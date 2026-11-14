@@ -16,7 +16,7 @@ from conftest import request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
-CRON = {"Cron": {"minute": "0", "hour": "*/6"}}
+CRON = {"cron": {"minute": "0", "hour": "*/6"}}
 
 
 def _other_principal() -> SyncMedullaClient:
@@ -50,7 +50,7 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
     updated = clean_graph.jobs.schedule_update(
         graph,
         name,
-        {"Interval": {"every_ms": 60_000, "start_ms": 0}},
+        {"interval": {"every_ms": 60_000, "start_ms": 0}},
         "association.rebuild",
     )
     assert updated["task_kind"] == "association.rebuild"
@@ -58,7 +58,7 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
 
     # Invalid cron fields and a zero interval are refused with a typed error,
     # on create and on update, and leave the stored record unchanged.
-    bad_cron = {"Cron": {"minute": "61", "hour": "*"}}
+    bad_cron = {"cron": {"minute": "61", "hour": "*"}}
     with pytest.raises((EngineResponseError, RuntimeError), match="INVALID_SCHEDULE"):
         clean_graph.jobs.schedule_create(
             graph, f"{name}-bad", bad_cron, "association.refresh"

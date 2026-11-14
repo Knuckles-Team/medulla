@@ -47,7 +47,7 @@ def test_exhausted_budget_skips_the_tick(clean_graph):
 
     # A schedule without budget fields carries the server's default budget.
     default = clean_graph.jobs.schedule_create(
-        GRAPH, idle, {"OneShot": {"at_ms": now_ms + 10**12}}, "association.refresh"
+        GRAPH, idle, {"one_shot": {"at_ms": now_ms + 10**12}}, "association.refresh"
     )
     assert default["max_run_s"] > 0
     assert default["max_tokens"] > 0
@@ -56,7 +56,7 @@ def test_exhausted_budget_skips_the_tick(clean_graph):
     created = clean_graph.jobs.schedule_create(
         GRAPH,
         name,
-        {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
+        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
         "association.refresh",
         max_run_s=1,
         max_tokens=1_000_000,

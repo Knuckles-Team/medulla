@@ -52,7 +52,7 @@ def test_tick_runs_once_per_window_on_leader(clean_graph):
     clean_graph.jobs.schedule_create(
         GRAPH,
         name,
-        {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
+        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
         "association.refresh",
     )
 

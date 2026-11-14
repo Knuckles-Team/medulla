@@ -80,7 +80,7 @@ def test_overlap_and_missed_windows_skip_without_queueing(clean_graph):
     remote = f"skip-remote-{suffix}"
     local = f"skip-local-{suffix}"
     now_ms = int(time.time() * 1000)
-    interval = {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms}}
+    interval = {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms}}
     # The remote kind needs a worker capability no worker holds: its run stays active.
     clean_graph.jobs.schedule_create(GRAPH, remote, interval, "association.remote")
     clean_graph.jobs.schedule_create(GRAPH, local, interval, "association.refresh")

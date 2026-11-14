@@ -44,7 +44,7 @@ def test_paused_windows_are_skipped_and_resume_does_not_backfill(clean_graph):
     created = clean_graph.jobs.schedule_create(
         GRAPH,
         name,
-        {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
+        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
         "association.refresh",
     )
     assert created["state"] == "enabled"

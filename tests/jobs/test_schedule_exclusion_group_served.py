@@ -76,7 +76,7 @@ def test_group_members_never_overlap_and_respect_spacing(clean_graph):
             clean_graph.jobs.schedule_create(
                 GRAPH,
                 f"group-bad-{suffix}",
-                {"OneShot": {"at_ms": now_ms + 10**12}},
+                {"one_shot": {"at_ms": now_ms + 10**12}},
                 "association.refresh",
                 exclusion_group=bad,
             )
@@ -88,14 +88,14 @@ def test_group_members_never_overlap_and_respect_spacing(clean_graph):
     clean_graph.jobs.schedule_create(
         GRAPH,
         first,
-        {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
+        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms}},
         "association.remote",
         exclusion_group=group,
     )
     created = clean_graph.jobs.schedule_create(
         GRAPH,
         second,
-        {"Interval": {"every_ms": EVERY_MS, "start_ms": now_ms + 1_000}},
+        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms + 1_000}},
         "association.refresh",
         exclusion_group=group,
         min_spacing_s=SPACING_S,
