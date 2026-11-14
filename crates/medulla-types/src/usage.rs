@@ -17,6 +17,7 @@ pub const USAGE_BAD_DIGEST: &str = "USAGE_BAD_DIGEST";
 /// The closed outcome of one model call.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum UsageOutcome {
     /// The call completed and produced a completion.
     Ok,
@@ -27,6 +28,7 @@ pub enum UsageOutcome {
 /// One observed model call, owned by the tenant of the verified caller.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct UsageRecord {
     /// Format identity of this record.
     pub schema_version: u16,
@@ -82,6 +84,7 @@ pub fn is_sha256_hex(text: &str) -> bool {
 /// tokens, so no float appears.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PriceEntry {
     /// Format identity of this entry.
     pub schema_version: u16,
@@ -100,11 +103,51 @@ pub struct PriceEntry {
 /// The price entries and the model-name aliases a ledger prices against.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PriceCatalog {
     /// Normalized raw name to canonical model key.
     pub aliases: BTreeMap<String, String>,
     /// Every price entry.
     pub entries: Vec<PriceEntry>,
+}
+
+/// One served usage-ledger operation (`Method::Usage`,
+/// MEDULLA-DECISION-ENGINE-R801.8). Both ops write and need the service-only
+/// scope `usage:write`; the tenant is the verified caller's.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UsageOp {
+    /// Append one batch of observed model calls in one ledger transaction.
+    Append {
+        /// The records, each owned by the verified tenant.
+        records: Vec<UsageRecord>,
+    },
+    /// Validate a price catalog and store its entries.
+    PutPrice {
+        /// The catalog to store.
+        catalog: PriceCatalog,
+    },
+}
+
+/// What a served `Usage` append returns (MEDULLA-DECISION-ENGINE-R801.8).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UsageAppended {
+    /// Records written.
+    pub appended: u64,
+    /// The digest of the canonical records, as recorded in the audit line.
+    pub batch_digest: String,
+}
+
+/// What a served `Usage` price put returns (MEDULLA-DECISION-ENGINE-R801.8).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UsagePriceStored {
+    /// Price entries in the stored catalog (identical replays included).
+    pub entries: u64,
 }
 
 #[cfg(test)]

@@ -390,36 +390,51 @@ impl AgentLibraryStore {
         }
     }
 
-    /// Write one price entry. An identical entry is an idempotent no-op; a
-    /// different entry at or below the latest `valid_from_ms` of its key is
-    /// `PRICE_WINDOW_OVERLAP`.
+    /// Write one price entry; see [`Self::put_prices`].
     pub fn put_price(&self, tenant: &str, entry: &PriceEntry) -> Result<(), UsageRefusal> {
-        let bytes = encode(entry)?;
-        let prefix = price_prefix(tenant, &entry.model_key);
-        let key = price_key(tenant, &entry.model_key, entry.valid_from_ms);
+        self.put_prices(tenant, std::slice::from_ref(entry))
+    }
+
+    /// Write a catalog's price entries as one revision, in one ledger
+    /// transaction: either every entry is stored or none is. An identical
+    /// entry is an idempotent no-op; a different entry at or below the latest
+    /// `valid_from_ms` of its key is `PRICE_WINDOW_OVERLAP`.
+    pub fn put_prices(&self, tenant: &str, entries: &[PriceEntry]) -> Result<(), UsageRefusal> {
+        let mut encoded = Vec::with_capacity(entries.len());
+        for entry in entries {
+            encoded.push((
+                price_prefix(tenant, &entry.model_key),
+                price_key(tenant, &entry.model_key, entry.valid_from_ms),
+                entry.valid_from_ms,
+                encode(entry)?,
+            ));
+        }
         let mut failure: Option<UsageRefusal> = None;
         let result = self.maintain_control_rows(tenant, "usage_ledger_price", |owner| {
             let mut table = owner.open_table(DECISION_ARTIFACTS)?;
-            if let Some(row) = table.get((tenant, key.as_str())).map_err(store)? {
-                if row.value() == bytes.as_slice() {
-                    return Ok(());
+            for (prefix, key, valid_from_ms, bytes) in &encoded {
+                if let Some(row) = table.get((tenant, key.as_str())).map_err(store)? {
+                    if row.value() == bytes.as_slice() {
+                        continue;
+                    }
                 }
-            }
-            let mut latest: Option<u64> = None;
-            for row in table.range((tenant, prefix.as_str())..).map_err(store)? {
-                let (row_key, _) = row.map_err(store)?;
-                if row_key.value().0 != tenant || !row_key.value().1.starts_with(&prefix) {
-                    break;
+                let mut latest: Option<u64> = None;
+                for row in table.range((tenant, prefix.as_str())..).map_err(store)? {
+                    let (row_key, _) = row.map_err(store)?;
+                    if row_key.value().0 != tenant || !row_key.value().1.starts_with(prefix.as_str())
+                    {
+                        break;
+                    }
+                    latest = row_key.value().1[prefix.len()..].parse::<u64>().ok();
                 }
-                latest = row_key.value().1[prefix.len()..].parse::<u64>().ok();
+                if latest.is_some_and(|latest| *valid_from_ms <= latest) {
+                    failure = Some(UsageRefusal::PriceWindowOverlap);
+                    return Err("price window overlaps the latest entry".to_string());
+                }
+                table
+                    .insert((tenant, key.as_str()), bytes.as_slice())
+                    .map_err(store)?;
             }
-            if latest.is_some_and(|latest| entry.valid_from_ms <= latest) {
-                failure = Some(UsageRefusal::PriceWindowOverlap);
-                return Err("price window overlaps the latest entry".to_string());
-            }
-            table
-                .insert((tenant, key.as_str()), bytes.as_slice())
-                .map_err(store)?;
             Ok(())
         });
         match result {

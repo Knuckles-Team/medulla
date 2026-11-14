@@ -296,6 +296,12 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::Usage { op } => {
+            dispatch_boxed(async {
+                medulla_h_decide::usage::handle_usage(state, req.id, verified_context, *op).await
+            })
+            .await
+        }
         Method::BeliefRevise { request } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_belief_revise(

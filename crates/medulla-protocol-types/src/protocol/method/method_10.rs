@@ -100,6 +100,12 @@ $($variants)*
     DecisionLog {
         op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
+    /// The per-tenant usage ledger (MEDULLA-DECISION-ENGINE-R801.8): append
+    /// observed model calls or store a price catalog under the verified tenant.
+    /// Both ops need the service-only scope `usage:write`.
+    Usage {
+        op: Box<medulla_types::usage::UsageOp>,
+    },
     /// Research claims: propose, advance along the lifecycle, record evidence
     /// on five channels, compile a sealed research artifact and read them back.
     /// The `Claims` handler is the single writer of claim state.

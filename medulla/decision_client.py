@@ -893,6 +893,64 @@ def list_document_sets_op() -> dict[str, Any]:
     return {"op": "list_document_sets"}
 
 
+def usage_record(
+    tenant: str,
+    child_id: str,
+    operation: str,
+    run_id: str,
+    recorded_at_ms: int,
+    *,
+    errored: bool = False,
+    model_key: str = "m1",
+    principal: str = "",
+    tokens_in: int = 100,
+    tokens_out: int = 20,
+    tokens_cached: int = 0,
+    latency_ms: int = 50,
+    content: str | None = None,
+) -> dict[str, Any]:
+    """Build one ``UsageRecord`` for :func:`usage_append_op`.
+
+    Only a SHA-256 digest of ``content`` (default: the run id) travels; the
+    engine stamps the verified principal over ``principal``.
+    """
+    import hashlib
+
+    digest = hashlib.sha256((content or run_id).encode("utf-8")).hexdigest()
+    return {
+        "schema_version": 1,
+        "recorded_at_ms": recorded_at_ms,
+        "child_id": child_id,
+        "operation": operation,
+        "tenant": tenant,
+        "principal": principal,
+        "run_id": run_id,
+        "model_key": model_key,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "tokens_cached": tokens_cached,
+        "latency_ms": latency_ms,
+        "outcome": "error" if errored else "ok",
+        "content_digest": digest,
+    }
+
+
+def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    """A ``Usage`` append of ``records`` (scope ``usage:write``)."""
+    return {"op": "append", "records": [dict(record) for record in records]}
+
+
+def usage_put_price_op(catalog: Mapping[str, Any]) -> dict[str, Any]:
+    """A ``Usage`` price put of ``catalog`` (scope ``usage:write``)."""
+    return {
+        "op": "put_price",
+        "catalog": {
+            "aliases": dict(catalog.get("aliases", {})),
+            "entries": [dict(entry) for entry in catalog.get("entries", ())],
+        },
+    }
+
+
 def _payload(result: Any) -> Any:
     return getattr(result, "payload", result)
 
@@ -975,6 +1033,17 @@ class DecisionClient:
         from medulla.generated.coordination import send_loops
 
         result = await send_loops(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def usage(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``Usage`` (append usage records or put a price catalog)."""
+        from medulla.generated.coordination import send_usage
+
+        result = await send_usage(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -1067,4 +1136,7 @@ __all__ = [
     "resolve_op",
     "task_plan_request",
     "verify_task_plan_receipt",
+    "usage_append_op",
+    "usage_put_price_op",
+    "usage_record",
 ]
