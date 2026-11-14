@@ -79,6 +79,8 @@ fn rename_retargets_an_inbound_foreign_key() {
                 ref_columns: vec!["id".into()],
                 on_delete: RefAction::Cascade,
                 on_update: RefAction::NoAction,
+                deferrable: false,
+                initially_deferred: false,
             },
         )
         .expect("add FK");
