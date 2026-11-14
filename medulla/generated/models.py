@@ -15706,6 +15706,11 @@ class MethodDiscountedReturnParams(BaseModel):
     traj_id: str
 
 
+class DiscoverMode(str, Enum):
+    STANDARD = "standard"
+    DEEP = "deep"
+
+
 class MethodDiscoverParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15714,7 +15719,7 @@ class MethodDiscoverParams(BaseModel):
     hops: Annotated[int, Field(ge=0)] = Field(default=0)
     k: Annotated[int, Field(ge=0)]
     keywords: list[str]
-    mode: DiscoverMode = Field(default="standard")
+    mode: DiscoverMode = Field(default=DiscoverMode.STANDARD)
     perspectives: Annotated[int, Field(ge=0)] | None = None
     quality_policy_ref: str | None = None
     query_embedding: list[float]
@@ -31575,24 +31580,24 @@ class ConceptInputWire(BaseModel):
     impact_bp: Annotated[int, Field(ge=0)]
 
 
+class ContextMode(str, Enum):
+    HYBRID = "hybrid"
+    LEXICAL = "lexical"
+    SEMANTIC = "semantic"
+
+
 class ContextBundleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     agent_ref: str | None = None
     as_of: Annotated[int, Field(ge=0)] | None = None
     budget: ContextPackageBudget
-    mode: ContextMode = Field(default="hybrid")
+    mode: ContextMode = Field(default=ContextMode.HYBRID)
     query_embedding: list[float] = Field(default_factory=list)
     query_text: str
     tokenizer_id: str
     tokenizer_version: str
     top_n: Annotated[int, Field(ge=0)] = Field(default=256)
-
-
-class ContextMode(str, Enum):
-    HYBRID = "hybrid"
-    LEXICAL = "lexical"
-    SEMANTIC = "semantic"
 
 
 class ContextPackageBudget(BaseModel):
@@ -32694,12 +32699,6 @@ class SemanticEnrichOpRankProposals(BaseModel):
     subject: str
 
 
-class ShareScope(str, Enum):
-    PRIVATE = "private"
-    PLACEMENT = "placement"
-    TENANT = "tenant"
-
-
 class SourceCoverageFacet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32756,6 +32755,12 @@ class StoredParamType(str, Enum):
     BOOL = "bool"
 
 
+class ShareScope(str, Enum):
+    PRIVATE = "private"
+    PLACEMENT = "placement"
+    TENANT = "tenant"
+
+
 class StoredQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32765,7 +32770,7 @@ class StoredQuery(BaseModel):
     name: str
     params: dict[str, StoredParamType]
     refresh: RefreshPolicy
-    share: ShareScope = Field(default="private")
+    share: ShareScope = Field(default=ShareScope.PRIVATE)
     text: str
     version: Annotated[int, Field(ge=0)]
 
@@ -33050,11 +33055,6 @@ class CriticalChain(BaseModel):
     total_weight_units: Annotated[int, Field(ge=0)]
     total_weighted_duration_ms: Annotated[int, Field(ge=0)]
     weight_scale: Annotated[int, Field(ge=0)]
-
-
-class DiscoverMode(str, Enum):
-    STANDARD = "standard"
-    DEEP = "deep"
 
 
 class FeatureImportance(BaseModel):
