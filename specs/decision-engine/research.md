@@ -1273,4 +1273,3 @@ The `premises` hook derives each source's premises from the request's pinned sou
 - **`authorization_revision` reuses the change-feed helper.** One definition of the revision of a caller's authority (`authorization_revision(agent, scopes)`), not a second one.
 - **A request tenant that is not the verified tenant refuses `ACCESS_DENIED`.** The graph read is always the caller's own; the field exists so a cursor and a result name their tenant.
 - **Paging recomputes the search.** Each call walks the visible Documents and slices the page from the ordered spans; the cursor holds an index, not state, so a server restart or another node answers the same page.
-
