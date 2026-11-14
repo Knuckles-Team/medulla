@@ -26,6 +26,7 @@ INCIDENT = "https://knuckles-team.github.io/ontology/core#Incident"
 GRAPH = "__commons__"
 SOURCE = {"Mcp": {"server": "coverage-test-mcp", "tool": "search"}}
 
+
 @pytest.fixture(autouse=True)
 def _detach_after() -> Any:
     """Detach this module's schema source after each test.
@@ -93,6 +94,7 @@ def _attach(servicenow: int, pagerduty: int) -> None:
         )
     finally:
         client.close()
+
 
 def _register(client: Any, *names: str) -> None:
     for name in names:

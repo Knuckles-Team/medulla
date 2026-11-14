@@ -23,6 +23,7 @@ INCIDENT = "https://knuckles-team.github.io/ontology/core#Incident"
 GRAPH = "__commons__"
 SOURCE = {"Mcp": {"server": "role-test-mcp", "tool": "search"}}
 
+
 @pytest.fixture(autouse=True)
 def _detach_after() -> Any:
     """Detach this module's schema source after each test.
@@ -78,6 +79,7 @@ def _attach(document: str) -> None:
         )
     finally:
         client.close()
+
 
 def _coverage(client: Any) -> dict[str, Any]:
     result = client._send(
