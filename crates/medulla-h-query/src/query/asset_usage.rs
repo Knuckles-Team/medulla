@@ -19,6 +19,8 @@ pub(crate) fn query_assets(method: &Method) -> Vec<String> {
         )
         .unwrap_or_default(),
         Method::UnifiedQuery { plan, .. } => plan_labels(plan),
+        // A prepared UQL statement is planned, not run, so it reads nothing.
+        Method::Uql { prepare: true, .. } => Vec::new(),
         // A UQL statement is read by the plan it parses to (MEDULLA-FEDERATED-QUERY-R722.5).
         Method::Uql { text, .. } => medulla_uql::parse(text)
             .map(|plan| plan_labels(&plan))
@@ -144,5 +146,19 @@ mod tests {
     #[test]
     fn a_failed_answer_records_nothing() {
         assert!(!answered(&Response::err(1, "SQL_ERROR: nope")));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R722.5
+    #[test]
+    fn a_prepared_uql_statement_reads_no_asset() {
+        let uql = |prepare| {
+            serde_json::from_value::<Method>(serde_json::json!({
+                "method": "Uql",
+                "params": {"text": "MATCH (:Doc)", "prepare": prepare},
+            }))
+            .expect("a Uql method")
+        };
+        assert!(query_assets(&uql(true)).is_empty());
+        assert_eq!(query_assets(&uql(false)), vec!["Doc"]);
     }
 }
