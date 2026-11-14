@@ -26,6 +26,8 @@ pub enum AttachedApplication {
     Dockerhub,
     Uptime,
     ContainerManager,
+    /// Named `servicenow` on the wire, matching `as_str` and the node ids.
+    #[serde(rename = "servicenow")]
     ServiceNow,
 }
 
