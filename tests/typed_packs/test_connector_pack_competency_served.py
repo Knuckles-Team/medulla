@@ -135,7 +135,8 @@ def _pack(connector: str, question: str) -> list[ConnectorPackEntryContent]:
                 PackEntryKind.SKILL,
                 f"skill://{connector}-doc-skill",
                 f"{connector}-doc-skill",
-                b"---\nname: doc-skill\ndescription: document skill\n---\n\nbody\n",
+                f"---\nname: {connector}-doc-skill\ndescription: document skill\n"
+                "---\n\nbody\n".encode(),
                 "text/markdown",
             ),
         ]

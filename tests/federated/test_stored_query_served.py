@@ -11,7 +11,7 @@ import os
 import uuid
 
 import pytest
-from conftest import request_context
+from conftest import register_commons_agents, request_context
 
 from medulla.client import MedullaClient
 from medulla.generated import query
@@ -21,6 +21,9 @@ TEXT = "MATCH (:StoredIncident) WHERE status = $status"
 
 async def _connect(principal: str | None = None) -> MedullaClient:
     # The agent is the principal, so the verified caller is exactly the name given.
+    if principal:
+        # A principal other than the suite's System identity is registered first.
+        register_commons_agents(principal)
     context = request_context(agent_id=principal) if principal else request_context()
     return await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],

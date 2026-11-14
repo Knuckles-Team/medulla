@@ -23,6 +23,7 @@ from conftest import (
     TEST_TENANT,
     bootstrap_context,
     find_server_binary,
+    register_commons_agents,
     request_context,
     spawn_server,
     stop_server,
@@ -137,7 +138,15 @@ def engine() -> Iterator[Engine]:
 
 def _register_peer(served: Engine) -> None:
     """Create the peer principal in the identity store so it resolves."""
-    admin = served.connect("usr:admin", scopes=["identity:admin"])
+    # Creating a user is a direct-only identity administration: the admin acts as
+    # itself (no delegation chain), so it is registered as its own agent first.
+    register_commons_agents(
+        "usr:admin", socket_path=served.socket_path, auth_secret=SECRET
+    )
+    context = request_context(agent_id="usr:admin", scopes=["identity:admin"])
+    admin = SyncMedullaClient.connect(
+        socket_path=served.socket_path, auth_secret=SECRET, verified_context=context
+    )
     try:
         op = IdentityOpUserCreate(
             family="user",
