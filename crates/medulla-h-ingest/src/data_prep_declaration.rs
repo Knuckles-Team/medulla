@@ -207,10 +207,15 @@ fn encode(value: &serde_json::Value) -> Result<Vec<u8>, DataPrepRefusal> {
 
 /// Validate `payload`, compare it with the stored declaration of the same
 /// capability and lower the change. The grammar check runs before any read.
+///
+/// The envelope id binds the write-set to `base_version`, the graph version it
+/// was lowered against: the same delta lowered again later (after a revert or
+/// a wipe) is a new operation, not a replay of the earlier batch id.
 pub fn declare_data_prep(
     view: &dyn DeclarationView,
     tenant: &str,
     payload: &serde_json::Value,
+    base_version: u64,
 ) -> Result<Declared, DataPrepRefusal> {
     let declaration = validate_declaration(payload)?;
     let digest = content_digest(&declaration)?;
@@ -266,9 +271,15 @@ pub fn declare_data_prep(
             properties_msgpack: encode(&json!({ "relationship": DECLARES_FIELD }))?,
         });
     }
-    let write_set =
-        IndexWriteSet::from_methods(ENVELOPE_PREFIX, b"eg/data-prep-declaration-write", methods)
-            .map_err(invalid)?;
+    let encoded = rmp_serde::to_vec_named(&methods)
+        .map_err(|error| invalid(format!("engine write-set encoding failed: {error}")))?;
+    let write_digest = Digest256::framed(
+        b"eg/data-prep-declaration-write",
+        &[encoded.as_slice(), &base_version.to_be_bytes()[..]],
+    )
+    .map_err(invalid)?;
+    let write_set = IndexWriteSet::with_digest(ENVELOPE_PREFIX, &write_digest.to_hex(), methods)
+        .map_err(invalid)?;
     Ok(Declared::Write {
         content_digest: digest,
         write_set,
@@ -377,7 +388,7 @@ mod tests {
         assert!(edge_set(&core).is_empty());
 
         let Declared::Write { write_set, .. } =
-            declare_data_prep(&view(), TENANT, &payload(&["a.field", "b.field"])).unwrap()
+            declare_data_prep(&view(), TENANT, &payload(&["a.field", "b.field"]), 0).unwrap()
         else {
             panic!("a first declaration writes");
         };
@@ -387,7 +398,7 @@ mod tests {
 
         // An equal declaration, in any field order, writes nothing.
         let Declared::Unchanged { .. } =
-            declare_data_prep(&view(), TENANT, &payload(&["b.field", "a.field"])).unwrap()
+            declare_data_prep(&view(), TENANT, &payload(&["b.field", "a.field"]), 0).unwrap()
         else {
             panic!("an equal digest is unchanged");
         };
@@ -395,7 +406,7 @@ mod tests {
 
         // A changed declaration is one write-set holding both the removal and the addition.
         let Declared::Write { write_set, .. } =
-            declare_data_prep(&view(), TENANT, &payload(&["b.field", "c.field"])).unwrap()
+            declare_data_prep(&view(), TENANT, &payload(&["b.field", "c.field"]), 0).unwrap()
         else {
             panic!("a changed declaration writes");
         };
@@ -442,11 +453,11 @@ mod tests {
                 panic!("the grammar check runs before any read");
             }
         }
-        let refuse = |value: serde_json::Value| match declare_data_prep(&Unreadable, TENANT, &value)
-        {
-            Err(refusal) => refusal.code,
-            Ok(_) => panic!("must refuse {value}"),
-        };
+        let refuse =
+            |value: serde_json::Value| match declare_data_prep(&Unreadable, TENANT, &value, 0) {
+                Err(refusal) => refusal.code,
+                Ok(_) => panic!("must refuse {value}"),
+            };
         for bad in ["a:b", "a/b", "usr/bin/sh", "has space", ""] {
             assert_eq!(refuse(payload(&[bad])), DATA_PREP_DECLARATION_INVALID);
         }
