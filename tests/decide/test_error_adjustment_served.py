@@ -148,8 +148,6 @@ async def _adjust(request: dict[str, Any]) -> list[str]:
     return sorted(score["option_id"] for score in outcome["scores"])
 
 
-# spec: MEDULLA-DECISION-ENGINE-R158.6
-@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R158.6")
 @pytest.mark.skip(
     reason="needs the served usage append (MEDULLA-DECISION-ENGINE-R801.8), "
     "which the engine and client do not serve yet"
