@@ -25,6 +25,7 @@
 //! transaction, and a trigger reacts at most once per event of one write chain
 //! (`TRIGGER_REACTION_DUPLICATE`). Any refusal aborts the whole statement.
 
+use redb::ReadableTable;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use medulla_result_types::row_predicate::{CmpOp, RowPredicate};
