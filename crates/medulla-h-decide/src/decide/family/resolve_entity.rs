@@ -1,11 +1,12 @@
 //! The `resolve_entity` question family (MEDULLA-DECISION-ENGINE-R001.101).
 //!
 //! Ranks through the shared matrix ladder. The Record stage adds identity
-//! evidence (MEDULLA-UNIFIED-DATA-PLANE-R030.701): each pair of declared
-//! options contributes one premise `identity:<kind>` per piece of evidence and
-//! one `identity:decision:<merge_decision>` premise. Names are the option texts
-//! `name` and `key`; an embedding cosine of a pair is the request param
-//! `embedding:<left option>:<right option>`. Evidence thresholds are the
+//! evidence (MEDULLA-UNIFIED-DATA-PLANE-R030.701): each declared pair option
+//! contributes, between its two sides, one premise `identity:<kind>` per piece
+//! of evidence and one `identity:decision:<merge_decision>` premise. The
+//! per-side inputs are the option texts `entity.left.<field>` and
+//! `entity.right.<field>` (`name`, `key`); an embedding cosine of a pair is the
+//! request param `embedding:<option id>`. Evidence thresholds are the
 //! registry knobs `entity_link.entropy_bits` and `entity_link.embedding_min`.
 //! The merge decision is always a proposal. A request that declares an
 //! approval (`approve_link`) without a named `approver` refuses with
@@ -79,28 +80,35 @@ fn param<'a>(request: &'a DecideRequest, name: &str) -> Option<&'a TypedParam> {
     request.params.iter().find(|param| param.name == name)
 }
 
-fn cosine(request: &DecideRequest, left: &str, right: &str) -> Option<f64> {
-    let named = param(request, &format!("embedding:{left}:{right}"))?;
+/// One per-side input of a pair option: the text `entity.<side>.<field>`.
+fn side_text<'a>(option: &'a DeclaredOption, side: &str, field: &str) -> Option<&'a str> {
+    let key = format!("{side}.{field}");
+    text(option, &key)
+}
+
+/// The embedding cosine of a pair option: the request param `embedding:<option id>`.
+fn cosine(request: &DecideRequest, option_id: &str) -> Option<f64> {
+    let named = param(request, &format!("embedding:{option_id}"))?;
     match &named.value {
         TypedValue::Int(q32) => Some(*q32 as f64 / Q32),
         _ => None,
     }
 }
 
+/// The identity evidence between the two sides of one pair option.
 fn evidence_of(
     request: &DecideRequest,
-    left: &DeclaredOption,
-    right: &DeclaredOption,
+    option: &DeclaredOption,
     entropy_bits: f64,
 ) -> Vec<IdentityEvidence> {
     let mut evidence = identity_evidence(
-        text(left, "name").unwrap_or_default(),
-        text(right, "name").unwrap_or_default(),
-        text(left, "key"),
-        text(right, "key"),
+        side_text(option, LEFT_KEY, "name").unwrap_or_default(),
+        side_text(option, RIGHT_KEY, "name").unwrap_or_default(),
+        side_text(option, LEFT_KEY, "key"),
+        side_text(option, RIGHT_KEY, "key"),
         entropy_bits,
     );
-    if let Some(cosine) = cosine(request, &left.option_id, &right.option_id) {
+    if let Some(cosine) = cosine(request, &option.option_id) {
         evidence.push(IdentityEvidence::Embedding { cosine });
     }
     evidence
@@ -114,7 +122,8 @@ fn decision_fact(decision: MergeDecision) -> &'static str {
     }
 }
 
-/// The identity premises of every pair of declared options.
+/// The identity premises of every declared pair option, computed between its
+/// two sides.
 pub fn identity_premises(request: &DecideRequest) -> Vec<PremiseRef> {
     let CandidateSource::Declared { options } = &request.candidates else {
         return Vec::new();
@@ -124,29 +133,26 @@ pub fn identity_premises(request: &DecideRequest) -> Vec<PremiseRef> {
     let provenance = || PremiseProvenance::Request {
         field: "candidates.options".to_string(),
     };
-    for (i, left) in options.iter().enumerate() {
-        for right in options.iter().skip(i + 1) {
-            let evidence = evidence_of(request, left, right, knobs.entity_link_entropy_bits);
-            let decision = decide_merge(&evidence, knobs.entity_link_embedding_min);
-            let subject = format!("{}|{}", left.option_id, right.option_id);
-            for piece in &evidence {
-                out.push(PremiseRef {
-                    subject: subject.clone(),
-                    fact: piece.premise_fact().to_string(),
-                    class: PremiseClass::Claim,
-                    provenance: provenance(),
-                });
-            }
+    for option in options.iter() {
+        let evidence = evidence_of(request, option, knobs.entity_link_entropy_bits);
+        let decision = decide_merge(&evidence, knobs.entity_link_embedding_min);
+        for piece in &evidence {
             out.push(PremiseRef {
-                subject,
-                fact: decision_fact(decision).to_string(),
+                subject: option.option_id.clone(),
+                fact: piece.premise_fact().to_string(),
                 class: PremiseClass::Claim,
                 provenance: provenance(),
             });
-            if out.len() >= MAX_IDENTITY_PREMISES {
-                out.truncate(MAX_IDENTITY_PREMISES);
-                return out;
-            }
+        }
+        out.push(PremiseRef {
+            subject: option.option_id.clone(),
+            fact: decision_fact(decision).to_string(),
+            class: PremiseClass::Claim,
+            provenance: provenance(),
+        });
+        if out.len() >= MAX_IDENTITY_PREMISES {
+            out.truncate(MAX_IDENTITY_PREMISES);
+            return out;
         }
     }
     out

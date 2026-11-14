@@ -27,14 +27,30 @@ def _schema_body() -> dict:
     )
 
 
-def _options(*pairs: tuple[str, str, str | None]) -> list[dc.DeclaredOption]:
+Side = tuple[str, str, str | None]
+
+
+def _side(texts: dict[str, str], side: str, entity: Side) -> None:
+    iri, name, key = entity
+    texts[side] = iri
+    texts[f"{side}.name"] = name
+    if key is not None:
+        texts[f"{side}.key"] = key
+
+
+def _options(*pairs: tuple[str, Side, Side]) -> list[dc.DeclaredOption]:
+    """Each option is one entity pair; its sides carry `entity.<side>.<field>`."""
     options = []
-    for option_id, name, key in pairs:
-        texts = {"name": name}
-        if key is not None:
-            texts["key"] = key
+    for option_id, left, right in pairs:
+        texts: dict[str, str] = {}
+        _side(texts, "entity.left", left)
+        _side(texts, "entity.right", right)
         options.append(dc.DeclaredOption(option_id, texts=texts))
     return options
+
+
+def _e(n: str, name: str, key: str | None = None) -> Side:
+    return (f"urn:entity:{n}", name, key)
 
 
 async def _decide(schema: dict, question_id: str, options, params=()):
@@ -67,7 +83,10 @@ def test_high_entropy_names_do_not_merge(clean_graph):
         _decide(
             schema,
             "q:identity:opaque",
-            _options(("a", OPAQUE, None), ("b", OPAQUE, None)),
+            _options(
+                ("a", _e("a1", OPAQUE), _e("a2", OPAQUE)),
+                ("b", _e("b1", "Alpha Works"), _e("b2", "Beta Labs")),
+            ),
         )
     )
     facts = _facts(opaque)
@@ -81,10 +100,12 @@ def test_high_entropy_names_do_not_merge(clean_graph):
             schema,
             "q:identity:kinds",
             _options(
-                ("c", "Ada Lovelace", "ada@x.org"),
-                ("d", "ada lovelace", "ada@x.org"),
-                ("e", "Report Builder v2", None),
-                ("f", "Report Builder v3", None),
+                (
+                    "cd",
+                    _e("c", "Ada Lovelace", "ada@x.org"),
+                    _e("d", "ada lovelace", "ada@x.org"),
+                ),
+                ("ef", _e("e", "Report Builder v2"), _e("f", "Report Builder v3")),
             ),
         )
     )
@@ -99,7 +120,10 @@ def test_high_entropy_names_do_not_merge(clean_graph):
             _decide(
                 schema,
                 "q:identity:approve",
-                _options(("a", "Ada", None), ("b", "Ada", None)),
+                _options(
+                    ("a", _e("a1", "Ada"), _e("a2", "Ada")),
+                    ("b", _e("b1", "Alpha Works"), _e("b2", "Beta Labs")),
+                ),
                 params=[dc.param("approve_link", "bool", True)],
             )
         )
