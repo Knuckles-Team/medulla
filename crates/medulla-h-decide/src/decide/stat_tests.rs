@@ -1178,7 +1178,8 @@ mod paper_admission_tests;
 // MEDULLA-DECISION-ENGINE-R038.3: the served held-item admission gate.
 mod held_item_admission_tests;
 
-// MEDULLA-DECISION-ENGINE-R819, R820, R826: the serving, process and ingest families.
+// MEDULLA-DECISION-ENGINE-R819, MEDULLA-DECISION-ENGINE-R820 and
+// MEDULLA-DECISION-ENGINE-R826: the serving, process and ingest families.
 #[cfg(feature = "redb")]
 mod capacity_tests;
 mod ingest_shortfall_tests;
