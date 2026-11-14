@@ -843,3 +843,27 @@
             sh:minCount 1 ;
             sh:path :probabilistic ] ;
     sh:targetClass :ForecastSample .
+
+# MEDULLA-CQ-CONN-R075.2: an order never reports more filled than ordered
+# (sh:lessThanOrEquals of filledQty against orderQty, as a SHACL-SPARQL check).
+:VersionedOrderFillShape a sh:NodeShape ;
+    sh:name "Versioned Order Fill Shape" ;
+    sh:targetClass :VersionedOrder ;
+    sh:sparql [
+        sh:message "filledQty must be less than or equal to orderQty." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                $this :filledQty ?filled ; :orderQty ?ordered .
+                FILTER (?filled > ?ordered)
+            }
+        """
+    ] .
+
+# MEDULLA-CQ-CONN-R075.4: a budget names its limit.
+:BudgetShape a sh:NodeShape ;
+    sh:name "Budget Shape" ;
+    sh:property [ sh:minCount 1 ;
+            sh:message "Budget must have a budgetLimit." ;
+            sh:path :budgetLimit ] ;
+    sh:targetClass :Budget .
