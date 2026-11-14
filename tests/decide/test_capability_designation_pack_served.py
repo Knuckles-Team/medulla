@@ -62,9 +62,12 @@ def _pack(connector: str, classes: dict[str, str], with_tool_a: bool):
         f"<{order}> a owl:Class ; rdfs:subClassOf <{ONT}core#Agreement> .\n"
         f"<{sub}> a owl:Class ; rdfs:subClassOf <{order}> .\n"
         f"<{ship}> a owl:Class ; rdfs:subClassOf <{ONT}core#Agreement> .\n"
-        f"<tool://{connector}/a> cp:operatesOn <{sub}> .\n"
         f"<tool://{connector}/b> cp:executes <{ship}> .\n"
     )
+    # MEDULLA-TYPED-PACKS-R102.5: a surface triple naming a component absent
+    # from the pack is refused, so the withdrawn pack drops tool a's link too.
+    if with_tool_a:
+        turtle += f"<tool://{connector}/a> cp:operatesOn <{sub}> .\n"
     entries = [_tool(connector, "b", "dispatch shipment")]
     if with_tool_a:
         entries.append(_tool(connector, "a", "look up an order"))
