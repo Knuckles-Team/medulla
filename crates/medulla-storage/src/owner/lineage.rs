@@ -122,12 +122,11 @@ pub const AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE: LayoutPredecessor = LayoutPredec
 };
 
 /// The frozen layout digest of [`AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD`]: the
-/// Agent Library pin before the `capability_reward` table. LAYOUT-REGEN needed:
-/// the gate fixer prints the digest of the layout with the concept tables and
-/// no reward table and replaces this value.
+/// Agent Library pin before the `capability_reward` table: the layout with the
+/// concept tables and no reward table.
 pub const AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST: [u8; 32] = [
-    0xe1, 0x12, 0xd8, 0x11, 0x8e, 0x4e, 0x62, 0xb0, 0x02, 0x79, 0x9b, 0x84, 0xbb, 0xa8, 0xc6, 0x91,
-    0x62, 0xe4, 0x77, 0x07, 0x18, 0x61, 0xa8, 0x1d, 0x38, 0x93, 0x27, 0x77, 0x36, 0x72, 0x7e, 0xa0,
+    0x71, 0x0c, 0xe7, 0x43, 0xbc, 0x15, 0xde, 0x6a, 0x15, 0xe7, 0x65, 0x3e, 0x87, 0x3c, 0xa2, 0xbc,
+    0xfd, 0xa3, 0x7d, 0x60, 0x02, 0x80, 0x70, 0x6b, 0x33, 0xc0, 0x0f, 0x8b, 0xdb, 0x90, 0x9e, 0x88,
 ];
 
 /// An Agent Library owner file from before the learned capability reward rows
@@ -561,7 +560,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "c613d48af8649e05a3a0737ce6aba8d4edd58c88c0ca244d05fc11dd9edc52a5"
         }
         OwnerLayout::AgentLibrary => {
-            "e112d8118e4e62b002799b84bba8c69162e477071861a81d3893277736727ea0"
+            "ab99eb3e0ac4dca9cc782dabc8ea9c92f9f9e043678cf1a25c8c8d34c67c3f64"
         }
         OwnerLayout::BranchRegistry => {
             "f8b3f0bc54cc11357787200c0091ebf8ccd7ae67af7fbea1930837e1d24019b4"

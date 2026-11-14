@@ -84,7 +84,8 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
             predecessor.owner_tables.contains(&"audit_requests"),
             predecessor.label == GRAPH_SHARD_BEFORE_CURRENT_PLANS.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS.label
-                || predecessor.label == GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label,
+                || predecessor.label == GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label,
             "{}",
             predecessor.label
         );
@@ -94,16 +95,24 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
                 .contains(&"work_item_current_plans"),
             predecessor.label == GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
         );
         assert_eq!(
             predecessor
                 .owner_tables
                 .contains(&"work_item_run_checkpoints"),
             predecessor.label == GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
+        );
+        assert_eq!(
+            predecessor
+                .owner_tables
+                .contains(&"work_item_effect_receipts"),
+            predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
         );
         assert!(!predecessor
             .owner_tables
-            .contains(&"work_item_effect_receipts"));
+            .contains(&"xshard_decision_certificate"));
         assert!(!predecessor.owner_tables.contains(&"work_item_run_events"));
     }
     assert!(
