@@ -134,10 +134,12 @@ def test_matched_readback_and_each_refusal(readback_server):
     writer = _client(readback_server, TEST_AGENT_ID)
     reader = _client(readback_server, READER)
     try:
-        writer.nodes.add(
-            "rb:a", {"type": "Fact", "_visibility": "public", "revision": 2}
-        )
-        writer.nodes.add("rb:b", {"type": "Fact", "_visibility": "public"})
+        # The writer is the system identity, whose writes are not stamped with
+        # an owner, and a bare public tag on an unowned row is hidden: the
+        # shared facts name their owner.
+        shared = {"type": "Fact", "_owner": TEST_AGENT_ID, "_visibility": "public"}
+        writer.nodes.add("rb:a", {**shared, "revision": 2})
+        writer.nodes.add("rb:b", shared)
         writer.nodes.add(
             "rb:hidden",
             {"type": "Fact", "_owner": "service:worker-1", "_visibility": "private"},

@@ -43,10 +43,16 @@ async def _journey(tag: str, role: str) -> dict[str, Any]:
     clients = [system]
     try:
         await system.rbac.add_role(role)
+        # Every caller may read and write the graph that holds the store; who may
+        # read or save a profile is then decided by the profile's own shares.
+        graph_role = f"{role}-graph"
+        await system.rbac.add_role(graph_role)
+        await system.rbac.add_grant(graph_role, {"Graph": "__commons__"}, "Read")
+        await system.rbac.add_grant(graph_role, {"Graph": "__commons__"}, "Write")
         for agent_id, roles in (
-            (owner_id, []),
-            (reader_id, [role]),
-            (outsider_id, []),
+            (owner_id, [graph_role]),
+            (reader_id, [role, graph_role]),
+            (outsider_id, [graph_role]),
         ):
             await system.consensus.register_identity(
                 agent_id,

@@ -310,9 +310,28 @@ pub(super) fn admit_put(
     }
 }
 
+/// The serialisation lane of one stored object: every save of it admits and
+/// commits while holding this lane, so the revision compare-and-set is judged
+/// against the state no other save can change before this one commits. `None`
+/// for an op that is not a save.
+pub(super) async fn lock_save_lane(
+    graph: &str,
+    op: &ProfileOp,
+) -> Option<tokio::sync::OwnedMutexGuard<()>> {
+    static LANES: std::sync::OnceLock<Vec<std::sync::Arc<tokio::sync::Mutex<()>>>> =
+        std::sync::OnceLock::new();
+    let node_id = match op {
+        ProfileOp::PutProfile { profile } => profile_node_id(&profile.profile_id),
+        ProfileOp::PutDocumentSet { set } => document_set_node_id(&set.set_id),
+        _ => return None,
+    };
+    let key = format!("{graph}\u{0}{node_id}");
+    Some(medulla_server_api::routed_write_coalescer::striped_lock(&LANES, &key).await)
+}
+
 /// The `Route::AssistantProfile` entry: admit the put, then commit the node
-/// upsert through the coalescable gateway. The revision is re-checked inside
-/// the commit, so two racing saves of one revision cannot both win.
+/// upsert through the coalescable gateway, both inside the object's save lane,
+/// so two racing saves of one revision cannot both win.
 pub(super) async fn handle_put(
     ctx: &MutationCtx<'_>,
     _tenant_id: &str,
@@ -330,38 +349,23 @@ pub(super) async fn handle_put(
             ),
         ));
     };
+    // Held until the commit below returns: admission reads the pre-write state
+    // and no other save of this object commits in between.
+    let _lane = lock_save_lane(ctx.graph_name, op).await;
     let admitted = match admit_put(ctx.core, ctx.isolation, ctx.tenant_scope, agent_id, op) {
         Ok(admitted) => admitted,
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
-    let (write, node_id, expected_revision) = match &admitted {
-        Admitted::Profile(write, saved) => (
-            write.as_ref().clone(),
-            profile_node_id(&saved.profile_id),
-            Some(saved.revision - 1),
-        ),
-        Admitted::Set(write, saved) => (
-            write.as_ref().clone(),
-            document_set_node_id(&saved.set_id),
-            None,
-        ),
+    // The compare-and-set ran in `admit_put` under the save lane: the closure
+    // below runs only after the batch is durable, so a check there could never
+    // stop the write, only misreport it as refused.
+    let write = match &admitted {
+        Admitted::Profile(write, _) | Admitted::Set(write, _) => write.as_ref().clone(),
     };
     let plan = MutationPlan::for_method(&write);
-    let tenant_scope = ctx.tenant_scope.to_string();
     let owned = write.clone();
     Some(
         super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
-            if let Some(expected) = expected_revision {
-                let current: Option<AssistantProfile> =
-                    read_stored(core, &node_id, "AssistantProfile", &tenant_scope);
-                let current_revision = current.map_or(0, |stored| stored.revision);
-                if current_revision != expected {
-                    return Err(refuse(
-                        "PROFILE_REVISION_CONFLICT",
-                        format!("the profile moved to revision {current_revision} during the save"),
-                    ));
-                }
-            }
             medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;
             match admitted {
                 Admitted::Profile(_, saved) => {

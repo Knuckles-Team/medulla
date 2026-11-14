@@ -603,6 +603,55 @@ mod tests {
                 );
             }
 
+            // spec: MEDULLA-IDENTITY-R706
+            #[test]
+            fn governed_source_record_is_decided_by_the_source_gate_alone() {
+                fn blob(value: serde_json::Value) -> std::sync::Arc<Vec<u8>> {
+                    std::sync::Arc::new(rmp_serde::to_vec_named(&value).unwrap())
+                }
+                fn view(members: &[&str]) -> GraphView {
+                    let mut v = GraphView::default();
+                    let rows = [
+                        (
+                            "source:guarded",
+                            serde_json::json!({
+                                "type": "Document",
+                                "source_access_public": false,
+                                "source_access_read_roles": ["group:eng"],
+                                "source_classification": "internal",
+                            }),
+                        ),
+                        (
+                            "source_group:eng",
+                            serde_json::json!({
+                                "type": "SourceGroup", "group_id": "eng", "members": members,
+                            }),
+                        ),
+                        ("untagged", serde_json::json!({"type": "Fact"})),
+                    ];
+                    for (id, properties) in rows {
+                        let idx = v.graph.add_node(id.to_string());
+                        v.node_map.insert(id.to_string(), idx);
+                        v.node_properties.insert(id.to_string(), blob(properties));
+                    }
+                    v
+                }
+                let layer = setup();
+                // Neither the record nor the untagged row has an owner.
+                let mut member = view(&["worker1"]);
+                layer.filter_view("worker1", &mut member);
+                assert!(member.node_properties.contains_key("source:guarded"));
+                assert!(!member.node_properties.contains_key("untagged"));
+                let mut outsider = view(&["worker1"]);
+                layer.filter_view("worker2", &mut outsider);
+                assert!(!outsider.node_properties.contains_key("source:guarded"));
+                // Removing the member changes only the group node, never the record.
+                let mut removed = view(&[]);
+                layer.filter_view("worker1", &mut removed);
+                assert!(!removed.node_properties.contains_key("source:guarded"));
+                assert!(!removed.node_properties.contains_key("untagged"));
+            }
+
             #[test]
             fn unowned_bare_visibility_tag_alone_is_no_longer_trusted() {
                 // BUG-064 (BUG-LEDGER.md#BUG-064): reproduces the exact shape

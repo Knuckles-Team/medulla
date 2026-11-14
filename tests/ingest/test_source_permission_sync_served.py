@@ -14,7 +14,7 @@ import time
 import pytest
 from conftest import TEST_AGENT_ID, TEST_SIGNER_KEY, request_context
 
-from medulla.client import EngineResponseError, SyncMedullaClient
+from medulla.client import EngineResponseError, MedullaClient, SyncMedullaClient
 
 from .test_source_governance_served import _governed, _record
 from .test_source_stream_versions_served import (
@@ -28,6 +28,7 @@ from .test_source_stream_versions_served import (
 MEMBER = "usr:carol"
 OUTSIDER = "usr:dave"
 GROUP = "eng"
+CONNECTOR_ROLE = "suite:permission-sync-connector"
 
 
 def _groups_batch(connector: str, page: int, members: list[str]) -> dict:
@@ -90,6 +91,37 @@ def _grant_graph_read(graph: str) -> None:
         admin.close()
 
 
+async def _connector_client(connector: str, graph: str) -> MedullaClient:
+    """A client acting as the connector itself: its writes are its own, not System's."""
+    principal = f"connector:{connector}"
+    admin = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        try:
+            admin.rbac.add_role(CONNECTOR_ROLE)
+        except EngineResponseError:
+            pass  # another case on this engine already created it
+        admin.rbac.add_grant(CONNECTOR_ROLE, {"Graph": graph}, "Read")
+        admin.rbac.add_grant(CONNECTOR_ROLE, {"Graph": graph}, "Write")
+        admin.consensus.register_identity(
+            principal,
+            "Agent",
+            ["team:test"],
+            [CONNECTOR_ROLE],
+            signer_id=TEST_AGENT_ID,
+            signer_key=TEST_SIGNER_KEY,
+        )
+    finally:
+        admin.close()
+    return await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(agent_id=principal, principal=principal),
+        graph_name=graph,
+    )
+
+
 def _visible_source_ids(principal: str, graph: str) -> list[str]:
     client = _reader(principal, graph)
     try:
@@ -104,7 +136,8 @@ def _visible_source_ids(principal: str, graph: str) -> list[str]:
 @pytest.mark.asyncio
 async def test_group_change_applies_without_rewrite() -> None:
     connector = _connector()
-    client, graph = await _ingest_client(connector)
+    owner, graph = await _ingest_client(connector)
+    client = await _connector_client(connector, graph)
     try:
         records = _governed(
             connector,
@@ -139,4 +172,5 @@ async def test_group_change_applies_without_rewrite() -> None:
         assert len(removed.raw_admissions) == 0
         assert not _visible_source_ids(MEMBER, graph), "the removed member is denied"
     finally:
-        await _close(client, graph)
+        await client.close()
+        await _close(owner, graph)

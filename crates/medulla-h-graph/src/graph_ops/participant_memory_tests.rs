@@ -279,3 +279,48 @@ fn document_set_save_share_and_read_only_query() {
         .unwrap_err()
         .starts_with("ACCESS_DENIED: "));
 }
+
+/// Two writers save one profile from the same revision at once. Each admits and
+/// commits inside the profile's save lane, as `handle_put` does, with the commit
+/// held open across a yield: exactly one wins and the other is refused with
+/// PROFILE_REVISION_CONFLICT against the state the winner wrote.
+// spec: MEDULLA-DECISION-ENGINE-R656.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn racing_saves_of_one_revision_admit_exactly_one() {
+    use super::assistant_profile::lock_save_lane;
+    let core = std::sync::Arc::new(GraphCore::new());
+    let iso = std::sync::Arc::new(isolation());
+    save(&core, &iso, SCOPE_A, "alice", profile(0, vec![])).unwrap();
+    let barrier = std::sync::Arc::new(tokio::sync::Barrier::new(2));
+    let writers = (0..2).map(|n| {
+        let (core, iso, barrier) = (core.clone(), iso.clone(), barrier.clone());
+        tokio::spawn(async move {
+            let mut next = profile(1, vec![]);
+            next.name = format!("writer {n}");
+            let op = ProfileOp::PutProfile { profile: next };
+            barrier.wait().await;
+            let _lane = lock_save_lane("g", &op).await;
+            let admitted = admit_put(&core, &iso, SCOPE_A, "alice", &op)?;
+            // The commit is still in flight when the other writer is ready.
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            let Admitted::Profile(write, saved) = admitted else {
+                panic!("a profile save admits a profile");
+            };
+            apply_coalescable_write(&core, &write).unwrap();
+            Ok::<_, String>(saved)
+        })
+    });
+    let mut outcomes = Vec::new();
+    for writer in writers.collect::<Vec<_>>() {
+        outcomes.push(writer.await.unwrap());
+    }
+    let won: Vec<_> = outcomes.iter().filter_map(|o| o.as_ref().ok()).collect();
+    let lost: Vec<_> = outcomes.iter().filter_map(|o| o.as_ref().err()).collect();
+    assert_eq!(won.len(), 1, "{outcomes:?}");
+    assert_eq!(won[0].revision, 2);
+    assert_eq!(lost.len(), 1, "{outcomes:?}");
+    assert!(lost[0].contains("PROFILE_REVISION_CONFLICT"), "{}", lost[0]);
+    let stored = get(&core, &iso, SCOPE_A, "alice", "p-1").unwrap();
+    assert_eq!(stored.revision, 2);
+    assert_eq!(stored.name, won[0].name);
+}

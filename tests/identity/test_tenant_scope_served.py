@@ -79,12 +79,14 @@ def _unified_notes(client: SyncMedullaClient) -> set[str]:
 
 
 def _sql_notes(client: SyncMedullaClient) -> set[str]:
-    rows = client.query.sql("SELECT id FROM nodes WHERE type = 'Note'")
+    rows = client.query.sql("SELECT id FROM nodes WHERE node_type = 'Note'")
     return {row["id"] for row in rows}
 
 
 def _audit_lines(client: SyncMedullaClient) -> int:
-    return int(client.admin.audit_verify()["entries"])
+    # A served read is audited on the tenant's read-audit chain, which
+    # AuditVerify reports as `read_entries` (MEDULLA-IDENTITY-R023.5).
+    return int(client.admin.audit_verify()["read_entries"])
 
 
 def _audit_lines_after(client: SyncMedullaClient, expected: int) -> int:
@@ -94,6 +96,19 @@ def _audit_lines_after(client: SyncMedullaClient, expected: int) -> int:
     while count < expected and time.monotonic() < deadline:
         time.sleep(0.05)
         count = _audit_lines(client)
+    return count
+
+
+def _audit_lines_settled(client: SyncMedullaClient) -> int:
+    """The count once earlier reads' queued audit entries have all landed."""
+    deadline = time.monotonic() + 10
+    count = _audit_lines(client)
+    while time.monotonic() < deadline:
+        time.sleep(0.3)
+        again = _audit_lines(client)
+        if again == count:
+            break
+        count = again
     return count
 
 
@@ -131,15 +146,16 @@ def test_chain_visibility_and_unscopable_refusal(clean_graph):
         # the private middle graph and the foreign tenant never appear.
         assert _uql_notes(leaf) == VISIBLE_TO_LEAF
 
-        # One audit line per read.
-        before = _audit_lines(leaf)
-        _uql_notes(leaf)
-        assert _audit_lines_after(leaf, before + 1) == before + 1
+        # One audit line per read, written in two phases (R023.5): the
+        # reservation at admission and the outcome after the read, two entries.
+        before = _audit_lines_settled(leaf)
         _uql_notes(leaf)
         assert _audit_lines_after(leaf, before + 2) == before + 2
+        _uql_notes(leaf)
+        assert _audit_lines_after(leaf, before + 4) == before + 4
 
         # A plan binding no node variable is refused, runs nothing, is not audited.
-        settled = _audit_lines(leaf)
+        settled = _audit_lines_settled(leaf)
         with pytest.raises((EngineResponseError, RuntimeError)) as refused:
             leaf.query.unified([])
         assert "QUERY_UNSCOPABLE" in str(refused.value)

@@ -49,7 +49,11 @@ pub(crate) type SourceGroupMemo =
     std::cell::OnceCell<std::sync::Arc<medulla_graph_core::rls::SourceGroups>>;
 
 /// The one source access decision (MEDULLA-IDENTITY-R706), shared by the layer's own
-/// filter and the policy lease's mirror of it.
+/// filter and the policy lease's mirror of it. `None` when the node is not a governed
+/// source record (it carries no source access properties): the row rules decide it.
+/// `Some` is the whole decision for a governed record, taken instead of the row rules,
+/// so a record ingested without an owner is still readable by the callers its access
+/// properties admit.
 #[cfg(feature = "security")]
 pub(crate) fn source_gate(
     agent_id: &str,
@@ -58,23 +62,19 @@ pub(crate) fn source_gate(
     view: &medulla_graph_core::graph::GraphView,
     id: &str,
     groups: &SourceGroupMemo,
-) -> bool {
+) -> Option<bool> {
     use medulla_graph_core::rls;
-    let Some(blob) = view.node_properties.get(id) else {
-        return true;
-    };
+    let blob = view.node_properties.get(id)?;
     // Cheap byte probe so ungoverned nodes never pay a property decode.
     let key = rls::SOURCE_ACCESS_PUBLIC_KEY.as_bytes();
     if !blob.windows(key.len()).any(|window| window == key) {
-        return true;
+        return None;
     }
-    let Some(access) = rls::source_access(blob) else {
-        return true;
-    };
+    let access = rls::source_access(blob)?;
     if is_system {
-        return true;
+        return Some(true);
     }
-    rls::source_access_verdict(
+    Some(rls::source_access_verdict(
         &access,
         agent_id,
         roles,
@@ -86,7 +86,7 @@ pub(crate) fn source_gate(
         access_clock_ms(),
         rls::source_acl_stale_after_s(),
     )
-    .allows()
+    .allows())
 }
 
 impl IsolationLayer {
@@ -270,11 +270,13 @@ impl IsolationLayer {
                     .map(|blob| row_visibility(blob))
             })
             .unwrap_or_else(RowVisibility::default_public);
-        visibility.schema = view.schema_node_ids.contains(id);
-        if !self.can_see_row(agent_id, &visibility) {
-            return false;
+        // A governed source record is decided by the source gate alone; every other
+        // row, an unowned untagged one included, by the row rules.
+        if let Some(allowed) = self.source_gate_allows(agent_id, view, id, groups) {
+            return allowed;
         }
-        self.source_gate_allows(agent_id, view, id, groups)
+        visibility.schema = view.schema_node_ids.contains(id);
+        self.can_see_row(agent_id, &visibility)
     }
 
     /// The source access gate: a governed source record is visible only to a caller its
@@ -287,7 +289,7 @@ impl IsolationLayer {
         view: &medulla_graph_core::graph::GraphView,
         id: &str,
         groups: &SourceGroupMemo,
-    ) -> bool {
+    ) -> Option<bool> {
         let roles: &[String] = self
             .agents
             .get(agent_id)

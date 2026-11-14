@@ -146,7 +146,30 @@ pub struct BranchWriteReceipt {
 pub fn branch_target_graph(branch: &BranchRef) -> String {
     use sha2::{Digest, Sha256};
     let digest = hex::encode(Sha256::digest(branch.registry_key().as_bytes()));
-    format!("{}~branch~{}", branch.graph, &digest[..16])
+    format!(
+        "{}{BRANCH_TARGET_SEPARATOR}{}",
+        branch.graph,
+        &digest[..BRANCH_TARGET_DIGEST_CHARS]
+    )
+}
+
+/// The separator [`branch_target_graph`] puts between the base graph and the digest.
+const BRANCH_TARGET_SEPARATOR: &str = "~branch~";
+/// The hex characters of the digest a branch target graph name ends with.
+const BRANCH_TARGET_DIGEST_CHARS: usize = 16;
+
+/// The base graph of a branch target graph name, the inverse of
+/// [`branch_target_graph`]: `Some(base)` exactly when `target` is
+/// `{base}~branch~{16 lowercase hex}` with a non-empty base, otherwise `None`.
+/// A branch belongs to its base graph, so its write authority is the base's.
+pub fn branch_base_graph(target: &str) -> Option<&str> {
+    let (base, digest) = target.rsplit_once(BRANCH_TARGET_SEPARATOR)?;
+    let well_formed = !base.is_empty()
+        && digest.len() == BRANCH_TARGET_DIGEST_CHARS
+        && digest
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    well_formed.then_some(base)
 }
 
 /// The id of one branch commit: the SHA-256 of the branch key, the prior head,
@@ -383,6 +406,7 @@ mod tests {
         assert_ne!(a, b);
         assert_ne!(a, "g");
         assert!(a.starts_with("g~branch~"));
+        assert_eq!(branch_base_graph(&a), Some("g"));
         assert_eq!(a, branch_target_graph(&branch("a")));
     }
 
@@ -492,5 +516,15 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn branch_base_graph_inverts_only_well_formed_targets() {
+        assert_eq!(branch_base_graph("g~branch~0123456789abcdef"), Some("g"));
+        assert_eq!(branch_base_graph("g"), None);
+        assert_eq!(branch_base_graph("~branch~0123456789abcdef"), None);
+        assert_eq!(branch_base_graph("g~branch~0123"), None);
+        assert_eq!(branch_base_graph("g~branch~0123456789ABCDEF"), None);
+        assert_eq!(branch_base_graph("g~7e"), None);
     }
 }

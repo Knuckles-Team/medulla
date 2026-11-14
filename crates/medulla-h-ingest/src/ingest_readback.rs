@@ -182,7 +182,7 @@ pub fn receipt_node_id(receipt: &ReadbackReceipt) -> String {
 
 /// Lower a receipt to its one `:ReadbackReceipt` node write-set.
 pub fn lower(receipt: &ReadbackReceipt) -> Result<IndexWriteSet, String> {
-    let properties = json!({
+    let mut properties = json!({
         "type": READBACK_RECEIPT_TYPE,
         "write_receipt_digest": receipt.write_receipt_digest.to_hex(),
         "principal": receipt.principal,
@@ -192,6 +192,10 @@ pub fn lower(receipt: &ReadbackReceipt) -> Result<IndexWriteSet, String> {
         "mismatched_ids": receipt.mismatched_ids,
         "verdict": "matched",
     });
+    // The receipt is the reading principal's evidence, so it is that
+    // principal's row: an unowned row is hidden from every non-System reader,
+    // the principal included.
+    properties[medulla_graph_core::rls::RLS_OWNER_ID_KEY] = json!(receipt.principal);
     let methods = vec![Method::AddNode {
         node_id: receipt_node_id(receipt),
         properties_msgpack: rmp_serde::to_vec_named(&properties)
@@ -258,7 +262,20 @@ mod tests {
         let receipt = verify(&request(&["a", "b"]), "alice", &ok).unwrap();
         assert_eq!(receipt.verdict, ReadbackVerdict::Matched);
         assert_eq!(receipt.matched_ids, ["a", "b"]);
-        assert_eq!(lower(&receipt).unwrap().methods.len(), 1);
+        let lowered = lower(&receipt).unwrap();
+        assert_eq!(lowered.methods.len(), 1);
+        let Method::AddNode {
+            properties_msgpack, ..
+        } = &lowered.methods[0]
+        else {
+            panic!("a readback receipt lowers to one AddNode");
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(properties_msgpack).unwrap();
+        assert_eq!(
+            properties[medulla_graph_core::rls::RLS_OWNER_ID_KEY],
+            "alice",
+            "the receipt is owned by the reading principal"
+        );
 
         let stale = View(4, ok.1.clone());
         let refusal = verify(&request(&["a"]), "alice", &stale).unwrap_err();

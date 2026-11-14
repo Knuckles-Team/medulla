@@ -86,6 +86,8 @@ pub(super) async fn graph_at_level(
     ),
     String,
 > {
+    // After a restart a durable graph is cold until a request opens it.
+    medulla_server_api::api::reentry::ensure_graph_resident(state, graph).await;
     let guard = state.read().await;
     let entry = guard
         .registry

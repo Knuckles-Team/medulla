@@ -45,6 +45,9 @@ use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 mod throttle;
+// The cipher exists only in a build with encryption at rest.
+#[cfg(all(test, feature = "security"))]
+mod replay_tests;
 
 /// One capacity table opened for writing on one graph's scope.
 type CapacityRows<'a> = ScopedOwnerTableMut<'a, (&'static str, &'static str), &'static [u8]>;
@@ -74,6 +77,15 @@ struct DurableReplay {
     pub digest: String,
     pub operation: String,
     pub result: Vec<u8>,
+}
+
+impl DurableReplay {
+    /// The stored result. The row is sealed once as a whole and unsealed by
+    /// [`read_replay`]; the result inside is plain encoded bytes, never sealed
+    /// again.
+    fn decode_result<T: serde::de::DeserializeOwned>(&self) -> Result<T, String> {
+        decode_durable(&self.result)
+    }
 }
 
 /// Drop every capacity row of one graph inside an admitted group.
@@ -371,7 +383,7 @@ fn acquire(
                 "IDEMPOTENCY_CONFLICT: capacity acquire key has a different request".to_string(),
             );
         }
-        let mut result: CapacityAcquireResult = decode_durable(&crypto.unseal(&replay.result)?)?;
+        let mut result: CapacityAcquireResult = replay.decode_result()?;
         result.decision = CapacityDecision::Replayed;
         return Ok(result);
     }
@@ -595,7 +607,7 @@ fn check_mutation_replay(
             "IDEMPOTENCY_CONFLICT: capacity mutation key has a different request".to_string(),
         );
     }
-    let mut result: CapacityMutationResult = decode_durable(&crypto.unseal(&replay.result)?)?;
+    let mut result: CapacityMutationResult = replay.decode_result()?;
     result.decision = CapacityDecision::Replayed;
     Ok(Some(result))
 }

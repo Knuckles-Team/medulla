@@ -153,14 +153,16 @@ fn can_see_node_for_identities(
             .map(|blob| row_visibility(blob))
             .unwrap_or_else(RowVisibility::default_public),
     };
-    vis.schema = view.schema_node_ids.contains(id);
-    if !can_see_row_for_identities(identities, agent_id, &vis) {
-        return false;
-    }
     let identity = identities.get(agent_id);
     let is_system = identity.is_some_and(|identity| identity.role == AgentRole::System);
     let roles: &[String] = identity.map_or(&[], |identity| identity.roles.as_slice());
-    super::access_policy::source_gate(agent_id, is_system, roles, view, id, groups)
+    if let Some(allowed) =
+        super::access_policy::source_gate(agent_id, is_system, roles, view, id, groups)
+    {
+        return allowed;
+    }
+    vis.schema = view.schema_node_ids.contains(id);
+    can_see_row_for_identities(identities, agent_id, &vis)
 }
 
 /// Fail-closed mint-time error (contract §8, items 2/13/14).

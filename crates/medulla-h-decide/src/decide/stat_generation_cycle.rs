@@ -304,13 +304,22 @@ pub(super) fn run_cycle(
     if record.stored.is_none() {
         record.save(run)?;
     }
-    if record.job.cycle.state() == GenerationCycleState::Published {
+    let state = record.job.cycle.state();
+    if matches!(
+        state,
+        GenerationCycleState::Published | GenerationCycleState::Reembedding
+    ) {
         // The shadow generation is a new embedding space: a shadow graph that
         // declares none gets the model's, so an activated generation always
-        // has a space a reader can pin its query vectors to (R172.12.6).
+        // has a space a reader can pin its query vectors to (R172.12.6). The
+        // declaration is held with the resident graph, so a cycle resumed after
+        // a restart declares it again before its next batch; a space already
+        // declared is kept.
         run.gens
             .shadow
             .ensure_space(&model_space(&request.model_ref)?)?;
+    }
+    if state == GenerationCycleState::Published {
         fire(&mut record.job, GenerationCycleEvent::ReembedBegun, None)?;
         record.save(run)?;
     }
