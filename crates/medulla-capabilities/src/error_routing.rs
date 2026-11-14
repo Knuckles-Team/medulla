@@ -161,7 +161,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FEDERATED-QUERY-R709: a GeoSPARQL operand that is not WKT or
     // names an unsupported coordinate reference.
-    ("Sparql", &["GEO_CRS_UNSUPPORTED", "GEO_LITERAL_INVALID"]),
+    // MEDULLA-CQ-CONN-R084.7: a competency question names a pack the tenant has not imported.
+    (
+        "Sparql",
+        &[
+            "GEO_CRS_UNSUPPORTED",
+            "GEO_LITERAL_INVALID",
+            "PACK_NOT_IMPORTED",
+        ],
+    ),
+    // MEDULLA-TYPED-PACKS-R807: the conformance read or revoke finds no current evidence.
+    ("ConnectorPack", &["CONFORMANCE_EVIDENCE_ABSENT"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.3: a source that cannot give one snapshot.
     (
         "UnifiedQuery",
@@ -1278,6 +1288,11 @@ mod tests {
     #[test]
     fn connector_and_foreign_refusals_are_routed_to_their_served_methods() {
         assert!(method_allows_error("ConnectorPack", "SEED_TURTLE_INVALID"));
+        assert!(method_allows_error(
+            "ConnectorPack",
+            "CONFORMANCE_EVIDENCE_ABSENT"
+        ));
+        assert!(method_allows_error("Sparql", "PACK_NOT_IMPORTED"));
         assert!(method_allows_error(
             "UnifiedQuery",
             "SOURCE_APPROVAL_NOT_ADMITTED"
