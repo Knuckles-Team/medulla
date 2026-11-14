@@ -99,6 +99,12 @@ closed_error_codes! {
         /// The logical graph's pointer moved while a cycle activated
         /// (MEDULLA-DECISION-ENGINE-R174.4).
         GenerationPointerConflict => "GENERATION_POINTER_CONFLICT",
+        /// A schema-mapping question names no column, or an empty one
+        /// (MEDULLA-DECISION-ENGINE-R033.2.2).
+        SchemaMappingColumnMissing => "SCHEMA_MAPPING_COLUMN_MISSING",
+        /// A schema-mapping column names an SQL type outside the closed set
+        /// (MEDULLA-DECISION-ENGINE-R033.2.2).
+        SchemaMappingSqlTypeUnknown => "SCHEMA_MAPPING_SQL_TYPE_UNKNOWN",
         /// A thought-search question names no reasoning strategy in the
         /// pinned policy for its task class (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtStrategyUnknown => "THOUGHT_STRATEGY_UNKNOWN",

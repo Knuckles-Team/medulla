@@ -24,8 +24,28 @@ pub const W_TYPE: KnobSpec = weight("schema_mapping.w_type", 300_000);
 /// Weight of the fraction of sample values that validate.
 pub const W_SAMPLE: KnobSpec = weight("schema_mapping.w_sample", 200_000);
 
+/// The least score at which the top property is proposed
+/// (MEDULLA-DECISION-ENGINE-R033.2.2); below it the decision abstains.
+pub const ACCEPT_MIN: KnobSpec = KnobSpec {
+    name: "schema_mapping.accept_min",
+    unit: "score",
+    default: KnobValue::DecimalMicros(700_000),
+    min: KnobValue::DecimalMicros(0),
+    max: KnobValue::DecimalMicros(1_000_000),
+    safety: KnobSafety::Tunable,
+};
+
 /// Every `schema_mapping.*` knob, each `Tunable`.
-pub const KNOBS: &[KnobSpec] = &[W_NAME, W_TYPE, W_SAMPLE];
+pub const KNOBS: &[KnobSpec] = &[W_NAME, W_TYPE, W_SAMPLE, ACCEPT_MIN];
+
+/// The acceptance floor the pinned policy sets, in micros: the knob, or its
+/// default.
+pub fn accept_min_micros(policy: &DecisionPolicy) -> i64 {
+    match policy.knob(&ACCEPT_MIN) {
+        KnobValue::DecimalMicros(micros) => micros.clamp(0, 1_000_000),
+        _ => 700_000,
+    }
+}
 
 /// The weights the pinned policy sets, in micros: each knob, or its default.
 pub fn weights_micros(policy: &DecisionPolicy) -> [i64; 3] {
@@ -51,7 +71,8 @@ mod tests {
             vec![
                 "schema_mapping.w_name",
                 "schema_mapping.w_type",
-                "schema_mapping.w_sample"
+                "schema_mapping.w_sample",
+                "schema_mapping.accept_min"
             ]
         );
         for spec in KNOBS {
@@ -61,5 +82,6 @@ mod tests {
         }
         let policy = DecisionPolicy::engine_default();
         assert_eq!(weights_micros(&policy), [500_000, 300_000, 200_000]);
+        assert_eq!(accept_min_micros(&policy), 700_000);
     }
 }
