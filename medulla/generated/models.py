@@ -14268,6 +14268,13 @@ class MethodBeliefRevise(BaseModel):
     params: MethodBeliefReviseParams
 
 
+class MethodUsage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Usage"]
+    params: MethodUsageParams
+
+
 class MethodArchitectureModelImport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14970,6 +14977,7 @@ Method = Annotated[
         MethodArgumentMapEvaluate,
         MethodLoops,
         MethodBeliefRevise,
+        MethodUsage,
         MethodArchitectureModelImport,
         MethodArchitectureModelExport,
         MethodSourceSync,
@@ -31983,6 +31991,87 @@ class MethodBeliefReviseParams(BaseModel):
     request: BeliefReviseRequest
 
 
+class MethodUsageParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: UsageOp
+
+
+class UsageOutcome(str, Enum):
+    OK = "ok"
+    ERROR = "error"
+
+
+class UsageRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    child_id: str
+    content_digest: str
+    latency_ms: Annotated[int, Field(ge=0)]
+    model_key: str
+    operation: str
+    outcome: UsageOutcome
+    principal: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    run_id: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    tenant: str
+    tokens_cached: Annotated[int, Field(ge=0)]
+    tokens_in: Annotated[int, Field(ge=0)]
+    tokens_out: Annotated[int, Field(ge=0)]
+
+
+class PriceEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cached_per_mtok_micro: Annotated[int, Field(ge=0)]
+    in_per_mtok_micro: Annotated[int, Field(ge=0)]
+    model_key: str
+    out_per_mtok_micro: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    valid_from_ms: Annotated[int, Field(ge=0)]
+
+
+class PriceCatalog(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    aliases: dict[str, str]
+    entries: list[PriceEntry]
+
+
+class UsageOpAppend(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["append"]
+    records: list[UsageRecord]
+
+
+class UsageOpPutPrice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    catalog: PriceCatalog
+    op: Literal["put_price"]
+
+
+UsageOp = Annotated[
+    UsageOpAppend | UsageOpPutPrice,
+    Field(discriminator="op"),
+]
+
+
+class UsageAppended(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    appended: Annotated[int, Field(ge=0)]
+    batch_digest: str
+
+
+class UsagePriceStored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: Annotated[int, Field(ge=0)]
+
+
 class MethodBranchDiffParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -37341,6 +37430,17 @@ __all__ = [
     "MethodBatchParams",
     "MethodBeliefRevise",
     "MethodBeliefReviseParams",
+    "MethodUsage",
+    "MethodUsageParams",
+    "PriceCatalog",
+    "PriceEntry",
+    "UsageAppended",
+    "UsageOp",
+    "UsageOpAppend",
+    "UsageOpPutPrice",
+    "UsageOutcome",
+    "UsagePriceStored",
+    "UsageRecord",
     "MethodBranchDiff",
     "MethodBranchDiffParams",
     "MethodBranchReadAt",

@@ -18,6 +18,9 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_decision_types::decision::DecisionErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
+        medulla_decision_types::decision::usage::REFUSALS
+            .iter()
+            .any(|item| item.as_str() == code),
         medulla_decision_types::decision::statistical::StatisticalErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
@@ -105,6 +108,14 @@ mod tests {
                 "{code}"
             );
             assert!(declared_error_code(&code), "{code}");
+        }
+    }
+
+    #[test]
+    fn usage_ledger_refusals_reach_the_wire_with_their_code() {
+        // spec: MEDULLA-DECISION-ENGINE-R801.8
+        for code in medulla_decision_types::decision::usage::REFUSALS {
+            assert!(declared_error_code(code.as_str()), "{}", code.as_str());
         }
     }
 }

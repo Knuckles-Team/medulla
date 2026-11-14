@@ -760,6 +760,7 @@ mod tests {
         ("Claims", "native MutationBatch in statecharts.redb: one claim or sealed-artifact instance transition per control-owner WTX through the statechart store; local-only authority"),
         ("Loops", "native MutationBatch in statecharts.redb: one loop-state or loop-record instance transition per control-owner WTX through the statechart store; local-only authority"),
         ("DecisionLog", "native MutationBatch in agent_library.redb: one verify-replayed statistical record or one outcome evaluation per control-owner WTX; local-only authority"),
+        ("Usage", "MEDULLA-DECISION-ENGINE-R801.8: native MutationBatch in agent_library.redb: one usage batch (records, day buckets, audit line) or one price entry per control-owner WTX; local-only authority"),
         ("MutationOutbox", "owner-local outbox ledger rewind: bounded medulla-transaction transactions with a durable control cursor; local-only authority"),
         ("EdgeIndex", "tenant SQL owner maintenance writes: edge-index registration, generation parts and fenced drop, one WTX each; local-only authority"),
         ("ClaimWorkItem", "dedicated engine-native MutationBatch lease transition in mutation_batch.rs/redb_store.rs"),

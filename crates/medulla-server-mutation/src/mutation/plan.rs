@@ -726,6 +726,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "DecisionEval",
     "DecisionFit",
     "DecisionLog",
+    // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger in the same control owner.
+    "Usage",
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
@@ -791,6 +793,7 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),
         Method::DecisionLog { .. } => Some("DecisionLog"),
+        Method::Usage { .. } => Some("Usage"),
         Method::MutationOutbox { .. } => Some("MutationOutbox"),
         Method::EdgeIndex { .. } => Some("EdgeIndex"),
         _ => None,

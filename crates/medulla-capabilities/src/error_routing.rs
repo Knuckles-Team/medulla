@@ -1011,6 +1011,20 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "IncidentRelatedClaims",
         &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
     ),
+    // MEDULLA-DECISION-ENGINE-R801.4/R801.8: the usage ledger's refusals.
+    (
+        "Usage",
+        &[
+            "USAGE_UNKNOWN_TENANT",
+            "USAGE_NEGATIVE_COUNT",
+            "USAGE_CACHED_EXCEEDS_INPUT",
+            "USAGE_BATCH_TOO_LARGE",
+            "USAGE_BAD_DIGEST",
+            "USAGE_STORE_FAILED",
+            "PRICE_WINDOW_OVERLAP",
+            "PARAMETER_INVALID",
+        ],
+    ),
     // MEDULLA-SDLC-R002.4/R002.5: the served release record's refusals.
     (
         "RecordRelease",
