@@ -3,9 +3,16 @@
 R610.3: every served read entry point (`Uql`, `UnifiedQuery`, `Sql`) is narrowed to
 the verified tenant's own graph, the shared graphs of its ancestors and the
 commons, and nothing else.
-R610.6: a three-level tenant chain is read as each tenant; the visibility order,
+R610.6: a three-level tenant chain is read by its leaf; the visibility order,
 the one audit line per read and the refusal of an unscopable query hold on the
 served path.
+
+A deployed engine admits exactly one tenant: a request context naming any other
+tenant is refused at the door with AUTH_TENANT_MISMATCH. So the connected reader
+is always the deployment tenant, placed as the leaf of the chain, and the other
+tenants are only owners of stored nodes. Reading the same store as each of
+several tenants is proven at the read chokepoint, in
+`crates/medulla-h-query/src/query/planning.rs::tenant_scope_served_tests`.
 """
 
 import os
@@ -16,13 +23,13 @@ import pytest
 from medulla.client import EngineResponseError, SyncMedullaClient
 
 try:
-    from conftest import request_context
+    from conftest import TEST_TENANT, request_context
 except ModuleNotFoundError:  # package-root import
-    from tests.conftest import request_context
+    from tests.conftest import TEST_TENANT, request_context
 
 ROOT = "tenant-root"
 MID = "tenant-mid"
-LEAF = "tenant-leaf"
+LEAF = TEST_TENANT  # the one tenant the engine admits
 OTHER = "tenant-other"
 
 # The root shares its graph with descendants; the middle tenant keeps its graph private.
@@ -43,13 +50,9 @@ NOTES = {
     "note-commons": {"node_type": "Note"},
 }
 
-# What each tenant reads: own graph, the sharing ancestors' graphs, the commons.
-VISIBLE = {
-    ROOT: {"note-root", "note-commons"},
-    MID: {"note-mid", "note-root", "note-commons"},
-    LEAF: {"note-leaf", "note-root", "note-commons"},
-    OTHER: {"note-other", "note-commons"},
-}
+# What the leaf reads: own graph, the sharing root's graph, the commons; the
+# private middle graph and the foreign tenant's graph stay hidden.
+VISIBLE_TO_LEAF = {"note-leaf", "note-root", "note-commons"}
 
 
 def _connect(tenant: str) -> SyncMedullaClient:
@@ -96,18 +99,25 @@ def _audit_lines_after(client: SyncMedullaClient, expected: int) -> int:
 
 @pytest.mark.spec("MEDULLA-IDENTITY-R610.3")
 # spec: MEDULLA-IDENTITY-R610.3
-@pytest.mark.parametrize("tenant", [ROOT, MID, LEAF, OTHER])
-def test_scope_predicate_injected_on_served_read(clean_graph, tenant):
-    """Each entry point returns the tenant's own, shared-ancestor and commons notes."""
+def test_scope_predicate_injected_on_served_read(clean_graph):
+    """Each entry point returns only own, shared-ancestor and commons notes.
+
+    A context naming a foreign tenant is refused at the door.
+    """
     _seed(clean_graph)
-    client = _connect(tenant)
+    client = _connect(LEAF)
     try:
-        expected = VISIBLE[tenant]
-        assert _uql_notes(client) == expected
-        assert _unified_notes(client) == expected
-        assert _sql_notes(client) == expected
+        assert _uql_notes(client) == VISIBLE_TO_LEAF
+        assert _unified_notes(client) == VISIBLE_TO_LEAF
+        assert _sql_notes(client) == VISIBLE_TO_LEAF
     finally:
         client.close()
+    foreign = _connect(OTHER)
+    try:
+        with pytest.raises(EngineResponseError, match="AUTH_TENANT_MISMATCH"):
+            _uql_notes(foreign)
+    finally:
+        foreign.close()
 
 
 @pytest.mark.spec("MEDULLA-IDENTITY-R610.6")
@@ -119,7 +129,7 @@ def test_chain_visibility_and_unscopable_refusal(clean_graph):
     try:
         # Visibility order: own graph, the sharing ancestor, then the commons;
         # the private middle graph and the foreign tenant never appear.
-        assert _uql_notes(leaf) == {"note-leaf", "note-root", "note-commons"}
+        assert _uql_notes(leaf) == VISIBLE_TO_LEAF
 
         # One audit line per read.
         before = _audit_lines(leaf)
@@ -136,6 +146,6 @@ def test_chain_visibility_and_unscopable_refusal(clean_graph):
         time.sleep(0.3)
         assert _audit_lines(leaf) == settled
         # The graph is unchanged: the same read returns the same visible set.
-        assert _uql_notes(leaf) == {"note-leaf", "note-root", "note-commons"}
+        assert _uql_notes(leaf) == VISIBLE_TO_LEAF
     finally:
         leaf.close()

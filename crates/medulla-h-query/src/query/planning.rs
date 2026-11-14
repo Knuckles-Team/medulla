@@ -1281,6 +1281,103 @@ mod tenant_scope_served_tests {
         );
     }
 
+    /// One store holding four tenants: `mid` -> `root` with `root` shared,
+    /// `leaf` -> `mid` with `mid` private, a foreign `other`, and an unplaced
+    /// commons note.
+    fn chain_graph() -> (Arc<GraphCore>, Arc<GraphView>) {
+        let core = GraphCore::new();
+        core.add_node(
+            "link-mid".into(),
+            blob(serde_json::json!({
+                "node_type": "TenantParent", "tenant": "mid", "parent": "root", "shared": true,
+            })),
+        );
+        core.add_node(
+            "link-leaf".into(),
+            blob(serde_json::json!({
+                "node_type": "TenantParent", "tenant": "leaf", "parent": "mid",
+            })),
+        );
+        for tenant in ["root", "mid", "leaf", "other"] {
+            core.add_node(
+                format!("note-{tenant}"),
+                blob(serde_json::json!({ "node_type": "Note", "_tenant": tenant })),
+            );
+        }
+        core.add_node(
+            "note-commons".into(),
+            blob(serde_json::json!({ "node_type": "Note" })),
+        );
+        let view = core.analysis_snapshot();
+        (Arc::new(core), Arc::new(view))
+    }
+
+    async fn visible_notes(
+        core: &Arc<GraphCore>,
+        snap: Arc<GraphView>,
+        tenant: &str,
+    ) -> Vec<String> {
+        let rows = run(core, snap, Plan::new(vec![Op::ScanAll {}]), tenant)
+            .await
+            .expect("the chokepoint scopes and runs")
+            .expect("the scoped read executes");
+        let mut ids: Vec<String> = rows
+            .into_iter()
+            .map(|(id, _)| id)
+            .filter(|id| id.starts_with("note-"))
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    /// Several tenants read the SAME store through the one chokepoint: each sees
+    /// its own graph, its sharing ancestors' graphs and the commons, and nothing
+    /// else. A private ancestor (`mid`) is skipped while a shared one further up
+    /// (`root`) still reaches the leaf; the foreign tenant sees only its own.
+    // spec: MEDULLA-IDENTITY-R610.3
+    #[tokio::test]
+    async fn tenants_in_one_store_see_own_shared_ancestors_and_commons_only() {
+        let (core, snap) = chain_graph();
+        let expected: [(&str, &[&str]); 4] = [
+            ("root", &["note-commons", "note-root"]),
+            ("mid", &["note-commons", "note-mid", "note-root"]),
+            ("leaf", &["note-commons", "note-leaf", "note-root"]),
+            ("other", &["note-commons", "note-other"]),
+        ];
+        for (tenant, want) in expected {
+            assert_eq!(
+                visible_notes(&core, snap.clone(), tenant).await,
+                want.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>(),
+                "tenant {tenant} reads exactly its own, shared-ancestor and commons notes"
+            );
+        }
+    }
+
+    /// The three-level chain read by its leaf, then an unscopable plan from the
+    /// same leaf: refused with `QUERY_UNSCOPABLE`, and the store is unchanged.
+    // spec: MEDULLA-IDENTITY-R610.6
+    #[tokio::test]
+    async fn chain_leaf_reads_in_order_and_unscopable_plan_is_refused() {
+        let (core, snap) = chain_graph();
+        let want = vec!["note-commons", "note-leaf", "note-root"];
+        assert_eq!(visible_notes(&core, snap.clone(), "leaf").await, want);
+        let version = core.version();
+        let refused = run(
+            &core,
+            snap.clone(),
+            Plan::new(vec![Op::Filter { preds: Vec::new() }]),
+            "leaf",
+        )
+        .await
+        .expect_err("an unscopable plan refuses before anything runs");
+        assert!(
+            format!("{refused:?}").contains("QUERY_UNSCOPABLE"),
+            "the refusal carries the typed code: {refused:?}"
+        );
+        assert_eq!(core.version(), version, "the refusal changes nothing");
+        assert_eq!(visible_notes(&core, snap, "leaf").await, want);
+    }
+
     /// A plan with no bound node variable has nothing for the tenant predicate to
     /// bind to, so the chokepoint refuses before anything runs (the typed
     /// `QUERY_UNSCOPABLE` code of MEDULLA-IDENTITY-R610.4, bound in
