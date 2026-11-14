@@ -532,6 +532,7 @@ def _materialisation_document(declaration: str, capability: bool = True) -> str:
 @prefix vg: <{MAT_VG}> .
 @prefix kg: <{MAT_CORE}> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex: <urn:cc:materialisation:> .
 ex:conn a vg:SourceConnection ; vg:sourceKind "sql" ; vg:endpointRef ex:ep ;
     vg:foreignSourceName "{MAT_SOURCE}" ; vg:sourceRole "live_truth"{copy} .
@@ -550,7 +551,8 @@ ex:row a vg:SourceAuthority ; vg:authoritativeSource ex:conn ;
 
 
 ACCELERATED = (
-    '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ; '
+    '; vg:materialisation "accelerated" ; '
+    'vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger ; '
     'vg:materialisationReason "the table is slow and read often"'
 )
 
@@ -665,7 +667,8 @@ def test_6_materialisation(clean_graph, pg_source) -> None:
     # Refusals: an accelerated row without its reason, its bound or the copy capability.
     for bad, capability, message in [
         (
-            '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300',
+            '; vg:materialisation "accelerated" ; '
+            'vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger',
             True,
             "materialisationReason",
         ),
