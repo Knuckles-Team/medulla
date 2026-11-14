@@ -991,6 +991,7 @@ async fn demotion_run() {
                             .map(|id| ReturnedEvidence {
                                 evidence_id: id.clone(),
                                 content_class: Some("prose".to_string()),
+                                raw_score_ppm: None,
                             })
                             .collect(),
                     )
@@ -998,6 +999,7 @@ async fn demotion_run() {
                     cited: BoundedVec::new(vec![cited]).unwrap(),
                     query: None,
                     path: None,
+                    scorer_version: None,
                 }),
             },
         }),
