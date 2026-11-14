@@ -167,7 +167,7 @@ pub enum CoverageResult {
         facet: Option<String>,
         source: String,
         mapping_name: String,
-        /// The other candidates for the same class, in selection order.
+        /// The sources of the other candidates for the same class, in selection order.
         alternates: Vec<String>,
         path: Vec<SourceSelectionHop>,
         premises: Vec<Premise>,
@@ -1099,7 +1099,7 @@ fn covered(
             premises.push(authority_premise(candidate.row));
         }
         if position != index {
-            alternates.push(candidate.row.mapping_name.clone());
+            alternates.push(candidate.row.source.clone());
         }
     }
     CoverageResult::Covered {

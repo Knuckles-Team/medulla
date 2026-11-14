@@ -69,7 +69,7 @@ fn the_incident_fixture_parses_passes_the_shapes_and_selects_rank_one() {
             source, alternates, ..
         } => {
             assert_eq!(source, "servicenow-mcp");
-            assert_eq!(alternates, ["urn:eg:fixture:incident:pd-incidents"]);
+            assert_eq!(alternates, ["pagerduty-mcp"]);
         }
         other => panic!("expected ServiceNow, got {other:?}"),
     }
