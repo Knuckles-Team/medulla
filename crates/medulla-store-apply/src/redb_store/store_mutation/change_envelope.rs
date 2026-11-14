@@ -187,7 +187,7 @@ fn stale_content_or(
     crypto: DurableCrypto<'_>,
     error: String,
 ) -> String {
-    if !error.starts_with("WRITE_CONFLICT") {
+    if !error.contains("WRITE_CONFLICT:") {
         return error;
     }
     let current = medulla_store::redb_store::store_read::read_content_version(

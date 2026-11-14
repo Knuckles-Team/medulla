@@ -369,8 +369,11 @@ pub fn admit(
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_owned();
+        // The principal nodes are plain node writes: the atomic graph-row kernel
+        // that commits a served node write lowers `AddNode`, not
+        // `CreateNodeIfAbsent`, and their two keys are the same on every write.
         for principal_id in [network.subject.as_str(), network.peer.as_str()] {
-            out.push(Method::CreateNodeIfAbsent {
+            out.push(Method::AddNode {
                 node_id: principal_node(principal_id),
                 properties_msgpack: encode(
                     json!({ "type": "Person", "principal_id": principal_id })

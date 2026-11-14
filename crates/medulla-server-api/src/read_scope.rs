@@ -162,6 +162,12 @@ const METADATA_LABELS: [&str; 3] = ["Preference", "ClientMetadata", "Interaction
 /// `Preference` shared at `tenant` or `placement` scope, which reaches readers in
 /// the owner's tenant (every reader of the graph for `placement`).
 fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
+    // Metadata rows hold the owner's hashed identity and its tenant scope
+    // (MEDULLA-IDENTITY-R023.10), so the reader is compared in that domain.
+    let reader = crate::mutation_batch::identity_metadata::principal_persistence_id(
+        &caller.principal.id,
+    );
+    let reader_tenant = crate::carrier::tenant_scope_of(&caller.principal.tenant);
     let mut hidden = BTreeSet::new();
     for label in METADATA_LABELS {
         for (id, map) in nodes_with(view, label.as_bytes()) {
@@ -169,14 +175,15 @@ fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
                 continue;
             }
             let owner = text(&map, "owner").unwrap_or_default();
-            if owner == caller.principal.id {
+            if !caller.principal.id.is_empty() && owner == reader {
                 continue;
             }
             let shared = label == "Preference"
                 && match text(&map, "share") {
                     Some("placement") => true,
                     Some("tenant") => {
-                        text(&map, OWNER_TENANT_KEY).unwrap_or_default() == caller.principal.tenant
+                        !caller.principal.tenant.is_empty()
+                            && text(&map, OWNER_TENANT_KEY).unwrap_or_default() == reader_tenant
                     }
                     _ => false,
                 };
