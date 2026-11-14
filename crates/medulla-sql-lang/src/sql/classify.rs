@@ -804,10 +804,9 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
 /// `CREATE SEQUENCE` and `DROP SEQUENCE` (MEDULLA-ENGINE-PARITY-R013.2).
 fn classify_sequence_precheck(sql: &str) -> Option<Result<StatementKind, String>> {
     if let Some(parsed) = super::sequence_ddl::parse_create_sequence(sql) {
-        return Some(parsed.map(|(def, if_not_exists)| StatementKind::CreateSequence {
-            def,
-            if_not_exists,
-        }));
+        return Some(
+            parsed.map(|(def, if_not_exists)| StatementKind::CreateSequence { def, if_not_exists }),
+        );
     }
     super::sequence_ddl::parse_drop_sequence(sql).map(|parsed| {
         parsed.map(|(name, if_exists)| StatementKind::DropSequence { name, if_exists })
@@ -4384,6 +4383,8 @@ mod tests {
                 ref_columns: vec!["id".into()],
                 on_delete: RefAction::Cascade,
                 on_update: RefAction::SetNull,
+                deferrable: false,
+                initially_deferred: false,
             }
         );
     }
@@ -4405,6 +4406,8 @@ mod tests {
                 ref_columns: vec!["id".into()],
                 on_delete: RefAction::NoAction,
                 on_update: RefAction::NoAction,
+                deferrable: false,
+                initially_deferred: false,
             }
         );
     }

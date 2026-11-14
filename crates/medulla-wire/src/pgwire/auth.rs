@@ -35,6 +35,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use futures::SinkExt;
 
 use pgwire::api::auth::finish_authentication;
 use pgwire::api::auth::sasl::scram::{gen_salted_password, ScramAuth, SCRAM_ITERATIONS};
@@ -111,10 +112,16 @@ fn derive_salt(secret: &str, user: &str) -> Vec<u8> {
 /// (`Hi(password, salt, iters)`) plus the salt; pgwire's SCRAM handler verifies the
 /// client's proof against it. We compute both deterministically from the engine
 /// secret + the connecting user, so no password is ever persisted.
-#[derive(Debug)]
 struct EngineAuthSource {
     secret: String,
     logins: Arc<dyn WireLoginSource>,
+}
+
+impl std::fmt::Debug for EngineAuthSource {
+    // The secret and the login source are never printed.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EngineAuthSource").finish_non_exhaustive()
+    }
 }
 
 /// The `verifier` of a `Password` wire login: `<salt hex>:<SCRAM salted password
