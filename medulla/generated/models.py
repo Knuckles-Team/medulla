@@ -472,7 +472,7 @@ from .fleet_catalog import (
 )
 from .graph_schema import (
     BoundedVec_GraphSchemaSourceView_32,
-    BoundedVec_GraphSchemaSourceView_64,
+    BoundedVec_GraphSchemaSourceView_96,
     BoundedVec_GraphSchemaTermView_1000,
     FieldContract,
     GraphSchemaClassesView,
@@ -33546,7 +33546,7 @@ __all__ = [
     "BoundedVec_ForeignReadExecutionRef_16",
     "BoundedVec_GenerationEvalItem_1024",
     "BoundedVec_GraphSchemaSourceView_32",
-    "BoundedVec_GraphSchemaSourceView_64",
+    "BoundedVec_GraphSchemaSourceView_96",
     "BoundedVec_GraphSchemaTermView_1000",
     "BoundedVec_HarnessContrast_8",
     "BoundedVec_IndexDiagnostic_8",
