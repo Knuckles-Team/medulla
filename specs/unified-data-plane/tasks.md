@@ -278,7 +278,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
 - [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
 - [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
-- [ ] T177a [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job
+- [x] T177a [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job
 - [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
 - [ ] T178 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.1 Column-level lineage from SQL text: Model
 - [ ] T179 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.2 Derive column edges from SQL with the shared parser

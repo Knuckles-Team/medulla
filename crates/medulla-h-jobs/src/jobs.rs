@@ -552,8 +552,9 @@ fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
         JobKind::ProgramOptimize { .. } => false,
         // The dataset is read from the tenant's own table store by the worker.
         JobKind::DatasetProfile { .. } => false,
-        // The worker reads only the tenant's QualityRule configuration nodes and the
-        // target from the tenant's own table store.
+        // Submit reads no row. The worker reads the tenant's QualityRule nodes, a SQL
+        // target from the tenant's table store, and a shape target only through the
+        // job actor's row-level view (`executor_quality::ActorRows`).
         JobKind::QualityEvaluate { .. } => false,
         // The log is read from the attached source by the worker, never from graph rows.
         JobKind::SourceQueryLogIngest { .. } => false,

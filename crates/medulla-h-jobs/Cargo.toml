@@ -30,8 +30,10 @@ medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-program = { path = "../medulla-program" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-sql = { path = "../medulla-sql", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-stream = { path = "../medulla-stream" }
@@ -59,7 +61,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc", optional = true }
 medulla-retrieval = { path = "../medulla-retrieval" }
 
 [features]
-security = ["medulla-server-api/security"]
+security = ["medulla-isolation/security", "medulla-server-api/security"]
 default = []
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
 jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
@@ -72,6 +74,8 @@ statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medu
 decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
 # The governed-action outbox events (MEDULLA-UNIFIED-DATA-PLANE-R700.3).
 streaming = ["dep:medulla-server-cdc", "medulla-server-cdc/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]
+# Shape-rule measurement of the quality job (MEDULLA-UNIFIED-DATA-PLANE-R762.9).
+shacl = ["dep:medulla-shacl", "dep:medulla-rdf", "medulla-rdf/sparql", "medulla-server-api/shacl"]
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
 viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-raft/viz", "medulla-server-api/viz", "medulla-query-types/viz"]
 modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "server"]

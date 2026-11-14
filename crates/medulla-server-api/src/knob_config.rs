@@ -572,6 +572,9 @@ knobs! {
     /// Correlation window of the incident a failing quality rule records
     /// (MEDULLA-UNIFIED-DATA-PLANE-R762.3).
     quality_incident_window_ms: u64 = "quality.incident_window_ms", U64(86_400_000), [60_000, 2_592_000_000], "ms", Tunable;
+    /// Most focus nodes one shape rule of a `QualityEvaluate` job validates
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R762.9).
+    quality_max_focus_nodes: u64 = "quality.max_focus_nodes", U64(100_000), [1, 10_000_000], "nodes", Tunable;
     /// Most rules one `QualityEvaluate` job evaluates (MEDULLA-UNIFIED-DATA-PLANE-R762.3).
     quality_max_rules: u64 = "quality.max_rules", U64(1_000), [1, 100_000], "rules", Tunable;
     /// Most incidents one `QualityEvaluate` job loads for correlation

@@ -1191,7 +1191,7 @@ obda-wire = ["medulla-server/obda-wire", "obda"]
 # cannot accept a schema while silently dropping its DL restrictions. The
 # `Method::ShaclValidate` handler is gated on this feature. Pure Rust — links NO
 # C/native dep — and is included in the one main build alongside rdf/sparql.
-shacl = ["medulla-server/shacl", "medulla-h-admin/shacl", "medulla-h-query/shacl", "medulla-h-sparql/shacl", "medulla-h-decide/shacl", "medulla-h-graph/shacl", "medulla-raft/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-cdc/shacl", "medulla-server-mutation/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "medulla-kernel/shacl", "rdf", "owl-dl", "dep:medulla-shacl", "medulla-server-served-tests/shacl", "medulla-server-router/shacl", "medulla-persistence-tests/shacl"]
+shacl = ["medulla-server/shacl", "medulla-h-admin/shacl", "medulla-h-query/shacl", "medulla-h-sparql/shacl", "medulla-h-decide/shacl", "medulla-h-graph/shacl", "medulla-h-jobs/shacl", "medulla-raft/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-cdc/shacl", "medulla-server-mutation/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "medulla-kernel/shacl", "rdf", "owl-dl", "dep:medulla-shacl", "medulla-server-served-tests/shacl", "medulla-server-router/shacl", "medulla-persistence-tests/shacl"]
 # ShEx (Shape Expressions) Core validation (CONCEPT:MEDULLA-133) — the pure-Rust medulla-shex
 # engine, the complement to `shacl`. IMPLIES `rdf` (it validates focus nodes of an RDF
 # data graph against a ShExJ schema); the `Method::ShexValidate` handler is gated on this

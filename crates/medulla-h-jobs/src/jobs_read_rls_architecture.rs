@@ -70,10 +70,12 @@ const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
     ),
     (
         "QualityEvaluate",
-        "names one target dataset; the worker reads only the QualityRule \
-         configuration nodes stamped with the job's verified tenant (written \
-         by QualityRulePut) and the target from that tenant's own table \
-         store -- no caller data row is read from `core`",
+        "names one target; submit reads no row. The worker reads the \
+         QualityRule configuration nodes stamped with the job's verified tenant \
+         (written by QualityRulePut), a SQL target from that tenant's own table \
+         store, and a shape target only from the snapshot filtered through the \
+         job actor's row-level view (`IsolationLayer::filter_view`, the predicate \
+         `GraphReadAuthority::filter_view` applies) -- never the raw core",
     ),
     (
         "SourceQueryLogIngest",

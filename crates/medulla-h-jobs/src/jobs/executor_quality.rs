@@ -10,6 +10,12 @@
 //! nodes, the `scoreOf` edges, the rules' updated failure counters and the incident
 //! nodes commit as ONE `MutationBatch`. A rule in the `proposed` state is skipped and
 //! counted in the job result as `skipped_proposed`.
+//!
+//! Measurement per compiled rule kind (MEDULLA-UNIFIED-DATA-PLANE-R762.9): a SQL rule
+//! runs its pushed aggregate over the tenant's table store; a shape rule validates the
+//! tenant's nodes of the target label as SHACL focus nodes against one shape of the
+//! graph's composed GraphSchema shapes; a freshness rule reads the change-capture lag of
+//! the tenant's durable cursor for the target source.
 
 use super::data_plane_write::{
     commit_job_methods, edge_method, node_method, upsert_operations_to_methods,
@@ -25,6 +31,7 @@ use medulla_core::quality::{
     compile_rule, evaluate_rule, track_failure, CompiledRule, Evaluation, IncidentSink,
     Measurement, QualityAnomaly,
 };
+use medulla_protocol_types::change_envelope::{ChangeCursor, CursorPosition};
 use medulla_stream::telemetry::incident_authority::IncidentAuthority;
 use medulla_stream::telemetry::incident_nodes::{
     incident_operations, incident_record, INCIDENT_TYPE,
@@ -39,6 +46,10 @@ pub(super) const QUALITY_SCORE_LABEL: &str = "QualityScore";
 pub(super) const SCORE_OF: &str = "scoreOf";
 /// The checker of an engine-measured score.
 pub(super) const NATIVE_CHECKER: &str = "native";
+
+/// The prefix of a graph-shape rule target: `graph:<label>`.
+#[cfg(feature = "shacl")]
+const GRAPH_TARGET_PREFIX: &str = "graph:";
 
 /// The verified target of one quality claim.
 pub(super) struct QualityTarget {
@@ -152,21 +163,216 @@ fn measure_sql(
     })
 }
 
-/// Measure one compiled rule. A SQL rule runs over the tenant's native target; a shape or
-/// freshness rule has no measurement on this worker yet and is reported unscored with
-/// `QUALITY_MEASURE_UNAVAILABLE` (MEDULLA-UNIFIED-DATA-PLANE-R762.9).
-#[cfg(feature = "query")]
-fn measure(
-    view: &medulla_graph_core::graph::GraphView,
-    store: &medulla_table_store::tables::TableStore,
-    compiled: &CompiledRule,
-) -> Result<Measurement, String> {
-    match compiled {
-        CompiledRule::Sql { statement } => measure_sql(view, store, statement)
-            .map_err(|error| format!("QUALITY_MEASURE_UNAVAILABLE: {error}")),
-        CompiledRule::Shape { .. } | CompiledRule::Freshness { .. } => {
-            Err("QUALITY_MEASURE_UNAVAILABLE: this rule kind is not measured here".to_string())
+/// The source partition a freshness rule reads: the whole-source cursor.
+const FRESHNESS_PARTITION: &str = "";
+
+/// The capture lag of one durable change cursor at `now_ms`: the time since the newest
+/// source position it accepted. Only a time-ordered cursor has a lag.
+fn cursor_lag(cursor: Option<&ChangeCursor>, now_ms: i64) -> Result<u64, String> {
+    match cursor.map(|cursor| &cursor.position) {
+        Some(CursorPosition::TimestampMillis(at)) => Ok(now_ms.saturating_sub(*at).max(0) as u64),
+        Some(_) => Err(
+            "QUALITY_MEASURE_UNAVAILABLE: the source cursor carries no capture time".to_string(),
+        ),
+        None => Err(
+            "QUALITY_MEASURE_UNAVAILABLE: no change capture is recorded for the source".to_string(),
+        ),
+    }
+}
+
+/// The change-capture lag of the claim's source, read once per claim from the tenant's
+/// durable cursor (MEDULLA-UNIFIED-DATA-PLANE-R008 cursor rows, keyed by graph, tenant,
+/// source and partition). Read only when an approved freshness rule needs it.
+async fn freshness_lag(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    target: &QualityTarget,
+    rules: &[StoredRule],
+    now_ms: i64,
+) -> Option<Result<u64, String>> {
+    let needed = rules.iter().any(|stored| {
+        matches!(
+            compile_rule(&stored.rule),
+            Ok(CompiledRule::Freshness { .. })
+        )
+    });
+    if !needed {
+        return None;
+    }
+    let persistence = state.read().await.persistence.clone();
+    let Some(backend) = persistence else {
+        return Some(Err(
+            "QUALITY_MEASURE_UNAVAILABLE: change-capture persistence is unavailable".to_string(),
+        ));
+    };
+    let fname = medulla_kernel::persist::sanitize(graph);
+    let cursor = backend
+        .read_change_cursor(&fname, &target.tenant, &target.target, FRESHNESS_PARTITION)
+        .await
+        .map_err(|_| "QUALITY_MEASURE_UNAVAILABLE: the change cursor cannot be read".to_string());
+    Some(cursor.and_then(|cursor| cursor_lag(cursor.as_ref(), now_ms)))
+}
+
+/// The namespace a shape IRI lives in: everything up to and including its last `#`,
+/// `/` or `:`. The tenant's nodes are projected under it, so the shape's property paths
+/// name the node properties in the shape's own vocabulary.
+#[cfg(feature = "shacl")]
+fn shape_namespace(iri: &str) -> &str {
+    iri.rfind(['#', '/'])
+        .or_else(|| iri.rfind(':'))
+        .map_or(iri, |at| &iri[..=at])
+}
+
+/// The rows the job's actor may read: the same row-level predicate every served graph
+/// read applies (`IsolationLayer::filter_view`, which `GraphReadAuthority::filter_view`
+/// delegates to), applied to the snapshot a shape rule validates.
+pub(super) struct ActorRows {
+    #[cfg(feature = "security")]
+    isolation: medulla_isolation::isolation::IsolationLayer,
+    #[cfg(feature = "security")]
+    actor: String,
+}
+
+impl ActorRows {
+    async fn of(state: &Arc<RwLock<ServerState>>, actor: &str) -> Self {
+        #[cfg(feature = "security")]
+        {
+            Self {
+                isolation: state.read().await.isolation.clone(),
+                actor: actor.to_string(),
+            }
         }
+        #[cfg(not(feature = "security"))]
+        {
+            let _ = (state, actor);
+            Self {}
+        }
+    }
+
+    /// The snapshot of `core` with every row the actor may not read removed.
+    fn view(
+        &self,
+        core: &medulla_graph_core::graph::GraphCore,
+    ) -> medulla_graph_core::graph::GraphView {
+        #[cfg(feature = "security")]
+        {
+            let mut view = core.analysis_snapshot();
+            self.isolation.filter_view(&self.actor, &mut view);
+            view
+        }
+        #[cfg(not(feature = "security"))]
+        {
+            core.analysis_snapshot()
+        }
+    }
+}
+
+/// Measure one shape rule: the nodes of the target label that the job's actor may read
+/// are the focus nodes, validated against the shape `iri` of the graph's composed
+/// GraphSchema shapes over the RDF projection of that same row-filtered snapshot. A
+/// node with any validation result is a failed row.
+#[cfg(feature = "shacl")]
+fn measure_shape(
+    core: &medulla_graph_core::graph::GraphCore,
+    rows: &ActorRows,
+    target: &QualityTarget,
+    iri: &str,
+) -> Result<Measurement, String> {
+    use medulla_rdf::oxrdf::{NamedNode, Term};
+    let label = target
+        .target
+        .strip_prefix(GRAPH_TARGET_PREFIX)
+        .unwrap_or(&target.target);
+    let composed =
+        medulla_server_api::schema_compose::validate_and_compose(&core.schema_sources())?;
+    if composed.shapes.is_empty() {
+        return Err("the graph has no committed GraphSchema shapes".to_string());
+    }
+    let view = rows.view(core);
+    let projection = medulla_rdf::sparql::Projection::from_wire(shape_namespace(iri), "");
+    let mut data = medulla_shacl::Graph::new();
+    for triple in &medulla_rdf::mapping::export_view_projected(&view, &projection)? {
+        data.insert(triple);
+    }
+    let mut labelled: Vec<&String> = view
+        .node_properties
+        .iter()
+        .filter(|(_, properties)| {
+            medulla_types::msgpack::decode_property_value(properties)
+                .ok()
+                .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some(label))
+        })
+        .map(|(node_id, _)| node_id)
+        .collect();
+    labelled.sort_unstable();
+    labelled.truncate(medulla_server_api::knob_config::knobs().quality_max_focus_nodes as usize);
+    let mut focus = Vec::with_capacity(labelled.len());
+    for node_id in labelled {
+        let projected = projection.node_iri(node_id);
+        let bare = projected
+            .strip_prefix('<')
+            .and_then(|rest| rest.strip_suffix('>'))
+            .unwrap_or(&projected);
+        let node = NamedNode::new(bare)
+            .map_err(|_| format!("node `{node_id}` has no RDF identity under the shape"))?;
+        focus.push(Term::NamedNode(node));
+    }
+    let report = medulla_shacl::validate_nodes(&composed.shapes, &data, iri, &focus)?;
+    let violating: std::collections::HashSet<&str> = report
+        .results
+        .iter()
+        .map(|result| result.focus_node.as_str())
+        .collect();
+    let failed = focus
+        .iter()
+        .filter(|node| violating.contains(node.to_string().as_str()))
+        .count();
+    Ok(Measurement::Rows {
+        checked: focus.len() as u64,
+        failed: failed as u64,
+    })
+}
+
+#[cfg(not(feature = "shacl"))]
+fn measure_shape(
+    _core: &medulla_graph_core::graph::GraphCore,
+    _rows: &ActorRows,
+    _target: &QualityTarget,
+    _iri: &str,
+) -> Result<Measurement, String> {
+    Err("this worker has no SHACL validator".to_string())
+}
+
+/// What one measurement reads: the snapshot, the tenant's table store and the claim's
+/// change-capture lag.
+#[cfg(feature = "query")]
+struct MeasureInputs<'a> {
+    core: &'a medulla_graph_core::graph::GraphCore,
+    view: &'a medulla_graph_core::graph::GraphView,
+    store: &'a medulla_table_store::tables::TableStore,
+    target: &'a QualityTarget,
+    rows: &'a ActorRows,
+    lag: Option<&'a Result<u64, String>>,
+}
+
+/// Measure one compiled rule (MEDULLA-UNIFIED-DATA-PLANE-R762.9): a SQL rule over the
+/// tenant's native target, a shape rule over the tenant's focus nodes, a freshness rule
+/// from the claim's change-capture lag. A rule that cannot be measured is reported
+/// unscored with `QUALITY_MEASURE_UNAVAILABLE` and writes no score.
+#[cfg(feature = "query")]
+fn measure(inputs: &MeasureInputs<'_>, compiled: &CompiledRule) -> Result<Measurement, String> {
+    match compiled {
+        CompiledRule::Sql { statement } => measure_sql(inputs.view, inputs.store, statement)
+            .map_err(|error| format!("QUALITY_MEASURE_UNAVAILABLE: {error}")),
+        CompiledRule::Shape { iri } => measure_shape(inputs.core, inputs.rows, inputs.target, iri)
+            .map_err(|error| format!("QUALITY_MEASURE_UNAVAILABLE: {error}")),
+        CompiledRule::Freshness { .. } => match inputs.lag {
+            Some(Ok(lag)) => Ok(Measurement::LagMs(*lag)),
+            Some(Err(refusal)) => Err(refusal.clone()),
+            None => {
+                Err("QUALITY_MEASURE_UNAVAILABLE: the change-capture lag was not read".to_string())
+            }
+        },
     }
 }
 
@@ -178,6 +384,8 @@ fn evaluate_rules(
     core: &medulla_graph_core::graph::GraphCore,
     target: &QualityTarget,
     rules: &[StoredRule],
+    rows: &ActorRows,
+    lag: Option<&Result<u64, String>>,
     at: i64,
 ) -> Result<(Vec<Evaluation>, Vec<Unscored>), String> {
     let store =
@@ -186,13 +394,21 @@ fn evaluate_rules(
                 "QUALITY_MEASURE_UNAVAILABLE: the tenant table store cannot be opened".to_string()
             })?;
     let view = core.analysis_snapshot();
+    let inputs = MeasureInputs {
+        core,
+        view: &view,
+        store: &store,
+        target,
+        rows,
+        lag,
+    };
     let mut scored = Vec::with_capacity(rules.len());
     let mut unscored = Vec::new();
     for stored in rules {
         let outcome = compile_rule(&stored.rule)
             .map_err(|refusal| refusal.to_string())
             .and_then(|compiled| {
-                measure(&view, &store, &compiled)
+                measure(&inputs, &compiled)
                     .map(|measurement| evaluate_rule(&stored.rule, &compiled, measurement, at))
             });
         match outcome {
@@ -212,6 +428,8 @@ fn evaluate_rules(
     _core: &medulla_graph_core::graph::GraphCore,
     _target: &QualityTarget,
     _rules: &[StoredRule],
+    _rows: &ActorRows,
+    _lag: Option<&Result<u64, String>>,
     _at: i64,
 ) -> Result<(Vec<Evaluation>, Vec<Unscored>), String> {
     Err("QUALITY_MEASURE_UNAVAILABLE: this worker has no native table store".to_string())
@@ -365,7 +583,7 @@ pub(super) async fn execute_quality_claim(
             unix_ms(),
         )
         .map_err(|error| error.to_string())?;
-    let (_, _, core) = resolve_core_ref(state, &job.input_snapshot.graph)
+    let (graph, _, core) = resolve_core_ref(state, &job.input_snapshot.graph)
         .await
         .ok_or_else(|| "analytics target graph is unavailable".to_string())?;
     let persist_dir = state
@@ -386,9 +604,19 @@ pub(super) async fn execute_quality_claim(
     };
     let rules = load_rules(&core, &target);
     let at = unix_ms();
+    let lag = freshness_lag(state, &graph, &target, &rules.approved, at).await;
+    let rows_of_actor = ActorRows::of(state, &target.agent).await;
     let measured_core = Arc::clone(&core);
     let (measured, target, rules) = tokio::task::spawn_blocking(move || {
-        let measured = evaluate_rules(&persist_dir, &measured_core, &target, &rules.approved, at);
+        let measured = evaluate_rules(
+            &persist_dir,
+            &measured_core,
+            &target,
+            &rules.approved,
+            &rows_of_actor,
+            lag.as_ref(),
+            at,
+        );
         (measured, target, rules)
     })
     .await
@@ -666,5 +894,48 @@ mod tests {
             .filter(|method| matches!(method, Method::AddNode { node_id, .. } if node_id == &outcome.incident_ids[0]))
             .count();
         assert_eq!(incident_nodes, 1);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R762.9
+    #[test]
+    fn a_time_ordered_cursor_has_a_lag_and_any_other_cursor_is_unavailable() {
+        let cursor = |position| ChangeCursor {
+            source: "orders_feed".into(),
+            partition: String::new(),
+            position,
+            expected_previous: None,
+        };
+        assert_eq!(
+            cursor_lag(Some(&cursor(CursorPosition::TimestampMillis(1_000))), 4_000),
+            Ok(3_000)
+        );
+        // A source clock ahead of the engine is no lag, never a negative one.
+        assert_eq!(
+            cursor_lag(Some(&cursor(CursorPosition::TimestampMillis(9_000))), 4_000),
+            Ok(0)
+        );
+        for unavailable in [
+            cursor_lag(Some(&cursor(CursorPosition::Sequence(7))), 4_000),
+            cursor_lag(None, 4_000),
+        ] {
+            assert!(unavailable
+                .unwrap_err()
+                .starts_with("QUALITY_MEASURE_UNAVAILABLE:"));
+        }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R762.9
+    #[cfg(feature = "shacl")]
+    #[test]
+    fn a_shape_iri_projects_nodes_under_its_own_namespace() {
+        assert_eq!(
+            shape_namespace("https://knuckles-team.github.io/ontology/quality#CustomerShape"),
+            "https://knuckles-team.github.io/ontology/quality#"
+        );
+        assert_eq!(
+            shape_namespace("https://example.org/shapes/Customer"),
+            "https://example.org/shapes/"
+        );
+        assert_eq!(shape_namespace("urn:shape:Customer"), "urn:shape:");
     }
 }
