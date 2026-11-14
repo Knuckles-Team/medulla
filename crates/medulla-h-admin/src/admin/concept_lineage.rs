@@ -53,7 +53,9 @@ pub async fn handle(
                 context,
                 "concept-lineage:claim",
                 true,
-            ) {
+            )
+            .and_then(|context| context.validate().map(|()| context))
+            {
                 Ok(context) => context,
                 Err(error) => return Response::err(req_id, error),
             };
@@ -78,7 +80,9 @@ pub async fn handle(
                 context,
                 "concept-lineage:add-edge",
                 true,
-            ) {
+            )
+            .and_then(|context| context.validate().map(|()| context))
+            {
                 Ok(context) => context,
                 Err(error) => return Response::err(req_id, error),
             };
