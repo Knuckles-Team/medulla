@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from cases import CASE_INVALID, CaseInvalid, load_cases, load_file
 
 pytestmark = pytest.mark.no_engine
