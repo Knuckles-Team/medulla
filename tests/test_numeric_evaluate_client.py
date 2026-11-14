@@ -57,4 +57,6 @@ def test_round_trip_vectors_and_retired_attributes(clean_graph, vector) -> None:
 # spec: MEDULLA-FINANCE-PRIMITIVES-R002.3
 def test_bad_field_raises_the_engine_refusal_with_its_code(clean_graph) -> None:
     with pytest.raises(Exception, match="KERNEL_PARAM_INVALID"):
-        clean_graph.numeric.information_ratio(ic="not a number", n_independent=2.0)
+        # A well-typed field outside its domain reaches the kernel, which refuses it;
+        # a wrongly typed field is refused earlier, as an undecodable request.
+        clean_graph.numeric.information_ratio(ic=2.0, n_independent=2.0)

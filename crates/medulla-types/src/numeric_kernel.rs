@@ -496,8 +496,14 @@ mod tests {
                 p0: 1.0,
                 annualization: 252.0,
             },
+            // A mean-reverting AR(1) path (phi about 0.57): the kernel refuses a spread
+            // whose fitted coefficient is outside (0, 1).
             NumericEvaluateOp::OuCalibrate {
-                spread: v(60),
+                spread: v(59).iter().fold(vec![1.0], |mut path, noise| {
+                    let last = path[path.len() - 1];
+                    path.push(0.8 * last + 0.2 * noise);
+                    path
+                }),
                 dt: 1.0,
             },
             NumericEvaluateOp::OuThresholds {
@@ -530,15 +536,19 @@ mod tests {
         let generated = serde_json::json!({
             "vectors": ops.iter().map(|op| serde_json::to_value(op).unwrap()).collect::<Vec<_>>()
         });
+        // Compare the encoded text: serde_json's default float parser is not
+        // round-trip exact, so a decoded fixture can differ from the values
+        // that produced it in the last ulp.
+        let text = format!(
+            "{}\n",
+            serde_json::to_string_pretty(&generated).expect("vectors serialise")
+        );
         if std::env::var_os("MEDULLA_EMIT_NUMERIC_VECTORS").is_some() {
-            let text = serde_json::to_string_pretty(&generated).expect("vectors serialise");
-            std::fs::write(&path, format!("{text}\n")).expect("write fixture");
+            std::fs::write(&path, &text).expect("write fixture");
         }
-        let committed: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(&path).expect("fixture present"))
-                .expect("fixture is JSON");
+        let committed = std::fs::read_to_string(&path).expect("fixture present");
         assert_eq!(
-            committed, generated,
+            committed, text,
             "tests/fixtures/numeric_evaluate_vectors.json drifted from the serde types; rerun with MEDULLA_EMIT_NUMERIC_VECTORS=1"
         );
         for (vector, name) in generated["vectors"]
