@@ -180,7 +180,7 @@ class GraphSchemaSourcesView(BaseModel):
 
     composed_digest: str
     core_catalog_digest: str
-    core_sources: BoundedVec_GraphSchemaSourceView_64
+    core_sources: BoundedVec_GraphSchemaSourceView_96
     dynamic_sources: BoundedVec_GraphSchemaSourceView_32
     graph: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
@@ -307,10 +307,10 @@ BoundedVec_GraphSchemaSourceView_32 = Annotated[
 ]
 
 
-BoundedVec_GraphSchemaSourceView_64 = Annotated[
+BoundedVec_GraphSchemaSourceView_96 = Annotated[
     list[GraphSchemaSourceView],
     Field(
-        max_length=64,
+        max_length=96,
     ),
 ]
 
@@ -371,7 +371,7 @@ SchemaSourceOriginViewOntology.model_rebuild()
 
 __all__ = [
     "BoundedVec_GraphSchemaSourceView_32",
-    "BoundedVec_GraphSchemaSourceView_64",
+    "BoundedVec_GraphSchemaSourceView_96",
     "BoundedVec_GraphSchemaTermView_1000",
     "Digest256",
     "FieldContract",

@@ -142,6 +142,46 @@ class GovernanceReport(BaseModel):
     refused: Annotated[int, Field(ge=0)]
 
 
+class IngestBatchReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    refused: Annotated[int, Field(ge=0)]
+    unchanged: Annotated[int, Field(ge=0)]
+    written: Annotated[int, Field(ge=0)]
+
+
+class ClassReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ontology_class: str
+    report: IngestBatchReport
+
+
+class ColumnExclusionReason(str, Enum):
+    FOREIGN_KEY = "foreign_key"
+    BOOLEAN = "boolean"
+    TIMESTAMP = "timestamp"
+    NUMERIC = "numeric"
+    ENUMERATION = "enumeration"
+    INSUFFICIENT_SAMPLES = "insufficient_samples"
+
+
+class ColumnExclusion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    column: str
+    reason: ColumnExclusionReason
+    stream: str
+
+
+class EmbeddingSetEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    column: str
+    record_id: str
+    stream: str
+
+
 class DriftClass(str, Enum):
     COMPATIBLE = "compatible"
     WIDENING = "widening"
@@ -200,10 +240,13 @@ class SourceIngestionReceipt(BaseModel):
     accepted_checkpoint_digest: Digest256
     affected_count: Annotated[int, Field(ge=0)]
     batch_digest: Digest256
+    classes: Annotated[list[ClassReport], Field(max_length=1024)]
+    column_exclusions: list[ColumnExclusion] = Field(default_factory=list)
     committed_graph_version: Annotated[int, Field(ge=0)]
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
     drift: list[StreamDrift] = Field(default_factory=list)
+    embedding_set: list[EmbeddingSetEntry] = Field(default_factory=list)
     governance: GovernanceReport
     live_set_digest: Digest256 | None = None
     mappings: BoundedVec_SourceMappingReceipt_5120
@@ -213,6 +256,7 @@ class SourceIngestionReceipt(BaseModel):
     receipt_digest: Digest256
     receipt_id: str
     relationship_count: Annotated[int, Field(ge=0)]
+    report: IngestBatchReport
     relationship_live_set_digest: Digest256 | None = None
     relationship_raw_admissions: BoundedVec_RawRelationshipAdmissionReceipt_4096
     relationship_tombstoned_count: Annotated[int, Field(ge=0)]
@@ -520,6 +564,11 @@ __all__ = [
     "SourceIngestionDisposition",
     "SourceIngestionMode",
     "GovernanceReport",
+    "IngestBatchReport",
+    "ClassReport",
+    "ColumnExclusionReason",
+    "ColumnExclusion",
+    "EmbeddingSetEntry",
     "SourceIngestionReceipt",
     "SourceIngestionRequest",
     "SourceJson",
