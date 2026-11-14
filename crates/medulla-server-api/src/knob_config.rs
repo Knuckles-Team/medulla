@@ -932,7 +932,6 @@ static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();
 pub fn install(config: KnobConfig) {
     // The source access gate lives below this crate; it reads the resolved staleness bound.
     medulla_graph_core::rls::install_source_acl_stale_after_s(config.ingest_acl_stale_after_s);
-    let _ = INSTALLED.set(config);
     if INSTALLED.set(config).is_ok() {
         // The graph cores read the retention bound at write time and cannot see this
         // crate, so the resolved value is handed to them once, here.
