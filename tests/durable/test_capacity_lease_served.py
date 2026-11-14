@@ -9,6 +9,7 @@ lease it does not hold.
 """
 
 import hashlib
+import time
 
 import msgpack
 import pytest
@@ -38,7 +39,17 @@ def _value(result):
 
 
 def _acquire(
-    rpc, ok, sock, key, priority, amount, *, tenant=TENANT, owner=OWNER, now_ms=NOW_MS
+    rpc,
+    ok,
+    sock,
+    key,
+    priority,
+    amount,
+    *,
+    tenant=TENANT,
+    owner=OWNER,
+    now_ms=NOW_MS,
+    ttl_ms=TTL_MS,
 ):
     return _value(
         ok(
@@ -61,7 +72,7 @@ def _acquire(
                             }
                         ],
                         "lease_id": None,
-                        "ttl_ms": TTL_MS,
+                        "ttl_ms": ttl_ms,
                         "now_ms": now_ms,
                         "cost_budget_micros": None,
                         "token_budget": None,
@@ -173,12 +184,6 @@ def test_background_lease_cannot_spend_reserved_floor(tmp_path):
         assert cross["decision"] == "stale_fence"
         assert cross["leases"] == []
 
-        # An expired lease refuses to renew.
-        expired = _value(
-            ok(_mutate(rpc, sock, "RenewCapacity", lease, now_ms=NOW_MS + TTL_MS + 1))
-        )
-        assert expired["decision"] == "expired"
-
         # A live lease renews and releases; the released spare is spendable again.
         renewed = _value(
             ok(_mutate(rpc, sock, "RenewCapacity", lease, now_ms=NOW_MS + 10))
@@ -200,3 +205,14 @@ def test_background_lease_cannot_spend_reserved_floor(tmp_path):
             rpc, ok, sock, "bg-3", "background_ingestion", 1, now_ms=NOW_MS + 30
         )
         assert again["decision"] == "accepted"
+
+        # An expired lease refuses to renew. The engine stamps every capacity
+        # call with its own clock (the caller's `now_ms` is replaced), so the
+        # lease is given a 1 ms lifetime and the renewal waits past it.
+        short = _acquire(rpc, ok, sock, "bg-4", "background_ingestion", 1, ttl_ms=1)
+        assert short["decision"] == "accepted"
+        time.sleep(0.05)
+        expired = _value(
+            ok(_mutate(rpc, sock, "RenewCapacity", short["leases"][0], now_ms=0))
+        )
+        assert expired["decision"] == "expired"

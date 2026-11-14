@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -46,9 +47,9 @@ def test_rows_carry_contract_provenance_and_nothing_is_copied(
 
     # The journey asserts the zero-copy store audit (the graph is the same
     # before and after the served query) and returns the served answer.
-    answer = _run_journey("mcp_tool", clean_graph, tmp_path)
+    connector = f"ck-mcp_tool-{uuid.uuid4().hex[:8]}"
+    answer = _run_journey("mcp_tool", clean_graph, tmp_path, connector=connector)
 
-    connector = "ck-mcp_tool"
     rows = {row["id"]: row for row in answer["rows"]}
     assert set(rows) == {item["id"] for item in RECORDING_ITEMS}, answer
     for row in rows.values():

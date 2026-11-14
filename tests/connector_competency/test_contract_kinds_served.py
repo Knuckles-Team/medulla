@@ -382,10 +382,18 @@ async def _journey(
 
 
 def _run_journey(
-    kind: str, clean_graph: SyncMedullaClient, tmp_path: Path
+    kind: str,
+    clean_graph: SyncMedullaClient,
+    tmp_path: Path,
+    connector: str | None = None,
 ) -> dict[str, Any]:
-    """Run one kind's journey and return the served answer it read."""
-    connector = f"ck-{kind}"
+    """Run one kind's journey and return the served answer it read.
+
+    Connector pack heads outlive the per-test graph wipe, so a second journey of
+    one kind in the same engine names its own connector (the first import of a
+    connector expects no head).
+    """
+    connector = connector or f"ck-{kind}"
     recordings = tmp_path / "recordings"
     recordings.mkdir()
     (recordings / OPERATION).with_suffix(".json").write_text(

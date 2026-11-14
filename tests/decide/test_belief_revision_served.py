@@ -19,6 +19,7 @@ from medulla import decision_client as dc
 from medulla.client import MedullaClient
 
 GRAPH = "default"
+PREFIX = "the measured cache hit rate of the edge proxy is"
 
 
 async def _pass(tag: str) -> dict[str, Any]:
@@ -46,9 +47,11 @@ async def _pass(tag: str) -> dict[str, Any]:
             dc.belief_revise_request(
                 GRAPH,
                 [higher, lower],
+                # The pair must clear `belief.opposition_similarity_min`
+                # (default 800000 ppm token Jaccard): 11 shared tokens of 13.
                 texts={
-                    higher: "the cache hit rate is higher",
-                    lower: "the cache hit rate is lower",
+                    higher: f"{PREFIX} higher this week",
+                    lower: f"{PREFIX} lower this week",
                 },
             )
         )

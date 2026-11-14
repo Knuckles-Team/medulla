@@ -20,6 +20,7 @@ from conftest import TEST_TENANT, request_context
 from decide.test_harness_contrast_served import (
     BASELINE,
     COMPONENT_A,
+    COMPONENT_B,
     CONDITIONS_DIGEST,
     Q32,
     TASK_CLASS,
@@ -114,6 +115,16 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
         "eval_score_delta": 2 * Q32,
         "cost_delta": -Q32,
     }
+    # The contrast policy decides over at least two declared candidates
+    # (R803 knobs), so a neutral candidate of another component is held too.
+    neutral_ref = version_node_id(COMPONENT_B, "blob:r817-neutral")
+    neutral_trace = "trace:r817-neutral"
+    neutral = {
+        "retry_delta": 0,
+        "tool_selection_delta": 0,
+        "eval_score_delta": 0,
+        "cost_delta": -Q32,
+    }
     _apply_evidence(
         clean_graph,
         "h2-r817:evidence",
@@ -122,8 +133,10 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
                 improving_ref,
                 version_props(COMPONENT_A, "blob:r817-improving", 10, 100),
             ),
+            (neutral_ref, version_props(COMPONENT_B, "blob:r817-neutral", 10, 101)),
             (probe_run_node_id(BASELINE), probe_run_props(BASELINE, 102)),
             (probe_run_node_id(improving_trace), probe_run_props(improving_trace, 103)),
+            (probe_run_node_id(neutral_trace), probe_run_props(neutral_trace, 104)),
             (
                 contrast_node_id(BASELINE, improving_trace),
                 contrast_props(
@@ -141,7 +154,10 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
     schema = publish(
         clean_graph, "h2-r817-schema", "feature_schema", contrast_schema_body()
     )
-    options = [candidate(improving_ref, improving_trace, **improving)]
+    options = [
+        candidate(improving_ref, improving_trace, **improving),
+        candidate(neutral_ref, neutral_trace, **neutral),
+    ]
     _, record, _, _ = asyncio.run(
         _contrast_journey(schema, options, "q:h2-r817:adopt", _graph_name(clean_graph))
     )

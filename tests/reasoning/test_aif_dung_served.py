@@ -86,8 +86,21 @@ async def test_put_get_round_trip_and_evaluate() -> None:
 
 
 def _digest(doc: dict) -> str:
+    # The canonical interchange JSON is the AIF document in its declared order:
+    # `nodes` then `edges`, each record's keys as declared. The JSON result wire
+    # carries objects with sorted keys, so the order is rebuilt here, not assumed.
+    canonical = {
+        "nodes": [
+            {"nodeID": n["nodeID"], "text": n["text"], "type": n["type"]}
+            for n in doc["nodes"]
+        ],
+        "edges": [
+            {"edgeID": e["edgeID"], "fromID": e["fromID"], "toID": e["toID"]}
+            for e in doc["edges"]
+        ],
+    }
     return hashlib.sha256(
-        json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode()
+        json.dumps(canonical, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()
 
 
