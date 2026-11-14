@@ -18255,10 +18255,13 @@ def _uql_row(columns: list[str], row: dict[str, Any]) -> dict[str, Any]:
     for key in ("knowledge", "proof"):
         if row.get(key) is not None:
             out[key] = row[key]
-    # A source row's answer provenance (MEDULLA-FEDERATED-QUERY-R722.5); the engine
-    # omits it for a stored row.
+    # A source row's named text values: its answer provenance
+    # (MEDULLA-FEDERATED-QUERY-R722.5) and the field values the source returned. The
+    # engine omits them for a stored row. ``texts`` is the key a ``unified`` row uses
+    # for the same values, so both readers see one row shape.
     if row.get("provenance"):
         out["provenance"] = dict(row["provenance"])
+        out["texts"] = dict(row["provenance"])
     return out
 
 

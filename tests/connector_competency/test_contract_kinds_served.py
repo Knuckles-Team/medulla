@@ -596,7 +596,7 @@ def _watermark(client: SyncMedullaClient, mark: str) -> None:
 def _scan_labels(client: SyncMedullaClient) -> list[str]:
     result = client.query.uql(f"FOREIGN SCAN '{MAT_SOURCE}'")
     rows = result["rows"] if isinstance(result, dict) else result
-    return sorted(str(row.get("label")) for row in rows)
+    return sorted(str(row.get("texts", {}).get("label")) for row in rows)
 
 
 def _materialisation_journey(
