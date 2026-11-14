@@ -2,6 +2,7 @@
 
 import time
 import uuid
+from typing import Any
 
 import pytest
 from _decision_resident_fixture import publish, schema_body
@@ -30,7 +31,7 @@ def _scorer(weight: int) -> dict:
 
 
 def _budget(value: int, requested_k=None) -> dict:
-    query = {
+    query: dict[str, Any] = {
         "decision": "budget",
         "task_digest": "sha256:" + "1" * 64,
         "features": [
@@ -64,7 +65,7 @@ def _judged(a: str, b: str, verdict: str) -> dict:
 
 
 def _pairwise(records: list, pinned: bool = True) -> dict:
-    query = {
+    query: dict[str, Any] = {
         "decision": "pairwise",
         "candidates": [
             {"id": c, "digest": "sha256:" + c * 64} for c in ("a", "b", "c")
