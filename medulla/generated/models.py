@@ -27397,6 +27397,7 @@ class UqlRow(BaseModel):
     id: str
     knowledge: UqlKnowledge | None = None
     proof: UqlRowProof | None = None
+    provenance: dict[str, str] | None = None
     score: float | None = None
 
 
@@ -29629,13 +29630,10 @@ TsWindowResult = list[TsWindowResultValueItem]
 TxnUnifiedQueryResultValueItemItem1 = float | None
 
 
-TxnUnifiedQueryResultValueItem = Annotated[
-    tuple[str, TxnUnifiedQueryResultValueItemItem1],
-    Field(
-        min_length=2,
-        max_length=2,
-    ),
-]
+TxnUnifiedQueryResultValueItem = (
+    tuple[str, TxnUnifiedQueryResultValueItemItem1]
+    | tuple[str, TxnUnifiedQueryResultValueItemItem1, dict[str, str]]
+)
 
 
 TxnUnifiedQueryResult = list[TxnUnifiedQueryResultValueItem]
@@ -29644,13 +29642,10 @@ TxnUnifiedQueryResult = list[TxnUnifiedQueryResultValueItem]
 UnifiedQueryResultValueItemItem1 = float | None
 
 
-UnifiedQueryResultValueItem = Annotated[
-    tuple[str, UnifiedQueryResultValueItemItem1],
-    Field(
-        min_length=2,
-        max_length=2,
-    ),
-]
+UnifiedQueryResultValueItem = (
+    tuple[str, UnifiedQueryResultValueItemItem1]
+    | tuple[str, UnifiedQueryResultValueItemItem1, dict[str, str]]
+)
 
 
 UnifiedQueryResult = list[UnifiedQueryResultValueItem]
