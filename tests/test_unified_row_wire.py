@@ -32,7 +32,9 @@ def test_unified_rows_take_both_shapes() -> None:
     for result in (models.UnifiedQueryResult, models.TxnUnifiedQueryResult):
         adapter = TypeAdapter(result)
         parsed = adapter.validate_python(rows)
-        assert parsed[1][2].values == {"monitorId": 7.0}, parsed
+        fields = parsed[1][-1]
+        assert isinstance(fields, models.UnifiedRowFields), parsed
+        assert fields.values == {"monitorId": 7.0}, parsed
     assert _unified_rows(rows) == [
         {"id": "n1", "score": 0.5},
         {
