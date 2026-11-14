@@ -12339,7 +12339,8 @@ class QueryClient:
 
         Returns a list of ``{"id": str, "score": float | None}`` rows, in the plan's
         final order (descending score after a ``Rank``). A row a source answered also
-        carries ``"texts"``: the named text values the source attached to it.
+        carries ``"texts"`` and ``"values"``: the named text and numeric values the
+        source attached to it.
         """
         body: dict[str, Any] = {"plan": {"ops": plan}}
         if foreign_execution is not None and foreign_executions:
@@ -18235,12 +18236,15 @@ def _uql_param(value: Any) -> dict[str, Any]:
 
 
 def _unified_rows(rows: list[Any]) -> list[dict[str, Any]]:
-    """``[id, score]`` rows as dicts; a source row's third element is its ``texts``."""
+    """``[id, score]`` rows as dicts; a source row's third element carries the named
+    ``texts`` and numeric ``values`` its source attached."""
     out = []
     for row in rows:
         item: dict[str, Any] = {"id": row[0], "score": row[1]}
-        if len(row) > 2 and row[2]:
-            item["texts"] = dict(row[2])
+        fields = row[2] if len(row) > 2 else {}
+        for key in ("texts", "values"):
+            if fields.get(key):
+                item[key] = dict(fields[key])
         out.append(item)
     return out
 

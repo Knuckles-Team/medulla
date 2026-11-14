@@ -29627,12 +29627,21 @@ TsWindowResultValueItem = Annotated[
 TsWindowResult = list[TsWindowResultValueItem]
 
 
+class UnifiedRowFields(BaseModel):
+    """The named values a source attached to a unified plan row."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    texts: dict[str, str] | None = None
+    values: dict[str, float] | None = None
+
+
 TxnUnifiedQueryResultValueItemItem1 = float | None
 
 
 TxnUnifiedQueryResultValueItem = (
     tuple[str, TxnUnifiedQueryResultValueItemItem1]
-    | tuple[str, TxnUnifiedQueryResultValueItemItem1, dict[str, str]]
+    | tuple[str, TxnUnifiedQueryResultValueItemItem1, UnifiedRowFields]
 )
 
 
@@ -29644,7 +29653,7 @@ UnifiedQueryResultValueItemItem1 = float | None
 
 UnifiedQueryResultValueItem = (
     tuple[str, UnifiedQueryResultValueItemItem1]
-    | tuple[str, UnifiedQueryResultValueItemItem1, dict[str, str]]
+    | tuple[str, UnifiedQueryResultValueItemItem1, UnifiedRowFields]
 )
 
 
@@ -37201,6 +37210,7 @@ __all__ = [
     "TypedValueTaskPlan",
     "TypedValueText",
     "UnifiedQueryResult",
+    "UnifiedRowFields",
     "UnifiedQueryResultValueItem",
     "UnitRationalWire",
     "UniverseMember",
