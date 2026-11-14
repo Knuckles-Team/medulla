@@ -48,7 +48,7 @@ FIXTURE = (
     / "ontology_crosswalk"
     / "core_metadata.json"
 )
-FIXTURE_SHA256 = "6f8c0ef5d84f5f33910addd861b8b4263343d5f741d2520ceb9f5a80ab5eccc6"
+FIXTURE_SHA256 = "58b059a142a0f55278171e8b51c8d89fad4dbf656a97afa8d13b0d2d65be8bfc"
 
 
 def load_fixture() -> dict[str, Any]:

@@ -57,6 +57,9 @@ def _entry(
         media_type=media,
         body=body,
         input_schema=b'{"type":"object"}' if kind is PackEntryKind.TOOL else None,
+        output_schema=(
+            b'{"type":"object"}' if kind is PackEntryKind.RESOURCE else None
+        ),
         annotations=PackAnnotations(),
     )
 

@@ -241,6 +241,8 @@ def _resources(
     return ConnectorPackEntryContent(
         kind=PackEntryKind.RESOURCE,
         uri="connector://resources",
+        # A resource declares its content schema (MCP resource contract).
+        output_schema=b'{"type":"object"}',
         name="connector-resources",
         media_type="application/json",
         body=json.dumps(body).encode(),
