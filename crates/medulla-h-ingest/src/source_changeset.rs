@@ -31,7 +31,7 @@
 use std::io::Write;
 
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
-use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put};
+use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put_owned};
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::source_changeset::{
     ChangedPath, Changeset, ChangesetRefusal, FileMerger, PathOp, SubmitChangesetRequest,
@@ -259,8 +259,10 @@ pub trait BlobIo {
     fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String>;
 }
 
-/// [`BlobIo`] over the chunk store the upload protocol writes through.
-pub struct ChunkStoreBlobs<'a>(pub &'a dyn ChunkStore);
+/// [`BlobIo`] over the chunk store the upload protocol writes through. A merged
+/// blob is stored under the submitter's blob owner scope (the second field), so
+/// the submitter's own `BlobFetchBegin` reads the bytes that landed.
+pub struct ChunkStoreBlobs<'a>(pub &'a dyn ChunkStore, pub &'a str);
 
 impl BlobIo for ChunkStoreBlobs<'_> {
     fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
@@ -270,7 +272,7 @@ impl BlobIo for ChunkStoreBlobs<'_> {
     }
 
     fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
-        let blob = stream_blob_put(self.0, std::io::Cursor::new(bytes.to_vec()), 0)?;
+        let blob = stream_blob_put_owned(self.0, std::io::Cursor::new(bytes.to_vec()), 0, self.1)?;
         Ok(SubmittedBlobRef {
             digest: blob.digest,
             size: blob.manifest.len,
