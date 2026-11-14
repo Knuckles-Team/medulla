@@ -371,7 +371,7 @@ fn acquire(
                 "IDEMPOTENCY_CONFLICT: capacity acquire key has a different request".to_string(),
             );
         }
-        let mut result: CapacityAcquireResult = decode_durable(&crypto.unseal(&replay.result)?)?;
+        let mut result: CapacityAcquireResult = decode_durable(&replay.result)?;
         result.decision = CapacityDecision::Replayed;
         return Ok(result);
     }
@@ -595,7 +595,7 @@ fn check_mutation_replay(
             "IDEMPOTENCY_CONFLICT: capacity mutation key has a different request".to_string(),
         );
     }
-    let mut result: CapacityMutationResult = decode_durable(&crypto.unseal(&replay.result)?)?;
+    let mut result: CapacityMutationResult = decode_durable(&replay.result)?;
     result.decision = CapacityDecision::Replayed;
     Ok(Some(result))
 }
