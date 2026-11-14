@@ -779,7 +779,19 @@ fn validate_step_records(props: &Props) -> Result<(), String> {
             "steps must be an ordered list of step records".to_string(),
         ));
     };
-    medulla_result_types::outcome_bundle::validate_step_records(steps)
+    // R013.5: `recordedBy` is engine-stamped after admission; a client-sent
+    // value is overwritten, so it is not part of the step record checked here.
+    let steps: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|step| {
+            let mut step = step.clone();
+            if let Some(object) = step.as_object_mut() {
+                object.remove("recordedBy");
+            }
+            step
+        })
+        .collect();
+    medulla_result_types::outcome_bundle::validate_step_records(&steps)
         .map(|_| ())
         .map_err(|(code, detail)| refuse_code(code, detail))
 }
