@@ -103,17 +103,9 @@ impl ConceptLineageOp {
     pub fn validate(&self) -> Result<(), String> {
         validate_key(self.tenant_id(), "tenant_id")?;
         match self {
-            Self::Claim {
-                context,
-                repository,
-                ..
-            }
-            | Self::AddEdge {
-                context,
-                repository,
-                ..
-            } => {
-                context.validate()?;
+            // The request context is a shell the engine rebinds to the verified
+            // request; the handler validates the bound context.
+            Self::Claim { repository, .. } | Self::AddEdge { repository, .. } => {
                 validate_repository(repository)
             }
             Self::Read { .. } => Ok(()),
