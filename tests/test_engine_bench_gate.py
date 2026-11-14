@@ -79,6 +79,7 @@ def test_full_run_within_baseline_passes(tmp_path):
     assert done.returncode == 0, done.stderr
 
 
+# spec: MEDULLA-ENGINE-PARITY-R005.2
 def test_missing_workload_fails(tmp_path):
     records = [r for r in _full() if r["workload"] != "shards_8"]
     done = _run(tmp_path, records, _baseline())
@@ -87,6 +88,7 @@ def test_missing_workload_fails(tmp_path):
     assert "shards_8" in done.stderr
 
 
+# spec: MEDULLA-ENGINE-PARITY-R005.2
 def test_regression_over_ten_percent_fails(tmp_path):
     records = _full()
     records[0] = _record("single_row_commit", p99=1101)
@@ -125,6 +127,7 @@ _BASELINE_FILE = (
 )
 
 
+# spec: MEDULLA-ENGINE-PARITY-R005.3
 def test_baseline_file_matches_records_schema(tmp_path):
     """spec: MEDULLA-ENGINE-PARITY-R005.3
 
