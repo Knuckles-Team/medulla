@@ -277,9 +277,9 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
             (("caller_principal",), "principal:sha256:" + "0" * 64),
             (("question", "question_id"), "different-question"),
             (("evidence_class",), "proof"),
-            (("task_plan", "max_concurrency"), 3),
-            (("task_plan", "input_digest"), "sha256:" + "0" * 64),
-            (("task_plan", "plan_digest"), "sha256:" + "0" * 64),
+            (("answer", "value", "max_concurrency"), 3),
+            (("answer", "value", "input_digest"), "sha256:" + "0" * 64),
+            (("answer", "value", "plan_digest"), "sha256:" + "0" * 64),
         ]:
             changed = copy.deepcopy(record)
             target = changed
