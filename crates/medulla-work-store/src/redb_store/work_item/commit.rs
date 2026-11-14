@@ -355,6 +355,14 @@ pub fn apply_commit_work_item_result_row(
                 input.edges,
                 input.crypto,
             )?;
+            // The receipt nodes are graph nodes of this commit: name them so the
+            // serving projection publishes them with the work item (R133.8).
+            changed.extend(
+                extension
+                    .receipt_nodes
+                    .iter()
+                    .map(|receipt| receipt.node_id.clone()),
+            );
         }
     }
     commit_transition_result(

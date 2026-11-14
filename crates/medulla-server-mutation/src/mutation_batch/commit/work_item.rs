@@ -450,16 +450,37 @@ async fn publish_committed_work_item(
     .map_err(|_| "committed WorkItem result is corrupt".to_string())?;
 
     if !committed.replayed {
+        let mut wrote_trace_edges = false;
         for node_id in changed_work_item_ids(&result, publishes_work_item_rows)? {
             let props = persistence
                 .read_node(graph_fname, &node_id)
                 .await?
                 .ok_or_else(|| format!("committed WorkItem projection '{}' is missing", node_id))?;
+            wrote_trace_edges |= is_trace_receipt(&props);
             core.add_node(node_id, props);
         }
         core.mark_dirty();
+        // A terminal commit's trace receipts also wrote the `produced` and
+        // `child_of` edges in the same transaction (R133.8). Edge rows have no
+        // per-row read, so the projection is re-installed from the committed
+        // image, the same primitive a replay uses.
+        if wrote_trace_edges {
+            reconcile_projection_from_authority(persistence, graph_fname, core).await?;
+        }
     }
     Ok(result)
+}
+
+/// Whether stored node properties are a trace receipt of a terminal commit.
+fn is_trace_receipt(props: &[u8]) -> bool {
+    #[derive(serde::Deserialize)]
+    struct Class {
+        node_type: Option<String>,
+    }
+    rmp_serde::from_slice::<Class>(props)
+        .ok()
+        .and_then(|class| class.node_type)
+        .is_some_and(|class| class == "RunTrace" || class == "RecursiveTraceNode")
 }
 
 /// Re-materialize the serving projection from the authoritative durable image at the
