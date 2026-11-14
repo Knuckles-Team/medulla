@@ -12,9 +12,9 @@ import os
 import time
 
 import pytest
-from conftest import request_context
+from conftest import TEST_AGENT_ID, TEST_SIGNER_KEY, request_context
 
-from medulla.client import SyncMedullaClient
+from medulla.client import EngineResponseError, SyncMedullaClient
 
 from .test_source_governance_served import _governed, _record
 from .test_source_stream_versions_served import (
@@ -63,6 +63,33 @@ def _reader(principal: str, graph: str) -> SyncMedullaClient:
     )
 
 
+def _grant_graph_read(graph: str) -> None:
+    """Give both readers graph-level Read, so only the record's read gate decides."""
+    admin = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    # A role the test signer may assign (conftest TEST_SIGNER_ALLOWED_ROLES).
+    role = "commons-access"
+    try:
+        try:
+            admin.rbac.add_role(role)
+        except EngineResponseError:
+            pass  # another case on this engine already created it
+        admin.rbac.add_grant(role, {"Graph": graph}, "Read")
+        for principal in (MEMBER, OUTSIDER):
+            admin.consensus.register_identity(
+                principal,
+                "Agent",
+                ["team:test"],
+                [role],
+                signer_id=TEST_AGENT_ID,
+                signer_key=TEST_SIGNER_KEY,
+            )
+    finally:
+        admin.close()
+
+
 def _visible_source_ids(principal: str, graph: str) -> list[str]:
     client = _reader(principal, graph)
     try:
@@ -96,6 +123,7 @@ async def test_group_change_applies_without_rewrite() -> None:
             ],
         )
         await _submit(client, records, "records")
+        _grant_graph_read(graph)
 
         # A groups batch writes the member set and nothing else.
         added = await _submit(client, _groups_batch(connector, 1, [MEMBER]), "groups")

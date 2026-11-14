@@ -96,7 +96,7 @@ def _proposal(
         "schema_version": 1,
         "tenant_id": TEST_TENANT,
         "idempotency_key": key,
-        "graph": "default",
+        "graph": "__commons__",  # the connection graph the snapshots are synced to
         "record_id": DOC,
         "active": {"revision": 2, "digest": "a" * 64},
         "candidate": {"revision": 3, "digest": "b" * 64},
@@ -157,7 +157,7 @@ def _benchmark(policy_ref: dict[str, Any], key: str, good: bool) -> dict[str, An
 
 
 def _submit(client: Any, op: dict[str, Any]) -> dict[str, Any]:
-    return client._send("DecisionEval", op)
+    return client._send("DecisionEval", {"op": op})
 
 
 def test_real_decision_eval_binds_memory_candidate_and_metrics(clean_graph):
@@ -170,7 +170,7 @@ def test_real_decision_eval_binds_memory_candidate_and_metrics(clean_graph):
     admit = _submit(
         client, dc.memory_rewrite_op(_proposal(policy_ref, digest, "rw-1", 20))
     )
-    assert admit["state"]["state"] == "succeeded", admit
+    assert admit["state"]["state"] == "succeeded", admit["state"]
     evaluation = admit["state"]["output"]["evaluation"]
     assert evaluation["verdict"] == "admit"
     assert evaluation["fidelity_q4"] == 10000

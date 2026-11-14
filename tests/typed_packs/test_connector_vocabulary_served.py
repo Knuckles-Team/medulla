@@ -371,7 +371,12 @@ async def test_pack_record_of_each_new_term_round_trips(term: Term) -> None:
                 {
                     "subject": f"https://example.org/{connector}/{subject}",
                     "predicate": predicate,
-                    "object": obj,
+                    # The wire object is a typed RdfObject: an IRI or a literal.
+                    "object": (
+                        {"kind": "iri", "iri": obj}
+                        if obj.startswith(("http://", "https://"))
+                        else {"kind": "literal", "lexical": obj}
+                    ),
                 }
                 for subject, predicate, obj in triples
             ]
