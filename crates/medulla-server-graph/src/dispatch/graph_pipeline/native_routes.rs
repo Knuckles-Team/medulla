@@ -586,6 +586,21 @@ async fn route_source_ingestion_request(
     };
     let envelope = prepared.envelope.clone();
     let response = crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
+    // A writer that lost the stream to a concurrent batch is owed
+    // STALE_CONTENT_VERSION, not the kernel's bare WRITE_CONFLICT.
+    let response = match (response.refusal_text(), ctx.persistence.as_ref()) {
+        (Some(text), Some(persistence)) if text.contains("WRITE_CONFLICT:") => Response::err(
+            ctx.req_id,
+            crate::dispatch::change_envelope::stale_content_or(
+                persistence.as_ref(),
+                &medulla_kernel::persist::sanitize(ctx.graph_name),
+                &prepared.envelope,
+                text,
+            )
+            .await,
+        ),
+        _ => response,
+    };
     medulla_h_ingest::source_ingestion::finish(prepared, response)
 }
 

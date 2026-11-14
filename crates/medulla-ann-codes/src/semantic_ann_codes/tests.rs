@@ -3583,7 +3583,7 @@ fn a_second_admitted_write_racing_the_same_version_fails_closed() {
         .admit(owner, &loser)
         .map(|_| ())
         .expect_err("an activation racing a committed one must fail closed");
-    assert!(error.contains("STALE_VERSION"), "{error}");
+    assert!(error.contains("WRITE_CONFLICT"), "{error}");
     assert!(codes.read_generation(1).unwrap().is_none());
     let _ = std::fs::remove_dir_all(&dir);
 }

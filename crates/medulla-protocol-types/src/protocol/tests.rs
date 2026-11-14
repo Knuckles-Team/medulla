@@ -833,3 +833,27 @@ fn nl_query_dialect_and_max_steps_round_trip_on_the_wire() {
         }
     ));
 }
+
+#[test]
+fn a_wrapped_declared_refusal_keeps_its_code() {
+    let wrapped = Response::err(
+        3,
+        "commit failed: STALE_CONTENT_VERSION: object 'o' has no prior version",
+    );
+    assert_eq!(wrapped.error.as_deref(), Some("STALE_CONTENT_VERSION"));
+    assert_eq!(
+        wrapped.error_detail.as_deref(),
+        Some("commit failed: object 'o' has no prior version")
+    );
+    let bare = Response::err(4, "durable write: METADATA_UNTYPED");
+    assert_eq!(bare.error.as_deref(), Some("METADATA_UNTYPED"));
+    assert_eq!(bare.error_detail.as_deref(), Some("durable write"));
+    // Free text naming INTERNAL is still reported unclassified, its text kept off the wire.
+    let internal = Response::err(5, "store: INTERNAL: private storage key");
+    assert_eq!(internal.error.as_deref(), Some("INTERNAL"));
+    assert!(internal
+        .error_detail
+        .as_deref()
+        .unwrap()
+        .starts_with("unclassified engine refusal (cause-"));
+}

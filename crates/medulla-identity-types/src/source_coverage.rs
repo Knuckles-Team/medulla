@@ -65,7 +65,7 @@ pub enum CoverageVerdict {
         source: String,
         /// The approved mapping that serves it.
         mapping_name: String,
-        /// The lower-ranked candidates for the same class, in selection order.
+        /// The sources of the lower-ranked candidates for the same class, in selection order.
         alternates: Vec<String>,
         /// The hops from a queried root to the class.
         path: Vec<CoverageHop>,

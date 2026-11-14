@@ -134,6 +134,14 @@ pub async fn try_handle_gateway(
         Err(error) => return Ok(Response::err(req_id, error)),
     };
 
+    // MEDULLA-IDENTITY-R023.9: a typed metadata node write is admitted here with
+    // the verified principal's hashed identity, so the write the graph applies
+    // and the write that commits carry the same engine-stamped owner and actor.
+    let method = match admit_metadata_write(method, read_authority, tenant_scope) {
+        Ok(admitted) => admitted,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+
     let plan = MutationPlan::for_method(&method);
     let ctx = MutationCtx {
         anonymous: state.read().await.local_anonymous,
@@ -204,4 +212,42 @@ pub async fn try_handle_gateway(
         }
     }
     unreachable!("mutation::is_gateway_routed guarantees method is one of the routed variants")
+}
+
+/// Admit a typed metadata node write before it is applied. Only a node write
+/// that carries a metadata label changes; every other method passes through.
+/// Without a verified carrier there is no principal here, and the
+/// compile-time admission alone decides.
+fn admit_metadata_write(
+    method: Method,
+    read_authority: Option<&GraphReadAuthority>,
+    tenant_scope: &str,
+) -> Result<Method, String> {
+    use medulla_server_api::mutation_batch::identity_metadata::{
+        admit, principal_persistence_id, MetadataCaller,
+    };
+    // The owner is the verified request principal (MEDULLA-IDENTITY-R023.3),
+    // not the agent carrying a delegated request.
+    let Some(principal) = read_authority
+        .filter(|authority| authority.carrier().is_some())
+        .map(GraphReadAuthority::verified_principal)
+        .filter(|principal| !principal.is_empty())
+        .map(principal_persistence_id)
+    else {
+        return Ok(method);
+    };
+    if !matches!(
+        method,
+        Method::AddNode { .. } | Method::CreateNodeIfAbsent { .. } | Method::TxnAddNode { .. }
+    ) {
+        return Ok(method);
+    }
+    let caller = MetadataCaller {
+        principal: Some(&principal),
+        tenant: tenant_scope,
+    };
+    let mut admitted = admit(method, &caller).map_err(|refusal| refusal.to_string())?;
+    // The first method is the node write itself; the interaction edges an
+    // `InteractionNetwork` adds are compiled from it again at commit.
+    Ok(admitted.swap_remove(0))
 }

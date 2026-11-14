@@ -84,7 +84,9 @@ def test_group_members_never_overlap_and_respect_spacing(clean_graph):
         clean_graph.jobs.schedule_get(GRAPH, f"group-bad-{suffix}")
 
     # The first member runs on a remote worker capability nobody holds, so its run stays
-    # active; the second member starts one second later with a minimum spacing.
+    # active. The second member is created once that run exists: a window of the first
+    # member that is already past when it is created is never fired, so creating both at
+    # once would let the second member fire first, legitimately, with no run active.
     clean_graph.jobs.schedule_create(
         GRAPH,
         first,
@@ -92,17 +94,27 @@ def test_group_members_never_overlap_and_respect_spacing(clean_graph):
         "association.remote",
         exclusion_group=group,
     )
-    created = clean_graph.jobs.schedule_create(
-        GRAPH,
-        second,
-        {"interval": {"every_ms": EVERY_MS, "start_ms": now_ms + 1_000}},
-        "association.refresh",
-        exclusion_group=group,
-        min_spacing_s=SPACING_S,
-    )
-    assert created["exclusion_group"] == group
-    assert created["min_spacing_s"] == SPACING_S
+    created = None
     try:
+        assert _wait_for(
+            lambda: [t for t in _ticks(clean_graph, first) if t["outcome"] == "fired"],
+            30,
+        ), "the first member fires its first due window"
+        created = clean_graph.jobs.schedule_create(
+            GRAPH,
+            second,
+            {
+                "interval": {
+                    "every_ms": EVERY_MS,
+                    "start_ms": int(time.time() * 1000) + 1_000,
+                }
+            },
+            "association.refresh",
+            exclusion_group=group,
+            min_spacing_s=SPACING_S,
+        )
+        assert created["exclusion_group"] == group
+        assert created["min_spacing_s"] == SPACING_S
         active = _wait_for(
             lambda: [
                 t for t in _ticks(clean_graph, second) if t["reason"] == "group_active"
@@ -147,4 +159,5 @@ def test_group_members_never_overlap_and_respect_spacing(clean_graph):
         )
     finally:
         clean_graph.jobs.schedule_delete(GRAPH, first)
-        clean_graph.jobs.schedule_delete(GRAPH, second)
+        if created is not None:
+            clean_graph.jobs.schedule_delete(GRAPH, second)

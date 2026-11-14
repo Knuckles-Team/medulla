@@ -8215,7 +8215,7 @@ mod tests {
         let error = store
             .commit_txn_batch(&insert_one_metric(), &stale, 101)
             .unwrap_err();
-        assert!(error.contains("STALE_VERSION"), "{error}");
+        assert!(error.contains("WRITE_CONFLICT"), "{error}");
         assert_eq!(scope(), 1, "a refused batch advances nothing");
 
         stale.version_expectation = VersionExpectation::Native(1);

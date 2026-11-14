@@ -178,7 +178,7 @@ pub(super) fn job_refusal(error: &medulla_jobs::JobError) -> String {
             medulla_types::contract::ServerErrorCode::PriorityOutOfRange.as_str()
         }
         // A lost optimistic-concurrency race is a retryable conflict, not a fault.
-        medulla_jobs::JobError::Redb(message) if message.contains("STALE_VERSION") => "CONFLICT",
+        medulla_jobs::JobError::Redb(message) if message.contains("WRITE_CONFLICT") => "CONFLICT",
         medulla_jobs::JobError::Redb(_) | medulla_jobs::JobError::Codec(_) => "INTERNAL",
     };
     format!("{code}: {error}")

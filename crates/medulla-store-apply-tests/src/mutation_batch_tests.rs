@@ -2778,7 +2778,7 @@ fn cas_work_item_metadata_real_concurrent_race_has_exactly_one_winner() {
     );
 
     let loser_explicitly_rejected = results.iter().any(|result| match result {
-        Err(message) => message.contains("STALE_VERSION"),
+        Err(message) => message.contains("STALE_VERSION") || message.contains("WRITE_CONFLICT"),
         Ok(committed) => decode_result(committed).outcome == CasWorkItemMetadataOutcome::Conflict,
     });
     assert!(
@@ -3771,7 +3771,10 @@ fn lifecycle_adapter_commits_meta_and_delete_before_registry_publication() {
     // The old incarnation's scope identity cannot be re-admitted after the
     // delete, so this retry must fail closed before metadata is recreated.
     let stale = commit_at(&db, &create, None).unwrap_err();
-    assert!(stale.contains("STALE_VERSION"), "got: {stale}");
+    assert!(
+        stale.contains("STALE_VERSION") || stale.contains("WRITE_CONFLICT"),
+        "got: {stale}"
+    );
     assert!(
         read_all_graph_meta(&db).unwrap().is_empty(),
         "retrying the old Create must not resurrect graph metadata after Delete"

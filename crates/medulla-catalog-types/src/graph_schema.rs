@@ -337,7 +337,7 @@ pub fn ontology_source_key(connector: &ResourceId, ontology_iri: &str) -> String
 
 fn validate_ontology_identity(connector: &ResourceId, ontology_iri: &str) -> Result<(), String> {
     if ontology_iri.is_empty() {
-        return Err("ontology IRI must not be empty".to_string());
+        return Err("INVALID_ARGUMENT: ontology IRI must not be empty".to_string());
     }
     validate_source_key_shape(&ontology_source_key(connector, ontology_iri))
 }
@@ -351,11 +351,13 @@ fn validate_source_id(source_id: &str) -> Result<(), String> {
 fn validate_source_key_shape(source_id: &str) -> Result<(), String> {
     if source_id.is_empty() || source_id.len() > MAX_SCHEMA_SOURCE_ID_BYTES {
         return Err(format!(
-            "graph schema source id must be 1..={MAX_SCHEMA_SOURCE_ID_BYTES} bytes"
+            "INVALID_ARGUMENT: graph schema source id must be 1..={MAX_SCHEMA_SOURCE_ID_BYTES} bytes"
         ));
     }
     if source_id.chars().any(char::is_control) {
-        return Err("graph schema source id carries a control character".to_string());
+        return Err(
+            "INVALID_ARGUMENT: graph schema source id carries a control character".to_string(),
+        );
     }
     Ok(())
 }
@@ -368,7 +370,10 @@ fn validate_source_namespace(source_id: &str) -> Result<(), String> {
         ));
     }
     if source_id.strip_prefix("admin:").is_none_or(str::is_empty) {
-        return Err("graph schema source id must use the admin:<name> namespace".to_string());
+        return Err(
+            "INVALID_ARGUMENT: graph schema source id must use the admin:<name> namespace"
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -551,6 +556,8 @@ closed_error_codes! {
         RepairShadowMissing => "SCHEMA_REPAIR_SHADOW_MISSING",
         /// The stored shadow-ingest report holds violations or ingested no node.
         RepairShadowViolations => "SCHEMA_REPAIR_SHADOW_VIOLATIONS",
+        /// A `vg:sourceRole` value outside the closed role set (MEDULLA-SRC-AUTH-R010.3).
+        SourceRoleUnknown => "SOURCE_ROLE_UNKNOWN",
     }
 }
 

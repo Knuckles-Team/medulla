@@ -86,7 +86,7 @@ fn authority_rank_selects_winner_and_lists_lower_ranked_alternate() {
             ..
         } => {
             assert_eq!(mapping_name, "source-a-invoices");
-            assert_eq!(alternates, &["source-b-invoices".to_string()]);
+            assert_eq!(alternates, &["source-b".to_string()]);
             assert!(premises.contains(&Premise::Authority {
                 row: "Invoice::source-a-invoices".to_string(),
                 source: "source-a".to_string(),
@@ -275,7 +275,7 @@ fn covered_lists_alternates_in_rank_order() {
             ..
         } => {
             assert_eq!(mapping_name, "first");
-            assert_eq!(alternates, ["second", "third"]);
+            assert_eq!(alternates, ["b", "c"]);
         }
         other => panic!("expected Covered, got {other:?}"),
     }

@@ -604,7 +604,11 @@ fn commit_racing_resource_batch(
         );
         match commit_resource_batch(shard, &batch) {
             Ok(commit) => return (batch, commit),
-            Err(message) if message.starts_with("STALE_VERSION") => continue,
+            Err(message)
+                if message.starts_with("STALE_VERSION") || message.starts_with("WRITE_CONFLICT") =>
+            {
+                continue
+            }
             Err(message) => panic!("resource batch race commit failed: {message}"),
         }
     }

@@ -125,6 +125,35 @@ pub struct Response {
     pub error_detail: Option<String>,
 }
 
+/// The first declared code inside `text` that a caller's context wraps:
+/// `"<context>: CODE: detail"` or `"<context>: CODE"`. Returns the code and the
+/// detail with the context kept ahead of the refusal's own text.
+fn embedded_declared_code(text: &str) -> Option<(String, String)> {
+    let mut start = 0;
+    while let Some(offset) = text[start..].find(": ") {
+        let segment_start = start + offset + 2;
+        let rest = &text[segment_start..];
+        let (code, tail) = match rest.split_once(": ") {
+            Some((code, tail)) => (code, Some(tail)),
+            None => (rest, None),
+        };
+        // `INTERNAL` is never lifted out of free text: its detail is what the
+        // unclassified path below keeps off the wire.
+        if code != medulla_types::contract::ServerErrorCode::Internal.as_str()
+            && crate::error_registry::declared_error_code(code)
+        {
+            let context = &text[..start + offset];
+            let detail = match tail {
+                Some(tail) => format!("{context}: {tail}"),
+                None => context.to_string(),
+            };
+            return Some((code.to_string(), detail));
+        }
+        start = segment_start;
+    }
+    None
+}
+
 /// The fixed head of the detail that an uncoded refusal carries on the wire.
 pub const UNCLASSIFIED_DETAIL: &str = "unclassified engine refusal";
 
@@ -179,26 +208,32 @@ impl Response {
                 (code.to_string(), Some(detail.to_string()))
             }
             _ if crate::error_registry::declared_error_code(&text) => (text, None),
-            _ => {
-                // The wire never carries uncoded text (it may name request values).
-                // The full text stays in the operator log, tied to the wire answer
-                // by a cause reference (MEDULLA-OBSERVE-R001.2).
-                let cause = CauseRef::of(&text);
-                UNCLASSIFIED_REFUSALS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                tracing::warn!(
-                    target: "medulla::refusal",
-                    request_id = id,
-                    cause_ref = %cause,
-                    refusal = %text,
-                    "unclassified engine refusal reported as INTERNAL"
-                );
-                (
-                    medulla_types::contract::ServerErrorCode::Internal
-                        .as_str()
-                        .to_string(),
-                    Some(format!("{UNCLASSIFIED_DETAIL} ({cause})")),
-                )
-            }
+            // A declared refusal a caller wrapped in its own context
+            // ("<context>: CODE: detail") keeps its code; the context stays
+            // in the detail ahead of the refusal's own text.
+            _ => match embedded_declared_code(&text) {
+                Some((code, detail)) => (code, Some(detail)),
+                None => {
+                    // The wire never carries uncoded text (it may name request values).
+                    // The full text stays in the operator log, tied to the wire answer
+                    // by a cause reference (MEDULLA-OBSERVE-R001.2).
+                    let cause = CauseRef::of(&text);
+                    UNCLASSIFIED_REFUSALS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    tracing::warn!(
+                        target: "medulla::refusal",
+                        request_id = id,
+                        cause_ref = %cause,
+                        refusal = %text,
+                        "unclassified engine refusal reported as INTERNAL"
+                    );
+                    (
+                        medulla_types::contract::ServerErrorCode::Internal
+                            .as_str()
+                            .to_string(),
+                        Some(format!("{UNCLASSIFIED_DETAIL} ({cause})")),
+                    )
+                }
+            },
         };
         Response {
             id,

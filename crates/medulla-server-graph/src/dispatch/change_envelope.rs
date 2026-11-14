@@ -759,6 +759,36 @@ async fn apply_one_change_envelope_inner(
     )
 }
 
+/// A writer that lost the native scope version to a concurrent commit is
+/// refused `WRITE_CONFLICT` by the kernel before the stream's content-version
+/// precondition runs. When the committed stream version no longer chains from
+/// the envelope's previous digest, the writer is owed `STALE_CONTENT_VERSION`
+/// instead: a retry of the same envelope cannot succeed.
+pub(crate) async fn stale_content_or(
+    backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    fname: &str,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+    error: String,
+) -> String {
+    let object_id = envelope.content_version.object_id.as_str();
+    let Ok(current) = backend
+        .read_content_version(fname, envelope.mutation.identity.tenant().as_str(), object_id)
+        .await
+    else {
+        return error;
+    };
+    let previous = envelope.content_version.previous_digest.as_deref();
+    match current {
+        Some(current) if previous != Some(current.digest.as_str()) => format!(
+            "STALE_CONTENT_VERSION: object '{object_id}' expected previous digest does not match"
+        ),
+        None if previous.is_some() => {
+            format!("STALE_CONTENT_VERSION: object '{object_id}' has no prior version")
+        }
+        _ => error,
+    }
+}
+
 /// What the served version check needs to resolve a stale expectation
 /// (MEDULLA-DURABLE-KERNEL-R084.3).
 struct EnvelopeVersionScope<'a> {
@@ -818,8 +848,19 @@ async fn change_envelope_is_known_replay(
     let Some(record) = record else {
         return Ok(false);
     };
+    // A retry is a new attempt: it carries its own nonce, so the comparison
+    // takes the stored attempt's nonce before checking the content is identical.
+    let mut submitted = envelope.clone();
+    if let Some(stored_attempt) = record.envelope.mutation.envelope.operation() {
+        if submitted.mutation.envelope.operation().is_some() {
+            submitted
+                .mutation
+                .envelope
+                .rebind_attempt(stored_attempt.authority.nonce)?;
+        }
+    }
     let stored = rmp_serde::to_vec_named(&record.envelope).ok();
-    let submitted = rmp_serde::to_vec_named(envelope).ok();
+    let submitted = rmp_serde::to_vec_named(&submitted).ok();
     Ok(stored.is_some() && stored == submitted)
 }
 
