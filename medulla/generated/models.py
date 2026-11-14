@@ -27397,6 +27397,7 @@ class UqlRow(BaseModel):
     id: str
     knowledge: UqlKnowledge | None = None
     proof: UqlRowProof | None = None
+    provenance: dict[str, str] | None = None
     score: float | None = None
 
 
@@ -29626,16 +29627,22 @@ TsWindowResultValueItem = Annotated[
 TsWindowResult = list[TsWindowResultValueItem]
 
 
+class UnifiedRowFields(BaseModel):
+    """The named values a source attached to a unified plan row."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    texts: dict[str, str] | None = None
+    values: dict[str, float] | None = None
+
+
 TxnUnifiedQueryResultValueItemItem1 = float | None
 
 
-TxnUnifiedQueryResultValueItem = Annotated[
-    tuple[str, TxnUnifiedQueryResultValueItemItem1],
-    Field(
-        min_length=2,
-        max_length=2,
-    ),
-]
+TxnUnifiedQueryResultValueItem = (
+    tuple[str, TxnUnifiedQueryResultValueItemItem1]
+    | tuple[str, TxnUnifiedQueryResultValueItemItem1, UnifiedRowFields]
+)
 
 
 TxnUnifiedQueryResult = list[TxnUnifiedQueryResultValueItem]
@@ -29644,13 +29651,10 @@ TxnUnifiedQueryResult = list[TxnUnifiedQueryResultValueItem]
 UnifiedQueryResultValueItemItem1 = float | None
 
 
-UnifiedQueryResultValueItem = Annotated[
-    tuple[str, UnifiedQueryResultValueItemItem1],
-    Field(
-        min_length=2,
-        max_length=2,
-    ),
-]
+UnifiedQueryResultValueItem = (
+    tuple[str, UnifiedQueryResultValueItemItem1]
+    | tuple[str, UnifiedQueryResultValueItemItem1, UnifiedRowFields]
+)
 
 
 UnifiedQueryResult = list[UnifiedQueryResultValueItem]
@@ -37206,6 +37210,7 @@ __all__ = [
     "TypedValueTaskPlan",
     "TypedValueText",
     "UnifiedQueryResult",
+    "UnifiedRowFields",
     "UnifiedQueryResultValueItem",
     "UnitRationalWire",
     "UniverseMember",

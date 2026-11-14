@@ -121,7 +121,7 @@ pub(crate) async fn run_unified_overlaid<M>(
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response
 where
-    M: MethodResult<Body = Vec<(String, Option<f32>)>, Encoding = encoding::Raw>,
+    M: MethodResult<Body = Vec<medulla_types::unified_row::UnifiedRow>, Encoding = encoding::Raw>,
     M::Encoding: EncodeRef<M::Body>,
 {
     let txn = OverlaidTxn {

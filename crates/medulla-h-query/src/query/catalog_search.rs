@@ -16,10 +16,7 @@ use medulla_types::asset_usage::{
     CATALOG_USAGE_SUGGESTION_MIN_COUNT, CATALOG_USAGE_TOP_N,
 };
 
-/// Refusal code: the asset has no usage in the caller's scope.
-pub(crate) const CATALOG_ASSET_NOT_FOUND: &str = "CATALOG_ASSET_NOT_FOUND";
-/// Refusal code: `top_n` lies outside the knob's bounds.
-pub(crate) const CATALOG_LIMIT_INVALID: &str = "CATALOG_LIMIT_INVALID";
+use medulla_types::asset_usage::{CATALOG_ASSET_NOT_FOUND, CATALOG_LIMIT_INVALID};
 
 /// The tags of one usage series name, when it is a series of `base` about `asset`: the
 /// principal and the rest of the tags after the asset.

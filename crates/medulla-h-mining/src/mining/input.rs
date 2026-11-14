@@ -241,7 +241,10 @@ pub(super) fn gather_plan_rows(
     };
     let mut feats: Vec<Vec<f64>> = Vec::with_capacity(rows.len());
     let mut ids: Vec<String> = Vec::with_capacity(rows.len());
-    for (row_id, score) in rows {
+    for medulla_types::unified_row::UnifiedRow {
+        id: row_id, score, ..
+    } in rows
+    {
         if let Some(vec) = store.get_embedding(&row_id) {
             feats.push(vec.into_iter().map(|f| f as f64).collect());
             ids.push(row_id);
@@ -299,7 +302,7 @@ pub(super) fn gather_plan_rows_snapshot(
     };
     let mut feats: Vec<Vec<f64>> = Vec::with_capacity(rows.len());
     let mut ids: Vec<String> = Vec::with_capacity(rows.len());
-    for (node_id, _score) in rows {
+    for medulla_types::unified_row::UnifiedRow { id: node_id, .. } in rows {
         if let Some(vec) = store.get_embedding(&node_id) {
             feats.push(vec.into_iter().map(|f| f as f64).collect());
             ids.push(node_id);

@@ -119,9 +119,9 @@ def _assert_rows_equal_recording(rows: list[dict], recording: dict) -> None:
     by_id = {row["id"]: row for row in rows}
     assert sorted(by_id) == sorted(row["id"] for row in recording["rows"])
     for recorded in recording["rows"]:
-        served = json.dumps(by_id[recorded["id"]], sort_keys=True)
-        for text in recorded["texts"].values():
-            assert text in served, f"{text!r} missing from the served row"
+        served = by_id[recorded["id"]]
+        assert served.get("texts", {}) == recorded["texts"], served
+        assert served.get("values", {}) == recorded["values"], served
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R002.7")
@@ -134,6 +134,8 @@ def test_erpnext_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R003.4")
 def test_uptime_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
     recording = RECORDINGS["uptime_monitors"]
+    # The numeric monitor id of the mapping is served exactly, not merely present.
+    assert [row["values"]["monitorId"] for row in recording["rows"]] == [7, 12]
     rows = _read_recorded(clean_graph, "xsrc-uptime-monitors", recording)
     _assert_rows_equal_recording(rows, recording)
 

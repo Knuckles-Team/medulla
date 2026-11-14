@@ -26,8 +26,8 @@ pub mod versioning;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
 pub mod profile_grant_machine;
-pub mod reservation_machine;
 pub mod refusal_code;
+pub mod reservation_machine;
 pub mod transition_refused;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
 pub mod attached_source_governance;
@@ -70,17 +70,17 @@ pub mod code_health;
 // MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
-pub mod participant;
 pub mod corpus_retrieval;
+pub mod participant;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;
 // MEDULLA-FEDERATED-QUERY-R081.101.1 — the reusable compressed document state.
 pub mod retrieval_round;
 // MEDULLA-FEDERATED-QUERY-R081.103.1 — viewport query wire types.
-pub mod viewport;
 pub mod evidence_class;
 pub mod external_schema;
 pub mod ontology_diff;
+pub mod viewport;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
 // data; actually running the comparison is a later child.
@@ -169,6 +169,7 @@ pub mod profile;
 pub mod quality;
 // MEDULLA-UNIFIED-DATA-PLANE-R764.1/.2 — asset usage and catalog search hits.
 pub mod asset_usage;
+pub mod unified_row;
 // MEDULLA-ENGINE-PARITY-R020.1 — relational engine capability report.
 pub mod engine_capabilities;
 // MEDULLA-UNIFIED-DATA-PLANE-R028.1 — typed Postgres-equivalence differential
@@ -369,9 +370,9 @@ pub mod skill_plan;
 // MEDULLA-REPO-INGEST-R002.650: ingest capability types.
 pub mod ingest_capabilities;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
+pub mod code_map;
 pub mod ingest_readback;
 pub mod ingest_throughput;
-pub mod code_map;
 // MEDULLA-CQ-ORCH-R701.1: canonical workflow records of every process source.
 pub mod process_import;
 // MEDULLA-CQ-ORCH-R702.1: process document records (BPMN 2.0, DMN 1.3).

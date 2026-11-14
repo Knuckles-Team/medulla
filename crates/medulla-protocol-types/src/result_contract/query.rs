@@ -32,8 +32,9 @@ method_results! {
     GraphQl(GraphQl) => Raw<Dynamic> dynamic QueryRows;
     #[cfg(feature = "knowledge-batch")]
     KnowledgeStream(KnowledgeStream) => Raw<KnowledgeStreamBatch>;
-    // `[node id, score | nil]` rows of the cross-modal plan.
-    UnifiedQuery(UnifiedQuery) => Raw<Vec<(String, Option<f32>)>>;
+    // `[node id, score | nil]` rows of the cross-modal plan; a source row adds its named
+    // text values as a third element.
+    UnifiedQuery(UnifiedQuery) => Raw<Vec<medulla_types::unified_row::UnifiedRow>>;
     // MEDULLA-REPO-INGEST-R006.3: one page of a revision-bound code map.
     UnifiedQueryCodeMap(UnifiedQuery / "code_map") => Raw<medulla_types::code_map::CodeMapResult>;
     LiveArtifactPut(LiveArtifactPut) => Json<medulla_source_types::live_artifact::LiveArtifact>;
@@ -114,7 +115,7 @@ method_results! {
     NlQueryExplain(NlQueryExplain) => Raw<medulla_query_types::nl_query::NlQueryExplainResult>;
     // The unexecuted UQL candidate and its pins for the exact empty-parameter text.
     NlQueryPlan(NlQueryPlan) => Raw<medulla_query_types::nl_query::NlQueryPlanResult>;
-    TxnUnifiedQuery(TxnUnifiedQuery) => Raw<Vec<(String, Option<f32>)>>;
+    TxnUnifiedQuery(TxnUnifiedQuery) => Raw<Vec<medulla_types::unified_row::UnifiedRow>>;
     // A UQL statement's result inside a transaction (EH-434).
     #[cfg(feature = "query")]
     TxnUql(TxnUql) => Raw<medulla_types::wire::UqlResult>;

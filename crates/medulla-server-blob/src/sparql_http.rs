@@ -317,13 +317,14 @@ async fn handle_nl(
     }
     let rows = match resp.result {
         Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
-            rmp_serde::from_slice::<Vec<(String, Option<f32>)>>(&bytes).unwrap_or_default()
+            rmp_serde::from_slice::<Vec<medulla_types::unified_row::UnifiedRow>>(&bytes)
+                .unwrap_or_default()
         }
         _ => Vec::new(),
     };
     let rows_json: Vec<serde_json::Value> = rows
         .into_iter()
-        .map(|(id, score)| serde_json::json!({ "id": id, "score": score }))
+        .map(|row| serde_json::json!({ "id": row.id, "score": row.score }))
         .collect();
     (
         "200 OK",

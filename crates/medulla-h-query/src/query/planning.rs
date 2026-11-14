@@ -576,7 +576,8 @@ pub(crate) fn run_unified_bind_tensor(
 /// (off-lock execution failed), the inner result is the plan's scored rows or
 /// its error message.
 #[cfg(feature = "query")]
-pub(crate) type UnifiedRunOutcome = Result<Result<Vec<(String, Option<f32>)>, String>, Response>;
+pub(crate) type UnifiedRunOutcome =
+    Result<Result<Vec<medulla_types::unified_row::UnifiedRow>, String>, Response>;
 
 /// The verified-carrier-scoped legs of one served unified plan, resolved once per
 /// request before the result-cache probe: the tsdb `(tenant, namespace)` scope and the
@@ -707,9 +708,17 @@ impl ServedPlanLegs {
                     .get(name)
                     .copied()
             };
-            if let Some(sources) =
-                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s)
-            {
+            // An undeclared source is virtual: its answer is never kept as a whole-result copy
+            // either (MEDULLA-CQ-CONN-R067.6).
+            let watermarks = std::mem::take(&mut self.watermarks).only_declared(
+                &plan.ops,
+                &web_ttl_ms,
+                &declared_cache_s,
+            );
+            let fragments =
+                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s);
+            self.watermarks = watermarks;
+            if let Some(sources) = fragments {
                 foreign.install_fragment_cache(sources);
             }
         }
@@ -1103,6 +1112,11 @@ mod tensor_served_round_trip_tests {
             },
             execute_rows,
         )
+        .map(|rows| {
+            rows.iter()
+                .map(medulla_types::unified_row::UnifiedRow::pair)
+                .collect()
+        })
     }
 
     #[test]
@@ -1257,6 +1271,13 @@ mod tenant_scope_served_tests {
             execute_rows,
         )
         .await
+        .map(|result| {
+            result.map(|rows| {
+                rows.iter()
+                    .map(medulla_types::unified_row::UnifiedRow::pair)
+                    .collect()
+            })
+        })
     }
 
     // spec: MEDULLA-IDENTITY-R610.3

@@ -61,7 +61,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         >,
         #[cfg(feature = "tsdb")]
         tsdb_ctx: medulla_server_ops::api::query_txn::query_support::TsdbLegBind<'_>,
-    ) -> Result<Vec<(String, Option<f32>)>, String> {
+    ) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
         medulla_h_query::query::overlay::run_unified_with_staged_finish(
             plan,
             view,

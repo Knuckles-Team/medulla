@@ -458,8 +458,10 @@ async fn run_nl_query(
     // The same off-lock run as `Uql`: persistent vector/lexical/spatial/
     // shape indexes and the caller's owner-scoped foreign registry are bound inside it.
     let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    use medulla_types::unified_row::UnifiedRow;
     match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs, &scope).await? {
-        Ok(rows) => Ok((uql, rows, rewritten)),
+        // `NlQuery` answers `[id, score | nil]` rows only.
+        Ok(rows) => Ok((uql, rows.iter().map(UnifiedRow::pair).collect(), rewritten)),
         Err(msg) => Err(Response::err(
             req_id,
             medulla_protocol_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),

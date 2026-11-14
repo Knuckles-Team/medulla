@@ -38,6 +38,10 @@ pub const MAX_TOTAL_DYNAMIC_SCHEMA_BYTES: usize = 8 << 20;
 pub const MAX_SCHEMA_DOCUMENT_TRIPLES: usize = 100_000;
 pub const CORE_SOURCE_PREFIX: &str = "core:";
 pub const OPERATOR_SOURCE_ID: &str = "operator";
+/// The SHACL shapes of the core virtual-graph vocabulary (`core:virtual-graph-shapes@1`).
+/// An attached authority document is validated against them (MEDULLA-SRC-AUTH-R002.5).
+pub const VIRTUAL_GRAPH_SHAPES: &str =
+    include_str!("../../../medulla-core/ontology/virtual_graph-v1.shapes.ttl");
 const COMPOSED_DIGEST_DOMAIN: &[u8] = b"eg/graph-schema-sources/v1";
 const CORE_SET_DIGEST_DOMAIN: &[u8] = b"eg/core-schema-catalog/v1";
 
@@ -1439,9 +1443,7 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "virtual-graph-shapes",
             version: 1,
-            shapes: Some(include_str!(
-                "../../../medulla-core/ontology/virtual_graph-v1.shapes.ttl"
-            )),
+            shapes: Some(VIRTUAL_GRAPH_SHAPES),
             ontology: None,
         },
         // MEDULLA-SUPPLY-VOCAB-R003.13: the commercial module, registered once, with

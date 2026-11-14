@@ -14,14 +14,16 @@
 
 mod approved;
 pub(crate) mod attach_pack;
+#[cfg(all(test, feature = "shacl"))]
+mod authority_attach_tests;
 mod edits;
 #[cfg(test)]
 mod finance_tests;
-mod ontology_import;
 pub mod ontology_diff;
 mod ontology_diff_serve;
 #[cfg(test)]
 mod ontology_diff_tests;
+mod ontology_import;
 #[cfg(all(test, feature = "shacl"))]
 mod swarm_topology_tests;
 #[cfg(test)]
@@ -633,7 +635,14 @@ fn apply(
     let mut sources = (*core.schema_sources()).clone();
     check_expected_digest(&sources, op.expected_composed_digest())?;
     let changed = match op {
-        GraphSchemaOp::Attach { source_id, .. } => {
+        GraphSchemaOp::Attach {
+            source_id,
+            ontology_ttl,
+            ..
+        } => {
+            if let Some(document) = ontology_ttl.as_deref() {
+                authority::check_authority_document(document)?;
+            }
             sources.attach_dynamic(source_id.clone(), admin_source(op)?)?
         }
         GraphSchemaOp::AttachApproved { source_id, .. } => {
@@ -694,6 +703,69 @@ fn check_expected_digest(
 }
 
 /// The admin-origin source a validated generic `Attach` installs.
+/// The authority-document check of a generic attach (MEDULLA-SRC-AUTH-R002.5).
+mod authority {
+    /// The `vg:SourceAuthority` class IRI an authority document types its rows with.
+    const SOURCE_AUTHORITY: &str =
+        "https://knuckles-team.github.io/ontology/virtual-graph#SourceAuthority";
+
+    /// Validate an attached document that holds `vg:SourceAuthority` rows against the core
+    /// virtual-graph shapes, before anything is attached. A document without such a row is
+    /// not an authority document and is not checked here. A violation refuses the attach
+    /// with `ONTOLOGY_INVALID` and every violated shape's message.
+    #[cfg(feature = "shacl")]
+    pub(super) fn check_authority_document(document: &str) -> Result<(), String> {
+        let invalid =
+            medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyInvalid.as_str();
+        let data = medulla_shacl::graph_from_turtle(document)
+            .map_err(|error| format!("{invalid}: {error}"))?;
+        let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        let holds_authority_rows = data.iter().any(|triple| {
+            triple.predicate.as_str() == rdf_type
+                && matches!(
+                    triple.object,
+                    medulla_rdf::oxrdf::TermRef::NamedNode(class) if class.as_str() == SOURCE_AUTHORITY
+                )
+        });
+        if !holds_authority_rows {
+            return Ok(());
+        }
+        let shapes =
+            medulla_shacl::graph_from_turtle(medulla_graph_core::graph::VIRTUAL_GRAPH_SHAPES)
+                .map_err(|error| {
+                    format!("{invalid}: the virtual-graph shapes do not parse: {error}")
+                })?;
+        let report = medulla_shacl::validate(&shapes, &data)
+            .map_err(|error| format!("{invalid}: {error}"))?;
+        if report.conforms {
+            return Ok(());
+        }
+        let mut messages: Vec<String> = report
+            .results
+            .iter()
+            .filter_map(|result| result.message.clone())
+            .collect();
+        messages.sort();
+        messages.dedup();
+        Err(format!(
+            "{invalid}: the authority document violates the virtual-graph shapes: {}",
+            messages.join("; ")
+        ))
+    }
+
+    /// Without SHACL in the build an authority document cannot be validated, so it is refused.
+    #[cfg(not(feature = "shacl"))]
+    pub(super) fn check_authority_document(document: &str) -> Result<(), String> {
+        if document.contains("SourceAuthority") {
+            return Err(format!(
+                "{}: this build cannot validate an authority document",
+                medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyInvalid.as_str()
+            ));
+        }
+        Ok(())
+    }
+}
+
 fn admin_source(
     op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
 ) -> Result<medulla_graph_core::graph::GraphSchemaSource, String> {

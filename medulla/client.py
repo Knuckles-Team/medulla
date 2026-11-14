@@ -12338,7 +12338,9 @@ class QueryClient:
         own selectivity and ordering from the plan and current statistics.
 
         Returns a list of ``{"id": str, "score": float | None}`` rows, in the plan's
-        final order (descending score after a ``Rank``).
+        final order (descending score after a ``Rank``). A row a source answered also
+        carries ``"texts"`` and ``"values"``: the named text and numeric values the
+        source attached to it.
         """
         body: dict[str, Any] = {"plan": {"ops": plan}}
         if foreign_execution is not None and foreign_executions:
@@ -12350,8 +12352,7 @@ class QueryClient:
         if foreign_executions:
             body["foreign_executions"] = foreign_executions
         result = (await _gen.query.send_unified_query(self._client, body)).payload
-        rows = result or []
-        return [{"id": id_, "score": score} for id_, score in rows]
+        return _unified_rows(result or [])
 
     async def code_map(
         self,
@@ -13196,8 +13197,7 @@ class TxnClient:
                 self._client, {"txn_id": txn_id, "plan": {"ops": plan}}
             )
         ).payload
-        rows = result or []
-        return [{"id": id_, "score": score} for id_, score in rows]
+        return _unified_rows(result or [])
 
     async def commit(self, txn_id: str, *, idempotency_key: str | None = None) -> bool:
         """Commit the transaction. ``True`` ⇒ applied + persisted; ``False`` ⇒ OCC
@@ -18235,6 +18235,20 @@ def _uql_param(value: Any) -> dict[str, Any]:
     return _uql_literal(value)
 
 
+def _unified_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    """``[id, score]`` rows as dicts; a source row's third element carries the named
+    ``texts`` and numeric ``values`` its source attached."""
+    out = []
+    for row in rows:
+        item: dict[str, Any] = {"id": row[0], "score": row[1]}
+        fields = row[2] if len(row) > 2 else {}
+        for key in ("texts", "values"):
+            if fields.get(key):
+                item[key] = dict(fields[key])
+        out.append(item)
+    return out
+
+
 def _uql_row(columns: list[str], row: dict[str, Any]) -> dict[str, Any]:
     out = {
         "id": row["id"],
@@ -18245,6 +18259,13 @@ def _uql_row(columns: list[str], row: dict[str, Any]) -> dict[str, Any]:
     for key in ("knowledge", "proof"):
         if row.get(key) is not None:
             out[key] = row[key]
+    # A source row's named text values: its answer provenance
+    # (MEDULLA-FEDERATED-QUERY-R722.5) and the field values the source returned. The
+    # engine omits them for a stored row. ``texts`` is the key a ``unified`` row uses
+    # for the same values, so both readers see one row shape.
+    if row.get("provenance"):
+        out["provenance"] = dict(row["provenance"])
+        out["texts"] = dict(row["provenance"])
     return out
 
 

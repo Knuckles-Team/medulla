@@ -532,6 +532,7 @@ def _materialisation_document(declaration: str, capability: bool = True) -> str:
 @prefix vg: <{MAT_VG}> .
 @prefix kg: <{MAT_CORE}> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex: <urn:cc:materialisation:> .
 ex:conn a vg:SourceConnection ; vg:sourceKind "sql" ; vg:endpointRef ex:ep ;
     vg:foreignSourceName "{MAT_SOURCE}" ; vg:sourceRole "live_truth"{copy} .
@@ -550,7 +551,8 @@ ex:row a vg:SourceAuthority ; vg:authoritativeSource ex:conn ;
 
 
 ACCELERATED = (
-    '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ; '
+    '; vg:materialisation "accelerated" ; '
+    'vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger ; '
     'vg:materialisationReason "the table is slow and read often"'
 )
 
@@ -586,7 +588,9 @@ def _watermark(client: SyncMedullaClient, mark: str) -> None:
                     "eg:maxStaleness": 600,
                 },
             )
-            assert await aclient.txn.commit(txn, idempotency_key=f"r067-6-{mark}")
+            assert await aclient.txn.commit(
+                txn, idempotency_key=f"r067-6-{mark}-{now_ms}"
+            )
         finally:
             await aclient.close()
 
@@ -596,7 +600,7 @@ def _watermark(client: SyncMedullaClient, mark: str) -> None:
 def _scan_labels(client: SyncMedullaClient) -> list[str]:
     result = client.query.uql(f"FOREIGN SCAN '{MAT_SOURCE}'")
     rows = result["rows"] if isinstance(result, dict) else result
-    return sorted(str(row.get("label")) for row in rows)
+    return sorted(str(row.get("texts", {}).get("label")) for row in rows)
 
 
 def _materialisation_journey(
@@ -630,7 +634,11 @@ def _materialisation_journey(
     # Either way the engine stores no source row: the cache is not the record.
     stored = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
     assert [row for row in stored if "item-1" in str(row)] == [], stored
-    assert len(stored) <= len(before) + 1, "only the watermark node may be stored"
+    # The SELECT answers one row per triple; the watermark node holds several.
+    subjects = {row["s"] for row in stored} - {row["s"] for row in before}
+    assert subjects <= {f"eg:foreign-source:{MAT_SOURCE}"}, (
+        "only the watermark node may be stored"
+    )
     return first, second
 
 
@@ -659,7 +667,8 @@ def test_6_materialisation(clean_graph, pg_source) -> None:
     # Refusals: an accelerated row without its reason, its bound or the copy capability.
     for bad, capability, message in [
         (
-            '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300',
+            '; vg:materialisation "accelerated" ; '
+            'vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger',
             True,
             "materialisationReason",
         ),

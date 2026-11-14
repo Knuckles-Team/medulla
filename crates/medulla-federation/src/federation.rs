@@ -66,6 +66,27 @@ const MAX_FEDERATED_SQL_ROWS: usize = 250_000;
 const MAX_FEDERATED_SQL_FIELD_BYTES: usize = 1024;
 #[cfg(feature = "federation-sql")]
 const MAX_FEDERATED_SQL_ID_BYTES: usize = 64 * 1024;
+/// Upper bound on one text column value a SQL row carries into its text channels.
+#[cfg(feature = "federation-sql")]
+const MAX_FEDERATED_SQL_TEXT_BYTES: usize = 64 * 1024;
+
+/// One projected SQL row: id, optional score and its other text columns.
+#[cfg(feature = "federation-sql")]
+type SqlRow = (String, Option<f32>, std::collections::BTreeMap<String, String>);
+
+/// The `RowSet` of projected SQL rows, each row's text columns as its text channels.
+#[cfg(feature = "federation-sql")]
+fn sql_rowset(rows: Vec<SqlRow>) -> RowSet {
+    let mut texts = medulla_exec::rowset::TextChannels::new();
+    let mut pairs = Vec::with_capacity(rows.len());
+    for (id, score, columns) in rows {
+        if !columns.is_empty() {
+            texts.insert(id.clone(), columns);
+        }
+        pairs.push((id, score));
+    }
+    RowSet::from_rows(pairs).with_texts(texts)
+}
 #[cfg(feature = "federation-sql")]
 const FEDERATED_SQL_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 #[cfg(feature = "federation-sql")]
@@ -1363,7 +1384,7 @@ impl SqlSource<'_> {
         })
         .await
         .map_err(|_| "federation: postgres query timed out".to_string())??;
-        Ok(RowSet::from_rows(out))
+        Ok(sql_rowset(out))
     }
 }
 
@@ -1436,7 +1457,7 @@ impl SqlSource<'_> {
         tx.rollback()
             .await
             .map_err(|_| "federation: postgres read-only transaction cleanup failed".to_string())?;
-        Ok(RowSet::from_rows(out))
+        Ok(sql_rowset(out))
     }
 
     async fn fetch_mysql(&self) -> Result<RowSet, String> {
@@ -1480,7 +1501,31 @@ impl SqlSource<'_> {
         tx.rollback()
             .await
             .map_err(|_| "federation: mysql read-only transaction cleanup failed".to_string())?;
-        Ok(RowSet::from_rows(out))
+        Ok(sql_rowset(out))
+    }
+
+    /// The row's other text columns by name: the field values a mapping projects
+    /// (MEDULLA-CQ-XSRC-R002.7). A column that is not text, is NULL or exceeds the size
+    /// bound is left out; the id and score columns are not repeated.
+    fn text_columns<R>(&self, row: &R) -> std::collections::BTreeMap<String, String>
+    where
+        R: sqlx::Row,
+        usize: sqlx::ColumnIndex<R>,
+        for<'r> String: sqlx::Decode<'r, R::Database> + sqlx::Type<R::Database>,
+    {
+        use sqlx::Column;
+        row.columns()
+            .iter()
+            .enumerate()
+            .filter(|(_, column)| {
+                column.name() != self.id_field && Some(column.name()) != self.score_field
+            })
+            .filter_map(|(index, column)| {
+                let value = row.try_get::<Option<String>, _>(index).ok()??;
+                (value.len() <= MAX_FEDERATED_SQL_TEXT_BYTES)
+                    .then(|| (column.name().to_string(), value))
+            })
+            .collect()
     }
 
     fn validate_projection_fields(&self) -> Result<(), String> {
@@ -1500,7 +1545,7 @@ impl SqlSource<'_> {
         Ok(())
     }
 
-    fn project_pg_row(&self, row: &sqlx::postgres::PgRow) -> Result<(String, Option<f32>), String> {
+    fn project_pg_row(&self, row: &sqlx::postgres::PgRow) -> Result<SqlRow, String> {
         use sqlx::Row;
         let id = pg_col_to_id(row, self.id_field)?;
         if id.len() > MAX_FEDERATED_SQL_ID_BYTES {
@@ -1514,10 +1559,10 @@ impl SqlSource<'_> {
                 .or_else(|_| row.try_get::<f32, _>(sf))
                 .ok()
         });
-        Ok((id, score))
+        Ok((id, score, self.text_columns(row)))
     }
 
-    fn project_my_row(&self, row: &sqlx::mysql::MySqlRow) -> Result<(String, Option<f32>), String> {
+    fn project_my_row(&self, row: &sqlx::mysql::MySqlRow) -> Result<SqlRow, String> {
         use sqlx::Row;
         let id = my_col_to_id(row, self.id_field)?;
         if id.len() > MAX_FEDERATED_SQL_ID_BYTES {
@@ -1529,7 +1574,7 @@ impl SqlSource<'_> {
                 .or_else(|_| row.try_get::<f32, _>(sf))
                 .ok()
         });
-        Ok((id, score))
+        Ok((id, score, self.text_columns(row)))
     }
 }
 
