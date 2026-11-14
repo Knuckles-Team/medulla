@@ -708,9 +708,17 @@ impl ServedPlanLegs {
                     .get(name)
                     .copied()
             };
-            if let Some(sources) =
-                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s)
-            {
+            // An undeclared source is virtual: its answer is never kept as a whole-result copy
+            // either (MEDULLA-CQ-CONN-R067.6).
+            let watermarks = std::mem::take(&mut self.watermarks).only_declared(
+                &plan.ops,
+                &web_ttl_ms,
+                &declared_cache_s,
+            );
+            let fragments =
+                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s);
+            self.watermarks = watermarks;
+            if let Some(sources) = fragments {
                 foreign.install_fragment_cache(sources);
             }
         }

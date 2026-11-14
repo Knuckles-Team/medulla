@@ -97,6 +97,30 @@ impl ForeignWatermarks {
             .collect()
     }
 
+    /// Keep a served answer cacheable only when every named source it reads declared a cache
+    /// (MEDULLA-CQ-CONN-R067.6) or is a web source with its own entry TTL. A fresh watermark
+    /// alone does not make an undeclared source's answer a copy the engine may keep.
+    #[cfg(feature = "federation")]
+    pub(crate) fn only_declared(
+        self,
+        ops: &[medulla_exec::algebra::Op],
+        web_ttl_ms: &dyn Fn(&str) -> Option<u64>,
+        declared_cache_s: &dyn Fn(&str) -> Option<u64>,
+    ) -> Self {
+        let mut sources = BTreeSet::new();
+        if !ops.iter().all(|op| collect_foreign(op, &mut sources)) {
+            return Self::Unfresh;
+        }
+        let virtual_source = sources
+            .iter()
+            .any(|name| web_ttl_ms(name).is_none() && declared_cache_s(name).is_none());
+        if virtual_source {
+            Self::Unfresh
+        } else {
+            self
+        }
+    }
+
     /// Whether this leg allows caching at all.
     pub(crate) fn cacheable(&self) -> bool {
         !matches!(self, Self::Unfresh)
