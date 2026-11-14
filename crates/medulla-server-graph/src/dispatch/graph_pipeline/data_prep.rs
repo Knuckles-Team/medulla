@@ -73,7 +73,8 @@ async fn handle_declare(ctx: GraphOpRouting<'_>, request: DataPrepDeclareRequest
             core: ctx.core.as_ref(),
             visible: &visible,
         };
-        match prep::declare_data_prep(&view, &request.tenant, &request.payload) {
+        match prep::declare_data_prep(&view, &request.tenant, &request.payload, ctx.core.version())
+        {
             Ok(declared) => declared,
             Err(refusal) => return Response::err(req_id, refusal.to_string()),
         }
