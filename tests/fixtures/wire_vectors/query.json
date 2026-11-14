@@ -1155,10 +1155,12 @@
     "request": {
       "method": "Uql",
       "params": {
-        "foreign_execution": {
-          "execution_id": 0,
-          "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        },
+        "foreign_executions": [
+          {
+            "execution_id": 0,
+            "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
         "params": {},
         "text": ""
       }
@@ -1172,7 +1174,7 @@
         "warnings": []
       }
     },
-    "sha256": "693740000624038f1e8d5e7ebafdb5e1f44bd1bd0f3fda41ecedbad252c63f6a"
+    "sha256": "6b8e48011689b1e6368e292a2f74371059003dd54f5fd9acb0ff6aa295a7808a"
   },
   {
     "method": "WhatChanged",

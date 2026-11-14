@@ -103,6 +103,7 @@ class GraphSchemaOpAttachApproved(BaseModel):
 
     approval_lease_id: str
     contract: RecordContract
+    expected_digest: str | None = Field(default=None)
     if_composed_digest: str | None = None
     op: Literal["attach_approved"]
     source_id: str
@@ -117,6 +118,37 @@ class GraphSchemaOpValidateRepair(BaseModel):
     source_id: str
 
 
+class DiffTargetCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate: DiffTargetCandidateBody
+
+
+class DiffTargetCandidateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    turtle: str
+
+
+class DiffTargetRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    revision: Annotated[int, Field(ge=0)]
+
+
+class GraphSchemaOpDiffOntology(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: Annotated[str, Field(min_length=1)]
+    from_revision: Annotated[int, Field(ge=0)]
+    ontology_iri: str
+    op: Literal["diff_ontology"]
+    to: DiffTarget
+
+
+DiffTarget = DiffTargetRevision | DiffTargetCandidate
+
+
 GraphSchemaOp = Annotated[
     GraphSchemaOpAttach
     | GraphSchemaOpAttachPack
@@ -125,7 +157,8 @@ GraphSchemaOp = Annotated[
     | GraphSchemaOpRevertEdit
     | GraphSchemaOpDetach
     | GraphSchemaOpAttachApproved
-    | GraphSchemaOpValidateRepair,
+    | GraphSchemaOpValidateRepair
+    | GraphSchemaOpDiffOntology,
     Field(discriminator="op"),
 ]
 
@@ -368,4 +401,9 @@ __all__ = [
     "SchemaSourceOriginViewOntology",
     "SchemaSourceOriginViewOperator",
     "SchemaSourceOriginViewPack",
+    "DiffTarget",
+    "DiffTargetCandidate",
+    "DiffTargetCandidateBody",
+    "DiffTargetRevision",
+    "GraphSchemaOpDiffOntology",
 ]

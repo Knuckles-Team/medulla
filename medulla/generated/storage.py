@@ -2323,3 +2323,6 @@ send_data_product_register = contract_sender(
 decode_data_product_register = contract_decoder(
     "DataProductRegister", "DataProductRegistered"
 )
+send_ts_define_state_space = contract_sender(
+    "TsDefineStateSpace", "MethodTsDefineStateSpaceParams"
+)

@@ -2863,3 +2863,15 @@ send_sync_memory_snapshot = contract_sender(
 decode_sync_memory_snapshot = contract_decoder("SyncMemorySnapshot", "SyncOutcome")
 send_world_transform = contract_sender("WorldTransform", "MethodWorldTransformParams")
 decode_world_transform = contract_decoder("WorldTransform", "WorldTransformResult")
+send_architecture_model_export = contract_sender(
+    "ArchitectureModelExport", "MethodArchitectureModelExportParams"
+)
+send_architecture_model_import = contract_sender(
+    "ArchitectureModelImport", "MethodArchitectureModelImportParams"
+)
+send_open_graph_snapshot = contract_sender("OpenGraphSnapshot", "None")
+send_read_graph_changes = contract_sender(
+    "ReadGraphChanges", "MethodReadGraphChangesParams"
+)
+send_read_span = contract_sender("ReadSpan", "MethodReadSpanParams")
+send_source_sync = contract_sender("SourceSync", "MethodSourceSyncParams")

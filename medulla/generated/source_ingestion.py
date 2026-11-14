@@ -12,6 +12,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ._shared import (
     Digest256,
     McpCatalogSnapshotBinding,
+    SqlColumnProfile,
 )
 from .digest import (
     framed_named_msgpack_digest,
@@ -239,6 +240,7 @@ class SourceMappingReceipt(BaseModel):
 class SourceRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    column_profiles: dict[str, SqlColumnProfile] | None = None
     mapping_reference: str
     payload: SourceJson
     provenance: SourceRecordProvenance

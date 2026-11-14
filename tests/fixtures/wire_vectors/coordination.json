@@ -1616,6 +1616,20 @@
           },
           "op": "commit",
           "record": {
+            "answer": {
+              "type": "task_plan",
+              "value": {
+                "input_digest": "",
+                "max_concurrency": 0,
+                "max_steps": 0,
+                "output_task_id": "",
+                "plan_digest": "",
+                "policy_digest": "",
+                "policy_revision": "",
+                "tasks": [],
+                "total_tasks": 0
+              }
+            },
             "audit": {
               "inclusion_probability": {
                 "denominator": 4294967296,
@@ -1804,17 +1818,6 @@
             "resolution_kind": "constraint",
             "schema_version": 0,
             "synthetic_evidence": false,
-            "task_plan": {
-              "input_digest": "",
-              "max_concurrency": 0,
-              "max_steps": 0,
-              "output_task_id": "",
-              "plan_digest": "",
-              "policy_digest": "",
-              "policy_revision": "",
-              "tasks": [],
-              "total_tasks": 0
-            },
             "tenant_id": "",
             "trace_fidelity": {
               "fidelity": "full_step"
@@ -2125,7 +2128,7 @@
         "verification": "verified"
       }
     },
-    "sha256": "7e88d6f8db2807436ab733564d7a763ebf72c880503ff193a675cbb1b4438431"
+    "sha256": "7876768fd4c154b57d3dd5b73f2aebe78a157a13a8d012f2aae13f7671b0d1e7"
   },
   {
     "method": "DeferWorkItem",

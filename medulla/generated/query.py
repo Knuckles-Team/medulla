@@ -1789,3 +1789,27 @@ send_live_artifact_refresh = contract_sender(
     "LiveArtifactRefresh", "MethodLiveArtifactRefreshParams"
 )
 decode_live_artifact_refresh = contract_decoder("LiveArtifactRefresh", "RefreshEntry")
+send_approve_entity_link = contract_sender(
+    "ApproveEntityLink", "MethodApproveEntityLinkParams"
+)
+send_catalog_usage = contract_sender("CatalogUsage", "MethodCatalogUsageParams")
+send_column_lineage = contract_sender("ColumnLineage", "MethodColumnLineageParams")
+send_context_compile = contract_sender("ContextCompile", "MethodContextCompileParams")
+send_corpus_retrieve = contract_sender("CorpusRetrieve", "MethodCorpusRetrieveParams")
+send_cross_source_question = contract_sender(
+    "CrossSourceQuestion", "MethodCrossSourceQuestionParams"
+)
+send_encode_document = contract_sender("EncodeDocument", "MethodEncodeDocumentParams")
+send_encoded_document_search = contract_sender(
+    "EncodedDocumentSearch", "MethodEncodedDocumentSearchParams"
+)
+send_resolve_viewport_selection = contract_sender(
+    "ResolveViewportSelection", "MethodResolveViewportSelectionParams"
+)
+send_retrieval_round = contract_sender("RetrievalRound", "MethodRetrievalRoundParams")
+send_source_coverage = contract_sender("SourceCoverage", "MethodSourceCoverageParams")
+send_stored_query_call = contract_sender(
+    "StoredQueryCall", "MethodStoredQueryCallParams"
+)
+send_stored_query_put = contract_sender("StoredQueryPut", "MethodStoredQueryPutParams")
+send_viewport_query = contract_sender("ViewportQuery", "MethodViewportQueryParams")

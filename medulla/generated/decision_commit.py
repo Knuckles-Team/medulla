@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -246,6 +246,9 @@ from ._shared import (
     WhyNot,
 )
 
+if TYPE_CHECKING:
+    from .models import TopologyCommitEvidence
+
 DECISION_COMMIT_RESULT_SCHEMA_VERSION = 1
 
 
@@ -276,6 +279,7 @@ class DecisionCommitRequest(BaseModel):
     context: AgentLibraryMutationContext
     expected_catalog_digest: str
     record: DecisionRecord
+    topology: TopologyCommitEvidence | None = None
 
 
 class DecisionCommitResult(BaseModel):
@@ -289,7 +293,7 @@ class DecisionCommitResult(BaseModel):
 
 AgentComponentCommittedResult.model_rebuild()
 
-DecisionCommitRequest.model_rebuild()
+# DecisionCommitRequest names a type of models.py, which rebuilds it.
 
 DecisionCommitResult.model_rebuild()
 

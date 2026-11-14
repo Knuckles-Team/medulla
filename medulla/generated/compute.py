@@ -5828,3 +5828,13 @@ send_wallet_key_trust_get = contract_sender(
     "WalletKeyTrustGet", "MethodWalletKeyTrustGetParams"
 )
 decode_wallet_key_trust_get = contract_decoder("WalletKeyTrustGet", "WalletKeyTrust")
+send_finance_account_project = contract_sender(
+    "FinanceAccountProject", "MethodFinanceAccountProjectParams"
+)
+send_numeric_evaluate = contract_sender(
+    "NumericEvaluate", "MethodNumericEvaluateParams"
+)
+send_regime_forecast = contract_sender("RegimeForecast", "MethodRegimeForecastParams")
+send_regime_sizing_input = contract_sender(
+    "RegimeSizingInput", "MethodRegimeSizingInputParams"
+)

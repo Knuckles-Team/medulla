@@ -1489,3 +1489,9 @@ send_refresh_mat_view = contract_sender(
 send_register_udf = contract_sender(
     "RegisterUdf", "MethodRegisterUdfParams", expect_string
 )
+send_branch_diff = contract_sender("BranchDiff", "MethodBranchDiffParams")
+send_branch_read_at = contract_sender("BranchReadAt", "MethodBranchReadAtParams")
+send_branch_write = contract_sender("BranchWrite", "MethodBranchWriteParams")
+send_submit_changeset = contract_sender(
+    "SubmitChangeset", "MethodSubmitChangesetParams"
+)

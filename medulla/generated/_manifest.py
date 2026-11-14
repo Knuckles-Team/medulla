@@ -54,5 +54,5 @@ MANIFEST: dict[str, Any] = {
     "contract_revision": "1",
     "exported_types": exported_type_ids(),
     # SHA-256 over the sorted wire-vector files; regenerated with the vectors.
-    "schema_digest": "e72da24e16f4fdbe8711f03ae66560b3975e5b30609ed726094285e2bb79821a",
+    "schema_digest": "eb67f4a9ba28990ad872e34b6a6f7d5daf7bd11bf58563ae2ab838d573b39f3a",
 }

@@ -81,6 +81,35 @@ class AbstainReasonInsufficientConfidence(BaseModel):
     reason: Literal["insufficient_confidence"]
 
 
+class AbstainReasonFamily(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: RefusalCode
+    detail: str
+    family: QuestionKind
+    reason: Literal["family"]
+
+
+class AbstainReasonSurface(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: RefusalCode
+    detail: str
+    reason: Literal["surface"]
+    surface: RefusalSurface
+
+
+class RefusalSurface(str, Enum):
+    DECISION_LOG = "decision_log"
+    DECISION_EVAL = "decision_eval"
+    ASSEMBLE = "assemble"
+    POLICY_EVOLUTION = "policy_evolution"
+    DECISION_COMMIT = "decision_commit"
+
+
+RefusalCode = Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
+
+
 AbstainReason = Annotated[
     AbstainReasonUncoveredCapability
     | AbstainReasonUnresolvedCapabilityIri
@@ -91,7 +120,9 @@ AbstainReason = Annotated[
     | AbstainReasonIneligibleExternalAgent
     | AbstainReasonRecordTooLarge
     | AbstainReasonPolicyLoosening
-    | AbstainReasonInsufficientConfidence,
+    | AbstainReasonInsufficientConfidence
+    | AbstainReasonFamily
+    | AbstainReasonSurface,
     Field(discriminator="reason"),
 ]
 
@@ -225,6 +256,9 @@ class AgentComponentKind(str, Enum):
     NL_TEMPLATE = "nl_template"
     GUARDRAIL_RULE = "guardrail_rule"
     RULE_INVARIANT = "rule_invariant"
+    RED_TEAM_ATTACK = "red_team_attack"
+    RED_TEAM_SCORER = "red_team_scorer"
+    RED_TEAM_TRANSFORM = "red_team_transform"
 
 
 class AgentGraphEdge(BaseModel):
@@ -363,8 +397,12 @@ class AssemblyConstraints(BaseModel):
 class AssemblyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    assistant_profile_ref: str | None = None
     candidates: LibraryCandidateScope
+    coding_agent: CodingAgentRequest | None = None
     policy: DecisionPolicyRef
+    primitive_edges: BoundedVec_PrimitiveEdge_1024 | None = None
+    replacements: BoundedVec_PrimitiveReplacement_64 | None = None
     requirements: AssemblyRequirements
     solver: SolverBudget | None = None
     templates: BoundedVec_AgentGraphEntryRef_8 = Field(default_factory=list)
@@ -378,6 +416,7 @@ class AssemblyRequirements(BaseModel):
     constraints: AssemblyConstraints | None = None
     denies: BoundedVec_string_64 = Field(default_factory=list)
     pins: BoundedVec_ComponentDependency_64 = Field(default_factory=list)
+    required_input_media: BoundedVec_ModelInputMediaType_4 | None = None
     task_mappings: BoundedVec_ClaimedTaskMapping_32 = Field(default_factory=list)
     tasks: BoundedVec_string_32 = Field(default_factory=list)
     topology: TopologyRequirements | None = None
@@ -420,6 +459,7 @@ class CandidateFacts(BaseModel):
     facts: AgentComponentFacts
     kind: AgentComponentKind
     lifecycle: AgentLibraryLifecycle
+    primitive: PrimitiveContract | None = None
     required_capabilities: BoundedVec_string_64
     requires: BoundedVec_ComponentDependency_256
 
@@ -470,6 +510,7 @@ class CapacityResourceClass(str, Enum):
     WORKER = "worker"
     CPU = "cpu"
     BROKER = "broker"
+    MEMORY = "memory"
 
 
 class CapacityScope(BaseModel):
@@ -718,6 +759,8 @@ class DecisionInputs(BaseModel):
     ontology_digest: str
     policy: DecisionPolicy
     policy_digest: str
+    profile: ProfileConstraint | None = None
+    receipt_age_limit_s: Annotated[int, Field(ge=0)] | None = None
     request: AssemblyRequest
     solver: SolverIdentity
     templates: BoundedVec_TemplateFacts_8 = Field(default_factory=list)
@@ -753,12 +796,14 @@ class DecisionPolicy(BaseModel):
     a2a_requires_observation: bool
     accepted_gap: Scalar
     cold_start: ColdStart
+    knobs: dict[str, KnobValue] | None = None
     max_nogood_rounds: Annotated[int, Field(ge=0, le=255)]
     max_slots: Annotated[int, Field(ge=0, le=255)]
     max_templates: Annotated[int, Field(ge=0, le=255)]
     max_why_not_per_slot: Annotated[int, Field(ge=0, le=255)]
     node_budget: Annotated[int, Field(ge=0)]
     objective: ObjectiveOrder
+    reasoning: dict[str, ReasoningStrategy] | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     statistical: StatisticalPolicy | None = None
     topology: TopologyPolicy | None = None
@@ -809,6 +854,7 @@ class DecisionRecord(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     tenant_id: str
     trace_fidelity: TraceFidelity
+    uniqueness: BoundedVec_UniquenessProof_2 | None = None
     why_not: BoundedVec_WhyNot_64
 
 
@@ -1710,6 +1756,13 @@ class ViolationInfeasibleWhenForced(BaseModel):
     violation: Literal["infeasible_when_forced"]
 
 
+class ViolationPrimitiveContract(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    violation: Literal["primitive_contract"]
+
+
 Violation = Annotated[
     ViolationDenied
     | ViolationWithdrawn
@@ -1723,7 +1776,8 @@ Violation = Annotated[
     | ViolationOverBudget
     | ViolationTemplateValidation
     | ViolationUnknownLatencyUnderBudget
-    | ViolationInfeasibleWhenForced,
+    | ViolationInfeasibleWhenForced
+    | ViolationPrimitiveContract,
     Field(discriminator="violation"),
 ]
 
@@ -1885,8 +1939,7 @@ BoundedVec_string_64 = Annotated[list[str], Field(max_length=64)]
 BoundedVec_string_8 = Annotated[list[str], Field(max_length=8)]
 
 
-Coefficient = str | CoefficientKnown
-
+Coefficient = str | CoefficientKnown | Literal["unknown"]
 
 ConstraintBody = (
     ConstraintBodyLinear
@@ -1938,6 +1991,189 @@ SolveStatus = (
 
 
 VarId = Annotated[int, Field(ge=0)]
+
+
+class CodingAgentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent: VerifiedAgentFact
+    artifact_contract_digest: str
+    skills: BoundedVec_SkillTransformation_32
+
+
+class KnobValueDecimalMicros(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["decimal_micros"]
+    value: int
+
+
+class KnobValueDurationMs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["duration_ms"]
+    value: Annotated[int, Field(ge=0)]
+
+
+class KnobValueInteger(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["integer"]
+    value: int
+
+
+class PrimitiveContract(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capabilities: list[str]
+    effects: list[SideEffectClass]
+    input_schema_digest: str
+    kind: PrimitiveKind
+    output_schema_digest: str
+    primitive_id: str
+    version: str
+
+
+class PrimitiveEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    consumer: str
+    producer: str
+
+
+class PrimitiveKind(str, Enum):
+    PROMPT = "prompt"
+    TOOL = "tool"
+    MEMORY = "memory"
+    CONTROL_FLOW = "control_flow"
+
+
+class PrimitiveReplacement(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    new: str
+    old: str
+
+
+class ProfileConstraint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blocked_capabilities: BoundedVec_string_64
+    profile_id: str
+    removed: BoundedVec_string_64
+    revision: Annotated[int, Field(ge=0)]
+
+
+class ReasoningStrategy(str, Enum):
+    CHAIN = "chain"
+    TREE = "tree"
+    GRAPH = "graph"
+    PLANNING = "planning"
+
+
+class SideEffectClass(str, Enum):
+    READ_ONLY = "read_only"
+    GRAPH_WRITE = "graph_write"
+    EXTERNAL = "external"
+    IRREVERSIBLE = "irreversible"
+
+
+class SkillTransformation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    input_schema_digest: str
+    output_schema_digest: str
+    skill_id: str
+    version: str
+
+
+class SqlColumnProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    distinct_ratio_q32: Annotated[int, Field(ge=0)]
+    is_foreign_key: bool
+    sample_count: Annotated[int, Field(ge=0)]
+    sql_type: SqlColumnType
+
+
+class SqlColumnType(str, Enum):
+    BOOLEAN = "boolean"
+    TIMESTAMP = "timestamp"
+    TEXT = "text"
+    NUMERIC = "numeric"
+
+
+class UniquenessProof(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    certificate: Certificate
+    scope: UniquenessScope
+
+
+class UniquenessScope(str, Enum):
+    AFTER_ELIMINATION = "after_elimination"
+    ALL_CANDIDATES = "all_candidates"
+
+
+class VerifiedAgentFact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    capabilities: BoundedVec_string_64
+    discovery_age_s: Annotated[int, Field(ge=0)]
+    discovery_receipt_digest: str
+    revision: str
+
+
+BoundedVec_ModelInputMediaType_4 = Annotated[
+    list[ModelInputMediaType], Field(max_length=4)
+]
+
+
+BoundedVec_PrimitiveEdge_1024 = Annotated[list[PrimitiveEdge], Field(max_length=1024)]
+
+
+BoundedVec_PrimitiveReplacement_64 = Annotated[
+    list[PrimitiveReplacement], Field(max_length=64)
+]
+
+
+BoundedVec_SkillTransformation_32 = Annotated[
+    list[SkillTransformation], Field(max_length=32)
+]
+
+
+BoundedVec_UniquenessProof_2 = Annotated[list[UniquenessProof], Field(max_length=2)]
+
+
+KnobValue = Annotated[
+    KnobValueInteger | KnobValueDecimalMicros | KnobValueDurationMs,
+    Field(discriminator="type"),
+]
+
+
+QuestionKind = (
+    str
+    | Literal["pre_tool_risk"]
+    | Literal["connector_event_triage"]
+    | Literal["connector_tool_choice"]
+    | Literal["connector_write_back"]
+    | Literal["tool_subset"]
+    | Literal["harness_config"]
+    | Literal["task_plan"]
+    | Literal["harness_contrast"]
+    | Literal["placement"]
+    | Literal["context_budget"]
+    | Literal["round_verdict"]
+    | Literal["stage_allocation"]
+    | Literal["probe_verdict"]
+    | Literal["item_recommendation"]
+    | Literal["load_set"]
+    | Literal["usage_guidance"]
+    | Literal["branch_outcome"]
+    | Literal["edit_concentration"]
+)
+
 
 AbstainReasonUncoveredCapability.model_rebuild()
 
@@ -2558,4 +2794,32 @@ __all__ = [
     "ViolationWithdrawn",
     "WeightedLevel",
     "WhyNot",
+    "AbstainReasonFamily",
+    "AbstainReasonSurface",
+    "RefusalCode",
+    "RefusalSurface",
+    "ViolationPrimitiveContract",
+    "BoundedVec_ModelInputMediaType_4",
+    "BoundedVec_PrimitiveEdge_1024",
+    "BoundedVec_PrimitiveReplacement_64",
+    "BoundedVec_SkillTransformation_32",
+    "BoundedVec_UniquenessProof_2",
+    "CodingAgentRequest",
+    "KnobValue",
+    "KnobValueDecimalMicros",
+    "KnobValueDurationMs",
+    "KnobValueInteger",
+    "PrimitiveContract",
+    "PrimitiveEdge",
+    "PrimitiveKind",
+    "PrimitiveReplacement",
+    "ProfileConstraint",
+    "ReasoningStrategy",
+    "SideEffectClass",
+    "SkillTransformation",
+    "SqlColumnProfile",
+    "SqlColumnType",
+    "UniquenessProof",
+    "UniquenessScope",
+    "VerifiedAgentFact",
 ]

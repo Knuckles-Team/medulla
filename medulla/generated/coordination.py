@@ -3016,3 +3016,10 @@ decode_assistant_profile_list_profiles = contract_decoder(
 decode_assistant_profile_list_document_sets = contract_decoder(
     "AssistantProfile", "DocumentSetList", "list_document_sets"
 )
+send_batch = contract_sender("Batch", "MethodBatchParams")
+send_belief_revise = contract_sender("BeliefRevise", "MethodBeliefReviseParams")
+send_loops = contract_sender("Loops", "MethodLoopsParams")
+send_observation_state = contract_sender(
+    "ObservationState", "MethodObservationStateParams"
+)
+send_trace_critique = contract_sender("TraceCritique", "MethodTraceCritiqueParams")
