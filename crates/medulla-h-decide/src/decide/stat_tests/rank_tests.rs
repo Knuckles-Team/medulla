@@ -159,6 +159,7 @@ fn rank_request(
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

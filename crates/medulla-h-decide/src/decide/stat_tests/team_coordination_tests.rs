@@ -89,6 +89,7 @@ fn request(pin: &ComponentDependency, available: bool, age_s: u64) -> DecideRequ
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

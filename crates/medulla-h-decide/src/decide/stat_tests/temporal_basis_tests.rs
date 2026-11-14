@@ -62,6 +62,7 @@ fn request(
         params: BoundedVec::new(params).unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

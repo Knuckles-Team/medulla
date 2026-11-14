@@ -60,6 +60,7 @@ fn round_request(pin: &ComponentDependency, record: FeedbackRecord, bound: i64) 
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

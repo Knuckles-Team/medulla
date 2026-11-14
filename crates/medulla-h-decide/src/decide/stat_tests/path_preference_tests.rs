@@ -113,6 +113,7 @@ pub(super) async fn seed_as(
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     let decider = context("decider", tenant);
     let batch: DecisionBatch =
@@ -198,6 +199,7 @@ async fn prefer(
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     decide(h, request).await.unwrap().records.as_slice()[0].clone()
 }
@@ -280,6 +282,7 @@ async fn served_decide_prefers_the_higher_success_path() {
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     assert!(decide(&h, bad.clone())
         .await
@@ -354,6 +357,7 @@ async fn seed_aged(
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     let decider = context("decider", tenant);
     let batch: DecisionBatch =

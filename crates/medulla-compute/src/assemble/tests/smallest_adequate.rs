@@ -34,7 +34,7 @@ fn screened(require: bool) -> (Vec<String>, Vec<(String, Violation)>) {
     let legal = screened
         .legal
         .iter()
-        .map(|i| inputs.candidates[*i].component_id.clone())
+        .map(|i| inputs.candidates.as_slice()[*i].component_id.clone())
         .collect();
     let eliminated = screened
         .eliminated

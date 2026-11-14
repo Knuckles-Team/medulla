@@ -111,6 +111,7 @@ fn review_request(schema: &ComponentDependency, findings: &[Finding]) -> DecideR
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

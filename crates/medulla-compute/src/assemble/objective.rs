@@ -64,7 +64,7 @@ pub(super) fn first_unknown_size_or_cost(
 ) -> Option<(String, &'static str)> {
     let ranked = ranked_levels(&inputs.policy.objective);
     legal.iter().find_map(|&index| {
-        let candidate = &inputs.candidates[index];
+        let candidate = &inputs.candidates.as_slice()[index];
         ranked
             .iter()
             .filter(|kind| is_size_or_cost(**kind))

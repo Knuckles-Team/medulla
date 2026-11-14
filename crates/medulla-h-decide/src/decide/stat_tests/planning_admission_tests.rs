@@ -150,6 +150,7 @@ fn admission_request(pin: &ComponentDependency, plan: PlanningAdmissionRequest) 
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

@@ -1295,3 +1295,6 @@ The `premises` hook derives each source's premises from the request's pinned sou
 - Equal candidates resolve by a last `component_id` level (coefficient 2^rank over the id-sorted distinct placed candidates), added only when a size or ledger level is ranked. Beyond 40 distinct placed candidates the coefficient range is exhausted and the solver's own deterministic order decides.
 - Evidence premises read `objective:<level>=<value>` (class Observation, naming the revision that measured it), only for known values.
 - Wire: `ObjectiveLevelKind` gains three variants (hand-edited in `medulla/generated/_shared.py`); WIRE-REGEN needed for the wire vectors.
+
+## spec/f680b compile check (2026-11-13)
+After three writer-check rounds the branch's own errors are fixed (assembly candidates indexed through `as_slice`, every `DecideRequest` literal carries `evidence_streams`). The errors left are in files this branch does not touch and appear identically on a train/next-only check in the featureless writer-check build: `medulla-h-admin` (`service_grant`, `graph_schema_gateway`), `medulla-server-graph` `graph_pipeline/pipeline.rs:66` arity, and `medulla-h-decide` modules declared without the `decide` feature gate. They are environment or train/next reds, not this branch's.

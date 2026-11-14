@@ -181,6 +181,7 @@ fn load_set_request(schema: &ComponentDependency, question: LoadSetQuestion) -> 
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 
