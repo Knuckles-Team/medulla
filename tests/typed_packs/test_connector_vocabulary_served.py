@@ -334,6 +334,7 @@ def _sample_value(term: Term, connector: str) -> str | None:
 
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R089")
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("term", TERMS, ids=[t.name for t in TERMS])
 async def test_pack_record_of_each_new_term_round_trips(term: Term) -> None:
@@ -358,9 +359,9 @@ async def test_pack_record_of_each_new_term_round_trips(term: Term) -> None:
 
         props = await _read_back(client, pack_class)
         # Source, record id and as-of ride on the row.
-        assert props["source_record_id"] == "rec-1", props
+        assert props[KG + "sourceRecordId"] == "rec-1", props
         assert props["source_stream"] == STREAM, props
-        assert props["source_updated_at"] == UPDATED_AT, props
+        assert props[KG + "sourceUpdatedAt"] == UPDATED_AT, props
         assert connector in json.dumps(props["source_provenance"]), props
         if term.kind != "class":
             assert str(props[KG + term.name]) == str(value), props

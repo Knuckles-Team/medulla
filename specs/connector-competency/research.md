@@ -9,7 +9,7 @@ Finding: `SourceIngest` writes each record as a property-graph node whose id is
 RDF term (`<iri>` or a blank node), so an ingested source record does not appear in served SPARQL.
 
 Decision: the test reads the record through served `Uql` (`MATCH () WHERE type = '<pack class>'`)
-and the node properties (`source_record_id`, `source_stream`, `source_updated_at`,
+and the node properties (`core#sourceRecordId`, `source_stream`, `core#sourceUpdatedAt`,
 `source_provenance`, and the value under the term IRI). The term's declaration is proved by the
 served `ConnectorPack.Import`: a pack class that extends a core class the catalog lacks is refused
 `ONTOLOGY_ORPHAN`. Projecting source records into the RDF view is a separate engine feature and

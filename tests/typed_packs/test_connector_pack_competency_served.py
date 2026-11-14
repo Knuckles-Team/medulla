@@ -302,6 +302,7 @@ async def _answer(client, question: str, connector: str) -> list[str]:
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.2")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.3")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.4")
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
 @pytest.mark.parametrize("question", QUESTIONS)
 def test_pack_questions_end_to_end(question: str) -> None:
     async def exercise() -> None:
