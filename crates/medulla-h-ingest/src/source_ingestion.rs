@@ -2595,12 +2595,12 @@ fn mapped_properties(
     mapped.insert("type".into(), ontology_class.into());
     let mut targets: BTreeSet<String> = [
         "type",
-        "source_record_id",
+        SOURCE_RECORD_ID,
         "source_stream",
-        "source_mapping_reference",
+        SOURCE_MAPPING_REFERENCE,
         "source_raw_sha256",
         "source_provenance",
-        "source_updated_at",
+        SOURCE_UPDATED_AT,
         "source_datatypes",
     ]
     .into_iter()
@@ -2844,6 +2844,16 @@ fn validate_xsd_value(
     }
 }
 
+/// The core provenance predicates every ingested record carries
+/// (MEDULLA-INGEST-WORKER-R003.19): the record id, the as-of time and the mapping
+/// reference, under the one ontology IRI base.
+pub const SOURCE_RECORD_ID: &str = medulla_types::ontology_iri!("core#sourceRecordId");
+/// See [`SOURCE_RECORD_ID`].
+pub const SOURCE_UPDATED_AT: &str = medulla_types::ontology_iri!("core#sourceUpdatedAt");
+/// See [`SOURCE_RECORD_ID`].
+pub const SOURCE_MAPPING_REFERENCE: &str =
+    medulla_types::ontology_iri!("core#sourceMappingReference");
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn insert_source_metadata(
     mapped: &mut serde_json::Map<String, serde_json::Value>,
@@ -2851,9 +2861,9 @@ fn insert_source_metadata(
     mapping_reference: &str,
     raw_digest: &str,
 ) -> Result<(), String> {
-    mapped.insert("source_record_id".into(), record.record_id.clone().into());
+    mapped.insert(SOURCE_RECORD_ID.into(), record.record_id.clone().into());
     mapped.insert("source_stream".into(), record.stream.as_str().into());
-    mapped.insert("source_mapping_reference".into(), mapping_reference.into());
+    mapped.insert(SOURCE_MAPPING_REFERENCE.into(), mapping_reference.into());
     mapped.insert("source_raw_sha256".into(), raw_digest.into());
     mapped.insert(
         "source_provenance".into(),
@@ -2861,7 +2871,7 @@ fn insert_source_metadata(
             .map_err(|error| format!("source provenance encoding failed: {error}"))?,
     );
     if let Some(updated_at) = &record.updated_at {
-        mapped.insert("source_updated_at".into(), updated_at.clone().into());
+        mapped.insert(SOURCE_UPDATED_AT.into(), updated_at.clone().into());
     }
     Ok(())
 }

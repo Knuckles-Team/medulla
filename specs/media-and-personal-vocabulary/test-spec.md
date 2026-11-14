@@ -55,7 +55,7 @@ Every row below names a test that does not exist yet. The test file and function
 | T-042 | MEDULLA-MEDIA-VOCAB-R654 | L3 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_transcript_clock_tests.rs::segments_carry_three_typed_clocks` | Transcript segments carry storage, event and narrative time proves its row as stated in requirements.md |
 | T-043 | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-core/tests/nutrition_pack.rs::nutrient_ids_map_and_records_conform` | Food composition and nutrient reference types proves its row as stated in requirements.md |
 | T-043a | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-persistence-tests/src/cold_offload_tests.rs::cold_pack_graphs_open_on_first_union_resolve` | A pack graph that is cold after a restart opens on the first union read |
-| T-043b | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-h-admin/src/admin/connector_pack/reproject/surface.rs::tests::a_newer_head_drops_the_individuals_it_no_longer_names` | An individual dropped from a newer head disappears from the pack graph |
+| T-043b | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-h-admin/src/admin/connector_pack/reproject/surface.rs::tests::a_newer_head_drops_the_triples_it_no_longer_names` | A triple dropped from a newer head disappears from the pack graph |
 
 ## Negative and boundary cases
 

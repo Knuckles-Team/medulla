@@ -136,13 +136,22 @@ pub mod worker {
         let outcome = claim(&store, &tenant).await?;
         report(&outcome);
         let claimed = outcome.claims.len();
-        let progressed = claimed > 0;
+        let mut progressed = claimed > 0;
         let mut committed_graphs = 0usize;
         for lease in outcome.claims {
-            if settle(state, &store, &tenant, lease).await? {
-                committed_graphs += 1;
+            // MEDULLA-TYPED-PACKS-R096.2: one row's failure never ends the sweep;
+            // the rows after it keep flowing.
+            match settle(state, &store, &tenant, lease).await {
+                Ok(true) => committed_graphs += 1,
+                Ok(false) => {}
+                Err(error) => tracing::warn!(
+                    code = "CONNECTOR_PACK_PROJECTION_SETTLE_FAILED",
+                    %error,
+                    "connector pack projection: one row could not be resolved; the sweep continues"
+                ),
             }
         }
+        progressed |= retry_due(state, &store, &tenant, RetryAt::now()).await;
         if progressed {
             // Bounded cadence: one INFO per non-empty sweep (a sweep claims at
             // most CLAIM_LIMIT rows), so a multi-minute drain is never silent
@@ -216,33 +225,42 @@ pub mod worker {
             &lease.record.intent.payload,
         ) {
             Err(_) => (Some(OutboxRejectReason::InvalidEvent), false),
-            Ok(record) => match project(state, store, tenant, &record).await {
+            Ok(record) => match project(state, store, tenant, &record.connector).await {
                 Ok(projected) => (None, projected),
-                Err(error)
-                    if crate::admin::connector_pack::reproject::is_retryable_projection_error(
-                        &error,
-                    ) =>
-                {
-                    // MEDULLA-TYPED-PACKS-R096.1: the head records the failed
-                    // state; the lease stays unresolved so the kernel
-                    // redelivers the row when it expires (the backoff) and
-                    // dead-letters it after its bounded attempts.
-                    tracing::warn!(
-                        code = "CONNECTOR_PACK_PROJECTION_FAILED",
-                        connector = record.connector.as_str(),
-                        %error,
-                        "connector pack projection failed with a retryable code; redelivered after the lease expires"
-                    );
-                    return Ok(false);
-                }
                 Err(error) => {
+                    // MEDULLA-TYPED-PACKS-R096.2: the row is resolved either way so
+                    // the ordered stream keeps flowing; the failure moves into the
+                    // pack's own retry state (terminal at once when not retryable).
+                    let retryable =
+                        crate::admin::connector_pack::reproject::is_retryable_projection_error(
+                            &error,
+                        );
                     tracing::warn!(
                         code = "CONNECTOR_PACK_PROJECTION_FAILED",
                         connector = record.connector.as_str(),
+                        retryable,
                         %error,
-                        "connector pack projection failed; the head stays dark until re-driven"
+                        "connector pack projection failed; the pack's retry state carries it"
                     );
-                    (Some(OutboxRejectReason::ProjectionFailed), false)
+                    if let Err(failure) = schedule_retry(
+                        state,
+                        store,
+                        tenant,
+                        &record.connector,
+                        &error,
+                        RetryAt::now(),
+                    )
+                    .await
+                    {
+                        tracing::warn!(
+                            code = "CONNECTOR_PACK_PROJECTION_RETRY_UNRECORDED",
+                            connector = record.connector.as_str(),
+                            %failure,
+                            "connector pack projection retry state was not recorded"
+                        );
+                    }
+                    let reason = (!retryable).then_some(OutboxRejectReason::ProjectionFailed);
+                    (reason, false)
                 }
             },
         };
@@ -298,36 +316,19 @@ pub mod worker {
         state: &Arc<RwLock<ServerState>>,
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
-        record: &PackImportRecord,
+        connector: &medulla_types::contract::ResourceId,
     ) -> Result<bool, String> {
-        let status = store.connector_pack_status(tenant, &record.connector)?;
+        let status = store.connector_pack_status(tenant, connector)?;
         let Some(head) = status.head else {
             return Ok(false);
         };
         if head.visible_record_id.as_deref() == Some(head.record_id.as_str()) {
             return Ok(false);
         }
-        let (anonymous, server) = {
-            let state = state.read().await;
-            (state.local_anonymous, state.context.clone())
-        };
-        let plan = store.prepare_connector_pack_projection(tenant, &record.connector)?;
-        let verified = if anonymous {
-            VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
-        } else {
-            service_context(&server, &plan.record_id)?
-        };
-        let context =
-            medulla_persistence_records::agent_library::context::bind_agent_library_context(
-                store,
-                0,
-                &verified,
-                unbound_context(tenant),
-                "connector-pack:reproject",
-                true,
-            )?;
+        let plan = store.prepare_connector_pack_projection(tenant, connector)?;
+        let (anonymous, verified, context) = write_context(state, store, tenant, &plan).await?;
         if !anonymous {
-            if let Err(error) = grant_projection_access(state, tenant, record).await {
+            if let Err(error) = grant_projection_access(state, tenant, connector).await {
                 let error = format!("PACK_PROJECTION_GRANT_FAILED: {error}");
                 return Err(
                     crate::admin::connector_pack::reproject::record_projection_failure(
@@ -349,21 +350,147 @@ pub mod worker {
     async fn grant_projection_access(
         state: &Arc<RwLock<ServerState>>,
         tenant: &str,
-        record: &PackImportRecord,
+        connector: &medulla_types::contract::ResourceId,
     ) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
             let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
-                tenant,
-                &record.connector,
+                tenant, connector,
             )?;
             super::grant::ensure(&mut state.write().await.isolation, &graph)
         }
         #[cfg(not(feature = "security"))]
         {
-            let _ = (state, tenant, record);
+            let _ = (state, tenant, connector);
             Ok(())
         }
+    }
+
+    /// The verified identity and Agent Library context one projection write of
+    /// `plan`'s head commits under; each call mints its own attempt nonce.
+    async fn write_context(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        plan: &medulla_persistence_records::connector_pack::projection::ConnectorPackProjectionPlan,
+    ) -> Result<
+        (
+            bool,
+            VerifiedRequestContext,
+            medulla_agent_types::agent_library::AgentLibraryMutationContext,
+        ),
+        String,
+    > {
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
+        let verified = if anonymous {
+            VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
+        } else {
+            service_context(&server, &plan.record_id)?
+        };
+        let context =
+            medulla_persistence_records::agent_library::context::bind_agent_library_context(
+                store,
+                0,
+                &verified,
+                unbound_context(tenant),
+                "connector-pack:reproject",
+                true,
+            )?;
+        Ok((anonymous, verified, context))
+    }
+
+    /// When a retry decision is taken and under which knobs
+    /// (MEDULLA-TYPED-PACKS-R096.2): production reads the clock and the
+    /// registry; tests pass a later clock to make retries due.
+    #[derive(Clone, Copy)]
+    pub(crate) struct RetryAt {
+        pub(crate) now_ms: u64,
+        pub(crate) knobs: medulla_persistence_records::connector_pack::projection_retry::RetryKnobs,
+    }
+
+    impl RetryAt {
+        pub(crate) fn now() -> Self {
+            let knobs = medulla_server_api::knob_config::knobs();
+            Self {
+                now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+                knobs: medulla_persistence_records::connector_pack::projection_retry::RetryKnobs {
+                    max_attempts: u32::try_from(knobs.connector_pack_projection_max_attempts)
+                        .unwrap_or(u32::MAX),
+                    backoff_ms: knobs.connector_pack_projection_backoff_ms,
+                },
+            }
+        }
+    }
+
+    /// Move one failed projection of `connector`'s current head into its next
+    /// retry state: scheduled while attempts are left, the recorded terminal
+    /// failure (with its code) once they are used up or the failure is not
+    /// retryable. A head already terminal records nothing more.
+    async fn schedule_retry(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        connector: &medulla_types::contract::ResourceId,
+        error: &str,
+        at: RetryAt,
+    ) -> Result<(), String> {
+        let retryable =
+            crate::admin::connector_pack::reproject::is_retryable_projection_error(error);
+        use medulla_persistence_records::connector_pack::projection_retry::next_retry;
+        let plan = store.prepare_connector_pack_projection(tenant, connector)?;
+        let prior = store.connector_pack_projection_retry(tenant, connector)?;
+        let code = crate::admin::connector_pack::reproject::projection_error_code(error);
+        let Ok(next) = next_retry(
+            prior.as_ref(),
+            &plan.record_id,
+            &code,
+            retryable,
+            at.now_ms,
+            at.knobs,
+        ) else {
+            return Ok(());
+        };
+        let (_, _, context) = write_context(state, store, tenant, &plan).await?;
+        store.record_connector_pack_projection_retry(context, &plan, &next)
+    }
+
+    /// Run every pack retry that is due. Returns whether any ran. A pack's
+    /// failure only moves its own retry state; the other due packs still run.
+    pub(crate) async fn retry_due(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        at: RetryAt,
+    ) -> bool {
+        let due = match store.due_connector_pack_retries(tenant, at.now_ms) {
+            Ok(due) => due,
+            Err(error) => {
+                tracing::warn!(
+                    code = "CONNECTOR_PACK_PROJECTION_RETRY_SCAN_FAILED",
+                    %error,
+                    "connector pack projection retry scan failed"
+                );
+                return false;
+            }
+        };
+        for connector in &due {
+            let Err(error) = project(state, store, tenant, connector).await else {
+                continue;
+            };
+            if let Err(failure) = schedule_retry(state, store, tenant, connector, &error, at).await
+            {
+                tracing::warn!(
+                    code = "CONNECTOR_PACK_PROJECTION_RETRY_UNRECORDED",
+                    connector = connector.as_str(),
+                    %failure,
+                    "connector pack projection retry state was not recorded"
+                );
+            }
+        }
+        !due.is_empty()
     }
 
     /// The engine service identity the worker projects under. Its operation

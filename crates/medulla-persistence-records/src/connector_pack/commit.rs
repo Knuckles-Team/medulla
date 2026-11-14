@@ -437,6 +437,7 @@ fn apply_head(
         },
         receipt: receipt.clone(),
         conformance_evidence: Some(issue_conformance_evidence(plan)),
+        projection_retry: None,
     };
     let bytes = medulla_storage::encode_bounded(&head, "connector pack head")?;
     write

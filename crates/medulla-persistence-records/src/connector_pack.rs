@@ -41,6 +41,7 @@ mod declaration;
 pub(crate) mod outbox;
 mod pins;
 pub mod projection;
+pub mod projection_retry;
 pub mod undecodable;
 pub(crate) mod visibility;
 
@@ -59,6 +60,11 @@ pub(crate) struct ConnectorPackHeadRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conformance_evidence:
         Option<medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence>,
+    /// The head record's projection retry state (MEDULLA-TYPED-PACKS-R096.2): set by a
+    /// failed projection, cleared when one applies. Rows written before it existed
+    /// carry none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub projection_retry: Option<projection_retry::PackProjectionRetry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,6 +196,18 @@ impl AgentLibraryStore {
             })?;
         let head: ConnectorPackHeadRow =
             undecodable::decode_stored(head.value(), "connector pack head")?;
+        if let Some(retry) = head
+            .projection_retry
+            .as_ref()
+            .filter(|retry| retry.record_id == head.head.record_id && retry.is_terminal())
+        {
+            // MEDULLA-TYPED-PACKS-R096.2: a terminal projection failure refuses
+            // with its own code at once; the head will not become visible.
+            return Err(format!(
+                "{}: connector head projection failed after {} attempts",
+                retry.code, retry.attempt
+            ));
+        }
         let visible_record_id = head.head.visible_record_id.as_deref().ok_or_else(|| {
             "ATTACH_PACK_HEAD_NOT_VISIBLE: connector head has not completed projection".to_string()
         })?;

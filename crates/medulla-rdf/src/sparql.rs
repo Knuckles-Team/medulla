@@ -167,6 +167,23 @@ impl Projection {
     /// string. `None` in identity mode (no synthesis — `rdf:type` is edge-sourced).
     /// Namespaced: `<base + CamelCase(type)>` when `camel_type`, else the verbatim
     /// (space-underscored) local name.
+    /// The `rdf:type` object a node with key `node_key` and stored `type` projects
+    /// with: the one node-to-RDF typing rule every projection site uses. A `type`
+    /// that is an absolute IRI (a mapped class of the composed schema) types the node
+    /// as that class in every projection. An RDF-loaded node (`<iri>` / `_:b` key)
+    /// under the identity projection carries its explicit typing edges already, so it
+    /// is not typed a second time. Any other `type` follows [`Self::type_object_iri`].
+    pub fn node_type_iri(&self, node_key: &str, ty: &str) -> Option<String> {
+        if ty.contains("://") || ty.starts_with("urn:") {
+            let rdf_loaded = node_key.starts_with('<') || node_key.starts_with("_:");
+            if self.base_iri.is_none() && rdf_loaded {
+                return None;
+            }
+            return Some(format!("<{ty}>"));
+        }
+        self.type_object_iri(ty)
+    }
+
     pub fn type_object_iri(&self, ty: &str) -> Option<String> {
         let base = self.base_iri.as_ref()?;
         let local = if self.camel_type {
@@ -537,4 +554,31 @@ mod tests {
     include!("sparql/tests/query.rs");
     include!("sparql/tests/filters.rs");
     include!("sparql/tests/builtins.rs");
+
+    // spec: MEDULLA-INGEST-WORKER-R003.19
+    #[test]
+    fn a_property_node_with_an_iri_type_projects_rdf_type_once() {
+        let class = "https://knuckles-team.github.io/ontology/core#Position";
+        let raw = super::Projection::raw();
+        // A property-graph node (no RDF identity) is typed as its mapped class.
+        assert_eq!(
+            raw.node_type_iri("source:abc", class),
+            Some(format!("<{class}>"))
+        );
+        // An RDF-loaded node already carries its explicit typing edge.
+        assert_eq!(raw.node_type_iri("<https://example.org/p1>", class), None);
+        assert_eq!(raw.node_type_iri("_:b0", class), None);
+        // A bare type keeps the identity projection's no-synthesis rule.
+        assert_eq!(raw.node_type_iri("source:abc", "agent"), None);
+        // A namespaced projection keeps an absolute class verbatim.
+        let namespaced = super::Projection::from_wire("https://example.org/", "camel");
+        assert_eq!(
+            namespaced.node_type_iri("x", class),
+            Some(format!("<{class}>"))
+        );
+        assert_eq!(
+            namespaced.node_type_iri("x", "world_model"),
+            Some("<https://example.org/WorldModel>".to_string())
+        );
+    }
 }

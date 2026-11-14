@@ -34,10 +34,10 @@ pub(crate) fn is_retryable_projection_error(error: &str) -> bool {
     RETRYABLE_PROJECTION_CODES.contains(&code)
 }
 
-/// Test seam: the connector whose next projection body read reports the chunk
-/// store unavailable.
+/// Test seam: the connector whose next N projection body reads report the
+/// chunk store unavailable.
 #[cfg(all(test, feature = "redb", feature = "blob", feature = "shacl"))]
-pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<String>> =
+pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<(String, u32)>> =
     std::sync::Mutex::new(None);
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
@@ -161,9 +161,14 @@ async fn materialize_current_projection(
     {
         use medulla_kernel::lock_recovery::LockRecovery;
         let mut inject = INJECT_BLOB_UNAVAILABLE.lock_or_panic("injected blob failure");
-        if inject.as_deref() == Some(plan.connector.as_str()) {
-            *inject = None;
-            return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());
+        if let Some((connector, left)) = inject.as_mut() {
+            if connector.as_str() == plan.connector.as_str() {
+                *left = left.saturating_sub(1);
+                if *left == 0 {
+                    *inject = None;
+                }
+                return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());
+            }
         }
     }
     let blob = state
@@ -264,12 +269,13 @@ async fn materialize_projection_documents(
     let store = Arc::clone(&blob.store);
     let tenant_id = plan.tenant_id.clone();
     let bodies = plan.bodies.clone();
-    let mut documents = tokio::task::spawn_blocking(move || {
+    let (mut documents, declaration) = tokio::task::spawn_blocking(move || {
         projection_documents_from_store(store.as_ref(), &tenant_id, &bodies)
     })
     .await
     .map_err(|error| format!("connector pack projection body task failed: {error}"))??;
-    documents.surface = surface::surface_triples(plan, &documents.ontologies)?;
+    documents.surface =
+        surface::surface_triples(plan, &documents.ontologies, declaration.as_deref())?;
     Ok(documents)
 }
 
@@ -278,7 +284,8 @@ fn projection_documents_from_store(
     store: &dyn medulla_server_blob::blob::store::ChunkStore,
     tenant_id: &str,
     bodies: &[PackProjectionBody],
-) -> Result<PackProjectionDocuments, String> {
+) -> Result<(PackProjectionDocuments, Option<String>), String> {
+    let mut declaration = None;
     let mut shapes = Vec::new();
     let mut ontologies = Vec::new();
     let mut crosswalks = Vec::new();
@@ -300,18 +307,28 @@ fn projection_documents_from_store(
             PackEntryKind::Ontology => (&mut ontologies, &mut ontology_length),
             PackEntryKind::Shapes => (&mut shapes, &mut shapes_length),
             PackEntryKind::Crosswalk => (&mut crosswalks, &mut crosswalk_length),
+            PackEntryKind::Resource
+                if body.uri
+                    == medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI =>
+            {
+                declaration = Some(text.to_string());
+                continue;
+            }
             _ => {
                 return Err("CORRUPT_CONNECTOR_PACK: projection contains a non-schema body".into())
             }
         };
         push_schema_document(target, total_length, &body.uri, text)?;
     }
-    Ok(PackProjectionDocuments {
-        shapes,
-        ontologies,
-        crosswalks,
-        surface: None,
-    })
+    Ok((
+        PackProjectionDocuments {
+            shapes,
+            ontologies,
+            crosswalks,
+            surface: None,
+        },
+        declaration,
+    ))
 }
 
 /// A body read that failed without its own stable code is a chunk store
@@ -369,7 +386,7 @@ fn projection_failure_detail(error: &str) -> String {
 }
 
 #[cfg(all(feature = "blob", feature = "redb", feature = "shacl"))]
-fn projection_error_code(error: &str) -> String {
+pub(crate) fn projection_error_code(error: &str) -> String {
     let code = error.split_once(':').map_or(error, |(code, _)| code).trim();
     if code.is_empty()
         || code.len() > 256
@@ -422,7 +439,9 @@ mod tests {
                 length: stored[1].length,
             },
         ];
-        let documents = projection_documents_from_store(&store, "tenant-a", &pointers).unwrap();
+        let (documents, declaration) =
+            projection_documents_from_store(&store, "tenant-a", &pointers).unwrap();
+        assert!(declaration.is_none());
         assert_eq!(documents.ontologies.len(), 1);
         assert_eq!(documents.shapes.len(), 1);
     }

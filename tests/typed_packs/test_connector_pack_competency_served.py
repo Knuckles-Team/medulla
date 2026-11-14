@@ -41,6 +41,9 @@ QUESTIONS = [
     "q4_record_governance",
 ]
 STREAM = "items"
+# R101.2: a declaration's `ontology_class` and field predicates are IRIs of
+# the composed schema.
+CORE = "https://knuckles-team.github.io/ontology/core#"
 
 
 def _fixture(*parts: str, connector: str) -> str:
@@ -79,17 +82,20 @@ def _declaration(connector: str, question: str) -> ConnectorPackEntryContent:
     mappings: dict[str, Any] = {
         "position": {
             "fields": {
-                "id": "identifier",
-                "instrument": "positionInstrument",
-                "quantity": "positionQuantity",
+                "id": CORE + "identifier",
+                "instrument": CORE + "positionInstrument",
+                "quantity": CORE + "positionQuantity",
             },
             "key_fields": ["id"],
-            "ontology_class": "Position",
+            "ontology_class": CORE + "Position",
         },
         "doc": {
-            "fields": {"id": "identifier", "title": "label"},
+            "fields": {
+                "id": CORE + "identifier",
+                "title": "http://www.w3.org/2000/01/rdf-schema#label",
+            },
             "key_fields": ["id"],
-            "ontology_class": "Document",
+            "ontology_class": CORE + "Document",
         },
     }
     body: dict[str, Any] = {
@@ -299,6 +305,7 @@ async def _answer(client, question: str, connector: str) -> list[str]:
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.2")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.3")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.4")
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
 @pytest.mark.parametrize("question", QUESTIONS)
 def test_pack_questions_end_to_end(question: str) -> None:
     async def exercise() -> None:

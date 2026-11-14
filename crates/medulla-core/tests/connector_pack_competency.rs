@@ -163,8 +163,8 @@ fn finance_method_terms_and_shape() {
 const CONNECTOR: &str = "competency-pack";
 const CP_NS: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
 
-/// SourceIngest stamps these properties on every ingested node
-/// (`insert_source_metadata` in `medulla-h-ingest`); they are engine metadata
+/// SourceIngest stamps these core properties on every ingested node
+/// (`insert_source_metadata` in `medulla-h-ingest`, MEDULLA-INGEST-WORKER-R003.19); they are engine metadata
 /// of the record, not ontology terms, so the registry check skips them.
 const ENGINE_STAMPED: [&str; 3] = [
     "sourceRecordId",
@@ -406,6 +406,7 @@ fn finance_algorithm_selection_query_uses_registered_terms() {
     assert_registered("q1_finance_algorithms");
 }
 
+// spec: MEDULLA-INGEST-WORKER-R003.19
 // spec: MEDULLA-CQ-CONN-R084.2
 #[test]
 fn positions_and_applicable_risk_analyses_answer() {

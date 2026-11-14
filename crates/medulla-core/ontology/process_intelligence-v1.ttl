@@ -117,9 +117,6 @@
 :source_graph_epoch a owl:DatatypeProperty ;
     owl:equivalentProperty :sourceGraphEpoch .
 
-:source_record_id a owl:DatatypeProperty ;
-    owl:equivalentProperty :sourceRecordId .
-
 :valid_from a owl:DatatypeProperty ;
     owl:equivalentProperty :validFrom .
 
