@@ -347,13 +347,14 @@ pub(super) fn decide_blocking(
             registry,
         )
     })?;
-    let (pinned, policy, binding) = telemetry::stage(Stage::Constraints, family, tenant, || {
-        registry.constraints(request)?;
-        let binding = registry.bind(ctx, request)?;
-        let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
-        let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
-        Ok::<_, String>((pinned, policy, binding))
-    })?;
+    let (pinned, policy, provider_binding) =
+        telemetry::stage(Stage::Constraints, family, tenant, || {
+            registry.constraints(request)?;
+            let provider_binding = registry.bind(ctx, request)?;
+            let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
+            let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+            Ok::<_, String>((pinned, policy, provider_binding))
+        })?;
     let comparative = super::family::comparative_analysis::plan(
         request,
         &candidates.entries,
@@ -456,7 +457,7 @@ pub(super) fn decide_blocking(
                 registry,
                 context_digest,
                 pool,
-                binding,
+                binding: provider_binding,
             },
             &executed,
             nl,

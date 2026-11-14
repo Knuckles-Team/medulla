@@ -171,6 +171,7 @@ fn joined_evaluation(h: &Harness, record: &StatisticalDecisionRecord, tenant: &s
         lease_holder: "worker-a".to_string(),
         fidelity: OutcomeFidelity::ToolCalls,
         success: Some(true),
+        backbone: None,
     };
     let key = medulla_persistence_records::decision_jobs::evaluation_key(
         &record.record_id,
