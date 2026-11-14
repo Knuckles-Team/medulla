@@ -586,7 +586,7 @@ def _watermark(client: SyncMedullaClient, mark: str) -> None:
                     "eg:maxStaleness": 600,
                 },
             )
-            assert await aclient.txn.commit(txn, idempotency_key=f"r067-6-{mark}")
+            assert await aclient.txn.commit(txn, idempotency_key=f"r067-6-{mark}-{now_ms}")
         finally:
             await aclient.close()
 
