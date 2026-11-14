@@ -1,7 +1,7 @@
 """MEDULLA-UNIFIED-DATA-PLANE-R038.6 served acceptance: openCypher over a graph view.
 
-A named view registered with ``RegisterGraphView`` answers ``CypherQuery`` reads over the
-approved R2RML mapping of a PostgreSQL source without copying a row, and
+A named view registered with ``RegisterGraphView`` answers ``CypherQuery`` reads over
+the approved R2RML mapping of a PostgreSQL source without copying a row, and
 the same question in SPARQL over the same mapping returns the same answer. A view is
 owner-scoped: another principal does not resolve it.
 """

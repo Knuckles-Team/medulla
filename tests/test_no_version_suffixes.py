@@ -119,9 +119,7 @@ FALSE_POSITIVE_LINE_PATTERNS: list[tuple[re.Pattern, str]] = [
     # MEDULLA-DECISION-ENGINE-R134 names `AnswerCandidateRankingV1` as the typed
     # record of the answer-ranking question.
     (
-        re.compile(
-            r"\bAnswerCandidateRankingV1\b"
-        ),
+        re.compile(r"\bAnswerCandidateRankingV1\b"),
         "spec-named decision-engine record type (MEDULLA-DECISION-ENGINE-R134), "
         "not a versioned component",
     ),

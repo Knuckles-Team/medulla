@@ -106,7 +106,10 @@ def text_bm25(key: str, param: str) -> dict[str, Any]:
 
 
 def nearest_neighbour_similarity(graph_param: str) -> dict[str, Any]:
-    """Similarity of a candidate to the nearest other row of the graph named by ``graph_param``."""
+    """Similarity of a candidate to the nearest other row of the graph ``graph_param``.
+
+    ``graph_param`` names the graph whose rows are compared.
+    """
     return {"feature": "nearest_neighbour_similarity", "graph_param": graph_param}
 
 

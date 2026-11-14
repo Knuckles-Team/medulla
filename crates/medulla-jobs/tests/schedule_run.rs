@@ -204,9 +204,9 @@ fn group_members_skip_while_one_runs_and_inside_the_spacing() {
     assert_eq!(decide_window(&record, &run, &spaced), TickOutcome::Fired);
 
     // A schedule outside any group ignores group facts.
-    let mut loner = record.clone();
-    loner.exclusion_group = None;
-    assert_eq!(decide_window(&loner, &run, &active), TickOutcome::Fired);
+    let mut ungrouped = record.clone();
+    ungrouped.exclusion_group = None;
+    assert_eq!(decide_window(&ungrouped, &run, &active), TickOutcome::Fired);
 
     // Group name and spacing bounds.
     assert!(validate_group(Some("g"), 0).is_ok());

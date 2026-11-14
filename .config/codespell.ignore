@@ -53,3 +53,6 @@ atmost
 statics
 hsa
 uptodate
+# caf: the NFC test input "Caf\u{e9} Open" (memory_rewrite.rs) spells "Cafe" with an escaped
+# combining-free e-acute; the escape splits the word, so codespell sees "Caf".
+caf

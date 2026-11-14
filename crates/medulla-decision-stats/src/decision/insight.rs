@@ -120,10 +120,10 @@ pub fn select_insights(
             })
         })
         .collect();
-    chosen.sort_by(|(ai, au, a), (bi, bu, b)| {
+    chosen.sort_by(|(a_inter, a_union, a), (b_inter, b_union, b)| {
         // Compare the exact fractions, then the recorded order keys.
-        (u128::from(*bi) * u128::from(*au))
-            .cmp(&(u128::from(*ai) * u128::from(*bu)))
+        (u128::from(*b_inter) * u128::from(*a_union))
+            .cmp(&(u128::from(*a_inter) * u128::from(*b_union)))
             .then(b.insight.success_count.cmp(&a.insight.success_count))
             .then(a.insight.insight_id.cmp(&b.insight.insight_id))
     });

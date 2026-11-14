@@ -512,6 +512,7 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
 
 MAT_TABLE = "cc_materialised"
 MAT_SOURCE = "cc-materialised"
+MAT_DIGEST = "sha256:" + "0" * 60 + "67a6"
 MAT_VG = "https://knuckles-team.github.io/ontology/virtual-graph#"
 MAT_CORE = "https://knuckles-team.github.io/ontology/core#"
 
@@ -528,7 +529,7 @@ ex:conn a vg:SourceConnection ; vg:sourceKind "sql" ; vg:endpointRef ex:ep ;
     vg:foreignSourceName "{MAT_SOURCE}" ; vg:sourceRole "live_truth"{copy} .
 ex:ep vg:url "postgres://source.example.invalid/db" .
 ex:contract a vg:MetadataContract ; vg:contractSource ex:conn ; vg:schemaVersion "1" ;
-    vg:contentDigest "sha256:00000000000000000000000000000000000000000000000000000000000067a6" ;
+    vg:contentDigest "{MAT_DIGEST}" ;
     vg:discoveredEntity "items" ; vg:discoveredField "items.id", "items.label" .
 ex:mapping a vg:VirtualMapping ; vg:mapsContract ex:contract ;
     vg:mapsOntologyClass kg:Incident ; vg:mapsEntity "items" ; vg:keyField "items.id" ;

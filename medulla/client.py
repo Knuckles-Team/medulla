@@ -2921,7 +2921,8 @@ class NodeClient:
         ``{"op": "GetNodeProperties", "node_id": ...}``. The operations commit together
         in order or not at all; a read sees the writes before it. The result is one
         mapping per operation, in order. An empty batch is refused ``INVALID_ARGUMENT``
-        and a batch over 64 operations ``BATCH_TOO_LARGE``, both before anything runs."""
+        and a batch over 64 operations ``BATCH_TOO_LARGE``, both before anything
+        runs."""
         packed: list[dict[str, Any]] = []
         for operation in operations:
             wire = {
@@ -12773,7 +12774,8 @@ class QueryClient:
 
         Returns ``{"ranked": [{"id", "score", "similarity", "evidence_quality",
         "source_reliability"},
-        ...]}``, highest score first. The graph (RLS-filtered) supplies each source's prior.
+        ...]}``, highest score first. The graph (RLS-filtered) supplies each
+        source's prior.
         Epistemic-causal support is included in the mandatory main build.
         """
         params: dict[str, Any] = {"candidates": candidates}
@@ -13490,7 +13492,8 @@ class TimeSeriesClient:
         ``[filtered level, 0, known_at_ms]``. Idempotent for the same model (the call
         catches the series up); another model over the same series is refused with
         ``STATE_CHECKPOINT_STALE``, a missing or too narrow source with
-        ``STATE_SCHEMA_UNAVAILABLE``, a model over a ceiling with ``KERNEL_STATE_BUDGET``
+        ``STATE_SCHEMA_UNAVAILABLE``, a model over a ceiling with
+        ``KERNEL_STATE_BUDGET``
         or ``KERNEL_WORK_BUDGET``. Returns the receipt: ``derived_from``, ``digest``,
         ``appended``, ``caught_up``, ``last_ts``, ``cursor``, ``model_revision`` and
         ``checkpoint_digest``."""
