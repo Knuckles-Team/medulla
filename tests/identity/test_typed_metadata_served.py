@@ -418,8 +418,14 @@ def test_typed_metadata_served_journey():
                 "ClientMetadata": set(),
                 "InteractionNetwork": set(),
             }
-            # A principal of another tenant sees none of it.
-            assert all(not ids for ids in _all_ids(outsider).values())
+            # A principal of another tenant sees none of it: the graph refuses its
+            # read outright, or answers with nothing.
+            try:
+                foreign = _all_ids(outsider)
+            except EngineResponseError as refused:
+                assert "AUTH_TENANT_MISMATCH" in str(refused)
+            else:
+                assert all(not ids for ids in foreign.values())
         finally:
             owner.close()
             member.close()
