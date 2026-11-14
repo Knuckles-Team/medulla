@@ -149,7 +149,25 @@ async fn belief_pass_reaches_the_handler() {
 #[tokio::test]
 async fn belief_refusals_leave_state_unchanged() {
     let h = belief_harness().await;
-    claim_with_evidence(&h, "disk-is-fast", false, 3_000_000).await;
+    // One piece of evidence weighs at most WEIGHT_PPM_MAX (1.0 nat at the
+    // outcome prior), short of the -1.386 nat retraction threshold: two full
+    // refutations put the claim below it.
+    claim_with_evidence(&h, "disk-is-fast", false, 1_000_000).await;
+    let _: ClaimRecord = claim_op(
+        &h,
+        ClaimOp::RecordEvidence {
+            evidence_id: "e-disk-is-fast-2".to_string(),
+            claim_id: "disk-is-fast".to_string(),
+            channel: Some(EvidenceChannel::Outcome),
+            supports: false,
+            weight_ppm: 1_000_000,
+            source_digest: "sha256:disk-is-fast-2".to_string(),
+            stances: BTreeMap::new(),
+            feed: None,
+        },
+    )
+    .await
+    .unwrap();
     let before: ClaimRecord = claim_op(
         &h,
         ClaimOp::Get {

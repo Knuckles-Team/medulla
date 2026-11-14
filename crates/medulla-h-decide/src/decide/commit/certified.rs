@@ -72,6 +72,36 @@ impl Coordinator {
         record: &DecisionRecord,
         expected_catalog_digest: &str,
     ) -> Result<Self, String> {
+        let mut coordinator =
+            Self::unstarted(state, verified, record, expected_catalog_digest).await?;
+        coordinator.interrupted = coordinator.is_interrupted()?;
+        if coordinator.interrupted {
+            return Ok(coordinator);
+        }
+        let begun = certificate::begin(coordinator.redb()?, &coordinator.request).await?;
+        match begun {
+            Begun::Fresh => {}
+            Begun::Decided(OwnerDecision::Commit) => coordinator.resumed = true,
+            Begun::Decided(OwnerDecision::Abort) => return Err(coordinator.decided_abort()),
+        }
+        Ok(coordinator)
+    }
+
+    fn decided_abort(&self) -> String {
+        format!(
+            "{}: transaction {} was decided ABORT",
+            DecisionErrorCode::CertificateDecidedAbort.as_str(),
+            self.request.txn_id
+        )
+    }
+
+    /// The coordinator of this request, before any durable write.
+    async fn unstarted(
+        state: &SharedState,
+        verified: &VerifiedRequestContext,
+        record: &DecisionRecord,
+        expected_catalog_digest: &str,
+    ) -> Result<Self, String> {
         let backend = state.read().await.persistence.clone().ok_or_else(|| {
             format!(
                 "{}: the engine has no durable backend to hold the commit decision",
@@ -96,29 +126,12 @@ impl Coordinator {
             request_digest: digest,
             deadline_ms,
         };
-        let mut coordinator = Self {
+        Ok(Self {
             backend,
             request,
             resumed: false,
             interrupted: false,
-        };
-        coordinator.interrupted = coordinator.is_interrupted()?;
-        if coordinator.interrupted {
-            return Ok(coordinator);
-        }
-        let begun = certificate::begin(coordinator.redb()?, &coordinator.request).await?;
-        match begun {
-            Begun::Fresh => {}
-            Begun::Decided(OwnerDecision::Commit) => coordinator.resumed = true,
-            Begun::Decided(OwnerDecision::Abort) => {
-                return Err(format!(
-                    "{}: transaction {} was decided ABORT",
-                    DecisionErrorCode::CertificateDecidedAbort.as_str(),
-                    coordinator.request.txn_id
-                ));
-            }
-        }
-        Ok(coordinator)
+        })
     }
 
     /// A pending marker with no decision whose deadline has passed: the commit that wrote it

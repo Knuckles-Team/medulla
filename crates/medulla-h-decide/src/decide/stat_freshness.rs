@@ -354,12 +354,31 @@ pub(super) fn refresh_with(
             receipt.stored.push(result);
         }
     }
-    writes.push((
-        revision_key(graph),
-        encode_artifact(&(revision, sequence + 1))?,
-    ));
     writes.push((format!("{RECEIPT_PREFIX}{id}"), encode_artifact(&receipt)?));
-    ctx.store.put_decision_artifacts(ctx.tenant_id, &writes)?;
+    // A superseded row and the graph's counters already exist: they are
+    // compare-and-set against the bytes read, so a concurrent refresh is
+    // refused instead of overwritten. Every other row is new.
+    let mut fresh = Vec::new();
+    let mut replaced = Vec::new();
+    for (key, bytes) in writes {
+        match ctx.store.decision_artifact(ctx.tenant_id, &key)? {
+            Some(current) if current != bytes => replaced.push((key, current, bytes)),
+            _ => fresh.push((key, bytes)),
+        }
+    }
+    let counter_key = revision_key(graph);
+    let counter_before = ctx.store.decision_artifact(ctx.tenant_id, &counter_key)?;
+    ctx.store.put_decision_artifacts(ctx.tenant_id, &fresh)?;
+    for (key, current, bytes) in replaced {
+        ctx.store
+            .swap_decision_artifact(ctx.tenant_id, &key, Some(current), bytes)?;
+    }
+    ctx.store.swap_decision_artifact(
+        ctx.tenant_id,
+        &counter_key,
+        counter_before,
+        encode_artifact(&(revision, sequence + 1))?,
+    )?;
     SPENDING
         .lock()
         .map_err(|_| "the refresh spending ledger is poisoned".to_string())?

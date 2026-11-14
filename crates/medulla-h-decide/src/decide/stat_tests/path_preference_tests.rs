@@ -272,6 +272,11 @@ async fn served_decide_prefers_the_higher_success_path() {
         .await
         .unwrap_err()
         .starts_with("PARAMETER_INVALID"));
+    // Another tenant naming this tenant's schema pin is refused on the pin,
+    // so its request declares a well-formed path.
+    bad.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![route_option(&a)]).unwrap(),
+    };
     bad.tenant_id = OTHER.to_string();
     let other = context("decider", OTHER);
     let error = decode::<DecisionBatch>(
@@ -398,7 +403,11 @@ async fn unmeasured_and_stale_paths_refuse() {
         path_id("stale"),
         path_id("thin"),
     );
-    seed(&h, TENANT, &pins, &a, &run(7, 3)).await;
+    // 7 of 10 with the latest outcomes successes: a path whose latest three
+    // outcomes failed is skipped (R159.3), and A must stay measured and ranked.
+    let mut a_outcomes = run(0, 3);
+    a_outcomes.extend(run(7, 0));
+    seed(&h, TENANT, &pins, &a, &a_outcomes).await;
     // Ten evaluations, all eight days old: outside the seven-day window.
     seed_aged(&h, TENANT, &pins, &stale, &run(10, 0), 8 * 86_400_000).await;
     // Nine attempts inside the window: below path.min_samples.

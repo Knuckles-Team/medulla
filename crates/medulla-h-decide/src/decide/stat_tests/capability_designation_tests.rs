@@ -966,8 +966,11 @@ async fn capability_adapter_applies_before_rank() {
                 vec![1.0, 0.0, 0.0],
             ),
             (
+                // Close enough to axis 0 that the bounded tilt (|gain| <= 1/2,
+                // `QueryAdapterBody::check`) can reorder it above `agent-n`:
+                // base cosines 1.0 vs 0.96, adapted about 0.981 vs 0.996.
                 record(Some(TENANT), "agent-m", &["cap:x"]),
-                vec![0.8, 0.6, 0.0],
+                vec![0.96, 0.28, 0.0],
             ),
         ],
     )
@@ -1006,7 +1009,7 @@ async fn capability_adapter_applies_before_rank() {
     );
     let norm = moved.iter().map(|v| v * v).sum::<f32>().sqrt();
     assert!((norm - 1.0).abs() < 1e-5, "unit length again: {norm}");
-    let expected_cosine = f64::from(0.8 * moved[0] + 0.6 * moved[1]);
+    let expected_cosine = f64::from(0.96 * moved[0] + 0.28 * moved[1]);
     let scored = answer_of(&adapted).designations[0].cosine_q32;
     let got = scored as f64 / Q32_ONE as f64;
     assert!(
@@ -1123,6 +1126,13 @@ fn publish_tool(h: &Harness, tenant: &str, id: &str, summary: &str) {
 fn retire_tool(h: &Harness, tenant: &str, id: &str) {
     let nonce = h.nonce.get();
     h.nonce.set(nonce + 1);
+    // A retirement names the head revision it supersedes.
+    let head = h
+        .store
+        .current_component(tenant, id)
+        .unwrap()
+        .expect("the tool is published")
+        .entry_revision;
     h.store
         .retire_component(
             medulla_agent_types::agent_component::AgentComponentRetireRequest {
@@ -1131,7 +1141,7 @@ fn retire_tool(h: &Harness, tenant: &str, id: &str) {
                     tenant,
                     &format!("retire-{id}-{nonce}"),
                     nonce,
-                    0,
+                    head,
                     "agent-component:retire",
                 ),
                 component_id: id.to_string(),
@@ -1178,7 +1188,28 @@ async fn designated(h: &Harness, version: &str) -> Vec<String> {
 async fn committed_library_write_is_visible_to_next_question() {
     let h = Harness::new().await;
     // The commons graph's active generation is the embedding space of the feed.
-    super::learning_tests::graph_with(&h, "__commons__", "1", 3, Vec::new()).await;
+    // The server state already provisions the commons graph, so its store
+    // declares the space in place rather than creating the graph again.
+    {
+        let mut guard = h.state.write().await;
+        if guard.registry.get("__commons__").is_none() {
+            guard
+                .registry
+                .create_graph(
+                    "__commons__",
+                    medulla_protocol_types::protocol::GraphType::Team,
+                    None,
+                )
+                .unwrap();
+        }
+        let core = guard.registry.get("__commons__").unwrap().core.clone();
+        let space = medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
+            "m", "1", "sha256:w", "sha256:p", 3, false,
+        )
+        .unwrap();
+        assert_eq!(space.digest, super::learning_tests::space_of("1", 3));
+        core.semantic_store.write().declare_space(space).unwrap();
+    }
     let version = super::learning_tests::space_of("1", 3);
     assert!(designated(&h, &version).await.is_empty());
 

@@ -281,8 +281,11 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
             request.evaluation.active_graph.as_str(),
             request.evaluation.shadow_graph.as_str(),
         ],
-        LearningWrite::RefreshFreshness { request } => vec![request.logical_graph.as_str()],
-        LearningWrite::RecordOutcome { .. }
+        // A refresh's logical graph is a virtual graph read through its
+        // registered search source (R174.9.3); it needs no materialized graph,
+        // and a graph with no source refuses SEARCH_SOURCE_UNREGISTERED (R174.9.4).
+        LearningWrite::RefreshFreshness { .. }
+        | LearningWrite::RecordOutcome { .. }
         | LearningWrite::EvaluateDrift { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }

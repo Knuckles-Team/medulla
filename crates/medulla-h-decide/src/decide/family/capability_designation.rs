@@ -587,7 +587,24 @@ pub(crate) fn designate(
             alternatives: hit.record.swappable_with.clone(),
         })
         .collect();
-    let ranked = rank_capability_candidates(pool, question, &rewards, &RankPolicy::from(&knobs));
+    // The rank recomputes each cosine from the question's query vector, so it
+    // must read the ADAPTED query the index was searched with
+    // (MEDULLA-DECISION-ENGINE-R172.13); without an adapter it is the base.
+    let adapted_question;
+    let rank_question = if runtime.adapter.is_some() {
+        let mut adapted = question.clone();
+        adapted.query_vector = medulla_decision_types::decision::capability_designation::QueryVector::from_f32(
+            &question.query_vector.embedding_version,
+            &query,
+        )
+        .map_err(|detail| invalid_parameter(detail))?;
+        adapted_question = adapted;
+        &adapted_question
+    } else {
+        question
+    };
+    let ranked =
+        rank_capability_candidates(pool, rank_question, &rewards, &RankPolicy::from(&knobs));
     let designations: Vec<DesignatedCapability> = ranked
         .into_iter()
         .filter_map(|candidate| {

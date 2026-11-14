@@ -89,6 +89,16 @@ impl GraphVectors {
         self.core.semantic_store.read().dim()
     }
 
+    /// The generation's width: its rows' width, or, before it holds a row, the
+    /// width of the space it declares; 0 when it has neither.
+    pub(super) fn generation_dimensions(&self) -> usize {
+        let store = self.core.semantic_store.read();
+        match store.dim() {
+            0 => store.space().map_or(0, |space| space.dimensions),
+            width => width,
+        }
+    }
+
     /// The graph's mutation version when the view was opened.
     pub(super) fn version(&self) -> u64 {
         self.core.version()

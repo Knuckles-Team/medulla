@@ -49,7 +49,7 @@ use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_log::{logged_dataset, LogReader};
-use super::stat_penalty::{draft_premises, resolve_penalty};
+use super::stat_penalty::{draft_premises, precheck_importance, resolve_penalty};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
@@ -682,7 +682,11 @@ async fn serve_fit(
             );
             let job = medulla_server_api::api::dispatch_support::blocking_task(
                 BLOCKING_TASK,
-                move || submit_job(&store, &id, || run_fit(&store, &reader, &request)),
+                move || {
+                    // R151.4: request validation before the fit starts.
+                    precheck_importance(&store, &request)?;
+                    submit_job(&store, &id, || run_fit(&store, &reader, &request))
+                },
             )
             .await?;
             ResultPayload::of::<DecisionFitSubmit>(job)

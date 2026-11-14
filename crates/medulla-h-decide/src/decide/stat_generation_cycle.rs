@@ -138,7 +138,8 @@ fn check_request(run: &CycleRun, request: &GenerationCycleRequest) -> Result<(),
     }
     // A shadow store that holds no vector and declares no space has no width
     // yet: the cycle declares the model's space on it (DECISIONS GEN-BOOTSTRAP).
-    let width = run.gens.shadow.dimensions();
+    // One that declares a space has that space's width before its first row.
+    let width = run.gens.shadow.generation_dimensions();
     if width != 0 && model.dimension as usize != width {
         return Err(refusal(
             StatisticalErrorCode::GenerationDimensionMismatch,
@@ -150,7 +151,9 @@ fn check_request(run: &CycleRun, request: &GenerationCycleRequest) -> Result<(),
             "a cycle that names an index-side adapter runs with exactly that adapter",
         ));
     }
-    if run.index.is_some() && run.gens.active.dimensions() != run.gens.shadow.dimensions() {
+    if run.index.is_some()
+        && run.gens.active.generation_dimensions() != run.gens.shadow.generation_dimensions()
+    {
         return Err(refusal(
             StatisticalErrorCode::GenerationDimensionMismatch,
             "an index-side adapter keeps the vector width of the active generation",

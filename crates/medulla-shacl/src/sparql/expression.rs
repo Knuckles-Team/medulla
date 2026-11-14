@@ -43,15 +43,15 @@ pub(super) fn eval_term(
         | Expression::LessOrEqual(_, _) => eval_term_compare(ctx, expression, solution),
         Expression::In(_, _) => eval_term_in(ctx, expression, solution),
         Expression::FunctionCall(function, args) => eval_function(ctx, function, args, solution),
+        Expression::Add(_, _)
+        | Expression::Subtract(_, _)
+        | Expression::Multiply(_, _)
+        | Expression::UnaryPlus(_)
+        | Expression::UnaryMinus(_) => eval_term_integer_arithmetic(ctx, expression, solution),
         Expression::Exists(_)
         | Expression::If(_, _, _)
         | Expression::Coalesce(_)
-        | Expression::Add(_, _)
-        | Expression::Subtract(_, _)
-        | Expression::Multiply(_, _)
-        | Expression::Divide(_, _)
-        | Expression::UnaryPlus(_)
-        | Expression::UnaryMinus(_) => eval_term_unsupported(expression),
+        | Expression::Divide(_, _) => eval_term_unsupported(expression),
     }
 }
 
@@ -148,17 +148,72 @@ fn eval_term_in(
     Ok(Some(bool_term(found)))
 }
 
+/// An operand as an integer: `Ok(None)` when unbound or not numeric (a SPARQL
+/// type error), `Err` for a numeric value that is not an integer, which this
+/// evaluator declines rather than approximating.
+fn integer_operand(
+    ctx: &Ctx,
+    expression: &Expression,
+    solution: &Solution,
+) -> Result<Option<i64>, String> {
+    let Some(term) = eval_term(ctx, expression, solution)? else {
+        return Ok(None);
+    };
+    let Some(lexical) = literal_lexical(&term) else {
+        return Ok(None);
+    };
+    let lexical = lexical.trim();
+    if let Ok(value) = lexical.parse::<i64>() {
+        return Ok(Some(value));
+    }
+    if lexical.parse::<f64>().is_ok() {
+        return Err("sh:sparql: arithmetic over non-integer numbers is not supported".to_string());
+    }
+    Ok(None)
+}
+
+/// Integer `+`, `-`, `*` and unary `+`/`-`; an overflow is a type error.
+fn eval_term_integer_arithmetic(
+    ctx: &Ctx,
+    expression: &Expression,
+    solution: &Solution,
+) -> Result<Option<Term>, String> {
+    let value = match expression {
+        Expression::Add(left, right)
+        | Expression::Subtract(left, right)
+        | Expression::Multiply(left, right) => {
+            let (Some(left), Some(right)) = (
+                integer_operand(ctx, left, solution)?,
+                integer_operand(ctx, right, solution)?,
+            ) else {
+                return Ok(None);
+            };
+            match expression {
+                Expression::Add(_, _) => left.checked_add(right),
+                Expression::Subtract(_, _) => left.checked_sub(right),
+                _ => left.checked_mul(right),
+            }
+        }
+        Expression::UnaryPlus(inner) => integer_operand(ctx, inner, solution)?,
+        Expression::UnaryMinus(inner) => {
+            integer_operand(ctx, inner, solution)?.and_then(i64::checked_neg)
+        }
+        _ => return Err("sh:sparql: invalid arithmetic expression dispatch".to_string()),
+    };
+    Ok(value.map(|value| {
+        Term::Literal(Literal::new_typed_literal(
+            value.to_string(),
+            medulla_rdf::oxrdf::NamedNode::new_unchecked(crate::vocab::XSD_INTEGER),
+        ))
+    }))
+}
+
 fn eval_term_unsupported(expression: &Expression) -> Result<Option<Term>, String> {
     match expression {
         Expression::Exists(_) => Err("sh:sparql: EXISTS / NOT EXISTS is not supported".to_string()),
         Expression::If(_, _, _) => Err("sh:sparql: IF is not supported".to_string()),
         Expression::Coalesce(_) => Err("sh:sparql: COALESCE is not supported".to_string()),
-        Expression::Add(_, _)
-        | Expression::Subtract(_, _)
-        | Expression::Multiply(_, _)
-        | Expression::Divide(_, _)
-        | Expression::UnaryPlus(_)
-        | Expression::UnaryMinus(_) => Err("sh:sparql: arithmetic is not supported".to_string()),
+        Expression::Divide(_, _) => Err("sh:sparql: division is not supported".to_string()),
         _ => Err("sh:sparql: invalid unsupported expression dispatch".to_string()),
     }
 }

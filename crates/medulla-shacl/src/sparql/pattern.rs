@@ -1,5 +1,5 @@
 use medulla_rdf::oxrdf::{Graph, NamedNode, NamedOrBlankNodeRef, Term};
-use spargebra::algebra::{Expression, GraphPattern};
+use spargebra::algebra::{AggregateExpression, AggregateFunction, Expression, GraphPattern};
 use spargebra::term::{NamedNodePattern, TermPattern, TriplePattern};
 
 use super::expression::{eval_filter, eval_term};
@@ -25,10 +25,14 @@ pub(super) fn eval_pattern(
         | GraphPattern::Reduced { .. }
         | GraphPattern::OrderBy { .. }
         | GraphPattern::Slice { .. } => eval_pattern_transform(ctx, pattern, init),
+        GraphPattern::Group {
+            inner,
+            variables,
+            aggregates,
+        } => eval_group(ctx, inner, variables, aggregates, init),
         GraphPattern::Path { .. }
         | GraphPattern::Minus { .. }
         | GraphPattern::Values { .. }
-        | GraphPattern::Group { .. }
         | GraphPattern::Service { .. } => eval_pattern_unsupported(pattern),
     }
 }
@@ -236,12 +240,89 @@ fn eval_pattern_unsupported(pattern: &GraphPattern) -> Result<Vec<Solution>, Str
         }
         GraphPattern::Minus { .. } => Err("sh:sparql: MINUS is not supported".to_string()),
         GraphPattern::Values { .. } => Err("sh:sparql: VALUES is not supported".to_string()),
-        GraphPattern::Group { .. } => {
-            Err("sh:sparql: GROUP BY / aggregates are not supported".to_string())
-        }
         GraphPattern::Service { silent: true, .. } => Ok(Vec::new()),
         GraphPattern::Service { .. } => Err("sh:sparql: SERVICE is not supported".to_string()),
         _ => Err("sh:sparql: this SPARQL construct is not supported".to_string()),
+    }
+}
+
+/// `GROUP BY` with `COUNT` aggregates (`COUNT(*)`, `COUNT(expr)`, either
+/// `DISTINCT`). Every other aggregate function is rejected (`Err`), never
+/// silently mis-evaluated. With no grouping variables an empty input still
+/// yields one group, as SPARQL 1.1 §18.5 requires.
+fn eval_group(
+    ctx: &Ctx,
+    inner: &GraphPattern,
+    variables: &[spargebra::term::Variable],
+    aggregates: &[(spargebra::term::Variable, AggregateExpression)],
+    init: &Solution,
+) -> Result<Vec<Solution>, String> {
+    let rows = eval_pattern(ctx, inner, init)?;
+    let mut groups: Vec<(Vec<Option<Term>>, Vec<Solution>)> = Vec::new();
+    for row in rows {
+        let key: Vec<Option<Term>> = variables
+            .iter()
+            .map(|variable| row.get(variable.as_str()).cloned())
+            .collect();
+        match groups.iter_mut().find(|(existing, _)| *existing == key) {
+            Some((_, members)) => members.push(row),
+            None => groups.push((key, vec![row])),
+        }
+    }
+    if groups.is_empty() && variables.is_empty() {
+        groups.push((Vec::new(), Vec::new()));
+    }
+    let mut output = Vec::with_capacity(groups.len());
+    for (key, members) in groups {
+        let mut solution = Solution::new();
+        for (variable, value) in variables.iter().zip(key) {
+            if let Some(value) = value {
+                solution.insert(variable.as_str().to_string(), value);
+            }
+        }
+        for (variable, aggregate) in aggregates {
+            let name = variable.as_str();
+            if super::is_protected_var(name) {
+                return Err(format!(
+                    "sh:sparql: an aggregate may not rebind the pre-bound variable ?{name}"
+                ));
+            }
+            let count = count_aggregate(ctx, aggregate, &members)?;
+            solution.insert(name.to_string(), super::terms::int_term(count));
+        }
+        output.push(solution);
+    }
+    Ok(output)
+}
+
+fn count_aggregate(
+    ctx: &Ctx,
+    aggregate: &AggregateExpression,
+    members: &[Solution],
+) -> Result<usize, String> {
+    match aggregate {
+        AggregateExpression::CountSolutions { distinct: false } => Ok(members.len()),
+        AggregateExpression::CountSolutions { distinct: true } => {
+            Ok(dedup(members.to_vec()).len())
+        }
+        AggregateExpression::FunctionCall {
+            name: AggregateFunction::Count,
+            expr,
+            distinct,
+        } => {
+            let mut values: Vec<Term> = Vec::new();
+            for member in members {
+                if let Some(value) = eval_term(ctx, expr, member)? {
+                    if !*distinct || !values.contains(&value) {
+                        values.push(value);
+                    }
+                }
+            }
+            Ok(values.len())
+        }
+        AggregateExpression::FunctionCall { .. } => Err(
+            "sh:sparql: only the COUNT aggregate is supported".to_string(),
+        ),
     }
 }
 

@@ -275,6 +275,9 @@ pub const ENTITY_PAIR_SELF: RefusalCode = RefusalCode::new("ENTITY_PAIR_SELF");
 /// the spelling is `ApprovalRefusal::ApproverRequired.code()`.
 pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_MISSING");
 
+/// An entity link approval names no approver
+/// (MEDULLA-UNIFIED-DATA-PLANE-R030.701; `ApprovalRefusal::ApproverRequired`).
+pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_MISSING");
 /// Every `resolve_entity` family code, in declaration order.
 pub const RESOLVE_ENTITY: &[RefusalCode] =
     &[ENTITY_PAIR_INVALID, ENTITY_PAIR_SELF, LINK_APPROVER_MISSING];
@@ -572,6 +575,13 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "topology_enforcement",
             medulla_agent_types::agent_topology::enforcement::REFUSALS.to_vec(),
         ),
+        // The standalone topology question's read refusal (R111.1).
+        (
+            "topology_question",
+            vec![RefusalCode::new(
+                super::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE,
+            )],
+        ),
     ]
 }
 
@@ -584,6 +594,7 @@ pub fn registered() -> impl Iterator<Item = RefusalCode> {
         .chain(PROMOTION.iter())
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
+        .chain(super::transfer::REFUSALS.iter())
         .chain(super::importance_penalty::REFUSALS.iter())
         .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
         .chain(super::memory_rewrite::REFUSALS.iter())

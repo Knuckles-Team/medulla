@@ -84,6 +84,30 @@ pub(super) fn resolve_penalty(
     Ok(Some(ResolvedPenalty { penalty, receipt }))
 }
 
+/// The importance checks of R151.4 at submission, before the fit job is
+/// created, so a refused request writes no job record and no artifact. The
+/// feature names come from the pinned feature schema; a pin that does not
+/// resolve is left to the fit, which refuses it with its own code.
+pub(super) fn precheck_importance(
+    store: &AgentLibraryStore,
+    request: &DecisionFitRequest,
+) -> Result<(), String> {
+    use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
+    if request.penalty.is_none() {
+        return Ok(());
+    }
+    let Ok((schema, _)) = pinned_body::<FeatureSchemaBody>(
+        store,
+        &request.tenant_id,
+        &request.feature_schema,
+        AgentComponentKind::FeatureSchema,
+        StatisticalErrorCode::FeatureSchemaInvalid,
+    ) else {
+        return Ok(());
+    };
+    check_importance(request, &schema.names())
+}
+
 /// Refuse a penalty whose importance list is empty, names a feature outside the
 /// pinned schema, or carries an entry that is out of range or without
 /// well-formed evidence (MEDULLA-DECISION-ENGINE-R151.4). Runs before the fit

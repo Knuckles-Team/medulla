@@ -360,7 +360,13 @@ pub fn aggregate_fanout(
     let mismatch = |detail: &str| FanoutRefusal::PlanMismatch {
         detail: detail.to_string(),
     };
-    if !is_digest(&request.plan_digest) {
+    // A plan digest is 64 lowercase hex characters, bare or in the `sha256:` text form that
+    // `plan_explicit_tasks` emits; `bind_plan` then requires it to equal the carried plan's.
+    let plan_hex = request
+        .plan_digest
+        .strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .unwrap_or(&request.plan_digest);
+    if !is_digest(plan_hex) {
         return Err(mismatch("plan_digest is not 64 lowercase hex characters"));
     }
     let reducer_ok = match (request.aggregation.op, &request.aggregation.reducer_id) {

@@ -125,20 +125,23 @@ async fn admission_enforces_caps_and_replays() {
     let store = state.write().await.ensure_agent_library().unwrap();
     seed_library(&store);
 
-    // The default caps are the engine bounds; the record names each one and the plan digest.
+    // The default cap knobs are the engine bounds (16, 8, 8); per R046.750 they
+    // tighten the request caps (8, 2, 4 in the fixture), so the caps the plan is
+    // held to, and that the record names, are the tighter of the two.
     let (record, request) = topology_record(&store, DecisionPolicy::engine_default());
     let plan = plan_of(&record);
     let facts_of = |record: &DecisionRecord| -> Vec<String> {
         record.premises.iter().map(|p| p.fact.clone()).collect()
     };
     let facts = facts_of(&record);
+    let asked = requirements(1).caps;
     for expected in [
-        "topology_cap:max_width=16",
-        "topology_cap:max_depth=8",
-        "topology_cap:max_rounds=8",
+        format!("topology_cap:max_width={}", asked.max_width.min(16)),
+        format!("topology_cap:max_depth={}", asked.max_depth.min(8)),
+        format!("topology_cap:max_rounds={}", asked.max_rounds.min(8)),
     ] {
         assert!(
-            facts.iter().any(|f| f == expected),
+            facts.iter().any(|f| *f == expected),
             "{expected} in {facts:?}"
         );
     }

@@ -19,7 +19,12 @@ async fn call<T: serde::de::DeserializeOwned>(
     op: ClaimOp,
 ) -> Result<T, String> {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
-    decode(handle_claims(&h.state, 3, &verified, op).await)
+    // The refusal text is "CODE: detail"; these tests pin the typed code.
+    decode(handle_claims(&h.state, 3, &verified, op).await).map_err(|text| {
+        text.split_once(':')
+            .map_or(text.as_str(), |(code, _)| code)
+            .to_string()
+    })
 }
 
 async fn writer<T: serde::de::DeserializeOwned>(h: &Harness, op: ClaimOp) -> Result<T, String> {

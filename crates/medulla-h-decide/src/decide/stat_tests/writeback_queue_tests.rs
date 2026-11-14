@@ -30,6 +30,12 @@ async fn writeback_as(h: &Harness, who: &str, op: WritebackOp) -> Result<Writeba
     )
 }
 
+/// The approver a verified principal is stored as (R615.3: the verified
+/// principal, in its opaque persistence form, never the raw subject).
+fn approver_id(who: &str) -> String {
+    VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT).principal_persistence_id()
+}
+
 fn proposal(tier: RiskTier) -> ProposalInput {
     ProposalInput {
         id: "wp:1".to_string(),
@@ -242,11 +248,7 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
         panic!("approval expected")
     };
     assert_eq!(approval.proposal_id, "wp:1");
-    assert!(
-        approval.approver.contains("approver-1"),
-        "{}",
-        approval.approver
-    );
+    assert_eq!(approval.approver, approver_id("approver-1"));
     assert!(approval.approved_at_ms > 0);
     let unknown = writeback_as(&h, "approver-1", approve("wp:404"))
         .await
@@ -483,11 +485,7 @@ async fn release_and_refusal_leave_audit_rows() {
         );
     }
     assert_eq!(refused[0].proposal_id, "wp:1");
-    assert!(refused[0]
-        .approver
-        .as_deref()
-        .unwrap()
-        .contains("approver-1"));
+    assert_eq!(refused[0].approver, Some(approver_id("approver-1")));
     assert_eq!(refused[1].proposal_id, "wp:2");
     assert_eq!(refused[1].approver, None);
 
@@ -510,8 +508,8 @@ async fn release_and_refusal_leave_audit_rows() {
     assert!(all[2..]
         .iter()
         .all(|r| r.outcome == WritebackAuditOutcome::Released));
-    assert!(all[2].approver.as_deref().unwrap().contains("approver-1"));
-    assert!(all[3].approver.as_deref().unwrap().contains("approver-2"));
+    assert_eq!(all[2].approver, Some(approver_id("approver-1")));
+    assert_eq!(all[3].approver, Some(approver_id("approver-2")));
     assert_eq!(all[2].as_of_ms, 1_700_000_000_000);
 
     // Releasing a released queue returns the same set and adds no rows.

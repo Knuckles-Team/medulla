@@ -170,7 +170,11 @@ async fn commit(
     // made durable with its certificate; only then is the record written; and both owners are
     // resolved from the durable decision. A repeat of a stored record needs none of this.
     let stored = store.current_component(verified.tenant(), &record.record_id)?;
-    let replaying = stored.is_some();
+    // Only a repeat of THIS transaction's durable COMMIT replays without the protocol. Any other
+    // request runs `Coordinator::begin` first (R036.105.2), even for a stored record: an earlier
+    // ABORT answers again, a changed intent refuses, and a late COMMIT expires.
+    let replaying = stored.is_some()
+        && certified::Coordinator::decided_commit(state, verified, &record).await?;
     if let (Some(stored), true) = (&stored, capacity_backed) {
         // MEDULLA-DECISION-ENGINE-R113.2.4: a repeat of a decided capacity-backed commit is
         // refused with its original outcome. A crash after the record write may have left the

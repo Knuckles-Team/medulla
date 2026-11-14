@@ -126,6 +126,13 @@ fn request(items: Vec<GenerationEvalItem>, max_batches: Option<u32>) -> Generati
     }
 }
 
+/// The verified carrier's tenant scope of `TENANT`: the partition a served
+/// cycle keeps its job, its lease, its receipts and its pointer in, and the one
+/// the `decision_pointers` view reads.
+fn served_scope() -> String {
+    medulla_server_api::carrier::tenant_scope_of(TENANT)
+}
+
 async fn cycle(
     h: &Harness,
     request: &GenerationCycleRequest,
@@ -142,13 +149,15 @@ async fn cycle(
 /// A durable capacity ledger with one embedding cell, installed in the served
 /// state. The returned backend is the ledger the lease is read from.
 async fn with_ledger(h: &Harness, dir: &std::path::Path) -> std::sync::Arc<RedbBackend> {
-    with_ledger_class(h, dir, CapacityResourceClass::LlmEmbedding).await
+    with_ledger_class(h, dir, ACTIVE, CapacityResourceClass::LlmEmbedding).await
 }
 
-/// A durable capacity ledger whose one cell is of `class`.
+/// A durable capacity ledger whose one cell is of `class`, held in the
+/// partition of `logical`: the logical graph a cycle leases under.
 pub(super) async fn with_ledger_class(
     h: &Harness,
     dir: &std::path::Path,
+    logical: &str,
     class: CapacityResourceClass,
 ) -> std::sync::Arc<RedbBackend> {
     let backend = std::sync::Arc::new(
@@ -156,7 +165,7 @@ pub(super) async fn with_ledger_class(
     );
     backend
         .commit_capacity_lease(
-            &medulla_kernel::persist::sanitize(ACTIVE),
+            &medulla_kernel::persist::sanitize(logical),
             Method::UpdateCapacityCell {
                 request: CapacityCellUpdateRequest {
                     schema_version: NativeControlSchemaVersion::V1,
@@ -267,7 +276,7 @@ async fn resume_activates_once() {
         gens: &gens,
         embedder: &embedder,
         index: None,
-        tenant: TENANT,
+        tenant: &served_scope(),
         lease_id: None,
         batch_nodes: 100,
     };
@@ -324,7 +333,7 @@ async fn submit_creates_a_job_and_holds_a_lease() {
             &medulla_kernel::persist::sanitize(ACTIVE),
             &CapacityStatusRequest {
                 schema_version: NativeControlSchemaVersion::V1,
-                tenant_ref: TENANT.into(),
+                tenant_ref: served_scope(),
                 cell_id: Some(CELL.into()),
                 lease_id: None,
                 max_count: 10,
@@ -338,7 +347,7 @@ async fn submit_creates_a_job_and_holds_a_lease() {
         "the ledger holds the job's lease: {status:?}"
     );
     let key = super::super::stat_generation_cycle::job_key(&job.job_id);
-    assert!(h.store.decision_artifact(TENANT, &key).unwrap().is_some());
+    assert!(h.store.decision_artifact(&served_scope(), &key).unwrap().is_some());
     assert!(
         h.store
             .decision_artifact("other-tenant", &key)
@@ -401,7 +410,7 @@ impl Reembedder for MovesPointer<'_> {
         use super::super::stat_generation::generation_pointer;
         use super::super::stat_pointer::{activate, PointerMove, Qualified};
         let at = PointerMove {
-            tenant: TENANT,
+            tenant: &served_scope(),
             key: generation_pointer(ACTIVE),
             principal: "operator",
             now_ms: 5,
@@ -492,7 +501,7 @@ async fn refusal_codes() {
         gens: &gens,
         embedder: &embedder,
         index: None,
-        tenant: TENANT,
+        tenant: &served_scope(),
         lease_id: None,
         batch_nodes: 512,
     };
@@ -514,7 +523,7 @@ async fn refusal_codes() {
     );
     let (_, pointer) = super::super::stat_pointer::read_pointer(
         &h.store,
-        TENANT,
+        &served_scope(),
         &super::super::stat_generation::generation_pointer(ACTIVE),
     )
     .unwrap();
@@ -562,7 +571,7 @@ async fn first_generation_bootstraps_without_an_evaluation() {
     let digest = done.cycle.receipt_digest.clone().unwrap();
     let bytes = h
         .store
-        .decision_artifact(TENANT, &format!("generation-bootstrap:{digest}"))
+        .decision_artifact(&served_scope(), &format!("generation-bootstrap:{digest}"))
         .unwrap()
         .expect("the bootstrap receipt is stored under its digest");
     let receipt: medulla_decision_types::decision::statistical::retrieval_generation::GenerationBootstrapReceipt =
@@ -577,7 +586,7 @@ async fn first_generation_bootstraps_without_an_evaluation() {
     );
     let (_, pointer) = super::super::stat_pointer::read_pointer(
         &h.store,
-        TENANT,
+        &served_scope(),
         &super::super::stat_generation::generation_pointer(ACTIVE),
     )
     .unwrap();

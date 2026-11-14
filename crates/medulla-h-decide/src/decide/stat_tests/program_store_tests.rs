@@ -98,8 +98,11 @@ impl Fixture {
         Self { h, core, backend }
     }
 
-    /// Put the `RunTrace` receipt node of `trace`, owned by `owner`.
-    fn add_trace_node(&self, trace: &RunTraceRecord, owner: &str) -> String {
+    /// Commit the `RunTrace` receipt node of `trace`, owned by `owner`, through
+    /// the durable graph path, as the run's terminal commit leaves it: the
+    /// program's `compiled_from` edge needs a durable endpoint.
+    async fn add_trace_node(&self, trace: &RunTraceRecord, owner: &str) -> String {
+        static BATCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let id = trace_node_id(&trace.run_id);
         let props = serde_json::json!({
             "type": "RunTrace",
@@ -108,8 +111,28 @@ impl Fixture {
             "_owner": owner,
             "_visibility": "private",
         });
-        self.core
-            .add_node(id.clone(), rmp_serde::to_vec_named(&props).unwrap());
+        let persistence: Arc<dyn PersistenceBackend> = self.backend.clone();
+        let sequence = BATCH.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let batch_id = format!("test-trace-node:{id}:{sequence}");
+        medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+                Some(&persistence),
+                &self.core,
+                medulla_server_mutation::mutation_batch::CommitOrigin {
+                    request_id: sequence,
+                    principal: Some(owner),
+                },
+                GRAPH,
+                &batch_id,
+                vec![medulla_protocol_types::protocol::Method::AddNode {
+                    node_id: id.clone(),
+                    properties_msgpack: rmp_serde::to_vec_named(&props).unwrap(),
+                }],
+                &medulla_protocol_types::protocol::ResultPayload::Bool(true),
+            ),
+        )
+        .await
+        .expect("the trace node commits durably");
         id
     }
 
@@ -181,7 +204,7 @@ async fn commit_op(f: &Fixture, op: DecisionLogOp) -> Result<RunRecordStored, St
 /// Commit `trace` after its receipt node is in the graph, as the terminal
 /// commit leaves it.
 async fn commit_run(f: &Fixture, trace: RunTraceRecord) -> Result<RunRecordStored, String> {
-    f.add_trace_node(&trace, "recorder");
+    f.add_trace_node(&trace, "recorder").await;
     commit_op(f, run_record_op(trace)).await
 }
 
@@ -473,7 +496,8 @@ async fn program_links_source_trace() {
     .await
     .unwrap_err();
     assert!(wrong.contains("PROGRAM_TRACE_UNKNOWN"), "{wrong}");
-    f.add_trace_node(&trace("run-1", RunOutcome::Succeeded, 1, "x"), "recorder");
+    f.add_trace_node(&trace("run-1", RunOutcome::Succeeded, 1, "x"), "recorder")
+        .await;
     let mismatch = commit_op(
         &f,
         run_record_op_from(
@@ -613,7 +637,7 @@ mod preplan {
         receipt: Option<PrePlanTestReceipt>,
     ) -> Result<RunRecordStored, String> {
         let run = trace("run-1", RunOutcome::Succeeded, 3, "weekly");
-        h.add_trace_node(&run, "recorder");
+        h.add_trace_node(&run, "recorder").await;
         let op = DecisionLogOp::RunRecord {
             tenant_id: TENANT.to_string(),
             record: RunRecord::CompiledProgram {

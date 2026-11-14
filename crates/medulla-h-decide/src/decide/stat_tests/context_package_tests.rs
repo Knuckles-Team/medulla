@@ -646,7 +646,13 @@ fn exhausting_without_incumbent(
     model: &medulla_decision_policy::solve::Model,
     config: &medulla_decision_policy::solve::SolverConfig,
 ) -> medulla_decision_policy::solve::Certificate {
-    exhausted_certificate(model, config, false)
+    // The real solver seeds a greedy incumbent before its first node, so on this
+    // pool no budget leaves it without one. A search that found no package is
+    // the exhausted certificate with no incumbent claimed: its bound proof does
+    // not rest on the incumbent, so the verifier still accepts it.
+    let mut certificate = exhausted_certificate(model, config, true);
+    certificate.incumbent = None;
+    certificate
 }
 
 /// A solver whose certificate is bound to another model: the verifier must reject it.

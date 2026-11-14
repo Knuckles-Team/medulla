@@ -555,7 +555,7 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
     // read from the Agent Library under the carrier tenant.
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let ledger = tempfile::tempdir().unwrap();
-    with_ledger_class(&h, ledger.path(), CapacityResourceClass::Cpu).await;
+    with_ledger_class(&h, ledger.path(), GRAPH, CapacityResourceClass::Cpu).await;
     let (fitted, items) = index_setup(&h).await;
     let kernel = AdapterKernel::of(&fitted.body).unwrap();
     let request = index_cycle(&fitted, items.clone());
@@ -607,7 +607,35 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
         LearningRecorded::Cycle(job) => job,
         other => panic!("cycle: {other:?}"),
     };
-    assert_eq!(done.cycle.state(), GenerationCycleState::Activated);
+    let (diag_active, diag_shadow) = {
+        let guard = h.state.read().await;
+        let probe = |graph: &str| {
+            guard
+                .registry
+                .get(graph)
+                .unwrap()
+                .core
+                .semantic_store
+                .read()
+                .semantic_search(&[1.0_f32, 0.9, 0.0], 5)
+        };
+        (probe(GRAPH), probe(INDEX_SHADOW))
+    };
+    assert_eq!(
+        done.cycle.state(),
+        GenerationCycleState::Activated,
+        "adapter body {:?}; active top-5 {:?}; shadow top-5 {:?}; \
+         rejection {:?}, receipt digest {:?}, evaluation {:?}",
+        fitted.body,
+        diag_active,
+        diag_shadow,
+        done.rejection,
+        done.cycle.receipt_digest,
+        done.cycle
+            .receipt_digest
+            .as_deref()
+            .map(|digest| super::super::stat_generation::stored_evaluation(&h.store, &medulla_server_api::carrier::tenant_scope_of(TENANT), digest)),
+    );
     assert_eq!(done.reembedded_nodes, 80, "every node was materialized");
     let receipt = done
         .receipt
@@ -861,6 +889,15 @@ async fn fit_and_rollback_receipts_and_verdict_field() {
     assert_eq!(verdict_adapter(&h, &core).await, "base");
 }
 
+/// The rank of the first row whose id starts with `prefix`; a prefix absent
+/// from the served rows ranks after every row. (`Option`'s order puts `None`
+/// first, so comparing raw positions would read "absent" as "ranked first".)
+fn first_of(rows: &[String], prefix: char) -> usize {
+    rows.iter()
+        .position(|id| id.starts_with(prefix))
+        .unwrap_or(usize::MAX)
+}
+
 /// Verifies MEDULLA-DECISION-ENGINE-R174.7.6: cited outcomes recorded through
 /// `Learn` fit an adapter whose activation re-orders the served `Discover`
 /// rows and names the adapter digest, and degrading outcomes roll it back.
@@ -878,8 +915,8 @@ async fn outcome_adapter_lifts_and_reverts() {
 
     let (base_digest, base_rows) = discovered(&h, &core).await;
     assert_eq!(base_digest, "base");
-    let first_p = base_rows.iter().position(|id| id.starts_with('p'));
-    let first_n = base_rows.iter().position(|id| id.starts_with('n'));
+    let first_p = first_of(&base_rows, 'p');
+    let first_n = first_of(&base_rows, 'n');
     assert!(
         first_n < first_p,
         "the base order prefers the negatives: {base_rows:?}"
@@ -901,8 +938,8 @@ async fn outcome_adapter_lifts_and_reverts() {
     .unwrap();
     let (lifted_digest, lifted_rows) = discovered(&h, &core).await;
     assert_eq!(lifted_digest, fitted.adapter_digest);
-    let first_p = lifted_rows.iter().position(|id| id.starts_with('p'));
-    let first_n = lifted_rows.iter().position(|id| id.starts_with('n'));
+    let first_p = first_of(&lifted_rows, 'p');
+    let first_n = first_of(&lifted_rows, 'n');
     assert!(
         first_p < first_n,
         "the adapter lifts the cited rows: {lifted_rows:?}"
@@ -970,8 +1007,8 @@ async fn capability_outcome_adapter_lifts_and_reverts() {
     // The capability's own read applies the adapter and lifts the cited rows.
     let (lifted_digest, lifted_rows) = discovered_for(&h, &core, Some(&capability)).await;
     assert_eq!(lifted_digest, fitted.adapter_digest);
-    let first_p = lifted_rows.iter().position(|id| id.starts_with('p'));
-    let first_n = lifted_rows.iter().position(|id| id.starts_with('n'));
+    let first_p = first_of(&lifted_rows, 'p');
+    let first_n = first_of(&lifted_rows, 'n');
     assert!(first_p < first_n, "the adapter lifts: {lifted_rows:?}");
     // A read that names no capability (graph scope) and another capability
     // stay on the base order.

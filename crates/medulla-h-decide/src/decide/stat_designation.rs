@@ -69,7 +69,14 @@ async fn adapter_of(
     let core = super::topology_read::graph_core(state, &ask.graph, verified)
         .await
         .ok()?;
-    let tenant = ask.question.tenant_id.as_str();
+    // Adapter pointers are written under the verified carrier's tenant scope
+    // (`stat_learning::prepare`), so they are read under the same scope; the
+    // question's tenant id is the raw tenant and never names a pointer.
+    let served_tenant = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)
+        .ok()?
+        .tenant_scope()
+        .to_string();
+    let tenant = served_tenant.as_str();
     let mut scopes = Vec::new();
     let mut required = ask.question.required_capabilities.iter();
     if let (Some(capability), None) = (required.next(), required.next()) {

@@ -153,7 +153,9 @@ pub(super) fn decide_contrast(
         &ctx,
         request,
         Some(view),
-        "decider".to_string(),
+        // The served path records the verified principal's persistence id.
+        VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT)
+            .principal_persistence_id(),
         Instant::now(),
     )
     .unwrap();

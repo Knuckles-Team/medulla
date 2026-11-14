@@ -489,7 +489,13 @@ fn seed_web_tool(store: &AgentLibraryStore) {
         30,
         ("tool-web", AgentComponentKind::Tool),
         None,
-        |draft| draft.declared_capabilities = vec![WEB.to_string()],
+        |draft| {
+            // Coverage reads the curated classification
+            // (`CandidateFacts::classified_under`); the declaration is what a
+            // profile records as blocked when it removes the tool.
+            draft.classification = vec![WEB.to_string()];
+            draft.declared_capabilities = vec![WEB.to_string()];
+        },
     );
 }
 
@@ -571,8 +577,11 @@ async fn allowlist_removes_tools_and_admission_still_runs() {
     let h = harness().await;
     seed(&h.store, None);
     seed_web_tool(&h.store);
-    store_profile(&h, (TENANT, ASKER), "profile-web", &["tool-web"]).await;
-    store_profile(&h, (TENANT, ASKER), "profile-none", &["tool-a"]).await;
+    // A skill is a candidate of the `Tool` primitive class
+    // (`PrimitiveKind::of`), so the allowlist names the one skill the
+    // single-agent graph needs (`one:skill`); only the tools differ.
+    store_profile(&h, (TENANT, ASKER), "profile-web", &["tool-web", "skill-a"]).await;
+    store_profile(&h, (TENANT, ASKER), "profile-none", &["tool-a", "skill-a"]).await;
 
     // Without a profile the web tool covers the requirement.
     let open = assemble(&h, web_request(None)).await.expect("solved");

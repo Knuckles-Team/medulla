@@ -416,23 +416,31 @@ pub fn evidence_request(
     nonce: u8,
 ) -> AgentGraphPublishRequest {
     let record = &assembly.record;
-    store
-        .publish(AgentLibraryPublishRequest {
-            context: mutation_context(
-                store,
-                TENANT,
-                "agent-shared",
-                nonce,
-                0,
-                "agent-library:publish",
-            ),
-            entry: assembly
-                .agents
-                .first()
-                .cloned()
-                .expect("solved answers an agent"),
-        })
-        .expect("the assembled agent publishes");
+    let agent = assembly
+        .agents
+        .first()
+        .cloned()
+        .expect("solved answers an agent");
+    // An agent a fixture already published (the same definition) is reused, not re-published.
+    let published = store
+        .current(TENANT, &agent.agent_id)
+        .expect("reads the agent head")
+        .is_some_and(|entry| entry.as_draft() == agent);
+    if !published {
+        store
+            .publish(AgentLibraryPublishRequest {
+                context: mutation_context(
+                    store,
+                    TENANT,
+                    "agent-shared",
+                    nonce,
+                    0,
+                    "agent-library:publish",
+                ),
+                entry: agent,
+            })
+            .expect("the assembled agent publishes");
+    }
     let mut graph = assembly.graph.clone().expect("solved answers a graph");
     graph.synthesis_evidence = Some(ComponentDependency {
         component_id: record.record_id.clone(),

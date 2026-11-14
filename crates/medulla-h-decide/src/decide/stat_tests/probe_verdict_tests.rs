@@ -20,6 +20,18 @@ fn publish(h: &Harness, tenant: &str, id: &str, kind: AgentComponentKind, attrs:
     h.commit_in(tenant, draft, None).unwrap();
 }
 
+/// The transform `tx-1` every probe request names: a transform id that names
+/// no visible transform refuses `PARAMETER_INVALID` (R138.3).
+fn publish_transform(h: &Harness, tenant: &str) {
+    publish(
+        h,
+        tenant,
+        "tx-1",
+        AgentComponentKind::RedTeamTransform,
+        &[("kind", "base64")],
+    );
+}
+
 /// One attack, one transform and three scorers; `scorer-other` has another
 /// category than the attack, so it is never selected.
 fn publish_red_team(h: &Harness) {
@@ -31,13 +43,7 @@ fn publish_red_team(h: &Harness) {
         K::RedTeamAttack,
         &[("category", "injection"), ("goal", "leak")],
     );
-    publish(
-        h,
-        TENANT,
-        "tx-1",
-        K::RedTeamTransform,
-        &[("kind", "base64")],
-    );
+    publish_transform(h, TENANT);
     for (id, category, threshold) in [
         ("scorer-a", "injection", "700"),
         ("scorer-b", "injection", "500"),
@@ -183,6 +189,7 @@ async fn decide_routes_probe_verdict() {
         AgentComponentKind::RedTeamAttack,
         &[("category", "injection"), ("goal", "leak")],
     );
+    publish_transform(&h, OTHER);
     let ctx = VerifiedRequestContext::verified_for_test_in_tenant("decider", OTHER);
     let batch: DecisionBatch = decode(
         super::super::statistical::handle_decide(
@@ -256,6 +263,7 @@ async fn probe_verdict_refusals() {
         AgentComponentKind::RedTeamAttack,
         &[("category", "injection"), ("goal", "leak")],
     );
+    publish_transform(&h2, TENANT);
     let batch = decide(
         &h2,
         probe_request(TENANT, &pin2, vec![result("scorer-a", Some(800))]),
@@ -288,6 +296,7 @@ async fn missing_scorer_abstains() {
         AgentComponentKind::RedTeamAttack,
         &[("category", "injection"), ("goal", "leak")],
     );
+    publish_transform(&h, TENANT);
     let batch = decide(
         &h,
         probe_request(TENANT, &pin, vec![result("scorer-a", None)]),

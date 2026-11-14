@@ -150,6 +150,7 @@ fn participant_knobs_are_registered_and_tunable() {
 #[tokio::test]
 async fn record_lists_every_knob_read() {
     use medulla_decision_stats::decision::drift::KNOBS as DRIFT;
+    use medulla_decision_types::decision::knob_families::route::KNOBS as ROUTE;
     let h = Harness::new().await;
     let schema_pin = h
         .publish_test_component(
@@ -184,7 +185,20 @@ async fn record_lists_every_knob_read() {
         .filter(|p| p.fact.starts_with("knob:"))
         .map(|p| p.fact.as_str())
         .collect();
-    assert_eq!(facts.len(), DRIFT.len(), "one premise per knob read");
+    // The question is a Route: the decision reads the drift knobs and the
+    // route family's own knobs, and the record names every one of them.
+    assert_eq!(
+        facts.len(),
+        DRIFT.len() + ROUTE.len(),
+        "one premise per knob read"
+    );
+    for spec in DRIFT.iter().chain(ROUTE) {
+        assert!(
+            facts.iter().any(|f| f.starts_with(&format!("knob:{}=", spec.name))),
+            "{}",
+            spec.name
+        );
+    }
     assert!(facts.contains(&"knob:drift.shift_threshold=0.400000"));
     assert!(facts.contains(&"knob:drift.vocabulary_growth_points=5"));
 }

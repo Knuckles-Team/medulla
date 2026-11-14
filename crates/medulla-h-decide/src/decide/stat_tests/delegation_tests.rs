@@ -19,11 +19,16 @@ use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key
 
 const DAY_MS: u64 = 86_400_000;
 
+/// The fixture clock: read once, so every window a test names is the same
+/// bytes on every call and two equal questions seal the same verdict digest.
 fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64
+    static NOW: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    *NOW.get_or_init(|| {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    })
 }
 
 /// One seeded record and its evaluations: `(evaluator, success)` each.

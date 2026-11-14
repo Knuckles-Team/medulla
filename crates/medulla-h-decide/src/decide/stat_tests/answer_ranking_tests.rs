@@ -54,6 +54,10 @@ fn ranking_request(h: &Harness, body: AnswerRankingRequest, declared: &[&str]) -
             value: TypedValue::AnswerRanking(Box::new(body)),
         }],
     );
+    // A declared option set is strictly sorted and unique (check_declared).
+    let mut declared: Vec<&str> = declared.to_vec();
+    declared.sort_unstable();
+    declared.dedup();
     request.candidates = CandidateSource::Declared {
         options: BoundedVec::new(declared.iter().map(|id| declared_option(id)).collect()).unwrap(),
     };

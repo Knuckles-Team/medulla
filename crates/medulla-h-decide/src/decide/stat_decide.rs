@@ -591,16 +591,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::OverWindowPlan => {
             medulla_decision_types::decision::knob_families::context::KNOBS
         }
-        QuestionKind::TaskPlan
-            if sealing.request.params.iter().any(|p| {
-                matches!(
-                    p.value,
-                    medulla_decision_types::decision::statistical::TypedValue::SkillPlanQuery(_)
-                )
-            }) =>
-        {
-            medulla_decision_types::decision::knob_families::task_plan::SKILL_TREE_KNOBS
-        }
+        // A task plan of any proposer (explicit, decomposition, skill query)
+        // lists the whole family table (MEDULLA-DECISION-ENGINE-R134.7); the
+        // skill-tree knobs are a subset of it.
         QuestionKind::TemporalBasis => medulla_decision_types::decision::temporal_query::KNOBS,
         QuestionKind::RuntimeQuota => medulla_decision_types::decision::run_governance::KNOBS,
         QuestionKind::ProgramLookup => medulla_decision_types::decision::program_store::KNOBS,
@@ -624,6 +617,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::TeamCoordination => {
             medulla_decision_types::decision::team_coordination::KNOBS
         }
+        QuestionKind::ChangesetReview => medulla_decision_stats::decision::changeset_review::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS
@@ -952,6 +946,14 @@ fn seal(
         synthetic_evidence: synthetic,
         record_digest: String::new(),
     };
+    // A load set answer carries the premises it was sealed with
+    // (MEDULLA-DECISION-ENGINE-R176.5), not only the ones its family computed.
+    if let Some(medulla_decision_types::decision::statistical::outcome::FamilyAnswer::LoadSet(
+        answer,
+    )) = record.answer.as_mut()
+    {
+        answer.premises = record.premises.as_slice().to_vec();
+    }
     record.record_digest = statistical_record_digest(&record);
     Ok(record)
 }

@@ -42,28 +42,72 @@ pub(in crate::decide) fn topology_assembly(
 ) -> medulla_compute::assemble::Assembly {
     let base = decided(store);
     let mut topology = facts();
-    let shape = base.graph.unwrap().shape;
+    let base_graph = base.graph.unwrap();
+    let shape = base_graph.shape.clone();
     let mut slot = topology.slots.as_slice()[0].clone();
     slot.node_id = shape.entry_node.clone();
     topology.slots = BoundedVec::new(vec![slot]).unwrap();
+    // The template is a published library graph: the commit re-reads every template the record
+    // names inside its write (STALE_CATALOG when it is gone), so it is published the way an
+    // operator publishes one and the record names the stored revision.
+    // The template's shape pins the assembled agent: publish it first, as
+    // `evidence_request` does (which then reuses the published entry).
+    store
+        .publish(
+            medulla_agent_types::agent_library::AgentLibraryPublishRequest {
+                context: medulla_persistence_records::agent_fixtures::mutation_context(
+                    store,
+                    TENANT,
+                    "topology-template-agent",
+                    199,
+                    0,
+                    "agent-library:publish",
+                ),
+                entry: base
+                    .agents
+                    .first()
+                    .cloned()
+                    .expect("solved answers an agent"),
+            },
+        )
+        .expect("the assembled agent publishes");
+    let mut draft = base_graph;
+    draft.graph_id = "topology-template".into();
+    draft.synthesis_evidence = None;
+    draft.topology = Some(topology);
+    let entry = store
+        .publish_graph(medulla_agent_types::agent_graph::AgentGraphPublishRequest {
+            context: medulla_persistence_records::agent_fixtures::mutation_context(
+                store,
+                TENANT,
+                "topology-template",
+                200,
+                0,
+                "agent-graph:publish",
+            ),
+            graph: draft,
+        })
+        .expect("the topology template publishes")
+        .result
+        .graph;
     let template = TemplateFacts {
-        graph_id: "topology-template".into(),
-        entry_revision: 1,
-        definition_digest: "a".repeat(64),
-        shape,
-        topology: Some(topology),
+        graph_id: entry.graph_id.clone(),
+        entry_revision: entry.entry_revision,
+        definition_digest: entry.definition_digest.clone(),
+        shape: entry.shape.clone(),
+        topology: entry.topology.clone(),
     };
     let mut request = base.record.inputs.request;
     request.requirements.topology = Some(requirements(1));
     request.templates = BoundedVec::new(vec![AgentGraphEntryRef {
         tenant_id: TENANT.into(),
-        graph_id: template.graph_id.clone(),
-        entry_revision: template.entry_revision,
-        definition_digest: template.definition_digest.clone(),
-        actor_scope: "operator".into(),
-        purpose_id: "agent-graph:publish".into(),
-        policy_digest: "b".repeat(64),
-        composed_work_ceiling: 8,
+        graph_id: entry.graph_id.clone(),
+        entry_revision: entry.entry_revision,
+        definition_digest: entry.definition_digest.clone(),
+        actor_scope: entry.actor_scope.clone(),
+        purpose_id: entry.purpose_id.clone(),
+        policy_digest: entry.policy_digest.clone(),
+        composed_work_ceiling: entry.composed_work_ceiling,
     }])
     .unwrap();
     let mut input = inputs(

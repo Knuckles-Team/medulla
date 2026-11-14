@@ -53,7 +53,7 @@ use medulla_decision_types::{
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;
-use super::stat_replay::replay;
+use super::stat_replay::{replay_view, replay_with_view};
 use super::stat_resolve::resolve;
 use super::stat_retention::{compact, full_record, verify, Retention};
 use super::stat_slate::{evaluated_slates, slate_of, SLATE_QUESTION};
@@ -257,13 +257,14 @@ fn commit(
     reader: &LogReader,
     record: &StatisticalDecisionRecord,
     evaluator: Option<&medulla_decision_types::decision::statistical::log::NamedEvaluator>,
+    replay_graph: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<DecisionLogCommitted, String> {
     if record.caller_principal != reader.principal {
         return Err(
             "ACCESS_DENIED: a decision is logged by the principal that made it".to_string(),
         );
     }
-    let logged = replay(ctx, record)?;
+    let logged = replay_with_view(ctx, record, replay_graph)?;
     let key = record_key(&logged.record_id);
     let committed = |replayed| DecisionLogCommitted {
         schema_version: DECISION_LOG_SCHEMA_VERSION,
@@ -728,6 +729,7 @@ fn dispatch(
     op: DecisionLogOp,
     inputs: Option<&super::stat_learning::LearningInputs>,
     index: &medulla_decision_memory::memory::capability_index::CapabilityIndex,
+    replay_graph: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionLogAggregate,
@@ -740,7 +742,7 @@ fn dispatch(
     };
     match op {
         DecisionLogOp::Commit { record, evaluator } => ResultPayload::of::<DecisionLogCommit>(
-            commit(ctx, reader, &record, evaluator.as_ref())?,
+            commit(ctx, reader, &record, evaluator.as_ref(), replay_graph)?,
         ),
         DecisionLogOp::Evaluate { evaluation, .. } => {
             ResultPayload::of::<DecisionLogEvaluate>(evaluate(ctx, reader, evaluation)?)
@@ -875,6 +877,12 @@ async fn serve(
     let index = super::stat_designation::shared_capability_index(&*state.read().await);
     let inputs = super::stat_learning::prepare(state, verified, &op).await?;
     let run_graph = super::run_record::open_graph(state, verified, &op).await?;
+    // A committed family answer that re-reads a graph replays over the same
+    // filtered view the served `Decide` opened.
+    let replay_graph = match &op {
+        DecisionLogOp::Commit { record, .. } => replay_view(state, verified, record).await?,
+        _ => None,
+    };
     let blocking_graph = run_graph.clone();
     let principal = verified.agent_id().to_string();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -898,7 +906,15 @@ async fn serve(
                 &principal,
             )
             .map(|staged| Served::RunRecord(Box::new(staged))),
-            op => dispatch(&ctx, &reader, op, inputs.as_ref(), &index).map(Served::Payload),
+            op => dispatch(
+                &ctx,
+                &reader,
+                op,
+                inputs.as_ref(),
+                &index,
+                replay_graph.as_ref(),
+            )
+            .map(Served::Payload),
         }
     })
     .await
@@ -953,7 +969,14 @@ async fn commit_run_record(
         )
         .await
         .map_err(|error| {
-            format!("PERSISTENCE_UNAVAILABLE: run record link not committed: {error}")
+            // `PERSISTENCE_UNAVAILABLE` is no declared code, so the wire hid every
+            // cause as INTERNAL: keep a coded cause's own code, else report the
+            // declared engine-unavailable code.
+            medulla_protocol_types::error_registry::classify_refusal(
+                "ENGINE_UNAVAILABLE",
+                "run record link not committed: ",
+                &error,
+            )
         })?;
     }
     ResultPayload::of::<medulla_protocol_types::result_contract::coordination::DecisionLogRunRecord>(

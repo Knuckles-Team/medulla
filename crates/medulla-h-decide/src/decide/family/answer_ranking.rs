@@ -67,6 +67,9 @@ impl DecisionFamily for AnswerRankingFamily {
         let mut named: Vec<&str> = body.candidate_ids.iter().map(String::as_str).collect();
         declared.sort_unstable();
         named.sort_unstable();
+        // A repeated candidate id is the ranking's DUPLICATE_CANDIDATE
+        // abstention, not a declared-set mismatch: compare as sets.
+        named.dedup();
         if declared != named {
             return Err(invalid(
                 "declared candidates must equal the ranking candidate_ids",

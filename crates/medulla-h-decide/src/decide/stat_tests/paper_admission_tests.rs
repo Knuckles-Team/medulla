@@ -75,6 +75,29 @@ async fn published_head(h: &Harness) -> (ComponentDependency, ComponentDependenc
         400,
     );
     data.feature_names = BoundedVec::new(vec!["goals".to_string(), "nn".to_string()]).unwrap();
+    // Perfectly separable gold drives the listwise weights without bound, so
+    // the head's calibrated relevance of `both` saturates at 1.0 and even a
+    // floor of 1.0 admits it. One item in twenty names the goals-only paper
+    // instead: the head stays confident (well above the 0.6 default floor)
+    // without claiming certainty.
+    data.items = BoundedVec::new(
+        data.items
+            .as_slice()
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, mut item)| {
+                if i % 20 == 19 {
+                    item.label = ItemLabel::Gold {
+                        acceptable: BoundedVec::new(vec![ids[1].clone()]).unwrap(),
+                        source: LabelSource::SyntheticConstruction,
+                    };
+                }
+                item
+            })
+            .collect(),
+    )
+    .unwrap();
     let gold = super::super::stat_jobs::dataset_digest(&data).unwrap();
     let request = DecisionFitRequest {
         tenant_id: TENANT.to_string(),
@@ -335,10 +358,12 @@ async fn only_relevant_papers_are_admitted_with_claims() {
     .unwrap();
     assert!(admitted(&strict.records.as_slice()[0]).is_empty());
 
-    // A stale snapshot: the graph moved after the papers were staged.
+    // A stale snapshot: the named version differs from the graph's (R031.100).
+    // Staging nodes need not advance the version, which may be 0, so name a
+    // version ahead of it rather than behind.
     let stale = decide(
         &h,
-        papers_request(&schema, &head, advisory_policy(&h, None), version - 1),
+        papers_request(&schema, &head, advisory_policy(&h, None), version + 1),
     )
     .await
     .unwrap();

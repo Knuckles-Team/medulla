@@ -159,7 +159,8 @@ async fn cross_owner_admission_journey() {
     assert_eq!(
         certified.request_digest,
         request_digest(&[
-            "caller-a",
+            // The coordinator binds the verified principal, not the raw agent id.
+            verified("good", 3).principal(),
             TENANT,
             &record.record_id,
             &record.inputs.catalog_digest,
@@ -415,7 +416,7 @@ async fn topology_world() -> TopologyWorld {
         )
         .await
         .unwrap();
-    let mut server = ServerState::new_for_test("topology-world", IsolationLayer::new());
+    let mut server = ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
     server.persist_dir = Some(path);
     server.persistence = Some(backend.clone());
     server
@@ -454,7 +455,7 @@ impl TopologyWorld {
         drop(state);
         drop(backend);
         let backend = Arc::new(RedbBackend::open_with_shards(path.clone(), 16, 1).unwrap());
-        let mut server = ServerState::new_for_test("topology-world", IsolationLayer::new());
+        let mut server = ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
         server.persist_dir = Some(path);
         server.persistence = Some(backend.clone());
         server

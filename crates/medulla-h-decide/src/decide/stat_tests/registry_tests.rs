@@ -44,11 +44,21 @@ fn declared_request(
             options: BoundedVec::new(
                 ["a", "b"]
                     .into_iter()
-                    .map(|id| DeclaredOption {
-                        option_id: id.into(),
-                        classification: BoundedVec::default(),
-                        numbers: BoundedVec::default(),
-                        texts: BoundedVec::default(),
+                    .map(|id| {
+                        // A resolve_entity option is one entity pair
+                        // (MEDULLA-DECISION-ENGINE-R032.2.2): it declares both
+                        // sides as IRIs.
+                        let texts = if kind == QuestionKind::ResolveEntity {
+                            pair_texts(id)
+                        } else {
+                            Vec::new()
+                        };
+                        DeclaredOption {
+                            option_id: id.into(),
+                            classification: BoundedVec::default(),
+                            numbers: BoundedVec::default(),
+                            texts: BoundedVec::new(texts).unwrap(),
+                        }
                     })
                     .collect(),
             )
@@ -77,9 +87,18 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::ConnectorEventTriage,
     QuestionKind::ConnectorToolChoice,
     QuestionKind::ConnectorWriteBack,
+    QuestionKind::ItemRecommendation,
+];
+
+/// Kinds that left the shared ladder for a family of their own (placement
+/// R046, probe verdict R138.3, load set, usage guidance, edit concentration
+/// R173.3, comparative analysis plan): each concludes from its own typed
+/// parameters, covered by its own tests. The registry must still route a
+/// matrix-shaped request to that family, which seals the kind or refuses
+/// with a typed code, never an unclassified one.
+const SPECIALIZED_KINDS: &[QuestionKind] = &[
     QuestionKind::Placement,
     QuestionKind::ProbeVerdict,
-    QuestionKind::ItemRecommendation,
     QuestionKind::LoadSet,
     QuestionKind::UsageGuidance,
     QuestionKind::EditConcentration,
@@ -170,6 +189,16 @@ async fn decide_dispatches_every_kind_through_its_family() {
         );
     }
 
+    for kind in SPECIALIZED_KINDS.iter().copied() {
+        match decide(&h, declared_request(kind, &pin, None)).await {
+            Ok(batch) => assert_eq!(batch.records.as_slice()[0].question.kind, kind),
+            Err(detail) => assert!(
+                !detail.starts_with("INTERNAL"),
+                "{kind:?} must refuse with a typed code: {detail}"
+            ),
+        }
+    }
+
     // The task plan family concludes a typed plan through the registry.
     let batch = decide(&h, task_request(&pin)).await.unwrap();
     let record = &batch.records.as_slice()[0];
@@ -206,7 +235,7 @@ async fn assemble_and_decide_text_use_the_registry() {
     use super::super::family::for_kind;
     // The utterance binding is a family hook, not a private per-kind branch:
     // exactly the template-choice family binds.
-    for kind in MATRIX_KINDS.iter().copied() {
+    for kind in MATRIX_KINDS.iter().chain(SPECIALIZED_KINDS).copied() {
         assert_eq!(
             for_kind(kind).binds_utterance(),
             kind == QuestionKind::TemplateChoice,
@@ -246,19 +275,29 @@ fn text_option(id: &str, name: &str) -> DeclaredOption {
     }
 }
 
+/// The two IRI sides of a `resolve_entity` pair, in key order.
+fn pair_texts(id: &str) -> Vec<medulla_decision_types::decision::statistical::declared::DeclaredText> {
+    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    vec![
+        DeclaredText {
+            key: "entity.left".to_string(),
+            text: format!("urn:entity:{id}"),
+        },
+        DeclaredText {
+            key: "entity.right".to_string(),
+            text: format!("urn:entity:{id}-other"),
+        },
+    ]
+}
+
 /// A `resolve_entity` pair option: a name plus the two IRIs of the pair.
 fn pair_text_option(id: &str, name: &str) -> DeclaredOption {
     use medulla_decision_types::decision::statistical::declared::DeclaredText;
     let mut option = text_option(id, name);
     let mut texts: Vec<DeclaredText> = option.texts.iter().cloned().collect();
-    texts.push(DeclaredText {
-        key: "entity.left".to_string(),
-        text: format!("urn:entity:{id}"),
-    });
-    texts.push(DeclaredText {
-        key: "entity.right".to_string(),
-        text: format!("urn:entity:{id}-other"),
-    });
+    texts.extend(pair_texts(id));
+    // Declared fact keys are strictly sorted (check_declared).
+    texts.sort_by(|a, b| a.key.cmp(&b.key));
     option.texts = BoundedVec::new(texts).unwrap();
     option
 }

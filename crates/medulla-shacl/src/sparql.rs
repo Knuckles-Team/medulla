@@ -20,10 +20,13 @@
 //! plus the FILTER built-ins a shape's `sh:select` commonly needs (`isIRI`/
 //! `isBlank`/`isLiteral`/`isNumeric`/`bound`/`lang`/`langMatches`/`datatype`/`str`/
 //! `regex`/`contains`/`strStarts`/`strEnds`/`ucase`/`lcase`/`strlen`, `=`/
-//! `sameTerm`/`<`/`<=`/`>`/`>=`/`IN`, `&&`/`||`/`!`). Constructs the SHACL-SPARQL
-//! spec explicitly permits an implementation to decline — aggregates/`GROUP BY`,
-//! `MINUS`, `VALUES`, non-`SILENT` `SERVICE`, sub-`SELECT`, property paths,
-//! `EXISTS`, and arithmetic — are REJECTED (`Err`), never silently mishandled: an
+//! `sameTerm`/`<`/`<=`/`>`/`>=`/`IN`, `&&`/`||`/`!`), integer `+`/`-`/`*`, and
+//! `GROUP BY`/`HAVING` with the `COUNT` aggregate (the concentration shape of
+//! MEDULLA-DECISION-ENGINE-R173.3 counts shipped edits against a policy minimum).
+//! Constructs the SHACL-SPARQL spec explicitly permits an implementation to
+//! decline — aggregates other than `COUNT`, `MINUS`, `VALUES`, non-`SILENT`
+//! `SERVICE`, property paths, `EXISTS`, division and non-integer arithmetic —
+//! are REJECTED (`Err`), never silently mishandled: an
 //! `sh:sparql` shape that needs one of those fails the validation run rather than
 //! producing a wrong or incomplete report. Rebinding a pre-bound variable via
 //! `BIND`/`AS` (e.g. `BIND(true AS $this)`) is likewise rejected — allowing it

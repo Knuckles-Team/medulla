@@ -755,7 +755,7 @@ mod topology_question {
     // spec: MEDULLA-DECISION-ENGINE-R111.1
     #[tokio::test]
     async fn a_standalone_topology_decide_question_returns_a_typed_decision_record() {
-        let h = Harness::new().await;
+        let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
         let mut topology = facts();
         let mut slots = topology.slots.as_slice().to_vec();
         slots[0].node_id = "research".into();
@@ -847,7 +847,8 @@ mod topology_question {
             "{refused}"
         );
 
-        // The engine fills the read: a caller-supplied one is refused at the served door,
+        // The engine fills the read: a caller-supplied one is refused at the served door
+        // (the refusal carries its code in `error` and the reason in `error_detail`),
         // and a graph that cannot be read is TOPOLOGY_SCHEMA_UNAVAILABLE.
         let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
         let supplied = request(&schema_pin, ask(requirements(3), Some(read(8))), TENANT);
@@ -855,18 +856,19 @@ mod topology_question {
             crate::decide::stat_decide::handle_decide(&h.state, 1, &verified, supplied).await;
         assert!(
             response
-                .error
-                .as_deref()
+                .refusal_text()
                 .is_some_and(|error| error.contains("filled by the engine")),
             "{response:?}"
         );
-        let missing_graph = request(&schema_pin, ask(requirements(3), None), TENANT);
+        // A graph the engine does not hold cannot be read.
+        let mut unreadable = ask(requirements(3), None);
+        unreadable.graph = "graph-not-registered".into();
+        let missing_graph = request(&schema_pin, unreadable, TENANT);
         let response =
             crate::decide::stat_decide::handle_decide(&h.state, 2, &verified, missing_graph).await;
         assert!(
             response
-                .error
-                .as_deref()
+                .refusal_text()
                 .is_some_and(|error| error.starts_with(TOPOLOGY_SCHEMA_UNAVAILABLE)),
             "{response:?}"
         );
@@ -879,8 +881,7 @@ mod topology_question {
             crate::decide::stat_decide::handle_decide(&h.state, 3, &stranger, foreign).await;
         assert!(
             response
-                .error
-                .as_deref()
+                .refusal_text()
                 .is_some_and(|error| error.starts_with("ACCESS_DENIED")),
             "{response:?}"
         );

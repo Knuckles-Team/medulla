@@ -659,11 +659,12 @@ async fn rising_judge_score_without_outcome_gain_refuses() {
     assert_eq!(*family, QuestionKind::CriterionReview);
     assert_eq!(code.as_str(), "JUDGE_OUTCOME_DIVERGENCE");
     assert!(premise_of(&batch, "criterion.divergence=200000").is_some());
+    // Knob premises are sealed in the family's `KNOBS` declaration order.
     assert_eq!(
         knob_facts(&batch, "knob:criterion_review."),
         vec![
-            "knob:criterion_review.divergence_threshold=0.150000".to_string(),
             "knob:criterion_review.divergence_window=20".to_string(),
+            "knob:criterion_review.divergence_threshold=0.150000".to_string(),
         ]
     );
 

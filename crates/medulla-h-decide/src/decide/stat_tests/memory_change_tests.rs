@@ -201,7 +201,9 @@ fn failure(job: &DecisionJobRecord) -> &str {
 // spec: MEDULLA-DECISION-ENGINE-R141.102
 #[tokio::test]
 async fn rewrite_admit_and_discard_through_decision_eval() {
-    let h = Harness::new().await;
+    // The served path reads the record's head behind the caller's graph access,
+    // which needs a provisioned identity policy.
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     assert_eq!(seed_head(&h).await, 2);
     let head_before = head_digest(&h).await;
 

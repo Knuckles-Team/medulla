@@ -20,7 +20,9 @@ use super::*;
 
 const GRAPH: &str = "placement";
 const CPU_HEADROOM: u64 = 4_000;
-const MEMORY_HEADROOM: u64 = 8 << 30;
+/// Memory headroom in bytes; a ledger cell holds at most
+/// `MAX_CAPACITY_AMOUNT` (10^9) units, so the fixture stays under it.
+const MEMORY_HEADROOM: u64 = 512 << 20;
 
 /// `(ha, volumes, max replicas, relative cost)` per registered target.
 fn declared_facts(target: PlacementTarget) -> (bool, bool, u32, u64) {
@@ -116,7 +118,7 @@ fn body(requires_ha: bool, replicas: u32) -> PlacementRequestBody {
         subject: PlacementSubject {
             workload_iri: "urn:workload:api".into(),
             cpu_millis: 500,
-            memory_bytes: 1 << 30,
+            memory_bytes: 64 << 20,
             replicas,
             needs_persistent_volume: false,
         },
@@ -130,10 +132,16 @@ fn body(requires_ha: bool, replicas: u32) -> PlacementRequestBody {
                 .collect(),
             priority: LeasePriority::Interactive,
         },
-        candidate_targets: PlacementTarget::ALL
-            .iter()
-            .map(|target| target.option_id().to_string())
-            .collect(),
+        // The declared options mirror the candidates, and a declared option
+        // set is strictly sorted (check_declared): name them in id order.
+        candidate_targets: {
+            let mut ids: Vec<String> = PlacementTarget::ALL
+                .iter()
+                .map(|target| target.option_id().to_string())
+                .collect();
+            ids.sort();
+            ids
+        },
     }
 }
 

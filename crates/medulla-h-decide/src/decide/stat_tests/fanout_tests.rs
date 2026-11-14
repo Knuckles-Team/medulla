@@ -436,7 +436,7 @@ async fn readback(h: &Harness) {
 // spec: MEDULLA-DECISION-ENGINE-R134.100
 #[tokio::test]
 async fn fanout_aggregate_applies_the_plan_operator_and_names_gaps() {
-    let h = Harness::new().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     seed(&h).await;
     matrix(&h).await;
     refusals(&h).await;
@@ -491,7 +491,7 @@ async fn budgeted(
 // spec: MEDULLA-DECISION-ENGINE-R134.10
 #[tokio::test]
 async fn summary_only_children_fit_the_parent_budget() {
-    let h = Harness::new().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     seed(&h).await;
     let fits = vec![
         summarised("t1", 'a', 100),
@@ -697,7 +697,7 @@ async fn deliver(
 // spec: MEDULLA-DECISION-ENGINE-R134.101
 #[tokio::test]
 async fn coordinator_delivers_one_complete_artifact() {
-    let h = Harness::new().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     seed(&h).await;
     let batch = deliver(&h, coordinator_plan(Some(declared())), delivery_receipt())
         .await

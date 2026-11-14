@@ -169,7 +169,26 @@ fn read_heads(
         heads.extend(page.entries);
         match page.next_cursor {
             Some(next) => cursor = Some(next),
-            None => return Ok(heads),
+            None => {
+                // The search answers only published heads; the generation is
+                // over every `Tool` and `Toolset` head whatever its lifecycle
+                // (MEDULLA-DECISION-ENGINE-R134.110.7), so a retirement raises
+                // it. A non-published head enters `build` as a tombstone and
+                // never reaches a result, a count or the catalog digest.
+                let max_rows = MAX_PAGES * PAGE as usize;
+                let retired = store
+                    .component_heads_with_prefix(tenant_id, "", max_rows)
+                    .map_err(ToolIndexError::Read)?
+                    .into_iter()
+                    .filter(|entry| {
+                        matches!(
+                            entry.kind,
+                            AgentComponentKind::Tool | AgentComponentKind::Toolset
+                        ) && entry.lifecycle != AgentLibraryLifecycle::Published
+                    });
+                heads.extend(retired);
+                return Ok(heads);
+            }
         }
     }
     Err(ToolIndexError::Read(

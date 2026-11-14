@@ -25,6 +25,8 @@ use medulla_decision_types::{
     decision::statistical::StatisticalOutcome,
 };
 
+use medulla_graph_core::graph::GraphView;
+
 use super::stat_belief::points;
 use super::stat_classes::current_rules;
 use super::stat_executor::{
@@ -188,10 +190,106 @@ fn replay_feedback_loop(
     Ok(record.clone())
 }
 
+/// The request a logged record was decided from, as far as its stored inputs
+/// carry it: the question, pins, policy and parameters. Declared options are
+/// stored only by digest, so none are rebuilt.
+fn replay_request(
+    record: &StatisticalDecisionRecord,
+) -> medulla_decision_types::decision::statistical::DecideRequest {
+    use medulla_decision_types::decision::statistical::{CandidateSource, DecideRequest};
+    use medulla_types::contract::BoundedVec;
+    let inputs = &record.inputs;
+    DecideRequest {
+        tenant_id: record.tenant_id.clone(),
+        question: record.question.clone(),
+        candidates: CandidateSource::Declared {
+            options: BoundedVec::default(),
+        },
+        feature_schema: inputs.feature_schema.clone(),
+        head: inputs.head.clone(),
+        policy: inputs.policy.clone(),
+        params: inputs.params.clone(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    }
+}
+
+/// The graph view a family conclusion re-reads on replay, opened the way the
+/// served `Decide` opened it for the same parameters and caller (RLS-filtered):
+/// a `fanout_aggregate` answer checks its stored readback node in the named
+/// graph (MEDULLA-DECISION-ENGINE-R134.101). `None` for every record whose
+/// replay reads no graph.
+pub(super) async fn replay_view(
+    state: &super::SharedState,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    record: &StatisticalDecisionRecord,
+) -> Result<Option<GraphView>, String> {
+    if !matches!(record.outcome, StatisticalOutcome::Advisory { .. })
+        || record.question.kind != QuestionKind::FanoutAggregate
+    {
+        return Ok(None);
+    }
+    super::family::fanout_view(
+        state,
+        verified.agent_id(),
+        verified.tenant(),
+        &replay_request(record),
+    )
+    .await
+    .map(Some)
+}
+
+/// The verify-replay of an advisory answer a question family concluded from
+/// its parameters alone (an answer ranking, MEDULLA-DECISION-ENGINE-R134.106;
+/// a round verdict, R136.4): the shared ladder cannot reproduce it, so the
+/// family's own conclusion re-runs on the stored parameters under the pinned
+/// policy and must give the recorded outcome. A kind whose family concludes
+/// nothing on its own keeps the refusal of an unlogged advisory score.
+fn replay_family_conclusion(
+    ctx: &ExecutionContext,
+    record: &StatisticalDecisionRecord,
+    graph_view: Option<&GraphView>,
+) -> Result<StatisticalDecisionRecord, String> {
+    let (pinned, policy) = pinned_and_policy(ctx, record)?;
+    let request = replay_request(record);
+    let family = super::family::for_kind(record.question.kind);
+    let Some(concluded) = family.conclude(ctx, &request, &policy.policy, graph_view) else {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "only an acted, explored or abstained decision is logged",
+        ));
+    };
+    let concluded = concluded.map_err(|detail| mismatch(&detail))?;
+    let replayed = family.refine(
+        None,
+        &pinned,
+        &[],
+        &policy.policy,
+        &policy.digest,
+        concluded,
+    )?;
+    if replayed.ladder.outcome != record.outcome {
+        return Err(mismatch(
+            "re-running the family conclusion on its stored inputs gives another answer",
+        ));
+    }
+    Ok(record.clone())
+}
+
 /// Re-derive `record` and return the copy to log, with its seed revealed.
 pub(super) fn replay(
     ctx: &ExecutionContext,
     record: &StatisticalDecisionRecord,
+) -> Result<StatisticalDecisionRecord, String> {
+    replay_with_view(ctx, record, None)
+}
+
+/// [`replay`] with the graph view a family conclusion re-reads
+/// ([`replay_view`]).
+pub(super) fn replay_with_view(
+    ctx: &ExecutionContext,
+    record: &StatisticalDecisionRecord,
+    graph_view: Option<&GraphView>,
 ) -> Result<StatisticalDecisionRecord, String> {
     if statistical_record_digest(record) != record.record_digest {
         return Err(mismatch("the record digest does not match its content"));
@@ -200,6 +298,9 @@ pub(super) fn replay(
         return replay_feedback_loop(ctx, record);
     }
     require_supported_replay(record)?;
+    if matches!(record.outcome, StatisticalOutcome::Advisory { .. }) {
+        return replay_family_conclusion(ctx, record, graph_view);
+    }
     if !loggable(&record.outcome) {
         return Err(refusal(
             StatisticalErrorCode::ParameterInvalid,

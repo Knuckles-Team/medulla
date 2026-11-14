@@ -247,7 +247,9 @@ fn commit(
                     &binding,
                     manifest?,
                     max_receipt_age_ms(&resolved.policy),
-                    &resolved.digest,
+                    // Recorded as bare SHA-256 hex, like every other digest
+                    // the verdict and receipt carry.
+                    resolved.digest.trim_start_matches("sha256:"),
                 )
                 .map_err(|error| error.to_string())?;
                 let receipt = preplan_receipt.ok_or_else(|| PrePlanError::Missing.to_string())?;
