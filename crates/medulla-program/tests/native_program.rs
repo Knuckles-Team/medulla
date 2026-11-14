@@ -270,6 +270,7 @@ fn optimizer_names_are_thirteen_distinct_current_spellings() {
     assert!(names.contains("avatar"));
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R810.1
 #[test]
 fn program_contracts_round_trip_and_optimizer_catalog_is_closed() {
     let request = request(OptimizerKind::LabeledFewShot);

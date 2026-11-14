@@ -174,6 +174,7 @@ fn abstained_codes(batch: &DecisionBatch) -> Vec<String> {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R138.100.2
+// spec: MEDULLA-DECISION-ENGINE-R138.100
 #[tokio::test]
 async fn admission_requires_a_complete_receipt() {
     let h = Harness::new().await;

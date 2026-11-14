@@ -81,6 +81,7 @@ mod tests {
     use medulla_types::transition_refused::TransitionRefusalReason;
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R905.1
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R905
     #[test]
     fn every_legal_transition_applies() {
         assert_eq!(BAR_MACHINE.initial, BarStatus::Provisional);

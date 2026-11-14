@@ -60,6 +60,7 @@ fn peak_rss_kib() -> u64 {
         .unwrap_or(0)
 }
 
+// spec: MEDULLA-TYPED-PACKS-R804.6
 fn bench_ontology_diff(c: &mut Criterion) {
     let (from, to) = revisions();
     let diff = diff_axioms(&from, &to).expect("the revisions diff");

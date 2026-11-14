@@ -130,6 +130,7 @@ async def test_transition_entry_names_states_and_digest() -> None:
         await client.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R168.6
 @pytest.mark.spec(
     "MEDULLA-DECISION-ENGINE-R168",
     "MEDULLA-DECISION-ENGINE-R168.1",

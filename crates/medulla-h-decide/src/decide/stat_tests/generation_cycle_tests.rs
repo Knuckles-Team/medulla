@@ -527,6 +527,7 @@ async fn refusal_codes() {
 /// space digest and the item count, and a request that asks for an evaluation
 /// is not refused.
 // spec: MEDULLA-DECISION-ENGINE-R174.1
+// spec: MEDULLA-DECISION-ENGINE-R174.10
 #[tokio::test]
 async fn first_generation_bootstraps_without_an_evaluation() {
     #[cfg(any(feature = "security", feature = "raft"))]

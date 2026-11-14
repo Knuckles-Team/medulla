@@ -35,6 +35,7 @@ def _upserted(page):
     return ids
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R043.100.4
 def test_client_reads_feed_from_a_served_engine(client):
     client.nodes.add("before-snapshot", {"type": "Doc"})
     snapshot = client.graph.open_graph_snapshot()

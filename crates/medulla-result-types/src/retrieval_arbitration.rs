@@ -154,6 +154,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R083.1
     #[test]
     fn verdict_carries_both_candidates_and_support() {
         let verdict = ArbitrationVerdict {
