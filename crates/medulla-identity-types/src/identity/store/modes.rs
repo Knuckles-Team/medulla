@@ -19,7 +19,7 @@ use super::super::{
     SOURCE_AUTHORITY_APPROVERS_GROUP, SOURCE_AUTHORITY_APPROVER_ROLE, USER_ROLE,
 };
 use super::{ApplyContext, IdentityStore};
-use medulla_identity_types::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
+use crate::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
 /// Built-in roles: `(role_id, scopes)`. Administrators additionally get an
 /// allow-all graph grant for every action.
