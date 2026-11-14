@@ -1065,6 +1065,9 @@ mod resolve_entity_tests;
 mod delegation_quality_tests;
 mod distilled_rank_tests;
 
+// MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
+mod context_budget_tests;
+
 // MEDULLA-DECISION-ENGINE-R137.8: the served package selection journey.
 mod context_package_tests;
 
