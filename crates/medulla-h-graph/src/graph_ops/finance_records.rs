@@ -64,7 +64,7 @@ pub(super) fn check_record_shape(
     kind: medulla_types::wire_finance::FinanceRecordKind,
     record: &medulla_types::wire_finance::FinanceRecord,
 ) -> Result<(), String> {
-    use medulla_query_types::wire::finance_record_refusal::SHAPE_INVALID;
+    use medulla_types::wire_finance::finance_record_refusal::SHAPE_INVALID;
     if !is_local_name(&record.record_id) {
         return Err(refuse(
             SHAPE_INVALID,
@@ -120,7 +120,7 @@ pub(super) fn admit_put(
     tenant_scope: &str,
     method: &Method,
 ) -> Result<(Method, u64), String> {
-    use medulla_query_types::wire::finance_record_refusal as code;
+    use medulla_types::wire_finance::finance_record_refusal as code;
     use medulla_types::wire_finance::{admit_finance_record_version, FinanceRecordPolicy};
     let Method::FinanceRecordPut {
         kind,
@@ -364,7 +364,7 @@ fn research_refuse(error: medulla_finance::research::ResearchRecordError) -> Str
 #[cfg(all(feature = "finance", feature = "shacl"))]
 fn shape_invalid(detail: impl std::fmt::Display) -> String {
     refuse(
-        medulla_query_types::wire::finance_record_refusal::SHAPE_INVALID,
+        medulla_types::wire_finance::finance_record_refusal::SHAPE_INVALID,
         detail,
     )
 }
@@ -659,7 +659,7 @@ fn admit_research(
     expected_head: Option<u64>,
 ) -> Result<(Method, u64), String> {
     use medulla_finance::research::ResearchRecordError as Error;
-    use medulla_query_types::wire::finance_record_refusal as code;
+    use medulla_types::wire_finance::finance_record_refusal as code;
     if !is_local_name(&record.record_id) {
         return Err(shape_invalid(
             "record_id must be a non-empty [A-Za-z0-9_] name",
