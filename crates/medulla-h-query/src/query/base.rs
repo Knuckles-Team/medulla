@@ -17,10 +17,17 @@ pub(crate) fn sql_refusal(error: impl std::fmt::Display) -> String {
 /// must reject a mismatch before choosing a read lane or MutationBatch path.
 #[cfg(feature = "cypher")]
 pub fn validate_cypher_mode(method: &Method) -> Result<(), String> {
-    let Method::CypherQuery { query, mode, .. } = method else {
+    let Method::CypherQuery { query, mode, view } = method else {
         return Ok(());
     };
-    let parsed_mode = match medulla_cypher::cypher::classify_cypher(query) {
+    // A view read may lead with EXPLAIN (MEDULLA-UNIFIED-DATA-PLANE-R038.6.5); the
+    // statement it explains is what carries the mode.
+    let statement = if view.is_some() {
+        medulla_cypher::cypher::split_explain(query).1
+    } else {
+        query.as_str()
+    };
+    let parsed_mode = match medulla_cypher::cypher::classify_cypher(statement) {
         Ok(medulla_cypher::cypher::CypherStatementKind::Read) => {
             medulla_protocol_types::protocol::CypherMode::Read
         }
