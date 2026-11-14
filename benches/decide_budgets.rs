@@ -129,6 +129,19 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::IngestShortfall,
     QuestionKind::CapacityProposal,
     QuestionKind::ProbeSelection,
+    QuestionKind::InsightSelection,
+    QuestionKind::SkillUpgrade,
+    QuestionKind::SkillWorkflowCompile,
+    QuestionKind::TeamCoordination,
+];
+
+/// The families with their own bench fixture instead of the generic one:
+/// `bench_topology_admit`, `bench_tool_relevance_cap` and
+/// `bench_capability_designation` (`ProgramLookup` is listed by `bench_program_lookup`).
+const OWN_FIXTURE_FAMILIES: &[QuestionKind] = &[
+    QuestionKind::Topology,
+    QuestionKind::ToolRelevance,
+    QuestionKind::CapabilityDesignation,
 ];
 
 /// The samples the budget report takes per group.
@@ -1560,6 +1573,10 @@ fn bench_usage_guidance(
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    assert!(
+        OWN_FIXTURE_FAMILIES.iter().all(|kind| !FAMILIES.contains(kind)),
+        "a family is benched by the generic fixture or its own, not both"
+    );
     for kind in FAMILIES {
         let (h, asked) = rt.block_on(fixture(*kind));
         let group_name = format!("decide/{}", family_name(*kind));
