@@ -173,9 +173,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-TYPED-PACKS-R807: the conformance read or revoke finds no current evidence.
     ("ConnectorPack", &["CONFORMANCE_EVIDENCE_ABSENT"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.3: a source that cannot give one snapshot.
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 / MEDULLA-FEDERATED-QUERY-R073.3: a remote
+    // branch whose source cannot be reached.
     (
         "UnifiedQuery",
-        &["SNAPSHOT_UNAVAILABLE", "CODE_MAP_STALE", "CODE_MAP_INVALID"],
+        &[
+            "SNAPSHOT_UNAVAILABLE",
+            "CODE_MAP_STALE",
+            "CODE_MAP_INVALID",
+            "SOURCE_UNREACHABLE",
+        ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with
     // the view codes before any source statement.
@@ -258,6 +265,55 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBED_BUDGET_EXHAUSTED",
             "EMBED_VECTOR_INVALID",
             "EMBED_PROVIDER_FAILED",
+        ],
+    ),
+    // MEDULLA-FEDERATED-QUERY-R039.2.5/R039.2.6: the served chunk encoding and
+    // the encoded-document search refuse with the chunk-encoding codes.
+    (
+        "EncodeDocument",
+        &[
+            "ENCODE_POSITION_MODE_UNSUPPORTED",
+            "ENCODE_OVERLAP_INVALID",
+            "NO_EMBEDDING",
+            "ENCODE_DIM_MISMATCH",
+            "ENCODE_NON_FINITE",
+            "ENCODE_BUDGET_EXHAUSTED",
+            "ENCODE_POLICY_STALE",
+        ],
+    ),
+    ("EncodedDocumentSearch", &["ENCODE_POLICY_STALE"]),
+    // MEDULLA-DECISION-ENGINE-R615.6: the write-back queue ops of DecisionLog.
+    // MEDULLA-DECISION-ENGINE-R174.6: a generation cycle without its capacity lease.
+    (
+        "DecisionLog",
+        &[
+            "CAPACITY_UNAVAILABLE",
+            "INVALID_WRITEBACK_IDENTIFIER",
+            "INVALID_WRITEBACK_AS_OF",
+            "WRITEBACK_DUPLICATE_EXTERNAL_ID",
+            "WRITEBACK_TENANT_MISMATCH",
+            "WRITEBACK_SOURCE_CONFLICT",
+            "PROPOSAL_UNAPPROVED",
+            "WRITEBACK_QUEUE_TRANSITION_REFUSED",
+            "WRITEBACK_QUEUE_UNKNOWN",
+            "WRITEBACK_QUEUE_EXISTS",
+            "WRITEBACK_PROPOSAL_UNKNOWN",
+            "WRITEBACK_BELOW_QUEUE_TIER",
+            "WRITEBACK_QUEUE_TOO_LARGE",
+        ],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R763.2: column lineage derivation and impact refusals.
+    (
+        "ColumnLineage",
+        &[
+            "LINEAGE_SQL_TOO_LARGE",
+            "LINEAGE_SQL_UNPARSEABLE",
+            "LINEAGE_SQL_NOT_A_QUERY",
+            "LINEAGE_DEPTH_INVALID",
+            "LINEAGE_CATALOG_AMBIGUOUS",
+            "LINEAGE_CATALOG_MISSING",
+            "LINEAGE_IMPACT_TOO_LARGE",
+            "SCHEMA_DRIFT",
         ],
     ),
     // Local-only authority: a clustered server refuses it with the typed
@@ -1168,6 +1224,10 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
         codes.extend(typed_codes(UqlCode::ALL, UqlCode::as_str));
     }
     if id.starts_with("Decision") || id.starts_with("Decide") {
+        // The decision plane's family and module refusal tables.
+        codes.extend(
+            medulla_decision_types::decision::codes::registered().map(|code| code.as_str()),
+        );
         codes.extend(typed_codes(
             DecisionErrorCode::ALL,
             DecisionErrorCode::as_str,
@@ -1282,6 +1342,24 @@ mod tests {
         assert_eq!(
             super::TRANSITION_REFUSED,
             medulla_types::transition_refused::TRANSITION_REFUSED
+        );
+    }
+
+    /// A code a method contract allows must also be a declared wire code, or the
+    /// served boundary reports it as an unclassified `INTERNAL`.
+    #[test]
+    fn every_method_contract_code_is_a_declared_wire_code() {
+        let mut undeclared = std::collections::BTreeSet::new();
+        for descriptor in crate::method_descriptors() {
+            for code in super::method_error_set(&descriptor) {
+                if !medulla_protocol_types::error_registry::declared_error_code(code) {
+                    undeclared.insert(code);
+                }
+            }
+        }
+        assert!(
+            undeclared.is_empty(),
+            "undeclared wire codes: {undeclared:?}"
         );
     }
 

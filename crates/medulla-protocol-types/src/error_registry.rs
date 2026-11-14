@@ -39,6 +39,11 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_result_types::retrieval_verdict::RetrievalErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
+        medulla_decision_types::decision::context_package::ContextPackageErrorCode::ALL
+            .iter()
+            .any(|item| item.as_str() == code),
+        // The decision plane's family and module refusal tables.
+        medulla_decision_types::decision::codes::resolve(code).is_some(),
     ]
     .into_iter()
     .any(|known| known)

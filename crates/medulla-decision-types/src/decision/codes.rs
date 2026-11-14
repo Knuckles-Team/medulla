@@ -568,11 +568,9 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     ]
 }
 
-/// Resolve a wire string to its registered code, shared codes first. The
-/// assembly and commit surface's closed `DecisionErrorCode` set is registered
-/// too: an assembly refusal folds under `RefusalOrigin::ASSEMBLE` with its own
-/// code (MEDULLA-DECISION-ENGINE-R010.100.2).
-pub fn resolve(code: &str) -> Option<RefusalCode> {
+/// Every registered code: the shared codes first, then each family and module
+/// table. A code may appear in more than one table.
+pub fn registered() -> impl Iterator<Item = RefusalCode> {
     SHARED
         .iter()
         .chain(FOLDED.iter())
@@ -585,6 +583,14 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
         .chain(super::statistical::retrieval_generation::REFUSALS.iter())
         .copied()
         .chain(module_tables().into_iter().flat_map(|(_, table)| table))
+}
+
+/// Resolve a wire string to its registered code, shared codes first. The
+/// assembly and commit surface's closed `DecisionErrorCode` set is registered
+/// too: an assembly refusal folds under `RefusalOrigin::ASSEMBLE` with its own
+/// code (MEDULLA-DECISION-ENGINE-R010.100.2).
+pub fn resolve(code: &str) -> Option<RefusalCode> {
+    registered()
         .find(|registered| registered.as_str() == code)
         .or_else(|| decision_error_code(code))
 }
