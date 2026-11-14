@@ -1767,15 +1767,24 @@ async fn feedback_refusals_dispatch_nothing() {
     critic.feedback = Some(part);
     assert!(refusal(round_as(&state, None, critic).await).starts_with(RETRIEVAL_FEEDBACK_INVALID));
 
-    // Evidence in another tenant's graph is not the caller's: the round returns none of it.
-    put(
+    // The deployment admits one tenant: a write into another tenant's graph is refused at
+    // the door, so that document never exists for the caller and cannot be cited.
+    let foreign_write = test_support::dispatch(
         &state,
-        Some("tenant-b"),
-        "doc-b",
-        serde_json::json!({ "type": "Doc", "text": "other tenant" }),
-        None,
+        test_support::request(
+            SECRET,
+            next_id(),
+            "tenant-b",
+            Method::AddNode {
+                node_id: "doc-b".to_string(),
+                properties_msgpack: test_support::json_bytes(
+                    serde_json::json!({ "type": "Doc", "text": "other tenant" }),
+                ),
+            },
+        ),
     )
     .await;
+    assert!(foreign_write.error.is_some(), "a foreign graph is refused");
     let mut foreign = request(None);
     let mut part = feedback_part(1, "replica recovery");
     part.feedback.documents[0].document_id = "doc-b".into();
@@ -2102,22 +2111,22 @@ async fn arbitration_part_returns_verdict_or_none() {
     assert_eq!(verdict.prior.support_state, SupportState::Supported);
     assert_eq!(verdict.retrieved.support_state, SupportState::Supported);
 
-    // Another graph's caller does not see the document: the citation is outside its snapshot.
-    let verdict = decode(
-        round_as(
-            &state,
-            Some("other-graph"),
-            arbitration_request(
-                candidate(AnswerGrounding::Parametric, 0.9, None),
-                candidate(AnswerGrounding::Retrieved, 0.9, Some(good())),
-            ),
-        )
-        .await,
+    // The deployment admits one tenant: another graph's caller is refused at the door and
+    // is handed no verdict about this graph's documents.
+    let foreign = round_as(
+        &state,
+        Some("other-graph"),
+        arbitration_request(
+            candidate(AnswerGrounding::Parametric, 0.9, None),
+            candidate(AnswerGrounding::Retrieved, 0.9, Some(good())),
+        ),
     )
-    .arbitration
-    .expect("verdict");
-    assert_eq!(verdict.retrieved.support_state, SupportState::Unknown);
-    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
+    .await;
+    assert!(foreign.error.is_some(), "a foreign graph is refused");
+    assert!(
+        foreign.result.is_none(),
+        "no verdict leaks to a foreign graph"
+    );
 
     // A candidate grounded the wrong way round refuses, and nothing is returned.
     let refused = round_as(

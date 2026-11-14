@@ -191,9 +191,9 @@ mod tests {
         assert_eq!(verdict.margin, 0.10);
         assert_eq!(verdict.prior.answer, prior.answer);
         assert_eq!(verdict.retrieved.answer, retrieved.answer);
-        let tied = candidate(0.80, AnswerGrounding::Retrieved, &[Some("doc-r")]);
+        let tied = candidate(0.75, AnswerGrounding::Retrieved, &[Some("doc-r")]);
         let low = candidate(0.50, AnswerGrounding::Parametric, &[Some("doc-p")]);
-        assert_eq!(run(low, tied, 0.30).choice, ArbitrationChoice::Abstain);
+        assert_eq!(run(low, tied, 0.25).choice, ArbitrationChoice::Abstain);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R083.2
