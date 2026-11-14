@@ -130,12 +130,19 @@ impl AgentLibraryStore {
             let member: ConnectorPackMemberRow =
                 super::undecodable::decode_stored(value.value(), "connector pack member")?;
             surface.extend(PackSurfaceMember::of(&member));
-            if !matches!(
-                member.kind,
-                medulla_catalog_types::connector_pack::PackEntryKind::Ontology
-                    | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
-                    | medulla_catalog_types::connector_pack::PackEntryKind::Crosswalk
-            ) || member.lifecycle != AgentLibraryLifecycle::Published
+            // The connector declaration is projected too: its contract maps to
+            // `cp:` triples in the pack graph (MEDULLA-CQ-CONN-R084.4).
+            let declaration = member.kind
+                == medulla_catalog_types::connector_pack::PackEntryKind::Resource
+                && member.uri == super::CONNECTOR_DECLARATION_URI;
+            if !(declaration
+                || matches!(
+                    member.kind,
+                    medulla_catalog_types::connector_pack::PackEntryKind::Ontology
+                        | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
+                        | medulla_catalog_types::connector_pack::PackEntryKind::Crosswalk
+                ))
+                || member.lifecycle != AgentLibraryLifecycle::Published
             {
                 continue;
             }
@@ -168,7 +175,11 @@ impl AgentLibraryStore {
                     "BODY_MISSING: schema member body holder differs from its catalog row".into(),
                 );
             }
-            for source in &member.source_registrations {
+            for source in member
+                .source_registrations
+                .iter()
+                .filter(|_| !declaration)
+            {
                 if source.connector != *connector || source.resource_uri != member.uri {
                     return Err(
                         "CORRUPT_CONNECTOR_PACK: source registration differs from its member"

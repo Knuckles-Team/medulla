@@ -17,7 +17,7 @@ use medulla_persistence_records::connector_pack::projection::{
 };
 use medulla_rdf::oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 
-use crate::admin::connector_pack::surface_vocab::{is_member_uri, link_object, CP, RDF_TYPE};
+use crate::admin::connector_pack::surface_vocab::{link_object, CP, RDF_TYPE};
 use crate::graph_schema::PackSchemaDocument;
 
 const XSD_INTEGER: &str = "http://www.w3.org/2001/XMLSchema#integer";
@@ -99,44 +99,33 @@ fn declared_links(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, Stri
     Ok(links)
 }
 
-/// Namespaces whose classes type schema terms, not data: a subject typed only
-/// with these is vocabulary the schema source already carries.
-const SCHEMA_NAMESPACES: [&str; 4] = [
-    "http://www.w3.org/2002/07/owl#",
-    "http://www.w3.org/2000/01/rdf-schema#",
-    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "http://www.w3.org/ns/shacl#",
-];
-
-/// The named individuals among `triples`: subjects typed with at least one class outside the
-/// schema namespaces, and not a surface member (the engine stamps those).
-fn individual_subjects(triples: &[Triple]) -> std::collections::HashSet<&NamedOrBlankNode> {
-    triples
-        .iter()
-        .filter(|triple| {
-            triple.predicate.as_str() == RDF_TYPE
-                && matches!(&triple.subject, NamedOrBlankNode::NamedNode(node) if !is_member_uri(node.as_str()))
-                && matches!(&triple.object, Term::NamedNode(class)
-                    if !SCHEMA_NAMESPACES.iter().any(|ns| class.as_str().starts_with(ns)))
-        })
-        .map(|triple| &triple.subject)
-        .collect()
+/// Every triple the pack ontologies declare: the class-level (TBox) triples,
+/// the contract `cp:` triples and the named individuals alike
+/// (MEDULLA-CQ-CONN-R084.1, MEDULLA-MEDIA-VOCAB-R655).
+fn pack_triples(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, String> {
+    let mut triples = Vec::new();
+    for document in ontologies {
+        triples.extend(medulla_rdf::mapping::parse_turtle(&document.body)?);
+    }
+    Ok(triples)
 }
 
-/// Every triple about a named individual the pack ontologies describe.
-fn declared_individuals(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, String> {
-    let mut individuals = Vec::new();
-    for document in ontologies {
-        let triples = medulla_rdf::mapping::parse_turtle(&document.body)?;
-        let subjects = individual_subjects(&triples);
-        individuals.extend(
-            triples
-                .iter()
-                .filter(|triple| subjects.contains(&triple.subject))
-                .cloned(),
-        );
+/// The `cp:` triples of the connector declaration's contract (the mapping the
+/// import validated, MEDULLA-TYPED-PACKS-R101.2), or none when the declaration
+/// carries no contract.
+fn contract_triples(connector: &str, declaration: Option<&str>) -> Result<Vec<Triple>, String> {
+    let Some(text) = declaration else {
+        return Ok(Vec::new());
+    };
+    let Ok(body) = serde_json::from_str::<serde_json::Value>(text) else {
+        return Ok(Vec::new());
+    };
+    if body.get("contract").is_none() {
+        return Ok(Vec::new());
     }
-    Ok(individuals)
+    let graph = crate::admin::connector_pack::import::contract_rdf::contract_graph(connector, &body)
+        .map_err(|_| "PACK_PROJECTION_FAILED: contract declaration is not mappable to RDF".to_string())?;
+    Ok(graph.iter().map(|triple| triple.into_owned()).collect())
 }
 
 /// The declared surface links of each tool and skill member of `plan`'s head
@@ -181,11 +170,12 @@ pub(super) fn surface_facts(
     Ok(facts)
 }
 
-/// The surface of `plan`'s head and the individuals its ontologies describe as
-/// one N-Triples document, or `None` when the head has neither.
+/// The stamped surface of `plan`'s head and every triple its ontologies
+/// declare as one N-Triples document, or `None` when the head has neither.
 pub(super) fn surface_triples(
     plan: &ConnectorPackProjectionPlan,
     ontologies: &[PackSchemaDocument],
+    declaration: Option<&str>,
 ) -> Result<Option<Arc<str>>, String> {
     let mut triples = Vec::new();
     if !plan.surface.is_empty() {
@@ -193,12 +183,12 @@ pub(super) fn surface_triples(
         for member in &plan.surface {
             triples.extend(stamped(member, &digest)?);
         }
-        triples.extend(declared_links(ontologies)?);
     }
     triples.extend(super::capability::persist_descriptors(
         &plan.tenant_id,
-        declared_individuals(ontologies)?,
+        pack_triples(ontologies)?,
     )?);
+    triples.extend(contract_triples(plan.connector.as_str(), declaration)?);
     if triples.is_empty() {
         return Ok(None);
     }
@@ -206,14 +196,14 @@ pub(super) fn surface_triples(
     Ok(Some(Arc::from(document)))
 }
 
-/// Write the surface document into the pack graph, inside the graph gateway.
+/// Write the projection document into the pack graph, inside the graph gateway.
 ///
-/// The projection of a newer head replaces the older one in this one commit
-/// (MEDULLA-MEDIA-VOCAB-R655). Every `cp:` triple a node the document names held from an
-/// earlier head goes first, and every triple of every individual the graph holds, whether or
-/// not the new head still names it, so a changed value never leaves its old value beside the
-/// new one and an individual the new head dropped disappears. A head with no surface and no
-/// individuals (`None`) clears the individuals too.
+/// The projection of a newer head replaces the whole projected set in this one
+/// commit (MEDULLA-MEDIA-VOCAB-R655): every triple the pack graph held goes and the
+/// new head's document is written, so a changed value never leaves its old value
+/// beside the new one and a triple the new head dropped disappears. A head with
+/// nothing to project (`None`) leaves the graph empty. The pack graph holds only
+/// projection output; the attached schema sources are kept apart from its triples.
 pub(crate) fn write_surface(
     core: &medulla_graph_core::graph::GraphCore,
     graph: &str,
@@ -223,21 +213,7 @@ pub(crate) fn write_surface(
         Some(document) => medulla_rdf::mapping::parse_ntriples(document)?,
         None => Vec::new(),
     };
-    let nodes: std::collections::HashSet<_> = fresh.iter().map(|t| t.subject.clone()).collect();
-    let existing = medulla_rdf::mapping::export_triples(core, graph)?;
-    let held: std::collections::HashSet<NamedOrBlankNode> = individual_subjects(&existing)
-        .into_iter()
-        .cloned()
-        .collect();
-    let stale: Vec<Triple> = existing
-        .into_iter()
-        .filter(|t| {
-            held.contains(&t.subject)
-                || (nodes.contains(&t.subject)
-                    && (t.predicate.as_str().starts_with(CP)
-                        || !matches!(&t.subject, NamedOrBlankNode::NamedNode(node) if is_member_uri(node.as_str()))))
-        })
-        .collect();
+    let stale = medulla_rdf::mapping::export_triples(core, graph)?;
     medulla_rdf::update::remove_triples(core, &stale);
     medulla_rdf::update::insert_triples(core, &fresh)?;
     Ok(())
@@ -248,21 +224,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn individuals_are_projected_and_schema_terms_are_not() {
+    fn class_level_triples_and_individuals_are_both_projected() {
         let body = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
             @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
-            :Extra a owl:Class .\n\
+            :Extra a owl:Class ; :appliesToAnalysis :Risk .\n\
             :amount_a a :NutrientAmount ; :nutrientId \"1003\" .\n";
         let documents = [PackSchemaDocument {
             uri: "ontology://food/foods".to_string(),
             body: Arc::from(body),
         }];
-        let triples = declared_individuals(&documents).unwrap();
-        assert_eq!(triples.len(), 2, "{triples:?}");
-        assert!(triples
-            .iter()
-            .all(|t| t.subject.to_string()
-                == "<https://knuckles-team.github.io/ontology/core#amount_a>"));
+        let triples = pack_triples(&documents).unwrap();
+        assert_eq!(triples.len(), 4, "{triples:?}");
+        let subjects: std::collections::BTreeSet<String> =
+            triples.iter().map(|t| t.subject.to_string()).collect();
+        assert!(subjects.contains("<https://knuckles-team.github.io/ontology/core#Extra>"));
+        assert!(subjects.contains("<https://knuckles-team.github.io/ontology/core#amount_a>"));
     }
 
     fn individuals(ids: &[&str]) -> String {
@@ -289,7 +265,7 @@ mod tests {
 
     // spec: MEDULLA-MEDIA-VOCAB-R655
     #[test]
-    fn a_newer_head_drops_the_individuals_it_no_longer_names() {
+    fn a_newer_head_drops_the_triples_it_no_longer_names() {
         let core = medulla_graph_core::graph::GraphCore::new();
         write_surface(&core, "pack", Some(&individuals(&["amount_a", "amount_b"]))).unwrap();
         assert_eq!(subjects_of(&core).len(), 2);
@@ -302,7 +278,7 @@ mod tests {
         write_surface(&core, "pack", None).unwrap();
         assert!(
             subjects_of(&core).is_empty(),
-            "a head with no individuals clears them"
+            "a head with nothing to project clears the graph"
         );
     }
 }
