@@ -88,6 +88,9 @@ fn ask_with(
         tenant_id: tenant,
         now_ms: 1_000,
         server_secret: b"decide-stat-test-secret",
+        matched: &[],
+        designation: None,
+        reader: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
@@ -387,6 +390,7 @@ fn verdict_fit(
         window: window(),
         optimiser: fit_optimiser(),
         source: DatasetSource::PairedVerdicts,
+        calibration_method: None,
         penalty: None,
         features: Default::default(),
         parent_head: None,
