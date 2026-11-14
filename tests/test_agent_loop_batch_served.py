@@ -47,7 +47,15 @@ async def _commits_once_and_refuses_oversize() -> None:
         first, second = f"loop-{tag}-a", f"loop-{tag}-b"
         results = await client.nodes.batch(
             [
-                _create(first, label=f"task-{tag}", status="pending", seq=1),
+                # Reinforce acts on a memory: the node carries an explicit
+                # finite `importance` (the current memory schema).
+                _create(
+                    first,
+                    label=f"task-{tag}",
+                    status="pending",
+                    seq=1,
+                    importance=0.5,
+                ),
                 _create(second, label=f"task-{tag}", status="pending", seq=2),
                 {
                     "op": "CompareAndSetNodeFields",

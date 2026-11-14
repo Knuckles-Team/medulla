@@ -94,13 +94,16 @@ def _fixture(client: Any, graph: str) -> None:
     _edge(client, graph, "hub", "near-a", "MENTIONS", 0.9)
     _edge(client, graph, "hub", "near-b", "MENTIONS", 0.4)
     _edge(client, graph, "near-a", "far", "MENTIONS", 0.7)
-    for node in ("answer", "src-a", "src-b", "deep"):
+    for node in ("answer", "src-a", "src-b", "deep", "aside"):
         _node(client, graph, node, {"type": "Artifact", "name": node})
     _edge(client, graph, "answer", "src-a", "DERIVED_FROM")
     _edge(client, graph, "answer", "src-b", "CITES")
     _edge(client, graph, "src-a", "deep", "GENERATED_BY")
     _edge(client, graph, "deep", "answer", "CITES")
-    _edge(client, graph, "answer", "hub", "RELATED_TO")
+    # The unrelated edge lineage skips. It ends outside the entity cluster: the
+    # neighbourhood walk is undirected, so an edge into `hub` would pull the
+    # lineage nodes into hub's two-hop neighbours at the default weight 1.0.
+    _edge(client, graph, "answer", "aside", "RELATED_TO")
 
 
 def _with_graph(body: Any) -> None:

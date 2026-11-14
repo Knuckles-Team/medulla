@@ -33,6 +33,8 @@ def test_valid_trace_stores_steps_in_order(clean_graph):
     clean_graph.nodes.add("trace-steps-valid", _trace(steps))
     stored = clean_graph.nodes.properties("trace-steps-valid")
     assert [step["step_index"] for step in stored["steps"]] == [0, 1, 2]
+    # R013.5: the engine stamps each stored step with the verified writer.
+    assert all(step.pop("recordedBy") for step in stored["steps"])
     assert stored["steps"] == steps
 
 
