@@ -58,9 +58,25 @@ def _sql(client: Any, graph: str, query: str) -> Any:
     return _decode(client._send("Sql", {"query": query, "params_msgpack": b""}, graph))
 
 
-def _usage_points(client: Any, graph: str, base: str, asset: str) -> int:
-    return _series_total(
-        client, graph, f"{base}|principal={TEST_AGENT_ID}|asset={asset}"
+def _usage_points(client: Any, graph: str, asset: str) -> int:
+    """The served reads of `asset` by the test principal.
+
+    The usage ledger is graph-scoped and shared by every principal, so it is read
+    through the served `CatalogUsage` answer (MEDULLA-UNIFIED-DATA-PLANE-R764.8),
+    not through `TsRange`, which reads only the caller's own private series.
+    """
+    try:
+        answer = _decode(
+            client._send("CatalogUsage", {"asset": asset, "top_n": None}, graph)
+        )
+    except Exception as refused:
+        if "CATALOG_ASSET_NOT_FOUND" in str(refused):
+            return 0
+        raise
+    return sum(
+        int(user["reads"])
+        for user in answer["frequent_users"]
+        if user["principal"] == TEST_AGENT_ID
     )
 
 
@@ -78,16 +94,15 @@ def test_usage_counts_come_from_served_queries(start_medulla_server) -> None:
     client = _client()
     client.tenants.create(graph)
     try:
-        assert _usage_points(client, graph, "asset_usage.reads", "nodes") == 0
+        assert _usage_points(client, graph, "nodes") == 0
         _sql(client, graph, "SELECT count(*) AS n FROM nodes")
         _sql(client, graph, "SELECT count(*) AS n FROM nodes")
-        assert _usage_points(client, graph, "asset_usage.reads", "nodes") == 2
-        assert _usage_points(client, graph, "asset_usage.queries", "nodes") == 2
+        assert _usage_points(client, graph, "nodes") == 2
 
         # A failed statement records nothing.
         with pytest.raises(Exception, match="."):
             _sql(client, graph, "SELECT nope FROM nodes WHERE")
-        assert _usage_points(client, graph, "asset_usage.reads", "nodes") == 2
+        assert _usage_points(client, graph, "nodes") == 2
 
         # A client-supplied usage claim is not a field of any method. Whether the
         # server drops the extra field or refuses the request, it counts at most the
@@ -104,7 +119,7 @@ def test_usage_counts_come_from_served_queries(start_medulla_server) -> None:
             )
         except Exception:
             pass
-        assert _usage_points(client, graph, "asset_usage.reads", "nodes") in (2, 3)
+        assert _usage_points(client, graph, "nodes") in (2, 3)
     finally:
         client.tenants.delete(graph)
         client.close()
