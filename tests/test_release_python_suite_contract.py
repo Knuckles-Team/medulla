@@ -658,7 +658,7 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
                 "medulla-numeric/analytics,"
                 "medulla-numeric/contract,medulla-numeric/complex,"
                 "medulla-numeric/decision,"
-                "medulla-numeric/motif,medulla-pyengine/security,"
+                "medulla-numeric/motif,medulla-numeric/evaluate,medulla-pyengine/security,"
                 "medulla-pyengine/ml-pipeline,"
                 "medulla-pyengine/reasoning,medulla-pyengine/query,medulla-pyengine/cypher,"
                 "medulla-pyengine/tsdb,medulla-pyengine/streaming,medulla-pyengine/wasm-udf,"

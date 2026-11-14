@@ -776,7 +776,7 @@ jobs:
       - name: Test (pyo3 crates, every feature except python)
         if: github.job == 'gates-pyo3'
         env: *medulla-validation-compiler-cache-env
-        run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-numeric -p medulla-pyengine --features medulla-numeric/analytics,medulla-numeric/contract,medulla-numeric/complex,medulla-numeric/decision,medulla-numeric/motif,medulla-pyengine/security,medulla-pyengine/ml-pipeline,medulla-pyengine/reasoning,medulla-pyengine/query,medulla-pyengine/cypher,medulla-pyengine/tsdb,medulla-pyengine/streaming,medulla-pyengine/wasm-udf,medulla-pyengine/rdf,medulla-pyengine/blob,medulla-pyengine/jobs,medulla-pyengine/statechart,medulla-pyengine/finance --no-fail-fast
+        run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-numeric -p medulla-pyengine --features medulla-numeric/analytics,medulla-numeric/contract,medulla-numeric/complex,medulla-numeric/decision,medulla-numeric/motif,medulla-numeric/evaluate,medulla-pyengine/security,medulla-pyengine/ml-pipeline,medulla-pyengine/reasoning,medulla-pyengine/query,medulla-pyengine/cypher,medulla-pyengine/tsdb,medulla-pyengine/streaming,medulla-pyengine/wasm-udf,medulla-pyengine/rdf,medulla-pyengine/blob,medulla-pyengine/jobs,medulla-pyengine/statechart,medulla-pyengine/finance --no-fail-fast
 
       - name: Report native-crate compiler cache reuse
         if: always()
