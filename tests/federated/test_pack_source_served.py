@@ -31,11 +31,25 @@ from test_contract_kinds_served import (
 
 
 def _usage_reads(client: Any, asset: str) -> int:
-    series = f"asset_usage.reads|principal={TEST_AGENT_ID}|asset={asset}"
-    rows = client._send("TsRange", {"series_id": series, "from": 0, "to": 2**62}, None)
-    if isinstance(rows, (bytes, bytearray)):
-        rows = msgpack.unpackb(rows, raw=False)
-    return sum(int(sum(values)) for _ts, values in rows)
+    """The test principal's served reads of `asset`.
+
+    The usage ledger is graph-scoped and shared by every principal, so it is read
+    through the served `CatalogUsage` answer (MEDULLA-UNIFIED-DATA-PLANE-R764.8);
+    `TsRange` reads only the caller's own private series.
+    """
+    try:
+        answer = client._send("CatalogUsage", {"asset": asset, "top_n": None}, None)
+    except Exception as refused:
+        if "CATALOG_ASSET_NOT_FOUND" in str(refused):
+            return 0
+        raise
+    if isinstance(answer, (bytes, bytearray)):
+        answer = msgpack.unpackb(answer, raw=False)
+    return sum(
+        int(user["reads"])
+        for user in answer["frequent_users"]
+        if user["principal"] == TEST_AGENT_ID
+    )
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R722.5")

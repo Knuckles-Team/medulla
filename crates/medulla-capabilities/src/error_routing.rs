@@ -827,6 +827,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "VISUAL_STATE_STALE",
         ],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R764.8: the catalog usage answer's refusals.
+    (
+        "CatalogUsage",
+        &["CATALOG_ASSET_NOT_FOUND", "CATALOG_LIMIT_INVALID"],
+    ),
     // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
     (
         "AssistantProfile",

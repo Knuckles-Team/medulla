@@ -4,6 +4,19 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::refusal_code::RefusalCode;
+
+/// Refusal code of `CatalogUsage`: the asset has no usage in the caller's scope.
+pub const CATALOG_ASSET_NOT_FOUND: &str = "CATALOG_ASSET_NOT_FOUND";
+/// Refusal code of `CatalogUsage`: `top_n` lies outside the knob's bounds.
+pub const CATALOG_LIMIT_INVALID: &str = "CATALOG_LIMIT_INVALID";
+
+/// Every refusal code of the catalog usage answer (MEDULLA-UNIFIED-DATA-PLANE-R764.8).
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(CATALOG_ASSET_NOT_FOUND),
+    RefusalCode::new(CATALOG_LIMIT_INVALID),
+];
+
 /// Reads and queries of one asset by one principal in one period.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
