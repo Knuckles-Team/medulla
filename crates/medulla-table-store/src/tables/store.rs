@@ -4864,6 +4864,7 @@ fn plan_fk_cascade(
         on_delete,
         on_update,
         name: _,
+        ..
     } = constraint
     else {
         return None;

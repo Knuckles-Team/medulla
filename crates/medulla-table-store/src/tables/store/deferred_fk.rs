@@ -15,6 +15,8 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 
+use redb::ReadableTable;
+
 use medulla_tables::schema::{Cell, TableConstraint, TableSchema};
 
 use super::{
@@ -29,7 +31,7 @@ pub const DEFERRED_FK_PENDING_EXCEEDED: &str = "DEFERRED_FK_PENDING_EXCEEDED";
 
 /// The store-wide settings and metric of the deferred-key pass. Clones of a
 /// `TableStore` share one value.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub(super) struct DeferredFkState {
     max_pending: OnceLock<usize>,
     checked: AtomicU64,

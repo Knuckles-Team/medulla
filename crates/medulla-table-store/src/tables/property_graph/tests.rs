@@ -71,6 +71,8 @@ fn fixtures() -> Vec<RelationCatalogSnapshot> {
             ref_columns: vec!["id".into()],
             on_delete: RefAction::Restrict,
             on_update: RefAction::Restrict,
+            deferrable: false,
+            initially_deferred: false,
         },
         TableConstraint::ForeignKey {
             name: Some("lives_in_city".into()),
@@ -79,6 +81,8 @@ fn fixtures() -> Vec<RelationCatalogSnapshot> {
             ref_columns: vec!["id".into()],
             on_delete: RefAction::Restrict,
             on_update: RefAction::Restrict,
+            deferrable: false,
+            initially_deferred: false,
         },
     ]);
     vec![
@@ -318,6 +322,8 @@ fn type_mismatch_and_ambiguous_foreign_keys_are_rejected() {
         ref_columns: vec!["id".into()],
         on_delete: RefAction::Restrict,
         on_update: RefAction::Restrict,
+        deferrable: false,
+        initially_deferred: false,
     };
     ambiguous[2].schema.push_constraint(duplicate);
     ambiguous[2].schema_digest = ambiguous[2].schema.schema_digest().unwrap();

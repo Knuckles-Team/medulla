@@ -431,6 +431,8 @@ fn typed_insert_reuses_defaults_serial_uniqueness_and_foreign_key_checks() {
         ref_columns: vec!["id".into()],
         on_delete: RefAction::NoAction,
         on_update: RefAction::NoAction,
+        deferrable: false,
+        initially_deferred: false,
     }]);
     let parents = TableSchema::new(
         "parents",

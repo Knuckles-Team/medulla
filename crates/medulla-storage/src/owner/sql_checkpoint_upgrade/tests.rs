@@ -5,7 +5,7 @@ use super::*;
 use crate::owner::persisted_layout::create_predecessor_owner_file;
 use crate::recovery::evidence::strict_recovery_evidence;
 use medulla_direct_state::direct_state::private_local_tempdir;
-use redb::{ReadableDatabase, TableDefinition};
+use redb::{ReadableDatabase, ReadableTable, TableDefinition};
 use sha2::{Digest, Sha256};
 
 /// Serializes the tests here that open redb files. `upgrade_is_atomic_across_each_crash_stage`

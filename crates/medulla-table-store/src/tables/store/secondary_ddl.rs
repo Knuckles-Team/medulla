@@ -3,6 +3,8 @@
 //! a table created earlier in the same batch can be indexed and a rollback leaves
 //! no catalog row behind.
 
+use redb::ReadableTable;
+
 use medulla_tables::index::{
     SecondaryIndexColumn, SecondaryIndexOrder, SecondaryIndexSpec, SECONDARY_INDEX_SCHEMA_VERSION,
 };
