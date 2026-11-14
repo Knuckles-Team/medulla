@@ -180,7 +180,7 @@ def test_cycle_resumes_and_activates(tmp_path: Path) -> None:
             assert read["active"]["space_digest"] == space, read
             # Discover over the new generation, asked by vector alone, finds
             # nodes: only the cycle's embeddings can answer it.
-            found = await client.discover([], [1.0] + [0.0] * (DIM - 1), k=5)
+            found = await client.graph.discover([], [1.0] + [0.0] * (DIM - 1), k=5)
             hits = found["hits"]
             assert hits, found
             assert all(hit["type"] == "Doc" for hit in hits), hits

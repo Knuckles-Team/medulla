@@ -188,7 +188,7 @@ async def _discover(
     client: Any, capability: str | None = None
 ) -> tuple[str, list[str]]:
     """The verdict's adapter digest and the hit ids in the order Discover ranks them."""
-    found = await client.discover(
+    found = await client.graph.discover(
         [], [1.0] + [0.0] * (DIM - 1), k=5, capability=capability
     )
     return found["verdict"]["adapter_digest"], [hit["id"] for hit in found["hits"]]

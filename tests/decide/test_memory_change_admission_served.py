@@ -8,10 +8,12 @@ import hashlib
 import json
 from typing import Any
 
+import pytest
 from _decision_resident_fixture import publication
 from conftest import TEST_TENANT
 
 from medulla import decision_client as dc
+from medulla.client import EngineResponseError
 from medulla.decision import policy_digest
 from medulla.decision._digest import raw_digest
 
@@ -206,9 +208,8 @@ def test_real_decision_eval_binds_memory_candidate_and_metrics(clean_graph):
     assert receipt["verdict"] == "discard"
     assert receipt["reason_codes"][0] == "RECALL_BELOW_MIN"
 
-    conflict = _submit(
-        client, dc.memory_benchmark_op(_benchmark(policy_ref, "bm-1", False))
-    )
-    assert "IDEMPOTENCY_CONFLICT" in str(conflict)
+    # A reused key with a different request is refused at the door.
+    with pytest.raises(EngineResponseError, match="IDEMPOTENCY_CONFLICT"):
+        _submit(client, dc.memory_benchmark_op(_benchmark(policy_ref, "bm-1", False)))
 
     assert _read(client) == before
