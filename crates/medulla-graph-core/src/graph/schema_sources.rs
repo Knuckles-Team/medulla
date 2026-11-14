@@ -1958,7 +1958,7 @@ mod tests {
             // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and shapes.
             (
                 "state_machines",
-                "41a9f8621872f117ce23339b6b1a428aaad30b4f19fd1e41f0fd4f28a144f028",
+                "10d8c03459db4487ed7be2ec7fa297e7f7032e51dd3bb662091f9169b4b5bd28",
             ),
             (
                 "state_machines-shapes",

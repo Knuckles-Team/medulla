@@ -231,6 +231,10 @@ knobs! {
     context_proof_edges_per_item: u64 = "context.proof_edges_per_item", U64(3), [0, 16], "edges", Tunable;
     /// Context bundle: least value per token a chosen span must carry.
     context_value_floor_micro_per_token: u64 = "context.value_floor_micro_per_token", U64(0), [0, 1_000_000], "micro-units", Tunable;
+    /// Connector-pack projection: attempts one head record's projection gets before its retryable failure becomes the recorded terminal failure (MEDULLA-TYPED-PACKS-R096.2).
+    connector_pack_projection_max_attempts: u64 = "connector_pack.projection_max_attempts", U64(5), [1, 50], "attempts", Tunable;
+    /// Connector-pack projection: delay before the first retry; each later retry doubles it (MEDULLA-TYPED-PACKS-R096.2).
+    connector_pack_projection_backoff_ms: u64 = "connector_pack.projection_backoff_ms", U64(1_000), [10, 600_000], "milliseconds", Tunable;
     /// Executor schedule tick: seconds between passes over the due schedule windows.
     jobs_schedule_poll_s: u64 = "jobs.schedule_poll_s", U64(1), [1, 60], "seconds", Tunable;
     /// Schedule budget: default most run seconds one schedule's runs may use per budget period.

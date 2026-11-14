@@ -94,6 +94,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `freshness.window` | u64 | 60 | [1, 3600] | seconds | Tunable | `MEDULLA_FRESHNESS_WINDOW` |
 | `concept_lineage.read_max_successors` | u64 | 1024 | [1, 65536] | successors | Tunable | `MEDULLA_CONCEPT_LINEAGE_READ_MAX_SUCCESSORS` |
 | `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | none (registry knob, not an environment variable) |
+| `connector_pack.projection_max_attempts` | u64 | 5 | [1, 50] | attempts | Tunable | `MEDULLA_CONNECTOR_PACK_PROJECTION_MAX_ATTEMPTS` |
+| `connector_pack.projection_backoff_ms` | u64 | 1000 | [10, 600000] | milliseconds | Tunable | `MEDULLA_CONNECTOR_PACK_PROJECTION_BACKOFF_MS` |
 
 ## Wire shape
 

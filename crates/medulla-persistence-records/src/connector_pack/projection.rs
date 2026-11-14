@@ -343,6 +343,132 @@ fn receipt_matches_record(
         && head.receipt.record_id == record.record_id
 }
 
+impl AgentLibraryStore {
+    /// Record `retry` as the projection retry state of `plan`'s head
+    /// (MEDULLA-TYPED-PACKS-R096.2). One write per attempt: the attempt is part of
+    /// the replay identity, so a re-delivered attempt replays and a later one
+    /// writes.
+    pub fn record_connector_pack_projection_retry(
+        &self,
+        context: AgentLibraryMutationContext,
+        plan: &ConnectorPackProjectionPlan,
+        retry: &super::projection_retry::PackProjectionRetry,
+    ) -> Result<(), String> {
+        if context.tenant_id != plan.tenant_id || retry.record_id != plan.record_id {
+            return Err("connector pack projection retry differs from its plan".into());
+        }
+        let discriminator = format!("{}#retry-{}", plan.record_id, retry.attempt);
+        let identity = PackWriteIdentity {
+            purpose: "connector-pack:reproject",
+            kind: "connector-pack-projection-retry",
+            slug: "connector-pack-projection",
+            subject: plan.connector.as_str(),
+            revision: plan.head.binding_revision,
+            discriminator: Some(&discriminator),
+            result_schema: CONNECTOR_PACK_RESULT_SCHEMA_ID,
+            noun: "connector pack projection retry",
+        };
+        let effects = PackWriteEffects {
+            operations: vec![MutationOperation {
+                ordinal: 0,
+                surface: MutationSurface::Lifecycle,
+                domain: DurabilityDomain::ControlPlane,
+                method: Method::ApplyMutation {
+                    event_type: format!("connector_pack_projection_{}", retry.phase),
+                    query: format!("{}:{}", discriminator, plan.head.pack_digest),
+                },
+            }],
+            outbox: Vec::new(),
+        };
+        let retry = retry.clone();
+        let result = self.commit_pack_write(&context, identity, effects, |write, _| {
+            let tenant = plan.tenant_id.as_str();
+            let connector = plan.connector.as_str();
+            let mut heads = write.open_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+            let current = heads
+                .get((tenant, connector))
+                .map_err(|error| error.to_string())?
+                .ok_or_else(|| "PACK_PLAN_STALE: connector pack head disappeared".to_string())?;
+            let mut head: ConnectorPackHeadRow =
+                super::undecodable::decode_stored(current.value(), "connector pack head")?;
+            drop(current);
+            if head.head.record_id != plan.record_id {
+                return Err("PACK_PLAN_STALE: connector pack head changed".into());
+            }
+            head.projection_retry = Some(retry);
+            let bytes = medulla_storage::encode_bounded(&head, "connector pack head")?;
+            heads
+                .insert((tenant, connector), bytes.as_slice())
+                .map_err(|error| error.to_string())?;
+            Ok(PackImportResult::Imported {
+                receipt: Box::new(head.receipt),
+            })
+        })?;
+        match result {
+            PackImportResult::Imported { .. } => Ok(()),
+            PackImportResult::Unchanged { .. } | PackImportResult::Rejected { .. } => {
+                Err("CORRUPT_MUTATION_LEDGER: projection retry replay is not imported".into())
+            }
+        }
+    }
+
+    /// The projection retry state of `connector`'s current head record, if any.
+    pub fn connector_pack_projection_retry(
+        &self,
+        tenant_id: &str,
+        connector: &ResourceId,
+    ) -> Result<Option<super::projection_retry::PackProjectionRetry>, String> {
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        let read = self.read()?;
+        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+        let Some(row) = heads
+            .get((tenant_id, connector.as_str()))
+            .map_err(|error| error.to_string())?
+        else {
+            return Ok(None);
+        };
+        let head: ConnectorPackHeadRow =
+            super::undecodable::decode_stored(row.value(), "connector pack head")?;
+        Ok(head
+            .projection_retry
+            .filter(|retry| retry.record_id == head.head.record_id))
+    }
+
+    /// The connectors of `tenant_id` whose current head has a retry due at `now_ms`.
+    pub fn due_connector_pack_retries(
+        &self,
+        tenant_id: &str,
+        now_ms: u64,
+    ) -> Result<Vec<ResourceId>, String> {
+        let read = self.read()?;
+        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+        let mut due = Vec::new();
+        for row in heads
+            .range((tenant_id, "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            let (row_tenant, connector) = key.value();
+            if row_tenant != tenant_id {
+                break;
+            }
+            let head: ConnectorPackHeadRow =
+                super::undecodable::decode_stored(value.value(), "connector pack head")?;
+            let Some(retry) = head.projection_retry.as_ref() else {
+                continue;
+            };
+            if retry.record_id == head.head.record_id
+                && !retry.is_terminal()
+                && retry.next_attempt_ms <= now_ms
+                && head.head.visible_record_id.as_deref() != Some(head.head.record_id.as_str())
+            {
+                due.push(ResourceId::new(connector).map_err(|error| error.to_string())?);
+            }
+        }
+        Ok(due)
+    }
+}
+
 fn validate_projection_identity(
     context: &AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
@@ -452,6 +578,7 @@ fn apply_projection_rows(
     head.receipt.projection = projection.clone();
     if matches!(projection, PackProjectionState::Applied { .. }) {
         head.head.visible_record_id = Some(plan.record_id.clone());
+        head.projection_retry = None;
     }
     let record_bytes = medulla_storage::encode_bounded(&record, "connector pack import record")?;
     imports

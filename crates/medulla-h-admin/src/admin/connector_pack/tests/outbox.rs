@@ -619,9 +619,10 @@ async fn failed_projection_records_durable_failed_status() {
 
 // spec: MEDULLA-TYPED-PACKS-R096.1
 /// A retryable projection rejection never leaves the head dark without a
-/// state: the head reports `failed` with the stable code, the worker leaves
-/// the lease unresolved (no dead letter) so the kernel redelivers the row, and
-/// the failed state stays visible until a served reproject succeeds.
+/// state: the head reports `failed` with the stable code, the worker acks the
+/// row (no dead letter) and moves the failure into the pack's own retry state
+/// (MEDULLA-TYPED-PACKS-R096.2), and the failed state stays visible until a
+/// served reproject succeeds.
 #[tokio::test]
 async fn rejected_projection_is_visible_and_retried() {
     use crate::admin::connector_pack::reproject::{
@@ -656,7 +657,7 @@ async fn rejected_projection_is_visible_and_retried() {
     *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
         &INJECT_BLOB_UNAVAILABLE,
         "injected blob failure",
-    ) = Some(schema.to_string());
+    ) = Some((schema.to_string(), 1));
     let subscribed = AtomicBool::new(false);
     sweep(&served.state, &subscribed).await.unwrap();
     let status: MutationOutboxStatusView = ok(
@@ -673,7 +674,7 @@ async fn rejected_projection_is_visible_and_retried() {
     );
     assert_eq!(
         status.status.dead_lettered, 0,
-        "a retryable rejection is redelivered, not dead-lettered: {status:?}"
+        "a retryable rejection moves to the retry state, not the dead letters: {status:?}"
     );
     let tool_b = format!("mcp:{schema}/tool/b");
     assert!(
@@ -709,4 +710,115 @@ async fn rejected_projection_is_visible_and_retried() {
             .await,
     );
     assert!(searchable_ids(&served).await.contains(&tool_b));
+}
+
+fn ontology_entry(schema: &str) -> Content {
+    Content {
+        kind: PackEntryKind::Ontology,
+        uri: format!("ontology://{schema}/core.ttl"),
+        name: "core.ttl".to_string(),
+        media_type: "text/turtle",
+        body: b"<https://example.org/Thing> a <http://www.w3.org/2002/07/owl#Class> ; <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://knuckles-team.github.io/ontology/core#DomainEntity> .\n".to_vec(),
+        input_schema: None,
+        annotations: PackAnnotations::default(),
+        references: Vec::new(),
+    }
+}
+
+// spec: MEDULLA-TYPED-PACKS-R096.2
+/// A pack whose projection keeps failing never delays a healthy pack queued
+/// behind it: the one sweep resolves both rows, the healthy head turns
+/// visible, and the failing pack retries from its own state until the knob's
+/// attempts are used up. The terminal failure keeps its code, the head stays
+/// dark, and attach refuses at once with that code.
+#[tokio::test]
+async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
+    use crate::admin::connector_pack::reproject::INJECT_BLOB_UNAVAILABLE;
+    use crate::connector_pack_projection::worker::{retry_due, RetryAt};
+    use medulla_persistence_records::connector_pack::projection_retry::RetryKnobs;
+
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let (failing, healthy) = ("schema-pack-failing", "schema-pack-healthy");
+    for schema in [failing, healthy] {
+        bind(&served, schema, ADMIN).await;
+    }
+    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+        &INJECT_BLOB_UNAVAILABLE,
+        "injected blob failure",
+    ) = Some((failing.to_string(), u32::MAX));
+    // The failing pack's row is ahead of the healthy one on the ordered outbox.
+    for schema in [failing, healthy] {
+        imported(
+            &served,
+            &build_pack(schema, &[tool(schema, "b", "Tool b."), ontology_entry(schema)]),
+            None,
+        )
+        .await;
+    }
+    let subscribed = AtomicBool::new(false);
+    sweep(&served.state, &subscribed).await.unwrap();
+    let ids = searchable_ids(&served).await;
+    assert!(
+        ids.contains(&format!("mcp:{healthy}/tool/b")),
+        "the healthy pack projects in the same sweep: {ids:?}"
+    );
+    assert!(!ids.contains(&format!("mcp:{failing}/tool/b")));
+
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let connector = ResourceId::new(failing).unwrap();
+    let first = store
+        .connector_pack_projection_retry(TENANT, &connector)
+        .unwrap()
+        .expect("the failure moved into the pack's retry state");
+    assert_eq!(first.attempt, 1);
+    assert!(!first.is_terminal());
+    assert!(
+        !sweep(&served.state, &subscribed).await.unwrap(),
+        "the failing row was resolved; nothing is left leased on the outbox"
+    );
+
+    let knobs = RetryKnobs {
+        max_attempts: 3,
+        backoff_ms: 10,
+    };
+    let mut now_ms = first.next_attempt_ms;
+    for attempt in 2..=knobs.max_attempts {
+        now_ms += 1_000_000;
+        assert!(retry_due(&served.state, &store, TENANT, RetryAt { now_ms, knobs }).await);
+        let state = store
+            .connector_pack_projection_retry(TENANT, &connector)
+            .unwrap()
+            .unwrap();
+        assert_eq!(state.attempt, attempt);
+        assert_eq!(state.code, "PACK_PROJECTION_BLOB_UNAVAILABLE");
+        assert_eq!(state.is_terminal(), attempt == knobs.max_attempts, "{state:?}");
+    }
+    assert!(
+        !retry_due(
+            &served.state,
+            &store,
+            TENANT,
+            RetryAt {
+                now_ms: now_ms + 1_000_000,
+                knobs
+            }
+        )
+        .await,
+        "a terminal failure is never retried again"
+    );
+    let refused = store
+        .resolve_visible_connector_schema_head(TENANT, &connector)
+        .unwrap_err();
+    assert!(
+        refused.starts_with("PACK_PROJECTION_BLOB_UNAVAILABLE: "),
+        "attach refuses with the recorded code: {refused}"
+    );
+    assert!(!searchable_ids(&served)
+        .await
+        .contains(&format!("mcp:{failing}/tool/b")));
+    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+        &INJECT_BLOB_UNAVAILABLE,
+        "injected blob failure",
+    ) = None;
 }

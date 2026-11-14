@@ -3696,3 +3696,123 @@
     :fromState :SignalDataMachine_Valid ;
     :toState :SignalDataMachine_Stale ;
     :firedBy :SignalDataMachine_Event_Expire .
+
+# spec: MEDULLA-TYPED-PACKS-R096.2
+# The PackProjection machine: the projection lifecycle of one connector pack head record. The
+# Rust edge table PACK_PROJECTION_MACHINE is the same table.
+
+:PackProjectionState a owl:Class ;
+    rdfs:label "PackProjection State" ;
+    rdfs:comment "A state of the PackProjection machine." ;
+    rdfs:subClassOf :State .
+
+:PackProjectionTerminalState a owl:Class ;
+    rdfs:label "PackProjection Terminal State" ;
+    rdfs:comment "A terminal state of the PackProjection machine." ;
+    rdfs:subClassOf :TerminalState, :PackProjectionState .
+
+:PackProjectionTransition a owl:Class ;
+    rdfs:label "PackProjection Transition" ;
+    rdfs:comment "A transition of the PackProjection machine." ;
+    rdfs:subClassOf :Transition .
+
+:PackProjectionEvent a owl:Class ;
+    rdfs:label "PackProjection Event" ;
+    rdfs:comment "An event of the PackProjection machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:PackProjectionGuard a owl:Class ;
+    rdfs:label "PackProjection Guard" ;
+    rdfs:comment "A guard of the PackProjection machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:PackProjectionMachine a :StateMachine ;
+    rdfs:label "Pack projection machine" ;
+    :initialState :PackProjectionMachine_Pending ;
+    :hasState :PackProjectionMachine_Pending, :PackProjectionMachine_Retrying, :PackProjectionMachine_Applied, :PackProjectionMachine_Failed .
+
+:PackProjectionMachine_Pending a :PackProjectionState ;
+    rdfs:label "Pack projection Pending" ;
+    :storedForm "pending" .
+
+:PackProjectionMachine_Retrying a :PackProjectionState ;
+    rdfs:label "Pack projection Retrying" ;
+    :storedForm "retrying" .
+
+:PackProjectionMachine_Applied a :PackProjectionTerminalState ;
+    rdfs:label "Pack projection Applied" ;
+    :storedForm "applied" .
+
+:PackProjectionMachine_Failed a :PackProjectionTerminalState ;
+    rdfs:label "Pack projection Failed" ;
+    :storedForm "failed" .
+
+:PackProjectionMachine_Event_Apply a :PackProjectionEvent ;
+    rdfs:label "Pack projection event Apply" .
+
+:PackProjectionMachine_Event_FailRetryable a :PackProjectionEvent ;
+    rdfs:label "Pack projection event FailRetryable" .
+
+:PackProjectionMachine_Event_Refuse a :PackProjectionEvent ;
+    rdfs:label "Pack projection event Refuse" .
+
+:PackProjectionMachine_Guard_AttemptsLeft a :PackProjectionGuard ;
+    rdfs:label "Pack projection guard AttemptsLeft" .
+
+:PackProjectionMachine_P01 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P01" ;
+    :edgeId "P01" ;
+    :fromState :PackProjectionMachine_Pending ;
+    :toState :PackProjectionMachine_Applied ;
+    :firedBy :PackProjectionMachine_Event_Apply .
+
+:PackProjectionMachine_P02 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P02" ;
+    :edgeId "P02" ;
+    :fromState :PackProjectionMachine_Pending ;
+    :toState :PackProjectionMachine_Retrying ;
+    :guardedBy :PackProjectionMachine_Guard_AttemptsLeft ;
+    :firedBy :PackProjectionMachine_Event_FailRetryable .
+
+:PackProjectionMachine_P03 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P03" ;
+    :edgeId "P03" ;
+    :fromState :PackProjectionMachine_Pending ;
+    :toState :PackProjectionMachine_Failed ;
+    :firedBy :PackProjectionMachine_Event_FailRetryable .
+
+:PackProjectionMachine_P04 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P04" ;
+    :edgeId "P04" ;
+    :fromState :PackProjectionMachine_Pending ;
+    :toState :PackProjectionMachine_Failed ;
+    :firedBy :PackProjectionMachine_Event_Refuse .
+
+:PackProjectionMachine_P05 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P05" ;
+    :edgeId "P05" ;
+    :fromState :PackProjectionMachine_Retrying ;
+    :toState :PackProjectionMachine_Applied ;
+    :firedBy :PackProjectionMachine_Event_Apply .
+
+:PackProjectionMachine_P06 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P06" ;
+    :edgeId "P06" ;
+    :fromState :PackProjectionMachine_Retrying ;
+    :toState :PackProjectionMachine_Retrying ;
+    :guardedBy :PackProjectionMachine_Guard_AttemptsLeft ;
+    :firedBy :PackProjectionMachine_Event_FailRetryable .
+
+:PackProjectionMachine_P07 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P07" ;
+    :edgeId "P07" ;
+    :fromState :PackProjectionMachine_Retrying ;
+    :toState :PackProjectionMachine_Failed ;
+    :firedBy :PackProjectionMachine_Event_FailRetryable .
+
+:PackProjectionMachine_P08 a :PackProjectionTransition ;
+    rdfs:label "Pack projection P08" ;
+    :edgeId "P08" ;
+    :fromState :PackProjectionMachine_Retrying ;
+    :toState :PackProjectionMachine_Failed ;
+    :firedBy :PackProjectionMachine_Event_Refuse .
