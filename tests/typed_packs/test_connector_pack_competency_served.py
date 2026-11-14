@@ -41,6 +41,8 @@ QUESTIONS = [
     "q4_record_governance",
 ]
 STREAM = "items"
+# R101.2: a declaration's `ontology_class` is an IRI of the composed schema.
+CORE = "https://knuckles-team.github.io/ontology/core#"
 
 
 def _fixture(*parts: str, connector: str) -> str:
@@ -84,12 +86,12 @@ def _declaration(connector: str, question: str) -> ConnectorPackEntryContent:
                 "quantity": "positionQuantity",
             },
             "key_fields": ["id"],
-            "ontology_class": "Position",
+            "ontology_class": CORE + "Position",
         },
         "doc": {
             "fields": {"id": "identifier", "title": "label"},
             "key_fields": ["id"],
-            "ontology_class": "Document",
+            "ontology_class": CORE + "Document",
         },
     }
     body: dict[str, Any] = {
