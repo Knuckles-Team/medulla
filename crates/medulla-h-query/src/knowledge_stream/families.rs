@@ -462,11 +462,19 @@ async fn execute_cross_modal(
     .map_err(|_| "cross-modal surface unavailable".to_string())?;
     let source_result = response_result(response)?;
     let raw = raw_payload(&source_result, "cross-modal")?;
-    let result: Vec<(String, Option<f32>)> =
+    let result: Vec<medulla_types::unified_row::UnifiedRow> =
         decode_knowledge_result(raw).map_err(|_| "invalid cross-modal result shape".to_string())?;
     let rows = result
         .iter()
-        .map(|(id, score)| native_row(authority, "cross_modal_row", id.as_bytes(), 1.0, *score))
+        .map(|row| {
+            native_row(
+                authority,
+                "cross_modal_row",
+                row.id.as_bytes(),
+                1.0,
+                row.score,
+            )
+        })
         .collect();
     Ok(FamilyExecution {
         rows,

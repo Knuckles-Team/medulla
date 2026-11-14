@@ -86,17 +86,23 @@ pub struct TsdbLegBind<'a> {
 }
 
 /// Execute a unified cross-modal plan (CONCEPT:AU-KG.compute.vector/209) over
-/// the bound context and project its rows as `[id, score|nil]`.
+/// the bound context and project its rows as `[id, score|nil]`, with the named text
+/// values a source attached to a row as a third element (MEDULLA-CQ-XSRC-R002.7).
 #[cfg(feature = "query")]
 pub fn execute_rows(
     plan: &medulla_exec::algebra::Plan,
     ctx: &medulla_exec::exec::PlanCtx,
-) -> Result<Vec<(String, Option<f32>)>, String> {
+) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
     let result = medulla_exec::exec::execute(plan, ctx)?;
+    let texts = result.texts();
     Ok(result
         .rows()
         .iter()
-        .map(|r| (r.id.clone(), r.score))
+        .map(|r| medulla_types::unified_row::UnifiedRow {
+            id: r.id.clone(),
+            score: r.score,
+            texts: texts.get(&r.id).cloned().unwrap_or_default(),
+        })
         .collect())
 }
 

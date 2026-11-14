@@ -72,7 +72,7 @@ pub trait QueryApi: Send + Sync {
             &medulla_federation::federation::ForeignSourceRegistry,
         >,
         #[cfg(feature = "tsdb")] tsdb_ctx: query_support::TsdbLegBind<'_>,
-    ) -> Result<Vec<(String, Option<f32>)>, String> {
+    ) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 

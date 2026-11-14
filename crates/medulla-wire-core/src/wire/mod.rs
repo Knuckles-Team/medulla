@@ -5196,7 +5196,7 @@ fn property_graph_txn_rejection(kind: &StatementKind, in_txn: bool) -> Option<&'
 /// Project a unified-query result (`[(id, score)]`) into a two-column typed row set
 /// (`id TEXT`, `score FLOAT8`) so the wire encodes it exactly like any other read.
 #[cfg(feature = "query")]
-fn uql_rows_to_result(rows: Vec<(String, Option<f32>)>) -> TypedQueryResult {
+fn uql_rows_to_result(rows: Vec<medulla_types::unified_row::UnifiedRow>) -> TypedQueryResult {
     let columns = vec![
         TypedColumn {
             name: "id".to_string(),
@@ -5209,7 +5209,7 @@ fn uql_rows_to_result(rows: Vec<(String, Option<f32>)>) -> TypedQueryResult {
     ];
     let rows = rows
         .into_iter()
-        .map(|(id, score)| {
+        .map(|medulla_types::unified_row::UnifiedRow { id, score, .. }| {
             vec![
                 serde_json::Value::String(id),
                 match score {

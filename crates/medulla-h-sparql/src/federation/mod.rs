@@ -477,17 +477,19 @@ fn decode_local_rows(bytes: &[u8], lang: &str) -> Vec<FedRow> {
     }
     let _ = lang;
     // Default ranked-search path: `[(id, score)]` rows.
-    match medulla_types::msgpack::decode_bounded::<Vec<(String, Option<f32>)>>(
+    match medulla_types::msgpack::decode_bounded::<Vec<medulla_types::unified_row::UnifiedRow>>(
         bytes,
         medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
     ) {
         Ok(rows) => rows
             .into_iter()
-            .map(|(id, score)| FedRow {
-                key: id.clone(),
-                score: score.map(|s| s as f64),
-                data: serde_json::json!({ "id": id, "score": score }),
-            })
+            .map(
+                |medulla_types::unified_row::UnifiedRow { id, score, .. }| FedRow {
+                    key: id.clone(),
+                    score: score.map(|s| s as f64),
+                    data: serde_json::json!({ "id": id, "score": score }),
+                },
+            )
             .collect(),
         Err(_) => Vec::new(),
     }

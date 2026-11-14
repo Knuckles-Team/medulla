@@ -45,6 +45,11 @@ fn run(
         },
         execute_rows,
     )
+    .map(|rows| {
+        rows.iter()
+            .map(medulla_types::unified_row::UnifiedRow::pair)
+            .collect()
+    })
 }
 
 fn key_only_source() -> ForeignSourceSpec {
