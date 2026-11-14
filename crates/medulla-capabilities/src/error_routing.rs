@@ -151,9 +151,37 @@ const HARNESS_RECORD_ADMISSION_ERRORS: &[&str] = &[
     "WINDOW_RUN_REVISION_MISMATCH",
 ];
 
+/// The refusals of one state-space step (`medulla_tsdb::derive::state_space`).
+const STATE_SPACE_ERRORS: &[&str] = &[
+    "STATE_SCHEMA_UNAVAILABLE",
+    "STATE_CHECKPOINT_STALE",
+    "STATE_DIMENSION_MISMATCH",
+    "STATE_DOMAIN_VIOLATION",
+    "STATE_FACTOR_ORDER",
+    "STATE_FUTURE_LEAK",
+    "STATE_JACOBIAN_INVALID",
+    "STATE_MODEL_UNREGISTERED",
+    "STATE_NOISE_CORRELATED",
+    "STATE_RETUNE_BUDGET",
+    "STATE_TRANSFORM_INVALID",
+    "STATE_UNIT_MISMATCH",
+    "STATE_WARMUP",
+    "STATE_WINDOW_INVALID",
+    "KERNEL_INPUT_NONFINITE",
+    "KERNEL_PARAM_INVALID",
+    "KERNEL_SINGULAR",
+    "KERNEL_STATE_BUDGET",
+    "KERNEL_WORK_BUDGET",
+];
+
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-DURABLE-KERNEL-R871: a Batch over the operation cap is refused whole.
     ("Batch", &["BATCH_TOO_LARGE", "INVALID_ARGUMENT"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R002.9/R002.10: a state-space definition, and the
+    // filter step a source append runs, refuse with the series and kernel codes of
+    // `SeriesRefusal::render`.
+    ("TsDefineStateSpace", STATE_SPACE_ERRORS),
+    ("TsAppend", STATE_SPACE_ERRORS),
     // MEDULLA-CONTRACT-R054: the served contract read's pagination refusals.
     (
         "DescribeContract",
