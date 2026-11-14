@@ -402,7 +402,7 @@ def _run_journey(
     fixture = FixtureSource(kind, recordings, operations=[OPERATION]).start()
     # The graph holds no row of the source before the journey; the served
     # query must leave the count unchanged (zero stored source rows).
-    before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    before = _stored_nodes(clean_graph)
     assert before == [], "the graph must hold no row of the source before the journey"
 
     answers: list[dict[str, Any]] = []
@@ -441,7 +441,7 @@ def _run_journey(
     finally:
         fixture.close()
 
-    after = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    after = _stored_nodes(clean_graph)
     assert after == before, "the store holds no row of the source after the query"
     return answers[0]
 
@@ -488,7 +488,7 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
     pg_source.execute(
         f"INSERT INTO {VG_TABLE} VALUES ('item-1', 'Alpha'), ('item-2', 'Beta')"
     )
-    before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    before = _stored_nodes(clean_graph)
     assert before == [], "the graph must hold no row of the source before the query"
     external = [{"name": VG_TABLE, "dsn": pg_source.dsn, "table": VG_TABLE}]
 
@@ -506,7 +506,7 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
     assert started <= fetched
     # The table and the graph stay unchanged.
     assert pg_source.execute(f"SELECT count(*) FROM {VG_TABLE}") == "2"
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == before
+    assert _stored_nodes(clean_graph) == before
 
     # Refusal: with the table dropped, the host names SOURCE_UNAVAILABLE and no
     # row reaches the caller.
@@ -599,6 +599,17 @@ def _scan_labels(client: SyncMedullaClient) -> list[str]:
     return sorted(str(row.get("label")) for row in rows)
 
 
+def _stored_nodes(client: SyncMedullaClient) -> list[str]:
+    """The node ids the test's own graph stores.
+
+    Served SPARQL also reads every visible pack graph of the tenant
+    (MEDULLA-MEDIA-VOCAB-R655), so a default-graph pattern sees packs other
+    tests imported. A "stores no source row" check names only this graph's
+    nodes, and counts nodes, not triples.
+    """
+    return sorted(client.nodes.ids())
+
+
 def _materialisation_journey(
     clean_graph: SyncMedullaClient, pg_source, declaration: str
 ) -> tuple[list[str], list[str]]:
@@ -606,7 +617,7 @@ def _materialisation_journey(
     pg_source.execute(f"DROP TABLE IF EXISTS {MAT_TABLE}")
     pg_source.execute(f"CREATE TABLE {MAT_TABLE} (id text primary key, label text)")
     pg_source.execute(f"INSERT INTO {MAT_TABLE} VALUES ('item-1', 'Alpha')")
-    before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    before = _stored_nodes(clean_graph)
     clean_graph._send(
         "RegisterForeignSource",
         {
@@ -628,7 +639,7 @@ def _materialisation_journey(
     pg_source.execute(f"UPDATE {MAT_TABLE} SET label = 'Beta' WHERE id = 'item-1'")
     second = _scan_labels(clean_graph)
     # Either way the engine stores no source row: the cache is not the record.
-    stored = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    stored = _stored_nodes(clean_graph)
     assert [row for row in stored if "item-1" in str(row)] == [], stored
     assert len(stored) <= len(before) + 1, "only the watermark node may be stored"
     return first, second
