@@ -613,3 +613,36 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
     drop(persistence);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+/// A branch graph's lifecycle commit carries the owning tenant id; the branch
+/// graph name stays a graph name and is never read as a tenant identifier.
+#[tokio::test(flavor = "multi_thread")]
+async fn branch_graph_lifecycle_commit_carries_the_owning_tenant() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-branch", "create");
+    let persistence = open_backend(&dir);
+    let graph = "g~branch~0123456789abcdef";
+    let committed = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 7,
+                principal: Some("principal:lifecycle-test"),
+            },
+            "branch-create-key",
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Global,
+            },
+            &ResultPayload::Json(serde_json::json!({"created": graph})),
+        )
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("a branch graph name commits under its owning tenant");
+    assert!(!committed.replayed);
+    assert_eq!(committed.record.batch.identity.tenant().as_str(), TENANT);
+    persistence.shutdown();
+}
