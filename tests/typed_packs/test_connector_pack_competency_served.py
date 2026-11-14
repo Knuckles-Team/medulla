@@ -30,12 +30,9 @@ from ontology_pack_support import (
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "decide"))
 
-from test_capability_designation_pack_served import (
-    _ask,
-    _connect,
-    _establish_commons_generation,
-    _publish_schema,
-)
+from _commons_generation import connect as commons_connect
+from _commons_generation import establish_commons_generation, publish_schema
+from test_capability_designation_pack_served import _ask
 
 from medulla import ConnectorPackEntryContent
 from medulla import decision_client as dc
@@ -326,15 +323,15 @@ async def _designate_position_tools(connector: str) -> None:
     operates on a different class. The pack is imported and attached in a fresh
     graph so the shared graph's composed schema is left alone.
     """
-    client = await _connect()
+    client = await commons_connect()
     try:
-        space = await _establish_commons_generation(client)
-        schema = await _publish_schema(client)
+        space = await establish_commons_generation(client)
+        schema = await publish_schema(client)
         graph = f"pack-q1-{uuid.uuid4().hex[:8]}"
         await client.tenants.create(graph)
     finally:
         await client.close()
-    client = await _connect(graph)
+    client = await commons_connect(graph)
     decision = dc.DecisionClient(client=client, graph=graph)
     try:
         imported = await import_entries(
