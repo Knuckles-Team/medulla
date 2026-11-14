@@ -563,6 +563,8 @@ closed_error_codes! {
         StateSchemaUnavailable => "STATE_SCHEMA_UNAVAILABLE",
         KernelStateBudget => "KERNEL_STATE_BUDGET",
         KernelWorkBudget => "KERNEL_WORK_BUDGET",
+        KernelParamInvalid => "KERNEL_PARAM_INVALID",
+        KernelSingular => "KERNEL_SINGULAR",
         CarrierSignatureInvalid => "CARRIER_SIGNATURE_INVALID",
         ChildTargetTerminal => "CHILD_TARGET_TERMINAL",
         EnvelopeFieldMissing => "ENVELOPE_FIELD_MISSING",

@@ -1323,6 +1323,7 @@ pub const MACHINE_METHODS: &[&str] = &[
     "BrokerReject",
     "BrokerAckTag",
     "BrokerNackTag",
+    "Decide",
 ];
 
 /// The wire code of a refused machine transition.
