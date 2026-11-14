@@ -6,8 +6,8 @@
 //! The fixture comes from `scripts/gen_repo_fixture.py`; its path is read from
 //! `R600_FIXTURE`.
 //!
-//! Run: python3 scripts/gen_repo_fixture.py /var/tmp/r600.jsonl &&
-//!      R600_FIXTURE=/var/tmp/r600.jsonl cargo bench -p medulla-h-ingest \
+//! Run: python3 scripts/gen_repo_fixture.py "$TMPDIR/r600.jsonl" &&
+//!      R600_FIXTURE="$TMPDIR/r600.jsonl" cargo bench -p medulla-h-ingest \
 //!      --features test-support --bench r600_enrich_served
 
 use std::collections::HashMap;
