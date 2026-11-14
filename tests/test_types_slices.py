@@ -222,10 +222,11 @@ def test_acl_lives_in_the_identity_slice() -> None:
     # and never back; identity may not name the query slice.
     assert "medulla-identity-types" in _dependencies("medulla-query-types")
     assert "medulla-query-types" not in _dependencies("medulla-identity-types")
+    old_acl_path = "medulla_identity_types::acl"
     stale = [
         str(path.relative_to(ROOT))
         for path in CRATES.rglob("*.rs")
         if "target" not in path.parts
-        and "medulla_identity_types::acl" in path.read_text(encoding="utf-8", errors="ignore")
+        and old_acl_path in path.read_text(encoding="utf-8", errors="ignore")
     ]
     assert stale == []

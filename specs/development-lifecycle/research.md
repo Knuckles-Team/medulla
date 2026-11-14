@@ -208,4 +208,5 @@ The functions that apply a bound take `&TriageKnobs`; `pick_owner` applies none.
 lowest-id open defect of the same repository whose suspect set reaches the overlap knob; blame
 times are epoch milliseconds so the window compares against `as_of_ms` directly.
 ## Access control moves with its only dependant in medulla-types (R021.4)
+## Access control moves with its only dependent in medulla-types (R021.4)
 Decision: `acl` and `assistant_profile` move together into `medulla-identity-types`. `assistant_profile` reads the grant vocabulary of `acl` and has no other dependency, so leaving it behind would make `medulla-types` depend on the crate that depends on it. `medulla-identity-types` no longer names `medulla-query-types`; the dependency runs from the query slice to the identity slice, which is declared first in the `contract` layer.
