@@ -24,10 +24,10 @@ _TESTS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_TESTS))
 sys.path.insert(0, str(_TESTS / "connector_competency"))
 
-from conftest import TEST_AGENT_ID, TEST_TENANT, request_context  # noqa: E402
-from test_connector_pack_client import _catalog  # noqa: E402
-from test_connector_pack_planted import _context  # noqa: E402
-from test_contract_kinds_served import (  # noqa: E402
+from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
+from test_connector_pack_client import _catalog
+from test_connector_pack_planted import _context
+from test_contract_kinds_served import (
     OPERATION,
     SOURCE_ID,
     _contract_iri,
@@ -35,12 +35,14 @@ from test_contract_kinds_served import (  # noqa: E402
     _spec,
 )
 
-from medulla.client import MedullaClient  # noqa: E402
-from medulla.connector_pack import connector_pack_import_key  # noqa: E402
-from medulla.generated.connector_pack import (  # noqa: E402
+from medulla.client import MedullaClient
+from medulla.connector_pack import (
     ConnectorPackArchiveBuilder,
     ConnectorPackClient,
     ConnectorPackEntryContent,
+    connector_pack_import_key,
+)
+from medulla.generated.connector_pack import (
     PackAnnotations,
     PackEntryKind,
     PackProducer,
