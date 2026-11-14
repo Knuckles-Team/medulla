@@ -69,7 +69,8 @@ async def _incident(client: MedullaClient, tag: str, status: str) -> None:
 @pytest.mark.asyncio
 async def test_put_then_call() -> None:
     client = await _connect()
-    name = f"open-{uuid.uuid4().hex}"
+    # The UQL form names the query as an identifier, so the name has no hyphen.
+    name = f"open_{uuid.uuid4().hex}"
     status = f"open-{uuid.uuid4().hex}"
     try:
         stored = await _put(client, _stored(name))

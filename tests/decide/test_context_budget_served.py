@@ -30,7 +30,8 @@ def _publish_model_profile(client: Any, component_id: str, window: int) -> None:
         "provider": "provider",
         "model_identity": f"model:{component_id}",
         "context_window_tokens": window,
-        "max_output_tokens": 1_024,
+        # A profile never claims more output than its own window.
+        "max_output_tokens": min(1_024, window),
         "supports_tools": False,
         "supports_structured_output": False,
         "supports_vision": False,

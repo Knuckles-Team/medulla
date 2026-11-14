@@ -10,6 +10,7 @@ and a release returns one governed change set that a second release repeats.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 from typing import Any
@@ -118,7 +119,11 @@ def test_queue_approve_release(clean_graph):
 
     approval = outcome["approved"]["approval"]
     assert approval["proposal_id"] == first
-    assert TEST_AGENT_ID in approval["approver"]
+    # The approver is the caller's opaque persistence id, never its raw name.
+    assert (
+        approval["approver"]
+        == "principal:sha256:" + hashlib.sha256(TEST_AGENT_ID.encode()).hexdigest()
+    )
     assert approval["approved_at_ms"] > 0
     assert outcome["repeat"]["approval"] == approval
 

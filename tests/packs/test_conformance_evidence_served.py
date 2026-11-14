@@ -2,8 +2,8 @@
 
 The connector onboarding import writes one ``ConformanceEvidence`` record with the
 pack head. The served ``ConnectorPack`` read returns it (pack digest, one fingerprint
-per tool, issue and expiry times); the served revoke ends it; a revoked record, and
-any other tenant's read, refuse ``CONFORMANCE_EVIDENCE_ABSENT``.
+per tool, issue and expiry times); the served revoke ends it; a revoked record refuses
+``CONFORMANCE_EVIDENCE_ABSENT``, and another tenant never reaches the record.
 """
 
 from __future__ import annotations
@@ -107,8 +107,9 @@ async def test_evidence_written_read_revoked_and_tenant_scoped() -> None:
         }
         assert evidence.expires_at > evidence.issued_at >= before_ms - 60_000
 
-        # Another tenant never reaches this tenant's record.
-        with pytest.raises(EngineResponseError, match=ABSENT):
+        # Another tenant never reaches this tenant's record: the engine admits only
+        # contexts of its deployment tenant, so the outsider is refused at the door.
+        with pytest.raises(EngineResponseError, match="AUTH_TENANT_MISMATCH"):
             await _read(outsider, OTHER_TENANT, connector)
 
         # Reading under another tenant's name is an access refusal, not a lookup.

@@ -44,6 +44,8 @@ TEST_SIGNER_ALLOWED_ROLES = [
     "worker1-access",
     "flip-reader",
     "lease-writer",
+    # Per-test roles of served tests that register a second principal.
+    "suite:*",
 ]
 
 
