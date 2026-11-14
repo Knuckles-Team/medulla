@@ -420,6 +420,8 @@ closed_error_codes! {
         SeedTooLarge => "SEED_TOO_LARGE",
         SeedTurtleInvalid => "SEED_TURTLE_INVALID",
         SelectionUnavailable => "SELECTION_UNAVAILABLE",
+        /// A session fact minted under an older mode epoch (MEDULLA-IDENTITY-R003.6).
+        SessionEpochStale => "SESSION_EPOCH_STALE",
         SessionReferenceUnknown => "SESSION_REFERENCE_UNKNOWN",
         SnapshotUnavailable => "SNAPSHOT_UNAVAILABLE",
         VirtualViewReadOnly => "VIRTUAL_VIEW_READ_ONLY",
