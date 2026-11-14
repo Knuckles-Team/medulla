@@ -33,8 +33,11 @@ from conftest import (
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 from medulla.generated.models import (
+    AuthMode,
     CreateUserRequest,
+    IdentityOpConfigInitialize,
     IdentityOpUserCreate,
+    InitializeRequest,
     MethodIdentityParams,
     UserKind,
 )
@@ -148,6 +151,21 @@ def _register_peer(served: Engine) -> None:
         socket_path=served.socket_path, auth_secret=SECRET, verified_context=context
     )
     try:
+        import asyncio
+
+        # An uninitialized directory refuses every user write with
+        # IDENTITY_NOT_INITIALIZED; `none` mode seeds it without a password.
+        init = IdentityOpConfigInitialize(
+            family="config",
+            op="initialize",
+            request=InitializeRequest(mode=AuthMode.NONE),
+        )
+        init_params = MethodIdentityParams(op=init).model_dump(
+            mode="json", exclude_none=True
+        )
+        asyncio.run_coroutine_threadsafe(
+            send_identity(admin._client, init_params), admin._loop
+        ).result(timeout=30)
         op = IdentityOpUserCreate(
             family="user",
             op="create",
@@ -156,7 +174,6 @@ def _register_peer(served: Engine) -> None:
             ),
         )
         params = MethodIdentityParams(op=op).model_dump(mode="json", exclude_none=True)
-        import asyncio
 
         asyncio.run_coroutine_threadsafe(
             send_identity(admin._client, params), admin._loop
