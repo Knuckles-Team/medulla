@@ -159,6 +159,7 @@ impl ArchimateExchange {
 
 /// The answer of `ArchitectureModelExport` (MEDULLA-CQ-ORCH-R705.6, R705.9).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ArchitectureModelExported {
     /// The Open Exchange Format document text.
     pub document: String,
@@ -170,6 +171,7 @@ pub struct ArchitectureModelExported {
 
 /// The answer of `ArchitectureModelImport` (MEDULLA-CQ-ORCH-R705.6, R705.9).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ArchitectureModelImported {
     /// SHA-256 of the imported document bytes; every imported node carries it as `importedFrom`.
     pub document_digest: String,

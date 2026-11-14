@@ -165,6 +165,7 @@ pub const SOURCE_TEXT_FIELD: &str = "source_text";
 /// range is zero-based with an exclusive end.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ReadSpanResult {
     /// Document the span was read from.
     pub document_id: String,

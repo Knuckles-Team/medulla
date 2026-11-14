@@ -46,6 +46,7 @@ pub const MAX_PRIOR_TERMS: usize = 256;
 /// never decided here; the R082 stop part is the one stop authority.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundFeedback {
     pub feedback: RetrievalFeedback,
     #[serde(default)]
@@ -85,6 +86,7 @@ impl RoundFeedback {
 /// harness may do when evidence is short.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SufficiencyPart {
     /// 1-based round number.
     pub round: u32,
@@ -102,6 +104,7 @@ pub struct SufficiencyPart {
 /// One measured benchmark outcome of a selection policy or of its fixed-count baseline.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct BenchmarkResult {
     /// nDCG at 10 over the benchmark's labels.
     pub ndcg_at_10: f64,
@@ -114,6 +117,7 @@ pub struct BenchmarkResult {
 /// tenant filters. `digest` binds the benchmark data, labels and both results.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ActivationBenchmark {
     pub digest: String,
     pub baseline: BenchmarkResult,
@@ -125,6 +129,7 @@ pub struct ActivationBenchmark {
 /// cross-encoder score comes from the server-bound reranker over the node property `text`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SelectionPart {
     /// The query text the reranker scores each chunk against.
     pub query: String,
@@ -142,6 +147,7 @@ pub struct SelectionPart {
 /// a request names one.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SelectionMode {
     /// The dual-score mode of R081.7: embedding score and cross-encoder score.
     #[default]
@@ -180,6 +186,7 @@ impl SelectionMode {
 /// never reaches a result, so the one value a result carries is `Converged`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SolverStatus {
     /// The largest coefficient change fell below the tolerance.
     Converged,
@@ -188,6 +195,7 @@ pub enum SolverStatus {
 /// One selected document and its reconstruction coefficient.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct JointCoefficient {
     pub id: String,
     pub coefficient: f64,
@@ -197,6 +205,7 @@ pub struct JointCoefficient {
 /// zero, coefficient-descending then id ascending, at most the policy's `max_chunks`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct JointSelection {
     pub embedding_revision: String,
     pub selected: Vec<JointCoefficient>,
@@ -213,6 +222,7 @@ pub struct JointSelection {
 /// Where a document-section traversal starts and what it returns (R081.9.7.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SectionRequest {
     pub root_id: String,
     pub document_revision: String,
@@ -224,6 +234,7 @@ pub struct SectionRequest {
 /// `SectionNode` nodes from `section` and makes no embedding or vector call.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct HierarchyPart {
     #[serde(default)]
     pub query: String,
@@ -236,6 +247,7 @@ pub struct HierarchyPart {
 /// selector decides from scores that were already computed.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct InferenceCounts {
     pub embedding: u32,
     pub reranker: u32,
@@ -246,6 +258,7 @@ pub struct InferenceCounts {
 /// `retrieval.hierarchy`, `retrieval.sections`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetrievalPremise {
     pub step: String,
     pub name: String,
@@ -255,6 +268,7 @@ pub struct RetrievalPremise {
 /// One retrieval round: a plan, the revisions it is bound to, and the parts to run.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundRequest {
     pub plan: medulla_types::wire::Plan,
     /// The corpus revision the caller retrieved against.
@@ -285,6 +299,7 @@ pub struct RoundRequest {
 /// The state part of a round: the query scored against stored document state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StatePart {
     /// The query text. It is an input only: it never alters a stored state.
     pub query: String,
@@ -293,6 +308,7 @@ pub struct StatePart {
 /// One document's score against its stored state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StateScoreRow {
     pub document_id: String,
     /// The digest of the document content the state was built from.
@@ -311,6 +327,7 @@ pub struct StateScoreRow {
 /// What the state part returns: per-document scores and the measured interaction cost.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StateResult {
     /// Best score first, ties by document id, so candidate order never matters.
     pub scores: Vec<StateScoreRow>,
@@ -326,6 +343,7 @@ pub struct StateResult {
 
 /// One executed row of the plan.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundRow {
     pub id: String,
     pub score: Option<f32>,
@@ -334,6 +352,7 @@ pub struct RoundRow {
 /// What one round returns: the rows and one optional verdict per requested part.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundResult {
     pub rows: Vec<RoundRow>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -368,6 +387,7 @@ pub struct RoundResult {
 /// One term of the next query and the weight feedback left on it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct WeightedTerm {
     pub term: String,
     /// In `[-1.0, 1.0]`.
@@ -380,6 +400,7 @@ pub struct WeightedTerm {
 /// round when the stop verdict allows it.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct FeedbackOutcome {
     /// The original query text plus the reinforced terms, ordered by weight then term.
     pub next_query: String,
@@ -402,6 +423,7 @@ pub struct FeedbackOutcome {
 /// One completed round's answer, as the caller reports it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundAnswer {
     pub round: u32,
     pub answer_digest: String,
@@ -411,6 +433,7 @@ pub struct RoundAnswer {
 /// What the loop has consumed so far.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct BudgetUsage {
     pub tokens_used: u64,
     pub inference_calls_used: u32,
@@ -420,6 +443,7 @@ pub struct BudgetUsage {
 /// Limits a caller may lower; it can never raise one above the knob value.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CallerLimits {
     #[serde(default)]
     pub round_limit: Option<u32>,
@@ -444,6 +468,7 @@ pub struct StopKnobs {
 /// The stop part of a round (R082.1). Medulla builds the [`StopContext`] itself.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StopRequest {
     pub calibration: CalibrationTable,
     pub history: BoundedVec<RoundAnswer, MAX_ROUND_HISTORY>,

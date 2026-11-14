@@ -12,6 +12,7 @@ use crate::supply_chain_report::{ReportAbstention, SourceUsed};
 /// The closed set of served cross-source questions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum CrossSourceQuestionId {
     /// Which services are exposed by a vulnerability in an image we deploy.
     ExposedServices,
@@ -99,6 +100,7 @@ impl CrossSourceQuestionId {
 
 /// One related fact of an item: the relation and the value it points at.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RelatedValue {
     /// The relation name (for example `image`, `vulnerability`, `host`).
     pub relation: String,
@@ -109,6 +111,7 @@ pub struct RelatedValue {
 /// One answer item: a subject, the facts related to it, and the source that
 /// served it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CrossSourceItem {
     /// The subject the item is about.
     pub subject_iri: String,
@@ -139,6 +142,7 @@ impl CrossSourceItem {
 
 /// The answer to one cross-source question.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CrossSourceReport {
     /// The question answered.
     pub question: CrossSourceQuestionId,

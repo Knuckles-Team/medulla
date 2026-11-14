@@ -26,6 +26,7 @@ pub const GRAPH_CHANGE_CURSOR: CursorFamily = CursorFamily {
 /// One consistent snapshot and the cursor that continues after it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GraphSnapshot {
     pub schema_version: u32,
     pub incarnation: u64,
@@ -39,6 +40,7 @@ pub struct GraphSnapshot {
 /// What one committed event changed.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum GraphChange {
     /// Nodes and edges written by the commit.
     Upsert {
@@ -62,6 +64,7 @@ pub enum GraphChange {
 /// What a committed user-table commit did to one row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum RowOperation {
     Insert,
     Update,
@@ -71,6 +74,7 @@ pub enum RowOperation {
 /// One committed change, delivered at least once under a stable id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GraphChangeEvent {
     pub schema_version: u32,
     pub commit_id: String,
@@ -87,6 +91,7 @@ pub struct GraphChangeEvent {
 /// the caller may not see, so a page never reveals how many were withheld.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GraphChangePage {
     pub schema_version: u32,
     pub events: Vec<GraphChangeEvent>,

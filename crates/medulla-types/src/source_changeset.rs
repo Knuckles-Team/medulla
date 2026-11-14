@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 /// What a changeset did to one path.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum PathOp {
     Add,
     Modify,
@@ -19,6 +20,7 @@ pub enum PathOp {
 /// One path that changed against the first parent.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ChangedPath {
     pub path: String,
     pub op: PathOp,
@@ -32,6 +34,7 @@ pub struct ChangedPath {
 /// to `changeset_max_blob_bytes`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubmittedBlobRef {
     pub digest: String,
     pub size: u64,
@@ -92,6 +95,7 @@ pub type FileMerger = fn(&[u8], &[u8], &[u8]) -> Result<Vec<u8>, FileMergeRefusa
 /// The structured form of the `Spec:`, `Fixes:` and `Spec-Withdraw:` trailers.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Trailers {
     pub spec_ids: Vec<String>,
     pub fixes: Vec<String>,
@@ -164,6 +168,7 @@ impl Trailers {
 /// A changeset: the paths that changed against the first parent.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Changeset {
     pub id: String,
     pub repo: String,
@@ -210,6 +215,7 @@ impl Changeset {
 /// `op` is `Delete`; `renamed_from` is `Some` exactly when `op` is `Rename`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubmittedPath {
     pub path: String,
     pub op: PathOp,
@@ -221,6 +227,7 @@ pub struct SubmittedPath {
 /// The closed request of `Method::SubmitChangeset` (MEDULLA-SCM-R002).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubmitChangesetRequest {
     pub repo: String,
     pub branch: String,
@@ -235,6 +242,7 @@ pub struct SubmitChangesetRequest {
 
 /// The served receipt of an accepted (or replayed) changeset.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubmitChangesetReceipt {
     pub changeset: Changeset,
     /// The branch head after the append: the id of the carrying branch commit.

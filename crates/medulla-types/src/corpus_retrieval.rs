@@ -15,6 +15,7 @@ pub const MAX_PATTERN_BYTES: usize = 1_024;
 /// The retrieval mode of a request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum CorpusMode {
     Grep,
     Entity,
@@ -29,6 +30,7 @@ fn default_limit() -> u32 {
 /// A served `CorpusRetrieve` request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CorpusRequest {
     pub mode: CorpusMode,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -72,6 +74,7 @@ impl CorpusRequest {
 /// One grep hit in a text field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GrepMatch {
     pub node_id: String,
     pub field: String,
@@ -84,6 +87,7 @@ pub struct GrepMatch {
 /// One neighbour of an entity.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Neighbour {
     pub relationship: String,
     pub node_id: String,
@@ -92,6 +96,7 @@ pub struct Neighbour {
 /// An entity with its neighbourhood.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EntityContext {
     pub entity: String,
     pub hops: u32,
@@ -101,6 +106,7 @@ pub struct EntityContext {
 /// One turn of a session transcript.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SessionHit {
     pub session_id: String,
     pub ordinal: u32,
@@ -111,6 +117,7 @@ pub struct SessionHit {
 /// One hop of an answer lineage path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct LineageHop {
     pub node_id: String,
     pub relationship: String,
@@ -119,6 +126,7 @@ pub struct LineageHop {
 /// The path from an answer back to one source.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct LineagePath {
     pub answer_ref: String,
     pub hops: Vec<LineageHop>,
@@ -128,6 +136,7 @@ pub struct LineagePath {
 /// mode is filled.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CorpusResult {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub matches: Vec<GrepMatch>,
@@ -148,6 +157,7 @@ pub struct CorpusResult {
 /// row-level projection the handler applied before any mode ran.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CorpusEvidence {
     pub mode: String,
     /// Nodes the mode read: text nodes for grep, turns for session, the

@@ -23,6 +23,7 @@ pub const LINE_X_AXIS: &str = "ts";
 /// The shape of a viewport query.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ViewportKind {
     /// A count grid with per-cell extrema over two numeric fields (`point_table`).
     Scatter,
@@ -33,6 +34,7 @@ pub enum ViewportKind {
 /// The visible data window. A line query reads `x_min` and `x_max` as nanosecond
 /// timestamps; the y range only clips a scatter query.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ViewportDomain {
     /// Lower x bound, inclusive.
     pub x_min: f64,
@@ -46,6 +48,7 @@ pub struct ViewportDomain {
 
 /// A served `ViewportQuery` request, also the pinned window of a selection resolve.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ViewportRequest {
     /// The indexed source: the name of a scoped time series.
     pub source_id: String,
@@ -135,6 +138,7 @@ impl ViewportRequest {
 
 /// One non-empty cell of a scatter grid. Serialized as a six-element array.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ScatterBin {
     /// Stable id: `row * pixel_width + column` of the cell.
     pub id: u32,
@@ -176,6 +180,7 @@ impl<'de> Deserialize<'de> for ScatterBin {
 
 /// One non-empty pixel column of a line. Serialized as a seven-element array.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct LineBin {
     /// The pixel column, also the bin id.
     pub col: u32,
@@ -227,6 +232,7 @@ impl<'de> Deserialize<'de> for LineBin {
 /// The bins of one viewport, by kind.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "bins", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ViewportBins {
     /// Non-empty scatter cells in id order.
     Scatter(Vec<ScatterBin>),
@@ -251,6 +257,7 @@ impl ViewportBins {
 
 /// The window and pixels a result was binned for.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ViewportSpec {
     /// The visible window.
     pub domain: ViewportDomain,
@@ -262,6 +269,7 @@ pub struct ViewportSpec {
 
 /// The answer of a `ViewportQuery`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ViewportResult {
     /// The bins.
     pub bins: ViewportBins,
@@ -280,6 +288,7 @@ pub struct ViewportResult {
 /// A reference into a viewport result, resolvable only inside its pinned revisions.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SelectionToken {
     /// One raw point of a series, named by its timestamp.
     ExactPoint {
@@ -303,6 +312,7 @@ pub enum SelectionToken {
 
 /// One raw point returned by a selection resolve.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ResolvedPoint {
     /// Timestamp in nanoseconds.
     pub ts: i64,
@@ -312,6 +322,7 @@ pub struct ResolvedPoint {
 
 /// The answer of a `ResolveViewportSelection`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ResolvedSelection {
     /// At most [`MAX_RESOLVED_POINTS`] raw points, in timestamp order.
     pub points: Vec<ResolvedPoint>,

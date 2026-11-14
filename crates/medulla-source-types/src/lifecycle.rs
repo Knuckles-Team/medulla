@@ -345,6 +345,7 @@ pub fn handle_record_deployment(releases: &[Release], input: DeploymentInput) ->
 
 /// What `RecordRelease` answers.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ReleaseReceipt {
     pub release_id: String,
     pub node_id: String,
@@ -355,6 +356,7 @@ pub struct ReleaseReceipt {
 
 /// What `RecordDeployment` answers.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DeploymentReceipt {
     pub deployment_id: String,
     pub release_ref: Option<String>,

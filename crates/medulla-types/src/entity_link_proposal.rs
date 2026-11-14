@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 /// sources (uptime, container-manager and the ServiceNow CMDB).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum AttachedApplication {
     Gramps,
     Immich,
@@ -48,6 +49,7 @@ impl AttachedApplication {
 
 /// One entity reference: which application and its local entity id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EntityRef {
     pub application: AttachedApplication,
     pub entity_id: String,
@@ -63,6 +65,7 @@ impl EntityRef {
 /// A Fellegi-Sunter-style classification of a candidate pair.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum MatchClass {
     Match,
     NonMatch,
@@ -72,6 +75,7 @@ pub enum MatchClass {
 /// One cross-application entity-link candidate: never itself an assertion,
 /// only ever a proposal until a human approves it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EntityLinkProposal {
     pub left: EntityRef,
     pub right: EntityRef,
@@ -86,6 +90,7 @@ pub struct EntityLinkProposal {
 /// The result of one served `ApproveEntityLink` (MEDULLA-UNIFIED-DATA-PLANE-R030.3): the
 /// approved proposal and the `owl:sameAs` edge the approval wrote between the two nodes.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EntityLinkApproval {
     pub proposal: EntityLinkProposal,
     pub source: String,

@@ -15,6 +15,7 @@ use crate::contract::Digest256;
 /// vector.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EncodingReceipt {
     /// SHA-256 of the document's token ids, little-endian `u32`s in order.
     pub document_digest: String,
@@ -63,6 +64,7 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 /// A served `EncodeDocument` answer: the receipt and the one document vector.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EncodedDocument {
     pub document_id: String,
     pub receipt: EncodingReceipt,
@@ -72,6 +74,7 @@ pub struct EncodedDocument {
 /// A served `EncodedDocumentSearch` request.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EncodedSearchRequest {
     pub query_embedding: Vec<f32>,
     pub k: u32,
@@ -83,6 +86,7 @@ pub struct EncodedSearchRequest {
 /// One ranked document of an encoded-document search.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EncodedHit {
     pub document_id: String,
     pub score: f32,
@@ -92,6 +96,7 @@ pub struct EncodedHit {
 /// A served `EncodedDocumentSearch` answer.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EncodedSearchResult {
     pub hits: Vec<EncodedHit>,
     /// The policy digest the ranking ran under.

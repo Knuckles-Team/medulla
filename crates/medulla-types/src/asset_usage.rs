@@ -115,6 +115,7 @@ pub fn usage_filter_series_name(principal: &str, asset: &str, column: &str) -> S
 /// One principal that reads an asset, most reads first. `principal` is null for a caller
 /// without scope `catalog:usage:principals`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct FrequentUser {
     pub principal: Option<String>,
     pub reads: u64,
@@ -122,6 +123,7 @@ pub struct FrequentUser {
 
 /// One suggested join or filter of an asset.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct UsageSuggestion {
     /// `join` or `filter`.
     pub kind: String,
@@ -132,6 +134,7 @@ pub struct UsageSuggestion {
 
 /// The answer of `Method::CatalogUsage`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CatalogUsageAnswer {
     pub asset: String,
     pub frequent_users: Vec<FrequentUser>,

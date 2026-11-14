@@ -143,6 +143,7 @@ pub trait MachineEvent: Copy + Eq + 'static {
 
 /// One edge of a machine's edge table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Edge<S: 'static, E: 'static, G: 'static> {
     /// The edge id, such as `W08`. The ontology transition is `:<Name>Machine_<id>`.
     pub id: &'static str,
