@@ -161,9 +161,16 @@ def test_stream_restart_refusals_and_hot_path_receipts(clean_graph) -> None:
             "hp_stream", "hp_stream_src", model
         )
         assert replay["checkpoint_digest"] == streamed["checkpoint_digest"]
-        assert fresh.timeseries.range(
-            "hp_stream", 0, 1000 * SECOND_NS
-        ) == fresh.timeseries.range("hp_chunk", 0, 1000 * SECOND_NS)
+
+        # Points agree on (ts, value, revision); the third derived field is
+        # `known_at_ms`, the wall-clock time each series computed the point.
+        def _filtered(series: str) -> list:
+            return [
+                (ts, values[:2])
+                for ts, values in fresh.timeseries.range(series, 0, 1000 * SECOND_NS)
+            ]
+
+        assert _filtered("hp_stream") == _filtered("hp_chunk")
     finally:
         fresh.close()
 
