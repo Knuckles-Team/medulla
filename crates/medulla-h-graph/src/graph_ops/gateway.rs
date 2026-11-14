@@ -216,15 +216,24 @@ pub async fn try_handle_gateway(
 
 /// Admit a typed metadata node write before it is applied. Only a node write
 /// that carries a metadata label changes; every other method passes through.
-/// Without a verified carrier there is no hashed principal here, and the
+/// Without a verified carrier there is no principal here, and the
 /// compile-time admission alone decides.
 fn admit_metadata_write(
     method: Method,
     read_authority: Option<&GraphReadAuthority>,
     tenant_scope: &str,
 ) -> Result<Method, String> {
-    use medulla_server_api::mutation_batch::identity_metadata::{admit, MetadataCaller};
-    let Some(carrier) = read_authority.and_then(GraphReadAuthority::carrier) else {
+    use medulla_server_api::mutation_batch::identity_metadata::{
+        admit, principal_persistence_id, MetadataCaller,
+    };
+    // The owner is the verified request principal (MEDULLA-IDENTITY-R023.3),
+    // not the agent carrying a delegated request.
+    let Some(principal) = read_authority
+        .filter(|authority| authority.carrier().is_some())
+        .map(GraphReadAuthority::verified_principal)
+        .filter(|principal| !principal.is_empty())
+        .map(principal_persistence_id)
+    else {
         return Ok(method);
     };
     if !matches!(
@@ -234,7 +243,7 @@ fn admit_metadata_write(
         return Ok(method);
     }
     let caller = MetadataCaller {
-        principal: Some(carrier.actor_scope()),
+        principal: Some(&principal),
         tenant: tenant_scope,
     };
     let mut admitted = admit(method, &caller).map_err(|refusal| refusal.to_string())?;
