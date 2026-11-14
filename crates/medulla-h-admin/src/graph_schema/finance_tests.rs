@@ -235,6 +235,10 @@ fn finance_shapes_are_their_own_document() {
             "StrategyCard",
             "WalletKeyTrust",
             "Factor",
+            "ForecastSample",
+            "RegimeModel",
+            "VersionedOrder",
+            "Budget",
         ],
     );
 }
