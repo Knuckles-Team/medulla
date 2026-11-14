@@ -62,7 +62,7 @@ pub use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
     OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
     MAX_CORE_SCHEMA_SOURCES, MAX_ONTOLOGY_REVISION_HISTORY, MAX_SCHEMA_DOCUMENT_TRIPLES,
-    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES,
+    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES, VIRTUAL_GRAPH_SHAPES,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
 pub use view::GraphView;
