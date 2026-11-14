@@ -515,13 +515,13 @@ def test_task_plan_refuses_noncanonical_requests(authenticated_plan_client):
             (("question", "safety"), "security", "ordinary safety"),
             (("head",), pin, "no head"),
             (("belief_as_of",), [1], "belief slices"),
-            (("params",), [], "one parameter"),
-            (("params",), asked["params"] * 2, "one parameter"),
+            (("params",), [], "PLAN_PARAMETER_CONFLICT"),
+            (("params",), asked["params"] * 2, "PLAN_PARAMETER_CONFLICT"),
             (("params", 0, "name"), "model-policy", "must be named task_plan"),
             (
                 ("params", 0, "value"),
                 {"type": "text", "value": "not a plan"},
-                "typed task_plan proposal",
+                "PLAN_PARAMETER_CONFLICT",
             ),
             (
                 ("candidates", "options"),

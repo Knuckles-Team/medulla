@@ -138,7 +138,12 @@ def test_cycle_resumes_and_activates(tmp_path: Path) -> None:
         try:
             await client.tenants.create(logical)
             await client.tenants.create(shadow)
-            await _update_cell(client, cell)
+            # The cycle leases capacity against the logical graph's cells.
+            cell_client = await connect(logical, engine=engine)
+            try:
+                await _update_cell(cell_client, cell)
+            finally:
+                await cell_client.close()
             decision = dc.DecisionClient(client=client)
             space = (await _space_read(decision, logical))["model_space_digest"]
         finally:

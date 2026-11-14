@@ -115,22 +115,27 @@ async def _establish_generation(
         await client.tenants.create(logical)
         await client.tenants.create(shadow)
         now = int(time.time() * 1000)
-        await client.capacity_leases.update_cell(
-            {
-                "schema_version": "1",
-                "cell": {
-                    "cell_id": cell,
-                    "resource_class": "llm_embedding",
-                    "capacity": 8,
-                    "reserved_floor": 0,
-                    "epoch": 1,
-                    "policy_digest": "sha256:" + "d" * 64,
-                    "updated_at_ms": now,
-                },
-                "expected_epoch": None,
-                "now_ms": now,
-            }
-        )
+        # The cycle leases capacity against the logical graph's cells.
+        cell_client = await connect(logical, engine=engine)
+        try:
+            await cell_client.capacity_leases.update_cell(
+                {
+                    "schema_version": "1",
+                    "cell": {
+                        "cell_id": cell,
+                        "resource_class": "llm_embedding",
+                        "capacity": 8,
+                        "reserved_floor": 0,
+                        "epoch": 1,
+                        "policy_digest": "sha256:" + "d" * 64,
+                        "updated_at_ms": now,
+                    },
+                    "expected_epoch": None,
+                    "now_ms": now,
+                }
+            )
+        finally:
+            await cell_client.close()
         decision = dc.DecisionClient(client=client)
         read = await decision.log(
             {

@@ -12,19 +12,35 @@ import os
 import uuid
 
 import pytest
-from conftest import request_context
+from conftest import TEST_AGENT_ID, TEST_SIGNER_KEY, request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
 CRON = {"cron": {"minute": "0", "hour": "*/6"}}
 
 
-def _other_principal() -> SyncMedullaClient:
+def _other_principal(system: SyncMedullaClient, graph: str) -> SyncMedullaClient:
+    """A registered principal of the same tenant that may read and write `graph`.
+
+    Graph access is mandatory RBAC, so the principal holds a role granting the
+    graph; only the schedule's ownership can then refuse it.
+    """
+    tag = uuid.uuid4().hex[:8]
+    agent_id, role = f"service:sched-other-{tag}", f"suite:sched-other-{tag}"
+    system.rbac.add_role(role)
+    system.rbac.add_grant(role, {"Graph": graph}, "Read")
+    system.rbac.add_grant(role, {"Graph": graph}, "Write")
+    system.consensus.register_identity(
+        agent_id,
+        "Agent",
+        [],
+        [role],
+        signer_id=TEST_AGENT_ID,
+        signer_key=TEST_SIGNER_KEY,
+    )
     return SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-        verified_context=request_context(
-            agent_id=f"sched-other-{uuid.uuid4().hex[:8]}"
-        ),
+        verified_context=request_context(agent_id=agent_id),
     )
 
 
@@ -68,7 +84,7 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
     assert clean_graph.jobs.schedule_get(graph, name) == updated
 
     # A principal that does not own the schedule can neither change nor remove it.
-    other = _other_principal()
+    other = _other_principal(clean_graph, graph)
     try:
         with pytest.raises(
             (EngineResponseError, RuntimeError), match="SCHEDULE_NOT_OWNER"

@@ -204,7 +204,7 @@ async def _journey(tag: str, role: str) -> dict[str, Any]:
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R656.2")
 def test_profile_and_document_set_round_trip(clean_graph):
     tag = uuid.uuid4().hex[:10]
-    outcome = asyncio.run(_journey(tag, f"analyst-{tag}"))
+    outcome = asyncio.run(_journey(tag, f"suite:analyst-{tag}"))
 
     # Each save raises the revision by one.
     assert outcome["saved"]["revision"] == 1

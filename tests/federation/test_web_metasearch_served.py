@@ -50,7 +50,8 @@ def test_mcp_source_resolves(clean_graph):
         clean_graph.query.unified([scan("web-metasearch-source")])
     message = str(refused.value)
     assert "SOURCE_UNREACHABLE" in message
-    assert "mcp#" in message
+    # A registered source is labelled with its kind and name.
+    assert "mcp:web-metasearch-source#" in message
     assert "Oq2Unbound" not in message
 
 

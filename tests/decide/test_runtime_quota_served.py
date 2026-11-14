@@ -176,6 +176,23 @@ def _extension(
         "payload_digest": "",
         "properties_msgpack": WorkItemClient.receipt_properties(properties),
     }
+    # A complete outcome co-commits its outcome evaluation receipt node too.
+    outcome_id = "outcome:" + run_id
+    outcome_properties = {
+        **identity,
+        "node_id": outcome_id,
+        "kind": "outcome_evaluation",
+        "result_digest": "a" * 64,
+        "payload_ref": "cas:receipt:" + outcome_id,
+        "payload": {"fixture": True},
+    }
+    outcome_receipt = {
+        **receipt,
+        "node_id": outcome_id,
+        "kind": "outcome_evaluation",
+        "payload_ref": "cas:receipt:" + outcome_id,
+        "properties_msgpack": WorkItemClient.receipt_properties(outcome_properties),
+    }
     return {
         "outcome_bundle": {
             "schema_version": 1,
@@ -187,7 +204,7 @@ def _extension(
             "outcome_ref": "outcome:" + run_id,
             "langfuse_observation_refs": [],
         },
-        "receipt_nodes": [receipt],
+        "receipt_nodes": [receipt, outcome_receipt],
         "run_event": {
             "schema_version": 1,
             **{k: v for k, v in identity.items() if k != "missing_refs"},

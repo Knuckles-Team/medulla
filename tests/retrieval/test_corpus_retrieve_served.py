@@ -223,7 +223,9 @@ def test_corpus_refusals(start_medulla_server) -> None:
     def body(client: Any, graph: str) -> None:
         with pytest.raises(Exception, match="CORPUS_REGEX_TOO_COMPLEX"):
             _retrieve(client, graph, mode="grep", pattern="a" * 1025)
-        with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        # An unknown mode does not decode as a typed request, so the client
+        # refuses it before sending, exactly as the engine would.
+        with pytest.raises(ValueError, match="unknown variant `guess`"):
             _retrieve(client, graph, mode="guess")
         # A chain longer than `retrieval.lineage_depth` (default 8 hops).
         for n in range(12):

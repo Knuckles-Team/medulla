@@ -550,7 +550,7 @@ ACCELERATED = (
 def _attach_materialisation(client: SyncMedullaClient, document: str) -> None:
     client._send(
         "GraphSchema",
-        {"op": {"op": "attach", "source_id": "r067-6", "ontology_ttl": document}},
+        {"op": {"op": "attach", "source_id": "admin:r067-6", "ontology_ttl": document}},
         None,
         idempotency_key=f"r067-6-attach-{hash(document)}",
     )
