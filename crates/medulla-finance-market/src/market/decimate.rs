@@ -326,7 +326,10 @@ mod tests {
     #[test]
     fn a_provisional_part_makes_its_column_provisional() {
         let mut input = bars(400);
-        input[399].status = BarStatus::Provisional;
+        input[399] = BarRecord {
+            status: BarStatus::Provisional,
+            ..input[399].clone()
+        };
         let chart = decimate(&request(input, vec![])).unwrap();
         let last = chart.bars.last().unwrap();
         assert_eq!(last.status, BarStatus::Provisional);

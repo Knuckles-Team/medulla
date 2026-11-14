@@ -11,7 +11,8 @@ use super::calendar::{bucket, Bucket};
 use super::fixed::add;
 use super::resolve::require_ordered;
 use super::{
-    BarRecord, BarStatus, MarketError, MarketResult, Timeframe, TradingCalendar, OUT_OF_ORDER,
+    BarRecord, BarStatus, MarketError, MarketResult, Timeframe, TradingCalendar, INVALID_REQUEST,
+    OUT_OF_ORDER,
 };
 
 /// Roll resolved bars (ordered, non-overlapping) up to `timeframe`.
@@ -39,10 +40,10 @@ pub fn rollup(
             _ => rolled.push((target, start(target, bar))),
         }
     }
-    Ok(rolled
+    rolled
         .into_iter()
         .map(|(target, bar)| settle(target, bar, watermark))
-        .collect())
+        .collect()
 }
 
 fn start(target: Bucket, bar: &BarRecord) -> BarRecord {
@@ -60,22 +61,28 @@ fn fold(acc: &mut BarRecord, bar: &BarRecord) -> MarketResult<()> {
     acc.volume = add(acc.volume, bar.volume, "rolled volume")?;
     acc.revision = acc.revision.max(bar.revision);
     acc.known_at = acc.known_at.max(bar.known_at);
-    if bar.status == BarStatus::Provisional {
-        acc.status = BarStatus::Provisional;
-    }
+    acc.status = acc
+        .status
+        .and_settled(bar.status == BarStatus::Final)
+        .map_err(status_refused)?;
     Ok(())
 }
 
 /// A rolled bar is final only once its whole period is covered by final data.
-fn settle(target: Bucket, mut bar: BarRecord, watermark: i64) -> BarRecord {
+fn settle(target: Bucket, mut bar: BarRecord, watermark: i64) -> MarketResult<BarRecord> {
     let complete = watermark >= target.end;
-    if !complete {
-        bar.status = BarStatus::Provisional;
-    }
+    bar.status = bar.status.and_settled(complete).map_err(status_refused)?;
     if bar.status == BarStatus::Final {
         bar.known_at = bar.known_at.max(target.end);
     }
-    bar
+    Ok(bar)
+}
+
+fn status_refused(refused: impl std::fmt::Debug) -> MarketError {
+    MarketError::new(
+        INVALID_REQUEST,
+        format!("bar status transition refused: {refused:?}"),
+    )
 }
 
 #[cfg(test)]
@@ -143,7 +150,10 @@ mod tests {
         .unwrap();
         assert_eq!(open[0].status, BarStatus::Provisional);
         let mut parts = bars.clone();
-        parts[1].status = BarStatus::Provisional;
+        parts[1] = BarRecord {
+            status: BarStatus::Provisional,
+            ..parts[1].clone()
+        };
         let closed = rollup(
             &parts,
             &TradingCalendar::Utc24x7,

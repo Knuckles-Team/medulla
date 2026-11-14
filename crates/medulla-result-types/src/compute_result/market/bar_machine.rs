@@ -73,6 +73,12 @@ impl BarStatus {
             Ok(Self::INITIAL)
         }
     }
+
+    /// The status of a bar rolled up from this one and another part: final only when this
+    /// status is final and the other part is `settled`; otherwise the new bar is provisional.
+    pub fn and_settled(self, settled: bool) -> Result<Self, TransitionRefused> {
+        Self::of_settled(self == Self::Final && settled)
+    }
 }
 
 #[cfg(test)]
@@ -91,6 +97,15 @@ mod tests {
         );
         assert_eq!(BarStatus::of_settled(true), Ok(BarStatus::Final));
         assert_eq!(BarStatus::of_settled(false), Ok(BarStatus::Provisional));
+        assert_eq!(BarStatus::Final.and_settled(true), Ok(BarStatus::Final));
+        assert_eq!(
+            BarStatus::Final.and_settled(false),
+            Ok(BarStatus::Provisional)
+        );
+        assert_eq!(
+            BarStatus::Provisional.and_settled(true),
+            Ok(BarStatus::Provisional)
+        );
         assert_eq!(BAR_MACHINE.edges.len(), 1, "one legal edge is declared");
     }
 
