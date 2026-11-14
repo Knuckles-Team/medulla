@@ -167,7 +167,7 @@ def test_shared_unit_visible_only_in_scope(clean_graph):
 @pytest.mark.spec("MEDULLA-IDENTITY-R726")
 # spec: MEDULLA-IDENTITY-R726
 def test_same_principal_id_in_two_tenants_sees_only_its_own_units(clean_graph):
-    """Ownership is (tenant, principal): the same principal id elsewhere owns nothing here."""
+    """Ownership is (tenant, principal): the same id in another tenant owns nothing."""
     clean_graph.nodes.add("ku-own", _unit("private"))
     # A private unit of a principal with the same id in another tenant.
     clean_graph.nodes.add(
