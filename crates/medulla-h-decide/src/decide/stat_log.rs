@@ -935,7 +935,7 @@ async fn commit_run_record(
             "run-record",
             &link.graph,
             req_id,
-            &link.method,
+            &link.methods[0],
         );
         medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
             medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
@@ -947,7 +947,7 @@ async fn commit_run_record(
                 },
                 &link.graph,
                 &batch_id,
-                vec![link.method],
+                link.methods,
                 &ResultPayload::Bool(true),
             ),
         )
