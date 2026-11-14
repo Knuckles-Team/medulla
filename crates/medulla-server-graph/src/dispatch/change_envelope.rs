@@ -818,8 +818,19 @@ async fn change_envelope_is_known_replay(
     let Some(record) = record else {
         return Ok(false);
     };
+    // A retry is a new attempt: it carries its own nonce, so the comparison
+    // takes the stored attempt's nonce before checking the content is identical.
+    let mut submitted = envelope.clone();
+    if let Some(stored_attempt) = record.envelope.mutation.envelope.operation() {
+        if submitted.mutation.envelope.operation().is_some() {
+            submitted
+                .mutation
+                .envelope
+                .rebind_attempt(stored_attempt.authority.nonce)?;
+        }
+    }
     let stored = rmp_serde::to_vec_named(&record.envelope).ok();
-    let submitted = rmp_serde::to_vec_named(envelope).ok();
+    let submitted = rmp_serde::to_vec_named(&submitted).ok();
     Ok(stored.is_some() && stored == submitted)
 }
 

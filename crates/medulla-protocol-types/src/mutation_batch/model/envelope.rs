@@ -740,6 +740,25 @@ impl MutationEnvelope {
         }
     }
 
+    /// Re-present a recorded operation as a fresh attempt: the stable operation
+    /// identity is unchanged and only the attempt nonce (and the context digest
+    /// that covers it) moves to `nonce`. A retry that re-submits a recorded
+    /// batch must carry its own attempt, or the ledger refuses it as a
+    /// consumed nonce instead of replaying it.
+    pub fn rebind_attempt(&mut self, nonce: Nonce) -> Result<(), String> {
+        match self {
+            Self::Operation(envelope) => {
+                envelope.authority.nonce = nonce;
+                envelope.authority.context_digest =
+                    envelope.authority.recompute_context_digest()?;
+                Ok(())
+            }
+            Self::Maintenance(_) => {
+                Err("a maintenance write has no attempt nonce to rebind".into())
+            }
+        }
+    }
+
     pub fn is_maintenance(&self) -> bool {
         matches!(self, Self::Maintenance(_))
     }

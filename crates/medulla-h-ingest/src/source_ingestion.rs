@@ -2360,9 +2360,17 @@ fn prepared_replay(
     ctx: PrepareContext<'_>,
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
-    envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
+    mut envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<PreparedSourceIngestion, String> {
     validate_replay_authority(&ctx, batch_digest, &envelope)?;
+    // The stored envelope carries the first attempt's nonce, which the ledger
+    // has consumed; this request is a new attempt of the same operation
+    // (MEDULLA-INGEST-WORKER-R910.6).
+    envelope.mutation.envelope.rebind_attempt(
+        ctx.verified
+            .attempt_nonce()
+            .unwrap_or_else(medulla_types::contract::Nonce::minted),
+    )?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
     let receipt = replay_receipt(&envelope, &batch_id)?;
     validate_replay_metadata(batch, &receipt)?;
