@@ -337,3 +337,7 @@ The read-only SQL audit is one function. Both the federated SQL source and the a
 ## R083.3: the arbitration part verifies citations on the round's snapshot
 
 The arbitration part is the last block of `run_round`. The span verifier reads the cited document's `text` property through the round's bound view, so a document the caller cannot read is outside the snapshot and its citation classifies `unknown`, the same way a missing document does; it never confirms that another tenant's document exists. A span checks with the shared `verify_span` of the indexless-retrieval family (character boundaries plus SHA-256 of the slice), so there is one span check in the engine. The prior must be grounded `parametric` and the retrieved candidate `retrieved`; a part that swaps them refuses `RETRIEVAL_CONTRACT_INVALID`. The verdict's `graph_snapshot_revision` is the round's `corpus_revision`. The margin is the registry knob `retrieval.arbitration_margin`, read in the handler.
+
+## R081.8 and R083.3: foreign-graph proofs use the door shape
+
+A deployment admits one tenant, so a served call for another graph is refused at the door. The retrieval-round served tests assert that refusal (no write lands, no verdict returns) instead of seeding a second tenant's graph through the one-tenant harness. The two-tenants-in-one-store isolation case belongs in `crates/medulla-server-served-tests` (decision TENANT-SCOPE-TEST-SHAPE) and is owed there.
