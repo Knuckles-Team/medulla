@@ -633,8 +633,8 @@ fn unix_ms() -> u64 {
         .unwrap_or(0)
 }
 
-/// Bytes one field's aggregate occupies in a stored chunk.
-const FIELD_AGG_BYTES: usize = 48;
+/// Bytes one field's aggregate occupies in a stored chunk: seven 8-byte words.
+const FIELD_AGG_BYTES: usize = 7 * 8;
 
 /// What one chunk keeps about one field so a read that needs only a summary never decodes
 /// the points (MEDULLA-FEDERATED-QUERY-R081.103.5). Only finite values count: a NaN or
