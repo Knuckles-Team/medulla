@@ -31461,7 +31461,7 @@ class AttachedApplication(str, Enum):
     DOCKERHUB = "dockerhub"
     UPTIME = "uptime"
     CONTAINER_MANAGER = "container_manager"
-    SERVICE_NOW = "service_now"
+    SERVICE_NOW = "servicenow"
 
 
 class BatchOperationClaimNext(BaseModel):
