@@ -105,13 +105,20 @@ impl Harness {
         let nonce = self.nonce.get();
         self.nonce.set(nonce + 1);
         let (id, kind) = (draft.component_id.clone(), draft.kind);
+        // A publish is a compare-and-set on the component's head: name the
+        // current head revision (0 for a new id), so republishing an id the
+        // test already published files the next revision instead of refusing.
+        let head = self
+            .store
+            .current_component(tenant, &id)?
+            .map_or(0, |current| current.entry_revision);
         let request = AgentComponentPublishRequest {
             context: mutation_context(
                 &self.store,
                 tenant,
                 &format!("publish-{id}-{nonce}"),
                 nonce,
-                0,
+                head,
                 "agent-component:publish",
             ),
             component: draft,
@@ -188,7 +195,7 @@ impl Harness {
 pub fn decode<T: serde::de::DeserializeOwned>(
     response: medulla_protocol_types::protocol::Response,
 ) -> Result<T, String> {
-    if let Some(error) = response.error {
+    if let Some(error) = response.refusal_text() {
         return Err(error);
     }
     match response.result {
