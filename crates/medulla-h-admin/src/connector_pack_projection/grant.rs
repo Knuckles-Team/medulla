@@ -20,6 +20,11 @@
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_api::service_grant::ServiceGraphGrant;
 
+/// The service name the projection worker signs its writes as. Distinct from
+/// the outbox consumer id (`worker::CONSUMER`), which names a cursor and was
+/// renamed with the import topic; the signing identity holds the grants and
+/// must not move with it.
+pub(crate) const PROJECTION_SERVICE: &str = "connector-pack-projection";
 /// The fixed service principal the projection worker writes as.
 pub(crate) const PROJECTION_ACTOR: &str = "service:connector-pack-projection";
 
@@ -72,14 +77,16 @@ mod tests {
 
     #[test]
     fn the_granted_principal_is_the_principal_the_worker_signs_as() {
-        let signer =
-            medulla_server_api::authority_context::VerifiedRequestContext::authenticated_fixed_service_actor(
-                &medulla_server_api::server_context::ServerContext::fixture(),
-                super::super::worker::CONSUMER,
-                &["kg:write"],
-            )
-            .unwrap();
+        // The worker's own signing context, not a re-derivation of it: the
+        // outbox consumer id was renamed once and the signer silently moved
+        // with it, leaving every projection denied on its pack graph.
+        let signer = super::super::worker::service_context(
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            "record-1",
+        )
+        .unwrap();
         assert_eq!(signer.agent_id(), PROJECTION_ACTOR);
+        assert_ne!(super::super::worker::CONSUMER, PROJECTION_SERVICE);
     }
 
     #[test]

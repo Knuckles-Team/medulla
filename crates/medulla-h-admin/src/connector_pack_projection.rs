@@ -369,13 +369,13 @@ pub mod worker {
     /// The engine service identity the worker projects under. Its operation
     /// key is the record it projects, so a re-delivered row replays the
     /// projection commit rather than writing a second one.
-    fn service_context(
+    pub(super) fn service_context(
         server: &medulla_server_api::server_context::ServerContext,
         record_id: &str,
     ) -> Result<VerifiedRequestContext, String> {
         let service = VerifiedRequestContext::authenticated_fixed_service_actor(
             server,
-            CONSUMER,
+            super::grant::PROJECTION_SERVICE,
             &["kg:read", "kg:write"],
         )?;
         Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
