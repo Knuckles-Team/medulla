@@ -207,9 +207,15 @@ def task_plan_request(
     Model proposals must not provide the tenant, pin, policy or limits. Graph
     validity and effective bounds are computed by the engine, not this helper.
     """
+    import json
+
     from medulla.generated.models import TaskPlanProposal
 
-    typed = TaskPlanProposal.model_validate(dict(proposal), strict=True)
+    # Strict JSON mode admits the wire strings of Rust enums (``"parallel"``,
+    # ``"eq"``) while refusing coercions such as a quoted integer budget.
+    typed = TaskPlanProposal.model_validate_json(
+        json.dumps(dict(proposal)), strict=True
+    )
     # ``TaskPlanTask::call`` carries ``skip_serializing_if = "Option::is_none"``
     # on the engine side, so an absent call is an absent key -- never ``null``.
     # The generated senders dump the same way (``exclude_none=True``).
@@ -264,6 +270,15 @@ def tool_assignment_request(
     )
 
 
+def _json_value(value: Any) -> Any:
+    """A ``serde_json::Value`` as the engine encodes it: object keys sorted."""
+    if isinstance(value, Mapping):
+        return {key: _json_value(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        return [_json_value(item) for item in value]
+    return value
+
+
 def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
     """One task in Rust declaration order, for the digest.
 
@@ -280,7 +295,7 @@ def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
         body["call"] = {
             "server": call["server"],
             "tool": call["tool"],
-            "arguments": call["arguments"],
+            "arguments": _json_value(call["arguments"]),
         }
     aggregation = task.get("aggregation")
     if aggregation is not None:
@@ -290,6 +305,9 @@ def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
     if task.get("assignee") is not None:
         body["assignee"] = task["assignee"]
     _add_control_steps(body, task)
+    for key in ("duration_ms", "priority_weight"):
+        if task.get(key) is not None:
+            body[key] = task[key]
     return body
 
 
@@ -299,7 +317,7 @@ def _condition_body(condition: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "ref": condition["ref"],
         "op": condition["op"],
-        "value": condition["value"],
+        "value": _json_value(condition["value"]),
     }
 
 
@@ -336,14 +354,83 @@ def _add_control_steps(body: dict[str, Any], task: Mapping[str, Any]) -> None:
         }
 
 
+def _final_artifact(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    decl = value.get("final_artifact")
+    if decl is None:
+        return None
+    return {
+        "schema_id": decl["schema_id"],
+        "schema_version": decl["schema_version"],
+        "kind": decl["kind"],
+    }
+
+
 def _task_plan_body(value: Mapping[str, Any]) -> dict[str, Any]:
     """A validated proposal in Rust declaration order, for its digest."""
-    return {
+    body: dict[str, Any] = {
         "tasks": [_task_plan_task(task) for task in value["tasks"]],
         "output_task_id": value["output_task_id"],
         "max_concurrency": value["max_concurrency"],
         "max_steps": value["max_steps"],
     }
+    final_artifact = _final_artifact(value)
+    if final_artifact is not None:
+        body["final_artifact"] = final_artifact
+    return body
+
+
+def _critical_chain(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return {
+        key: value[key]
+        for key in (
+            "critical_chain_step_ids",
+            "total_weight_units",
+            "total_weighted_duration_ms",
+            "weight_scale",
+            "policy_revision",
+            "plan_digest",
+            "input_digest",
+        )
+    }
+
+
+def _horizons(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return {
+        "plan_digest": value["plan_digest"],
+        "horizons": [
+            {"index": horizon["index"], "step_ids": horizon["step_ids"]}
+            for horizon in value["horizons"]
+        ],
+        "credit_ceiling": value["credit_ceiling"],
+    }
+
+
+def _plan_digest(body: Mapping[str, Any], plan: Mapping[str, Any]) -> str:
+    """``compute_plan_digest``: v1 bare, v2 with the derived chain and
+    horizons, v3 with those and the final-artifact declaration."""
+    from medulla.decision._digest import digest_text
+
+    core = [
+        body["tasks"],
+        body["output_task_id"],
+        body["max_concurrency"],
+        body["max_steps"],
+        plan["total_tasks"],
+        plan["policy_revision"],
+        plan["policy_digest"],
+    ]
+    chain = _critical_chain(plan.get("critical_chain"))
+    horizons = _horizons(plan.get("horizons"))
+    final_artifact = body.get("final_artifact")
+    if final_artifact is not None:
+        return digest_text("eg/task-plan/v3", [core, chain, horizons, final_artifact])
+    if chain is None and horizons is None:
+        return digest_text("eg/task-plan/v1", core)
+    return digest_text("eg/task-plan/v2", [core, chain, horizons])
 
 
 def _require_task_plan(condition: bool, detail: str) -> None:
@@ -432,22 +519,7 @@ def _verify_task_plan_claims(
         plan["input_digest"] == digest_text("eg/task-plan-input/v1", proposal),
         "input digest",
     )
-    _require_task_plan(
-        plan["plan_digest"]
-        == digest_text(
-            "eg/task-plan/v1",
-            [
-                body["tasks"],
-                body["output_task_id"],
-                body["max_concurrency"],
-                body["max_steps"],
-                plan["total_tasks"],
-                plan["policy_revision"],
-                plan["policy_digest"],
-            ],
-        ),
-        "plan digest",
-    )
+    _require_task_plan(plan["plan_digest"] == _plan_digest(body, plan), "plan digest")
     return plan
 
 
@@ -493,6 +565,11 @@ def verify_task_plan_receipt(
     if served_plan is None:
         raise ValueError("task_plan receipt mismatch: missing plan")
     plan = served_plan.model_dump(mode="json", by_alias=True, exclude_none=True)
+    # ``BranchSpec::exhaustive`` is skipped on the wire when false.
+    for task in plan["tasks"]:
+        branch = task.get("branch")
+        if branch is not None and branch.get("exhaustive") is False:
+            del branch["exhaustive"]
     return _verify_task_plan_claims(plan, asked)
 
 
