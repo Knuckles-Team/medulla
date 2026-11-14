@@ -450,7 +450,7 @@ fn an_occ_expectation_formed_at_the_fenced_source_is_valid_at_the_destination() 
     let stale = event_batch(&identity, "stale", 0);
     match destination.mutations.admit(&destination_owner, &stale) {
         Ok(_) => panic!("a stale version expectation was admitted"),
-        Err(error) => assert!(error.starts_with("STALE_VERSION"), "{error}"),
+        Err(error) => assert!(error.starts_with("WRITE_CONFLICT"), "{error}"),
     }
 }
 

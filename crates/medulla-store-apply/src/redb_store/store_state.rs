@@ -410,6 +410,18 @@ pub(crate) fn check_change_content_version_precondition(
             decode_durable::<ContentVersion>(&bytes)
         })
         .transpose()?;
+    content_version_chains(change, current.as_ref())
+}
+
+/// Whether `change` chains off the durable content version `current`:
+/// matching previous digest AND a strictly advancing source version, or, with
+/// no durable row, no claimed previous digest. The commit path also asks this
+/// of the committed state when a racing writer lost the scope version, so the
+/// loser reports the stale stream instead of a bare write conflict.
+pub(crate) fn content_version_chains(
+    change: &ChangeEnvelope,
+    current: Option<&ContentVersion>,
+) -> Result<(), String> {
     match current {
         Some(current) => {
             if change.content_version.previous_digest.as_deref() != Some(current.digest.as_str()) {

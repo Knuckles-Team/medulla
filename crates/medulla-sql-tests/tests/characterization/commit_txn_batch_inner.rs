@@ -171,7 +171,7 @@ fn stale_version_expectation_is_rejected() {
     let err = store
         .commit_txn_batch(&insert_txn(), &stale, 100)
         .expect_err("stale version_expectation must be rejected");
-    assert!(err.contains("STALE_VERSION"), "unexpected error: {err}");
+    assert!(err.contains("WRITE_CONFLICT"), "unexpected error: {err}");
     assert_eq!(store.mutation_version(TENANT, GRAPH).unwrap(), 0);
 }
 

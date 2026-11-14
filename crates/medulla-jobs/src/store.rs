@@ -1317,7 +1317,7 @@ impl JobStore {
             let (batch, committed_at_ms) = rebatch()?;
             match self.request_cancel_batch(job_id, &batch, committed_at_ms) {
                 Err(JobError::Redb(ref m))
-                    if m.contains("STALE_VERSION") && attempt < MAX_ATTEMPTS =>
+                    if m.contains("WRITE_CONFLICT") && attempt < MAX_ATTEMPTS =>
                 {
                     attempt += 1;
                 }

@@ -307,12 +307,16 @@ fn admit_fresh<D: OwnerDomain>(
     }
     let source_version = source_version(write, batch)?;
     match (batch.version_expectation, source_version) {
-        (
-            VersionExpectation::Graph(expected) | VersionExpectation::Native(expected),
-            Some(actual),
-        ) if expected != actual => {
+        (VersionExpectation::Graph(expected), Some(actual)) if expected != actual => {
             return Err(format!(
                 "STALE_VERSION: mutation scope expected version {expected} but authoritative version is {actual}"
+            ));
+        }
+        // A native scope's version is engine-owned, not a claim the caller made:
+        // losing it to a concurrent writer is a write conflict to retry.
+        (VersionExpectation::Native(expected), Some(actual)) if expected != actual => {
+            return Err(format!(
+                "WRITE_CONFLICT: native scope expected version {expected} but authoritative version is {actual}"
             ));
         }
         (VersionExpectation::Unversioned, None) => {}
