@@ -105,6 +105,39 @@ mod tests {
         assert!(error.contains("cannot own a native scope"));
     }
 
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn branch_target_write_carries_its_base_graph_authority() {
+        let branch = medulla_types::branch::BranchRef {
+            tenant: "tenant-a".to_string(),
+            graph: "notes".to_string(),
+            name: "feature".to_string(),
+        };
+        let target = medulla_types::branch::branch_target_graph(&branch);
+        let base =
+            MutationScopeIdentity::fixed_graph("tenant-a", "notes", "incarnation-1").unwrap();
+        let on_branch =
+            MutationScopeIdentity::fixed_graph("tenant-a", &target, "incarnation-1").unwrap();
+        let base_scope = crate::mutation_batch::authority_scope_for(&base).unwrap();
+        let branch_scope = crate::mutation_batch::authority_scope_for(&on_branch).unwrap();
+        assert_eq!(branch_scope, base_scope, "a branch write is authorised as its base graph");
+        assert_eq!(branch_scope.scope_id.as_str(), "notes");
+
+        // Without a base graph authority there is none: a `~` name that is not a
+        // well-formed branch target, or a branch of a base that is not itself a
+        // canonical resource id, is refused.
+        for refused in ["notes~branch~0123", "notes~7e", "no tes~branch~0123456789abcdef"] {
+            let identity =
+                MutationScopeIdentity::fixed_graph("tenant-a", refused, "incarnation-1");
+            if let Ok(identity) = identity {
+                assert!(
+                    crate::mutation_batch::authority_scope_for(&identity).is_err(),
+                    "{refused} has no base graph authority"
+                );
+            }
+        }
+    }
+
     #[test]
     fn logical_and_physical_graph_keys_keep_authority_contracts_distinct() {
         let logical =
