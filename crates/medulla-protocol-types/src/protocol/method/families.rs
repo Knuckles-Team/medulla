@@ -47,9 +47,7 @@ impl Method {
             | Self::InvalidateEdge { .. }
             | Self::SupersedeEdge { .. }
             | Self::BatchUpdate { .. }
-            | Self::ArgumentMapPut { .. }
-            | Self::ArchitectureModelImport { .. }
-            | Self::SourceSync { .. } => MethodWriteFamily::GraphElement,
+            | Self::ArgumentMapPut { .. } => MethodWriteFamily::GraphElement,
             Self::KgDelegate { .. }
             | Self::SubmitWorkItem { .. }
             | Self::SubmitWorkItems { .. } => MethodWriteFamily::WorkItemSubmission,

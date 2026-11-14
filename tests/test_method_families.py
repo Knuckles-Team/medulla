@@ -162,10 +162,6 @@ _DURABLE_AT_BASE = (
         "SyncMemorySnapshot",
         # MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits graph nodes.
         "ArgumentMapPut",
-        # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
-        "ArchitectureModelImport",
-        # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
-        "SourceSync",
     }
 )
 
@@ -276,6 +272,18 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
+        # Declared writes added after the base on the staged gateways: stored
+        # queries, entity-link approval, document vectors, data-prep declarations,
+        # semantic enrichment, ingest read-back and the release/deployment records.
+        "ApproveEntityLink",
+        "DataPrepDeclare",
+        "EncodeDocument",
+        "RecordDeployment",
+        "RecordRelease",
+        "SemanticEnrich",
+        "StoredQueryCall",
+        "StoredQueryPut",
+        "VerifyIngestReadback",
         # Declared writes added after the base: typed actions, the agent bus, the
         # branch registry, document deletion, live artifacts and memory sync.
         "ActionRegister",

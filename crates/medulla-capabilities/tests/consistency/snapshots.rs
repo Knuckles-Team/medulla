@@ -150,6 +150,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "LiveArtifactRefresh",
     "StoredQueryPut",
     "ApproveEntityLink",
+    "EncodeDocument",
     "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
     "DataProductRegister",
@@ -172,6 +173,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "LiveArtifactRefresh",
     "StoredQueryPut",
     "ApproveEntityLink",
+    "EncodeDocument",
     "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
     "DataProductRegister",
@@ -455,6 +457,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "LiveArtifactRefresh",
     "StoredQueryPut",
     "ApproveEntityLink",
+    "EncodeDocument",
     "StoredQueryCall",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
@@ -664,6 +667,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "LiveArtifactRefresh",
     "StoredQueryPut",
     "ApproveEntityLink",
+    "EncodeDocument",
     "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: the rbac.redb policy store's hash-chained
     // audit trail records the write, like `RbacElevation`.
@@ -737,6 +741,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "LiveArtifactRefresh",
     "StoredQueryPut",
     "ApproveEntityLink",
+    "EncodeDocument",
     "StoredQueryCall",
     "DataProductRegister",
     "AccessRequestOpen",

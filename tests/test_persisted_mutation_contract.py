@@ -231,7 +231,7 @@ def test_decode_json_object_has_one_visible_owner_and_two_consumers() -> None:
     assert "pub(super) fn decode_json_object(" in gateway
     assert gateway.count("decode_json_object(") == 1
     assert routes.count("decode_json_object(") == 3
-    assert semantic.count("super::gateway_graph::decode_json_object(") == 1
+    assert semantic.count("super::gateway_graph::decode_json_object(") == 4
 
 
 def test_mutation_receipts_bind_typed_scope_identity() -> None:

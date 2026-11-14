@@ -1178,6 +1178,8 @@ _GRAPH_GATEWAY_FILES = (
     f"{_GRAPH_GATEWAY_DIR}/gateway_mining_ml.rs",
 )
 _GRAPH_GATEWAY_ROUTER_FILES = (
+    # gateway.rs routes SourceSync itself, before the carrier-less route table.
+    f"{_GRAPH_GATEWAY_DIR}/gateway.rs",
     f"{_GRAPH_GATEWAY_DIR}/gateway_graph.rs",
     f"{_GRAPH_GATEWAY_DIR}/gateway_graph_routes.rs",
     f"{_GRAPH_GATEWAY_DIR}/gateway_broker.rs",
