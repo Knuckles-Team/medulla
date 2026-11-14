@@ -79,6 +79,7 @@ fn write_outcome(
                 lease_holder: "worker-a".to_string(),
                 fidelity: OutcomeFidelity::ToolCalls,
                 success: *success,
+                backbone: None,
             },
             producer: "evaluator".to_string(),
             recorded_at_ms: 1,
