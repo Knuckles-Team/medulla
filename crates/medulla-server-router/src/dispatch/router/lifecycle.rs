@@ -98,6 +98,18 @@ impl GraphLifecycleRequest {
     }
 }
 
+impl GraphLifecycleRequest {
+    /// Commit under its own attempt nonce. An engine-internal lifecycle step
+    /// (for example a projection worker creating its reserved graph) is a
+    /// separate durable operation from the caller's write that follows it; it
+    /// must not consume the caller's nonce, or that write is refused as a
+    /// replay (`REPLAY_NONCE_CONSUMED`).
+    pub fn with_own_attempt_nonce(mut self) -> Self {
+        self.attempt_nonce = Some(medulla_types::contract::Nonce::minted());
+        self
+    }
+}
+
 pub async fn create_graph(
     state: &Arc<RwLock<ServerState>>,
     request: GraphLifecycleRequest,

@@ -475,7 +475,8 @@ pub async fn ensure_internal_global_graph(
         Some(verified.agent_id().to_string()),
         verified,
         format!("internal-create:{}", create_identity.to_hex()),
-    )?;
+    )?
+    .with_own_attempt_nonce();
     let response = super::router::create_graph(
         state,
         request,
