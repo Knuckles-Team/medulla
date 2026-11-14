@@ -157,14 +157,23 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
         candidate(improving_ref, improving_trace, **improving),
         candidate(neutral_ref, neutral_trace, **neutral),
     ]
-    _, record, _, _ = asyncio.run(
-        _contrast_journey(schema, options, "q:h2-r817:adopt", _graph_name(clean_graph))
-    )
-    assert record["inputs"]["harness_contrast"]["adopted_version_ref"] == improving_ref
+    # One decision record adopts once (a repeat of its write is a replay), so
+    # each agent's adoption is decided by its own record.
+    records = []
+    for agent in (FIRST_AGENT, SECOND_AGENT):
+        _, record, _, _ = asyncio.run(
+            _contrast_journey(
+                schema, options, f"q:h2-r817:adopt:{agent}", _graph_name(clean_graph)
+            )
+        )
+        adopted_ref = record["inputs"]["harness_contrast"]["adopted_version_ref"]
+        assert adopted_ref == improving_ref
+        records.append((agent, record))
+    assert records[0][1]["record_digest"] != records[1][1]["record_digest"]
 
     writes = [
         _write(record["record_digest"], improving_ref, agent, improving_trace)
-        for agent in (FIRST_AGENT, SECOND_AGENT)
+        for agent, record in records
     ]
     stored, pages, everything = asyncio.run(_journey(writes))
     adopted = [
@@ -185,7 +194,7 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
     # agent's harness bundle with its evaluation receipt.
     full = RevisionProposalPage.model_validate(everything)
     assert [row.id for row in full.rows] == adopted
-    for row in full.rows:
+    for row, (_, record) in zip(full.rows, records, strict=True):
         assert row.stage == "evaluated"
         assert row.subject_kind == "definition"
         assert row.subject_ref.endswith(f":{TASK_CLASS}")
