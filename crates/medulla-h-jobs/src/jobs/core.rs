@@ -107,12 +107,12 @@ pub(super) fn owned_job(
 ) -> Result<AnalyticsJob, String> {
     let job = store
         .get(job_id)
-        .map_err(|_| "analytics job not found or not owned by caller".to_string())?;
+        .map_err(|_| "JOB_NOT_FOUND: analytics job not found or not owned by caller".to_string())?;
     if authority.owns(&job.policy.tenant, &job.policy.actor) {
         Ok(job)
     } else {
         medulla_kernel::metrics::process().access_denied();
-        Err("analytics job not found or not owned by caller".to_string())
+        Err("JOB_NOT_FOUND: analytics job not found or not owned by caller".to_string())
     }
 }
 
