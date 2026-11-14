@@ -45,7 +45,8 @@ use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 mod throttle;
-#[cfg(test)]
+// The cipher exists only in a build with encryption at rest.
+#[cfg(all(test, feature = "security"))]
 mod replay_tests;
 
 /// One capacity table opened for writing on one graph's scope.
