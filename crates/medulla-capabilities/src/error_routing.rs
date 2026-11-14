@@ -59,6 +59,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     // MEDULLA-FEDERATED-QUERY-R708.4.
     ("StoredQuery", &["STORED_QUERY_"]),
+    // MEDULLA-SRC-AUTH-R012.7: a sync passes through the refusal of the foreign read it consumes.
+    ("SourceSync", &["FOREIGN_READ_"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R030.3.
     ("ApproveEntityLink", &["LINK_"]),
     (
