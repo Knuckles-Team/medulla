@@ -942,6 +942,8 @@ fn signal_machine_matches_edge_table() {
 #[test]
 fn signal_machine_classes_extend_core() {
     sm::assert_extends_core("SignalData");
+}
+
 // spec: MEDULLA-ENGINE-PARITY-R021.1
 #[test]
 fn instance_machine_matches_edge_table() {
