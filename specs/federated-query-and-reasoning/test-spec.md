@@ -709,6 +709,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R081.7.6` | `tests/retrieval/test_adaptive_selection_served.py::test_rescue_and_dual_low_refusal` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.7.6` | `tests/retrieval_round_served.rs::adaptive_selection_rescues_low_embedding_chunk` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |
+| `MEDULLA-FEDERATED-QUERY-R081.8` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_retrieval_round_two_tenant_tests.rs::feedback_reads_only_the_callers_tenant_in_one_store` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.1` | `crates/medulla-result-types/src/retrieval_round.rs::tests::round_feedback_round_trips_and_clamps_limits` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.1` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.2` | `crates/medulla-plan/src/retrieval_feedback.rs::tests::terms_reinforce_suppress_and_critique_cannot_promote` | L1 |
@@ -735,6 +736,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R083.1` | `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates_and_support` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R083.2` | `crates/medulla-plan/src/retrieval_arbitration.rs::tests::support_precedence_precedes_confidence_margin` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R083.3` | `tests/retrieval_round_served.rs::arbitration_part_returns_verdict_or_none` | L3 |
+| `MEDULLA-FEDERATED-QUERY-R083.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_retrieval_round_two_tenant_tests.rs::arbitration_verifies_only_the_callers_tenant_in_one_store` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R083.4` | `tests/retrieval_round_served.rs::abstain_returns_both_candidates` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R083.5` | `tests/retrieval_round_served.rs::arbitration_premise_lists_both_origins` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R083.6` | `tests/retrieval/test_arbitration_served.py::test_small_gap_abstains_with_both` | L4 |
