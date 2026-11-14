@@ -1337,8 +1337,13 @@ pub fn method_error_set(d: &MethodDescriptor) -> Vec<&'static str> {
     add_server_errors(d, &mut codes);
     add_owner_errors(d, &mut codes);
     add_typed_handler_errors(d, &mut codes);
+    // MACHINE_METHODS is the one authority for TRANSITION_REFUSED: a family code
+    // table shared by several methods (the decision plane's) must not list it
+    // on a method that moves no machine.
     if MACHINE_METHODS.contains(&d.id.as_str()) {
         codes.insert(TRANSITION_REFUSED);
+    } else {
+        codes.remove(TRANSITION_REFUSED);
     }
     codes.into_iter().collect()
 }
