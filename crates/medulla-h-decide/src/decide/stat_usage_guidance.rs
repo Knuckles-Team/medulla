@@ -381,12 +381,24 @@ pub(super) async fn with_usage_guidance_runtime(
     let index = shared_capability_index(&*state.read().await);
     let core = super::topology_read::graph_core(state, &question.graph, verified).await?;
     let graph = question.graph.clone();
+    // R177.3: the pack facts are read through the tenant-visible view, which
+    // holds the question graph and every visible pack projection graph of the
+    // tenant (the surface a pack import projects lives in its pack graph).
+    let pack_names: Vec<String> = store
+        .visible_connector_pack_graphs(verified.tenant())?
+        .into_iter()
+        .filter(|name| *name != graph)
+        .collect();
+    let packs = medulla_server_api::api::reentry::resident_graph_cores(state, pack_names).await;
     let (connector, job_class) = (question.connector.clone(), question.job_class.clone());
     let (facts, graph_revision) = tokio::task::spawn_blocking(move || {
         // The revision is read before the triples: a write between the two
         // makes the answer older than its stamp, never newer.
         let graph_revision = core.version();
-        let triples = medulla_rdf::mapping::export_triples(&core, &graph)?;
+        let mut triples = medulla_rdf::mapping::export_triples(&core, &graph)?;
+        for (name, pack) in &packs {
+            triples.extend(medulla_rdf::mapping::export_triples(pack, name)?);
+        }
         let facts: Vec<Fact> = triples
             .iter()
             .filter_map(|triple| {
