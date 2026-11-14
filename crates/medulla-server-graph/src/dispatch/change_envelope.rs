@@ -730,6 +730,10 @@ async fn apply_one_change_envelope_inner(
     };
     let committed = match committed_result {
         Ok(committed) => committed,
+        Err(error) if error.contains("WRITE_CONFLICT:") => {
+            let error = stale_content_or(backend.as_ref(), &fname, &envelope, error).await;
+            return Response::err(req_id, error);
+        }
         Err(error) => {
             // Keep a declared admission code (e.g. INVALID_ARGUMENT from
             // `ChangeEnvelope::validate`) first so `Response::err` keeps it and its
@@ -757,6 +761,36 @@ async fn apply_one_change_envelope_inner(
         req_id,
         ResultPayload::of::<txn_results::ApplyChangeEnvelope>(result),
     )
+}
+
+/// A writer that lost the native scope version to a concurrent commit is
+/// refused `WRITE_CONFLICT` by the kernel before the stream's content-version
+/// precondition runs. When the committed stream version no longer chains from
+/// the envelope's previous digest, the writer is owed `STALE_CONTENT_VERSION`
+/// instead: a retry of the same envelope cannot succeed.
+async fn stale_content_or(
+    backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    fname: &str,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+    error: String,
+) -> String {
+    let object_id = envelope.content_version.object_id.as_str();
+    let Ok(current) = backend
+        .read_content_version(fname, envelope.mutation.identity.tenant().as_str(), object_id)
+        .await
+    else {
+        return error;
+    };
+    let previous = envelope.content_version.previous_digest.as_deref();
+    match current {
+        Some(current) if previous != Some(current.digest.as_str()) => format!(
+            "STALE_CONTENT_VERSION: object '{object_id}' expected previous digest does not match"
+        ),
+        None if previous.is_some() => {
+            format!("STALE_CONTENT_VERSION: object '{object_id}' has no prior version")
+        }
+        _ => error,
+    }
 }
 
 /// What the served version check needs to resolve a stale expectation

@@ -53,8 +53,7 @@ pub fn commit_change_envelope_with_budget(
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
-    )
-    .map_err(|error| stale_content_or(shard, graph_fname, envelope, crypto, error))?;
+    )?;
     let outbox_count = change_envelope_outbox_count(envelope)?;
     Ok(change_envelope_commit(
         envelope,
@@ -120,13 +119,7 @@ pub fn commit_change_envelopes(
         &prepared.bound,
         envelopes,
         &prepared.outbox_counts,
-    )
-    .map_err(|mut failure| {
-        if let Some(envelope) = envelopes.get(failure.index) {
-            failure.error = stale_content_or(shard, graph_fname, envelope, crypto, failure.error);
-        }
-        failure
-    })?;
+    )?;
     let session = match start {
         ChangeEnvelopeStart::AllReplayed(commits) => return Ok(commits),
         ChangeEnvelopeStart::Active(session) => *session,
@@ -172,41 +165,6 @@ fn validate_change_envelope_batch_size(
         ));
     }
     Ok(())
-}
-
-/// A racing writer that lost the scope version to a concurrent commit is
-/// refused by the kernel with `WRITE_CONFLICT` before the domain preconditions
-/// run. When the committed state shows the envelope's stream content version
-/// no longer chains, that is the refusal the writer is owed
-/// (`STALE_CONTENT_VERSION`): retrying would not help. Any other error passes
-/// through unchanged.
-fn stale_content_or(
-    shard: &Shard,
-    graph_fname: &str,
-    envelope: &ChangeEnvelope,
-    crypto: DurableCrypto<'_>,
-    error: String,
-) -> String {
-    if !error.contains("WRITE_CONFLICT:") {
-        return error;
-    }
-    let current = medulla_store::redb_store::store_read::read_content_version(
-        shard,
-        envelope.mutation.identity.tenant().as_str(),
-        graph_fname,
-        &envelope.content_version.object_id,
-        crypto,
-    );
-    match current {
-        Ok(current) => match crate::redb_store::store_state::content_version_chains(
-            envelope,
-            current.as_ref(),
-        ) {
-            Err(stale) => stale,
-            Ok(()) => error,
-        },
-        Err(_) => error,
-    }
 }
 
 fn change_envelope_error(index: usize, error: String) -> ChangeEnvelopesError {
