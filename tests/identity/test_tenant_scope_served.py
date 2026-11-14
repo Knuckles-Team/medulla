@@ -99,6 +99,19 @@ def _audit_lines_after(client: SyncMedullaClient, expected: int) -> int:
     return count
 
 
+def _audit_lines_settled(client: SyncMedullaClient) -> int:
+    """The count once earlier reads' queued audit entries have all landed."""
+    deadline = time.monotonic() + 10
+    count = _audit_lines(client)
+    while time.monotonic() < deadline:
+        time.sleep(0.3)
+        again = _audit_lines(client)
+        if again == count:
+            break
+        count = again
+    return count
+
+
 @pytest.mark.spec("MEDULLA-IDENTITY-R610.3")
 # spec: MEDULLA-IDENTITY-R610.3
 def test_scope_predicate_injected_on_served_read(clean_graph):
@@ -135,14 +148,14 @@ def test_chain_visibility_and_unscopable_refusal(clean_graph):
 
         # One audit line per read, written in two phases (R023.5): the
         # reservation at admission and the outcome after the read, two entries.
-        before = _audit_lines(leaf)
+        before = _audit_lines_settled(leaf)
         _uql_notes(leaf)
         assert _audit_lines_after(leaf, before + 2) == before + 2
         _uql_notes(leaf)
         assert _audit_lines_after(leaf, before + 4) == before + 4
 
         # A plan binding no node variable is refused, runs nothing, is not audited.
-        settled = _audit_lines(leaf)
+        settled = _audit_lines_settled(leaf)
         with pytest.raises((EngineResponseError, RuntimeError)) as refused:
             leaf.query.unified([])
         assert "QUERY_UNSCOPABLE" in str(refused.value)
