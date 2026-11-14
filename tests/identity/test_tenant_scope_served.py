@@ -133,12 +133,13 @@ def test_chain_visibility_and_unscopable_refusal(clean_graph):
         # the private middle graph and the foreign tenant never appear.
         assert _uql_notes(leaf) == VISIBLE_TO_LEAF
 
-        # One audit line per read.
+        # One audit line per read, written in two phases (R023.5): the
+        # reservation at admission and the outcome after the read, two entries.
         before = _audit_lines(leaf)
         _uql_notes(leaf)
-        assert _audit_lines_after(leaf, before + 1) == before + 1
-        _uql_notes(leaf)
         assert _audit_lines_after(leaf, before + 2) == before + 2
+        _uql_notes(leaf)
+        assert _audit_lines_after(leaf, before + 4) == before + 4
 
         # A plan binding no node variable is refused, runs nothing, is not audited.
         settled = _audit_lines(leaf)
