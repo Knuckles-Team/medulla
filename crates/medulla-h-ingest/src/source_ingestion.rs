@@ -2753,6 +2753,9 @@ fn validate_strict_source_fields(
         "node_type",
         "externalToolId",
         governance::GOVERNANCE_MEMBER,
+        // The text of a text source is read by `stage_source_toc`
+        // (MEDULLA-DECISION-ENGINE-R153.3), never by a field mapping.
+        medulla_types::source_toc::SOURCE_TEXT_FIELD,
     ]);
     match source.keys().find(|key| !allowed.contains(key.as_str())) {
         Some(unknown) => Err(format!(
