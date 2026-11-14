@@ -102,7 +102,7 @@ def pg_source() -> Iterator[PgSource]:
             time.sleep(0.5)
         yield PgSource(
             container=name,
-            dsn=f"postgres://postgres:{PG_PASSWORD}@127.0.0.1:{PG_PORT}/postgres",  # sanitizer:ignore - test placeholder DSN
+            dsn=f"postgres://postgres:{PG_PASSWORD}@127.0.0.1:{PG_PORT}/postgres",  # sanitizer:ignore - test placeholder DSN  # noqa: E501
         )
     finally:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)
