@@ -45,7 +45,8 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 pub(super) struct StagedLink {
     pub graph: String,
     pub core: Arc<medulla_graph_core::graph::GraphCore>,
-    pub method: Method,
+    /// The program node write, then its `compiled_from` edge write.
+    pub methods: Vec<Method>,
 }
 
 /// A run record whose artifacts are stored and whose graph link, when it has
@@ -120,43 +121,45 @@ fn check_trace_node(
     Ok(())
 }
 
-/// The `BatchUpdate` that writes the program node, typed with its ontology
-/// class, and its `compiled_from` edge. Upserts, so a retry of a commit whose
-/// graph write failed converges.
+/// The node and edge writes of the program node, typed with its ontology class,
+/// and its `compiled_from` edge. Each is a method the internal graph commit
+/// projects onto the serving graph; a retry of a commit whose graph write
+/// failed writes the same node and edge again.
 fn link_batch(
     node_id: &str,
     program: &CompiledProgram,
     trace_node: &str,
     tenant: &str,
     principal: &str,
-) -> Result<Method, String> {
-    let operations = serde_json::json!([
-        {
-            "op": "upsert_node",
-            "id": node_id,
-            "properties": {
-                "type": PROGRAM_NODE_CLASS,
-                "task_signature": program.task_signature,
-                "program_digest": program.program_digest,
-                "source_run_id": program.source_run_id,
-                "step_count": program.steps.len(),
-                "_owner": principal,
-            },
+) -> Result<Vec<Method>, String> {
+    let encode = |value: serde_json::Value| {
+        rmp_serde::to_vec_named(&value).map_err(|error| {
+            refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                format!("run record link encoding failed: {error}"),
+            )
+        })
+    };
+    let node = encode(serde_json::json!({
+        "type": PROGRAM_NODE_CLASS,
+        "task_signature": program.task_signature,
+        "program_digest": program.program_digest,
+        "source_run_id": program.source_run_id,
+        "step_count": program.steps.len(),
+        "_owner": principal,
+    }))?;
+    let edge = encode(serde_json::json!({"relationship": COMPILED_FROM, "tenant": tenant}))?;
+    Ok(vec![
+        Method::AddNode {
+            node_id: node_id.to_string(),
+            properties_msgpack: node,
         },
-        {
-            "op": "upsert_edge",
-            "source": node_id,
-            "target": trace_node,
-            "properties": {"relationship": COMPILED_FROM, "tenant": tenant},
+        Method::AddEdge {
+            source_id: node_id.to_string(),
+            target_id: trace_node.to_string(),
+            properties_msgpack: edge,
         },
-    ]);
-    let operations_msgpack = rmp_serde::to_vec_named(&operations).map_err(|error| {
-        refusal(
-            StatisticalErrorCode::ParameterInvalid,
-            format!("run record link encoding failed: {error}"),
-        )
-    })?;
-    Ok(Method::BatchUpdate { operations_msgpack })
+    ])
 }
 
 /// Store one run record's artifacts and stage its graph link. A refused
@@ -184,7 +187,7 @@ pub(super) fn stage(
             Some(source),
             Some(view),
         ) => {
-            let method = link_batch(
+            let methods = link_batch(
                 program_node,
                 program,
                 &source.node_id,
@@ -194,7 +197,7 @@ pub(super) fn stage(
             Some(StagedLink {
                 graph: source.graph,
                 core: Arc::clone(view.core()),
-                method,
+                methods,
             })
         }
         _ => None,
