@@ -114,7 +114,7 @@ def _oracle(capacity):
     combinations = list(itertools.product(*options))
     assert len(combinations) == 27
     best = (0, 0)
-    sets = {frozenset()}
+    sets: set[frozenset] = {frozenset()}
     for combo in combinations:
         picked = [row for row in combo if row is not None]
         tokens = sum(row[3] for row in picked)
