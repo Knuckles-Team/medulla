@@ -41,13 +41,17 @@ pub fn check_outbound(config: &WarehouseSourceConfig) -> Result<(), String> {
 /// One read of a warehouse table: what the column plan asked the source for.
 #[derive(Debug, Clone)]
 pub struct WarehouseRead<'a> {
+    /// The warehouse source's connection settings.
     pub config: &'a WarehouseSourceConfig,
+    /// The table to read.
     pub table: &'a str,
     /// The columns to return (the remote projection; includes the id column when named).
     pub columns: Vec<String>,
     /// The column carrying the row id; empty means the row ordinal.
     pub id_column: &'a str,
+    /// Prefer the Arrow Flight SQL transport when the source offers it.
     pub prefer_flight_sql: bool,
+    /// The table snapshot to read; `None` reads the current snapshot.
     pub snapshot_id: Option<i64>,
     /// Filters certified pushable by [`filter_support`]; the local residual still runs.
     pub filters: Vec<ColumnPredicate>,
@@ -95,11 +99,17 @@ pub fn filter_support(predicate: &ColumnPredicate) -> PushdownSupport {
 
 /// The [`ForeignSource`] of a `Warehouse` spec.
 pub struct WarehouseSource<'a> {
+    /// The warehouse source's connection settings.
     pub config: &'a WarehouseSourceConfig,
+    /// The table to read.
     pub table: &'a str,
+    /// The columns to return.
     pub columns: &'a [String],
+    /// The column carrying the row id; empty means the row ordinal.
     pub id_column: &'a str,
+    /// Prefer the Arrow Flight SQL transport when the source offers it.
     pub prefer_flight_sql: bool,
+    /// The table snapshot to read; `None` reads the current snapshot.
     pub snapshot_id: Option<i64>,
 }
 
