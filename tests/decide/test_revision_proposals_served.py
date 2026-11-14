@@ -3,15 +3,17 @@ tenant scoped and paged over the wire.
 
 Rows come from the engine's own writer: a harness adoption (R803.8) stores an
 ``evaluated`` revision of the agent's harness bundle in the same owner write.
-Two adoptions by the first tenant give two rows; a second tenant's list never
-shows them, and its use of the first tenant's cursor reads as an empty page.
+Two adoptions by the deployment tenant give two rows, paged one at a time. A
+deployed engine admits one tenant, so a context naming another tenant is
+refused at the door with ``AUTH_TENANT_MISMATCH``; isolation between two
+tenants in one store is proven by the store-level test
+``revision_proposal_tests.rs::list_is_tenant_scoped_and_paged`` (L3).
 """
 
 from __future__ import annotations
 
 import asyncio
 import os
-import uuid
 
 import pytest
 from _decision_resident_fixture import publish
@@ -42,7 +44,6 @@ from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.models import HarnessAdoptionStored, RevisionProposalPage
 
 OTHER_TENANT = "tenant:other-revisions"
-OTHER_GRAPH = f"r817-other-{uuid.uuid4().hex[:8]}"
 FIRST_AGENT = "agent:r817-first"
 SECOND_AGENT = "agent:r817-second"
 BAD_CURSOR = "not-a-cursor"
@@ -66,28 +67,15 @@ def _write(record_digest: str, adopted_ref: str, agent_ref: str, trace: str) -> 
     }
 
 
-async def _journey(
-    writes: list[dict],
-) -> tuple[list[dict], list[dict], dict, dict, dict]:
-    """Adopt as the first tenant, then list as each tenant over the wire."""
+async def _journey(writes: list[dict]) -> tuple[list[dict], list[dict], dict]:
+    """Adopt and list as the deployment tenant; a foreign tenant is refused."""
     socket_path = os.environ["GRAPH_SERVICE_SOCKET"]
     owner = await MedullaClient.connect(
         socket_path=socket_path, verified_context=request_context()
     )
-    # A request names its own tenant's graph: the second tenant reads through a
-    # graph it created, never the first tenant's default graph.
-    other_context = dict(request_context(), tenant=OTHER_TENANT)
-    creator = await MedullaClient.connect(
-        socket_path=socket_path, verified_context=other_context
-    )
-    try:
-        await creator.tenants.create(OTHER_GRAPH)
-    finally:
-        await creator.close()
     stranger = await MedullaClient.connect(
         socket_path=socket_path,
-        verified_context=other_context,
-        graph_name=OTHER_GRAPH,
+        verified_context=dict(request_context(), tenant=OTHER_TENANT),
     )
     try:
         mine = dc.DecisionClient(client=owner)
@@ -105,13 +93,11 @@ async def _journey(
             if cursor is None:
                 break
         everything = await mine.revision_proposal_list()
-        foreign = await theirs.revision_proposal_list()
-        foreign_with_cursor = await theirs.revision_proposal_list(
-            cursor=pages[0]["next_cursor"]
-        )
         with pytest.raises(EngineResponseError, match="PROPOSAL_CURSOR_INVALID"):
             await mine.revision_proposal_list(cursor=BAD_CURSOR)
-        return stored, pages, everything, foreign, foreign_with_cursor
+        with pytest.raises(EngineResponseError, match="AUTH_TENANT_MISMATCH"):
+            await theirs.revision_proposal_list()
+        return stored, pages, everything
     finally:
         await owner.close()
         await stranger.close()
@@ -180,9 +166,7 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
         _write(record["record_digest"], improving_ref, agent, improving_trace)
         for agent in (FIRST_AGENT, SECOND_AGENT)
     ]
-    stored, pages, everything, foreign, foreign_with_cursor = asyncio.run(
-        _journey(writes)
-    )
+    stored, pages, everything = asyncio.run(_journey(writes))
     adopted = [
         HarnessAdoptionStored.model_validate(item).adopted_harness_ref
         for item in stored
@@ -207,7 +191,3 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
         assert row.subject_ref.endswith(f":{TASK_CLASS}")
         assert row.digest == record["record_digest"]
         assert row.evaluation_receipt_id
-
-    # Another tenant sees none of them, with or without the first tenant's cursor.
-    assert RevisionProposalPage.model_validate(foreign).rows == []
-    assert RevisionProposalPage.model_validate(foreign_with_cursor).rows == []
