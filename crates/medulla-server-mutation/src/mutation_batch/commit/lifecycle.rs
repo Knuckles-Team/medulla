@@ -104,7 +104,9 @@ pub async fn commit_lifecycle(
             request_id,
             attempt_nonce,
             principal,
-            tenant: graph,
+            // The owning tenant, never the graph name: a branch graph name
+            // (`{graph}~branch~{hash}`) is not a tenant identifier.
+            tenant: tenant_scope,
             graph,
             placement_epoch: 0,
             idempotency_key,
