@@ -289,6 +289,202 @@ pub fn evaluate(items: &[JudgedItem], directions: &[Direction]) -> Evaluation {
     eval
 }
 
+/// Angles a fitted index-side direction is searched over, per half turn.
+const INDEX_ANGLE_STEPS: usize = 64;
+
+/// The stored vector `d` after the index-side map, normalised: what a cosine
+/// search ranks a materialized row by. `None` for a vector the map sends to zero.
+fn indexed(directions: &[Direction], d: &[f64]) -> Option<Vec<f64>> {
+    let mapped = apply(directions, d);
+    let length = norm(&mapped);
+    (length > EPSILON).then(|| mapped.iter().map(|x| x / length).collect())
+}
+
+/// An item's score of `d` under the index-side map: the cosine search over the
+/// materialized rows, up to the query's own norm, which never reorders a row.
+fn index_score(directions: &[Direction], query: &[f64], d: &[f64]) -> f64 {
+    indexed(directions, d).map_or(f64::MIN, |row| dot(query, &row))
+}
+
+fn index_ordered_pairs(item: &JudgedItem, directions: &[Direction]) -> (u64, u64) {
+    let mut right = 0;
+    let mut total = 0;
+    for p in &item.positives {
+        let sp = index_score(directions, &item.query, p);
+        for n in &item.negatives {
+            total += 1;
+            right += u64::from(sp > index_score(directions, &item.query, n));
+        }
+    }
+    (right, total)
+}
+
+fn index_pairwise_accuracy(items: &[JudgedItem], directions: &[Direction]) -> f64 {
+    let (right, total) = items.iter().fold((0_u64, 0_u64), |(r, t), item| {
+        let (ri, ti) = index_ordered_pairs(item, directions);
+        (r + ri, t + ti)
+    });
+    if total == 0 {
+        return 0.0;
+    }
+    right as f64 / total as f64
+}
+
+/// The plane an index-side direction is searched in: the mean contrast and the
+/// mean query, each with the found directions removed. A rescale along one
+/// axis of axis-aligned rows is erased by the cosine normalisation, so the
+/// direction is chosen by the score the search uses, not by the eigen-direction
+/// of the query-side contrast operator.
+fn index_plane(
+    pairs: &[(&[f64], Vec<f64>)],
+    dim: usize,
+    found: &[Vec<f64>],
+) -> Option<(Vec<f64>, Option<Vec<f64>>)> {
+    let mut contrast = vec![0.0; dim];
+    let mut query = vec![0.0; dim];
+    for (q, d) in pairs {
+        contrast.iter_mut().zip(d).for_each(|(slot, x)| *slot += x);
+        query.iter_mut().zip(q.iter()).for_each(|(slot, x)| *slot += x);
+    }
+    let first = orthonormalise(contrast, found)?;
+    let mut with_first = found.to_vec();
+    with_first.push(first.clone());
+    let second = orthonormalise(query, &with_first);
+    Some((first, second))
+}
+
+/// Fit at most `rank` index-side directions: each is the unit in the
+/// contrast/query plane, and its gain the grid value, that maximise training
+/// pairwise accuracy under the materialized cosine score; zero gain keeps
+/// ties, so a direction that does not help gets gain zero.
+fn fit_index(items: &[JudgedItem], dim: usize, rank: usize, max_gain: f64) -> Vec<Direction> {
+    let pairs = contrasts(items, dim);
+    if pairs.is_empty() {
+        return Vec::new();
+    }
+    let usable: Vec<JudgedItem> = items
+        .iter()
+        .filter(|item| item.query.len() == dim)
+        .cloned()
+        .collect();
+    let mut units: Vec<Vec<f64>> = Vec::new();
+    let mut fitted: Vec<Direction> = Vec::new();
+    while units.len() < rank {
+        let Some((first, second)) = index_plane(&pairs, dim, &units) else {
+            break;
+        };
+        let steps = if second.is_some() { INDEX_ANGLE_STEPS } else { 1 };
+        let mut best: (f64, Vec<f64>, f64) = (f64::MIN, first.clone(), 0.0);
+        for step in 0..steps {
+            let angle = std::f64::consts::PI * step as f64 / steps as f64;
+            let (c, s) = (angle.cos(), angle.sin());
+            let unit: Vec<f64> = match &second {
+                Some(second) => first
+                    .iter()
+                    .zip(second)
+                    .map(|(a, b)| c * a + s * b)
+                    .collect(),
+                None => first.clone(),
+            };
+            for fraction in GAIN_GRID {
+                let gain = fraction * max_gain;
+                let mut trial = fitted.clone();
+                trial.push(Direction {
+                    unit: unit.clone(),
+                    gain,
+                });
+                let score = index_pairwise_accuracy(&usable, &trial);
+                if score > best.0 {
+                    best = (score, unit.clone(), gain);
+                }
+            }
+        }
+        units.push(best.1.clone());
+        fitted.push(Direction {
+            unit: best.1,
+            gain: best.2,
+        });
+    }
+    fitted
+}
+
+/// The reciprocal rank of the best cited unit under the index-side score.
+fn index_reciprocal_rank(item: &JudgedItem, directions: &[Direction]) -> Option<f64> {
+    let best = item
+        .positives
+        .iter()
+        .map(|p| index_score(directions, &item.query, p))
+        .fold(None, |acc: Option<f64>, s| {
+            Some(acc.map_or(s, |a| a.max(s)))
+        })?;
+    let above = item
+        .negatives
+        .iter()
+        .filter(|n| index_score(directions, &item.query, n) > best)
+        .count();
+    Some(1.0 / (above + 1) as f64)
+}
+
+fn evaluate_index(items: &[JudgedItem], directions: &[Direction]) -> Evaluation {
+    let mut eval = Evaluation {
+        n: 0,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        base_mrr: 0.0,
+        adapted_mrr: 0.0,
+        win_rate_lower: 0.0,
+    };
+    for item in items {
+        let (Some(base), Some(adapted)) = (
+            index_reciprocal_rank(item, &[]),
+            index_reciprocal_rank(item, directions),
+        ) else {
+            continue;
+        };
+        eval.n += 1;
+        eval.base_mrr += base;
+        eval.adapted_mrr += adapted;
+        eval.wins += u64::from(adapted > base);
+        eval.losses += u64::from(adapted < base);
+        eval.ties += u64::from(adapted == base);
+    }
+    if eval.n > 0 {
+        eval.base_mrr /= eval.n as f64;
+        eval.adapted_mrr /= eval.n as f64;
+    }
+    eval.win_rate_lower = wilson_lower(eval.wins, eval.wins + eval.losses);
+    eval
+}
+
+/// [`fit`] for the side the adapter applies to: a query-side adapter moves the
+/// query; an index-side one is fitted under the cosine score of the
+/// materialized, normalised stored vectors.
+pub fn fit_for(
+    side: AdapterSide,
+    items: &[JudgedItem],
+    dim: usize,
+    rank: usize,
+    max_gain: f64,
+) -> Vec<Direction> {
+    match side {
+        AdapterSide::Query => fit(items, dim, rank, max_gain),
+        AdapterSide::Index => fit_index(items, dim, rank, max_gain),
+    }
+}
+
+/// [`evaluate`] for the side the adapter applies to.
+pub fn evaluate_for(
+    side: AdapterSide,
+    items: &[JudgedItem],
+    directions: &[Direction],
+) -> Evaluation {
+    match side {
+        AdapterSide::Query => evaluate(items, directions),
+        AdapterSide::Index => evaluate_index(items, directions),
+    }
+}
+
 fn quantise_unit(value: f64) -> i32 {
     let scaled = (value * f64::from(1_u32 << UNIT_SCALE_BITS)).round();
     scaled.clamp(f64::from(i32::MIN), f64::from(i32::MAX)) as i32
@@ -415,6 +611,9 @@ pub struct ScopedFitParams {
     pub holdout_pct: u8,
     pub min_eval_items: u32,
     pub max_resident_bytes: u64,
+    /// The side the adapter applies to: it picks the score the fit and its
+    /// held-out evaluation use.
+    pub side: AdapterSide,
 }
 
 /// Why a scoped fit produced no adapter.
@@ -509,12 +708,12 @@ pub fn fit_scoped(
             needed: params.min_eval_items,
         });
     }
-    let fitted = fit(&train, params.dim, params.rank, params.max_gain);
+    let fitted = fit_for(params.side, &train, params.dim, params.rank, params.max_gain);
     if fitted.is_empty() {
         return Err(ScopedFitError::NothingToLearn);
     }
     let directions = snap(&fitted);
-    let evaluation = evaluate(&held, &directions);
+    let evaluation = evaluate_for(params.side, &held, &directions);
     let keep = evaluation.win_rate_lower > 0.5 && evaluation.adapted_mrr >= evaluation.base_mrr;
     Ok(ScopedFit {
         directions,
@@ -555,7 +754,17 @@ pub fn monitor_adapter(
     directions: &[Direction],
     min_outcomes: u64,
 ) -> MonitorVerdict {
-    let evaluation = evaluate(outcomes, directions);
+    monitor_adapter_for(AdapterSide::Query, outcomes, directions, min_outcomes)
+}
+
+/// [`monitor_adapter`] under the score of the side the adapter applies to.
+pub fn monitor_adapter_for(
+    side: AdapterSide,
+    outcomes: &[JudgedItem],
+    directions: &[Direction],
+    min_outcomes: u64,
+) -> MonitorVerdict {
+    let evaluation = evaluate_for(side, outcomes, directions);
     if evaluation.n < min_outcomes {
         return MonitorVerdict::Insufficient {
             outcomes: evaluation.n,
@@ -680,6 +889,7 @@ mod tests {
             holdout_pct: 30,
             min_eval_items: 10,
             max_resident_bytes: 40_960,
+            side: AdapterSide::Query,
         }
     }
 

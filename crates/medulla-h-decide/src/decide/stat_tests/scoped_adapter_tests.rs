@@ -607,35 +607,7 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
         LearningRecorded::Cycle(job) => job,
         other => panic!("cycle: {other:?}"),
     };
-    let (diag_active, diag_shadow) = {
-        let guard = h.state.read().await;
-        let probe = |graph: &str| {
-            guard
-                .registry
-                .get(graph)
-                .unwrap()
-                .core
-                .semantic_store
-                .read()
-                .semantic_search(&[1.0_f32, 0.9, 0.0], 5)
-        };
-        (probe(GRAPH), probe(INDEX_SHADOW))
-    };
-    assert_eq!(
-        done.cycle.state(),
-        GenerationCycleState::Activated,
-        "adapter body {:?}; active top-5 {:?}; shadow top-5 {:?}; \
-         rejection {:?}, receipt digest {:?}, evaluation {:?}",
-        fitted.body,
-        diag_active,
-        diag_shadow,
-        done.rejection,
-        done.cycle.receipt_digest,
-        done.cycle
-            .receipt_digest
-            .as_deref()
-            .map(|digest| super::super::stat_generation::stored_evaluation(&h.store, &medulla_server_api::carrier::tenant_scope_of(TENANT), digest)),
-    );
+    assert_eq!(done.cycle.state(), GenerationCycleState::Activated);
     assert_eq!(done.reembedded_nodes, 80, "every node was materialized");
     let receipt = done
         .receipt

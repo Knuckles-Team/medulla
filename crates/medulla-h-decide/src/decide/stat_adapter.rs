@@ -11,12 +11,12 @@
 //! audited event, and rollback returns to the adapter active before.
 
 use medulla_decision_stats::decision::adapter::{
-    fit_scoped, is_held_out, monitor_adapter, wilson_upper, MonitorVerdict, ScopedFitError,
+    evaluate_for, fit_for, fit_scoped, is_held_out, monitor_adapter_for, wilson_upper,
+    MonitorVerdict, ScopedFitError,
     ScopedFitParams, ScopedItem,
 };
 use medulla_decision_stats::{
-    decision::adapter::directions_of, decision::adapter::evaluate, decision::adapter::fit,
-    decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem,
+    decision::adapter::directions_of, decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem,
 };
 use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
@@ -153,7 +153,7 @@ fn receipt_of(
     body: &QueryAdapterBody,
     provenance: Provenance,
 ) -> AdapterEvalReceipt {
-    let eval = evaluate(held, &directions_of(body));
+    let eval = evaluate_for(request.side, held, &directions_of(body));
     let lower = to_q16(eval.win_rate_lower);
     AdapterEvalReceipt {
         schema_version: QUERY_ADAPTER_SCHEMA_VERSION,
@@ -339,7 +339,13 @@ pub(super) fn fit_adapter(
     let knobs = medulla_server_api::knob_config::knobs();
     let (ids, directions, held, sources) = if is_graph_retrieval_fit(request) {
         let (ids, train, held) = split_items(ctx.store, reader, request, vectors)?;
-        let directions = fit(&train, dim, usize::from(request.rank), max_gain);
+        let directions = fit_for(
+            request.side,
+            &train,
+            dim,
+            usize::from(request.rank),
+            max_gain,
+        );
         let count = (ids.len() + held.len()) as u64;
         let sources = vec![SourceCount {
             source: OutcomeSource::RetrievalOutcome,
@@ -355,6 +361,7 @@ pub(super) fn fit_adapter(
             holdout_pct: u8::try_from(request.holdout_per_mille / 10).unwrap_or(50),
             min_eval_items: request.min_eval_items,
             max_resident_bytes: knobs.adapter_max_resident_bytes,
+            side: request.side,
         };
         let fitted = fit_scoped(&items, &params).map_err(scoped_refusal)?;
         let held = held_items(&items, params.holdout_pct);
@@ -548,8 +555,9 @@ pub(super) fn monitor(
         .collect();
     let directions = directions_of(&fitted.body);
     let min_outcomes = medulla_server_api::knob_config::knobs().adapter_monitor_min_outcomes;
-    let verdict = monitor_adapter(&items, &directions, min_outcomes);
-    let evaluation = evaluate(&items, &directions);
+    let side = fitted.body.side;
+    let verdict = monitor_adapter_for(side, &items, &directions, min_outcomes);
+    let evaluation = evaluate_for(side, &items, &directions);
     let state = match verdict {
         MonitorVerdict::Insufficient { .. } => MonitorState::Watching,
         MonitorVerdict::Healthy { .. } => MonitorState::Healthy,
