@@ -36,6 +36,15 @@ async fn call(
     call_as(state, id, key, method, TENANT, &["*"]).await
 }
 
+/// A process-unique nonce suffix. Every state a test builds verifies against
+/// the one replay ledger the test harness shares, and a read consumes its
+/// nonce there: request ids repeat across these tests, so a nonce built from
+/// the id alone replays another test's read and is refused at authentication.
+fn next_nonce() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
 /// `call` for a caller of another tenant or with a narrower scope set.
 async fn call_as(
     state: &Arc<RwLock<ServerState>>,
@@ -54,7 +63,7 @@ async fn call_as(
             principal: ISSUER,
             tenant,
             scopes,
-            nonce: &format!("terminal-trace-nonce-{id}"),
+            nonce: &format!("terminal-trace-nonce-{id}-{}", next_nonce()),
             idempotency_key: key,
         },
     );
@@ -740,19 +749,34 @@ async fn trace_critique_refusals_leak_nothing() {
         "ACCESS_DENIED",
     );
 
-    // Another tenant's read of this tenant's root is refused exactly like a missing root.
-    let foreign = read(
-        18,
-        critique("rt:root", "tenant-other"),
-        "tenant-other",
-        &["*"],
+    // Another tenant's root is refused exactly like a missing root. This
+    // deployment authenticates one tenant, so the foreign root is seeded
+    // directly as a stored trace node that names another tenant.
+    let mut record = trace_node("rt:foreign", None, &[]);
+    record["run_id"] = "run:foreign".into();
+    let seeded = call(
+        &state,
+        19,
+        "critique-refusal-seed-foreign",
+        Method::AddNode {
+            node_id: "rt:foreign".into(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({
+                "node_type": "RecursiveTraceNode",
+                "tenant": "tenant-other",
+                "recursive_trace": record,
+            }))
+            .unwrap(),
+        },
     )
-    .await
-    .error
-    .expect("a foreign root is refused");
+    .await;
+    assert!(seeded.error.is_none(), "{:?}", seeded.error);
+    let foreign = read(18, critique("rt:foreign", TENANT), TENANT, &["*"])
+        .await
+        .error
+        .expect("a foreign root is refused");
     assert!(!foreign.contains(&protected), "{foreign}");
     assert_eq!(
-        foreign.replace("rt:root", "rt:absent"),
+        foreign.replace("rt:foreign", "rt:absent"),
         missing,
         "a foreign root reads like a missing one"
     );
