@@ -67,7 +67,9 @@ def _write(record_digest: str, adopted_ref: str, agent_ref: str, trace: str) -> 
     }
 
 
-async def _journey(writes: list[dict]) -> tuple[list[str], list[dict], list[dict], dict]:
+async def _journey(
+    writes: list[dict],
+) -> tuple[list[str], list[dict], list[dict], dict]:
     """Adopt and list as the deployment tenant; a foreign tenant is refused.
 
     The deployment tenant is shared by the session's served tests, so the rows
