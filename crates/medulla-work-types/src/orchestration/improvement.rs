@@ -475,7 +475,15 @@ pub fn register_lesson(
     if !cited(&run_a.trace_id) || !cited(&run_b.trace_id) {
         return Err(ImprovementLibraryRefusal::LessonWithoutEvidence);
     }
-    if replayed_or_immutable(lessons.iter().find(|l| l.node_id() == new.node_id()), &new)? {
+    // The identity (`node_id`) leaves out `supersedes_id`: the engine fills it
+    // from the head when the writer leaves it absent (R802.4), so a repeat of
+    // the same lesson compares against the stored record with that pointer.
+    let existing = lessons.iter().find(|l| l.node_id() == new.node_id());
+    let mut candidate = new.clone();
+    if candidate.supersedes_id.is_none() {
+        candidate.supersedes_id = existing.and_then(|l| l.supersedes_id.clone());
+    }
+    if replayed_or_immutable(existing, &candidate)? {
         return Ok(());
     }
     let head = lessons

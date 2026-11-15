@@ -67,8 +67,12 @@ def _write(record_digest: str, adopted_ref: str, agent_ref: str, trace: str) -> 
     }
 
 
-async def _journey(writes: list[dict]) -> tuple[list[dict], list[dict], dict]:
-    """Adopt and list as the deployment tenant; a foreign tenant is refused."""
+async def _journey(writes: list[dict]) -> tuple[list[str], list[dict], list[dict], dict]:
+    """Adopt and list as the deployment tenant; a foreign tenant is refused.
+
+    The deployment tenant is shared by the session's served tests, so the rows
+    it already holds are read first and returned beside the new ones.
+    """
     socket_path = os.environ["GRAPH_SERVICE_SOCKET"]
     owner = await MedullaClient.connect(
         socket_path=socket_path, verified_context=request_context()
@@ -80,6 +84,7 @@ async def _journey(writes: list[dict]) -> tuple[list[dict], list[dict], dict]:
     try:
         mine = dc.DecisionClient(client=owner)
         theirs = dc.DecisionClient(client=stranger)
+        before = [row["id"] for row in (await mine.revision_proposal_list())["rows"]]
         stored = [
             await mine.log(dc.harness_adoption_op(TEST_TENANT, **write))
             for write in writes
@@ -97,7 +102,7 @@ async def _journey(writes: list[dict]) -> tuple[list[dict], list[dict], dict]:
             await mine.revision_proposal_list(cursor=BAD_CURSOR)
         with pytest.raises(EngineResponseError, match="AUTH_TENANT_MISMATCH"):
             await theirs.revision_proposal_list()
-        return stored, pages, everything
+        return before, stored, pages, everything
     finally:
         await owner.close()
         await stranger.close()
@@ -175,26 +180,26 @@ def test_list_is_tenant_scoped_and_paged(clean_graph):
         _write(record["record_digest"], improving_ref, agent, improving_trace)
         for agent, record in records
     ]
-    stored, pages, everything = asyncio.run(_journey(writes))
+    before, stored, pages, everything = asyncio.run(_journey(writes))
     adopted = [
         HarnessAdoptionStored.model_validate(item).adopted_harness_ref
         for item in stored
     ]
 
-    # Limit 1 pages the two rows one at a time, in creation order, and the last
-    # page carries no cursor.
+    # Limit 1 pages every row one at a time, in creation order: the rows the
+    # tenant held before, then the two new ones; the last page carries no cursor.
     parsed = [RevisionProposalPage.model_validate(page) for page in pages]
-    assert [len(page.rows) for page in parsed] == [1, 1]
-    assert parsed[0].next_cursor is not None
-    assert parsed[1].next_cursor is None
+    assert [len(page.rows) for page in parsed] == [1] * (len(before) + 2)
+    assert all(page.next_cursor is not None for page in parsed[:-1])
+    assert parsed[-1].next_cursor is None
     paged_ids = [row.id for page in parsed for row in page.rows]
-    assert paged_ids == adopted
+    assert paged_ids == before + adopted
 
     # The unpaged list is the same rows; each is the evaluated revision of the
     # agent's harness bundle with its evaluation receipt.
     full = RevisionProposalPage.model_validate(everything)
-    assert [row.id for row in full.rows] == adopted
-    for row, (_, record) in zip(full.rows, records, strict=True):
+    assert [row.id for row in full.rows] == before + adopted
+    for row, (_, record) in zip(full.rows[len(before) :], records, strict=True):
         assert row.stage == "evaluated"
         assert row.subject_kind == "definition"
         assert row.subject_ref.endswith(f":{TASK_CLASS}")
