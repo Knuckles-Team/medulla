@@ -49,6 +49,7 @@ FIXTURE = (
     / "core_metadata.json"
 )
 FIXTURE_SHA256 = "58b059a142a0f55278171e8b51c8d89fad4dbf656a97afa8d13b0d2d65be8bfc"
+PROJECTION_WAIT_SECONDS = 240
 
 
 def load_fixture() -> dict[str, Any]:
@@ -239,7 +240,11 @@ def violation_codes(result: dict[str, Any]) -> set[str]:
 
 async def attach_pack(client: MedullaClient, connector: str) -> str:
     """Attach the connector's visible pack head; returns the composed digest."""
-    deadline = time.monotonic() + 60
+    # R009 gates visibility on projection and sets no latency bound. One worker
+    # projects heads in order and each projection re-reasons the core corpus
+    # (about 15 s on a build host), so under the full suite a head can queue
+    # behind several others. The budget covers that queue.
+    deadline = time.monotonic() + PROJECTION_WAIT_SECONDS
     while True:
         try:
             committed = await reasoning.send_graph_schema(
