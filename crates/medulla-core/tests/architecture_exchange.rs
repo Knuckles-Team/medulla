@@ -237,12 +237,23 @@ fn write_then_read_keeps_digest() {
     assert_eq!(back.views.len(), 1);
     // Identifiers survive; the canonical content of elements, relationships and
     // the view is the same after a write and a read.
+    // The writer emits elements in identifier order (MEDULLA-CQ-ORCH-R705.5), so the
+    // re-read document lists them sorted by identifier, whatever the source order was.
     let ids = |d: &medulla_types::archimate_exchange::ArchimateExchange| {
-        d.elements
+        let mut ids = d
+            .elements
             .iter()
             .map(|e| (e.identifier.clone(), e.element_type.clone(), e.name.clone()))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        ids.sort();
+        ids
     };
+    let written: Vec<_> = back
+        .elements
+        .iter()
+        .map(|e| (e.identifier.clone(), e.element_type.clone(), e.name.clone()))
+        .collect();
+    assert_eq!(written, ids(&doc), "written in identifier order");
     assert_eq!(ids(&back), ids(&doc));
     assert_eq!(back.views, doc.views);
     // Writing the re-read document into an empty graph and exporting again is stable.
