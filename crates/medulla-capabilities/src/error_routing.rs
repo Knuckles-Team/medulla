@@ -1240,6 +1240,14 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
         ));
         codes.extend(HARNESS_RECORD_ADMISSION_ERRORS.iter().copied());
     }
+    // MEDULLA-DECISION-ENGINE-R803.8: DecisionLog's improvement-library ops (harness
+    // adoption, lessons) refuse with the same closed harness vocabulary codes.
+    if d.id.as_str() == "DecisionLog" {
+        codes.extend(typed_codes(
+            HarnessVocabularyErrorCode::ALL,
+            HarnessVocabularyErrorCode::as_str,
+        ));
+    }
     if d.domain == "security" {
         codes.insert("POLICY_NATIVE_AUTHORITY_REQUIRED");
     }
