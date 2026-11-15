@@ -275,9 +275,6 @@ pub const ENTITY_PAIR_SELF: RefusalCode = RefusalCode::new("ENTITY_PAIR_SELF");
 /// the spelling is `ApprovalRefusal::ApproverRequired.code()`.
 pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_MISSING");
 
-/// An entity link approval names no approver
-/// (MEDULLA-UNIFIED-DATA-PLANE-R030.701; `ApprovalRefusal::ApproverRequired`).
-pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_MISSING");
 /// Every `resolve_entity` family code, in declaration order.
 pub const RESOLVE_ENTITY: &[RefusalCode] =
     &[ENTITY_PAIR_INVALID, ENTITY_PAIR_SELF, LINK_APPROVER_MISSING];
