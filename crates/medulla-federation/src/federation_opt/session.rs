@@ -254,7 +254,7 @@ fn collect_search_texts(ops: &[Op], out: &mut Vec<(Op, String)>) {
         for branch in branches {
             collect_search_texts(branch, out);
         }
-        let text = branches.iter().flatten().find_map(|inner| match inner {
+        let text: Option<String> = branches.iter().flatten().find_map(|inner| match inner {
             #[cfg(feature = "text")]
             Op::RankText { query } => Some(query.clone()),
             _ => None,
