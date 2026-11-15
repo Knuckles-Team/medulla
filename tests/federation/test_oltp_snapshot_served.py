@@ -73,7 +73,9 @@ def test_fragments_share_one_snapshot(clean_graph, pg_source):
     assert sorted(row["v"] for row in rows) == oracle
     assert pg_source.execute("SELECT count(*) FROM snap_base") == "4"
     # The engine stores zero source rows.
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+    # Served SPARQL also merges visible pack graphs (MEDULLA-MEDIA-VOCAB-R655);
+    # only this graph's own nodes count.
+    assert clean_graph.nodes.ids() == []
 
 
 def scan(name: str) -> dict[str, object]:

@@ -236,9 +236,11 @@ fn admit_metadata_write(
     else {
         return Ok(method);
     };
+    // Only gateway-routed node writes reach this function; a staged
+    // transaction node write is admitted when its commit compiles.
     if !matches!(
         method,
-        Method::AddNode { .. } | Method::CreateNodeIfAbsent { .. } | Method::TxnAddNode { .. }
+        Method::AddNode { .. } | Method::CreateNodeIfAbsent { .. }
     ) {
         return Ok(method);
     }

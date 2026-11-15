@@ -33,12 +33,11 @@ from _commons_generation import (
     restartable_engine,
     vector,
 )
-from _decision_resident_fixture import publication
+from _decision_resident_fixture import DIGEST, publication
 from conftest import TEST_TENANT
 from ontology_pack_support import attach_pack, import_entries, ontology_entry
 
 from medulla import decision_client as dc
-from medulla import decision_stat as ds
 
 ONT = "https://knuckles-team.github.io/ontology/"
 Q32_ONE = 1 << 32
@@ -67,9 +66,11 @@ async def _publish(
     """One Agent Library component with declared capabilities and policy tags."""
     draft = publication(component_id, "feature_schema", _EMPTY_BODY)
     component = draft["op"]["request"]["component"]
-    for key in ds.body_attributes_for_publish(_EMPTY_BODY):
-        component.pop(key, None)
+    # Not a feature schema: no schema attributes, and a neutral content digest
+    # (the draft always pins its bytes, so the digest stays).
     component.update(
+        content_digest=DIGEST,
+        attributes={},
         kind=kind,
         summary=f"{kind} {component_id}",
         declared_capabilities=capabilities,

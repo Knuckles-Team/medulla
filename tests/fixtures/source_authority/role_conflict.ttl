@@ -35,4 +35,4 @@ ex:incident-hist a vg:SourceAuthority ; vg:authoritativeSource ex:hist ;
     vg:authorityRank 1 ; vg:authorityContract "mcp" .
 ex:incident-live a vg:SourceAuthority ; vg:authoritativeSource ex:live ;
     vg:authorityFor kg:Incident ; vg:authorityMapping ex:live-incidents ;
-    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .

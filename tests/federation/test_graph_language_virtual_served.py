@@ -123,5 +123,7 @@ def test_cypher_matches_sparql_over_sql_source(clean_graph, pg_source):
     )
     assert cypher == sparql == ["Ann", "Bob", "Cy"]
     # The engine stores zero source rows: nothing was copied for either language.
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+    # Served SPARQL also merges visible pack graphs (MEDULLA-MEDIA-VOCAB-R655);
+    # only this graph's own nodes count.
+    assert clean_graph.nodes.ids() == []
     assert clean_graph.query.cypher_read("MATCH (n) RETURN n") == []

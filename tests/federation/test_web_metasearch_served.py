@@ -95,7 +95,9 @@ def test_pattern_pushes_to_connector_with_ttl_cache(
     clean_graph.query.unified(web_plan("web-ttl"))
     assert web_gateway.row_calls - before == 2, "one more call after the TTL"
     # The engine copies no result into the graph store.
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+    # Served SPARQL also merges visible pack graphs (MEDULLA-MEDIA-VOCAB-R655);
+    # only this graph's own nodes count.
+    assert clean_graph.nodes.ids() == []
     assert clean_graph.query.unified([{"Scan": {"label": "Doc"}}]) == []
 
 
@@ -121,4 +123,6 @@ def test_candidates_not_stored(clean_graph, web_gateway: WebGateway):
     rows = clean_graph.query.unified(web_plan("web-cand", "candidates"))
     assert set(URLS) <= {row["id"] for row in rows}
     # Results are fetch candidates: no node or triple holds a result URL afterwards.
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+    # Served SPARQL also merges visible pack graphs (MEDULLA-MEDIA-VOCAB-R655);
+    # only this graph's own nodes count.
+    assert clean_graph.nodes.ids() == []

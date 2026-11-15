@@ -30,8 +30,15 @@ def _canon(value: str) -> str:
 
 
 def _triples(client) -> set[tuple[str, str, str]]:
-    """The connection graph's triples as a set of canonical (s, p, o) row values."""
-    rows = client.rdf.sparql("SELECT ?s ?p ?o WHERE { ?s ?p ?o }")
+    """The test's triples (subjects ex:a and ex:c) as canonical (s, p, o) values.
+
+    Served SPARQL also merges every visible pack graph of the tenant into the
+    default graph (MEDULLA-MEDIA-VOCAB-R655), so the read names the subjects
+    this test writes instead of listing every triple.
+    """
+    rows = client.rdf.sparql(
+        "SELECT ?s ?p ?o WHERE { VALUES ?s { <http://ex/a> <http://ex/c> } ?s ?p ?o }"
+    )
     return {(_canon(row["s"]), _canon(row["p"]), _canon(row["o"])) for row in rows}
 
 
@@ -76,4 +83,4 @@ def test_graph_store_verbs(clean_graph):
     # DELETE — drop: the graph's content is gone, and a served read agrees.
     _update(clean_graph, "CLEAR DEFAULT")
     assert _triples(clean_graph) == set()
-    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+    assert clean_graph.nodes.ids() == []

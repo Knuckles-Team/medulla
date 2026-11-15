@@ -48,7 +48,7 @@ from medulla import (
     ConnectorPackClient,
     ConnectorPackEntryContent,
 )
-from medulla.client import MedullaClient, SyncMedullaClient
+from medulla.client import EngineResponseError, MedullaClient, SyncMedullaClient
 from medulla.connector_pack import connector_pack_import_key
 from medulla.generated.connector_pack import (
     PackAnnotations,
@@ -557,6 +557,25 @@ ACCELERATED = (
 )
 
 
+@pytest.fixture
+def _detach_materialisation(clean_graph: SyncMedullaClient) -> Any:
+    """Detach the materialisation schema source after the test.
+
+    Its rank-1 `kg:Incident` authority row would otherwise stay attached and tie
+    with the authority rows of every later source-coverage test of the run.
+    """
+    yield
+    try:
+        clean_graph._send(
+            "GraphSchema",
+            {"op": {"op": "detach", "source_id": "admin:r067-6"}},
+            None,
+            idempotency_key=f"r067-6-detach-{datetime.now(timezone.utc).isoformat()}",
+        )
+    except EngineResponseError:
+        pass  # the test never attached the source
+
+
 def _attach_materialisation(client: SyncMedullaClient, document: str) -> None:
     client._send(
         "GraphSchema",
@@ -654,7 +673,7 @@ def _materialisation_journey(
 
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.6")
-def test_6_materialisation(clean_graph, pg_source) -> None:
+def test_6_materialisation(clean_graph, pg_source, _detach_materialisation) -> None:
     """A source is virtual unless its row declares an accelerated, bounded cache."""
     # Without the statement the source is virtual: a change at the source shows at once.
     first, second = _materialisation_journey(clean_graph, pg_source, "")
