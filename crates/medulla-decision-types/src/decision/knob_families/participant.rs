@@ -56,7 +56,6 @@ pub const KNOBS: &[KnobSpec] = &[
 
 #[cfg(test)]
 mod tests {
-    use crate::decision::knob_families::REGISTRY;
     use crate::decision::knobs::KnobSafety;
 
     /// Verifies MEDULLA-DECISION-ENGINE-R179.8: Participant memory knobs.
@@ -64,13 +63,31 @@ mod tests {
     #[test]
     fn knob_defaults_are_inside_bounds() {
         let mut names = std::collections::BTreeSet::new();
-        for spec in REGISTRY.iter().flat_map(|family| family.iter()) {
+        // The participant memory tables of R179.8 (memory, participant,
+        // profile) and the topology caps; the full REGISTRY holds other
+        // families' Fixed knobs, which R179.8 does not govern.
+        let tables: [&[crate::decision::knobs::KnobSpec]; 4] = [
+            super::super::memory::KNOBS,
+            super::KNOBS,
+            super::super::profile::KNOBS,
+            super::super::topology::KNOBS,
+        ];
+        for spec in tables.iter().flat_map(|family| family.iter()) {
             assert!(spec.admits(&spec.default), "{} default", spec.name);
             assert!(spec.admits(&spec.min) && spec.admits(&spec.max));
-            assert_eq!(spec.safety, KnobSafety::Tunable, "{}", spec.name);
+            // R179.8: each entry is Tunable unless stated; R154.1 states the
+            // two memory admission bounds Fixed.
+            let fixed = matches!(spec.name, "memory.entry_max_bytes" | "memory.tenant_max_bytes");
+            let expected = if fixed {
+                KnobSafety::Fixed
+            } else {
+                KnobSafety::Tunable
+            };
+            assert_eq!(spec.safety, expected, "{}", spec.name);
             assert!(names.insert(spec.name), "{} repeats", spec.name);
         }
-        assert_eq!(names.len(), 16);
+        // 6 memory (4 of R179.8, 2 of R154.1), 6 participant, 2 profile, 3 topology.
+        assert_eq!(names.len(), 17);
         for prefix in ["memory.", "participant.", "profile.", "topology."] {
             assert!(names.iter().any(|n| n.starts_with(prefix)));
         }

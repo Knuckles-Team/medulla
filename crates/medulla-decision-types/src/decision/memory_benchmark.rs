@@ -62,9 +62,11 @@ pub const MEMORY_COVERAGE_INCOMPLETE: RefusalCode = RefusalCode::new("MEMORY_COV
 /// Refusal code: a run was measured on another snapshot than the request names.
 pub const MEMORY_SNAPSHOT_MISMATCH: RefusalCode = RefusalCode::new("MEMORY_SNAPSHOT_MISMATCH");
 /// Refusal code: `k` is zero or above `memory_change.max_k`, or a knob is not a ratio.
-pub const MEMORY_METRIC_UNRESOLVED: RefusalCode = RefusalCode::new("MEMORY_METRIC_UNRESOLVED");
+/// Owned and registered by `memory_rewrite`; one code, declared once.
+pub const MEMORY_METRIC_UNRESOLVED: RefusalCode = super::memory_rewrite::MEMORY_METRIC_UNRESOLVED;
 /// Refusal code: the candidate revision is not newer than the baseline revision.
-pub const MEMORY_REVISION_STALE: RefusalCode = RefusalCode::new("MEMORY_REVISION_STALE");
+/// Owned and registered by `memory_rewrite`; one code, declared once.
+pub const MEMORY_REVISION_STALE: RefusalCode = super::memory_rewrite::MEMORY_REVISION_STALE;
 
 /// Reason code: the candidate recall is below `memory_change.min_recall`.
 pub const RECALL_BELOW_MIN: RefusalCode = RefusalCode::new("RECALL_BELOW_MIN");
@@ -80,8 +82,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEMORY_EXPECTED_MISSING,
     MEMORY_COVERAGE_INCOMPLETE,
     MEMORY_SNAPSHOT_MISMATCH,
-    MEMORY_METRIC_UNRESOLVED,
-    MEMORY_REVISION_STALE,
+    // MEMORY_METRIC_UNRESOLVED and MEMORY_REVISION_STALE: registered by memory_rewrite.
     RECALL_BELOW_MIN,
     ACCURACY_BELOW_MIN,
     REGRESSION_ABOVE_MAX,

@@ -81,5 +81,28 @@ closed_error_codes! {
         CommitAlreadyDecided => "COMMIT_ALREADY_DECIDED",
         /// MEDULLA-DECISION-ENGINE-R036.105: the engine has no durable backend to hold a decision.
         DecisionCoordinatorUnavailable => "DECISION_COORDINATOR_UNAVAILABLE",
+        // The assembly refusals folded under `RefusalOrigin::ASSEMBLE`
+        // (`codes::FOLDED`, MEDULLA-DECISION-ENGINE-R010.100.2): each is a
+        // registered wire code.
+        /// A typed edge whose producer output schema is not the consumer input schema.
+        PrimitiveEdgeMismatch => "PRIMITIVE_EDGE_MISMATCH",
+        /// A replacement of another primitive kind.
+        PrimitiveKindMismatch => "PRIMITIVE_KIND_MISMATCH",
+        /// A replacement that changes the input or output schema digest.
+        PrimitiveSchemaChanged => "PRIMITIVE_SCHEMA_CHANGED",
+        /// A replacement that drops a capability the old primitive had.
+        PrimitiveCapabilityLost => "PRIMITIVE_CAPABILITY_LOST",
+        /// A replacement with an effect the old primitive did not have.
+        PrimitiveEffectWidened => "PRIMITIVE_EFFECT_WIDENED",
+        /// A primitive graph with more edges than `primitive.max_edges` admits.
+        PrimitiveGraphTooLarge => "PRIMITIVE_GRAPH_TOO_LARGE",
+        /// A coding agent offered without a discovery receipt.
+        DiscoveryReceiptMissing => "DISCOVERY_RECEIPT_MISSING",
+        /// A discovery receipt older than `coding_agent.max_receipt_age`.
+        DiscoveryReceiptStale => "DISCOVERY_RECEIPT_STALE",
+        /// Adjacent skill transformations whose output and input schemas differ.
+        TransformationSchemaMismatch => "TRANSFORMATION_SCHEMA_MISMATCH",
+        /// The last skill does not produce the artifact contract the plan binds.
+        ArtifactDigestChanged => "ARTIFACT_DIGEST_CHANGED",
     }
 }

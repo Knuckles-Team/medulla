@@ -511,7 +511,6 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (QuestionKind::RuntimeQuota, super::run_governance::REFUSALS),
     (QuestionKind::TaskPlan, super::task_plan::TASK_PLAN_REFUSALS),
-    (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
     (QuestionKind::ToolRelevance, super::tool_relevance::REFUSALS),
     (
         QuestionKind::InsightSelection,
@@ -525,10 +524,6 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (
         QuestionKind::DelegationAdmission,
         super::delegation::REFUSALS,
-    ),
-    (
-        QuestionKind::ComparativeAnalysisPlan,
-        super::comparative_analysis::REFUSALS,
     ),
     (
         QuestionKind::CapabilityDesignation,

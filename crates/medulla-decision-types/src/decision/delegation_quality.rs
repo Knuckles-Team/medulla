@@ -217,8 +217,9 @@ pub const DELEGATION_WINDOW_UNSTABLE: RefusalCode = RefusalCode::new("DELEGATION
 pub const DELEGATION_THRESHOLD_UNDEFINED: RefusalCode =
     RefusalCode::new("DELEGATION_THRESHOLD_UNDEFINED");
 /// Refusal code: fewer observations in the window than the minimum.
+/// Owned and registered by the `delegation` family table; one code, declared once.
 pub const DELEGATION_INSUFFICIENT_SAMPLES: RefusalCode =
-    RefusalCode::new("DELEGATION_INSUFFICIENT_SAMPLES");
+    crate::decision::delegation::DELEGATION_INSUFFICIENT_SAMPLES;
 
 /// The delegation quality refusals, registered with the decision refusal
 /// registry (`codes::module_tables`); each is also a `StatisticalErrorCode`.
@@ -226,7 +227,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     DELEGATION_WINDOW_STALE,
     DELEGATION_WINDOW_UNSTABLE,
     DELEGATION_THRESHOLD_UNDEFINED,
-    DELEGATION_INSUFFICIENT_SAMPLES,
+    // DELEGATION_INSUFFICIENT_SAMPLES is registered by the delegation family.
 ];
 
 /// The quality metrics a threshold may name: the closed set of measures a
