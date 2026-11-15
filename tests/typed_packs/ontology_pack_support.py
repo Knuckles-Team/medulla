@@ -49,7 +49,8 @@ FIXTURE = (
     / "core_metadata.json"
 )
 FIXTURE_SHA256 = "58b059a142a0f55278171e8b51c8d89fad4dbf656a97afa8d13b0d2d65be8bfc"
-PROJECTION_WAIT_SECONDS = 600   # under the per-test timeout (900 s); a rejected projection still fails at once
+# Under the per-test timeout (900 s); a rejected projection still fails at once.
+PROJECTION_WAIT_SECONDS = 600
 
 
 def load_fixture() -> dict[str, Any]:
