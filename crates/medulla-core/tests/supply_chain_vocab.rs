@@ -1711,7 +1711,20 @@ fn impact_query_is_class_only_and_parses() {
         .map(|line| line.split_once('#').map_or(line, |(code, _)| code))
         .collect::<Vec<_>>()
         .join("\n");
-    let lower = query_only.to_lowercase();
+    // The PREFIX IRIs sit under the one organization ontology base, whose host
+    // is not a source; the source-name scan covers every name outside an IRI.
+    let outside_iris: String = query_only
+        .split('<')
+        .enumerate()
+        .map(|(i, part)| match i {
+            0 => part,
+            // The comment strip above cuts a `...#>` IRI at its `#`, so an IRI
+            // may end at the line end instead of at `>`.
+            _ => part.find(['>', '\n']).map_or("", |end| &part[end + 1..]),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let lower = outside_iris.to_lowercase();
     for name in [
         "erpnext",
         "dockerhub",
