@@ -102,7 +102,7 @@ def test_live_truth_wins_conflict() -> None:
         )
     _attach(CONFLICT)
     verdict = next(v for v in _coverage(owner)["verdicts"] if v["class"] == INCIDENT)
-    assert verdict["verdict"] == "covered", verdict
+    assert verdict["verdict"] == "covered", verdict.get("premises")
     assert verdict["source"] == "live-incidents-mcp"
     assert "history-incidents-mcp" in verdict["alternates"]
     assert any("Role" in premise for premise in verdict["premises"])
