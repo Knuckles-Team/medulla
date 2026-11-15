@@ -1011,7 +1011,10 @@ ex:parent a owl:AsymmetricProperty .
         // so +19 here.
         // +88: the identity metadata vocabulary (MEDULLA-IDENTITY-R023.8); of its
         // 91 triples the 3 module-header metadata triples are not semantic axioms.
-        assert_eq!(semantic_axioms, 20_693);
+        // +1715 (measured, 20_693 -> 22_408): the semantic axioms of the 2026-11-13
+        // train's vocabulary rows (see the total pin); the total grows less because
+        // module-header triples fell.
+        assert_eq!(semantic_axioms, 22_408);
 
         let count_type = |object: &str| {
             composed
@@ -1101,7 +1104,9 @@ ex:parent a owl:AsymmetricProperty .
             // +1: placement:Target's kg:DomainEntity edge (MEDULLA-PLACEMENT-R001.5).
             // +3: the three identity metadata classes' kg:DomainEntity edges
             // (MEDULLA-IDENTITY-R023.8).
-            1067
+            // +117 (measured, 1067 -> 1184): the named subclass axioms of the
+            // 2026-11-13 train's vocabulary rows.
+            1184
         );
     }
 
