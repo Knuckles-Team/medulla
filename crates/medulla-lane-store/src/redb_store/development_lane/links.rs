@@ -286,7 +286,7 @@ pub fn validate_lane_links_in_wtx(
 /// from the image, so its verdict is the same as a full-image walk. A graph
 /// with no linked hold (almost every graph) costs one empty range read. The
 /// full walk this replaces unsealed every node on every commit and made each
-/// write O(graph size): 73 ms of a 107 ms p50 write at 100k nodes on R710.
+/// write O(graph size): 73 ms of a 107 ms p50 write at 100k nodes on a build host.
 pub fn validate_current_lane_links_in_wtx(
     write: &ShardWrite<'_>,
     graph: &str,
