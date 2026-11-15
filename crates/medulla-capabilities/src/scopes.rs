@@ -138,6 +138,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("contract:read", User, "engine"),
     entry("decide:commit", ServiceOnly, "graph-os"),
     entry("distcompute:read", User, "engine"),
+    // Catalog-admin (typed-packs research, MEDULLA-DECISION-ENGINE-R097.700), as catalog:data-product.
+    entry("domain:pack", Domain, "engine"),
     entry("edge:read", User, "engine"),
     entry("edge:write", User, "engine"),
     entry("explain:read", User, "engine"),
