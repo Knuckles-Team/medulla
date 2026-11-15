@@ -262,6 +262,10 @@ pub async fn route_repository_index(
     let source_budget = pending_source_budget(pending.as_ref());
     #[cfg(not(all(feature = "ast", feature = "redb")))]
     let outbox = vec![follow_on];
+    // The engine lowers this envelope, so its graph version is read under the
+    // graph write lock: a commit landing between the read and the apply (the
+    // previous batch's follow-on enrichment) must not refuse this batch.
+    let held = crate::dispatch::change_envelope::lock_graph_for_lowering(ctx.graph_name).await;
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
     let envelope = match medulla_h_ingest::repository_index::build_envelope_with_outbox(
         &commit_ctx,
@@ -274,12 +278,14 @@ pub async fn route_repository_index(
     #[cfg(all(feature = "ast", feature = "redb"))]
     let commit = crate::dispatch::change_envelope::apply_repository_change_envelope(
         ctx,
+        held,
         envelope,
         source_budget,
     )
     .await;
     #[cfg(not(all(feature = "ast", feature = "redb")))]
-    let commit = crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
+    let commit =
+        crate::dispatch::change_envelope::apply_lowered_change_envelope(ctx, held, envelope).await;
     medulla_h_ingest::repository_index::finish(result, commit)
 }
 

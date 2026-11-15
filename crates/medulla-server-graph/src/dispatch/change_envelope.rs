@@ -592,25 +592,59 @@ pub async fn apply_one_change_envelope(
 ) -> Response {
     #[cfg(feature = "redb")]
     {
-        apply_one_change_envelope_inner(ctx, envelope, None).await
+        apply_one_change_envelope_inner(ctx, None, envelope, None).await
     }
     #[cfg(not(feature = "redb"))]
     {
-        apply_one_change_envelope_inner(ctx, envelope).await
+        apply_one_change_envelope_inner(ctx, None, envelope).await
     }
 }
 
 #[cfg(feature = "redb")]
 pub async fn apply_repository_change_envelope(
     ctx: GraphOpRouting<'_>,
+    held: GraphWriteGuard,
     envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
 ) -> Response {
-    apply_one_change_envelope_inner(ctx, envelope, source_budget).await
+    apply_one_change_envelope_inner(ctx, Some(held), envelope, source_budget).await
+}
+
+/// The graph write lock an engine-lowered envelope is compiled under.
+///
+/// An engine-lowered envelope (a scoped `IndexRepository`) carries the graph
+/// version its route read. Reading that version before the write lock lets a
+/// concurrent commit (the batch's own follow-on enrichment, any other writer)
+/// advance the graph in between, and the envelope then meets a
+/// `WRITE_CONFLICT` the caller never chose and cannot correct. Its route takes
+/// this guard first, reads the version under it, and hands it to the apply.
+pub type GraphWriteGuard = tokio::sync::OwnedMutexGuard<()>;
+
+/// Take the write lock of `graph_name` for an engine-lowered envelope.
+pub async fn lock_graph_for_lowering(graph_name: &str) -> GraphWriteGuard {
+    medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await
+}
+
+/// Apply an engine-lowered envelope whose version was read under `held`.
+#[cfg(not(all(feature = "ast", feature = "redb")))]
+pub async fn apply_lowered_change_envelope(
+    ctx: GraphOpRouting<'_>,
+    held: GraphWriteGuard,
+    envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
+) -> Response {
+    #[cfg(feature = "redb")]
+    {
+        apply_one_change_envelope_inner(ctx, Some(held), envelope, None).await
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        apply_one_change_envelope_inner(ctx, Some(held), envelope).await
+    }
 }
 
 async fn apply_one_change_envelope_inner(
     ctx: GraphOpRouting<'_>,
+    held: Option<GraphWriteGuard>,
     envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     #[cfg(feature = "redb")] source_budget: Option<
         medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
@@ -653,7 +687,10 @@ async fn apply_one_change_envelope_inner(
         return resp;
     }
 
-    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
+    let _mutation_guard = match held {
+        Some(guard) => guard,
+        None => medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await,
+    };
     // MEDULLA-ORCH-VOCAB-R801.3: the harness-component writes of this envelope are
     // graph-relative (a supersession must name the CURRENT version, a
     // published version must not mutate), so they are verified under the
