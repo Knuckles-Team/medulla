@@ -19,6 +19,9 @@ pub(super) async fn graph_core(
     graph: &str,
     verified: &VerifiedRequestContext,
 ) -> Result<Arc<medulla_graph_core::graph::GraphCore>, String> {
+    // After a restart no graph is resident until a read asks for it; open a
+    // cold one before the registry lookup.
+    medulla_server_api::api::reentry::ensure_graph_resident(state, graph).await;
     let s = state.read().await;
     let entry = s
         .registry

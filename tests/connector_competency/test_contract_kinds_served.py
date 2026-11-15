@@ -558,22 +558,35 @@ ACCELERATED = (
 
 
 @pytest.fixture
-def _detach_materialisation(clean_graph: SyncMedullaClient) -> Any:
+def _detach_materialisation() -> Any:
     """Detach the materialisation schema source after the test.
 
     Its rank-1 `kg:Incident` authority row would otherwise stay attached and tie
-    with the authority rows of every later source-coverage test of the run.
+    with the authority rows of every later source-coverage test on the worker.
+    The detach speaks as the System identity on a fresh connection, like the
+    source-coverage tests' own cleanup, and a refusal fails the teardown.
     """
     yield
+    client = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    errors: list[EngineResponseError] = []
     try:
-        clean_graph._send(
-            "GraphSchema",
-            {"op": {"op": "detach", "source_id": "admin:r067-6"}},
-            None,
-            idempotency_key=f"r067-6-detach-{datetime.now(timezone.utc).isoformat()}",
-        )
-    except EngineResponseError:
-        pass  # the test never attached the source
+        for graph in (None, "__commons__"):
+            try:
+                client._send(
+                    "GraphSchema",
+                    {"op": {"op": "detach", "source_id": "admin:r067-6"}},
+                    graph,
+                    idempotency_key=f"r067-6-detach-{graph}-{os.urandom(8).hex()}",
+                )
+                return
+            except EngineResponseError as error:
+                errors.append(error)
+    finally:
+        client.close()
+    raise errors[0]
 
 
 def _attach_materialisation(client: SyncMedullaClient, document: str) -> None:
