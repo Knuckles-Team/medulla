@@ -91,7 +91,6 @@ def test_job_returns_bounded_tool_skill_agent_set() -> None:
                 # Tool-only packs carry no ontology or shapes body, so there is no
                 # schema to attach (ATTACH_PACK_SCHEMA_UNAVAILABLE); R176.6 imports
                 # them and asks, and the loop below waits for the feed.
-            connectors = {connector for connector, _ in packs}
 
             deadline = time.monotonic() + 240
             while True:
@@ -110,8 +109,9 @@ def test_job_returns_bounded_tool_skill_agent_set() -> None:
             assert 0 < len(tools) <= MAX_TOOLS, tools
             assert len(set(tools)) == len(tools), tools
             for tool in tools:
-                assert tool.startswith("mcp:"), tool
-                assert tool.split("/")[0].removeprefix("mcp:") in connectors, tool
+                # The candidates are every visible pack of the tenant
+                # (MEDULLA-MEDIA-VOCAB-R655), so another test's pack may rank.
+                assert tool.startswith("mcp:") and "/tool/" in tool, tool
             assert isinstance(answer["skills"], list), answer
             assert len(answer["agents"]) <= MAX_AGENTS, answer["agents"]
             facts = [premise["fact"] for premise in record["premises"]]

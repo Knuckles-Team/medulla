@@ -198,7 +198,7 @@ def test_designation_end_to_end(tmp_path: Path) -> None:
             await _publish(client, ids["tool_b"], "tool", [child], ["public"])
             await _publish(client, ids["tool_untagged"], "tool", [child], [])
             await _publish(client, ids["skill"], "skill", [other], ["public"])
-            await _publish(client, ids["agent"], "agent", [child], ["public"])
+            await _publish(client, ids["agent"], "a2a_agent_card", [child], ["public"])
 
             # Subsumption: requiring the superclass designates the tools that
             # declare the subclass; the policy tag filters the untagged one;

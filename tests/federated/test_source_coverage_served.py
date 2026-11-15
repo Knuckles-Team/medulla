@@ -126,7 +126,7 @@ def test_rank_one_wins_and_alternates_listed() -> None:
     _attach(1, 2)
 
     verdict = _incident(_coverage(owner, [INCIDENT]))
-    assert verdict["verdict"] == "covered"
+    assert verdict["verdict"] == "covered", verdict
     assert verdict["source"] == "servicenow-mcp"
     assert verdict["alternates"] == ["pagerduty-mcp"]
     assert verdict["premises"], "every verdict carries its premises"
@@ -157,7 +157,8 @@ def test_other_tenants_call_sees_no_verdict_from_these_sources() -> None:
     other = _client(_agent("b"))
     _register(owner, "servicenow-mcp", "pagerduty-mcp")
     _attach(1, 2)
-    assert _incident(_coverage(owner, [INCIDENT]))["verdict"] == "covered"
+    mine = _incident(_coverage(owner, [INCIDENT]))
+    assert mine["verdict"] == "covered", mine
     verdict = _incident(_coverage(other, [INCIDENT]))
     assert verdict["verdict"] != "covered"
 
@@ -170,8 +171,8 @@ def test_other_principals_source_is_unconnected() -> None:
     _attach(1, 2)
 
     verdict = _incident(_coverage(other, [INCIDENT]))
-    assert verdict["verdict"] == "abstained"
-    assert verdict["reason"] == "unconnected"
+    assert verdict["verdict"] == "abstained", verdict
+    assert verdict["reason"] == "unconnected", verdict
     reply = _coverage(other, [INCIDENT])
     assert not reply["audit"]["used"]
     assert {entry["reason"] for entry in reply["audit"]["not_used"]} == {"unconnected"}
