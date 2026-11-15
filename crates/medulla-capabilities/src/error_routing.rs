@@ -1318,8 +1318,13 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     }
     if id.starts_with("Decision") || id.starts_with("Decide") {
         // The decision plane's family and module refusal tables.
+        // The registry also holds the shared machine refusal; a decision method is
+        // not a machine method (MEDULLA-ORCH-VOCAB-R811.8), so only MACHINE_METHODS
+        // add TRANSITION_REFUSED.
         codes.extend(
-            medulla_decision_types::decision::codes::registered().map(|code| code.as_str()),
+            medulla_decision_types::decision::codes::registered()
+                .map(|code| code.as_str())
+                .filter(|code| *code != TRANSITION_REFUSED),
         );
         codes.extend(typed_codes(
             DecisionErrorCode::ALL,
