@@ -370,10 +370,14 @@ fn admit_premises_name_each_cap_and_the_plan_digest() {
         .iter()
         .map(|premise| premise.fact.as_str())
         .collect();
+    // The knob defaults (16/8/8) only tighten the topology policy and the request
+    // caps (8/2/4, tokens 500000 from the engine-default policy), so the premises
+    // name the tightest of the three, the caps the plan was actually held to.
     for expected in [
-        "topology_cap:max_width=16",
-        "topology_cap:max_depth=8",
-        "topology_cap:max_rounds=8",
+        "topology_cap:max_width=8",
+        "topology_cap:max_depth=2",
+        "topology_cap:max_rounds=4",
+        "topology_cap:max_tokens=500000",
     ] {
         assert!(facts.contains(&expected), "{expected} in {facts:?}");
     }

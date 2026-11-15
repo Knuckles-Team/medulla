@@ -663,7 +663,9 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
             task_plan: None,
         },
     };
-    let publish = |request| Method::PublishCurrentPlan { request };
+    let publish = |request| Method::PublishCurrentPlan {
+        request: Box::new(request),
+    };
     let _: CurrentPlanPublished = decode_raw(
         &test_support::dispatch(
             &state,
@@ -909,7 +911,9 @@ async fn current_plan_expired_replay(
             .unwrap(),
     )
     .unwrap();
-    let method = Method::PublishCurrentPlan { request: published };
+    let method = Method::PublishCurrentPlan {
+        request: Box::new(published),
+    };
     let replay: CurrentPlanPublished = decode_raw(
         &test_support::dispatch(state, signed_run_request(521, method.clone(), "plan-two")).await,
         "expired historical replay",

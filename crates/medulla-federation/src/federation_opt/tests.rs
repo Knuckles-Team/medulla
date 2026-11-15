@@ -1588,6 +1588,7 @@ mod web_metasearch {
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.3
+    #[cfg(feature = "text")]
     #[test]
     fn served_web_search_reaches_cache() {
         let _held = PORT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
