@@ -404,10 +404,13 @@ mod current_plan_identity_tests {
     #[test]
     fn publication_attachment_changes_content_not_retry_identity() {
         let plain = Method::PublishCurrentPlan {
-            request: medulla_decision_outcome_types::current_plan::sample_publish_request(),
+            request: Box::new(
+                medulla_decision_outcome_types::current_plan::sample_publish_request(),
+            ),
         };
         let attached = Method::PublishCurrentPlan {
-            request: medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request(
+            request: Box::new(
+                medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request(),
             ),
         };
         let identity = work_item_batch_identity("graph", "tenant", 1, &plain).unwrap();
@@ -427,7 +430,9 @@ mod current_plan_identity_tests {
             )
             .unwrap(),
         );
-        let changed = Method::PublishCurrentPlan { request: changed };
+        let changed = Method::PublishCurrentPlan {
+            request: Box::new(changed),
+        };
         assert_eq!(
             identity,
             work_item_batch_identity("graph", "tenant", 3, &changed).unwrap()
@@ -440,7 +445,7 @@ mod current_plan_identity_tests {
     fn publication_identity_separates_operation_revision_run_and_transport() {
         let request = medulla_decision_outcome_types::current_plan::sample_publish_request();
         let method = Method::PublishCurrentPlan {
-            request: request.clone(),
+            request: Box::new(request.clone()),
         };
         let first = work_item_batch_identity("graph", "tenant", 1, &method).unwrap();
         assert_eq!(
@@ -464,7 +469,9 @@ mod current_plan_identity_tests {
                 "graph",
                 "tenant",
                 2,
-                &Method::PublishCurrentPlan { request: changed }
+                &Method::PublishCurrentPlan {
+                    request: Box::new(changed),
+                }
             )
             .unwrap()
         );
@@ -478,7 +485,9 @@ mod current_plan_identity_tests {
                     "graph",
                     "tenant",
                     1,
-                    &Method::PublishCurrentPlan { request: other }
+                    &Method::PublishCurrentPlan {
+                        request: Box::new(other),
+                    }
                 )
                 .unwrap()
             );

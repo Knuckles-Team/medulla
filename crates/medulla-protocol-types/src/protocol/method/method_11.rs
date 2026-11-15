@@ -19,7 +19,7 @@ $($variants)*
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 
 
-    PublishCurrentPlan { request: medulla_decision_outcome_types::current_plan::PublishCurrentPlanRequest },
+    PublishCurrentPlan { request: Box<medulla_decision_outcome_types::current_plan::PublishCurrentPlanRequest> },
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },

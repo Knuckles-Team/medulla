@@ -180,7 +180,7 @@ async fn prepare_private_publication(
         Method::PublishCurrentPlan { mut request } => {
             request.idempotency_key = verified_publication_key(ctx, &request.tenant)?;
             request.validate()?;
-            prepare_current_plan(ctx, request).await
+            prepare_current_plan(ctx, *request).await
         }
         Method::PublishRunCheckpoint { mut request } => {
             request.idempotency_key = verified_publication_key(ctx, &request.tenant)?;
@@ -236,7 +236,9 @@ async fn prepare_current_plan(
         {
             return Err("ACCESS_DENIED: current-plan owner unavailable".into());
         }
-        Ok(Method::PublishCurrentPlan { request })
+        Ok(Method::PublishCurrentPlan {
+            request: Box::new(request),
+        })
     }
     #[cfg(not(feature = "redb"))]
     {
