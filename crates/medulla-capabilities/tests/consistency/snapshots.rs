@@ -5,6 +5,11 @@
 /// final unconditional `matches!(...)` tail). For every one of these, `requires_write`
 /// returns `true` no matter what the request's fields are.
 pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
+    // `requires_write_decision_surface` returns `Some(true)` for both: a belief
+    // revision commits its revised set, and Usage append / put_price both write
+    // (MEDULLA-DECISION-ENGINE-R801.8).
+    "BeliefRevise",
+    "Usage",
     "AddEdge",
     "AddEmbedding",
     "AddNode",
@@ -201,6 +206,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     // op's own `is_mutation()`, while the registry row carries the conservative
     // `mutates = true` upper bound.
     "Claims",
+    // `requires_write_decision_surface` delegates to `LoopOp::is_mutation()`.
+    "Loops",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",
