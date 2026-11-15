@@ -138,12 +138,15 @@ pub mod worker {
         let claimed = outcome.claims.len();
         let mut progressed = claimed > 0;
         let mut committed_graphs = 0usize;
-        for lease in outcome.claims {
+        let outcomes = project_claims(state, &store, &tenant, &outcome.claims).await;
+        // The stream is strictly ordered: leases resolve in claim order, after
+        // the projections (which ran concurrently across connectors) decided them.
+        for (lease, (reason, projected)) in outcome.claims.into_iter().zip(outcomes) {
             // MEDULLA-TYPED-PACKS-R096.2: one row's failure never ends the sweep;
             // the rows after it keep flowing.
-            match settle(state, &store, &tenant, lease).await {
-                Ok(true) => committed_graphs += 1,
-                Ok(false) => {}
+            match resolve(&store, &tenant, lease, reason).await {
+                Ok(()) if projected => committed_graphs += 1,
+                Ok(()) => {}
                 Err(error) => tracing::warn!(
                     code = "CONNECTOR_PACK_PROJECTION_SETTLE_FAILED",
                     %error,
@@ -211,21 +214,80 @@ pub mod worker {
         );
     }
 
-    /// Project one leased import's connector and resolve the lease: ack on
-    /// success, reject on a failed projection or an unreadable row. Returns
-    /// whether the projection's graph commit ran (the sweep's drain log counts
-    /// it — MEDULLA-DURABLE-KERNEL-R006.4).
-    async fn settle(
+    /// Decide every claimed row: one task per connector, so independent
+    /// connectors project concurrently while one connector's rows stay in
+    /// claim order. Each projection re-reasons the composed core corpus
+    /// (seconds of blocking-pool CPU), and one sweep claims up to
+    /// CLAIM_LIMIT rows: projected one after another, a burst of imports left
+    /// the last head dark for minutes. Returns the outcomes in claim order.
+    async fn project_claims(
         state: &Arc<RwLock<ServerState>>,
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
-        lease: MutationOutboxLease,
-    ) -> Result<bool, String> {
-        let (reason, projected) = match medulla_storage::decode_ledger_record::<PackImportRecord>(
-            &lease.record.intent.payload,
-        ) {
-            Err(_) => (Some(OutboxRejectReason::InvalidEvent), false),
-            Ok(record) => match project(state, store, tenant, &record.connector).await {
+        claims: &[MutationOutboxLease],
+    ) -> Vec<(Option<OutboxRejectReason>, bool)> {
+        let mut groups: Vec<(Option<String>, Vec<(usize, Option<PackImportRecord>)>)> = Vec::new();
+        for (index, lease) in claims.iter().enumerate() {
+            let record = medulla_storage::decode_ledger_record::<PackImportRecord>(
+                &lease.record.intent.payload,
+            )
+            .ok();
+            let key = record
+                .as_ref()
+                .map(|record| record.connector.as_str().to_string());
+            match groups
+                .iter_mut()
+                .find(|(group, _)| key.is_some() && *group == key)
+            {
+                Some((_, rows)) => rows.push((index, record)),
+                None => groups.push((key, vec![(index, record)])),
+            }
+        }
+        let mut tasks = tokio::task::JoinSet::new();
+        for (_, rows) in groups {
+            let (state, store, tenant) = (Arc::clone(state), Arc::clone(store), tenant.to_string());
+            tasks.spawn(async move {
+                let mut decided = Vec::with_capacity(rows.len());
+                for (index, record) in rows {
+                    decided.push((index, decide(&state, &store, &tenant, record).await));
+                }
+                decided
+            });
+        }
+        let mut outcomes = vec![(Some(OutboxRejectReason::ProjectionFailed), false); claims.len()];
+        while let Some(joined) = tasks.join_next().await {
+            match joined {
+                Ok(decided) => {
+                    for (index, outcome) in decided {
+                        outcomes[index] = outcome;
+                    }
+                }
+                // A panicked projection task: its rows keep the default
+                // outcome, rejected as a failed projection (dead-lettered and
+                // counted), so the ordered stream still moves past them.
+                Err(error) => tracing::warn!(
+                    code = "CONNECTOR_PACK_PROJECTION_TASK_FAILED",
+                    %error,
+                    "connector pack projection task failed"
+                ),
+            }
+        }
+        outcomes
+    }
+
+    /// Project one leased import's connector: no reason on success, a reject
+    /// reason on a non-retryable failure or an unreadable row, and whether the
+    /// projection's graph commit ran (the sweep's drain log counts it —
+    /// MEDULLA-DURABLE-KERNEL-R006.4).
+    async fn decide(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        record: Option<PackImportRecord>,
+    ) -> (Option<OutboxRejectReason>, bool) {
+        match record {
+            None => (Some(OutboxRejectReason::InvalidEvent), false),
+            Some(record) => match project(state, store, tenant, &record.connector).await {
                 Ok(projected) => (None, projected),
                 Err(error) => {
                     // MEDULLA-TYPED-PACKS-R096.2: the row is resolved either way so
@@ -263,9 +325,7 @@ pub mod worker {
                     (reason, false)
                 }
             },
-        };
-        resolve(store, tenant, lease, reason).await?;
-        Ok(projected)
+        }
     }
 
     async fn resolve(
