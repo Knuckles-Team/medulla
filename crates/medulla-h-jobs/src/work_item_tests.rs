@@ -36,6 +36,15 @@ async fn call(
     call_as(state, id, key, method, TENANT, &["*"]).await
 }
 
+/// A process-unique nonce suffix. Every state a test builds verifies against
+/// the one replay ledger the test harness shares, and a read consumes its
+/// nonce there: request ids repeat across these tests, so a nonce built from
+/// the id alone replays another test's read and is refused at authentication.
+fn next_nonce() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
 /// `call` for a caller of another tenant or with a narrower scope set.
 async fn call_as(
     state: &Arc<RwLock<ServerState>>,
@@ -54,7 +63,7 @@ async fn call_as(
             principal: ISSUER,
             tenant,
             scopes,
-            nonce: &format!("terminal-trace-nonce-{id}"),
+            nonce: &format!("terminal-trace-nonce-{id}-{}", next_nonce()),
             idempotency_key: key,
         },
     );
