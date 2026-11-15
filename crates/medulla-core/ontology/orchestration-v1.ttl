@@ -1099,10 +1099,7 @@
     rdfs:domain :SubCallSignature ;
     rdfs:range xsd:string .
 
-:revision a owl:DatatypeProperty ;
-    rdfs:label "signature revision" ;
-    rdfs:domain :SubCallSignature ;
-    rdfs:range xsd:integer .
+# :revision (the signature revision) is declared once in the harness module.
 
 :digest a owl:DatatypeProperty ;
     rdfs:label "signature digest" ;

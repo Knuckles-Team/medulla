@@ -121,7 +121,9 @@ fn the_canonical_bootstrap_matches_the_declared_shard_census() {
     // 60 -> 61: the private checkpoint table `work_item_run_checkpoints`.
     // 61 -> 63: the effect tables `work_item_effect_receipts` and
     // `work_item_admitted_requests` (MEDULLA-DURABLE-KERNEL-R820.1).
-    assert_eq!(declared.len(), 63);
+    // 63 -> 64: the coordinator-decision certificate table
+    // `xshard_decision_certificate` (MEDULLA-DECISION-ENGINE-R036.105.1).
+    assert_eq!(declared.len(), 64);
 
     for retired in [
         "mutation_batches",

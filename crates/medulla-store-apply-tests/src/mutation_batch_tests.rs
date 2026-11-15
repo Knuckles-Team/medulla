@@ -172,7 +172,7 @@ fn terminal_receipt_node(
         ReceiptNodeKind::RecursiveTraceNode => "recursive_trace_node",
     };
     let payload_ref = format!("cas:receipt:{node_id}");
-    let properties = serde_json::json!({
+    let mut properties = serde_json::json!({
         "node_id": node_id,
         "kind": kind_name,
         "delegation_id": bundle.delegation_id,
@@ -196,6 +196,19 @@ fn terminal_receipt_node(
         "model_digest": bundle.model_digest,
         "payload": {"fixture": true}
     });
+    // MEDULLA-DECISION-ENGINE-R133.8: a RunTrace receipt node carries the run's
+    // trace record, naming the bundle's run.
+    if kind == ReceiptNodeKind::RunTrace {
+        properties["run_trace"] = serde_json::json!({
+            "schema_version": 1,
+            "run_id": bundle.run_id,
+            "task_signature": "sig:terminal",
+            "model_id": "model:terminal",
+            "steps": [{"index": 0, "kind": "tool_call", "action_ref": "tool:fixture", "outcome": "ok"}],
+            "outcome": "succeeded",
+            "started_at_ms": 1
+        });
+    }
     let properties_msgpack = rmp_serde::to_vec_named(&properties).unwrap();
     ReceiptNode {
         node_id: node_id.to_string(),

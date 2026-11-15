@@ -337,8 +337,7 @@ Aligned to ArchiMate 3.2 layers.""" .
 
 :revision a owl:DatatypeProperty ;
     rdfs:label "revision" ;
-    rdfs:comment "The revision of a ConcentrationPolicy; edits judged under another revision make the question abstain." ;
-    rdfs:domain :ConcentrationPolicy ;
+    rdfs:comment "The revision of a versioned record: a ConcentrationPolicy (edits judged under another revision make the question abstain) or a SubCallSignature. Shared by both, so it names no domain." ;
     rdfs:range xsd:integer .
 
 :HarnessHook a owl:Class ;

@@ -902,7 +902,11 @@ ex:parent a owl:AsymmetricProperty .
         // events, four edges) in state-machines-v1.ttl.
         // +48 (MEDULLA-DECISION-ENGINE-R707.1): the FeatureLedger machine (three states, two
         // events, two edges) in state-machines-v1.ttl.
-        assert_eq!(composed.ontology.len(), 21_054);
+        // +1593 (measured composed delta, 21_054 -> 22_647): the vocabulary the rows of
+        // the 2026-11-13 train add (state-machines-v1.ttl machines, harness and
+        // orchestration decision vocabulary, virtual-graph and swarm-topology terms), with
+        // core:revision declared once (harness) instead of twice.
+        assert_eq!(composed.ontology.len(), 22_647);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
