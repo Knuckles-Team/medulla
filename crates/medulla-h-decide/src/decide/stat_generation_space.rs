@@ -73,11 +73,52 @@ pub(crate) async fn active_space(
     })
     .await
     .map_err(|error| format!("generation pointer read failed: {error}"))??;
+    // After a restart no graph is resident until a read asks for it, and a
+    // reopened graph carries no space declaration (it is held with the
+    // resident store only): open it cold and declare the space of the cycle
+    // that activated it again, so the active generation survives a restart.
+    // Only a catalog-known graph that is cold is opened: the feed resolves the
+    // space on every sweep, and a lazy open of a graph that does not exist (or
+    // is already resident) would run the open-and-evict path each time.
+    let cold = {
+        let guard = state.read().await;
+        guard.registry.exists(&graph) && !guard.registry.is_resident(&graph)
+    };
+    if cold {
+        medulla_server_api::api::reentry::ensure_graph_resident(state, &graph).await;
+    }
+    let (blocking_store, owned_tenant, owned_logical, owned_graph) = (
+        Arc::clone(store),
+        tenant.to_string(),
+        logical.to_string(),
+        graph.clone(),
+    );
+    let undeclared = state
+        .read()
+        .await
+        .registry
+        .get(&graph)
+        .is_some_and(|entry| entry.core.semantic_store.read().space().is_none());
+    let activated = if undeclared {
+        tokio::task::spawn_blocking(move || {
+            activated_space(&blocking_store, &owned_tenant, &owned_logical, &owned_graph)
+        })
+        .await
+        .map_err(|error| format!("generation cycle read failed: {error}"))??
+    } else {
+        None
+    };
     let guard = state.read().await;
     let entry = guard
         .registry
         .get(&graph)
         .ok_or_else(|| invalid(format!("the generation graph `{graph}` does not exist")))?;
+    if let Some(space) = activated {
+        let mut semantic = entry.core.semantic_store.write();
+        if semantic.space().is_none() {
+            semantic.declare_space(space)?;
+        }
+    }
     let store = entry.core.semantic_store.read();
     store
         .space()
@@ -91,6 +132,40 @@ pub(crate) async fn active_space(
             })
         })
         .transpose()
+}
+
+/// Most generation cycle jobs one tenant's resolution scans.
+const MAX_CYCLE_JOBS: usize = 4_096;
+
+/// The space of the activated cycle whose shadow graph is `graph`, the
+/// generation `logical` resolves to; `None` when no cycle activated it (the
+/// logical graph itself, or a space declared by hand).
+fn activated_space(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    logical: &str,
+    graph: &str,
+) -> Result<Option<EmbeddingSpaceRef>, String> {
+    use medulla_decision_types::decision::statistical::retrieval_generation::{
+        GenerationCycleJob, GenerationCycleState,
+    };
+    let jobs = store.decision_artifacts_with_prefix(
+        tenant,
+        &super::stat_generation_cycle::job_key(""),
+        MAX_CYCLE_JOBS,
+    )?;
+    for (_, bytes) in jobs {
+        let job: GenerationCycleJob =
+            medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "generation cycle")?;
+        let cycle = &job.cycle;
+        if cycle.state() == GenerationCycleState::Activated
+            && cycle.logical_graph == logical
+            && cycle.shadow_graph == graph
+        {
+            return model_space(&cycle.model_ref).map(Some);
+        }
+    }
+    Ok(None)
 }
 
 /// Serve `DecisionLog.generation_space`.

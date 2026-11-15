@@ -153,19 +153,35 @@ pub async fn sweep(
             })
             .await?;
         }
-        subscribed.store(true, Ordering::Release);
     }
     let index = shared_capability_index(&*state.read().await);
     let knobs = DesignationKnobs::from_policy(&DecisionPolicy::engine_default());
     let mut progressed = false;
+    // Read the generation BEFORE claiming. Without one no row can be applied,
+    // and a claimed row that defers keeps its lease for `feed_lease_ms`: every
+    // later row of its stream then fails to acknowledge (the order gap), so the
+    // whole stream would stall a full lease behind rows that were never
+    // applicable. Unclaimed rows wait and flow the moment a generation exists.
+    let generation = match active_generation(state, &store, tenant).await {
+        Ok(generation) => generation,
+        Err(error) => {
+            tracing::debug!(%error, "capability feed waits for an active embedding generation");
+            return Ok(false);
+        }
+    };
+    if !subscribed.load(Ordering::Acquire) {
+        // Once per process, before the streams resume: the subscription is
+        // idempotent, so a load that fails runs again on the next sweep.
+        hydrate(state, &store, tenant, embedder, &generation).await?;
+        subscribed.store(true, Ordering::Release);
+    }
+    let generation: Result<(String, u16), String> = Ok(generation);
     for consumer in [COMPONENT_CONSUMER, SURFACE_CONSUMER] {
         let claims = claim(&store, tenant, consumer, &knobs).await?;
         progressed |= !claims.is_empty();
         if claims.is_empty() {
             continue;
         }
-        // One generation read and one embed call per claimed batch.
-        let generation = active_generation(state, &store, tenant).await;
         for lease in claims {
             let outcome = match &generation {
                 Err(error) => Err(Settle::Retry(error.clone())),
@@ -198,10 +214,98 @@ pub async fn sweep(
                     .map_err(|error| format!("capability feed row task failed: {error}"))?
                 }
             };
+            let deferred = matches!(outcome, Err(Settle::Retry(_)));
             settle(&store, tenant, consumer, lease, outcome).await?;
+            if deferred {
+                // The rows after a deferred one cannot be acknowledged before
+                // it resolves; they are redelivered with it.
+                break;
+            }
         }
     }
     Ok(progressed)
+}
+
+/// Load every published tool and skill of `tenant` into the resident index
+/// once per process, before the feed resumes its streams.
+///
+/// The index lives in memory, while the consumer cursors are durable: after a
+/// restart the cursors are past every row already applied, so without this the
+/// index would stay empty until each component is republished. A record a
+/// later row carries at an older revision is never replaced (see [`upsert`]).
+/// The feed runs it only once a generation is active, and a load that fails
+/// runs again on the next sweep.
+async fn hydrate(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    store: &Arc<AgentLibraryStore>,
+    tenant: &str,
+    embedder: &Arc<dyn Reembedder>,
+    generation: &(String, u16),
+) -> Result<(), String> {
+    let knobs = DesignationKnobs::from_policy(&DecisionPolicy::engine_default());
+    let max_rows = knobs.max_records_per_shard;
+    let (blocking_store, owned_tenant) = (Arc::clone(store), tenant.to_string());
+    let components =
+        match medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+            blocking_store.component_heads_with_prefix(&owned_tenant, "", max_rows)
+        })
+        .await
+        {
+            Ok(components) => components,
+            Err(error) => {
+                // More components than one shard holds: the index could not
+                // hold them either; the streams still keep it current.
+                tracing::warn!(code = "CAPABILITY_FEED_HYDRATE_SKIPPED", %error, "capability feed did not load the published components");
+                return Ok(());
+            }
+        };
+    let published: Vec<(AgentComponentEntry, EntityKind)> = components
+        .into_iter()
+        .filter(|component| component.lifecycle == AgentLibraryLifecycle::Published)
+        .filter_map(|component| entity_kind(component.kind).map(|kind| (component, kind)))
+        .collect();
+    if published.is_empty() {
+        return Ok(());
+    }
+    let generation = generation.clone();
+    let index = shared_capability_index(&*state.read().await);
+    let embedder = Arc::clone(embedder);
+    tokio::task::spawn_blocking(move || {
+        let texts: Vec<String> = published
+            .iter()
+            .map(|(component, _)| embedding_text(component))
+            .collect();
+        let vectors = embedder.embed(&texts)?;
+        if vectors.len() != published.len() {
+            return Err("EMBEDDING_UNAVAILABLE: the embedder returned another number of vectors".to_string());
+        }
+        for ((component, kind), vector) in published.iter().zip(vectors) {
+            if vector.len() != usize::from(generation.1) {
+                return Err(format!(
+                    "EMBEDDING_UNAVAILABLE: the embedder returned {} dimensions; the active generation has {}",
+                    vector.len(),
+                    generation.1
+                ));
+            }
+            let record = match record_of(component, *kind, &generation) {
+                Ok(record) => record,
+                Err(Settle::Retry(error) | Settle::Reject(_, error)) => {
+                    tracing::warn!(code = "CAPABILITY_FEED_HYDRATE_SKIPPED", component = component.component_id.as_str(), %error, "capability feed skipped a component it cannot index");
+                    continue;
+                }
+            };
+            match upsert(&index, record, vector) {
+                Ok(()) => {}
+                Err(Settle::Retry(error)) => return Err(error),
+                Err(Settle::Reject(_, error)) => {
+                    tracing::warn!(code = "CAPABILITY_FEED_HYDRATE_SKIPPED", component = component.component_id.as_str(), %error, "capability feed skipped a component it cannot index");
+                }
+            }
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| format!("capability feed hydrate task failed: {error}"))?
 }
 
 /// How one leased row ends.
