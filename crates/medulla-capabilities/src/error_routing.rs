@@ -1330,6 +1330,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "ReleaseWorkItemResources",
     "ReleaseCapacity",
     "ResourceReservationStatus",
+    // `Method::AnalyticsJob` exists only with the `jobs` feature.
+    #[cfg(feature = "jobs")]
     "AnalyticsJob",
     "BrokerConsume",
     "BrokerAck",
@@ -1456,6 +1458,7 @@ mod tests {
             "CreateGraph",
             "SOURCE_BINDING_MISMATCH"
         ));
+        #[cfg(feature = "jobs")]
         assert!(method_allows_error("AnalyticsJob", "INVALID_CONFIGURATION"));
         assert!(method_allows_error(
             "MutationOutbox",
