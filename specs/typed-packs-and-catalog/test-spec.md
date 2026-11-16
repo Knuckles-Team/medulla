@@ -810,7 +810,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::record_round_trips_and_refuses_unknown_fields`
 - `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
-- `MEDULLA-TYPED-PACKS-R110.5`: `tests/open_metadata_sync_served.rs::sync_reads_terms_and_writes_catalog_nodes`
+- `MEDULLA-TYPED-PACKS-R110.5`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::sync_reads_terms_and_writes_catalog_nodes`
 - `MEDULLA-TYPED-PACKS-R110.6`: `tests/open_metadata_sync_served.rs::unmapped_types_are_listed_and_skipped`
 - `MEDULLA-TYPED-PACKS-R110.7`: `tests/open_metadata_sync_served.rs::nodes_keep_guid_version_and_source`
 - `MEDULLA-TYPED-PACKS-R110.8`: `tests/open_metadata_sync_served.rs::concurrent_term_edit_is_a_conflict_and_catalog_wins`

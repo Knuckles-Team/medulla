@@ -41,6 +41,8 @@ mod embedding_set;
 mod model_input_capabilities;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod ontology;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod open_metadata_sync;
 #[cfg(feature = "shacl")]
 mod outbox;
 #[cfg(all(feature = "owl", feature = "shacl"))]

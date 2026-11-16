@@ -20,9 +20,9 @@ pub const EXTERNAL_GUID_PROPERTY: &str =
 pub const EXTERNAL_VERSION_PROPERTY: &str =
     "https://knuckles-team.github.io/ontology/catalog#externalVersion";
 /// Edge property naming the first end (`cat:from`).
-const FROM_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#from";
+pub const FROM_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#from";
 /// Edge property naming the second end (`cat:to`).
-const TO_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#to";
+pub const TO_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#to";
 
 /// The open metadata type mapping: type name to catalog class IRI, read from
 /// the ontology's `cat:openMetadataType` annotations.

@@ -30,6 +30,9 @@ pub mod archimate_types;
 #[cfg(feature = "rdf")]
 pub mod mapping;
 
+#[cfg(feature = "rdf")]
+pub mod open_metadata_types;
+
 /// Served canonical hash of a Turtle payload (MEDULLA-TYPED-PACKS-R809).
 #[cfg(feature = "rdf")]
 pub mod ontology_hash;

@@ -84,7 +84,7 @@ mod outbound;
 
 pub use inbound::{
     inbound_mutations, OpenMetadataMutation, OpenMetadataTypeView, EXTERNAL_GUID_PROPERTY,
-    EXTERNAL_VERSION_PROPERTY,
+    EXTERNAL_VERSION_PROPERTY, FROM_PROPERTY, TO_PROPERTY,
 };
 pub use outbound::{outbound_record, OutboundNode};
 

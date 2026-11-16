@@ -318,7 +318,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T309 [US8] MEDULLA-TYPED-PACKS-R110.2 Open metadata record model
 - [ ] T310 [US8] MEDULLA-TYPED-PACKS-R110.3 Inbound open metadata mapping
 - [ ] T311 [US8] MEDULLA-TYPED-PACKS-R110.4 Outbound open metadata payload
-- [ ] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
+- [x] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
 - [ ] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata refusal
 - [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence
 - [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof

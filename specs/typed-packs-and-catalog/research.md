@@ -93,3 +93,9 @@ For a candidate that is fully resident, a class is in use when the graph's `type
 - The guard runs in `handle_add_triples` before the integrity check and before the write lands, so a refusal changes nothing (the write runs on a staged copy that a refused response discards). It applies to asset nodes the catalog mints (subject prefix `urn:medulla:asset:`); other subjects keep the existing integrity-policy path, which several served fixtures rely on.
 - A node declared without `cat:hasOwner` commits with `cat:flag "owner_missing"`, as `emit_asset` does. The stewardship report of R802.8 lists it.
 - `emit_asset` writes only family classes that are fixed constants under `cat:Asset`, so it cannot emit an orphan class. The Agent Library publish route that commits emitted nodes (R108.3) calls the same guard through its commit path.
+
+## Open metadata sync adapter placement (R110.5)
+
+**Decision.** `OpenMetadataSyncAdapter` lives in `crates/medulla-virtual-graph/src/open_metadata_sync.rs`, beside the `SyncAdapter` trait and `ArchitectureSyncAdapter`, not in `medulla-catalog-types`: the virtual-graph crate depends on the catalog types, so an adapter there would close a dependency cycle. The pure mapping stays in `medulla-catalog-types` (`inbound_mutations`, `outbound_record`); the type view is read once from the ontology annotations in `medulla-rdf`.
+
+**Why.** One adapter table, one trait, one place for adapters; the ontology stays the only source of the type mapping. A relationship becomes a node of its edge class because the sync batch writes nodes only. A classification or relationship type with no catalog class is left out of the digest and of the writes; R110.6 reports it.

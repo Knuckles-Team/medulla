@@ -272,7 +272,7 @@ type AdapterBuild =
 /// add theirs beside it. The first entry whose build answers `Some` serves the
 /// class.
 #[cfg(all(feature = "rdf", feature = "federation"))]
-const ADAPTERS: &[AdapterBuild] = &[architecture_adapter];
+const ADAPTERS: &[AdapterBuild] = &[architecture_adapter, open_metadata_adapter];
 
 #[cfg(all(feature = "rdf", feature = "federation"))]
 fn resolve_adapter(
@@ -309,6 +309,25 @@ fn architecture_adapter(
     Ok(Some(Box::new(
         medulla_virtual_graph::architecture_sync::ArchitectureSyncAdapter {
             model_id: model_id.to_string(),
+        },
+    )))
+}
+
+/// The open metadata adapter serves every catalog class annotated with an open
+/// metadata type (`cat:openMetadataType`); the scope is not used.
+#[cfg(all(feature = "rdf", feature = "federation"))]
+fn open_metadata_adapter(
+    class_iri: &str,
+    _scope: Option<&str>,
+) -> Result<Option<Box<dyn medulla_virtual_graph::source_sync::SyncAdapter>>, String> {
+    let view = medulla_rdf::open_metadata_types::open_metadata_type_view();
+    if view.type_for(class_iri).is_none() {
+        return Ok(None);
+    }
+    Ok(Some(Box::new(
+        medulla_virtual_graph::open_metadata_sync::OpenMetadataSyncAdapter {
+            view: view.clone(),
+            class_iri: class_iri.to_string(),
         },
     )))
 }

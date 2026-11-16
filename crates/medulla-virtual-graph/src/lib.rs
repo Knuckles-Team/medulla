@@ -7,6 +7,7 @@
 #![deny(missing_docs)]
 
 pub mod architecture_sync;
+pub mod open_metadata_sync;
 /// MEDULLA-101 — OBDA virtual graphs / R2RML (Phase Q). Expose a FOREIGN tabular source as a
 /// virtual, SPARQL-queryable RDF graph: an R2RML-style [`obda::TriplesMap`] (subject-IRI
 /// template + predicate→object maps) turns rows into triples ON DEMAND, and a SPARQL query
