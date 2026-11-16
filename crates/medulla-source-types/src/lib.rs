@@ -43,8 +43,12 @@ pub mod lifecycle;
 pub mod delivery;
 // MEDULLA-SDLC-R030.1 — the defect machine: edge table D01 to D09 and its one transition function.
 pub mod defect_machine;
+// MEDULLA-SDLC-R030.4 — the requirement-row state machine.
+pub mod spec_machine;
+// MEDULLA-SDLC-R030.5 — the task state machine.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_ingestion;
+pub mod task_machine;
 // MEDULLA-FEDERATED-QUERY-R701 — live artifacts re-derived from a query source.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod live_artifact;

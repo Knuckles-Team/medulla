@@ -783,6 +783,7 @@ fn analytics_job_machine_classes_extend_core() {
 }
 
 // spec: MEDULLA-SDLC-R030.2
+// spec: MEDULLA-SDLC-R030.3
 #[test]
 fn defect_machine_matches_edge_table() {
     sm::assert_matches(&medulla_source_types::defect_machine::DEFECT_MACHINE);
@@ -1081,4 +1082,59 @@ fn uql_machine_matches_edge_table() {
 #[test]
 fn uql_machine_classes_extend_core() {
     sm::assert_extends_core("Uql");
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R656.3
+#[test]
+fn gramps_pilot_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::gramps_pilot_machine::GRAMPS_PILOT_MACHINE);
+}
+// spec: MEDULLA-MEDIA-VOCAB-R656.3
+#[test]
+fn gramps_pilot_machine_classes_extend_core() {
+    sm::assert_extends_core("GrampsPilot");
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R656.4
+#[test]
+fn immich_pilot_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::immich_pilot_machine::IMMICH_PILOT_MACHINE);
+}
+// spec: MEDULLA-MEDIA-VOCAB-R656.4
+#[test]
+fn immich_pilot_machine_classes_extend_core() {
+    sm::assert_extends_core("ImmichPilot");
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R656.6
+#[test]
+fn tts_result_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_audio::tts::TTS_RESULT_MACHINE);
+}
+// spec: MEDULLA-MEDIA-VOCAB-R656.6
+#[test]
+fn tts_result_machine_classes_extend_core() {
+    sm::assert_extends_core("TtsResult");
+}
+
+// spec: MEDULLA-SDLC-R030.4
+#[test]
+fn spec_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::spec_machine::SPEC_MACHINE);
+}
+// spec: MEDULLA-SDLC-R030.4
+#[test]
+fn spec_machine_classes_extend_core() {
+    sm::assert_extends_core("Spec");
+}
+
+// spec: MEDULLA-SDLC-R030.5
+#[test]
+fn task_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::task_machine::TASK_MACHINE);
+}
+// spec: MEDULLA-SDLC-R030.5
+#[test]
+fn task_machine_classes_extend_core() {
+    sm::assert_extends_core("Task");
 }

@@ -194,7 +194,7 @@ impl StateMachineApply for DefectStatus {
 #[cfg(test)]
 mod tests {
     use super::{DefectEvent, DefectFacts, DefectStatus, DEFECT_MACHINE};
-    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     const ALL: DefectFacts = DefectFacts {
         fix_reference_recorded: true,
@@ -433,5 +433,38 @@ mod tests {
                 assert_eq!(legal, has_edge, "{state:?} {event:?}");
             }
         }
+    }
+
+    // spec: MEDULLA-SDLC-R030.3
+
+    #[test]
+    fn every_legal_transition_applies() {
+        for edge in DEFECT_MACHINE.edges {
+            assert_eq!(edge.from.apply(edge.event, ALL), Ok(edge.to), "{}", edge.id);
+        }
+    }
+
+    // spec: MEDULLA-SDLC-R030.3
+
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let pairs = illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, ALL).unwrap_err();
+            assert_eq!(refused.machine, "DefectMachine");
+            assert_eq!(refused.from, state.stored());
+            assert_eq!(refused.event, event.name());
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        }
+    }
+
+    // spec: MEDULLA-SDLC-R030.3
+
+    #[test]
+    fn no_writer_sets_status_outside_apply() {
+        let source = include_str!("../../medulla-core/src/lifecycle/defect.rs");
+        let writes = direct_state_writes(source, "status", "DefectStatus");
+        assert!(writes.is_empty(), "{writes:?}");
     }
 }

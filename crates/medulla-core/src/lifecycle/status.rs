@@ -55,11 +55,7 @@ fn leaf_row(id: &str, evidence: Option<&Evidence>, bindings: &[TestBinding]) -> 
     };
     verified_by.sort();
     verified_by.dedup();
-    let state = match (landed_by.is_empty(), verified_by.is_empty()) {
-        (true, _) => SpecState::Specified,
-        (false, true) => SpecState::Landed,
-        (false, false) => SpecState::Verified,
-    };
+    let state = SpecState::derive(!landed_by.is_empty(), !verified_by.is_empty());
     SpecRowState {
         id: id.to_owned(),
         state,
@@ -82,7 +78,9 @@ fn parent_of<'a>(id: &str, ids: &'a [String]) -> Option<&'a String> {
 }
 
 fn rollup(row: &mut SpecRowState, children: &[&SpecRowState]) {
-    row.state = children.iter().map(|c| c.state).min().unwrap_or(row.state);
+    // The weakest child decides; the state is rebuilt through the machine's edges.
+    let weakest = children.iter().map(|c| c.state).min().unwrap_or(row.state);
+    row.state = SpecState::derive(weakest >= SpecState::Landed, weakest == SpecState::Verified);
     for field in [0, 1] {
         let mut merged: Vec<String> = children
             .iter()
@@ -211,13 +209,7 @@ pub fn derive_task_state(
         }
         blocked_by.sort();
         blocked_by.dedup();
-        let state = if task.ticked {
-            TaskState::Done
-        } else if blocked_by.is_empty() {
-            TaskState::Open
-        } else {
-            TaskState::Blocked
-        };
+        let state = TaskState::derive(task.ticked, !blocked_by.is_empty());
         states.insert(
             task.id.clone(),
             TaskRowState {
