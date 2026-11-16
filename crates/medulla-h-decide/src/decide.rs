@@ -81,7 +81,6 @@ mod stat_learning;
 mod stat_load_set;
 #[cfg(feature = "decide")]
 mod stat_log;
-mod stat_verdict_dataset;
 #[cfg(feature = "decide")]
 mod stat_memory_change;
 #[cfg(feature = "decide")]
@@ -101,6 +100,7 @@ mod stat_resolve;
 mod stat_team;
 #[cfg(feature = "decide")]
 mod stat_usage_guidance;
+mod stat_verdict_dataset;
 #[cfg(feature = "decide")]
 mod stat_writeback;
 // MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.

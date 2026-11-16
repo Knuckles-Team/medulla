@@ -709,7 +709,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::TrajectoryLadder => {
             medulla_decision_types::decision::knob_families::trajectory::KNOBS
         }
-        QuestionKind::AnalystSynthesis => medulla_decision_types::decision::analyst_synthesis::KNOBS,
+        QuestionKind::AnalystSynthesis => {
+            medulla_decision_types::decision::analyst_synthesis::KNOBS
+        }
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }

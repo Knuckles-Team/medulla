@@ -26,6 +26,7 @@
 pub mod adapter;
 pub mod admission;
 pub mod aggregate;
+pub mod analyst_synthesis;
 pub mod autonomy;
 pub mod bm25;
 pub mod branch_outcomes;
@@ -70,7 +71,6 @@ pub mod refusal;
 pub mod replay;
 pub mod research_voi;
 pub mod retrieval;
-pub mod analyst_synthesis;
 pub mod reward;
 pub mod route;
 pub mod run_credit;
