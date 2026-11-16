@@ -32251,7 +32251,10 @@ class FeatureLedgerOpGet(BaseModel):
 
 
 FeatureLedgerOp = Annotated[
-    FeatureLedgerOpOpen | FeatureLedgerOpPlan | FeatureLedgerOpClose | FeatureLedgerOpGet,
+    FeatureLedgerOpOpen
+    | FeatureLedgerOpPlan
+    | FeatureLedgerOpClose
+    | FeatureLedgerOpGet,
     Field(discriminator="op"),
 ]
 
