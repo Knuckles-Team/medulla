@@ -67,7 +67,6 @@ pub(super) fn executed(outcome: StatisticalOutcome, answered: Option<FamilyExecu
         reading: None,
         seed: [0u8; 32],
         harness_contrast: None,
-        family: None,
         family_premises: Vec::new(),
         route: None,
         family: answered,

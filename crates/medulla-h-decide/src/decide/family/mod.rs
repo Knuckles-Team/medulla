@@ -93,7 +93,7 @@ mod usage_guidance;
 pub(in crate::decide) use command_config::command_view;
 pub(in crate::decide) use fanout_aggregate::fanout_view;
 pub(in crate::decide) use held_item_admission::held_item_view;
-pub(in crate::decide) use instruction_disclosure::disclosure_view;
+pub(in crate::decide) use instruction_disclosure::{disclosure_view, event_premise_fact};
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use resolve_entity::with_candidates;
