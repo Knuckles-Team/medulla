@@ -4279,6 +4279,13 @@ class RunRecordBranchRetrieval(BaseModel):
     receipt: BranchRetrievalReceipt
 
 
+class RunRecordTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["trace"]
+    trace: RunTraceRecord
+
+
 class RunRecordCompiledProgram(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4411,7 +4418,8 @@ RunRecord = Annotated[
     | RunRecordInsight
     | RunRecordHorizonCheckpoint
     | RunRecordBranchRecord
-    | RunRecordBranchRetrieval,
+    | RunRecordBranchRetrieval
+    | RunRecordTrace,
     Field(discriminator="kind"),
 ]
 
@@ -37921,6 +37929,7 @@ __all__ = [
     "RunRecord",
     "RunRecordBranchRecord",
     "RunRecordBranchRetrieval",
+    "RunRecordTrace",
     "RunRecordCompiledProgram",
     "RunRecordHorizonCheckpoint",
     "RunRecordInsight",
