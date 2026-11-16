@@ -68,9 +68,9 @@ pub(crate) mod stat_generation_space;
 #[cfg(feature = "decide")]
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
-mod stat_harness_adoption;
-#[cfg(feature = "decide")]
 mod stat_grounded_eval;
+#[cfg(feature = "decide")]
+mod stat_harness_adoption;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]

@@ -196,13 +196,13 @@ mod search_task;
 #[cfg(feature = "query")]
 pub(crate) use context_search::handle_context_search;
 #[cfg(feature = "query")]
-pub(crate) use search_task::handle_synthesize;
-#[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
+#[cfg(feature = "query")]
+pub(crate) use search_task::handle_synthesize;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
 pub(crate) use source_coverage::handle_source_coverage;
 mod explain_handlers;

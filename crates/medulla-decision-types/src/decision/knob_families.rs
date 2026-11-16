@@ -3,9 +3,9 @@
 //! `KNOBS` table; [`REGISTRY`] lists them for the knob registry.
 
 pub mod context;
+pub mod context_search;
 pub mod criterion_review;
 pub mod fanout;
-pub mod context_search;
 pub mod grounded;
 pub mod indexless;
 pub mod memory;
@@ -13,15 +13,15 @@ pub mod participant;
 pub mod placement;
 pub mod profile;
 pub mod prompt_candidate;
+pub mod ranking_eval;
 pub mod red_team;
 pub mod resolve_entity;
+pub mod retention;
 pub mod round_verdict;
 pub mod route;
 pub mod schema_mapping;
 pub mod skill;
 pub mod task_plan;
-pub mod ranking_eval;
-pub mod retention;
 pub mod topology;
 pub mod trajectory;
 pub mod verifier;
