@@ -2791,6 +2791,7 @@ components:
       - "crates/medulla-plan/benches"
       - "tests/nl_query_bounded_steps.rs"
       - "tests/plan_scope_tenant.rs"
+      - "tests/test_unified_planner_gate.py"
       - "tests/nl_query_grounding.rs"
       - "tests/retrieval/_round_served.py"
       - "tests/retrieval/test_adaptive_selection_served.py"
