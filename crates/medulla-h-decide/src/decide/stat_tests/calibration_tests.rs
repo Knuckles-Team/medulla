@@ -154,7 +154,7 @@ async fn isotonic_fit_is_monotone_and_promoted() {
 
 // spec: MEDULLA-DECISION-ENGINE-R822
 #[test]
-fn pooling_keeps_at_most_sixty_four_monotone_knots() {
+fn fit_isotonic_pooling_keeps_at_most_sixty_four_monotone_knots() {
     // 2000 distinct scores whose relevance zig-zags, so adjacent blocks
     // violate and then the closest blocks pool down to the knot limit.
     let pairs: Vec<(u32, bool)> = (0..2_000u32)
