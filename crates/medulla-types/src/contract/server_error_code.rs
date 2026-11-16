@@ -409,6 +409,10 @@ closed_error_codes! {
         ReceiptKeyInvalid => "RECEIPT_KEY_INVALID",
         ReleaseHeadUnknown => "RELEASE_HEAD_UNKNOWN",
         ReleaseSealed => "RELEASE_SEALED",
+        /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).
+        RenderBodyMissing => "RENDER_BODY_MISSING",
+        /// A skill package could not render: it references an ontology term the graph does not define (MEDULLA-TYPED-PACKS-R100.4).
+        RenderDanglingOntologyRef => "RENDER_DANGLING_ONTOLOGY_REF",
         ReleaseVersionTaken => "RELEASE_VERSION_TAKEN",
         RecordDerivedReadonly => "RECORD_DERIVED_READONLY",
         RecordHeadConflict => "RECORD_HEAD_CONFLICT",

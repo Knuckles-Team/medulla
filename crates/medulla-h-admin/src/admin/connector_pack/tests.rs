@@ -48,6 +48,8 @@ mod pack_source;
 mod scale;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
+mod skill_package_render;
+#[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_approval;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_sync;

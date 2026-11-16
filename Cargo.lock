@@ -7265,6 +7265,7 @@ dependencies = [
  "medulla-result-types",
  "medulla-server-api",
  "medulla-server-auth",
+ "medulla-server-blob",
  "medulla-server-graph",
  "medulla-storage",
  "medulla-test-ambient-auth",

@@ -312,6 +312,8 @@ class FleetSkillRow(BaseModel):
     classification: str
     component: FleetComponentRef
     override_revision: Annotated[int, Field(ge=0)] | None = None
+    package: RenderedSkillPackage | None = None
+    package_refusal: str | None = None
     skill_type: SkillType
     skill_type_source: SkillTypeSource
     uri: str
@@ -358,6 +360,16 @@ class FleetWriteReceipt(BaseModel):
     observed_at_ms: Annotated[int, Field(ge=0)]
     record_id: str
     revision: Annotated[int, Field(ge=0)]
+
+
+class RenderedSkillPackage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    graph_revision: Annotated[int, Field(ge=0)]
+    ontology_refs: list[str]
+    schema_version: Annotated[int, Field(ge=0)]
+    uri: str
 
 
 class ResourceKind(str, Enum):
@@ -504,6 +516,7 @@ __all__ = [
     "FleetVisibilityTenant",
     "FleetWriteDisposition",
     "FleetWriteReceipt",
+    "RenderedSkillPackage",
     "ResourceKind",
     "SkillType",
     "SkillTypeSource",

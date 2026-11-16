@@ -141,7 +141,7 @@ These partial regressions intentionally carry no acceptance binding that would m
 - `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
-- `MEDULLA-TYPED-PACKS-R045.8`: `crates/medulla-capabilities/src/contract/python/surfaces/tests.rs::pack_annotations_expose_harness_tool_facts`.
+- `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
 - `MEDULLA-TYPED-PACKS-R045.9`: `tests/harness_config_tool_facts_served.rs::two_tool_pack_subset_respects_budget`.
 
 ## Measured model producer tests (R048.3, R048.4)
@@ -228,11 +228,11 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R002.2 | An unchanged import keeps exact holder/refcount values. | Repeated identical import cannot increment or decrement a holder. | `tests/test_connector_pack_storage.py::test_unchanged_holder` |
 | MEDULLA-TYPED-PACKS-R002.3 | A revised component binds its new body and preserves historical revision holders. | A changed revision cannot orphan a body held by history. | `tests/test_connector_pack_storage.py::test_revised_holder` |
 | MEDULLA-TYPED-PACKS-R002.4 | A withdrawn component retains body access through a valid historical pin. | Withdrawal cannot reclaim a held historical body. | `tests/test_connector_pack_storage.py::test_withdrawn_holder` |
-| MEDULLA-TYPED-PACKS-R002.5 | A fault before owner commit leaves an orphan reclaimed only after its grace window. | An unexpired orphan or held body survives reconciliation and restart. | `tests/test_connector_pack_storage.py::test_orphan_grace_fault` |
+| MEDULLA-TYPED-PACKS-R002.5 | A fault before owner commit leaves an orphan reclaimed only after its grace window. | An unexpired orphan or held body survives reconciliation and restart. | `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::orphan_grace_fault` |
 | MEDULLA-TYPED-PACKS-R002.6 | AgentComponent.Content returns the exact body of its pinned component revision. | Corrupt bytes and denied tenants refuse without leaking body data. | `tests/test_connector_pack_storage.py::test_verified_body_read` |
-| MEDULLA-TYPED-PACKS-R002.7 | A successful write has one revision and live holder with its exact body digest. | A fault before owner commit leaves only an unreferenced body subject to the existing grace rule. | `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit` |
+| MEDULLA-TYPED-PACKS-R002.7 | A successful write has one revision and live holder with its exact body digest. | A fault before owner commit leaves only an unreferenced body subject to the existing grace rule. | `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit` (planned) |
 | MEDULLA-TYPED-PACKS-R002.8 | Independent graph queries read the exact prompt revision and dependency links. | Replaying an old event cannot regress the visible revision. | `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` |
-| MEDULLA-TYPED-PACKS-R002.9 | A real generated-client request reaches the renderer and returns the pinned revision and expected bytes. | Invalid requests leave graph, body holders, head and render-result publication unchanged. | `tests/test_prompt_blueprints_served.py::test_prompt_render_route` |
+| MEDULLA-TYPED-PACKS-R002.9 | A real generated-client request reaches the renderer and returns the pinned revision and expected bytes. | Invalid requests leave graph, body holders, head and render-result publication unchanged. | `tests/test_prompt_blueprints_served.py::test_prompt_render_route` (planned) |
 | MEDULLA-TYPED-PACKS-R002.10 | A valid served journey renders the pinned version and causes one observed model request. | Each invalid case yields a typed refusal and zero requests at the real model transport boundary. | `tests/test_prompt_blueprints_served.py::test_invalid_prompt_prevents_dispatch` |
 | MEDULLA-TYPED-PACKS-R002.11 | Current and historical revisions, graph links and verified body bytes survive restart. | A refused stale update leaves the previous durable head intact. | `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` |
 | MEDULLA-TYPED-PACKS-R094.1 | A generated Python client reads exact verified pack body bytes. | A refusal-only dispatch arm fails this acceptance. | `tests/test_connector_pack_content.py::test_stable_content_returns_body` |
@@ -581,7 +581,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R002.6`: `crates/medulla-h-admin/src/admin/component_content.rs::handle_component_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::verified_body_read` (planned)
 - `MEDULLA-TYPED-PACKS-R002.7`: `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit` (planned)
 - `MEDULLA-TYPED-PACKS-R002.8`: `crates/medulla-h-admin/src/connector_pack_projection.rs::project` (existing); `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` (planned)
-- `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route`
+- `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route` (planned)
 - `MEDULLA-TYPED-PACKS-R002.10`: `tests/test_prompt_blueprints_served.py::test_receipt_verdicts` (planned)
 - `MEDULLA-TYPED-PACKS-R002.11`: `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` (planned)
 - `MEDULLA-TYPED-PACKS-R003`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::only_the_bound_importer_may_import` (existing)

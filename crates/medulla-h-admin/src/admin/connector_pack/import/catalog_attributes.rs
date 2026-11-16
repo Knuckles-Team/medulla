@@ -6,6 +6,9 @@
 //!
 //! * `mcp.media_type` on MCP resources, resource templates and skill files;
 //! * `skill.type` on skills, the `SKILL.md` front-matter `skill_type` verbatim;
+//! * `skill.ontology_refs` on skills, the `SKILL.md` front-matter `ontology_refs` key
+//!   (whitespace-separated IRIs) verbatim, so the fleet catalog can render the
+//!   skill package from the ontology terms it references;
 //! * `sdk.tool_mode` on tools, the pack builder's declaration (EG never
 //!   re-derives it from the schema).
 
@@ -14,7 +17,7 @@ use std::collections::BTreeMap;
 use medulla_catalog_types::connector_pack::digest::tool_mode_token;
 use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
 
-use super::front_matter::declared_skill_type;
+use super::front_matter::{declared_skill_type, front_matter_value};
 
 /// Add the catalog attributes `entry` declares.
 pub(super) fn add_catalog_attributes(
@@ -31,6 +34,9 @@ pub(super) fn add_catalog_attributes(
     if entry.kind == PackEntryKind::Skill {
         if let Ok(Some(skill_type)) = declared_skill_type(body) {
             attributes.insert("skill.type".into(), skill_type.into());
+        }
+        if let Some(refs) = front_matter_value(body, "ontology_refs") {
+            attributes.insert("skill.ontology_refs".into(), refs);
         }
     }
     if let Some(mode) = entry.annotations.tool_mode {

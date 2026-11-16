@@ -4,7 +4,8 @@
 use medulla_server_graph::dispatch::shared::timed_read;
 use std::collections::BTreeMap;
 
-use medulla_agent_types::agent_component::AgentComponentEntry;
+use medulla_agent_types::agent_component::{AgentComponentEntry, AgentComponentKind};
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_catalog_types::{
     fleet_catalog::FleetCatalogKind, fleet_catalog::FleetCatalogListRequest,
     fleet_catalog::FleetCatalogLookup, fleet_catalog::FleetCatalogLookupRequest,
@@ -26,6 +27,7 @@ use super::records::{
     decode_record, discovery_record_id, skill_type_override, DiscoveryBody, OverrideBody, Viewer,
     DISCOVERY_NODE_TYPE, OVERRIDE_NODE_TYPE,
 };
+use super::skill_read::SkillGraphRead;
 use super::*;
 
 /// The `__commons__` half of one read, taken under the registry graph's lock so
@@ -39,10 +41,14 @@ struct CommonsView {
 }
 
 impl CommonsView {
-    fn inputs(&self) -> ProjectionInputs<'_> {
+    fn inputs<'a>(
+        &'a self,
+        skill_graph: &'a BTreeMap<String, SkillGraphRead>,
+    ) -> ProjectionInputs<'a> {
         ProjectionInputs {
             desired: &self.desired,
             skill_overrides: &self.skill_overrides,
+            skill_graph,
         }
     }
 }
@@ -176,6 +182,76 @@ fn member_head(
     match *store {}
 }
 
+/// The engine-held body of one skill revision, verified by the blob owner;
+/// `None` when it cannot be read (the row then says `RENDER_BODY_MISSING`).
+#[cfg(feature = "blob")]
+async fn read_skill_body(
+    state: &Arc<RwLock<ServerState>>,
+    store: &ComponentStore,
+    tenant_id: &str,
+    entry: &AgentComponentEntry,
+) -> Option<Vec<u8>> {
+    use medulla_server_blob::blob::BlobStateExt;
+
+    let pointer = store
+        .connector_pack_content_pointer(tenant_id, &entry.component_id, Some(entry.entry_revision))
+        .ok()?;
+    let blob = state.read().await.blob_cursors().cloned()?;
+    let tenant_id = tenant_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        medulla_server_blob::blob::engine_bodies::read_engine_body(
+            blob.store.as_ref(),
+            &tenant_id,
+            &pointer.engine_manifest_digest,
+            pointer.body_sha256,
+            pointer.length,
+        )
+        .ok()
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// A build without the `blob` feature holds no readable body.
+#[cfg(not(feature = "blob"))]
+async fn read_skill_body(
+    _state: &Arc<RwLock<ServerState>>,
+    _store: &ComponentStore,
+    _tenant_id: &str,
+    _entry: &AgentComponentEntry,
+) -> Option<Vec<u8>> {
+    None
+}
+
+/// Load what each listed skill's rendering reads: its body, and whether every
+/// ontology component it references is a published component of the tenant.
+async fn load_skill_graph(
+    state: &Arc<RwLock<ServerState>>,
+    store: &ComponentStore,
+    tenant_id: &str,
+    entries: &[AgentComponentEntry],
+    out: &mut BTreeMap<String, SkillGraphRead>,
+) {
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.kind == AgentComponentKind::Skill)
+    {
+        let body = read_skill_body(state, store, tenant_id, entry).await;
+        let defined = |term: &str| {
+            matches!(
+                member_head(store, tenant_id, term),
+                Ok(Some(head)) if head.kind == AgentComponentKind::Ontology
+                    && head.lifecycle == AgentLibraryLifecycle::Published
+            )
+        };
+        out.insert(
+            entry.component_id.clone(),
+            SkillGraphRead::from_entry(entry, body, defined),
+        );
+    }
+}
+
 /// Every visible member of `kind`, through each connector's widest binding.
 async fn content_rows(
     state: &Arc<RwLock<ServerState>>,
@@ -188,13 +264,17 @@ async fn content_rows(
         return Ok(Vec::new());
     }
     let store = component_store(state).await?;
-    let inputs = view.inputs();
     let mut rows = Vec::new();
     for binding in &bindings {
         let Some(prefix) = member_prefix(&binding.connector, kind) else {
             continue;
         };
         let heads = member_heads(&store, tenant_id, &prefix)?;
+        let mut skill_graph = BTreeMap::new();
+        if kind == FleetCatalogKind::Skills {
+            load_skill_graph(state, &store, tenant_id, &heads, &mut skill_graph).await;
+        }
+        let inputs = view.inputs(&skill_graph);
         rows.extend(
             heads
                 .iter()
@@ -227,7 +307,8 @@ async fn list_page(
 
 /// Resolve one lookup id against the view, or `None` when it names nothing the
 /// caller may see.
-fn lookup_one(
+async fn lookup_one(
+    state: &Arc<RwLock<ServerState>>,
     store: &ComponentStore,
     tenant_id: &str,
     view: &CommonsView,
@@ -246,8 +327,26 @@ fn lookup_one(
     else {
         return Ok(None);
     };
-    Ok(member_head(store, tenant_id, id)?
-        .and_then(|entry| component_row(kind, &entry, binding, &view.inputs())))
+    let Some(entry) = member_head(store, tenant_id, id)? else {
+        return Ok(None);
+    };
+    let mut skill_graph = BTreeMap::new();
+    if kind == FleetCatalogKind::Skills {
+        load_skill_graph(
+            state,
+            store,
+            tenant_id,
+            std::slice::from_ref(&entry),
+            &mut skill_graph,
+        )
+        .await;
+    }
+    Ok(component_row(
+        kind,
+        &entry,
+        binding,
+        &view.inputs(&skill_graph),
+    ))
 }
 
 /// Whether `id` names a pack member of a connector some visible observation
@@ -283,7 +382,9 @@ async fn lookup_rows(
             continue;
         }
         let found = match &store {
-            Some(store) => lookup_one(store, verified.tenant(), &view, &bindings, id)?,
+            Some(store) => {
+                lookup_one(state, store, verified.tenant(), &view, &bindings, id).await?
+            }
             None => lookup_discovery(&view, id),
         };
         rows.extend(found);

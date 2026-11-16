@@ -95,6 +95,7 @@ fn row(kind: FleetCatalogKind, entry: &AgentComponentEntry) -> Option<FleetCatal
         &ProjectionInputs {
             desired: &desired,
             skill_overrides: &overrides,
+            skill_graph: &BTreeMap::new(),
         },
     )
 }
@@ -238,6 +239,7 @@ fn an_override_beats_the_declaration_which_beats_the_default() {
     let inputs = ProjectionInputs {
         desired: &desired,
         skill_overrides: &overrides,
+        skill_graph: &BTreeMap::new(),
     };
     let Some(FleetCatalogRow::Skill { row: overridden }) = component_row(
         FleetCatalogKind::Skills,

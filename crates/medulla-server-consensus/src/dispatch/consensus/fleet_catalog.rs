@@ -20,6 +20,8 @@ use super::*;
 mod project;
 mod read;
 mod records;
+mod rendered;
+mod skill_read;
 mod write;
 
 /// Route one fleet catalog operation. Scope and admin authority were checked

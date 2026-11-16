@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::rendered::RenderedSkillPackage;
 use super::request::{DiscoveryCounts, FleetCatalogCursor};
 use super::vocabulary::{
     DiscoveryOutcome, DiscoveryScope, FleetCatalogKind, FleetVisibility, FleetWriteDisposition,
@@ -109,6 +110,13 @@ pub struct FleetSkillRow {
     pub skill_type_source: SkillTypeSource,
     /// The override record's revision, when an override decided `skill_type`.
     pub override_revision: Option<u64>,
+    /// The package rendered from the graph on this read (MEDULLA-TYPED-PACKS-R100.3),
+    /// carrying the graph revision and content digest (R100.5). `None` when the
+    /// render refused; `package_refusal` then says why.
+    pub package: Option<RenderedSkillPackage>,
+    /// The typed refusal that left `package` empty, naming the missing term
+    /// (`RENDER_DANGLING_ONTOLOGY_REF`) or body (`RENDER_BODY_MISSING`).
+    pub package_refusal: Option<String>,
 }
 
 /// One row of any kind.

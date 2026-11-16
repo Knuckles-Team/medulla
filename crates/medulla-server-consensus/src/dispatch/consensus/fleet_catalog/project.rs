@@ -30,6 +30,8 @@ use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
 use super::records::{discovery_record_id, DiscoveryBody, StoredRecord};
+use super::rendered::render_skill_package;
+use super::skill_read::SkillGraphRead;
 
 const SNAPSHOT_DOMAIN: &[u8] = b"eg/fleet-catalog-snapshot/v1";
 const CURSOR_STALE: &str =
@@ -60,6 +62,9 @@ pub struct ConnectorBinding {
 pub struct ProjectionInputs<'a> {
     pub desired: &'a BTreeMap<String, ServerDesiredState>,
     pub skill_overrides: &'a BTreeMap<String, (SkillType, u64)>,
+    /// What each listed skill's rendering reads, by component id, loaded for
+    /// THIS read. A skill with no entry here renders as a missing body.
+    pub skill_graph: &'a BTreeMap<String, SkillGraphRead>,
 }
 
 /// One binding per connector, through its WIDEST visible observation.
@@ -289,6 +294,19 @@ fn skill_row(
             (None, Some(declared)) => (declared, SkillTypeSource::Declared, None),
             (None, None) => (SkillType::Skill, SkillTypeSource::Default, None),
         };
+    // Rendered on every read from the graph content loaded for it; never cached.
+    let absent;
+    let graph = match inputs.skill_graph.get(&entry.component_id) {
+        Some(graph) => graph,
+        None => {
+            absent = SkillGraphRead::without_body(entry);
+            &absent
+        }
+    };
+    let (package, package_refusal) = match render_skill_package(entry, &uri, graph) {
+        Ok(package) => (Some(package), None),
+        Err(refusal) => (None, Some(refusal.to_string())),
+    };
     FleetCatalogRow::Skill {
         row: FleetSkillRow {
             component,
@@ -297,6 +315,8 @@ fn skill_row(
             classification: skill_type.label().to_string(),
             skill_type_source,
             override_revision,
+            package,
+            package_refusal,
         },
     }
 }
