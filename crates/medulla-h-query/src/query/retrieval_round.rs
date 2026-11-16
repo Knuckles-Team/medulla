@@ -12,7 +12,8 @@ use medulla_exec::exec::{LexicalOverlapReranker, Reranker, LEXICAL_OVERLAP_RERAN
 use medulla_plan::doc_state::{segment_policy, HashSegmentsEncoder, StateSource};
 use medulla_plan::retrieval_round::{run_round_with_state, RoundError, RoundKnobs, StateRuntime};
 use medulla_protocol_types::result_contract::query::RetrievalRound;
-use medulla_result_types::retrieval_round::{RoundRequest, RoundResult};
+use medulla_result_types::retrieval_arbitration::{ArbitrationChoice, ARBITRATION_ABSTAIN};
+use medulla_result_types::retrieval_round::{ArbitrationAbstention, RoundRequest, RoundResult};
 use medulla_result_types::retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED;
 use medulla_types::retrieval_round::DocumentState;
 
@@ -193,6 +194,24 @@ pub(crate) async fn handle_retrieval_round(
         {
             let verdict = serde_json::to_string(&result.stop).unwrap_or_default();
             Response::err(req_id, format!("{RETRIEVAL_BUDGET_EXCEEDED}: {verdict}"))
+        }
+        // MEDULLA-FEDERATED-QUERY-R083.4: an abstaining verdict is a refusal. It carries both
+        // candidates and the round's premises, and no chosen answer.
+        Ok(Ok(Ok(result)))
+            if result
+                .arbitration
+                .as_ref()
+                .is_some_and(|verdict| verdict.choice == ArbitrationChoice::Abstain) =>
+        {
+            let body = result
+                .arbitration
+                .clone()
+                .map(|verdict| ArbitrationAbstention {
+                    verdict,
+                    premises: result.premises.clone(),
+                });
+            let body = serde_json::to_string(&body).unwrap_or_default();
+            Response::err(req_id, format!("{ARBITRATION_ABSTAIN}: {body}"))
         }
         Ok(Ok(Ok(result))) => match ResultPayload::of::<RetrievalRound>(result) {
             Ok(payload) => Response::ok(req_id, payload),

@@ -593,10 +593,13 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // sufficiency step refuses a missing round limit with its typed code. The selection
     // step (R081.7) refuses a missing, stale or non-finite score pair, an invalid
     // normalization and an unapproved activation; the hierarchy step (R081.9, R081.9.7.4)
-    // refuses a malformed tree and an exhausted limit.
+    // refuses a malformed tree and an exhausted limit; the arbitration step (R083.4) abstains
+    // with both candidates and refuses a candidate that names no grounding.
     (
         "RetrievalRound",
         &[
+            "ARBITRATION_ABSTAIN",
+            "CANDIDATE_GROUNDING_REQUIRED",
             "RETRIEVAL_BUDGET_EXCEEDED",
             "RETRIEVAL_CONTRACT_INVALID",
             "RETRIEVAL_EMBEDDING_REVISION_MISMATCH",

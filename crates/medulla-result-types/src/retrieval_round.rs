@@ -324,11 +324,23 @@ pub struct RoundRequest {
 #[serde(deny_unknown_fields)]
 pub struct ArbitrationPart {
     /// The model's own answer, grounded `parametric`.
+    #[serde(deserialize_with = "crate::retrieval_arbitration::candidate_from_wire")]
     pub prior: crate::retrieval_arbitration::Candidate,
     /// The answer conditioned on retrieved evidence, grounded `retrieved`.
+    #[serde(deserialize_with = "crate::retrieval_arbitration::candidate_from_wire")]
     pub retrieved: crate::retrieval_arbitration::Candidate,
     /// Digest of the query both candidates answer.
     pub query_digest: String,
+}
+
+/// The body of an `ARBITRATION_ABSTAIN` refusal (MEDULLA-FEDERATED-QUERY-R083.4): the verdict
+/// with both candidates and their computed support, and the round's premises (including the
+/// `retrieval.arbitration` premise of R083.5). It names no chosen answer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArbitrationAbstention {
+    pub verdict: crate::retrieval_arbitration::ArbitrationVerdict,
+    pub premises: Vec<RetrievalPremise>,
 }
 
 /// The state part of a round: the query scored against stored document state.

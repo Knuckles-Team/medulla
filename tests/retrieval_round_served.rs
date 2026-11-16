@@ -16,10 +16,12 @@ use medulla_exec::exec::{HashEmbedder, TextEmbedder};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_result_types::retrieval_arbitration::{
     AnswerGrounding, ArbitrationChoice, Candidate, Citation, Claim, SupportState,
+    ARBITRATION_ABSTAIN,
 };
 use medulla_result_types::retrieval_round::{
-    sha256_hex_of, ActivationBenchmark, ArbitrationPart, BenchmarkResult, HierarchyPart,
-    RoundRequest, RoundResult, SectionRequest, SelectionMode, SelectionPart, SufficiencyPart,
+    sha256_hex_of, ActivationBenchmark, ArbitrationAbstention, ArbitrationPart, BenchmarkResult,
+    HierarchyPart, RoundRequest, RoundResult, SectionRequest, SelectionMode, SelectionPart,
+    SufficiencyPart,
 };
 use medulla_result_types::retrieval_verdict::{
     FallbackPolicy, HierarchyParentLink, HierarchyRetrievalKind, HierarchyRetrievalPolicy,
@@ -2033,6 +2035,15 @@ fn candidate(grounding: AnswerGrounding, confidence: f64, citation: Option<Citat
     }
 }
 
+/// Decode the body of an `ARBITRATION_ABSTAIN` refusal: the code is the refusal's own, the
+/// detail carries both candidates and the premises, and no result is returned.
+fn abstention(response: Response) -> ArbitrationAbstention {
+    assert_eq!(response.error.as_deref(), Some(ARBITRATION_ABSTAIN));
+    assert!(response.result.is_none(), "an abstention names no answer");
+    let detail = response.error_detail.expect("the refusal carries a body");
+    serde_json::from_str(&detail).expect("typed abstention body")
+}
+
 fn arbitration_request(prior: Candidate, retrieved: Candidate) -> RoundRequest {
     let mut round = request(None);
     round.arbitration = Some(ArbitrationPart {
@@ -2075,9 +2086,10 @@ async fn arbitration_part_returns_verdict_or_none() {
     assert_eq!(verdict.supporting_span_ids, vec!["doc-0:0-5".to_string()]);
     assert_eq!(verdict.graph_snapshot_revision, "corpus-1");
 
-    // A digest that does not match the stored span is unsupported, so both abstain.
+    // A digest that does not match the stored span is unsupported, so both abstain: the round
+    // refuses `ARBITRATION_ABSTAIN` with both candidates (MEDULLA-FEDERATED-QUERY-R083.4).
     let stale = span_citation("doc-0", 5, "other");
-    let verdict = decode(
+    let abstained = abstention(
         round_as(
             &state,
             None,
@@ -2087,14 +2099,15 @@ async fn arbitration_part_returns_verdict_or_none() {
             ),
         )
         .await,
-    )
-    .arbitration
-    .expect("verdict");
-    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
-    assert_eq!(verdict.retrieved.support_state, SupportState::Unsupported);
+    );
+    assert_eq!(abstained.verdict.choice, ArbitrationChoice::Abstain);
+    assert_eq!(
+        abstained.verdict.retrieved.support_state,
+        SupportState::Unsupported
+    );
 
     // Two supported candidates inside the margin abstain and keep both.
-    let verdict = decode(
+    let abstained = abstention(
         round_as(
             &state,
             None,
@@ -2104,12 +2117,16 @@ async fn arbitration_part_returns_verdict_or_none() {
             ),
         )
         .await,
-    )
-    .arbitration
-    .expect("verdict");
-    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
-    assert_eq!(verdict.prior.support_state, SupportState::Supported);
-    assert_eq!(verdict.retrieved.support_state, SupportState::Supported);
+    );
+    assert_eq!(abstained.verdict.choice, ArbitrationChoice::Abstain);
+    assert_eq!(
+        abstained.verdict.prior.support_state,
+        SupportState::Supported
+    );
+    assert_eq!(
+        abstained.verdict.retrieved.support_state,
+        SupportState::Supported
+    );
 
     // The deployment admits one tenant: another graph's caller is refused at the door and
     // is handed no verdict about this graph's documents.
@@ -2187,4 +2204,60 @@ async fn arbitration_premise_lists_both_origins() {
         .premises
         .iter()
         .all(|premise| premise.name != "retrieval.arbitration"));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R083.4
+#[tokio::test(flavor = "multi_thread")]
+async fn abstain_returns_both_candidates() {
+    let state = state();
+    seed(&state, 2).await;
+    let good = || span_citation("doc-0", 5, "entry");
+
+    // A gap inside the margin with both citations verifying abstains.
+    let response = round_as(
+        &state,
+        None,
+        arbitration_request(
+            candidate(AnswerGrounding::Parametric, 0.80, Some(good())),
+            candidate(AnswerGrounding::Retrieved, 0.85, Some(good())),
+        ),
+    )
+    .await;
+    assert_eq!(response.error.as_deref(), Some(ARBITRATION_ABSTAIN));
+    let abstained = abstention(response);
+    // Both candidates ride on the refusal with the support computed on the snapshot, and no
+    // span is named as the supporting evidence of a chosen answer.
+    assert_eq!(abstained.verdict.choice, ArbitrationChoice::Abstain);
+    assert_eq!(
+        abstained.verdict.prior.grounding,
+        AnswerGrounding::Parametric
+    );
+    assert_eq!(
+        abstained.verdict.retrieved.grounding,
+        AnswerGrounding::Retrieved
+    );
+    assert_eq!(abstained.verdict.prior.confidence, 0.80);
+    assert_eq!(abstained.verdict.retrieved.confidence, 0.85);
+    assert!(abstained.verdict.supporting_span_ids.is_empty());
+    // The refusal body carries the arbitration premise beside the verdict (R083.5).
+    assert!(abstained
+        .premises
+        .iter()
+        .any(|premise| premise.name == "retrieval.arbitration"
+            && premise.value["choice"] == "abstain"));
+
+    // A decisive gap is an answer, not a refusal.
+    let answered = round_as(
+        &state,
+        None,
+        arbitration_request(
+            candidate(AnswerGrounding::Parametric, 0.30, Some(good())),
+            candidate(AnswerGrounding::Retrieved, 0.90, Some(good())),
+        ),
+    )
+    .await;
+    assert_eq!(
+        decode(answered).arbitration.expect("verdict").choice,
+        ArbitrationChoice::Retrieved
+    );
 }

@@ -227,7 +227,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T214 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.1 Model of Arbitration between model prior and evidence
 - [x] T215 [US2] MEDULLA-FEDERATED-QUERY-R083.2 Behavior of Arbitration between model prior and evidence
 - [x] T216 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.3 Wiring of Arbitration between model prior and evidence
-- [ ] T217 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.4 Refusal of Arbitration between model prior and evidence
+- [x] T217 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.4 Refusal of Arbitration between model prior and evidence
 - [x] T218 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.5 Evidence of Arbitration between model prior and evidence
 - [ ] T219 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.6 Hot-path proof of Arbitration between model prior and evidence
 - [ ] T220 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.1 Model of Vector-free document-section traversal

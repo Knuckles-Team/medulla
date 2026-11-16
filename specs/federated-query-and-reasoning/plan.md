@@ -236,7 +236,7 @@ Cross-repository: `MERISTEM-HARNESS-CYCLE-R079` consumes the verdict and ends th
 Data flow: harness prior probe -> served cross-modal query carrying the prior `Candidate` -> `medulla_plan::execute` (`crates/medulla-exec/src/exec.rs:536`) -> `arbitrate` -> `ArbitrationVerdict` -> harness answers or reports the abstention.
 Types: `Candidate`, `EvidenceClass`, `ArbitrationVerdict`, `ArbitrationChoice`. The harness runs the probe; Medulla decides.
 Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
-Failure: A gap below the margin returns `ARBITRATION_ABSTAIN` with both candidates. A candidate without a class returns `CANDIDATE_CLASS_REQUIRED`.
+Failure: A gap below the margin returns `ARBITRATION_ABSTAIN` with both candidates. A candidate without a grounding returns `CANDIDATE_GROUNDING_REQUIRED`.
 Consumers: MERISTEM-HARNESS-CYCLE (R079)
 Moves from Meristem: shortcut_risks.py:42, agent_control_contracts.py:73 (prior probe and evidence classes)
 Existing code: `crates/medulla-exec/src/exec.rs:536`. The typed abstention pattern is at `crates/medulla-compute/src/assemble/conclude.rs:69`. It is not reachable today.

@@ -265,6 +265,24 @@ mod tests {
         assert_eq!(verdict.graph_snapshot_revision, "rev-1");
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R083.4
+    #[test]
+    fn abstain_returns_both_candidates() {
+        // Both citations verify and the gap sits inside the margin: the verdict abstains,
+        // keeps both candidates whole, names no supporting span and carries a premise that
+        // states the abstain choice.
+        let prior = candidate(0.75, AnswerGrounding::Parametric, &[Some("doc-p")]);
+        let retrieved = candidate(0.70, AnswerGrounding::Retrieved, &[Some("doc-r")]);
+        let verdict = run(prior.clone(), retrieved.clone(), 0.10);
+        assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
+        assert_eq!(verdict.prior.answer, prior.answer);
+        assert_eq!(verdict.retrieved.answer, retrieved.answer);
+        assert_eq!(verdict.prior.support_state, SupportState::Supported);
+        assert_eq!(verdict.retrieved.support_state, SupportState::Supported);
+        assert!(verdict.supporting_span_ids.is_empty());
+        assert_eq!(arbitration_premise(&verdict).value["choice"], "abstain");
+    }
+
     // spec: MEDULLA-FEDERATED-QUERY-R083.2
     #[test]
     fn margin_picks_or_abstains() {

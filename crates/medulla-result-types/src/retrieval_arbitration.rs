@@ -24,6 +24,10 @@ pub enum AnswerGrounding {
 /// Refusal code for a candidate that names no grounding.
 pub const CANDIDATE_GROUNDING_REQUIRED: &str = "CANDIDATE_GROUNDING_REQUIRED";
 
+/// Refusal code for an arbitration that abstains: it answers with both candidates
+/// and no chosen answer (MEDULLA-FEDERATED-QUERY-R083.4).
+pub const ARBITRATION_ABSTAIN: &str = "ARBITRATION_ABSTAIN";
+
 /// Why a candidate was refused before arbitration.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ArbitrationRefusal {
@@ -97,6 +101,19 @@ impl Candidate {
             detail: error.to_string(),
         })
     }
+}
+
+/// Decode one candidate of an arbitration part off the wire. A candidate that names no
+/// `grounding` fails the request decode with `CANDIDATE_GROUNDING_REQUIRED` leading its
+/// message, so the refusal reaches the caller with its registered code.
+pub fn candidate_from_wire<'de, D>(deserializer: D) -> Result<Candidate, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = <serde_json::Value as Deserialize>::deserialize(deserializer)?;
+    Candidate::from_value(&value).map_err(|refusal| {
+        serde::de::Error::custom(format!("{}: {}", refusal.code, refusal.detail))
+    })
 }
 
 /// The closed set of outcomes from comparing the prior and retrieved answers.
@@ -212,6 +229,28 @@ mod tests {
         )
         .expect_err("unknown grounding");
         assert_eq!(bad.code, "INVALID_ARGUMENT");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R083.4
+    #[test]
+    fn wire_candidate_without_grounding_refuses_with_its_code() {
+        #[derive(Debug, Deserialize)]
+        struct Part {
+            #[serde(deserialize_with = "candidate_from_wire")]
+            candidate: Candidate,
+        }
+        let refused = serde_json::from_value::<Part>(serde_json::json!({
+            "candidate": {"answer": "a", "confidence": 0.5}
+        }))
+        .expect_err("a candidate without grounding is refused");
+        assert!(refused
+            .to_string()
+            .starts_with(CANDIDATE_GROUNDING_REQUIRED));
+        let accepted = serde_json::from_value::<Part>(serde_json::json!({
+            "candidate": {"answer": "a", "confidence": 0.5, "grounding": "retrieved"}
+        }))
+        .expect("a grounded candidate decodes");
+        assert_eq!(accepted.candidate.answer, "a");
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R010.100.3

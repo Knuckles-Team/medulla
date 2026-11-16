@@ -16,10 +16,11 @@ use medulla_exec::algebra::{Op, Plan};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_result_types::retrieval_arbitration::{
     AnswerGrounding, ArbitrationChoice, Candidate, Citation, Claim, SupportState,
+    ARBITRATION_ABSTAIN,
 };
 use medulla_result_types::retrieval_round::{
-    sha256_hex_of, ArbitrationPart, BudgetUsage, CallerLimits, RoundFeedback, RoundRequest,
-    RoundResult, StopRequest,
+    sha256_hex_of, ArbitrationAbstention, ArbitrationPart, BudgetUsage, CallerLimits,
+    RoundFeedback, RoundRequest, RoundResult, StopRequest,
 };
 use medulla_result_types::retrieval_stop::CalibrationTable;
 use medulla_result_types::retrieval_verdict::{
@@ -386,8 +387,16 @@ async fn arbitration_verifies_only_the_callers_tenant_in_one_store() {
     // unknown for the caller: the verifier reads that snapshot only, and both
     // candidates abstain. The verdict names no span of the other tenant.
     for (tenant, foreign) in [(TENANT, "doc-b-0"), (OTHER_TENANT, "doc-a-0")] {
-        let crossed = decode(served.round_as(tenant, arbitration_round(foreign)).await);
-        let verdict = crossed.arbitration.expect("verdict");
+        let crossed = served.round_as(tenant, arbitration_round(foreign)).await;
+        assert_eq!(crossed.error.as_deref(), Some(ARBITRATION_ABSTAIN));
+        assert!(crossed.result.is_none(), "an abstention names no answer");
+        let body: ArbitrationAbstention = serde_json::from_str(
+            &crossed
+                .error_detail
+                .expect("the refusal carries both candidates"),
+        )
+        .expect("typed abstention body");
+        let verdict = body.verdict;
         assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
         assert_eq!(verdict.retrieved.support_state, SupportState::Unknown);
         assert!(verdict.supporting_span_ids.is_empty());
