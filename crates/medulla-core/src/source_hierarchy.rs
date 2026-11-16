@@ -5,7 +5,7 @@
 //! from a container to its parent. `subtree` walks those edges in reverse to
 //! resolve a scope.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_types::contract::Digest256;
@@ -94,25 +94,68 @@ fn props(core: &GraphCore, node_id: &str) -> Option<Value> {
     rmp_serde::from_slice::<Value>(&bytes).ok()
 }
 
-/// Upsert `containers` of `tenant` into `core`.
-///
-/// Every container is validated and the batch is checked for parent cycles and depth
-/// before anything is written. A parent outside the batch must already be a container
-/// node of the same source, otherwise the batch is refused with
-/// `CONTAINER_PARENT_UNKNOWN`. A container whose parent changed loses its old
-/// `containedIn` edge. Re-sending a container writes the same node and edge again.
-pub fn upsert_containers(
-    core: &GraphCore,
+/// One container node a plan writes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlannedNode {
+    /// The container node id.
+    pub node_id: String,
+    /// The node's properties.
+    pub properties: Value,
+}
+
+/// Everything one container batch writes, in write order: nodes first, then the
+/// `containedIn` edges a changed parent drops, then the `containedIn` edges to write.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ContainerPlan {
+    /// Container nodes to upsert.
+    pub nodes: Vec<PlannedNode>,
+    /// `(child, old parent)` edges to remove.
+    pub removed_edges: Vec<(String, String)>,
+    /// `(child, parent)` edges to write.
+    pub edges: Vec<(String, String)>,
+}
+
+/// Validate `containers`, refuse parent cycles and excess depth, and return the node id
+/// of every container and of every parent they name. Those are the nodes a plan needs to
+/// see the held state of: [`plan_containers`] takes them as its `held` map.
+pub fn held_ids(
     tenant: &str,
     containers: &[SourceContainer],
-) -> Result<ContainerUpsert, ContainerError> {
+) -> Result<BTreeSet<String>, ContainerError> {
     for container in containers {
         container
             .validate()
             .map_err(|e| refuse("CONTAINER_INVALID", e.to_string()))?;
     }
     check_container_tree(containers).map_err(|e| refuse(&e.code(), e.to_string()))?;
+    let mut ids = BTreeSet::new();
+    for container in containers {
+        ids.insert(container_node_id(
+            tenant,
+            &container.source,
+            &container.container_id,
+        )?);
+        if let Some(parent) = container.parent_id.as_deref() {
+            ids.insert(container_node_id(tenant, &container.source, parent)?);
+        }
+    }
+    Ok(ids)
+}
 
+/// Plan the writes of `containers` of `tenant`. `held` maps the node id of every node
+/// [`held_ids`] names that already exists to its properties; a missing key is an absent
+/// node. Nothing is written here: the caller applies the plan to a [`GraphCore`]
+/// ([`upsert_containers`]) or compiles it into the methods of a served batch.
+///
+/// A parent outside the batch must be a held container node of the same source,
+/// otherwise the batch is refused with `CONTAINER_PARENT_UNKNOWN`. A container whose
+/// parent changed loses its old `containedIn` edge.
+pub fn plan_containers(
+    tenant: &str,
+    containers: &[SourceContainer],
+    held: &BTreeMap<String, Value>,
+) -> Result<ContainerPlan, ContainerError> {
+    held_ids(tenant, containers)?;
     let in_batch: BTreeSet<(&str, &str)> = containers
         .iter()
         .map(|c| (c.source.as_str(), c.container_id.as_str()))
@@ -120,7 +163,7 @@ pub fn upsert_containers(
     for container in containers {
         if let Some(parent) = container.parent_id.as_deref() {
             if !in_batch.contains(&(container.source.as_str(), parent))
-                && !core.has_node(&container_node_id(tenant, &container.source, parent)?)
+                && !held.contains_key(&container_node_id(tenant, &container.source, parent)?)
             {
                 return Err(refuse(
                     "CONTAINER_PARENT_UNKNOWN",
@@ -133,30 +176,29 @@ pub fn upsert_containers(
         }
     }
 
-    let mut written = ContainerUpsert::default();
+    let mut plan = ContainerPlan::default();
     for container in containers {
         let id = container_node_id(tenant, &container.source, &container.container_id)?;
-        let old_parent = props(core, &id).and_then(|p| {
-            p.get("parent_id")
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        });
-        core.add_node(
-            id.clone(),
-            blob(&json!({
+        let old_parent = held
+            .get(&id)
+            .and_then(|p| p.get("parent_id"))
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        plan.nodes.push(PlannedNode {
+            node_id: id.clone(),
+            properties: json!({
                 "type": CONTAINER_CLASS,
                 "tenant": tenant,
                 "source": container.source,
                 "container_id": container.container_id,
                 "parent_id": container.parent_id,
                 "title": container.title,
-            })),
-        );
-        written.nodes += 1;
+            }),
+        });
         if let Some(old) = old_parent {
             if container.parent_id.as_deref() != Some(old.as_str()) {
                 let old_id = container_node_id(tenant, &container.source, &old)?;
-                core.remove_typed_edge(id.clone(), old_id, CONTAINED_IN.to_string());
+                plan.removed_edges.push((id, old_id));
             }
         }
     }
@@ -164,13 +206,50 @@ pub fn upsert_containers(
         let Some(parent) = container.parent_id.as_deref() else {
             continue;
         };
-        let id = container_node_id(tenant, &container.source, &container.container_id)?;
-        let parent_id = container_node_id(tenant, &container.source, parent)?;
-        core.add_typed_edge(id, parent_id, CONTAINED_IN.to_string(), blob(&json!({})))
-            .map_err(|e| refuse("CONTAINER_EDGE_REFUSED", e))?;
-        written.edges += 1;
+        plan.edges.push((
+            container_node_id(tenant, &container.source, &container.container_id)?,
+            container_node_id(tenant, &container.source, parent)?,
+        ));
     }
-    Ok(written)
+    Ok(plan)
+}
+
+/// Upsert `containers` of `tenant` into `core`.
+///
+/// Every container is validated and the batch is checked for parent cycles and depth
+/// before anything is written ([`plan_containers`] owns those rules). Re-sending a
+/// container writes the same node and edge again.
+pub fn upsert_containers(
+    core: &GraphCore,
+    tenant: &str,
+    containers: &[SourceContainer],
+) -> Result<ContainerUpsert, ContainerError> {
+    let mut held = BTreeMap::new();
+    for id in held_ids(tenant, containers)? {
+        if core.has_node(&id) {
+            held.insert(id.clone(), props(core, &id).unwrap_or_else(|| json!({})));
+        }
+    }
+    let plan = plan_containers(tenant, containers, &held)?;
+    for node in &plan.nodes {
+        core.add_node(node.node_id.clone(), blob(&node.properties));
+    }
+    for (child, old_parent) in &plan.removed_edges {
+        core.remove_typed_edge(child.clone(), old_parent.clone(), CONTAINED_IN.to_string());
+    }
+    for (child, parent) in &plan.edges {
+        core.add_typed_edge(
+            child.clone(),
+            parent.clone(),
+            CONTAINED_IN.to_string(),
+            blob(&json!({})),
+        )
+        .map_err(|e| refuse("CONTAINER_EDGE_REFUSED", e))?;
+    }
+    Ok(ContainerUpsert {
+        nodes: plan.nodes.len() as u64,
+        edges: plan.edges.len() as u64,
+    })
 }
 
 /// The root container and its descendants, found by walking `containedIn` edges in

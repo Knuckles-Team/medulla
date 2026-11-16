@@ -37,6 +37,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
+pub mod containers;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
@@ -201,15 +202,19 @@ pub async fn prepare(
 }
 
 /// `prepare` dispatches on the batch kind: `Records` has the record admission path,
-/// `Access` and `Groups` the permission path (MEDULLA-INGEST-WORKER-R902.3); the other
-/// kinds have no admission path until their owning rows add one.
+/// `Access` and `Groups` the permission path (MEDULLA-INGEST-WORKER-R902.3), `Containers`
+/// the container path (MEDULLA-INGEST-WORKER-R904.3); the other kinds have no admission
+/// path until their owning rows add one.
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_kind(
     kind: medulla_source_types::source_ingestion::batch_kind::SourceBatchKind,
 ) -> Result<(), String> {
     use medulla_source_types::source_ingestion::batch_kind::SourceBatchKind;
     match kind {
-        SourceBatchKind::Records | SourceBatchKind::Access | SourceBatchKind::Groups => Ok(()),
+        SourceBatchKind::Records
+        | SourceBatchKind::Access
+        | SourceBatchKind::Groups
+        | SourceBatchKind::Containers => Ok(()),
         _ => Err(format!(
             "{}: batch kind {kind:?} has no admission path",
             medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
@@ -229,8 +234,9 @@ pub async fn prepare(
         batch.kind,
         medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Access
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
     ) {
-        return prepare_permissions(ctx, &request).await;
+        return prepare_extension_batch(ctx, &request).await;
     }
     let batch_digest = request.batch_digest()?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
@@ -382,7 +388,7 @@ pub async fn prepare(
 /// envelope. The envelope advances the stream's permission object, never the record
 /// stream's cursor, so a permission sync cannot reorder record ingestion.
 #[cfg(all(feature = "redb", feature = "blob"))]
-async fn prepare_permissions(
+async fn prepare_extension_batch(
     ctx: PrepareContext<'_>,
     request: &SourceIngestionRequest,
 ) -> Result<PreparedSourceIngestion, String> {
@@ -455,9 +461,23 @@ async fn prepare_permissions(
                 methods.push(update.method);
             }
         }
+        Some(SourceBatchExtension::Containers(items)) => {
+            let found = containers::decode_containers(items.as_slice())?;
+            let held = read_held_containers(
+                persistence.as_ref(),
+                &graph_fname,
+                &containers::held_ids(ctx.tenant_scope, &found)?,
+            )
+            .await?;
+            let admission = containers::admit_containers(ctx.tenant_scope, &found, &held)?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
+            methods.extend(admission.methods);
+        }
         _ => {
             return Err(format!(
-                "{}: permission batch carries no matching extension",
+                "{}: extension batch carries no matching extension",
                 medulla_types::contract::ServerErrorCode::SourceBatchKindMismatch.as_str()
             ));
         }
@@ -537,6 +557,30 @@ fn decode_permission_items<T: serde::de::DeserializeOwned>(
             Ok(decoded)
         })
         .collect()
+}
+
+/// The held properties of each container node a `containers` batch names; an absent node
+/// has no entry.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_containers(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    ids: &BTreeSet<String>,
+) -> Result<BTreeMap<String, serde_json::Value>, String> {
+    let mut held = BTreeMap::new();
+    for id in ids {
+        let Some(bytes) = persistence.read_node(graph_fname, id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes).map_err(|error| {
+            format!(
+                "{}: held container: {error}",
+                medulla_types::contract::ServerErrorCode::SourceContainerInvalid.as_str()
+            )
+        })?;
+        held.insert(id.clone(), properties);
+    }
+    Ok(held)
 }
 
 /// What the engine holds about each record an access batch names.
@@ -1377,6 +1421,7 @@ fn admit_records(
                 .or_insert(toc_blob);
         }
         admitted.methods.push(item.method);
+        admitted.methods.extend(item.container_edge);
         admitted.lineage.push(item.lineage);
         admitted.policies.push(item.policy);
     }
@@ -1848,6 +1893,9 @@ struct AdmittedRecord {
     /// (MEDULLA-DECISION-ENGINE-R153.3); empty for any other record.
     toc_blobs: Vec<medulla_protocol_types::change_envelope::BlobReference>,
     method: Method,
+    /// The `inContainer` edge of a record whose `container_id` property names a
+    /// container (MEDULLA-INGEST-WORKER-R904.3).
+    container_edge: Option<Method>,
     lineage: medulla_protocol_types::change_envelope::LineageRecord,
     policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
@@ -1908,6 +1956,20 @@ fn admit_record(
             properties.insert((*key).into(), value.clone());
         }
     }
+    let container_edge = match properties
+        .get("container_id")
+        .and_then(serde_json::Value::as_str)
+    {
+        Some(container_id) => Some(containers::in_container_edge(
+            &node_id,
+            &containers::record_container_node_id(
+                ctx.tenant_scope,
+                batch.connector.as_str(),
+                container_id,
+            )?,
+        )?),
+        None => None,
+    };
     let method = Method::AddNode {
         node_id: node_id.clone(),
         properties_msgpack: rmp_serde::to_vec_named(&properties)
@@ -1944,6 +2006,7 @@ fn admit_record(
         ),
         toc_blobs,
         method,
+        container_edge,
         lineage,
         policy,
     }))

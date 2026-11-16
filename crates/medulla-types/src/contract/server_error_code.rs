@@ -493,6 +493,7 @@ closed_error_codes! {
         SourceBatchKindUnavailable => "SOURCE_BATCH_KIND_UNAVAILABLE",
         SourceBindingInvalid => "SOURCE_BINDING_INVALID",
         SourceColumnProfileInvalid => "SOURCE_COLUMN_PROFILE_INVALID",
+        SourceContainerInvalid => "SOURCE_CONTAINER_INVALID",
         SourceBindingMismatch => "SOURCE_BINDING_MISMATCH",
         SourceBindingNotRegistered => "SOURCE_BINDING_NOT_REGISTERED",
         SourceIngestionReplayConflict => "SOURCE_INGESTION_REPLAY_CONFLICT",
