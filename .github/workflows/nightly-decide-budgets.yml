@@ -25,7 +25,10 @@ jobs:
   decide-budgets:
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 180
-    runs-on: ubuntu-24.04
+    # A full medulla build exhausts a hosted runner (shutdown signal mid-compile); use the warm build runners.
+    runs-on:
+      group: medulla-warm
+      labels: [self-hosted, medulla-warm]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

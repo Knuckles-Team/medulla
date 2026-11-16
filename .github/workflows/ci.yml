@@ -1632,7 +1632,14 @@ jobs:
           # recreated runner reuse what its neighbours on the host already compiled.
           sccache_dir="$root/sccache"
           [ -d "$HOME/sccache-shared" ] && [ -w "$HOME/sccache-shared" ] && sccache_dir="$HOME/sccache-shared"
+          # Hooks pin pipelines at `rev: main`, and pre-commit never re-fetches a mutable rev, so a persistent
+          # hook cache keeps running a fixed bug forever. Key the hook home on the pipelines main commit and
+          # drop every other key.
+          hooks_key="$(git ls-remote https://github.com/Knuckles-Team/pipelines refs/heads/main | cut -c1-12)"
+          [ -n "$hooks_key" ] || { echo "could not resolve pipelines main"; exit 1; }
           mkdir -p "$target" "$sccache_dir" "$root/pre-commit"
+          find "$root/pre-commit" -mindepth 1 -maxdepth 1 ! -name "$hooks_key" -exec rm -rf {} +
+          mkdir -p "$root/pre-commit/$hooks_key"
           budget_kb=$((250 * 1024 * 1024))
           used_kb="$(du -sk "$root" | cut -f1)"
           echo "cache root $root: ${used_kb} KiB used (budget ${budget_kb} KiB)"
@@ -1646,7 +1653,7 @@ jobs:
             echo "SCCACHE_DIR=$sccache_dir"
             echo "SCCACHE_CACHE_SIZE=100G"
             echo "SCCACHE_GHA_ENABLED=false"
-            echo "PRE_COMMIT_HOME=$root/pre-commit"
+            echo "PRE_COMMIT_HOME=$root/pre-commit/$hooks_key"
           } >> "$GITHUB_ENV"
           # Pinned static sccache (v0.10.0, musl x86_64), kept in the persistent cache root.
           sccache_bin="$root/bin/sccache"
