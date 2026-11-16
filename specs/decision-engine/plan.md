@@ -84,6 +84,16 @@ The nine rules below bind every row.
 8. **Evolution-tuned knobs (`MEDULLA-DECISION-ENGINE-R179`).** Each tunable value is a named knob with a default, bounds and a unit. Knobs of security, policy, write-back and irreversible questions are `Fixed`.
 9. **Ownership.** A medulla row keeps the fact, decision and record side. Served, contract and connector parts live in the owner's spec and link by ID.
 
+Design answers:
+
+- **Owner.** Medulla. The served stages live in `crates/medulla-h-decide/src/decide/`; the record and refusal types in `medulla-decision-types` and `medulla-decision-outcome-types`; the kernels in `medulla-decision-stats`, `medulla-decision-rank`, `medulla-decision-memory`, `medulla-decision-plan` and `medulla-decision-policy`. Served, contract and connector parts belong to their owners (rule 9).
+- **Cohesion.** Every question runs the same stages (prepare, evaluate, conclude, seal) through one `DecisionFamily` trait, so a family is one module under `decide/family/` and shares one record, one refusal taxonomy and one knob table.
+- **Dependency direction.** `medulla-h-decide` points down to the decision kernel crates and the shared engine crates; the kernel crates point down only to `medulla-decision-types` and the numeric crates. No kernel crate depends on the served layer.
+- **Interface depth.** Few entry points: `Decide`, `AgentAssemble` and `DecideText` evaluate; `DecisionCommit`, `DecisionLog` and the decision jobs write (rule 4). Each family adds hooks to the one trait, not a new method.
+- **Special cases.** None per caller. A new question is a new `QuestionKind` with its family; the exhaustive match rejects a kind without one (rule 1).
+- **State.** Decisions are evaluate-only and keep no state between calls. Durable state is the sealed record, the fitted-head lifecycle (rule 7) and the decision jobs, each with one write authority.
+- **Environment.** Tunable values are named knobs with defaults, bounds and units, read through the knob table (rule 8). The decision crates read no environment variable.
+
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
 ### Process control steps and decisions (R134.111.14 to R134.111.18, R180)
