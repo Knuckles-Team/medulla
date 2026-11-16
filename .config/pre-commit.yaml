@@ -441,6 +441,13 @@ repos:
     pass_filenames: false
     always_run: true
     stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
+  - id: decision-reachability
+    name: Every public decision item has a production caller
+    entry: python3 scripts/check_decision_reachability.py
+    language: system
+    pass_filenames: false
+    always_run: true
+    stages: [manual]
   - id: durable-table-registration-push
     name: Every durable table is in the owner registry, manifest and census
     entry: python3 -m scripts.source_gate_scope --scope push --scanner durable-table-registration
