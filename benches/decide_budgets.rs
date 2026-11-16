@@ -71,7 +71,8 @@ use medulla_decision_types::decision::thought_search::{
     MAX_THOUGHT_LEAVES,
 };
 use medulla_decision_types::decision::trajectory_verdict::{
-    JoinRequest, StepCheck, TraceStep, TrajectoryEntry, VerifyRequest, MAX_TRAJECTORIES,
+    JoinRequest, StepCheck, TraceStep as VerifyStep, TrajectoryEntry, VerifyRequest,
+    MAX_TRAJECTORIES,
 };
 use medulla_decision_types::decision::{DecisionPolicyRef, EvidenceClass};
 use medulla_h_decide::decide::stat_test_support::{
@@ -2121,8 +2122,8 @@ fn bench_trajectory_served(
         black_box(decide(rt, &h, &joined));
     });
 
-    let steps: Vec<TraceStep> = (0..SERVED_VERIFY_STEPS)
-        .map(|n| TraceStep {
+    let steps: Vec<VerifyStep> = (0..SERVED_VERIFY_STEPS)
+        .map(|n| VerifyStep {
             step_id: format!("s{n:04}"),
             digest: format!("{:02x}", n % 251 + 1).repeat(32),
         })
