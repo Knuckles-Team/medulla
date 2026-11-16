@@ -40,6 +40,7 @@ use medulla_decision_stats::decision::population::wasserstein1;
 use medulla_decision_stats::decision::reward::decompose;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
 use medulla_decision_stats::decision::trajectory_join::join;
+use medulla_decision_types::belief_revision::BeliefReviseRequest;
 use medulla_decision_types::claims::{ClaimOp, EvidenceChannel};
 use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
 use medulla_decision_types::decision::curriculum::{
@@ -1848,6 +1849,97 @@ fn bench_group(
     );
 }
 
+/// Claims the `decide/belief_revision` group holds, each with evidence already
+/// revised once.
+const BELIEF_CLAIMS: usize = 64;
+/// Evidence items each belief-bench claim starts with.
+const BELIEF_EVIDENCE_PER_CLAIM: usize = 8;
+/// Graph the belief-bench passes run on.
+const BELIEF_GRAPH: &str = "bench-belief";
+
+// spec: MEDULLA-DECISION-ENGINE-R700.6
+/// The `decide/belief_revision` group (MEDULLA-DECISION-ENGINE-R700.6, R178.1):
+/// 64 claims of 8 evidence items each have been revised once; one sample
+/// records one new evidence item on the next claim and serves the
+/// `BeliefRevise` pass that revises it. The fixture asserts the pass visited
+/// exactly that claim, so the group times the revision and not a refusal.
+/// Budgets: `group_budgets` in `benches/baselines/decide.json`.
+fn bench_belief_revision(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let h = rt.block_on(Harness::new());
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
+    let record = |claim: usize, item: usize| {
+        let response = claims(
+            rt,
+            &h,
+            ClaimOp::RecordEvidence {
+                evidence_id: format!("belief-e{claim}-{item}"),
+                claim_id: format!("belief-claim-{claim}"),
+                channel: Some(EvidenceChannel::Outcome),
+                supports: item % 3 != 0,
+                weight_ppm: 50_000,
+                source_digest: format!("sha256:{claim:032x}{item:032x}"),
+                stances: BTreeMap::new(),
+                feed: None,
+            },
+        );
+        assert!(
+            response.error.is_none(),
+            "belief bench fixture: {response:?}"
+        );
+    };
+    let pass = |ids: Vec<String>| {
+        let response = rt.block_on(medulla_h_decide::decide::handle_belief_revise(
+            &h.state,
+            2,
+            &verified,
+            BeliefReviseRequest {
+                graph: BELIEF_GRAPH.to_string(),
+                claim_ids: ids,
+                texts: BTreeMap::new(),
+                premises: Vec::new(),
+                advance: Vec::new(),
+            },
+        ));
+        assert!(
+            response.error.is_none(),
+            "belief bench fixture: {response:?}"
+        );
+        response
+    };
+    for claim in 0..BELIEF_CLAIMS {
+        let response = claims(
+            rt,
+            &h,
+            ClaimOp::Propose {
+                claim_id: format!("belief-claim-{claim}"),
+            },
+        );
+        assert!(
+            response.error.is_none(),
+            "belief bench fixture: {response:?}"
+        );
+        for item in 0..BELIEF_EVIDENCE_PER_CLAIM {
+            record(claim, item);
+        }
+    }
+    pass(
+        (0..BELIEF_CLAIMS)
+            .map(|n| format!("belief-claim-{n}"))
+            .collect(),
+    );
+    let mut round = 0usize;
+    bench_group(c, report, "decide/belief_revision", &mut || {
+        let claim = round % BELIEF_CLAIMS;
+        record(claim, BELIEF_EVIDENCE_PER_CLAIM + round);
+        round += 1;
+        black_box(pass(vec![format!("belief-claim-{claim}")]));
+    });
+}
+
 /// Skills the `decide/skill_evolution` group publishes, one library block.
 const EVOLUTION_SKILLS: usize = 256;
 
@@ -2233,6 +2325,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_concentration_kernel(c, &mut report);
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);
+    bench_belief_revision(c, &rt, &mut report);
     bench_skill_evolution(c, &rt, &mut report);
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);

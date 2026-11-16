@@ -1,5 +1,5 @@
 //! Served belief revision tests (MEDULLA-DECISION-ENGINE-R700.3, R700.4,
-//! R700.7): a pass queued by a committed batch reaches the handler, refusals
+//! R700.6, R700.7): a pass queued by a committed batch reaches the handler, refusals
 //! leave the ledger untouched, and a detected contradiction is tracked, read
 //! through UQL and moved only in status order.
 
@@ -19,6 +19,7 @@ const WHO: &str = "belief-writer";
 const GRAPH: &str = "kg-belief";
 const HIGHER: &str = "cache-hit-rate-is-higher";
 const LOWER: &str = "cache-hit-rate-is-lower";
+const OTHER_TENANT: &str = "tenant-other";
 
 fn verified(tenant: &str) -> VerifiedRequestContext {
     VerifiedRequestContext::verified_for_test_in_tenant(WHO, tenant)
@@ -94,7 +95,28 @@ fn request(claims: &[&str]) -> BeliefReviseRequest {
 }
 
 async fn pass(h: &Harness, request: BeliefReviseRequest) -> Result<BeliefPassResult, String> {
-    decode(handle_belief_revise(&h.state, 4, &verified(TENANT), request).await)
+    pass_as(h, TENANT, request).await
+}
+
+async fn pass_as(
+    h: &Harness,
+    tenant: &str,
+    request: BeliefReviseRequest,
+) -> Result<BeliefPassResult, String> {
+    decode(handle_belief_revise(&h.state, 4, &verified(tenant), request).await)
+}
+
+async fn claim_of(h: &Harness, claim_id: &str) -> ClaimRecord {
+    claim_op(
+        h,
+        ClaimOp::Get {
+            claim_id: Some(claim_id.into()),
+            artifact_id: None,
+        },
+    )
+    .await
+    .map(|got: medulla_types::claims::ClaimGetResult| got.claim.unwrap())
+    .unwrap()
 }
 
 fn touching(claims: &[&str]) -> MutationOutboxIntent {
@@ -304,4 +326,119 @@ async fn contradiction_is_tracked_and_status_is_ordered() {
     assert!(backwards
         .unwrap_err()
         .starts_with("CONTRADICTION_STATUS_ORDER"));
+}
+
+/// The hot path end to end (MEDULLA-DECISION-ENGINE-R700.6): supporting and
+/// opposing evidence is committed, one pass revises the claims and cites a
+/// premise, reports a friction finding between the opposed pair and proposes a
+/// retraction for a refuted claim. Both refusals change nothing, no claim is
+/// ever retracted, and a second tenant neither sees nor shares the first
+/// tenant's claims or ledger.
+// spec: MEDULLA-DECISION-ENGINE-R700.6
+#[tokio::test]
+async fn belief_pass_proposes_and_never_retracts() {
+    let h = belief_harness().await;
+    claim_with_evidence(&h, HIGHER, true, 900_000).await;
+    claim_with_evidence(&h, LOWER, false, 900_000).await;
+    claim_with_evidence(&h, "premise-claim", true, 400_000).await;
+    claim_with_evidence(&h, "disk-is-fast", false, 1_000_000).await;
+    let _: ClaimRecord = claim_op(
+        &h,
+        ClaimOp::RecordEvidence {
+            evidence_id: "e-disk-is-fast-2".to_string(),
+            claim_id: "disk-is-fast".to_string(),
+            channel: Some(EvidenceChannel::Outcome),
+            supports: false,
+            weight_ppm: 1_000_000,
+            source_digest: "sha256:disk-is-fast-2".to_string(),
+            stances: BTreeMap::new(),
+            feed: None,
+        },
+    )
+    .await
+    .unwrap();
+    let ids = [HIGHER, LOWER, "disk-is-fast"];
+    let before: Vec<ClaimRecord> = {
+        let mut all = Vec::new();
+        for id in ids {
+            all.push(claim_of(&h, id).await);
+        }
+        all
+    };
+
+    // Refusals first: they change no durable state.
+    let unknown = pass(&h, request(&["no-such-claim"])).await;
+    assert!(unknown.unwrap_err().starts_with("BELIEF_CLAIM_NOT_FOUND"));
+    let mut missing = request(&[HIGHER]);
+    missing.premises.push(PremiseRef {
+        claim_id: HIGHER.into(),
+        premise_id: "absent-premise".into(),
+        supports: true,
+        channel: EvidenceChannel::Health,
+        weight_ppm: 100_000,
+        class: EvidenceClass::Observation,
+    });
+    let error = pass(&h, missing).await.unwrap_err();
+    assert!(error.starts_with("BELIEF_PREMISE_MISSING"));
+    assert!(error.contains("absent-premise"));
+
+    // One pass over the committed evidence, citing an existing claim as a premise.
+    let mut cited = request(&ids);
+    cited.premises.push(PremiseRef {
+        claim_id: HIGHER.into(),
+        premise_id: "premise-claim".into(),
+        supports: true,
+        channel: EvidenceChannel::Health,
+        weight_ppm: 100_000,
+        class: EvidenceClass::Observation,
+    });
+    let result = pass(&h, cited).await.unwrap();
+    assert_eq!(
+        result.claims_visited, 3,
+        "the refusals left no ledger entry"
+    );
+    let by_claim: BTreeMap<_, _> = result
+        .revisions
+        .iter()
+        .map(|r| (r.claim_id.as_str(), r))
+        .collect();
+    assert!(by_claim[HIGHER].posterior_micro > 0);
+    assert!(by_claim[LOWER].posterior_micro < 0);
+    assert!(
+        by_claim[HIGHER]
+            .support
+            .iter()
+            .any(|e| e.evidence_id == "premise:premise-claim"),
+        "the cited premise is part of the stored explanation"
+    );
+    assert_eq!(result.friction.len(), 1);
+    assert!(result.friction[0].opposes);
+    assert_eq!(result.retractions.len(), 1);
+    assert_eq!(result.retractions[0].claim_id, "disk-is-fast");
+    assert_eq!(result.retractions[0].evidence_class, EvidenceClass::Claim);
+
+    // Proposing never retracts: every claim is byte-equal afterwards.
+    for (id, claim_before) in ids.iter().zip(&before) {
+        assert_eq!(&claim_of(&h, id).await, claim_before);
+    }
+
+    // Another tenant cannot revise the first tenant's claims, and its own pass
+    // on a claim of the same name is independent of the first tenant's ledger.
+    let foreign = pass_as(&h, OTHER_TENANT, request(&[HIGHER])).await;
+    assert!(foreign.unwrap_err().starts_with("BELIEF_CLAIM_NOT_FOUND"));
+    let _: ClaimRecord = decode(
+        handle_claims(
+            &h.state,
+            3,
+            &verified(OTHER_TENANT),
+            ClaimOp::Propose {
+                claim_id: HIGHER.to_string(),
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let theirs = pass_as(&h, OTHER_TENANT, request(&[HIGHER])).await.unwrap();
+    assert!(theirs.revisions.iter().all(|r| r.support.is_empty()));
+    assert!(theirs.friction.is_empty() && theirs.retractions.is_empty());
 }

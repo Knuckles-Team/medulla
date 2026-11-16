@@ -1,4 +1,4 @@
-"""MEDULLA-DECISION-ENGINE-R700.3 served belief revision: a pass over claims
+"""MEDULLA-DECISION-ENGINE-R700.3, R700.6 served belief revision: a pass over claims
 whose evidence changed, through the ``belief_revise`` client method.
 
 Two claims take opposing evidence, a pass revises both, reports the pair as a
@@ -73,7 +73,9 @@ async def _pass(tag: str) -> dict[str, Any]:
 
 
 # spec: MEDULLA-DECISION-ENGINE-R700.3
+# spec: MEDULLA-DECISION-ENGINE-R700.6
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R700.3")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R700.6")
 def test_pass_served(clean_graph):
     outcome = asyncio.run(_pass(uuid.uuid4().hex[:12]))
     revised = outcome["revised"]
@@ -83,6 +85,7 @@ def test_pass_served(clean_graph):
     assert by_claim[outcome["higher"]]["posterior_micro"] > 0
     assert by_claim[outcome["lower"]]["posterior_micro"] < 0
     assert revised["claims_visited"] == 2
+    assert len(revised["friction"]) == 1
     assert len(revised["pass_id"]) == 32
 
     pairs = {(c["left"], c["right"]) for c in revised["contradictions"]}
