@@ -1183,6 +1183,10 @@ mod scheduler_knob_tests {
             assert_eq!(refusal.code, ServerErrorCode::KnobOutOfRange);
             assert_eq!(refusal.knob, "batch.max_operations");
         }
+    }
+}
+
+#[cfg(test)]
 mod root_list_tests {
     use super::*;
 
