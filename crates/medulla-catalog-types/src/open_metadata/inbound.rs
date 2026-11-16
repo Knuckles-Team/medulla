@@ -62,6 +62,18 @@ impl OpenMetadataTypeView {
         self.classes.get(type_name).map(String::as_str)
     }
 
+    /// The open metadata type name a catalog class IRI maps to, if any. A class
+    /// annotated with two type names is ambiguous and is left unmapped.
+    pub fn type_for(&self, class_iri: &str) -> Option<&str> {
+        let mut found = self
+            .classes
+            .iter()
+            .filter(|(_, class)| class.as_str() == class_iri)
+            .map(|(name, _)| name.as_str());
+        let first = found.next()?;
+        found.next().is_none().then_some(first)
+    }
+
     fn require(&self, type_name: &str) -> Result<&str, OpenMetadataError> {
         self.class_for(type_name)
             .ok_or_else(|| OpenMetadataError::TypeUnmapped {

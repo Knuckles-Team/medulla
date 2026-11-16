@@ -80,11 +80,13 @@ pub struct OpenMetadataRecord {
 }
 
 mod inbound;
+mod outbound;
 
 pub use inbound::{
     inbound_mutations, OpenMetadataMutation, OpenMetadataTypeView, EXTERNAL_GUID_PROPERTY,
     EXTERNAL_VERSION_PROPERTY,
 };
+pub use outbound::{outbound_record, OutboundNode};
 
 /// Why an open metadata record could not be mapped.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -95,6 +97,13 @@ pub enum OpenMetadataError {
     TypeUnmapped {
         /// The unmapped open metadata type name.
         type_name: String,
+    },
+    /// The catalog class has no open metadata type annotated on it, so a node of
+    /// it is not proposed outbound.
+    #[error("catalog class {class_iri} has no open metadata type")]
+    ClassUnmapped {
+        /// The unmapped catalog class IRI.
+        class_iri: String,
     },
 }
 

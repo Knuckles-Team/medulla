@@ -153,3 +153,53 @@ fn inbound_maps_term_asset_and_lineage() {
         }
     );
 }
+
+// spec: MEDULLA-TYPED-PACKS-R110.4
+#[test]
+fn outbound_carries_expected_version() {
+    let view = view();
+    let synced = OutboundNode {
+        class_iri: format!("{CAT}GlossaryTerm"),
+        properties: BTreeMap::from([
+            (EXTERNAL_GUID_PROPERTY.to_string(), serde_json::json!("g-1")),
+            (EXTERNAL_VERSION_PROPERTY.to_string(), serde_json::json!(7)),
+            ("displayName".to_string(), serde_json::json!("Customer")),
+        ]),
+        update_time_ms: 42,
+    };
+    let record = outbound_record(&view, &synced).unwrap();
+    assert_eq!(record.guid, "g-1");
+    assert_eq!(record.type_name, "GlossaryTerm");
+    assert_eq!(
+        record.version, 7,
+        "the last synced version is the expected one"
+    );
+    assert_eq!(record.update_time_ms, 42);
+    assert_eq!(
+        record.properties,
+        BTreeMap::from([("displayName".to_string(), serde_json::json!("Customer"))])
+    );
+
+    // A node that was never synced is a create: empty GUID, version zero.
+    let fresh = OutboundNode {
+        class_iri: format!("{CAT}DataResource"),
+        properties: BTreeMap::new(),
+        update_time_ms: 1,
+    };
+    let record = outbound_record(&view, &fresh).unwrap();
+    assert_eq!((record.guid.as_str(), record.version), ("", 0));
+    assert_eq!(record.type_name, "DataSet");
+
+    // A class with no annotation is refused and nothing is proposed.
+    let unmapped = OutboundNode {
+        class_iri: format!("{CAT}Other"),
+        properties: BTreeMap::new(),
+        update_time_ms: 1,
+    };
+    assert_eq!(
+        outbound_record(&view, &unmapped).unwrap_err(),
+        OpenMetadataError::ClassUnmapped {
+            class_iri: format!("{CAT}Other")
+        }
+    );
+}
