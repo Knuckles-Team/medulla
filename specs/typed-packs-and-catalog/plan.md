@@ -589,6 +589,10 @@ choice stay here.
 
 The catalog of R106 is the system of record. An open-metadata store is a federated secondary through `MEDULLA-SRC-AUTH-R012`; nothing is copied outside the catalog's own nodes. The `cat:openMetadataType` annotation maps open metadata type names to catalog classes, so the ontology drives the mapping. `OpenMetadataRecord` mirrors the open metadata (OMRS) instance header: GUID, type name and version. Inbound sync writes `cat:externalGuid` and `cat:externalVersion`. Outbound proposals carry the last synced version as the expected version. The connector refuses a write over a concurrent store change. The next sync records the conflict. Call path: `Method::SourceSync` → `handle_source_sync` → `OpenMetadataSyncAdapter` (`crates/medulla-catalog-types/src/open_metadata/adapter.rs`). The open-metadata connector `egeria-mcp` owns the pack sources and the version-checked write sink; R110 names its rows.
 
+### Domain pack run (R097.700)
+
+Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row, grouped by user story and ordered producer first: a model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks that edit the shared dispatch file or `metadata_catalog-v1.ttl` run in series; tasks in different crates run in parallel.
@@ -625,7 +629,3 @@ none
 - Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
 - Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
 - Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
-
-## Domain pack run (R097.700)
-
-Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.

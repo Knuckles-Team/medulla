@@ -268,6 +268,24 @@ Three consecutive failures of one rule open one incident through R760. R763 exte
 lineage of R702 to columns by parsing SQL text with the shared planner parser. R764 counts asset
 use from the query audit and fuses a capped usage prior into catalog search.
 
+### Catalog probe (R014.2.2, R014.2.3)
+
+Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.
+
+#### Usage from source query logs and the usage answer (R764.7, R764.8)
+
+`SourceQueryLogIngest` is an analytics job kind. Its claim runs `run_query_log_ingest`
+(`medulla-server-ops`), which reads the source log through `SourceQueryLog`, tallies reads, joins
+and filters on the shared parser and appends `asset_usage.*` points. `Method::CatalogUsage` is a
+read-only query-family method answered by `handle_usage` from those series; see research.md for
+the cursor, scope-stamping and refusal decisions.
+
+### Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
+
+`virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.
+
+Projection read wiring (R026.4): `Method::ProjectionRead` is served by `handle_projection_read` in `crates/medulla-h-query/src/query/projection.rs` (types and pure evaluation in `crates/medulla-types/src/projection_read.rs`, codes `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`, `PROJECTION_ACCESS_DENIED`, `PROJECTION_READ_ONLY` in `ServerErrorCode`). The pgwire session binds `medulla.mapping` through `WireSession::bind_mapping`; `refuse_projection_write` in `crates/medulla-wire-core/src/wire/projection.rs` refuses writes. Served tests: `tests/projection_read_served.rs`.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Adapter tasks of different dialects run in parallel after the conformance harness exists. Tasks that edit the shared `foreign_scan` path or the shared dispatch arms run in sequence.
@@ -305,21 +323,3 @@ none
 - Source ingest of fetched pages and outside quality results: `MEDULLA-UNIFIED-DATA-PLANE-R651.7.3` provides, `SCION-SOURCE-INGEST-R001` consumes. Contract: [scion-source-ingest.md](contracts/scion-source-ingest.md).
 - Gramps pilot corpus and phase exits: `MEDULLA-UNIFIED-DATA-PLANE-R026.2.2` provides, `CONN-GRAMPS-MCP-CONNECTOR-CONTENT-R001` consumes. Contract: [gramps-native-pilot.md](contracts/gramps-native-pilot.md).
 - Cross-application entity links: `MEDULLA-UNIFIED-DATA-PLANE-R030.3` provides, `CONN-IMMICH-API-R001` consumes. Contract: [immich-entity-links.md](contracts/immich-entity-links.md).
-
-## Catalog probe (R014.2.2, R014.2.3)
-
-Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.
-
-### Usage from source query logs and the usage answer (R764.7, R764.8)
-
-`SourceQueryLogIngest` is an analytics job kind. Its claim runs `run_query_log_ingest`
-(`medulla-server-ops`), which reads the source log through `SourceQueryLog`, tallies reads, joins
-and filters on the shared parser and appends `asset_usage.*` points. `Method::CatalogUsage` is a
-read-only query-family method answered by `handle_usage` from those series; see research.md for
-the cursor, scope-stamping and refusal decisions.
-
-## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
-
-`virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.
-
-Projection read wiring (R026.4): `Method::ProjectionRead` is served by `handle_projection_read` in `crates/medulla-h-query/src/query/projection.rs` (types and pure evaluation in `crates/medulla-types/src/projection_read.rs`, codes `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`, `PROJECTION_ACCESS_DENIED`, `PROJECTION_READ_ONLY` in `ServerErrorCode`). The pgwire session binds `medulla.mapping` through `WireSession::bind_mapping`; `refuse_projection_write` in `crates/medulla-wire-core/src/wire/projection.rs` refuses writes. Served tests: `tests/projection_read_served.rs`.
