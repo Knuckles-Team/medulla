@@ -941,6 +941,13 @@ pub fn run_round_with_state(
             &verifier,
         )
     });
+    // MEDULLA-FEDERATED-QUERY-R083.5: the verdict rides in the premise list beside the
+    // other steps' premises, so the harness persists it through its decision log.
+    if let Some(verdict) = &arbitration {
+        steps
+            .premises
+            .push(crate::retrieval_arbitration::arbitration_premise(verdict));
+    }
     Ok(RoundResult {
         state,
         rows: rows

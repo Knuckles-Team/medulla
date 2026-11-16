@@ -9,6 +9,7 @@
 use medulla_result_types::retrieval_arbitration::{
     ArbitrationChoice, ArbitrationVerdict, Candidate, Citation, SupportState,
 };
+use medulla_result_types::retrieval_round::RetrievalPremise;
 
 /// What the span verifier says about one citation on the request snapshot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +115,33 @@ pub fn arbitrate(
         query_digest: query_digest.to_owned(),
         graph_snapshot_revision: graph_snapshot_revision.to_owned(),
         supporting_span_ids,
+    }
+}
+
+/// The `retrieval.arbitration` premise (MEDULLA-FEDERATED-QUERY-R083.5): both
+/// candidates with their grounding and support state, the citation ids, the margin
+/// and the choice. Ids and states only, never claim or answer text.
+pub fn arbitration_premise(verdict: &ArbitrationVerdict) -> RetrievalPremise {
+    let origin = |candidate: &Candidate| {
+        serde_json::json!({
+            "grounding": candidate.grounding,
+            "support_state": candidate.support_state,
+            "confidence": candidate.confidence,
+            "citation_ids": supporting_spans(candidate),
+        })
+    };
+    RetrievalPremise {
+        step: "arbitration".into(),
+        name: "retrieval.arbitration".into(),
+        value: serde_json::json!({
+            "choice": verdict.choice,
+            "margin": verdict.margin,
+            "query_digest": verdict.query_digest,
+            "graph_snapshot_revision": verdict.graph_snapshot_revision,
+            "supporting_span_ids": verdict.supporting_span_ids,
+            "prior": origin(&verdict.prior),
+            "retrieved": origin(&verdict.retrieved),
+        }),
     }
 }
 
@@ -261,5 +289,20 @@ mod tests {
             0.0,
         );
         assert_eq!(equal.choice, ArbitrationChoice::Abstain);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R083.5
+    #[test]
+    fn arbitration_premise_lists_both_classes() {
+        let prior = candidate(0.95, AnswerGrounding::Parametric, &[None]);
+        let retrieved = candidate(0.70, AnswerGrounding::Retrieved, &[Some("doc-a")]);
+        let premise = arbitration_premise(&run(prior, retrieved, 0.10));
+        assert_eq!(premise.name, "retrieval.arbitration");
+        assert_eq!(premise.value["choice"], "retrieved");
+        assert_eq!(premise.value["prior"]["grounding"], "parametric");
+        assert_eq!(premise.value["prior"]["support_state"], "unsupported");
+        assert_eq!(premise.value["retrieved"]["support_state"], "supported");
+        assert_eq!(premise.value["retrieved"]["citation_ids"][0], "doc-a:0-4");
+        assert!(!premise.value.to_string().contains("Retrieved\""));
     }
 }

@@ -2143,3 +2143,48 @@ async fn arbitration_part_returns_verdict_or_none() {
         .unwrap_or_default()
         .starts_with(RETRIEVAL_CONTRACT_INVALID));
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R083.5
+#[tokio::test(flavor = "multi_thread")]
+async fn arbitration_premise_lists_both_origins() {
+    let state = state();
+    seed(&state, 2).await;
+    let result = decode(
+        round_as(
+            &state,
+            None,
+            arbitration_request(
+                candidate(AnswerGrounding::Parametric, 0.99, None),
+                candidate(
+                    AnswerGrounding::Retrieved,
+                    0.2,
+                    Some(span_citation("doc-0", 5, "entry")),
+                ),
+            ),
+        )
+        .await,
+    );
+    let premise = result
+        .premises
+        .iter()
+        .find(|premise| premise.name == "retrieval.arbitration")
+        .expect("the arbitration premise rides with the result");
+    let value = &premise.value;
+    assert_eq!(value["choice"], "retrieved");
+    assert_eq!(value["prior"]["grounding"], "parametric");
+    assert_eq!(value["prior"]["support_state"], "unsupported");
+    assert_eq!(value["retrieved"]["grounding"], "retrieved");
+    assert_eq!(value["retrieved"]["support_state"], "supported");
+    assert_eq!(value["retrieved"]["citation_ids"][0], "doc-0:0-5");
+    assert!(
+        !value.to_string().contains("answer"),
+        "the premise carries ids and states, never answer text: {value}"
+    );
+
+    // No arbitration part: no premise.
+    let plain = decode(round_as(&state, None, request(None)).await);
+    assert!(plain
+        .premises
+        .iter()
+        .all(|premise| premise.name != "retrieval.arbitration"));
+}
