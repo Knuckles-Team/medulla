@@ -5324,6 +5324,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-capabilities",
  "medulla-catalog-types",
+ "medulla-compute",
  "medulla-core",
  "medulla-decision-types",
  "medulla-exec",

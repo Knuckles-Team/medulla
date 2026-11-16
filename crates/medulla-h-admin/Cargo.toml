@@ -18,6 +18,7 @@ dashmap = "6.2"
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-compute = { path = "../medulla-compute", features = ["decide"] }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-kernel = { path = "../medulla-kernel" }

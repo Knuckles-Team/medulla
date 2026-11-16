@@ -581,7 +581,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R002.6`: `crates/medulla-h-admin/src/admin/component_content.rs::handle_component_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::verified_body_read` (planned)
 - `MEDULLA-TYPED-PACKS-R002.7`: `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit` (planned)
 - `MEDULLA-TYPED-PACKS-R002.8`: `crates/medulla-h-admin/src/connector_pack_projection.rs::project` (existing); `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` (planned)
-- `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route` (planned)
+- `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route`
 - `MEDULLA-TYPED-PACKS-R002.10`: `tests/test_prompt_blueprints_served.py::test_receipt_verdicts` (planned)
 - `MEDULLA-TYPED-PACKS-R002.11`: `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` (planned)
 - `MEDULLA-TYPED-PACKS-R003`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::only_the_bound_importer_may_import` (existing)
