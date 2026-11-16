@@ -14268,6 +14268,13 @@ class MethodBeliefRevise(BaseModel):
     params: MethodBeliefReviseParams
 
 
+class MethodFeatureLedger(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FeatureLedger"]
+    params: MethodFeatureLedgerParams
+
+
 class MethodUsage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14999,6 +15006,7 @@ Method = Annotated[
         MethodLoops,
         MethodBeliefRevise,
         MethodUsage,
+        MethodFeatureLedger,
         MethodArchitectureModelImport,
         MethodArchitectureModelExport,
         MethodArchitectureView,
@@ -32196,6 +32204,81 @@ class MethodBeliefReviseParams(BaseModel):
     request: BeliefReviseRequest
 
 
+class MethodFeatureLedgerParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: FeatureLedgerOp
+
+
+class FeatureLedgerPlanProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature_ids: list[str]
+    plan_id: str
+    rationale_digest: str
+
+
+class FeatureLedgerOpOpen(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature_id: str
+    match_ids: list[str]
+    op: Literal["open"]
+
+
+class FeatureLedgerOpPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expected_revision: Annotated[int, Field(ge=0)]
+    op: Literal["plan"]
+    plan: FeatureLedgerPlanProposal
+
+
+class FeatureLedgerOpClose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    closed_by: str
+    expected_revision: Annotated[int, Field(ge=0)]
+    feature_id: str
+    op: Literal["close"]
+
+
+class FeatureLedgerOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature_ids: list[str]
+    op: Literal["get"]
+
+
+FeatureLedgerOp = Annotated[
+    FeatureLedgerOpOpen | FeatureLedgerOpPlan | FeatureLedgerOpClose | FeatureLedgerOpGet,
+    Field(discriminator="op"),
+]
+
+
+class FeatureLedgerStatus(str, Enum):
+    OPEN = "open"
+    PLANNED = "planned"
+    CLOSED = "closed"
+
+
+class FeatureLedgerEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    closed_by: str | None = None
+    feature_id: str
+    match_ids: list[str]
+    plan_id: str | None = None
+    revision: Annotated[int, Field(ge=0)]
+    status: FeatureLedgerStatus
+
+
+class FeatureLedgerView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: list[FeatureLedgerEntry]
+
+
 class MethodUsageParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -37637,6 +37720,17 @@ __all__ = [
     "MethodBeliefRevise",
     "MethodBeliefReviseParams",
     "MethodUsage",
+    "MethodFeatureLedger",
+    "MethodFeatureLedgerParams",
+    "FeatureLedgerEntry",
+    "FeatureLedgerOp",
+    "FeatureLedgerOpClose",
+    "FeatureLedgerOpGet",
+    "FeatureLedgerOpOpen",
+    "FeatureLedgerOpPlan",
+    "FeatureLedgerPlanProposal",
+    "FeatureLedgerStatus",
+    "FeatureLedgerView",
     "MethodUsageParams",
     "PriceCatalog",
     "PriceEntry",

@@ -121,6 +121,7 @@ SEND_BY_METHOD = {
     "BeginTxn": transactions.send_begin_txn,
     "BeliefRevise": coordination.send_belief_revise,
     "Usage": coordination.send_usage,
+    "FeatureLedger": coordination.send_feature_ledger,
     "BestTrajectory": graph.send_best_trajectory,
     "BetweennessCentrality": compute.send_betweenness_centrality,
     "BindQueue": messaging.send_bind_queue,

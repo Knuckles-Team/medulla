@@ -228,6 +228,7 @@ METHOD_IDS = frozenset(
         "DecisionEval",
         "DecisionLog",
         "Usage",
+        "FeatureLedger",
         "Statechart",
         "AddNode",
         "CreateNodeIfAbsent",
