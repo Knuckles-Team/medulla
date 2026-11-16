@@ -2147,6 +2147,7 @@ components:
       - "tests/jobs/test_schedule_pause_served.py"
       - "tests/jobs/test_schedule_skip_served.py"
       - "tests/jobs/test_schedule_tick_served.py"
+      - "tests/jobs/test_analytics_pool_served.py"
     generated_roots: []
     shared_roots: []
     shared_files: []
