@@ -463,6 +463,7 @@ async fn contrast_is_measured_from_stored_traces() {
         &view,
     );
     let decision = both
+        .inputs
         .harness_contrast
         .expect("the contrast decision is sealed");
     let row = decision
@@ -593,9 +594,9 @@ async fn contrast_never_reads_another_tenants_runs() {
 
     // Each tenant reads its own evidence.
     let own_a = decide_contrast_in(&h, TENANT, &ask(BASELINE, "trace:a"), &view_a).unwrap();
-    assert!(own_a.harness_contrast.is_some());
+    assert!(own_a.inputs.harness_contrast.is_some());
     let own_b = decide_contrast_in(&h, OTHER, &ask(other_base, other_probe), &view_b).unwrap();
-    assert!(own_b.harness_contrast.is_some());
+    assert!(own_b.inputs.harness_contrast.is_some());
 
     // Ids that exist nowhere abstain insufficient_evidence.
     let unknown = decide_contrast_in(
@@ -612,6 +613,7 @@ async fn contrast_never_reads_another_tenants_runs() {
     );
     let abstention = |record: &StatisticalDecisionRecord| {
         let decision = record
+            .inputs
             .harness_contrast
             .as_ref()
             .expect("an abstained contrast is sealed with its decision");
