@@ -68,7 +68,7 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+The unknowns resolved while building are recorded in [research.md](research.md): who owns the embedding set in prepare, the improvement loops, semantic enrichment and where it runs, family answers and utterance binding, the primitive contract source, topology admission and the standalone topology question, run credit, the coordinator decision certificate and shared commit path, thought search wiring, drift quality and region selection, trajectory decisions, the disclosure kernel inputs, the shared benchmark types, family premises at conclude time, the single `refine` hook, and instruction disclosure versions.
 
 ## Phase 1: Design
 
