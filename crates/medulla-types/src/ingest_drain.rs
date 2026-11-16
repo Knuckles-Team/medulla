@@ -4,6 +4,7 @@
 //! Every identifier is validated at construction, and deserialization goes
 //! through the same constructors, so an invalid value is never representable.
 
+use crate::ingest_throughput::IngestStage;
 use serde::{Deserialize, Serialize};
 
 /// Most bytes a page cursor may hold.
@@ -185,7 +186,7 @@ impl GraphRoute {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StageProfile {
-    pub stage: String,
+    pub stage: IngestStage,
     pub wall_ms: u64,
     pub tokens: u64,
     pub embeddings: u64,
@@ -204,7 +205,7 @@ mod tests {
         let page = PageCheckpoint::new(id.clone(), 3, "cursor-3").unwrap();
         let route = GraphRoute::new("tenant:docs.main-1", RouteScope::Repository).unwrap();
         let profile = StageProfile {
-            stage: "embed".to_string(),
+            stage: IngestStage::Embed,
             wall_ms: 12,
             tokens: 400,
             embeddings: 8,

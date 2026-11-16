@@ -17,6 +17,7 @@ use medulla_work_types::{
     native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
 };
 use sha2::{Digest, Sha256};
+use super::enrichment_machine::{EnrichmentEvent, ENRICHMENT_MACHINE};
 
 const MAX_OUTCOMES: usize = 4_096;
 // A plan is one native transaction. Never admit more than its atomic command
@@ -47,13 +48,15 @@ impl EnrichmentStage {
         }
     }
 
+    /// The stage after abstention through `rung`: rung 2 is the initial stage and each later
+    /// rung is one `Escalated` event. A rung below 2 or past the last stage yields `None`.
     fn after_abstention(rung: u8) -> Option<Self> {
-        match rung {
-            2 => Some(Self::Classical),
-            3 => Some(Self::Embedding),
-            4 => Some(Self::Llm),
-            _ => None,
+        let escalations = rung.checked_sub(2)?;
+        let mut stage = ENRICHMENT_MACHINE.initial;
+        for _ in 0..escalations {
+            stage = stage.apply(EnrichmentEvent::Escalated).ok()?;
         }
+        Some(stage)
     }
 }
 

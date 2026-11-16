@@ -4806,3 +4806,345 @@
     :fromState :PackReleaseMachine_Active ;
     :toState :PackReleaseMachine_Superseded ;
     :firedBy :PackReleaseMachine_Event_Supersede .
+# spec: MEDULLA-INGEST-WORKER-R911.1
+# The Enrichment Work machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:EnrichmentWorkState a owl:Class ;
+    rdfs:label "Enrichment Work State" ;
+    rdfs:comment "A state of the Enrichment Work machine." ;
+    rdfs:subClassOf :State .
+
+:EnrichmentWorkTerminalState a owl:Class ;
+    rdfs:label "Enrichment Work Terminal State" ;
+    rdfs:comment "A terminal state of the Enrichment Work machine." ;
+    rdfs:subClassOf :TerminalState, :EnrichmentWorkState .
+
+:EnrichmentWorkTransition a owl:Class ;
+    rdfs:label "Enrichment Work Transition" ;
+    rdfs:comment "A transition of the Enrichment Work machine." ;
+    rdfs:subClassOf :Transition .
+
+:EnrichmentWorkEvent a owl:Class ;
+    rdfs:label "Enrichment Work Event" ;
+    rdfs:comment "A event of the Enrichment Work machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:EnrichmentWorkGuard a owl:Class ;
+    rdfs:label "Enrichment Work Guard" ;
+    rdfs:comment "A guard of the Enrichment Work machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:EnrichmentWorkMachine a :StateMachine ;
+    rdfs:label "Enrichment Work machine" ;
+    :initialState :EnrichmentWorkMachine_Classical ;
+    :hasState :EnrichmentWorkMachine_Classical, :EnrichmentWorkMachine_Embedding, :EnrichmentWorkMachine_Llm .
+
+:EnrichmentWorkMachine_Classical a :EnrichmentWorkState ;
+    rdfs:label "Enrichment Work Classical" ;
+    :storedForm "classical" .
+
+:EnrichmentWorkMachine_Embedding a :EnrichmentWorkState ;
+    rdfs:label "Enrichment Work Embedding" ;
+    :storedForm "embedding" .
+
+:EnrichmentWorkMachine_Llm a :EnrichmentWorkTerminalState ;
+    rdfs:label "Enrichment Work Llm" ;
+    :storedForm "llm" .
+
+:EnrichmentWorkMachine_Event_Escalated a :EnrichmentWorkEvent ;
+    rdfs:label "Enrichment Work Escalated" .
+
+:EnrichmentWorkMachine_W01 a :EnrichmentWorkTransition ;
+    rdfs:label "Enrichment Work W01" ;
+    :edgeId "W01" ;
+    :fromState :EnrichmentWorkMachine_Classical ;
+    :toState :EnrichmentWorkMachine_Embedding ;
+    :firedBy :EnrichmentWorkMachine_Event_Escalated .
+
+:EnrichmentWorkMachine_W02 a :EnrichmentWorkTransition ;
+    rdfs:label "Enrichment Work W02" ;
+    :edgeId "W02" ;
+    :fromState :EnrichmentWorkMachine_Embedding ;
+    :toState :EnrichmentWorkMachine_Llm ;
+    :firedBy :EnrichmentWorkMachine_Event_Escalated .
+
+
+# spec: MEDULLA-INGEST-WORKER-R911.2
+# The Enrichment machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:EnrichmentState a owl:Class ;
+    rdfs:label "Enrichment State" ;
+    rdfs:comment "A state of the Enrichment machine." ;
+    rdfs:subClassOf :State .
+
+:EnrichmentTerminalState a owl:Class ;
+    rdfs:label "Enrichment Terminal State" ;
+    rdfs:comment "A terminal state of the Enrichment machine." ;
+    rdfs:subClassOf :TerminalState, :EnrichmentState .
+
+:EnrichmentTransition a owl:Class ;
+    rdfs:label "Enrichment Transition" ;
+    rdfs:comment "A transition of the Enrichment machine." ;
+    rdfs:subClassOf :Transition .
+
+:EnrichmentEvent a owl:Class ;
+    rdfs:label "Enrichment Event" ;
+    rdfs:comment "A event of the Enrichment machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:EnrichmentGuard a owl:Class ;
+    rdfs:label "Enrichment Guard" ;
+    rdfs:comment "A guard of the Enrichment machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:EnrichmentMachine a :StateMachine ;
+    rdfs:label "Enrichment machine" ;
+    :initialState :EnrichmentMachine_Classical ;
+    :hasState :EnrichmentMachine_Classical, :EnrichmentMachine_Embedding, :EnrichmentMachine_Llm .
+
+:EnrichmentMachine_Classical a :EnrichmentState ;
+    rdfs:label "Enrichment Classical" ;
+    :storedForm "classical" .
+
+:EnrichmentMachine_Embedding a :EnrichmentState ;
+    rdfs:label "Enrichment Embedding" ;
+    :storedForm "embedding" .
+
+:EnrichmentMachine_Llm a :EnrichmentTerminalState ;
+    rdfs:label "Enrichment Llm" ;
+    :storedForm "llm" .
+
+:EnrichmentMachine_Event_Escalated a :EnrichmentEvent ;
+    rdfs:label "Enrichment Escalated" .
+
+:EnrichmentMachine_E01 a :EnrichmentTransition ;
+    rdfs:label "Enrichment E01" ;
+    :edgeId "E01" ;
+    :fromState :EnrichmentMachine_Classical ;
+    :toState :EnrichmentMachine_Embedding ;
+    :firedBy :EnrichmentMachine_Event_Escalated .
+
+:EnrichmentMachine_E02 a :EnrichmentTransition ;
+    rdfs:label "Enrichment E02" ;
+    :edgeId "E02" ;
+    :fromState :EnrichmentMachine_Embedding ;
+    :toState :EnrichmentMachine_Llm ;
+    :firedBy :EnrichmentMachine_Event_Escalated .
+
+
+# spec: MEDULLA-INGEST-WORKER-R911.3
+# The Ingest machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:IngestState a owl:Class ;
+    rdfs:label "Ingest State" ;
+    rdfs:comment "A state of the Ingest machine." ;
+    rdfs:subClassOf :State .
+
+:IngestTerminalState a owl:Class ;
+    rdfs:label "Ingest Terminal State" ;
+    rdfs:comment "A terminal state of the Ingest machine." ;
+    rdfs:subClassOf :TerminalState, :IngestState .
+
+:IngestTransition a owl:Class ;
+    rdfs:label "Ingest Transition" ;
+    rdfs:comment "A transition of the Ingest machine." ;
+    rdfs:subClassOf :Transition .
+
+:IngestEvent a owl:Class ;
+    rdfs:label "Ingest Event" ;
+    rdfs:comment "A event of the Ingest machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:IngestGuard a owl:Class ;
+    rdfs:label "Ingest Guard" ;
+    rdfs:comment "A guard of the Ingest machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:IngestMachine a :StateMachine ;
+    rdfs:label "Ingest machine" ;
+    :initialState :IngestMachine_Fetch ;
+    :hasState :IngestMachine_Fetch, :IngestMachine_Extract, :IngestMachine_Embed, :IngestMachine_Index .
+
+:IngestMachine_Fetch a :IngestState ;
+    rdfs:label "Ingest Fetch" ;
+    :storedForm "fetch" .
+
+:IngestMachine_Extract a :IngestState ;
+    rdfs:label "Ingest Extract" ;
+    :storedForm "extract" .
+
+:IngestMachine_Embed a :IngestState ;
+    rdfs:label "Ingest Embed" ;
+    :storedForm "embed" .
+
+:IngestMachine_Index a :IngestTerminalState ;
+    rdfs:label "Ingest Index" ;
+    :storedForm "index" .
+
+:IngestMachine_Event_Fetched a :IngestEvent ;
+    rdfs:label "Ingest Fetched" .
+
+:IngestMachine_Event_Extracted a :IngestEvent ;
+    rdfs:label "Ingest Extracted" .
+
+:IngestMachine_Event_Embedded a :IngestEvent ;
+    rdfs:label "Ingest Embedded" .
+
+:IngestMachine_I01 a :IngestTransition ;
+    rdfs:label "Ingest I01" ;
+    :edgeId "I01" ;
+    :fromState :IngestMachine_Fetch ;
+    :toState :IngestMachine_Extract ;
+    :firedBy :IngestMachine_Event_Fetched .
+
+:IngestMachine_I02 a :IngestTransition ;
+    rdfs:label "Ingest I02" ;
+    :edgeId "I02" ;
+    :fromState :IngestMachine_Extract ;
+    :toState :IngestMachine_Embed ;
+    :firedBy :IngestMachine_Event_Extracted .
+
+:IngestMachine_I03 a :IngestTransition ;
+    rdfs:label "Ingest I03" ;
+    :edgeId "I03" ;
+    :fromState :IngestMachine_Embed ;
+    :toState :IngestMachine_Index ;
+    :firedBy :IngestMachine_Event_Embedded .
+
+
+# spec: MEDULLA-INGEST-WORKER-R911.4
+# The Throughput machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:ThroughputState a owl:Class ;
+    rdfs:label "Throughput State" ;
+    rdfs:comment "A state of the Throughput machine." ;
+    rdfs:subClassOf :State .
+
+:ThroughputTerminalState a owl:Class ;
+    rdfs:label "Throughput Terminal State" ;
+    rdfs:comment "A terminal state of the Throughput machine." ;
+    rdfs:subClassOf :TerminalState, :ThroughputState .
+
+:ThroughputTransition a owl:Class ;
+    rdfs:label "Throughput Transition" ;
+    rdfs:comment "A transition of the Throughput machine." ;
+    rdfs:subClassOf :Transition .
+
+:ThroughputEvent a owl:Class ;
+    rdfs:label "Throughput Event" ;
+    rdfs:comment "A event of the Throughput machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ThroughputGuard a owl:Class ;
+    rdfs:label "Throughput Guard" ;
+    rdfs:comment "A guard of the Throughput machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ThroughputMachine a :StateMachine ;
+    rdfs:label "Throughput machine" ;
+    :initialState :ThroughputMachine_Unknown ;
+    :hasState :ThroughputMachine_Complete, :ThroughputMachine_Unknown .
+
+:ThroughputMachine_Complete a :ThroughputState ;
+    rdfs:label "Throughput Complete" ;
+    :storedForm "complete" .
+
+:ThroughputMachine_Unknown a :ThroughputState ;
+    rdfs:label "Throughput Unknown" ;
+    :storedForm "unknown" .
+
+:ThroughputMachine_Event_TelemetryFresh a :ThroughputEvent ;
+    rdfs:label "Throughput TelemetryFresh" .
+
+:ThroughputMachine_Event_TelemetryStale a :ThroughputEvent ;
+    rdfs:label "Throughput TelemetryStale" .
+
+:ThroughputMachine_T01 a :ThroughputTransition ;
+    rdfs:label "Throughput T01" ;
+    :edgeId "T01" ;
+    :fromState :ThroughputMachine_Unknown ;
+    :toState :ThroughputMachine_Complete ;
+    :firedBy :ThroughputMachine_Event_TelemetryFresh .
+
+:ThroughputMachine_T02 a :ThroughputTransition ;
+    rdfs:label "Throughput T02" ;
+    :edgeId "T02" ;
+    :fromState :ThroughputMachine_Complete ;
+    :toState :ThroughputMachine_Unknown ;
+    :firedBy :ThroughputMachine_Event_TelemetryStale .
+
+
+# spec: MEDULLA-INGEST-WORKER-R912.1
+# The Enumeration Run machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:EnumerationRunState a owl:Class ;
+    rdfs:label "Enumeration Run State" ;
+    rdfs:comment "A state of the Enumeration Run machine." ;
+    rdfs:subClassOf :State .
+
+:EnumerationRunTerminalState a owl:Class ;
+    rdfs:label "Enumeration Run Terminal State" ;
+    rdfs:comment "A terminal state of the Enumeration Run machine." ;
+    rdfs:subClassOf :TerminalState, :EnumerationRunState .
+
+:EnumerationRunTransition a owl:Class ;
+    rdfs:label "Enumeration Run Transition" ;
+    rdfs:comment "A transition of the Enumeration Run machine." ;
+    rdfs:subClassOf :Transition .
+
+:EnumerationRunEvent a owl:Class ;
+    rdfs:label "Enumeration Run Event" ;
+    rdfs:comment "A event of the Enumeration Run machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:EnumerationRunGuard a owl:Class ;
+    rdfs:label "Enumeration Run Guard" ;
+    rdfs:comment "A guard of the Enumeration Run machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:EnumerationRunMachine a :StateMachine ;
+    rdfs:label "Enumeration Run machine" ;
+    :initialState :EnumerationRunMachine_Staging ;
+    :hasState :EnumerationRunMachine_Staging, :EnumerationRunMachine_Planned, :EnumerationRunMachine_Discarded .
+
+:EnumerationRunMachine_Staging a :EnumerationRunState ;
+    rdfs:label "Enumeration Run Staging" ;
+    :storedForm "staging" .
+
+:EnumerationRunMachine_Planned a :EnumerationRunTerminalState ;
+    rdfs:label "Enumeration Run Planned" ;
+    :storedForm "planned" .
+
+:EnumerationRunMachine_Discarded a :EnumerationRunTerminalState ;
+    rdfs:label "Enumeration Run Discarded" ;
+    :storedForm "discarded" .
+
+:EnumerationRunMachine_Event_PageStaged a :EnumerationRunEvent ;
+    rdfs:label "Enumeration Run PageStaged" .
+
+:EnumerationRunMachine_Event_Completed a :EnumerationRunEvent ;
+    rdfs:label "Enumeration Run Completed" .
+
+:EnumerationRunMachine_Event_Incomplete a :EnumerationRunEvent ;
+    rdfs:label "Enumeration Run Incomplete" .
+
+:EnumerationRunMachine_N01 a :EnumerationRunTransition ;
+    rdfs:label "Enumeration Run N01" ;
+    :edgeId "N01" ;
+    :fromState :EnumerationRunMachine_Staging ;
+    :toState :EnumerationRunMachine_Staging ;
+    :firedBy :EnumerationRunMachine_Event_PageStaged .
+
+:EnumerationRunMachine_N02 a :EnumerationRunTransition ;
+    rdfs:label "Enumeration Run N02" ;
+    :edgeId "N02" ;
+    :fromState :EnumerationRunMachine_Staging ;
+    :toState :EnumerationRunMachine_Planned ;
+    :firedBy :EnumerationRunMachine_Event_Completed .
+
+:EnumerationRunMachine_N03 a :EnumerationRunTransition ;
+    rdfs:label "Enumeration Run N03" ;
+    :edgeId "N03" ;
+    :fromState :EnumerationRunMachine_Staging ;
+    :toState :EnumerationRunMachine_Discarded ;
+    :firedBy :EnumerationRunMachine_Event_Incomplete .

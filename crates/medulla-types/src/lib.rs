@@ -377,6 +377,10 @@ pub mod ingest_capabilities;
 pub mod code_map;
 pub mod ingest_readback;
 pub mod ingest_throughput;
+// MEDULLA-INGEST-WORKER-R911.3: the ingest stage machine.
+pub mod ingest_machine;
+// MEDULLA-INGEST-WORKER-R911.4: the throughput window trust machine.
+pub mod throughput_machine;
 // MEDULLA-CQ-ORCH-R701.1: canonical workflow records of every process source.
 pub mod process_import;
 // MEDULLA-CQ-ORCH-R702.1: process document records (BPMN 2.0, DMN 1.3).

@@ -27,6 +27,10 @@ pub mod enrichment_admission;
 /// durable store checks it in every build, so it lives outside the `ast` gate.
 pub const TOP_UP_ACTION: &str = "repository:enrichment:budget:top_up";
 #[cfg(feature = "ast")]
+pub mod enrichment_machine;
+#[cfg(feature = "ast")]
 pub mod enrichment_reactivation;
 #[cfg(feature = "ast")]
 pub mod enrichment_snapshot;
+#[cfg(feature = "ast")]
+pub mod enrichment_work_machine;

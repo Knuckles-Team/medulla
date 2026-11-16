@@ -14,6 +14,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::transition_refused::TransitionRefused;
+
 /// One stage of a paper's ingest pipeline, in pipeline order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -130,7 +132,7 @@ pub fn measure_window(
     window_fresh_for_ms: u64,
     newest_receipt_at_ms: Option<u64>,
     window_end_ms: u64,
-) -> ThroughputWindow {
+) -> Result<ThroughputWindow, TransitionRefused> {
     let window_start_ms = window_end_ms.saturating_sub(WINDOW_MS);
     let fresh_floor_ms = window_end_ms.saturating_sub(window_fresh_for_ms);
 
@@ -140,13 +142,13 @@ pub fn measure_window(
         None => false,
     };
     if !known {
-        return ThroughputWindow {
+        return Ok(ThroughputWindow {
             completed_distinct: 0,
             target,
             shortfall: target,
             bottleneck_stage: None,
-            state: ThroughputState::Unknown,
-        };
+            state: ThroughputState::observe(known)?,
+        });
     }
 
     let mut papers: BTreeMap<String, BTreeSet<IngestStage>> = BTreeMap::new();
@@ -180,13 +182,13 @@ pub fn measure_window(
     } else {
         None
     };
-    ThroughputWindow {
+    Ok(ThroughputWindow {
         completed_distinct,
         target,
         shortfall: target.saturating_sub(completed_distinct),
         bottleneck_stage,
-        state: ThroughputState::Complete,
-    }
+        state: ThroughputState::observe(known)?,
+    })
 }
 
 #[cfg(test)]
@@ -230,7 +232,8 @@ mod tests {
             FRESH_MS,
             Some(WINDOW_END - 1_000),
             WINDOW_END,
-        );
+        )
+        .unwrap();
         assert_eq!(window.state, ThroughputState::Complete);
         assert_eq!(window.completed_distinct, 1_999);
         assert_eq!(window.target, 2_000);
@@ -246,7 +249,8 @@ mod tests {
             FRESH_MS,
             Some(WINDOW_END - 1_000),
             WINDOW_END,
-        );
+        )
+        .unwrap();
         assert_eq!(window.state, ThroughputState::Complete);
         assert_eq!(window.completed_distinct, 2_000);
         assert_eq!(window.shortfall, 0);
@@ -277,7 +281,8 @@ mod tests {
             FRESH_MS,
             Some(WINDOW_END - 1_000),
             WINDOW_END,
-        );
+        )
+        .unwrap();
         assert_eq!(window.completed_distinct, 1);
         assert_eq!(window.shortfall, 1_999);
         // Index completed for one paper only.
@@ -289,18 +294,20 @@ mod tests {
     fn the_window_is_half_open_at_both_edges() {
         // Completed exactly at the start counts; exactly at the end does not.
         let inside = all_stages("paper-1", 0);
-        let window = measure_window(&inside, 1, FRESH_MS, Some(WINDOW_END - 1_000), WINDOW_END);
+        let window =
+            measure_window(&inside, 1, FRESH_MS, Some(WINDOW_END - 1_000), WINDOW_END).unwrap();
         assert_eq!(window.completed_distinct, 1);
 
         let outside = all_stages("paper-1", WINDOW_END);
-        let window = measure_window(&outside, 1, FRESH_MS, Some(WINDOW_END - 1_000), WINDOW_END);
+        let window =
+            measure_window(&outside, 1, FRESH_MS, Some(WINDOW_END - 1_000), WINDOW_END).unwrap();
         assert_eq!(window.completed_distinct, 0);
     }
 
     // spec: MEDULLA-REPO-INGEST-R006.1
     #[test]
     fn a_partial_window_reports_unknown() {
-        let window = measure_window(&[], 2_000, FRESH_MS, None, WINDOW_END);
+        let window = measure_window(&[], 2_000, FRESH_MS, None, WINDOW_END).unwrap();
         assert_eq!(window.state, ThroughputState::Unknown);
         assert_eq!(window.completed_distinct, 0);
         assert_eq!(window.shortfall, 2_000);
@@ -314,7 +321,7 @@ mod tests {
         // newest receipt is two hours old — far beyond the 300 s knob.
         let at = WINDOW_END - 2 * 60 * 60 * 1_000;
         let receipts = all_stages("paper-1", at);
-        let window = measure_window(&receipts, 2_000, FRESH_MS, Some(at), WINDOW_END);
+        let window = measure_window(&receipts, 2_000, FRESH_MS, Some(at), WINDOW_END).unwrap();
         assert_eq!(window.state, ThroughputState::Unknown);
         assert_eq!(window.completed_distinct, 0);
         assert_eq!(window.shortfall, 2_000);
@@ -326,7 +333,7 @@ mod tests {
     fn telemetry_exactly_at_the_fresh_floor_is_not_stale() {
         let at = WINDOW_END - FRESH_MS;
         let receipts = all_stages("paper-1", at);
-        let window = measure_window(&receipts, 2_000, FRESH_MS, Some(at), WINDOW_END);
+        let window = measure_window(&receipts, 2_000, FRESH_MS, Some(at), WINDOW_END).unwrap();
         assert_eq!(window.state, ThroughputState::Complete);
         assert_eq!(window.completed_distinct, 1);
     }
@@ -362,7 +369,8 @@ mod tests {
             FRESH_MS,
             Some(WINDOW_END - 1_000),
             WINDOW_END,
-        );
+        )
+        .unwrap();
         assert_eq!(window.state, ThroughputState::Complete);
         assert_eq!(window.completed_distinct, 0);
         assert_eq!(window.bottleneck_stage, Some(IngestStage::Index));

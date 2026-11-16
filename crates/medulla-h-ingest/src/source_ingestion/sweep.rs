@@ -19,6 +19,9 @@ use medulla_source_types::source_ingestion::batch_kind::EnumerationPage;
 use medulla_source_types::source_ingestion::SourceEntityRef;
 use medulla_types::contract::Digest256;
 use medulla_types::ingest_rules::plan_reconcile_digests;
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
@@ -48,38 +51,83 @@ pub enum EnumerationRunEvent {
     Incomplete,
 }
 
-/// An event the machine refuses in the current state.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EnumerationTransitionError {
-    pub state: EnumerationRunState,
-    pub event: EnumerationRunEvent,
-}
-
-impl std::fmt::Display for EnumerationTransitionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "SOURCE_ENUMERATION_TRANSITION_ILLEGAL: machine enumeration_run in state {:?} refuses event {:?}",
-            self.state, self.event
-        )
+impl MachineState for EnumerationRunState {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Staging => "staging",
+            Self::Planned => "planned",
+            Self::Discarded => "discarded",
+        }
     }
 }
 
-impl std::error::Error for EnumerationTransitionError {}
-
-/// The only writer of `StagedRun.state`.
-pub fn enumeration_transition(
-    state: EnumerationRunState,
-    event: EnumerationRunEvent,
-) -> Result<EnumerationRunState, EnumerationTransitionError> {
-    use EnumerationRunEvent as E;
-    use EnumerationRunState as S;
-    match (state, event) {
-        (S::Staging, E::PageStaged) => Ok(S::Staging),
-        (S::Staging, E::Completed) => Ok(S::Planned),
-        (S::Staging, E::Incomplete) => Ok(S::Discarded),
-        _ => Err(EnumerationTransitionError { state, event }),
+impl MachineEvent for EnumerationRunEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::PageStaged => "PageStaged",
+            Self::Completed => "Completed",
+            Self::Incomplete => "Incomplete",
+        }
     }
+}
+
+/// `EnumerationRunMachine`: the closed edge table of the `enumeration_run` lifecycle. Every
+/// other pair of state and event is refused.
+pub static ENUMERATION_RUN_MACHINE: MachineDef<
+    EnumerationRunState,
+    EnumerationRunEvent,
+    &'static str,
+> = MachineDef {
+    name: "EnumerationRunMachine",
+    states: &[
+        EnumerationRunState::Staging,
+        EnumerationRunState::Planned,
+        EnumerationRunState::Discarded,
+    ],
+    initial: EnumerationRunState::Staging,
+    terminals: &[EnumerationRunState::Planned, EnumerationRunState::Discarded],
+    events: &[
+        EnumerationRunEvent::PageStaged,
+        EnumerationRunEvent::Completed,
+        EnumerationRunEvent::Incomplete,
+    ],
+    guards: &[],
+    edges: &[
+        Edge {
+            id: "N01",
+            from: EnumerationRunState::Staging,
+            event: EnumerationRunEvent::PageStaged,
+            guard: None,
+            to: EnumerationRunState::Staging,
+        },
+        Edge {
+            id: "N02",
+            from: EnumerationRunState::Staging,
+            event: EnumerationRunEvent::Completed,
+            guard: None,
+            to: EnumerationRunState::Planned,
+        },
+        Edge {
+            id: "N03",
+            from: EnumerationRunState::Staging,
+            event: EnumerationRunEvent::Incomplete,
+            guard: None,
+            to: EnumerationRunState::Discarded,
+        },
+    ],
+};
+
+impl EnumerationRunState {
+    /// The one transition function of `EnumerationRunMachine`.
+    pub fn apply(self, event: EnumerationRunEvent) -> Result<Self, TransitionRefused> {
+        transition(&ENUMERATION_RUN_MACHINE, self, event, |_| false).map(|edge| edge.to)
+    }
+}
+
+/// The wire text of a refused enumeration transition: the registered code, then the typed
+/// refusal.
+fn illegal_transition(refused: TransitionRefused) -> String {
+    format!("SOURCE_ENUMERATION_TRANSITION_ILLEGAL: {refused}")
 }
 
 /// The durable record of one run: sorted identifier digests per page.
@@ -96,6 +144,14 @@ pub struct StagedRun {
     pub last_page: Option<u32>,
     pub complete: bool,
     pub ids_digest: Option<String>,
+}
+
+impl StagedRun {
+    /// The only writer of `state`: delegates to `EnumerationRunState::apply`.
+    pub fn transition(&mut self, event: EnumerationRunEvent) -> Result<(), TransitionRefused> {
+        self.state = self.state.apply(event)?;
+        Ok(())
+    }
 }
 
 /// One planned deletion.
@@ -238,8 +294,8 @@ pub fn admit_enumeration(input: EnumerationInput<'_>) -> Result<EnumerationAdmis
             ids_digest: None,
         },
     };
-    run.state = enumeration_transition(run.state, EnumerationRunEvent::PageStaged)
-        .map_err(|error| error.to_string())?;
+    run.transition(EnumerationRunEvent::PageStaged)
+        .map_err(illegal_transition)?;
     run.pages.insert(page.page, page_bytes(page));
     run.complete = page.complete;
     let run_id = run_node_id(input.tenant, input.connector, input.stream)?;
@@ -278,8 +334,8 @@ pub fn admit_enumeration(input: EnumerationInput<'_>) -> Result<EnumerationAdmis
         ));
     }
     if !page.complete {
-        run.state = enumeration_transition(run.state, EnumerationRunEvent::Incomplete)
-            .map_err(|error| error.to_string())?;
+        run.transition(EnumerationRunEvent::Incomplete)
+            .map_err(illegal_transition)?;
         return Ok(EnumerationAdmission {
             methods: vec![node_method(run_id, &run)?],
             run,
@@ -298,8 +354,8 @@ pub fn admit_enumeration(input: EnumerationInput<'_>) -> Result<EnumerationAdmis
     let held_digests: Vec<[u8; 32]> = held.iter().map(|(digest, _)| *digest).collect();
     let missing = plan_reconcile_digests(&held_digests, &enumerated, true, input.admin_override)
         .map_err(|refusal| refusal.to_string())?;
-    run.state = enumeration_transition(run.state, EnumerationRunEvent::Completed)
-        .map_err(|error| error.to_string())?;
+    run.transition(EnumerationRunEvent::Completed)
+        .map_err(illegal_transition)?;
     let due_new = input
         .now_ms
         .saturating_add(input.grace_s.saturating_mul(1_000));
@@ -715,24 +771,71 @@ mod tests {
         );
     }
 
-    // spec: MEDULLA-INGEST-WORKER-R903.2
+    // spec: MEDULLA-INGEST-WORKER-R912.1
     #[test]
-    fn the_enumeration_run_machine_allows_only_its_transitions() {
-        use EnumerationRunEvent as E;
-        use EnumerationRunState as S;
-        let legal = [
-            (S::Staging, E::PageStaged, S::Staging),
-            (S::Staging, E::Completed, S::Planned),
-            (S::Staging, E::Incomplete, S::Discarded),
-        ];
-        for (state, event, next) in legal {
-            assert_eq!(enumeration_transition(state, event), Ok(next));
+    fn every_legal_transition_applies() {
+        for edge in ENUMERATION_RUN_MACHINE.edges {
+            assert_eq!(edge.from.apply(edge.event), Ok(edge.to), "{}", edge.id);
         }
-        for state in [S::Planned, S::Discarded] {
-            for event in [E::PageStaged, E::Completed, E::Incomplete] {
-                let error = enumeration_transition(state, event).unwrap_err();
-                assert!(error.to_string().contains("enumeration_run"));
+        let mut run = StagedRun {
+            node_type: RUN_NODE_TYPE.into(),
+            connector: "c".into(),
+            stream: "s".into(),
+            run_id: "r".into(),
+            state: ENUMERATION_RUN_MACHINE.initial,
+            pages: BTreeMap::new(),
+            last_page: None,
+            complete: false,
+            ids_digest: None,
+        };
+        run.transition(EnumerationRunEvent::PageStaged).unwrap();
+        run.transition(EnumerationRunEvent::Completed).unwrap();
+        assert_eq!(run.state, EnumerationRunState::Planned);
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R912.1
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        use medulla_types::transition_refused::TransitionRefusalReason;
+        let machine = &ENUMERATION_RUN_MACHINE;
+        let mut illegal = 0;
+        for &state in machine.states {
+            for &event in machine.events {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    continue;
+                }
+                illegal += 1;
+                let refused = state.apply(event).unwrap_err();
+                assert_eq!(refused.reason, TransitionRefusalReason::TerminalState);
+                assert_eq!(refused.machine, "EnumerationRunMachine");
+                assert_eq!(refused.from, state.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+                assert!(illegal_transition(refused)
+                    .starts_with("SOURCE_ENUMERATION_TRANSITION_ILLEGAL"));
             }
         }
+        assert_eq!(
+            illegal,
+            machine.states.len() * machine.events.len() - machine.edges.len()
+        );
+    }
+
+    /// `state` is written only inside `StagedRun::transition`.
+    // spec: MEDULLA-INGEST-WORKER-R912.1
+    #[test]
+    fn no_writer_sets_state_outside_transition() {
+        let source = include_str!("sweep.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//") && l.contains(".state = "))
+            .collect();
+        assert_eq!(writes, vec!["self.state = self.state.apply(event)?;"]);
     }
 }

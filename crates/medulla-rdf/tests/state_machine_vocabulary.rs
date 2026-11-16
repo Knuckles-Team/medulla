@@ -877,6 +877,60 @@ fn shard_monitor_machine_classes_extend_core() {
     sm::assert_extends_core("ShardMonitor");
 }
 
+// spec: MEDULLA-INGEST-WORKER-R911.1
+#[test]
+fn enrichment_work_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_compute::parser::enrichment_work_machine::ENRICHMENT_WORK_MACHINE);
+}
+// spec: MEDULLA-INGEST-WORKER-R911.1
+#[test]
+fn enrichment_work_machine_classes_extend_core() {
+    sm::assert_extends_core("EnrichmentWork");
+}
+
+// spec: MEDULLA-INGEST-WORKER-R911.2
+#[test]
+fn enrichment_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_compute::parser::enrichment_machine::ENRICHMENT_MACHINE);
+}
+// spec: MEDULLA-INGEST-WORKER-R911.2
+#[test]
+fn enrichment_machine_classes_extend_core() {
+    sm::assert_extends_core("Enrichment");
+}
+
+// spec: MEDULLA-INGEST-WORKER-R911.3
+#[test]
+fn ingest_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::ingest_machine::INGEST_MACHINE);
+}
+// spec: MEDULLA-INGEST-WORKER-R911.3
+#[test]
+fn ingest_machine_classes_extend_core() {
+    sm::assert_extends_core("Ingest");
+}
+
+// spec: MEDULLA-INGEST-WORKER-R911.4
+#[test]
+fn throughput_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::throughput_machine::THROUGHPUT_MACHINE);
+}
+// spec: MEDULLA-INGEST-WORKER-R911.4
+#[test]
+fn throughput_machine_classes_extend_core() {
+    sm::assert_extends_core("Throughput");
+}
+
+// spec: MEDULLA-INGEST-WORKER-R912.1
+#[test]
+fn enumeration_run_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_h_ingest::source_ingestion::sweep::ENUMERATION_RUN_MACHINE);
+}
+// spec: MEDULLA-INGEST-WORKER-R912.1
+#[test]
+fn enumeration_run_machine_classes_extend_core() {
+    sm::assert_extends_core("EnumerationRun");
+}
 // spec: MEDULLA-DECISION-ENGINE-R805.7
 #[test]
 fn revision_machine_matches_edge_table() {
