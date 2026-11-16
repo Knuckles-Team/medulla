@@ -1358,6 +1358,15 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "Solve" {
         codes.extend(typed_codes(SolveErrorCode::ALL, SolveErrorCode::as_str));
     }
+    if id == "FeatureLedger" {
+        // MEDULLA-DECISION-ENGINE-R707.4: the ledger's own refusal table (a
+        // stale compare-and-set, a close by an unknown change).
+        codes.extend(
+            medulla_decision_types::decision::feature_match::REFUSALS
+                .iter()
+                .map(|code| code.as_str()),
+        );
+    }
 }
 
 /// The served methods that move an explicit state machine (MEDULLA-ORCH-VOCAB-R811.8,
