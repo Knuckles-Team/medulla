@@ -12,7 +12,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T006 [US1] MEDULLA-PLACEMENT-R001.6 Pure feasibility function.
 - [ ] T007 [US1] MEDULLA-PLACEMENT-R001.7 Wiring: Placement kind in Decide.
 - [ ] T008 [US1] MEDULLA-PLACEMENT-R001.8 Evidence: capacity headroom premises, no lease.
-- [ ] T009 [US1] MEDULLA-PLACEMENT-R001.9 Evidence: why-not for every non-chosen target.
+- [x] T009 [US1] MEDULLA-PLACEMENT-R001.9 Evidence: why-not for every non-chosen target.
 - [ ] T010 [US1] MEDULLA-PLACEMENT-R001.10 Refusal: typed abstention.
 - [ ] T011 [US1] MEDULLA-PLACEMENT-R001.11 Served contract proof through Decide.
 - [x] T012 [US1] MEDULLA-PLACEMENT-R001.12 Assembled step graph from the chosen target.

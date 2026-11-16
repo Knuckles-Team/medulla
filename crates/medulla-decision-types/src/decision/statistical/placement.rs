@@ -6,6 +6,11 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_mutation_types::capacity_lease::LeasePriority;
+use medulla_query_types::solve_scalar::Scalar;
+use medulla_types::contract::BoundedVec;
+
+use crate::decision::{Violation, WhyNot};
+use crate::solve::{LevelValue, ObjectiveValue};
 
 /// Supported deployment targets. Systemd is not a placement target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -276,6 +281,59 @@ pub fn place(
         .feasible
         .sort_by(|(a, x), (b, y)| x.cmp(y).then_with(|| a.option_id().cmp(b.option_id())));
     Ok(verdict)
+}
+
+/// The slot every placement why-not names: a placement chooses one target.
+pub const WHY_NOT_SLOT: &str = "target";
+
+/// The answer a `placement` question seals beside its scored outcome: why each
+/// target that was not chosen was not (MEDULLA-PLACEMENT-R001.9).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementAnswer {
+    pub why_not: BoundedVec<WhyNot, 64>,
+}
+
+impl PlacementVerdict {
+    /// One why-not per non-chosen target. An eliminated target carries the
+    /// reason of the rule that removed it. A feasible but costlier target
+    /// carries the cost it would have forced and the comparison it lost. The
+    /// chosen target is the cheapest feasible one and has no entry.
+    pub fn why_not(&self) -> Vec<WhyNot> {
+        let entry = |target: PlacementTarget,
+                     forced_objective: Option<ObjectiveValue>,
+                     reason: String| WhyNot {
+            component_id: target.option_id().to_string(),
+            slot: WHY_NOT_SLOT.to_string(),
+            forced_objective,
+            violation: Some(Violation::Placement { reason }),
+        };
+        let mut rows = Vec::new();
+        if let Some((chosen, best)) = self.feasible.first() {
+            for (target, cost) in self.feasible.iter().skip(1) {
+                let forced = Scalar::new(i128::from(*cost));
+                let objective = ObjectiveValue {
+                    levels: vec![LevelValue {
+                        known: forced,
+                        unknown_selected: 0,
+                    }],
+                    scalar: forced,
+                };
+                rows.push(entry(
+                    *target,
+                    Some(objective),
+                    format!("costlier than {} ({cost} > {best})", chosen.option_id()),
+                ));
+            }
+        }
+        rows.extend(
+            self.eliminated
+                .iter()
+                .map(|(target, reason)| entry(*target, None, reason.as_why_not())),
+        );
+        rows
+    }
 }
 
 /// The name of the one parameter a placement question carries.

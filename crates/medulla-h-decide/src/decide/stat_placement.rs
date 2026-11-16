@@ -11,9 +11,9 @@
 use medulla_agent_types::agent_topology::{CapacityHeadroom, CapacityScope};
 use medulla_decision_types::decision::knob_families::placement::policy_from_knobs;
 use medulla_decision_types::decision::statistical::placement::{
-    cpu_cell, effective_cost_cap, memory_cell, place, PlacementQuestion, PlacementRead,
-    PlacementReason, PlacementRequestBody, PlacementTarget, TargetFacts, TargetFactsEntry,
-    PLACEMENT_FACTS_INVALID, PLACEMENT_PARAM,
+    cpu_cell, effective_cost_cap, memory_cell, place, PlacementAnswer, PlacementQuestion,
+    PlacementRead, PlacementReason, PlacementRequestBody, PlacementTarget, TargetFacts,
+    TargetFactsEntry, PLACEMENT_FACTS_INVALID, PLACEMENT_PARAM,
 };
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, ScoredOption, StatisticalOutcome, TypedValue,
@@ -229,16 +229,22 @@ fn binding_constraint(
 pub(super) fn placement_outcome(
     request: &DecideRequest,
     policy: &DecisionPolicy,
-) -> Result<StatisticalOutcome, String> {
+) -> Result<(StatisticalOutcome, Option<PlacementAnswer>), String> {
     let question = question_of(request)?;
     let read = question.read.as_ref().ok_or_else(|| {
         invalid_parameter("the placement read is missing: the engine fills it before deciding")
     })?;
     let caps = policy_from_knobs(policy);
-    let abstain = |reasons: Vec<AbstainReason>| -> Result<StatisticalOutcome, String> {
-        Ok(StatisticalOutcome::Abstained {
-            reasons: BoundedVec::new(reasons).map_err(invalid_parameter)?,
-        })
+    let abstain = |reasons: Vec<AbstainReason>| -> Result<
+        (StatisticalOutcome, Option<PlacementAnswer>),
+        String,
+    > {
+        Ok((
+            StatisticalOutcome::Abstained {
+                reasons: BoundedVec::new(reasons).map_err(invalid_parameter)?,
+            },
+            None,
+        ))
     };
     if effective_cost_cap(
         question.body.constraints.max_relative_cost,
@@ -289,10 +295,16 @@ pub(super) fn placement_outcome(
             probability: None,
         })
         .collect();
-    Ok(StatisticalOutcome::Advisory {
+    let outcome = StatisticalOutcome::Advisory {
         scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
         calibrated: false,
-    })
+    };
+    // The why-not of every target that was not chosen (R001.9): the caller
+    // seals it as the record's family answer.
+    let answer = PlacementAnswer {
+        why_not: BoundedVec::new(verdict.why_not()).map_err(invalid_parameter)?,
+    };
+    Ok((outcome, Some(answer)))
 }
 
 /// The recorded reads as premises: one `lease:<cell>:<class>` observation per

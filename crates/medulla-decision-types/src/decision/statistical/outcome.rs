@@ -162,6 +162,9 @@ pub enum FamilyAnswer {
     SkillUpgrade(Box<crate::decision::skill_upgrade_request::SkillUpgradeReceipt>),
     /// An admitted plan of the `planning_admission` family (MEDULLA-DECISION-ENGINE-R171.3).
     PlanningAdmission(Box<crate::decision::planning_admission::PlanningAdmissionAnswer>),
+    /// The why-not of every non-chosen target of a `placement` question
+    /// (MEDULLA-PLACEMENT-R001.9).
+    Placement(Box<crate::decision::statistical::placement::PlacementAnswer>),
     /// The per-step split of a trajectory reward (MEDULLA-DECISION-ENGINE-R751.755).
     RewardDecomposition(Box<crate::decision::reward::TrajectoryReward>),
     /// The ordered reads and stop reason of a research walk (MEDULLA-DECISION-ENGINE-R705.3).
@@ -275,6 +278,14 @@ impl FamilyAnswer {
     ) -> Option<&crate::decision::planning_admission::PlanningAdmissionAnswer> {
         match self {
             Self::PlanningAdmission(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// The placement why-not this answer carries.
+    pub fn placement(&self) -> Option<&crate::decision::statistical::placement::PlacementAnswer> {
+        match self {
+            Self::Placement(value) => Some(value),
             _ => None,
         }
     }

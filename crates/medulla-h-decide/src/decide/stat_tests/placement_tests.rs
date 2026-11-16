@@ -5,12 +5,13 @@
 use std::sync::Arc;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::placement::{
     cpu_cell, memory_cell, PlacementConstraints, PlacementQuestion, PlacementRead,
     PlacementRequestBody, PlacementSubject, PlacementTarget, PLACEMENT_PARAM,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionOutcome, EvidenceClass, ResolutionKind,
+    AbstainReason, DecisionOutcome, EvidenceClass, ResolutionKind, Violation,
 };
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass, LeasePriority};
 use medulla_persistence::redb_backend::RedbBackend;
@@ -543,4 +544,76 @@ async fn deployment_template_assembles_ordered_steps() {
             "one agent per template slot"
         );
     }
+}
+
+// spec: MEDULLA-PLACEMENT-R001.9
+#[tokio::test]
+async fn placement_record_has_one_why_not_per_non_chosen_target() {
+    let h = placement_harness().await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+
+    // Two replicas: compose is chosen. in_process is eliminated by its
+    // replica cap; swarm and helm are feasible but costlier.
+    let batch = decide(&h, placement_request(&schema_pin, body(false, 2)))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let Some(FamilyAnswer::Placement(answer)) = &record.answer else {
+        panic!("a placement answer is sealed: {:?}", record.answer)
+    };
+    let rows = answer.why_not.as_slice();
+    let mut ids: Vec<&str> = rows.iter().map(|row| row.component_id.as_str()).collect();
+    ids.sort_unstable();
+    assert_eq!(
+        ids,
+        ["placement:helm", "placement:in_process", "placement:swarm"],
+        "one why-not per non-chosen target and none for the chosen one"
+    );
+    for row in rows {
+        assert_eq!(row.slot, "target");
+    }
+    let by_id = |id: &str| rows.iter().find(|row| row.component_id == id).unwrap();
+    let swarm = by_id("placement:swarm");
+    assert!(
+        swarm.forced_objective.is_some(),
+        "a feasible but costlier target carries the objective it would force"
+    );
+    assert_eq!(
+        swarm.violation,
+        Some(Violation::Placement {
+            reason: "costlier than placement:compose (3 > 2)".to_string()
+        })
+    );
+    let in_process = by_id("placement:in_process");
+    assert_eq!(in_process.forced_objective, None);
+    assert_eq!(
+        in_process.violation,
+        Some(Violation::Placement {
+            reason: "placement:maxReplicas=1 < 2".to_string()
+        })
+    );
+
+    // Requiring HA eliminates compose by a declared property.
+    let batch = decide(&h, placement_request(&schema_pin, body(true, 2)))
+        .await
+        .unwrap();
+    let Some(FamilyAnswer::Placement(answer)) = &batch.records.as_slice()[0].answer else {
+        panic!("a placement answer is sealed")
+    };
+    let compose = answer
+        .why_not
+        .iter()
+        .find(|row| row.component_id == "placement:compose")
+        .expect("compose is explained");
+    assert_eq!(
+        compose.violation,
+        Some(Violation::Placement {
+            reason: "placement:supportsHa=false".to_string()
+        })
+    );
+    assert_eq!(
+        answer.why_not.len(),
+        3,
+        "swarm chosen; three others explained"
+    );
 }

@@ -129,6 +129,13 @@ pub enum Violation {
     UnknownLatencyUnderBudget,
     /// Forcing this component into the assembly leaves no feasible answer.
     InfeasibleWhenForced,
+    /// A deployment target a `placement` question did not choose: the stable
+    /// reason (MEDULLA-PLACEMENT-R001.9), either the rule that removed it
+    /// (`placement:supportsHa=false`) or the comparison it lost
+    /// (`costlier than placement:compose (5 > 2)`).
+    Placement {
+        reason: String,
+    },
     /// A primitive edge or replacement the request proposes failed its typed
     /// contract check; `code` is the registered `PRIMITIVE_*` refusal code
     /// (MEDULLA-DECISION-ENGINE-R036.100.3).
