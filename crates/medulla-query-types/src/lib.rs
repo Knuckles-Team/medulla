@@ -45,6 +45,8 @@ pub mod rdf_report;
 pub mod search_source;
 // EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
 pub mod series_expr;
+// MEDULLA-FEDERATED-QUERY-R738.17 — the lifecycle of one EXPLAIN/PROFILE stage report.
+pub mod uql_machine;
 // The query plan AST and wire DTOs embedded in feature-gated `protocol::Method` variants.
 // Domain-specific DTOs sit in private child modules and are re-exported by `wire` itself.
 pub mod wire;

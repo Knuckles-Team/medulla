@@ -1076,7 +1076,7 @@ fn trace_outcome_machine_classes_extend_core() {
 // spec: MEDULLA-FEDERATED-QUERY-R738.17
 #[test]
 fn uql_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_types::uql_machine::UQL_MACHINE);
+    sm::assert_matches(&medulla_query_types::uql_machine::UQL_MACHINE);
 }
 // spec: MEDULLA-FEDERATED-QUERY-R738.17
 #[test]

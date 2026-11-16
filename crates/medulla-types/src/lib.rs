@@ -28,9 +28,6 @@ pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
 pub mod transition_refused;
-// MEDULLA-FEDERATED-QUERY-R738.17 — the lifecycle of one EXPLAIN/PROFILE stage report.
-#[cfg(feature = "query")]
-pub mod uql_machine;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
 pub mod attached_source_governance;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.1 — typed model distinguishing the MySQL and

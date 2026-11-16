@@ -9,10 +9,10 @@
 //! initial state and `UqlStageReport::measured` is the one writer of `rows` and `micros`. The
 //! ontology description is `UqlMachine` in `state-machines-v1.ttl`.
 
-use crate::transition_refused::{
+use crate::wire::{UqlStage, UqlStageReport};
+use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
-use crate::wire::{UqlStage, UqlStageReport};
 
 /// The closed event set of `UqlMachine`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -102,7 +102,7 @@ impl UqlStageReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transition_refused::TransitionRefusalReason;
+    use medulla_types::transition_refused::TransitionRefusalReason;
 
     // spec: MEDULLA-FEDERATED-QUERY-R738.17
     #[test]
