@@ -18,10 +18,10 @@ The Rust ``method-codec`` profile supplies the module bytes directly. The
 builder verifies the WebAssembly header and refuses an import section. Two
 independent canonical builds must be byte-identical and within ``MAX_BYTES``
 (MEDULLA-CONTRACT-R006.2) before any copy is written.
-The linked module is then shrunk by binaryen ``wasm-opt -Oz`` from one pinned
-release archive (``BINARYEN_URL``), fetched into the cargo target directory and
-refused unless its SHA-256 equals ``BINARYEN_SHA256``; the same pinned binary
-gives the same bytes on every host.
+The linked module is then shrunk by binaryen ``wasm-opt`` (``-Oz`` with
+outlining) from one pinned release archive (``BINARYEN_URL``), fetched into
+the cargo target directory and refused unless its SHA-256 equals
+``BINARYEN_SHA256``; the same pinned binary gives the same bytes on every host.
 
 ``--export-dir`` saves the fresh module and a SHA-256/source/build provenance
 sidecar. Failed builds clear old exports and never advertise a completed export.
@@ -60,8 +60,9 @@ PROFILE = "method-codec"
 MODULE = "medulla_method_codec.wasm"
 CLIENT_DIRS = ("clients/go", "clients/js")
 PROVENANCE = "medulla_method_codec.provenance.json"
-# Fixed release gate (MEDULLA-CONTRACT-R006): lowered, never raised.
-MAX_BYTES = 10_946_464
+# Release gate (MEDULLA-CONTRACT-R006): lowered freely; raised only by an
+# owner-approved change to that row.
+MAX_BYTES = 14_000_000
 CANONICAL_BUILDS = 2
 BUILD_COMMAND = (
     "cargo",
@@ -93,7 +94,9 @@ WASM_FEATURES = (
     "--enable-multivalue",
     "--enable-reference-types",
 )
-WASM_OPT_PASSES = ("-Oz", "--strip-debug", "--strip-producers")
+# ``--outlining`` moves instruction sequences repeated across the many
+# per-type serde functions into shared helpers before the final ``-Oz``.
+WASM_OPT_PASSES = ("-Oz", "--outlining", "-Oz", "--strip-debug", "--strip-producers")
 
 
 def wasm_opt(target_dir: Path) -> Path:

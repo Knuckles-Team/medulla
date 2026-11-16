@@ -88,8 +88,18 @@ impl Method {
     /// canonicalizer. Hashing this (rather than transmitting a client-supplied
     /// hash) means the verifier NEVER trusts an attacker-stated body hash — it
     /// always recomputes it from the actual `method` that rode the wire.
+    ///
+    /// The encoder writes into an owned `Vec<u8>` with the named-struct
+    /// configuration, which gives exactly the bytes `rmp_serde::to_vec_named`
+    /// gives. That writer has the same type as the buffer the encoder uses for
+    /// a sequence or map of unknown length, which lets the method-codec module
+    /// share more of its two `Serialize` copies (MEDULLA-CONTRACT-R006).
     pub fn canonical_body_bytes(&self) -> Vec<u8> {
-        rmp_serde::to_vec_named(self).unwrap_or_default()
+        let mut serializer = rmp_serde::Serializer::new(Vec::new()).with_struct_map();
+        match serde::Serialize::serialize(self, &mut serializer) {
+            Ok(()) => serializer.into_inner(),
+            Err(_) => Vec::new(),
+        }
     }
 
     /// [`Self::canonical_body_bytes`] of the `Method` one MessagePack request
@@ -144,5 +154,28 @@ mod canonical_frame_tests {
             refused.is_err(),
             "an undecodable frame has no canonical body"
         );
+    }
+
+    /// The owned-writer encoder must give exactly the bytes of
+    /// `rmp_serde::to_vec_named`, including nested maps and sequences.
+    #[test]
+    fn the_canonical_body_is_the_named_messagepack_encoding() {
+        let methods = [
+            Method::CancelRequest { target_req_id: 7 },
+            Method::StoredQueryCall {
+                name: "q".to_string(),
+                version: Some(2),
+                args: [
+                    ("b".to_string(), serde_json::json!([1, "x", {"k": 1.5}])),
+                    ("a".to_string(), serde_json::json!(null)),
+                ]
+                .into_iter()
+                .collect(),
+            },
+        ];
+        for method in methods {
+            let expected = rmp_serde::to_vec_named(&method).expect("the method encodes");
+            assert_eq!(method.canonical_body_bytes(), expected, "{method:?}");
+        }
     }
 }
