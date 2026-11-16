@@ -19,6 +19,8 @@
 
 #![allow(clippy::result_large_err)]
 
+#[cfg(feature = "rdf")]
+mod catalog_guard;
 mod dispatch;
 #[cfg(feature = "obda")]
 mod obda;

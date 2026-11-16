@@ -16,6 +16,7 @@ pub(super) async fn handle_add_triples(
     req_id: u64,
     graph_name: &str,
     core: &Arc<GraphCore>,
+    read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
     turtle: String,
     ntriples: String,
 ) -> Response {
@@ -25,10 +26,17 @@ pub(super) async fn handle_add_triples(
         "AddTriples requires the shacl integrity-guard feature",
     );
 
-    let triples = match parse_either(&turtle, &ntriples) {
+    let mut triples = match parse_either(&turtle, &ntriples) {
         Ok(t) => t,
         Err(e) => return Response::err(req_id, e),
     };
+
+    // MEDULLA-TYPED-PACKS-R108.4: refuse an orphan asset class or a marked person
+    // field the writer does not hold, and flag an ownerless asset node, before
+    // the write lands.
+    if let Err(refusal) = super::catalog_guard::guard_catalog_write(&mut triples, read_authority) {
+        return Response::err(req_id, refusal.to_string());
+    }
 
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.

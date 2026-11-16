@@ -332,6 +332,24 @@ cat:Person a owl:Class ;
     rdfs:subClassOf cat:Asset ,
         [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Person ] .
 
+catn:fieldMarking a owl:AnnotationProperty ;
+    rdfs:label "field marking" ;
+    rdfs:comment "Names the marking a writer must hold to write this field of a catalog person node (MEDULLA-TYPED-PACKS-R108.4). A field with no marking is open." .
+
+cat:email a owl:DatatypeProperty ;
+    rdfs:label "email" ;
+    rdfs:comment "The email address of a person asset." ;
+    rdfs:domain cat:Person ;
+    rdfs:range xsd:string ;
+    catn:fieldMarking "pii" .
+
+cat:phone a owl:DatatypeProperty ;
+    rdfs:label "phone" ;
+    rdfs:comment "The phone number of a person asset." ;
+    rdfs:domain cat:Person ;
+    rdfs:range xsd:string ;
+    catn:fieldMarking "pii" .
+
 cat:Role a owl:Class ;
     rdfs:label "Role Asset" ;
     rdfs:comment "A business role catalogued as an asset." ;

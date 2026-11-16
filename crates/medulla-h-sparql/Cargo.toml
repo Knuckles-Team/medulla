@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-tables = { path = "../medulla-tables" }
+medulla-catalog = { path = "../medulla-catalog" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }

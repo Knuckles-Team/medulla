@@ -99,6 +99,7 @@ async fn try_handle_rdf(
                 req_id,
                 graph_name,
                 core,
+                read_authority,
                 turtle.clone(),
                 ntriples.clone(),
             )

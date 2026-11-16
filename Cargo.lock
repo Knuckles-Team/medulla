@@ -5836,6 +5836,7 @@ dependencies = [
 name = "medulla-h-sparql"
 version = "0.1.0"
 dependencies = [
+ "medulla-catalog",
  "medulla-catalog-types",
  "medulla-exec",
  "medulla-federation",

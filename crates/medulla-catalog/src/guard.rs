@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 
 use medulla_identity_types::tenancy::Marking;
 
-use crate::emit::{Object, Triple, ASSET_NODE_PREFIX, CAT};
+use crate::emit::{Object, Triple, ASSET_NODE_PREFIX, CAT, OWNER_MISSING_FLAG};
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 /// The wire code of an orphan asset class.
@@ -112,6 +112,45 @@ pub fn check_catalog_write(
     Ok(())
 }
 
+/// The `owner_missing` flag triples for the asset nodes of one write that name
+/// no owner.
+///
+/// An asset node is declared in the write by an `rdf:type` triple of a `cat:`
+/// class on a minted asset subject. When the write carries no `cat:hasOwner` for
+/// it and no `owner_missing` flag, the node commits flagged `owner_missing`, as
+/// [`crate::emit::emit_asset`] does, so the stewardship report lists it. The
+/// write is never refused for a missing owner.
+pub fn flag_ownerless(triples: &[Triple]) -> Vec<Triple> {
+    let has_owner = format!("{CAT}hasOwner");
+    let flag = format!("{CAT}flag");
+    let mut declared: BTreeSet<&str> = BTreeSet::new();
+    for triple in triples {
+        let typed_cat = matches!(&triple.object, Object::Iri(class) if class.starts_with(CAT));
+        if triple.predicate == RDF_TYPE
+            && typed_cat
+            && triple.subject.starts_with(ASSET_NODE_PREFIX)
+        {
+            declared.insert(triple.subject.as_str());
+        }
+    }
+    let settled: BTreeSet<&str> = triples
+        .iter()
+        .filter(|t| {
+            t.predicate == has_owner
+                || (t.predicate == flag && t.object == Object::Literal(OWNER_MISSING_FLAG.into()))
+        })
+        .map(|t| t.subject.as_str())
+        .collect();
+    declared
+        .difference(&settled)
+        .map(|subject| Triple {
+            subject: (*subject).to_string(),
+            predicate: flag.clone(),
+            object: Object::Literal(OWNER_MISSING_FLAG.to_string()),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,5 +217,35 @@ mod tests {
             field(&person, &format!("{CAT}displayName")),
         ];
         assert_eq!(check_catalog_write(&unmarked, &context), Ok(()));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.4
+    #[test]
+    fn a_node_with_no_owner_is_flagged_and_an_owned_or_flagged_node_is_left_alone() {
+        let ownerless = format!("{ASSET_NODE_PREFIX}product:p1");
+        let owned = format!("{ASSET_NODE_PREFIX}product:p2");
+        let flagged = format!("{ASSET_NODE_PREFIX}product:p3");
+        let product = format!("{CAT}Product");
+        let triples = vec![
+            typed(&ownerless, &product),
+            typed(&owned, &product),
+            Triple {
+                subject: owned.clone(),
+                predicate: format!("{CAT}hasOwner"),
+                object: Object::Iri("urn:owner:a".to_string()),
+            },
+            typed(&flagged, &product),
+            Triple {
+                subject: flagged.clone(),
+                predicate: format!("{CAT}flag"),
+                object: Object::Literal(OWNER_MISSING_FLAG.to_string()),
+            },
+            typed("urn:other:node", &product),
+        ];
+        let added = flag_ownerless(&triples);
+        assert_eq!(added.len(), 1);
+        assert_eq!(added[0].subject, ownerless);
+        assert_eq!(added[0].predicate, format!("{CAT}flag"));
+        assert_eq!(added[0].object, Object::Literal(OWNER_MISSING_FLAG.into()));
     }
 }

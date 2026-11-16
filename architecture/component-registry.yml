@@ -3987,6 +3987,7 @@ components:
       - "tests/connector_competency/test_contract_kinds_served.py"
       - "tests/typed_packs/test_model_harness_facts.py"
       - "tests/typed_packs/test_catalog_competency_queries.py"
+      - "tests/typed_packs/test_catalog_assets_served.py"
       - "tests/typed_packs/test_concept_path_admission_served.py"
       - "tests/typed_packs/ontology_pack_support.py"
       - "tests/typed_packs/test_ontology_corpus_served.py"
