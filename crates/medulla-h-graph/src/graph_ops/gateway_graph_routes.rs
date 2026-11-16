@@ -23,6 +23,7 @@ enum Route {
     DomainPack,
     ArgumentMap,
     AssistantProfile,
+    NlCorrection,
     ObservationState,
     ArchitectureExchange,
     Other,
@@ -159,6 +160,10 @@ fn is_assistant_profile(method: &Method) -> bool {
     matches!(method, Method::AssistantProfile { op } if op.is_mutation())
 }
 
+fn is_nl_correction(method: &Method) -> bool {
+    matches!(method, Method::NlQueryCorrect { .. })
+}
+
 fn is_architecture_exchange(method: &Method) -> bool {
     matches!(method, Method::ArchitectureModelImport { .. })
 }
@@ -199,6 +204,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_domain_pack, Route::DomainPack),
     (is_argument_map, Route::ArgumentMap),
     (is_assistant_profile, Route::AssistantProfile),
+    (is_nl_correction, Route::NlCorrection),
     (is_observation_state, Route::ObservationState),
     (is_architecture_exchange, Route::ArchitectureExchange),
 ];
@@ -224,6 +230,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Analytics
         | Route::ArgumentMap
         | Route::AssistantProfile
+        | Route::NlCorrection
         | Route::ObservationState
         | Route::ArchitectureExchange
         | Route::FinanceRecords
@@ -312,6 +319,9 @@ async fn try_handle_admin(
         }
         Route::AssistantProfile => {
             super::super::assistant_profile::handle_put(ctx, tenant_id, method).await
+        }
+        Route::NlCorrection => {
+            super::super::nl_correction::handle_correct(ctx, tenant_id, method).await
         }
         Route::ArchitectureExchange => {
             super::super::architecture_exchange::handle_import(ctx, tenant_id, method).await

@@ -116,6 +116,8 @@ method_results! {
     NlQuery(NlQuery) => Raw<Vec<(String, Option<f32>)>>;
     // The executed UQL text alongside the same `[node id, score | nil]` rows as `NlQuery`.
     NlQueryExplain(NlQueryExplain) => Raw<medulla_query_types::nl_query::NlQueryExplainResult>;
+    // The recorded certified correction (MEDULLA-FEDERATED-QUERY-R058.7).
+    NlQueryCorrect(NlQueryCorrect) => Raw<medulla_query_types::nl_query::NlCorrection>;
     // The unexecuted UQL candidate and its pins for the exact empty-parameter text.
     NlQueryPlan(NlQueryPlan) => Raw<medulla_query_types::nl_query::NlQueryPlanResult>;
     TxnUnifiedQuery(TxnUnifiedQuery) => Raw<Vec<medulla_types::unified_row::UnifiedRow>>;

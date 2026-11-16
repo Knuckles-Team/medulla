@@ -2200,6 +2200,28 @@ pub(crate) fn selectable_tables(
     Ok(out)
 }
 
+/// Every table the verified caller may SELECT, each with its column names, in
+/// table-name order (MEDULLA-FEDERATED-QUERY-R058.4.3). The one catalog read the
+/// natural-language schema context uses: the same `selectable_tables` authority
+/// as every served SQL surface, so a table the caller cannot read is absent.
+pub fn visible_catalog_columns(
+    authority: &CarrierAuthority,
+    persist_dir: &Path,
+) -> Result<Vec<(String, Vec<String>)>, String> {
+    let mut out = Vec::new();
+    for name in selectable_tables(authority, persist_dir)? {
+        let schema =
+            open_authorized_table(authority, persist_dir, &name, SqlPrivilege::Select)?.schema()?;
+        let columns = schema
+            .columns()
+            .iter()
+            .map(|column| column.name.clone())
+            .collect();
+        out.push((name, columns));
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

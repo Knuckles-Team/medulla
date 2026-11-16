@@ -11,7 +11,7 @@ mod test_support;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_query_types::nl_query::{NlDialect, NlQueryPlanResult, NlTurn};
+use medulla_query_types::nl_query::{NlDialect, NlQueryExplainResult, NlQueryPlanResult, NlTurn};
 use medulla_types::wire::UqlResult;
 
 const SECRET: &str = "nl-query-bounded-steps-secret";
@@ -22,6 +22,14 @@ const GRAPH: &str = "__commons__";
 struct ScriptedPlanner;
 
 impl medulla_nlq::nl::NlPlanner for ScriptedPlanner {
+    fn id(&self) -> String {
+        "scripted".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
     fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
         if schema_hint.starts_with("Rewrite the question") {
             assert!(
@@ -204,6 +212,14 @@ async fn second_step_corrects_parse_error() {
 struct EchoPlanner;
 
 impl medulla_nlq::nl::NlPlanner for EchoPlanner {
+    fn id(&self) -> String {
+        "scripted".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }
@@ -238,4 +254,161 @@ async fn refusals_return_code_and_no_rows() {
         assert!(!text.contains("step 2"), "{text}");
         assert!(refused.result.is_none(), "{text}");
     }
+}
+
+async fn add_doc(state: &test_support::SharedState, id: u64, node: &str, label: &str) {
+    let added = test_support::dispatch(
+        state,
+        test_support::commons_request(
+            SECRET,
+            id,
+            Method::AddNode {
+                node_id: node.to_string(),
+                properties_msgpack: test_support::json_bytes(
+                    serde_json::json!({"type": label, "year": 2000}),
+                ),
+            },
+        ),
+    )
+    .await;
+    assert!(added.error.is_none(), "{:?}", added.error);
+}
+
+async fn explain(state: &test_support::SharedState, id: u64, text: &str) -> NlQueryExplainResult {
+    let method = Method::NlQueryExplain {
+        text: text.into(),
+        graph: GRAPH.into(),
+        history: Vec::new(),
+    };
+    let resp =
+        test_support::dispatch(state, test_support::request(SECRET, id, GRAPH, method)).await;
+    match &resp.result {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
+        other => panic!(
+            "expected Raw explain result, got {other:?} / {}",
+            refusal(&resp)
+        ),
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.5
+#[tokio::test]
+async fn served_response_carries_steps_and_digest() {
+    medulla_h_query::nl::set_nl_planner(Arc::new(ScriptedPlanner));
+    let state = state();
+    add_doc(&state, 40, "d1", "Doc").await;
+
+    // Step 1 is refused (does not parse), step 2 is the accepted correction.
+    let first = explain(&state, 41, "two documents, corrected").await;
+    assert_eq!(first.steps.len(), 2, "{:?}", first.steps);
+    assert_eq!(first.steps[0].dialect, "uql");
+    assert_eq!(first.steps[0].query_text, "MATCH (:Doc");
+    assert_ne!(first.steps[0].outcome, "accepted");
+    assert_eq!(first.steps[1].dialect, "uql");
+    assert_eq!(first.steps[1].query_text, "MATCH (:Doc) |> LIMIT 2");
+    assert_eq!(first.steps[1].outcome, "accepted");
+    assert_eq!(first.uql, first.steps[1].query_text);
+
+    // The digest is 64 lowercase hex characters (the `Digest256` text form), the planner
+    // identity and revision are the planner's own.
+    let hex = first.context_digest.to_hex();
+    assert_eq!(hex.len(), 64);
+    assert!(hex
+        .chars()
+        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+    assert_eq!(first.planner_id, "scripted");
+    assert_eq!(first.planner_revision, "1");
+
+    // The same schema gives the same digest; a new label changes it.
+    let again = explain(&state, 42, "MATCH (:Doc) |> LIMIT 1").await;
+    assert_eq!(again.context_digest, first.context_digest);
+    assert_eq!(again.steps.len(), 1);
+    assert_eq!(again.steps[0].outcome, "accepted");
+    add_doc(&state, 43, "p1", "Person").await;
+    let changed = explain(&state, 44, "MATCH (:Doc) |> LIMIT 1").await;
+    assert_ne!(changed.context_digest, first.context_digest);
+}
+
+/// Records every schema hint the engine hands it. The first call of the probe
+/// question writes a new label through the served path, then answers text that does
+/// not parse, so the second step runs after the graph changed.
+struct ProbePlanner {
+    state: test_support::SharedState,
+    handle: tokio::runtime::Handle,
+    hints: std::sync::Mutex<Vec<String>>,
+}
+
+impl medulla_nlq::nl::NlPlanner for ProbePlanner {
+    fn id(&self) -> String {
+        "probe".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
+    fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
+        let mut hints = self.hints.lock().unwrap();
+        hints.push(schema_hint.to_string());
+        if hints.len() == 1 {
+            let state = self.state.clone();
+            tokio::task::block_in_place(|| {
+                self.handle.block_on(add_doc(&state, 60, "p1", "Person"))
+            });
+            return Ok("MATCH (:Doc".to_string());
+        }
+        Ok(nl.replace("probe doc person ledger_entries, ", ""))
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn one_schema_read_per_request() {
+    let state = state();
+    add_doc(&state, 50, "d1", "Doc").await;
+    let created = test_support::dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            51,
+            Method::Sql {
+                query: "CREATE TABLE ledger_entries (id TEXT, amount TEXT)".into(),
+                params_msgpack: Vec::new(),
+            },
+        ),
+    )
+    .await;
+    assert!(created.error.is_none(), "{}", refusal(&created));
+    let planner = Arc::new(ProbePlanner {
+        state: state.clone(),
+        handle: tokio::runtime::Handle::current(),
+        hints: std::sync::Mutex::new(Vec::new()),
+    });
+    medulla_h_query::nl::set_nl_planner(planner.clone());
+
+    // Step 1 is refused after the planner changed the graph; step 2 still sees the
+    // schema read at the start of the request: one read, shared by every step.
+    let text = "probe doc person ledger_entries, MATCH (:Doc) |> LIMIT 1";
+    let first = explain(&state, 52, text).await;
+    assert_eq!(first.steps.len(), 2, "{:?}", first.steps);
+    let hints = planner.hints.lock().unwrap().clone();
+    assert_eq!(hints.len(), 2, "{hints:?}");
+    assert!(hints[0].contains("Doc"), "{}", hints[0]);
+    assert!(
+        hints[0].contains("ledger_entries"),
+        "the caller's catalog tables are in the context: {}",
+        hints[0]
+    );
+    assert!(!hints[0].contains("Person"), "{}", hints[0]);
+    assert!(
+        !hints[1].contains("Person"),
+        "the second step must not re-read the schema: {}",
+        hints[1]
+    );
+
+    // A new request reads again and now sees the label written during the first.
+    let second = explain(&state, 53, text).await;
+    let hints = planner.hints.lock().unwrap().clone();
+    assert!(hints[2].contains("Person"), "{}", hints[2]);
+    assert_ne!(second.context_digest, first.context_digest);
 }

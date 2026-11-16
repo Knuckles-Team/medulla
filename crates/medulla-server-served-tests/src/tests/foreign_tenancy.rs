@@ -20,6 +20,14 @@ const OTHER_B: &str = "worker2";
 struct EchoPlanner;
 
 impl medulla_nlq::nl::NlPlanner for EchoPlanner {
+    fn id(&self) -> String {
+        "scripted".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }

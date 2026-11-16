@@ -822,6 +822,38 @@ pub async fn dispatch_method_scoped_graph_methods(
             )
             .await
         }
+        // Certified correction (MEDULLA-FEDERATED-QUERY-R058.7): only a caller holding the
+        // certify scope reaches the graph door that commits the correction record.
+        Method::NlQueryCorrect {
+            text,
+            graph,
+            rejected_uql,
+            approved_uql,
+        } => {
+            if !verified_context.allows_action(medulla_query_types::nl_query::NL_CERTIFY_SCOPE) {
+                Response::err(
+                    req.id,
+                    format!(
+                        "{}: NlQueryCorrect requires scope '{}'",
+                        medulla_query_types::nl_query::NL_CORRECTION_UNAUTHORIZED,
+                        medulla_query_types::nl_query::NL_CERTIFY_SCOPE
+                    ),
+                )
+            } else {
+                let target = nl_target_graph(&graph, &req.graph);
+                dispatch_nl_method(
+                    ctx,
+                    &target,
+                    Method::NlQueryCorrect {
+                        text,
+                        graph,
+                        rejected_uql,
+                        approved_uql,
+                    },
+                )
+                .await
+            }
+        }
         Method::NlQueryPlan {
             text,
             graph,

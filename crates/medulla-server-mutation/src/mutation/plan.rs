@@ -115,6 +115,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: the served factor record ranks, then
     // commits the Factor nodes and their derivedFrom edges as one batch.
     "FinanceFactorRecord",
+    // MEDULLA-FEDERATED-QUERY-R058.7: the certified correction commits one node.
+    "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
@@ -746,6 +748,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "FinanceAlertRaise",
     // The factor batch has no replicated command either (MEDULLA-FINANCE-PRIMITIVES-R018.5).
     "FinanceFactorRecord",
+    // The certified correction has no replicated command either (MEDULLA-FEDERATED-QUERY-R058.7).
+    "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
@@ -827,6 +831,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
         Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
+        Method::NlQueryCorrect { .. } => Some("NlQueryCorrect"),
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),

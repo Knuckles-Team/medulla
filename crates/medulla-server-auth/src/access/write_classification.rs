@@ -496,6 +496,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::FinanceRecordPut { .. }
                 | Method::FinanceAlertRaise { .. }
                 | Method::FinanceFactorRecord { .. }
+                // MEDULLA-FEDERATED-QUERY-R058.7: a certified NL correction commits one node.
+                | Method::NlQueryCorrect { .. }
                 // MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
                 | Method::ArchitectureModelImport { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.

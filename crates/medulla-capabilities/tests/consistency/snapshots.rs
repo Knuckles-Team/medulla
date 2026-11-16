@@ -140,6 +140,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
@@ -403,6 +404,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "NlQueryCorrect",
     // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
     // `Method::AddNode` upsert, which carries the durable effect.
     "SchemaProjections",
@@ -664,6 +666,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "NlQueryCorrect",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -741,6 +744,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "NlQueryCorrect",
     "SchemaProjections",
     "DomainPack",
     "FinanceRecordPut",
@@ -809,6 +813,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "NlQueryCorrect",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -837,6 +842,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "NlQueryCorrect",
     "SchemaProjections",
     "DomainPack",
     "FinanceRecordPut",

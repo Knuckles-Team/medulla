@@ -12628,6 +12628,13 @@ class MethodNlQuery(BaseModel):
     params: MethodNlQueryParams
 
 
+class MethodNlQueryCorrect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["NlQueryCorrect"]
+    params: MethodNlQueryCorrectParams
+
+
 class MethodNlQueryExplain(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14821,6 +14828,7 @@ Method = Annotated[
         MethodCausalCounterfactual,
         MethodRankByProvenance,
         MethodNlQuery,
+        MethodNlQueryCorrect,
         MethodNlQueryExplain,
         MethodNlQueryPlan,
         MethodRegisterForeignSource,
@@ -17419,6 +17427,15 @@ class MethodMutationOutboxParams(BaseModel):
     op: MutationOutboxOp
 
 
+class MethodNlQueryCorrectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approved_uql: str
+    graph: str | None = None
+    rejected_uql: str
+    text: str
+
+
 class MethodNlQueryExplainParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18919,10 +18936,41 @@ NlChoiceSource = Annotated[
 ]
 
 
+class CertifiedTermUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    lineage: list[str]
+    term: str
+    version: str
+
+
+class NlCorrection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approved_uql: str
+    certified_at_ms: int = Field(ge=0, le=18446744073709551615)
+    certifier: str
+    question: str
+    rejected_uql: str
+
+
+class NlPlanStepResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dialect: str
+    outcome: str
+    query_text: str
+
+
 class NlQueryExplainResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    certified_terms: list[CertifiedTermUse] | None = None
+    context_digest: Digest256
+    planner_id: str
+    planner_revision: str
     rows: list[NlQueryExplainResultRowsItem]
+    steps: list[NlPlanStepResult]
     uql: str
 
 
@@ -36052,6 +36100,8 @@ __all__ = [
     "MethodMutationOutbox",
     "MethodMutationOutboxParams",
     "MethodNlQuery",
+    "MethodNlQueryCorrect",
+    "MethodNlQueryCorrectParams",
     "MethodNlQueryExplain",
     "MethodNlQueryExplainParams",
     "MethodNlQueryParams",
@@ -36451,6 +36501,7 @@ __all__ = [
     "NlChoiceSource",
     "NlChoiceSourceEngine",
     "NlChoiceSourceLlmProposal",
+    "NlCorrection",
     "NlQueryExplainResult",
     "NlQueryExplainResultRowsItem",
     "NlQueryPlanResult",

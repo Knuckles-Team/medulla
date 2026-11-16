@@ -1290,6 +1290,14 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
             "NL_MUTATION_REFUSED",
         ]);
     }
+    // MEDULLA-FEDERATED-QUERY-R058.7: a correction without the certify scope.
+    if id == "NlQueryCorrect" {
+        codes.insert("NL_CORRECTION_UNAUTHORIZED");
+    }
+    // MEDULLA-FEDERATED-QUERY-R058.6: the certified-definition loop ended in a mismatch.
+    if matches!(id, "NlQuery" | "NlQueryExplain") {
+        codes.insert("NL_DEFINITION_CONFLICT");
+    }
     // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
     // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path.
     if id == "GetNodeProperties" {

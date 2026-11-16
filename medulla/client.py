@@ -12966,6 +12966,38 @@ class QueryClient:
         ).payload
         return result or {"uql": "", "rows": []}
 
+    async def nl_query_correct(
+        self,
+        text: str,
+        rejected_uql: str,
+        approved_uql: str,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a certified correction of a natural-language question
+        (MEDULLA-FEDERATED-QUERY-R058.7).
+
+        Sends ``Method::NlQueryCorrect``: the question, the UQL the certifier
+        rejected and the UQL the certifier approved are committed as one
+        correction record under the caller's authority. Later planning of the same
+        question carries the approved pair. The caller needs the
+        ``query:nl:certify`` scope (``NL_CORRECTION_UNAUTHORIZED`` without it). A
+        correction never changes a certified definition. Returns the record
+        (``question``, ``rejected_uql``, ``approved_uql``, ``certifier``,
+        ``certified_at_ms``). ``graph`` defaults to the connection's graph."""
+        target_graph = graph or self._client._graph_name
+        params = {
+            "text": text,
+            "graph": target_graph,
+            "rejected_uql": rejected_uql,
+            "approved_uql": approved_uql,
+        }
+        result = (
+            await _gen.query.send_nl_query_correct(
+                self._client, params, graph=target_graph
+            )
+        ).payload
+        return result or {}
+
     @staticmethod
     def _rows_to_dicts(result: Any) -> list[dict[str, Any]]:
         """Zip a ``{columns, rows}`` query result into per-row dicts. Shared by

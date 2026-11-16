@@ -118,19 +118,19 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T112 [US1] MEDULLA-FEDERATED-QUERY-R053.100 Generated Cypher property keys use backtick quoting with a build gate
 - [ ] T113 [US1] MEDULLA-FEDERATED-QUERY-R032.100 Layer- and history-weighted impact in both dependency directions
 - [ ] T114 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.1 NL planning context: model
-- [ ] T115 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.2 NL planning context: behavior
-- [ ] T116 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.3 NL planning context: wiring
+- [x] T115 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.2 NL planning context: behavior
+- [x] T116 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.3 NL planning context: wiring
 - [ ] T117 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.4 NL planning context: refusal
 - [ ] T118 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.5 NL planning context: evidence
 - [ ] T119 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.6 NL planning context: hot-path proof
 - [ ] T120 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.1 Snapshot graph and authorized foreign-source grounding
 - [ ] T121 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.8 The hint offers mapped connector properties under their ontology names
-- [ ] T122 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.9 Inline foreign adapter grounding
-- [ ] T420 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.10 Natural-language to SQL planner
-- [ ] T421 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.11 Natural-language to SPARQL planner
+- [x] T122 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.9 Inline foreign adapter grounding
+- [x] T420 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.10 Natural-language to SQL planner
+- [x] T421 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.11 Natural-language to SPARQL planner
 - [ ] T123 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.5 Configurable NL planner request
-- [ ] T124 [US1] MEDULLA-FEDERATED-QUERY-R058.6 NL answers are checked against certified definitions
-- [ ] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
+- [x] T124 [US1] MEDULLA-FEDERATED-QUERY-R058.6 NL answers are checked against certified definitions
+- [x] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
 - [ ] T126 [US1] MEDULLA-FEDERATED-QUERY-R058.8 A follow-up question is rewritten to a standalone question before planning
 - [ ] T127 [US1] MEDULLA-FEDERATED-QUERY-R058.9 Conflicting definitions across sources are reported, not merged
 - [ ] T128 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.700 Trino and Spark sources with idempotent submission: model and behavior

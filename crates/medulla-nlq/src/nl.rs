@@ -35,8 +35,15 @@
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
 
+pub mod certified;
 pub mod context;
 pub mod ground_sources;
+#[cfg(feature = "nl-query")]
+pub mod planned_text;
+#[cfg(feature = "nl-query")]
+pub mod sparql_planner;
+#[cfg(feature = "nl-query")]
+pub mod sql_planner;
 
 /// The NL→query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input): turn a natural-language request plus a
 /// `schema_hint` (labels / grammar the model should target) into an executable query
@@ -49,6 +56,14 @@ pub trait NlPlanner: Send + Sync {
     /// (network / model / empty output) is surfaced to the caller as a clear error
     /// rather than a panic or a silent empty result.
     fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String>;
+
+    /// The planner's identity, disclosed with every served NL result
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    fn id(&self) -> String;
+
+    /// The planner's revision: it changes when the planner's model or prompt does
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    fn revision(&self) -> String;
 }
 
 /// CONCEPT:MEDULLA-KG.query.core-query-input — the deterministic seam. Run `planner` to get a UQL query string,
@@ -149,6 +164,12 @@ pub enum NlQueryError {
     /// The follow-up rewrite produced no usable standalone question
     /// (MEDULLA-FEDERATED-QUERY-R058.8): empty, or longer than 2000 characters.
     RewriteFailed(String),
+    /// The loop ended with a candidate that still uses a certified term without its
+    /// lineage (MEDULLA-FEDERATED-QUERY-R058.6). `steps` holds every step.
+    DefinitionConflict {
+        /// Every step, in order; the last outcome names the mismatch.
+        steps: Vec<context::NlPlanStep>,
+    },
 }
 
 impl std::fmt::Display for NlQueryError {
@@ -174,6 +195,10 @@ impl std::fmt::Display for NlQueryError {
             }
             Self::Execution { message, .. } => write!(f, "nl-query: execution failed: {message}"),
             Self::RewriteFailed(msg) => write!(f, "nl-query: follow-up rewrite failed: {msg}"),
+            Self::DefinitionConflict { steps } => {
+                let last = steps.last().map_or("no step ran", |s| s.outcome.as_str());
+                write!(f, "nl-query: certified definition not honoured: {last}")
+            }
         }
     }
 }
@@ -186,11 +211,14 @@ impl NlQueryError {
             Self::StepsExhausted { .. } => Some(NL_QUERY_STEPS_EXHAUSTED),
             Self::PlannerUnconfigured => Some(NL_PLANNER_UNCONFIGURED),
             Self::MutationRefused { .. } => Some(NL_MUTATION_REFUSED),
+            Self::DefinitionConflict { .. } => Some(NL_DEFINITION_CONFLICT),
             _ => None,
         }
     }
 }
 
+/// The step budget ended with a candidate that does not honour a certified definition.
+pub const NL_DEFINITION_CONFLICT: &str = "NL_DEFINITION_CONFLICT";
 /// Every planner step was refused and the step budget is spent.
 pub const NL_QUERY_STEPS_EXHAUSTED: &str = "NL_QUERY_STEPS_EXHAUSTED";
 /// No NL planner is configured.
@@ -213,7 +241,9 @@ impl Default for NlQueryBudget {
     /// A generous but bounded default: long enough for any realistic hand-written-style
     /// UQL statement, short enough to refuse a runaway/hostile planner answer.
     fn default() -> Self {
-        Self { max_uql_len: 8192 }
+        Self {
+            max_uql_len: medulla_query_types::nl_query::NL_UQL_MAX_CHARS,
+        }
     }
 }
 
@@ -716,6 +746,19 @@ impl UreqNlPlanner {
 
 #[cfg(feature = "nl-query")]
 impl NlPlanner for UreqNlPlanner {
+    fn id(&self) -> String {
+        format!("openai-compatible:{}", self.model)
+    }
+
+    fn revision(&self) -> String {
+        let extra = serde_json::Value::Object(self.extra_body.clone()).to_string();
+        medulla_types::contract::Digest256::framed(
+            b"nl-planner-revision",
+            &[self.system_prompt.as_bytes(), extra.as_bytes()],
+        )
+        .map_or_else(|_| String::new(), |d| d.to_hex())
+    }
+
     fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
         let user = if schema_hint.trim().is_empty() {
             format!("Question: {nl}")
@@ -832,6 +875,14 @@ mod tests {
         pub(super) canned: String,
     }
     impl NlPlanner for MockPlanner {
+        fn id(&self) -> String {
+            "scripted".to_string()
+        }
+
+        fn revision(&self) -> String {
+            "1".to_string()
+        }
+
         fn plan(&self, _nl: &str, _hint: &str) -> Result<String, String> {
             Ok(self.canned.clone())
         }

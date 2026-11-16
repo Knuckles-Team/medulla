@@ -105,6 +105,75 @@ pub struct NlQueryExplainResult {
     /// request carried history (MEDULLA-FEDERATED-QUERY-R058.8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rewritten_question: Option<String>,
+    /// The certified glossary terms the executed UQL used, with their version and
+    /// lineage (MEDULLA-FEDERATED-QUERY-R058.6).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub certified_terms: Vec<CertifiedTermUse>,
+    /// Every planner step of the bounded correction loop, in order, ending with the
+    /// accepted one (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    pub steps: Vec<NlPlanStepResult>,
+    /// SHA-256 of the schema context the planner was given (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    pub context_digest: medulla_types::contract::Digest256,
+    /// The identity of the planner that answered (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    pub planner_id: String,
+    /// The revision of that planner; it changes when the planner's prompt or model does
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.5).
+    pub planner_revision: String,
+}
+
+/// One planner step as the served result discloses it (MEDULLA-FEDERATED-QUERY-R058.4.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NlPlanStepResult {
+    /// The dialect the step was planned in: `uql`, `sql` or `sparql`.
+    pub dialect: String,
+    /// The exact text the planner produced for this step.
+    pub query_text: String,
+    /// `accepted`, or the typed reason the engine refused the step.
+    pub outcome: String,
+}
+
+/// One certified glossary term an NL answer used (MEDULLA-FEDERATED-QUERY-R058.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CertifiedTermUse {
+    /// The term's preferred label.
+    pub term: String,
+    /// The certified version of the definition.
+    pub version: String,
+    /// The stored names (labels, properties, relationships) the definition is computed from.
+    pub lineage: Vec<String>,
+}
+
+/// Most characters a UQL text of the planner or of a certified correction may hold
+/// (MEDULLA-FEDERATED-QUERY-R058, R058.7). `NlQueryBudget::default` uses it.
+pub const NL_UQL_MAX_CHARS: usize = 8192;
+/// The refusal code of a correction without the `query:nl:certify` scope
+/// (MEDULLA-FEDERATED-QUERY-R058.7).
+pub const NL_CORRECTION_UNAUTHORIZED: &str = "NL_CORRECTION_UNAUTHORIZED";
+/// The scope a certifier holds to record a correction (MEDULLA-FEDERATED-QUERY-R058.7).
+pub const NL_CERTIFY_SCOPE: &str = "query:nl:certify";
+/// The node type of a recorded correction (MEDULLA-FEDERATED-QUERY-R058.7).
+pub const NL_CORRECTION_LABEL: &str = "NlCorrection";
+
+/// One certified correction of a natural-language question
+/// (MEDULLA-FEDERATED-QUERY-R058.7): the question, the UQL the certifier rejected,
+/// the UQL the certifier approved, who certified it and when. Later planning for
+/// the same question carries the approved pair; a correction never changes a
+/// certified glossary term.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NlCorrection {
+    /// The natural-language question the correction answers.
+    pub question: String,
+    /// The UQL the certifier rejected.
+    pub rejected_uql: String,
+    /// The UQL the certifier approved; it parses with the caller grammar.
+    pub approved_uql: String,
+    /// The verified principal that certified the correction.
+    pub certifier: String,
+    /// The authoritative engine time of the certification, in milliseconds.
+    pub certified_at_ms: u64,
 }
 
 /// The unexecuted natural-language candidate and the pins for the exact
@@ -139,13 +208,25 @@ mod tests {
             uql: "MATCH (:Doc) |> LIMIT 2".into(),
             rows: vec![("d1".into(), Some(0.5)), ("d2".into(), None)],
             rewritten_question: None,
+            certified_terms: Vec::new(),
+            steps: vec![NlPlanStepResult {
+                dialect: "uql".into(),
+                query_text: "MATCH (:Doc) |> LIMIT 2".into(),
+                outcome: "accepted".into(),
+            }],
+            context_digest: medulla_types::contract::Digest256::sha256(b"ctx"),
+            planner_id: "scripted".into(),
+            planner_revision: "1".into(),
         };
         let bytes = rmp_serde::to_vec_named(&result).unwrap();
         let value: serde_json::Value = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(value["uql"], "MATCH (:Doc) |> LIMIT 2");
         assert_eq!(
-            value,
-            serde_json::json!({"uql": "MATCH (:Doc) |> LIMIT 2", "rows": [["d1", 0.5], ["d2", null]]})
+            value["rows"],
+            serde_json::json!([["d1", 0.5], ["d2", null]])
         );
+        assert_eq!(value["steps"][0]["outcome"], "accepted");
+        assert_eq!(value["planner_id"], "scripted");
         let back: NlQueryExplainResult = rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(back, result);
     }

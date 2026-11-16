@@ -26,4 +26,6 @@ pub mod plpgsql;
 pub mod sequence_ddl;
 pub mod trigger_ddl;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod select_names;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod typed_result;

@@ -48,6 +48,59 @@ pub(crate) fn nl_config_refusal(e: &medulla_nlq::nl::NlConfigError) -> String {
 }
 
 #[cfg(feature = "nl-query")]
+/// What a served NL result discloses about how its plan was reached
+/// (MEDULLA-FEDERATED-QUERY-R058.4.5): every planner step, the digest of the schema
+/// context the planner saw, and the planner's identity and revision.
+#[cfg(feature = "nl-query")]
+pub(crate) struct NlPlanEvidence {
+    pub(crate) steps: Vec<medulla_query_types::nl_query::NlPlanStepResult>,
+    pub(crate) context_digest: medulla_types::contract::Digest256,
+    pub(crate) planner_id: String,
+    pub(crate) planner_revision: String,
+}
+
+/// How one NL request is planned: the requested dialect, the step budget, and whether
+/// the text dialects (SQL and SPARQL) may answer. `NlQueryExplain` discloses UQL, so it
+/// plans in UQL only.
+#[cfg(feature = "nl-query")]
+pub(crate) struct NlPlanning {
+    pub(crate) dialect: medulla_query_types::nl_query::NlDialect,
+    pub(crate) max_steps: usize,
+    pub(crate) text_dialects: bool,
+}
+
+/// A planned NL request: UQL that runs on the fused plan pipeline, or one SQL or SPARQL
+/// text that runs on that dialect's own served read path
+/// (MEDULLA-FEDERATED-QUERY-R058.4.10, R058.4.11).
+#[cfg(feature = "nl-query")]
+pub(crate) enum NlPlanned {
+    Uql {
+        uql: String,
+        plan: medulla_exec::algebra::Plan,
+        rewritten: Option<String>,
+        certified: Vec<medulla_query_types::nl_query::CertifiedTermUse>,
+        evidence: NlPlanEvidence,
+    },
+    Text {
+        dialect: medulla_query_types::nl_query::NlDialect,
+        text: String,
+    },
+}
+
+/// The result of one NL run: rows of the fused UQL pipeline with what the plan discloses,
+/// or the answer the SQL or SPARQL read path served for its own dialect.
+#[cfg(feature = "nl-query")]
+enum NlRun {
+    Rows {
+        uql: String,
+        rows: Vec<(String, Option<f32>)>,
+        rewritten: Option<String>,
+        certified: Vec<medulla_query_types::nl_query::CertifiedTermUse>,
+        evidence: NlPlanEvidence,
+    },
+    Answered(Response),
+}
+
 /// The NL → executable-UQL-plan resolution of [`handle_nl_query`]: resolve the
 /// configured/injected `NlPlanner`, ground it on the caller's snapshot (labels,
 /// stored property keys, relationships and the composed GraphSchema's ontology
@@ -63,9 +116,10 @@ pub(crate) fn handle_nl_query_plan(
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
     catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
+    tables: Vec<medulla_nlq::nl::context::NlTable>,
     history: &[medulla_query_types::nl_query::NlTurn],
-    max_steps: usize,
-) -> Result<(String, medulla_exec::algebra::Plan, Option<String>), Response> {
+    planning: &NlPlanning,
+) -> Result<NlPlanned, Response> {
     // MEDULLA-FEDERATED-QUERY-R651.4: the same bound `Discover` holds, refused before any
     // planner call so nothing is retrieved or asked.
     if text.len() > medulla_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES {
@@ -94,18 +148,135 @@ pub(crate) fn handle_nl_query_plan(
         })?;
     let (text, rewritten) = nl_follow_up(planner.as_ref(), text, history, req_id)?;
     let text = text.as_str();
-    let context = nl_schema_context(view, foreign_sources, catalogs);
+    let context = nl_schema_context(view, foreign_sources, catalogs, tables);
+    // MEDULLA-FEDERATED-QUERY-R058.4.2: link the request to the schema and choose the
+    // planner dialect before any planning step. UQL always has the planner resolved above;
+    // SQL and SPARQL are offered when their planner is configured. An explicit dialect
+    // with no planner refuses `NL_PLANNER_UNCONFIGURED`.
+    let (sql_planner, sparql_planner) = if planning.text_dialects {
+        (
+            crate::nl::resolve_sql_planner()
+                .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?,
+            nl_sparql_planner(req_id)?,
+        )
+    } else {
+        (None, None)
+    };
+    let mut available = vec![medulla_query_types::nl_query::NlDialect::Uql];
+    if sql_planner.is_some() {
+        available.push(medulla_query_types::nl_query::NlDialect::Sql);
+    }
+    if sparql_planner.is_some() {
+        available.push(medulla_query_types::nl_query::NlDialect::Sparql);
+    }
+    let chosen = medulla_nlq::nl::context::choose_dialect(
+        planning.dialect,
+        &context.link_schema(text),
+        &available,
+    )
+    .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+    let budget = medulla_nlq::nl::NlQueryBudget::default();
+    match (chosen, sql_planner, sparql_planner) {
+        (medulla_query_types::nl_query::NlDialect::Sql, Some(sql), _) => {
+            let planned = medulla_nlq::nl::sql_planner::plan_sql_grounded(
+                sql.as_ref(),
+                text,
+                &context,
+                budget,
+                planning.max_steps,
+            )
+            .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+            return Ok(NlPlanned::Text {
+                dialect: chosen,
+                text: planned.text,
+            });
+        }
+        (medulla_query_types::nl_query::NlDialect::Sparql, _, Some(sparql)) => {
+            let planned = medulla_nlq::nl::sparql_planner::plan_sparql_grounded(
+                sparql.as_ref(),
+                text,
+                &context,
+                budget,
+                planning.max_steps,
+            )
+            .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+            return Ok(NlPlanned::Text {
+                dialect: chosen,
+                text: planned.text,
+            });
+        }
+        (
+            medulla_query_types::nl_query::NlDialect::Sql
+            | medulla_query_types::nl_query::NlDialect::Sparql,
+            _,
+            _,
+        ) => {
+            return Err(Response::err(
+                req_id,
+                nl_refusal(&medulla_nlq::nl::NlQueryError::PlannerUnconfigured),
+            ))
+        }
+        _ => {}
+    }
     // MEDULLA-FEDERATED-QUERY-R058.2.1: the SAME typed budget refuses an over-budget
     // answer before it reaches the parser, inside every correction step.
-    let candidate = medulla_nlq::nl::context::plan_grounded(
+    // MEDULLA-FEDERATED-QUERY-R058.6: the certified terms of the caller's own
+    // (row-level filtered) snapshot join the bounded loop as one more typed check.
+    let terms = medulla_nlq::nl::certified::certified_terms(view);
+    // MEDULLA-FEDERATED-QUERY-R058.7: the approved pairs recorded for this question
+    // join the planning context; they never change a certified term.
+    let corrections = medulla_nlq::nl::certified::nl_corrections(view);
+    let candidate = medulla_nlq::nl::context::plan_grounded_certified(
         planner.as_ref(),
         text,
         &context,
-        medulla_nlq::nl::NlQueryBudget::default(),
-        max_steps,
+        budget,
+        planning.max_steps,
+        &terms,
+        &corrections,
     )
     .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
-    Ok((candidate.uql, candidate.plan, rewritten))
+    let context_digest = medulla_types::contract::Digest256::parse(&context.compute_digest())
+        .map_err(|e| Response::err(req_id, format!("INTERNAL: NlQuery: {e}")))?;
+    let evidence = NlPlanEvidence {
+        steps: candidate
+            .steps
+            .into_iter()
+            .map(|step| medulla_query_types::nl_query::NlPlanStepResult {
+                dialect: step.dialect,
+                query_text: step.query_text,
+                outcome: step.outcome,
+            })
+            .collect(),
+        context_digest,
+        planner_id: planner.id(),
+        planner_revision: planner.revision(),
+    };
+    Ok(NlPlanned::Uql {
+        uql: candidate.uql,
+        plan: candidate.plan,
+        rewritten,
+        certified: candidate.certified,
+        evidence,
+    })
+}
+
+/// The SPARQL planner when the build serves SPARQL, else none.
+#[cfg(all(feature = "nl-query", feature = "sparql"))]
+fn nl_sparql_planner(
+    req_id: u64,
+) -> Result<Option<std::sync::Arc<dyn medulla_nlq::nl::sparql_planner::SparqlNlPlanner>>, Response>
+{
+    crate::nl::resolve_sparql_planner().map_err(|e| Response::err(req_id, nl_config_refusal(&e)))
+}
+
+/// A build without SPARQL has no SPARQL planner to offer.
+#[cfg(all(feature = "nl-query", not(feature = "sparql")))]
+fn nl_sparql_planner(
+    _req_id: u64,
+) -> Result<Option<std::sync::Arc<dyn medulla_nlq::nl::sparql_planner::SparqlNlPlanner>>, Response>
+{
+    Ok(None)
 }
 
 /// Bound the earlier turns and rewrite a follow-up into the standalone question
@@ -138,13 +309,17 @@ pub(crate) fn nl_schema_context(
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
     #[cfg_attr(not(all(feature = "rdf", feature = "shacl")), allow(unused_mut))]
     mut catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
+    tables: Vec<medulla_nlq::nl::context::NlTable>,
 ) -> medulla_nlq::nl::context::SchemaContext {
-    let mut context = medulla_nlq::nl::context::SchemaContext::from_view(view);
+    // MEDULLA-FEDERATED-QUERY-R058.4.3: the one schema read of the request.
+    #[cfg(all(feature = "rdf", feature = "shacl"))]
+    let properties = medulla_h_sparql::rdf::composed_ontology_properties(&view.schema_sources);
+    #[cfg(not(all(feature = "rdf", feature = "shacl")))]
+    let properties: Vec<medulla_nlq::nl::context::OntologyProperty> = Vec::new();
+    let mut context =
+        medulla_nlq::nl::context::SchemaContext::from_graph_schema(view, &properties, tables);
     #[cfg(all(feature = "rdf", feature = "shacl"))]
     {
-        context.link_ontology(&medulla_h_sparql::rdf::composed_ontology_properties(
-            &view.schema_sources,
-        ));
         catalogs.rdf = medulla_h_sparql::rdf::composed_vocabulary(&view.schema_sources);
     }
     context.declare_source_catalogs(catalogs);
@@ -152,6 +327,34 @@ pub(crate) fn nl_schema_context(
         context.declare_foreign_sources(sources.clone());
     }
     context
+}
+
+/// The SQL catalog tables the verified caller may read, with their columns
+/// (MEDULLA-FEDERATED-QUERY-R058.4.3): the same authorized catalog `Method::Sql`
+/// reads, so a table the caller cannot see is absent from the context. A
+/// deployment with no persistence directory has no catalog and no tables; a
+/// caller with no verified carrier sees none.
+#[cfg(feature = "nl-query")]
+async fn nl_catalog_tables(
+    ctx: &QueryHandlerCtx<'_>,
+) -> Result<Vec<medulla_nlq::nl::context::NlTable>, Response> {
+    let Some(carrier) = ctx.read_authority.and_then(GraphReadAuthority::carrier) else {
+        return Ok(Vec::new());
+    };
+    let Some(persist_dir) = ctx.state.read().await.persist_dir.clone() else {
+        return Ok(Vec::new());
+    };
+    medulla_server_auth::sql_catalog_acl::visible_catalog_columns(
+        carrier,
+        std::path::Path::new(&persist_dir),
+    )
+    .map(|tables| {
+        tables
+            .into_iter()
+            .map(|(name, columns)| medulla_nlq::nl::context::NlTable { name, columns })
+            .collect()
+    })
+    .map_err(|error| Response::err(ctx.req_id, sql_refusal(error)))
 }
 
 /// Names visible to NL grounding come from the same verified owner-scoped
@@ -235,6 +438,11 @@ pub(crate) fn nl_refusal(error: &medulla_nlq::nl::NlQueryError) -> String {
             medulla_nlq::nl::NL_QUERY_STEPS_EXHAUSTED,
             ungrounded_detail(steps)
         ),
+        E::DefinitionConflict { steps } => format!(
+            "{}: NlQuery: {}",
+            medulla_nlq::nl::NL_DEFINITION_CONFLICT,
+            ungrounded_detail(steps)
+        ),
         E::PlannerUnconfigured => format!("{}: {error}", medulla_nlq::nl::NL_PLANNER_UNCONFIGURED),
         E::MutationRefused { query } => {
             format!(
@@ -274,18 +482,24 @@ pub(crate) async fn handle_nl_query(
     max_steps: Option<u32>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
-    // `dialect` is validated by the wire type; planner choice by dialect is R058.4.2.
-    let _ = dialect;
     let max_steps = match medulla_nlq::nl::context::resolve_max_steps(max_steps) {
         Ok(steps) => steps,
         Err(refusal) => return Ok(Response::err(req_id, nl_steps_refusal(&refusal))),
     };
     // Plain `NlQuery` answers bare rows and discloses no rewrite (R058.8).
+    // A SQL or SPARQL plan answers with its own dialect's read response
+    // (MEDULLA-FEDERATED-QUERY-R058.4.10, R058.4.11).
+    let planning = NlPlanning {
+        dialect,
+        max_steps,
+        text_dialects: true,
+    };
     Ok(
-        match run_nl_query(ctx, text, graph, history, max_steps).await {
-            Ok((_uql, rows, _rewritten)) => {
+        match run_nl_query(ctx, text, graph, history, planning).await {
+            Ok(NlRun::Rows { rows, .. }) => {
                 result_response::<query_results::NlQuery>(req_id, &rows)
             }
+            Ok(NlRun::Answered(response)) => response,
             Err(resp) => resp,
         },
     )
@@ -303,25 +517,44 @@ pub(crate) async fn handle_nl_query_explain(
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     Ok(
+        // `NlQueryExplain` discloses UQL and its `[id, score]` rows, so it plans in UQL
+        // only; a SQL or SPARQL answer has another row shape and goes through `NlQuery`.
         match run_nl_query(
             ctx,
             text,
             graph,
             history,
-            medulla_nlq::nl::context::DEFAULT_MAX_STEPS,
+            NlPlanning {
+                dialect: medulla_query_types::nl_query::NlDialect::Auto,
+                max_steps: medulla_nlq::nl::context::DEFAULT_MAX_STEPS,
+                text_dialects: false,
+            },
         )
         .await
         {
-            Ok((uql, rows, rewritten_question)) => {
-                result_response::<query_results::NlQueryExplain>(
-                    req_id,
-                    &medulla_query_types::nl_query::NlQueryExplainResult {
-                        uql,
-                        rows,
-                        rewritten_question,
-                    },
-                )
-            }
+            Ok(NlRun::Answered(_)) => Response::err(
+                req_id,
+                "INTERNAL: NlQueryExplain planned a text dialect".to_string(),
+            ),
+            Ok(NlRun::Rows {
+                uql,
+                rows,
+                rewritten: rewritten_question,
+                certified: certified_terms,
+                evidence,
+            }) => result_response::<query_results::NlQueryExplain>(
+                req_id,
+                &medulla_query_types::nl_query::NlQueryExplainResult {
+                    uql,
+                    rows,
+                    rewritten_question,
+                    certified_terms,
+                    steps: evidence.steps,
+                    context_digest: evidence.context_digest,
+                    planner_id: evidence.planner_id,
+                    planner_revision: evidence.planner_revision,
+                },
+            ),
             Err(resp) => resp,
         },
     )
@@ -405,6 +638,38 @@ fn plan_nl_only(
     Ok((candidate.uql, plan))
 }
 
+/// Run a planned SQL or SPARQL text on that dialect's own served read path, so the
+/// caller's row-level security, catalog authority and refusals are exactly those of
+/// `Method::Sql` and `Method::Sparql`; no second execution entry
+/// (MEDULLA-FEDERATED-QUERY-R058.4.10, R058.4.11).
+#[cfg(feature = "nl-query")]
+async fn run_nl_text(
+    ctx: &QueryHandlerCtx<'_>,
+    dialect: medulla_query_types::nl_query::NlDialect,
+    text: String,
+) -> Result<Response, Response> {
+    use medulla_query_types::nl_query::NlDialect;
+    let req_id = ctx.req_id;
+    match dialect {
+        NlDialect::Sql => handle_sql(ctx, text, Vec::new()).await.map_err(|_| {
+            Response::err(
+                req_id,
+                "ENGINE_UNAVAILABLE: NlQuery: SQL is not served in this build".to_string(),
+            )
+        }),
+        #[cfg(feature = "sparql")]
+        NlDialect::Sparql => super::live_artifact::sparql_response(ctx, &text)
+            .await
+            .map_err(|message| {
+                Response::err(req_id, format!("ENGINE_UNAVAILABLE: NlQuery: {message}"))
+            }),
+        other => Err(Response::err(
+            req_id,
+            format!("INTERNAL: NlQuery: {other:?} has no text execution path"),
+        )),
+    }
+}
+
 /// The one NL run both NL handlers share: plan `text` to UQL, then run it on the
 /// caller's RLS-filtered snapshot. Answers the planner's exact UQL and the rows, or the
 /// refusal response.
@@ -414,8 +679,8 @@ async fn run_nl_query(
     text: String,
     graph: String,
     history: Vec<medulla_query_types::nl_query::NlTurn>,
-    max_steps: usize,
-) -> Result<(String, Vec<(String, Option<f32>)>, Option<String>), Response> {
+    planning: NlPlanning,
+) -> Result<NlRun, Response> {
     let state = ctx.state;
     let req_id = ctx.req_id;
     let core = ctx.core.clone();
@@ -439,15 +704,29 @@ async fn run_nl_query(
     #[cfg(not(feature = "federation"))]
     let foreign_sources = None;
     let catalogs = nl_source_catalogs(ctx).await;
-    let (uql, plan, rewritten) = handle_nl_query_plan(
+    let tables = nl_catalog_tables(ctx).await?;
+    let planned = handle_nl_query_plan(
         &text,
         &snap,
         req_id,
         foreign_sources.as_ref(),
         catalogs,
+        tables,
         &history,
-        max_steps,
+        &planning,
     )?;
+    let (uql, plan, rewritten, certified, evidence) = match planned {
+        NlPlanned::Uql {
+            uql,
+            plan,
+            rewritten,
+            certified,
+            evidence,
+        } => (uql, plan, rewritten, certified, evidence),
+        NlPlanned::Text { dialect, text } => {
+            return run_nl_text(ctx, dialect, text).await.map(NlRun::Answered)
+        }
+    };
     // Verified-carrier legs: the committed tsdb scope for `Op::TsScan` fusion
     // (CONCEPT:MEDULLA-KG.query.native-time-series) and the CALLER'S owner-scoped foreign
     // registry (EH-373), so an NL-planned `FOREIGN "<name>"` / `Named` `ForeignScan`
@@ -461,7 +740,13 @@ async fn run_nl_query(
     use medulla_types::unified_row::UnifiedRow;
     match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs, &scope).await? {
         // `NlQuery` answers `[id, score | nil]` rows only.
-        Ok(rows) => Ok((uql, rows.iter().map(UnifiedRow::pair).collect(), rewritten)),
+        Ok(rows) => Ok(NlRun::Rows {
+            uql,
+            rows: rows.iter().map(UnifiedRow::pair).collect(),
+            rewritten,
+            certified,
+            evidence,
+        }),
         Err(msg) => Err(Response::err(
             req_id,
             medulla_protocol_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),
@@ -558,6 +843,14 @@ mod nl_plan_only_tests {
     struct PurePlanner;
 
     impl medulla_nlq::nl::NlPlanner for PurePlanner {
+        fn id(&self) -> String {
+            "scripted".to_string()
+        }
+
+        fn revision(&self) -> String {
+            "1".to_string()
+        }
+
         fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
             assert!(
                 schema_hint.is_empty(),

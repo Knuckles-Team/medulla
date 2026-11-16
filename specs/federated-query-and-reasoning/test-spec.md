@@ -335,7 +335,7 @@ Snapshot grounding acceptance for `MEDULLA-FEDERATED-QUERY-R058.4.7.1` uses the 
 
 Ontology-name acceptance for `MEDULLA-FEDERATED-QUERY-R058.4.8` uses the mapped-property and ambiguity tests in the same suite.
 
-`MEDULLA-FEDERATED-QUERY-R058.4.9` remains open. Its current negative test refuses an inline HTTP adapter before any source can run. Completing it requires positive tests for a schema-bound adapter and cross-owner refusal.
+`MEDULLA-FEDERATED-QUERY-R058.4.9` is proven by the served test `tests/nl_query_grounding.rs::inline_adapter_refused_named_source_grounds`: a natural-language plan with an inline HTTP adapter refuses `NL_SCHEMA_UNBOUND_FOREIGN_SOURCE` before any source can run, and a plan naming a source the caller registered grounds.
 
 Hot-path proof for `MEDULLA-FEDERATED-QUERY-R058.4`: `tests/nl_query_bounded_steps.rs::second_step_corrects_parse_error`.
 
@@ -582,8 +582,8 @@ cases against the same frozen source archive before composing this evidence.
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Behavior | `MEDULLA-FEDERATED-QUERY-R058.6` | `tests/nl_query_certified_definitions.rs::mismatch_is_corrected_then_disclosed`: one feedback step, the certified terms in the result, and `NL_DEFINITION_CONFLICT` when the loop ends. |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.6` | `tests/nl_query_certified_definitions.rs::mismatch_is_corrected_then_disclosed`: one feedback step, the certified terms in the result, and `NL_DEFINITION_CONFLICT` when the loop ends; beside it, the L1 `crates/medulla-nlq/src/nl/certified_tests.rs::candidate_without_the_whole_lineage_is_a_mismatch`. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`; beside it, the L1 `crates/medulla-h-graph/src/graph_ops/nl_correction.rs::a_correction_needs_a_parsable_distinct_approved_query` and `crates/medulla-nlq/src/nl/certified_tests.rs::only_the_same_question_matches_its_corrections`. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.8` | `tests/nl_query_bounded_steps.rs::follow_up_is_rewritten_and_disclosed`: the rewritten question is disclosed; without history the question is unchanged. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: one conflict fact; planning does not treat the term as certified. |
 
@@ -846,16 +846,16 @@ Each test below is planned: its path is the post-split location and its name is 
 
 Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATED-QUERY-R005.701`. Each path is where the test will live after the crate split; none is an execution receipt.
 
-- **MEDULLA-FEDERATED-QUERY-R058.4.2:** `crates/medulla-nlq/src/nl/context.rs::tests::linking_dialect_and_one_correction` (planned). NL planning context: behavior. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R058.4.3:** `tests/nl_query_bounded_steps.rs::one_schema_read_per_request` (planned). NL planning context: wiring. A served NlQuery with a scripted planner asserts one schema read.
+- **MEDULLA-FEDERATED-QUERY-R058.4.2:** `crates/medulla-nlq/src/nl/context.rs::tests::linking_dialect_and_one_correction`. NL planning context: behavior. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R058.4.3:** `tests/nl_query_bounded_steps.rs::one_schema_read_per_request`. NL planning context: wiring. A served NlQuery with a scripted planner asserts one schema read.
 - **MEDULLA-FEDERATED-QUERY-R058.4.4:** `tests/nl_query_bounded_steps.rs::refusals_return_code_and_no_rows` (planned). NL planning context: refusal. Each case returns its code and no rows.
-- **MEDULLA-FEDERATED-QUERY-R058.4.5:** `tests/nl_query_bounded_steps.rs::served_response_carries_steps_and_digest` (planned). NL planning context: evidence. It reads the step list and digest from the served response.
+- **MEDULLA-FEDERATED-QUERY-R058.4.5:** `tests/nl_query_bounded_steps.rs::served_response_carries_steps_and_digest`. NL planning context: evidence. It reads the step list and digest from the served response.
 - **MEDULLA-FEDERATED-QUERY-R058.4.7:** `tests/nl_query_grounding.rs::unknown_identifier_returns_feedback_not_execution` (planned). Schema grounding of planner output (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R058.4.7.1:** `context_tests.rs::evidence_questions_are_grounded_or_refused_over_servicenow_data` (planned), `nl_explain.rs::nl_query_grounds_names_on_the_graph_schema_before_running` (planned). Snapshot graph and authorized foreign-source grounding. A table holds the 26 validation-run questions over ingested ServiceNow fixture data. Each row asserts grounded UQL and the expected rows. A question with no graph data asserts the typed refusal (). A served test refuses an unknown property with its reason and runs a repaired name ().
 - **MEDULLA-FEDERATED-QUERY-R058.4.7.2:** `tests/nl_query_grounding.rs::source_native_identifiers_grounded` (planned). Source-native identifier grounding (rollup). The child acceptance criteria apply. Root journey test.
-- **MEDULLA-FEDERATED-QUERY-R058.4.9:** `tests/nl_query_grounding.rs::inline_adapter_refused_named_source_grounds` (planned). Inline foreign adapter grounding. It asserts the refusal for an inline HTTP adapter and success for a registered source.
-- **MEDULLA-FEDERATED-QUERY-R058.4.10:** `tests/nl_query_sql_served.rs::sql_dialect_plans_and_runs_a_select` (planned). Natural-language to SQL planner.
-- **MEDULLA-FEDERATED-QUERY-R058.4.11:** `tests/nl_query_sparql_served.rs::sparql_dialect_plans_and_runs_a_select` (planned). Natural-language to SPARQL planner.
+- **MEDULLA-FEDERATED-QUERY-R058.4.9:** `tests/nl_query_grounding.rs::inline_adapter_refused_named_source_grounds`. Inline foreign adapter grounding. It asserts the refusal for an inline HTTP adapter and success for a registered source.
+- **MEDULLA-FEDERATED-QUERY-R058.4.10:** `crates/medulla-nlq/src/nl/sql_planner.rs::tests::select_grounds_and_mutation_refuses` (L1) and `tests/nl_query_sql_served.rs::sql_dialect_plans_and_runs_a_select` (L3). Natural-language to SQL planner.
+- **MEDULLA-FEDERATED-QUERY-R058.4.11:** `crates/medulla-nlq/src/nl/sparql_planner.rs::tests::select_grounds_and_update_refuses` (L1) and `tests/nl_query_sparql_served.rs::sparql_dialect_plans_and_runs_a_select` (L3) and `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_nl_sparql_tenant_tests.rs::nl_sparql_returns_only_the_callers_tenant_rows` (L3, two tenants in one store). Natural-language to SPARQL planner.
 - **MEDULLA-FEDERATED-QUERY-R088:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). UQL rows apply visibility before limits and carry a snapshot header (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R088.1:** `crates/medulla-types/src/wire_query_core.rs::tests::uql_header_round_trips_with_defaults` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R088.2:** `tests/uql_governed_summary.rs::hidden_rows_do_not_displace_visible_rows` (planned). Behavior. Runs through Method::Uql with two principals and LIMIT 5.

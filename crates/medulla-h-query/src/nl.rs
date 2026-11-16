@@ -18,8 +18,8 @@
 use std::sync::{Arc, OnceLock};
 
 use medulla_nlq::{
-    nl::NlConfigError, nl::NlPlanner, nl::OAuth2ClientCredentials, nl::TokenAuthStyle,
-    nl::UreqNlPlanner,
+    nl::sparql_planner::SparqlNlPlanner, nl::sql_planner::SqlNlPlanner, nl::NlConfigError,
+    nl::NlPlanner, nl::OAuth2ClientCredentials, nl::TokenAuthStyle, nl::UreqNlPlanner,
 };
 
 /// An operator-injected planner (CONCEPT:MEDULLA-KG.query.fence-stripper). Set ONCE, before first use, by an
@@ -28,8 +28,12 @@ static INJECTED: OnceLock<Arc<dyn NlPlanner>> = OnceLock::new();
 /// The lazily-built, config-derived default planner (`None` when nothing is configured).
 /// Built at most once, on the first `NlQuery` that finds no injected planner.
 /// An invalid request config is kept as a typed error so `NlQuery` can refuse with it.
-type ConfigDefault = Result<Option<Arc<dyn NlPlanner>>, NlConfigError>;
+type ConfigDefault = Result<Option<Arc<UreqNlPlanner>>, NlConfigError>;
 static CONFIG_DEFAULT: OnceLock<ConfigDefault> = OnceLock::new();
+/// An operator-injected SQL planner (MEDULLA-FEDERATED-QUERY-R058.4.10). Wins over the config default.
+static INJECTED_SQL: OnceLock<Arc<dyn SqlNlPlanner>> = OnceLock::new();
+/// An operator-injected SPARQL planner (MEDULLA-FEDERATED-QUERY-R058.4.11). Wins over the config default.
+static INJECTED_SPARQL: OnceLock<Arc<dyn SparqlNlPlanner>> = OnceLock::new();
 
 /// Inject the NL planner the facade should use (CONCEPT:MEDULLA-KG.query.fence-stripper). An embedder calls this
 /// at startup to opt into the engine driving NL→query with its own planner. Idempotent:
@@ -37,6 +41,42 @@ static CONFIG_DEFAULT: OnceLock<ConfigDefault> = OnceLock::new();
 /// resolved) is ignored, so the wiring is stable for the process lifetime.
 pub fn set_nl_planner(planner: Arc<dyn NlPlanner>) {
     let _ = INJECTED.set(planner);
+}
+
+/// Inject the SQL planner of the NL surface (MEDULLA-FEDERATED-QUERY-R058.4.10). Same rules as
+/// [`set_nl_planner`]: set once, before first use; an injected planner wins over the config default.
+pub fn set_sql_nl_planner(planner: Arc<dyn SqlNlPlanner>) {
+    let _ = INJECTED_SQL.set(planner);
+}
+
+/// Inject the SPARQL planner of the NL surface (MEDULLA-FEDERATED-QUERY-R058.4.11). Same rules as
+/// [`set_nl_planner`].
+pub fn set_sparql_nl_planner(planner: Arc<dyn SparqlNlPlanner>) {
+    let _ = INJECTED_SPARQL.set(planner);
+}
+
+/// Resolve the SQL planner: the injected one, else the config default (the same
+/// OpenAI-compatible client that plans UQL), `Ok(None)` when none is configured.
+pub fn resolve_sql_planner() -> Result<Option<Arc<dyn SqlNlPlanner>>, NlConfigError> {
+    if let Some(p) = INJECTED_SQL.get() {
+        return Ok(Some(p.clone()));
+    }
+    CONFIG_DEFAULT
+        .get_or_init(build_default_from_config)
+        .clone()
+        .map(|planner| planner.map(|p| p as Arc<dyn SqlNlPlanner>))
+}
+
+/// Resolve the SPARQL planner: the injected one, else the config default,
+/// `Ok(None)` when none is configured.
+pub fn resolve_sparql_planner() -> Result<Option<Arc<dyn SparqlNlPlanner>>, NlConfigError> {
+    if let Some(p) = INJECTED_SPARQL.get() {
+        return Ok(Some(p.clone()));
+    }
+    CONFIG_DEFAULT
+        .get_or_init(build_default_from_config)
+        .clone()
+        .map(|planner| planner.map(|p| p as Arc<dyn SparqlNlPlanner>))
 }
 
 /// Resolve the active planner: the injected one if present, else the lazily-built config
@@ -49,6 +89,7 @@ pub fn resolve_planner() -> Result<Option<Arc<dyn NlPlanner>>, NlConfigError> {
     CONFIG_DEFAULT
         .get_or_init(build_default_from_config)
         .clone()
+        .map(|planner| planner.map(|p| p as Arc<dyn NlPlanner>))
 }
 
 /// OAuth2 client-credentials settings resolved from config (the client secret is carried
@@ -107,7 +148,7 @@ fn build_default_from_config() -> ConfigDefault {
     let model = settings.model.clone();
     let read_timeout = settings.read_timeout_secs;
     let planner = build_planner(settings, model, read_timeout)?;
-    Ok(Some(Arc::new(planner) as Arc<dyn NlPlanner>))
+    Ok(Some(Arc::new(planner)))
 }
 
 /// Build the planner-shaped HTTP client of the expansion port

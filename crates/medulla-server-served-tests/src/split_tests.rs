@@ -51,6 +51,17 @@ mod medulla_h_jobs_wire_tests;
 mod medulla_h_query_dispatch_pipeline_tests;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod medulla_h_query_retrieval_round_two_tenant_tests;
+#[cfg(all(
+    test,
+    unix,
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security",
+    feature = "sparql",
+    feature = "nl-query"
+))]
+mod medulla_h_query_nl_sparql_tenant_tests;
 #[cfg(all(test, feature = "query", feature = "ann-redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_query_sql_source_read_tests;

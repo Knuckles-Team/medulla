@@ -803,7 +803,7 @@ Use the existing owner-authorized foreign-source registry before planning. Forei
 
 `MEDULLA-FEDERATED-QUERY-R058.4.7` remains an open rollup. Its child `.1` delivers snapshot graph and authorized foreign-name grounding. Child `.2` tracks the remaining record-native and embedded-language identifier schemas. Existing execution routes and their source validators remain active.
 
-`MEDULLA-FEDERATED-QUERY-R058.4.9` tracks inline adapter authority and schema binding. The named-source path remains supported. NL grounding refuses only the unbound inline form pending that work. Deterministic query routes keep their existing adapter policies.
+`MEDULLA-FEDERATED-QUERY-R058.4.9` fixes inline adapter authority and schema binding: natural-language grounding always refuses an inline adapter, and only registered named sources ground, because a registered source carries a declared schema and an owner. Deterministic query routes keep their existing adapter policies.
 
 ### MEDULLA-FEDERATED-QUERY-R088 — governed UQL text rows
 

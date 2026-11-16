@@ -50,6 +50,14 @@ impl ScriptedPlanner {
 }
 
 impl NlPlanner for ScriptedPlanner {
+    fn id(&self) -> String {
+        "scripted".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
     fn plan(&self, _nl: &str, hint: &str) -> Result<String, String> {
         let mut calls = self.calls.lock().unwrap();
         let index = calls.len().min(self.answers.len() - 1);
@@ -1394,4 +1402,101 @@ fn cep_attributes_are_grounded_against_event_attributes() {
     assert!(context.ground(&cep("temp")).is_ok());
     let violation = context.ground(&cep("invented")).unwrap_err();
     assert!(violation.to_string().contains("family: cep"));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.2
+#[test]
+fn linking_dialect_and_one_correction() {
+    let mut context = SchemaContext::from_view(&servicenow_view());
+    context.set_tables(vec![
+        NlTable {
+            name: "beta_orders".into(),
+            columns: vec!["id".into()],
+        },
+        NlTable {
+            name: "alpha_orders".into(),
+            columns: vec!["id".into()],
+        },
+        NlTable {
+            name: "audit_log".into(),
+            columns: vec!["id".into()],
+        },
+    ]);
+    context.link_ontology(&[OntologyProperty {
+        name: "assignedTo".into(),
+        label: None,
+        domains: Vec::new(),
+    }]);
+
+    // Linking: a plural request token names its label, an unrelated label is not linked.
+    let linked = context.link_schema("which incidents exist");
+    assert_eq!(linked.labels, vec!["Incident".to_string()]);
+    assert!(linked.tables.is_empty());
+    assert!(linked.label_properties["Incident"].is_empty());
+    // A table ties on score and sorts by name ascending; camelCase parts link properties.
+    let linked = context.link_schema("orders assigned to somebody");
+    assert_eq!(
+        linked.tables,
+        vec!["alpha_orders".to_string(), "beta_orders".to_string()]
+    );
+    assert_eq!(linked.properties, vec!["assignedTo".to_string()]);
+    let linked = context.link_schema("incident assigned_to number");
+    assert_eq!(linked.label_properties["Incident"][0], "assigned_to");
+
+    // Dialect choice: the highest score among the dialects with a planner wins; a tie
+    // or an all-zero score chooses UQL, then sql, then sparql.
+    let all = [NlDialect::Uql, NlDialect::Sql, NlDialect::Sparql];
+    let pick = |request: &str, requested: NlDialect| {
+        choose_dialect(requested, &context.link_schema(request), &all)
+    };
+    assert_eq!(pick("orders", NlDialect::Auto).unwrap(), NlDialect::Sql);
+    assert_eq!(pick("incidents", NlDialect::Auto).unwrap(), NlDialect::Uql);
+    assert_eq!(
+        pick("assigned", NlDialect::Auto).unwrap(),
+        NlDialect::Sparql
+    );
+    assert_eq!(
+        pick("nothing here", NlDialect::Auto).unwrap(),
+        NlDialect::Uql
+    );
+    assert_eq!(
+        pick("incidents audit", NlDialect::Auto).unwrap(),
+        NlDialect::Uql
+    );
+    assert_eq!(pick("orders", NlDialect::Uql).unwrap(), NlDialect::Uql);
+    // Cypher has no planner; a dialect missing from `available` refuses the same way.
+    assert!(matches!(
+        pick("incidents", NlDialect::Cypher),
+        Err(NlQueryError::PlannerUnconfigured)
+    ));
+    assert!(matches!(
+        choose_dialect(
+            NlDialect::Sql,
+            &context.link_schema("orders"),
+            &[NlDialect::Uql]
+        ),
+        Err(NlQueryError::PlannerUnconfigured)
+    ));
+    assert_eq!(
+        choose_dialect(
+            NlDialect::Auto,
+            &context.link_schema("orders"),
+            &[NlDialect::Uql]
+        )
+        .unwrap(),
+        NlDialect::Uql
+    );
+
+    // One corrected step: the parse error goes back to the planner, the second answer runs.
+    let planner = ScriptedPlanner::new(&["MATCH (:Incident", "MATCH (:Incident) |> LIMIT 2"]);
+    let candidate = plan_grounded(
+        &planner,
+        "two incidents",
+        &context,
+        NlQueryBudget::default(),
+        2,
+    )
+    .expect("the corrected step grounds");
+    assert!(candidate.uql.contains("Incident"), "{}", candidate.uql);
+    assert_eq!(planner.hints().len(), 2);
 }

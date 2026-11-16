@@ -154,6 +154,7 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::FinanceAlertRaise { envelope } => {
             Some(format!("FINANCE_ALERT_RAISE|{}", envelope.event_id))
         }
+        Method::NlQueryCorrect { .. } => Some("NL_QUERY_CORRECT".to_string()),
         Method::FinanceFactorRecord { factor_ids, .. } => {
             Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
         }

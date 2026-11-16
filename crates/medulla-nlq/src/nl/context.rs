@@ -22,8 +22,12 @@ use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::nl_query::{CertifiedTermUse, NlCorrection, NlDialect};
 use medulla_types::wire::{Op, Plan, Pred};
 
+use super::certified::{
+    certified_hint, check_certified_definitions, corrections_hint, CertifiedTerm,
+};
 use super::ground_sources::{self, IdentifierFamily, SourceCatalogs};
 use super::{enforce_budget, NlPlanner, NlQueryBudget, NlQueryError};
 
@@ -41,6 +45,13 @@ pub const MIN_STEPS: usize = 1;
 pub const MAX_TABLES: usize = 60;
 /// Columns kept per catalog table (MEDULLA-FEDERATED-QUERY-R058.4.1).
 pub const MAX_COLUMNS_PER_TABLE: usize = 64;
+
+/// The dialects that have a natural-language planner today, in the order a tie in
+/// `auto` choice resolves (MEDULLA-FEDERATED-QUERY-R058.4.2): UQL, the SQL planner of
+/// MEDULLA-FEDERATED-QUERY-R058.4.10 and the SPARQL planner of
+/// MEDULLA-FEDERATED-QUERY-R058.4.11. A deployment offers the subset whose planner is
+/// configured.
+pub const PLANNER_DIALECTS: [NlDialect; 3] = [NlDialect::Uql, NlDialect::Sql, NlDialect::Sparql];
 
 /// A request asked for a `max_steps` outside `1..=4` (MEDULLA-FEDERATED-QUERY-R058.4.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -289,6 +300,8 @@ pub struct GroundedCandidate {
     pub plan: Plan,
     pub steps: Vec<NlPlanStep>,
     pub repairs: Vec<Repair>,
+    /// The certified terms the accepted candidate used (MEDULLA-FEDERATED-QUERY-R058.6).
+    pub certified: Vec<CertifiedTermUse>,
 }
 
 /// Lower-case alphanumerics only: `assigned_to`, `assignedTo` and `assigned to`
@@ -325,6 +338,22 @@ fn union_scope(left: Scope, right: Scope) -> Scope {
 }
 
 impl SchemaContext {
+    /// The one schema read of a natural-language request
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.3): the labels, keys and relationships of
+    /// `view`, the composed ontology `properties` linked onto stored keys, and the
+    /// SQL catalog `tables` the caller can see. The caller runs it once per request
+    /// and every planner step reads the result.
+    pub fn from_graph_schema(
+        view: &GraphView,
+        properties: &[OntologyProperty],
+        tables: Vec<NlTable>,
+    ) -> Self {
+        let mut context = Self::from_view(view);
+        context.link_ontology(properties);
+        context.set_tables(tables);
+        context
+    }
+
     /// Collect labels, property keys and relationships from `view`.
     pub fn from_view(view: &GraphView) -> Self {
         let mut context = Self::default();
@@ -547,6 +576,47 @@ impl SchemaContext {
         });
         labels.truncate(MAX_LABELS);
         labels
+    }
+
+    /// Link the request to the schema (MEDULLA-FEDERATED-QUERY-R058.4.2). Each label,
+    /// catalog table and ontology property scores `shared_tokens / request_tokens`,
+    /// where a shared token is a request token that names the item or one of its
+    /// parts (plural `s` ignored). Only items with a nonzero score are linked. They
+    /// sort by score, then by name ascending, and are kept to at most
+    /// [`MAX_LABELS`] labels, [`MAX_TABLES`] tables and [`MAX_PROPERTIES_PER_LABEL`]
+    /// properties per label; the ontology properties follow the label cap.
+    /// The request tokens come from the one tokenizer, `question_tokens`.
+    pub fn link_schema(&self, request: &str) -> LinkedSchema {
+        let tokens = question_tokens(request);
+        let label_names: Vec<&String> = self.labels.keys().collect();
+        let labels = rank_linked(&label_names, &tokens, MAX_LABELS);
+        let tables = rank_linked(
+            &self.tables.iter().map(|t| &t.name).collect::<Vec<_>>(),
+            &tokens,
+            MAX_TABLES,
+        );
+        let properties = rank_linked(
+            &self.properties.iter().collect::<Vec<_>>(),
+            &tokens,
+            MAX_LABELS,
+        );
+        let label_properties = labels
+            .iter()
+            .filter_map(|label| {
+                let schema = self.labels.get(label)?;
+                let fields: Vec<&String> = schema.fields.iter().collect();
+                Some((
+                    label.clone(),
+                    rank_linked(&fields, &tokens, MAX_PROPERTIES_PER_LABEL),
+                ))
+            })
+            .collect();
+        LinkedSchema {
+            labels,
+            tables,
+            properties,
+            label_properties,
+        }
     }
 
     /// Validate `plan` against the snapshot and rewrite ontology names and
@@ -1101,6 +1171,86 @@ fn pred_property(pred: &mut Pred) -> Option<&mut String> {
     }
 }
 
+/// The labels, tables and RDF properties a request links to, best first
+/// (MEDULLA-FEDERATED-QUERY-R058.4.2).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LinkedSchema {
+    /// Linked graph labels, at most [`MAX_LABELS`].
+    pub labels: Vec<String>,
+    /// Linked SQL catalog tables, at most [`MAX_TABLES`].
+    pub tables: Vec<String>,
+    /// Linked RDF properties of the composed ontology, at most [`MAX_LABELS`].
+    pub properties: Vec<String>,
+    /// Linked property keys per linked label, at most [`MAX_PROPERTIES_PER_LABEL`] each.
+    pub label_properties: BTreeMap<String, Vec<String>>,
+}
+
+/// The dialect a request is planned in (MEDULLA-FEDERATED-QUERY-R058.4.2). An explicit
+/// dialect with no planner in `available` refuses [`NlQueryError::PlannerUnconfigured`].
+/// `auto` scores UQL by linked labels, `sql` by linked tables and `sparql` by linked RDF
+/// properties; the highest score wins, and a tie or an all-zero score chooses UQL, then
+/// `sql`, then `sparql`.
+pub fn choose_dialect(
+    requested: NlDialect,
+    linked: &LinkedSchema,
+    available: &[NlDialect],
+) -> Result<NlDialect, NlQueryError> {
+    match requested {
+        NlDialect::Auto => {
+            let mut best = NlDialect::Uql;
+            let mut best_score = linked.labels.len();
+            for (dialect, score) in [
+                (NlDialect::Sql, linked.tables.len()),
+                (NlDialect::Sparql, linked.properties.len()),
+            ] {
+                if available.contains(&dialect) && score > best_score {
+                    best = dialect;
+                    best_score = score;
+                }
+            }
+            Ok(best)
+        }
+        explicit if available.contains(&explicit) => Ok(explicit),
+        _ => Err(NlQueryError::PlannerUnconfigured),
+    }
+}
+
+/// Names with a nonzero overlap with the request tokens: score descending, then name
+/// ascending, truncated to `keep`. The score `shared / request_tokens` shares one
+/// denominator, so the shared count orders them.
+fn rank_linked(names: &[&String], tokens: &BTreeSet<String>, keep: usize) -> Vec<String> {
+    let mut scored: Vec<(usize, &String)> = names
+        .iter()
+        .filter_map(|name| {
+            let shared = shared_tokens(tokens, name);
+            (shared > 0).then_some((shared, *name))
+        })
+        .collect();
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
+    scored.truncate(keep);
+    scored.into_iter().map(|(_, name)| name.clone()).collect()
+}
+
+/// Request tokens that name `name` or one of its camelCase or `_`-separated parts,
+/// ignoring a plural `s`.
+fn shared_tokens(tokens: &BTreeSet<String>, name: &str) -> usize {
+    let mut spaced = String::new();
+    let mut previous_lower = false;
+    for c in name.chars() {
+        if c.is_ascii_uppercase() && previous_lower {
+            spaced.push(' ');
+        }
+        previous_lower = c.is_ascii_lowercase() || c.is_ascii_digit();
+        spaced.push(c);
+    }
+    let mut parts: BTreeSet<String> = question_terms(&spaced).into_iter().collect();
+    parts.insert(norm(name));
+    tokens
+        .iter()
+        .filter(|t| parts.contains(*t) || parts.contains(t.trim_end_matches('s')))
+        .count()
+}
+
 fn question_tokens(question: &str) -> BTreeSet<String> {
     question_terms(question).into_iter().collect()
 }
@@ -1153,20 +1303,51 @@ pub fn plan_grounded(
     budget: NlQueryBudget,
     max_steps: usize,
 ) -> Result<GroundedCandidate, NlQueryError> {
-    let hint = context.hint(nl);
+    plan_grounded_certified(planner, nl, context, budget, max_steps, &[], &[])
+}
+
+/// [`plan_grounded`] with the certified-definition check of
+/// MEDULLA-FEDERATED-QUERY-R058.6: a candidate that grounds but uses a certified
+/// term without its lineage costs one step and returns to the planner as typed
+/// feedback; when the budget ends on such a mismatch the request is refused with
+/// [`NlQueryError::DefinitionConflict`]. The approved pairs recorded for the same
+/// question (MEDULLA-FEDERATED-QUERY-R058.7) join the planning context.
+pub fn plan_grounded_certified(
+    planner: &dyn NlPlanner,
+    nl: &str,
+    context: &SchemaContext,
+    budget: NlQueryBudget,
+    max_steps: usize,
+    terms: &[CertifiedTerm],
+    corrections: &[NlCorrection],
+) -> Result<GroundedCandidate, NlQueryError> {
+    let hint = format!(
+        "{}{}{}",
+        context.hint(nl),
+        certified_hint(terms, nl),
+        corrections_hint(corrections, nl)
+    );
     let mut steps: Vec<NlPlanStep> = Vec::new();
+    let mut last_was_conflict = false;
     for _ in 0..max_steps.clamp(1, MAX_STEPS) {
         let prompt = feedback_hint(&hint, &steps);
         let text = planner.plan(nl, &prompt).map_err(NlQueryError::Planner)?;
         enforce_budget(&text, budget)?;
         match ground_text(context, &text) {
             Ok((uql, grounded)) => {
+                let check = check_certified_definitions(terms, nl, &uql);
+                if let Some(mismatch) = check.mismatches.first() {
+                    steps.push(step(&text, &mismatch.to_string()));
+                    last_was_conflict = true;
+                    continue;
+                }
                 steps.push(step(&text, "accepted"));
                 return Ok(GroundedCandidate {
                     uql,
                     plan: grounded.plan,
                     steps,
                     repairs: grounded.repairs,
+                    certified: check.used,
                 });
             }
             Err(outcome) => {
@@ -1174,8 +1355,12 @@ pub fn plan_grounded(
                     return Err(NlQueryError::MutationRefused { query: text });
                 }
                 steps.push(step(&text, &outcome));
+                last_was_conflict = false;
             }
         }
+    }
+    if last_was_conflict {
+        return Err(NlQueryError::DefinitionConflict { steps });
     }
     Err(NlQueryError::StepsExhausted { steps })
 }

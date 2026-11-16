@@ -463,6 +463,19 @@ $($variants)*
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         history: Vec<medulla_query_types::nl_query::NlTurn>,
     },
+    /// Record a certified correction of a natural-language question
+    /// (MEDULLA-FEDERATED-QUERY-R058.7): the question, the rejected UQL and the
+    /// approved UQL, committed as one `NlCorrection` node under the caller's
+    /// authority. The caller needs the `query:nl:certify` scope
+    /// (`NL_CORRECTION_UNAUTHORIZED` without it). Later planning for the same
+    /// question carries the approved pair.
+    NlQueryCorrect {
+        text: String,
+        #[serde(default)]
+        graph: String,
+        rejected_uql: String,
+        approved_uql: String,
+    },
     /// Plan a natural-language request without executing it
     /// (MEDULLA-FEDERATED-QUERY-R058.2.2.2). The result contains the exact
     /// exact UQL and plan/query pins that a caller must carry into a later

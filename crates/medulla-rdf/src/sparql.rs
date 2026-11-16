@@ -57,6 +57,8 @@ use bool_builtins::{eval_bool_str_relation, term_type_test};
 // EH-197 — witness proofs for SELECT rows (child module: it reuses the private
 // pattern matcher and join rather than re-implementing them).
 mod proof;
+mod shape;
+pub use shape::{query_shape, QueryForm, QueryShape, ShapeError};
 // SERVICE delegation: pushdown eligibility, fallback and the bind-join budget.
 mod service;
 #[cfg(test)]

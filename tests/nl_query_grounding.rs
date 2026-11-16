@@ -24,6 +24,14 @@ const GRAPH: &str = "__commons__";
 struct EchoPlanner;
 
 impl medulla_nlq::nl::NlPlanner for EchoPlanner {
+    fn id(&self) -> String {
+        "scripted".to_string()
+    }
+
+    fn revision(&self) -> String {
+        "1".to_string()
+    }
+
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }
@@ -255,4 +263,43 @@ async fn rdf_identifiers() {
         "SPARQL 'PREFIX p: <{namespace}> SELECT ?x WHERE {{ ?x a p:InventedClassName }}' VAR 'x'"
     );
     assert_unknown(&nl(&state, 3, &by_prefix).await, "rdf", "InventedClassName");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.9
+#[cfg(feature = "federation")]
+#[tokio::test]
+async fn inline_adapter_refused_named_source_grounds() {
+    use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+    let state = state();
+    let registered = send(
+        &state,
+        1,
+        Method::RegisterForeignSource {
+            name: "peer".into(),
+            source: ForeignSourceSpec::HttpJson {
+                url: "https://example.invalid/data".into(),
+                json_path: String::new(),
+                field_map: HttpFieldMap {
+                    id: "id".into(),
+                    score: None,
+                    columns: Default::default(),
+                },
+            },
+        },
+    )
+    .await;
+    assert!(registered.error.is_none(), "{:?}", registered.error);
+    // A registered named source carries a declared schema and an owner, so it grounds.
+    assert_grounded(&nl(&state, 2, "FOREIGN 'peer' |> LIMIT 5").await);
+    // An inline HTTP adapter carries neither, so natural-language grounding refuses it.
+    let inline = nl(
+        &state,
+        3,
+        "FOREIGN HTTP 'https://example.invalid/data' ID 'id' |> LIMIT 5",
+    )
+    .await;
+    assert!(
+        inline.contains("NL_SCHEMA_UNBOUND_FOREIGN_SOURCE"),
+        "{inline}"
+    );
 }
