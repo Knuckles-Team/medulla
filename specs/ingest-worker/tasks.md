@@ -66,7 +66,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T060 [US5] MEDULLA-INGEST-WORKER-R606.5 Evidence: per-batch report
 - [ ] T061 [US5] MEDULLA-INGEST-WORKER-R606.6 Hot-path proof: materialization at batch size
 - [ ] T062 [US3] MEDULLA-INGEST-WORKER-R700.1 Model: fragments and the reader registry
-- [ ] T063 [US3] MEDULLA-INGEST-WORKER-R700.2 Behavior: bounded streaming readers
+- [x] T063 [US3] MEDULLA-INGEST-WORKER-R700.2 Behavior: bounded streaming readers
 - [ ] T064 [US3] MEDULLA-INGEST-WORKER-R700.3 Wiring: readers run inside document normalization
 - [ ] T065 [US3] MEDULLA-INGEST-WORKER-R700.4 Refusal: oversize, encrypted, unsupported or corrupt input
 - [ ] T066 [US3] MEDULLA-INGEST-WORKER-R700.5 Evidence: every fragment re-extracts from its span

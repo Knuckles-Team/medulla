@@ -41,6 +41,8 @@ mod header;
 mod html;
 /// Deterministic heading- and paragraph-aware chunking (MEDULLA-REPO-INGEST-R652).
 pub mod processing;
+/// Bounded streaming readers (MEDULLA-INGEST-WORKER-R700.2).
+pub mod readers;
 /// Versioned table of the languages with a shipped parser AND resolver (R006.4).
 pub mod semantic_support;
 /// Skill-document step compiler (MEDULLA-REPO-INGEST-R002.1.2).

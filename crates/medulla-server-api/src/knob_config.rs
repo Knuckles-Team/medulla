@@ -545,6 +545,10 @@ knobs! {
     ingest_context_token_budget: u64 = "ingest.context_token_budget", U64(2_000), [100, 32_000], "words", Tunable;
     /// Ingest link minimum shared mentions.
     ingest_link_min_shared_mentions: u64 = "ingest.link_min_shared_mentions", U64(2), [1, 20], "count", Tunable;
+    /// Largest source a document reader accepts, and the base of its memory bound (MEDULLA-INGEST-WORKER-R700.2).
+    ingest_reader_max_bytes: u64 = "ingest.reader_max_bytes", U64(67_108_864), [1_048_576, 268_435_456], "bytes", Tunable;
+    /// Threads a document reader uses for independent page and sheet units (MEDULLA-INGEST-WORKER-R700.2).
+    ingest_reader_parallelism: u64 = "ingest.reader_parallelism", U64(4), [1, 32], "threads", Tunable;
     /// Media blob size cap.
     media_max_blob_bytes: u64 = "media.max_blob_bytes", U64(33_554_432), [1_048_576, 268_435_456], "bytes", Tunable;
     /// Synthesis context budget.
