@@ -184,7 +184,10 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
         1,
         &service,
         medulla_types::usage::UsageOp::PutPrice {
-            entries: vec![price],
+            catalog: medulla_types::usage::PriceCatalog {
+                aliases: Default::default(),
+                entries: vec![price],
+            },
         },
     )
     .await;
