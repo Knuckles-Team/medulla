@@ -240,21 +240,6 @@ closed_error_codes! {
         /// A used distilled score's low fidelity bound is under the floor
         /// (MEDULLA-DECISION-ENGINE-R147.4).
         DistilledFidelityBelowFloor => "DISTILLED_FIDELITY_BELOW_FLOOR",
-        /// A non-initial disclosure trigger names no prior event
-        /// (MEDULLA-DECISION-ENGINE-R143.2).
-        DisclosurePriorMissing => "DISCLOSURE_PRIOR_MISSING",
-        /// The `initial` disclosure trigger came with a prior event
-        /// (MEDULLA-DECISION-ENGINE-R143.2).
-        DisclosurePriorUnexpected => "DISCLOSURE_PRIOR_UNEXPECTED",
-        /// The prior disclosure event belongs to another instruction set
-        /// (MEDULLA-DECISION-ENGINE-R143.2).
-        DisclosureSetMismatch => "DISCLOSURE_SET_MISMATCH",
-        /// The new instructions hash equals the prior hash
-        /// (MEDULLA-DECISION-ENGINE-R143.2).
-        DisclosureHashUnchanged => "DISCLOSURE_HASH_UNCHANGED",
-        /// A `timeout` trigger before `disclosure.timeout` elapsed
-        /// (MEDULLA-DECISION-ENGINE-R143.2).
-        DisclosureTimeoutNotElapsed => "DISCLOSURE_TIMEOUT_NOT_ELAPSED",
     }
 }
 
