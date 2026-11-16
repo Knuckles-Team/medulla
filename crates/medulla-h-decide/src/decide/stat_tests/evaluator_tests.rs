@@ -180,6 +180,7 @@ async fn a_role_grant_admits_its_holders_but_never_the_committer() {
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     let committer = principal_of("decider");
     let rows = super::super::stat_evaluator::grant_rows(

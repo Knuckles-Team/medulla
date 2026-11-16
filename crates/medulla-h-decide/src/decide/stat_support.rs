@@ -16,10 +16,8 @@ use medulla_agent_types::{
     agent_component::ComponentDependency,
 };
 use medulla_decision_types::decision::statistical::body::decode_body;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef, StatisticalPolicy};
-use medulla_decision_types::{
-    decision::statistical::QuestionKind, decision::statistical::StatisticalErrorCode,
-};
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
@@ -208,17 +206,6 @@ pub(super) fn refusal(code: StatisticalErrorCode, detail: impl std::fmt::Display
 
 pub(super) fn invalid_parameter(detail: impl std::fmt::Display) -> String {
     refusal(StatisticalErrorCode::ParameterInvalid, detail)
-}
-
-/// The wire kind is published before its specialized executor and replay path.
-/// Refuse it until both can derive the three-part harness configuration.
-pub(super) fn require_supported_question_kind(kind: QuestionKind) -> Result<(), String> {
-    if kind == QuestionKind::HarnessConfig {
-        return Err(invalid_parameter(
-            "harness_config is not supported by the decision executor",
-        ));
-    }
-    Ok(())
 }
 
 /// The revision a pin names, checked for tenant, kind and digest.

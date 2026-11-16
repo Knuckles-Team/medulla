@@ -42,9 +42,7 @@ use super::stat_executor::{
 };
 use super::stat_log::{fill_observed_costs, fill_outcome_rates, LogReader};
 use super::stat_nl::binding;
-use super::stat_support::{
-    refusal, require_supported_question_kind, resolve_policy, ResolvedPolicy,
-};
+use super::stat_support::{refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -86,7 +84,6 @@ async fn serve(
                 "ACCESS_DENIED: Decide tenant must match the verified request tenant".to_string(),
             );
         }
-        require_supported_question_kind(request.question.kind)?;
         medulla_decision_types::decision::evidence_stream::validate(
             request.evidence_streams.as_slice(),
         )
@@ -291,6 +288,10 @@ async fn serve(
                 super::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(|view| Some((view, 0)))
+            } else if request.question.kind == QuestionKind::HarnessConfig {
+                super::family::harness_config::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else {
                 super::candidates::filtered_graph_view(
                     state,
@@ -306,6 +307,22 @@ async fn serve(
         Some((view, version)) => (Some(view), version),
         None => (None, 0),
     };
+    // A `harness_config` question that names an assistant profile reads it
+    // here, under the visibility rule of the profile store, before any
+    // decision input is read (MEDULLA-DECISION-ENGINE-R128.16).
+    let assistant_profile = telemetry::stage_async(
+        telemetry::Stage::Visibility,
+        &family,
+        verified.tenant(),
+        async {
+            if request.question.kind == QuestionKind::HarnessConfig {
+                super::family::harness_config::resolve_profile(state, verified, &request).await
+            } else {
+                Ok(None)
+            }
+        },
+    )
+    .await?;
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
@@ -330,6 +347,7 @@ async fn serve(
                     matched: &[],
                     designation: designation.as_ref(),
                     reader: Some(&reader),
+                    assistant_profile: assistant_profile.as_ref(),
                 };
                 decide_blocking(
                     &ctx,
@@ -785,6 +803,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::StepVerification | QuestionKind::AdversarialAdmission => {
             medulla_decision_types::decision::trajectory_verdict::KNOBS
         }
+        QuestionKind::HarnessConfig => {
+            medulla_decision_types::decision::statistical::harness_config::HARNESS_KNOBS
+        }
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS
@@ -998,7 +1019,14 @@ fn seal(
     >,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
-        harness_evaluation: None,
+        harness_evaluation: match executed
+            .family
+            .as_ref()
+            .and_then(|family| family.answer.as_ref())
+        {
+            Some(FamilyAnswer::HarnessConfig(evidence)) => Some((**evidence).clone()),
+            _ => None,
+        },
         context_digest: Some(sealing.context_digest.clone()),
         harness_contrast: executed.harness_contrast.clone(),
         feature_schema: sealing.request.feature_schema.clone(),
@@ -1109,10 +1137,13 @@ fn seal(
             .or_else(|| planning_admission_answer(sealing.request, &executed.ladder.outcome))
             .or_else(|| comparative.map(|plan| FamilyAnswer::ComparativeAnalysis(Box::new(plan))))
             .or_else(|| {
+                // A harness configuration is sealed as `inputs.harness_evaluation`,
+                // never as the record's `answer` (MEDULLA-DECISION-ENGINE-R128.12).
                 executed
                     .family
                     .as_ref()
                     .and_then(|family| family.answer.clone())
+                    .filter(|answer| !matches!(answer, FamilyAnswer::HarnessConfig(_)))
             }),
         calibration: executed.ladder.calibration,
         explanation: recorded_explanation(sealing.pinned, executed)?,

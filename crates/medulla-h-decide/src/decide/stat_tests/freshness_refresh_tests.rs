@@ -130,6 +130,7 @@ fn ctx<'a>(h: &'a Harness, tenant: &'a str) -> ExecutionContext<'a> {
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     }
 }
 

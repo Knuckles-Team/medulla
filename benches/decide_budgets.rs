@@ -29,6 +29,9 @@ mod test_support;
 
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::{
+    MeasuredFact, ObservationRef, ShellProficiency, StoppingBehaviour,
+};
 use medulla_agent_types::agent_topology::{
     LeasePlan, SlotPlan, StopRule, TopologyPlan, TopologyPolicy,
 };
@@ -59,13 +62,17 @@ use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
 };
 use medulla_decision_types::decision::skill_evolution::{PARAM_REQUESTED_SKILLS, PARAM_USED_TERMS};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
+use medulla_decision_types::decision::statistical::harness_config::{
+    HarnessConfigEvaluationEvidence, HarnessEvidenceLimits,
+};
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::writeback::{
     ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
 };
 use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
+    CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
+    StatisticalDecisionRecord, StatisticalQuestion, TypedParam, TypedValue,
 };
 use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
 use medulla_decision_types::decision::thought_search::{
@@ -76,9 +83,10 @@ use medulla_decision_types::decision::trajectory_verdict::{
     JoinRequest, StepCheck, TraceStep as VerifyStep, TrajectoryEntry, VerifyRequest,
     MAX_TRAJECTORIES,
 };
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::{DecisionPolicyRef, EvidenceClass};
 use medulla_h_decide::decide::stat_test_support::{
-    declared_request, publish_route_schema, request, Harness, TENANT,
+    declared_request, decode, publish_route_schema, request, Harness, TENANT,
 };
 use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_persistence_records::decision_jobs::encode_artifact;
@@ -2271,6 +2279,263 @@ fn bench_trajectory_join_kernel(
     });
 }
 
+const BENCH_PROFILE: &str = "bench-profile";
+const BENCH_TASK: &str = "urn:task:bench";
+const BENCH_SWARM: &str = "https://knuckles-team.github.io/ontology/swarm#";
+
+/// A harness with a model profile and task facts, and one sealed
+/// `harness_config` record decided over three declared tools.
+async fn harness_config_record() -> (Harness, StatisticalDecisionRecord) {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    fn measured<T>(value: T, run: &str) -> MeasuredFact<T> {
+        MeasuredFact {
+            value,
+            evaluation_run_ref: ObservationRef {
+                evaluation_id: run.to_string(),
+                digest: format!("sha256:{run}"),
+            },
+        }
+    }
+    h.publish_model_profile(
+        TENANT,
+        BENCH_PROFILE,
+        8192,
+        Some(measured(ShellProficiency::High, "eval:shell")),
+        Some(measured(StoppingBehaviour::Balanced, "eval:stopping")),
+    )
+    .unwrap();
+    let mut task = serde_json::Map::new();
+    task.insert(format!("{BENCH_SWARM}shellCentric"), false.into());
+    task.insert(
+        format!("{BENCH_SWARM}taskTokenUpperBound"),
+        10_000u64.into(),
+    );
+    h.seed_node("__commons__", BENCH_TASK, task.into()).await;
+    let (schema_pin, _) = publish_route_schema(&h);
+    let option = |id: &str, capability: &str, tokens: i64| DeclaredOption {
+        option_id: id.to_string(),
+        classification: BoundedVec::new(vec![capability.to_string()]).unwrap(),
+        numbers: BoundedVec::new(vec![DeclaredNumber {
+            key: "schema_tokens".to_string(),
+            q32: tokens,
+        }])
+        .unwrap(),
+        texts: BoundedVec::default(),
+    };
+    let param = |name: &str, value: TypedValue| TypedParam {
+        name: name.to_string(),
+        value,
+    };
+    let asked = DecideRequest {
+        tenant_id: TENANT.to_string(),
+        question: StatisticalQuestion {
+            question_id: "bench.harness_config_replay".to_string(),
+            kind: QuestionKind::HarnessConfig,
+            safety: QuestionSafety::Ordinary,
+        },
+        candidates: CandidateSource::Declared {
+            options: BoundedVec::new(vec![
+                option("tool-a", "eg:cap/a", 100),
+                option("tool-b", "eg:cap/b", 50),
+                option("tool-c", "eg:cap/a", 400),
+            ])
+            .unwrap(),
+        },
+        feature_schema: schema_pin,
+        head: None,
+        policy: DecisionPolicyRef::Default,
+        params: BoundedVec::new(vec![
+            param("graph", TypedValue::Text("__commons__".to_string())),
+            param(
+                "model_profile_ref",
+                TypedValue::Iri(BENCH_PROFILE.to_string()),
+            ),
+            param("priority", TypedValue::Text("interactive".to_string())),
+            param(
+                "required_capabilities",
+                TypedValue::IriList(
+                    BoundedVec::new(vec!["eg:cap/a".to_string(), "eg:cap/b".to_string()]).unwrap(),
+                ),
+            ),
+            param("task_class", TypedValue::Iri(BENCH_TASK.to_string())),
+            param("usable_context_budget_tokens", TypedValue::Int(1000)),
+        ])
+        .unwrap(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    };
+    let response = dispatch(
+        &h,
+        Method::Decide {
+            request: Box::new(asked),
+        },
+    )
+    .await;
+    let batch: DecisionBatch = decode(response).expect("the harness_config bench decision");
+    let record = batch.records.as_slice()[0].clone();
+    (h, record)
+}
+
+/// A changed record with its ids and digests recomputed.
+fn reseal(mut record: StatisticalDecisionRecord) -> StatisticalDecisionRecord {
+    record.inputs_digest = medulla_query_types::solve_scalar::digest_text(
+        medulla_h_decide::decide::stat_decide::STATISTICAL_INPUTS_DOMAIN,
+        &(&record.question, &record.inputs),
+    );
+    record.record_id = format!(
+        "decision:{}",
+        record.inputs_digest.trim_start_matches("sha256:")
+    );
+    record.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&record);
+    record
+}
+
+/// The widest evidence the default limits admit: 4096 items.
+fn widest_evidence() -> HarnessConfigEvaluationEvidence {
+    let decided =
+        |value: serde_json::Value| serde_json::json!({"status": "decided", "value": value});
+    let q32 = |n: u64| serde_json::json!({"numerator": n, "denominator": 4294967296u64});
+    let tools: Vec<String> = (0..256).map(|i| format!("tool-{i:04}")).collect();
+    let declared: Vec<serde_json::Value> = (0..64)
+        .map(|i| {
+            serde_json::json!({
+                "option_id": format!("tool-{i:04}"),
+                "classification": [format!("eg:cap/{i}")]
+            })
+        })
+        .collect();
+    serde_json::from_value(serde_json::json!({
+        "model_profile": {"component_id": "profile", "kind": "model_profile",
+            "definition_digest": "sha256:profile"},
+        "request": {"model_profile_ref": "profile", "task_class": "task",
+            "usable_context_budget_tokens": 10, "priority": "interactive"},
+        "answer": {
+            "context_policy": decided(serde_json::json!("none")),
+            "soft_threshold": decided(q32(1)),
+            "hard_threshold": decided(q32(2)),
+            "recent_window_fraction": decided(q32(1)),
+            "plan_scaffold": decided(serde_json::json!("on")),
+            "action_space": decided(serde_json::json!("tool_set")),
+            "tool_subset": decided(serde_json::json!(tools))
+        },
+        "declared_options": declared
+    }))
+    .expect("the widest evidence fixture decodes")
+}
+
+/// One report entry from `samples` timings of `work`.
+fn report_entry(samples: usize, mut work: impl FnMut()) -> serde_json::Value {
+    let before = high_water_mib();
+    let mut timings: Vec<Duration> = (0..samples)
+        .map(|_| {
+            let start = Instant::now();
+            work();
+            start.elapsed()
+        })
+        .collect();
+    timings.sort();
+    serde_json::json!({
+        "p50_ms": percentile_ms(&timings, 0.50),
+        "p99_ms": percentile_ms(&timings, 0.99),
+        "peak_mib": (high_water_mib() - before).max(0.0),
+    })
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R128.13.1.2
+/// The `decide/harness_evidence_codec` group (MEDULLA-DECISION-ENGINE-R128.13.1.2):
+/// encode plus digest of the widest admitted evidence, and the refusal path of
+/// an over-limit frame as a second sub-benchmark. Budgets are `group_budgets`
+/// in `benches/baselines/decide.json`: encode plus digest p99 at most 50 ms with
+/// 64 MiB growth; the refusal path p99 at most 1 ms.
+fn bench_harness_evidence_codec(
+    c: &mut Criterion,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let evidence = widest_evidence();
+    let limits = HarnessEvidenceLimits::from_policy(&DecisionPolicy::engine_default());
+    let frame = serde_json::to_vec(&evidence).unwrap();
+    assert!(
+        limits.decode(&frame).is_ok(),
+        "the widest evidence is admitted"
+    );
+    let oversize = vec![b'{'; limits.max_bytes as usize + 1];
+    let encode = || {
+        let frame = serde_json::to_vec(black_box(&evidence)).unwrap();
+        black_box((frame.len(), evidence.digest()));
+    };
+    let refuse = || {
+        black_box(limits.decode(black_box(&oversize)).unwrap_err());
+    };
+    let mut group = c.benchmark_group("decide/harness_evidence_codec");
+    group.bench_function("encode_and_digest", |b| b.iter(encode));
+    group.bench_function("refusal", |b| b.iter(refuse));
+    group.finish();
+    report.insert(
+        "decide/harness_evidence_codec".to_string(),
+        report_entry(REPORT_SAMPLES, encode),
+    );
+    report.insert(
+        "decide/harness_evidence_codec_refusal".to_string(),
+        report_entry(REPORT_SAMPLES, refuse),
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R128.13.2.2
+/// The `decide/harness_config_replay` group (MEDULLA-DECISION-ENGINE-R128.13.2.2):
+/// a served `Decide` of a harness_config question, then its `DecisionLog` commit
+/// (re-derivation and persistence) and read-back. Budget in `group_budgets`: p99
+/// at most 500 ms, growth at most 128 MiB.
+fn bench_harness_config_replay(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (h, record) = rt.block_on(harness_config_record());
+    let journey = |nonce: u64| {
+        // Each pass commits a record with a distinct id, so persistence runs.
+        let mut fresh = record.clone();
+        fresh.created_at_ms += nonce;
+        fresh.inputs.shortlist.now_ms += nonce;
+        let fresh = reseal(fresh);
+        let committed = rt.block_on(dispatch(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Commit {
+                    record: Box::new(fresh.clone()),
+                    evaluator: None,
+                }),
+            },
+        ));
+        assert!(
+            committed.error.is_none(),
+            "replay bench commit: {committed:?}"
+        );
+        let read = rt.block_on(dispatch(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Get {
+                    tenant_id: TENANT.to_string(),
+                    record_id: fresh.record_id.clone(),
+                }),
+            },
+        ));
+        black_box(read);
+    };
+    let nonce = std::cell::Cell::new(0u64);
+    let next = || {
+        nonce.set(nonce.get() + 1);
+        nonce.get()
+    };
+    let mut group = c.benchmark_group("decide/harness_config_replay");
+    group.bench_function("commit_and_read_back", |b| b.iter(|| journey(next())));
+    group.finish();
+    report.insert(
+        "decide/harness_config_replay".to_string(),
+        report_entry(REPORT_SAMPLES, || journey(next())),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -2332,6 +2597,8 @@ fn bench_decide(c: &mut Criterion) {
     bench_skill_evolution(c, &rt, &mut report);
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);
+    bench_harness_evidence_codec(c, &mut report);
+    bench_harness_config_replay(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

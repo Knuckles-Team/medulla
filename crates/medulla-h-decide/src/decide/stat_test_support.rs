@@ -206,6 +206,84 @@ impl Harness {
         self.commit(draft, receipt)
     }
 
+    /// Publish a `ModelProfile` for `tenant` with the measured harness facts
+    /// the caller names; an absent fact stays absent.
+    pub fn publish_model_profile(
+        &self,
+        tenant: &str,
+        id: &str,
+        window: u32,
+        shell: Option<
+            medulla_agent_types::agent_component::MeasuredFact<
+                medulla_agent_types::agent_component::ShellProficiency,
+            >,
+        >,
+        stopping: Option<
+            medulla_agent_types::agent_component::MeasuredFact<
+                medulla_agent_types::agent_component::StoppingBehaviour,
+            >,
+        >,
+    ) -> Result<ComponentDependency, String> {
+        use medulla_agent_types::agent_component::{AgentComponentFacts, ModalityFacts};
+        let mut draft = test_component_draft(tenant, id);
+        draft.kind = AgentComponentKind::ModelProfile;
+        draft.facts = AgentComponentFacts::ModelProfile {
+            provider: "test".into(),
+            model_identity: id.into(),
+            context_window_tokens: window,
+            max_output_tokens: 1024,
+            supports_tools: true,
+            supports_structured_output: true,
+            supports_vision: false,
+            input_capabilities: None,
+            modalities: ModalityFacts::default(),
+            cost: None,
+            latency_declared: None,
+            latency_observed_ref: None,
+            shell_proficiency: shell,
+            stopping_behaviour: stopping,
+        };
+        let nonce = self.nonce.get();
+        self.nonce.set(nonce + 1);
+        let kind = draft.kind;
+        let request = AgentComponentPublishRequest {
+            context: mutation_context(
+                &self.store,
+                tenant,
+                &format!("publish-{id}-{nonce}"),
+                nonce,
+                0,
+                "agent-component:publish",
+            ),
+            component: draft,
+            evaluation_receipt_digest: None,
+        };
+        let committed = self.store.publish_component(request)?;
+        Ok(ComponentDependency {
+            component_id: id.to_string(),
+            kind,
+            definition_digest: committed.result.component.definition_digest,
+        })
+    }
+
+    /// Write one node with JSON properties into a registered graph, as a
+    /// served read of that graph will see it.
+    pub async fn seed_node(&self, graph: &str, node_id: &str, props: serde_json::Value) {
+        let core = self
+            .state
+            .read()
+            .await
+            .registry
+            .get(graph)
+            .expect("graph exists")
+            .core
+            .clone();
+        core.add_node(
+            node_id.to_string(),
+            rmp_serde::to_vec_named(&props).expect("node properties"),
+        );
+    }
+
     /// Publish a policy the way the assembly lane serves it: canonical JSON in
     /// one attribute, `content_digest` = the policy digest.
     pub fn publish_policy(

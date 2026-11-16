@@ -81,7 +81,7 @@ fn query(request: &DecideRequest) -> Result<Option<&TemporalQueryInput>, String>
 
 fn claim(subject: &'static str, fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject,
+        subject: subject.into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.temporal_query"),

@@ -56,6 +56,7 @@ async fn compact_at(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     super::super::stat_retention::compact(
         &ctx,

@@ -174,7 +174,7 @@ fn decided(
     let (defaults, ceilings, sources, found) = defaults_with_overrides(tenant, policy, view, class);
     let quota = decide_runtime_quota(&defaults, &ceilings, &asked).map_err(refused)?;
     let premise = |fact: String, class: PremiseClass, source: FamilyPremiseSource| FamilyPremise {
-        subject: "runtime_quota",
+        subject: "runtime_quota".into(),
         fact,
         class,
         source,

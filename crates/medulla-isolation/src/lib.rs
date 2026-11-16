@@ -8,6 +8,9 @@
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod isolation;
+/// The stored-profile read rule shared by the profile store and `Decide`.
+#[cfg(feature = "security")]
+pub mod profile_access;
 #[cfg(feature = "security")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rbac;

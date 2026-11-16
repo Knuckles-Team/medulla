@@ -56,6 +56,18 @@ swarm:shellCentric a owl:DatatypeProperty ;
     rdfs:domain swarm:TaskShape ;
     rdfs:range xsd:boolean ;
     rdfs:comment "Whether this task shape primarily requires shell interaction; absence is an unknown fact." .
+swarm:taskTokenUpperBound a owl:DatatypeProperty ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "An enforced upper bound on the complete context tokens of a task class; absence is an unknown fact." .
+swarm:planScaffoldNoGainAblation a owl:DatatypeProperty ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether a cited ablation observed no gain from the plan scaffold for a model profile; absence is an unknown fact." .
+swarm:planScaffoldNoGainAblationRun a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The evaluation id of the run that measured planScaffoldNoGainAblation." .
+swarm:planScaffoldNoGainAblationRunDigest a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The digest of the run record named by planScaffoldNoGainAblationRun." .
 
 # --- Topology classes -------------------------------------------------------
 

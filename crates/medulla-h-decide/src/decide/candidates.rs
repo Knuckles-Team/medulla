@@ -44,7 +44,7 @@ use super::stat_support::refusal;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 /// Domain of a declared option set's digest.
-const DECLARED_OPTIONS_DOMAIN: &str = "eg/decide-declared-options/v1";
+pub(super) const DECLARED_OPTIONS_DOMAIN: &str = "eg/decide-declared-options/v1";
 /// Page size of the library read.
 const PAGE: u32 = 256;
 /// Most pages one read walks before it refuses as unbounded.

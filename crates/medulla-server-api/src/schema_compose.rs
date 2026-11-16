@@ -921,7 +921,8 @@ ex:parent a owl:AsymmetricProperty .
         // +1 (measured, 24_169 -> 24_170; MEDULLA-ORCH-VOCAB-R010.101): orchestration
         // :PriceTable gains its core parent `rdfs:subClassOf bfo:0000031`
         // (MEDULLA-TYPED-PACKS-R071.2).
-        assert_eq!(composed.ontology.len(), 24_170);
+        // +12 (MEDULLA-DECISION-ENGINE-R128.8): the four harness-fact datatype properties.
+        assert_eq!(composed.ontology.len(), 24_182);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -1034,7 +1035,8 @@ ex:parent a owl:AsymmetricProperty .
         // +1462 because the triples on the 48 module-header subjects fell from 218 to
         // 158 (imports unchanged at 81).
         // +1: the :PriceTable core-parent axiom (see the total pin).
-        assert_eq!(semantic_axioms, 23_931);
+        // +12 (MEDULLA-DECISION-ENGINE-R128.8): the four harness-fact datatype properties.
+        assert_eq!(semantic_axioms, 23_943);
 
         let count_type = |object: &str| {
             composed

@@ -382,7 +382,7 @@ fn disclose(
 
 fn premise(fact: String, class: PremiseClass, source: FamilyPremiseSource) -> FamilyPremise {
     FamilyPremise {
-        subject: "instruction_disclosure",
+        subject: "instruction_disclosure".into(),
         fact,
         class,
         source,

@@ -103,7 +103,7 @@ fn route(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, St
                 .ok_or_else(|| invalid("the routed graph left the candidate set"))?;
             let mut executed = advisory(vec![resolution.graph_id.clone()])?;
             executed.family_premises = vec![FamilyPremise {
-                subject: "a2a_route",
+                subject: "a2a_route".into(),
                 fact: format!("a2a_route:{}", resolution.graph_id),
                 class: PremiseClass::Observation,
                 source: FamilyPremiseSource::Publisher {

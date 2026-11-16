@@ -18,18 +18,18 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
-use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceContext};
-use medulla_identity_types::assistant_profile::{
-    document_set_node_id, document_set_resource, profile_node_id, profile_resource,
-    shares_as_grants, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
-};
 use medulla_isolation::isolation::IsolationLayer;
-use medulla_isolation::rbac::RbacPolicy;
+use medulla_isolation::profile_access::{may, profile_unavailable, read_stored, Caller};
 use medulla_protocol_types::result_contract::coordination::{
     AssistantProfileGetDocumentSet, AssistantProfileGetProfile, AssistantProfileListDocumentSets,
     AssistantProfileListProfiles, AssistantProfilePutDocumentSet, AssistantProfilePutProfile,
 };
 use medulla_server_api::knob_config::knobs;
+use medulla_identity_types::acl::RbacAction;
+use medulla_identity_types::assistant_profile::{
+    document_set_node_id, document_set_resource, profile_node_id, profile_resource,
+    AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
+};
 
 const PROFILE_PREFIX: &str = "assistant_profile:";
 const SET_PREFIX: &str = "document_set:";
@@ -38,88 +38,12 @@ fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
 }
 
-/// The one non-disclosing envelope of an absent or unreadable profile.
-fn profile_unavailable(profile_id: &str) -> String {
-    refuse(
-        "PROFILE_NOT_VISIBLE",
-        format!("assistant profile {profile_id} is not available to the caller"),
-    )
-}
-
 /// The one non-disclosing envelope of an absent or unreadable document set.
 fn set_unavailable(set_id: &str) -> String {
     refuse(
         "DOCUMENT_SET_NOT_FOUND",
         format!("document set {set_id} is not available to the caller"),
     )
-}
-
-/// Who is asking: the verified agent id and the RBAC role names it holds.
-struct Caller {
-    agent_id: String,
-    roles: Vec<String>,
-}
-
-impl Caller {
-    fn of(isolation: &IsolationLayer, agent_id: &str) -> Self {
-        let roles = isolation
-            .get_identity(agent_id)
-            .map(|identity| identity.roles)
-            .unwrap_or_default();
-        Self {
-            agent_id: agent_id.to_string(),
-            roles,
-        }
-    }
-}
-
-/// What a caller may do with one stored object: the owner may do everything;
-/// any other caller is judged by the grants its shares stand for.
-fn may(
-    caller: &Caller,
-    owner: &str,
-    shares: &[ProfileShare],
-    resource: &str,
-    action: RbacAction,
-) -> bool {
-    if caller.agent_id == owner {
-        return true;
-    }
-    let mut policy = RbacPolicy::new();
-    for grant in shares_as_grants(shares, resource) {
-        policy.add_grant(grant);
-    }
-    let context = ResourceContext::graph(resource);
-    let effect = |action| policy.evaluate(caller.roles.as_slice(), &context, action);
-    match action {
-        RbacAction::Read => {
-            effect(RbacAction::Read) == Some(GrantEffect::Allow)
-                || effect(RbacAction::Admin) == Some(GrantEffect::Allow)
-        }
-        RbacAction::Write => {
-            effect(RbacAction::Write) == Some(GrantEffect::Allow)
-                || effect(RbacAction::Admin) == Some(GrantEffect::Allow)
-        }
-        RbacAction::Admin => effect(RbacAction::Admin) == Some(GrantEffect::Allow),
-    }
-}
-
-/// The stored JSON document of one node whose `type` property is `label` and
-/// whose tenant is `tenant_scope`; anything else reads as absent.
-fn read_stored<T: serde::de::DeserializeOwned>(
-    core: &GraphCore,
-    node_id: &str,
-    label: &str,
-    tenant_scope: &str,
-) -> Option<T> {
-    let blob = core.get_node_properties(node_id)?;
-    let props = medulla_types::msgpack::decode_property_object(&blob).ok()?;
-    if props.get("type").and_then(|value| value.as_str()) != Some(label)
-        || props.get("tenant_scope").and_then(|value| value.as_str()) != Some(tenant_scope)
-    {
-        return None;
-    }
-    serde_json::from_str(props.get("json")?.as_str()?).ok()
 }
 
 fn node_blob<T: serde::Serialize>(

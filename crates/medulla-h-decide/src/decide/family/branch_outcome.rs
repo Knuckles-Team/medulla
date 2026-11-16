@@ -68,7 +68,7 @@ fn policy_of(request: &DecideRequest) -> Result<FusionPolicyRef, String> {
 
 fn claim(fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject: "branch_outcome",
+        subject: "branch_outcome".into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request(PARAM_PLANNED),

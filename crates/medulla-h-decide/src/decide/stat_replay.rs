@@ -11,6 +11,7 @@
 
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_types::decision::digest::statistical_record_digest;
+use medulla_decision_types::decision::statistical::harness_config::HARNESS_REPLAY_MISMATCH;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::{
     decision::harness_contrast::replay_record, decision::harness_contrast::ContrastKnobs,
@@ -33,9 +34,7 @@ use super::stat_executor::{
     pinned_inputs, recorded_explanation, run_on_matrix, Executed, ExecutionContext, MatrixInputs,
     Pinned,
 };
-use super::stat_support::{
-    materialize_matrix, refusal, require_supported_question_kind, resolve_policy, ResolvedPolicy,
-};
+use super::stat_support::{materialize_matrix, refusal, resolve_policy, ResolvedPolicy};
 
 fn mismatch(detail: &str) -> String {
     format!(
@@ -229,8 +228,9 @@ fn same_answer(record: &StatisticalDecisionRecord, replayed: &Executed, derived:
 }
 
 fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), String> {
-    require_supported_question_kind(record.question.kind)?;
-    if record.answer.is_some()
+    // A harness_config record carries its evidence as its answer; it replays
+    // through its own re-derivation, never through the score replay.
+    if (record.answer.is_some() && record.question.kind != QuestionKind::HarnessConfig)
         || record.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan
     {
         return Err(refusal(
@@ -238,10 +238,14 @@ fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), St
             "task plans are evaluate-only and cannot use statistical score replay",
         ));
     }
-    if record.inputs.harness_evaluation.is_some() {
+    if record.inputs.harness_evaluation.is_some()
+        && record.question.kind != QuestionKind::HarnessConfig
+    {
         return Err(refusal(
             StatisticalErrorCode::ParameterInvalid,
-            "harness_config evidence replay is not supported",
+            format!(
+                "{HARNESS_REPLAY_MISMATCH}: harness evidence rides only a harness_config question"
+            ),
         ));
     }
     if record.inputs.harness_contrast.is_some()
@@ -253,6 +257,20 @@ fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), St
         ));
     }
     Ok(())
+}
+
+/// The verify-replay of a `HarnessConfig` record (MEDULLA-DECISION-ENGINE-R128.13.2.1):
+/// the family re-derives the configuration from the stored evidence, task
+/// facts and pinned policy; the record is logged only when it re-derives.
+fn replay_harness_config(
+    ctx: &ExecutionContext,
+    record: &StatisticalDecisionRecord,
+) -> Result<StatisticalDecisionRecord, String> {
+    let (_, policy) = pinned_and_policy(ctx, record)?;
+    super::family::harness_config::replay(ctx, record, &policy.policy)?;
+    let mut logged = record.clone();
+    logged.record_digest = statistical_record_digest(&logged);
+    Ok(logged)
 }
 
 /// The verify-replay of a `HarnessContrast` record (MEDULLA-DECISION-ENGINE-R803.5):
@@ -441,6 +459,9 @@ pub(super) fn replay_with_view(
     require_supported_replay(record)?;
     if matches!(record.outcome, StatisticalOutcome::Advisory { .. }) {
         return replay_family_conclusion(ctx, record, graph_view);
+    }
+    if record.question.kind == QuestionKind::HarnessConfig {
+        return replay_harness_config(ctx, record);
     }
     if !loggable(&record.outcome) {
         return Err(refusal(

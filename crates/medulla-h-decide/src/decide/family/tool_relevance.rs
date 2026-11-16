@@ -61,7 +61,7 @@ fn assignment(request: &DecideRequest) -> Result<&ToolAssignmentRequest, String>
 
 fn claim(fact: String, field: &'static str) -> FamilyPremise {
     FamilyPremise {
-        subject: "tool_relevance",
+        subject: "tool_relevance".into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request(field),
@@ -174,7 +174,7 @@ fn conclude(
     let mut premises: Vec<FamilyPremise> = chosen
         .iter()
         .map(|assigned| FamilyPremise {
-            subject: "tool_relevance",
+            subject: "tool_relevance".into(),
             fact: format!(
                 "tool_rank:tool={};lexical={};embedding={};fused_rank={};index_revision={}",
                 assigned.tool_id,

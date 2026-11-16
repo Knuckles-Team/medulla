@@ -111,6 +111,17 @@
       "p50_ms": 2.0,
       "p99_ms": 6.0,
       "peak_mib": 4.0
+    },
+    "decide/harness_evidence_codec": {
+      "p99_ms": 50.0,
+      "peak_mib": 64.0
+    },
+    "decide/harness_evidence_codec_refusal": {
+      "p99_ms": 1.0
+    },
+    "decide/harness_config_replay": {
+      "p99_ms": 500.0,
+      "peak_mib": 128.0
     }
   },
   "groups": {}

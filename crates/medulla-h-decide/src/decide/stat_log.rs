@@ -1028,6 +1028,7 @@ async fn serve(
             matched: &[],
             designation: None,
             reader: None,
+            assistant_profile: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(

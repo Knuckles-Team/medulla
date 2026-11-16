@@ -75,7 +75,7 @@ fn promoted(
 
 fn claim(fact: String, field: &'static str) -> FamilyPremise {
     FamilyPremise {
-        subject: "program_lookup",
+        subject: "program_lookup".into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request(field),

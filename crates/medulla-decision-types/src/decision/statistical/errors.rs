@@ -327,6 +327,15 @@ closed_error_codes! {
         ProbeSetEmpty => "PROBE_SET_EMPTY",
         /// An admission over more probes than `knob verify.probe_budget`.
         ProbeBudgetExceeded => "PROBE_BUDGET_EXCEEDED",
+        /// A rule promotion names fewer human resolutions than
+        /// `rule_promotion.min_overrides` (MEDULLA-DECISION-ENGINE-R129.5).
+        RulePromotionTooFewOverrides => "RULE_PROMOTION_TOO_FEW_OVERRIDES",
+        /// A rule promotion's human agreement is below
+        /// `rule_promotion.min_agreement` (MEDULLA-DECISION-ENGINE-R129.5).
+        RulePromotionAgreementLow => "RULE_PROMOTION_AGREEMENT_LOW",
+        /// A rule promotion contradicts a published invariant; nothing is
+        /// activated (MEDULLA-DECISION-ENGINE-R129.5).
+        RuleContradictsInvariant => "RULE_CONTRADICTS_INVARIANT",
     }
 }
 

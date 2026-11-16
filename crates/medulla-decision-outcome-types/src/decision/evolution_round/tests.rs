@@ -128,6 +128,7 @@ fn stage(id: &str, impact: Option<i64>) -> StageInput {
     }
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R136.3
 #[test]
 fn stronger_models_go_to_high_impact_stages() {
     let knobs = medulla_decision_types::decision::harness_contrast::ContrastKnobs::defaults();

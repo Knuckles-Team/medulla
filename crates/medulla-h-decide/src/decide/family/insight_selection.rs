@@ -62,7 +62,7 @@ fn stored(ctx: &ExecutionContext) -> Result<Vec<Insight>, String> {
 
 fn observation(fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject: "insight_selection",
+        subject: "insight_selection".into(),
         fact,
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Request(PARAM_CONTEXT_SIGNATURE),

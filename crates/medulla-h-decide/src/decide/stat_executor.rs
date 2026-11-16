@@ -59,6 +59,10 @@ pub(super) struct ExecutionContext<'a> {
     /// caller's own earlier records (the same visibility rule as the log).
     /// `None` where a decision runs without a served caller.
     pub(super) reader: Option<&'a super::stat_log::LogReader>,
+    /// The assistant profile a `harness_config` request names, read by the
+    /// serving path under the profile store's visibility rule
+    /// (MEDULLA-DECISION-ENGINE-R128.16).
+    pub(super) assistant_profile: Option<&'a medulla_types::assistant_profile::AssistantProfile>,
 }
 
 /// The pinned inputs of one decision.
@@ -152,11 +156,14 @@ pub(super) enum FamilyPremiseSource {
     Policy,
     /// A recorded fact read from the graph, by the node that holds it.
     Observation(String),
+    /// A provenance the family already bound itself, where its field or
+    /// policy digest is only known at conclude time.
+    Bound(medulla_decision_types::decision::PremiseProvenance),
 }
 
 /// One premise a family computed while it concluded.
 pub(super) struct FamilyPremise {
-    pub(super) subject: &'static str,
+    pub(super) subject: std::borrow::Cow<'static, str>,
     pub(super) fact: String,
     pub(super) class: medulla_decision_types::decision::PremiseClass,
     pub(super) source: FamilyPremiseSource,
@@ -187,6 +194,7 @@ impl FamilyPremise {
                 FamilyPremiseSource::Observation(node_id) => PremiseProvenance::Observation {
                     evaluation_id: node_id.clone(),
                 },
+                FamilyPremiseSource::Bound(provenance) => provenance.clone(),
             },
         }
     }

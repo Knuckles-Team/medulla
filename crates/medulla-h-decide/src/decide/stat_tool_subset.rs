@@ -110,7 +110,7 @@ fn declared_candidates(request: &DecideRequest) -> Result<&[DeclaredOption], Str
 }
 
 /// The declared schema size, if the caller supplied one.
-fn token_cost(option: &DeclaredOption) -> Option<u32> {
+pub(super) fn token_cost(option: &DeclaredOption) -> Option<u32> {
     option
         .numbers
         .iter()
@@ -118,10 +118,15 @@ fn token_cost(option: &DeclaredOption) -> Option<u32> {
         .map(|number| number.q32.max(0) as u32)
 }
 
-fn request_body(request: &DecideRequest) -> Result<ToolSubsetRequestBody, String> {
-    let required = required_capabilities(request)?;
-    let context_budget_tokens = context_budget_tokens(request)?;
-    let options = declared_candidates(request)?;
+/// The covering request over declared tool options: every option must declare
+/// `schema_tokens`. The `ToolSubset` question and the `harness_config` action
+/// space both build their request through this one function
+/// (MEDULLA-DECISION-ENGINE-R128.9).
+pub(super) fn tool_subset_body(
+    options: &[DeclaredOption],
+    required: Vec<String>,
+    context_budget_tokens: u32,
+) -> Result<ToolSubsetRequestBody, String> {
     let mut candidates = Vec::with_capacity(options.len());
     for option in options {
         let token_cost = token_cost(option).ok_or_else(|| {
@@ -146,8 +151,15 @@ fn request_body(request: &DecideRequest) -> Result<ToolSubsetRequestBody, String
     })
 }
 
+fn request_body(request: &DecideRequest) -> Result<ToolSubsetRequestBody, String> {
+    let required = required_capabilities(request)?;
+    let context_budget_tokens = context_budget_tokens(request)?;
+    let options = declared_candidates(request)?;
+    tool_subset_body(options, required, context_budget_tokens)
+}
+
 /// The registered code of the refusal on the `Decide` path, then its detail.
-fn refusal_reason(kind: ToolSubsetRefusal) -> String {
+pub(super) fn refusal_reason(kind: ToolSubsetRefusal) -> String {
     let code =
         AbstainReason::from_refusal(RefusalOrigin::Decide(QuestionKind::ToolSubset), &kind).code();
     let detail = match kind {
@@ -157,6 +169,26 @@ fn refusal_reason(kind: ToolSubsetRefusal) -> String {
         ToolSubsetRefusal::BudgetExceeded => "every covering subset exceeds the context budget",
     };
     format!("{}: {detail}", code.as_str())
+}
+
+/// Why a covering solve produced no subset: the request has a typed refusal
+/// (an uncoverable capability, an exceeded budget) or the solver itself failed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum SubsetFailure {
+    Refused(ToolSubsetRefusal),
+    Solver(String),
+}
+
+impl SubsetFailure {
+    /// The refusal text the `ToolSubset` question seals.
+    pub(super) fn text(self) -> String {
+        match self {
+            Self::Refused(kind) => {
+                refusal(StatisticalErrorCode::ParameterInvalid, refusal_reason(kind))
+            }
+            Self::Solver(detail) => detail,
+        }
+    }
 }
 
 /// The exact covering subset and the statistical-path certificate it carries.
@@ -239,38 +271,40 @@ fn solver_refusal(detail: impl std::fmt::Display) -> String {
 }
 
 /// Solve the covering request exactly and certify the statistical path.
-pub(super) fn solved_covering_subset(body: &ToolSubsetRequestBody) -> Result<SolvedSubset, String> {
+pub(super) fn solved_covering_subset(
+    body: &ToolSubsetRequestBody,
+) -> Result<SolvedSubset, SubsetFailure> {
     if body.required_capabilities.is_empty() {
-        return Err(solver_refusal("no required capability to cover"));
+        return Err(SubsetFailure::Solver(solver_refusal(
+            "no required capability to cover",
+        )));
     }
-    let spec = covering_model(body)
-        .map_err(|kind| refusal(StatisticalErrorCode::ParameterInvalid, refusal_reason(kind)))?;
-    let model = Model::try_from(spec).map_err(solver_refusal)?;
+    let spec = covering_model(body).map_err(SubsetFailure::Refused)?;
+    let model = Model::try_from(spec).map_err(|e| SubsetFailure::Solver(solver_refusal(e)))?;
     let config = SolverConfig::default();
     let certificate = solve(&model, &config);
-    verify(&model, &certificate).map_err(solver_refusal)?;
+    verify(&model, &certificate).map_err(|e| SubsetFailure::Solver(solver_refusal(e)))?;
     let model_digest = String::from(model.digest());
     let statistical = StatisticalSolverCertificate::solved(
         model_digest.clone(),
         certificate.nodes_expanded,
         config.node_budget(),
     )
-    .map_err(|refused| solver_refusal(format!("{refused:?}")))?;
+    .map_err(|refused| SubsetFailure::Solver(solver_refusal(format!("{refused:?}"))))?;
     statistical
         .verify(&String::from(certificate.model_digest))
-        .map_err(|refused| solver_refusal(format!("{refused:?}")))?;
+        .map_err(|refused| SubsetFailure::Solver(solver_refusal(format!("{refused:?}"))))?;
     let incumbent = match (&certificate.status, &certificate.incumbent) {
         (SolveStatus::Optimal | SolveStatus::OptimalByDeterministicSearch { .. }, Some(i)) => i,
         (
             SolveStatus::Infeasible { .. } | SolveStatus::InfeasibleByDeterministicSearch { .. },
             _,
-        ) => {
-            return Err(refusal(
-                StatisticalErrorCode::ParameterInvalid,
-                refusal_reason(ToolSubsetRefusal::BudgetExceeded),
-            ))
+        ) => return Err(SubsetFailure::Refused(ToolSubsetRefusal::BudgetExceeded)),
+        (status, _) => {
+            return Err(SubsetFailure::Solver(solver_refusal(format!(
+                "no proven optimum: {status:?}"
+            ))))
         }
-        (status, _) => return Err(solver_refusal(format!("no proven optimum: {status:?}"))),
     };
     let chosen = body
         .candidates
@@ -288,7 +322,9 @@ pub(super) fn solved_covering_subset(body: &ToolSubsetRequestBody) -> Result<Sol
 
 fn compute(request: &DecideRequest) -> Result<StatisticalOutcome, String> {
     let body = request_body(request)?;
-    let chosen = solved_covering_subset(&body)?.chosen;
+    let chosen = solved_covering_subset(&body)
+        .map_err(SubsetFailure::text)?
+        .chosen;
     let scores: Vec<ScoredOption> = chosen
         .into_iter()
         .map(|tool_id| ScoredOption {
@@ -372,7 +408,7 @@ mod tests {
         // A changed programme changes the certified model.
         let mut tighter = greedy_trap();
         tighter.context_budget_tokens = 9;
-        let refused = solved_covering_subset(&tighter).unwrap_err();
+        let refused = solved_covering_subset(&tighter).unwrap_err().text();
         assert!(refused.contains("context budget"), "{refused}");
     }
 }

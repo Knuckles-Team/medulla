@@ -264,7 +264,7 @@ fn q32(score_q16: u32) -> QuantisedValue {
 
 fn premise(fact: String, source: FamilyPremiseSource) -> FamilyPremise {
     FamilyPremise {
-        subject: "distilled",
+        subject: "distilled".into(),
         fact,
         class: PremiseClass::Claim,
         source,
@@ -401,7 +401,7 @@ pub(super) fn rank(
     ];
     for (index, spec) in KNOBS.iter().enumerate() {
         premises.push(FamilyPremise {
-            subject: "policy",
+            subject: "policy".into(),
             fact: format!("knob:{}={}", spec.name, policy.knob(&KNOBS[index]).render()),
             class: PremiseClass::Definition,
             source: FamilyPremiseSource::Policy,

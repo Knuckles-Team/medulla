@@ -189,6 +189,10 @@ pub enum FamilyAnswer {
     /// family's event mode (MEDULLA-DECISION-ENGINE-R143.3). The prior-event
     /// read of the next request finds it here.
     DisclosureEvent(Box<crate::decision::instruction_disclosure::DisclosureEvent>),
+    /// The three-part harness configuration with the evidence it rests on, for
+    /// the `harness_config` family (MEDULLA-DECISION-ENGINE-R128.12). The record
+    /// seals it as `inputs.harness_evaluation`, not as `answer`.
+    HarnessConfig(Box<super::harness_config::HarnessConfigEvaluationEvidence>),
 }
 
 impl FamilyAnswer {
@@ -220,6 +224,15 @@ impl FamilyAnswer {
         }
     }
 
+    /// The harness-config evidence this answer carries.
+    pub fn harness_config(
+        &self,
+    ) -> Option<&super::harness_config::HarnessConfigEvaluationEvidence> {
+        match self {
+            Self::HarnessConfig(evidence) => Some(evidence),
+            _ => None,
+        }
+    }
     /// The load set this answer carries.
     pub fn load_set(&self) -> Option<&crate::decision::load_set::LoadSetAnswer> {
         match self {

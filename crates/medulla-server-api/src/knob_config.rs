@@ -336,6 +336,10 @@ knobs! {
     embed_cache_entries: u64 = "embed.cache_entries", U64(10_000), [0, 10_000_000], "entries", Tunable;
     /// Embedding provider: resident cache bytes.
     embed_cache_bytes: u64 = "embed.cache_bytes", U64(67_108_864), [0, 4_294_967_296], "bytes", Tunable;
+    /// Share of a promoted rule's named resolutions that must be human (MEDULLA-DECISION-ENGINE-R129.5).
+    rule_promotion_min_agreement: f64 = "rule_promotion.min_agreement", F64(0.8), [0.5, 1.0], "fraction", Fixed;
+    /// Fewest human resolutions a rule promotion needs (MEDULLA-DECISION-ENGINE-R129.5).
+    rule_promotion_min_overrides: u64 = "rule_promotion.min_overrides", U64(5), [1, 1_000], "resolutions", Fixed;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Edit concentration: shipped edits on one dimension inside the window that revert a new edit (MEDULLA-DECISION-ENGINE-R173.3); the default when a policy names none.

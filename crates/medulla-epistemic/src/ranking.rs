@@ -409,6 +409,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R130.2
     #[test]
     fn equal_codes_order_by_item_score() {
         let input = vec![

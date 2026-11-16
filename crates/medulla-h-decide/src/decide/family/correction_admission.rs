@@ -45,7 +45,7 @@ fn binding(request: &DecideRequest) -> Result<&CorrectionBinding, String> {
 
 fn claim(subject: &'static str, fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject,
+        subject: subject.into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.correction_binding"),

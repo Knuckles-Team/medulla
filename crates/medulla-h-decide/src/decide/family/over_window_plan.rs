@@ -167,7 +167,7 @@ fn plan(
     };
     let plan = decide_over_window(asked.prompt_tokens, &budget, &limits).map_err(refused)?;
     let premise = |fact: String, class: PremiseClass, source: FamilyPremiseSource| FamilyPremise {
-        subject: "context_budget",
+        subject: "context_budget".into(),
         fact,
         class,
         source,

@@ -12,7 +12,19 @@ use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_types::contract::BoundedVec;
 
 mod context_policy;
-pub use context_policy::{decide_context_policy, ContextPolicyDecision, HarnessDefaults};
+mod evidence_limits;
+mod replay_limits;
+pub use context_policy::{
+    decide_context_policy, ContextPolicyDecision, HarnessDefaults, HARNESS_THRESHOLDS_INVALID,
+    KNOBS as HARNESS_KNOBS,
+};
+pub use evidence_limits::{
+    HarnessEvidenceLimits, HARNESS_EVIDENCE_OVER_LIMIT, KNOBS as HARNESS_EVIDENCE_KNOBS,
+};
+pub use replay_limits::{
+    HarnessReplayLimits, HARNESS_REPLAY_LIMIT, HARNESS_REPLAY_MISMATCH,
+    KNOBS as HARNESS_REPLAY_KNOBS,
+};
 
 /// Typed inputs whose field names match `DecideRequest.params` entries.
 /// References use the opaque strings carried by `TypedValue::Iri`; token counts
@@ -28,6 +40,18 @@ pub struct HarnessConfigRequestBody {
     pub priority: LeasePriority,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_trajectory_tokens: Option<u32>,
+    /// Capabilities the tool subset must cover (MEDULLA-DECISION-ENGINE-R128.9).
+    /// Omitted from the wire when empty, so evidence digests of requests
+    /// without one are unchanged.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub required_capabilities: BoundedVec<String, 64>,
+    /// The assistant profile that constrained this request
+    /// (MEDULLA-DECISION-ENGINE-R128.16). Omitted from the wire when absent,
+    /// so evidence digests of requests without one are unchanged. When set,
+    /// `model_profile_ref` and `usable_context_budget_tokens` hold the
+    /// effective values after the profile was applied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assistant_profile_ref: Option<String>,
 }
 
 /// Each part carries its own decision or conservative fallback.
@@ -117,6 +141,36 @@ pub struct HarnessConfigEvaluationEvidence {
     pub model_profile: medulla_agent_types::agent_component::ComponentDependency,
     pub request: HarnessConfigRequestBody,
     pub answer: HarnessConfigAnswer,
+    /// The exact-solve certificate of the tool subset, present exactly when
+    /// the covering solve ran (MEDULLA-DECISION-ENGINE-R128.9). Omitted when
+    /// no solve ran, so evidence bytes of such records are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_subset_certificate: Option<HarnessSolverCertificate>,
+    /// The tool candidates the question declared. The record keeps only their
+    /// digest in `candidate_source`; the replay re-derives the tool subset
+    /// from these options after checking that digest (R128.13.2.1). Omitted
+    /// when empty, so evidence of a question without candidates is unchanged.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub declared_options: BoundedVec<super::declared::DeclaredOption, 64>,
+}
+
+impl HarnessConfigEvaluationEvidence {
+    /// The digest of the evidence in the one decision digest scheme.
+    pub fn digest(&self) -> String {
+        medulla_query_types::solve_scalar::digest_text("eg/decide-harness-evidence/v1", self)
+    }
+}
+
+/// The verified solver certificate of the tool-subset solve: the model it was
+/// solved against, the branches the deterministic search explored, and the
+/// digest of the solver's own certificate.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HarnessSolverCertificate {
+    pub model_digest: String,
+    pub branch_count: u64,
+    pub solver_certificate_digest: String,
 }
 
 /// Q32 fractions reuse the checked unit rational with denominator 2^32.
@@ -718,6 +772,8 @@ mod tests {
             },
             request,
             answer: full_answer,
+            tool_subset_certificate: None,
+            declared_options: BoundedVec::default(),
         });
         let wire = serde_json::to_vec(&inputs).unwrap();
         let restored: super::super::StatisticalInputs = serde_json::from_slice(&wire).unwrap();

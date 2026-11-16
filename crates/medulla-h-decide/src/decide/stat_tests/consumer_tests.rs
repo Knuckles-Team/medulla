@@ -88,7 +88,7 @@ pub(super) fn declared_request(
     }
 }
 
-fn resolution(
+pub(super) fn resolution(
     record_id: &str,
     id: &str,
     option: &str,
@@ -105,7 +105,7 @@ fn resolution(
     }
 }
 
-async fn resolve(h: &Harness, op: DecisionLogOp) -> Result<StoredResolution, String> {
+pub(super) async fn resolve(h: &Harness, op: DecisionLogOp) -> Result<StoredResolution, String> {
     decode(log_op(h, "decider", op).await)
 }
 
@@ -129,7 +129,7 @@ pub(super) async fn declared_abstention(h: &Harness) -> StatisticalDecisionRecor
     batch.records.as_slice()[0].clone()
 }
 
-async fn logged_abstention(h: &Harness) -> DecisionLogCommitted {
+pub(super) async fn logged_abstention(h: &Harness) -> DecisionLogCommitted {
     let record = declared_abstention(h).await;
     let commit = DecisionLogOp::Commit {
         record: Box::new(record),
@@ -742,6 +742,7 @@ mod topology_question {
             matched: &[],
             designation: None,
             reader: None,
+            assistant_profile: None,
         };
         crate::decide::stat_decide::decide_blocking(
             &ctx,

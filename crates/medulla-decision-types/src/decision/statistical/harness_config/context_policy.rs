@@ -1,7 +1,9 @@
 //! Pure context-pressure selection (MEDULLA-DECISION-ENGINE-R128.5).
 
 use super::{ContextPolicy, HarnessPart};
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::numeric::UnitRationalWire;
+use crate::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
 
 const Q32: u64 = 1 << 32;
@@ -29,7 +31,64 @@ impl Default for HarnessDefaults {
     }
 }
 
+/// Refusal code of a threshold set that fails validation
+/// (MEDULLA-DECISION-ENGINE-R128.4); the wire error is `PARAMETER_INVALID`.
+pub const HARNESS_THRESHOLDS_INVALID: &str = "HARNESS_THRESHOLDS_INVALID";
+
+const fn fraction_knob(name: &'static str, default: i64, min: i64, max: i64) -> KnobSpec {
+    KnobSpec {
+        name,
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(default),
+        min: KnobValue::DecimalMicros(min),
+        max: KnobValue::DecimalMicros(max),
+        safety: KnobSafety::Tunable,
+    }
+}
+
+/// The `harness.*` threshold knobs (MEDULLA-DECISION-ENGINE-R128.4), in the
+/// field order of [`HarnessDefaults`]: soft, hard, recent window.
+pub const KNOBS: &[KnobSpec] = &[
+    fraction_knob("harness.soft_threshold", 600_000, 50_000, 950_000),
+    fraction_knob("harness.hard_threshold", 850_000, 100_000, 990_000),
+    fraction_knob("harness.recent_window_fraction", 300_000, 50_000, 900_000),
+];
+
+/// `round(micros / 10^6 * 2^32)` as a Q32 fraction.
+fn q32_fraction(micros: i64) -> Result<UnitRationalWire, String> {
+    let micros = u128::try_from(micros)
+        .map_err(|_| format!("{HARNESS_THRESHOLDS_INVALID}: a threshold knob is negative"))?;
+    let numerator = (micros * u128::from(Q32) + 500_000) / 1_000_000;
+    let numerator = u64::try_from(numerator)
+        .map_err(|_| format!("{HARNESS_THRESHOLDS_INVALID}: a threshold knob overflows Q32"))?;
+    UnitRationalWire::new(numerator, Q32)
+        .map_err(|detail| format!("{HARNESS_THRESHOLDS_INVALID}: {detail}"))
+}
+
 impl HarnessDefaults {
+    /// The thresholds the pinned policy sets, each knob or its default, as
+    /// exact Q32 fractions (MEDULLA-DECISION-ENGINE-R128.4). A set that fails
+    /// [`HarnessDefaults::validate`] (soft not below hard) refuses with
+    /// `HARNESS_THRESHOLDS_INVALID`.
+    pub fn from_policy(policy: &DecisionPolicy) -> Result<Self, String> {
+        let read = |index: usize| match policy.knob(&KNOBS[index]) {
+            KnobValue::DecimalMicros(micros) => q32_fraction(micros),
+            _ => Err(format!(
+                "{HARNESS_THRESHOLDS_INVALID}: {} has the wrong value type",
+                KNOBS[index].name
+            )),
+        };
+        let defaults = Self {
+            soft_threshold: read(0)?,
+            hard_threshold: read(1)?,
+            recent_window_fraction: read(2)?,
+        };
+        defaults
+            .validate()
+            .map_err(|detail| format!("{HARNESS_THRESHOLDS_INVALID}: {detail}"))?;
+        Ok(defaults)
+    }
+
     /// All thresholds use Q32; soft precedes hard, and each fraction is positive.
     pub fn validate(&self) -> Result<(), String> {
         for fraction in [

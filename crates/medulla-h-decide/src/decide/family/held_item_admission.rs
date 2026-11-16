@@ -114,7 +114,7 @@ fn refused(refusal: HeldItemRefusal) -> Result<Executed, String> {
 
 fn premise(fact: String, item_ref: &str) -> FamilyPremise {
     FamilyPremise {
-        subject: "held_item",
+        subject: "held_item".into(),
         fact,
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Observation(item_ref.to_string()),

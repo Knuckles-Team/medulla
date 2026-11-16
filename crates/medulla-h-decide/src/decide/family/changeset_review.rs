@@ -217,7 +217,7 @@ fn conclude_review(request: &DecideRequest, policy: &DecisionPolicy) -> Result<E
         .iter()
         .zip(&dispositions)
         .map(|((id, _), (_, disposition))| FamilyPremise {
-            subject: "changeset_review",
+            subject: "changeset_review".into(),
             fact: format!("review.finding:{id}={}", disposition_name(*disposition)),
             class: PremiseClass::Claim,
             source: FamilyPremiseSource::Request("candidates.options"),

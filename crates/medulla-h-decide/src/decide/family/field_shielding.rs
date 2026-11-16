@@ -48,7 +48,7 @@ fn shielding(request: &DecideRequest) -> Result<&FieldShieldingRequest, String> 
 
 fn claim(subject: &'static str, fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject,
+        subject: subject.into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.field_shielding"),

@@ -118,3 +118,38 @@ fn context_policy_preserves_supplied_thresholds_and_refuses_invalid_ones() {
         assert!(decide_context_policy(Some(100), Some(50), None, &invalid).is_err());
     }
 }
+
+fn policy_with(knobs: &[(&str, i64)]) -> crate::decision::policy::DecisionPolicy {
+    let mut policy = crate::decision::policy::DecisionPolicy::engine_default();
+    for (name, micros) in knobs {
+        policy.knobs.insert(
+            crate::decision::knobs::KnobName::new(name),
+            crate::decision::knobs::KnobValue::DecimalMicros(*micros),
+        );
+    }
+    policy
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R128.4
+#[test]
+fn from_policy_converts_knobs_to_q32() {
+    let defaults = HarnessDefaults::from_policy(&policy_with(&[])).unwrap();
+    assert_eq!(defaults.soft_threshold.denominator(), 1 << 32);
+    // round(0.6 * 2^32), round(0.85 * 2^32), round(0.3 * 2^32).
+    assert_eq!(defaults.soft_threshold.numerator(), 2_576_980_378);
+    assert_eq!(defaults.hard_threshold.numerator(), 3_650_722_202);
+    assert_eq!(defaults.recent_window_fraction.numerator(), 1_288_490_189);
+    let pinned =
+        HarnessDefaults::from_policy(&policy_with(&[("harness.soft_threshold", 500_000)])).unwrap();
+    assert_eq!(pinned.soft_threshold.numerator(), 1 << 31);
+    assert_eq!(pinned.hard_threshold, defaults.hard_threshold);
+    let inverted = HarnessDefaults::from_policy(&policy_with(&[
+        ("harness.soft_threshold", 900_000),
+        ("harness.hard_threshold", 800_000),
+    ]))
+    .unwrap_err();
+    assert!(
+        inverted.starts_with(HARNESS_THRESHOLDS_INVALID),
+        "{inverted}"
+    );
+}

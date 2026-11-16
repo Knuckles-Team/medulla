@@ -281,6 +281,7 @@ fn lookup_in(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

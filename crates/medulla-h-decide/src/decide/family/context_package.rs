@@ -512,7 +512,7 @@ const SOLVER_VERSION: &str = "context-package-exact/1";
 
 fn premise(fact: String, class: PremiseClass, source: FamilyPremiseSource) -> FamilyPremise {
     FamilyPremise {
-        subject: "context_package",
+        subject: "context_package".into(),
         fact,
         class,
         source,

@@ -91,7 +91,7 @@ fn nodes_of<T: serde::de::DeserializeOwned>(
 /// A premise true by the definition of the stored mode or schema, bound to the policy in force.
 fn definition(subject: &'static str, fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject,
+        subject: subject.into(),
         fact,
         class: PremiseClass::Definition,
         source: FamilyPremiseSource::Policy,
@@ -112,7 +112,7 @@ fn type_name(field: FieldType) -> &'static str {
 
 fn observation(subject: &'static str, fact: String, node_id: &str) -> FamilyPremise {
     FamilyPremise {
-        subject,
+        subject: subject.into(),
         fact,
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Observation(node_id.to_string()),
@@ -235,7 +235,7 @@ fn conclude_mode(
     executed
         .family_premises
         .extend(schema.fields.iter().map(|(field, expected)| FamilyPremise {
-            subject: VALIDATION_SUBJECT,
+            subject: VALIDATION_SUBJECT.into(),
             fact: format!("{field}={}", type_name(*expected)),
             class: PremiseClass::Proof,
             source: FamilyPremiseSource::Policy,

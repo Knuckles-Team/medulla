@@ -296,13 +296,13 @@ impl DecisionFamily for GeneratedCodeAdmissionFamily {
                 policy,
             );
             let mut premises = vec![FamilyPremise {
-                subject: "verifier",
+                subject: "verifier".into(),
                 fact: format!("verifier.revision={}", stated.verifier_revision),
                 class: PremiseClass::Definition,
                 source: FamilyPremiseSource::Request("params.verifier_revision"),
             }];
             premises.extend(receipt.cases.iter().map(|case| FamilyPremise {
-                subject: "verifier",
+                subject: "verifier".into(),
                 fact: format!("verifier.case:{}={}", case.case_id, state_name(case.state)),
                 class: PremiseClass::Claim,
                 source: FamilyPremiseSource::Request("candidates.options"),

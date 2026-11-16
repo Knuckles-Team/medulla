@@ -76,7 +76,7 @@ fn premise(
     source: FamilyPremiseSource,
 ) -> FamilyPremise {
     FamilyPremise {
-        subject: "paper_admission",
+        subject: "paper_admission".into(),
         fact: subject_fact,
         class,
         source,
@@ -255,6 +255,7 @@ pub(in crate::decide) async fn with_similarity(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     let pinned = pinned_inputs(&ctx, &request.feature_schema, None)?;
     let staged = graph_vectors(state, verified.agent_id(), &source).await?;

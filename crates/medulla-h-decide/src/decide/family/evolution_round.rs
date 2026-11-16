@@ -117,7 +117,7 @@ impl DecisionFamily for RoundVerdictFamily {
             let tally = tally_round(&prediction, &outcomes);
             let micros = round_verdict::flip_fraction_micros(policy);
             let premise = |fact: String, class, source| FamilyPremise {
-                subject: "round",
+                subject: "round".into(),
                 fact,
                 class,
                 source,
@@ -231,7 +231,7 @@ impl DecisionFamily for StageAllocationFamily {
                 allocate_stage_models(&stages, &models, &budget, &knobs).map_err(refused)?;
             let summary = summarize_allocation(&models, &allocations);
             let premise = |fact: String, source| FamilyPremise {
-                subject: "allocation",
+                subject: "allocation".into(),
                 fact,
                 class: PremiseClass::Claim,
                 source,
@@ -380,7 +380,7 @@ impl DecisionFamily for CriterionReviewFamily {
         Some((|| {
             let (prior, new) = review_params(request)?;
             let rubric = || FamilyPremise {
-                subject: "criterion",
+                subject: "criterion".into(),
                 fact: format!("criterion.rubric_digest={}", prior.rubric_digest),
                 class: PremiseClass::Claim,
                 source: FamilyPremiseSource::Request("params.prior_report"),
@@ -389,7 +389,7 @@ impl DecisionFamily for CriterionReviewFamily {
             // trend (R136.103); the review holds whatever the criteria say.
             let mut divergence = None;
             let divergence_premise = |micros: i64| FamilyPremise {
-                subject: "criterion",
+                subject: "criterion".into(),
                 fact: format!("criterion.divergence={micros}"),
                 class: PremiseClass::Claim,
                 source: FamilyPremiseSource::Request("params.runs"),
@@ -431,7 +431,7 @@ impl DecisionFamily for CriterionReviewFamily {
                     held.family_premises = vec![
                         rubric(),
                         FamilyPremise {
-                            subject: "criterion",
+                            subject: "criterion".into(),
                             fact: format!("criterion.regressed:{criterion_id}"),
                             class: PremiseClass::Claim,
                             source: FamilyPremiseSource::Request("params.new_report"),

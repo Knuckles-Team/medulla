@@ -124,6 +124,7 @@ fn decide_view(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
