@@ -1254,15 +1254,14 @@ mod belief_revision_tests;
 // MEDULLA-DECISION-ENGINE-R750: bounded multi-step reasoning search, served.
 mod thought_search_tests;
 
-// MEDULLA-DECISION-ENGINE-R172.7: capability designation served through Decide.
-#[cfg(feature = "redb")]
-mod capability_designation_tests;
+// MEDULLA-DECISION-ENGINE-R100.101.3: served grounded evaluation.
+mod grounded_eval_tests;
 
 // MEDULLA-DECISION-ENGINE-R138.101: changeset review, served.
 mod changeset_review_tests;
 
-// MEDULLA-DECISION-ENGINE-R148.3: command config, served.
-mod command_config_tests;
+// MEDULLA-DECISION-ENGINE-R146.3: temporal basis, served.
+mod temporal_basis_tests;
 
 // MEDULLA-DECISION-ENGINE-R161.3: correction admission, served.
 mod correction_admission_tests;
@@ -1270,12 +1269,8 @@ mod correction_admission_tests;
 // MEDULLA-DECISION-ENGINE-R162.3: field shielding, served.
 mod field_shielding_tests;
 
-// MEDULLA-DECISION-ENGINE-R100.101.3: served grounded evaluation.
-mod grounded_eval_tests;
-
-// MEDULLA-DECISION-ENGINE-R176.3: the load set served through Decide.
-#[cfg(feature = "redb")]
-mod load_set_tests;
+// MEDULLA-DECISION-ENGINE-R148.3: command config, served.
+mod command_config_tests;
 
 // MEDULLA-DECISION-ENGINE-R159.3: routing-path preference, served.
 mod path_preference_tests;
@@ -1299,8 +1294,6 @@ mod skill_evolution_tests;
 
 // MEDULLA-DECISION-ENGINE-R704.3: playbook triage, served.
 mod playbook_triage_tests;
-// MEDULLA-DECISION-ENGINE-R146.3: temporal basis, served.
-mod temporal_basis_tests;
 
 // MEDULLA-DECISION-ENGINE-R177.3 to R177.5: usage guidance served through Decide.
 #[cfg(feature = "redb")]
