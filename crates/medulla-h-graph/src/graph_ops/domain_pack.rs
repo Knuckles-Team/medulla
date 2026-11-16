@@ -66,6 +66,7 @@ fn manifest_refusal(error: ManifestError) -> String {
 
 /// What admission yields: the proposed facts, how many cases passed, and the
 /// source artifact (a source row id or a markdown artifact id) of each entity.
+#[derive(Debug)]
 struct Admitted {
     facts: Vec<ProposedFact>,
     cases_passed: u32,
@@ -275,8 +276,8 @@ fn plan_batch(
         ensure_owned(core, id, tenant_scope)?;
         let mut properties = props.clone();
         properties.insert("type".into(), (*class).into());
-        properties.insert("domain_pack".into(), pack_id.into());
-        properties.insert("domain_pack_version".into(), version.into());
+        properties.insert("domain_pack".into(), pack_id.as_str().into());
+        properties.insert("domain_pack_version".into(), version.as_str().into());
         properties.insert(
             EVIDENCE_INTEGRITY_KEY.into(),
             manifest.integrity_sha256.as_str().into(),
