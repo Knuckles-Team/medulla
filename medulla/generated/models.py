@@ -14289,6 +14289,27 @@ class MethodArchitectureModelExport(BaseModel):
     params: MethodArchitectureModelExportParams
 
 
+class MethodArchitectureView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ArchitectureView"]
+    params: MethodArchitectureViewParams
+
+
+class MethodDomainPack(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DomainPack"]
+    params: MethodDomainPackParams
+
+
+class MethodProjectionRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProjectionRead"]
+    params: MethodProjectionReadParams
+
+
 class MethodSourceSync(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14980,6 +15001,9 @@ Method = Annotated[
         MethodUsage,
         MethodArchitectureModelImport,
         MethodArchitectureModelExport,
+        MethodArchitectureView,
+        MethodDomainPack,
+        MethodProjectionRead,
         MethodSourceSync,
         MethodConceptLineage,
         MethodColumnLineage,
@@ -31970,10 +31994,187 @@ class MethodApproveEntityLinkParams(BaseModel):
     right: EntityRef
 
 
+class SourceKind(str, Enum):
+    COLUMN = "column"
+    FRONT_MATTER = "front_matter"
+    TABLE = "table"
+    HEADING = "heading"
+    LINK = "link"
+    JSON_FIELD = "json_field"
+
+
+class ManifestClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    properties: list[str] = Field(default_factory=list)
+    relations: list[str] = Field(default_factory=list)
+
+
+class ManifestMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    source_kind: SourceKind
+    selector: str
+    target_class: str
+    target_property_or_relation: str
+
+
+class SourceRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    row_id: str
+    source_kind: SourceKind
+    fields: dict[str, Any]
+
+
+class ProposedFactEntity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fact: Literal["entity"]
+    entity_id: str
+    class_: str = Field(alias="class")
+
+
+class ProposedFactProperty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fact: Literal["property"]
+    entity_id: str
+    property: str
+    value: Any
+
+
+class ProposedFactRelationship(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fact: Literal["relationship"]
+    from_: str = Field(alias="from")
+    relation: str
+    to: str
+
+
+ProposedFact = Annotated[
+    ProposedFactEntity | ProposedFactProperty | ProposedFactRelationship,
+    Field(discriminator="fact"),
+]
+
+
+class ManifestCase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    rows: list[SourceRow]
+    expected: list[ProposedFact]
+
+
+class DomainPackManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    schema_version: int
+    pack_id: str
+    version: str
+    integrity_sha256: str
+    classes: list[ManifestClass]
+    mappings: list[ManifestMapping]
+    cases: list[ManifestCase] = Field(default_factory=list)
+
+
+class MarkdownSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_id: str
+    text: str
+
+
+class DomainPackInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    manifest: DomainPackManifest
+    rows: list[SourceRow] = Field(default_factory=list)
+    markdown: list[MarkdownSource] = Field(default_factory=list)
+
+
+class DomainPackOpPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["preview"]
+    input: DomainPackInput
+
+
+class DomainPackOpRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["run"]
+    input: DomainPackInput
+
+
+DomainPackOp = Annotated[
+    DomainPackOpPreview | DomainPackOpRun,
+    Field(discriminator="op"),
+]
+
+
+class ViewScope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    repository_id: str
+    revision: str | None = None
+
+
+class ProjectionCompare(str, Enum):
+    EQ = "eq"
+    NE = "ne"
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+
+
+class ProjectionPredicate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    column: str
+    op: ProjectionCompare
+    value: Any
+
+
+class ProjectionReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant: str
+    actor: str
+    graph: str
+    mapping_id: str
+    mapping_revision: int
+    table: str
+    columns: list[str] = Field(default_factory=list)
+    predicates: list[ProjectionPredicate] = Field(default_factory=list)
+    query_digest: str = ""
+
+
 class MethodArchitectureModelExportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     scope: str | None = None
+
+
+class MethodArchitectureViewParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope: ViewScope
+
+
+class MethodDomainPackParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: DomainPackOp
+
+
+class MethodProjectionReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ProjectionReadRequest
 
 
 class MethodArchitectureModelImportParams(BaseModel):
@@ -37876,6 +38077,31 @@ __all__ = [
     "UniquenessScope",
     "VerifiedAgentFact",
     "QueryVectorF32",
+    "SourceKind",
+    "ManifestClass",
+    "ManifestMapping",
+    "SourceRow",
+    "ProposedFactEntity",
+    "ProposedFactProperty",
+    "ProposedFactRelationship",
+    "ProposedFact",
+    "ManifestCase",
+    "DomainPackManifest",
+    "MarkdownSource",
+    "DomainPackInput",
+    "DomainPackOpPreview",
+    "DomainPackOpRun",
+    "DomainPackOp",
+    "ViewScope",
+    "ProjectionCompare",
+    "ProjectionPredicate",
+    "ProjectionReadRequest",
+    "MethodArchitectureView",
+    "MethodArchitectureViewParams",
+    "MethodDomainPack",
+    "MethodDomainPackParams",
+    "MethodProjectionRead",
+    "MethodProjectionReadParams",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

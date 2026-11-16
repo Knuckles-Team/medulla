@@ -2869,6 +2869,10 @@ send_architecture_model_export = contract_sender(
 send_architecture_model_import = contract_sender(
     "ArchitectureModelImport", "MethodArchitectureModelImportParams"
 )
+send_architecture_view = contract_sender(
+    "ArchitectureView", "MethodArchitectureViewParams"
+)
+send_domain_pack = contract_sender("DomainPack", "MethodDomainPackParams")
 send_open_graph_snapshot = contract_sender("OpenGraphSnapshot", "None")
 send_read_graph_changes = contract_sender(
     "ReadGraphChanges", "MethodReadGraphChangesParams"
