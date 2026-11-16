@@ -80,8 +80,6 @@ fn declared_request(
 /// (`thought_search_tests`, `branch_outcomes_tests`, `reward_decomposition_tests`, `population_tests`,
 /// `trajectory_join_tests`, `step_verification_tests`).
 const MATRIX_KINDS: &[QuestionKind] = &[
-    QuestionKind::CurriculumPromotion,
-    QuestionKind::AutonomyVerdict,
     QuestionKind::Route,
     QuestionKind::Rank,
     QuestionKind::Classify,
@@ -97,7 +95,8 @@ const MATRIX_KINDS: &[QuestionKind] = &[
 
 /// Kinds that left the shared ladder for a family of their own (placement
 /// R046, probe verdict R138.3, load set, usage guidance, edit concentration
-/// R173.3, comparative analysis plan): each concludes from its own typed
+/// R173.3, comparative analysis plan, curriculum promotion, autonomy
+/// verdict): each concludes from its own typed
 /// parameters, covered by its own tests. The registry must still route a
 /// matrix-shaped request to that family, which seals the kind or refuses
 /// with a typed code, never an unclassified one.
@@ -108,6 +107,8 @@ const SPECIALIZED_KINDS: &[QuestionKind] = &[
     QuestionKind::UsageGuidance,
     QuestionKind::EditConcentration,
     QuestionKind::ComparativeAnalysisPlan,
+    QuestionKind::CurriculumPromotion,
+    QuestionKind::AutonomyVerdict,
 ];
 
 pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
@@ -297,12 +298,20 @@ fn pair_texts(
     ]
 }
 
-/// A `resolve_entity` pair option: a name plus the two IRIs of the pair.
+/// A `resolve_entity` pair option: a name, the two IRIs of the pair and the
+/// same name on both sides, since identity evidence is computed between the
+/// two sides of one pair.
 fn pair_text_option(id: &str, name: &str) -> DeclaredOption {
     use medulla_decision_types::decision::statistical::declared::DeclaredText;
     let mut option = text_option(id, name);
     let mut texts: Vec<DeclaredText> = option.texts.iter().cloned().collect();
     texts.extend(pair_texts(id));
+    for side in ["entity.left.name", "entity.right.name"] {
+        texts.push(DeclaredText {
+            key: side.to_string(),
+            text: name.to_string(),
+        });
+    }
     // Declared fact keys are strictly sorted (check_declared).
     texts.sort_by(|a, b| a.key.cmp(&b.key));
     option.texts = BoundedVec::new(texts).unwrap();

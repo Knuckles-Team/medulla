@@ -399,7 +399,9 @@ fn decide_event(
         &ctx,
         request,
         None,
-        "decider".to_string(),
+        // The verified principal's persistence id, as the served path seals it,
+        // so `DecisionLog.commit` by "decider" accepts the record.
+        super::retrieval_tests::principal_of("decider"),
         Instant::now(),
     )
     .map(|batch| batch.records.as_slice()[0].clone())
@@ -432,7 +434,7 @@ fn event_of(record: &StatisticalDecisionRecord) -> DisclosureEvent {
 fn logged_rows(h: &Harness) -> usize {
     let reader = super::super::stat_log::LogReader {
         tenant_id: TENANT.to_string(),
-        principal: "decider".to_string(),
+        principal: super::retrieval_tests::principal_of("decider"),
         roles: Vec::new(),
         retention: super::super::stat_retention::Retention::none(),
     };

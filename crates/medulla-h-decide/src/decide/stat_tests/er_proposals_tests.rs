@@ -87,7 +87,8 @@ fn facts(record: &StatisticalDecisionRecord, prefix: &str) -> Vec<String> {
 // spec: MEDULLA-DECISION-ENGINE-R706.3
 #[tokio::test]
 async fn resolve_entity_uses_tenant_scoped_candidates() {
-    let h = Harness::new().await;
+    // A provisioned, non-system reader: row-level security hides the other owner's node.
+    let h = Harness::with_isolation(reader_isolation("decider", &[GRAPH])).await;
     entity_graph(&h).await;
     let (schema, digest) = publish_schema(&h);
     let head = publish_acting_head(&h, &digest, "head-er-proposals", 0.4);
@@ -241,7 +242,8 @@ async fn resolve_entity_uses_tenant_scoped_candidates() {
 // spec: MEDULLA-DECISION-ENGINE-R706.3
 #[tokio::test]
 async fn review_drift_is_recorded_with_the_proposals() {
-    let h = Harness::new().await;
+    // A provisioned, non-system reader: row-level security hides the other owner's node.
+    let h = Harness::with_isolation(reader_isolation("decider", &[GRAPH])).await;
     entity_graph(&h).await;
     let (schema, digest) = publish_schema(&h);
     let head = publish_acting_head(&h, &digest, "head-er-drift", 0.4);
@@ -311,7 +313,8 @@ fn abstain_code(record: &StatisticalDecisionRecord) -> String {
 // spec: MEDULLA-DECISION-ENGINE-R706.4
 #[tokio::test]
 async fn er_refusals_and_hypothesis_marking() {
-    let h = Harness::new().await;
+    // A provisioned, non-system reader: row-level security hides the other owner's node.
+    let h = Harness::with_isolation(reader_isolation("decider", &[GRAPH])).await;
     entity_graph(&h).await;
     let (schema, digest) = publish_schema(&h);
     let head = publish_acting_head(&h, &digest, "head-er-refusals", 0.4);
@@ -423,7 +426,8 @@ async fn er_refusals_and_hypothesis_marking() {
 // spec: MEDULLA-DECISION-ENGINE-R706.5
 #[tokio::test]
 async fn proposal_records_model_hash_and_tier() {
-    let h = Harness::new().await;
+    // A provisioned, non-system reader: row-level security hides the other owner's node.
+    let h = Harness::with_isolation(reader_isolation("decider", &[GRAPH])).await;
     entity_graph(&h).await;
     let (schema, digest) = publish_schema(&h);
     let head = publish_acting_head(&h, &digest, "head-er-evidence", 0.4);

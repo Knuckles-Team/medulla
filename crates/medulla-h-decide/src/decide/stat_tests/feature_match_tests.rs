@@ -158,7 +158,8 @@ fn only(view: FeatureLedgerView) -> medulla_decision_types::decision::feature_ma
 // spec: MEDULLA-DECISION-ENGINE-R707.3
 #[tokio::test]
 async fn match_and_ledger_reach_their_handlers() {
-    let h = Harness::new().await;
+    // A provisioned, non-system ledger writer: the hidden commit stays hidden.
+    let h = Harness::with_isolation(reader_isolation("ledger-writer", &["repo-index"])).await;
     index_commits(&h).await;
     let pins = pins(&h, TENANT);
 
@@ -230,7 +231,9 @@ async fn match_and_ledger_reach_their_handlers() {
         .unwrap_err()
         .starts_with("PARAMETER_INVALID"));
     let error = decide_as_other_tenant(&h, request(&pins.0, features(), Some("local"))).await;
-    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+    // The served tenant boundary refuses a request naming a tenant the
+    // caller does not belong to, before any pin is read.
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 
     // The ledger: open the gap with the match it came from.
     let open = |id: &str| FeatureLedgerOp::Open {
@@ -361,7 +364,8 @@ async fn match_and_ledger_reach_their_handlers() {
 // spec: MEDULLA-DECISION-ENGINE-R707.4
 #[tokio::test]
 async fn ledger_refusals_change_no_state() {
-    let h = Harness::new().await;
+    // A provisioned, non-system ledger writer: the hidden commit stays hidden.
+    let h = Harness::with_isolation(reader_isolation("ledger-writer", &["repo-index"])).await;
     index_commits(&h).await;
     let pins = pins(&h, TENANT);
 

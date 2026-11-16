@@ -533,6 +533,19 @@ fn leading_option(outcome: &StatisticalOutcome) -> Option<&str> {
     }
 }
 
+/// The first declared option, in option id order, that is a tiered proposal.
+fn first_declared_proposal(request: &DecideRequest) -> Option<String> {
+    let CandidateSource::Declared { options } = &request.candidates else {
+        return None;
+    };
+    options
+        .iter()
+        .map(|option| option.option_id.as_str())
+        .filter(|id| tier_of_option(id).is_some())
+        .min()
+        .map(str::to_string)
+}
+
 fn family_abstention(
     code: medulla_types::refusal_code::RefusalCode,
     detail: String,
@@ -734,6 +747,22 @@ impl DecisionFamily for ResolveEntityFamily {
                 format!("probabilistic proposal '{id}' is held while the accept rate drifts"),
             )?;
             return Ok(executed);
+        }
+        // The ladder abstained for insufficient confidence while the request
+        // carries proposals: no proposal reached the head's certified act
+        // threshold, which is the family's typed below-threshold abstention.
+        if let (StatisticalOutcome::Abstained { reasons }, Some(request)) =
+            (&executed.ladder.outcome, request)
+        {
+            if reasons.as_slice() == [AbstainReason::InsufficientConfidence] {
+                if let Some(id) = first_declared_proposal(request) {
+                    executed.ladder.outcome = family_abstention(
+                        ER_BELOW_THRESHOLD,
+                        format!("proposal '{id}' scored under the head's certified act threshold"),
+                    )?;
+                    return Ok(executed);
+                }
+            }
         }
         let abstain = match &executed.ladder.outcome {
             StatisticalOutcome::Acted { prediction_set, .. } => {

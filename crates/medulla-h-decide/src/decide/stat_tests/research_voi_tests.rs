@@ -204,7 +204,9 @@ async fn decide_routes_research_next() {
         .starts_with("PARAMETER_INVALID"));
 
     let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 3_000_000)).await;
-    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+    // The served tenant boundary refuses a request naming a tenant the
+    // caller does not belong to, before any pin is read.
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R705.4: a subtask with no budget left and
@@ -250,7 +252,9 @@ async fn research_refusals() {
     assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
 
     let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 3_000_000)).await;
-    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+    // The served tenant boundary refuses a request naming a tenant the
+    // caller does not belong to, before any pin is read.
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R705.5: the sealed record carries one
@@ -284,7 +288,16 @@ async fn spent_units_are_recorded_per_subtask() {
     // the value floor. intro: 4 - 1 - 1; method: 4 - 2 - 1.
     assert!(facts.contains(&"remaining:intro=2000000"), "{facts:?}");
     assert!(facts.contains(&"remaining:method=1000000"), "{facts:?}");
-    for premise in record.premises.iter() {
+    // Every ledger premise the research family states is a caller claim; the
+    // sealing premises every record carries (context, schema, policy) keep
+    // their own Definition class.
+    let ledger: Vec<_> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.subject == "research_next")
+        .collect();
+    assert!(ledger.len() >= 6, "{ledger:?}");
+    for premise in ledger {
         assert_eq!(premise.class, PremiseClass::Claim, "{premise:?}");
     }
 
@@ -297,5 +310,7 @@ async fn spent_units_are_recorded_per_subtask() {
         .starts_with("PARAMETER_INVALID"));
 
     let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 9_000_000)).await;
-    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+    // The served tenant boundary refuses a request naming a tenant the
+    // caller does not belong to, before any pin is read.
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 }

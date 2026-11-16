@@ -104,7 +104,9 @@ async fn served_decide_promotes_on_a_cleared_window() {
         .unwrap_err()
         .starts_with("PARAMETER_INVALID"));
     let error = decide_as_other_tenant(&h, request(&pins.0, "stage-cleared")).await;
-    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+    // The served tenant boundary refuses a request naming a tenant the
+    // caller does not belong to, before any pin is read.
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R751.754: another tenant's outcomes never

@@ -548,6 +548,18 @@ async fn contrast_never_reads_another_tenants_runs() {
             None,
         )
         .unwrap();
+    // Tenant B pins the same feature schema in its own library: a pin resolves
+    // only inside the tenant that asks.
+    let other_pin = {
+        let encoded = encode_body(&contrast_schema()).unwrap();
+        let mut draft = test_component_draft(OTHER, "schema-contrast-tenants");
+        draft.kind = AgentComponentKind::FeatureSchema;
+        draft.summary = "contrast deltas".to_string();
+        draft.classification = vec!["eg:capability/retrieval/web-search".to_string()];
+        draft.content_digest = encoded.content_digest;
+        draft.attributes = encoded.attributes;
+        h.commit_in(OTHER, draft, None).unwrap()
+    };
     let (a, b) = ("harness-component:prompt:a", "harness-component:prompt:b");
     let ok = |action| (StepKind::ToolCall, action, StepOutcome::Ok);
     let failed = |action| (StepKind::ToolCall, action, StepOutcome::Error);
@@ -584,28 +596,30 @@ async fn contrast_never_reads_another_tenants_runs() {
         &[(other_base, 0.4, "human"), (other_probe, 0.9, "human")],
     );
 
-    let ask = |baseline: &str, probe: &str| {
+    let ask_with = |pin: &ComponentDependency, baseline: &str, probe: &str| {
         with_baseline(
             contrast_request(
-                &schema_pin,
+                pin,
                 DecisionPolicyRef::Default,
                 vec![option(a, probe), option(b, probe)],
             ),
             baseline,
         )
     };
+    let ask = |baseline: &str, probe: &str| ask_with(&schema_pin, baseline, probe);
+    let ask_b = |baseline: &str, probe: &str| ask_with(&other_pin, baseline, probe);
 
     // Each tenant reads its own evidence.
     let own_a = decide_contrast_in(&h, TENANT, &ask(BASELINE, "trace:a"), &view_a).unwrap();
     assert!(own_a.inputs.harness_contrast.is_some());
-    let own_b = decide_contrast_in(&h, OTHER, &ask(other_base, other_probe), &view_b).unwrap();
+    let own_b = decide_contrast_in(&h, OTHER, &ask_b(other_base, other_probe), &view_b).unwrap();
     assert!(own_b.inputs.harness_contrast.is_some());
 
     // Ids that exist nowhere abstain insufficient_evidence.
     let unknown = decide_contrast_in(
         &h,
         OTHER,
-        &ask("trace:nowhere-base", "trace:nowhere-a"),
+        &ask_b("trace:nowhere-base", "trace:nowhere-a"),
         &view_b,
     )
     .unwrap();
@@ -633,7 +647,7 @@ async fn contrast_never_reads_another_tenants_runs() {
 
     // Tenant B asking about tenant A's run ids gets the same answer: nothing
     // of A's traces, scores or ledger is visible.
-    let foreign = decide_contrast_in(&h, OTHER, &ask(BASELINE, "trace:a"), &view_b).unwrap();
+    let foreign = decide_contrast_in(&h, OTHER, &ask_b(BASELINE, "trace:a"), &view_b).unwrap();
     assert_eq!(foreign.outcome, unknown.outcome);
     assert_eq!(abstention(&foreign), abstention(&unknown));
 }

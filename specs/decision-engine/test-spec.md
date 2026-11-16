@@ -1966,7 +1966,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R704.1` | `crates/medulla-decision-types/src/decision/playbook.rs::tests::playbook_types_round_trip_with_golden_vector` | L1 |
 | `MEDULLA-DECISION-ENGINE-R704.1` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-decision-stats/src/decision/playbook.rs::tests::window_eviction_and_flap_detection` | L2 |
-| `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.3` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.4` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::playbook_refusals` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.5` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::proposal_records_playbook_id_and_revision` | L3 |
@@ -1984,7 +1984,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R706.1` | `crates/medulla-decision-types/src/decision/entity_resolution.rs::tests::er_types_round_trip` | L1 |
 | `MEDULLA-DECISION-ENGINE-R706.1` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-decision-stats/src/decision/entity_resolution.rs::tests::unchanged_nodes_skip_embedding_and_drift_is_detected` | L2 |
-| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-decision-stats/src/decision/entity_resolution.rs::tests::candidate_index_is_tenant_scoped_and_options_name_their_tier` | L2 |

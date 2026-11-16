@@ -116,7 +116,9 @@ impl DecisionFamily for AutonomyFamily {
                     answer: Some(FamilyAnswer::Autonomy(Box::new(reading))),
                     premises,
                     resolution: None,
-                    evidence: None,
+                    // The verdict rests on the observed evaluation ledger; the claim
+                    // premises only echo the caller's question.
+                    evidence: Some(EvidenceClass::Observation),
                 }),
             ))
         }))

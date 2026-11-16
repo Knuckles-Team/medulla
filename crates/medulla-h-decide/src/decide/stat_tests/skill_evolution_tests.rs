@@ -106,7 +106,8 @@ fn options(batch: &DecisionBatch) -> Vec<(String, i64)> {
 // spec: MEDULLA-DECISION-ENGINE-R703.3
 #[tokio::test]
 async fn decide_routes_skill_evolution() {
-    let h = Harness::new().await;
+    // The embedding graph is read through the graph ACL, which needs a provisioned caller.
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let (schema, _) = publish_route_schema(&h);
     // skill-a and skill-b overlap in three of four capabilities and embed
     // alike; skill-c has the same capabilities as skill-a but a different
@@ -245,7 +246,8 @@ async fn merge_pair_refusals() {
 // spec: MEDULLA-DECISION-ENGINE-R703.5
 #[tokio::test]
 async fn candidate_cites_traces_and_library_rows() {
-    let h = Harness::new().await;
+    // The embedding graph is read through the graph ACL, which needs a provisioned caller.
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let (schema, _) = publish_route_schema(&h);
     let a = h
         .commit_in(
@@ -334,7 +336,8 @@ async fn candidate_cites_traces_and_library_rows() {
 #[tokio::test]
 async fn candidates_are_proposals_only() {
     use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
-    let h = Harness::new().await;
+    // The embedding graph is read through the graph ACL, which needs a provisioned caller.
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let (schema, _) = publish_route_schema(&h);
     publish_skill(&h, TENANT, "skill-a", &["cap-1", "cap-2", "cap-3"]);
     publish_skill(&h, TENANT, "skill-b", &["cap-1", "cap-2", "cap-3", "cap-4"]);

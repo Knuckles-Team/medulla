@@ -104,7 +104,9 @@ impl DecisionFamily for CurriculumPromotionFamily {
                     answer: Some(FamilyAnswer::CurriculumPromotion(Box::new(reading))),
                     premises,
                     resolution: None,
-                    evidence: None,
+                    // The verdict rests on the observed evaluation ledger; the claim
+                    // premises only echo the caller's question.
+                    evidence: Some(EvidenceClass::Observation),
                 }),
             ))
         }))
