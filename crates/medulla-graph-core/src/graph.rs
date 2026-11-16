@@ -59,6 +59,9 @@ pub use analysis_support::{
 };
 pub use core_expand::{edge_weight, expand_hops, ExpandedHit};
 use core_helpers::{edge_endpoint_not_found, push_ledger_impl, HexLedger};
+pub use node_history::{
+    install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
+};
 pub use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
     OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
@@ -66,9 +69,6 @@ pub use schema_sources::{
     MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES, VIRTUAL_GRAPH_SHAPES,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
-pub use node_history::{
-    install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
-};
 pub use view::GraphView;
 #[cfg(feature = "result-cache")]
 pub use view::ProjectionScope;
