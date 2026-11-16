@@ -33,6 +33,7 @@ mod json;
 mod nutrition;
 mod planning;
 mod skill_files;
+mod skill_graph;
 mod validation;
 pub(crate) mod vocabulary;
 
