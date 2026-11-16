@@ -66,6 +66,37 @@ pub fn reader_isolation(
     isolation
 }
 
+/// A provisioned isolation policy in which `agent` is an ordinary (non-system)
+/// principal that may read exactly `graphs`. Row-level security then admits
+/// only the rows it owns, public rows and rows granted to it, so a test can
+/// prove another owner's private row stays hidden on a served read.
+pub fn reader_isolation(
+    agent: &str,
+    graphs: &[&str],
+) -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
+    let role = format!("{agent}-reader");
+    #[cfg(feature = "security")]
+    {
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        isolation.add_role(Role::new(role.clone()));
+        for graph in graphs {
+            isolation.add_grant(Grant {
+                role: role.clone(),
+                resource: ResourceSelector::Graph((*graph).to_string()),
+                action: RbacAction::Read,
+                effect: GrantEffect::Allow,
+            });
+        }
+    }
+    isolation.register_agent(medulla_types::acl::AgentIdentity {
+        agent_id: agent.into(),
+        role: medulla_types::acl::AgentRole::Agent,
+        teams: graphs.iter().map(|graph| (*graph).to_string()).collect(),
+        roles: vec![role],
+    });
+    isolation
+}
 pub struct Harness {
     pub _dir: tempfile::TempDir,
     pub state: Arc<RwLock<ServerState>>,
