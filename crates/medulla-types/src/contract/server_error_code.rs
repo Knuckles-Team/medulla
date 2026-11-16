@@ -176,6 +176,9 @@ closed_error_codes! {
         DomainPackIntegrityMismatch => "DOMAIN_PACK_INTEGRITY_MISMATCH",
         DomainPackInvalid => "DOMAIN_PACK_INVALID",
         DomainPackCaseFailed => "DOMAIN_PACK_CASE_FAILED",
+        // MEDULLA-TYPED-PACKS-R097.701: a mapping that names no declared target, and a class absent from the pack.
+        DomainPackMappingInvalid => "DOMAIN_PACK_MAPPING_INVALID",
+        DomainPackClassUnknown => "DOMAIN_PACK_CLASS_UNKNOWN",
         EditChainBroken => "EDIT_CHAIN_BROKEN",
         EditSealed => "EDIT_SEALED",
         EcosystemDepthOutOfRange => "ECOSYSTEM_DEPTH_OUT_OF_RANGE",

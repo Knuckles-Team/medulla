@@ -139,6 +139,10 @@ struct IntegrityBody<'a> {
 pub enum ManifestError {
     /// A bound, a reference or a name is wrong; the text says which.
     Invalid(String),
+    /// A mapping has an empty selector or a target its class does not declare.
+    MappingInvalid(String),
+    /// A mapping names a class the pack does not declare.
+    ClassUnknown(String),
     /// `integrity_sha256` is not the digest of the manifest body.
     IntegrityMismatch { declared: String, computed: String },
 }
@@ -198,20 +202,20 @@ impl DomainPackManifest {
         }
         for mapping in &self.mappings {
             let Some(class) = self.classes.iter().find(|c| c.name == mapping.target_class) else {
-                return bad(format!(
+                return Err(ManifestError::ClassUnknown(format!(
                     "mapping targets undeclared class '{}'",
                     mapping.target_class
-                ));
+                )));
             };
             let target = mapping.target_property_or_relation.as_str();
             if mapping.selector.trim().is_empty()
                 || !(class.properties.iter().any(|p| p == target)
                     || class.relations.iter().any(|r| r == target))
             {
-                return bad(format!(
+                return Err(ManifestError::MappingInvalid(format!(
                     "mapping target '{}' is not declared on class '{}'",
                     target, class.name
-                ));
+                )));
             }
         }
         Ok(())
@@ -356,7 +360,13 @@ mod tests {
         manifest.mappings[0].target_property_or_relation = "undeclared".into();
         assert!(matches!(
             manifest.validate(),
-            Err(ManifestError::Invalid(_))
+            Err(ManifestError::MappingInvalid(_))
+        ));
+        manifest.mappings[0].target_property_or_relation = "name".into();
+        manifest.mappings[0].target_class = "Ghost".into();
+        assert!(matches!(
+            manifest.validate(),
+            Err(ManifestError::ClassUnknown(_))
         ));
     }
 }

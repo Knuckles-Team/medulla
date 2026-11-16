@@ -11,7 +11,8 @@
 
 use super::*;
 use medulla_catalog_types::domain_pack::{
-    DomainPackInput, DomainPackOp, DomainPackPreview, DomainPackRun, ManifestError, ProposedFact,
+    DomainPackInput, DomainPackManifest, DomainPackOp, DomainPackPreview, DomainPackRun,
+    ManifestError, ProposedFact,
 };
 use medulla_core::domain_pack::{evaluate_mapping, fragment_markdown, run_cases, MappingError};
 use medulla_protocol_types::result_contract::graph::{
@@ -22,11 +23,17 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// The node property naming the opaque verified tenant scope of the writer.
 const TENANT_SCOPE_KEY: &str = "domain_pack_tenant_scope";
+/// Evidence of a promoted node: the digest of the manifest that produced it.
+const EVIDENCE_INTEGRITY_KEY: &str = "domain_pack_integrity_sha256";
+/// Evidence of a promoted node: the source row or markdown artifact it came from.
+const EVIDENCE_SOURCE_KEY: &str = "domain_pack_source";
 /// Node property names a pack property may not use.
 const RESERVED: &[&str] = &[
     "type",
     "domain_pack",
     "domain_pack_version",
+    EVIDENCE_INTEGRITY_KEY,
+    EVIDENCE_SOURCE_KEY,
     TENANT_SCOPE_KEY,
 ];
 
@@ -34,39 +41,74 @@ fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> String {
     format!("{}: {detail}", code.as_str())
 }
 
+/// The wire refusal of a manifest error.
+fn manifest_refusal(error: ManifestError) -> String {
+    match error {
+        ManifestError::IntegrityMismatch { declared, computed } => refuse(
+            ServerErrorCode::DomainPackIntegrityMismatch,
+            format!("declared {declared}, computed {computed}"),
+        ),
+        ManifestError::Invalid(detail) => refuse(ServerErrorCode::DomainPackInvalid, detail),
+        ManifestError::MappingInvalid(detail) => {
+            refuse(ServerErrorCode::DomainPackMappingInvalid, detail)
+        }
+        ManifestError::ClassUnknown(detail) => {
+            refuse(ServerErrorCode::DomainPackClassUnknown, detail)
+        }
+    }
+}
+
+/// What admission yields: the proposed facts, how many cases passed, and the
+/// source artifact (a source row id or a markdown artifact id) of each entity.
+struct Admitted {
+    facts: Vec<ProposedFact>,
+    cases_passed: u32,
+    sources: BTreeMap<String, String>,
+}
+
 /// Load the manifest and evaluate the request: the proposed facts and how many
 /// of the manifest's cases passed.
-fn admit(input: &DomainPackInput) -> Result<(Vec<ProposedFact>, u32), String> {
+fn admit(input: &DomainPackInput) -> Result<Admitted, String> {
     input
         .manifest
         .verify_integrity()
-        .map_err(|error| match error {
-            ManifestError::IntegrityMismatch { declared, computed } => refuse(
-                ServerErrorCode::DomainPackIntegrityMismatch,
-                format!("declared {declared}, computed {computed}"),
-            ),
-            ManifestError::Invalid(detail) => refuse(ServerErrorCode::DomainPackInvalid, detail),
+        .map_err(manifest_refusal)?;
+    input.manifest.validate().map_err(manifest_refusal)?;
+    input.check_bounds().map_err(manifest_refusal)?;
+    let cases_passed =
+        run_cases(&input.manifest).map_err(|MappingError::CaseFailed { case }| {
+            refuse(
+                ServerErrorCode::DomainPackCaseFailed,
+                format!("case '{case}' does not evaluate to its expected facts"),
+            )
         })?;
-    let invalid = |error: ManifestError| match error {
-        ManifestError::Invalid(detail) => refuse(ServerErrorCode::DomainPackInvalid, detail),
-        ManifestError::IntegrityMismatch { .. } => refuse(
-            ServerErrorCode::DomainPackIntegrityMismatch,
-            "digest differs",
-        ),
+    let mut facts = Vec::new();
+    let mut sources = BTreeMap::new();
+    let mut take = |source: &str, batch: Vec<ProposedFact>| {
+        for fact in &batch {
+            if let ProposedFact::Entity { entity_id, .. } = fact {
+                sources.insert(entity_id.clone(), source.to_owned());
+            }
+        }
+        facts.extend(batch);
     };
-    input.manifest.validate().map_err(invalid)?;
-    input.check_bounds().map_err(invalid)?;
-    let passed = run_cases(&input.manifest).map_err(|MappingError::CaseFailed { case }| {
-        refuse(
-            ServerErrorCode::DomainPackCaseFailed,
-            format!("case '{case}' does not evaluate to its expected facts"),
-        )
-    })?;
-    let mut facts = evaluate_mapping(&input.manifest, &input.rows);
-    for source in &input.markdown {
-        facts.extend(fragment_markdown(&source.artifact_id, &source.text));
+    for row in &input.rows {
+        take(
+            &row.row_id,
+            evaluate_mapping(&input.manifest, std::slice::from_ref(row)),
+        );
     }
-    Ok((facts, passed))
+    for source in &input.markdown {
+        take(
+            &source.artifact_id,
+            fragment_markdown(&source.artifact_id, &source.text),
+        );
+    }
+    Ok(Admitted {
+        facts,
+        cases_passed,
+        sources,
+    })
 }
 
 /// Serve `Preview`: the proposed facts, nothing written. `Run` never reaches
@@ -79,7 +121,11 @@ pub async fn handle_domain_pack(req_id: u64, op: DomainPackOp) -> Response {
         );
     };
     match admit(&input) {
-        Ok((facts, cases_passed)) => Response::ok(
+        Ok(Admitted {
+            facts,
+            cases_passed,
+            ..
+        }) => Response::ok(
             req_id,
             ResultPayload::of::<DomainPackPreviewResult>(DomainPackPreview {
                 pack_id: input.manifest.pack_id,
@@ -126,11 +172,12 @@ struct Plan {
 /// Group the facts into node upserts and edge upserts.
 fn plan_batch(
     core: &GraphCore,
-    pack_id: &str,
-    version: &str,
+    manifest: &DomainPackManifest,
     tenant_scope: &str,
-    facts: &[ProposedFact],
+    admitted: &Admitted,
 ) -> Result<Plan, String> {
+    let (pack_id, version) = (&manifest.pack_id, &manifest.version);
+    let facts = &admitted.facts;
     let mut nodes: BTreeMap<&str, (&str, serde_json::Map<String, serde_json::Value>)> =
         BTreeMap::new();
     for fact in facts {
@@ -191,6 +238,13 @@ fn plan_batch(
         properties.insert("type".into(), (*class).into());
         properties.insert("domain_pack".into(), pack_id.into());
         properties.insert("domain_pack_version".into(), version.into());
+        properties.insert(
+            EVIDENCE_INTEGRITY_KEY.into(),
+            manifest.integrity_sha256.as_str().into(),
+        );
+        if let Some(source) = admitted.sources.get(*id) {
+            properties.insert(EVIDENCE_SOURCE_KEY.into(), source.as_str().into());
+        }
         properties.insert(TENANT_SCOPE_KEY.into(), tenant_scope.into());
         operations.push(serde_json::json!({
             "op": "upsert_node", "id": id, "properties": properties,
@@ -224,15 +278,8 @@ pub(super) async fn handle_run(ctx: &MutationCtx<'_>, method: &Method) -> Option
             "INVALID_ARGUMENT: a domain pack preview is served by the catalog admin route",
         ));
     };
-    let admitted = admit(input).and_then(|(facts, _)| {
-        plan_batch(
-            ctx.core,
-            &input.manifest.pack_id,
-            &input.manifest.version,
-            ctx.tenant_scope,
-            &facts,
-        )
-    });
+    let admitted = admit(input)
+        .and_then(|admitted| plan_batch(ctx.core, &input.manifest, ctx.tenant_scope, &admitted));
     let plan = match admitted {
         Ok(plan) => plan,
         Err(error) => return Some(Response::err(ctx.req_id, error)),
@@ -304,9 +351,9 @@ mod tests {
     #[test]
     fn admission_refuses_a_tampered_manifest_and_plans_one_node() {
         let ok = input("full_name");
-        let (facts, passed) = admit(&ok).unwrap();
-        assert_eq!(passed, 0);
-        let plan = plan_batch(&GraphCore::new(), "hr", "1", "tenant-a", &facts).unwrap();
+        let admitted = admit(&ok).unwrap();
+        assert_eq!(admitted.cases_passed, 0);
+        let plan = plan_batch(&GraphCore::new(), &ok.manifest, "tenant-a", &admitted).unwrap();
         assert_eq!((plan.entities, plan.relationships), (1, 0));
 
         let mut tampered = input("full_name");
@@ -314,5 +361,38 @@ mod tests {
         assert!(admit(&tampered)
             .unwrap_err()
             .starts_with("DOMAIN_PACK_INTEGRITY_MISMATCH"));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.701
+    #[test]
+    fn refusals_carry_their_own_codes_and_evidence_names_the_source() {
+        let mut ghost = input("full_name");
+        ghost.manifest.mappings[0].target_class = "Ghost".into();
+        ghost.manifest.integrity_sha256 = ghost.manifest.compute_integrity();
+        assert!(admit(&ghost)
+            .unwrap_err()
+            .starts_with("DOMAIN_PACK_CLASS_UNKNOWN"));
+
+        let mut bad = input("full_name");
+        bad.manifest.mappings[0].target_property_or_relation = "undeclared".into();
+        bad.manifest.integrity_sha256 = bad.manifest.compute_integrity();
+        assert!(admit(&bad)
+            .unwrap_err()
+            .starts_with("DOMAIN_PACK_MAPPING_INVALID"));
+
+        let ok = input("full_name");
+        let admitted = admit(&ok).unwrap();
+        assert_eq!(admitted.sources.values().collect::<Vec<_>>(), ["r1"]);
+        let plan = plan_batch(&GraphCore::new(), &ok.manifest, "tenant-a", &admitted).unwrap();
+        let operations: Vec<serde_json::Value> =
+            rmp_serde::from_slice(&plan.operations_msgpack).unwrap();
+        let properties = &operations[0]["properties"];
+        assert_eq!(properties[EVIDENCE_SOURCE_KEY], "r1");
+        assert_eq!(
+            properties[EVIDENCE_INTEGRITY_KEY],
+            ok.manifest.integrity_sha256.as_str()
+        );
+        assert_eq!(properties["domain_pack"], "hr");
+        assert_eq!(properties["domain_pack_version"], "1");
     }
 }

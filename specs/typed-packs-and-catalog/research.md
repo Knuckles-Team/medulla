@@ -99,3 +99,11 @@ For a candidate that is fully resident, a class is in use when the graph's `type
 **Decision.** `OpenMetadataSyncAdapter` lives in `crates/medulla-virtual-graph/src/open_metadata_sync.rs`, beside the `SyncAdapter` trait and `ArchitectureSyncAdapter`, not in `medulla-catalog-types`: the virtual-graph crate depends on the catalog types, so an adapter there would close a dependency cycle. The pure mapping stays in `medulla-catalog-types` (`inbound_mutations`, `outbound_record`); the type view is read once from the ontology annotations in `medulla-rdf`.
 
 **Why.** One adapter table, one trait, one place for adapters; the ontology stays the only source of the type mapping. A relationship becomes a node of its edge class because the sync batch writes nodes only. A classification or relationship type with no catalog class is left out of the digest and of the writes; R110.6 reports it.
+
+## Domain pack refusals and evidence (R097.701)
+
+**Decision.** Three manifest refusals have their own registered codes: `DOMAIN_PACK_INTEGRITY_MISMATCH` (digest), `DOMAIN_PACK_MAPPING_INVALID` (empty selector, or a target its class does not declare) and `DOMAIN_PACK_CLASS_UNKNOWN` (a mapping onto a class the pack does not declare). `DOMAIN_PACK_INVALID` stays for bounds and names. The composed ontology a pack's mapping resolves against is the manifest's own declared classes; a class outside it is unknown. Each promoted node carries `domain_pack`, `domain_pack_version`, `domain_pack_integrity_sha256` and `domain_pack_source` (the source row id, or the markdown artifact id); the source is recorded by evaluating row by row, so the evaluator's output is unchanged.
+
+**Why.** One code per refusal cause lets a caller act without parsing text. Evidence on the node keeps every promoted fact traceable to the exact manifest revision and source without a second store.
+
+**Spec fix.** None to the row text. WIRE-REGEN: two new codes in the error-code contract.

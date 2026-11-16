@@ -801,6 +801,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DOMAIN_PACK_INTEGRITY_MISMATCH",
             "DOMAIN_PACK_INVALID",
             "DOMAIN_PACK_CASE_FAILED",
+            "DOMAIN_PACK_MAPPING_INVALID",
+            "DOMAIN_PACK_CLASS_UNKNOWN",
         ],
     ),
     // MEDULLA-BRANCH-MERGE-R001: the five CreateBranch refusals.

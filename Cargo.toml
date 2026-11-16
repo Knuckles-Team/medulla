@@ -2160,6 +2160,12 @@ path = "benches/identity_segment_filter.rs"
 harness = false
 required-features = ["redb"]
 
+# Domain pack mapping at 1,000 rows (MEDULLA-TYPED-PACKS-R097.701): p50 < 10 ms, p99 < 60 ms. Nightly only.
+[[bench]]
+name = "domain_pack_mapping"
+path = "benches/domain_pack_mapping.rs"
+harness = false
+
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field
 # approved contract, rotated over deterministic drift shapes; prints p50/p99
