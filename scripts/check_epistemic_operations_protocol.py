@@ -46,6 +46,7 @@ EXPECTED_RUST_SOURCES = frozenset(
         "crates/medulla-result-types/src/epistemic_operations/resource_core.rs",
         "crates/medulla-result-types/src/epistemic_operations/resource_host.rs",
         "crates/medulla-result-types/src/epistemic_operations/resource_status.rs",
+        "crates/medulla-result-types/src/epistemic_operations/trace_outcome_machine.rs",
     }
 )
 RUST_GENERATED = (
