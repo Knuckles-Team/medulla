@@ -491,7 +491,9 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
     else {
         panic!("fit output")
     };
-    assert_eq!(draft.n_training, 24);
+    // A full-label listwise fit holds out every stride-th item for calibration.
+    let held_out = |items: usize| items / medulla_decision_stats::decision::fit::CALIBRATION_STRIDE;
+    assert_eq!(draft.n_training as usize, 24 - held_out(24));
     assert_eq!(draft.weights.len(), 2, "one weight per ladder feature");
     assert!(draft.synthetic);
     let first_lineage = draft.training_records_digest.clone();
@@ -531,6 +533,6 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
     else {
         panic!("fit output")
     };
-    assert_eq!(draft.n_training, 25);
+    assert_eq!(draft.n_training as usize, 25 - held_out(25));
     assert_ne!(draft.training_records_digest, first_lineage);
 }
