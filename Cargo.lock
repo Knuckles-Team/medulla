@@ -4882,7 +4882,7 @@ dependencies = [
 
 [[package]]
 name = "medulla-engine"
-version = "3.3.3"
+version = "3.3.4"
 dependencies = [
  "ahash",
  "anyhow",
@@ -6470,7 +6470,7 @@ dependencies = [
 
 [[package]]
 name = "medulla-pyengine"
-version = "3.3.3"
+version = "3.3.4"
 dependencies = [
  "medulla-capabilities",
  "medulla-compute",
@@ -8264,7 +8264,7 @@ dependencies = [
 
 [[package]]
 name = "medulla-version"
-version = "3.3.3"
+version = "3.3.4"
 
 [[package]]
 name = "medulla-video"
