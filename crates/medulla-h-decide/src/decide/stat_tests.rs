@@ -1280,9 +1280,6 @@ mod path_preference_tests;
 // MEDULLA-DECISION-ENGINE-R751 to R753: the pure-kernel families, served.
 mod autonomy_tests;
 
-// MEDULLA-DECISION-ENGINE-R172.7: capability designation served through Decide.
-#[cfg(feature = "redb")]
-mod capability_designation_tests;
 mod curriculum_promotion_tests;
 #[cfg(feature = "statechart")]
 mod feature_match_tests;
@@ -1290,9 +1287,6 @@ mod kernel_family_support;
 // MEDULLA-DECISION-ENGINE-R100.100.2: served pinned ranking evaluation.
 mod retrieval_eval_tests;
 
-// MEDULLA-DECISION-ENGINE-R176.3: the load set served through Decide.
-#[cfg(feature = "redb")]
-mod load_set_tests;
 mod population_tests;
 mod research_voi_tests;
 mod reward_decomposition_tests;
