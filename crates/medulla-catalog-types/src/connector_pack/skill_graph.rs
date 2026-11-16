@@ -23,8 +23,6 @@ pub enum SkillGraphTypeError {
 /// A SHA-256 as 64 lowercase hex characters, without any `sha256:` prefix.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "contract-schema", schemars(transparent))]
 pub struct Sha256Hex(String);
 
 impl Sha256Hex {
@@ -71,6 +69,7 @@ pub struct SkillGraphEntry {
     /// Path inside the graph, for example `reference/<hash>.md`.
     pub path: String,
     /// SHA-256 of the file's canonical text.
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub sha256: Sha256Hex,
 }
 
