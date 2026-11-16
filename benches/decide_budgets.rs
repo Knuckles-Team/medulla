@@ -161,15 +161,20 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::TeamCoordination,
     QuestionKind::FanoutWidth,
     QuestionKind::AdversarialAdmission,
+    QuestionKind::ResearchNext,
+    QuestionKind::FeatureMatch,
+    QuestionKind::PlaybookTriage,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
-/// `bench_topology_admit`, `bench_tool_relevance_cap` and
-/// `bench_capability_designation` (`ProgramLookup` is listed by `bench_program_lookup`).
+/// `bench_topology_admit`, `bench_tool_relevance_cap`,
+/// `bench_capability_designation` and `bench_skill_evolution` (`ProgramLookup`
+/// is listed by `bench_program_lookup`).
 const OWN_FIXTURE_FAMILIES: &[QuestionKind] = &[
     QuestionKind::Topology,
     QuestionKind::ToolRelevance,
     QuestionKind::CapabilityDesignation,
+    QuestionKind::SkillEvolution,
 ];
 
 /// The samples the budget report takes per group.
@@ -223,7 +228,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::TrajectoryJoin => "trajectory_join",
         QuestionKind::StepVerification => "step_verification",
         QuestionKind::AdversarialAdmission => "adversarial_admission",
-        QuestionKind::ResearchNext => "research_voi",
+        QuestionKind::ResearchNext => "research_next",
         QuestionKind::FeatureMatch => "feature_match",
         // Needs a published template and a typed question, so it has its own
         // bench fixture, not the generic one `FAMILIES` is driven with.
@@ -263,7 +268,6 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::CapacityProposal => "capacity_proposal",
         QuestionKind::ProbeSelection => "probe_selection",
         QuestionKind::SkillEvolution => "skill_evolution",
-        // Needs published playbooks and an event burst, so it has its own bench fixture.
         QuestionKind::PlaybookTriage => "playbook_triage",
     }
 }
