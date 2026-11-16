@@ -114,6 +114,10 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
+    super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
+    if !violations.is_empty() {
+        return rejected(request, violations);
+    }
 
     let prior_by_uri = members_by_uri(&prior);
     let entries_by_uri = entries_by_uri(&all);

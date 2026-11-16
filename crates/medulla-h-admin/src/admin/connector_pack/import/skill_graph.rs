@@ -14,10 +14,14 @@
 use std::collections::{HashMap, HashSet};
 
 use medulla_catalog_types::connector_pack::skill_graph::{ConformanceReport, SkillGraphManifest};
-use medulla_catalog_types::connector_pack::{PackEntry, MAX_PACK_VIOLATIONS};
+use medulla_catalog_types::connector_pack::{
+    PackEntry, PackEntryKind, PackViolation, PackViolationCode, MAX_PACK_VIOLATIONS,
+};
 use sha2::{Digest, Sha256};
 
-use super::validation::{section_bytes, valid_skill_frontmatter};
+use super::front_matter::declared_skill_type;
+use super::json::parse_bounded_json;
+use super::validation::{section_bytes, valid_skill_frontmatter, violation};
 
 /// Rule id: every manifest path has an entry whose body lies in the archive.
 pub(super) const RULE_ENTRIES_PRESENT: &str = "skill_graph.entries_present";
@@ -31,6 +35,66 @@ pub(super) const RULE_INDEX_SECTIONS: &str = "skill_graph.index_sections";
 const INDEX_PATH: &str = "index.json";
 const SKILL_FILE_NAME: &str = "SKILL.md";
 const REFERENCE_PREFIX: &str = "reference/";
+
+const SOURCES_PATH: &str = "sources.json";
+const GRAPH_SKILL_TYPE: &str = "graph";
+
+/// Validates the bundle of every skill graph the pack declares (R700.3): a
+/// `Skill` entry whose front matter says `skill_type: graph` names a graph, and
+/// the `skill_file` entries named `<graph>/...` are its bundle. Each violation
+/// of `validate_bundle` joins the import's violations on the `Skill` entry, so
+/// a failing bundle refuses the whole import before anything is committed.
+pub(super) fn validate_graph_bundles(
+    archive: &[u8],
+    all: &[&PackEntry],
+    violations: &mut Vec<PackViolation>,
+) {
+    for skill in all
+        .iter()
+        .filter(|entry| entry.kind == PackEntryKind::Skill)
+    {
+        let declares_graph = section_bytes(archive, &skill.body)
+            .ok()
+            .and_then(|body| declared_skill_type(body).ok().flatten())
+            == Some(GRAPH_SKILL_TYPE);
+        if !declares_graph {
+            continue;
+        }
+        let graph = skill.name.as_str();
+        let prefix = format!("{graph}/");
+        let sources = all.iter().find(|entry| {
+            entry.kind == PackEntryKind::SkillFile
+                && entry.name.strip_prefix(prefix.as_str()) == Some(SOURCES_PATH)
+        });
+        let manifest = sources
+            .ok_or_else(|| "no sources.json entry".to_string())
+            .and_then(|entry| {
+                section_bytes(archive, &entry.body)
+                    .map_err(|_| "sources.json lies outside the archive".to_string())
+            })
+            .and_then(parse_bounded_json)
+            .and_then(|json| {
+                SkillGraphManifest::from_sources_json(&json).map_err(|error| error.to_string())
+            });
+        let manifest = match manifest {
+            Ok(manifest) => manifest,
+            Err(detail) => {
+                violations.push(violation(
+                    PackViolationCode::MalformedBody,
+                    Some(&skill.uri),
+                    &format!("SKILL_GRAPH_ENTRY_MISSING: {SOURCES_PATH}: {detail}"),
+                ));
+                continue;
+            }
+        };
+        let report = validate_bundle(graph, archive, all, &manifest);
+        violations.extend(
+            report.violations.iter().map(|message| {
+                violation(PackViolationCode::MalformedBody, Some(&skill.uri), message)
+            }),
+        );
+    }
+}
 
 struct Collector {
     violations: Vec<String>,
