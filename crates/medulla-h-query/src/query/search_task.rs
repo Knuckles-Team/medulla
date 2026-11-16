@@ -25,11 +25,8 @@ use medulla_server_api::knob_config::knobs;
 use medulla_work_types::search_task::{
     EvidenceEdge, EvidenceGraph, EvidenceNode, RiskThresholds, SynthesizeSearchTaskAnswer,
     SynthesizeSearchTaskRequest, SynthesizeSearchTaskResult, SEARCH_TASK_INVALID,
-    SEARCH_TASK_SCHEMA_VERSION, SEARCH_TASK_SHORTCUT,
+    SEARCH_TASK_SCHEMA_VERSION, SEARCH_TASK_SHORTCUT, SEARCH_TASK_TOO_LARGE,
 };
-
-/// The evidence neighbourhood is larger than `search_task.max_evidence_nodes`.
-const SEARCH_TASK_TOO_LARGE: &str = "SEARCH_TASK_TOO_LARGE";
 /// The node variable the read scope binds its tenant predicate to.
 const SCOPE_VARIABLE: &str = "evidence";
 /// The relation an edge without a stored relationship carries.

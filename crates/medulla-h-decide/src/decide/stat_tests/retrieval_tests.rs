@@ -326,12 +326,16 @@ fn publish_for(
 ) -> ComponentDependency {
     let mut draft = medulla_persistence_records::agent_component::test_component_draft(tenant, id);
     draft.kind = kind;
+    // Every publish is its own attempt: take the harness's next nonce so the
+    // replay ledger never sees one attempt nonce twice.
+    let nonce = h.nonce.get();
+    h.nonce.set(nonce + 1);
     let request = medulla_agent_types::agent_component::AgentComponentPublishRequest {
         context: medulla_persistence_records::agent_fixtures::mutation_context(
             &h.store,
             tenant,
             &format!("publish-{tenant}-{id}"),
-            200,
+            nonce,
             0,
             "agent-component:publish",
         ),

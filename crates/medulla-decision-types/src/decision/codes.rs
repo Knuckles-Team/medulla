@@ -612,6 +612,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "topology_enforcement",
             medulla_agent_types::agent_topology::enforcement::REFUSALS.to_vec(),
         ),
+        (
+            "search_task",
+            medulla_work_types::search_task::REFUSALS.to_vec(),
+        ),
+        ("topology", medulla_query_types::topology::REFUSALS.to_vec()),
         // The standalone topology question's read refusal (R111.1).
         (
             "topology_question",

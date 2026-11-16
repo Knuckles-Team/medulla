@@ -1,7 +1,10 @@
 //! Cross-domain analogy matching (MEDULLA-FEDERATED-QUERY-R607.7).
 //!
 //! Every node gets a Weisfeiler-Lehman signature of [`WL_ROUNDS`] rounds over the
-//! relationship types (with direction) of its neighbourhood. The round-0 colour
+//! relationship types of its neighbourhood. Edge direction does not enter the
+//! colour: an analogy is a structural correspondence between two domains, and
+//! the edges joining two domains always point one way, so a directed colour
+//! could never let mirrored nodes on either side of that join agree. The round-0 colour
 //! is the same for every node: a node's own `label` names its domain, so it
 //! decides which pairs may match (only nodes of DIFFERENT labels) and never
 //! enters the colour, or no cross-domain pair could ever agree. Two nodes match
@@ -45,8 +48,8 @@ fn signatures(graph: &LabeledGraph) -> (Vec<String>, Vec<String>, Vec<BTreeMap<u
     let mut neighbours: Vec<Vec<(String, usize)>> = vec![Vec::new(); n];
     for (src, dst, rel) in &graph.edges {
         if let (Some(&s), Some(&d)) = (index.get(src.as_str()), index.get(dst.as_str())) {
-            neighbours[s].push((format!(">{rel}"), d));
-            neighbours[d].push((format!("<{rel}"), s));
+            neighbours[s].push((rel.clone(), d));
+            neighbours[d].push((rel.clone(), s));
         }
     }
     let mut colour = vec![0u64; n];

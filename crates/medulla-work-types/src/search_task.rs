@@ -14,6 +14,16 @@ use serde::{Deserialize, Serialize};
 pub const SEARCH_TASK_INVALID: &str = "SEARCH_TASK_INVALID";
 /// A detector value exceeded its threshold.
 pub const SEARCH_TASK_SHORTCUT: &str = "SEARCH_TASK_SHORTCUT";
+/// The evidence neighbourhood is larger than `search_task.max_evidence_nodes`.
+pub const SEARCH_TASK_TOO_LARGE: &str = "SEARCH_TASK_TOO_LARGE";
+
+/// Every refusal a search-task synthesis serves, registered so each reaches
+/// the wire under its own code (MEDULLA-FEDERATED-QUERY-R702.3).
+pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] = &[
+    medulla_types::refusal_code::RefusalCode::new(SEARCH_TASK_INVALID),
+    medulla_types::refusal_code::RefusalCode::new(SEARCH_TASK_SHORTCUT),
+    medulla_types::refusal_code::RefusalCode::new(SEARCH_TASK_TOO_LARGE),
+];
 
 /// The four shortcut risks. Closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

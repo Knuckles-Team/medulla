@@ -14,6 +14,21 @@ pub const TOPOLOGY_K_DEFAULT: u32 = 8;
 pub const TOPOLOGY_K_MIN: u32 = 2;
 pub const TOPOLOGY_K_MAX: u32 = 256;
 
+/// A graph over `topology.max_nodes` / `topology.max_edges`.
+pub const TOPOLOGY_GRAPH_TOO_LARGE: &str = "TOPOLOGY_GRAPH_TOO_LARGE";
+/// A bad `k`, edge weight or candidate set.
+pub const TOPOLOGY_PARAM_INVALID: &str = "TOPOLOGY_PARAM_INVALID";
+/// Fewer than three nodes.
+pub const TOPOLOGY_TRIVIAL_GRAPH: &str = "TOPOLOGY_TRIVIAL_GRAPH";
+
+/// Every refusal `MineTopology` serves, registered so each reaches the wire
+/// under its own code (MEDULLA-FEDERATED-QUERY-R607.4).
+pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] = &[
+    medulla_types::refusal_code::RefusalCode::new(TOPOLOGY_GRAPH_TOO_LARGE),
+    medulla_types::refusal_code::RefusalCode::new(TOPOLOGY_PARAM_INVALID),
+    medulla_types::refusal_code::RefusalCode::new(TOPOLOGY_TRIVIAL_GRAPH),
+];
+
 /// The request `k` when the caller sends none.
 pub fn default_k() -> u32 {
     TOPOLOGY_K_DEFAULT

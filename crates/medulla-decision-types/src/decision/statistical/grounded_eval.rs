@@ -140,12 +140,30 @@ impl ClaimVotes {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct WeightedBrier {
-    /// Sum of `v * (p - q)^2`, in parts per million squared.
+    /// Sum of `v * (p - q)^2`, in parts per million squared. Carried on the
+    /// wire as a decimal string: the binary wire encoding has no 128-bit
+    /// integer, and narrowing would lose exactness.
+    #[serde(with = "u128_decimal")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub numerator: u128,
     /// Sum of `v`.
     pub denominator: u64,
     pub digits: u32,
     pub score_scaled: u64,
+}
+
+/// Serde codec for an exact `u128` as its decimal string.
+mod u128_decimal {
+    use serde::{de::Error, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(value: &u128, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u128, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        text.parse::<u128>().map_err(D::Error::custom)
+    }
 }
 
 /// Version of the grounded-evaluation request and receipt shapes.
