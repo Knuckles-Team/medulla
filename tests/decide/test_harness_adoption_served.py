@@ -20,21 +20,16 @@ from _harness_envelope import graph_name as _graph_name
 from conftest import TEST_TENANT, request_context
 
 from decide.test_harness_contrast_served import (
-    BASELINE,
     COMPONENT_A,
     COMPONENT_B,
     CONDITIONS_DIGEST,
-    Q32,
     TASK_CLASS,
     TASK_REF,
-    _apply_evidence,
+    ProbeRun,
     _contrast_journey,
     candidate,
-    contrast_node_id,
-    contrast_props,
     contrast_schema_body,
-    probe_run_node_id,
-    probe_run_props,
+    seed_probe_runs,
     version_node_id,
     version_props,
 )
@@ -78,21 +73,7 @@ async def _adopt_and_read(
 def test_adoption_logged_and_lesson_retrieved(clean_graph):
     improving_ref = version_node_id(COMPONENT_A, "blob:adopt-improving")
     neutral_ref = version_node_id(COMPONENT_B, "blob:adopt-neutral")
-    improving_trace = "trace:adopt-improving"
-    neutral_trace = "trace:adopt-neutral"
-    improving = {
-        "retry_delta": -Q32,
-        "tool_selection_delta": 0,
-        "eval_score_delta": 2 * Q32,
-        "cost_delta": -Q32,
-    }
-    neutral = {
-        "retry_delta": 0,
-        "tool_selection_delta": 0,
-        "eval_score_delta": 0,
-        "cost_delta": -Q32,
-    }
-    _apply_evidence(
+    ids = seed_probe_runs(
         clean_graph,
         "h2-r803-8:evidence",
         [
@@ -101,33 +82,29 @@ def test_adoption_logged_and_lesson_retrieved(clean_graph):
                 version_props(COMPONENT_A, "blob:adopt-improving", 10, 100),
             ),
             (neutral_ref, version_props(COMPONENT_B, "blob:adopt-neutral", 10, 101)),
-            (probe_run_node_id(BASELINE), probe_run_props(BASELINE, 102)),
-            (probe_run_node_id(improving_trace), probe_run_props(improving_trace, 103)),
-            (probe_run_node_id(neutral_trace), probe_run_props(neutral_trace, 104)),
-            (
-                contrast_node_id(BASELINE, improving_trace),
-                contrast_props(
-                    BASELINE,
-                    improving_trace,
-                    improving["retry_delta"],
-                    improving["tool_selection_delta"],
-                    improving["eval_score_delta"],
-                    improving["cost_delta"],
-                    105,
-                ),
-            ),
         ],
+        [
+            ProbeRun("baseline", retries=1, extra_ok=0, score=0.25, cost=3),
+            # Improving: no retry, a higher independent score, a lower cost.
+            ProbeRun("improving", retries=0, extra_ok=1, score=0.75, cost=2),
+            ProbeRun("neutral", retries=1, extra_ok=0, score=0.25, cost=2),
+        ],
+    )
+    baseline, improving_trace, neutral_trace = (
+        ids["baseline"],
+        ids["improving"],
+        ids["neutral"],
     )
     schema = publish(
         clean_graph, "h2-r803-8-schema", "feature_schema", contrast_schema_body()
     )
     options = [
-        candidate(improving_ref, improving_trace, **improving),
-        candidate(neutral_ref, neutral_trace, **neutral),
+        candidate(improving_ref, improving_trace),
+        candidate(neutral_ref, neutral_trace),
     ]
     _, record, _, _ = asyncio.run(
         _contrast_journey(
-            schema, options, "q:h2-r803-8:adopt", _graph_name(clean_graph)
+            schema, options, "q:h2-r803-8:adopt", _graph_name(clean_graph), baseline
         )
     )
     assert record["inputs"]["harness_contrast"]["adopted_version_ref"] == improving_ref
@@ -145,7 +122,7 @@ def test_adoption_logged_and_lesson_retrieved(clean_graph):
         "what_changed": "the prompt names the tool contract",
         "applicability": ["tool_error"],
         "confidence_ppm": 800_000,
-        "evidence_run_ids": [BASELINE, improving_trace],
+        "evidence_run_ids": [baseline, improving_trace],
     }
     before, stored, repeat, found = asyncio.run(_adopt_and_read(write, ["tool_error"]))
 
@@ -167,5 +144,5 @@ def test_adoption_logged_and_lesson_retrieved(clean_graph):
     lesson = next(item for item in result.lessons if item.deficiency == DEFICIENCY)
     assert lesson.task_class == TASK_CLASS
     assert lesson.what_changed == write["what_changed"]
-    assert lesson.evidence_run_ids == [BASELINE, improving_trace]
+    assert lesson.evidence_run_ids == [baseline, improving_trace]
     assert lesson.confidence == pytest.approx(0.8)

@@ -3,20 +3,22 @@ composition decision over the wire.
 
 The entry point is the served ``Decide`` method with the
 ``harness_contrast`` question kind: the caller declares each candidate
-component version as an option (option id = the version's node id, the four
-measured deltas as declared Q32 numbers, the probe trace id as a declared
-text) and names the task, the task class, the baseline trace, the identical
-probe conditions and the evidence graph as typed request params. The engine
-reads the held versions, the probe runs and the stored contrasts out of the
-named graph, adopts the improving candidate (positive ``eval_score_delta``
-no other candidate beats, cost the tie-break) or abstains with
+component version as an option (option id = the version's node id, the probe
+trace id as a declared text) and names the task, the task class, the baseline
+trace, the identical probe conditions and the evidence graph as typed request
+params. The engine reads the held versions and the probe runs out of the named
+graph and measures the four deltas itself (R803.7): each run's trace committed
+through ``DecisionLog``, its independent ``:Score`` rows linked by
+``scoresRun`` and its priced cost in the usage ledger. It then adopts the
+improving candidate (positive ``eval_score_delta`` no other candidate beats,
+cost the tie-break) or abstains with
 ``no_improvement`` when nothing improves, and seals the answer as one record
 whose ``inputs`` carry the decision. R803.3 commits that record through
 ``DecisionLog`` -- the commit runs verify-replay over the contrast's own
 deterministic core -- and reads it back by record id.
 
-The graph evidence (published component versions, probe runs, one stored
-contrast) is written through the generated client write
+The graph evidence (published component versions, probe runs, score rows) is
+written through the generated client write
 (``ApplyChangeEnvelopes``; ``changes.apply_batch`` compiles to it), the same
 entry point as the R801/R802 served tests.
 """
@@ -25,7 +27,10 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any
+import time
+import uuid
+from collections.abc import Sequence
+from typing import Any, NamedTuple
 
 import msgpack
 import pytest
@@ -50,7 +55,9 @@ CONTENT_DIGEST_DOMAIN = "eg/harness-component-content/v1"
 TASK_REF = "task:h2-r803"
 TASK_CLASS = "eg:taskclass/contrast"
 CONDITIONS_DIGEST = "sha256:conditions"
-BASELINE = "trace:baseline"
+#: The model key the probe runs' usage is priced under: one micro-unit per
+#: million input tokens, so a run's ledger cost is its token count / 10^6.
+PROBE_MODEL = "contrast-probe"
 #: The four contrast delta features, in the sorted order the decision
 #: record's feature matrix names them.
 CONTRAST_FEATURES = [
@@ -102,39 +109,160 @@ def probe_run_props(trace_id: str, tx_from: int) -> dict[str, Any]:
     }
 
 
-def contrast_node_id(run_a: str, run_b: str) -> str:
-    return f"harness-contrast:{CONDITIONS_DIGEST}:{run_a}:{run_b}"
+class ProbeRun(NamedTuple):
+    """One probe run as the engine measures it: ``retries`` failed tool calls
+    each retried once, ``extra_ok`` further clean tool calls, one independent
+    score on a 0..1 range and the run's ledger cost in micro-units."""
+
+    name: str
+    retries: int
+    extra_ok: int
+    score: float
+    cost: int
 
 
-def contrast_props(
-    run_a: str,
-    run_b: str,
-    retry_delta: int,
-    tool_selection_delta: int,
-    eval_score_delta: int,
-    cost_delta: int,
-    tx_from: int,
-) -> dict[str, Any]:
-    """One measured contrast: B minus A on the Q32 scale, run against the
-    baseline under the identical probe conditions."""
+def _trace(run_id: str, run: ProbeRun) -> dict[str, Any]:
+    steps: list[tuple[str, str]] = []
+    for index in range(run.retries):
+        steps += [(f"tool:retry-{index}", "error"), (f"tool:retry-{index}", "ok")]
+    steps += [(f"tool:clean-{index}", "ok") for index in range(run.extra_ok)]
     return {
-        "_harness_contrast": True,
-        "task_ref": TASK_REF,
-        "conditions_digest": CONDITIONS_DIGEST,
-        "run_a_trace_id": run_a,
-        "run_b_trace_id": run_b,
-        "retry_delta": retry_delta,
-        "tool_selection_delta": tool_selection_delta,
-        "eval_score_delta": eval_score_delta,
-        "cost_delta": cost_delta,
-        "tx_from": tx_from,
+        "schema_version": 1,
+        "run_id": run_id,
+        "task_signature": TASK_REF,
+        "model_id": PROBE_MODEL,
+        "steps": [
+            {
+                "index": index,
+                "kind": "tool_call",
+                "action_ref": action,
+                "outcome": outcome,
+            }
+            for index, (action, outcome) in enumerate(steps)
+        ],
+        "outcome": "succeeded",
+        "started_at_ms": 1,
     }
 
 
+def _q32_of_micros(micros: int) -> int:
+    """The engine's millionths-to-Q32 conversion (truncates toward zero)."""
+    magnitude = (abs(micros) << 32) // 1_000_000
+    return magnitude if micros >= 0 else -magnitude
+
+
+def measured_deltas(baseline: ProbeRun, run: ProbeRun) -> dict[str, int]:
+    """The four deltas the engine measures for ``run`` against ``baseline``."""
+    return {
+        "retry_delta": (run.retries - baseline.retries) * Q32,
+        "tool_selection_delta": (
+            (run.retries + run.extra_ok) - (baseline.retries + baseline.extra_ok)
+        )
+        * Q32,
+        "eval_score_delta": _q32_of_micros(
+            round(run.score * 1_000_000) - round(baseline.score * 1_000_000)
+        ),
+        "cost_delta": (run.cost - baseline.cost) * Q32,
+    }
+
+
+async def _record_runs(traces: dict[str, ProbeRun]) -> None:
+    """Commit each run's trace through ``DecisionLog`` as the deciding
+    principal and append its priced usage through ``Usage``."""
+    socket_path = os.environ["GRAPH_SERVICE_SOCKET"]
+    decider = await MedullaClient.connect(
+        socket_path=socket_path, verified_context=request_context()
+    )
+    service = await MedullaClient.connect(
+        socket_path=socket_path,
+        verified_context=request_context(scopes=["usage:write"]),
+    )
+    try:
+        for run_id, run in traces.items():
+            stored = await dc.DecisionClient(client=decider).log(
+                {
+                    "op": "run_record",
+                    "tenant_id": TEST_TENANT,
+                    "record": {"kind": "trace", "trace": _trace(run_id, run)},
+                }
+            )
+            assert stored["stored"]["kind"] == "trace", stored
+        usage = dc.DecisionClient(client=service)
+        price = {
+            "schema_version": 1,
+            "model_key": PROBE_MODEL,
+            "valid_from_ms": 0,
+            "in_per_mtok_micro": 1,
+            "out_per_mtok_micro": 0,
+            "cached_per_mtok_micro": 0,
+        }
+        await usage.usage(dc.usage_put_price_op({"entries": [price]}))
+        now = int(time.time() * 1000)
+        records = [
+            dc.usage_record(
+                TEST_TENANT,
+                "contrast-probe",
+                "probe",
+                run_id,
+                now,
+                model_key=PROBE_MODEL,
+                tokens_in=run.cost * 1_000_000,
+                tokens_out=0,
+            )
+            for run_id, run in traces.items()
+        ]
+        appended = await usage.usage(dc.usage_append_op(records))
+        assert appended["appended"] == len(records)
+    finally:
+        await decider.close()
+        await service.close()
+
+
+def seed_probe_runs(
+    clean_graph: Any,
+    key: str,
+    versions: list[tuple[str, dict[str, Any]]],
+    runs: list[ProbeRun],
+) -> dict[str, str]:
+    """Write the held versions and the measured evidence of ``runs``; answer
+    each run's trace id by name.
+
+    Trace ids carry a fresh tag: the run traces and the usage ledger are
+    tenant-wide and outlive the test, so a reused id would replay old rows."""
+    tag = uuid.uuid4().hex[:12]
+    traces = {f"trace:{key}:{tag}:{run.name}": run for run in runs}
+    asyncio.run(_record_runs(traces))
+    nodes = list(versions)
+    edges: list[tuple[str, str]] = []
+    for offset, (trace_id, run) in enumerate(traces.items()):
+        score_id = f"score:{trace_id}"
+        nodes += [
+            (probe_run_node_id(trace_id), probe_run_props(trace_id, 200 + offset)),
+            (trace_id, {"node_type": "ExperimentRun"}),
+            (
+                score_id,
+                {
+                    "node_type": "Score",
+                    "value": run.score,
+                    "range_min": 0.0,
+                    "range_max": 1.0,
+                    "grader_kind": "human",
+                },
+            ),
+        ]
+        edges.append((score_id, trace_id))
+    _apply_evidence(clean_graph, f"{key}:{tag}", nodes, edges)
+    return {run.name: trace_id for trace_id, run in traces.items()}
+
+
 def _apply_evidence(
-    clean_graph: Any, key: str, nodes: list[tuple[str, dict[str, Any]]]
+    clean_graph: Any,
+    key: str,
+    nodes: list[tuple[str, dict[str, Any]]],
+    scores: Sequence[tuple[str, str]] = (),
 ) -> None:
-    """One envelope, in application order, writing the evidence nodes.
+    """One envelope, in application order, writing the evidence nodes and then
+    one ``scoresRun`` edge per ``(score, run)`` pair.
 
     The batch id derives from the caller's key: the shared session graph
     persists batch receipts across tests, so two tests may never claim the
@@ -151,6 +279,18 @@ def _apply_evidence(
                 {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
             )
             for ordinal, (node_id, props) in enumerate(nodes)
+        ]
+        + [
+            op(
+                len(nodes) + offset,
+                "AddEdge",
+                {
+                    "source_id": score_id,
+                    "target_id": run_id,
+                    "properties_msgpack": msgpack.packb({"relationship": "scoresRun"}),
+                },
+            )
+            for offset, (score_id, run_id) in enumerate(scores)
         ],
     )
     results = clean_graph.changes.apply_batch([envelope])
@@ -165,31 +305,15 @@ def contrast_schema_body() -> dict[str, Any]:
     )
 
 
-def candidate(
-    version_ref: str,
-    probe_trace_id: str,
-    retry_delta: int,
-    tool_selection_delta: int,
-    eval_score_delta: int,
-    cost_delta: int,
-) -> dc.DeclaredOption:
-    """One declared candidate option: the version ref as option id, the four
-    measured deltas as declared Q32 numbers, the probe trace as declared text."""
-    return dc.DeclaredOption(
-        version_ref,
-        numbers={
-            "retry_delta": retry_delta,
-            "tool_selection_delta": tool_selection_delta,
-            "eval_score_delta": eval_score_delta,
-            "cost_delta": cost_delta,
-        },
-        texts={"probe_trace_id": probe_trace_id},
-    )
+def candidate(version_ref: str, probe_trace_id: str) -> dc.DeclaredOption:
+    """One declared candidate option: the version ref as option id and the
+    probe trace as declared text. The deltas are the engine's to measure."""
+    return dc.DeclaredOption(version_ref, texts={"probe_trace_id": probe_trace_id})
 
 
-def _contrast_params(graph: str) -> list[dict[str, Any]]:
+def _contrast_params(graph: str, baseline: str) -> list[dict[str, Any]]:
     return [
-        dc.param("baseline_trace_id", "text", BASELINE),
+        dc.param("baseline_trace_id", "text", baseline),
         dc.param("conditions_digest", "text", CONDITIONS_DIGEST),
         dc.param("graph", "text", graph),
         dc.param("task_class", "iri", TASK_CLASS),
@@ -202,6 +326,7 @@ async def _contrast_journey(
     options: list[dc.DeclaredOption],
     question_id: str,
     graph: str,
+    baseline: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Decide, commit through the decision log and read the entry back."""
     socket_path = os.environ["GRAPH_SERVICE_SOCKET"]
@@ -216,7 +341,7 @@ async def _contrast_journey(
             (question_id, "harness_contrast", "ordinary"),
             dc.declared(options),
             schema,
-            params=_contrast_params(graph),
+            params=_contrast_params(graph, baseline),
         )
         payload = await decision.decide(request)
         record = payload["records"][0]
@@ -258,60 +383,53 @@ def _expected_matrix(
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R803.3")
 def test_contrast_decide_stores_record(clean_graph):
     # The evidence: the two held candidate versions (one per component),
-    # the baseline probe run and the two candidate probe runs under the
-    # identical conditions, and the stored contrast of the improving
-    # candidate against the baseline -- every one written through the
-    # generated client write.
+    # the baseline and the two candidate probe runs under the identical
+    # conditions -- each run's trace, score row and priced usage -- written
+    # through the generated client write, DecisionLog and Usage.
     improving_ref = version_node_id(COMPONENT_A, "blob:improving")
     neutral_ref = version_node_id(COMPONENT_B, "blob:neutral")
-    improving_trace = "trace:improving"
-    neutral_trace = "trace:neutral"
-    improving = {
-        "retry_delta": -Q32,
-        "tool_selection_delta": 0,
-        "eval_score_delta": 2 * Q32,
-        "cost_delta": -Q32,
-    }
-    neutral = {
-        "retry_delta": 0,
-        "tool_selection_delta": 0,
-        "eval_score_delta": 0,
-        "cost_delta": -Q32,
-    }
-    _apply_evidence(
+    base = ProbeRun("baseline", retries=1, extra_ok=0, score=0.25, cost=3)
+    better = ProbeRun("improving", retries=0, extra_ok=1, score=0.75, cost=2)
+    same = ProbeRun("neutral", retries=1, extra_ok=0, score=0.25, cost=2)
+    ids = seed_probe_runs(
         clean_graph,
         "h2-r803:evidence:adopt",
         [
             (improving_ref, version_props(COMPONENT_A, "blob:improving", 10, 100)),
             (neutral_ref, version_props(COMPONENT_B, "blob:neutral", 10, 101)),
-            (probe_run_node_id(BASELINE), probe_run_props(BASELINE, 102)),
-            (probe_run_node_id(improving_trace), probe_run_props(improving_trace, 103)),
-            (probe_run_node_id(neutral_trace), probe_run_props(neutral_trace, 104)),
-            (
-                contrast_node_id(BASELINE, improving_trace),
-                contrast_props(
-                    BASELINE,
-                    improving_trace,
-                    improving["retry_delta"],
-                    improving["tool_selection_delta"],
-                    improving["eval_score_delta"],
-                    improving["cost_delta"],
-                    105,
-                ),
-            ),
         ],
+        [base, better, same],
     )
+    baseline, improving_trace, neutral_trace = (
+        ids["baseline"],
+        ids["improving"],
+        ids["neutral"],
+    )
+    improving = measured_deltas(base, better)
+    neutral = measured_deltas(base, same)
+    assert improving == {
+        "retry_delta": -Q32,
+        "tool_selection_delta": 0,
+        "eval_score_delta": Q32 // 2,
+        "cost_delta": -Q32,
+    }
+    assert neutral == {
+        "retry_delta": 0,
+        "tool_selection_delta": 0,
+        "eval_score_delta": 0,
+        "cost_delta": -Q32,
+    }
 
     schema = publish(
         clean_graph, "h2-r803-schema", "feature_schema", contrast_schema_body()
     )
     graph = _graph_name(clean_graph)
     options = [
-        candidate(improving_ref, improving_trace, **improving),
-        candidate(neutral_ref, neutral_trace, **neutral),
+        candidate(improving_ref, improving_trace),
+        candidate(neutral_ref, neutral_trace),
     ]
     payload, record, committed, entry = asyncio.run(
-        _contrast_journey(schema, options, "q:h2-r803:adopt", graph)
+        _contrast_journey(schema, options, "q:h2-r803:adopt", graph, baseline)
     )
 
     # The answer is one sealed record; the decision is stored in its inputs
@@ -344,7 +462,7 @@ def test_contrast_decide_stores_record(clean_graph):
         {
             "task_ref": TASK_REF,
             "conditions_digest": CONDITIONS_DIGEST,
-            "run_a_trace_id": BASELINE,
+            "run_a_trace_id": baseline,
             "run_b_trace_id": traces[ref],
             **deltas[traces[ref]],
         }
@@ -384,17 +502,22 @@ def test_contrast_hot_path_served(clean_graph):
     # abstention stores through the same commit path.
     a_ref = version_node_id(COMPONENT_A, "blob:hot-a")
     b_ref = version_node_id(COMPONENT_B, "blob:hot-b")
-    _apply_evidence(
+    ids = seed_probe_runs(
         clean_graph,
         "h2-r803:evidence:hot",
         [
             (a_ref, version_props(COMPONENT_A, "blob:hot-a", 10, 100)),
             (b_ref, version_props(COMPONENT_B, "blob:hot-b", 10, 101)),
-            (probe_run_node_id(BASELINE), probe_run_props(BASELINE, 102)),
-            (probe_run_node_id("trace:hot-a"), probe_run_props("trace:hot-a", 103)),
-            (probe_run_node_id("trace:hot-b"), probe_run_props("trace:hot-b", 104)),
-            (probe_run_node_id("trace:hot-c"), probe_run_props("trace:hot-c", 105)),
-            (probe_run_node_id("trace:hot-d"), probe_run_props("trace:hot-d", 106)),
+        ],
+        [
+            ProbeRun("baseline", retries=0, extra_ok=1, score=0.25, cost=3),
+            # Improving: a higher independent score at a lower cost.
+            ProbeRun("hot-a", retries=0, extra_ok=1, score=0.75, cost=2),
+            # Neutral, flat: the baseline's score at a lower cost.
+            ProbeRun("hot-b", retries=0, extra_ok=1, score=0.25, cost=2),
+            ProbeRun("hot-c", retries=0, extra_ok=1, score=0.25, cost=2),
+            # Worse: a retry, a lower score and a higher cost.
+            ProbeRun("hot-d", retries=1, extra_ok=0, score=0.0, cost=4),
         ],
     )
 
@@ -403,10 +526,12 @@ def test_contrast_hot_path_served(clean_graph):
     )
     graph = _graph_name(clean_graph)
 
-    improving = candidate(a_ref, "trace:hot-a", 0, 0, 2 * Q32, -Q32)
-    neutral = candidate(b_ref, "trace:hot-b", 0, 0, 0, -Q32)
+    improving = candidate(a_ref, ids["hot-a"])
+    neutral = candidate(b_ref, ids["hot-b"])
     _, record, committed, _ = asyncio.run(
-        _contrast_journey(schema, [improving, neutral], "q:h2-r803:hot-adopt", graph)
+        _contrast_journey(
+            schema, [improving, neutral], "q:h2-r803:hot-adopt", graph, ids["baseline"]
+        )
     )
     assert record["outcome"] == {
         "outcome": "explored",
@@ -418,10 +543,12 @@ def test_contrast_hot_path_served(clean_graph):
     # commit has already landed under the same record id.
     assert committed["replayed"] is False
 
-    flat = candidate(a_ref, "trace:hot-c", 0, 0, 0, -Q32)
-    worse = candidate(b_ref, "trace:hot-d", Q32, 0, -Q32, Q32)
+    flat = candidate(a_ref, ids["hot-c"])
+    worse = candidate(b_ref, ids["hot-d"])
     _, record, committed, entry = asyncio.run(
-        _contrast_journey(schema, [flat, worse], "q:h2-r803:hot-abstain", graph)
+        _contrast_journey(
+            schema, [flat, worse], "q:h2-r803:hot-abstain", graph, ids["baseline"]
+        )
     )
     assert record["outcome"] == {
         "outcome": "abstained",
