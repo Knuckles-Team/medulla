@@ -148,7 +148,7 @@
             },
             "expected_revision": 0,
             "outcome": {
-              "status": "reachable"
+              "probe": "reachable"
             },
             "scope": {
               "authority": "tenant_local"

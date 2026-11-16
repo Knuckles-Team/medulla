@@ -4011,6 +4011,7 @@ components:
       - "tests/test_finance_pine_companion.py"
       - "tests/test_finance_signal_models.py"
       - "tests/test_fleet_catalog_client.py"
+      - "tests/test_wire_mirror_state_words.py"
       - "tests/test_generated_connector_pack_catalog.py"
       - "tests/test_generated_model_input_capabilities.py"
       - "tests/test_consensus_client_get_identity.py"

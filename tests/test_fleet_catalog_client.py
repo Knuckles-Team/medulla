@@ -140,7 +140,7 @@ def test_writes_use_their_own_typed_operations() -> None:
                     "server_name": "github",
                     "scope": {"authority": "tenant_local"},
                     "connector": "github",
-                    "outcome": {"status": "unreachable", "error": "connection refused"},
+                    "outcome": {"probe": "unreachable", "error": "connection refused"},
                 }
             )
         )

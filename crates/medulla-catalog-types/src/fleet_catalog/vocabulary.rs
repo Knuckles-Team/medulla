@@ -37,7 +37,7 @@ impl DiscoveryScope {
 
 /// What the probe found.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(tag = "probe", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum DiscoveryOutcome {
     Reachable,
@@ -277,5 +277,25 @@ mod tests {
         assert_eq!(DiscoveryScope::TenantLocal.key(), "tenant_local");
         assert_eq!(grant.key(), format!("grant-{}", "07".repeat(32)));
         assert!(DiscoveryScope::TenantLocal < grant);
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R811.2
+    #[test]
+    fn discovery_outcome_tag_is_probe_not_status() {
+        let reachable = serde_json::to_value(DiscoveryOutcome::Reachable).expect("serialize");
+        assert_eq!(reachable, serde_json::json!({"probe": "reachable"}));
+        let unreachable = serde_json::to_value(DiscoveryOutcome::Unreachable {
+            error: "timeout".to_string(),
+        })
+        .expect("serialize");
+        assert_eq!(
+            unreachable,
+            serde_json::json!({"probe": "unreachable", "error": "timeout"})
+        );
+        let old_key = serde_json::json!({"status": "reachable"});
+        assert!(serde_json::from_value::<DiscoveryOutcome>(old_key).is_err());
+        let back: DiscoveryOutcome =
+            serde_json::from_value(serde_json::json!({"probe": "reachable"})).expect("decode");
+        assert_eq!(back, DiscoveryOutcome::Reachable);
     }
 }

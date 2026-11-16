@@ -30,19 +30,19 @@ class DiscoveryCounts(BaseModel):
 class DiscoveryOutcomeReachable(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["reachable"]
+    probe: Literal["reachable"]
 
 
 class DiscoveryOutcomeUnreachable(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     error: str
-    status: Literal["unreachable"]
+    probe: Literal["unreachable"]
 
 
 DiscoveryOutcome = Annotated[
     DiscoveryOutcomeReachable | DiscoveryOutcomeUnreachable,
-    Field(discriminator="status"),
+    Field(discriminator="probe"),
 ]
 
 
