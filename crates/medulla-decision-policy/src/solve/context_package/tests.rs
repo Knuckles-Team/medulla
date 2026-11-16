@@ -5,7 +5,7 @@ use medulla_decision_types::decision::context_package::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::{effective_capacity, lower, select};
+use super::{effective_capacity, lower, select, select_with};
 
 const DIGEST: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -191,4 +191,29 @@ fn order_does_not_change_the_optimum() {
     assert_eq!(a.chosen_ids, b.chosen_ids);
     assert_eq!(a.model_digest, b.model_digest);
     assert_eq!(a.certificate_digest, b.certificate_digest);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R137.12
+#[test]
+fn select_with_refuses_a_corrupted_certificate() {
+    // No served operation accepts a certificate from the caller, so the rejection
+    // of a bad certificate is proven against the verifier itself: a solver that
+    // claims the optimum while selecting every candidate breaks the capacity row.
+    let req = request(budget(100), pool());
+    let refused = select_with(&req, |model, config| {
+        let mut certificate = super::super::solve(model, config);
+        if let Some(incumbent) = certificate.incumbent.as_mut() {
+            incumbent
+                .selected
+                .iter_mut()
+                .for_each(|picked| *picked = true);
+        }
+        certificate
+    })
+    .expect_err("the verifier must reject the corrupted certificate");
+    assert_eq!(
+        refused.code,
+        ContextPackageErrorCode::CertificateUnacceptable
+    );
+    assert!(select(&req).is_ok(), "the real solver is still accepted");
 }

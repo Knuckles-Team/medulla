@@ -5,14 +5,15 @@ holds three evidence units with two resolutions each, so there are 27 ways to
 pick at most one resolution per unit. The test computes the optimum by
 exhaustive search over all 27 and asserts the served selection equals it, with
 the fewer-token tie-break. Further cases cover the reserved output, money and
-latency ceilings, fractional rounding, zero capacity, unknown rates, a stale
-source and a rejected certificate.
+latency ceilings, fractional rounding, zero capacity, unknown rates, and a stale
+source.
 
-The rejected-certificate case needs the served engine to run a corrupting
-solver for one named question. That seam exists only in an engine built with the
-test-only `test-solver-seam` cargo feature (the served-test build in
-`conftest.SERVED_TEST_FEATURES`); a release build has no such path. A
-`MEDULLA_TEST_BINARY` supplied by a caller must be built with the same features.
+No served operation accepts a solver certificate from the caller, so a rejected
+certificate cannot be reached from served input. That case is proven below the
+wire: the verifier rejecting a corrupted certificate is an L2 test
+(`select_with_refuses_a_corrupted_certificate`) and the family's refusal an L3
+test (`corrupted_certificate_is_refused`). The served build carries no solver
+seam.
 """
 
 from __future__ import annotations
@@ -29,9 +30,6 @@ from medulla import decision_stat as ds
 from medulla.client import EngineResponseError, _pack_binary_msgpack
 
 DIGEST = "0123456789abcdef" * 4
-
-# The question id the seam answers with a corrupted certificate.
-CORRUPT_QUESTION_ID = "context.package.corrupt-certificate"
 
 # (candidate id, evidence unit, resolution, tokens, value). Unit `c` ties on
 # value across its two resolutions, so the fewer-token resolution must win.
@@ -281,14 +279,6 @@ def test_certified_package_end_to_end(served):
     ):
         _refusal(served, _package(_budget(100), stale), "CONTEXT_PACKAGE_STALE_SOURCE")
 
-    # A certificate the independent verifier rejects is refused, and the same
-    # package under an ordinary question is answered: only the seam's question
-    # is corrupted.
-    _refusal(
-        served,
-        _package(_budget(100)),
-        "CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE",
-        CORRUPT_QUESTION_ID,
-    )
+    # The same package under the real solver is answered with a verified optimum.
     _, optima = _oracle(100)
     assert _chosen(_decide(served, _package(_budget(100)))) in optima
