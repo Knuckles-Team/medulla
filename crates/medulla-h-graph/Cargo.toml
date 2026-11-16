@@ -51,7 +51,7 @@ medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-persistence-ops = { path = "../medulla-persistence-ops" }
-medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["shacl"] }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }

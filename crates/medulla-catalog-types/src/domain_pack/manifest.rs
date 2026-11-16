@@ -134,6 +134,50 @@ struct IntegrityBody<'a> {
     cases: &'a [ManifestCase],
 }
 
+/// The class, property and relation terms of a graph's composed ontology (the
+/// core plus every admitted pack), each held by full IRI and by local name so a
+/// mapping may name a term either way.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ComposedVocabulary {
+    classes: BTreeSet<String>,
+    properties: BTreeSet<String>,
+    relations: BTreeSet<String>,
+}
+
+impl ComposedVocabulary {
+    /// Collect the terms of a composed ontology: `(iri, kind)` pairs.
+    pub fn from_terms<'a>(
+        terms: impl IntoIterator<Item = (&'a str, crate::graph_schema::GraphSchemaTermKind)>,
+    ) -> Self {
+        use crate::graph_schema::{term_local_name, GraphSchemaTermKind as Kind};
+        let mut vocabulary = Self::default();
+        for (iri, kind) in terms {
+            let set = match kind {
+                Kind::Class => &mut vocabulary.classes,
+                Kind::ObjectProperty => &mut vocabulary.relations,
+                Kind::DatatypeProperty | Kind::AnnotationProperty | Kind::Property => {
+                    &mut vocabulary.properties
+                }
+            };
+            set.insert(iri.to_owned());
+            set.insert(term_local_name(iri).to_owned());
+        }
+        vocabulary
+    }
+
+    fn has_class(&self, name: &str) -> bool {
+        self.classes.contains(name)
+    }
+
+    fn has_property(&self, name: &str) -> bool {
+        self.properties.contains(name)
+    }
+
+    fn has_relation(&self, name: &str) -> bool {
+        self.relations.contains(name)
+    }
+}
+
 /// Why a manifest is refused before use.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManifestError {
@@ -175,9 +219,17 @@ impl DomainPackManifest {
         }
     }
 
-    /// Check bounds and references: names, unique classes, mapping targets
-    /// declared on their class.
-    pub fn validate(&self) -> Result<(), ManifestError> {
+    /// Check bounds and references against the graph's composed ontology and
+    /// return the manifest with every composed class its mappings target
+    /// resolved into a class entry. A mapping targets either a class the
+    /// manifest declares (its property or relation must be declared on it) or a
+    /// class of the composed ontology (the core plus every admitted pack, which
+    /// every pack rolls up to), whose property or relation must be a composed
+    /// term. A class in neither is `ClassUnknown`.
+    pub fn resolve(
+        &self,
+        composed: &ComposedVocabulary,
+    ) -> Result<DomainPackManifest, ManifestError> {
         let bad = |detail: String| Err(ManifestError::Invalid(detail));
         if self.schema_version != DOMAIN_PACK_MANIFEST_VERSION {
             return bad(format!(
@@ -200,25 +252,59 @@ impl DomainPackManifest {
                 return bad(format!("class '{}' is empty or declared twice", class.name));
             }
         }
+        let mut resolved = self.clone();
         for mapping in &self.mappings {
-            let Some(class) = self.classes.iter().find(|c| c.name == mapping.target_class) else {
+            let target = mapping.target_property_or_relation.as_str();
+            if let Some(class) = self.classes.iter().find(|c| c.name == mapping.target_class) {
+                if mapping.selector.trim().is_empty()
+                    || !(class.properties.iter().any(|p| p == target)
+                        || class.relations.iter().any(|r| r == target))
+                {
+                    return Err(ManifestError::MappingInvalid(format!(
+                        "mapping target '{}' is not declared on class '{}'",
+                        target, class.name
+                    )));
+                }
+                continue;
+            }
+            if !composed.has_class(&mapping.target_class) {
                 return Err(ManifestError::ClassUnknown(format!(
-                    "mapping targets undeclared class '{}'",
+                    "mapping targets class '{}' absent from the graph's composed ontology",
                     mapping.target_class
                 )));
-            };
-            let target = mapping.target_property_or_relation.as_str();
-            if mapping.selector.trim().is_empty()
-                || !(class.properties.iter().any(|p| p == target)
-                    || class.relations.iter().any(|r| r == target))
-            {
+            }
+            let relation = composed.has_relation(target);
+            if mapping.selector.trim().is_empty() || !(relation || composed.has_property(target)) {
                 return Err(ManifestError::MappingInvalid(format!(
-                    "mapping target '{}' is not declared on class '{}'",
-                    target, class.name
+                    "mapping target '{}' is not a property or relation of the composed ontology",
+                    target
                 )));
             }
+            let entry = match resolved
+                .classes
+                .iter()
+                .position(|c| c.name == mapping.target_class)
+            {
+                Some(index) => &mut resolved.classes[index],
+                None => {
+                    resolved.classes.push(ManifestClass {
+                        name: mapping.target_class.clone(),
+                        properties: Vec::new(),
+                        relations: Vec::new(),
+                    });
+                    resolved.classes.last_mut().expect("just pushed")
+                }
+            };
+            let slot = if relation {
+                &mut entry.relations
+            } else {
+                &mut entry.properties
+            };
+            if !slot.iter().any(|t| t == target) {
+                slot.push(target.to_owned());
+            }
         }
-        Ok(())
+        Ok(resolved)
     }
 
     /// Whether `target` is a relation (not a property) of `class`.
@@ -351,7 +437,7 @@ mod tests {
     fn integrity_detects_a_changed_body_and_validate_checks_targets() {
         let mut manifest = sample();
         manifest.verify_integrity().unwrap();
-        manifest.validate().unwrap();
+        manifest.resolve(&ComposedVocabulary::default()).unwrap();
         manifest.version = "2".into();
         assert!(matches!(
             manifest.verify_integrity(),
@@ -359,13 +445,59 @@ mod tests {
         ));
         manifest.mappings[0].target_property_or_relation = "undeclared".into();
         assert!(matches!(
-            manifest.validate(),
+            manifest.resolve(&ComposedVocabulary::default()),
             Err(ManifestError::MappingInvalid(_))
         ));
         manifest.mappings[0].target_property_or_relation = "name".into();
         manifest.mappings[0].target_class = "Ghost".into();
         assert!(matches!(
-            manifest.validate(),
+            manifest.resolve(&ComposedVocabulary::default()),
+            Err(ManifestError::ClassUnknown(_))
+        ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.701
+    #[test]
+    fn a_mapping_resolves_against_the_composed_ontology_not_only_the_manifest() {
+        use crate::graph_schema::GraphSchemaTermKind as Kind;
+        let composed = ComposedVocabulary::from_terms([
+            (
+                "https://knuckles-team.github.io/ontology/core#Document",
+                Kind::Class,
+            ),
+            (
+                "https://knuckles-team.github.io/ontology/core#title",
+                Kind::DatatypeProperty,
+            ),
+            (
+                "https://knuckles-team.github.io/ontology/core#cites",
+                Kind::ObjectProperty,
+            ),
+        ]);
+        let mut manifest = sample();
+        manifest.mappings[0].target_class = "Document".into();
+        manifest.mappings[0].target_property_or_relation = "title".into();
+        let resolved = manifest.resolve(&composed).unwrap();
+        let document = resolved
+            .classes
+            .iter()
+            .find(|c| c.name == "Document")
+            .unwrap();
+        assert_eq!(document.properties, ["title"]);
+        assert!(!resolved.is_relation("Document", "title"));
+
+        manifest.mappings[0].target_property_or_relation = "cites".into();
+        let resolved = manifest.resolve(&composed).unwrap();
+        assert!(resolved.is_relation("Document", "cites"));
+
+        manifest.mappings[0].target_property_or_relation = "nothing".into();
+        assert!(matches!(
+            manifest.resolve(&composed),
+            Err(ManifestError::MappingInvalid(_))
+        ));
+        manifest.mappings[0].target_class = "Ghost".into();
+        assert!(matches!(
+            manifest.resolve(&composed),
             Err(ManifestError::ClassUnknown(_))
         ));
     }

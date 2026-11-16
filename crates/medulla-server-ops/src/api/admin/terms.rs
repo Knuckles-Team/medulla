@@ -56,6 +56,23 @@ pub async fn handle_classes(
     }
 }
 
+/// The class, property and relation terms of the request graph's composed
+/// schema (the core plus every admitted pack): the one vocabulary a domain
+/// pack's mappings resolve against, read through the same sources and
+/// declarations `GraphSchemaClasses` serves.
+pub fn composed_vocabulary(
+    sources: &GraphSchemaSources,
+) -> Result<medulla_catalog_types::domain_pack::ComposedVocabulary, String> {
+    let terms = declared_terms(sources)?;
+    Ok(
+        medulla_catalog_types::domain_pack::ComposedVocabulary::from_terms(
+            terms
+                .keys()
+                .map(|position| (position.iri.as_str(), position.kind)),
+        ),
+    )
+}
+
 fn classes_page(
     graph_name: &str,
     sources: &GraphSchemaSources,

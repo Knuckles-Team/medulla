@@ -24,6 +24,7 @@ from conftest import request_context
 
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated import graph as graph_methods
+from medulla.generated import reasoning
 
 
 def _integrity(manifest: dict[str, Any]) -> str:
@@ -95,6 +96,16 @@ async def _fresh_graph() -> tuple[MedullaClient, MedullaClient, str]:
     return admin, client, graph
 
 
+async def _composed_term(client: MedullaClient, kind: str) -> str:
+    """The local name of one term of the graph's composed schema (the core
+    plus every admitted pack), read through the served schema method."""
+    page = await reasoning.send_graph_schema_classes(
+        client, {"kind": kind, "cursor": None, "limit": 1}
+    )
+    assert page.terms, f"the composed schema declares no {kind}"
+    return page.terms[0].local_name
+
+
 async def _refusal(client: MedullaClient, op: str, manifest: dict[str, Any]) -> str:
     with pytest.raises(EngineResponseError) as refused:
         await _send(client, op, manifest)
@@ -142,6 +153,43 @@ def test_preview_then_run_promotes_only_through_envelope() -> None:
             assert node["domain_pack_integrity_sha256"] == manifest["integrity_sha256"]
             assert node["domain_pack_source"] == "r1"
             assert node["name"] == "Ada"
+        finally:
+            await client.close()
+            await admin.tenants.delete(graph)
+            await admin.close()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.701")
+def test_mapping_resolves_against_the_composed_ontology() -> None:
+    """A mapping may name a class of the target graph's composed schema that the
+    manifest does not declare; a class in no schema is refused."""
+
+    async def exercise() -> None:
+        admin, client, graph = await _fresh_graph()
+        try:
+            core_class = await _composed_term(client, "class")
+            core_property = await _composed_term(client, "datatype_property")
+            pack_id = f"core-{uuid.uuid4().hex[:6]}"
+            onto_core = _manifest(
+                pack_id, target_class=core_class, target=core_property
+            )
+            ghost = _manifest(pack_id, target_class="NoSuchClassAnywhere")
+            before = await client.nodes.count()
+
+            preview = await _send(client, "preview", onto_core)
+            assert any(
+                fact["fact"] == "entity" and fact["class"] == core_class
+                for fact in preview["facts"]
+            )
+            for op in ("preview", "run"):
+                assert await _refusal(client, op, ghost) == "DOMAIN_PACK_CLASS_UNKNOWN"
+            assert await client.nodes.count() == before
+
+            run = await _send(client, "run", onto_core)
+            assert run["entities_written"] == 1
+            assert await client.nodes.count() == before + 1
         finally:
             await client.close()
             await admin.tenants.delete(graph)

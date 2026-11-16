@@ -371,7 +371,14 @@ async fn dispatch_catalog_admin_methods(
         // nothing; `Run` continues to the mutation gateway (`Route::DomainPack`).
         Method::DomainPack { op } if !op.is_mutation() => {
             dispatch_boxed(async {
-                medulla_h_graph::graph_ops::domain_pack::handle_domain_pack(req.id, *op).await
+                medulla_h_graph::graph_ops::domain_pack::handle_domain_pack(
+                    state,
+                    req.id,
+                    &req.graph,
+                    verified_context,
+                    *op,
+                )
+                .await
             })
             .await
         }

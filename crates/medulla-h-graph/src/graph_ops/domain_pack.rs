@@ -11,15 +11,21 @@
 
 use super::*;
 use medulla_catalog_types::domain_pack::{
-    DomainPackInput, DomainPackManifest, DomainPackOp, DomainPackPreview, DomainPackRun,
-    ManifestError, ProposedFact,
+    ComposedVocabulary, DomainPackInput, DomainPackManifest, DomainPackOp, DomainPackPreview,
+    DomainPackRun, ManifestError, ProposedFact,
 };
 use medulla_core::domain_pack::{evaluate_mapping, fragment_markdown, run_cases, MappingError};
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::result_contract::graph::{
     DomainPackPreviewResult, DomainPackRunResult,
 };
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_server_auth::access::check_graph_access;
 use medulla_types::contract::ServerErrorCode;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// The node property naming the opaque verified tenant scope of the writer.
 const TENANT_SCOPE_KEY: &str = "domain_pack_tenant_scope";
@@ -66,22 +72,29 @@ struct Admitted {
     sources: BTreeMap<String, String>,
 }
 
+/// The composed vocabulary of the request graph: its core plus admitted packs.
+fn composed_vocabulary(core: &GraphCore) -> Result<ComposedVocabulary, String> {
+    medulla_server_ops::api::admin::terms::composed_vocabulary(
+        &medulla_server_ops::api::admin::schema_read::disclosed_sources(core),
+    )
+}
+
 /// Load the manifest and evaluate the request: the proposed facts and how many
-/// of the manifest's cases passed.
-fn admit(input: &DomainPackInput) -> Result<Admitted, String> {
+/// of the manifest's cases passed. Mappings resolve against `composed`, the
+/// target graph's composed ontology, not the manifest's own classes alone.
+fn admit(input: &DomainPackInput, composed: &ComposedVocabulary) -> Result<Admitted, String> {
     input
         .manifest
         .verify_integrity()
         .map_err(manifest_refusal)?;
-    input.manifest.validate().map_err(manifest_refusal)?;
+    let manifest = input.manifest.resolve(composed).map_err(manifest_refusal)?;
     input.check_bounds().map_err(manifest_refusal)?;
-    let cases_passed =
-        run_cases(&input.manifest).map_err(|MappingError::CaseFailed { case }| {
-            refuse(
-                ServerErrorCode::DomainPackCaseFailed,
-                format!("case '{case}' does not evaluate to its expected facts"),
-            )
-        })?;
+    let cases_passed = run_cases(&manifest).map_err(|MappingError::CaseFailed { case }| {
+        refuse(
+            ServerErrorCode::DomainPackCaseFailed,
+            format!("case '{case}' does not evaluate to its expected facts"),
+        )
+    })?;
     let mut facts = Vec::new();
     let mut sources = BTreeMap::new();
     let mut take = |source: &str, batch: Vec<ProposedFact>| {
@@ -95,7 +108,7 @@ fn admit(input: &DomainPackInput) -> Result<Admitted, String> {
     for row in &input.rows {
         take(
             &row.row_id,
-            evaluate_mapping(&input.manifest, std::slice::from_ref(row)),
+            evaluate_mapping(&manifest, std::slice::from_ref(row)),
         );
     }
     for source in &input.markdown {
@@ -112,15 +125,41 @@ fn admit(input: &DomainPackInput) -> Result<Admitted, String> {
 }
 
 /// Serve `Preview`: the proposed facts, nothing written. `Run` never reaches
-/// this function; the router hands mutations to the gateway.
-pub async fn handle_domain_pack(req_id: u64, op: DomainPackOp) -> Response {
+/// this function; the router hands mutations to the gateway. Preview resolves
+/// mappings against the request graph's composed ontology, so it reads the graph
+/// under the caller's read access first.
+pub async fn handle_domain_pack(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    op: DomainPackOp,
+) -> Response {
     let DomainPackOp::Preview { input } = op else {
         return Response::err(
             req_id,
             "INVALID_ARGUMENT: a domain pack run commits through the mutation gateway",
         );
     };
-    match admit(&input) {
+    let core = {
+        let guard = state.read().await;
+        let Some(entry) = guard.registry.get(graph) else {
+            return Response::err(req_id, format!("INVALID_ARGUMENT: unknown graph {graph}"));
+        };
+        if let Err(denied) = check_graph_access(
+            &guard.isolation,
+            Some(verified.agent_id()),
+            graph,
+            entry.graph_type,
+            entry.owner.as_deref(),
+            AccessLevel::Read,
+        ) {
+            return Response::err(req_id, denied);
+        }
+        Arc::clone(&entry.core)
+    };
+    let admitted = composed_vocabulary(&core).and_then(|composed| admit(&input, &composed));
+    match admitted {
         Ok(Admitted {
             facts,
             cases_passed,
@@ -278,7 +317,8 @@ pub(super) async fn handle_run(ctx: &MutationCtx<'_>, method: &Method) -> Option
             "INVALID_ARGUMENT: a domain pack preview is served by the catalog admin route",
         ));
     };
-    let admitted = admit(input)
+    let admitted = composed_vocabulary(ctx.core)
+        .and_then(|composed| admit(input, &composed))
         .and_then(|admitted| plan_batch(ctx.core, &input.manifest, ctx.tenant_scope, &admitted));
     let plan = match admitted {
         Ok(plan) => plan,
@@ -351,14 +391,14 @@ mod tests {
     #[test]
     fn admission_refuses_a_tampered_manifest_and_plans_one_node() {
         let ok = input("full_name");
-        let admitted = admit(&ok).unwrap();
+        let admitted = admit(&ok, &ComposedVocabulary::default()).unwrap();
         assert_eq!(admitted.cases_passed, 0);
         let plan = plan_batch(&GraphCore::new(), &ok.manifest, "tenant-a", &admitted).unwrap();
         assert_eq!((plan.entities, plan.relationships), (1, 0));
 
         let mut tampered = input("full_name");
         tampered.manifest.version = "2".into();
-        assert!(admit(&tampered)
+        assert!(admit(&tampered, &ComposedVocabulary::default())
             .unwrap_err()
             .starts_with("DOMAIN_PACK_INTEGRITY_MISMATCH"));
     }
@@ -369,19 +409,19 @@ mod tests {
         let mut ghost = input("full_name");
         ghost.manifest.mappings[0].target_class = "Ghost".into();
         ghost.manifest.integrity_sha256 = ghost.manifest.compute_integrity();
-        assert!(admit(&ghost)
+        assert!(admit(&ghost, &ComposedVocabulary::default())
             .unwrap_err()
             .starts_with("DOMAIN_PACK_CLASS_UNKNOWN"));
 
         let mut bad = input("full_name");
         bad.manifest.mappings[0].target_property_or_relation = "undeclared".into();
         bad.manifest.integrity_sha256 = bad.manifest.compute_integrity();
-        assert!(admit(&bad)
+        assert!(admit(&bad, &ComposedVocabulary::default())
             .unwrap_err()
             .starts_with("DOMAIN_PACK_MAPPING_INVALID"));
 
         let ok = input("full_name");
-        let admitted = admit(&ok).unwrap();
+        let admitted = admit(&ok, &ComposedVocabulary::default()).unwrap();
         assert_eq!(admitted.sources.values().collect::<Vec<_>>(), ["r1"]);
         let plan = plan_batch(&GraphCore::new(), &ok.manifest, "tenant-a", &admitted).unwrap();
         let operations: Vec<serde_json::Value> =
@@ -394,5 +434,33 @@ mod tests {
         );
         assert_eq!(properties["domain_pack"], "hr");
         assert_eq!(properties["domain_pack_version"], "1");
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.701
+    #[test]
+    fn a_mapping_onto_a_composed_class_is_admitted_and_one_in_no_schema_is_refused() {
+        use medulla_catalog_types::graph_schema::GraphSchemaTermKind as Kind;
+        let composed = ComposedVocabulary::from_terms([
+            (
+                "https://knuckles-team.github.io/ontology/core#Document",
+                Kind::Class,
+            ),
+            (
+                "https://knuckles-team.github.io/ontology/core#title",
+                Kind::DatatypeProperty,
+            ),
+        ]);
+        let mut onto_core = input("full_name");
+        onto_core.manifest.mappings[0].target_class = "Document".into();
+        onto_core.manifest.mappings[0].target_property_or_relation = "title".into();
+        onto_core.manifest.integrity_sha256 = onto_core.manifest.compute_integrity();
+        let admitted = admit(&onto_core, &composed).unwrap();
+        assert!(admitted.facts.iter().any(|fact| matches!(
+            fact,
+            ProposedFact::Property { property, .. } if property == "title"
+        )));
+        assert!(admit(&onto_core, &ComposedVocabulary::default())
+            .unwrap_err()
+            .starts_with("DOMAIN_PACK_CLASS_UNKNOWN"));
     }
 }
