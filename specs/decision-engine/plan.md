@@ -215,4 +215,3 @@ Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:preced
 ## Pure-kernel families (R751.751 to R753.755)
 
 Pure kernels in `medulla-decision-stats` (`reward.rs`, `population.rs`, `trajectory_join.rs`, `step_verify.rs`) take the wire types of `medulla-decision-types` and the pinned knobs, and return typed answers. Six families in `medulla-h-decide/src/decide/family/` (`reward_decomposition`, `population_drift`, `fanout_width`, `trajectory_join`, `step_verification`, `adversarial_admission`) share the shape checks of `family/kernel.rs`, decode their one typed body, call the kernel and return `Executed::from_family` with a `FamilyAnswer` and claim premises; `stat_decide.rs` seals the answer, the premises and the evidence class. The served proofs are `reward_decomposition_tests.rs`, `population_tests.rs`, `trajectory_join_tests.rs` and `step_verification_tests.rs`, sharing `kernel_family_support.rs`.
-
