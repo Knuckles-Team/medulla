@@ -67,7 +67,15 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+Seven unknowns were resolved in [research.md](research.md):
+
+- Is source registration synchronous, and how does a probe establish and detect a schema drift baseline?
+- How does a web result row carry text columns, and how does the engine reach the connector tool behind it?
+- Where do the catalog probe machine and the MySQL catalog reads live without a dependency cycle or a new locked dependency?
+- Who writes column lineage edges, and which catalog does a derivation read?
+- How is query log usage counted from cumulative and event logs, and in whose scope does it land (R764.7, R764.8)?
+- How does a graph view compile when `medulla-cypher` cannot depend on `medulla-virtual-graph` (R038.6.2)?
+- How does a named graph view reach the live sources of its mapping, and how is a projection table read (R038.6.3, R026.4)?
 
 ## Phase 1: Design
 
@@ -83,6 +91,18 @@ The rules below bind every row. The sections after them hold the detail.
 8. **Ownership.** A medulla row keeps the source, mapping, query and catalog side. Served operations, connectors and deployment parts live in the owner's spec and link by ID.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
+
+### Pre-untangled design
+
+One line per answer.
+
+- **Owner.** Medulla. The source registry is `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs`; planning is `crates/medulla-plan`; scans are `foreign_scan` in `crates/medulla-federation`; mappings are `crates/medulla-h-sparql/src/rdf/obda.rs`; change capture is `crates/medulla-server-cdc`.
+- **Cohesion.** SQL federation, OBDA and capture share one source identity and one source record, so they extend the one registry instead of each keeping its own.
+- **Dependency direction.** Dispatch in `medulla-server-router` points down to the handler crates (`medulla-h-query`, `medulla-h-sparql`), which point down to `medulla-plan`, `medulla-federation` and `medulla-exec`, which point down to `medulla-catalog-types` and `medulla-types`. No handler crate calls a sibling handler crate.
+- **Interface depth.** Registration enters at `Method::RegisterForeignSource`; reads enter at `Method::UnifiedQuery`, the SPARQL and openCypher methods and `Method::Sql`, and all reach the one `foreign_scan`. An adapter provides `connect`, `render`, `read_catalog`, `decode_types` and `capture` or an explicit no-capture result. No new abstraction.
+- **Special cases.** None per dialect in the planner: capabilities are declared by the adapter, never inferred from a dialect name, and a fallback is named in EXPLAIN.
+- **State.** The source record and its held catalog live in the owner-scoped foreign catalog; probing follows `CatalogProbeMachine` in `crates/medulla-catalog-types/src/probe_machine.rs` (Registered, Probing, Baselined, Drifted, ProbeFailed); capture keeps a durable cursor per subscription. Entity rows stay at the source.
+- **Environment.** Engine knobs are typed fields of `crates/medulla-server-api/src/knob_config.rs` (for example `federation.web_cache_ttl_s` and `foreign.mysql.pool_size`), read once at startup and bounds-checked. The fleet gateway address is `MEDULLA_CONNECTOR_GATEWAY_URL`, used only when no host connector port is registered. Secrets are references to the deployment's secret provider.
 
 ### Authority and reuse
 

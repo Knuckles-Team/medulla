@@ -58,7 +58,12 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+Four unknowns were resolved in [research.md](research.md):
+
+- How does the pack ontology Turtle become the `ObjectModel` without a second model path?
+- Is `DiffOntology` a new method or a read op of `Method::GraphSchema`, and which revision bodies can it compare?
+- Where does the connector conformance evidence record of R807 live, and how does it expire?
+- How does a domain pack run (R097.700) carry its manifest and commit its entities?
 
 ## Phase 1: Design
 
@@ -71,6 +76,18 @@ The design below binds every row; the detail sections follow under Design refere
 5. **Integration-first proof.** A behaviour row is VERIFIED only by a test that enters through the production dispatch with a tenant and principal context.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
+
+### Pre-untangled design
+
+One line per answer.
+
+- **Owner.** Medulla. Handlers in `crates/medulla-h-admin/src/admin/connector_pack/` and `crates/medulla-h-admin/src/graph_schema/`; wire types in `crates/medulla-catalog-types` and `crates/medulla-agent-types`; durable rows in `crates/medulla-persistence-records/src/connector_pack/`; the Turtle corpus in `crates/medulla-core/ontology/`.
+- **Cohesion.** Import, validation, planning and projection of a pack share one validator (G1-G21, K1-K7) and one Agent Library owner transaction, so they live in one handler module tree.
+- **Dependency direction.** `medulla-server-router` dispatch points down to `medulla-h-admin`, which points down to the type, record, blob and `medulla-rdf` crates. No handler crate calls a sibling handler crate.
+- **Interface depth.** The served `ConnectorPack`, `AgentComponent` and `GraphSchema` methods, with descriptors in `crates/medulla-capabilities/src/domains/`. No new abstraction; rows extend the existing modules.
+- **Special cases.** None per connector or pack. A retired behaviour is deleted in the same change, with no shim.
+- **State.** The owner transaction writes head, members, holders, receipt and outbox intents together; `visible_record_id` gates readers until the schema attach commits. Conformance evidence follows `ConformanceEvidenceMachine` (`Active`, terminal `Revoked`).
+- **Environment.** Engine knobs are typed fields of `crates/medulla-server-api/src/knob_config.rs` (for example `conformance.evidence_ttl_ms`), read once at startup and bounds-checked. Decision knobs live in the `MEDULLA-DECISION-ENGINE-R179` registry. No handler reads an environment variable.
 
 ### Design reference
 

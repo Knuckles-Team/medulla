@@ -329,7 +329,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T316 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.2 Binning kernel and caps
 - [ ] T317 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.3 Wiring of Viewport-bounded scatter and line queries over indexed sources
 - [ ] T318 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.4 Hot-path proof of Viewport-bounded scatter and line queries over indexed sources
-- [ ] T319a [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.5 Block aggregates for series viewport reads
+- [ ] T457 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.5 Block aggregates for series viewport reads
 - [ ] T319 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.1 Model of Ordered n-ary inductive link prediction emits hypotheses only
 - [ ] T320 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.2 Behavior of Ordered n-ary inductive link prediction emits hypotheses only
 - [ ] T321 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.3 Wiring and refusal
@@ -440,7 +440,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T419 [US5] MEDULLA-FEDERATED-QUERY-R709.7 Per-graph spatial index over geo literals
 - [ ] T416 [US5] MEDULLA-FEDERATED-QUERY-R708.8 Share scope of Named stored queries and materialized results
 - [ ] T417 [US5] MEDULLA-FEDERATED-QUERY-R708.9 Lint against trust flags
-- [ ] T417a [US5] MEDULLA-FEDERATED-QUERY-R708.10 SQL and SPARQL stored queries are callable
+- [ ] T458 [US5] MEDULLA-FEDERATED-QUERY-R708.10 SQL and SPARQL stored queries are callable
   Depends: MEDULLA-FEDERATED-QUERY-R708.3
 - [ ] T418 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.100 The bench gate checks p99 ceilings
 - [ ] T431 [US4] MEDULLA-FEDERATED-QUERY-R737 Typed tabular channel on RowSet

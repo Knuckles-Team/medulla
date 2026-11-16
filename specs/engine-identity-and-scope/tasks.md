@@ -78,12 +78,12 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [x] T071 [US7] MEDULLA-IDENTITY-R722.1 Describe the RBAC elevation machine in the ontology
 - [ ] T072 [US7] MEDULLA-IDENTITY-R722.2 Elevation refusals are typed
 - [x] T073 [US6] MEDULLA-IDENTITY-R723 Declare the Workstream record and the attachedTo session link
-- [ ] T75 [US6] MEDULLA-IDENTITY-R724 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T76 [US6] MEDULLA-IDENTITY-R724.1 ApplicationAdmission/AdmissionStage state machine: route 1 census findings through AdmissionStage::apply
-- [ ] T77 [US6] MEDULLA-IDENTITY-R722.3 ElevationLease/ElevationLeaseState state machine: route 4 census findings through ElevationLeaseState::apply
-- [ ] T78 [US6] MEDULLA-IDENTITY-R724.2 ReplayReceipt/ReplayStatus state machine: route 4 census findings through ReplayStatus::apply
-- [ ] T79 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
-- [ ] T80 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
-- [ ] T81 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
-- [ ] T80 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
+- [ ] T075 [US6] MEDULLA-IDENTITY-R724 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T076 [US6] MEDULLA-IDENTITY-R724.1 ApplicationAdmission/AdmissionStage state machine: route 1 census findings through AdmissionStage::apply
+- [ ] T077 [US6] MEDULLA-IDENTITY-R722.3 ElevationLease/ElevationLeaseState state machine: route 4 census findings through ElevationLeaseState::apply
+- [ ] T078 [US6] MEDULLA-IDENTITY-R724.2 ReplayReceipt/ReplayStatus state machine: route 4 census findings through ReplayStatus::apply
+- [ ] T079 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
+- [ ] T080 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
+- [ ] T081 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
+- [ ] T082 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
   Depends: none
