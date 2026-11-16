@@ -14,12 +14,12 @@ mod test_support;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_tsdb::store::SeriesStore;
 use medulla_query_types::series_expr::{
     DerivedSeriesReceipt, NoisePolicy, StateSpaceModel, StateSpaceProfile,
     STATE_SPACE_KERNEL_REVISION,
 };
 use medulla_query_types::wire::{Op, Plan};
+use medulla_tsdb::store::SeriesStore;
 
 const SECRET: &str = "medulla-state-space-served-secret";
 

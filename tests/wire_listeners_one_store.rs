@@ -337,7 +337,10 @@ mod one_store {
             }
         }
 
-        fn context(agent: &str, scopes: &[&str]) -> medulla_identity_types::acl::RequestContextClaims {
+        fn context(
+            agent: &str,
+            scopes: &[&str],
+        ) -> medulla_identity_types::acl::RequestContextClaims {
             let mut claims = common::context_for(agent);
             claims.scopes = scopes.iter().map(|scope| scope.to_string()).collect();
             claims

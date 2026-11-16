@@ -11,6 +11,9 @@
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_plan::retrieval_stop::{decide_stop, round_progress};
+use medulla_query_types::wire::{
+    DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict, ShardGeneration,
+};
 use medulla_result_types::retrieval_round::{sha256_hex_of, RoundAnswer};
 use medulla_result_types::retrieval_stop::{
     CalibrationTable, RoundCalibration, StopContext, StopReason,
@@ -18,9 +21,6 @@ use medulla_result_types::retrieval_stop::{
 use medulla_retrieval::discover_signals::{SignalsReading, BASE_ADAPTER};
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::DiscoverHit;
-use medulla_query_types::wire::{
-    DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict, ShardGeneration,
-};
 
 /// The registered knobs a verdict reads.
 #[derive(Debug, Clone, Copy, PartialEq)]

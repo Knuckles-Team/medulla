@@ -56,11 +56,13 @@ pub(crate) async fn served_foreign_leg(
         let coverage = registry
             .exclude_unreadable(&names)
             .into_iter()
-            .map(|(source, used)| medulla_query_types::wire::UqlSourceCoverage {
-                source,
-                used,
-                reason: (!used).then(unreadable_reason),
-            })
+            .map(
+                |(source, used)| medulla_query_types::wire::UqlSourceCoverage {
+                    source,
+                    used,
+                    reason: (!used).then(unreadable_reason),
+                },
+            )
             .collect();
         return Ok(ForeignLeg {
             registry: Some(registry),

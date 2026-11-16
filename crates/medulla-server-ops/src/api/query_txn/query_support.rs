@@ -200,7 +200,9 @@ pub fn plan_foreign_names(ops: &[medulla_exec::algebra::Op]) -> Vec<String> {
             let name = match op {
                 medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
                 medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
-                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => Some(name.as_str()),
+                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
+                        Some(name.as_str())
+                    }
                     _ => None,
                 },
                 medulla_exec::algebra::Op::FuseRrf { branches, .. } => {

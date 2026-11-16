@@ -15,9 +15,9 @@ use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use medulla_exec::exec::derive_op;
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::series_expr::{DeriveColumn, SeriesExpr, SIGNATURES};
 use medulla_sql::sql::exec_sql_over_tables;
 use medulla_tsdb::promql::{query_range, MemSeriesSource};
-use medulla_query_types::series_expr::{DeriveColumn, SeriesExpr, SIGNATURES};
 use serde::Deserialize;
 
 const REFERENCE: &str = include_str!("../crates/medulla-numeric/tests/fixtures/series/golden.json");

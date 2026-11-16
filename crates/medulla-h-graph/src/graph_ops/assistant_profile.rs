@@ -18,6 +18,11 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceContext};
+use medulla_identity_types::assistant_profile::{
+    document_set_node_id, document_set_resource, profile_node_id, profile_resource,
+    shares_as_grants, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
+};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_isolation::rbac::RbacPolicy;
 use medulla_protocol_types::result_contract::coordination::{
@@ -25,11 +30,6 @@ use medulla_protocol_types::result_contract::coordination::{
     AssistantProfileListProfiles, AssistantProfilePutDocumentSet, AssistantProfilePutProfile,
 };
 use medulla_server_api::knob_config::knobs;
-use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceContext};
-use medulla_identity_types::assistant_profile::{
-    document_set_node_id, document_set_resource, profile_node_id, profile_resource,
-    shares_as_grants, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
-};
 
 const PROFILE_PREFIX: &str = "assistant_profile:";
 const SET_PREFIX: &str = "document_set:";

@@ -507,7 +507,9 @@ fn seed_web_tool(store: &AgentLibraryStore) {
 /// Store a profile node the way a saved profile is stored, owned by `owner`
 /// and scoped to `tenant_scope`.
 async fn store_profile(h: &Harness, (tenant_scope, owner): (&str, &str), id: &str, allow: &[&str]) {
-    use medulla_identity_types::assistant_profile::{profile_node_id, AssistantProfile, ModelHints};
+    use medulla_identity_types::assistant_profile::{
+        profile_node_id, AssistantProfile, ModelHints,
+    };
     {
         let mut state = h.state.write().await;
         if state.registry.get("default").is_none() {
