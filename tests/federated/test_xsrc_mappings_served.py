@@ -125,14 +125,16 @@ def _assert_rows_equal_recording(rows: list[dict], recording: dict) -> None:
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R002.7")
-def test_erpnext_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
+@pytest.mark.usefixtures("recorded_gateway")
+def test_erpnext_mapping_reads_recorded_rows(clean_graph):
     recording = RECORDINGS["erpnext_suppliers"]
     rows = _read_recorded(clean_graph, "xsrc-erpnext-suppliers", recording)
     _assert_rows_equal_recording(rows, recording)
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R003.4")
-def test_uptime_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
+@pytest.mark.usefixtures("recorded_gateway")
+def test_uptime_mapping_reads_recorded_rows(clean_graph):
     recording = RECORDINGS["uptime_monitors"]
     # The numeric monitor id of the mapping is served exactly, not merely present.
     assert [row["values"]["monitorId"] for row in recording["rows"]] == [7, 12]
@@ -141,7 +143,8 @@ def test_uptime_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R003.5")
-def test_container_manager_mapping_reads_recorded_rows(clean_graph, recorded_gateway):
+@pytest.mark.usefixtures("recorded_gateway")
+def test_container_manager_mapping_reads_recorded_rows(clean_graph):
     recording = RECORDINGS["container_manager_workloads"]
     rows = _read_recorded(clean_graph, "xsrc-container-manager-workloads", recording)
     _assert_rows_equal_recording(rows, recording)
