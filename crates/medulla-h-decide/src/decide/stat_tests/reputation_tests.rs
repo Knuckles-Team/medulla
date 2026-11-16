@@ -319,6 +319,9 @@ async fn read_pool(
          WHERE subject_kind = 'option' ORDER BY subject",
     )
     .await;
+    // Rows come back in subject order; the reads below list the sparse subject first.
+    let mut relation = relation;
+    relation.sort_by_key(|row| row[0] != json!(SPARSE));
     let uql = [uql_read(h, SPARSE, prior), uql_read(h, DENSE, prior)];
     let mut status = Vec::new();
     for subject in [SPARSE, DENSE] {
