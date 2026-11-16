@@ -795,8 +795,8 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R085.5.1`: `crates/medulla-identity-types/src/identity/tests/approval_keys.rs::lifecycle_persists_public_facts_and_enforces_rotation_and_revocation_cas`, `::registration_message_has_exact_domain_lengths_and_revision_binding`
 - `MEDULLA-TYPED-PACKS-R085.6.1`: `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::credential_observation_preserves_state_and_existing_refusals`, `::omitted_refresh_preserves_legacy_touch_and_authority`
 - `MEDULLA-TYPED-PACKS-R094.8`: `tests/test_prompt_blueprints_served.py::test_source_effect_receipt_is_recorded_once`
-- `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
-- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
+- `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-catalog-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
+- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
 - `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged`
 - `MEDULLA-TYPED-PACKS-R097.2.7.4`: `tests/typed_packs/test_external_schema_import_served.py::test_mapped_and_unmapped_terms_of_every_kind`
 - `MEDULLA-TYPED-PACKS-R803.7`: `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest_tests.rs::enrich_proposes_claim_for_sensitive_document`

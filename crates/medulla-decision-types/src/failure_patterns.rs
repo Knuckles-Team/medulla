@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// Most steps one failure record or pattern carries.
 pub const MAX_FAILURE_STEPS: usize = 256;

@@ -144,7 +144,7 @@ No `:ChangeRequest` class is added (Decision D3).
 
 ### Entity resolution across sources
 
-Mechanism: `MEDULLA-UNIFIED-DATA-PLANE-R030` (blocking, field similarity, Fellegi-Sunter, proposals inactive until approved; `crates/medulla-types/src/entity_link_proposal.rs`, `assert_same_as`). Its `AttachedApplication` enum covers Gramps, Immich, Twenty and Firefly only; the consumers `MEDULLA-CQ-XSRC-R004.3/.4` extend it. This spec adds only the **blocking keys per concept** as a data fixture (`crates/medulla-core/tests/fixtures/supply_chain_blocking_keys.ttl`):
+Mechanism: `MEDULLA-UNIFIED-DATA-PLANE-R030` (blocking, field similarity, Fellegi-Sunter, proposals inactive until approved; `crates/medulla-catalog-types/src/entity_link_proposal.rs`, `assert_same_as`). Its `AttachedApplication` enum covers Gramps, Immich, Twenty and Firefly only; the consumers `MEDULLA-CQ-XSRC-R004.3/.4` extend it. This spec adds only the **blocking keys per concept** as a data fixture (`crates/medulla-core/tests/fixtures/supply_chain_blocking_keys.ttl`):
 
 | Concept | Sources joined | Blocking keys (strongest first) |
 |---|---|---|

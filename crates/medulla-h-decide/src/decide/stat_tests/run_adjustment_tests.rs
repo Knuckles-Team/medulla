@@ -6,7 +6,9 @@
 use super::*;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
-use medulla_types::usage::{PriceCatalog, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION};
+use medulla_decision_types::usage::{
+    PriceCatalog, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
+};
 
 const OTHER: &str = "tenant-other";
 

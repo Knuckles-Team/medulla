@@ -13,7 +13,7 @@ Meeting: `TRANSCRIPT_BASE_CONFLICT`, `TRANSCRIPT_EVENT_CONFLICT`, `TRANSCRIPT_NO
 
 ## Authoritative types
 
-The request and result types in `crates/medulla-types/src/meeting_transcript.rs` and `bookmark_query.rs`, and the method variants in `crates/medulla-protocol-types/src/protocol/method/method_11.rs`.
+The request and result types in `crates/medulla-source-types/src/meeting_transcript.rs` and `bookmark_query.rs`, and the method variants in `crates/medulla-protocol-types/src/protocol/method/method_11.rs`.
 
 ## Test vectors
 

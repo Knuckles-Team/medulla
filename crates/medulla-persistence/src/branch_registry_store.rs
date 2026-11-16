@@ -10,7 +10,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_types::branch::{
+use medulla_mutation_types::branch::{
     branch_commit_id, Branch, BranchCommit, BranchMutationRefusal, BranchRef,
 };
 use medulla_types::contract::ServerErrorCode;

@@ -1,6 +1,6 @@
 //! The branch registry owner table (MEDULLA-BRANCH-MERGE-R001).
 //!
-//! One row per branch, keyed by `medulla_types::branch::BranchRef::registry_key`,
+//! One row per branch, keyed by `medulla_mutation_types::branch::BranchRef::registry_key`,
 //! valued with the MessagePack `Branch`. A branch copies no graph data, so this
 //! one table is the whole layout. `medulla-storage` declares it; the store in
 //! `medulla-persistence` only names it (RF-RULING-004).

@@ -22,7 +22,7 @@ use medulla_types::process_import::{
 use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
 
-pub use medulla_types::scheduler_config::DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS;
+pub use medulla_work_types::scheduler_config::DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS;
 
 /// Rule 1: Unicode NFC, whitespace collapsed to single spaces, trimmed.
 pub fn normalize_text(text: &str) -> String {

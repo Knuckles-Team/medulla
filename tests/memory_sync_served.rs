@@ -7,11 +7,11 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::contract::Digest256;
-use medulla_types::memory_sync::{
+use medulla_mutation_types::memory_sync::{
     DocId, MemorySnapshotRead, RequestId, Resolution, SyncAction, SyncOutcome, SyncRequest,
 };
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_types::contract::Digest256;
 
 const SECRET: &str = "memory-sync-served-secret";
 const ENCRYPTION_KEY: &str = "memory-sync-served-encryption-key-0123456789";
@@ -149,7 +149,7 @@ async fn authorized_read_list_and_cursor_isolation() {
         let _: SyncOutcome = json_of(send(&state, id, method).await);
     }
 
-    let first: medulla_types::memory_sync::MemorySnapshotList =
+    let first: medulla_mutation_types::memory_sync::MemorySnapshotList =
         json_of(send(&state, 20, list(None)).await);
     let names: Vec<&str> = first.heads.iter().map(|h| h.doc_id.as_str()).collect();
     assert_eq!(names, ["page/a.md", "page/b.md"]);
@@ -158,7 +158,7 @@ async fn authorized_read_list_and_cursor_isolation() {
         .expect("a second page")
         .as_str()
         .to_string();
-    let second: medulla_types::memory_sync::MemorySnapshotList =
+    let second: medulla_mutation_types::memory_sync::MemorySnapshotList =
         json_of(send(&state, 21, list(Some(cursor.clone()))).await);
     let names: Vec<&str> = second.heads.iter().map(|h| h.doc_id.as_str()).collect();
     assert_eq!(names, ["page/c.md"]);

@@ -71,6 +71,7 @@ cold-tier = ["medulla-graph-core/cold-tier"]
 contract = ["medulla-graph-core/contract", "medulla-ann/contract"]
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-work-types = { path = "../medulla-work-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-ann = { path = "../medulla-ann" }

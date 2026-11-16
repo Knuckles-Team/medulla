@@ -197,12 +197,6 @@ probabilistic = ["query"]
 # crate in the DAG); the facade wires it through `jobs`, included in the main
 # `full` deployment while remaining absent from small leaf builds unless selected.
 jobs = ["epistemic", "mining", "query"]
-# CONCEPT:INT-P2-2 — the native statechart engine: gates the `statechart` wire module
-# (`StatechartOp`) + the `Method::Statechart` variant. Pure serde/enum-variant gate,
-# same shape as `jobs`; the durable engine (typed model + redb store + pure transition
-# function) lives in `medulla-statechart` (ABOVE this crate in the DAG) and the facade wires
-# it through `statechart`, included in the main `full` build.
-statechart = []
 # Graph-native program optimization extends the jobs wire contract with its one
 # typed job kind. A jobs-only build does not expose a non-executable variant.
 program-optimization = ["jobs", "epistemic", "mining", "query"]
@@ -249,6 +243,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-query-types = { path = "../medulla-query-types" }

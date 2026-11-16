@@ -66,12 +66,12 @@ pub(crate) fn answered(response: &Response) -> bool {
 /// query: a dropped point is counted instead.
 #[cfg(feature = "tsdb")]
 pub(crate) async fn record_query_usage(ctx: &QueryHandlerCtx<'_>, assets: Vec<String>) {
-    use medulla_tsdb::point::Point;
-    use medulla_tsdb::store::SeriesKey;
-    use medulla_types::asset_usage::{
+    use medulla_catalog_types::asset_usage::{
         catalog_usage_period_s, usage_series_name, ASSET_USAGE_QUERIES_SERIES,
         ASSET_USAGE_READS_SERIES,
     };
+    use medulla_tsdb::point::Point;
+    use medulla_tsdb::store::SeriesKey;
 
     if assets.is_empty() {
         return;

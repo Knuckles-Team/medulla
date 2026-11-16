@@ -171,8 +171,8 @@ async fn commit_trace_in(h: &Harness, tenant: &str, who: &str, trace: RunTraceRe
 pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
     let service =
         VerifiedRequestContext::verified_for_test_with_scopes("svc", tenant, &["usage:write"]);
-    let price = medulla_types::usage::PriceEntry {
-        schema_version: medulla_types::usage::USAGE_SCHEMA_VERSION,
+    let price = medulla_decision_types::usage::PriceEntry {
+        schema_version: medulla_decision_types::usage::USAGE_SCHEMA_VERSION,
         model_key: "m1".into(),
         valid_from_ms: 0,
         in_per_mtok_micro: 1,
@@ -183,8 +183,8 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
         &h.state,
         1,
         &service,
-        medulla_types::usage::UsageOp::PutPrice {
-            catalog: medulla_types::usage::PriceCatalog {
+        medulla_decision_types::usage::UsageOp::PutPrice {
+            catalog: medulla_decision_types::usage::PriceCatalog {
                 aliases: Default::default(),
                 entries: vec![price],
             },
@@ -194,8 +194,8 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
     assert!(put.error.is_none(), "{:?}", put.refusal_text());
     let records = costs
         .iter()
-        .map(|(run, cost)| medulla_types::usage::UsageRecord {
-            schema_version: medulla_types::usage::USAGE_SCHEMA_VERSION,
+        .map(|(run, cost)| medulla_decision_types::usage::UsageRecord {
+            schema_version: medulla_decision_types::usage::USAGE_SCHEMA_VERSION,
             recorded_at_ms: 1_000,
             child_id: "child".into(),
             operation: "probe".into(),
@@ -207,7 +207,7 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
             tokens_out: 0,
             tokens_cached: 0,
             latency_ms: 1,
-            outcome: medulla_types::usage::UsageOutcome::Ok,
+            outcome: medulla_decision_types::usage::UsageOutcome::Ok,
             content_digest: "a".repeat(64),
         })
         .collect();
@@ -215,7 +215,7 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
         &h.state,
         2,
         &service,
-        medulla_types::usage::UsageOp::Append { records },
+        medulla_decision_types::usage::UsageOp::Append { records },
     )
     .await;
     assert!(appended.error.is_none(), "{:?}", appended.refusal_text());

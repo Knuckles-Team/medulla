@@ -20,16 +20,16 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::state::ServerState;
-use medulla_types::branch::{BranchCommit, BranchRef};
-use medulla_types::contract::ServerErrorCode;
-use medulla_types::source_changeset::{Changeset, PathOp};
-use medulla_types::versioning::{
+use medulla_mutation_types::branch::{BranchCommit, BranchRef};
+use medulla_mutation_types::versioning::{
     page_of, BranchSnapshot, DiffEntity, DiffOperation, KgDiff, KgDiffEntry, KgTransaction,
     SnapshotEdge, SnapshotNode,
 };
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_source_types::source_changeset::{Changeset, PathOp};
+use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
 /// The wire fields of `Method::BranchDiff`.

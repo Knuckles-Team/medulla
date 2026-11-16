@@ -6,12 +6,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
-use medulla_types::contract::Digest256;
-use medulla_types::ontology_inspection::{
+use medulla_catalog_types::ontology_inspection::{
     OntologyClassView, OntologyCrosswalkView, OntologyInspection, OntologyPropertyView,
     MAX_INSPECT_DOCUMENTS,
 };
+use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
+use medulla_types::contract::Digest256;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSchemaSources;

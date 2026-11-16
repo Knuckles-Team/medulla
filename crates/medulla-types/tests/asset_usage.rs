@@ -1,4 +1,4 @@
-use medulla_types::asset_usage::{
+use medulla_catalog_types::asset_usage::{
     fuse_with_usage_prior, AssetUsage, CatalogSearchHit, USAGE_PRIOR_CAP,
 };
 

@@ -10,13 +10,13 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
-use medulla_document::toc::locate_span;
-use medulla_server_api::knob_config::knobs;
-use medulla_types::contract::ServerErrorCode;
-use medulla_types::source_toc::{
+use medulla_decision_types::source_toc::{
     ReadSpanResult, SourceToc, SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY,
     SOURCE_TOTAL_LINES_PROPERTY, TOC_DIGEST_PROPERTY,
 };
+use medulla_document::toc::locate_span;
+use medulla_server_api::knob_config::knobs;
+use medulla_types::contract::ServerErrorCode;
 
 /// Content-addressed read access to the stored source text and table blobs.
 pub(super) trait SpanBlobs {

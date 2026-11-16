@@ -45,7 +45,7 @@ matview = ["medulla-store-apply/matview", "medulla-store/matview", "medulla-prot
 metrics = ["medulla-store-apply/metrics", "medulla-store/metrics", "medulla-protocol-types/metrics", "medulla-kernel/metrics", "medulla-types/metrics"]
 raft = ["medulla-store-apply/raft", "medulla-store/raft", "medulla-kernel/raft"]
 security = ["medulla-store-apply/security", "medulla-store/security", "medulla-protocol-types/security", "medulla-kernel/security", "medulla-types/security", "medulla-graph-core/security", "medulla-resource-store/security", "medulla-work-store/security", "medulla-lane-store/security"]
-statechart = ["dep:medulla-statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart", "medulla-work-store/statechart"]
+statechart = ["dep:medulla-statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-work-types/statechart", "medulla-work-store/statechart"]
 tsdb = ["dep:medulla-tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]
 [dev-dependencies]
 medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }

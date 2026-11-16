@@ -8,11 +8,11 @@
 //! the same pre-image, so both reach byte-identical rows.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_types::contract::Digest256;
-use medulla_types::memory_sync::{
+use medulla_mutation_types::memory_sync::{
     decide, Decision, DocId, MemorySnapshotHead, MemorySnapshotRead, MemorySyncRefusal, Resolution,
     SnapshotProvenance, SyncOutcome, SyncRequest, SyncStamp, SyncStanding,
 };
+use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
 const HEAD_LABEL: &str = "MemorySnapshot";
@@ -222,7 +222,7 @@ fn resolve(
 }
 
 fn acknowledge(core: &GraphCore, request: &SyncRequest, standing: SyncStanding) -> SyncOutcome {
-    let medulla_types::memory_sync::SyncAction::Acknowledge {
+    let medulla_mutation_types::memory_sync::SyncAction::Acknowledge {
         revision,
         content_digest,
         observation_generation,

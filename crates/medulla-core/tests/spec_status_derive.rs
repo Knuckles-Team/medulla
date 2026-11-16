@@ -2,8 +2,8 @@
 
 use medulla_core::lifecycle::derive::TestBinding;
 use medulla_core::lifecycle::status::derive_spec_status;
+use medulla_source_types::source_changeset::{Changeset, Trailers};
 use medulla_source_types::{lifecycle::SpecRowState, lifecycle::SpecState};
-use medulla_types::source_changeset::{Changeset, Trailers};
 
 fn cs(id: &str, spec: &[&str], withdraw: &[&str]) -> Changeset {
     Changeset {

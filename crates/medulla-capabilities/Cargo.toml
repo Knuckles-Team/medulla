@@ -126,10 +126,10 @@ canonical-ledger = [
 # enable one without the other (this feature enables `medulla-types/jobs` itself, so a
 # caller only ever needs to request THIS one).
 jobs = ["medulla-types/jobs", "medulla-agent-types/jobs", "medulla-work-types/jobs", "medulla-protocol-types/jobs"]
-# CONCEPT:INT-P2-2 -- see the module doc above. Mirrors `medulla-types/statechart` 1:1 (same
-# lockstep contract as `jobs`): this feature enables `medulla-types/statechart` AND cfg-gates
+# CONCEPT:INT-P2-2 -- see the module doc above. Mirrors `medulla-work-types/statechart` 1:1 (same
+# lockstep contract as `jobs`): this feature enables `medulla-work-types/statechart` AND cfg-gates
 # `policy()`'s one `Method::Statechart` arm together, so the two can never drift.
-statechart = ["medulla-types/statechart", "medulla-protocol-types/statechart"]
+statechart = ["medulla-work-types/statechart", "medulla-protocol-types/statechart"]
 # Mirrors the facade/medulla-types native governed KnowledgeBatch wire contract.
 knowledge-batch = ["medulla-types/knowledge-batch", "medulla-protocol-types/knowledge-batch"]
 # Mirrors the facade/medulla-types governed modality feature so the exhaustive policy

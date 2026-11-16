@@ -1,7 +1,7 @@
 //! Ontology edit chain records (MEDULLA-TYPED-PACKS-R651.1).
 
+use medulla_catalog_types::ontology_edit::{EditKind, NamingFinding, NamingSeverity, OntologyEdit};
 use medulla_types::contract::Digest256;
-use medulla_types::ontology_edit::{EditKind, NamingFinding, NamingSeverity, OntologyEdit};
 
 fn digest(seed: &str) -> Digest256 {
     Digest256::sha256(seed.as_bytes())

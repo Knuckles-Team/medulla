@@ -1,7 +1,7 @@
 //! MEDULLA-DURABLE-KERNEL-R042.100.2 -- `bench-claim admit` refuses each missing
 //! or invalid measurement field with its stable code, through the real binary.
 
-use medulla_types::benchmark_claim::{
+use medulla_mutation_types::benchmark_claim::{
     sha256_hex, BenchmarkMeasurement, ResourceKind, MEASUREMENT_CURRENCY_EXPONENT_INVALID,
     MEASUREMENT_ELAPSED_NOT_POSITIVE, MEASUREMENT_PRICE_TABLE_MISSING,
     MEASUREMENT_PROFILE_INCOMPARABLE, MEASUREMENT_SCHEMA_VERSION, MEASUREMENT_TOKENIZER_MISSING,

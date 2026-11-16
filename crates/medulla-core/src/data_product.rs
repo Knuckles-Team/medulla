@@ -3,8 +3,10 @@
 //! One pure function compares a product's contract with live catalog,
 //! quality and change-capture state and returns every broken promise.
 
-use medulla_types::data_product::{ContractPromise, ContractViolation, DataContract, DataProduct};
-use medulla_types::quality::QualityScore;
+use medulla_catalog_types::data_product::{
+    ContractPromise, ContractViolation, DataContract, DataProduct,
+};
+use medulla_catalog_types::quality::QualityScore;
 
 /// Live state a contract is checked against.
 #[derive(Debug, Clone, PartialEq)]

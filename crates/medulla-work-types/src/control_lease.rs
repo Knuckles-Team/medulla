@@ -32,8 +32,8 @@ use medulla_types::transition_refused::{
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::work_item_read::WORK_ITEM_ROW_REVISION;
 use medulla_types::tenant_cursor::CursorFamily;
+use medulla_types::work_item_read::WORK_ITEM_ROW_REVISION;
 use medulla_types::{
     keyset_page::matches_pairs, keyset_page::validate_pair_filter, keyset_page::KeysetListing,
 };
@@ -239,7 +239,7 @@ impl ControlLeaseStatus {
     }
 
     pub fn from_stored(stored: &str) -> Option<Self> {
-        crate::work_item_read::stored_value(&STORED_STATUS, stored)
+        medulla_types::work_item_read::stored_value(&STORED_STATUS, stored)
     }
 }
 
@@ -299,7 +299,7 @@ pub struct ControlLeaseView {
     pub revision: u64,
     /// Native issuance provenance, absent on legacy and ordinary leases.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub host_start_provenance: Option<crate::host_start::HostStartProvenance>,
+    pub host_start_provenance: Option<medulla_types::host_start::HostStartProvenance>,
 }
 
 /// How an issue resolved.
@@ -371,7 +371,7 @@ impl IssueControlLeaseRequest {
         ] {
             bounded(field, value)?;
         }
-        if self.kind == crate::host_start::HOST_START_KIND {
+        if self.kind == medulla_types::host_start::HOST_START_KIND {
             return Err("ACCESS_DENIED: host.start is issued by IssueHostStartGrant only".into());
         }
         if self.kind == DECISION_EVALUATION_LEASE_KIND {
@@ -499,12 +499,14 @@ impl ControlLeaseView {
         let host_start_provenance = row
             .get("host_start_provenance")
             .map(|value| {
-                serde_json::from_value::<crate::host_start::HostStartProvenance>(value.clone())
+                serde_json::from_value::<medulla_types::host_start::HostStartProvenance>(
+                    value.clone(),
+                )
             })
             .transpose()
             .map_err(|e| e.to_string())?;
         if let Some(provenance) = &host_start_provenance {
-            if text("kind") != crate::host_start::HOST_START_KIND {
+            if text("kind") != medulla_types::host_start::HOST_START_KIND {
                 return Err("host-start provenance on a different lease kind".into());
             }
             provenance.validate()?;

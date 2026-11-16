@@ -31,6 +31,7 @@ medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-text = { path = "../medulla-text", optional = true }
 medulla-ann = { path = "../medulla-ann", optional = true }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 rmp-serde = "1.3"

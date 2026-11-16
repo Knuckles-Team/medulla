@@ -70,7 +70,7 @@ async fn commit(
 
 async fn revision(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::meeting_transcript::MeetingTranscriptRevision,
+    request: medulla_source_types::meeting_transcript::MeetingTranscriptRevision,
 ) -> Response {
     let req_id = ctx.req_id;
     let lowered = state(&ctx, &request.meeting_id)
@@ -93,7 +93,7 @@ async fn revision(
 
 async fn summary_context(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::meeting_transcript::MeetingSummaryContextRequest,
+    request: medulla_source_types::meeting_transcript::MeetingSummaryContextRequest,
 ) -> Response {
     let req_id = ctx.req_id;
     let built = state(&ctx, &request.meeting_id)
@@ -113,7 +113,7 @@ async fn summary_context(
 
 async fn summary_commit(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::meeting_transcript::MeetingSummaryCommitRequest,
+    request: medulla_source_types::meeting_transcript::MeetingSummaryCommitRequest,
 ) -> Response {
     let req_id = ctx.req_id;
     let context_id = transcript::context::context_node_id(&request.receipt.input_context_digest);

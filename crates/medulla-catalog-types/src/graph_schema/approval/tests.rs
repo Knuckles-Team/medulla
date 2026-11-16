@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use serde_json::{json, Map, Value};
 
 use super::*;
-use crate::graph_schema::repair::{FieldContract, JsonType};
-use crate::graph_schema::GraphSchemaOp;
+use medulla_types::graph_schema::repair::{FieldContract, JsonType};
+use medulla_types::graph_schema::GraphSchemaOp;
 
 const SOURCE: &str = "approved:container-manager-mcp";
 const NOW: u64 = 1_700_000_000_000;

@@ -12,8 +12,8 @@ use medulla_decision_types::decision::memory_rewrite::{
     MEMORY_REWRITE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::DecisionJobStatusRequest;
+use medulla_mutation_types::memory_sync::{DocId, RequestId, SyncAction, SyncRequest, SyncStamp};
 use medulla_types::contract::Digest256;
-use medulla_types::memory_sync::{DocId, RequestId, SyncAction, SyncRequest, SyncStamp};
 
 const DOC: &str = "memory:served-1";
 const GRAPH: &str = "default";

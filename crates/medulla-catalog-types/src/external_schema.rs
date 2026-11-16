@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// The one record layout this build reads and writes.
 pub const EXTERNAL_SCHEMA_VERSION: u16 = 1;

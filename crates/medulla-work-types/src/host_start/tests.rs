@@ -1,5 +1,5 @@
 use super::*;
-use crate::control_lease::ControlLeaseView;
+use medulla_types::control_lease::ControlLeaseView;
 
 fn request() -> IssueHostStartGrantRequest {
     super::fixtures::host_start_request("tenant-a")

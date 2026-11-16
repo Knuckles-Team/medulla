@@ -7,8 +7,8 @@ use medulla_core::lifecycle::derive::{
     TestCall, RULE_VERSION,
 };
 use medulla_core::lifecycle::store::LifecycleStore;
+use medulla_source_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
 use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
-use medulla_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
 
 fn changeset(id: &str, paths: &[&str], trailers: Trailers) -> Changeset {
     Changeset {

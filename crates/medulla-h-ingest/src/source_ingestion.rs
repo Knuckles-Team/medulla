@@ -1984,7 +1984,7 @@ fn stage_source_toc(
     let payload = record.payload.value()?;
     let Some(text) = payload
         .as_object()
-        .and_then(|fields| fields.get(medulla_types::source_toc::SOURCE_TEXT_FIELD))
+        .and_then(|fields| fields.get(medulla_decision_types::source_toc::SOURCE_TEXT_FIELD))
         .and_then(|value| value.as_str())
     else {
         return Ok(Vec::new());
@@ -2780,7 +2780,7 @@ fn validate_strict_source_fields(
         governance::GOVERNANCE_MEMBER,
         // The text of a text source is read by `stage_source_toc`
         // (MEDULLA-DECISION-ENGINE-R153.3), never by a field mapping.
-        medulla_types::source_toc::SOURCE_TEXT_FIELD,
+        medulla_decision_types::source_toc::SOURCE_TEXT_FIELD,
     ]);
     match source.keys().find(|key| !allowed.contains(key.as_str())) {
         Some(unknown) => Err(format!(

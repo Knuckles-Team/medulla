@@ -362,13 +362,13 @@ jobs = ["medulla-server-store-tests/jobs", "medulla-server-served-tests/jobs", "
 # rehydratable `(state, context)` machine-instance record in `statecharts.redb`) +
 # `src/server/handlers/statechart.rs`. Pulls `server` (Tokio dispatch + ServerState) +
 # `dep:medulla-statechart` (the typed model + pure transition fn + redb store) + the matching
-# `medulla-types/statechart` and `medulla-capabilities/statechart` wire/policy features (kept in
+# `medulla-work-types/statechart` and `medulla-capabilities/statechart` wire/policy features (kept in
 # LOCKSTEP, exactly like `jobs`). Unlike `jobs` it needs neither `mining` nor `epistemic`
 # -- phase-1 does not reuse a compute kernel or write claims. Included in the main `full`
 # build.
 statechart = ["medulla-work-store/statechart", "medulla-store-apply/statechart", "medulla-server/statechart", "medulla-server-router/statechart", "medulla-wire/statechart", "medulla-h-query/statechart", "medulla-h-jobs/statechart", "medulla-raft/statechart", "medulla-persistence/statechart", "medulla-server-api/statechart", "medulla-store/statechart",
     "server",
-    "dep:medulla-statechart", "medulla-types/statechart", "medulla-protocol-types/statechart", "medulla-capabilities/statechart"]
+    "dep:medulla-statechart", "medulla-work-types/statechart", "medulla-protocol-types/statechart", "medulla-capabilities/statechart"]
 # Graph-native, provider-neutral LM programs and governed self-improvement. This
 # extends the one analytics-job authority; it does not introduce another network,
 # cache, provider, or graph-mutation path.

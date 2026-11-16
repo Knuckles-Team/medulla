@@ -13,7 +13,7 @@ Meristem writes a `:RunTrace` node, its ordered step records and its observation
 
 ## Authoritative types
 
-`StepRecord` and `step_digest` in `crates/medulla-result-types/src/outcome_bundle.rs`; `RunObservationWindow` in `crates/medulla-types/src/run_observation.rs`.
+`StepRecord` and `step_digest` in `crates/medulla-result-types/src/outcome_bundle.rs`; `RunObservationWindow` in `crates/medulla-work-types/src/run_observation.rs`.
 
 ## Test vectors
 

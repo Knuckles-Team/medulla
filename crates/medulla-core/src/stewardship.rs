@@ -1,12 +1,12 @@
 //! Stewardship rules (MEDULLA-TYPED-PACKS-R802.2).
 //!
-//! Pure functions over the records in `medulla_types::stewardship`: which
+//! Pure functions over the records in `medulla_catalog_types::stewardship`: which
 //! assignments govern a target, who may review a change to it, how a change
 //! request moves, and when a certification lapses. Callers (the stewardship
 //! handler, glossary, pack contracts, data products) import this module and
 //! never the handler crate.
 
-use medulla_types::stewardship::{
+use medulla_catalog_types::stewardship::{
     Certification, ChangeRequest, ChangeRequestState, StewardRole, StewardshipAssignment,
     StewardshipFieldError, StewardshipScope, MAX_CHANGE_REQUEST_REVIEWERS,
 };

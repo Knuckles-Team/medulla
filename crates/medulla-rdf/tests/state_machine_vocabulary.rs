@@ -1041,7 +1041,7 @@ fn instance_machine_classes_extend_core() {
 // spec: MEDULLA-ENGINE-PARITY-R021.2
 #[test]
 fn sql_form_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_types::sql_form_machine::SQL_FORM_MACHINE);
+    sm::assert_matches(&medulla_mutation_types::sql_form_machine::SQL_FORM_MACHINE);
 }
 // spec: MEDULLA-ENGINE-PARITY-R021.2
 #[test]

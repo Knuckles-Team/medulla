@@ -2,12 +2,12 @@
 //! (MEDULLA-DURABLE-KERNEL-R085.1) and the pure compare-and-set core
 //! (MEDULLA-DURABLE-KERNEL-R085.3).
 
-use medulla_types::contract::{Digest256, ServerErrorCode};
-use medulla_types::memory_sync::{
+use medulla_mutation_types::memory_sync::{
     decide, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySyncConfig, MemorySyncRefusal,
     RequestId, Resolution, SnapshotProvenance, SyncAction, SyncOutcome, SyncRequest, SyncStanding,
     MAX_CONTENT_BYTES,
 };
+use medulla_types::contract::{Digest256, ServerErrorCode};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

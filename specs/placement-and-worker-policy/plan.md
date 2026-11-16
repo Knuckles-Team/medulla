@@ -38,7 +38,7 @@ crates/medulla-h-decide/src/decide/capacity_premise.rs                   existin
 crates/medulla-h-decide/src/decide/assemble.rs                           existing  AgentAssemble (R001.12, R001.13)
 crates/medulla-core/ontology/placement.ttl, placement.shapes.ttl         new       placement vocabulary and shapes (R001.5)
 crates/medulla-work-types/src/worker_registry/grants.rs                  existing  granted_slots; WorkerGrant added (R002.3, R002.4)
-crates/medulla-types/src/scheduler_config.rs                             existing  engine-owned settings (R002.2, R002.14, R751.753)
+crates/medulla-work-types/src/scheduler_config.rs                             existing  engine-owned settings (R002.2, R002.14, R751.753)
 crates/medulla-h-jobs/src/jobs/submit.rs                                 existing  association bound (R003.1 to R003.6)
 crates/medulla-mining/src/mining/association.rs                          existing  kernel guard (R003.4)
 crates/medulla-h-jobs/src/jobs/host_capabilities.rs                      new       declared_for (R004.3, R004.4)
@@ -143,7 +143,7 @@ Rendering or applying manifests (Arbora `deploy/`), acquiring capacity, systemd,
 
 #### B producer implementation boundary
 
-R002.2 is implemented by the pure `medulla_types::scheduler_config` contract (R076.1). R076.2 owns its later served integration. Neither the autosize grant function nor the existing analytics pool has been switched by this producer slice.
+R002.2 is implemented by the pure `medulla_work_types::scheduler_config` contract (R076.1). R076.2 owns its later served integration. Neither the autosize grant function nor the existing analytics pool has been switched by this producer slice.
 
 R002.3 now provides pure `worker_registry::granted_slots` with `WorkerSizingInput` for the optional request ceiling, current available memory and engine-selected write classification. It consumes the real `WorkerRecord` and `SchedulerConfig`; the typed `WorkerSlotGrant` reports zero on refusal. CPU sizing alone may round up to one; memory, request ceiling, pool, disabled resources and writer width remain hard bounds. No reservations, served registration or R075 admission are claimed.
 

@@ -7,10 +7,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
-use medulla_types::claims::{
+use medulla_decision_types::claims::{
     ArtifactSeal, ClaimState, Evidence, EvidenceChannel, ResearchArtifact, Stance,
 };
+use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use medulla_types::contract::ServerErrorCode;
 
 /// Digest domain of a sealed research artifact.

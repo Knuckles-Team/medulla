@@ -9,7 +9,7 @@
 //! `commit_seq` rather than inventing a private commit sequence of their own.
 //!
 //! This is deliberately a NEW, additive module rather than a field bolted onto
-//! [`crate::mutation_batch::MutationBatch`]. `MutationBatch` remains the request
+//! [`medulla_types::mutation_batch::MutationBatch`]. `MutationBatch` remains the request
 //! envelope a single surface (graph/txn/query/rdf/lifecycle/job/broker) stages;
 //! `CommitDescriptor` is the higher-altitude cross-domain identity a
 //! `MutationBatch` — or a cross-modal group of them — commits under. Wiring the
@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 pub const COMMIT_DESCRIPTOR_VERSION: u16 = 1;
 
 /// The domain a commit participant registers durable bytes under. Deliberately a
-/// distinct vocabulary from [`crate::mutation_batch::DurabilityDomain`] (which
+/// distinct vocabulary from [`medulla_types::mutation_batch::DurabilityDomain`] (which
 /// classifies one `MutationOperation`'s durability target): this enum is the
 /// commit-descriptor-level participant registry the lane doc's "Registration of
 /// graph, modality, vector, blob/refcount, time-series, evidence, table/lake, and
@@ -227,7 +227,7 @@ pub struct CommitDescriptor {
     pub authority_epoch: u64,
     /// Graph version this commit read against. `0` denotes an authority whose
     /// state does not live in the graph store — the cross-domain analogue of
-    /// [`crate::mutation_batch::CommittedVersion::Native`], which likewise
+    /// [`medulla_types::mutation_batch::CommittedVersion::Native`], which likewise
     /// carries its own `{ source, target }` pair independent of the graph
     /// store rather than a shared sentinel constant.
     pub source_graph_version: u64,
@@ -291,7 +291,7 @@ impl CommitDescriptor {
 // participating authority rather than extending this one to carry several.
 
 /// Durable per-projection watermark and fence (lane doc "Commit descriptor").
-/// Distinct from [`crate::mutation_batch::MutationProjectionCursor`], which is
+/// Distinct from [`medulla_types::mutation_batch::MutationProjectionCursor`], which is
 /// keyed by `(projection, identity, batch_id, outbox_ordinal)` — where
 /// `identity` is the typed `MutationScopeIdentity` (tenant, typed logical
 /// owner, lifecycle generation) — for the existing per-surface outbox

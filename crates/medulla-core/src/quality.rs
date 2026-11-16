@@ -6,8 +6,10 @@
 //! runner measured into a score, and [`track_failure`] counts consecutive
 //! failures and opens one incident through an [`IncidentSink`].
 
+use medulla_catalog_types::quality::{
+    InvalidQualityRule, QualityDimension, QualityRule, QualityScore,
+};
 use medulla_types::contract::Digest256;
-use medulla_types::quality::{InvalidQualityRule, QualityDimension, QualityRule, QualityScore};
 
 /// What a rule compiles to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -218,7 +220,7 @@ fn dimension_name(dimension: QualityDimension) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::quality::QualitySeverity;
+    use medulla_catalog_types::quality::QualitySeverity;
 
     fn rule(dimension: QualityDimension, target: &str, expression: &str) -> QualityRule {
         QualityRule {

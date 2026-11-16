@@ -3,10 +3,10 @@
 
 use std::collections::BTreeMap;
 
+use medulla_catalog_types::dialect_conformance::ConformanceOutcome;
+use medulla_catalog_types::replay_conformance::compare_replay_to_snapshot;
 use medulla_protocol_types::debezium_bridge::{DebeziumChangeEvent, DebeziumOp};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::dialect_conformance::ConformanceOutcome;
-use medulla_types::replay_conformance::compare_replay_to_snapshot;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 

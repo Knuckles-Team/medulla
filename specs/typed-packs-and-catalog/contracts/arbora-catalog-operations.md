@@ -13,7 +13,7 @@ The stable codes registered by the child rows of `MEDULLA-TYPED-PACKS-R801` to `
 
 ## Authoritative types
 
-`Method::Glossary`, `GlossaryOp`, `Method::DashboardAsset` and `DashboardAssetOp` in `crates/medulla-protocol-types/src/protocol/method/method_finish.rs`. The records are `crates/medulla-types/src/glossary.rs` and `crates/medulla-types/src/dashboard.rs` (both new).
+`Method::Glossary`, `GlossaryOp`, `Method::DashboardAsset` and `DashboardAssetOp` in `crates/medulla-protocol-types/src/protocol/method/method_finish.rs`. The records are `crates/medulla-catalog-types/src/glossary.rs` and `crates/medulla-types/src/dashboard.rs` (both new).
 
 ## Test vectors
 

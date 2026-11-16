@@ -27,11 +27,11 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+use medulla_catalog_types::metadata_acceleration::{AccelerationPolicy, FragmentExecutionMode};
 pub use medulla_identity_types::{
     authority_audit::AuditEntry, authority_audit::AuditSourceMode, authority_audit::AuthorityAudit,
     authority_audit::NotUsedReason, authority_audit::SourceRole,
 };
-use medulla_types::metadata_acceleration::{AccelerationPolicy, FragmentExecutionMode};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "rdf")]

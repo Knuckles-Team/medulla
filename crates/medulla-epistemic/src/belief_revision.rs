@@ -5,10 +5,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::belief_revision::{
+use medulla_decision_types::belief_revision::{
     BeliefRevision, EvidenceRef, FrictionFinding, RetractionProposal,
 };
-use medulla_types::claims::{Evidence, EvidenceChannel};
+use medulla_decision_types::claims::{Evidence, EvidenceChannel};
 use medulla_types::evidence_class::EvidenceClass;
 
 use crate::antonyms::confirms_opposition;

@@ -47,7 +47,7 @@ async fn registered_state() -> test_support::SharedState {
     .await;
     for i in 0..SESSIONS {
         let method = Method::BusRegister {
-            participant: medulla_types::agent_bus::BusParticipant {
+            participant: medulla_work_types::agent_bus::BusParticipant {
                 session_ref: session(i),
                 tenant: String::new(),
                 host_ref: "bench-host".to_string(),

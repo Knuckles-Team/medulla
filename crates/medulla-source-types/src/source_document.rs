@@ -9,10 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::source_ingestion::{
+use medulla_types::contract::Digest256;
+use medulla_types::source_ingestion::{
     SourceCheckpoint, SourceEntityRef, SourceIngestionReceipt, SourceIngestionRequest,
 };
-use medulla_types::contract::Digest256;
 
 /// Maximum atom or concept references one normalized document may name.
 pub const MAX_DOCUMENT_REFS: usize = 4_096;
@@ -139,7 +139,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::source_ingestion::{
+    use medulla_types::source_ingestion::{
         SourceIngestionBatch, SourceIngestionDisposition, SourceIngestionMode, SourceJson,
         SourceRecord, SourceRecordProvenance,
     };

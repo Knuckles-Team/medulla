@@ -40,6 +40,7 @@ use medulla_decision_stats::decision::population::wasserstein1;
 use medulla_decision_stats::decision::reward::decompose;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
 use medulla_decision_stats::decision::trajectory_join::join;
+use medulla_decision_types::claims::{ClaimOp, EvidenceChannel};
 use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
 use medulla_decision_types::decision::curriculum::{
     CurriculumRequest, CurriculumStage, PromotionPolicy,
@@ -83,7 +84,6 @@ use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_types::claims::{ClaimOp, EvidenceChannel};
 use medulla_types::contract::BoundedVec;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};

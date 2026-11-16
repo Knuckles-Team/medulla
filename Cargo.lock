@@ -4512,6 +4512,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-ann",
+ "medulla-catalog-types",
  "medulla-index-types",
  "medulla-mutation-types",
  "medulla-protocol-types",
@@ -4697,6 +4698,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-work-types",
  "oxrdf",
  "oxttl",
  "parking_lot",
@@ -4726,6 +4728,7 @@ dependencies = [
  "ipnet",
  "md-5 0.10.6",
  "medulla-ann",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-graph-algos",
@@ -4856,6 +4859,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4895,6 +4899,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "medulla-types",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5114,6 +5119,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-graph-core",
  "medulla-identity-types",
  "medulla-isolation",
@@ -5497,6 +5503,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-document",
  "medulla-finance",
  "medulla-finance-market",
@@ -5613,6 +5620,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-decision-outcome-types",
@@ -5759,6 +5767,7 @@ dependencies = [
  "medulla-uql",
  "medulla-version",
  "medulla-virtual-graph",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5932,6 +5941,7 @@ name = "medulla-index-types"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-catalog-types",
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
@@ -6157,6 +6167,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "sha2 0.10.9",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -6522,6 +6533,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-work-types",
  "parking_lot",
  "pyo3",
  "rmp-serde",
@@ -6793,6 +6805,7 @@ dependencies = [
  "medulla-rdf",
  "medulla-semantic-index",
  "medulla-types",
+ "medulla-work-types",
  "oxrdf",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
@@ -7600,6 +7613,7 @@ dependencies = [
  "async-trait",
  "jsonwebtoken",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-decision-types",
@@ -7981,6 +7995,7 @@ dependencies = [
 name = "medulla-statechart"
 version = "0.1.0"
 dependencies = [
+ "medulla-decision-types",
  "medulla-mutation-types",
  "medulla-protocol-types",
  "medulla-storage",
@@ -8123,6 +8138,7 @@ name = "medulla-stream"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-catalog-types",
  "medulla-modality",
  "medulla-types",
  "rdkafka",
@@ -8296,6 +8312,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-decision-types",
  "medulla-identity-types",
+ "medulla-mutation-types",
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-result-types",
@@ -8464,6 +8481,7 @@ dependencies = [
  "medulla-types",
  "medulla-uql",
  "medulla-wire-core",
+ "medulla-work-types",
  "parking_lot",
  "pgwire",
  "rand 0.8.8",
@@ -8606,6 +8624,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-result-types",
  "medulla-types",
+ "rmp-serde",
  "schemars 1.2.3",
  "serde",
  "serde_bytes",

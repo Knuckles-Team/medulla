@@ -13,7 +13,7 @@ Arbora sends every call with `{tenant_id, actor_id, source_id, trace_id, policy_
 
 ## Authoritative types
 
-`ForeignSourceSpec` in `crates/medulla-plan`, the source record of `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` and `SchemaContextCatalog` in `crates/medulla-types/src/schema_context.rs`.
+`ForeignSourceSpec` in `crates/medulla-plan`, the source record of `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` and `SchemaContextCatalog` in `crates/medulla-catalog-types/src/schema_context.rs`.
 
 ## Test vectors
 

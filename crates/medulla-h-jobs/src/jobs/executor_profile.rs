@@ -5,8 +5,8 @@
 
 use std::collections::HashMap;
 
+use medulla_catalog_types::profile::{ColumnProfile, HistogramBucket, ProfileMethod, TopValue};
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
-use medulla_types::profile::{ColumnProfile, HistogramBucket, ProfileMethod, TopValue};
 
 /// Refusal code: the source supports neither aggregate pushdown nor sampling
 /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).

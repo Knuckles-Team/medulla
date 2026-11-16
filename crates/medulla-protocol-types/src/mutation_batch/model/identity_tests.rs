@@ -108,12 +108,12 @@ mod tests {
     // spec: MEDULLA-BRANCH-MERGE-R002
     #[test]
     fn branch_target_write_carries_its_base_graph_authority() {
-        let branch = medulla_types::branch::BranchRef {
+        let branch = medulla_mutation_types::branch::BranchRef {
             tenant: "tenant-a".to_string(),
             graph: "notes".to_string(),
             name: "feature".to_string(),
         };
-        let target = medulla_types::branch::branch_target_graph(&branch);
+        let target = medulla_mutation_types::branch::branch_target_graph(&branch);
         let base =
             MutationScopeIdentity::fixed_graph("tenant-a", "notes", "incarnation-1").unwrap();
         let on_branch =

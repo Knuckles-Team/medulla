@@ -1,4 +1,4 @@
-use medulla_types::profile::{
+use medulla_catalog_types::profile::{
     ColumnProfile, HistogramBucket, InvalidColumnProfile, ProfileMethod, TopValue,
 };
 

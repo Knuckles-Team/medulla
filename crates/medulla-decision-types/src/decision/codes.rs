@@ -572,10 +572,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
 /// that declares its table; the uniqueness test collects it with every family
 /// table (MEDULLA-DECISION-ENGINE-R010.100.1).
 pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
-    use medulla_types::{
-        archimate_exchange, asset_usage, belief_revision, claims, context_facts,
-        meeting_transcript, participant, source_toc, transition_refused,
-    };
+    use crate::{belief_revision, claims, context_facts, source_toc};
+    use medulla_catalog_types::asset_usage;
+    use medulla_source_types::meeting_transcript;
+    use medulla_types::{archimate_exchange, participant, transition_refused};
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
         ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),

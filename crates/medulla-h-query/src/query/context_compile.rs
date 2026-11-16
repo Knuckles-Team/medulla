@@ -110,7 +110,7 @@ struct NodeText {
     node_type: String,
     source: String,
     mode: AccessMode,
-    web: medulla_types::web_source::WebProvenance,
+    web: medulla_catalog_types::web_source::WebProvenance,
 }
 
 fn node_text(core: &GraphCore, id: &str) -> Option<NodeText> {
@@ -121,7 +121,7 @@ fn node_text(core: &GraphCore, id: &str) -> Option<NodeText> {
         t => t,
     };
     let source = text_field(&object, "source");
-    let web = medulla_types::web_source::WebProvenance::from_properties(&object);
+    let web = medulla_catalog_types::web_source::WebProvenance::from_properties(&object);
     Some(NodeText {
         web,
         name: if name.is_empty() {

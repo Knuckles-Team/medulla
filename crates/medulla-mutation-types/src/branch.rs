@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ServerErrorCode;
+use medulla_types::contract::ServerErrorCode;
 
 /// The reserved trunk name.
 pub const RESERVED_BRANCH_NAME: &str = "main";

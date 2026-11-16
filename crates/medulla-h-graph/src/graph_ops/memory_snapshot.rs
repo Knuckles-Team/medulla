@@ -10,15 +10,15 @@
 use super::memory_cursor;
 use medulla_core::memory_snapshot_store as store;
 use medulla_graph_core::graph::GraphCore;
+use medulla_mutation_types::memory_sync::{
+    decide, Decision, DocId, ListCursor, MemorySnapshotList, MemorySyncError, MemorySyncRefusal,
+    SyncOutcome, SyncRequest, SyncStamp,
+};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::graph as results;
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_server_ops::api::ingest::graph::commit_gateway;
 use medulla_types::contract::Digest256;
-use medulla_types::memory_sync::{
-    decide, Decision, DocId, ListCursor, MemorySnapshotList, MemorySyncError, MemorySyncRefusal,
-    SyncOutcome, SyncRequest, SyncStamp,
-};
 
 /// `limit` default and maximum of `ListMemorySnapshots`.
 const DEFAULT_LIMIT: u32 = 50;

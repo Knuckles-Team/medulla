@@ -5,7 +5,7 @@
 //! LSN-polled CDC/Change Tracking capture loop are
 //! MEDULLA-UNIFIED-DATA-PLANE-R016.2.2+.
 
-use crate::mssql_attached_catalog::MssqlCaptureMode;
+use medulla_types::mssql_attached_catalog::MssqlCaptureMode;
 use serde::{Deserialize, Serialize};
 
 /// Transport encryption posture for the tiberius connection, mirroring the

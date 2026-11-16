@@ -1,10 +1,10 @@
 //! Served `ReadSpan` proofs (MEDULLA-DECISION-ENGINE-R153.3, R153.5).
 
 use super::read_span::{serve_read_span, SpanBlobs, SpanRequest};
+use medulla_decision_types::source_toc::{ReadSpanResult, SourceToc};
 use medulla_document::toc::{build_and_store_toc, StagedToc, TocSink};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
-use medulla_types::source_toc::{ReadSpanResult, SourceToc};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -275,7 +275,7 @@ fn read_span_refusals() {
         inner: &memory,
         reads: std::sync::atomic::AtomicUsize::new(0),
     };
-    let registered: Vec<&str> = medulla_types::source_toc::REFUSALS
+    let registered: Vec<&str> = medulla_decision_types::source_toc::REFUSALS
         .iter()
         .map(|code| code.as_str())
         .collect();

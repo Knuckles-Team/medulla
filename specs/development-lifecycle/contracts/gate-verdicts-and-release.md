@@ -28,7 +28,7 @@ Consumer: medulla MEDULLA-SDLC-R018.1
 ## Authoritative types
 
 - `crates/medulla-source-types/src/lifecycle.rs`: `SpecState`, `SpecRowState` and `SpecStatusAnswer`.
-- `crates/medulla-types/src/source_changeset.rs`: the changeset that a verdict names.
+- `crates/medulla-source-types/src/source_changeset.rs`: the changeset that a verdict names.
 
 ## Test vectors
 

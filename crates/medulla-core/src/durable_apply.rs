@@ -189,7 +189,7 @@ fn apply_memory_snapshot(core: &GraphCore, m: &Method) -> bool {
 /// carries the engine-stamped tenant, principal and request clock, so replay
 /// rebuilds the same participant node byte for byte.
 fn apply_agent_bus(core: &GraphCore, m: &Method) -> bool {
-    use medulla_types::agent_bus::{participant_node_id, BusParticipant};
+    use medulla_work_types::agent_bus::{participant_node_id, BusParticipant};
     match m {
         Method::BusRegister {
             participant,

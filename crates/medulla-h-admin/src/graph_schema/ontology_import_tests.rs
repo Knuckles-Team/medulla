@@ -28,8 +28,8 @@ fn import_op(body: &str, expected_prior_revision: Option<u64>) -> GraphSchemaOp 
     }
 }
 
-fn no_impact() -> medulla_types::ontology_diff::ChangeImpact {
-    medulla_types::ontology_diff::ChangeImpact {
+fn no_impact() -> medulla_catalog_types::ontology_diff::ChangeImpact {
+    medulla_catalog_types::ontology_diff::ChangeImpact {
         instances_invalid: 0,
         shapes_broken: 0,
         mappings_broken: 0,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,44 +32,12 @@ STAY_SET = frozenset(
     }
 )
 REMAINING = (
-    "agent_bus",
-    "asset_usage",
-    "atomic_primitive",
-    "attached_source_dialect",
-    "attached_source_governance",
-    "belief_revision",
-    "benchmark_claim",
-    "branch",
-    "claims",
     "code_health",
-    "consolidation_isolation",
-    "context_facts",
-    "correction",
-    "cross_store_scope",
     "data_prep_declaration",
-    "data_product",
-    "dialect_conformance",
-    "document_conformance",
-    "embedding_promotion",
-    "engine_capabilities",
-    "entity_link_proposal",
-    "external_schema",
     "extracted_fact",
-    "failure_patterns",
-    "fast_path",
     "finance_event_envelope",
     "finance_research",
     "finance_wallet_trust",
-    "glossary",
-    "gramps_baseline_digest",
-    "gramps_cutover_gate",
-    "gramps_gap_fix",
-    "gramps_pilot_phase",
-    "graph_change_feed",
-    "health_incident",
-    "hot_store_engine",
-    "immich_pilot_phase",
-    "incident",
     "ingest_capabilities",
     "ingest_drain",
     "ingest_readback",
@@ -76,51 +45,10 @@ REMAINING = (
     "ingestion_wire",
     "knowledge_atom",
     "knowledge_stream",
-    "loops",
-    "meeting_transcript",
-    "memory_sync",
-    "metadata_acceleration",
-    "mirror_sink",
-    "mysql_mariadb_connection",
-    "ontology_diff",
-    "ontology_edit",
-    "ontology_inspection",
     "ontology_proposal",
-    "pg_diff_baseline",
-    "pg_operational_surface",
-    "pgrx_spike",
-    "pgrx_spike_review",
-    "pipeline_batch",
-    "pitr_schedule",
-    "profile",
-    "quality",
-    "replay_conformance",
-    "restore_drill",
-    "retention_cleanup",
-    "retention_policy",
-    "rule_correction",
-    "run_observation",
-    "scheduler_config",
-    "schema_context",
-    "schema_inference",
-    "shared_db_platform",
     "skill_plan",
-    "source_changeset",
     "source_governance",
-    "source_symbol_edit",
-    "source_toc",
-    "statechart",
-    "step_verdict",
-    "stewardship",
-    "task_queue",
-    "usage",
-    "virtual_graph_view",
-    "warehouse_conformance",
-    "warehouse_federation",
-    "web_source",
     "wire_finance",
-    "workload_class",
-    "write_conflict",
 )
 SLICES = (
     "medulla-query-types",
@@ -222,11 +150,119 @@ def test_acl_lives_in_the_identity_slice() -> None:
     # and never back; identity may not name the query slice.
     assert "medulla-identity-types" in _dependencies("medulla-query-types")
     assert "medulla-query-types" not in _dependencies("medulla-identity-types")
-    old_acl_path = "medulla_identity_types::acl"
+    old_acl_path = "medulla_types::acl"
     stale = [
         str(path.relative_to(ROOT))
         for path in CRATES.rglob("*.rs")
         if "target" not in path.parts
         and old_acl_path in path.read_text(encoding="utf-8", errors="ignore")
+    ]
+    assert stale == []
+
+
+DOMAIN_SLICES = {
+    "medulla-mutation-types": (
+        "atomic_primitive",
+        "benchmark_claim",
+        "branch",
+        "cross_store_scope",
+        "fast_path",
+        "graph_change_feed",
+        "health_incident",
+        "hot_store_engine",
+        "memory_sync",
+        "mirror_sink",
+        "pg_operational_surface",
+        "pipeline_batch",
+        "retention_cleanup",
+        "retention_policy",
+        "rule_correction",
+        "versioning",
+        "workload_class",
+        "write_conflict",
+    ),
+    "medulla-work-types": (
+        "agent_bus",
+        "run_observation",
+        "scheduler_config",
+        "statechart",
+        "task_queue",
+    ),
+    "medulla-decision-types": (
+        "belief_revision",
+        "claims",
+        "context_facts",
+        "correction",
+        "failure_patterns",
+        "loops",
+        "source_toc",
+        "usage",
+    ),
+    "medulla-catalog-types": (
+        "architecture_view",
+        "asset_usage",
+        "attached_source_dialect",
+        "attached_source_governance",
+        "consolidation_isolation",
+        "data_product",
+        "dialect_conformance",
+        "document_conformance",
+        "embedding_promotion",
+        "engine_capabilities",
+        "entity_link_proposal",
+        "external_schema",
+        "glossary",
+        "gramps_baseline_digest",
+        "gramps_cutover_gate",
+        "gramps_gap_fix",
+        "gramps_pilot_phase",
+        "immich_pilot_phase",
+        "incident",
+        "metadata_acceleration",
+        "mysql_mariadb_connection",
+        "ontology_diff",
+        "ontology_edit",
+        "ontology_inspection",
+        "pg_diff_baseline",
+        "pgrx_spike",
+        "pgrx_spike_review",
+        "pitr_schedule",
+        "profile",
+        "quality",
+        "replay_conformance",
+        "restore_drill",
+        "schema_context",
+        "schema_inference",
+        "shared_db_platform",
+        "stewardship",
+        "virtual_graph_view",
+        "warehouse_conformance",
+        "warehouse_federation",
+        "web_source",
+    ),
+    "medulla-source-types": (
+        "meeting_transcript",
+        "source_changeset",
+        "source_symbol_edit",
+    ),
+}
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R021.5")
+def test_domain_modules_live_in_their_owning_slice() -> None:
+    for owner, modules in DOMAIN_SLICES.items():
+        assert _modules(owner) >= set(modules), owner
+        for crate in ("medulla-types", *SLICES):
+            if crate != owner:
+                assert _modules(crate) & set(modules) == set(), crate
+    # Hard cutover: no importer still names a moved module through medulla-types.
+    moved = "|".join(module for modules in DOMAIN_SLICES.values() for module in modules)
+    old_path = re.compile(r"\bmedulla_types::(" + moved + r")\b")
+    stale = [
+        str(path.relative_to(ROOT))
+        for top in ("crates", "src", "tests", "benches")
+        for path in (ROOT / top).rglob("*.rs")
+        if "target" not in path.parts
+        and old_path.search(path.read_text(encoding="utf-8", errors="ignore"))
     ]
     assert stale == []

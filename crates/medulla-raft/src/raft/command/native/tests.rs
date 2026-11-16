@@ -444,7 +444,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     #[cfg(feature = "statechart")]
     assert_native_round_trip(
         Method::Statechart {
-            op: medulla_types::statechart::StatechartOp::List { def_id: None },
+            op: medulla_work_types::statechart::StatechartOp::List { def_id: None },
         },
         NativeMutationDomain::Statechart,
     );

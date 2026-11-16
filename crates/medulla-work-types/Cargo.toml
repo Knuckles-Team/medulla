@@ -16,6 +16,7 @@ medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
+rmp-serde = "1.3"
 thiserror = "2.0"
 sha2 = "0.10"
 hex = "0.4"
@@ -28,6 +29,12 @@ serde_bytes = "0.11.19"
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-result-types/contract-schema"]
 jobs = ["medulla-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization"]
+# CONCEPT:INT-P2-2 — the native statechart engine: gates the `statechart` wire module of this crate
+# (`StatechartOp`) + the `Method::Statechart` variant. Pure serde/enum-variant gate,
+# same shape as `jobs`; the durable engine (typed model + redb store + pure transition
+# function) lives in `medulla-statechart` (above this crate in the DAG) and the facade wires
+# it through `statechart`, included in the main `full` build.
+statechart = []
 test-support = ["medulla-types/test-support", "medulla-query-types/test-support"]
 
 # MEDULLA-UNIFIED-DATA-PLANE-R700.6 hot-path receipt; nightly only, never gates a PR.

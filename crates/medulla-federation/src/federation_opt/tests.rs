@@ -668,7 +668,7 @@ mod snapshot_reads {
         render_trace, FederationSession, FetchStrategy, FragmentExecutionMode, FragmentTrace,
         REPLICA_LAG_EXCEEDED, SNAPSHOT_UNAVAILABLE, SOURCE_WRITE_FORBIDDEN,
     };
-    use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+    use medulla_catalog_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
 
     fn spec() -> ForeignSourceSpec {
         ForeignSourceSpec::Named {
@@ -1426,8 +1426,8 @@ mod web_metasearch {
     use crate::federation::ForeignSourceRegistry;
     use crate::federation_opt::web::{resolve_web, resolve_web_with, web_scan_at, WebQuery};
     use crate::federation_opt::{web_candidates, FragmentCacheScope, SourceWatermark};
+    use medulla_catalog_types::web_source::WebSearchCapability;
     use medulla_exec::rowset::{TextChannels, ValueChannels};
-    use medulla_types::web_source::WebSearchCapability;
     use std::collections::{BTreeMap, HashMap};
     use std::sync::atomic::AtomicBool;
 

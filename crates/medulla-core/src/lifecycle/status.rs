@@ -10,11 +10,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_source_types::source_changeset::Changeset;
 use medulla_source_types::{
     lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer,
     lifecycle::TaskRowState, lifecycle::TaskState, lifecycle::TaskStatusAnswer,
 };
-use medulla_types::source_changeset::Changeset;
 
 use super::derive::TestBinding;
 

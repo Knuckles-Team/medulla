@@ -18,7 +18,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_durable::{
     plan_baseline, BaselineSources, DeltaManifest, DeltaManifestEntry, DeltaManifestKey,
 };
-use medulla_types::scheduler_config::SchedulerConfig;
+use medulla_work_types::scheduler_config::SchedulerConfig;
 
 const FILES: usize = 50_000;
 const P50_BUDGET: Duration = Duration::from_millis(10);

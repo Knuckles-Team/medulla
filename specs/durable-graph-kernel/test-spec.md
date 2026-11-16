@@ -36,7 +36,7 @@ R074.2 remains pending: exercise these transitions through real authenticated di
 
 ## T-FR-14 scheduler configuration producer
 
-R076.1 and MEDULLA-PLACEMENT-R002.2 bind native tests in `crates/medulla-types/src/scheduler_config.rs`: real-serde default and override round trips. Exact floor sum. Over-subscription. U32::MAX floor overflow. Zero disabling bounds. CPU >1000, memory=0 and blank-lane refusals. Missing/unknown/negative/out-of-range wire fields. Run `cargo test -p medulla-types scheduler_config::tests` on a warm build, or compile that exact source with real serde/serde_json dependencies for isolated producer evidence. The latter is not full-crate or server validation. R076.2 still requires the served settings/admission scenario.
+R076.1 and MEDULLA-PLACEMENT-R002.2 bind native tests in `crates/medulla-work-types/src/scheduler_config.rs`: real-serde default and override round trips. Exact floor sum. Over-subscription. U32::MAX floor overflow. Zero disabling bounds. CPU >1000, memory=0 and blank-lane refusals. Missing/unknown/negative/out-of-range wire fields. Run `cargo test -p medulla-types scheduler_config::tests` on a warm build, or compile that exact source with real serde/serde_json dependencies for isolated producer evidence. The latter is not full-crate or server validation. R076.2 still requires the served settings/admission scenario.
 
 ## T-FR-15 association submission schema
 
@@ -527,14 +527,19 @@ checkpoint and admission runs do not qualify this new integration.
 | `benches/shape_validation.rs::shape_validation` (L5) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/test_service_layer.py::test_service_channel_group_leave_returns_leave_result` (L4) | `MEDULLA-DURABLE-KERNEL-R068` | A join, leave and rejoin over a served engine return each its own tagged result. | A leave never returns the stored join result. |
+<<<<<<< HEAD
 | `crates/medulla-types/src/task_queue.rs::tests::each_type_round_trips_and_each_refusal_has_its_code` (L1) | `MEDULLA-DURABLE-KERNEL-R071` | Each type round-trips through serde with its bounds at the limit values. | Each out-of-bound field returns its registered refusal code. |
 | `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
+=======
+| `crates/medulla-work-types/src/task_queue.rs::tests::each_type_round_trips_and_each_refusal_has_its_code` (L1) | `MEDULLA-DURABLE-KERNEL-R071` | Each type round-trips through serde with its bounds at the limit values. | Each out-of-bound field returns its registered refusal code. |
+| `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
+>>>>>>> 6f774f4fc9 (refactor(types): move the domain modules out of medulla-types into their slices)
 | `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `tests/test_wire_vectors.py::test_task_queue_models_match_the_rust_vectors` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `crates/medulla-work-types/src/worker_registry.rs::tests::register_heartbeat_and_expiry_at_the_exact_deadline` (L1) | `MEDULLA-DURABLE-KERNEL-R074.1` | Register, heartbeat and expire at the exact deadline. | Every refusal leaves the registry unchanged. |
 | `tests/worker_registry_served.rs::unknown_expired_and_cross_owner_requests_refuse` (L3) | `MEDULLA-DURABLE-KERNEL-R074.2` | Advance the injected clock past the ttl and the worker disappears. | An unknown worker returns WORKER_UNKNOWN and another principal returns ACCESS_DENIED. |
 | `tests/worker_registry_served.rs::non_reserved_task_is_refused_when_only_reserved_capacity_remains` (L3) | `MEDULLA-DURABLE-KERNEL-R075` | A one-worker pool receives the general lane. | A non-reserved task is refused with ADMIT_HELD_FOR_RESERVE when only reserved capacity remains. |
-| `crates/medulla-types/src/scheduler_config.rs::tests::over_subscribed_floors_are_refused_without_overflow` (L1) | `MEDULLA-DURABLE-KERNEL-R076.1` | Serde defaults and overrides round-trip and exact floors validate. | Over-subscribed floors, blank lanes, a CPU share above 1000 and zero memory per worker are refused. |
+| `crates/medulla-work-types/src/scheduler_config.rs::tests::over_subscribed_floors_are_refused_without_overflow` (L1) | `MEDULLA-DURABLE-KERNEL-R076.1` | Serde defaults and overrides round-trip and exact floors validate. | Over-subscribed floors, blank lanes, a CPU share above 1000 and zero memory per worker are refused. |
 | `tests/scheduler_config_served.rs::set_get_refuse_and_admission_follows_floors` (L3) | `MEDULLA-DURABLE-KERNEL-R076.2` | A set then get returns the setting and admission follows the floors; the config survives a restart. | A refused setting returns SCHEDULER_CONFIG_INVALID and changes nothing. |
 | `tests/scheduler_config_served.rs::config_survives_restart` (L3) | `MEDULLA-DURABLE-KERNEL-R076.2` | A set then get returns the setting and admission follows the floors; the config survives a restart. | A refused setting returns SCHEDULER_CONFIG_INVALID and changes nothing. |
 | `tests/scheduler_config_served.rs::width_for_a_multi_shard_tenant_matches_configured_writers` (L3) | `MEDULLA-DURABLE-KERNEL-R077` | A multi-shard tenant gets the configured writer count k. | A caller without scheduler:read is refused. |
@@ -574,7 +579,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_kvcache_connector.py::test_put_from_one_client_is_read_by_another` (L4).
 - `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_release_feature_matrix.py::test_full_contains_kvcache_server` (L2).
 - `MEDULLA-DURABLE-KERNEL-R084`: Planned: `tests/write_conflict_two_writers.rs::two_writers_one_commit_one_typed_conflict` (L3).
-- `MEDULLA-DURABLE-KERNEL-R084.2`: Planned: `crates/medulla-types/src/write_conflict.rs::tests::resolve_under_each_strategy` (L1).
+- `MEDULLA-DURABLE-KERNEL-R084.2`: Planned: `crates/medulla-mutation-types/src/write_conflict.rs::tests::resolve_under_each_strategy` (L1).
 - `MEDULLA-DURABLE-KERNEL-R084.3`: Planned: `tests/write_conflict_two_writers.rs::stale_envelope_reaches_the_resolver` (L3).
 - `MEDULLA-DURABLE-KERNEL-R084.4`: Planned: `tests/write_conflict_two_writers.rs::conflict_codes_leave_state_unchanged` (L3).
 - `MEDULLA-DURABLE-KERNEL-R084.5`: Planned: `tests/write_conflict_two_writers.rs::conflict_evidence_names_scope_strategy_winner` (L3).
@@ -594,7 +599,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R086.6`: Planned: `tests/safe_eviction_read_through.rs::production_eviction_retains_unconfirmed_candidates` (L3).
 - `MEDULLA-DURABLE-KERNEL-R086.7`: Planned: `tests/safe_eviction_read_through.rs::backend_failure_is_not_absence_evidence` (L3).
 - `MEDULLA-DURABLE-KERNEL-R086.8`: Planned: `tests/safe_eviction_read_through.rs::restarted_engine_reads_an_evicted_node` (L3).
-- `MEDULLA-DURABLE-KERNEL-R095.1000`: Planned: `crates/medulla-types/src/agent_bus.rs::tests::participant_round_trips_and_bounds` (L1).
+- `MEDULLA-DURABLE-KERNEL-R095.1000`: Planned: `crates/medulla-work-types/src/agent_bus.rs::tests::participant_round_trips_and_bounds` (L1).
 - `MEDULLA-DURABLE-KERNEL-R095.1000`: Planned: `tests/agent_bus_served.rs::roster_survives_restart` (L3).
 - `MEDULLA-DURABLE-KERNEL-R095.1001`: Planned: `tests/agent_bus_served.rs::register_heartbeat_and_roster_mark_liveness` (L3).
 - `MEDULLA-DURABLE-KERNEL-R095.1002`: Planned: `tests/agent_bus_served.rs::bus_methods_listed_and_reach_the_gateway` (L3).
@@ -659,9 +664,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::tick_enqueues_leased_jobs` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` |
-| `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-mutation-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-mutation-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` |
+| `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-mutation-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R035.7` | `crates/medulla-wire/src/pgwire/replication.rs::serve_walsender` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
@@ -767,7 +772,11 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R874.19`: `crates/medulla-persistence-ops/src/store_upgrade/store_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-persistence-ops/src/store_upgrade/store_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-persistence-ops/src/store_upgrade/store_machine.rs::tests::no_writer_sets_status_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::store_machine_matches_edge_table` (planned, L1): proves: StoreReport/StoreStatus state machine: route 1 census findings through StoreStatus::apply.
 - `MEDULLA-DURABLE-KERNEL-R874.20`: `crates/medulla-server-consensus/src/dispatch/consensus/transaction_consensus_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-server-consensus/src/dispatch/consensus/transaction_consensus_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-server-consensus/src/dispatch/consensus/transaction_consensus_machine.rs::tests::no_writer_sets_phase_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::transaction_consensus_machine_matches_edge_table` (planned, L1): proves: TransactionPhaseSubmission/TransactionConsensusPhase state machine: route 1 census findings through TransactionConsensusPhase::apply.
 - `MEDULLA-DURABLE-KERNEL-R875`: see each child (rollup).
+<<<<<<< HEAD
 - `MEDULLA-DURABLE-KERNEL-R875.1`: `crates/medulla-types/src/memory_sync.rs::tests::sync_standing_is_not_a_lifecycle_field` (L1): proves: SyncState is a sync reading, not a lifecycle: rename, no machine.
+=======
+- `MEDULLA-DURABLE-KERNEL-R875.1`: `crates/medulla-mutation-types/src/memory_sync.rs::tests::sync_standing_is_not_a_lifecycle_field` (planned, L1): proves: SyncState is a sync reading, not a lifecycle: rename, no machine.
+>>>>>>> 6f774f4fc9 (refactor(types): move the domain modules out of medulla-types into their slices)
 - `MEDULLA-DURABLE-KERNEL-R875.2`: `crates/medulla-protocol-types/src/result_contract/coordination/work_items.rs::tests::work_item_reply_outcomes_are_not_lifecycle_fields` (planned, L1): proves: WorkItemCommitStatus and WorkItemCancelStatus are reply outcomes, not lifecycles: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.3`: `crates/medulla-work-types/src/work_item_read/tests.rs::terminal_event_read_tag_is_not_a_lifecycle_field` (L1): proves: TerminalEventRead discriminator `status` is an availability tag: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.4`: `crates/medulla-protocol-types/src/result_contract/transactions.rs::tests::change_envelope_result_tag_is_not_a_lifecycle_field` (L1): proves: ChangeEnvelopeOutcome discriminator `status` is a result tag: rename, no machine.

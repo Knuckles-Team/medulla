@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::mutation::{MutationReceipt, MutationRequestEnvelope};
 use medulla_identity_types::authority::AuthorityScope;
+use medulla_types::mutation::{MutationReceipt, MutationRequestEnvelope};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::RecordBytes,
     contract::ResourceId, contract::TenantId, contract::UtcUnixNanos,
@@ -477,8 +477,8 @@ impl OutboxProjectionCursor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mutation::{MutationReceipt, MutationResult};
     use medulla_identity_types::authority::ScopeKind;
+    use medulla_types::mutation::{MutationReceipt, MutationResult};
     use medulla_types::{
         contract::MutationDisposition, contract::TenantId, contract::MAX_SCOPE_COMPONENTS,
     };

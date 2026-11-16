@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::{EngineErrorCode, ServerErrorCode};
+use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 
 /// Longest queue name, in characters.
 pub const TASK_QUEUE_NAME_MAX_CHARS: usize = 128;

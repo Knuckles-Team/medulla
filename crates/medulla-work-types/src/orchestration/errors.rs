@@ -2,7 +2,7 @@
 //! versioned components, R802 improvement library).
 //!
 //! The closed set is registered in
-//! [`crate::contract::declared_error_code`] so the wire reports each code
+//! [`medulla_types::contract::declared_error_code`] so the wire reports each code
 //! verbatim instead of classifying the refusal as `INTERNAL`
 //! (MEDULLA-DURABLE-KERNEL-R043.8). The engine-internal typed refusals
 //! ([`super::HarnessComponentRefusal`], [`super::improvement::

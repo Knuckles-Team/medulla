@@ -9,12 +9,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+use medulla_catalog_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiff};
 use medulla_graph_core::graph::{
     GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin, MAX_SCHEMA_DOCUMENT_TRIPLES,
 };
 use medulla_rdf::oxrdf::{Graph, NamedOrBlankNode, Term, Triple};
 use medulla_shacl::Severity;
-use medulla_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiff};
 
 const OWL_DEPRECATED: &str = "http://www.w3.org/2002/07/owl#deprecated";
 

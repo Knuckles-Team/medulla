@@ -6,7 +6,7 @@
 //! `toc.line_index_stride`-th line, so a span read seeks to the nearest
 //! checkpoint instead of scanning the whole source.
 
-use crate::refusal_code::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 
 /// Every refusal code of the `ReadSpan` family

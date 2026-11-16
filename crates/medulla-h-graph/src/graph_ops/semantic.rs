@@ -43,10 +43,13 @@ pub(super) fn node_text(core: &GraphCore, node_id: &str) -> (String, String, Str
 }
 
 /// The web provenance of a node (MEDULLA-FEDERATED-QUERY-R653.7); empty unless the node has a URL.
-fn web_provenance(core: &GraphCore, node_id: &str) -> medulla_types::web_source::WebProvenance {
+fn web_provenance(
+    core: &GraphCore,
+    node_id: &str,
+) -> medulla_catalog_types::web_source::WebProvenance {
     core.get_node_properties(node_id)
         .map(|blob| {
-            medulla_types::web_source::WebProvenance::from_properties(
+            medulla_catalog_types::web_source::WebProvenance::from_properties(
                 &super::gateway_graph::decode_json_object(&blob),
             )
         })

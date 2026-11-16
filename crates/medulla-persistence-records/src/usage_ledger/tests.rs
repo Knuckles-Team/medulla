@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use medulla_types::usage::{
+use medulla_decision_types::usage::{
     PriceCatalog, PriceEntry, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
 };
 

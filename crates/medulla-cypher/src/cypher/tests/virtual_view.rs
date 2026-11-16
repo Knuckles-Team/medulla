@@ -4,7 +4,9 @@ use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use medulla_types::virtual_graph_view::{GraphView, NodeLabelMapping, RelationshipTypeMapping};
+use medulla_catalog_types::virtual_graph_view::{
+    GraphView, NodeLabelMapping, RelationshipTypeMapping,
+};
 use medulla_virtual_graph::obda::{
     apply_view_joins, run_virtual, ForeignRow, JoinScan, ObdaFilter, ObdaSource,
     ObdaSourceRegistry, SourceIdentity, TriplesMap, VirtualGraph, JOIN_RIGHT_PREFIX,

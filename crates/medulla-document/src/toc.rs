@@ -6,7 +6,7 @@
 //! checkpoint at or before the first line and scans forward at most `stride`
 //! lines plus the span, so a read costs O(stride + span).
 
-use medulla_types::source_toc::{SourceToc, TocEntry, SOURCE_TOC_SCHEMA_VERSION};
+use medulla_decision_types::source_toc::{SourceToc, TocEntry, SOURCE_TOC_SCHEMA_VERSION};
 
 use crate::header::content_hash;
 
@@ -181,7 +181,7 @@ impl StagedToc {
     /// The node properties that bind a document node to its stored table, text
     /// and revision.
     pub fn node_properties(&self) -> [(&'static str, serde_json::Value); 4] {
-        use medulla_types::source_toc::{
+        use medulla_decision_types::source_toc::{
             SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY, SOURCE_TOTAL_LINES_PROPERTY,
             TOC_DIGEST_PROPERTY,
         };

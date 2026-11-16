@@ -8,8 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_source_types::meeting_transcript::{MeetingTranscriptRevision, TranscriptRevisionOp};
 use medulla_types::contract::Digest256;
-use medulla_types::meeting_transcript::{MeetingTranscriptRevision, TranscriptRevisionOp};
 
 /// The refusal a revision event meets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

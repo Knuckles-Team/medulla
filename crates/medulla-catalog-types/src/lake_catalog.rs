@@ -136,7 +136,7 @@ impl GovernanceMeta {
 /// A catalog/table/lake record's binding to a GOC-03 commit descriptor.
 ///
 /// Deliberately mirrors `mutation_batch::MutationBatch`'s `(tenant, graph)` +
-/// `placement_epoch` + `fencing_token` vocabulary (`crate::mutation_batch`) rather
+/// `placement_epoch` + `fencing_token` vocabulary (`medulla_types::mutation_batch`) rather
 /// than inventing a parallel fencing scheme, so a durable participant (GOC-10-W03)
 /// can bind a catalog/table/lake row to the SAME batch a graph/SQL mutation commits
 /// under (GOC-10 invariant 3). `batch_id` is that `MutationBatch::batch_id`.

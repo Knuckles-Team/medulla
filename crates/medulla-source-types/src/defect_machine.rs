@@ -7,7 +7,7 @@ use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, StateMachineApply, TransitionRefused,
 };
 
-use crate::lifecycle::DefectStatus;
+use medulla_types::lifecycle::DefectStatus;
 
 /// The facts the defect guards read.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

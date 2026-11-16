@@ -7,8 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::source_ingestion::SourceIngestionRequest;
 use medulla_types::contract::ResourceId;
+use medulla_types::source_ingestion::SourceIngestionRequest;
 
 /// Maximum messages one thread may reference.
 pub const MAX_THREAD_MESSAGES: usize = 16_384;
@@ -146,7 +146,7 @@ pub const SEGMENT_CLOCKS: [(&str, &str); 3] = [
 /// stays absent: nothing is derived or filled from another clock.
 pub fn segment_clock_properties(
     payload: &serde_json::Map<String, serde_json::Value>,
-    provenance: &crate::source_ingestion::SourceRecordProvenance,
+    provenance: &medulla_types::source_ingestion::SourceRecordProvenance,
 ) -> serde_json::Map<String, serde_json::Value> {
     let mut out = serde_json::Map::new();
     for (property, field) in SEGMENT_CLOCKS {
@@ -171,7 +171,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::source_ingestion::{
+    use medulla_types::source_ingestion::{
         SourceCheckpoint, SourceIngestionBatch, SourceIngestionMode, SourceJson, SourceRecord,
         SourceRecordProvenance,
     };

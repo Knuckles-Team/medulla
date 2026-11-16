@@ -11,7 +11,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use crate::lineage::LineageDialect;
+use medulla_types::lineage::LineageDialect;
 
 /// One column of an attached-source table, as discovered by a catalog reader.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

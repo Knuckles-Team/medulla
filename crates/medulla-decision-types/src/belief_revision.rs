@@ -7,8 +7,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::claims::EvidenceChannel;
-use crate::evidence_class::EvidenceClass;
-use crate::refusal_code::RefusalCode;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 /// One piece of evidence behind a revision.
 ///
@@ -66,7 +66,7 @@ pub struct RetractionProposal {
 
 /// The refusal codes of the belief surface (MEDULLA-DECISION-ENGINE-R700.4,
 /// R700.7), `(code, meaning)`, sorted by code. Each is a registered
-/// [`crate::contract::ServerErrorCode`].
+/// [`medulla_types::contract::ServerErrorCode`].
 pub const REFUSALS: &[(RefusalCode, &str)] = &[
     (
         RefusalCode::new("BELIEF_CLAIM_NOT_FOUND"),

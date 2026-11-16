@@ -374,8 +374,8 @@ async fn backup_restore_carries_non_shard_durable_stores() {
 // spec: MEDULLA-BRANCH-MERGE-R001
 #[tokio::test(flavor = "multi_thread")]
 async fn backup_restore_carries_the_branch_registry() {
+    use medulla_mutation_types::branch::{Branch, BranchRef};
     use medulla_persistence::branch_registry_store::BranchRegistry;
-    use medulla_types::branch::{Branch, BranchRef};
     #[cfg(feature = "security")]
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
     let root = std::env::temp_dir().join(format!("medulla-backup-branch-{}", std::process::id()));

@@ -649,8 +649,10 @@ pub fn open_durable_stores(
 
 /// Map the `--write-conflict-strategy` value to the typed policy
 /// (MEDULLA-DURABLE-KERNEL-R084.3). Clap already restricts the value set.
-pub fn parse_write_conflict_strategy(value: &str) -> medulla_types::write_conflict::MergeStrategy {
-    use medulla_types::write_conflict::MergeStrategy;
+pub fn parse_write_conflict_strategy(
+    value: &str,
+) -> medulla_mutation_types::write_conflict::MergeStrategy {
+    use medulla_mutation_types::write_conflict::MergeStrategy;
     match value {
         "prefer_newer" => MergeStrategy::PreferNewer,
         "field_union" => MergeStrategy::FieldUnion,

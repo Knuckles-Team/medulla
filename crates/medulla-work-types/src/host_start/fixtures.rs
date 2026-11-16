@@ -1,5 +1,7 @@
 //! Valid host-start request shared by DTO, carrier and native authority tests.
-use crate::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};
+use medulla_types::host_start::{
+    HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
+};
 
 pub fn host_start_request(tenant: &str) -> IssueHostStartGrantRequest {
     IssueHostStartGrantRequest {

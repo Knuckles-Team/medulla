@@ -4,6 +4,7 @@
 use crate::protocol::SparqlResult;
 #[cfg(feature = "owl")]
 use crate::protocol::{OwlExplainResult, OwlReasonResult};
+use medulla_catalog_types::ontology_inspection::{OntologyCanonicalHashResult, OntologyInspection};
 use medulla_catalog_types::{
     graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaCommitted,
     graph_schema::GraphSchemaSourcesView,
@@ -11,7 +12,6 @@ use medulla_catalog_types::{
 use medulla_query_types::rdf_report::{
     RuleReasonResponse, ShaclValidationReport, ShexValidationReport,
 };
-use medulla_types::ontology_inspection::{OntologyCanonicalHashResult, OntologyInspection};
 use medulla_types::types::DatalogReasoningResult;
 
 method_results! {

@@ -2,6 +2,7 @@
 
 #[cfg(feature = "modality-serving")]
 use super::Dynamic;
+use medulla_catalog_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticBindingPage,
     semantic_index::SemanticIndexResponse, semantic_index::SemanticSqlSourceManifest,
@@ -20,7 +21,6 @@ use medulla_source_types::{
     source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
     source_ingestion::SourceIngestionReceipt,
 };
-use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_types::{
     ingestion_wire::IndexResult, ingestion_wire::ParseResult,
     ingestion_wire::ScreenObservationResult,
@@ -68,9 +68,9 @@ method_results! {
     // MEDULLA-DECISION-ENGINE-R614.3: what one scheduled enrichment wrote.
     SemanticEnrich(SemanticEnrich) => Raw<medulla_types::semantic_enrichment::SemanticEnrichReceipt>;
     // MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5: meeting transcript surface.
-    MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
-    MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
-    MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_types::meeting_transcript::MeetingSummaryCommitReceipt>;
+    MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_source_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
+    MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryContext>;
+    MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryCommitReceipt>;
     // MEDULLA-INGEST-WORKER-R001.1007/.1008: what one declaration did, and the stored declaration.
     DataPrepDeclare(DataPrepDeclare) => Raw<medulla_types::data_prep_declaration::DataPrepDeclareReceipt>;
     DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_types::data_prep_declaration::DataPrepDeclarationView>;

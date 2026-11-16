@@ -192,7 +192,7 @@ Out of scope: new analytics families, a schedule for mining jobs, and any change
 
 #### Scheduler policy contract (R076.1)
 
-`medulla_types::scheduler_config::SchedulerConfig` is the sole producer of scheduler policy data. It includes explicit total workers and queue depth, a deterministic lane-floor map, and CPU per-mille default 360. The memory-per-worker default is 3,221,225,472 bytes. `validate()` rejects blank lane IDs, CPU fractions above 1000, zero memory divisors and floor sums exceeding the pool. Checked subtraction prevents floor-sum overflow. Zero pool, CPU fraction or queue depth is an explicit disabled resource. The later grant path must never override it with a floor of one. Serde rejects unknown fields and requires the two explicit limits. Deserialization alone is not policy admission: consumers must call validation before applying data.
+`medulla_work_types::scheduler_config::SchedulerConfig` is the sole producer of scheduler policy data. It includes explicit total workers and queue depth, a deterministic lane-floor map, and CPU per-mille default 360. The memory-per-worker default is 3,221,225,472 bytes. `validate()` rejects blank lane IDs, CPU fractions above 1000, zero memory divisors and floor sums exceeding the pool. Checked subtraction prevents floor-sum overflow. Zero pool, CPU fraction or queue depth is an explicit disabled resource. The later grant path must never override it with a floor of one. Serde rejects unknown fields and requires the two explicit limits. Deserialization alone is not policy admission: consumers must call validation before applying data.
 
 R076.2 remains responsible for scope, persistence, served reads/updates, lane membership and real admission/queue enforcement. Worker registration supplies capacity, not an alternative policy authority. R074 worker registration and these floor keys share canonical engine lane IDs; served integration must validate membership against the same registry.
 
@@ -221,7 +221,7 @@ Decision: key by model version plus prefix hash. Rejected: session-keyed blocks,
 ### MEDULLA-DURABLE-KERNEL-R084 version-checked writes
 
 Data flow: served `ApplyMutation` → mutation envelope with `VersionExpectation::Native` (`crates/medulla-jobs/src/store.rs:2537`) → `resolve_conflict` → commit or `WRITE_CONFLICT` → trace.
-Types: `WriteConflict` and `MergeStrategy` in `crates/medulla-types/src/write_conflict.rs`. The default strategy is `Refuse`.
+Types: `WriteConflict` and `MergeStrategy` in `crates/medulla-mutation-types/src/write_conflict.rs`. The default strategy is `Refuse`.
 Attach point: the version check at `crates/medulla-jobs/src/store.rs:2537`; the caller is the served mutation path.
 Failure: a stale write under `Refuse` changes nothing and returns `WRITE_CONFLICT`.
 Reuses `VersionExpectation` (`crates/medulla-isolation/src/rbac_persist/durable_write.rs:105`). New: the strategy and the typed conflict.
@@ -264,7 +264,7 @@ Do not add another persistent write envelope or an agent-owned memory store.
 
 The proposed wire methods are `ReadMemorySnapshot`, `ListMemorySnapshots` and `SyncMemorySnapshot`.
 These names reserve design intent, not existing runtime availability.
-Add typed definitions under a new `crates/medulla-types/src/memory_sync.rs` module.
+Add typed definitions under a new `crates/medulla-mutation-types/src/memory_sync.rs` module.
 Declare graph-domain capabilities through `crates/medulla-capabilities/src/domains/graph.rs`.
 Generate request schemas, result schemas and public clients from that authority.
 A missing method or incompatible contract returns unavailable to consumers.
@@ -570,7 +570,7 @@ Replaces: `agent_utilities/knowledge_graph/backends/contrib/` (three backend mod
 
 Meristem acceptance cases: `tests/unit/knowledge_graph/test_neo4j_transport_security.py`, `tests/unit/knowledge_graph/test_backend_contrib.py`, `tests/unit/knowledge_graph/test_falkordb_param_sanitize.py` and the three `test_ladybug_*.py` files.
 
-Call path: served `ApplyMutation` -> outbox row -> `MirrorTargetSpec::Outbox` consumer (`MEDULLA-DURABLE-KERNEL-R024.5`) -> `MirrorTargetRegistry` (`crates/medulla-federation/src/mirror_target.rs`) -> sink driver -> target acknowledgement -> `MirrorCursor` advance (`crates/medulla-types/src/mirror_sink.rs`).
+Call path: served `ApplyMutation` -> outbox row -> `MirrorTargetSpec::Outbox` consumer (`MEDULLA-DURABLE-KERNEL-R024.5`) -> `MirrorTargetRegistry` (`crates/medulla-federation/src/mirror_target.rs`) -> sink driver -> target acknowledgement -> `MirrorCursor` advance (`crates/medulla-mutation-types/src/mirror_sink.rs`).
 
 Crates: `medulla-types` for the kinds, `medulla-plan` for the drivers, `medulla-lake` for the Parquet writer.
 
@@ -1159,7 +1159,7 @@ Organization constitution Article XXXI requires a closed set of states, one tran
 `Method::OpenGraphSnapshot` and `Method::ReadGraphChanges` are handled in
 `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs` over `CdcHub::feed_position` and
 `CdcHub::read`. The feed types, the cursor and the authorization revision are in
-`crates/medulla-types/src/graph_change_feed.rs`. The served proofs are in
+`crates/medulla-mutation-types/src/graph_change_feed.rs`. The served proofs are in
 `tests/graph_change_feed_served.rs`.
 
 ## Concept lineage served method (R094.7, R094.7.1)

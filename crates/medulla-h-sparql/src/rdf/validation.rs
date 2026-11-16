@@ -9,7 +9,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "shacl")]
 pub(super) struct ShaclData<'a> {
     pub(super) turtle: &'a str,
-    pub(super) triples: Option<&'a [medulla_types::ontology_inspection::RdfTriple]>,
+    pub(super) triples: Option<&'a [medulla_catalog_types::ontology_inspection::RdfTriple]>,
 }
 
 /// Validate the request graph (or an inline `data_graph` Turtle document, or typed

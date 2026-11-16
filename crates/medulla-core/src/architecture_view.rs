@@ -12,7 +12,7 @@ use medulla_catalog_types::architecture_view::{
     ArchitectureView, ViewAbstained, ViewContainer, ViewEdge, ViewScope,
 };
 use medulla_graph_core::graph::{GraphCore, GraphView};
-use medulla_types::scheduler_config::DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS;
+use medulla_work_types::scheduler_config::DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS;
 
 /// Rule (1)+(2): manifest file name -> technology of the package it roots.
 #[derive(Debug, Clone, PartialEq, Eq)]

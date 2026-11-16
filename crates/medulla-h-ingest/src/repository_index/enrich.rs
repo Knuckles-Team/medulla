@@ -554,7 +554,7 @@ pub fn spawn(
     state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
 ) -> Result<(), String> {
     let timeout_ms =
-        medulla_types::scheduler_config::enrich_timeout_ms_from(|key| std::env::var(key).ok())
+        medulla_work_types::scheduler_config::enrich_timeout_ms_from(|key| std::env::var(key).ok())
             .map_err(|error| error.to_string())?;
     let history = history_config(|key| std::env::var(key).ok())?;
     #[cfg(all(feature = "redb", not(feature = "raft")))]
@@ -568,7 +568,7 @@ pub fn spawn(
 /// out-of-range value refuses startup.
 pub fn history_config(lookup: impl Fn(&str) -> Option<String>) -> Result<HistoryConfig, String> {
     let [max_commits, support_floor, confidence_floor_milli, max_files] =
-        medulla_types::scheduler_config::history_knobs_from(lookup)
+        medulla_work_types::scheduler_config::history_knobs_from(lookup)
             .map_err(|error| error.to_string())?;
     Ok(HistoryConfig {
         max_commits: usize::try_from(max_commits).map_err(|error| error.to_string())?,

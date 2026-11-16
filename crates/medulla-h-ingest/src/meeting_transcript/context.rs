@@ -11,10 +11,10 @@ use std::collections::BTreeMap;
 
 use medulla_core::meeting_transcript::{get_final, TranscriptState};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::contract::Digest256;
-use medulla_types::meeting_transcript::{
+use medulla_source_types::meeting_transcript::{
     MeetingSummaryContext, MeetingSummaryContextRequest, SummarySpan,
 };
+use medulla_types::contract::Digest256;
 
 use super::{encode, transcript_node_id};
 use crate::repository_index::IndexWriteSet;

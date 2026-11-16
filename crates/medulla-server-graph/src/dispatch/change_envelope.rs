@@ -834,7 +834,7 @@ pub(crate) async fn stale_content_or(
 /// (MEDULLA-DURABLE-KERNEL-R084.3).
 struct EnvelopeVersionScope<'a> {
     graph_name: &'a str,
-    strategy: medulla_types::write_conflict::MergeStrategy,
+    strategy: medulla_mutation_types::write_conflict::MergeStrategy,
     core: &'a Arc<medulla_graph_core::graph::GraphCore>,
 }
 
@@ -847,7 +847,7 @@ async fn prepare_change_envelope_commit(
     (
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         bool,
-        Option<medulla_types::write_conflict::WriteConflictEvidence>,
+        Option<medulla_mutation_types::write_conflict::WriteConflictEvidence>,
     ),
     String,
 > {
@@ -913,14 +913,14 @@ fn validate_change_envelope_version(
     current_version: u64,
     known_replay: bool,
     graph_name: &str,
-) -> Result<Result<(), medulla_types::write_conflict::WriteConflict>, String> {
+) -> Result<Result<(), medulla_mutation_types::write_conflict::WriteConflict>, String> {
     let medulla_protocol_types::mutation_batch::VersionExpectation::Graph(expected) =
         envelope.mutation.version_expectation
     else {
         return Err("ApplyChangeEnvelope requires a graph version expectation".to_string());
     };
     if expected != current_version && !known_replay {
-        return Ok(Err(medulla_types::write_conflict::WriteConflict {
+        return Ok(Err(medulla_mutation_types::write_conflict::WriteConflict {
             expected,
             actual: current_version,
             scope: graph_name.to_owned(),
@@ -934,8 +934,8 @@ fn validate_change_envelope_version(
 /// values and the evidence (MEDULLA-DURABLE-KERNEL-R084.5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvelopeConflictRefusal {
-    pub conflict: medulla_types::write_conflict::WriteConflict,
-    pub evidence: medulla_types::write_conflict::WriteConflictEvidence,
+    pub conflict: medulla_mutation_types::write_conflict::WriteConflict,
+    pub evidence: medulla_mutation_types::write_conflict::WriteConflictEvidence,
     /// `true` under a merge strategy (`WRITE_CONFLICT_UNMERGEABLE`).
     pub unmergeable: bool,
 }
@@ -967,18 +967,20 @@ impl std::fmt::Display for EnvelopeConflictRefusal {
 /// `STALE_VERSION` check in `admit_fresh` stays the last guard.
 pub fn resolve_envelope_conflict(
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
-    conflict: medulla_types::write_conflict::WriteConflict,
-    strategy: medulla_types::write_conflict::MergeStrategy,
+    conflict: medulla_mutation_types::write_conflict::WriteConflict,
+    strategy: medulla_mutation_types::write_conflict::MergeStrategy,
     core: &medulla_graph_core::graph::GraphCore,
 ) -> Result<
     (
         medulla_protocol_types::change_envelope::ChangeEnvelope,
-        medulla_types::write_conflict::WriteConflictEvidence,
+        medulla_mutation_types::write_conflict::WriteConflictEvidence,
     ),
     EnvelopeConflictRefusal,
 > {
-    use medulla_types::write_conflict::{ConflictWinner, MergeStrategy, WriteConflictEvidence};
-    let refuse = |conflict: medulla_types::write_conflict::WriteConflict| {
+    use medulla_mutation_types::write_conflict::{
+        ConflictWinner, MergeStrategy, WriteConflictEvidence,
+    };
+    let refuse = |conflict: medulla_mutation_types::write_conflict::WriteConflict| {
         let evidence = WriteConflictEvidence {
             conflict_scope: conflict.scope.clone(),
             strategy,
@@ -1014,7 +1016,7 @@ pub fn resolve_envelope_conflict(
         else {
             return Err(refuse(conflict));
         };
-        let merged = match medulla_types::write_conflict::resolve_write_conflict(
+        let merged = match medulla_mutation_types::write_conflict::resolve_write_conflict(
             &conflict, strategy, &current, &incoming,
         ) {
             Ok(merged) => merged,

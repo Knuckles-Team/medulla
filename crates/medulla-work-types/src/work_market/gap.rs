@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 
 use super::offer::WorkOfferView;
 use super::{bounded, bounded_list, bounded_ppm, severity_bucket, GapStatus, GAP_NODE_TYPE};
-use crate::work_item_read::WORK_ITEM_ROW_REVISION;
+use medulla_types::work_item_read::WORK_ITEM_ROW_REVISION;
 
 /// Most evidence entries one upsert may carry.
 pub const MAX_UPSERT_EVIDENCE: usize = 16;

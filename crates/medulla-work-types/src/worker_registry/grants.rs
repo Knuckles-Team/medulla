@@ -1,7 +1,7 @@
 //! Pure capacity sizing. Served admission, lane selection and reservations remain R075.
 
 use super::WorkerRecord;
-use medulla_types::{scheduler_config::InvalidSchedulerConfig, scheduler_config::SchedulerConfig};
+use crate::{scheduler_config::InvalidSchedulerConfig, scheduler_config::SchedulerConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::num::NonZeroU32;

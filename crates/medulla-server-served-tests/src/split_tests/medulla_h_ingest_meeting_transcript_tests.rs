@@ -13,13 +13,13 @@ use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload}
 use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_types::contract::Digest256;
-use medulla_types::meeting_transcript::{
+use medulla_source_types::meeting_transcript::{
     MeetingSummaryCommitReceipt, MeetingSummaryCommitRequest, MeetingSummaryContext,
     MeetingSummaryContextRequest, MeetingSummaryLimitPolicy, MeetingTranscriptRevision,
     MeetingTranscriptRevisionReceipt, SummaryAdmissionRef, SummaryCitation, SummaryClaim,
     SummaryReceipt, SummarySegmentText, TranscriptRevisionOp,
 };
+use medulla_types::contract::Digest256;
 
 /// Synthetic HMAC fixture for `ServerState::new_for_test`; never a live credential.
 const SECRET: &str = "meeting-transcript-served-fixture-secret"; // sanitizer:ignore
@@ -516,7 +516,7 @@ async fn properties_of(
 // spec: MEDULLA-MEDIA-VOCAB-R001.101.6
 #[tokio::test]
 async fn transcript_finalize_context_commit_round_trip() {
-    let codes: Vec<&str> = medulla_types::meeting_transcript::REFUSALS
+    let codes: Vec<&str> = medulla_source_types::meeting_transcript::REFUSALS
         .iter()
         .map(|(code, _)| code.as_str())
         .collect();

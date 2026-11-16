@@ -1,4 +1,4 @@
-use medulla_types::engine_capabilities::{
+use medulla_catalog_types::engine_capabilities::{
     ConstraintKind, EngineCapabilities, IndexKind, WireFeature, ENGINE_PARITY_CONSUMERS,
 };
 

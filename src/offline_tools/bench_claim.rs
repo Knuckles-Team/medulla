@@ -4,7 +4,9 @@
 //! Usage: `medulla-server bench-claim admit <measurement.json> --price-table <table.json>
 //! [--against <other-measurement.json>]`.
 
-use medulla_types::benchmark_claim::{BenchmarkMeasurement, MeasurementRefusal, PriceTable};
+use medulla_mutation_types::benchmark_claim::{
+    BenchmarkMeasurement, MeasurementRefusal, PriceTable,
+};
 
 fn read_measurement(path: &str) -> Result<BenchmarkMeasurement, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;

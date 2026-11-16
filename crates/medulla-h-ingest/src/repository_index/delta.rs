@@ -269,7 +269,7 @@ mod tests {
     use medulla_types::ingestion_wire::{
         IndexDeltaChange, IndexDeltaRename, MAX_INDEX_DELTA_PATHS,
     };
-    use medulla_types::scheduler_config;
+    use medulla_work_types::scheduler_config;
 
     use super::*;
 

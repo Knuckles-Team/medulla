@@ -13,7 +13,7 @@ Meristem calls the model and mints the invocation receipt `{owner_requirement_id
 
 ## Authoritative types
 
-`SummaryReceipt` in `crates/medulla-types/src/meeting_transcript.rs`; the receipt digest is SHA-256 over the other fields.
+`SummaryReceipt` in `crates/medulla-source-types/src/meeting_transcript.rs`; the receipt digest is SHA-256 over the other fields.
 
 ## Test vectors
 

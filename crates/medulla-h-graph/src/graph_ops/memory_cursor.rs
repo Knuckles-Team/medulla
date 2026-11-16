@@ -8,8 +8,8 @@
 //! `memory_sync.cursor_ttl_s` is `MEMSYNC_CURSOR_EXPIRED`.
 
 use hmac::{Hmac, Mac};
+use medulla_mutation_types::memory_sync::MemorySyncRefusal;
 use medulla_types::contract::Digest256;
-use medulla_types::memory_sync::MemorySyncRefusal;
 use medulla_types::tenant_cursor::CursorFamily;
 use sha2::Sha256;
 

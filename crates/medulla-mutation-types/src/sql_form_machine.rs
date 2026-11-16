@@ -9,7 +9,7 @@
 //! ontology description is `SqlFormMachine` in `state-machines-v1.ttl`.
 
 use crate::pg_operational_surface::SqlFormState;
-use crate::transition_refused::{
+use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
 
@@ -137,7 +137,7 @@ impl SqlFormState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transition_refused::TransitionRefusalReason;
+    use medulla_types::transition_refused::TransitionRefusalReason;
 
     const EVENTS: [SqlFormEvent; 4] = [
         SqlFormEvent::ServePartially,

@@ -12,12 +12,12 @@
 
 use std::collections::BTreeMap;
 
+use medulla_catalog_types::web_source::{
+    WebCandidateSet, WebResult, WebResultRefusal, WebSearchCapability,
+};
 use medulla_exec::algebra::Op;
 use medulla_exec::rowset::{RowSet, TextChannels, ValueChannels};
 use medulla_query_types::wire::ForeignSourceSpec;
-use medulla_types::web_source::{
-    WebCandidateSet, WebResult, WebResultRefusal, WebSearchCapability,
-};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 

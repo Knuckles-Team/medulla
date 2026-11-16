@@ -9,14 +9,14 @@
 //! `catalog:usage:principals`; other callers get the counts with `principal` null.
 
 use super::*;
-use medulla_protocol_types::result_contract::query::CatalogUsage;
-use medulla_types::asset_usage::{
+use medulla_catalog_types::asset_usage::{
     CatalogUsageAnswer, FrequentUser, UsageSuggestion, ASSET_USAGE_FILTER_SERIES,
     ASSET_USAGE_JOIN_SERIES, ASSET_USAGE_READS_SERIES, CATALOG_USAGE_PRINCIPALS_SCOPE,
     CATALOG_USAGE_SUGGESTION_MIN_COUNT, CATALOG_USAGE_TOP_N,
 };
+use medulla_protocol_types::result_contract::query::CatalogUsage;
 
-use medulla_types::asset_usage::{CATALOG_ASSET_NOT_FOUND, CATALOG_LIMIT_INVALID};
+use medulla_catalog_types::asset_usage::{CATALOG_ASSET_NOT_FOUND, CATALOG_LIMIT_INVALID};
 
 /// The tags of one usage series name, when it is a series of `base` about `asset`: the
 /// principal and the rest of the tags after the asset.
@@ -197,7 +197,7 @@ async fn read_usage_series(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::asset_usage::{
+    use medulla_catalog_types::asset_usage::{
         usage_filter_series_name, usage_join_series_name, usage_series_name,
     };
 

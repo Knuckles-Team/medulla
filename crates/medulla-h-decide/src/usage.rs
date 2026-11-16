@@ -9,9 +9,9 @@
 //! `AgentLibraryStore::put_prices`. Every refusal is
 //! answered with its stable R801.4 code before anything is written.
 
+use medulla_decision_types::usage::UsageOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::usage::UsageOp;
 
 use crate::decide::SharedState;
 
@@ -43,13 +43,13 @@ pub async fn handle_usage(
 mod served {
     use super::{UsageOp, VerifiedRequestContext, USAGE_WRITE_SCOPE};
     use crate::decide::SharedState;
+    use medulla_decision_types::usage::{
+        PriceCatalog, UsageAppended, UsagePriceStored, UsageRecord, USAGE_SCHEMA_VERSION,
+    };
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::usage_ledger::UsageRefusal;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{UsageAppend, UsagePutPrice};
-    use medulla_types::usage::{
-        PriceCatalog, UsageAppended, UsagePriceStored, UsageRecord, USAGE_SCHEMA_VERSION,
-    };
 
     pub(super) async fn serve(
         state: &SharedState,

@@ -18,7 +18,7 @@ This file names the records and graph terms that the rows add. Each entity has o
 ### RunObservationWindow and DurableUnit
 
 - Fields: revisioned window with measured-or-unknown fields; a unit with `run_id`, closed `status` and artifact refs.
-- Owner: `crates/medulla-types/src/run_observation.rs` and `crates/medulla-types/src/durable_unit.rs`.
+- Owner: `crates/medulla-work-types/src/run_observation.rs` and `crates/medulla-types/src/durable_unit.rs`.
 - Relation: both link to a `:RunTrace`.
 
 ### MeasuredModelFact

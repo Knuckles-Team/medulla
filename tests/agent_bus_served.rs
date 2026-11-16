@@ -14,7 +14,7 @@ mod test_support;
 use std::collections::BTreeSet;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::agent_bus::{BusParticipant, BusRoster, MAX_SESSION_REF_BYTES};
+use medulla_work_types::agent_bus::{BusParticipant, BusRoster, MAX_SESSION_REF_BYTES};
 
 const SECRET: &str = "agent-bus-served-secret";
 const ENCRYPTION_KEY: &str = "agent-bus-served-encryption-key-0123456789";
@@ -276,7 +276,7 @@ async fn bus_refusals_write_nothing() {
 
     // The roster bound: BUS_ROSTER_FULL is asserted against the Fixed constant.
     assert_eq!(
-        medulla_types::agent_bus::MAX_PARTICIPANTS_PER_TENANT,
+        medulla_work_types::agent_bus::MAX_PARTICIPANTS_PER_TENANT,
         10_000
     );
 }

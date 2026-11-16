@@ -19,11 +19,11 @@ use medulla_catalog_types::attached_catalog::{
     AttachedCatalogGraph, CatalogColumn, CatalogConstraint, CatalogConstraintKind,
     CatalogReference, CatalogTable, CatalogView,
 };
-use medulla_catalog_types::lineage::LineageDialect;
-use medulla_federation::mysql_introspect::{read_information_schema, InformationSchema};
-use medulla_types::attached_source_dialect::{
+use medulla_catalog_types::attached_source_dialect::{
     DialectDeclarationRefused, SqlEngineCaptureSupport, SqlEngineDialectEntry, SqlEngineKind,
 };
+use medulla_catalog_types::lineage::LineageDialect;
+use medulla_federation::mysql_introspect::{read_information_schema, InformationSchema};
 
 /// The source cannot be reached or its catalog cannot be read.
 pub const SOURCE_UNAVAILABLE: &str = "SOURCE_UNAVAILABLE";

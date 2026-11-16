@@ -1582,7 +1582,7 @@ const BLOCKING: &str = "https://knuckles-team.github.io/ontology/test/blocking-k
 // spec: MEDULLA-SUPPLY-VOCAB-R007.2
 #[test]
 fn digest_key_is_exact_name_only_key_is_a_proposal() {
-    use medulla_types::entity_link_proposal::{
+    use medulla_catalog_types::entity_link_proposal::{
         AttachedApplication, CannotAssert, EntityLinkProposal, EntityRef, MatchClass,
     };
 

@@ -79,7 +79,7 @@ reasoning = ["medulla-server-api/reasoning", "medulla-server-cdc/reasoning", "me
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-kernel/redb"]
 shacl = ["rdf", "dep:medulla-shacl", "medulla-server-api/shacl", "medulla-server-cdc/shacl", "medulla-kernel/shacl"]
 sparql-http = ["shacl", "medulla-server-api/sparql-http", "redb"]
-statechart = ["medulla-server-api/statechart", "medulla-capabilities/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
+statechart = ["medulla-server-api/statechart", "medulla-capabilities/statechart", "medulla-protocol-types/statechart", "medulla-work-types/statechart"]
 streaming = ["medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-protocol-types/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]
 test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-work-types/test-support"]
 [dev-dependencies]

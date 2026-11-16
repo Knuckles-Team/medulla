@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ServerErrorCode;
-use crate::refusal_code::RefusalCode;
+use medulla_types::contract::ServerErrorCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Largest evidence weight, in parts per million.
 pub const WEIGHT_PPM_MAX: u32 = 1_000_000;

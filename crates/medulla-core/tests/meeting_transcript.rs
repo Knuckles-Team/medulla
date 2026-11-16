@@ -3,8 +3,8 @@
 use medulla_core::meeting_transcript::{
     apply_revision, get_final, Conflict, SummaryMark, TranscriptState,
 };
+use medulla_source_types::meeting_transcript::{MeetingTranscriptRevision, TranscriptRevisionOp};
 use medulla_types::contract::Digest256;
-use medulla_types::meeting_transcript::{MeetingTranscriptRevision, TranscriptRevisionOp};
 
 fn event(
     op: TranscriptRevisionOp,

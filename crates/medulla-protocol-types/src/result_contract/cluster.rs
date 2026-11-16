@@ -16,11 +16,11 @@ method_results! {
     visit_cluster;
     CreateGraph(CreateGraph) => Json<GraphCreated>;
     DeleteGraph(DeleteGraph) => Json<GraphDeleted>;
-    CreateBranch(CreateBranch) => Json<medulla_types::branch::Branch>;
-    BranchWrite(BranchWrite) => Json<medulla_types::branch::BranchWriteReceipt>;
-    BranchDiff(BranchDiff) => Json<medulla_types::versioning::KgDiff>;
-    BranchReadAt(BranchReadAt) => Json<medulla_types::versioning::BranchSnapshot>;
-    SubmitChangeset(SubmitChangeset) => Json<medulla_types::source_changeset::SubmitChangesetReceipt>;
+    CreateBranch(CreateBranch) => Json<medulla_mutation_types::branch::Branch>;
+    BranchWrite(BranchWrite) => Json<medulla_mutation_types::branch::BranchWriteReceipt>;
+    BranchDiff(BranchDiff) => Json<medulla_mutation_types::versioning::KgDiff>;
+    BranchReadAt(BranchReadAt) => Json<medulla_mutation_types::versioning::BranchSnapshot>;
+    SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;
     CatalogAssign(CatalogAssign) => Bool<bool>;

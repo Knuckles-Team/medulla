@@ -40,6 +40,7 @@ name = "medulla_durable"
 # MEDULLA-REPO-INGEST-R650.1/.2: `Digest256` for manifest/plan digests and the
 # `SchedulerConfig` hydration knobs. medulla-types sits at the bottom of the DAG.
 medulla-types = { path = "../medulla-types" }
+medulla-work-types = { path = "../medulla-work-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

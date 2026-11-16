@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::refusal_code::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal code of `CatalogUsage`: the asset has no usage in the caller's scope.
 pub const CATALOG_ASSET_NOT_FOUND: &str = "CATALOG_ASSET_NOT_FOUND";

@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::{
+use medulla_catalog_types::{
     entity_link_proposal::EntityLinkProposal, entity_link_proposal::EntityRef,
     entity_link_proposal::MatchClass,
 };
@@ -330,7 +330,7 @@ pub fn decide_merge(evidence: &[IdentityEvidence], embedding_min: f64) -> MergeD
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::{
+    use medulla_catalog_types::{
         entity_link_proposal::AttachedApplication, entity_link_proposal::CannotAssert,
     };
 

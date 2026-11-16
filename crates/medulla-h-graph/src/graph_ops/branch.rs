@@ -14,6 +14,10 @@ pub mod time_travel;
 
 use std::sync::Arc;
 
+use medulla_mutation_types::branch::{
+    branch_target_graph, validate_branch_name, Branch, BranchMutationRefusal, BranchRef,
+    BranchWriteReceipt, RESERVED_BRANCH_NAME,
+};
 use medulla_persistence::branch_registry_store::{
     shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
     BranchRegistry, CommitPlan, PayloadReader,
@@ -21,10 +25,6 @@ use medulla_persistence::branch_registry_store::{
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_types::branch::{
-    branch_target_graph, validate_branch_name, Branch, BranchMutationRefusal, BranchRef,
-    BranchWriteReceipt, RESERVED_BRANCH_NAME,
-};
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
@@ -205,7 +205,7 @@ impl BranchTarget {
     pub async fn replayed(
         &self,
         batch_id: &str,
-    ) -> Result<Option<medulla_types::branch::BranchCommit>, String> {
+    ) -> Result<Option<medulla_mutation_types::branch::BranchCommit>, String> {
         let registry = Arc::clone(&self.registry);
         let reference = self.reference.clone();
         let batch_id = batch_id.to_string();
@@ -229,7 +229,7 @@ impl BranchTarget {
     }
 
     /// Every commit of the branch, oldest first (R006).
-    pub async fn chain(&self) -> Result<Vec<medulla_types::branch::BranchCommit>, String> {
+    pub async fn chain(&self) -> Result<Vec<medulla_mutation_types::branch::BranchCommit>, String> {
         let registry = Arc::clone(&self.registry);
         let reference = self.reference.clone();
         let mut commits = tokio::task::spawn_blocking(move || registry.chain(&reference))

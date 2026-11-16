@@ -2,12 +2,12 @@
 
 use super::handle_usage;
 use crate::decide::stat_test_support::Harness;
-use medulla_protocol_types::protocol::{Response, ResultPayload};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::usage::{
+use medulla_decision_types::usage::{
     PriceCatalog, PriceEntry, UsageAppended, UsageOp, UsageOutcome, UsagePriceStored, UsageRecord,
     USAGE_SCHEMA_VERSION,
 };
+use medulla_protocol_types::protocol::{Response, ResultPayload};
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 const TENANT: &str = "tenant-usage";
 

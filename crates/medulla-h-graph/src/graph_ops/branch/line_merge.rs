@@ -10,7 +10,7 @@
 //! nothing, the caller lands the merged blob.
 
 use medulla_compute::line_merge::{merge_lines, LineMerge};
-use medulla_types::source_changeset::{FileMergeRefusal, FileMerger};
+use medulla_source_types::source_changeset::{FileMergeRefusal, FileMerger};
 
 /// Three-way text merge of one file over `base`, `ours` (the submission) and
 /// `theirs` (the branch head). Disjoint hunks merge; overlapping hunks and

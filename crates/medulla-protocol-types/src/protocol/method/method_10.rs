@@ -104,7 +104,7 @@ $($variants)*
     /// observed model calls or store a price catalog under the verified tenant.
     /// Both ops need the service-only scope `usage:write`.
     Usage {
-        op: Box<medulla_types::usage::UsageOp>,
+        op: Box<medulla_decision_types::usage::UsageOp>,
     },
     /// The feature ledger: record a gap with the matches it came from, attach a
     /// plan, close it by a known change, and read entries
@@ -117,21 +117,21 @@ $($variants)*
     /// on five channels, compile a sealed research artifact and read them back.
     /// The `Claims` handler is the single writer of claim state.
     Claims {
-        op: Box<medulla_types::claims::ClaimOp>,
+        op: Box<medulla_decision_types::claims::ClaimOp>,
     },
     /// Improvement loops: the fenced lease, gaps, the gap-to-work-offer market,
     /// stage beacons, the improvement ledger, the failure-sequence miner and
     /// the capability ratchet. The `Loops` handler is the single writer of
     /// loop state.
     Loops {
-        op: Box<medulla_types::loops::LoopOp>,
+        op: Box<medulla_decision_types::loops::LoopOp>,
     },
     /// Belief revision: revise the confidence of claims whose evidence changed,
     /// track contradictions and propose retractions. The `BeliefRevise`
     /// handler is the single writer of belief revisions, friction findings and
     /// contradiction records.
     BeliefRevise {
-        request: Box<medulla_types::belief_revision::BeliefReviseRequest>,
+        request: Box<medulla_decision_types::belief_revision::BeliefReviseRequest>,
     },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.

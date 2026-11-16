@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 
 use medulla_core::meeting_transcript::{apply_revision, get_final, TranscriptState};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::meeting_transcript::{
+use medulla_source_types::meeting_transcript::{
     MeetingTranscriptRevision, MeetingTranscriptRevisionReceipt, TranscriptRevisionOp,
 };
 

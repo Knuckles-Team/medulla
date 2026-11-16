@@ -11,7 +11,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::tenant_cursor::CursorFamily;
+use medulla_types::tenant_cursor::CursorFamily;
 
 /// Wire schema version of the feed types.
 pub const GRAPH_CHANGE_FEED_SCHEMA_VERSION: u32 = 1;

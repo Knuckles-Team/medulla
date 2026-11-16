@@ -22,6 +22,11 @@ use super::batch::{semantic_digest, MetadataMutation};
 use super::persist::replace_bytes;
 use super::{kernel_error, refused, SemanticCodeError, SemanticCodeStore};
 use medulla_ann::{recall_at_k, EmbeddingVersion, EmbeddingVersionStore, PromotionApproval};
+use medulla_catalog_types::embedding_promotion::{
+    decode_promotion_record, encode_promotion_record, evaluate_promotion, ModalityCheck,
+    ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality, PromotionStage,
+    PromotionVerdict, SemanticModelConfig, StageReceipt, DEFAULT_PROMOTION_TOLERANCE,
+};
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_semantic_index::semantic::SemanticGenerationImage;
 use medulla_storage::{
@@ -29,11 +34,6 @@ use medulla_storage::{
     SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
 };
 use medulla_transaction::AdmittedOwnerWrite;
-use medulla_types::embedding_promotion::{
-    decode_promotion_record, encode_promotion_record, evaluate_promotion, ModalityCheck,
-    ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality, PromotionStage,
-    PromotionVerdict, SemanticModelConfig, StageReceipt, DEFAULT_PROMOTION_TOLERANCE,
-};
 use redb::ReadableTable;
 
 /// The refusal code of a blocked promotion: the registered

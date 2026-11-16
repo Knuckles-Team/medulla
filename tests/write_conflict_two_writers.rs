@@ -13,8 +13,8 @@ mod test_support;
 
 use std::collections::BTreeMap;
 
+use medulla_mutation_types::write_conflict::MergeStrategy;
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
-use medulla_types::write_conflict::MergeStrategy;
 use serde_json::{json, Value};
 
 const SECRET: &str = "write-conflict-two-writers-secret";

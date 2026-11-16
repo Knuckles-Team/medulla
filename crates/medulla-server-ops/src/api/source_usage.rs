@@ -76,13 +76,13 @@ pub async fn run_query_log_ingest(
     run: &QueryLogRun,
 ) -> Result<QueryLogSummary, String> {
     use crate::api::query_txn::ForeignStateExt;
-    use medulla_federation::source_query_log::{dialect_for_dsn, query_log_for_dsn, tally_entries};
-    use medulla_tsdb::point::Point;
-    use medulla_tsdb::store::SeriesKey;
-    use medulla_types::asset_usage::{
+    use medulla_catalog_types::asset_usage::{
         catalog_usage_period_s, usage_filter_series_name, usage_join_series_name,
         usage_series_name, ASSET_USAGE_READS_SERIES, CATALOG_USAGE_LOG_BATCH,
     };
+    use medulla_federation::source_query_log::{dialect_for_dsn, query_log_for_dsn, tally_entries};
+    use medulla_tsdb::point::Point;
+    use medulla_tsdb::store::SeriesKey;
 
     let (catalog, store, persist) = {
         let guard = state.read().await;

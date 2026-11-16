@@ -5,7 +5,7 @@
 //! The records are pure data; the chain rules live in `medulla-core` and the
 //! commit in the `GraphSchema` handler.
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
 /// What one edit did to its subject.

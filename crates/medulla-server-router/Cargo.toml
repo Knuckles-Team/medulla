@@ -16,6 +16,7 @@ medulla-version = { path = "../medulla-version" }
 medulla-h-retrieve = { path = "../medulla-h-retrieve" }
 medulla-h-sparql = { path = "../medulla-h-sparql" }
 medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-h-admin = { path = "../medulla-h-admin" }
@@ -133,7 +134,7 @@ shacl = ["medulla-server-graph/shacl", "medulla-server-obs/shacl", "rdf", "medul
 sparql = ["medulla-server-graph/sparql", "medulla-server-obs/sparql", "dep:medulla-rdf", "medulla-rdf/sparql", "rdf", "medulla-h-admin/sparql", "medulla-h-decide/sparql", "medulla-h-graph/sparql", "medulla-h-query/sparql", "medulla-h-sparql/sparql", "medulla-h-txn/sparql", "medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-raft/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
 sparql-http = ["medulla-server-graph/sparql-http", "medulla-server-obs/sparql-http", "sparql", "shacl", "security", "server", "medulla-server-api/sparql-http", "medulla-server-blob/sparql-http", "medulla-server-mutation/sparql-http", "owl"]
 sqlite-file = ["query", "server", "medulla-h-txn/sqlite-file", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-raft/sqlite-file", "medulla-types/sqlite-file"]
-statechart = ["medulla-capabilities/statechart", "server", "medulla-h-jobs/statechart", "medulla-h-query/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart"]
+statechart = ["medulla-capabilities/statechart", "server", "medulla-h-jobs/statechart", "medulla-h-query/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-work-types/statechart"]
 stomp-wire = ["server", "medulla-server-api/stomp-wire"]
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-stream/stream", "medulla-plan/stream", "medulla-h-admin/stream", "medulla-h-decide/stream", "medulla-h-jobs/stream", "medulla-h-query/stream", "medulla-h-txn/stream", "medulla-raft/stream", "medulla-server-api/stream", "medulla-server-cdc/stream", "medulla-server-ops/stream", "medulla-types/stream", "medulla-query-types/stream"]
 streaming = ["medulla-server-graph/streaming", "medulla-server-obs/streaming", "server", "medulla-h-admin/streaming", "medulla-h-graph/streaming", "medulla-h-query/streaming", "medulla-protocol-types/streaming", "medulla-raft/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-server-mutation/streaming", "medulla-server-ops/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]

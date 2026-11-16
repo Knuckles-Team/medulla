@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ServerErrorCode;
+use medulla_types::contract::ServerErrorCode;
 
 /// What one bound web metasearch tool accepts.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

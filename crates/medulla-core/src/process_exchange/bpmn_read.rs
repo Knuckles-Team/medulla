@@ -22,8 +22,8 @@ pub struct BpmnLimits {
 impl Default for BpmnLimits {
     fn default() -> Self {
         Self {
-            max_bytes: medulla_types::scheduler_config::DEFAULT_PROCESS_DOCUMENT_MAX_BYTES,
-            max_depth: medulla_types::scheduler_config::DEFAULT_PROCESS_DOCUMENT_MAX_DEPTH,
+            max_bytes: medulla_work_types::scheduler_config::DEFAULT_PROCESS_DOCUMENT_MAX_BYTES,
+            max_depth: medulla_work_types::scheduler_config::DEFAULT_PROCESS_DOCUMENT_MAX_DEPTH,
         }
     }
 }

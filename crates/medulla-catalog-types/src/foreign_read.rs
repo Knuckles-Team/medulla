@@ -6,7 +6,7 @@
 //! `UnifiedQuery`.  These DTOs carry no credentials and no source URL; the
 //! server re-reads the approval and catalog before it binds its page source.
 
-use crate::connector_pack::ConnectorPackSourceApprovalResult;
+use medulla_types::connector_pack::ConnectorPackSourceApprovalResult;
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

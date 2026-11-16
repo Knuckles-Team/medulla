@@ -31,12 +31,12 @@ method_results! {
     DomainPackRunResult(DomainPack / "run") => Raw<medulla_catalog_types::domain_pack::DomainPackRun>;
     // MEDULLA-CQ-ORCH-R010.3: the served architecture view.
     ArchitectureView(ArchitectureView) => Json<medulla_catalog_types::architecture_view::ArchitectureViewResponse>;
-    ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
+    ContextFacts(ContextFacts) => Json<medulla_decision_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
-    ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;
+    ReadSpan(ReadSpan) => Json<medulla_decision_types::source_toc::ReadSpanResult>;
     // MEDULLA-DURABLE-KERNEL-R043.100.2 and .3: the change feed's snapshot and page.
-    OpenGraphSnapshot(OpenGraphSnapshot) => Json<medulla_types::graph_change_feed::GraphSnapshot>;
-    ReadGraphChanges(ReadGraphChanges) => Json<medulla_types::graph_change_feed::GraphChangePage>;
+    OpenGraphSnapshot(OpenGraphSnapshot) => Json<medulla_mutation_types::graph_change_feed::GraphSnapshot>;
+    ReadGraphChanges(ReadGraphChanges) => Json<medulla_mutation_types::graph_change_feed::GraphChangePage>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;
@@ -44,10 +44,10 @@ method_results! {
     DecayNode(DecayNode) => Bool<bool>;
     BusRegister(BusRegister) => Bool<bool>;
     BusHeartbeat(BusHeartbeat) => Bool<bool>;
-    BusRoster(BusRoster) => Json<medulla_types::agent_bus::BusRoster>;
-    ReadMemorySnapshot(ReadMemorySnapshot) => Json<medulla_types::memory_sync::MemorySnapshotRead>;
-    ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_types::memory_sync::MemorySnapshotList>;
-    SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_types::memory_sync::SyncOutcome>;
+    BusRoster(BusRoster) => Json<medulla_work_types::agent_bus::BusRoster>;
+    ReadMemorySnapshot(ReadMemorySnapshot) => Json<medulla_mutation_types::memory_sync::MemorySnapshotRead>;
+    ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_mutation_types::memory_sync::MemorySnapshotList>;
+    SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_mutation_types::memory_sync::SyncOutcome>;
     DecayMemories(DecayMemories) => Count<u64>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;

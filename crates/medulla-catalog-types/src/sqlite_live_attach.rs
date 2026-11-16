@@ -4,7 +4,7 @@
 //! tailing / watermark polling against a live, concurrently-written file is
 //! MEDULLA-UNIFIED-DATA-PLANE-R015.2.2+.
 
-use crate::sqlite_attached_catalog::SqliteCaptureMode;
+use medulla_types::sqlite_attached_catalog::SqliteCaptureMode;
 use serde::{Deserialize, Serialize};
 
 /// How this adapter opens the live application's SQLite file. This slice

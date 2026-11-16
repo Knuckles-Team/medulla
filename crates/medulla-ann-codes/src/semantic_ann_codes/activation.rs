@@ -49,7 +49,7 @@ struct Publication<'a> {
     mutation_bytes: &'a [u8],
     /// The passing promotion verdict this activation stores, when the gate
     /// applied (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
-    promotion: Option<&'a medulla_types::embedding_promotion::PromotionVerdict>,
+    promotion: Option<&'a medulla_catalog_types::embedding_promotion::PromotionVerdict>,
 }
 
 impl SemanticCodeStore {

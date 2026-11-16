@@ -266,7 +266,7 @@ fn compute(
         )));
     }
     let baseline_trace = read_run_trace(ctx, baseline_trace_id)?;
-    let catalog = medulla_types::usage::PriceCatalog {
+    let catalog = medulla_decision_types::usage::PriceCatalog {
         aliases: BTreeMap::new(),
         entries: ctx
             .store

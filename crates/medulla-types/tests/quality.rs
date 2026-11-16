@@ -1,4 +1,6 @@
-use medulla_types::quality::{QualityDimension, QualityRule, QualityScore, QualitySeverity};
+use medulla_catalog_types::quality::{
+    QualityDimension, QualityRule, QualityScore, QualitySeverity,
+};
 
 fn rule() -> QualityRule {
     QualityRule {
@@ -46,8 +48,8 @@ fn rule_round_trips() {
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R762.7
 #[test]
 fn profile_yields_proposed_rules() {
-    use medulla_types::profile::{ColumnProfile, ProfileMethod};
-    use medulla_types::quality::{propose_rules, RuleState};
+    use medulla_catalog_types::profile::{ColumnProfile, ProfileMethod};
+    use medulla_catalog_types::quality::{propose_rules, RuleState};
     let profile = ColumnProfile {
         dataset: "pg:app.public.customers".to_string(),
         column: "zip".to_string(),

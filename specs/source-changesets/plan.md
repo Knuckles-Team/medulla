@@ -29,10 +29,10 @@ The engine holds a repository's source as a log of changesets over a content-add
 ## Project Structure
 
 ```text
-crates/medulla-types/src/source_changeset.rs          existing: Changeset, Trailers, ChangedPath
-crates/medulla-types/src/source_symbol_edit.rs        existing: SymbolEdit
+crates/medulla-source-types/src/source_changeset.rs          existing: Changeset, Trailers, ChangedPath
+crates/medulla-source-types/src/source_symbol_edit.rs        existing: SymbolEdit
 crates/medulla-types/src/source_path_grant.rs         new: PathGrant
-crates/medulla-types/src/scheduler_config.rs          existing: knobs added
+crates/medulla-work-types/src/scheduler_config.rs          existing: knobs added
 crates/medulla-compute/src/source_symbol_edit.rs      existing: projection
 crates/medulla-compute/src/source_tree.rs             new: tree_at
 crates/medulla-compute/src/source_history.rs          new: history indexes

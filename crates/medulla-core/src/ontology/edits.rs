@@ -9,8 +9,8 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
+use medulla_catalog_types::ontology_edit::{NamingFinding, NamingMode, OntologyEdit};
 use medulla_types::contract::{Digest256, ServerErrorCode};
-use medulla_types::ontology_edit::{NamingFinding, NamingMode, OntologyEdit};
 
 /// A refused chain operation: a registered code plus a detail.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,7 +51,7 @@ pub fn chain_head(chain: &[OntologyEdit]) -> Option<Digest256> {
 #[derive(Clone, Debug)]
 pub struct EditDraft {
     /// Add, change or remove.
-    pub kind: medulla_types::ontology_edit::EditKind,
+    pub kind: medulla_catalog_types::ontology_edit::EditKind,
     /// The subject the edit is about.
     pub subject_iri: String,
     /// Digest before the edit.
@@ -260,7 +260,7 @@ pub fn lint_names(
 pub fn refuse_naming_errors(findings: &[NamingFinding]) -> Result<(), EditRefusal> {
     let Some(first) = findings
         .iter()
-        .find(|f| f.severity == medulla_types::ontology_edit::NamingSeverity::Error)
+        .find(|f| f.severity == medulla_catalog_types::ontology_edit::NamingSeverity::Error)
     else {
         return Ok(());
     };

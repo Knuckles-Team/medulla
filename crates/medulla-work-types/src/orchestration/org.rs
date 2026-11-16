@@ -7,13 +7,13 @@
 //!
 //! The market defines no bid or allocation type of its own: the bid is the
 //! [`WorkOffer`] / [`WorkOfferView`] / [`BlastRadius`] of
-//! [`crate::work_market`], and the allocation inputs and output are its
+//! [`medulla_types::work_market`], and the allocation inputs and output are its
 //! [`MarketFacts`], [`RankedOffer`] and [`OfferSelection`].
 
 use serde::{Deserialize, Serialize};
 
-pub use crate::work_market::selection::{MarketFacts, OfferSelection, RankedOffer};
-pub use crate::work_market::{BlastRadius, WorkOffer, WorkOfferView};
+pub use medulla_types::work_market::selection::{MarketFacts, OfferSelection, RankedOffer};
+pub use medulla_types::work_market::{BlastRadius, WorkOffer, WorkOfferView};
 
 /// An organization and the roles it staffs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

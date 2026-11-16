@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 use medulla_core::meeting_transcript::{SummaryMark, TranscriptState};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::meeting_transcript::{
+use medulla_source_types::meeting_transcript::{
     MeetingSummaryCommitReceipt, MeetingSummaryCommitRequest, SummaryAdmissionRef,
 };
 

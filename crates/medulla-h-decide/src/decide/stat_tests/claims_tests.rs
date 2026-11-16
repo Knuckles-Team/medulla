@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use super::*;
 use crate::decide::claims::handle_claims;
-use medulla_types::claims::{
+use medulla_decision_types::claims::{
     ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, EvidenceChannel, ResearchArtifact, Stance,
 };
 
@@ -133,7 +133,7 @@ async fn claim_journey() {
         1_000_000,
     );
     if let ClaimOp::RecordEvidence { feed: slot, .. } = &mut feed {
-        *slot = Some(medulla_types::claims::FeedItem {
+        *slot = Some(medulla_decision_types::claims::FeedItem {
             text: "weather forecast".to_string(),
             fleet_topics: vec!["graph storage".to_string()],
         });

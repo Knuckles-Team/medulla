@@ -426,7 +426,7 @@ mod contract_pin_tests {
     // spec: MEDULLA-TYPED-PACKS-R065
     #[test]
     fn server_pin_digest_carries_the_declared_sdk_contract_pin_opaquely() {
-        let index = crate::catalog_fixtures::contract_pack::index();
+        let index = medulla_types::catalog_fixtures::contract_pack::index();
         let server = &index.server;
         assert_eq!(
             entry_digest(server).unwrap().to_hex(),
@@ -457,12 +457,12 @@ mod harness_tool_fact_tests {
     // spec: MEDULLA-TYPED-PACKS-R045.3
     #[test]
     fn absent_new_fields_keep_golden_vectors() {
-        let index = crate::catalog_fixtures::contract_pack::index();
+        let index = medulla_types::catalog_fixtures::contract_pack::index();
         assert_eq!(
             entry_digest(&index.server).unwrap().to_hex(),
             "be337c60eeea7477fe2970931c3de4ada4d30a301aa10bb6aa8d2b49827f4e6d"
         );
-        let base = crate::catalog_fixtures::contract_pack::annotations();
+        let base = medulla_types::catalog_fixtures::contract_pack::annotations();
         let baseline = annotations_digest(&base).unwrap();
         let explicit_absent: PackAnnotations = serde_json::from_value({
             let mut wire = serde_json::to_value(&base).unwrap();
@@ -518,7 +518,7 @@ mod harness_tool_fact_tests {
             side_effects: Some(ToolSideEffects::Network),
             declared_by: Some(ToolFactDeclarer::McpHint),
             schema_tokens: Some(42),
-            ..crate::catalog_fixtures::contract_pack::annotations()
+            ..medulla_types::catalog_fixtures::contract_pack::annotations()
         };
         assert_eq!(
             annotations_digest(&annotations).unwrap().to_hex(),

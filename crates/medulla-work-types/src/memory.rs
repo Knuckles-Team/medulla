@@ -8,7 +8,7 @@
 //! reads a clock or a store.
 //!
 //! This `RetentionPolicy` prunes engine-held memory. It is distinct from
-//! [`crate::retention_policy::RetentionPolicy`], which drives the durable
+//! [`medulla_mutation_types::retention_policy::RetentionPolicy`], which drives the durable
 //! node-cleanup path (MEDULLA-DURABLE-KERNEL-R700.1).
 
 use serde::{Deserialize, Serialize};

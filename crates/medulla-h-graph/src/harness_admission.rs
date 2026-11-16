@@ -861,7 +861,7 @@ fn validate_run_observation(
     props: &Props,
 ) -> Result<Option<Admission>, String> {
     use medulla_types::contract::ServerErrorCode;
-    use medulla_types::run_observation::{RunObservationWindow, WINDOW_SAMPLES_MAX_DEFAULT};
+    use medulla_work_types::run_observation::{RunObservationWindow, WINDOW_SAMPLES_MAX_DEFAULT};
     if node_type(props) != Some("RunObservationWindow") {
         return Ok(None);
     }
@@ -1010,7 +1010,7 @@ fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Ve
     if node_type(props) == Some("RunObservationWindow") {
         // R009.18.2: the window links to its trace, and a zero
         // `eligible_attempts` stores the error rate as Unknown.
-        let window: medulla_types::run_observation::RunObservationWindow =
+        let window: medulla_work_types::run_observation::RunObservationWindow =
             decode_record(props).map_err(|err| format!("HarnessRecordMalformed: {err}"))?;
         stamped.insert("run_trace_ref".into(), serde_json::json!(window.run_id));
         stamped.insert(

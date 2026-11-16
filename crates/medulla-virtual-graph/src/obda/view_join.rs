@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use medulla_types::virtual_graph_view::ViewJoin;
+use medulla_catalog_types::virtual_graph_view::ViewJoin;
 
 use super::{
     ForeignRow, ObdaFilter, ObdaSource, ObdaSourceRegistry, ObjectMap, TriplesMap, VirtualGraph,

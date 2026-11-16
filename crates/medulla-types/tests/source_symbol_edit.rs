@@ -1,6 +1,6 @@
 //! Symbol edit model (MEDULLA-SCM-R013.1).
 
-use medulla_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
+use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
 
 // spec: MEDULLA-SCM-R013.1
 #[test]

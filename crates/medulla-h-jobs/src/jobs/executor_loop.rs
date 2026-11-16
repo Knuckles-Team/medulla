@@ -64,7 +64,7 @@ pub(super) fn ensure_job_workers(
     store: Arc<JobStore>,
 ) -> Result<(), String> {
     let timing = analytics_worker_timing()?;
-    let workers = medulla_types::scheduler_config::analytics_workers()
+    let workers = medulla_work_types::scheduler_config::analytics_workers()
         .map_err(|error| error.to_string())? as usize;
     static STARTED: OnceLock<()> = OnceLock::new();
     STARTED.get_or_init(|| {
@@ -175,7 +175,7 @@ mod tests {
     // spec: MEDULLA-PLACEMENT-R002.14
     #[test]
     fn analytics_workers_default_and_clamp() {
-        use medulla_types::scheduler_config::{
+        use medulla_work_types::scheduler_config::{
             analytics_workers_from, InvalidSchedulerConfig, ENV_ANALYTICS_WORKERS,
         };
         let env = |value: &'static str| move |_: &str| Some(value.to_string());

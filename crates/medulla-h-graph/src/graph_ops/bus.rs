@@ -15,11 +15,11 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_server_ops::api::ingest::graph::commit_gateway;
-use medulla_types::agent_bus::{
+use medulla_types::contract::ServerErrorCode;
+use medulla_work_types::agent_bus::{
     participant_node_id, BusParticipant, BusRoster, BusRosterEntry, BUS_PARTICIPANT_LABEL,
     MAX_PARTICIPANTS_PER_TENANT, MAX_SESSION_REF_BYTES,
 };
-use medulla_types::contract::ServerErrorCode;
 
 /// Default `bus.participant_ttl_s`.
 pub const DEFAULT_PARTICIPANT_TTL_S: u64 = 90;

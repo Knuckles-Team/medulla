@@ -20,6 +20,7 @@ name = "medulla_statechart"
 # `redb` is UNCONDITIONAL here exactly as it is in `medulla-jobs` — there is no "durable
 # machine-instance plane without a durable store" configuration worth shipping.
 [dependencies]
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-types = { path = "../medulla-types" }
 # RF-RULING-004: `medulla-storage` is the sole physical owner of `statecharts.redb`
 # (declared `OwnerLayout::Statechart`) and `medulla-transaction` the sole writer.

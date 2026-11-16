@@ -14,8 +14,8 @@
 //! `legal_hold` to true are never removed.
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_mutation_types::retention_policy::RetentionPolicy;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::retention_policy::RetentionPolicy;
 use serde::{Deserialize, Serialize};
 
 /// The label whose aged nodes a step removes.
@@ -176,7 +176,7 @@ pub fn cleanup_graph(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::retention_policy::HoldCheck;
+    use medulla_mutation_types::retention_policy::HoldCheck;
 
     const DAY: u64 = 86_400_000;
     const NOW: u64 = 100 * DAY;

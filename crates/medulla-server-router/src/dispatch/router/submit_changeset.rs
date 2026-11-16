@@ -18,7 +18,7 @@ use super::*;
 
 /// The wire field of `Method::SubmitChangeset`.
 pub struct SubmitChangesetFields {
-    pub request: Box<medulla_types::source_changeset::SubmitChangesetRequest>,
+    pub request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -30,7 +30,7 @@ mod served {
     };
     use medulla_persistence::branch_registry_store::{AppendError, CommitPlan, PayloadReader};
     use medulla_server_blob::blob::BlobStateExt;
-    use medulla_types::source_changeset::{Changeset, SubmitChangesetReceipt};
+    use medulla_source_types::source_changeset::{Changeset, SubmitChangesetReceipt};
 
     /// The chain as the registry transaction reads it.
     struct RegistryChain<'a> {
@@ -70,10 +70,10 @@ mod served {
         verified: &VerifiedRequestContext,
         fields: SubmitChangesetFields,
     ) -> Response {
-        let request: Arc<medulla_types::source_changeset::SubmitChangesetRequest> =
+        let request: Arc<medulla_source_types::source_changeset::SubmitChangesetRequest> =
             Arc::from(fields.request);
         // The repository is the graph the branch belongs to.
-        let reference = medulla_types::branch::BranchRef {
+        let reference = medulla_mutation_types::branch::BranchRef {
             tenant: verified.tenant().to_string(),
             graph: request.repo.clone(),
             name: request.branch.clone(),
@@ -89,7 +89,8 @@ mod served {
             Some(verified.principal()),
             verified.idempotency_key(),
         );
-        let replay = |commit: medulla_types::branch::BranchCommit, changeset: Changeset| {
+        let replay = |commit: medulla_mutation_types::branch::BranchCommit,
+                      changeset: Changeset| {
             receipt_response(
                 req.id,
                 SubmitChangesetReceipt {
@@ -141,7 +142,7 @@ mod served {
                 verify_submission(
                     store.as_ref(),
                     &request,
-                    medulla_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
+                    medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
                 )
             })
             .await

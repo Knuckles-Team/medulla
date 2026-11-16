@@ -19,7 +19,7 @@ This file names the entities that the rows of `requirements.md` add or reuse. Ea
 ### MetadataContract and AccelerationPolicy
 
 - Fields: schemas, entities, relationships, endpoints, schema version and content digest; a copy policy with a hot-subset predicate, a row bound and a watermark.
-- Owner: `crates/medulla-types/src/metadata_acceleration.rs`.
+- Owner: `crates/medulla-catalog-types/src/metadata_acceleration.rs`.
 - Rule: a policy for a source that cannot capture refuses, and a missing watermark falls back to a live read.
 
 ### VirtualMapping
@@ -31,7 +31,7 @@ This file names the entities that the rows of `requirements.md` add or reuse. Ea
 ### SourceCategory and SnapshotSemantics
 
 - Fields: a closed category list; isolation (`Snapshot`, `RepeatableRead`), snapshot token and replica lag bound.
-- Owner: `crates/medulla-types/src/metadata_acceleration.rs`.
+- Owner: `crates/medulla-catalog-types/src/metadata_acceleration.rs`.
 - Rule: serde rejects an unknown category or isolation, and the default lag bound is 5000 ms.
 
 ### ChangeEnvelope and ConsumerCheckpoint
@@ -43,7 +43,7 @@ This file names the entities that the rows of `requirements.md` add or reuse. Ea
 ### ModalityCheck and PromotionVerdict
 
 - Fields: modality (`text`, `image`, `audio`), probe set digest, metric, floor, baseline; verdict per modality.
-- Owner: `crates/medulla-types/src/embedding_promotion.rs`.
+- Owner: `crates/medulla-catalog-types/src/embedding_promotion.rs`.
 - Rule: one regression blocks promotion, and the verdict is a graph node linked to the model and version.
 
 ### IncidentRecord and AnomalyReading

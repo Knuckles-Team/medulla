@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
+use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::rowset::RowSet;
-use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// The bounds a snapshot is opened under. Both come from the server knobs
 /// `federation.replica_lag_bound_ms` and `federation.statement_timeout_ms`.

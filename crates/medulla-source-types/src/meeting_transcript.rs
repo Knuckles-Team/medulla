@@ -7,8 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
-use crate::refusal_code::RefusalCode;
+use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Fixed ceiling of `MeetingSummaryLimitPolicy::max_spans`.
 pub const MAX_SUMMARY_SPANS: u32 = 128;

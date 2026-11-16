@@ -36,6 +36,8 @@ pub mod cross_source_report;
 // (raft/backup/persistence) and a validated declaration within one.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pre_merge_test_module;
+// MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
+pub mod source_changeset;
 // MEDULLA-SDLC — release, deployment, defect, derived status and lifecycle trace records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lifecycle;
@@ -48,10 +50,15 @@ pub mod spec_machine;
 // MEDULLA-SDLC-R030.5 — the task state machine.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_ingestion;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 — the web metasearch capability and its result record.
+pub mod source_symbol_edit;
 pub mod task_machine;
 // MEDULLA-FEDERATED-QUERY-R701 — live artifacts re-derived from a query source.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod live_artifact;
+// MEDULLA-MEDIA-VOCAB-R001.101.1 — meeting transcript revisions and summary
+// contracts. Pure serde.
+pub mod meeting_transcript;
 // MEDULLA-FEDERATED-QUERY-R708 — stored, versioned queries and their materialized results.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stored_query;

@@ -7,8 +7,8 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_mutation_types::graph_change_feed::{GraphChange, GraphChangePage, GraphSnapshot};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::graph_change_feed::{GraphChange, GraphChangePage, GraphSnapshot};
 
 const SECRET: &str = "r043-100-graph-change-feed-secret";
 const GRAPH: &str = "__commons__";
@@ -236,12 +236,12 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
     let ahead = snapshot_of(&call(&state, 11, Method::OpenGraphSnapshot).await);
     let tenant = medulla_server_api::carrier::tenant_scope_of(common::TEST_TENANT);
     let ahead_cursor = {
-        let bound = medulla_types::graph_change_feed::GraphChangeCursor::decode(
+        let bound = medulla_mutation_types::graph_change_feed::GraphChangeCursor::decode(
             &tenant,
             &ahead.high_water_cursor,
         )
         .expect("own cursor decodes");
-        medulla_types::graph_change_feed::GraphChangeCursor {
+        medulla_mutation_types::graph_change_feed::GraphChangeCursor {
             last_event: bound.last_event + 50,
             ..bound
         }
@@ -265,7 +265,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
         .contains("safe_cursor="));
 
     // A cursor of another tenant is not a cursor.
-    let foreign = medulla_types::graph_change_feed::GraphChangeCursor {
+    let foreign = medulla_mutation_types::graph_change_feed::GraphChangeCursor {
         graph: GRAPH.to_string(),
         incarnation: ahead.incarnation,
         authorization_revision: ahead.visibility_revision,

@@ -4,14 +4,14 @@
 //! outgoing edges become cited facts inside a token budget. The read runs over
 //! the row-level-security projected core, so a node the caller cannot see yields
 //! no fact and an edge to a hidden node does not exist. The ranking and the
-//! budget are the pure functions of `medulla_types::context_facts`.
+//! budget are the pure functions of `medulla_decision_types::context_facts`.
 
 use super::terminal::GraphOpsContext;
 use super::*;
-use medulla_server_api::knob_config::knobs;
-use medulla_types::context_facts::{
+use medulla_decision_types::context_facts::{
     select, validate_request, ContextFactsRefusal, ContextFactsRequest, ContextFactsResult, RawFact,
 };
+use medulla_server_api::knob_config::knobs;
 use medulla_types::evidence_class::EvidenceClass;
 
 /// Property keys that carry provenance, not content.

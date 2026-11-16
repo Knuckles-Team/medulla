@@ -52,7 +52,7 @@ wire-contract = [
     "streaming", "owl", "owl-plan", "wasm-udf", "federation", "geo", "tensor", "stream",
     "medulla-types/wire-contract", "medulla-identity-types/wire-contract",
 ]
-wire-complete = ["wire-contract", "medulla-identity-types/wire-complete", "timeseries", "probabilistic", "quantum", "asr-native", "viz", "medulla-types/jobs", "medulla-types/statechart", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving"]
+wire-complete = ["wire-contract", "medulla-identity-types/wire-complete", "timeseries", "probabilistic", "quantum", "asr-native", "viz", "medulla-types/jobs", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema"]
 
 [dev-dependencies]

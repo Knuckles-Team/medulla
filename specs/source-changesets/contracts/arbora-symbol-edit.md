@@ -13,7 +13,7 @@ Arbora sends `Method::SubmitSymbolEdit { request }` with `SymbolEdit { repo, bra
 
 ## Authoritative types
 
-`SymbolEdit`, `SymbolEditOp` and `SymbolEditKind` in `crates/medulla-types/src/source_symbol_edit.rs`.
+`SymbolEdit`, `SymbolEditOp` and `SymbolEditKind` in `crates/medulla-source-types/src/source_symbol_edit.rs`.
 
 ## Test vectors
 

@@ -1,6 +1,6 @@
 //! Data product, contract and access-request records (MEDULLA-TYPED-PACKS-R805.1).
 
-use medulla_types::data_product::{
+use medulla_catalog_types::data_product::{
     parse_product_version, AccessRequest, AccessRequestState, ContractPromise, ContractViolation,
     DataContract, DataProduct, ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
 };

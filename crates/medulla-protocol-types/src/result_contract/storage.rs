@@ -124,9 +124,9 @@ method_results! {
     ConnectorPackCatalogRequestOwnerPrincipal(ConnectorPack / "catalog_request_owner_principal") => Raw<String>;
     ConnectorPackConformanceEvidence(ConnectorPack / "conformance_evidence") => Raw<ConformanceEvidence>;
     ConnectorPackRevokeConformanceEvidence(ConnectorPack / "revoke_conformance_evidence") => Raw<ConformanceEvidence>;
-    DataProductRegister(DataProductRegister) => Raw<medulla_types::data_product::DataProductRegistered>;
-    AccessRequestOpen(AccessRequestOpen) => Raw<medulla_types::data_product::AccessRequest>;
-    AccessRequestDecide(AccessRequestDecide) => Raw<medulla_types::data_product::AccessRequest>;
+    DataProductRegister(DataProductRegister) => Raw<medulla_catalog_types::data_product::DataProductRegistered>;
+    AccessRequestOpen(AccessRequestOpen) => Raw<medulla_catalog_types::data_product::AccessRequest>;
+    AccessRequestDecide(AccessRequestDecide) => Raw<medulla_catalog_types::data_product::AccessRequest>;
     WriteBackCreate(WriteBack / "create") => Raw<SourceChangeSet>;
     WriteBackGet(WriteBack / "get") => Raw<Option<SourceChangeSet>>;
     WriteBackRecordAttempt(WriteBack / "record_attempt") => Raw<WriteBackReceipt>;

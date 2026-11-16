@@ -12,7 +12,7 @@ This file describes the entities that the rows add or extend.
 ### SqlFormEntry and SqlFormState
 
 - Fields: `SqlFormEntry{name, kind, state}`; `kind` is `Statement`, `Function`, `Operator` or `Type`; `SqlFormState` is `Supported`, `Partial` or `Refused`.
-- Owner: `crates/medulla-types/src/pg_operational_surface.rs`, inside `PgCompatibilityMatrix`. The matrix is closed: an absent form is `Refused`.
+- Owner: `crates/medulla-mutation-types/src/pg_operational_surface.rs`, inside `PgCompatibilityMatrix`. The matrix is closed: an absent form is `Refused`.
 
 ### SQLSTATE table
 
@@ -50,4 +50,4 @@ This file describes the entities that the rows add or extend.
 
 ### EngineCapabilities
 
-- Fields: `{wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`. Owner: `crates/medulla-types/src/engine_capabilities.rs`.
+- Fields: `{wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`. Owner: `crates/medulla-catalog-types/src/engine_capabilities.rs`.

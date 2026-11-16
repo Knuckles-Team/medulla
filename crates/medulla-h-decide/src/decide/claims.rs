@@ -14,9 +14,9 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
+use medulla_decision_types::claims::ClaimOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::claims::ClaimOp;
 
 /// Serve one claim operation.
 pub async fn handle_claims(
@@ -54,6 +54,10 @@ pub(super) mod served {
     use serde::de::DeserializeOwned;
     use sha2::{Digest, Sha256};
 
+    use medulla_decision_types::claims::{
+        ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, Evidence, FeedGrade, LifecycleTransition,
+        ResearchArtifact, Stance, WEIGHT_PPM_MAX,
+    };
     use medulla_epistemic::claims::{
         check_transition, combine_evidence, compile_artifact, contradiction_pairs,
         feed_is_relevant, grade_feed, verify_seal, ClaimKnobs,
@@ -67,10 +71,6 @@ pub(super) mod served {
         StatechartStore,
     };
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
-    use medulla_types::claims::{
-        ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, Evidence, FeedGrade, LifecycleTransition,
-        ResearchArtifact, Stance, WEIGHT_PPM_MAX,
-    };
     use medulla_types::contract::ServerErrorCode;
 
     /// Domain of the instance keys.
@@ -382,7 +382,7 @@ pub(super) mod served {
             &self,
             evidence_id: String,
             claim_id: String,
-            channel: Option<medulla_types::claims::EvidenceChannel>,
+            channel: Option<medulla_decision_types::claims::EvidenceChannel>,
             supports: bool,
             weight_ppm: u32,
             source_digest: String,
@@ -414,7 +414,7 @@ pub(super) mod served {
             &self,
             evidence: Evidence,
             new_stances: BTreeMap<String, Stance>,
-            feed: Option<medulla_types::claims::FeedItem>,
+            feed: Option<medulla_decision_types::claims::FeedItem>,
         ) -> Result<ClaimRecord, String> {
             let instance = self.require("claim", &evidence.claim_id)?;
             let mut record = record_of(&instance)?;

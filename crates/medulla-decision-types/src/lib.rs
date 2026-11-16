@@ -6,6 +6,15 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+// MEDULLA-DECISION-ENGINE-R700.1 — belief revision wire types.
+pub mod belief_revision;
+// MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
+pub mod claims;
+// MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
+// crate (a wire type, not a decision type), and the evidence class they cite.
+pub mod context_facts;
+// MEDULLA-DECISION-ENGINE-R702.1 — Learn-stage correction records and effects.
+pub mod correction;
 // RF-ADR-010 — the Decide layer's wire contract: assembly requests and records,
 // the decision policy, the statistical surface and the two admin jobs. Pure
 // data; every algorithm lives above this crate.
@@ -14,8 +23,15 @@ pub mod decision;
 #[cfg(any(test, feature = "test-support"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod decision_fixtures;
+// MEDULLA-DECISION-ENGINE-R701.1 — failure records, patterns and gap topics.
+pub mod failure_patterns;
+// MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
+pub mod loops;
 /// Generated decision ontology and shapes (MEDULLA-DECISION-ENGINE-R054.1).
 #[cfg(feature = "contract-schema")]
 pub mod ontology;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod solve;
+// MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.
+pub mod source_toc;
+pub mod usage;

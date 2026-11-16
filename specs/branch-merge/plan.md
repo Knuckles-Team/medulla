@@ -39,8 +39,8 @@ No new store, no new consensus layer and no second writer authority.
 ## Project Structure
 
 ```text
-crates/medulla-types/src/branch.rs                     new: Branch, BranchRef, BranchCommit, MergeOutcome, ConflictRecord
-crates/medulla-types/src/versioning.rs                 new: KgTransaction, KgCommit, KgDiff
+crates/medulla-mutation-types/src/branch.rs                     new: Branch, BranchRef, BranchCommit, MergeOutcome, ConflictRecord
+crates/medulla-mutation-types/src/versioning.rs                 new: KgTransaction, KgCommit, KgDiff
 crates/medulla-storage/src/owner/branch_registry.rs    new: BranchRegistry owner layout
 crates/medulla-storage/src/owner/lineage.rs            existing: ALL_LAYOUTS gains the layout
 crates/medulla-server-api/src/api/conflict_decider.rs  new: ConflictDecider trait

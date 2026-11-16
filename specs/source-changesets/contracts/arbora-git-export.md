@@ -13,7 +13,7 @@ Arbora sends `GitExportPack` with a repository, wants and haves. Medulla returns
 
 ## Authoritative types
 
-`Changeset` and `GitOrigin` in `crates/medulla-types/src/source_changeset.rs`.
+`Changeset` and `GitOrigin` in `crates/medulla-source-types/src/source_changeset.rs`.
 
 ## Test vectors
 

@@ -989,6 +989,11 @@ components:
     contract_state: unknown_not_inventory_complete
     owned_crates:
       - "medulla-types"
+      - "medulla-catalog-types"
+      - "medulla-decision-types"
+      - "medulla-mutation-types"
+      - "medulla-source-types"
+      - "medulla-work-types"
       - "medulla-capabilities"
       - "medulla-durable"
       - "medulla-resource"
@@ -1030,7 +1035,7 @@ components:
       - "crates/medulla-types/src/quantum.rs"
       - "crates/medulla-result-types/src/row_predicate.rs"
       - "crates/medulla-types/src/semantic_index"
-      - "crates/medulla-types/src/statechart.rs"
+      - "crates/medulla-work-types/src/statechart.rs"
       - "crates/medulla-types/src/types.rs"
       - "crates/medulla-types/src/viz.rs"
       - "crates/medulla-query-types/src/wire.rs"

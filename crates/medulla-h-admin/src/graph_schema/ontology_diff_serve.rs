@@ -12,11 +12,11 @@ use medulla_catalog_types::graph_schema::{
     ontology_source_key, DiffTarget, GraphSchemaCommitted, GraphSchemaOp,
     GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
 };
+use medulla_catalog_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiffReport};
+use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::{open_change_request, TargetScopes};
 use medulla_graph_core::graph::{GraphCore, SchemaSourceOrigin};
 use medulla_types::contract::{Digest256, ServerErrorCode, TenantId};
-use medulla_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiffReport};
-use medulla_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use serde_json::{json, Value};
 
 use super::edits;

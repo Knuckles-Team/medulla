@@ -9,9 +9,9 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 
-use crate::contract::ServerErrorCode;
-use crate::evidence_class::EvidenceClass;
-use crate::refusal_code::RefusalCode;
+use medulla_types::contract::ServerErrorCode;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Schema version carried by every `ContextFacts` type.
 pub const CONTEXT_FACTS_SCHEMA_VERSION: u32 = 1;

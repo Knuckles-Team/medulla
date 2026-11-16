@@ -33,7 +33,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use medulla_statechart::{Context, EventInput, StatechartDef, StatechartError, StatechartStore};
-use medulla_types::statechart::StatechartOp;
+use medulla_work_types::statechart::StatechartOp;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;

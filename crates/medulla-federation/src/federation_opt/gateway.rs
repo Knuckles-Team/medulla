@@ -15,8 +15,8 @@ use std::io::Read;
 use std::sync::Arc;
 use std::time::Duration;
 
+use medulla_catalog_types::web_source::WebSearchCapability;
 use medulla_exec::rowset::{RowSet, TextChannels, ValueChannels};
-use medulla_types::web_source::WebSearchCapability;
 use serde_json::{json, Value};
 
 use super::mcp::{

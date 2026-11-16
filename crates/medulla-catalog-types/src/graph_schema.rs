@@ -451,7 +451,7 @@ pub struct OntologyRevisionEntry {
     /// What this revision broke when it was accepted, if it was measured
     /// (MEDULLA-TYPED-PACKS-R804.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub change_impact: Option<medulla_types::ontology_diff::ChangeImpact>,
+    pub change_impact: Option<crate::ontology_diff::ChangeImpact>,
 }
 
 /// One attached source, without its documents.
@@ -488,7 +488,7 @@ pub struct GraphSchemaCommitted {
     /// The diff and impact a `DiffOntology` request computed
     /// (MEDULLA-TYPED-PACKS-R804.3); absent for every other operation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ontology_diff: Option<medulla_types::ontology_diff::OntologyDiffReport>,
+    pub ontology_diff: Option<crate::ontology_diff::OntologyDiffReport>,
 }
 
 /// What a runtime ontology import or withdrawal returns once R103.2 wires the

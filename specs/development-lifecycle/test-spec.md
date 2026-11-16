@@ -273,7 +273,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SDLC-R021.2`: `tests/test_types_slices.py::test_module_set_of_medulla_types_is_the_stay_set` and `tests/test_types_slices.py::test_each_moved_module_lives_in_exactly_one_slice` (L2). (planned): proves: The slice map test guards every move.
 - `MEDULLA-SDLC-R021.3`: `tests/test_types_slices.py::test_query_modules_live_only_in_the_query_slice` and `tests/test_crate_layers_policy.py::test_every_workspace_crate_is_in_exactly_one_layer_entry` (L2). (planned): proves: Move the query plan AST and wire DTOs to medulla-query-types.
 - `MEDULLA-SDLC-R021.4`: `tests/test_types_slices.py::test_acl_lives_in_the_identity_slice` (L2). (planned): proves: Move access control to medulla-identity-types.
-- `MEDULLA-SDLC-R021.5`: `tests/test_types_slices.py::test_domain_modules_live_in_their_owning_slice` (L2). (planned): proves: Move the domain modules into their owning slices.
+- `MEDULLA-SDLC-R021.5`: `tests/test_types_slices.py::test_domain_modules_live_in_their_owning_slice` (L2): proves: Move the domain modules into their owning slices.
 - `MEDULLA-SDLC-R021.6`: `tests/test_types_slices.py::test_module_set_of_medulla_types_is_the_stay_set` (L2) and `cargo test --workspace` once on the tip (L4). (planned): proves: Create the finance and ingestion slices.
 - `MEDULLA-SDLC-R021.7`: `tests/test_no_crate_reexports.py::test_no_pub_use_of_another_workspace_crate` (L2). (planned): proves: No crate re-exports another crate's items.
 - `MEDULLA-SDLC-R014.10`: `crates/medulla-core/tests/sdd_row_vocab.rs::row_classes_extend_core_and_none_imports_core` (L2): proves: Row-level spec vocabulary in the SDD ontology.

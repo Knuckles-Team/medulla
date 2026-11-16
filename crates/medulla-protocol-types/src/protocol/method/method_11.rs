@@ -230,13 +230,13 @@ $($variants)*
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.
     IncidentRecordAnomaly {
-        anomaly: medulla_types::incident::AnomalyReading,
+        anomaly: medulla_catalog_types::incident::AnomalyReading,
         window_ms: u64,
     },
     /// Correlate a set of anomalies in one pass: grouped by entity and
     /// `window_ms` bucket, each group opens or joins an open incident.
     IncidentCorrelate {
-        anomalies: Vec<medulla_types::incident::AnomalyReading>,
+        anomalies: Vec<medulla_catalog_types::incident::AnomalyReading>,
         window_ms: u64,
     },
     /// One incident of the caller's tenant with its evidence. Read-only.
@@ -251,7 +251,7 @@ $($variants)*
     /// Move an incident one status forward (open -> acknowledged -> resolved).
     IncidentSetStatus {
         incident_id: String,
-        status: medulla_types::incident::IncidentStatus,
+        status: medulla_catalog_types::incident::IncidentStatus,
     },
 
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
@@ -356,7 +356,7 @@ $($variants)*
     /// `[a-z0-9][a-z0-9._/-]{0,127}` (`BRANCH_NAME_INVALID`); `main` and the
     /// `eg/` prefix are reserved (`BRANCH_NAME_RESERVED`); a name with a row
     /// refuses `BRANCH_EXISTS`. Every refusal writes nothing. See
-    /// [`medulla_types::branch`].
+    /// [`medulla_mutation_types::branch`].
     CreateBranch {
         tenant: String,
         graph: String,
@@ -418,7 +418,7 @@ $($variants)*
     /// `BLOB_TOO_LARGE`, `BLOB_DIGEST_MISMATCH`), plus the branch refusals of
     /// `BranchWrite`; every refusal leaves the chain unchanged.
     SubmitChangeset {
-        request: Box<medulla_types::source_changeset::SubmitChangesetRequest>,
+        request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
@@ -426,16 +426,16 @@ $($variants)*
     /// the caller's order, the visible literal properties and outgoing edges as
     /// facts that name their source and evidence class. Reads only, through the
     /// caller's graph view, so a hidden node yields no fact. See
-    /// [`medulla_types::context_facts`].
+    /// [`medulla_decision_types::context_facts`].
     ContextFacts {
-        request: medulla_types::context_facts::ContextFactsRequest,
+        request: medulla_decision_types::context_facts::ContextFactsRequest,
     },
     // ── Source spans (MEDULLA-DECISION-ENGINE-R153) ──
     /// A bounded line range of one ingested text source, located through the
     /// table of contents `SourceIngest` stored for the document revision.
     /// `line_start` and `line_end` are 1-based and inclusive. Every answer names
     /// the table digest and the source digest. Reads only, through the caller's
-    /// graph view. See [`medulla_types::source_toc`].
+    /// graph view. See [`medulla_decision_types::source_toc`].
     ReadSpan {
         document_id: String,
         revision: u64,
@@ -445,7 +445,7 @@ $($variants)*
     // ── Graph change feed (MEDULLA-DURABLE-KERNEL-R043.100) ──
     /// One consistent snapshot digest of the request graph, with the cursor
     /// that continues after it (`high_water_cursor`). Reads only, through the
-    /// caller's graph view. See [`medulla_types::graph_change_feed`].
+    /// caller's graph view. See [`medulla_mutation_types::graph_change_feed`].
     OpenGraphSnapshot,
     /// One page of committed graph changes after `cursor`, at most `limit`
     /// (1 to 256) scanned events. Delivery is at-least-once under stable ids.
@@ -465,7 +465,7 @@ $($variants)*
     /// stamps `participant.tenant` and `principal` from the verified request
     /// context; caller values are overwritten. Needs `bus:write`.
     BusRegister {
-        participant: medulla_types::agent_bus::BusParticipant,
+        participant: medulla_work_types::agent_bus::BusParticipant,
         #[serde(default)]
         principal: String,
     },
@@ -487,17 +487,17 @@ $($variants)*
     /// and commit its `TranscriptSegment` nodes and revision node as one
     /// ChangeEnvelope. An exact replay answers the stored revision.
     MeetingTranscriptRevision {
-        request: Box<medulla_types::meeting_transcript::MeetingTranscriptRevision>,
+        request: Box<medulla_source_types::meeting_transcript::MeetingTranscriptRevision>,
     },
     /// Cut a bounded summary context from the current finalized transcript and
     /// record one `SummaryContext` node keyed by its digest.
     MeetingSummaryContext {
-        request: Box<medulla_types::meeting_transcript::MeetingSummaryContextRequest>,
+        request: Box<medulla_source_types::meeting_transcript::MeetingSummaryContextRequest>,
     },
     /// Commit a produced summary: the receipt must match its stored context and
     /// every citation must lie inside a context span.
     MeetingSummaryCommit {
-        request: Box<medulla_types::meeting_transcript::MeetingSummaryCommitRequest>,
+        request: Box<medulla_source_types::meeting_transcript::MeetingSummaryCommitRequest>,
     },
 
     // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
@@ -529,7 +529,7 @@ $($variants)*
 
     // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────
     /// Read one document's head, or the retained `revision`, with its bytes.
-    /// Needs `memory:read`. See [`medulla_types::memory_sync`].
+    /// Needs `memory:read`. See [`medulla_mutation_types::memory_sync`].
     ReadMemorySnapshot {
         doc_id: String,
         revision: Option<u64>,
@@ -544,24 +544,24 @@ $($variants)*
     /// Observe, submit, resolve or acknowledge one document. The engine fills
     /// `stamp` from the verified request context. Needs `memory:write`.
     SyncMemorySnapshot {
-        request: Box<medulla_types::memory_sync::SyncRequest>,
+        request: Box<medulla_mutation_types::memory_sync::SyncRequest>,
         #[serde(default)]
-        stamp: Option<medulla_types::memory_sync::SyncStamp>,
+        stamp: Option<medulla_mutation_types::memory_sync::SyncStamp>,
     },
 
     // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
     /// Register one data product with its contract in the `rbac.redb` policy
     /// store, keyed by tenant and product id. `tenant` must equal the verified
-    /// request tenant. See [`medulla_types::data_product`].
+    /// request tenant. See [`medulla_catalog_types::data_product`].
     DataProductRegister {
         tenant: String,
-        product: medulla_types::data_product::DataProduct,
-        contract: medulla_types::data_product::DataContract,
+        product: medulla_catalog_types::data_product::DataProduct,
+        contract: medulla_catalog_types::data_product::DataContract,
     },
     /// Open one access request against a registered product (state `pending`).
     AccessRequestOpen {
         tenant: String,
-        request: medulla_types::data_product::AccessRequest,
+        request: medulla_catalog_types::data_product::AccessRequest,
     },
     /// Approve or reject the pending access request of `principal` for `product`.
     AccessRequestDecide {

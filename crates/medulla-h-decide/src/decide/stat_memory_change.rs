@@ -20,9 +20,9 @@ use medulla_decision_types::decision::memory_rewrite::{
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionJobOutput;
+use medulla_mutation_types::memory_sync::DocId;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::memory_sync::DocId;
 use medulla_types::refusal_code::RefusalCode;
 
 use super::stat_jobs::JobRun;

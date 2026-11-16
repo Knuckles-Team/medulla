@@ -8,11 +8,11 @@ use std::collections::BTreeMap;
 use super::*;
 use crate::decide::belief_revise::{enqueue_touched, handle_belief_revise};
 use crate::decide::claims::handle_claims;
-use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::belief_revision::{
+use medulla_decision_types::belief_revision::{
     BeliefPassResult, BeliefReviseRequest, ContradictionMove, ContradictionStatus, PremiseRef,
 };
-use medulla_types::claims::{ClaimOp, ClaimRecord, EvidenceChannel};
+use medulla_decision_types::claims::{ClaimOp, ClaimRecord, EvidenceChannel};
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::evidence_class::EvidenceClass;
 
 const WHO: &str = "belief-writer";
@@ -176,7 +176,7 @@ async fn belief_refusals_leave_state_unchanged() {
         },
     )
     .await
-    .map(|got: medulla_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap();
 
     let unknown = pass(&h, request(&["no-such-claim"])).await;
@@ -214,7 +214,7 @@ async fn belief_refusals_leave_state_unchanged() {
         },
     )
     .await
-    .map(|got: medulla_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap();
     assert_eq!(
         after, before,

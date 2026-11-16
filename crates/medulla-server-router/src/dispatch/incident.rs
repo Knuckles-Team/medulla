@@ -11,6 +11,9 @@
 
 use std::sync::Arc;
 
+use medulla_catalog_types::incident::{
+    AnomalyReading, IncidentRecord, IncidentRelatedClaim, IncidentStatus, IncidentWriteReceipt,
+};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_protocol_types::result_contract::ingestion::{
@@ -25,9 +28,6 @@ use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{timed_read, typed_response};
 use medulla_stream::telemetry::incident_authority::{IncidentAuthority, IncidentRefusal};
-use medulla_types::incident::{
-    AnomalyReading, IncidentRecord, IncidentRelatedClaim, IncidentStatus, IncidentWriteReceipt,
-};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
@@ -368,7 +368,7 @@ fn incident_operations<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::incident::{IncidentSeverity, IncidentStatus};
+    use medulla_catalog_types::incident::{IncidentSeverity, IncidentStatus};
 
     fn record() -> IncidentRecord {
         IncidentRecord {

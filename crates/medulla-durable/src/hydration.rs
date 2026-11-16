@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use medulla_types::contract::Digest256;
-use medulla_types::scheduler_config::SchedulerConfig;
+use medulla_work_types::scheduler_config::SchedulerConfig;
 use serde::{Deserialize, Serialize};
 
 /// The stable model version for hydration records.

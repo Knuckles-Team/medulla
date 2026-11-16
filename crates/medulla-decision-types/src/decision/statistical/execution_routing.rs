@@ -7,7 +7,7 @@
 //!
 //! This module names the 7 routing categories the requirement enumerates.
 //! Model, prompt, skill and tool already have a native component kind
-//! ([`crate::agent_component::AgentComponentKind`]); harness mode, account
+//! ([`medulla_types::agent_component::AgentComponentKind`]); harness mode, account
 //! mode and sandbox configuration had no type anywhere, so a routing
 //! decision could not name which of them it was choosing among. The
 //! decision itself still runs through the ordinary `Decide` executor over

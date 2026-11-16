@@ -13,7 +13,7 @@ An agent principal passes `run_trace_id` in `SubmitChangeset`. It must resolve t
 
 ## Authoritative types
 
-`Changeset` in `crates/medulla-types/src/source_changeset.rs`.
+`Changeset` in `crates/medulla-source-types/src/source_changeset.rs`.
 
 ## Test vectors
 

@@ -381,7 +381,7 @@ pub struct ServerState {
     /// Policy applied to a stale `ApplyChangeEnvelope` version expectation
     /// (MEDULLA-DURABLE-KERNEL-R084.3). Startup sets it from `ServerArgs`;
     /// the default `Refuse` returns a typed `WRITE_CONFLICT`.
-    pub write_conflict_strategy: medulla_types::write_conflict::MergeStrategy,
+    pub write_conflict_strategy: medulla_mutation_types::write_conflict::MergeStrategy,
 }
 
 #[cfg(feature = "raft")]

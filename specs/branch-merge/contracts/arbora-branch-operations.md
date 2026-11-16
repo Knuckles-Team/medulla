@@ -13,7 +13,7 @@ Arbora forwards `CreateBranch`, `BranchWrite`, `BranchMerge`, `BranchDiff` and `
 
 ## Authoritative types
 
-The request and result types in `crates/medulla-protocol-types/src/protocol/method/method_11.rs` and `crates/medulla-types/src/branch.rs`.
+The request and result types in `crates/medulla-protocol-types/src/protocol/method/method_11.rs` and `crates/medulla-mutation-types/src/branch.rs`.
 
 ## Test vectors
 

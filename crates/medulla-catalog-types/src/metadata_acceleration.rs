@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ServerErrorCode;
+use medulla_types::contract::ServerErrorCode;
 
 /// A versioned, hashed metadata-discovery result for one registered
 /// source. Carries no entity row data — only the discovered shape and its

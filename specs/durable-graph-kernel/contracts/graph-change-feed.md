@@ -13,7 +13,7 @@ Arbora calls `OpenGraphSnapshot` once and then pages `ReadGraphChanges` with the
 
 ## Authoritative types
 
-`crates/medulla-types/src/graph_change_feed.rs` (`MEDULLA-DURABLE-KERNEL-R043.100.1`). The methods are variants of `crates/medulla-protocol-types/src/protocol/method/`. The Python client methods are `open_graph_snapshot` and `read_graph_changes` (`MEDULLA-DURABLE-KERNEL-R043.100.4`).
+`crates/medulla-mutation-types/src/graph_change_feed.rs` (`MEDULLA-DURABLE-KERNEL-R043.100.1`). The methods are variants of `crates/medulla-protocol-types/src/protocol/method/`. The Python client methods are `open_graph_snapshot` and `read_graph_changes` (`MEDULLA-DURABLE-KERNEL-R043.100.4`).
 
 ## Test vectors
 

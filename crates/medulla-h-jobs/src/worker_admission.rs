@@ -60,7 +60,7 @@ pub fn shard_writer_width(
 
 use std::collections::BTreeMap;
 
-use medulla_types::scheduler_config::SchedulerConfig;
+use medulla_work_types::scheduler_config::SchedulerConfig;
 use medulla_work_types::worker_registry::{
     admit_reserved_worker_task, LaneLoad, WorkerAdmission, WorkerAdmissionRefusal, WorkerRegistry,
     WorkerSizingInput,

@@ -10,14 +10,14 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_mutation_types::graph_change_feed::{
+    authorization_revision, snapshot_digest, GraphChange, GraphChangeCursor, GraphChangeEvent,
+    GraphChangePage, GraphSnapshot, RowOperation, GRAPH_CHANGE_FEED_SCHEMA_VERSION,
+};
 use medulla_query_types::wire::{CdcEvent, CdcKind};
 use medulla_server_api::knob_config::knobs;
 use medulla_server_cdc::cdc::{CdcHub, CdcStateExt};
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::graph_change_feed::{
-    authorization_revision, snapshot_digest, GraphChange, GraphChangeCursor, GraphChangeEvent,
-    GraphChangePage, GraphSnapshot, RowOperation, GRAPH_CHANGE_FEED_SCHEMA_VERSION,
-};
 
 /// Revision of the latency accounting the events carry.
 const LATENCY_PROFILE_REVISION: u64 = 1;

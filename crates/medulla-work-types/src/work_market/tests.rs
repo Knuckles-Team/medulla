@@ -4,8 +4,8 @@ use super::gap::GapMerge;
 use super::lifecycle::SettledWorkItem;
 use super::selection::{derive_legal_offers, MarketFacts, OfferExclusion};
 use super::*;
-use crate::work_item_read::WorkItemStatus;
 use medulla_types::keyset_page::KeysetListing;
+use medulla_types::work_item_read::WorkItemStatus;
 
 fn digest(tag: &str) -> String {
     evidence_digest(&[tag])

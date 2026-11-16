@@ -14,10 +14,10 @@ use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::usage as codes;
+use medulla_decision_types::usage::{PriceCatalog, PriceEntry, UsageOutcome, UsageRecord};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_server_api::knob_config::knobs;
 use medulla_storage::DECISION_ARTIFACTS;
-use medulla_types::usage::{PriceCatalog, PriceEntry, UsageOutcome, UsageRecord};
 use redb::ReadableTable;
 use serde::{Deserialize, Serialize};
 

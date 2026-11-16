@@ -12,11 +12,11 @@ use super::payload::{
 };
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
-use crate::outbox::OutboxIntent;
 use medulla_identity_types::{
     authority::AuthorityScope, authority::NonceReplayKey, authority::OperationReplayIdentity,
     authority::VerifiedAuthority,
 };
+use medulla_types::outbox::OutboxIntent;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId,
     contract::RequestedMutationResult, contract::ResourceId, contract::MAX_MUTATION_EFFECTS,

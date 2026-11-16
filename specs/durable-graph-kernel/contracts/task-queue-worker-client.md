@@ -13,7 +13,7 @@ The runner calls the served methods `TaskQueueEnqueue`, `TaskQueueClaim` and `Ta
 
 ## Authoritative types
 
-`crates/medulla-types/src/task_queue.rs` (`MEDULLA-DURABLE-KERNEL-R071`) and `crates/medulla-work-types/src/worker_registry.rs` (`MEDULLA-DURABLE-KERNEL-R074.1`). The Python client methods are in `medulla/client.py` (`MEDULLA-DURABLE-KERNEL-R073`).
+`crates/medulla-work-types/src/task_queue.rs` (`MEDULLA-DURABLE-KERNEL-R071`) and `crates/medulla-work-types/src/worker_registry.rs` (`MEDULLA-DURABLE-KERNEL-R074.1`). The Python client methods are in `medulla/client.py` (`MEDULLA-DURABLE-KERNEL-R073`).
 
 ## Test vectors
 

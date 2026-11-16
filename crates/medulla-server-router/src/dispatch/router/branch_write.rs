@@ -104,7 +104,7 @@ pub async fn handle_branch_write(
     if let Err(detail) = check_mutation(&mutation, verified) {
         return ops::invalid_write(req.id, detail);
     }
-    let reference = medulla_types::branch::BranchRef {
+    let reference = medulla_mutation_types::branch::BranchRef {
         tenant: tenant.clone(),
         graph: graph.clone(),
         name: branch.clone(),

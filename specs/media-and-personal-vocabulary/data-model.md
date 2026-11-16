@@ -19,7 +19,7 @@ This file describes the ontology classes and the Rust types that the rows of thi
 
 ### Meeting transcript types
 
-- New file: `crates/medulla-types/src/meeting_transcript.rs`, row `MEDULLA-MEDIA-VOCAB-R001.101.1`.
+- New file: `crates/medulla-source-types/src/meeting_transcript.rs`, row `MEDULLA-MEDIA-VOCAB-R001.101.1`.
 - `TranscriptRevisionOp`: append, correct, delete segment, finalize. `MeetingTranscriptRevision` holds the meeting id, base and new revision, a monotonic event sequence, an idempotency key, ordered segment ids and digests.
 - `MeetingSummaryLimitPolicy`, `SummaryAdmissionRef` and `SummaryReceipt` bound the summary context and commit. Digests are SHA-256 as 64 lowercase hex characters.
 

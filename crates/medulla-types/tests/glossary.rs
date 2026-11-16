@@ -1,6 +1,6 @@
 //! Business glossary term model (MEDULLA-TYPED-PACKS-R801.1).
 
-use medulla_types::glossary::{
+use medulla_catalog_types::glossary::{
     GlossaryTerm, GlossaryTermStatus, SkosObject, SKOS_ALT_LABEL, SKOS_BROADER, SKOS_DEFINITION,
     SKOS_PREF_LABEL, SKOS_RELATED,
 };

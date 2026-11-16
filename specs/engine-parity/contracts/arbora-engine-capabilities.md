@@ -13,7 +13,7 @@ None. The method never refuses a caller that holds `service:control`; a caller w
 
 ## Authoritative types
 
-`EngineCapabilities`, `WireFeature`, `IndexKind` and `ConstraintKind` in `crates/medulla-types/src/engine_capabilities.rs`.
+`EngineCapabilities`, `WireFeature`, `IndexKind` and `ConstraintKind` in `crates/medulla-catalog-types/src/engine_capabilities.rs`.
 
 ## Test vectors
 

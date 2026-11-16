@@ -1,11 +1,11 @@
 //! Served `ContextFacts` proofs (MEDULLA-DECISION-ENGINE-R152.3 .. R152.6).
 
 use super::context_facts::{select_facts, serve_context_facts};
-use medulla_graph_core::graph::GraphCore;
-use medulla_protocol_types::protocol::{Response, ResultPayload};
-use medulla_types::context_facts::{
+use medulla_decision_types::context_facts::{
     fact_id, ContextFactsRequest, ContextFactsResult, CONTEXT_FACTS_SCHEMA_VERSION,
 };
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_types::evidence_class::EvidenceClass;
 use serde_json::json;
 

@@ -12,8 +12,8 @@
 
 use std::time::Instant;
 
+use medulla_catalog_types::incident::AnomalyReading;
 use medulla_stream::telemetry::incident_authority::IncidentAuthority;
-use medulla_types::incident::AnomalyReading;
 
 const ANOMALIES: usize = 100_000;
 const ENTITIES: usize = 100;

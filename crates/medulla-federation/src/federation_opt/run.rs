@@ -22,9 +22,9 @@ use super::strategy::{choose_join, BatchSizer, JoinInputs, JoinStrategy};
 use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace};
 use super::{fuse_foreign, stats};
 use crate::federation::ForeignSourceRegistry;
+use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::algebra::Op;
 use medulla_exec::rowset::RowSet;
-use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// `Op::ForeignScan { source, join }`: a source read (`join == false`, or an empty input) or
 /// a foreign∩local join, optimized unless `MEDULLA_FEDERATION_OPT=0`.

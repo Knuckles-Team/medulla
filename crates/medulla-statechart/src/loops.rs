@@ -1,6 +1,6 @@
 //! Loop kernels (MEDULLA-DECISION-ENGINE-R653.2, R653.7, R653.8).
 //!
-//! Pure functions over the `medulla_types::loops` records: the fenced lease,
+//! Pure functions over the `medulla_decision_types::loops` records: the fenced lease,
 //! the loop queue order, gap settlement, the offer rate, the failure-sequence
 //! miner and the capability ratchet. Time arrives as an argument and nothing
 //! here reads a store or a clock; the `Loops` handler in `medulla-h-decide`
@@ -9,7 +9,7 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap};
 
-use medulla_types::loops::{
+use medulla_decision_types::loops::{
     Gap, GapState, ImprovementSample, LoopLease, MinedPattern, RatchetEvidence, RatchetVerdict,
     PPM_MAX,
 };

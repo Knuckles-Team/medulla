@@ -46,7 +46,7 @@ method_results! {
     EncodedDocumentSearch(EncodedDocumentSearch) => Json<medulla_types::retrieval::EncodedSearchResult>;
     ProjectionRead(ProjectionRead) => Json<medulla_types::projection_read::ProjectionReadResponse>;
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
-    ApproveEntityLink(ApproveEntityLink) => Json<medulla_types::entity_link_proposal::EntityLinkApproval>;
+    ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;
@@ -82,7 +82,7 @@ method_results! {
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.
     CrossSourceQuestion(CrossSourceQuestion) => Raw<medulla_source_types::cross_source_report::CrossSourceReport>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
-    CatalogUsage(CatalogUsage) => Raw<medulla_types::asset_usage::CatalogUsageAnswer>;
+    CatalogUsage(CatalogUsage) => Raw<medulla_catalog_types::asset_usage::CatalogUsageAnswer>;
     #[cfg(feature = "query")]
     ExplainPlan(ExplainPlan) => Raw<ExplainPlanResult>;
     ExplainProvenance(ExplainProvenance) => Raw<EvidenceBundle>;

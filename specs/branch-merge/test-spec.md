@@ -10,7 +10,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 - `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (L4). A write on a branch
   shows on that branch. It stays invisible on main and on sibling branches. It is idempotent
   under a tenant-scoped branch idempotency key. *(MEDULLA-BRANCH-MERGE-R002)*
-- `crates/medulla-types/src/branch.rs::tests::branch_commit_appends_one_parent_and_round_trips` (L2). A plain
+- `crates/medulla-mutation-types/src/branch.rs::tests::branch_commit_appends_one_parent_and_round_trips` (L2). A plain
   branch commit appends exactly one parent, the prior head, and round-trips through serde.
   `refusal_set_and_default_branch_are_closed` proves the typed refusal set is closed and the
   default trunk name is reserved. *(MEDULLA-BRANCH-MERGE-R002.1)*

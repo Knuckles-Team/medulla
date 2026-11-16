@@ -23,10 +23,10 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_decision_types::usage::PriceCatalog;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::usage_ledger::RunWindow;
 use medulla_types::contract::BoundedVec;
-use medulla_types::usage::PriceCatalog;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

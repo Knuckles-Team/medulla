@@ -517,7 +517,7 @@ $($variants)*
     #[cfg(feature = "federation")]
     RegisterGraphView {
         name: String,
-        view: medulla_types::virtual_graph_view::GraphView,
+        view: medulla_catalog_types::virtual_graph_view::GraphView,
         /// The R2RML Turtle document (or compact mapping) the view's labels map through.
         mapping: String,
         /// Engine user tables the mapping reads.
@@ -525,7 +525,7 @@ $($variants)*
         tables: Vec<String>,
         /// Live relational sources the mapping reads.
         #[serde(default)]
-        sources: Vec<medulla_types::virtual_graph_view::ViewSource>,
+        sources: Vec<medulla_catalog_types::virtual_graph_view::ViewSource>,
     },
 
     /// Read mapped columns from this caller's registered SQL or HTTP source. The source
@@ -653,8 +653,8 @@ $($variants)*
     /// proposal from the two nodes (never from the caller), refuses a pair that is not a
     /// `Match`, records the verified caller as approver and writes one `owl:sameAs` edge.
     ApproveEntityLink {
-        left: medulla_types::entity_link_proposal::EntityRef,
-        right: medulla_types::entity_link_proposal::EntityRef,
+        left: medulla_catalog_types::entity_link_proposal::EntityRef,
+        right: medulla_catalog_types::entity_link_proposal::EntityRef,
     },
 
     // ── Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview) ───────

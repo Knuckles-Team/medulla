@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::{Digest256, ServerErrorCode};
+use medulla_types::contract::{Digest256, ServerErrorCode};
 
 /// The largest `doc_id`, in bytes.
 pub const MAX_DOC_ID_BYTES: usize = 256;

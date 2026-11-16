@@ -541,7 +541,7 @@ $($variants)*
     /// `statecharts.redb`, not a graph — like `AnalyticsJob`/`TsAppend`/`Kv*`).
     #[cfg(feature = "statechart")]
     Statechart {
-        op: medulla_types::statechart::StatechartOp,
+        op: medulla_work_types::statechart::StatechartOp,
     },
 
 

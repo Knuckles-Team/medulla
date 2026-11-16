@@ -166,7 +166,7 @@ pub fn reason_triples_bounded(
 }
 
 /// The default fixpoint bound: `knob reasoning.rule_max_steps`.
-pub use medulla_types::scheduler_config::DEFAULT_RULE_MAX_STEPS;
+pub use medulla_work_types::scheduler_config::DEFAULT_RULE_MAX_STEPS;
 
 /// Extract ABox ground facts from a triple stream: a `rdf:type` triple with a non-meta
 /// object becomes a unary class-membership fact `C(s)`; any other non-schema triple
@@ -233,8 +233,9 @@ pub struct RuleReasonRequest {
 impl RuleReasonRequest {
     /// The effective fixpoint bound of this request.
     pub fn effective_max_steps(&self) -> u64 {
-        self.max_steps
-            .unwrap_or_else(|| medulla_types::scheduler_config::reasoning_knobs().rule_max_steps)
+        self.max_steps.unwrap_or_else(|| {
+            medulla_work_types::scheduler_config::reasoning_knobs().rule_max_steps
+        })
     }
 }
 

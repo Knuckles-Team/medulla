@@ -1,8 +1,8 @@
 //! `OntologyCanonicalHash`: the RDFC-1.0 SHA-256 digest of a Turtle payload
 //! (MEDULLA-TYPED-PACKS-R809). Pure: the payload is the only input.
 
+use medulla_catalog_types::ontology_inspection::OntologyCanonicalHashResult;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
-use medulla_types::ontology_inspection::OntologyCanonicalHashResult;
 
 /// The most triples one payload may carry (the bound of a schema document).
 const MAX_TRIPLES: usize = 100_000;

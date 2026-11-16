@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Which path a write-back takes to reach the attached source.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]

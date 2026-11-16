@@ -9,9 +9,9 @@ use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilit
 use super::snapshot::{SnapshotBound, SnapshotConn};
 use super::stats::{fingerprint, short, Fingerprint};
 use crate::federation::{ForeignSource, ForeignSourceRegistry, SharedForeignSource};
+use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
-use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// A foreign source that can answer a [`RemoteRequest`]. `fetch` must return a SUPERSET of
 /// the rows the request selects: every row whose id is in `keys` (when keys are given), the

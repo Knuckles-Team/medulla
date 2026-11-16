@@ -117,10 +117,10 @@ pub struct ForeignSourceCatalog {
 /// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3).
 #[derive(Clone, Debug)]
 pub struct RegisteredGraphView {
-    pub view: medulla_types::virtual_graph_view::GraphView,
+    pub view: medulla_catalog_types::virtual_graph_view::GraphView,
     pub mapping: String,
     pub tables: Vec<String>,
-    pub sources: Vec<medulla_types::virtual_graph_view::ViewSource>,
+    pub sources: Vec<medulla_catalog_types::virtual_graph_view::ViewSource>,
 }
 
 /// Every owner's registered graph views, partitioned by verified owner scope exactly as

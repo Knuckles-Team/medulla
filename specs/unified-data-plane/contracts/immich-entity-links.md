@@ -13,7 +13,7 @@ The connector ingests per-user people and assets incrementally and emits cross-a
 
 ## Authoritative types
 
-`EntityLinkProposal` in `crates/medulla-types/src/entity_link_proposal.rs`.
+`EntityLinkProposal` in `crates/medulla-catalog-types/src/entity_link_proposal.rs`.
 
 ## Test vectors
 

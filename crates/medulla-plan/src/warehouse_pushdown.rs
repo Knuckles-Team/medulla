@@ -1,6 +1,6 @@
 //! Warehouse federation pushdown-transport dispatch
 //! (MEDULLA-UNIFIED-DATA-PLANE-R020.2): deciding, per
-//! [`medulla_types::warehouse_federation::WarehouseSourceKind`], whether a federated query
+//! [`medulla_catalog_types::warehouse_federation::WarehouseSourceKind`], whether a federated query
 //! pushes down over Arrow Flight SQL or the kind's native protocol — extended for
 //! Iceberg by `medulla-query::sql::iceberg_federation`'s own REST-catalog scan path. This
 //! is the typed-model slice (`.2.1`): the dispatch decision plus the refusal for an
@@ -9,7 +9,7 @@
 //! data-out. Actually issuing the pushed-down query against each native warehouse or
 //! lake engine is the live slice (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2+).
 
-use medulla_types::warehouse_federation::{
+use medulla_catalog_types::warehouse_federation::{
     MissingWarehouseFields, WarehouseSourceConfig, WarehouseSourceKind,
 };
 

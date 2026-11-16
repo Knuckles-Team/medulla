@@ -14,9 +14,9 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
+use medulla_decision_types::loops::LoopOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::loops::LoopOp;
 
 /// Serve one loop operation.
 pub async fn handle_loops(
@@ -50,6 +50,10 @@ pub async fn handle_loops(
 pub(super) mod served {
     use std::sync::Arc;
 
+    use medulla_decision_types::loops::{
+        Gap, GapState, ImprovementLedger, LoopInstance, LoopOp, LoopTransition, LoopView,
+        OfferEvidence, StageBeacon, PPM_MAX,
+    };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         LoopsBeacon, LoopsClaim, LoopsFileGap, LoopsGet, LoopsMine, LoopsOffer, LoopsRatchet,
@@ -67,10 +71,6 @@ pub(super) mod served {
         loop_record_statechart_def, loop_statechart_def, FINAL_STATES, LOOP_RECORD_KEY,
     };
     use medulla_types::contract::ServerErrorCode;
-    use medulla_types::loops::{
-        Gap, GapState, ImprovementLedger, LoopInstance, LoopOp, LoopTransition, LoopView,
-        OfferEvidence, StageBeacon, PPM_MAX,
-    };
 
     use crate::decide::claims::served::{invalid, refuse, request_key};
 

@@ -2,8 +2,8 @@
 //! that owns no RDF syntax send data as plain values; the engine alone turns them
 //! into terms, so an IRI or language tag is checked here, once.
 
+use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple, MAX_TYPED_TRIPLES};
 use medulla_rdf::oxrdf::{Literal, NamedNode, Term, Triple};
-use medulla_types::ontology_inspection::{RdfObject, RdfTriple, MAX_TYPED_TRIPLES};
 
 /// Build the data graph from typed triples, refusing the whole request on the first
 /// malformed triple (named by its index) rather than validating a partial graph.

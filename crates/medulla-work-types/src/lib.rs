@@ -9,10 +9,14 @@
 // MEDULLA-UNIFIED-DATA-PLANE-R700 — governed action specs and runs.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod action_spec;
+// MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
+pub mod agent_bus;
 // MEDULLA-UNIFIED-DATA-PLANE-R750.750-752 — run audit rows, tool calls and the
 // scoped conversation-history step store.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_history;
+// MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
+pub mod run_observation;
 // MEDULLA-DURABLE-KERNEL-R074.1 — pure worker registry, registration validation,
 // and deterministic aggregate capabilities. No RPC or persistence ownership.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -86,9 +90,15 @@ pub mod work_market;
 // `medulla_viz_core::ViewSpec` and resolves it.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_usage;
+// MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
+pub mod scheduler_config;
 // MEDULLA-DECISION-ENGINE-R816 — run-bound observation state.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod observation_state;
 // MEDULLA-FEDERATED-QUERY-R702 — search-task records and shortcut-risk reports.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod search_task;
+#[cfg(feature = "statechart")]
+pub mod statechart;
+// MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.
+pub mod task_queue;

@@ -1,11 +1,11 @@
 //! Round-trip contract of the meeting transcript types
 //! (MEDULLA-MEDIA-VOCAB-R001.101.1).
 
-use medulla_types::contract::Digest256;
-use medulla_types::meeting_transcript::{
+use medulla_source_types::meeting_transcript::{
     MeetingSummaryLimitPolicy, MeetingTranscriptRevision, SummaryAdmissionRef, SummaryReceipt,
     TranscriptRevisionOp, REFUSALS,
 };
+use medulla_types::contract::Digest256;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

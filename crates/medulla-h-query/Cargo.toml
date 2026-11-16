@@ -72,6 +72,7 @@ medulla-h-sparql = { path = "../medulla-h-sparql" }
 medulla-h-retrieve = { path = "../medulla-h-retrieve" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-work-types = { path = "../medulla-work-types" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
@@ -127,7 +128,7 @@ tensor = ["dep:medulla-tensor", "dep:medulla-plan", "medulla-plan/tensor", "quer
 text = ["dep:medulla-plan", "medulla-plan/text", "query", "medulla-h-retrieve/text", "medulla-exec/text", "medulla-federation/text", "medulla-nlq/text", "medulla-server-api/text", "medulla-server-ops/text", "medulla-types/text", "medulla-query-types/text", "medulla-uql/text"]
 tsdb = ["dep:medulla-tsdb", "medulla-nlq/timeseries", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-h-retrieve/tsdb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "server"]
 server = ["dep:async-trait", "medulla-federation/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
-statechart = ["medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
+statechart = ["medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-work-types/statechart", "server"]
 viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-query-types/viz"]
 modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-cdc/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server", "streaming"]
 asr-whisper = ["medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server"]

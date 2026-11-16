@@ -11,7 +11,9 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use medulla_types::incident::{AnomalyReading, IncidentRecord, IncidentSeverity, IncidentStatus};
+use medulla_catalog_types::incident::{
+    AnomalyReading, IncidentRecord, IncidentSeverity, IncidentStatus,
+};
 use sha2::{Digest, Sha256};
 
 /// A refused call, with its stable code. A refusal changes no state.

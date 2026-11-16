@@ -362,8 +362,8 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     medulla_kernel::otel::init_tracing()?;
 
     // MEDULLA-FEDERATED-QUERY-R608.2 — reasoning knobs: an out-of-range value refuses startup.
-    medulla_types::scheduler_config::install_reasoning_knobs(
-        medulla_types::scheduler_config::ReasoningKnobs::from_env()?,
+    medulla_work_types::scheduler_config::install_reasoning_knobs(
+        medulla_work_types::scheduler_config::ReasoningKnobs::from_env()?,
     );
 
     let (socket_path, socket_parent) = resolve_socket_path(args.socket_path.take());

@@ -32,11 +32,11 @@ use std::io::Write;
 
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
 use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put_owned};
-use medulla_transaction::occ::{KeyRange, TxnFootprint};
-use medulla_types::source_changeset::{
+use medulla_source_types::source_changeset::{
     ChangedPath, Changeset, ChangesetRefusal, FileMerger, PathOp, SubmitChangesetRequest,
     SubmitRefusal, SubmittedBlobRef, SubmittedPath, Trailers,
 };
+use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use sha2::{Digest, Sha256};
 
 /// A `Write` that re-derives chunk digests from the bytes `stream_blob_get`
@@ -492,7 +492,7 @@ mod tests {
         hex_digest, RedbChunkStore, BLOB_MANIFEST_VERSION, ENGINE_BLOB_OWNER_SCOPE,
     };
     use medulla_server_blob::blob::stream::stream_blob_put;
-    use medulla_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES;
+    use medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES;
     use std::io::Cursor;
 
     /// Upload `data` through the existing streaming facade and build the ref
@@ -735,8 +735,8 @@ mod tests {
         path: &str,
         op: PathOp,
         blob: Option<&str>,
-    ) -> medulla_types::source_changeset::SubmittedPath {
-        medulla_types::source_changeset::SubmittedPath {
+    ) -> medulla_source_types::source_changeset::SubmittedPath {
+        medulla_source_types::source_changeset::SubmittedPath {
             path: path.into(),
             op,
             blob: blob.map(|d| SubmittedBlobRef {
@@ -750,7 +750,7 @@ mod tests {
 
     fn request(
         base: Option<String>,
-        paths: Vec<medulla_types::source_changeset::SubmittedPath>,
+        paths: Vec<medulla_source_types::source_changeset::SubmittedPath>,
     ) -> SubmitChangesetRequest {
         SubmitChangesetRequest {
             repo: "r".into(),
@@ -779,8 +779,8 @@ mod tests {
         _base: &[u8],
         _ours: &[u8],
         _theirs: &[u8],
-    ) -> Result<Vec<u8>, medulla_types::source_changeset::FileMergeRefusal> {
-        Err(medulla_types::source_changeset::FileMergeRefusal::Conflict)
+    ) -> Result<Vec<u8>, medulla_source_types::source_changeset::FileMergeRefusal> {
+        Err(medulla_source_types::source_changeset::FileMergeRefusal::Conflict)
     }
 
     const CTX: AcceptContext<'static> = AcceptContext {
@@ -919,7 +919,7 @@ mod tests {
         let unknown = submitted("a.rs", PathOp::Add, Some(&"f".repeat(64)));
         assert_eq!(code(&request(None, vec![unknown])), "BLOB_NOT_FOUND");
         let data = upload(&store, b"hello");
-        let known = medulla_types::source_changeset::SubmittedPath {
+        let known = medulla_source_types::source_changeset::SubmittedPath {
             blob: Some(data),
             ..submitted("a.rs", PathOp::Add, None)
         };
