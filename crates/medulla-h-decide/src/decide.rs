@@ -135,11 +135,11 @@ pub mod stat_freshness;
 mod stat_thought_search;
 // MEDULLA-DECISION-ENGINE-R140.104: the trajectory decisions of a task plan.
 #[cfg(feature = "decide")]
-mod stat_trajectory;
-#[cfg(feature = "decide")]
 mod stat_tool_subset;
 #[cfg(feature = "decide")]
 mod stat_topology;
+#[cfg(feature = "decide")]
+mod stat_trajectory;
 #[cfg(feature = "decide")]
 mod stat_vectors;
 // EH-528: walk-forward replay evaluation (its validation kernels are finance's).

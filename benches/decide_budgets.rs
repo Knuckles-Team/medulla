@@ -66,15 +66,15 @@ use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, De
 use medulla_decision_types::decision::statistical::harness_config::{
     HarnessConfigEvaluationEvidence, HarnessEvidenceLimits,
 };
-use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-use medulla_decision_types::decision::statistical::writeback::{
-    ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
-};
 use medulla_decision_types::decision::statistical::distilled::{DistilledUpload, TeacherJudgment};
 use medulla_decision_types::decision::statistical::features::{
     FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
 };
+use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
+use medulla_decision_types::decision::statistical::writeback::{
+    ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
+};
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
     StatisticalDecisionRecord, StatisticalQuestion, TypedParam, TypedValue,
