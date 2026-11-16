@@ -94,15 +94,15 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T084 [US4] MEDULLA-PLACEMENT-R783.5 Partition move machine: edge table
 - [ ] T085 [US4] MEDULLA-PLACEMENT-R781.3 Delete the tombstone field from the record and the result. Size: M, 2 PRs, 5 hours.
 - [ ] T086 [US4] MEDULLA-PLACEMENT-R781.4 Convert stored reservation records. Size: S, 1 PR, 3 hours.
-- [ ] T91 [US4] MEDULLA-PLACEMENT-R784 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T92 [US4] MEDULLA-PLACEMENT-R784.1 CircuitBreaker/CircuitState state machine: route 3 census findings through CircuitState::apply
-- [ ] T93 [US4] MEDULLA-PLACEMENT-R780.3 DevelopmentLaneHold/DevelopmentLaneHoldState state machine: route 1 census findings through HoldState::apply
-- [ ] T94 [US4] MEDULLA-PLACEMENT-R783.6 MembershipShrinkJournal/ShrinkStage state machine: route 2 census findings through MembershipShrinkJournal::advance
-- [ ] T95 [US4] MEDULLA-PLACEMENT-R783.7 MoveCheckpoint/MovePhase state machine: route 9 census findings through MovePhase::apply
-- [ ] T96 [US4] MEDULLA-PLACEMENT-R784.2 OperationResult/OperationResultStatus state machine: route 1 census findings through OperationResultStatus::apply
-- [ ] T97 [US4] MEDULLA-PLACEMENT-R783.8 PartitionMoveJournal/MoveStage state machine: route 9 census findings through PlacementEntry::apply_move
-- [ ] T98 [US4] MEDULLA-PLACEMENT-R783.9 PlacementEntry/PartitionState state machine: route 1 census findings through PlacementEntry::apply_move
-- [ ] T99 [US4] MEDULLA-PLACEMENT-R784.3 ReadLeg/ReadLegStatus state machine: route 1 census findings through ReadLegStatus::apply
+- [ ] T091 [US4] MEDULLA-PLACEMENT-R784 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T092 [US4] MEDULLA-PLACEMENT-R784.1 CircuitBreaker/CircuitState state machine: route 3 census findings through CircuitState::apply
+- [ ] T093 [US4] MEDULLA-PLACEMENT-R780.3 DevelopmentLaneHold/DevelopmentLaneHoldState state machine: route 1 census findings through HoldState::apply
+- [ ] T094 [US4] MEDULLA-PLACEMENT-R783.6 MembershipShrinkJournal/ShrinkStage state machine: route 2 census findings through MembershipShrinkJournal::advance
+- [ ] T095 [US4] MEDULLA-PLACEMENT-R783.7 MoveCheckpoint/MovePhase state machine: route 9 census findings through MovePhase::apply
+- [ ] T096 [US4] MEDULLA-PLACEMENT-R784.2 OperationResult/OperationResultStatus state machine: route 1 census findings through OperationResultStatus::apply
+- [ ] T097 [US4] MEDULLA-PLACEMENT-R783.8 PartitionMoveJournal/MoveStage state machine: route 9 census findings through PlacementEntry::apply_move
+- [ ] T098 [US4] MEDULLA-PLACEMENT-R783.9 PlacementEntry/PartitionState state machine: route 1 census findings through PlacementEntry::apply_move
+- [ ] T099 [US4] MEDULLA-PLACEMENT-R784.3 ReadLeg/ReadLegStatus state machine: route 1 census findings through ReadLegStatus::apply
 - [ ] T100 [US4] MEDULLA-PLACEMENT-R781.5 ResourceReservationResult/ResourceReservationResultState state machine: route 1 census findings through ResourceReservationRecordState::apply
 - [ ] T101 [US4] MEDULLA-PLACEMENT-R781.6 ResourceReservationSummary/ResourceReservationSummaryState state machine: route 1 census findings through ResourceReservationRecordState::apply
 - [ ] T102 [US4] MEDULLA-PLACEMENT-R783.10 ShardDrain/DrainPhase state machine: route 9 census findings through DrainPhase::apply
