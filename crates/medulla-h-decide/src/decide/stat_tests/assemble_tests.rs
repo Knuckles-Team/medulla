@@ -31,16 +31,16 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
-const TENANT: &str = "tenant-media";
+pub(super) const TENANT: &str = "tenant-media";
 const ASKER: &str = "asker";
 
-struct Harness {
+pub(super) struct Harness {
     _dir: tempfile::TempDir,
-    state: Arc<RwLock<ServerState>>,
-    store: Arc<AgentLibraryStore>,
+    pub(super) state: Arc<RwLock<ServerState>>,
+    pub(super) store: Arc<AgentLibraryStore>,
 }
 
-async fn harness() -> Harness {
+pub(super) async fn harness() -> Harness {
     let dir = tempfile::tempdir().unwrap();
     // The graph ACL admits only a principal the provisioned policy knows
     // (`topology_read::graph_core` checks read on the request graph).
@@ -80,7 +80,7 @@ fn model_facts(input_capabilities: Option<ModelInputCapabilities>) -> AgentCompo
     }
 }
 
-fn publish(
+pub(super) fn publish(
     store: &AgentLibraryStore,
     nonce: u8,
     (id, kind): (&str, AgentComponentKind),
@@ -122,7 +122,7 @@ fn publish_with(
 
 /// One model (declaring `capabilities`), one prompt, one tool, one skill and
 /// one ontology: every slot of a runnable agent (`one:tool` is at least one).
-fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
+pub(super) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
     publish(
         store,
         1,
@@ -146,7 +146,7 @@ fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>)
     publish(store, 5, ("tool-a", AgentComponentKind::Tool), None);
 }
 
-fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
+pub(super) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
     AssemblyRequest {
         tenant_id: TENANT.to_string(),
         requirements: AssemblyRequirements {
@@ -174,7 +174,10 @@ fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
     }
 }
 
-async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResult, String> {
+pub(super) async fn assemble(
+    h: &Harness,
+    request: AssemblyRequest,
+) -> Result<AssemblyResult, String> {
     // Assembly reads the caller's run-scope bound from the request graph
     // (MEDULLA-IDENTITY-R008.4), so the graph it names must exist.
     {
@@ -201,6 +204,8 @@ async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResul
             "allowed_tools": [
                 "model-a", "prompt-a", "tool-a", "skill-a", "ontology-a", "p-search", "p-sink",
                 "p-bad", "r-ok", "r-kind", "r-schema", "r-caps", "r-effect", "tool-web",
+                "tool-render-artifact", "tool-apply", "tool-verify", "tool:search", "prompt:agent",
+                "skill:reason", "model-profile:default", "ontology:agent",
             ],
             "allowed_graphs": ["default"],
         });

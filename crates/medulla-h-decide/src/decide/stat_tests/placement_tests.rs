@@ -9,13 +9,16 @@ use medulla_decision_types::decision::statistical::placement::{
     cpu_cell, memory_cell, PlacementConstraints, PlacementQuestion, PlacementRead,
     PlacementRequestBody, PlacementSubject, PlacementTarget, PLACEMENT_PARAM,
 };
-use medulla_decision_types::decision::{AbstainReason, EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::{
+    AbstainReason, DecisionOutcome, EvidenceClass, ResolutionKind,
+};
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass, LeasePriority};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_work_types::native_control::{CapacityCellUpdateRequest, NativeControlSchemaVersion};
 
+use super::assemble_tests as library;
 use super::*;
 
 const GRAPH: &str = "placement";
@@ -462,6 +465,82 @@ async fn placement_abstains_with_typed_reasons() {
         assert!(
             medulla_decision_types::decision::codes::resolve(code).is_some(),
             "{code}"
+        );
+    }
+}
+
+// spec: MEDULLA-PLACEMENT-R001.12
+/// Verifies MEDULLA-PLACEMENT-R001.12: the served assembly of the template the
+/// chosen target names answers the deployment steps in slot order.
+#[tokio::test]
+async fn deployment_template_assembles_ordered_steps() {
+    let library = library::harness().await;
+    let targets: Vec<&str> = PlacementTarget::ALL
+        .iter()
+        .map(|target| target.option_id().trim_start_matches("placement:"))
+        .collect();
+    library::seed(&library.store, None);
+    for (nonce, tool) in (40u8..).zip(["tool-render-artifact", "tool-apply", "tool-verify"]) {
+        library::publish(
+            &library.store,
+            nonce,
+            (
+                tool,
+                medulla_agent_types::agent_component::AgentComponentKind::Tool,
+            ),
+            None,
+        );
+    }
+    let templates = medulla_persistence_records::agent_graph::tests::publish_deployment_templates(
+        &library.store,
+        library::TENANT,
+        &targets,
+    );
+    assert_eq!(templates.len(), targets.len(), "one template per target");
+
+    for (target, template) in targets.iter().zip(templates) {
+        assert_eq!(template.graph_id, format!("deployment:{target}"));
+        let mut request = library::request(Vec::new());
+        request.templates = BoundedVec::new(vec![template]).unwrap();
+        let result = library::assemble(&library, request)
+            .await
+            .unwrap_or_else(|error| panic!("{target}: the template assembles: {error}"));
+        let DecisionOutcome::Solved { slots, .. } = &result.record.outcome else {
+            panic!(
+                "{target}: expected a solved assembly, got {:?}",
+                result.record.outcome
+            );
+        };
+        let mut nodes: Vec<&str> = Vec::new();
+        for slot in slots.iter() {
+            let (node, _kind) = slot
+                .slot
+                .split_once('/')
+                .expect("a template slot names its node");
+            if nodes.last() != Some(&node) {
+                nodes.push(node);
+            }
+        }
+        assert_eq!(
+            nodes,
+            ["render-artifact", "apply", "verify"],
+            "{target}: slots follow the template order"
+        );
+        let graph = result
+            .graph
+            .as_ref()
+            .expect("a solved record answers its graph");
+        let steps: Vec<&str> = graph
+            .shape
+            .nodes
+            .iter()
+            .map(|n| n.node_id.as_str())
+            .collect();
+        assert_eq!(steps, ["render-artifact", "apply", "verify", "done"]);
+        assert_eq!(
+            result.agents.as_slice().len(),
+            3,
+            "one agent per template slot"
         );
     }
 }

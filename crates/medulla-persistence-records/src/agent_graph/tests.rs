@@ -772,3 +772,70 @@ pub fn publish_topology_template(
         composed_work_ceiling: entry.composed_work_ceiling,
     }
 }
+
+/// Publish one deployment template per target (MEDULLA-PLACEMENT-R001.12): the
+/// operator-owned step graph `render-artifact -> apply -> verify -> done`
+/// under the graph id `deployment:<target>`, and name each the way an
+/// assembly request does.
+pub fn publish_deployment_templates(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    targets: &[&str],
+) -> Vec<medulla_agent_types::delegation::AgentGraphEntryRef> {
+    let steps = [
+        ("render-artifact", "agent:research"),
+        ("apply", "agent:write"),
+        ("verify", "agent:work"),
+    ];
+    let mut nodes: Vec<AgentGraphNode> = steps
+        .iter()
+        .map(|(node_id, agent_id)| AgentGraphNode {
+            node_id: (*node_id).into(),
+            kind: agent_node(store, tenant_id, agent_id),
+            deps_contract: None,
+            output_contract: None,
+        })
+        .collect();
+    nodes.push(end_node());
+    let shape = AgentGraphShape {
+        entry_node: "render-artifact".into(),
+        nodes,
+        edges: vec![
+            edge("render-artifact", "apply"),
+            edge("apply", "verify"),
+            edge("verify", "done"),
+        ],
+        max_iterations: 10,
+    };
+    targets
+        .iter()
+        .zip(100u8..)
+        .map(|(target, nonce)| {
+            let graph_id = format!("deployment:{target}");
+            let mut graph = draft(store, tenant_id, &graph_id);
+            graph.shape = shape.clone();
+            let (actor_scope, purpose_id, policy_digest) = (
+                graph.actor_scope.clone(),
+                graph.purpose_id.clone(),
+                graph.policy_digest.clone(),
+            );
+            try_publish(store, &format!("key-{graph_id}"), nonce, 0, graph)
+                .expect("the deployment template publishes");
+            let entry = store
+                .graph_revisions(tenant_id, &graph_id)
+                .expect("revisions read")
+                .pop()
+                .expect("one revision");
+            medulla_agent_types::delegation::AgentGraphEntryRef {
+                tenant_id: tenant_id.to_string(),
+                graph_id,
+                entry_revision: entry.entry_revision,
+                definition_digest: entry.definition_digest,
+                actor_scope,
+                purpose_id,
+                policy_digest,
+                composed_work_ceiling: entry.composed_work_ceiling,
+            }
+        })
+        .collect()
+}

@@ -15,7 +15,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T009 [US1] MEDULLA-PLACEMENT-R001.9 Evidence: why-not for every non-chosen target.
 - [ ] T010 [US1] MEDULLA-PLACEMENT-R001.10 Refusal: typed abstention.
 - [ ] T011 [US1] MEDULLA-PLACEMENT-R001.11 Served contract proof through Decide.
-- [ ] T012 [US1] MEDULLA-PLACEMENT-R001.12 Assembled step graph from the chosen target.
+- [x] T012 [US1] MEDULLA-PLACEMENT-R001.12 Assembled step graph from the chosen target.
 - [ ] T013 [US1] MEDULLA-PLACEMENT-R001.13 Assemble abstains rather than invents.
 - [ ] T014 [US1] MEDULLA-PLACEMENT-R001.15 Capacity adjustment is a decision-engine question (pointer).
 - [ ] T015 [US1] MEDULLA-PLACEMENT-R001.16 Wiring: arbora placement flow.
