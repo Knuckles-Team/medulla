@@ -1,9 +1,9 @@
 //! Tier ladder and tier refusals over the byte-budgeted `TieredCache`.
 
-use std::cell::Cell;
 use std::collections::HashMap;
 use std::io;
-use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use medulla_kvcache::{Block, ColdStore, KvTierError, Tier, TieredCache};
 
@@ -17,13 +17,13 @@ fn block(index: u32, len: usize) -> Block {
 /// bytes it hands back on a page-in.
 struct ControlledCold {
     blobs: HashMap<String, Vec<u8>>,
-    refuse_writes: Rc<Cell<bool>>,
-    corrupt_reads: Rc<Cell<bool>>,
+    refuse_writes: Arc<AtomicBool>,
+    corrupt_reads: Arc<AtomicBool>,
 }
 
 impl ColdStore<String> for ControlledCold {
     fn put(&mut self, key: &String, bytes: &[u8]) -> io::Result<()> {
-        if self.refuse_writes.get() {
+        if self.refuse_writes.load(Ordering::SeqCst) {
             return Err(io::Error::other("cold device refuses writes"));
         }
         self.blobs.insert(key.clone(), bytes.to_vec());
@@ -32,7 +32,7 @@ impl ColdStore<String> for ControlledCold {
 
     fn get(&self, key: &String) -> io::Result<Option<Vec<u8>>> {
         let mut blob = self.blobs.get(key).cloned();
-        if self.corrupt_reads.get() {
+        if self.corrupt_reads.load(Ordering::SeqCst) {
             if let Some(bytes) = blob.as_mut().and_then(|b| b.last_mut()) {
                 *bytes ^= 0xff;
             }
@@ -51,15 +51,15 @@ impl ColdStore<String> for ControlledCold {
 }
 
 /// A shared switch the test flips to make the cold tier refuse or corrupt.
-type Switch = Rc<Cell<bool>>;
+type Switch = Arc<AtomicBool>;
 
 fn controlled_cache(
     hot: usize,
     warm: usize,
     cold: usize,
 ) -> (TieredCache<String, Block>, Switch, Switch) {
-    let refuse = Rc::new(Cell::new(false));
-    let corrupt = Rc::new(Cell::new(false));
+    let refuse = Arc::new(AtomicBool::new(false));
+    let corrupt = Arc::new(AtomicBool::new(false));
     let store = ControlledCold {
         blobs: HashMap::new(),
         refuse_writes: refuse.clone(),
@@ -113,7 +113,7 @@ fn cold_write_failure_and_digest_mismatch_refuse() {
         .try_put("b".into(), block(2, 200))
         .expect("a demotes to WARM");
     assert_eq!(cache.tier_of(&"a".to_string()), Some(Tier::Warm));
-    refuse.set(true);
+    refuse.store(true, Ordering::SeqCst);
     let refusal = cache.try_put("c".into(), block(3, 200)).unwrap_err();
     assert_eq!(refusal, KvTierError::ColdWriteFailed);
     assert_eq!(refusal.code(), "KV_COLD_WRITE_FAILED");
@@ -131,7 +131,7 @@ fn cold_write_failure_and_digest_mismatch_refuse() {
     }
 
     // A page-in whose digest differs from the digest at first write drops the block.
-    refuse.set(false);
+    refuse.store(false, Ordering::SeqCst);
     for i in 10..20u32 {
         cache.try_put(format!("k{i}"), block(i, 200)).expect("put");
     }
@@ -139,7 +139,7 @@ fn cold_write_failure_and_digest_mismatch_refuse() {
         .map(|i| format!("k{i}"))
         .find(|k| cache.tier_of(k) == Some(Tier::Cold))
         .expect("a block reached COLD");
-    corrupt.set(true);
+    corrupt.store(true, Ordering::SeqCst);
     let before = cache.len();
     let refusal = cache.try_get(&cold_key).unwrap_err();
     assert_eq!(refusal, KvTierError::BlockDigestMismatch);
@@ -155,6 +155,6 @@ fn cold_write_failure_and_digest_mismatch_refuse() {
         before - 1,
         "no other block changed tier membership"
     );
-    corrupt.set(false);
+    corrupt.store(false, Ordering::SeqCst);
     assert_eq!(cache.try_get(&cold_key).unwrap(), None);
 }

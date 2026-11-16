@@ -136,7 +136,7 @@ where
     hot: HashMap<K, HotEntry<V>>,
     warm: HashMap<K, WarmEntry>,
     cold_meta: HashMap<K, ColdMeta>,
-    cold_store: Box<dyn ColdStore<K>>,
+    cold_store: Box<dyn ColdStore<K> + Send>,
     /// Keep a block's cold row when it is paged in to HOT (MEDULLA-DURABLE-KERNEL-R083.5):
     /// a cache whose cold device is the one durable copy of its blocks must not delete
     /// that copy on a hit. Off by default (a promotion moves the bytes up).
@@ -205,7 +205,7 @@ where
     /// store ([`MemoryColdStore`]) — no durable device, no dependency.
     pub fn new(hot_cap: usize, warm_cap: usize, cold_cap: usize) -> Self
     where
-        K: 'static,
+        K: Send + 'static,
     {
         Self::with_cold_store(
             hot_cap,
@@ -222,7 +222,7 @@ where
         hot_cap: usize,
         warm_cap: usize,
         cold_cap: usize,
-        cold_store: Box<dyn ColdStore<K>>,
+        cold_store: Box<dyn ColdStore<K> + Send>,
     ) -> Self {
         TieredCache {
             hot: HashMap::new(),

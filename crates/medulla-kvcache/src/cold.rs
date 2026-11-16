@@ -20,7 +20,7 @@ use std::io;
 /// A pluggable COLD-tier blob device the tiered cache spills bytes into (CONCEPT:MEDULLA-KG.storage.durable-redb-cold-tier).
 ///
 /// Object-safe by design: keys and values cross as borrows / owned `Vec<u8>`, so it can
-/// be held as `Box<dyn ColdStore<K>>`. The cache keeps the per-key metadata; a store
+/// be held as `Box<dyn ColdStore<K> + Send>`, so a cache behind a lock can be shared across threads. The cache keeps the per-key metadata; a store
 /// only persists / returns opaque blobs.
 pub trait ColdStore<K> {
     /// Write (or overwrite) the blob for `key`.
