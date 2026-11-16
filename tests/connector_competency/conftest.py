@@ -92,7 +92,10 @@ def pg_source() -> Iterator[PgSource]:
         deadline = time.monotonic() + 60
         while True:
             probe = subprocess.run(
-                ["docker", "exec", name, "psql", "-U", "postgres", "-c", "SELECT 1"],
+                # Over TCP: the image's first-boot init server listens on the socket
+                # only, then restarts, so a socket probe can pass too early.
+                ["docker", "exec", name, "psql", "-h", "127.0.0.1"]
+                + ["-U", "postgres", "-c", "SELECT 1"],
                 capture_output=True,
             )
             if probe.returncode == 0:
