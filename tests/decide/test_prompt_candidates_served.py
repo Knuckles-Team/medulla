@@ -15,7 +15,7 @@ from medulla.client import MedullaClient
 from medulla.testing.synthetic.packs.content import canonical_json
 from medulla.testing.synthetic.packs.malformed import base_spec, edited
 
-LEGACY_SECRET = "legacy-body-text-that-must-not-be-echoed"
+LEGACY_SECRET = "legacy-body-text-that-must-not-be-echoed"  # sanitizer:ignore synthetic fixture text, not a credential
 
 
 async def _import_prompt(connector: str, body: dict[str, Any]) -> Any:
