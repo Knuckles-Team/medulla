@@ -21,8 +21,11 @@ pub const CONSUMER_CONTRACT_DIGEST_DOMAIN: &[u8] = b"eg/consumer-contract/v1";
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ContractField {
+    /// The field name.
     pub name: String,
+    /// The field type name.
     pub type_name: String,
+    /// Whether consumers must supply it.
     pub required: bool,
 }
 
@@ -31,6 +34,7 @@ pub struct ContractField {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ConsumerContractSchema {
+    /// The fields, sorted by name and unique.
     pub fields: BoundedVec<ContractField, MAX_CONTRACT_FIELDS>,
 }
 
