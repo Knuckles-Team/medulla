@@ -298,6 +298,7 @@ fn replay_request(
         params: inputs.params.clone(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: inputs.evidence_streams.clone(),
     }
 }
 
