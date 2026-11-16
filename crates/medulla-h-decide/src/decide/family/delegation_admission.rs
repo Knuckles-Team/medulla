@@ -104,7 +104,7 @@ fn counted_outcomes(
 
 fn premise(fact: String, class: PremiseClass, source: FamilyPremiseSource) -> FamilyPremise {
     FamilyPremise {
-        subject: "delegation_admission",
+        subject: "delegation_admission".into(),
         fact,
         class,
         source,

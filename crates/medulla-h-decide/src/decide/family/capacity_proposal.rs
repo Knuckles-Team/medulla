@@ -33,7 +33,7 @@ fn conclude_verdict(ctx: &ExecutionContext, request: &DecideRequest) -> Result<E
     let verdict = judge(&proposal, ctx.tenant_id, &observation);
     let mut executed = advisory(vec![verdict.option_id()])?;
     executed.family_premises = vec![FamilyPremise {
-        subject: "capacity",
+        subject: "capacity".into(),
         fact: format!(
             "headroom:{}:{}:epoch={}",
             proposal.resource_class_iri, observation.available, observation.epoch
