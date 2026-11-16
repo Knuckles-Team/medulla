@@ -4345,3 +4345,78 @@
     :fromState :ShardMonitorMachine_Monitoring ;
     :toState :ShardMonitorMachine_Monitoring ;
     :firedBy :ShardMonitorMachine_Event_Write .
+
+# spec: MEDULLA-TYPED-PACKS-R107.2
+# The PackRelease machine: the lifecycle of one pack release in its contract history. The Rust
+# edge table PACK_RELEASE_MACHINE is the same table.
+
+:PackReleaseState a owl:Class ;
+    rdfs:label "PackRelease State" ;
+    rdfs:comment "A state of the PackRelease machine." ;
+    rdfs:subClassOf :State .
+
+:PackReleaseTerminalState a owl:Class ;
+    rdfs:label "PackRelease Terminal State" ;
+    rdfs:comment "A terminal state of the PackRelease machine." ;
+    rdfs:subClassOf :TerminalState, :PackReleaseState .
+
+:PackReleaseTransition a owl:Class ;
+    rdfs:label "PackRelease Transition" ;
+    rdfs:comment "A transition of the PackRelease machine." ;
+    rdfs:subClassOf :Transition .
+
+:PackReleaseEvent a owl:Class ;
+    rdfs:label "PackRelease Event" ;
+    rdfs:comment "An event of the PackRelease machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:PackReleaseMachine a :StateMachine ;
+    rdfs:label "PackRelease machine" ;
+    :initialState :PackReleaseMachine_Pending ;
+    :hasState :PackReleaseMachine_Pending, :PackReleaseMachine_Active, :PackReleaseMachine_Superseded, :PackReleaseMachine_Rejected .
+
+:PackReleaseMachine_Pending a :PackReleaseState ;
+    rdfs:label "PackRelease Pending" ;
+    :storedForm "pending" .
+
+:PackReleaseMachine_Active a :PackReleaseState ;
+    rdfs:label "PackRelease Active" ;
+    :storedForm "active" .
+
+:PackReleaseMachine_Superseded a :PackReleaseTerminalState ;
+    rdfs:label "PackRelease Superseded" ;
+    :storedForm "superseded" .
+
+:PackReleaseMachine_Rejected a :PackReleaseTerminalState ;
+    rdfs:label "PackRelease Rejected" ;
+    :storedForm "rejected" .
+
+:PackReleaseMachine_Event_Activate a :PackReleaseEvent ;
+    rdfs:label "PackRelease Activate" .
+
+:PackReleaseMachine_Event_Reject a :PackReleaseEvent ;
+    rdfs:label "PackRelease Reject" .
+
+:PackReleaseMachine_Event_Supersede a :PackReleaseEvent ;
+    rdfs:label "PackRelease Supersede" .
+
+:PackReleaseMachine_P01 a :PackReleaseTransition ;
+    rdfs:label "PackRelease P01" ;
+    :edgeId "P01" ;
+    :fromState :PackReleaseMachine_Pending ;
+    :toState :PackReleaseMachine_Active ;
+    :firedBy :PackReleaseMachine_Event_Activate .
+
+:PackReleaseMachine_P02 a :PackReleaseTransition ;
+    rdfs:label "PackRelease P02" ;
+    :edgeId "P02" ;
+    :fromState :PackReleaseMachine_Pending ;
+    :toState :PackReleaseMachine_Rejected ;
+    :firedBy :PackReleaseMachine_Event_Reject .
+
+:PackReleaseMachine_P03 a :PackReleaseTransition ;
+    rdfs:label "PackRelease P03" ;
+    :edgeId "P03" ;
+    :fromState :PackReleaseMachine_Active ;
+    :toState :PackReleaseMachine_Superseded ;
+    :firedBy :PackReleaseMachine_Event_Supersede .

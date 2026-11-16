@@ -1,6 +1,7 @@
 //! Pack contract versions and standalone grants (MEDULLA-TYPED-PACKS-R107.1).
 
 use medulla_catalog_types::{
+    connector_pack::contract_version::ContractBreak,
     connector_pack::contract_version::ContractBreakKind,
     connector_pack::contract_version::PackContractVersion,
     connector_pack::contract_version::StandaloneGrant,
@@ -108,4 +109,33 @@ fn invalid_versions_and_incomplete_grants_are_refused() {
     };
     let error = no_expiry.validate().unwrap_err();
     assert_eq!((error.code, error.field), (GRANT_INCOMPLETE, "expires_at"));
+}
+
+/// Verifies MEDULLA-TYPED-PACKS-R107.1: a break names its kind and item.
+// spec: MEDULLA-TYPED-PACKS-R107.1
+#[test]
+fn version_grant_and_break_round_trip() {
+    version_and_grant_round_trip();
+    let found = ContractBreak {
+        kind: ContractBreakKind::RetypedField,
+        item: "tools.search.limit".into(),
+    };
+    found.validate().unwrap();
+    let wire = serde_json::to_value(&found).unwrap();
+    assert_eq!(wire["kind"], "retyped_field");
+    assert_eq!(
+        serde_json::from_value::<ContractBreak>(wire).unwrap(),
+        found
+    );
+    let packed: ContractBreak =
+        rmp_serde::from_slice(&rmp_serde::to_vec_named(&found).unwrap()).unwrap();
+    assert_eq!(packed, found);
+    assert!(ContractBreak {
+        kind: ContractBreakKind::RemovedClass,
+        item: " ".into()
+    }
+    .validate()
+    .is_err());
+    let extra = serde_json::json!({"kind": "removed_class", "item": "x", "note": "y"});
+    assert!(serde_json::from_value::<ContractBreak>(extra).is_err());
 }

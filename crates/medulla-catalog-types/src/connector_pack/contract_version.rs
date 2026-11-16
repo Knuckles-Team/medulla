@@ -58,6 +58,22 @@ pub enum ContractBreakKind {
     RemovedMapping,
 }
 
+/// One breaking change a release makes to the active contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContractBreak {
+    pub kind: ContractBreakKind,
+    /// The class, property, field path, shape or mapping the break names.
+    pub item: String,
+}
+
+impl ContractBreak {
+    pub fn validate(&self) -> Result<(), PackContractError> {
+        text("item", &self.item)
+    }
+}
+
 /// A record that failed validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackContractError {

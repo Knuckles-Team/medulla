@@ -26,6 +26,8 @@ pub(crate) mod admin;
 mod approval;
 mod catalog_authority;
 mod conformance;
+#[cfg(feature = "shacl")]
+pub(crate) mod contract_diff;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub(crate) mod import;
 pub(crate) mod reconcile;

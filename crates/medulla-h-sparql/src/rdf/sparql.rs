@@ -40,6 +40,14 @@ pub(super) async fn handle_sparql(
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
+    // The request graph's runtime-imported ontologies are read the same way as a pack
+    // graph: their classes and properties join the default graph, so a served query
+    // sees an imported class after its revision and not after its withdrawal
+    // (MEDULLA-TYPED-PACKS-R103.6). The composed digest joins the cache key.
+    let ontology = match runtime_ontology_view(&core) {
+        Ok(ontology) => ontology,
+        Err(error) => return Response::err(req_id, format!("SPARQL error: {error}")),
+    };
     // Each pack view is taken before the key is built, so the key names the exact
     // pack versions the evaluation reads; a pack write changes the key.
     let pack_views: Vec<(String, Arc<GraphView>, u64)> = packs
@@ -76,9 +84,12 @@ pub(super) async fn handle_sparql(
         for (name, _, version) in &pack_views {
             key.push_str(&format!("\u{0}{name}@{version}"));
         }
+        key.push_str(&format!("\u{0}ontology@{}", ontology.digest));
         key
     };
-    let pack_views: Vec<Arc<GraphView>> = pack_views.into_iter().map(|(_, view, _)| view).collect();
+    let mut pack_views: Vec<Arc<GraphView>> =
+        pack_views.into_iter().map(|(_, view, _)| view).collect();
+    pack_views.extend(ontology.view);
     #[cfg(feature = "result-cache")]
     let hash = sparql_cache_hash(
         &cache_key,
@@ -117,6 +128,48 @@ pub(super) async fn handle_sparql(
         version,
     )
     .await
+}
+
+/// The runtime ontologies of one graph as a readable view, with the composed digest
+/// that names exactly which revisions it holds.
+struct RuntimeOntology {
+    view: Option<Arc<GraphView>>,
+    #[cfg_attr(not(feature = "result-cache"), allow(dead_code))]
+    digest: String,
+}
+
+/// Build the view of every `SchemaSourceOrigin::Ontology` source composed into
+/// `core`'s GraphSchema: the active revision's ontology Turtle lowered to graph rows
+/// with the same lowering a bulk RDF load uses. Engine core vocabulary and attached
+/// packs stay out: only a connector's imported ontology joins the default graph. The
+/// view is derived from the composed sources on every read, so it never outlives a
+/// revision or a withdrawal.
+fn runtime_ontology_view(core: &GraphCore) -> Result<RuntimeOntology, String> {
+    use medulla_graph_core::graph::SchemaSourceOrigin;
+    let sources = core.schema_sources();
+    let digest = sources.composed_digest().to_hex();
+    let mut triples = Vec::new();
+    for (id, source) in sources.all() {
+        if !matches!(source.origin, SchemaSourceOrigin::Ontology { .. }) {
+            continue;
+        }
+        let Some(document) = source.ontology_ttl.as_deref() else {
+            continue;
+        };
+        let parsed = medulla_rdf::mapping::parse_turtle(document)
+            .map_err(|error| format!("ontology source '{id}': {error}"))?;
+        triples.extend(parsed);
+    }
+    if triples.is_empty() {
+        return Ok(RuntimeOntology { view: None, digest });
+    }
+    let scratch = GraphCore::new();
+    let mut iris = medulla_rdf::mapping::IriStore::default();
+    medulla_rdf::mapping::load_triples(&scratch, &mut iris, "runtime-ontology", triples)?;
+    Ok(RuntimeOntology {
+        view: Some(Arc::new(scratch.analysis_snapshot())),
+        digest,
+    })
 }
 
 #[cfg(feature = "result-cache")]

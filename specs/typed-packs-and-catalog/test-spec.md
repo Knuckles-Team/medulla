@@ -481,7 +481,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
   - UQL equivalents return the same rows, for example `MATCH (s:StewardshipAssignment)-[:assignedTo]->(a {id: X}) RETURN s.principal, s.role`.
 - `MEDULLA-TYPED-PACKS-R107`: See each child.
 - `MEDULLA-TYPED-PACKS-R107.1`: `crates/medulla-types/tests/pack_contract.rs::version_grant_and_break_round_trip`.
-- `MEDULLA-TYPED-PACKS-R107.2`: `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::non_breaking_applies_breaking_waits_and_queries_use_active_version`.
+- `MEDULLA-TYPED-PACKS-R107.2`: `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::non_breaking_applies_breaking_waits_and_queries_use_active_version`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::every_legal_and_illegal_release_transition_is_typed`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::the_ontology_describes_the_same_release_machine`.
 - `MEDULLA-TYPED-PACKS-R107.3`: `tests/typed_packs/test_pack_contract_served.py::test_diff_runs_in_import_and_orphan_report_is_served`.
 - `MEDULLA-TYPED-PACKS-R107.4`: `tests/typed_packs/test_pack_contract_served.py::test_ungranted_incomplete_breaking_and_in_use_refuse`.
 - `MEDULLA-TYPED-PACKS-R107.5`: `tests/typed_packs/test_pack_contract_served.py::test_receipt_carries_digests_break_count_request_and_grant`.

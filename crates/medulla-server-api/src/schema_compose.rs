@@ -908,7 +908,9 @@ ex:parent a owl:AsymmetricProperty .
         // the 2026-11-13 train add (state-machines-v1.ttl machines, harness and
         // orchestration decision vocabulary, virtual-graph and swarm-topology terms), with
         // core:revision declared once (harness) instead of twice.
-        assert_eq!(composed.ontology.len(), 22_647);
+        // +60 (MEDULLA-TYPED-PACKS-R107.2): the PackRelease machine (four states, three
+        // events, three edges) in state-machines-v1.ttl.
+        assert_eq!(composed.ontology.len(), 22_707);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
