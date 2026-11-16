@@ -70,9 +70,13 @@ impl DecisionFamily for CurriculumPromotionFamily {
                 &curriculum.judged_stage.stage_id,
                 window as usize,
             )?;
-            let reading =
-                promotion_verdict(&curriculum.judged_stage, &curriculum.policy, &outcomes, window)
-                    .map_err(invalid_parameter)?;
+            let reading = promotion_verdict(
+                &curriculum.judged_stage,
+                &curriculum.policy,
+                &outcomes,
+                window,
+            )
+            .map_err(invalid_parameter)?;
             let subject = curriculum.judged_stage.stage_id.as_str();
             let field = "params.curriculum_promotion";
             let premises = vec![
