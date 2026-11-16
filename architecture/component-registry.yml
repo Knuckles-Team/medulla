@@ -4160,6 +4160,7 @@ components:
       - "tests/test_types_slices.py"
       - "tests/attached_conformance.rs"
       - "tests/attached_sqlite_served.rs"
+      - "tests/attached_warehouse_served.rs"
       - "tests/test_ci_parity.py"
       - "tests/test_no_crate_level_lint_allows.py"
       - "tests/test_ci_light_gates_topology.py"
