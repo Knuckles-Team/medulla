@@ -155,8 +155,10 @@ fn activated_space(
         MAX_CYCLE_JOBS,
     )?;
     for (_, bytes) in jobs {
-        let job: GenerationCycleJob =
-            medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "generation cycle")?;
+        let job: GenerationCycleJob = medulla_persistence_records::decision_jobs::decode_artifact(
+            &bytes,
+            "generation cycle",
+        )?;
         let cycle = &job.cycle;
         if cycle.state() == GenerationCycleState::Activated
             && cycle.logical_graph == logical

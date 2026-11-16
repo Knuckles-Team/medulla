@@ -192,14 +192,24 @@ fn main() {
         "ADC+refine recall@10  : {:.4}   {:.2} ms/query",
         refined.0, refined.1
     );
-    println!("recall_at_10={:.4} peak_rss_mb={}", refined.0, peak_rss_mb());
+    println!(
+        "recall_at_10={:.4} peak_rss_mb={}",
+        refined.0,
+        peak_rss_mb()
+    );
 }
 
 /// Apply the row-major OPQ rotation `r` (`dim*dim`) to `v`.
 fn rotate(r: &[f32], v: &[f32]) -> Vec<f32> {
     let n = v.len();
     (0..n)
-        .map(|i| r[i * n..(i + 1) * n].iter().zip(v).map(|(a, b)| a * b).sum())
+        .map(|i| {
+            r[i * n..(i + 1) * n]
+                .iter()
+                .zip(v)
+                .map(|(a, b)| a * b)
+                .sum()
+        })
         .collect()
 }
 

@@ -38,6 +38,9 @@ mod tests {
         assert!(ONTOLOGY_BASE.starts_with("https://") && ONTOLOGY_BASE.ends_with('/'));
         assert_eq!(CORE_NAMESPACE, format!("{ONTOLOGY_BASE}core#"));
         assert_eq!(CORE_DOCUMENT, format!("{ONTOLOGY_BASE}core"));
-        assert_eq!(ontology_iri!("core#Person"), format!("{ONTOLOGY_BASE}core#Person"));
+        assert_eq!(
+            ontology_iri!("core#Person"),
+            format!("{ONTOLOGY_BASE}core#Person")
+        );
     }
 }

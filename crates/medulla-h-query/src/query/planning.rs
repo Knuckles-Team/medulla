@@ -715,8 +715,12 @@ impl ServedPlanLegs {
                 &web_ttl_ms,
                 &declared_cache_s,
             );
-            let fragments =
-                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s);
+            let fragments = ForeignWatermarks::fragment_sources(
+                core,
+                &plan.ops,
+                &web_ttl_ms,
+                &declared_cache_s,
+            );
             self.watermarks = watermarks;
             if let Some(sources) = fragments {
                 foreign.install_fragment_cache(sources);

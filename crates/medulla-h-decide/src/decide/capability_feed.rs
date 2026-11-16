@@ -245,20 +245,20 @@ async fn hydrate(
     let knobs = DesignationKnobs::from_policy(&DecisionPolicy::engine_default());
     let max_rows = knobs.max_records_per_shard;
     let (blocking_store, owned_tenant) = (Arc::clone(store), tenant.to_string());
-    let components =
-        match medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-            blocking_store.component_heads_with_prefix(&owned_tenant, "", max_rows)
-        })
-        .await
-        {
-            Ok(components) => components,
-            Err(error) => {
-                // More components than one shard holds: the index could not
-                // hold them either; the streams still keep it current.
-                tracing::warn!(code = "CAPABILITY_FEED_HYDRATE_SKIPPED", %error, "capability feed did not load the published components");
-                return Ok(());
-            }
-        };
+    let components = match medulla_server_api::api::dispatch_support::blocking_task(
+        BLOCKING_TASK,
+        move || blocking_store.component_heads_with_prefix(&owned_tenant, "", max_rows),
+    )
+    .await
+    {
+        Ok(components) => components,
+        Err(error) => {
+            // More components than one shard holds: the index could not
+            // hold them either; the streams still keep it current.
+            tracing::warn!(code = "CAPABILITY_FEED_HYDRATE_SKIPPED", %error, "capability feed did not load the published components");
+            return Ok(());
+        }
+    };
     let published: Vec<(AgentComponentEntry, EntityKind)> = components
         .into_iter()
         .filter(|component| component.lifecycle == AgentLibraryLifecycle::Published)

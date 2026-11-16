@@ -144,21 +144,27 @@ fn union_keeps_document_order_prefixes_and_blank_node_references() {
 #[test]
 fn imports_may_name_the_parent_catalog_and_its_modules() {
     let allowed = BTreeSet::from(["urn:current"]);
-    for parent in [medulla_types::ontology_iri!("core"), medulla_types::ontology_iri!("supply_chain")] {
+    for parent in [
+        medulla_types::ontology_iri!("core"),
+        medulla_types::ontology_iri!("supply_chain"),
+    ] {
         let text = format!("<urn:current> <http://www.w3.org/2002/07/owl#imports> <{parent}> .");
         assert_eq!(
             validate_ontology_imports(&text, "urn:current", &allowed),
             Ok(())
         );
     }
-    assert!(!is_parent_ontology_iri("https://knuckles-team.github.io/ontology/core/x"));
+    assert!(!is_parent_ontology_iri(
+        "https://knuckles-team.github.io/ontology/core/x"
+    ));
     assert!(!is_parent_ontology_iri("https://example.org/ontology/core"));
 }
 
 // spec: MEDULLA-TYPED-PACKS-R105.1
 #[test]
 fn orphan_classes_are_those_without_a_path_to_a_parent_class() {
-    let parent = BTreeSet::from(["https://knuckles-team.github.io/ontology/core#Event".to_string()]);
+    let parent =
+        BTreeSet::from(["https://knuckles-team.github.io/ontology/core#Event".to_string()]);
     let linked = "@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix c: <urn:connector#> .

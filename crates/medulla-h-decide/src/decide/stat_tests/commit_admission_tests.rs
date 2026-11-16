@@ -416,7 +416,8 @@ async fn topology_world() -> TopologyWorld {
         )
         .await
         .unwrap();
-    let mut server = ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
+    let mut server =
+        ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
     server.persist_dir = Some(path);
     server.persistence = Some(backend.clone());
     server
@@ -455,7 +456,8 @@ impl TopologyWorld {
         drop(state);
         drop(backend);
         let backend = Arc::new(RedbBackend::open_with_shards(path.clone(), 16, 1).unwrap());
-        let mut server = ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
+        let mut server =
+            ServerState::new_for_test("topology-world", ServerState::test_isolation("caller-a"));
         server.persist_dir = Some(path);
         server.persistence = Some(backend.clone());
         server

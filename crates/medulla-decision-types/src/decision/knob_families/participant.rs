@@ -77,7 +77,10 @@ mod tests {
             assert!(spec.admits(&spec.min) && spec.admits(&spec.max));
             // R179.8: each entry is Tunable unless stated; R154.1 states the
             // two memory admission bounds Fixed.
-            let fixed = matches!(spec.name, "memory.entry_max_bytes" | "memory.tenant_max_bytes");
+            let fixed = matches!(
+                spec.name,
+                "memory.entry_max_bytes" | "memory.tenant_max_bytes"
+            );
             let expected = if fixed {
                 KnobSafety::Fixed
             } else {

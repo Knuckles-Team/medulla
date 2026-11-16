@@ -751,7 +751,10 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
     for schema in [failing, healthy] {
         imported(
             &served,
-            &build_pack(schema, &[tool(schema, "b", "Tool b."), ontology_entry(schema)]),
+            &build_pack(
+                schema,
+                &[tool(schema, "b", "Tool b."), ontology_entry(schema)],
+            ),
             None,
         )
         .await;
@@ -792,7 +795,11 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
             .unwrap();
         assert_eq!(state.attempt, attempt);
         assert_eq!(state.code, "PACK_PROJECTION_BLOB_UNAVAILABLE");
-        assert_eq!(state.is_terminal(), attempt == knobs.max_attempts, "{state:?}");
+        assert_eq!(
+            state.is_terminal(),
+            attempt == knobs.max_attempts,
+            "{state:?}"
+        );
     }
     assert!(
         !retry_due(

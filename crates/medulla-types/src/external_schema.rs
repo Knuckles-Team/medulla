@@ -239,7 +239,8 @@ mod tests {
                     external_iri: format!("{EX}Patient"),
                     kind: ExternalTermKind::Class,
                     result: ExternalTermResult::Mapped {
-                        platform_iri: "https://knuckles-team.github.io/ontology/core#Person".to_string(),
+                        platform_iri: "https://knuckles-team.github.io/ontology/core#Person"
+                            .to_string(),
                         provenance_digest: Digest256::sha256(b"provenance"),
                     },
                 },

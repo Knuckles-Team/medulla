@@ -536,8 +536,8 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
 /// table (MEDULLA-DECISION-ENGINE-R010.100.1).
 pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     use medulla_types::{
-        archimate_exchange, asset_usage, belief_revision, claims, context_facts, meeting_transcript,
-        participant, source_toc, transition_refused,
+        archimate_exchange, asset_usage, belief_revision, claims, context_facts,
+        meeting_transcript, participant, source_toc, transition_refused,
     };
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![

@@ -347,7 +347,11 @@ async fn submit_creates_a_job_and_holds_a_lease() {
         "the ledger holds the job's lease: {status:?}"
     );
     let key = super::super::stat_generation_cycle::job_key(&job.job_id);
-    assert!(h.store.decision_artifact(&served_scope(), &key).unwrap().is_some());
+    assert!(h
+        .store
+        .decision_artifact(&served_scope(), &key)
+        .unwrap()
+        .is_some());
     assert!(
         h.store
             .decision_artifact("other-tenant", &key)

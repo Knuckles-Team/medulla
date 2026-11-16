@@ -147,7 +147,11 @@ pub static PACK_PROJECTION_MACHINE: MachineDef<ProjectionPhase, ProjectionEvent,
 
 impl ProjectionPhase {
     /// The one transition function of `PackProjectionMachine`.
-    pub fn apply(self, event: ProjectionEvent, attempts_left: bool) -> Result<Self, TransitionRefused> {
+    pub fn apply(
+        self,
+        event: ProjectionEvent,
+        attempts_left: bool,
+    ) -> Result<Self, TransitionRefused> {
         transition(&PACK_PROJECTION_MACHINE, self, event, |guard| {
             guard == ATTEMPTS_LEFT && attempts_left
         })
@@ -235,15 +239,36 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R096.2
     #[test]
     fn retries_back_off_and_end_in_a_terminal_failure_that_keeps_its_code() {
-        let first = next_retry(None, "r1", "PACK_PROJECTION_BLOB_UNAVAILABLE", true, 1000, KNOBS)
-            .unwrap();
+        let first = next_retry(
+            None,
+            "r1",
+            "PACK_PROJECTION_BLOB_UNAVAILABLE",
+            true,
+            1000,
+            KNOBS,
+        )
+        .unwrap();
         assert_eq!((first.attempt, first.next_attempt_ms), (1, 1100));
         assert!(!first.is_terminal());
-        let second =
-            next_retry(Some(&first), "r1", "PACK_PROJECTION_STORE_BUSY", true, 2000, KNOBS).unwrap();
+        let second = next_retry(
+            Some(&first),
+            "r1",
+            "PACK_PROJECTION_STORE_BUSY",
+            true,
+            2000,
+            KNOBS,
+        )
+        .unwrap();
         assert_eq!((second.attempt, second.next_attempt_ms), (2, 2200));
-        let third =
-            next_retry(Some(&second), "r1", "PACK_PROJECTION_STORE_BUSY", true, 3000, KNOBS).unwrap();
+        let third = next_retry(
+            Some(&second),
+            "r1",
+            "PACK_PROJECTION_STORE_BUSY",
+            true,
+            3000,
+            KNOBS,
+        )
+        .unwrap();
         assert_eq!(third.attempt, 3);
         assert!(third.is_terminal(), "the knob's attempts are used up");
         assert_eq!(third.code, "PACK_PROJECTION_STORE_BUSY");
@@ -270,8 +295,7 @@ mod tests {
             .is_err());
     }
 
-    const MACHINES: &str =
-        include_str!("../../../medulla-core/ontology/state-machines-v1.ttl");
+    const MACHINES: &str = include_str!("../../../medulla-core/ontology/state-machines-v1.ttl");
 
     fn title(stored: &str) -> String {
         format!("{}{}", stored[..1].to_uppercase(), &stored[1..])
@@ -288,7 +312,10 @@ mod tests {
             )));
         }
         for edge in PACK_PROJECTION_MACHINE.edges {
-            let block = format!(":PackProjectionMachine_{} a :PackProjectionTransition", edge.id);
+            let block = format!(
+                ":PackProjectionMachine_{} a :PackProjectionTransition",
+                edge.id
+            );
             let start = MACHINES.find(&block).expect("edge declared");
             let text = &MACHINES[start..];
             let text = &text[..text.find(" .\n").unwrap()];

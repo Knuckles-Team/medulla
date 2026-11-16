@@ -74,19 +74,21 @@ pub(crate) fn source_gate(
     if is_system {
         return Some(true);
     }
-    Some(rls::source_access_verdict(
-        &access,
-        agent_id,
-        roles,
-        &mut || {
-            groups
-                .get_or_init(|| std::sync::Arc::new(rls::SourceGroups::from_view(view)))
-                .clone()
-        },
-        access_clock_ms(),
-        rls::source_acl_stale_after_s(),
+    Some(
+        rls::source_access_verdict(
+            &access,
+            agent_id,
+            roles,
+            &mut || {
+                groups
+                    .get_or_init(|| std::sync::Arc::new(rls::SourceGroups::from_view(view)))
+                    .clone()
+            },
+            access_clock_ms(),
+            rls::source_acl_stale_after_s(),
+        )
+        .allows(),
     )
-    .allows())
 }
 
 impl IsolationLayer {

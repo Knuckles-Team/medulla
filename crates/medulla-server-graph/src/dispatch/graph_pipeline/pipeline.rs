@@ -98,12 +98,14 @@ pub async fn route_gateway_and_stateless_domains(
     // (MEDULLA-FINANCE-PRIMITIVES-R902): a revision stored as a ForecastSample is
     // refused before the pure kernel runs.
     #[cfg(feature = "finance")]
-    if let Some(refusal) = medulla_h_graph::graph_ops::finance_forecast_gate::refuse_probabilistic_input(
-        req_id,
-        core,
-        read_authority.as_ref(),
-        &method,
-    ) {
+    if let Some(refusal) =
+        medulla_h_graph::graph_ops::finance_forecast_gate::refuse_probabilistic_input(
+            req_id,
+            core,
+            read_authority.as_ref(),
+            &method,
+        )
+    {
         return Ok(refusal);
     }
     #[cfg(feature = "finance")]

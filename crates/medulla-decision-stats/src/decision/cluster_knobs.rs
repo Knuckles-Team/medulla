@@ -202,8 +202,8 @@ pub fn config_from_policy(policy: &DecisionPolicy) -> ClusterConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_numeric::cluster as k;
     use medulla_decision_types::decision::knobs::{check_revision, KnobName, KnobRefusalCode};
+    use medulla_numeric::cluster as k;
     use std::collections::BTreeMap;
 
     // spec: MEDULLA-CLUSTER-R002.5

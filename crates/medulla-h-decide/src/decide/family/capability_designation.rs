@@ -593,11 +593,12 @@ pub(crate) fn designate(
     let adapted_question;
     let rank_question = if runtime.adapter.is_some() {
         let mut adapted = question.clone();
-        adapted.query_vector = medulla_decision_types::decision::capability_designation::QueryVector::from_f32(
-            &question.query_vector.embedding_version,
-            &query,
-        )
-        .map_err(|detail| invalid_parameter(detail))?;
+        adapted.query_vector =
+            medulla_decision_types::decision::capability_designation::QueryVector::from_f32(
+                &question.query_vector.embedding_version,
+                &query,
+            )
+            .map_err(|detail| invalid_parameter(detail))?;
         adapted_question = adapted;
         &adapted_question
     } else {

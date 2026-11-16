@@ -39,7 +39,8 @@ fn shell_centric_must_be_boolean() {
             result
                 .constraint_component
                 .ends_with("DatatypeConstraintComponent")
-                && result.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/swarm#shellCentric>")
+                && result.path.as_deref()
+                    == Some("<https://knuckles-team.github.io/ontology/swarm#shellCentric>")
         }));
     }
 }

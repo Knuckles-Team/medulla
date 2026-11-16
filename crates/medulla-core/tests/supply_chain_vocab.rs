@@ -1234,7 +1234,8 @@ fn twenty_company_maps_to_customer_rank_two_without_a_contract_mapping() {
     );
 }
 
-const VM_CONTAINER_MANAGER: &str = "https://knuckles-team.github.io/ontology/test/vm-container-manager#";
+const VM_CONTAINER_MANAGER: &str =
+    "https://knuckles-team.github.io/ontology/test/vm-container-manager#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.3, MEDULLA-CQ-XSRC-R003.5
 #[test]

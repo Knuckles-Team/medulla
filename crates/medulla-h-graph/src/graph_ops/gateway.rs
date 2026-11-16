@@ -165,7 +165,8 @@ pub async fn try_handle_gateway(
     // graph and takes its rows under the verified carrier, so it enters here,
     // where both are in hand, before the carrier-less route table.
     if matches!(method, Method::SourceSync { .. }) {
-        let visible = read_authority.map_or_else(|| core.clone(), |authority| authority.project_core(core));
+        let visible =
+            read_authority.map_or_else(|| core.clone(), |authority| authority.project_core(core));
         return Ok(super::source_sync::handle_source_sync(
             state,
             &ctx,

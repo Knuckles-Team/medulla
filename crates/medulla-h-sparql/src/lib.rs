@@ -6,6 +6,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// The served cross-source competency questions (MEDULLA-CQ-XSRC-R008.4).
+#[cfg(feature = "rdf")]
+pub mod cross_source_question;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "federation-search")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -14,9 +17,6 @@ pub mod federation;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod foreign_source_handlers;
-/// The served cross-source competency questions (MEDULLA-CQ-XSRC-R008.4).
-#[cfg(feature = "rdf")]
-pub mod cross_source_question;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "rdf")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

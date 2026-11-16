@@ -18,16 +18,16 @@
 pub mod architecture_exchange;
 /// Graph-derived architecture view (MEDULLA-CQ-ORCH-R010.2).
 pub mod architecture_view;
+pub mod batch_apply;
 #[cfg(feature = "broker")]
 pub mod broker;
-pub mod batch_apply;
-/// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
-pub mod data_product;
-pub mod domain_pack;
 /// Pure document-chunk encoding steps: windows, per-chunk encode calls, mean aggregation
 /// (MEDULLA-FEDERATED-QUERY-R039.2).
 pub mod compute;
+/// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
+pub mod data_product;
 pub mod decay;
+pub mod domain_pack;
 /// Canonical durable-mutation classification/application, hoisted down from the
 /// facade's `src/mutation_apply.rs` (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §4.2) so a
 /// caller below the facade (`crates/medulla-pyengine`) can share it instead of

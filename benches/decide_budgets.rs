@@ -1652,7 +1652,9 @@ fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
     assert!(
-        OWN_FIXTURE_FAMILIES.iter().all(|kind| !FAMILIES.contains(kind)),
+        OWN_FIXTURE_FAMILIES
+            .iter()
+            .all(|kind| !FAMILIES.contains(kind)),
         "a family is benched by the generic fixture or its own, not both"
     );
     for kind in FAMILIES {

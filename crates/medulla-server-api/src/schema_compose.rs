@@ -802,7 +802,9 @@ ex:parent a owl:AsymmetricProperty .
             }));
         }
         assert!(!foundation.contains("owl:imports"));
-        assert!(foundation.contains("<https://knuckles-team.github.io/ontology/core> a owl:Ontology"));
+        assert!(
+            foundation.contains("<https://knuckles-team.github.io/ontology/core> a owl:Ontology")
+        );
     }
 
     #[test]
@@ -1139,7 +1141,8 @@ ex:parent a owl:AsymmetricProperty .
         // Operator ruling 2026-09-22: a skill is a capacity its bearer can realize — a
         // BFO disposition (a specifically dependent continuant), not an independent
         // continuant and not an information artifact.
-        let skill = &classification.subsumers["<https://knuckles-team.github.io/ontology/core#Skill>"];
+        let skill =
+            &classification.subsumers["<https://knuckles-team.github.io/ontology/core#Skill>"];
         let bfo = |id: &str| format!("<http://purl.obolibrary.org/obo/BFO_{id}>");
         assert!(
             skill.contains(&bfo("0000016")),

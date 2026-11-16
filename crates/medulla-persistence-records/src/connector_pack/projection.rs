@@ -175,11 +175,7 @@ impl AgentLibraryStore {
                     "BODY_MISSING: schema member body holder differs from its catalog row".into(),
                 );
             }
-            for source in member
-                .source_registrations
-                .iter()
-                .filter(|_| !declaration)
-            {
+            for source in member.source_registrations.iter().filter(|_| !declaration) {
                 if source.connector != *connector || source.resource_uri != member.uri {
                     return Err(
                         "CORRUPT_CONNECTOR_PACK: source registration differs from its member"

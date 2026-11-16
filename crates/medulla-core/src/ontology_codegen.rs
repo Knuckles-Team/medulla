@@ -79,7 +79,11 @@ impl VocabularyModule {
     /// input always produces the equal, byte-identical output.
     pub fn to_turtle(&self) -> String {
         let mut out = String::new();
-        out.push_str(concat!("@prefix : <", medulla_types::ontology_iri!("core#"), "> .\n"));
+        out.push_str(concat!(
+            "@prefix : <",
+            medulla_types::ontology_iri!("core#"),
+            "> .\n"
+        ));
         out.push_str("@prefix owl: <http://www.w3.org/2002/07/owl#> .\n");
         out.push_str("@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n");
         out.push_str("@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n");
@@ -118,7 +122,11 @@ impl VocabularyModule {
         }
 
         out.push_str(&format!(
-            concat!("<", medulla_types::ontology_base!(), "{}> a owl:Ontology ;\n"),
+            concat!(
+                "<",
+                medulla_types::ontology_base!(),
+                "{}> a owl:Ontology ;\n"
+            ),
             self.module_id
         ));
         out.push_str(&format!("    rdfs:label \"{}\" ;\n", self.ontology_label));

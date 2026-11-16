@@ -194,7 +194,9 @@ async fn record_lists_every_knob_read() {
     );
     for spec in DRIFT.iter().chain(ROUTE) {
         assert!(
-            facts.iter().any(|f| f.starts_with(&format!("knob:{}=", spec.name))),
+            facts
+                .iter()
+                .any(|f| f.starts_with(&format!("knob:{}=", spec.name))),
             "{}",
             spec.name
         );

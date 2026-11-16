@@ -64,12 +64,16 @@ fn fixture_parses_and_is_linked_to_the_parent() {
         "fixture ontology has orphan classes: {orphans:?}"
     );
 
-    let connector = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#connector";
-    let connector_class = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#ConnectorIncident";
+    let connector =
+        "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#connector";
+    let connector_class =
+        "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#ConnectorIncident";
     let parent_class = format!("{KG}WorkItem");
-    let instance = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incident-1";
+    let instance =
+        "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incident-1";
     let source = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incidents";
-    let operation = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#search-incidents";
+    let operation =
+        "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#search-incidents";
 
     assert!(parents.contains(&parent_class));
     assert!(has_iri(

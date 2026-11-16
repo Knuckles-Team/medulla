@@ -256,8 +256,8 @@ mod semantic_ann_query;
 mod semantic_ann_shape;
 
 use crate::semantic_ann::AnnIndexImage;
-use semantic_ann_persistence::PersistedIndexManifest as IndexManifest;
 pub use semantic_ann_build::{build_off_lock, BuildHooks, BuildOutcome};
+use semantic_ann_persistence::PersistedIndexManifest as IndexManifest;
 pub use semantic_ann_persistence::SemanticGenerationImage;
 
 impl Clone for SemanticStore {

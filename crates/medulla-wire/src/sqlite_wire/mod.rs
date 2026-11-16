@@ -223,10 +223,9 @@ fn outcome_json(outcome: WireOutcome) -> String {
         // `COPY … FROM STDIN` has no analogue in the SQLite surface (SQLite has no COPY);
         // it cannot arise from SQLite-dialect SQL, so report it as unsupported rather
         // than entering a copy-in mode this line protocol does not model.
-        WireOutcome::CopyIn { .. } | WireOutcome::CopyOut { .. } => error_json(
-            "0A000",
-            "COPY is not supported over the SQLite surface",
-        ),
+        WireOutcome::CopyIn { .. } | WireOutcome::CopyOut { .. } => {
+            error_json("0A000", "COPY is not supported over the SQLite surface")
+        }
     }
 }
 

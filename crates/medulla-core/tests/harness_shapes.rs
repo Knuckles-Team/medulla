@@ -64,7 +64,8 @@ fn model_fact_shapes_reject_missing_required_facts() {
             !result.conforms,
             "a ModelProfile missing required {missing_fact} must fail"
         );
-        let expected_path = format!("<https://knuckles-team.github.io/ontology/core#{missing_fact}>");
+        let expected_path =
+            format!("<https://knuckles-team.github.io/ontology/core#{missing_fact}>");
         assert!(
             result
                 .results
@@ -93,7 +94,8 @@ fn model_fact_shapes_reject_missing_run() {
             .message
             .as_deref()
             .is_some_and(|message| message.contains("evaluationRun"))
-            || violation.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/core#evaluationRun>")
+            || violation.path.as_deref()
+                == Some("<https://knuckles-team.github.io/ontology/core#evaluationRun>")
     }));
 }
 

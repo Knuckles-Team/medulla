@@ -38,54 +38,186 @@ const MIGRATION_SERVICE: &str = "namespace-migration";
 /// the same prefix.
 pub const NAMESPACE_REWRITES: &[(&str, &str)] = &[
     // The legacy `au:` alias: two names live in core, everything else in infrastructure.
-    ("http://agent-utilities.dev/ontology#HardwareNode", medulla_types::ontology_iri!("core#HardwareNode")),
-    ("http://agent-utilities.dev/ontology#Agent", medulla_types::ontology_iri!("core#Agent")),
-    ("http://agent-utilities.dev/ontology#WorldModel", medulla_types::ontology_iri!("core#WorldModel")),
-    ("https://agent-utilities.dev/ontology#HardwareNode", medulla_types::ontology_iri!("core#HardwareNode")),
-    ("https://agent-utilities.dev/ontology#Agent", medulla_types::ontology_iri!("core#Agent")),
-    ("https://agent-utilities.dev/ontology#WorldModel", medulla_types::ontology_iri!("core#WorldModel")),
-    ("http://agent-utilities.dev/ontology#", medulla_types::ontology_iri!("infrastructure#")),
-    ("https://agent-utilities.dev/ontology#", medulla_types::ontology_iri!("infrastructure#")),
-    ("http://agent-utilities.dev/ontology", medulla_types::ontology_iri!("infrastructure")),
-    ("https://agent-utilities.dev/ontology", medulla_types::ontology_iri!("infrastructure")),
+    (
+        "http://agent-utilities.dev/ontology#HardwareNode",
+        medulla_types::ontology_iri!("core#HardwareNode"),
+    ),
+    (
+        "http://agent-utilities.dev/ontology#Agent",
+        medulla_types::ontology_iri!("core#Agent"),
+    ),
+    (
+        "http://agent-utilities.dev/ontology#WorldModel",
+        medulla_types::ontology_iri!("core#WorldModel"),
+    ),
+    (
+        "https://agent-utilities.dev/ontology#HardwareNode",
+        medulla_types::ontology_iri!("core#HardwareNode"),
+    ),
+    (
+        "https://agent-utilities.dev/ontology#Agent",
+        medulla_types::ontology_iri!("core#Agent"),
+    ),
+    (
+        "https://agent-utilities.dev/ontology#WorldModel",
+        medulla_types::ontology_iri!("core#WorldModel"),
+    ),
+    (
+        "http://agent-utilities.dev/ontology#",
+        medulla_types::ontology_iri!("infrastructure#"),
+    ),
+    (
+        "https://agent-utilities.dev/ontology#",
+        medulla_types::ontology_iri!("infrastructure#"),
+    ),
+    (
+        "http://agent-utilities.dev/ontology",
+        medulla_types::ontology_iri!("infrastructure"),
+    ),
+    (
+        "https://agent-utilities.dev/ontology",
+        medulla_types::ontology_iri!("infrastructure"),
+    ),
     // The engine's runtime assertion vocabulary (both retired spellings).
-    ("http://medulla/owl#", medulla_types::ontology_iri!("reasoning#")),
-    ("http://epistemic-graph/owl#", medulla_types::ontology_iri!("reasoning#")),
+    (
+        "http://medulla/owl#",
+        medulla_types::ontology_iri!("reasoning#"),
+    ),
+    (
+        "http://epistemic-graph/owl#",
+        medulla_types::ontology_iri!("reasoning#"),
+    ),
     // Governed concepts, schemes and pillars.
-    ("http://knuckles.team/kg/concept/AU/", medulla_types::ontology_iri!("concept#")),
-    ("http://knuckles.team/kg/concept/EG/", medulla_types::ontology_iri!("concept#")),
-    ("http://knuckles.team/kg/scheme/AU", medulla_types::ontology_iri!("concept-scheme#governed-concepts")),
-    ("http://knuckles.team/kg/scheme/EG", medulla_types::ontology_iri!("concept-scheme#governed-concepts")),
-    ("http://knuckles.team/kg/pillar/", medulla_types::ontology_iri!("pillar#")),
+    (
+        "http://knuckles.team/kg/concept/AU/",
+        medulla_types::ontology_iri!("concept#"),
+    ),
+    (
+        "http://knuckles.team/kg/concept/EG/",
+        medulla_types::ontology_iri!("concept#"),
+    ),
+    (
+        "http://knuckles.team/kg/scheme/AU",
+        medulla_types::ontology_iri!("concept-scheme#governed-concepts"),
+    ),
+    (
+        "http://knuckles.team/kg/scheme/EG",
+        medulla_types::ontology_iri!("concept-scheme#governed-concepts"),
+    ),
+    (
+        "http://knuckles.team/kg/pillar/",
+        medulla_types::ontology_iri!("pillar#"),
+    ),
     // Modules renamed for their domain or moved under the connector prefix.
-    ("http://knuckles.team/kg/arbora#", medulla_types::ontology_iri!("admission#")),
-    ("http://knuckles.team/kg/bellwether-mcp/shape#", medulla_types::ontology_iri!("connector/bellwether-shapes#")),
-    ("http://knuckles.team/kg/artcraft/workflows#", medulla_types::ontology_iri!("connector/artcraft-workflows#")),
-    ("http://knuckles.team/kg/artcraft/", medulla_types::ontology_iri!("connector/")),
-    ("http://knuckles.team/kg/arr", medulla_types::ontology_iri!("connector/arr")),
-    ("http://knuckles.team/kg/arr#", medulla_types::ontology_iri!("connector/arr#")),
-    ("http://knuckles.team/kg/qbittorrent", medulla_types::ontology_iri!("connector/qbittorrent")),
-    ("http://knuckles.team/kg/qbittorrent#", medulla_types::ontology_iri!("connector/qbittorrent#")),
-    ("http://knuckles.team/kg/erpnext", medulla_types::ontology_iri!("connector/erpnext")),
-    ("http://knuckles.team/kg/erpnext#", medulla_types::ontology_iri!("connector/erpnext#")),
-    ("http://knuckles.team/kg/emerald-finance", medulla_types::ontology_iri!("connector/emerald-finance")),
-    ("http://knuckles.team/kg/emerald-finance#", medulla_types::ontology_iri!("connector/emerald-finance#")),
-    ("https://knuckles-team.github.io/agent-connector-sdk/access#", medulla_types::ontology_iri!("access#")),
-    ("https://knuckles-team.github.io/scion-sdk/access#", medulla_types::ontology_iri!("access#")),
-    ("https://knuckles-team.github.io/scion-sdk/lifecycle", medulla_types::ontology_iri!("connector-lifecycle")),
-    ("https://knuckles-team.github.io/scion-sdk/lifecycle#", medulla_types::ontology_iri!("connector-lifecycle#")),
-    ("https://knuckles-team.github.io/scion-sdk/breaker#", medulla_types::ontology_iri!("circuit-breaker#")),
-    ("https://knuckles-team.github.io/scion-sdk/stream", medulla_types::ontology_iri!("stream-transport")),
-    ("https://knuckles-team.github.io/scion-sdk/stream#", medulla_types::ontology_iri!("stream-transport#")),
-    ("https://knuckles-team.github.io/scion-sdk/contract", medulla_types::ontology_iri!("surface-contract")),
-    ("https://knuckles-team.github.io/scion-sdk/contract#", medulla_types::ontology_iri!("surface-contract#")),
-    ("http://knuckles.team/xsrc#", medulla_types::ontology_iri!("source-record#")),
-    ("http://knuckles.team/xsrc/", medulla_types::ontology_iri!("source-record/")),
-    ("http://knuckles.team/test/", medulla_types::ontology_iri!("test/")),
-    ("https://example.invalid/ontology/", medulla_types::ontology_iri!("connector/")),
+    (
+        "http://knuckles.team/kg/arbora#",
+        medulla_types::ontology_iri!("admission#"),
+    ),
+    (
+        "http://knuckles.team/kg/bellwether-mcp/shape#",
+        medulla_types::ontology_iri!("connector/bellwether-shapes#"),
+    ),
+    (
+        "http://knuckles.team/kg/artcraft/workflows#",
+        medulla_types::ontology_iri!("connector/artcraft-workflows#"),
+    ),
+    (
+        "http://knuckles.team/kg/artcraft/",
+        medulla_types::ontology_iri!("connector/"),
+    ),
+    (
+        "http://knuckles.team/kg/arr",
+        medulla_types::ontology_iri!("connector/arr"),
+    ),
+    (
+        "http://knuckles.team/kg/arr#",
+        medulla_types::ontology_iri!("connector/arr#"),
+    ),
+    (
+        "http://knuckles.team/kg/qbittorrent",
+        medulla_types::ontology_iri!("connector/qbittorrent"),
+    ),
+    (
+        "http://knuckles.team/kg/qbittorrent#",
+        medulla_types::ontology_iri!("connector/qbittorrent#"),
+    ),
+    (
+        "http://knuckles.team/kg/erpnext",
+        medulla_types::ontology_iri!("connector/erpnext"),
+    ),
+    (
+        "http://knuckles.team/kg/erpnext#",
+        medulla_types::ontology_iri!("connector/erpnext#"),
+    ),
+    (
+        "http://knuckles.team/kg/emerald-finance",
+        medulla_types::ontology_iri!("connector/emerald-finance"),
+    ),
+    (
+        "http://knuckles.team/kg/emerald-finance#",
+        medulla_types::ontology_iri!("connector/emerald-finance#"),
+    ),
+    (
+        "https://knuckles-team.github.io/agent-connector-sdk/access#",
+        medulla_types::ontology_iri!("access#"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/access#",
+        medulla_types::ontology_iri!("access#"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/lifecycle",
+        medulla_types::ontology_iri!("connector-lifecycle"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/lifecycle#",
+        medulla_types::ontology_iri!("connector-lifecycle#"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/breaker#",
+        medulla_types::ontology_iri!("circuit-breaker#"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/stream",
+        medulla_types::ontology_iri!("stream-transport"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/stream#",
+        medulla_types::ontology_iri!("stream-transport#"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/contract",
+        medulla_types::ontology_iri!("surface-contract"),
+    ),
+    (
+        "https://knuckles-team.github.io/scion-sdk/contract#",
+        medulla_types::ontology_iri!("surface-contract#"),
+    ),
+    (
+        "http://knuckles.team/xsrc#",
+        medulla_types::ontology_iri!("source-record#"),
+    ),
+    (
+        "http://knuckles.team/xsrc/",
+        medulla_types::ontology_iri!("source-record/"),
+    ),
+    (
+        "http://knuckles.team/test/",
+        medulla_types::ontology_iri!("test/"),
+    ),
+    (
+        "https://example.invalid/ontology/",
+        medulla_types::ontology_iri!("connector/"),
+    ),
     // The shared core vocabulary, its document, and every other `kg/<module>`.
-    ("http://knuckles.team/kg#", medulla_types::ontology_iri!("core#")),
-    ("http://knuckles.team/kg", medulla_types::ontology_iri!("core")),
+    (
+        "http://knuckles.team/kg#",
+        medulla_types::ontology_iri!("core#"),
+    ),
+    (
+        "http://knuckles.team/kg",
+        medulla_types::ontology_iri!("core"),
+    ),
     ("http://knuckles.team/kg/", medulla_types::ontology_base!()),
 ];
 
@@ -151,9 +283,11 @@ pub fn rewrite_text(text: &str) -> Option<String> {
 }
 
 fn holds_retired(bytes: &[u8]) -> bool {
-    RETIRED_MARKERS
-        .iter()
-        .any(|marker| bytes.windows(marker.len()).any(|window| window == marker.as_bytes()))
+    RETIRED_MARKERS.iter().any(|marker| {
+        bytes
+            .windows(marker.len())
+            .any(|window| window == marker.as_bytes())
+    })
 }
 
 /// Every retired namespace (as spelled in [`NAMESPACE_REWRITES`]) that `bytes`
@@ -542,9 +676,10 @@ mod tests {
         let text = serde_json::to_string(&decode(&rewritten)).unwrap();
         assert!(!text.contains("epistemic-graph/owl#"));
         let expected = serde_json::from_str::<serde_json::Value>(
-            &serde_json::to_string(&value)
-                .unwrap()
-                .replace("http://epistemic-graph/owl#", medulla_types::ontology_iri!("reasoning#")),
+            &serde_json::to_string(&value).unwrap().replace(
+                "http://epistemic-graph/owl#",
+                medulla_types::ontology_iri!("reasoning#"),
+            ),
         )
         .unwrap();
         assert_eq!(decode(&rewritten), expected);
@@ -638,7 +773,11 @@ mod tests {
         for (old, new) in NAMESPACE_REWRITES {
             assert!(new.starts_with(base), "{old} -> {new}");
             assert!(!old.starts_with(base), "{old} is already under the base");
-            let sample = if old.ends_with(['#', '/']) { format!("{old}X") } else { (*old).to_string() };
+            let sample = if old.ends_with(['#', '/']) {
+                format!("{old}X")
+            } else {
+                (*old).to_string()
+            };
             let rewritten = rewrite_text(&sample).unwrap_or_else(|| panic!("{old} not rewritten"));
             assert!(rewritten.starts_with(base), "{old} -> {rewritten}");
             assert_eq!(rewrite_text(&rewritten), None, "{old} is not idempotent");
@@ -650,23 +789,62 @@ mod tests {
         let cases = [
             ("http://knuckles.team/kg#Person", "core#Person"),
             ("http://knuckles.team/kg", "core"),
-            ("http://knuckles.team/kg/infrastructure#Host", "infrastructure#Host"),
+            (
+                "http://knuckles.team/kg/infrastructure#Host",
+                "infrastructure#Host",
+            ),
             ("http://knuckles.team/kg/commercial", "commercial"),
-            ("http://knuckles.team/kg/arbora#CredentialLease", "admission#CredentialLease"),
-            ("http://knuckles.team/kg/artcraft/cadcraft#Part", "connector/cadcraft#Part"),
-            ("http://knuckles.team/kg/concept/AU/KG/memory", "concept#KG/memory"),
-            ("http://knuckles.team/kg/concept/EG/KG/memory", "concept#KG/memory"),
-            ("http://knuckles.team/kg/scheme/AU", "concept-scheme#governed-concepts"),
-            ("http://knuckles.team/kg/scheme/EG", "concept-scheme#governed-concepts"),
+            (
+                "http://knuckles.team/kg/arbora#CredentialLease",
+                "admission#CredentialLease",
+            ),
+            (
+                "http://knuckles.team/kg/artcraft/cadcraft#Part",
+                "connector/cadcraft#Part",
+            ),
+            (
+                "http://knuckles.team/kg/concept/AU/KG/memory",
+                "concept#KG/memory",
+            ),
+            (
+                "http://knuckles.team/kg/concept/EG/KG/memory",
+                "concept#KG/memory",
+            ),
+            (
+                "http://knuckles.team/kg/scheme/AU",
+                "concept-scheme#governed-concepts",
+            ),
+            (
+                "http://knuckles.team/kg/scheme/EG",
+                "concept-scheme#governed-concepts",
+            ),
             ("http://knuckles.team/kg/pillar/ORCH", "pillar#ORCH"),
-            ("http://knuckles.team/xsrc#supplier-acme", "source-record#supplier-acme"),
+            (
+                "http://knuckles.team/xsrc#supplier-acme",
+                "source-record#supplier-acme",
+            ),
             ("http://knuckles.team/test/recorded#a", "test/recorded#a"),
             ("http://medulla/owl#confidence", "reasoning#confidence"),
-            ("http://epistemic-graph/owl#confidence", "reasoning#confidence"),
-            ("http://agent-utilities.dev/ontology#HardwareNode", "core#HardwareNode"),
-            ("https://agent-utilities.dev/ontology#PlatformService", "infrastructure#PlatformService"),
-            ("https://knuckles-team.github.io/scion-sdk/breaker#Open", "circuit-breaker#Open"),
-            ("https://knuckles-team.github.io/agent-connector-sdk/access#AccessContract", "access#AccessContract"),
+            (
+                "http://epistemic-graph/owl#confidence",
+                "reasoning#confidence",
+            ),
+            (
+                "http://agent-utilities.dev/ontology#HardwareNode",
+                "core#HardwareNode",
+            ),
+            (
+                "https://agent-utilities.dev/ontology#PlatformService",
+                "infrastructure#PlatformService",
+            ),
+            (
+                "https://knuckles-team.github.io/scion-sdk/breaker#Open",
+                "circuit-breaker#Open",
+            ),
+            (
+                "https://knuckles-team.github.io/agent-connector-sdk/access#AccessContract",
+                "access#AccessContract",
+            ),
         ];
         for (old, new) in cases {
             assert_eq!(
@@ -680,7 +858,13 @@ mod tests {
         // Text around a retired IRI is kept.
         assert_eq!(
             rewrite_text("a <http://knuckles.team/kg#A> b").as_deref(),
-            Some(format!("a <{}core#A> b", medulla_types::ontology_base::ONTOLOGY_BASE).as_str())
+            Some(
+                format!(
+                    "a <{}core#A> b",
+                    medulla_types::ontology_base::ONTOLOGY_BASE
+                )
+                .as_str()
+            )
         );
     }
 

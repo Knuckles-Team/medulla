@@ -344,7 +344,10 @@ fn index_plane(
     let mut query = vec![0.0; dim];
     for (q, d) in pairs {
         contrast.iter_mut().zip(d).for_each(|(slot, x)| *slot += x);
-        query.iter_mut().zip(q.iter()).for_each(|(slot, x)| *slot += x);
+        query
+            .iter_mut()
+            .zip(q.iter())
+            .for_each(|(slot, x)| *slot += x);
     }
     let first = orthonormalise(contrast, found)?;
     let mut with_first = found.to_vec();
@@ -373,7 +376,11 @@ fn fit_index(items: &[JudgedItem], dim: usize, rank: usize, max_gain: f64) -> Ve
         let Some((first, second)) = index_plane(&pairs, dim, &units) else {
             break;
         };
-        let steps = if second.is_some() { INDEX_ANGLE_STEPS } else { 1 };
+        let steps = if second.is_some() {
+            INDEX_ANGLE_STEPS
+        } else {
+            1
+        };
         let mut best: (f64, Vec<f64>, f64) = (f64::MIN, first.clone(), 0.0);
         for step in 0..steps {
             let angle = std::f64::consts::PI * step as f64 / steps as f64;
@@ -708,7 +715,13 @@ pub fn fit_scoped(
             needed: params.min_eval_items,
         });
     }
-    let fitted = fit_for(params.side, &train, params.dim, params.rank, params.max_gain);
+    let fitted = fit_for(
+        params.side,
+        &train,
+        params.dim,
+        params.rank,
+        params.max_gain,
+    );
     if fitted.is_empty() {
         return Err(ScopedFitError::NothingToLearn);
     }

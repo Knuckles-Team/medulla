@@ -583,7 +583,10 @@ fn seed_means(points: &[Point], k: usize, seed: u64) -> Vec<Point> {
     let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
     let rows = Rows::new(&flat, points.len(), dim);
     match seed_indices(rows, k, seed, &ClusterConfig::default()) {
-        Ok(idx) => idx.into_iter().map(|i| points[i as usize].clone()).collect(),
+        Ok(idx) => idx
+            .into_iter()
+            .map(|i| points[i as usize].clone())
+            .collect(),
         // A refusal (k above the rows) falls back to the first `k` rows.
         Err(_) => points.iter().take(k).cloned().collect(),
     }

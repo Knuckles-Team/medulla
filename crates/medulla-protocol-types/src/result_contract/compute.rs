@@ -19,9 +19,9 @@ use medulla_result_types::compute_result::mining;
 use medulla_result_types::compute_result::pipeline;
 #[cfg(feature = "finance")]
 use medulla_result_types::compute_result::signal_models;
+use medulla_types::numeric_kernel;
 #[cfg(feature = "datascience")]
 use medulla_types::wire::FittedModel;
-use medulla_types::numeric_kernel;
 use serde::{Deserialize, Serialize};
 
 /// One proposed entity-resolution action returned by `ResolveCandidates`.

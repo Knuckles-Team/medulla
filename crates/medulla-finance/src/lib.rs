@@ -11,11 +11,11 @@ pub mod exchange;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod forensic;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod futures_roll;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod ghostfolio_import;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod golden_fixture;
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod futures_roll;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lot_accounting;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

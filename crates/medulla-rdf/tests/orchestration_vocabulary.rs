@@ -523,7 +523,9 @@ mod vocabulary {
                 .collect()
         };
         let swarm = imports(SWARM);
-        assert!(swarm.contains(&"<https://knuckles-team.github.io/ontology/orchestration>".to_string()));
+        assert!(
+            swarm.contains(&"<https://knuckles-team.github.io/ontology/orchestration>".to_string())
+        );
         // The import closure has no cycle: orchestration imports nothing back.
         assert!(imports(ORCHESTRATION).is_empty());
         medulla_graph_core::graph::GraphSchemaSources::default()

@@ -176,7 +176,8 @@ async fn tick_pass(
         // not yet guaranteed to be readable by the next member's check, so the
         // pass carries it itself: a later member of the group is skipped, never
         // fired beside it (MEDULLA-PLACEMENT-R751.760).
-        let mut fired_groups: std::collections::BTreeMap<(String, String), String> = BTreeMap::new();
+        let mut fired_groups: std::collections::BTreeMap<(String, String), String> =
+            BTreeMap::new();
         for (window, record) in due {
             let tick = ScheduleTick {
                 schedule_id: ScheduleRecord::node_id(&record.tenant, &record.name),

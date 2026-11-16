@@ -302,9 +302,7 @@ fn count_aggregate(
 ) -> Result<usize, String> {
     match aggregate {
         AggregateExpression::CountSolutions { distinct: false } => Ok(members.len()),
-        AggregateExpression::CountSolutions { distinct: true } => {
-            Ok(dedup(members.to_vec()).len())
-        }
+        AggregateExpression::CountSolutions { distinct: true } => Ok(dedup(members.to_vec()).len()),
         AggregateExpression::FunctionCall {
             name: AggregateFunction::Count,
             expr,
@@ -320,9 +318,9 @@ fn count_aggregate(
             }
             Ok(values.len())
         }
-        AggregateExpression::FunctionCall { .. } => Err(
-            "sh:sparql: only the COUNT aggregate is supported".to_string(),
-        ),
+        AggregateExpression::FunctionCall { .. } => {
+            Err("sh:sparql: only the COUNT aggregate is supported".to_string())
+        }
     }
 }
 

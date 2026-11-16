@@ -45,8 +45,8 @@ pub use digest::opaque_request_key;
 #[cfg(feature = "redb")]
 pub use digest::work_item_batch_identity;
 pub use digest::{
-    batch_actor, branch_batch_id, lifecycle_batch_id, opaque_coordinator_key, opaque_idempotency_key_for_context,
-    principal_fingerprint,
+    batch_actor, branch_batch_id, lifecycle_batch_id, opaque_coordinator_key,
+    opaque_idempotency_key_for_context, principal_fingerprint,
 };
 
 /// The verified coordinates one governed graph-row write is compiled under:

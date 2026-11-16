@@ -12,11 +12,11 @@
 
 use medulla_decision_stats::decision::adapter::{
     evaluate_for, fit_for, fit_scoped, is_held_out, monitor_adapter_for, wilson_upper,
-    MonitorVerdict, ScopedFitError,
-    ScopedFitParams, ScopedItem,
+    MonitorVerdict, ScopedFitError, ScopedFitParams, ScopedItem,
 };
 use medulla_decision_stats::{
-    decision::adapter::directions_of, decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem,
+    decision::adapter::directions_of, decision::adapter::to_body, decision::adapter::to_q16,
+    decision::adapter::JudgedItem,
 };
 use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;

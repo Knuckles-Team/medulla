@@ -11,7 +11,6 @@
 
 pub mod bar_machine;
 pub mod bars;
-pub mod signal_machine;
 pub mod chart;
 pub mod corporate_action;
 pub mod evidence;
@@ -19,6 +18,7 @@ pub mod liquidity;
 pub mod op;
 pub mod scan;
 pub mod signal;
+pub mod signal_machine;
 pub mod snapshot;
 
 pub use bars::{
@@ -39,9 +39,9 @@ pub use liquidity::{
 pub use op::FinanceMarketOp;
 pub use scan::{ScanCounts, ScanFilter, ScanPage, ScanRequest, ScanRow};
 pub use signal::{
-    CandleBasis, DataStatus, Direction, FlipRecord, FlipRecordKind, IndicatorKind,
-    IndicatorPoint, IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalKey,
-    SignalReplay, SignalReplayRequest, SignalState, SuperTrendCheckpoint, TrendFlip,
+    CandleBasis, DataStatus, Direction, FlipRecord, FlipRecordKind, IndicatorKind, IndicatorPoint,
+    IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalKey, SignalReplay,
+    SignalReplayRequest, SignalState, SuperTrendCheckpoint, TrendFlip,
 };
 pub use snapshot::{
     AnalysisSnapshot, AnalysisSnapshotDraft, BarWindow, ClaimAuthor, ClaimSource, SnapshotClaim,

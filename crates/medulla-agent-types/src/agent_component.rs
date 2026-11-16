@@ -1659,7 +1659,10 @@ mod tests {
             (AgentComponentKind::GuardrailRule, "agent:component-write"),
             (AgentComponentKind::RuleInvariant, "agent:component-write"),
             (AgentComponentKind::RedTeamAttack, "agent:component-write"),
-            (AgentComponentKind::RedTeamTransform, "agent:component-write"),
+            (
+                AgentComponentKind::RedTeamTransform,
+                "agent:component-write",
+            ),
             (AgentComponentKind::RedTeamScorer, "agent:component-write"),
             (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
             (AgentComponentKind::DecisionHead, "admin:decision-head"),

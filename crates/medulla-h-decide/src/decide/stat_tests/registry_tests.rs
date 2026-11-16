@@ -276,7 +276,9 @@ fn text_option(id: &str, name: &str) -> DeclaredOption {
 }
 
 /// The two IRI sides of a `resolve_entity` pair, in key order.
-fn pair_texts(id: &str) -> Vec<medulla_decision_types::decision::statistical::declared::DeclaredText> {
+fn pair_texts(
+    id: &str,
+) -> Vec<medulla_decision_types::decision::statistical::declared::DeclaredText> {
     use medulla_decision_types::decision::statistical::declared::DeclaredText;
     vec![
         DeclaredText {

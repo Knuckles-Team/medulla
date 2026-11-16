@@ -41,34 +41,34 @@ mod broker;
 // MEDULLA-DURABLE-KERNEL-R095.1001 — served agent bus roster.
 pub mod bus;
 mod context_facts;
+#[cfg(test)]
+mod context_facts_tests;
 mod discover_plan;
 #[cfg(feature = "query")]
 mod discover_quality;
-#[cfg(test)]
-mod context_facts_tests;
 pub mod domain_pack;
 mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;
+mod finance_alerts;
+mod finance_factors;
 #[cfg(feature = "finance")]
 pub mod finance_forecast_gate;
+mod finance_records;
 #[cfg(feature = "finance")]
 mod finance_regime;
 #[cfg(feature = "finance")]
 mod finance_regime_gate;
-mod finance_alerts;
-mod finance_factors;
-mod finance_records;
 mod gateway;
 #[cfg(feature = "broker")]
 mod gateway_broker;
 mod gateway_graph;
 #[cfg(any(feature = "graphlearn", feature = "ml-pipeline"))]
 mod gateway_mining_ml;
-mod hierarchy;
-mod memory;
 #[cfg(feature = "streaming")]
 mod graph_change_feed;
+mod hierarchy;
+mod memory;
 mod memory_cursor;
 pub mod memory_snapshot;
 mod nodes;

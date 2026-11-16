@@ -165,9 +165,8 @@ const METADATA_LABELS: [&str; 3] = ["Preference", "ClientMetadata", "Interaction
 fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
     // Metadata rows hold the owner's hashed identity and its tenant scope
     // (MEDULLA-IDENTITY-R023.10), so the reader is compared in that domain.
-    let reader = crate::mutation_batch::identity_metadata::principal_persistence_id(
-        &caller.principal.id,
-    );
+    let reader =
+        crate::mutation_batch::identity_metadata::principal_persistence_id(&caller.principal.id);
     let reader_tenant = crate::carrier::tenant_scope_of(&caller.principal.tenant);
     let mut hidden = BTreeSet::new();
     for label in METADATA_LABELS {

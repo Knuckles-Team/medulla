@@ -167,10 +167,10 @@ mod column_lineage;
 mod context_compile;
 #[cfg(feature = "query")]
 mod corpus_retrieve;
-#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
-mod source_coverage;
 #[cfg(feature = "query")]
 mod schema_projections;
+#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
+mod source_coverage;
 #[cfg(all(feature = "query", feature = "federation-sql"))]
 pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
@@ -183,20 +183,20 @@ mod viewport;
 pub(crate) use viewport::{handle_resolve_viewport_selection, handle_viewport_query};
 #[cfg(feature = "query")]
 mod document_encoding;
+#[cfg(all(feature = "query", feature = "nl-query"))]
+pub mod expansion;
 #[cfg(feature = "query")]
 mod projection;
 #[cfg(feature = "query")]
 mod retrieval_round;
-#[cfg(all(feature = "query", feature = "nl-query"))]
-pub mod expansion;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
-#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
-pub(crate) use source_coverage::handle_source_coverage;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
+#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
+pub(crate) use source_coverage::handle_source_coverage;
 mod explain_handlers;
 pub(crate) use explain_handlers::*;
 mod nl;
@@ -248,11 +248,11 @@ pub(crate) use sql_catalog::*;
 #[cfg(feature = "query")]
 mod argument_map;
 #[cfg(feature = "query")]
+mod entity_link;
+#[cfg(feature = "query")]
 mod harness_metrics;
 #[cfg(feature = "query")]
 mod live_artifact;
-#[cfg(feature = "query")]
-mod entity_link;
 #[cfg(feature = "query")]
 mod stored_query;
 #[cfg(feature = "query")]

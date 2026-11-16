@@ -809,7 +809,11 @@ pub(crate) async fn stale_content_or(
 ) -> String {
     let object_id = envelope.content_version.object_id.as_str();
     let Ok(current) = backend
-        .read_content_version(fname, envelope.mutation.identity.tenant().as_str(), object_id)
+        .read_content_version(
+            fname,
+            envelope.mutation.identity.tenant().as_str(),
+            object_id,
+        )
         .await
     else {
         return error;

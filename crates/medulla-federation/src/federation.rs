@@ -72,7 +72,11 @@ const MAX_FEDERATED_SQL_TEXT_BYTES: usize = 64 * 1024;
 
 /// One projected SQL row: id, optional score and its other text columns.
 #[cfg(feature = "federation-sql")]
-type SqlRow = (String, Option<f32>, std::collections::BTreeMap<String, String>);
+type SqlRow = (
+    String,
+    Option<f32>,
+    std::collections::BTreeMap<String, String>,
+);
 
 /// The `RowSet` of projected SQL rows, each row's text columns as its text channels.
 #[cfg(feature = "federation-sql")]

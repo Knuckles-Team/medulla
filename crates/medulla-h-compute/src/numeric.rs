@@ -32,30 +32,32 @@ fn encode(req_id: u64, op: &Op, out: Out) -> Response {
         (Op::Ewma { .. }, Out::Series { values }) => {
             ResultPayload::of::<results::NumericEvaluateEwma>(values)
         }
-        (Op::InformationCoefficient { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateInformationCoefficient>(value))
-        }
-        (Op::InformationRatio { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateInformationRatio>(value))
-        }
-        (Op::EffectiveIndependentN { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateEffectiveIndependentN>(value))
-        }
+        (Op::InformationCoefficient { .. }, Out::Scalar { value }) => Ok(ResultPayload::scalar::<
+            results::NumericEvaluateInformationCoefficient,
+        >(value)),
+        (Op::InformationRatio { .. }, Out::Scalar { value }) => Ok(ResultPayload::scalar::<
+            results::NumericEvaluateInformationRatio,
+        >(value)),
+        (Op::EffectiveIndependentN { .. }, Out::Scalar { value }) => Ok(ResultPayload::scalar::<
+            results::NumericEvaluateEffectiveIndependentN,
+        >(value)),
         (Op::DieboldMariano { .. }, Out::DieboldMariano(v)) => {
             ResultPayload::of::<results::NumericEvaluateDieboldMariano>(v)
         }
-        (Op::DeflatedSharpe { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateDeflatedSharpe>(value))
-        }
+        (Op::DeflatedSharpe { .. }, Out::Scalar { value }) => Ok(ResultPayload::scalar::<
+            results::NumericEvaluateDeflatedSharpe,
+        >(value)),
         (Op::PurgedCpcv { .. }, Out::Splits { splits }) => {
             ResultPayload::of::<results::NumericEvaluatePurgedCpcv>(splits)
         }
         (Op::ProbabilityOfBacktestOverfit { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateProbabilityOfBacktestOverfit>(value))
+            Ok(ResultPayload::scalar::<
+                results::NumericEvaluateProbabilityOfBacktestOverfit,
+            >(value))
         }
-        (Op::Brier { .. }, Out::Scalar { value }) => {
-            Ok(ResultPayload::scalar::<results::NumericEvaluateBrier>(value))
-        }
+        (Op::Brier { .. }, Out::Scalar { value }) => Ok(ResultPayload::scalar::<
+            results::NumericEvaluateBrier,
+        >(value)),
         (Op::KalmanLevel { .. }, Out::Kalman(v)) => {
             ResultPayload::of::<results::NumericEvaluateKalmanLevel>(v)
         }

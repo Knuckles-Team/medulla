@@ -167,7 +167,9 @@ async fn materialize_current_projection(
                 if *left == 0 {
                     *inject = None;
                 }
-                return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());
+                return Err(
+                    "PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into(),
+                );
             }
         }
     }

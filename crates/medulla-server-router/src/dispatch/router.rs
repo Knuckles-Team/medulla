@@ -39,7 +39,6 @@ use medulla_server_graph::{
 use std::sync::OnceLock;
 
 mod branch_write;
-mod submit_changeset;
 mod channels;
 mod control_plane;
 mod data_plane;
@@ -53,6 +52,7 @@ mod resource_cost;
 mod sdlc;
 mod service_control;
 mod source_ingest;
+mod submit_changeset;
 mod telemetry;
 
 use channels::dispatch_channel_methods;
@@ -72,12 +72,12 @@ use data_plane::{
 use graph_lifecycle::dispatch_graph_lifecycle_methods;
 use identity_access::dispatch_identity_and_access_methods;
 use incident::dispatch_incident_methods;
-use sdlc::dispatch_sdlc_methods;
 #[cfg(feature = "security")]
 use lifecycle::apply_rbac_admin;
 pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
 use lifecycle::{delete_graph, dispatch_get_identity, index_kind_label, index_validity_label};
 use resource_cost::dispatch_resource_cost_methods;
+use sdlc::dispatch_sdlc_methods;
 use service_control::dispatch_service_control_methods;
 use source_ingest::dispatch_source_ingest_methods;
 use telemetry::dispatch_telemetry_methods;

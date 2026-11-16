@@ -1674,7 +1674,13 @@ mod web_metasearch {
             ("https://a/4", "4", "e"),
             ("https://a/5", "5", "e"),
         ]);
-        let cut = web_scan_at(&query, &web_remote(&many, &registry), &session, t0 + 9_000_000).unwrap();
+        let cut = web_scan_at(
+            &query,
+            &web_remote(&many, &registry),
+            &session,
+            t0 + 9_000_000,
+        )
+        .unwrap();
         assert_eq!(cut.len(), 3);
         assert!(session.trace().last().unwrap().truncated);
         // A result with no URL is refused.

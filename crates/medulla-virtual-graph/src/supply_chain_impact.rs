@@ -149,8 +149,10 @@ mod tests {
         ];
         let rows = vec![ImpactRow {
             service: "https://knuckles-team.github.io/ontology/source-record#checkout".to_string(),
-            supplier: "https://knuckles-team.github.io/ontology/source-record#supplier-acme".to_string(),
-            component_version: "https://knuckles-team.github.io/ontology/source-record#version-1.18.0".to_string(),
+            supplier: "https://knuckles-team.github.io/ontology/source-record#supplier-acme"
+                .to_string(),
+            component_version:
+                "https://knuckles-team.github.io/ontology/source-record#version-1.18.0".to_string(),
             vulnerability: Some("CVE-2021-23017".to_string()),
             impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: "gitlab-mcp".to_string(),

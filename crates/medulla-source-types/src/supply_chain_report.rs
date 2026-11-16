@@ -381,7 +381,9 @@ mod tests {
             ],
             &[SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
+                class_served:
+                    "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage"
+                        .to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -462,7 +464,9 @@ mod tests {
             },
             SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
+                class_served:
+                    "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage"
+                        .to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -472,7 +476,9 @@ mod tests {
             // A duplicate premise must not duplicate the source.
             SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
+                class_served:
+                    "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage"
+                        .to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,

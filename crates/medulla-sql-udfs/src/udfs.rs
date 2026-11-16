@@ -1766,7 +1766,9 @@ fn sequence_udf(
             let value = each(&SequenceArgs { names, ints, row }).map_err(exec)?;
             out.push(Some(value));
         }
-        Ok(ColumnarValue::Array(Arc::new(Int64Array::from(out)) as ArrayRef))
+        Ok(ColumnarValue::Array(
+            Arc::new(Int64Array::from(out)) as ArrayRef
+        ))
     });
     create_udf(name, args, DataType::Int64, Volatility::Volatile, fun)
 }

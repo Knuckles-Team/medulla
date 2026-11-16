@@ -266,8 +266,7 @@ pub fn authority_scope_for(identity: &MutationScopeIdentity) -> Result<Authority
             // A branch belongs to its base graph: a write to a branch target
             // graph carries the base graph's authority (MEDULLA-BRANCH-MERGE-R002).
             ResourceId::new(
-                medulla_types::branch::branch_base_graph(graph.as_str())
-                    .unwrap_or(graph.as_str()),
+                medulla_types::branch::branch_base_graph(graph.as_str()).unwrap_or(graph.as_str()),
             )?,
             vec![ResourceId::new(tenant.as_str())?],
         ),

@@ -13,7 +13,6 @@ use crate::dispatch::*;
 mod data_prep;
 mod dispatch_helpers;
 mod document_ops;
-mod ingest_readback;
 #[cfg(any(
     feature = "query",
     feature = "cypher",
@@ -23,6 +22,7 @@ mod ingest_readback;
 mod gateway;
 mod graph_access;
 mod graph_dispatch;
+mod ingest_readback;
 mod meeting_transcript;
 // MEDULLA-UNIFIED-DATA-PLANE-R702.3 — the served lineage drain.
 mod lineage_ingest;

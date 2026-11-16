@@ -688,7 +688,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("FinanceMarket", &["PROBABILISTIC_INPUT_REFUSED"]),
     // A batch commits through the change-envelope route, whose graph-version
     // fence refuses with WRITE_CONFLICT when another write moved the graph.
-    ("SourceIngest", &["FORECAST_SAMPLE_INVALID", "WRITE_CONFLICT"]),
+    (
+        "SourceIngest",
+        &["FORECAST_SAMPLE_INVALID", "WRITE_CONFLICT"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     // MEDULLA-FEDERATED-QUERY-R724: a put with bad bounds, an unregistered scope or

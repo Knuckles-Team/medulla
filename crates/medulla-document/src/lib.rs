@@ -33,10 +33,10 @@
 /// Atom decomposition (MEDULLA-INGEST-WORKER-R003.2).
 pub mod atoms;
 pub mod cascade;
-/// Fragments and the reader registry (MEDULLA-INGEST-WORKER-R700.1).
-pub mod fragment;
 mod decoder;
 mod document;
+/// Fragments and the reader registry (MEDULLA-INGEST-WORKER-R700.1).
+pub mod fragment;
 mod header;
 mod html;
 /// Deterministic heading- and paragraph-aware chunking (MEDULLA-REPO-INGEST-R652).

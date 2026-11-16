@@ -149,7 +149,9 @@ mod tests {
                     let text = std::fs::read_to_string(&path).unwrap_or_default();
                     for (number, line) in text.lines().enumerate() {
                         let line = line.trim();
-                        if !line.starts_with("//") && line.contains(concat!(".status = ", "BarStatus::")) {
+                        if !line.starts_with("//")
+                            && line.contains(concat!(".status = ", "BarStatus::"))
+                        {
                             hits.push(format!("{}:{}", path.display(), number + 1));
                         }
                     }

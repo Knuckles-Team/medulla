@@ -123,8 +123,11 @@ fn contract_triples(connector: &str, declaration: Option<&str>) -> Result<Vec<Tr
     if body.get("contract").is_none() {
         return Ok(Vec::new());
     }
-    let graph = crate::admin::connector_pack::import::contract_rdf::contract_graph(connector, &body)
-        .map_err(|_| "PACK_PROJECTION_FAILED: contract declaration is not mappable to RDF".to_string())?;
+    let graph =
+        crate::admin::connector_pack::import::contract_rdf::contract_graph(connector, &body)
+            .map_err(|_| {
+                "PACK_PROJECTION_FAILED: contract declaration is not mappable to RDF".to_string()
+            })?;
     Ok(graph.iter().map(|triple| triple.into_owned()).collect())
 }
 

@@ -7,8 +7,8 @@
 //! decision with its own method.
 
 pub mod belief;
-pub mod capacity;
 pub mod body;
+pub mod capacity;
 pub mod dataset;
 pub mod declared;
 pub mod distilled;

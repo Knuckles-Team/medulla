@@ -184,7 +184,10 @@ fn already_admitted(props: &Map<String, Value>, principal: &str) -> bool {
 }
 
 fn resolves(principal_id: &str, caller: &MetadataCaller<'_>) -> bool {
-    if caller.principal.is_some_and(|principal| is_writer(principal_id, principal)) {
+    if caller
+        .principal
+        .is_some_and(|principal| is_writer(principal_id, principal))
+    {
         return true;
     }
     #[cfg(feature = "security")]

@@ -74,7 +74,10 @@ async fn service_append_succeeds_and_human_is_refused() {
     let appended: UsageAppended =
         decode(handle_usage(&h.state, 1, &service(), append()).await).unwrap();
     assert_eq!(appended.appended, 2);
-    let hex = appended.batch_digest.strip_prefix("sha256:").unwrap_or(&appended.batch_digest);
+    let hex = appended
+        .batch_digest
+        .strip_prefix("sha256:")
+        .unwrap_or(&appended.batch_digest);
     assert_eq!(hex.len(), 64, "{}", appended.batch_digest);
 
     let refused =
@@ -141,8 +144,7 @@ async fn two_tenant_appends_stay_in_their_own_tenant() {
         records: runs.iter().map(|run| record(tenant, run)).collect(),
     };
     let a: UsageAppended =
-        decode(handle_usage(&h.state, 1, &service(), append(TENANT, &["a1", "a2"])).await)
-            .unwrap();
+        decode(handle_usage(&h.state, 1, &service(), append(TENANT, &["a1", "a2"])).await).unwrap();
     let b: UsageAppended =
         decode(handle_usage(&h.state, 2, &other, append(OTHER, &["b1"])).await).unwrap();
     assert_eq!((a.appended, b.appended), (2, 1));
@@ -155,5 +157,11 @@ async fn two_tenant_appends_stay_in_their_own_tenant() {
         decode::<UsageAppended>(handle_usage(&h.state, 3, &other, append(TENANT, &["x"])).await)
             .unwrap_err();
     assert!(cross.starts_with("USAGE_UNKNOWN_TENANT"), "{cross}");
-    assert_eq!(h.store.recent_runs(TENANT, "child", "decide", 10).unwrap().len(), 2);
+    assert_eq!(
+        h.store
+            .recent_runs(TENANT, "child", "decide", 10)
+            .unwrap()
+            .len(),
+        2
+    );
 }

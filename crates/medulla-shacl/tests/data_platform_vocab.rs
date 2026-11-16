@@ -32,6 +32,7 @@ fn document_source_kind_accepted() {
         "ftp must remain outside the closed vocabulary"
     );
     assert!(ftp.results.iter().any(|result| {
-        result.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/virtual-graph#sourceKind>")
+        result.path.as_deref()
+            == Some("<https://knuckles-team.github.io/ontology/virtual-graph#sourceKind>")
     }));
 }

@@ -421,7 +421,8 @@ impl AgentLibraryStore {
                 let mut latest: Option<u64> = None;
                 for row in table.range((tenant, prefix.as_str())..).map_err(store)? {
                     let (row_key, _) = row.map_err(store)?;
-                    if row_key.value().0 != tenant || !row_key.value().1.starts_with(prefix.as_str())
+                    if row_key.value().0 != tenant
+                        || !row_key.value().1.starts_with(prefix.as_str())
                     {
                         break;
                     }

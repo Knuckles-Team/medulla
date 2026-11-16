@@ -212,7 +212,9 @@ fn facts_become_one_owned_batch_with_nodes_before_edges() {
     let graph = FactGraph {
         nodes: vec![FactNode {
             id: "behaviour:Service:svc:checkout:0".into(),
-            class_iri: "https://knuckles-team.github.io/ontology/infrastructure#BehaviourObservation".into(),
+            class_iri:
+                "https://knuckles-team.github.io/ontology/infrastructure#BehaviourObservation"
+                    .into(),
             properties: json!({"type": "BehaviourObservation", "requests": 3.0})
                 .as_object()
                 .unwrap()
