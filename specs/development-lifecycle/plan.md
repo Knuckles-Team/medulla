@@ -65,6 +65,16 @@ The budgets of R014.2 are starting defaults. A measurement on this platform repl
 
 ## Phase 1: Design
 
+Design answers:
+
+- **Owner.** Medulla. The lifecycle records and derivations live in `crates/medulla-sdlc`; the spec parser in the `medulla-compute` parser module; ingest and decisions in `medulla-h-ingest` and `medulla-h-decide`. Delivery steps outside the engine belong to the owners named in Cross-repo seams.
+- **Cohesion.** One record vocabulary (Release, Deployment, Defect plus the existing chain), one edge vocabulary and one derivation pass, so every lifecycle question reads the same records.
+- **Dependency direction.** `medulla-sdlc` and the parser point down to `medulla-core` and `medulla-source-types`; the handler crates point down to them. No kernel crate depends on a handler.
+- **Interface depth.** Few entry points: ingest, derive and the competency answer. Each new record kind adds a case to the existing passes, not a new method.
+- **Special cases.** None per caller. A new record kind is one vocabulary entry; the exhaustive match rejects a kind without a derivation.
+- **State.** The graph holds all state: records, per-file digests and delivery state. The parser and derivation keep none between calls.
+- **Environment.** Budgets are named knobs with defaults and units; no crate in this plan reads an environment variable.
+
 ### Existing system and reuse
 
 | Need | Existing owner |

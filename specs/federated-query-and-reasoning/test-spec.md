@@ -391,19 +391,19 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R090`: `tests/retrieval/test_discove
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-FEDERATED-QUERY-R091.1` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::observation_store_bounds`: A serde round trip keeps every field and rejects an unknown kind; the store evicts at its bound. |
+| Model | `MEDULLA-FEDERATED-QUERY-R091.1` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::observation_store_bounds` (planned): A serde round trip keeps every field and rejects an unknown kind; the store evicts at its bound. |
 
-| Behavior | `MEDULLA-FEDERATED-QUERY-R091.2` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::keep_or_revert_by_measurement`: A faster equal candidate is kept, and a slower or unequal candidate is reverted. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R091.2` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::keep_or_revert_by_measurement` (planned): A faster equal candidate is kept, and a slower or unequal candidate is reverted. |
 
-| Wiring | `MEDULLA-FEDERATED-QUERY-R091.3` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::served_path_records_and_reads`: A served query records one observation, and a later query uses the kept plan. |
+| Wiring | `MEDULLA-FEDERATED-QUERY-R091.3` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::served_path_records_and_reads` (planned): A served query records one observation, and a later query uses the kept plan. |
 
-| Refusal | `MEDULLA-FEDERATED-QUERY-R091.4` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::evolution_refusals`: Each case returns its code, and the active plan stays the baseline. |
+| Refusal | `MEDULLA-FEDERATED-QUERY-R091.4` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::evolution_refusals` (planned): Each case returns its code, and the active plan stays the baseline. |
 
-| Evidence | `MEDULLA-FEDERATED-QUERY-R091.5` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::receipt_names_measurements`: A served read finds the receipt linked to the shape. |
+| Evidence | `MEDULLA-FEDERATED-QUERY-R091.5` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::receipt_names_measurements` (planned): A served read finds the receipt linked to the shape. |
 
-| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R091.6` | `tests/federation/test_plan_evolution_served.py::test_kept_plan_measurably_faster_and_mismatch_reverts`: The kept plan improves p50 by 10% or more, the unequal candidate reverts, and the overhead meets the budget. |
+| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R091.6` | `tests/federation/test_plan_evolution_served.py::test_kept_plan_measurably_faster_and_mismatch_reverts` (planned): The kept plan improves p50 by 10% or more, the unequal candidate reverts, and the overhead meets the budget. |
 
-Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_evolution_served.py::test_kept_plan_measurably_faster_and_mismatch_reverts`.
+Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_evolution_served.py::test_kept_plan_measurably_faster_and_mismatch_reverts` (planned).
 
 ## MEDULLA-FEDERATED-QUERY-R653.7 acceptance
 
@@ -815,7 +815,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R006.1` | `tests/forward_chain_served.rs::chain_covers_model_order_origin_refusal_restart_and_trace` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R040.5` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.10` | `tests/retrieval_round_served.rs::clock_basis_and_second_pass_are_bounded` | L3 |
-| `MEDULLA-FEDERATED-QUERY-R028.1` | `tests/query/test_knowledge_set_uql_served.py::test_frames_resolved_missing_stale` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R028.1` | `tests/query/test_knowledge_set_uql_served.py::test_frames_resolved_missing_stale` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R005.1` | `tests/query/test_validate_shape_served.py::test_violation_matrix_five_kinds` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R078.7` | `tests/query/test_company_context_served.py::test_two_tenants_two_clearances` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.7` | `tests/retrieval/test_topic_fusion_served.py::test_document_responsibilities_change_order` | L4 |
@@ -1052,10 +1052,10 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.4` | `tests/graphlearn_nary_served.rs::nary_hypotheses_are_read_only_and_ordered` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `crates/medulla-graph-core/src/graph/core_expand.rs::tests::hop_cap_and_order` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `tests/retrieval/test_discover_planning_served.py::test_two_hop_neighbour_is_returned_with_path` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::cache_and_materialize_candidates_respect_capability` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `tests/federation/test_plan_evolution_served.py::test_cache_candidate_kept_when_faster` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::index_suggestion_threshold` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `tests/federation/test_plan_evolution_served.py::test_index_suggestion_is_a_fact_only` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::cache_and_materialize_candidates_respect_capability` (planned) |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `tests/federation/test_plan_evolution_served.py::test_cache_candidate_kept_when_faster` (planned) |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::index_suggestion_threshold` (planned) |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `tests/federation/test_plan_evolution_served.py::test_index_suggestion_is_a_fact_only` (planned) |
 | Planned | `MEDULLA-FEDERATED-QUERY-R607.7` | `crates/medulla-graph-algos/src/graph_algos/analogy.rs::tests::isomorphic_subgraphs_match_and_boundary_score` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R607.7` | `tests/reasoning/test_topology_served.py::test_analogy_served` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R607.8` | `crates/medulla-graph-algos/src/graph_algos/synergy.rs::tests::two_community_bridge_ranks_first` |
@@ -1131,7 +1131,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 - `MEDULLA-FEDERATED-QUERY-R738.14`: `crates/medulla-result-types/src/source_query_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-result-types/src/source_query_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-result-types/src/source_query_machine.rs::tests::no_writer_sets_phase_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::source_query_machine_matches_edge_table` (planned, L1): proves: SourceQueryApprovalCheck/SourceQueryPhase state machine: route 1 census findings through SourceQueryPhase::apply.
 - `MEDULLA-FEDERATED-QUERY-R738.15`: `crates/medulla-types/src/promotion_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/promotion_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/promotion_machine.rs::tests::no_writer_sets_stage_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::promotion_machine_matches_edge_table` (planned, L1): proves: StageReceipt/PromotionStage state machine: route 1 census findings through PromotionStage::apply.
 - `MEDULLA-FEDERATED-QUERY-R738.16`: `crates/medulla-result-types/src/epistemic_operations/trace_outcome_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-result-types/src/epistemic_operations/trace_outcome_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-result-types/src/epistemic_operations/trace_outcome_machine.rs::tests::no_writer_sets_status_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::trace_outcome_machine_matches_edge_table` (L1): proves: TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply.
-- `MEDULLA-FEDERATED-QUERY-R738.17`: `crates/medulla-types/src/uql_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/uql_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/uql_machine.rs::tests::no_writer_sets_stage_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::uql_machine_matches_edge_table` (L1): proves: UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply.
+- `MEDULLA-FEDERATED-QUERY-R738.17`: `crates/medulla-query-types/src/uql_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-query-types/src/uql_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-query-types/src/uql_machine.rs::tests::no_writer_sets_stage_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::uql_machine_matches_edge_table` (L1): proves: UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply.
 - `MEDULLA-FEDERATED-QUERY-R738.18`: `crates/medulla-types/src/verdict_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/verdict_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/verdict_machine.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::verdict_machine_matches_edge_table` (planned, L1): proves: VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply.
 - `MEDULLA-FEDERATED-QUERY-R739`: see each child (rollup).
 - `MEDULLA-FEDERATED-QUERY-R739.1`: `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::every_legal_transition_applies`, `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::no_writer_sets_state_outside_transition`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::shard_monitor_machine_matches_edge_table` (L1): proves: ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply.

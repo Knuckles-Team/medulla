@@ -60,6 +60,16 @@ Unknowns and their resolution are in [research.md](research.md). They cover how 
 
 ## Phase 1: Design
 
+Design answers:
+
+- **Owner.** Medulla. Handlers live in `medulla-h-query`, the planner in `medulla-plan`, operators in `medulla-exec`, sources in `medulla-federation` and retrieval rounds in `medulla-retrieval`; wire types live in `medulla-query-types`. Serving and connectors belong to their owners.
+- **Cohesion.** Every read goes through the one typed query surface and the one planner; new rows add narrow files to these crates, not a second planner, registry or store.
+- **Dependency direction.** Handlers point down to the planner, operators and federation crates; those point down to the type crates. No planner or operator crate depends on a handler.
+- **Interface depth.** The served `Uql` method and its sibling query methods stay the entry points. Each slice extends a plan, operator or verdict type behind them instead of adding a method.
+- **Special cases.** None per caller. A new behaviour is a new plan node or policy value, and the exhaustive match rejects one without a case.
+- **State.** Queries are read-only and keep no state between calls; durable state is the graph, the approved definitions and the sealed proofs.
+- **Environment.** Tunable values are named knobs with defaults, bounds and units; the query crates read no environment variable.
+
 ### Sequence
 
 1. **Freeze the baseline.** Record the exact public default-branch SHA. Record the method registry and feature profiles. Record source kinds, index generations and existing tests. Document compatible code and missing or incompatible implementations. Record acceptance evidence separately. Historical delivery claims do not establish current acceptance.
@@ -1176,6 +1186,57 @@ The seven design answers that bind every row of this feature:
 - **Special cases.** An unsupported construct returns `UQL_UNSUPPORTED` with a stable span and never falls back silently. A capability stays off until its conformance oracle passes.
 - **State.** A query is stateless over one shared read snapshot. Durable state is the registries, verdicts and corrections each row names, and it is written through the mutation gateway.
 - **Environment.** Registry knobs named by each row. No row reads an environment variable of its own.
+### Context bundle compile decisions (R650.1, R650.2, R652.2, DECISION-ENGINE R137.8)
+
+- One selection kernel: `select` in `medulla-decision-policy` is the only knapsack; `compile` and the package decision family both call it. A solver result that is not a verified optimum is refused, so a greedy fallback never qualifies.
+- A candidate is one resolution of one hit. Its value is the fused value times its token share of the widest resolution, so a smaller resolution is a real trade-off rather than a free choice.
+- Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
+- `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
+- Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.
+
+#### Served context compile (R650.3 to R650.6)
+
+`Method::ContextCompile { request }` is registered by the seven-step recipe: variant in `method_05.rs`, policy `query:retrieval` in `domains/query.rs`, result `Raw<ContextBundle>` in `result_contract/query.rs`, the RLS-routed read table, the canonical read arm, `add_typed_handler_errors` codes, and `medulla/client.py::context_compile`. `handle_context_compile` validates, serves a cached bundle by `BundleKey` when one exists, else gathers the lexical and semantic arms off-lock, measures spans, runs `filter_hits`, calls `compile`. Bench `context_bundle` guards the compile (p50 2 ms, p99 12 ms). Decisions: `research.md`, section "Served context compile decisions".
+
+#### Served corpus retrieve (R653.2, R653.3, R653.8 to R653.10)
+
+`Method::CorpusRetrieve { request }` follows the seven-step recipe (variant in `method_05.rs`, policy `query:retrieval`, result `Raw<CorpusResult>`, read class, routed code `CORPUS_REGEX_TOO_COMPLEX`, client `corpus_retrieve`). `handle_corpus_retrieve` fills a `CorpusView` from the projected core and calls `medulla_plan::corpus_retrieval::dispatch`, which calls `grep_corpus`, `entity_context`, `session_hits` or `lineage_path`. `expand_hops` now lives in `medulla-graph-core`.
+
+#### Selection and hierarchy parts of the served round (R081.7.3 to R081.9.7.5)
+
+`RoundRequest` gains the `selection` and `hierarchy` parts and `RoundResult` gains `selection`, `hierarchy_selected`, `inference` and `premises`. `run_round` runs hierarchy, then sufficiency over the plan rows joined with the hierarchy's selected ids, then selection. The `Reranker` port sits beside `TextEmbedder` in `medulla-exec` and is bound from `retrieval.reranker_model`. `GraphHierarchySource` and `GraphSectionTopology` live in `crates/medulla-plan/src/hierarchy_source.rs` and read the caller's narrowed snapshot, so tenant isolation needs no second filter. Each step appends one premise (`retrieval.selection`, `retrieval.hierarchy`, `retrieval.sections`) that carries its receipt and measured counters. Decisions are in research.md.
+
+#### Model scorer of the rerank stage (R652.7)
+
+`compile_with` takes a `ModelBinding` (`Unset`, `Bound`, `Unavailable`). After reciprocal-rank fusion, `rerank_fused` scores the first `retrieval.rerank_k` fused candidates through `rerank_with`, replaces their fused scores with the calibrated rerank scores, and the cut and package solver run on that order. `handle_context_compile` supplies each hit's name, description and `text`, and the binding read by `reranker_binding`. The receipt is `BundleEvidence.rerank`. A request with no query text skips the stage.
+
+
+#### Stop part, corpus refusals and evidence (R082.3, R082.4, R653.4, R653.5)
+
+`RoundRequest.stop` carries `StopRequest`; `run_round` builds the `StopContext` with `StopRequest::context` (knobs from `RoundKnobs`), measures progress with `round_progress`, calls `decide_stop` and sets `RoundResult.stop`. A terminal verdict sets the sufficiency repair to `Stop`; `handle_retrieval_round` answers an exhausted dimension with `RETRIEVAL_BUDGET_EXCEEDED` carrying the verdict. `dispatch` in `crates/medulla-plan/src/corpus_retrieval.rs` refuses an unreadable entity or session (`CORPUS_SCOPE_DENIED`), a too-deep lineage walk (`CORPUS_LINEAGE_TOO_DEEP`) and fills `CorpusEvidence`; `handle_corpus_retrieve` names the visibility filter.
+
+Chunk encoding (R039.2.2 to R039.2.4): `crates/medulla-core/src/compute/chunk_windows.rs` holds `split_windows`, `ChunkEncoder`/`encode_chunks` and `aggregate_mean_chunks` as pure functions; the window knobs are registry knobs in `knob_config.rs` and the refusal codes are `ServerErrorCode` variants routed to `SemanticIndex` (decision recorded in research.md).
+
+Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/document_encoding.rs` serves `EncodeDocument` (durable write, staged gateway) and `EncodedDocumentSearch` (read). `encode` runs `split_windows`, `encode_chunks` and `aggregate_mean_chunks`, builds the `EncodingReceipt` (`crates/medulla-types/src/retrieval.rs`) and writes one `EncodedDocument` node and one per-policy `EncodedIndexHead` node. `retrieval.encode_budget_chunks` is a registry knob; `ENCODE_BUDGET_EXHAUSTED` and `ENCODE_POLICY_STALE` are `ServerErrorCode` variants routed to `SemanticIndex`. The served tests are `tests/retrieval/test_chunk_encoding_served.py`.
+
+#### Low-storage ANN layering
+
+`medulla-ann::low_storage` holds the manifest, checked accounting, the compact artifact (`HnswIndex::to_compact`, `LowStorageArtifact::{encode,decode,candidates}`) and `prune_hubs`. Regeneration, the bounded provider and the served path (R040.5.3, R040.5.4, R040.5.6) layer on top and own the L4 proof of the slice.
+
+- R040.5.4: `BoundedCachingEmbeddingProvider::with_limits(EmbedLimits)` batches by items and bytes, runs waves of `embed.concurrency` batches on scoped threads, reserves calls per wave, keeps an LRU cache capped by `embed.cache_entries` and `embed.cache_bytes`, and returns `EMBED_*` coded refusals.
+
+#### R722.5 build order (continuation)
+
+1. Add the `provenance` text map to `UqlRow` in `crates/medulla-query-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
+2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
+3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
+4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).
+
+#### Expansion port wiring (R651.3)
+`ExpansionProvider`, `set_expansion_provider`, `expansion_provider` and `run_expansion` live in
+`crates/medulla-plan/src/query_understanding.rs`. `HttpExpansionProvider` lives in
+`crates/medulla-h-query/src/query/expansion.rs` and is installed from `install_seams`
+(`crates/medulla-server/src/seams_install.rs`). `UreqNlPlanner::complete` is the one HTTP path.
 
 ## Phase 2: Task approach
 
@@ -1234,55 +1295,3 @@ Order: R733, then R734 and R735 in parallel.
 - `SCION-SOURCE-INGEST-R004.7` executes approved source queries through the registered SDK adapter. Provider row: `MEDULLA-FEDERATED-QUERY-R085`. Contract: [contracts/approved-source-query.md](contracts/approved-source-query.md).
 - `SCION-CONNECTOR-CONTROL-R069` supplies transports and contract terms for operation-bound sources. Provider row: `MEDULLA-FEDERATED-QUERY-R073`. Contract: [contracts/connector-source-transport.md](contracts/connector-source-transport.md).
 - `MERISTEM-HARNESS-CYCLE-R079` applies each retrieval verdict and runs the next round. Provider row: `MEDULLA-FEDERATED-QUERY-R081`. Contract: [contracts/retrieval-verdict-consumer.md](contracts/retrieval-verdict-consumer.md).
-
-## Context bundle compile decisions (R650.1, R650.2, R652.2, DECISION-ENGINE R137.8)
-
-- One selection kernel: `select` in `medulla-decision-policy` is the only knapsack; `compile` and the package decision family both call it. A solver result that is not a verified optimum is refused, so a greedy fallback never qualifies.
-- A candidate is one resolution of one hit. Its value is the fused value times its token share of the widest resolution, so a smaller resolution is a real trade-off rather than a free choice.
-- Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
-- `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
-- Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.
-
-### Served context compile (R650.3 to R650.6)
-
-`Method::ContextCompile { request }` is registered by the seven-step recipe: variant in `method_05.rs`, policy `query:retrieval` in `domains/query.rs`, result `Raw<ContextBundle>` in `result_contract/query.rs`, the RLS-routed read table, the canonical read arm, `add_typed_handler_errors` codes, and `medulla/client.py::context_compile`. `handle_context_compile` validates, serves a cached bundle by `BundleKey` when one exists, else gathers the lexical and semantic arms off-lock, measures spans, runs `filter_hits`, calls `compile`. Bench `context_bundle` guards the compile (p50 2 ms, p99 12 ms). Decisions: `research.md`, section "Served context compile decisions".
-
-### Served corpus retrieve (R653.2, R653.3, R653.8 to R653.10)
-
-`Method::CorpusRetrieve { request }` follows the seven-step recipe (variant in `method_05.rs`, policy `query:retrieval`, result `Raw<CorpusResult>`, read class, routed code `CORPUS_REGEX_TOO_COMPLEX`, client `corpus_retrieve`). `handle_corpus_retrieve` fills a `CorpusView` from the projected core and calls `medulla_plan::corpus_retrieval::dispatch`, which calls `grep_corpus`, `entity_context`, `session_hits` or `lineage_path`. `expand_hops` now lives in `medulla-graph-core`.
-
-### Selection and hierarchy parts of the served round (R081.7.3 to R081.9.7.5)
-
-`RoundRequest` gains the `selection` and `hierarchy` parts and `RoundResult` gains `selection`, `hierarchy_selected`, `inference` and `premises`. `run_round` runs hierarchy, then sufficiency over the plan rows joined with the hierarchy's selected ids, then selection. The `Reranker` port sits beside `TextEmbedder` in `medulla-exec` and is bound from `retrieval.reranker_model`. `GraphHierarchySource` and `GraphSectionTopology` live in `crates/medulla-plan/src/hierarchy_source.rs` and read the caller's narrowed snapshot, so tenant isolation needs no second filter. Each step appends one premise (`retrieval.selection`, `retrieval.hierarchy`, `retrieval.sections`) that carries its receipt and measured counters. Decisions are in research.md.
-
-### Model scorer of the rerank stage (R652.7)
-
-`compile_with` takes a `ModelBinding` (`Unset`, `Bound`, `Unavailable`). After reciprocal-rank fusion, `rerank_fused` scores the first `retrieval.rerank_k` fused candidates through `rerank_with`, replaces their fused scores with the calibrated rerank scores, and the cut and package solver run on that order. `handle_context_compile` supplies each hit's name, description and `text`, and the binding read by `reranker_binding`. The receipt is `BundleEvidence.rerank`. A request with no query text skips the stage.
-
-
-## Stop part, corpus refusals and evidence (R082.3, R082.4, R653.4, R653.5)
-
-`RoundRequest.stop` carries `StopRequest`; `run_round` builds the `StopContext` with `StopRequest::context` (knobs from `RoundKnobs`), measures progress with `round_progress`, calls `decide_stop` and sets `RoundResult.stop`. A terminal verdict sets the sufficiency repair to `Stop`; `handle_retrieval_round` answers an exhausted dimension with `RETRIEVAL_BUDGET_EXCEEDED` carrying the verdict. `dispatch` in `crates/medulla-plan/src/corpus_retrieval.rs` refuses an unreadable entity or session (`CORPUS_SCOPE_DENIED`), a too-deep lineage walk (`CORPUS_LINEAGE_TOO_DEEP`) and fills `CorpusEvidence`; `handle_corpus_retrieve` names the visibility filter.
-
-Chunk encoding (R039.2.2 to R039.2.4): `crates/medulla-core/src/compute/chunk_windows.rs` holds `split_windows`, `ChunkEncoder`/`encode_chunks` and `aggregate_mean_chunks` as pure functions; the window knobs are registry knobs in `knob_config.rs` and the refusal codes are `ServerErrorCode` variants routed to `SemanticIndex` (decision recorded in research.md).
-
-Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/document_encoding.rs` serves `EncodeDocument` (durable write, staged gateway) and `EncodedDocumentSearch` (read). `encode` runs `split_windows`, `encode_chunks` and `aggregate_mean_chunks`, builds the `EncodingReceipt` (`crates/medulla-types/src/retrieval.rs`) and writes one `EncodedDocument` node and one per-policy `EncodedIndexHead` node. `retrieval.encode_budget_chunks` is a registry knob; `ENCODE_BUDGET_EXHAUSTED` and `ENCODE_POLICY_STALE` are `ServerErrorCode` variants routed to `SemanticIndex`. The served tests are `tests/retrieval/test_chunk_encoding_served.py`.
-
-## Low-storage ANN layering
-
-`medulla-ann::low_storage` holds the manifest, checked accounting, the compact artifact (`HnswIndex::to_compact`, `LowStorageArtifact::{encode,decode,candidates}`) and `prune_hubs`. Regeneration, the bounded provider and the served path (R040.5.3, R040.5.4, R040.5.6) layer on top and own the L4 proof of the slice.
-
-- R040.5.4: `BoundedCachingEmbeddingProvider::with_limits(EmbedLimits)` batches by items and bytes, runs waves of `embed.concurrency` batches on scoped threads, reserves calls per wave, keeps an LRU cache capped by `embed.cache_entries` and `embed.cache_bytes`, and returns `EMBED_*` coded refusals.
-
-### R722.5 build order (continuation)
-
-1. Add the `provenance` text map to `UqlRow` in `crates/medulla-query-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
-2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
-3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
-4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).
-
-## Expansion port wiring (R651.3)
-`ExpansionProvider`, `set_expansion_provider`, `expansion_provider` and `run_expansion` live in
-`crates/medulla-plan/src/query_understanding.rs`. `HttpExpansionProvider` lives in
-`crates/medulla-h-query/src/query/expansion.rs` and is installed from `install_seams`
-(`crates/medulla-server/src/seams_install.rs`). `UreqNlPlanner::complete` is the one HTTP path.

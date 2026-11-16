@@ -485,7 +485,7 @@ pub fn seeded_system_wire_state(
 ) -> SharedState {
     let mut state = make_state(
         auth_secret,
-        wire_isolation_with_role(&[user], medulla_types::acl::AgentRole::System),
+        wire_isolation_with_role(&[user], medulla_identity_types::acl::AgentRole::System),
         persist_dir,
         persistence,
     );

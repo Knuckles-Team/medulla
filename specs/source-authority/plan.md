@@ -49,9 +49,19 @@ tests/federated/                                            new: served Python t
 
 ## Phase 0: Research
 
-none
+The unknowns are decided in [research.md](research.md): where authority comes from (the typed contract), where served SourceCoverage lives, what the native graph is (the individual `vg:NativeGraph`), and where the served sync proof runs and how an approver finds the queue.
 
 ## Phase 1: Design
+
+Design answers:
+
+- **Owner.** Medulla. Selection lives in `crates/medulla-virtual-graph` (`source_selection`), shapes in `medulla-shacl`, approval in `medulla-h-admin`, the served `Method::SourceCoverage` in `medulla-h-sparql`. Connector self-claims and operator interfaces belong to their owners.
+- **Cohesion.** One `vg:SourceAuthority` vocabulary, one origin-approved ranking inside the existing selection, one audit; no second planner and no second catalog.
+- **Dependency direction.** Handlers point down to `medulla-virtual-graph`, `medulla-graph-core` and `medulla-shacl`; the selection crate does not depend on a handler or a sibling handler crate.
+- **Interface depth.** One new served method, `SourceCoverage`; roles, trust marks and sync reuse `GraphSchema.AttachApproved`, `AddNode` and `SourceSync` rather than adding methods.
+- **Special cases.** None per source. Ties abstain with a typed reason and never fall back to name order; a class without an approved row abstains.
+- **State.** Authority rows, trust marks and `vg:SyncState` are graph facts written in the same batch as the change they describe; the selection itself keeps no state between calls.
+- **Environment.** Limits are named knobs (`source_coverage.hop_budget`, `source_coverage.max_classes`) with defaults and bounds; no environment variable is read.
 
 ```
 question (classes only, e.g. :Incident, :Service)
