@@ -874,7 +874,9 @@ impl EngineBackend {
         // reads under this one (MEDULLA-ENGINE-PARITY-R007.2).
         if let Some(record) = record {
             let authority = self.session.carrier_authority().map_err(wire_err_to_pg)?;
-            if authority.tenant_scope() != record.tenant {
+            if authority.tenant_scope()
+                != medulla_server_api::carrier::tenant_scope_of(&record.tenant)
+            {
                 return Err(wire_err_to_pg(WireError {
                     code: PLAN_SCOPE_UNVERIFIED_SQLSTATE.to_string(),
                     message: format!(

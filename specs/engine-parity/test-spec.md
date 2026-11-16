@@ -27,7 +27,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R007.2` | `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls`; `Method::Uql` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.3` | `tests/pgwire_roundtrip.rs::login_maps_to_principal`; `tests/pgwire_roundtrip.rs::certificate_login_maps_to_principal`; bench group `engine_parity/pgwire_login` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.4` | `tests/identity/test_wire_login_served.py::test_grant_login_revoke` | planned |
-| `MEDULLA-ENGINE-PARITY-R008.1` | `crates/medulla-sql-tests/tests/user_tables.rs::catalog_lists_constraints_and_indexes`; `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` | bound |
+| `MEDULLA-ENGINE-PARITY-R008.1` | `crates/medulla-sql-tests/tests/user_tables.rs::catalog_lists_constraints_and_indexes` | bound |
 | `MEDULLA-ENGINE-PARITY-R008.2` | `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` | planned |
 | `MEDULLA-ENGINE-PARITY-R008.3` | `tests/pgwire_roundtrip.rs::introspection_fixture_total_latency`; bench group `engine_parity/introspection` | planned |
 | `MEDULLA-ENGINE-PARITY-R009.1` | `crates/medulla-sql-tests/tests/compat.rs::matrix_loads_and_is_closed`; `tests/test_sql_compat_conformance.py::test_supported_entries_pass` | planned |

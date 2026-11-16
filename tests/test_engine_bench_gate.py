@@ -27,6 +27,9 @@ _WORKLOADS = (
     "bulk_load",
     "conflict_heavy",
 )
+# Workloads later rows add to the same baseline: the wire login (R007.3), the
+# partial-index probe (R011.2) and the serial-column draw (R013.3).
+_ROW_WORKLOADS = ("pgwire_login", "index_probe", "sequence_nextval")
 
 
 def _record(name: str, p99: int = 1000, throughput: float = 1000.0, **extra) -> dict:
@@ -131,12 +134,13 @@ _BASELINE_FILE = (
 def test_baseline_file_matches_records_schema(tmp_path):
     """spec: MEDULLA-ENGINE-PARITY-R005.3
 
-    The committed baseline names exactly the five required workloads, each with
-    the numeric metrics a record carries, and the gate accepts records equal to it.
+    The committed baseline names the five required workloads and the three row
+    workloads, each with the numeric metrics a record carries, and the gate
+    accepts records equal to it.
     """
     baseline = json.loads(_BASELINE_FILE.read_text())
     assert set(baseline) == {"workloads"}
-    assert set(baseline["workloads"]) == set(_WORKLOADS)
+    assert set(baseline["workloads"]) == set(_WORKLOADS) | set(_ROW_WORKLOADS)
     for name, metrics in baseline["workloads"].items():
         assert set(metrics) == {"p99_us", "throughput"}, name
         assert metrics["p99_us"] > 0 and metrics["throughput"] > 0, name

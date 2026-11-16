@@ -1073,7 +1073,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R702.6.
     ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
-    ("WriteBack", &["CORRUPT_WRITE_BACK"]),
+    // MEDULLA-ENGINE-PARITY-R019.2: an engine record class is never placed in an outside source.
+    (
+        "WriteBack",
+        &["CORRUPT_WRITE_BACK", "EXTERNAL_PLACEMENT_FORBIDDEN"],
+    ),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
     ("ActionRegister", &["ACTION_SPEC_INVALID"]),
     (

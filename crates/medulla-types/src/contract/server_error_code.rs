@@ -707,6 +707,7 @@ closed_error_codes! {
         DiscoverPlannerUnconfigured => "DISCOVER_PLANNER_UNCONFIGURED",
         DocumentSetNotFound => "DOCUMENT_SET_NOT_FOUND",
         DocumentSetQueryNotReadOnly => "DOCUMENT_SET_QUERY_NOT_READ_ONLY",
+        ExternalPlacementForbidden => "EXTERNAL_PLACEMENT_FORBIDDEN",
         ExpansionFanoutExceeded => "EXPANSION_FANOUT_EXCEEDED",
         ExpansionProviderFailed => "EXPANSION_PROVIDER_FAILED",
         ExpansionProviderUnconfigured => "EXPANSION_PROVIDER_UNCONFIGURED",

@@ -1591,9 +1591,11 @@ async fn occ_conflict_over_wire() {
     ))
     .await
     .expect("CREATE TABLE");
-    a.simple_query(&format!("INSERT INTO {table} VALUES (1, 10), (2, 20)"))
-        .await
-        .expect("seed rows");
+    a.simple_query(&format!(
+        "INSERT INTO {table} (id, bal) VALUES (1, 10), (2, 20)"
+    ))
+    .await
+    .expect("seed rows");
 
     a.simple_query("BEGIN").await.expect("A BEGIN");
     b.simple_query("BEGIN").await.expect("B BEGIN");
@@ -1776,7 +1778,10 @@ async fn disjoint_sessions_commit_in_parallel() {
         .map(|id| format!("({id}, {}, 0)", id / ROWS_PER_SESSION))
         .collect();
     setup
-        .simple_query(&format!("INSERT INTO {table} VALUES {}", values.join(", ")))
+        .simple_query(&format!(
+            "INSERT INTO {table} (id, owner, bal) VALUES {}",
+            values.join(", ")
+        ))
         .await
         .expect("seed rows");
 
@@ -2448,7 +2453,7 @@ async fn create_partial_index_over_wire_is_used() {
         .expect("CREATE TABLE");
     client
         .simple_query(&format!(
-            "INSERT INTO {table} VALUES (1, 'a@x', 'active'), (2, 'b@x', 'closed'), (3, 'c@x', 'active')"
+            "INSERT INTO {table} (id, email, status) VALUES (1, 'a@x', 'active'), (2, 'b@x', 'closed'), (3, 'c@x', 'active')"
         ))
         .await
         .expect("seed rows before the index");
@@ -2461,7 +2466,7 @@ async fn create_partial_index_over_wire_is_used() {
     // Rows inserted after the index exists, inside and outside its predicate.
     client
         .simple_query(&format!(
-            "INSERT INTO {table} VALUES (4, 'd@x', 'active'), (5, 'e@x', 'closed')"
+            "INSERT INTO {table} (id, email, status) VALUES (4, 'd@x', 'active'), (5, 'e@x', 'closed')"
         ))
         .await
         .expect("insert after the index");
@@ -2512,11 +2517,13 @@ async fn serial_column_uses_sequence() {
     let table = unique_table();
     admin
         .simple_query(&format!(
-            "CREATE TABLE {table} (id SERIAL PRIMARY KEY, session BIGINT NOT NULL)"
+            "CREATE TABLE {table} (id SERIAL PRIMARY KEY, session BIGINT NOT NULL, ord BIGINT NOT NULL)"
         ))
         .await
         .expect("CREATE TABLE with a serial column");
 
+    // Each row carries its session and its position in that session's insert
+    // order, so the assigned ids can be read back and compared in that order.
     let per_session = ROWS / SESSIONS;
     let mut sessions = Vec::new();
     for session in 0..SESSIONS {
@@ -2524,36 +2531,52 @@ async fn serial_column_uses_sequence() {
         let table = table.clone();
         sessions.push(tokio::spawn(async move {
             let client = connect(&addr).await;
-            let mut ids: Vec<i64> = Vec::with_capacity(per_session);
-            for _ in 0..per_session / STATEMENT_ROWS {
+            for statement in 0..per_session / STATEMENT_ROWS {
                 let values = (0..STATEMENT_ROWS)
-                    .map(|_| format!("({session})"))
+                    .map(|row| format!("({session}, {})", statement * STATEMENT_ROWS + row))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let rows = client
+                client
                     .simple_query(&format!(
-                        "INSERT INTO {table} (session) VALUES {values} RETURNING id"
+                        "INSERT INTO {table} (session, ord) VALUES {values}"
                     ))
                     .await
-                    .expect("serial INSERT RETURNING");
-                ids.extend(
-                    simple_ids(rows)
-                        .iter()
-                        .map(|id| id.parse::<i64>().expect("serial id")),
-                );
+                    .expect("serial INSERT");
             }
-            ids
         }));
     }
-    let mut every_id = Vec::with_capacity(ROWS);
     for session in sessions {
-        let ids = session.await.expect("session task");
-        assert_eq!(ids.len(), per_session);
+        session.await.expect("session task");
+    }
+    let stored = admin
+        .simple_query(&format!("SELECT session, ord, id FROM {table}"))
+        .await
+        .expect("read back the serial ids");
+    let mut by_session: std::collections::BTreeMap<i64, Vec<(i64, i64)>> = Default::default();
+    for message in stored {
+        if let tokio_postgres::SimpleQueryMessage::Row(row) = message {
+            let field = |index: usize| -> i64 {
+                row.get(index)
+                    .expect("column")
+                    .parse()
+                    .expect("integer column")
+            };
+            by_session
+                .entry(field(0))
+                .or_default()
+                .push((field(1), field(2)));
+        }
+    }
+    assert_eq!(by_session.len(), SESSIONS);
+    let mut every_id = Vec::with_capacity(ROWS);
+    for (_, mut rows) in by_session {
+        rows.sort_unstable();
+        assert_eq!(rows.len(), per_session);
         assert!(
-            ids.windows(2).all(|pair| pair[0] < pair[1]),
+            rows.windows(2).all(|pair| pair[0].1 < pair[1].1),
             "ids must increase within a session"
         );
-        every_id.extend(ids);
+        every_id.extend(rows.into_iter().map(|(_, id)| id));
     }
     every_id.sort_unstable();
     every_id.dedup();
@@ -2625,21 +2648,27 @@ async fn constraint_violations_return_sqlstate() {
         .await
         .expect("CREATE children");
     client
-        .simple_query(&format!("INSERT INTO {parents} VALUES (1)"))
+        .simple_query(&format!("INSERT INTO {parents} (id) VALUES (1)"))
         .await
         .expect("seed parent");
     client
-        .simple_query(&format!("INSERT INTO {children} VALUES (1, 1, 10)"))
+        .simple_query(&format!(
+            "INSERT INTO {children} (id, parent_id, bal) VALUES (1, 1, 10)"
+        ))
         .await
         .expect("seed child");
 
     // 23505: a duplicate primary key.
-    let (code, _) = refusal_of(&client, &format!("INSERT INTO {children} VALUES (1, 1, 5)")).await;
+    let (code, _) = refusal_of(
+        &client,
+        &format!("INSERT INTO {children} (id, parent_id, bal) VALUES (1, 1, 5)"),
+    )
+    .await;
     assert_eq!(code, "23505");
     // 23503: a parent that does not exist, naming the constraint.
     let (code, message) = refusal_of(
         &client,
-        &format!("INSERT INTO {children} VALUES (2, 99, 5)"),
+        &format!("INSERT INTO {children} (id, parent_id, bal) VALUES (2, 99, 5)"),
     )
     .await;
     assert_eq!(code, "23503");
@@ -2650,7 +2679,7 @@ async fn constraint_violations_return_sqlstate() {
     // 23514: a failing CHECK, naming the constraint.
     let (code, message) = refusal_of(
         &client,
-        &format!("INSERT INTO {children} VALUES (3, 1, -1)"),
+        &format!("INSERT INTO {children} (id, parent_id, bal) VALUES (3, 1, -1)"),
     )
     .await;
     assert_eq!(code, "23514");
@@ -2690,7 +2719,9 @@ async fn constraint_violations_return_sqlstate() {
         .expect("CREATE deferred");
     client.simple_query("BEGIN").await.expect("BEGIN");
     client
-        .simple_query(&format!("INSERT INTO {deferred} VALUES (1, 77)"))
+        .simple_query(&format!(
+            "INSERT INTO {deferred} (id, parent_id) VALUES (1, 77)"
+        ))
         .await
         .expect("a deferred key is not checked per statement");
     let (code, message) = refusal_of(&client, "COMMIT").await;
@@ -2701,29 +2732,6 @@ async fn constraint_violations_return_sqlstate() {
     );
     let _ = client.simple_query("ROLLBACK").await;
     assert_eq!(count_rows(&client, &deferred).await, 0);
-}
-
-/// Serves one fixed trigger machine under its definition id, as the engine's
-/// statechart store does for `CREATE TRIGGER … EXECUTE MACHINE`.
-#[cfg(feature = "statechart")]
-struct StampMachine {
-    id: String,
-    machine: medulla_statechart::StatechartDef,
-}
-
-#[cfg(feature = "statechart")]
-impl medulla_table_store::tables::TriggerMachineSource for StampMachine {
-    fn machine(
-        &self,
-        _persist_dir: &std::path::Path,
-        machine_id: &str,
-    ) -> Result<medulla_statechart::StatechartDef, String> {
-        if machine_id == self.id {
-            Ok(self.machine.clone())
-        } else {
-            Err("no stored definition".to_string())
-        }
-    }
 }
 
 // spec: MEDULLA-ENGINE-PARITY-R012.2
@@ -2753,13 +2761,14 @@ async fn wire_txn_create_and_drop_trigger_follow_the_transaction() {
         finals: Vec::new(),
         meta: Default::default(),
     };
-    let machine_id = machine.def_id();
-    medulla_table_store::tables::install_trigger_machine_source(Arc::new(StampMachine {
-        id: machine_id.clone(),
-        machine,
-    }));
-
-    let state = seeded_state();
+    // The machine lives in the engine's own statechart store, which is where
+    // the served `CREATE TRIGGER` reads it.
+    let persist_dir = sql_test_persist_dir();
+    let machine_id = medulla_h_jobs::statechart::statechart_store(Some(&persist_dir))
+        .expect("statechart store")
+        .define(&machine)
+        .expect("define the trigger machine");
+    let state = state_with_dir(default_persistence(), persist_dir);
     let addr = spawn_listener(state).await;
     let client = connect(&addr).await;
     let table = unique_table();

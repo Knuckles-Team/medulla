@@ -109,6 +109,8 @@ const STATEMENT_SAMPLES: &[(&str, &str)] = &[
     ),
     ("create_index", "CREATE INDEX ON t (a)"),
     ("drop_index", "DROP INDEX i"),
+    ("create_sequence", "CREATE SEQUENCE s START 1"),
+    ("drop_sequence", "DROP SEQUENCE s"),
     ("create_hypertable", "SELECT create_hypertable('t', 'ts')"),
     (
         "create_continuous_aggregate",
