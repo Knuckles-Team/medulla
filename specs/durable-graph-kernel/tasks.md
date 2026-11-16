@@ -279,7 +279,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T270 MEDULLA-DURABLE-KERNEL-R874.4 DirectStateInstallJournal/DirectStateInstallPhase state machine: route 1 census findings through DirectStateInstallPhase::apply
 - [ ] T271 MEDULLA-DURABLE-KERNEL-R874.5 EmbeddingBinding/BindingState state machine: route 1 census findings through BindingState::apply
 - [ ] T272 MEDULLA-DURABLE-KERNEL-R874.6 ExactRetirement/ExactRetirementPhase state machine: route 1 census findings through ExactRetirementPhase::apply
-- [ ] T273 MEDULLA-IDENTITY-R720.1 GovernedChange/GovernedChangeState state machine: route 5 census findings through GovernedStatus::apply
 - [ ] T274 MEDULLA-DURABLE-KERNEL-R874.7 GraphWriter/CoalescerState state machine: route 2 census findings through CoalescerState::apply
 - [ ] T275 MEDULLA-DURABLE-KERNEL-R874.8 JournalEntry/JournalState state machine: route 1 census findings through JournalState::apply
 - [ ] T276 MEDULLA-DURABLE-KERNEL-R874.9 ManagedIndexStatus/ManagedIndexState state machine: route 2 census findings through ManagedIndexState::apply
