@@ -26,6 +26,8 @@ closed_error_codes! {
         /// A read met a graph whose durable material is only partly in memory (MEDULLA-OBSERVE-R001.1).
         PartialMaterialization => "PARTIAL_MATERIALIZATION",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
+        /// A catalog node is typed with a class that is not under `cat:Asset` (MEDULLA-TYPED-PACKS-R108.4).
+        AssetClassOrphan => "ASSET_CLASS_ORPHAN",
         AstInputInvalid => "AST_INPUT_INVALID",
         AstInputLimit => "AST_INPUT_LIMIT",
         AttachPackClusterUnavailable => "ATTACH_PACK_CLUSTER_UNAVAILABLE",
@@ -45,6 +47,8 @@ closed_error_codes! {
         AuditUnavailable => "AUDIT_UNAVAILABLE",
         AuditWriterUnavailable => "AUDIT_WRITER_UNAVAILABLE",
         AuthenticationRequired => "AUTHENTICATION_REQUIRED",
+        /// A catalog person field carries a marking the writer does not hold (MEDULLA-TYPED-PACKS-R108.4).
+        FieldMarked => "FIELD_MARKED",
         BodyDigestMismatch => "BODY_DIGEST_MISMATCH",
         BranchBaseUnknown => "BRANCH_BASE_UNKNOWN",
         BranchDeleted => "BRANCH_DELETED",

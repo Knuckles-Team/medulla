@@ -1321,6 +1321,12 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
             "METADATA_SCHEMA_INVALID",
         ]);
     }
+    // MEDULLA-TYPED-PACKS-R108.4: the catalog write guard refuses an orphan asset
+    // class and a marked person field on the RDF write route and on the Agent
+    // Library publish route that emits catalog nodes.
+    if matches!(id, "AddTriples" | "AgentComponent") {
+        codes.extend(["ASSET_CLASS_ORPHAN", "FIELD_MARKED"]);
+    }
     // MEDULLA-FEDERATED-QUERY-R058.4.1: `max_steps` outside 1 to 4.
     if id == "NlQuery" {
         codes.insert("NL_STEPS_INVALID");

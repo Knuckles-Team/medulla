@@ -4570,6 +4570,7 @@ name = "medulla-catalog"
 version = "0.1.0"
 dependencies = [
  "medulla-agent-types",
+ "medulla-identity-types",
  "medulla-work-types",
  "thiserror 2.0.21",
 ]
