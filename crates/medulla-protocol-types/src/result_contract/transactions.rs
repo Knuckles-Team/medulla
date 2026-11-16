@@ -68,6 +68,11 @@ impl BatchUpdateReport {
 pub struct MultiGraphBatchReport {
     pub results: BTreeMap<String, BatchUpdateReport>,
     pub errors: BTreeMap<String, String>,
+    /// One entry per sub-batch in request order: the shard writer it queued
+    /// on, its queue and commit times and its own outcome
+    /// (MEDULLA-DURABLE-KERNEL-R099.5).
+    #[serde(default)]
+    pub fanout: Vec<crate::mutation_batch::ShardFanoutReport>,
 }
 
 /// The placement a replicated `ApplyChangeEnvelope` committed under.

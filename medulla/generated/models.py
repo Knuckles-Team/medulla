@@ -18752,10 +18752,41 @@ class MotifSearchPairsBody(BaseModel):
     length: Annotated[int, Field(ge=0)]
 
 
+class ShardFanoutOutcomeCommitted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    status: Literal["committed"]
+
+
+class ShardFanoutOutcomeFailed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    status: Literal["failed"]
+    code: str
+    message: str
+
+
+ShardFanoutOutcome = Annotated[
+    ShardFanoutOutcomeCommitted | ShardFanoutOutcomeFailed,
+    Field(discriminator="status"),
+]
+
+
+class ShardFanoutReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    commit_us: Annotated[int, Field(ge=0)]
+    graph: str
+    outcome: ShardFanoutOutcome
+    queued_us: Annotated[int, Field(ge=0)]
+    shard_index: Annotated[int, Field(ge=0)]
+
+
 class MultiGraphBatchReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     errors: dict[str, str]
+    fanout: list[ShardFanoutReport] = Field(default_factory=list)
     results: dict[str, BatchUpdateReport]
 
 
@@ -37471,6 +37502,10 @@ __all__ = [
     "ShaclValidationReport",
     "ShaclValidationResult",
     "ShapeKeep",
+    "ShardFanoutOutcome",
+    "ShardFanoutOutcomeCommitted",
+    "ShardFanoutOutcomeFailed",
+    "ShardFanoutReport",
     "ShardLoadSummary",
     "ShardReshardReport",
     "ShardWriterWidth",

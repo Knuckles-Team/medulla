@@ -2242,6 +2242,13 @@ path = "benches/cold_warm_reopen.rs"
 harness = false
 required-features = ["full"]
 
+# MEDULLA-DURABLE-KERNEL-R099.6: served MultiGraphBatchUpdate across eight shard writers.
+[[bench]]
+name = "multi_graph_fanout"
+path = "benches/multi_graph_fanout.rs"
+harness = false
+required-features = ["full"]
+
 # MEDULLA-DURABLE-KERNEL-R095.1005: served BusHeartbeat through the dispatch entry.
 [[bench]]
 name = "bus_heartbeat"

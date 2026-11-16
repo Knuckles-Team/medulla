@@ -170,10 +170,10 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T162 [US1] MEDULLA-DURABLE-KERNEL-R043.8 Envelope admission refusals carry a declared code and a safe diagnostic
 - [ ] T163 MEDULLA-DURABLE-KERNEL-R099.1 Model
 - [ ] T164 MEDULLA-DURABLE-KERNEL-R099.2 Behavior
-- [ ] T165 MEDULLA-DURABLE-KERNEL-R099.3 Wiring
-- [ ] T166 MEDULLA-DURABLE-KERNEL-R099.4 Refusal
-- [ ] T167 MEDULLA-DURABLE-KERNEL-R099.5 Evidence
-- [ ] T168 MEDULLA-DURABLE-KERNEL-R099.6 Hot-path proof
+- [x] T165 MEDULLA-DURABLE-KERNEL-R099.3 Wiring
+- [x] T166 MEDULLA-DURABLE-KERNEL-R099.4 Refusal
+- [x] T167 MEDULLA-DURABLE-KERNEL-R099.5 Evidence
+- [x] T168 MEDULLA-DURABLE-KERNEL-R099.6 Hot-path proof
 - [ ] T169 [US2] MEDULLA-DURABLE-KERNEL-R028.2.1 Served WorkItem transition history read
 - [ ] T170 [US2] MEDULLA-DURABLE-KERNEL-R028.3 Fenced metadata CAS requires a live worker lease
 - [ ] T171 MEDULLA-DURABLE-KERNEL-R101.1 Model

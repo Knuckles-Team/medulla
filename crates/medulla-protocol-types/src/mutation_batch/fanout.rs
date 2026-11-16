@@ -12,6 +12,7 @@ pub const MAX_FANOUT_SUB_BATCHES: usize = 256;
 
 /// One sub-batch's terminal outcome.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ShardFanoutOutcome {
     Committed,
@@ -24,6 +25,7 @@ pub enum ShardFanoutOutcome {
 
 /// The fan-out evidence for one sub-batch.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ShardFanoutReport {
     pub graph: String,

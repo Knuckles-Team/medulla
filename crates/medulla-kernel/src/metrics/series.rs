@@ -249,6 +249,8 @@ pub struct KernelMetrics {
     pub(super) work_item_uncertain_effects_total: IntCounterVec,
     pub(super) work_item_uncertain_open: IntGauge,
     pub(super) store_migration_steps_total: IntCounterVec,
+    pub(super) shard_writer_inflight: IntGaugeVec,
+    pub(super) shard_writer_commit_seconds: HistogramVec,
 }
 
 impl KernelMetrics {
@@ -744,6 +746,17 @@ impl KernelMetrics {
             "medulla_store_migration_steps_total",
             "Automatic store migration steps at open, by step and outcome",
             &["step", "outcome"],
+        ),
+            shard_writer_inflight: gauge_vec(&registry,
+            "medulla_shard_writer_inflight",
+            "Sub-batches being dispatched on one shard writer, by shard index",
+            &["shard"],
+        ),
+            shard_writer_commit_seconds: histogram_vec(&registry,
+            "medulla_shard_writer_commit_seconds",
+            "Time to dispatch one cross-graph sub-batch on its shard writer, by shard index",
+            &["shard"],
+            lock_gap_buckets(),
         ),
             registry,
         }

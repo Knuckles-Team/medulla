@@ -617,14 +617,14 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R042.100`: Planned: `tests/bench_claim_cli.rs::measurement_throughput_and_cost_are_recomputed_for_two_releases` (L2).
 - `MEDULLA-DURABLE-KERNEL-R099`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
 - `MEDULLA-DURABLE-KERNEL-R099.2`: Planned: `crates/medulla-server-graph/src/dispatch/change_envelope/multi_graph.rs::fanout_cap_tests::groups_keep_request_order_within_a_shard` (L1).
-- `MEDULLA-DURABLE-KERNEL-R099.3`: Planned: `tests/shard_write_fanout.rs::served_arm_returns_one_report_per_sub_batch` (L3).
-- `MEDULLA-DURABLE-KERNEL-R099.4`: Planned: `tests/shard_write_fanout.rs::oversize_refused_and_failed_sub_batch_reported` (L3).
-- `MEDULLA-DURABLE-KERNEL-R099.5`: Planned: `tests/shard_write_fanout.rs::report_and_metrics_name_every_sub_batch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.3`: `tests/shard_write_fanout.rs::served_arm_returns_one_report_per_sub_batch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.4`: `tests/shard_write_fanout.rs::oversize_refused_and_failed_sub_batch_reported` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.5`: `tests/shard_write_fanout.rs::report_and_metrics_name_every_sub_batch` (L3).
 - `MEDULLA-DURABLE-KERNEL-R084.6`: Planned: `tests/write_conflict_two_writers.rs::two_writers_one_commit_one_typed_conflict` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.8`: Planned: `tests/memory_sync_served.rs::complete_memory_sync_journey` (L3).
 - `MEDULLA-DURABLE-KERNEL-R086.9`: Planned: `tests/safe_eviction_read_through.rs::served_safe_eviction_read_through_journey` (L3).
 - `MEDULLA-DURABLE-KERNEL-R095.1004`: Planned: `tests/agent_bus_served.rs::roster_survives_restart` (L3).
-- `MEDULLA-DURABLE-KERNEL-R099.6`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.6`: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
 
 ## Planned bindings, range 3
 

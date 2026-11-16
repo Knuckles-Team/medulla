@@ -8,6 +8,8 @@ use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 #[cfg(feature = "redb")]
+use medulla_protocol_types::mutation_batch::{ShardFanoutOutcome, ShardFanoutReport};
+#[cfg(feature = "redb")]
 use medulla_protocol_types::result_contract::transactions as txn_results;
 
 /// Apply a batched cross-graph write (CONCEPT:MEDULLA-KG.storage.multi-graph-batch-write).
@@ -33,7 +35,15 @@ pub async fn multi_graph_batch_update(
 ) -> Response {
     let batches = match decode_multi_graph_batches(batches_msgpack) {
         Ok(batches) => batches,
-        Err(error) => return Response::err(req_id, error),
+        Err(error) => {
+            return Response::err(
+                req_id,
+                format!(
+                    "{}: {error}",
+                    medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
+                ),
+            )
+        }
     };
     let backend = {
         let s = timed_read(state).await;
@@ -185,15 +195,41 @@ fn finish_multi_graph_batch(
     }
 }
 
+/// The failed outcome of one sub-batch: the registered code in front of the
+/// refusal text, or the internal code when the answer carried none.
+#[cfg(feature = "redb")]
+fn failed_outcome(error: &str) -> ShardFanoutOutcome {
+    match error.split_once(": ") {
+        Some((code, message))
+            if !code.is_empty()
+                && code
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_') =>
+        {
+            ShardFanoutOutcome::Failed {
+                code: code.to_string(),
+                message: message.to_string(),
+            }
+        }
+        _ => ShardFanoutOutcome::Failed {
+            code: medulla_types::contract::ServerErrorCode::Internal
+                .as_str()
+                .to_string(),
+            message: error.to_string(),
+        },
+    }
+}
+
 /// Record one sub-batch's outcome. A graph lands in `results` with its
 /// `BatchUpdate` report, or in `errors` -- its own failure, or a success that
 /// answered no valid report -- so the reply names every graph exactly once.
+/// The returned outcome is the sub-batch's `ShardFanoutReport` outcome.
 #[cfg(feature = "redb")]
 fn record_multi_graph_result(
     report: &mut txn_results::MultiGraphBatchReport,
     graph: String,
     response: Response,
-) {
+) -> ShardFanoutOutcome {
     match declared_json_response::<txn_results::BatchUpdateReport>(
         response,
         "sub-batch answered an invalid BatchUpdate report",
@@ -201,11 +237,25 @@ fn record_multi_graph_result(
     ) {
         Ok(batch) => {
             report.results.insert(graph, batch);
+            ShardFanoutOutcome::Committed
         }
         Err(error) => {
+            let outcome = failed_outcome(&error);
             report.errors.insert(graph, error);
+            outcome
         }
     }
+}
+
+/// One sub-batch's dispatch with the evidence its report carries.
+#[cfg(feature = "redb")]
+struct Dispatched {
+    graph: String,
+    index: usize,
+    shard: usize,
+    queued_us: u64,
+    commit_us: u64,
+    response: Response,
 }
 
 /// Group sub-batches by the shard writer that owns their graph
@@ -241,15 +291,25 @@ async fn run_multi_graph_batches(
 ) -> txn_results::MultiGraphBatchReport {
     let mut report = txn_results::MultiGraphBatchReport::default();
     let caller_owned = caller.map(str::to_string);
+    let started = std::time::Instant::now();
+    let indexed: Vec<(String, (usize, serde_bytes::ByteBuf))> = batches
+        .into_iter()
+        .enumerate()
+        .map(|(index, (graph, ops))| (graph, (index, ops)))
+        .collect();
     let mut set = tokio::task::JoinSet::new();
-    for (_shard, group) in group_by_shard(batches, |fname| backend.shard_of(fname)) {
+    for (shard, group) in group_by_shard(indexed, |fname| backend.shard_of(fname)) {
         let state = Arc::clone(state);
         let caller_owned = caller_owned.clone();
         let verified_context = VerifiedRequestContext::clone(verified_context);
         set.spawn(async move {
+            let metrics = medulla_kernel::metrics::process();
+            let queued_us = u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX);
             let mut out = Vec::with_capacity(group.len());
-            for (graph, ops) in group {
-                let resp = dispatch_graph_op(
+            for (graph, (index, ops)) in group {
+                metrics.shard_writer_begin(shard);
+                let dispatched_at = std::time::Instant::now();
+                let response = dispatch_graph_op(
                     &state,
                     &graph,
                     req_id,
@@ -260,17 +320,38 @@ async fn run_multi_graph_batches(
                     },
                 )
                 .await;
-                out.push((graph, resp));
+                let elapsed = dispatched_at.elapsed();
+                metrics.shard_writer_end(shard, elapsed.as_secs_f64());
+                out.push(Dispatched {
+                    graph,
+                    index,
+                    shard,
+                    queued_us,
+                    commit_us: u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX),
+                    response,
+                });
             }
             out
         });
     }
 
+    let mut fanout: Vec<(usize, ShardFanoutReport)> = Vec::new();
     while let Some(joined) = set.join_next().await {
         match joined {
             Ok(results) => {
-                for (graph, resp) in results {
-                    record_multi_graph_result(&mut report, graph, resp);
+                for done in results {
+                    let graph = done.graph.clone();
+                    let outcome = record_multi_graph_result(&mut report, done.graph, done.response);
+                    fanout.push((
+                        done.index,
+                        ShardFanoutReport {
+                            graph,
+                            shard_index: u32::try_from(done.shard).unwrap_or(u32::MAX),
+                            queued_us: done.queued_us,
+                            commit_us: done.commit_us,
+                            outcome,
+                        },
+                    ));
                 }
             }
             Err(join_err) => {
@@ -283,6 +364,8 @@ async fn run_multi_graph_batches(
             }
         }
     }
+    fanout.sort_by_key(|(index, _)| *index);
+    report.fanout = fanout.into_iter().map(|(_, entry)| entry).collect();
     report
 }
 

@@ -56,6 +56,8 @@ pub fn process() -> &'static KernelMetrics {
 
 // X10 outbox consumer metrics.
 mod outbox;
+// Shard-writer inflight gauge and commit histogram (MEDULLA-DURABLE-KERNEL-R099.5).
+mod shard_writer;
 // Automatic store migration at open (MEDULLA-DURABLE-KERNEL-R070.1).
 mod store_migration;
 // Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
