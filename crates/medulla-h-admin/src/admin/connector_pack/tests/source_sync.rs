@@ -235,7 +235,7 @@ impl Harness {
                     &unique("register"),
                     Method::RegisterForeignSource {
                         name: source_name.clone(),
-                        source: medulla_types::wire::ForeignSourceSpec::Mcp {
+                        source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                             server: CONNECTOR.to_string(),
                             tool: "export_elements".to_string(),
                             capabilities: Default::default(),

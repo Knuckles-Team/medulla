@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx};
 use medulla_federation::federation::{ForeignSource, ForeignSourceRegistry};
 use medulla_federation::federation_opt::FederatedExec;
-use medulla_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
+use medulla_query_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
 
 /// A bound source that claims it filtered by key but always answers a superset: every
 /// local document plus ids the plan never selected.
