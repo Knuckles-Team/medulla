@@ -18,7 +18,7 @@ from medulla.generated.models import (
 )
 from medulla.generated.security import send_identity
 
-UNKNOWN_TOKEN = "never-issued-session-token"  # sanitizer:ignore synthetic never-issued token, not a credential
+UNKNOWN_TOKEN = "never-issued-session-token"  # sanitizer:ignore synthetic token
 
 
 def _resolve(clean_graph, refresh):
