@@ -9,11 +9,14 @@
 // MEDULLA-DURABLE-KERNEL-R039 — in-memory structure/atomic-primitive kinds and a
 // durability declaration that always names redb as sole durability
 // authority. Pure serde, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod atomic_primitive;
 // MEDULLA-DURABLE-KERNEL-R042 — a published benchmark report's typed superiority
 // claim and the refusal for an unpublished-configuration or non-passing one.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod benchmark_claim;
 // MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod branch;
 // CONCEPT:AU-ORCH.scheduling — GOC-21 distributed CapacityCell/CapacityLease
 // wire contract + pure fencing/admission algorithm (cross-host capacity
@@ -35,10 +38,12 @@ pub mod consensus;
 // MEDULLA-DURABLE-KERNEL-R034 — cross-store atomicity's typed transaction-scope
 // model: a single-store scope structurally can never map to the cross-store
 // commit path. Pure serde, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod cross_store_scope;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod fast_path;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation;
@@ -52,40 +57,52 @@ pub mod outbox;
 // MEDULLA-DURABLE-KERNEL-R035 — the PostgreSQL wire protocol's required
 // operational surfaces and a fail-closed compatibility matrix. Pure serde,
 // no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pg_operational_surface;
 pub mod sql_form_machine;
 // MEDULLA-DURABLE-KERNEL-R040 — pipelined RESP/pgwire-extended batch admission:
 // one admission maps to exactly one commit with order-preserving replies.
 // Pure serde, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pipeline_batch;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retention_cleanup;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retention_policy;
 // MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rule_correction;
 // EH-558 — sealed record classes: content-addressed rows generic writes may not change.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sealed_record;
 // MEDULLA-BRANCH-MERGE-R006 — transaction, commit and diff vocabulary of branch time travel.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod versioning;
 // MEDULLA-DURABLE-KERNEL-R037 — the workload classification (point/structure/sql)
 // every wire listener routes an operation by. Pure, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod workload_class;
 // EH-560 -- governed changes: reserved control-lease kinds whose approval EG
 // proves two-person (approver != proposer, exact digest, single use).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod governed_change;
 // MEDULLA-DURABLE-KERNEL-R043.100.1 — graph change-feed types and snapshot digest.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graph_change_feed;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod health_incident;
 // MEDULLA-DURABLE-KERNEL-R033 — the hot-store engine evaluation's typed model
 // (redb/fjall/RocksDB candidates, workload profiles, validated benchmark
 // results, winner selection). Pure serde, no dep.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod hot_store_engine;
 // MEDULLA-DURABLE-KERNEL-R085.1 — memory snapshot head, sync request/outcome, cursor and
 // the pure compare-and-set core. Pure serde; served handlers live above this crate.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod memory_sync;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mirror_sink;
 // EH-406 -- error-budget adaptive (AIMD) throttling on a capacity cell:
 // automatic steps only narrow or give back what they narrowed.
@@ -98,4 +115,5 @@ pub mod write_back;
 // MEDULLA-DURABLE-KERNEL-R084.1 — typed optimistic-write conflict and the closed
 // set of scope-level merge strategies. Resolution and served wiring live above
 // this pure-data crate.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod write_conflict;
