@@ -929,7 +929,9 @@ fn validate_dispatch_carrier(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redb_store::work_item::test_shard::{apply, open, run_request, GRAPH};
+    use crate::redb_store::work_item::test_shard::{
+        apply, open, run_request, submit_run_rows, with_write, GRAPH,
+    };
     use medulla_protocol_types::protocol::{Method, ResultPayload};
     use medulla_result_types::epistemic_operations::{
         ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
@@ -948,15 +950,14 @@ mod tests {
         request
     }
 
+    /// Submit one work item through the production submit rows. `SubmitWorkItem`
+    /// itself is applied by the store-apply layer, so this drives the submit
+    /// row kernel the way the other row tests do.
     fn submit(shard: &Shard, kind: &str, key: &str) -> Result<SubmitWorkItemResult, String> {
-        let method = Method::SubmitWorkItem {
-            request: request_of(kind, key),
-        };
-        match apply(shard, key, method, 1_000)? {
-            ResultPayload::Json(value) => Ok(serde_json::from_value(value).unwrap()),
-            ResultPayload::Raw(bytes) => Ok(decode_durable(&bytes).unwrap()),
-            other => panic!("SubmitWorkItem answers a result, got {other:?}"),
-        }
+        let request = request_of(kind, key);
+        with_write(shard, &format!("submit/{key}"), 1_000, |admitted| {
+            submit_run_rows(admitted, &request, "owner")
+        })
     }
 
     #[test]
