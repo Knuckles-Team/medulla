@@ -991,6 +991,7 @@ async fn demotion_run() {
                             .map(|id| ReturnedEvidence {
                                 evidence_id: id.clone(),
                                 content_class: Some("prose".to_string()),
+                                source: None,
                                 raw_score_ppm: None,
                             })
                             .collect(),
