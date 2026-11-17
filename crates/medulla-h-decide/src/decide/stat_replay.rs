@@ -457,11 +457,15 @@ pub(super) fn replay_with_view(
         return replay_feedback_loop(ctx, record);
     }
     require_supported_replay(record)?;
-    if matches!(record.outcome, StatisticalOutcome::Advisory { .. }) {
-        return replay_family_conclusion(ctx, record, graph_view);
-    }
+    // A sealed `harness_config` record is advisory, but its replay re-derives the
+    // configuration from the stored evidence (MEDULLA-DECISION-ENGINE-R128.13.2.1),
+    // which the generic family-conclusion replay cannot do: it holds no declared
+    // options. It is routed first.
     if record.question.kind == QuestionKind::HarnessConfig {
         return replay_harness_config(ctx, record);
+    }
+    if matches!(record.outcome, StatisticalOutcome::Advisory { .. }) {
+        return replay_family_conclusion(ctx, record, graph_view);
     }
     if !loggable(&record.outcome) {
         return Err(refusal(
