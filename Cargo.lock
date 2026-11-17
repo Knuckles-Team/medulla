@@ -6781,6 +6781,7 @@ dependencies = [
  "medulla-core",
  "medulla-decision-outcome-types",
  "medulla-decision-types",
+ "medulla-direct-state",
  "medulla-geo",
  "medulla-graph-core",
  "medulla-h-ingest",
