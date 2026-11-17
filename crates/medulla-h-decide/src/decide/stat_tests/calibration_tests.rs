@@ -57,6 +57,7 @@ async fn judged_scored_runs(h: &Harness) {
                 .map(|(rank, id)| ReturnedEvidence {
                     evidence_id: id.clone(),
                     content_class: None,
+                    source: None,
                     raw_score_ppm: Some(score_of(rank)),
                 })
                 .collect(),

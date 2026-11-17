@@ -37,7 +37,7 @@ fn action_request(schema: &ComponentDependency, content_ref: &str, class: &str) 
 
 fn verdict(batch: &DecisionBatch) -> String {
     match &batch.records.as_slice()[0].outcome {
-        StatisticalOutcome::Advisory { scores, .. } => scores[0].option_id.clone(),
+        StatisticalOutcome::Advisory { scores, .. } => scores.as_slice()[0].option_id.clone(),
         StatisticalOutcome::Abstained { reasons } => match &reasons.as_slice()[0] {
             AbstainReason::Family { code, .. } => format!("abstained:{}", code.as_str()),
             other => panic!("unexpected abstention {other:?}"),
@@ -125,7 +125,7 @@ async fn untrusted_follow_up_is_denied() {
     // A principal the graph's access check does not admit never sees the mark.
     let stranger = VerifiedRequestContext::verified_for_test_in_tenant("stranger", TENANT);
     let denied = decode::<DecisionBatch>(
-        super::statistical::handle_decide(
+        crate::decide::statistical::handle_decide(
             &h.state,
             9,
             &stranger,
