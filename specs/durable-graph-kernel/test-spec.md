@@ -332,7 +332,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R100`: `tests/mirror_graph_sinks_serv
 
 | Evidence | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-jobs/src/downtime.rs::tests::selection_recorded`: A served read finds the selection and the budget use of each job. |
 
-| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts`: Jobs run in priority order, and the foreground query preempts them within 250 ms. |
+| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts` (planned): Jobs run in priority order, and the foreground query preempts them within 250 ms. |
 
 
 Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts`.
@@ -528,7 +528,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/test_service_layer.py::test_service_channel_group_leave_returns_leave_result` (L4) | `MEDULLA-DURABLE-KERNEL-R068` | A join, leave and rejoin over a served engine return each its own tagged result. | A leave never returns the stored join result. |
 | `crates/medulla-types/src/task_queue.rs::tests::each_type_round_trips_and_each_refusal_has_its_code` (L1) | `MEDULLA-DURABLE-KERNEL-R071` | Each type round-trips through serde with its bounds at the limit values. | Each out-of-bound field returns its registered refusal code. |
-| `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
+| `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
 | `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `tests/test_wire_vectors.py::test_task_queue_models_match_the_rust_vectors` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `crates/medulla-work-types/src/worker_registry.rs::tests::register_heartbeat_and_expiry_at_the_exact_deadline` (L1) | `MEDULLA-DURABLE-KERNEL-R074.1` | Register, heartbeat and expire at the exact deadline. | Every refusal leaves the registry unchanged. |
@@ -769,7 +769,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R875`: see each child (rollup).
 - `MEDULLA-DURABLE-KERNEL-R875.1`: `crates/medulla-types/src/memory_sync.rs::tests::sync_standing_is_not_a_lifecycle_field` (L1): proves: SyncState is a sync reading, not a lifecycle: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.2`: `crates/medulla-protocol-types/src/result_contract/coordination/work_items.rs::tests::work_item_reply_outcomes_are_not_lifecycle_fields` (planned, L1): proves: WorkItemCommitStatus and WorkItemCancelStatus are reply outcomes, not lifecycles: rename, no machine.
-- `MEDULLA-DURABLE-KERNEL-R875.3`: `crates/medulla-work-types/src/work_item_read.rs::tests::terminal_event_read_tag_is_not_a_lifecycle_field` (L1): proves: TerminalEventRead discriminator `status` is an availability tag: rename, no machine.
+- `MEDULLA-DURABLE-KERNEL-R875.3`: `crates/medulla-work-types/src/work_item_read/tests.rs::terminal_event_read_tag_is_not_a_lifecycle_field` (L1): proves: TerminalEventRead discriminator `status` is an availability tag: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.4`: `crates/medulla-protocol-types/src/result_contract/transactions.rs::tests::change_envelope_result_tag_is_not_a_lifecycle_field` (L1): proves: ChangeEnvelopeOutcome discriminator `status` is a result tag: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.5`: `crates/medulla-index-types/src/semantic_index/response.rs::tests::semantic_index_result_tag_is_not_a_lifecycle_field` (L1): proves: SemanticIndexOutcome discriminator `status` is a result tag: rename, no machine.
 - `MEDULLA-DURABLE-KERNEL-R875.6`: `tests/test_wire_mirror_state_words.py::test_semantic_and_audit_mirrors_type_state_as_the_rust_enum` (planned, L1): proves: Semantic index and audit wire mirrors follow their Rust machines: Python mirror follows the Rust machine.
