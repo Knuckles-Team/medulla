@@ -440,7 +440,10 @@ async fn placement_abstains_with_typed_reasons() {
         .unwrap();
     let reasons = abstain_reasons(&batch);
     assert_eq!(reasons.len(), PlacementTarget::ALL.len(), "{reasons:?}");
-    for (reason, target) in reasons.iter().zip(PlacementTarget::ALL) {
+    // The declared options are strictly sorted by id, so the reasons follow id order.
+    let mut by_id = PlacementTarget::ALL;
+    by_id.sort_by_key(|target| target.option_id());
+    for (reason, target) in reasons.iter().zip(by_id) {
         assert_eq!(
             *reason,
             AbstainReason::UnknownFact {
