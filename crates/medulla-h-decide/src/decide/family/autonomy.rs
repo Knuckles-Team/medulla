@@ -144,8 +144,14 @@ impl DecisionFamily for AutonomyFamily {
         }))
     }
 
-    fn resolution_kind(&self, _outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
-        Some(ResolutionKind::Constraint)
+    fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        // A class whose recorded outcomes are all self-reported abstains
+        // (`TRUST_SELF_REPORTED`, MEDULLA-DECISION-ENGINE-R752.752); an abstention
+        // resolves as one, every verdict resolves as a constraint.
+        Some(match outcome {
+            StatisticalOutcome::Abstained { .. } => ResolutionKind::Abstention,
+            _ => ResolutionKind::Constraint,
+        })
     }
 
     fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
