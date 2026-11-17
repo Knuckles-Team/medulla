@@ -1120,6 +1120,7 @@ fn publish_tool(h: &Harness, tenant: &str, id: &str, summary: &str) {
                 ),
                 component: draft,
                 evaluation_receipt_digest: None,
+                blueprint: None,
             },
         )
         .unwrap();
