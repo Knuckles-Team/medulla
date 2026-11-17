@@ -32,7 +32,7 @@ use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
 pub(super) const TENANT: &str = "tenant-media";
-const ASKER: &str = "asker";
+pub(super) const ASKER: &str = "asker";
 
 pub(super) struct Harness {
     _dir: tempfile::TempDir,
@@ -89,7 +89,7 @@ pub(super) fn publish(
     publish_with(store, nonce, (id, kind), facts, |_| {});
 }
 
-fn publish_with(
+pub(super) fn publish_with(
     store: &AgentLibraryStore,
     nonce: u8,
     (id, kind): (&str, AgentComponentKind),
@@ -123,13 +123,24 @@ fn publish_with(
 /// One model (declaring `capabilities`), one prompt, one tool, one skill and
 /// one ontology: every slot of a runnable agent (`one:tool` is at least one).
 pub(super) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
-    publish(
+    seed_with(store, capabilities, |_| {});
+}
+
+/// [`seed`] with `tweak` applied to every component's draft before it publishes.
+pub(super) fn seed_with(
+    store: &AgentLibraryStore,
+    capabilities: Option<ModelInputCapabilities>,
+    tweak: impl Fn(&mut medulla_agent_types::agent_component::AgentComponentDraft),
+) {
+    let facts = |facts: Option<AgentComponentFacts>| facts;
+    publish_with(
         store,
         1,
         ("model-a", AgentComponentKind::ModelProfile),
-        Some(model_facts(capabilities)),
+        facts(Some(model_facts(capabilities))),
+        &tweak,
     );
-    publish(
+    publish_with(
         store,
         2,
         ("prompt-a", AgentComponentKind::SystemPrompt),
@@ -140,10 +151,23 @@ pub(super) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCap
             body_sha256: None,
             schema_revision: None,
         }),
+        &tweak,
     );
-    publish(store, 3, ("skill-a", AgentComponentKind::Skill), None);
-    publish(store, 4, ("ontology-a", AgentComponentKind::Ontology), None);
-    publish(store, 5, ("tool-a", AgentComponentKind::Tool), None);
+    publish_with(
+        store,
+        3,
+        ("skill-a", AgentComponentKind::Skill),
+        None,
+        &tweak,
+    );
+    publish_with(
+        store,
+        4,
+        ("ontology-a", AgentComponentKind::Ontology),
+        None,
+        &tweak,
+    );
+    publish_with(store, 5, ("tool-a", AgentComponentKind::Tool), None, &tweak);
 }
 
 pub(super) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
@@ -205,6 +229,7 @@ pub(super) async fn assemble(
             "allowed_tools": [
                 "model-a", "prompt-a", "tool-a", "skill-a", "ontology-a", "p-search", "p-sink",
                 "p-bad", "r-ok", "r-kind", "r-schema", "r-caps", "r-effect", "tool-web",
+                "tool-small", "tool-large", "tool-bad",
                 "tool-render-artifact", "tool-apply", "tool-verify", "tool:search", "prompt:agent",
                 "skill:reason", "model-profile:default", "ontology:agent",
             ],

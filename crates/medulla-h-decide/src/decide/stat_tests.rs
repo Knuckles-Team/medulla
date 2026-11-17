@@ -1045,6 +1045,8 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
 // MEDULLA-DECISION-ENGINE-R815: the model media capability on the assembly answer.
 #[cfg(feature = "redb")]
 mod assemble_tests;
+#[cfg(feature = "redb")]
+mod assemble_size_tests;
 #[cfg(feature = "security")]
 pub(in crate::decide) mod commit_admission_tests;
 
