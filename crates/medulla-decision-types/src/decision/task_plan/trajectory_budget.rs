@@ -118,6 +118,22 @@ pub enum BudgetBranch {
     Complex,
 }
 
+/// An exact `i128` on the wire as a canonical decimal string.
+mod i128_decimal {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(value: &i128, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(value)
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<i128, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        text.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 /// The decision: the score, the branch and the permitted and chosen K.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -125,6 +141,10 @@ pub enum BudgetBranch {
 pub struct TrajectoryBudget {
     pub task_digest: String,
     pub scorer_digest: String,
+    /// The score in micro-units, exact 128-bit; it travels as a decimal string
+    /// because MessagePack carries no 128-bit integer.
+    #[serde(with = "i128_decimal")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub score_micro: i128,
     pub threshold_micro: i64,
     pub branch: BudgetBranch,
