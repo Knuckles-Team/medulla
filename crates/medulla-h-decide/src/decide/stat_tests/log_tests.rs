@@ -389,7 +389,11 @@ pub(super) async fn mixed_origin_aggregates_exclude_synthetic(
     real_request.params = BoundedVec::new(params).unwrap();
     let real = decide(h, real_request).await.unwrap().records.as_slice()[0].clone();
     assert!(!real.synthetic_evidence);
-    assert!(matches!(real.outcome, StatisticalOutcome::Explored { .. }));
+    assert!(
+        matches!(real.outcome, StatisticalOutcome::Explored { .. }),
+        "{:?}",
+        real.outcome
+    );
     assert_eq!(real.inputs.policy_digest, synthetic.inputs.policy_digest);
     let _: DecisionLogCommitted = decode(
         log_op(

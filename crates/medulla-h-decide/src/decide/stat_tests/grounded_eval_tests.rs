@@ -318,8 +318,10 @@ async fn grounded_evaluation_is_sealed_with_scorer_isolation() {
     let denied = submit_raw(&h, foreign).await.unwrap_err();
     assert!(denied.starts_with("ACCESS_DENIED"), "{denied}");
 
-    // Each kernel refusal code, with no receipt.
-    refuses_each_unscorable_input_without_a_receipt(&h).await;
+    // Each kernel refusal code, with no receipt. A fresh store: a revision the
+    // evaluation above already accepted pins its digest, so a changed set at
+    // that revision would be refused for its digest before the kernel runs.
+    refuses_each_unscorable_input_without_a_receipt(&Harness::new().await).await;
 }
 
 /// Every input the kernels refuse is a refused job with no receipt.
