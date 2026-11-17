@@ -36,7 +36,14 @@ feature-depth = 1
 # advisories — FAIL-CLOSED (RUSTSEC / OSV advisory database)
 # ─────────────────────────────────────────────────────────────────────────────
 [advisories]
-ignore = []
+# Unmaintained notices, not vulnerabilities. Each entry names the spec row that removes the
+# dependency; MEDULLA-CONTRACT-R064 deletes all four when the graph is clean.
+ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
+    { id = "RUSTSEC-2026-0559", reason = "chrono-tz-build unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
+    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # licenses — minimal/permissive for now (broad OSI-permissive allow-list)

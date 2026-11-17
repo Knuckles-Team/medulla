@@ -26,3 +26,11 @@
 - Finding: each wire type is expensive. The request flattens a method enum tagged with separate tag and params fields, so every type decodes through serde's buffered path, which is about half of the module. Each struct variant is decoded through `deserialize_any`, which compiles about 14 small error functions per type. The encoder compiles the `Serialize` code twice: once for the outer writer and once for the buffer it uses for collections of unknown length. Decoding already compiles one copy per type, the fewest serde allows here.
 - Finding: measured savings after `wasm-opt`. Encoding the canonical body with an owned `Vec` writer gives the same bytes and saves about 100 KB. A `wasm-opt --outlining` pass saves about 212 KB. Running `-Oz` twice, `--converge`, `--gufa`, `--merge-similar-functions` and `opt-level = "s"` gave no saving or a larger module.
 - Decision: both savings are adopted. On 2026-11-16 the owner set the budget to 14,000,000 bytes, from the measured size after `wasm-opt`. The budget may be lowered freely; it is raised only by an owner-approved change to MEDULLA-CONTRACT-R006. Removing wire surface or replacing serde for these types was rejected: the codec must decode every method exactly as the engine does.
+
+## Unmaintained date-time crates
+
+- Question: can the engine drop the four unmaintained date-time crates, and what replaces them?
+- Finding: the advisories are unmaintained notices, not vulnerabilities. The workspace itself uses date-time parsing in one place, the `xsd:date` and `xsd:dateTime` checks in `medulla-h-ingest`. Most of the graph reaches the crates through the columnar, lake, query, object-store and consensus libraries.
+- Finding: the capabilities needed are RFC 3339 parsing, civil dates, time zones from the system zone database, and friendly duration parsing. One maintained crate, `jiff`, covers all four.
+- Finding: removal is gated by third-party releases. Until each dependent ships a release without the crates, the ignore list stays non-empty and each entry expires within 90 days.
+- Decision: MEDULLA-CONTRACT-R064 records the debt, names the replacement and the removal rule, and ties each ignore to the row.

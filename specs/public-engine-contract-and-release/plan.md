@@ -60,9 +60,21 @@ Run Go commands from `clients/go` and npm commands from `clients/js`. The comple
 
 ## Phase 0: Research
 
-No unknowns.
+Five unknowns were resolved in [research.md](research.md): whether a release can be checked without trusting the build host (build twice, compare digests), whether every durable artifact is identified by a content digest (artifacts yes, graph facts no, by design), where the Go and JavaScript method-body vectors come from (generated at test time, not committed), what the method codec's size budget should be (14,000,000 bytes after `wasm-opt`), and whether the four unmaintained date-time crates can leave the dependency graph (yes, replaced by `jiff`, gated by third-party releases).
 
 ## Phase 1: Design
+
+### Pre-untangled design
+
+One line per answer.
+
+- **Owner.** Rust method and error declarations in `crates/medulla-capabilities` and `crates/medulla-types` own the public contract; `medulla-version` owns the release version; `.github/workflows/release.yml` and `scripts/check_wheel_completeness.py` own release checks. No other file declares a method, scope or error code.
+- **Cohesion.** Contract rows, release checks and dependency hygiene (R064) share one subject: what ships and what a client can rely on. Each lives with its owner above. Advisory policy sits in `.config/deny.toml` and `.config/cargo-audit-allow.txt` beside the rest of the build policy.
+- **Dependency direction.** Language projections (Python models, Go and JavaScript clients) point down to the Rust types and the method codec; the Rust types never import a projection. Lower contract crates do not depend on the root facade (see Current architecture boundaries).
+- **Interface depth.** One served catalog (`method_catalog()`) and one digest (`contract_catalog_digest`) for every consumer. Date-time handling narrows to one crate (`jiff`) once R064 closes.
+- **Special cases.** None per client or per platform. The only exception list is the advisory ignore list, each entry tied to R064 with an expiry within 90 days; it ends empty.
+- **State.** No contract file is stored; the catalog is computed at run time. The release build keeps no state beyond its pinned inputs. The advisory ledger is the one tracked list and is dated.
+- **Environment.** Builds read pinned inputs only: `rust-toolchain.toml`, `Cargo.lock`, `pyproject.toml`, `go.mod` and `package-lock.json`. Hosted CI runs from checked-in fixture recipes. `cargo deny` reads `.config/deny.toml` and no environment variable.
 
 ### Design decisions
 
@@ -205,6 +217,7 @@ No follow-on above asserts a passed test or changes a subsystem's acceptance in 
 4. **Package:** one `medulla` distribution per platform, with the server folded in (R053.x).
 5. **CI:** the full root Python suite, static gates and the feature matrix run in hosted CI (R009, R018, R037).
 6. **Split gates:** crate graph, build profiles and spec path checks (R056.x).
+7. **Dependency hygiene:** the workspace moves to one maintained date-time crate, and the four advisory ignores leave `.config/deny.toml` (R064).
 
 ## Complexity Tracking
 

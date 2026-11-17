@@ -15,3 +15,8 @@
 # Cargo.lock (see the W0.12 gate-proof report). Add a line here -- AND the
 # matching `[advisories].ignore` entry in .config/deny.toml -- only when a real
 # advisory has no released fix and the risk is genuinely accepted.
+
+RUSTSEC-2026-0543 expires=2027-02-10 # chrono unmaintained, not vulnerable; removal tracked by MEDULLA-CONTRACT-R064
+RUSTSEC-2026-0555 expires=2027-02-10 # chrono-tz unmaintained, not vulnerable; removal tracked by MEDULLA-CONTRACT-R064
+RUSTSEC-2026-0559 expires=2027-02-10 # chrono-tz-build unmaintained, not vulnerable; removal tracked by MEDULLA-CONTRACT-R064
+RUSTSEC-2026-0542 expires=2027-02-10 # humantime unmaintained, not vulnerable; removal tracked by MEDULLA-CONTRACT-R064
