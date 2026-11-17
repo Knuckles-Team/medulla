@@ -1194,6 +1194,7 @@ mod tests {
             max_result_rows: 0,
             max_traversal_visits: 1,
             max_series_work: 1,
+            ..medulla_exec::budget::Budget::default()
         });
         let mut live = request(Some(part(Some(4))));
         live.stop = Some(stop_request_part(None));

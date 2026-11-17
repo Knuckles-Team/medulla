@@ -180,19 +180,27 @@ impl ForeignReadSessions {
         self.reap_expired();
         if let Some(id) = submission_id.as_deref() {
             for entry in self.sessions.iter() {
-                let record = lock(entry.value())?;
+                let mut record = lock(entry.value())?;
                 if record.submission_id.as_deref() == Some(id)
                     && record.owner_scope == caller.owner_scope()
                     && record.effective_actor_scope == caller.effective_actor_scope()
-                    && record.state != SessionState::Aborted
-                    && self.check_expiry(&record).is_ok()
+                    && record.phase != ForeignReadPhase::Aborted
+                    && self.check_expiry(&mut record).is_ok()
                 {
                     return Ok(OpenedForeignRead {
                         execution: ForeignReadExecutionRef {
                             execution_id: *entry.key(),
                             query_digest: record.query_digest,
                         },
-                        expires_at_ms: record.expires_at_ms,
+                        expires_at_ms: now_ms().saturating_add(
+                            u64::try_from(
+                                record
+                                    .expires_at
+                                    .saturating_duration_since(Instant::now())
+                                    .as_millis(),
+                            )
+                            .unwrap_or(u64::MAX),
+                        ),
                         next_sequence: record.next_sequence,
                         source_identity: record.source_identity.clone(),
                         resumed: true,
