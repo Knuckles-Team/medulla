@@ -4454,6 +4454,297 @@
 
 :InstanceMachine_Active a :InstanceState ;
     rdfs:label "Instance Active" ;
+:MutationCommitMachine_BeforeRows a :MutationCommitState ;
+    rdfs:label "Mutation Commit BeforeRows" ;
+    :storedForm "before_rows" .
+
+:MutationCommitMachine_AfterRowsBeforeMetadata a :MutationCommitState ;
+    rdfs:label "Mutation Commit AfterRowsBeforeMetadata" ;
+    :storedForm "after_rows_before_metadata" .
+
+:MutationCommitMachine_BeforeCommit a :MutationCommitState ;
+    rdfs:label "Mutation Commit BeforeCommit" ;
+    :storedForm "before_commit" .
+
+:MutationCommitMachine_AfterCommitBeforeAck a :MutationCommitTerminalState ;
+    rdfs:label "Mutation Commit AfterCommitBeforeAck" ;
+    :storedForm "after_commit_before_ack" .
+
+:MutationCommitMachine_Event_RowsWritten a :MutationCommitEvent ;
+    rdfs:label "Mutation Commit RowsWritten" .
+
+:MutationCommitMachine_Event_MetadataStaged a :MutationCommitEvent ;
+    rdfs:label "Mutation Commit MetadataStaged" .
+
+:MutationCommitMachine_Event_Committed a :MutationCommitEvent ;
+    rdfs:label "Mutation Commit Committed" .
+
+:MutationCommitMachine_M01 a :MutationCommitTransition ;
+    rdfs:label "Mutation Commit M01" ;
+    :edgeId "M01" ;
+    :fromState :MutationCommitMachine_BeforeRows ;
+    :toState :MutationCommitMachine_AfterRowsBeforeMetadata ;
+    :firedBy :MutationCommitMachine_Event_RowsWritten .
+
+:MutationCommitMachine_M02 a :MutationCommitTransition ;
+    rdfs:label "Mutation Commit M02" ;
+    :edgeId "M02" ;
+    :fromState :MutationCommitMachine_AfterRowsBeforeMetadata ;
+    :toState :MutationCommitMachine_BeforeCommit ;
+    :firedBy :MutationCommitMachine_Event_MetadataStaged .
+
+:MutationCommitMachine_M03 a :MutationCommitTransition ;
+    rdfs:label "Mutation Commit M03" ;
+    :edgeId "M03" ;
+    :fromState :MutationCommitMachine_BeforeCommit ;
+    :toState :MutationCommitMachine_AfterCommitBeforeAck ;
+    :firedBy :MutationCommitMachine_Event_Committed .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.2
+# The Commit machine. The Rust edge table COMMIT_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:CommitState a owl:Class ;
+    rdfs:label "Commit State" ;
+    rdfs:comment "A state of the Commit machine." ;
+    rdfs:subClassOf :State .
+
+:CommitTerminalState a owl:Class ;
+    rdfs:label "Commit Terminal State" ;
+    rdfs:comment "A terminal state of the Commit machine." ;
+    rdfs:subClassOf :TerminalState, :CommitState .
+
+:CommitTransition a owl:Class ;
+    rdfs:label "Commit Transition" ;
+    rdfs:comment "A transition of the Commit machine." ;
+    rdfs:subClassOf :Transition .
+
+:CommitEvent a owl:Class ;
+    rdfs:label "Commit Event" ;
+    rdfs:comment "A event of the Commit machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:CommitGuard a owl:Class ;
+    rdfs:label "Commit Guard" ;
+    rdfs:comment "A guard of the Commit machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:CommitMachine a :StateMachine ;
+    rdfs:label "Commit machine" ;
+    :initialState :CommitMachine_Prepared ;
+    :hasState :CommitMachine_Prepared, :CommitMachine_Committed, :CommitMachine_Aborted, :CommitMachine_ReconcileRequired .
+
+:CommitMachine_Prepared a :CommitState ;
+    rdfs:label "Commit Prepared" ;
+    :storedForm "prepared" .
+
+:CommitMachine_Committed a :CommitState ;
+    rdfs:label "Commit Committed" ;
+    :storedForm "committed" .
+
+:CommitMachine_Aborted a :CommitTerminalState ;
+    rdfs:label "Commit Aborted" ;
+    :storedForm "aborted" .
+
+:CommitMachine_ReconcileRequired a :CommitState ;
+    rdfs:label "Commit ReconcileRequired" ;
+    :storedForm "reconcile_required" .
+
+:CommitMachine_Event_Publish a :CommitEvent ;
+    rdfs:label "Commit Publish" .
+
+:CommitMachine_Event_Abort a :CommitEvent ;
+    rdfs:label "Commit Abort" .
+
+:CommitMachine_Event_DigestUnconfirmed a :CommitEvent ;
+    rdfs:label "Commit DigestUnconfirmed" .
+
+:CommitMachine_Event_Reconcile a :CommitEvent ;
+    rdfs:label "Commit Reconcile" .
+
+:CommitMachine_C01 a :CommitTransition ;
+    rdfs:label "Commit C01" ;
+    :edgeId "C01" ;
+    :fromState :CommitMachine_Prepared ;
+    :toState :CommitMachine_Committed ;
+    :firedBy :CommitMachine_Event_Publish .
+
+:CommitMachine_C02 a :CommitTransition ;
+    rdfs:label "Commit C02" ;
+    :edgeId "C02" ;
+    :fromState :CommitMachine_Prepared ;
+    :toState :CommitMachine_Aborted ;
+    :firedBy :CommitMachine_Event_Abort .
+
+:CommitMachine_C03 a :CommitTransition ;
+    rdfs:label "Commit C03" ;
+    :edgeId "C03" ;
+    :fromState :CommitMachine_Committed ;
+    :toState :CommitMachine_ReconcileRequired ;
+    :firedBy :CommitMachine_Event_DigestUnconfirmed .
+
+:CommitMachine_C04 a :CommitTransition ;
+    rdfs:label "Commit C04" ;
+    :edgeId "C04" ;
+    :fromState :CommitMachine_ReconcileRequired ;
+    :toState :CommitMachine_Committed ;
+    :firedBy :CommitMachine_Event_Reconcile .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.4
+# The Direct State Install machine. The Rust edge table DIRECT_STATE_INSTALL_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:DirectStateInstallState a owl:Class ;
+    rdfs:label "Direct State Install State" ;
+    rdfs:comment "A state of the Direct State Install machine." ;
+    rdfs:subClassOf :State .
+
+:DirectStateInstallTerminalState a owl:Class ;
+    rdfs:label "Direct State Install Terminal State" ;
+    rdfs:comment "A terminal state of the Direct State Install machine." ;
+    rdfs:subClassOf :TerminalState, :DirectStateInstallState .
+
+:DirectStateInstallTransition a owl:Class ;
+    rdfs:label "Direct State Install Transition" ;
+    rdfs:comment "A transition of the Direct State Install machine." ;
+    rdfs:subClassOf :Transition .
+
+:DirectStateInstallEvent a owl:Class ;
+    rdfs:label "Direct State Install Event" ;
+    rdfs:comment "An event of the Direct State Install machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:DirectStateInstallGuard a owl:Class ;
+    rdfs:label "Direct State Install Guard" ;
+    rdfs:comment "A guard of the Direct State Install machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:DirectStateInstallMachine a :StateMachine ;
+    rdfs:label "Direct State Install machine" ;
+    :initialState :DirectStateInstallMachine_Prepared ;
+    :hasState :DirectStateInstallMachine_Prepared, :DirectStateInstallMachine_Published .
+
+:DirectStateInstallMachine_Prepared a :DirectStateInstallState ;
+    rdfs:label "Direct State Install Prepared" ;
+    :storedForm "prepared" .
+
+:DirectStateInstallMachine_Published a :DirectStateInstallTerminalState ;
+    rdfs:label "Direct State Install Published" ;
+    :storedForm "published" .
+
+:DirectStateInstallMachine_Event_Publish a :DirectStateInstallEvent ;
+    rdfs:label "Direct State Install Publish" .
+
+:DirectStateInstallMachine_D01 a :DirectStateInstallTransition ;
+    rdfs:label "Direct State Install D01" ;
+    :edgeId "D01" ;
+    :fromState :DirectStateInstallMachine_Prepared ;
+    :toState :DirectStateInstallMachine_Published ;
+    :firedBy :DirectStateInstallMachine_Event_Publish .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.6
+# The ExactRetirement machine. The Rust edge table EXACT_RETIREMENT_MACHINE is the same table.
+
+:ExactRetirementState a owl:Class ;
+    rdfs:label "ExactRetirement State" ;
+    rdfs:comment "A state of the ExactRetirement machine." ;
+    rdfs:subClassOf :State .
+
+:ExactRetirementTerminalState a owl:Class ;
+    rdfs:label "ExactRetirement TerminalState" ;
+    rdfs:comment "A terminal state of the ExactRetirement machine." ;
+    rdfs:subClassOf :TerminalState, :ExactRetirementState .
+
+:ExactRetirementTransition a owl:Class ;
+    rdfs:label "ExactRetirement Transition" ;
+    rdfs:comment "A transition of the ExactRetirement machine." ;
+    rdfs:subClassOf :Transition .
+
+:ExactRetirementEvent a owl:Class ;
+    rdfs:label "ExactRetirement Event" ;
+    rdfs:comment "An event of the ExactRetirement machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ExactRetirementGuard a owl:Class ;
+    rdfs:label "ExactRetirement Guard" ;
+    rdfs:comment "A guard of the ExactRetirement machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ExactRetirementMachine a :StateMachine ;
+    rdfs:label "ExactRetirement machine" ;
+    :initialState :ExactRetirementMachine_Live ;
+    :hasState :ExactRetirementMachine_Live, :ExactRetirementMachine_Quarantined, :ExactRetirementMachine_Unlinked .
+
+:ExactRetirementMachine_Live a :ExactRetirementState ;
+    rdfs:label "ExactRetirement Live" ;
+    :storedForm "live" .
+
+:ExactRetirementMachine_Quarantined a :ExactRetirementState ;
+    rdfs:label "ExactRetirement Quarantined" ;
+    :storedForm "quarantined" .
+
+:ExactRetirementMachine_Unlinked a :ExactRetirementTerminalState ;
+    rdfs:label "ExactRetirement Unlinked" ;
+    :storedForm "unlinked" .
+
+:ExactRetirementMachine_Event_Quarantine a :ExactRetirementEvent ;
+    rdfs:label "ExactRetirement Quarantine" .
+
+:ExactRetirementMachine_Event_Unlink a :ExactRetirementEvent ;
+    rdfs:label "ExactRetirement Unlink" .
+
+:ExactRetirementMachine_X01 a :ExactRetirementTransition ;
+    rdfs:label "ExactRetirement X01" ;
+    :edgeId "X01" ;
+    :fromState :ExactRetirementMachine_Live ;
+    :toState :ExactRetirementMachine_Quarantined ;
+    :firedBy :ExactRetirementMachine_Event_Quarantine .
+
+:ExactRetirementMachine_X02 a :ExactRetirementTransition ;
+    rdfs:label "ExactRetirement X02" ;
+    :edgeId "X02" ;
+    :fromState :ExactRetirementMachine_Quarantined ;
+    :toState :ExactRetirementMachine_Unlinked ;
+    :firedBy :ExactRetirementMachine_Event_Unlink .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.9
+# The ManagedIndex machine. The Rust edge table MANAGED_INDEX_MACHINE is the same table.
+
+:ManagedIndexState a owl:Class ;
+    rdfs:label "ManagedIndex State" ;
+    rdfs:comment "A state of the ManagedIndex machine." ;
+    rdfs:subClassOf :State .
+
+:ManagedIndexTerminalState a owl:Class ;
+    rdfs:label "ManagedIndex TerminalState" ;
+    rdfs:comment "A terminal state of the ManagedIndex machine." ;
+    rdfs:subClassOf :TerminalState, :ManagedIndexState .
+
+:ManagedIndexTransition a owl:Class ;
+    rdfs:label "ManagedIndex Transition" ;
+    rdfs:comment "A transition of the ManagedIndex machine." ;
+    rdfs:subClassOf :Transition .
+
+:ManagedIndexEvent a owl:Class ;
+    rdfs:label "ManagedIndex Event" ;
+    rdfs:comment "An event of the ManagedIndex machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ManagedIndexMachine a :StateMachine ;
+    rdfs:label "ManagedIndex machine" ;
+    :initialState :ManagedIndexMachine_Requested ;
+    :hasState :ManagedIndexMachine_Requested, :ManagedIndexMachine_Backfilling, :ManagedIndexMachine_Active, :ManagedIndexMachine_Blocked .
+
+:ManagedIndexMachine_Requested a :ManagedIndexState ;
+    rdfs:label "ManagedIndex Requested" ;
+    :storedForm "requested" .
+
+:ManagedIndexMachine_Backfilling a :ManagedIndexState ;
+    rdfs:label "ManagedIndex Backfilling" ;
+    :storedForm "backfilling" .
+
+:ManagedIndexMachine_Active a :ManagedIndexTerminalState ;
+    rdfs:label "ManagedIndex Active" ;
     :storedForm "active" .
 
 :InstanceMachine_Final a :InstanceState ;
@@ -5469,3 +5760,432 @@
     :fromState :TaskMachine_Done ;
     :toState :TaskMachine_Open ;
     :firedBy :TaskMachine_Event_Reopen .
+
+# spec: MEDULLA-DURABLE-KERNEL-R101.6
+# The DowntimePhase machine: whether a running downtime job works or is held back for
+# foreground activity. The Rust edge table `DowntimePhase::apply` is the same table.
+
+:DowntimePhaseState a owl:Class ;
+    rdfs:label "DowntimePhase State" ;
+    rdfs:comment "A state of the DowntimePhase machine." ;
+    rdfs:subClassOf :State .
+
+:DowntimePhaseTransition a owl:Class ;
+    rdfs:label "DowntimePhase Transition" ;
+    rdfs:comment "A transition of the DowntimePhase machine." ;
+    rdfs:subClassOf :Transition .
+
+:DowntimePhaseEvent a owl:Class ;
+    rdfs:label "DowntimePhase Event" ;
+    rdfs:comment "An event of the DowntimePhase machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:DowntimePhaseMachine a :StateMachine ;
+    rdfs:label "DowntimePhase machine" ;
+    :initialState :DowntimePhaseMachine_Working ;
+    :hasState :DowntimePhaseMachine_Working, :DowntimePhaseMachine_Paused .
+
+:DowntimePhaseMachine_Working a :DowntimePhaseState ;
+    rdfs:label "DowntimePhase Working" ;
+    :storedForm "downtime:working" .
+
+:DowntimePhaseMachine_Paused a :DowntimePhaseState ;
+    rdfs:label "DowntimePhase Paused" ;
+    :storedForm "downtime:paused" .
+
+:DowntimePhaseMachine_Event_Preempt a :DowntimePhaseEvent ;
+    rdfs:label "DowntimePhase Preempt" .
+
+:DowntimePhaseMachine_Event_Resume a :DowntimePhaseEvent ;
+    rdfs:label "DowntimePhase Resume" .
+
+:DowntimePhaseMachine_D01 a :DowntimePhaseTransition ;
+    rdfs:label "DowntimePhase D01" ;
+    :edgeId "D01" ;
+    :fromState :DowntimePhaseMachine_Working ;
+    :toState :DowntimePhaseMachine_Paused ;
+    :firedBy :DowntimePhaseMachine_Event_Preempt .
+
+:DowntimePhaseMachine_D02 a :DowntimePhaseTransition ;
+    rdfs:label "DowntimePhase D02" ;
+    :edgeId "D02" ;
+    :fromState :DowntimePhaseMachine_Paused ;
+    :toState :DowntimePhaseMachine_Working ;
+    :firedBy :DowntimePhaseMachine_Event_Resume .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.15
+# The ParticipantTransaction machine. The Rust edge table PARTICIPANT_TRANSACTION_MACHINE is the same table.
+:ParticipantTransactionState a owl:Class ;
+    rdfs:label "ParticipantTransaction State" ;
+    rdfs:comment "A state of the ParticipantTransaction machine." ;
+    rdfs:subClassOf :State .
+
+:ParticipantTransactionTerminalState a owl:Class ;
+    rdfs:label "ParticipantTransaction TerminalState" ;
+    rdfs:comment "A terminal state of the ParticipantTransaction machine." ;
+    rdfs:subClassOf :TerminalState, :ParticipantTransactionState .
+
+:ParticipantTransactionTransition a owl:Class ;
+    rdfs:label "ParticipantTransaction Transition" ;
+    rdfs:comment "A transition of the ParticipantTransaction machine." ;
+    rdfs:subClassOf :Transition .
+
+:ParticipantTransactionEvent a owl:Class ;
+    rdfs:label "ParticipantTransaction Event" ;
+    rdfs:comment "An event of the ParticipantTransaction machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ParticipantTransactionGuard a owl:Class ;
+    rdfs:label "ParticipantTransaction Guard" ;
+    rdfs:comment "A guard of the ParticipantTransaction machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ParticipantTransactionMachine a :StateMachine ;
+    rdfs:label "ParticipantTransaction machine" ;
+    :initialState :ParticipantTransactionMachine_Prepared ;
+    :hasState :ParticipantTransactionMachine_Prepared, :ParticipantTransactionMachine_ResolvedCommit, :ParticipantTransactionMachine_ResolvedAbort, :ParticipantTransactionMachine_CollectedCommit, :ParticipantTransactionMachine_CollectedAbort .
+
+:ParticipantTransactionMachine_Prepared a :ParticipantTransactionState ;
+    rdfs:label "ParticipantTransaction Prepared" ;
+    :storedForm "prepared" .
+
+:ParticipantTransactionMachine_ResolvedCommit a :ParticipantTransactionState ;
+    rdfs:label "ParticipantTransaction ResolvedCommit" ;
+    :storedForm "resolved_commit" .
+
+:ParticipantTransactionMachine_ResolvedAbort a :ParticipantTransactionState ;
+    rdfs:label "ParticipantTransaction ResolvedAbort" ;
+    :storedForm "resolved_abort" .
+
+:ParticipantTransactionMachine_CollectedCommit a :ParticipantTransactionTerminalState ;
+    rdfs:label "ParticipantTransaction CollectedCommit" ;
+    :storedForm "collected_commit" .
+
+:ParticipantTransactionMachine_CollectedAbort a :ParticipantTransactionTerminalState ;
+    rdfs:label "ParticipantTransaction CollectedAbort" ;
+    :storedForm "collected_abort" .
+
+:ParticipantTransactionMachine_Event_ResolveCommit a :ParticipantTransactionEvent ;
+    rdfs:label "ParticipantTransaction ResolveCommit" .
+
+:ParticipantTransactionMachine_Event_ResolveAbort a :ParticipantTransactionEvent ;
+    rdfs:label "ParticipantTransaction ResolveAbort" .
+
+:ParticipantTransactionMachine_Event_CollectCommit a :ParticipantTransactionEvent ;
+    rdfs:label "ParticipantTransaction CollectCommit" .
+
+:ParticipantTransactionMachine_Event_CollectAbort a :ParticipantTransactionEvent ;
+    rdfs:label "ParticipantTransaction CollectAbort" .
+
+:ParticipantTransactionMachine_E01 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction E01" ;
+    :edgeId "E01" ;
+    :fromState :ParticipantTransactionMachine_Prepared ;
+    :toState :ParticipantTransactionMachine_ResolvedCommit ;
+    :firedBy :ParticipantTransactionMachine_Event_ResolveCommit .
+
+:ParticipantTransactionMachine_E02 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction E02" ;
+    :edgeId "E02" ;
+    :fromState :ParticipantTransactionMachine_Prepared ;
+    :toState :ParticipantTransactionMachine_ResolvedAbort ;
+    :firedBy :ParticipantTransactionMachine_Event_ResolveAbort .
+
+:ParticipantTransactionMachine_E03 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction E03" ;
+    :edgeId "E03" ;
+    :fromState :ParticipantTransactionMachine_ResolvedCommit ;
+    :toState :ParticipantTransactionMachine_CollectedCommit ;
+    :firedBy :ParticipantTransactionMachine_Event_CollectCommit .
+
+:ParticipantTransactionMachine_E04 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction E04" ;
+    :edgeId "E04" ;
+    :fromState :ParticipantTransactionMachine_ResolvedAbort ;
+    :toState :ParticipantTransactionMachine_CollectedAbort ;
+    :firedBy :ParticipantTransactionMachine_Event_CollectAbort .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.16
+# The Projection machine. The Rust edge table PROJECTION_MACHINE is the same table.
+:ProjectionState a owl:Class ;
+    rdfs:label "Projection State" ;
+    rdfs:comment "A state of the Projection machine." ;
+    rdfs:subClassOf :State .
+
+:ProjectionTerminalState a owl:Class ;
+    rdfs:label "Projection TerminalState" ;
+    rdfs:comment "A terminal state of the Projection machine." ;
+    rdfs:subClassOf :TerminalState, :ProjectionState .
+
+:ProjectionTransition a owl:Class ;
+    rdfs:label "Projection Transition" ;
+    rdfs:comment "A transition of the Projection machine." ;
+    rdfs:subClassOf :Transition .
+
+:ProjectionEvent a owl:Class ;
+    rdfs:label "Projection Event" ;
+    rdfs:comment "An event of the Projection machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ProjectionGuard a owl:Class ;
+    rdfs:label "Projection Guard" ;
+    rdfs:comment "A guard of the Projection machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ProjectionMachine a :StateMachine ;
+    rdfs:label "Projection machine" ;
+    :initialState :ProjectionMachine_Ready ;
+    :hasState :ProjectionMachine_Ready, :ProjectionMachine_CatchingUp, :ProjectionMachine_Degraded .
+
+:ProjectionMachine_Ready a :ProjectionState ;
+    rdfs:label "Projection Ready" ;
+    :storedForm "ready" .
+
+:ProjectionMachine_CatchingUp a :ProjectionState ;
+    rdfs:label "Projection CatchingUp" ;
+    :storedForm "catching_up" .
+
+:ProjectionMachine_Degraded a :ProjectionState ;
+    rdfs:label "Projection Degraded" ;
+    :storedForm "degraded" .
+
+:ProjectionMachine_Event_Catch a :ProjectionEvent ;
+    rdfs:label "Projection Catch" .
+
+:ProjectionMachine_Event_Lag a :ProjectionEvent ;
+    rdfs:label "Projection Lag" .
+
+:ProjectionMachine_Event_Degrade a :ProjectionEvent ;
+    rdfs:label "Projection Degrade" .
+
+:ProjectionMachine_E01 a :ProjectionTransition ;
+    rdfs:label "Projection E01" ;
+    :edgeId "E01" ;
+    :fromState :ProjectionMachine_Ready ;
+    :toState :ProjectionMachine_Ready ;
+    :firedBy :ProjectionMachine_Event_Catch .
+
+:ProjectionMachine_E02 a :ProjectionTransition ;
+    rdfs:label "Projection E02" ;
+    :edgeId "E02" ;
+    :fromState :ProjectionMachine_CatchingUp ;
+    :toState :ProjectionMachine_Ready ;
+    :firedBy :ProjectionMachine_Event_Catch .
+
+:ProjectionMachine_E03 a :ProjectionTransition ;
+    rdfs:label "Projection E03" ;
+    :edgeId "E03" ;
+    :fromState :ProjectionMachine_Degraded ;
+    :toState :ProjectionMachine_Ready ;
+    :firedBy :ProjectionMachine_Event_Catch .
+
+:ProjectionMachine_E04 a :ProjectionTransition ;
+    rdfs:label "Projection E04" ;
+    :edgeId "E04" ;
+    :fromState :ProjectionMachine_Ready ;
+    :toState :ProjectionMachine_CatchingUp ;
+    :firedBy :ProjectionMachine_Event_Lag .
+
+:ProjectionMachine_E05 a :ProjectionTransition ;
+    rdfs:label "Projection E05" ;
+    :edgeId "E05" ;
+    :fromState :ProjectionMachine_CatchingUp ;
+    :toState :ProjectionMachine_CatchingUp ;
+    :firedBy :ProjectionMachine_Event_Lag .
+
+:ProjectionMachine_E06 a :ProjectionTransition ;
+    rdfs:label "Projection E06" ;
+    :edgeId "E06" ;
+    :fromState :ProjectionMachine_Degraded ;
+    :toState :ProjectionMachine_CatchingUp ;
+    :firedBy :ProjectionMachine_Event_Lag .
+
+:ProjectionMachine_E07 a :ProjectionTransition ;
+    rdfs:label "Projection E07" ;
+    :edgeId "E07" ;
+    :fromState :ProjectionMachine_Ready ;
+    :toState :ProjectionMachine_Degraded ;
+    :firedBy :ProjectionMachine_Event_Degrade .
+
+:ProjectionMachine_E08 a :ProjectionTransition ;
+    rdfs:label "Projection E08" ;
+    :edgeId "E08" ;
+    :fromState :ProjectionMachine_CatchingUp ;
+    :toState :ProjectionMachine_Degraded ;
+    :firedBy :ProjectionMachine_Event_Degrade .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.17
+# The SemanticSourceReconciliation machine. The Rust edge table SEMANTIC_SOURCE_RECONCILIATION_MACHINE is the same table.
+:SemanticSourceReconciliationState a owl:Class ;
+    rdfs:label "SemanticSourceReconciliation State" ;
+    rdfs:comment "A state of the SemanticSourceReconciliation machine." ;
+    rdfs:subClassOf :State .
+
+:SemanticSourceReconciliationTerminalState a owl:Class ;
+    rdfs:label "SemanticSourceReconciliation TerminalState" ;
+    rdfs:comment "A terminal state of the SemanticSourceReconciliation machine." ;
+    rdfs:subClassOf :TerminalState, :SemanticSourceReconciliationState .
+
+:SemanticSourceReconciliationTransition a owl:Class ;
+    rdfs:label "SemanticSourceReconciliation Transition" ;
+    rdfs:comment "A transition of the SemanticSourceReconciliation machine." ;
+    rdfs:subClassOf :Transition .
+
+:SemanticSourceReconciliationEvent a owl:Class ;
+    rdfs:label "SemanticSourceReconciliation Event" ;
+    rdfs:comment "An event of the SemanticSourceReconciliation machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SemanticSourceReconciliationGuard a owl:Class ;
+    rdfs:label "SemanticSourceReconciliation Guard" ;
+    rdfs:comment "A guard of the SemanticSourceReconciliation machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SemanticSourceReconciliationMachine a :StateMachine ;
+    rdfs:label "SemanticSourceReconciliation machine" ;
+    :initialState :SemanticSourceReconciliationMachine_Scanning ;
+    :hasState :SemanticSourceReconciliationMachine_Scanning, :SemanticSourceReconciliationMachine_FinalizingTombstones .
+
+:SemanticSourceReconciliationMachine_Scanning a :SemanticSourceReconciliationState ;
+    rdfs:label "SemanticSourceReconciliation Scanning" ;
+    :storedForm "scanning" .
+
+:SemanticSourceReconciliationMachine_FinalizingTombstones a :SemanticSourceReconciliationState ;
+    rdfs:label "SemanticSourceReconciliation FinalizingTombstones" ;
+    :storedForm "finalizing_tombstones" .
+
+:SemanticSourceReconciliationMachine_Event_AdvanceScan a :SemanticSourceReconciliationEvent ;
+    rdfs:label "SemanticSourceReconciliation AdvanceScan" .
+
+:SemanticSourceReconciliationMachine_Event_CompleteScan a :SemanticSourceReconciliationEvent ;
+    rdfs:label "SemanticSourceReconciliation CompleteScan" .
+
+:SemanticSourceReconciliationMachine_Event_PageTombstones a :SemanticSourceReconciliationEvent ;
+    rdfs:label "SemanticSourceReconciliation PageTombstones" .
+
+:SemanticSourceReconciliationMachine_E01 a :SemanticSourceReconciliationTransition ;
+    rdfs:label "SemanticSourceReconciliation E01" ;
+    :edgeId "E01" ;
+    :fromState :SemanticSourceReconciliationMachine_Scanning ;
+    :toState :SemanticSourceReconciliationMachine_Scanning ;
+    :firedBy :SemanticSourceReconciliationMachine_Event_AdvanceScan .
+
+:SemanticSourceReconciliationMachine_E02 a :SemanticSourceReconciliationTransition ;
+    rdfs:label "SemanticSourceReconciliation E02" ;
+    :edgeId "E02" ;
+    :fromState :SemanticSourceReconciliationMachine_Scanning ;
+    :toState :SemanticSourceReconciliationMachine_FinalizingTombstones ;
+    :firedBy :SemanticSourceReconciliationMachine_Event_CompleteScan .
+
+:SemanticSourceReconciliationMachine_E03 a :SemanticSourceReconciliationTransition ;
+    rdfs:label "SemanticSourceReconciliation E03" ;
+    :edgeId "E03" ;
+    :fromState :SemanticSourceReconciliationMachine_FinalizingTombstones ;
+    :toState :SemanticSourceReconciliationMachine_FinalizingTombstones ;
+    :firedBy :SemanticSourceReconciliationMachine_Event_PageTombstones .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.18
+# The Semantic machine. The Rust edge table SEMANTIC_MACHINE is the same table.
+:SemanticState a owl:Class ;
+    rdfs:label "Semantic State" ;
+    rdfs:comment "A state of the Semantic machine." ;
+    rdfs:subClassOf :State .
+
+:SemanticTerminalState a owl:Class ;
+    rdfs:label "Semantic TerminalState" ;
+    rdfs:comment "A terminal state of the Semantic machine." ;
+    rdfs:subClassOf :TerminalState, :SemanticState .
+
+:SemanticTransition a owl:Class ;
+    rdfs:label "Semantic Transition" ;
+    rdfs:comment "A transition of the Semantic machine." ;
+    rdfs:subClassOf :Transition .
+
+:SemanticEvent a owl:Class ;
+    rdfs:label "Semantic Event" ;
+    rdfs:comment "An event of the Semantic machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SemanticGuard a owl:Class ;
+    rdfs:label "Semantic Guard" ;
+    rdfs:comment "A guard of the Semantic machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SemanticMachine a :StateMachine ;
+    rdfs:label "Semantic machine" ;
+    :initialState :SemanticMachine_SourceCommit ;
+    :hasState :SemanticMachine_SourceCommit, :SemanticMachine_GraphProjection, :SemanticMachine_LexicalIndex, :SemanticMachine_Vector, :SemanticMachine_AnnIndex, :SemanticMachine_ReconcileAndActivate .
+
+:SemanticMachine_SourceCommit a :SemanticState ;
+    rdfs:label "Semantic SourceCommit" ;
+    :storedForm "S1" .
+
+:SemanticMachine_GraphProjection a :SemanticState ;
+    rdfs:label "Semantic GraphProjection" ;
+    :storedForm "S2" .
+
+:SemanticMachine_LexicalIndex a :SemanticState ;
+    rdfs:label "Semantic LexicalIndex" ;
+    :storedForm "S3" .
+
+:SemanticMachine_Vector a :SemanticState ;
+    rdfs:label "Semantic Vector" ;
+    :storedForm "S4" .
+
+:SemanticMachine_AnnIndex a :SemanticState ;
+    rdfs:label "Semantic AnnIndex" ;
+    :storedForm "S5" .
+
+:SemanticMachine_ReconcileAndActivate a :SemanticTerminalState ;
+    rdfs:label "Semantic ReconcileAndActivate" ;
+    :storedForm "S6" .
+
+:SemanticMachine_Event_ProjectGraph a :SemanticEvent ;
+    rdfs:label "Semantic ProjectGraph" .
+
+:SemanticMachine_Event_IndexLexical a :SemanticEvent ;
+    rdfs:label "Semantic IndexLexical" .
+
+:SemanticMachine_Event_EmbedVectors a :SemanticEvent ;
+    rdfs:label "Semantic EmbedVectors" .
+
+:SemanticMachine_Event_BuildAnn a :SemanticEvent ;
+    rdfs:label "Semantic BuildAnn" .
+
+:SemanticMachine_Event_ReconcileAndActivate a :SemanticEvent ;
+    rdfs:label "Semantic ReconcileAndActivate" .
+
+:SemanticMachine_E01 a :SemanticTransition ;
+    rdfs:label "Semantic E01" ;
+    :edgeId "E01" ;
+    :fromState :SemanticMachine_SourceCommit ;
+    :toState :SemanticMachine_GraphProjection ;
+    :firedBy :SemanticMachine_Event_ProjectGraph .
+
+:SemanticMachine_E02 a :SemanticTransition ;
+    rdfs:label "Semantic E02" ;
+    :edgeId "E02" ;
+    :fromState :SemanticMachine_GraphProjection ;
+    :toState :SemanticMachine_LexicalIndex ;
+    :firedBy :SemanticMachine_Event_IndexLexical .
+
+:SemanticMachine_E03 a :SemanticTransition ;
+    rdfs:label "Semantic E03" ;
+    :edgeId "E03" ;
+    :fromState :SemanticMachine_LexicalIndex ;
+    :toState :SemanticMachine_Vector ;
+    :firedBy :SemanticMachine_Event_EmbedVectors .
+
+:SemanticMachine_E04 a :SemanticTransition ;
+    rdfs:label "Semantic E04" ;
+    :edgeId "E04" ;
+    :fromState :SemanticMachine_Vector ;
+    :toState :SemanticMachine_AnnIndex ;
+    :firedBy :SemanticMachine_Event_BuildAnn .
+
+:SemanticMachine_E05 a :SemanticTransition ;
+    rdfs:label "Semantic E05" ;
+    :edgeId "E05" ;
+    :fromState :SemanticMachine_AnnIndex ;
+    :toState :SemanticMachine_ReconcileAndActivate ;
+    :firedBy :SemanticMachine_Event_ReconcileAndActivate .
