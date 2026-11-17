@@ -551,10 +551,12 @@ async fn state_budget_spills_then_demotes_and_answers_stay_correct() {
     assert_eq!(demoted.len(), 1);
     assert_eq!(demoted[0].mode, ViewMode::Recompute);
 
-    for (_, view, _) in BUDGET_SEED.iter() {
+    // Each drop is its own operation, so each carries its own request id: a reused id
+    // is the same idempotency key and the second drop would refuse as a conflict.
+    for (n, (_, view, _)) in BUDGET_SEED.iter().enumerate() {
         let dropped = Method::PlanMatViewDrop {
             name: (*view).into(),
         };
-        send_in(&state, "r007_5_graph_a", 10_000, dropped).await;
+        send_in(&state, "r007_5_graph_a", 10_000 + n as u64, dropped).await;
     }
 }
