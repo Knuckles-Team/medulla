@@ -1223,9 +1223,12 @@ async fn stop_precedence_follows_the_declared_order() {
         result.stop.expect("stop verdict").reason,
         StopReason::ContinueAnswerChanged
     );
+    // Round 2 of 4 is below the evidence floor and short of its limit, so the repair is
+    // the declared order's second step (R081.2: BoostK at round 1, SwitchMode at round 2).
     assert!(matches!(
         result.sufficiency.expect("sufficiency").repair,
-        medulla_result_types::retrieval_verdict::RepairStep::BoostK { .. }
+        medulla_result_types::retrieval_verdict::RepairStep::SwitchMode { ref mode }
+            if mode == "extractive"
     ));
     // A round past the limit is a malformed continuation, not a quiet stop.
     let beyond = stop_part(calibration(&[9]), vec![]);
