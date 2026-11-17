@@ -92,6 +92,7 @@ async fn read_rows(
             Method::ForeignReadOpen {
                 request: ForeignReadOpenRequest {
                     schema_version: FOREIGN_READ_SCHEMA_VERSION,
+                    submission: None,
                     source_name: source_name.to_string(),
                     approval: approval.clone(),
                     plan_digest,
@@ -158,6 +159,7 @@ async fn read_rows(
                 foreign_execution: Some(opened.execution),
                 foreign_executions: Default::default(),
                 code_map: None,
+                source_plan: None,
             },
         )
         .await;

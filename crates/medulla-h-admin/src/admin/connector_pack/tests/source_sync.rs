@@ -315,6 +315,7 @@ impl Harness {
                     Method::ForeignReadOpen {
                         request: ForeignReadOpenRequest {
                             schema_version: FOREIGN_READ_SCHEMA_VERSION,
+                            submission: None,
                             source_name: self.source_name.clone(),
                             approval: self.approved.clone(),
                             plan_digest: digest,
