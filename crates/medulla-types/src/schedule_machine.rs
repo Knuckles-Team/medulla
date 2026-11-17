@@ -42,8 +42,8 @@ pub enum ScheduleEvent {
 impl MachineEvent for ScheduleEvent {
     fn name(self) -> &'static str {
         match self {
-            Self::Pause => "pause",
-            Self::Resume => "resume",
+            Self::Pause => "Pause",
+            Self::Resume => "Resume",
         }
     }
 }
