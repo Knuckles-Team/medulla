@@ -84,6 +84,14 @@ pub struct MetastoreFunc {
     scope: Option<Arc<HiveScope>>,
 }
 
+impl std::fmt::Debug for MetastoreFunc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MetastoreFunc")
+            .field("bound", &self.scope.is_some())
+            .finish()
+    }
+}
+
 impl MetastoreFunc {
     pub fn new(scope: Option<Arc<HiveScope>>) -> Self {
         Self { scope }
@@ -364,44 +372,49 @@ impl TableProvider for HiveTableProvider {
             .map(|f| f.name().clone())
             .filter(|name| !self.is_key(name))
             .collect();
-        let orc = OrcFiles {
-            bytes: self.source.bytes.as_ref(),
-            predicates: pushed
-                .iter()
-                .filter_map(|e| self.stripe_predicate(e))
-                .collect(),
-            projection: columns.clone(),
-        };
-        // MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3: an Avro table reads in the metastore's reader
-        // schema; it has no stripe statistics, so only partition pruning skips files.
-        let avro = AvroFiles {
-            bytes: self.source.bytes.as_ref(),
-            reader_schema: self.description.columns.clone(),
-            projection: columns,
-        };
-        let (files, data): (&dyn RowFileSource, &dyn DataFileSource) =
-            match self.description.format {
-                LakeFileFormat::Avro => (&avro, &avro),
-                _ => (&orc, &orc),
+        // The scan borrows the source's ports, which are not `Sync`; finish it before the
+        // await below so no borrow lives across it.
+        let batches = {
+            let orc = OrcFiles {
+                bytes: self.source.bytes.as_ref(),
+                predicates: pushed
+                    .iter()
+                    .filter_map(|e| self.stripe_predicate(e))
+                    .collect(),
+                projection: columns.clone(),
             };
-        let provider = MetastoreTableProvider {
-            client: self.source.client.as_ref(),
-            files: data,
-            source_label: self.source.label.clone(),
-            database: self.database.clone(),
-            table: self.table.clone(),
-            limits: self.source.limits,
-        };
-        let scanned = provider
-            .scan_rows(&partition_filter(&partition_predicates), files)
-            .map_err(refusal)?;
-        self.scope.record(scanned.receipt);
-        let mut batches = Vec::new();
-        for partition in &scanned.partitions {
-            for batch in &partition.batches {
-                batches.push(self.shape(batch, &partition.values, &projected)?);
+            // MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3: an Avro table reads in the metastore's reader
+            // schema; it has no stripe statistics, so only partition pruning skips files.
+            let avro = AvroFiles {
+                bytes: self.source.bytes.as_ref(),
+                reader_schema: self.description.columns.clone(),
+                projection: columns,
+            };
+            let (files, data): (&dyn RowFileSource, &dyn DataFileSource) =
+                match self.description.format {
+                    LakeFileFormat::Avro => (&avro, &avro),
+                    _ => (&orc, &orc),
+                };
+            let provider = MetastoreTableProvider {
+                client: self.source.client.as_ref(),
+                files: data,
+                source_label: self.source.label.clone(),
+                database: self.database.clone(),
+                table: self.table.clone(),
+                limits: self.source.limits,
+            };
+            let scanned = provider
+                .scan_rows(&partition_filter(&partition_predicates), files)
+                .map_err(refusal)?;
+            self.scope.record(scanned.receipt);
+            let mut batches = Vec::new();
+            for partition in &scanned.partitions {
+                for batch in &partition.batches {
+                    batches.push(self.shape(batch, &partition.values, &projected)?);
+                }
             }
-        }
+            batches
+        };
         let mem = MemTable::try_new(projected, vec![batches])?;
         let read_limit = if pushed.is_empty() { limit } else { None };
         mem.scan(state, None, &[], read_limit).await
