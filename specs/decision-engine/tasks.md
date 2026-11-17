@@ -284,7 +284,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score
 - [ ] T274 [US4] MEDULLA-DECISION-ENGINE-R100.101.3 Grounded evaluation wiring, scorer isolation and evidence
 - [x] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
-- [ ] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
+- [x] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
 - [x] T277 [US1] MEDULLA-DECISION-ENGINE-R001.101.1 DecisionFamily trait and registry
 - [ ] T278 [US1] MEDULLA-DECISION-ENGINE-R001.101.2 Route decide_blocking through the registry
 - [ ] T279 [US1] MEDULLA-DECISION-ENGINE-R001.101.3 Route AgentAssemble and DecideText through the registry

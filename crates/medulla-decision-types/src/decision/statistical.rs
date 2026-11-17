@@ -459,6 +459,9 @@ pub enum TypedValue {
     LoadSet(Box<super::load_set::LoadSetQuestion>),
     /// A plan to admit against the architecture view (MEDULLA-DECISION-ENGINE-R171.3).
     PlanningAdmission(Box<super::planning_admission::PlanningAdmissionRequest>),
+    /// The caller's measurements of the policy's safety bounds, read from the
+    /// param `safety.measurements` (MEDULLA-DECISION-ENGINE-R001.100.2).
+    SafetyMeasurements(BoundedVec<super::safety::SafetyMeasurement, 32>),
     /// One trajectory decision of a task plan (MEDULLA-DECISION-ENGINE-R140.104).
     Trajectory(Box<super::task_plan::trajectory::TrajectoryQuery>),
 }

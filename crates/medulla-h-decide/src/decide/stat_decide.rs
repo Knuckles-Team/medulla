@@ -509,6 +509,12 @@ pub(super) fn decide_blocking(
             executed,
         )
     })?;
+    // The policy's safety bounds are checked after the decision concludes and
+    // before it is sealed (MEDULLA-DECISION-ENGINE-R001.100.2).
+    let (executed, safety_premises) =
+        super::safety_stage::apply(request, &policy.policy, ctx.now_ms, executed)?;
+    let mut trajectory_premises = trajectory_premises;
+    trajectory_premises.extend(safety_premises);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;

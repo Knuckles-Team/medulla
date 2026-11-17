@@ -1295,6 +1295,7 @@ mod population_tests;
 mod research_voi_tests;
 mod reward_decomposition_tests;
 mod step_verification_tests;
+mod safety_bound_tests;
 mod trajectory_join_tests;
 // MEDULLA-DECISION-ENGINE-R703.3: skill gaps, neologisms and merges, served.
 mod skill_evolution_tests;

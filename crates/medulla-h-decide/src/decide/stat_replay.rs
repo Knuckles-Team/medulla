@@ -427,6 +427,12 @@ fn replay_family_conclusion(
         &policy.digest,
         concluded,
     )?;
+    let (replayed, _) = super::safety_stage::apply(
+        &request,
+        &policy.policy,
+        record.created_at_ms,
+        replayed,
+    )?;
     if replayed.ladder.outcome != record.outcome {
         return Err(mismatch(
             "re-running the family conclusion on its stored inputs gives another answer",
@@ -507,6 +513,13 @@ pub(super) fn replay_with_view(
     } else {
         replayed
     };
+    // The safety bounds withheld or passed the original at its own instant.
+    let (replayed, _) = super::safety_stage::apply(
+        &replay_request(record),
+        &policy.policy,
+        record.created_at_ms,
+        replayed,
+    )?;
     let explanation = recorded_explanation(&pinned, &replayed)? == record.explanation;
     let belief =
         points(&pinned, inputs.belief_slices.as_slice(), options)? == record.belief.as_slice();

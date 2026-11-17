@@ -94,6 +94,9 @@ mod stat_proposals;
 mod stat_ranking_eval;
 #[cfg(feature = "decide")]
 mod stat_replay;
+// MEDULLA-DECISION-ENGINE-R001.100.2: the served safety bound stage.
+#[cfg(feature = "decide")]
+mod safety_stage;
 #[cfg(feature = "decide")]
 mod stat_resolve;
 #[cfg(feature = "decide")]

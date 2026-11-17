@@ -70,6 +70,7 @@ pub fn policy(cold_start: ColdStart) -> DecisionPolicy {
         topology: None,
         reasoning: std::collections::BTreeMap::new(),
         knobs: Default::default(),
+        safety_bounds: Default::default(),
     }
 }
 

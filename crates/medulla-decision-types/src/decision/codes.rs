@@ -625,6 +625,7 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
         ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),
+        ("safety", super::safety::REFUSALS.to_vec()),
         (
             "delegation_quality",
             super::delegation_quality::REFUSALS.to_vec(),

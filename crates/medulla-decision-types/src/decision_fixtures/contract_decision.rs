@@ -61,6 +61,7 @@ pub fn policy() -> DecisionPolicy {
         topology: None,
         reasoning: std::collections::BTreeMap::new(),
         knobs: Default::default(),
+        safety_bounds: Default::default(),
     }
 }
 

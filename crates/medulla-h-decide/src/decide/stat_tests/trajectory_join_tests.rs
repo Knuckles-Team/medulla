@@ -10,7 +10,7 @@ use super::*;
 use medulla_decision_types::decision::trajectory_verdict::{JoinRequest, TrajectoryEntry};
 use medulla_decision_types::decision::ResolutionKind;
 
-fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
+pub(super) fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
     TrajectoryEntry::new(
         id.to_string(),
         evidence,
@@ -23,7 +23,7 @@ fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
     .unwrap()
 }
 
-fn join(schema: &ComponentDependency, entries: Vec<TrajectoryEntry>) -> DecideRequest {
+pub(super) fn join(schema: &ComponentDependency, entries: Vec<TrajectoryEntry>) -> DecideRequest {
     let mut ids: Vec<String> = entries.iter().map(|e| e.trajectory_id.clone()).collect();
     ids.sort();
     // A request declares at most `MAX_DECLARED_OPTIONS` candidates; an oversize

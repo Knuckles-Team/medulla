@@ -185,6 +185,11 @@ pub struct DecisionPolicy {
     /// spec default. Empty keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub knobs: BTreeMap<KnobName, KnobValue>,
+    /// Pinned safety limits checked after a decision concludes and before it is
+    /// sealed (MEDULLA-DECISION-ENGINE-R001.100.2). Empty checks nothing, is
+    /// omitted from the wire and keeps an existing policy's digest.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub safety_bounds: BoundedVec<super::safety::SafetyBound, 32>,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:
@@ -242,6 +247,7 @@ impl DecisionPolicy {
             topology: None,
             reasoning: std::collections::BTreeMap::new(),
             knobs: BTreeMap::new(),
+            safety_bounds: BoundedVec::default(),
         }
     }
 
