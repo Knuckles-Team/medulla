@@ -156,12 +156,13 @@
     "request": {
       "method": "Consolidate",
       "params": {
+        "admit_receipt_digests": [],
         "episodic_ids": [],
         "semantic_props_msgpack": []
       }
     },
     "result": "",
-    "sha256": "4ac97b99218c85cd4b0ebd865d5853a5c6816920c2cdbd4e6ce32698cb2b9432"
+    "sha256": "9b4511b1838998a3ef1fb35a03dabd3895eb211378c2410c3ca9cf70a290b08a"
   },
   {
     "method": "ContextFacts",
@@ -305,11 +306,12 @@
       "params": {
         "delete": false,
         "ids": [],
+        "tenant": "",
         "threshold": 0.0
       }
     },
     "result": [],
-    "sha256": "53852131ee5d346a3a878bc94f5af057cb051f74cbf8894914ebdffc95e4835e"
+    "sha256": "179a4471c76fe23004613c9a5827932bc1dc42d4b9330957b5bf7d170c97c451"
   },
   {
     "method": "EvictLRU",
@@ -624,14 +626,15 @@
         "evict_threshold": 0.0,
         "half_life_ms": 0,
         "ids": [],
-        "now_ms": 0
+        "now_ms": 0,
+        "tenant": ""
       }
     },
     "result": [
       0,
       []
     ],
-    "sha256": "26269b10f02ec4b9fb257a37b3a4ef971e895480cff0b489959bcb7080679c4a"
+    "sha256": "0571fbb2650d03b14d38b1187b694c0a93a35bd6b4a1022a356d103b7e30936a"
   },
   {
     "method": "Metrics",
@@ -854,13 +857,14 @@
     "request": {
       "method": "Reinforce",
       "params": {
+        "cap": 0.0,
         "node_id": "",
         "now_ms": 0,
         "weight": 0.0
       }
     },
     "result": false,
-    "sha256": "f0186f1e1b4e70d1beffc676fb96bf83889fd06eb3ad1ce9e406fb4c178c2309"
+    "sha256": "14b155e5a98be6dcdc2c66c7b9a557cece65f7561aa261a69f18737711143126"
   },
   {
     "method": "RemoveEdge",

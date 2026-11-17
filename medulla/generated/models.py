@@ -17886,6 +17886,7 @@ class MethodRegisterUdfParams(BaseModel):
 class MethodReinforceParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    cap: float | None = None
     node_id: str
     now_ms: Annotated[int, Field(ge=0)]
     weight: float
@@ -31729,6 +31730,7 @@ class BatchOperationGetNodeProperties(BaseModel):
 class BatchOperationReinforce(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    cap: float | None = None
     node_id: str
     now_ms: Annotated[int, Field(ge=0)]
     op: Literal["Reinforce"]
