@@ -153,7 +153,7 @@ impl SemanticCodeStore {
         let receipt = StageReceipt {
             binding_id: self.binding.clone(),
             generation,
-            stage,
+            probe_point: stage,
             modality,
             recall,
             measured_at_ms: now_ms,
