@@ -48,7 +48,7 @@ fn activate(request: &DecideRequest, policy: &DecisionPolicy) -> Result<Executed
     .map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.detail))?;
     let mut executed = advisory(vec![answer.to_string()])?;
     executed.family_premises = vec![FamilyPremise {
-        subject: "serving_technique",
+        subject: "serving_technique".into(),
         fact: format!("receipts:{}", receipts.len()),
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.receipts"),

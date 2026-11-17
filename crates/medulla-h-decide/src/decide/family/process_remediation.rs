@@ -76,7 +76,7 @@ fn remediate(
         .map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.detail))?;
     let mut executed = advisory(vec![answer.option_id().to_string()])?;
     executed.family_premises = vec![FamilyPremise {
-        subject: "process_remediation",
+        subject: "process_remediation".into(),
         fact: format!("liveness:cpu_ms={cpu}:output_bytes={output}"),
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.last_progress_ms"),

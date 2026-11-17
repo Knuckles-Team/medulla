@@ -181,13 +181,13 @@ fn conclude_adjustment(
                 .map(|run| run.run_id.clone())
                 .unwrap_or_default();
             let counted = |subject: &'static str, fact: String| FamilyPremise {
-                subject,
+                subject: subject.into(),
                 fact,
                 class: PremiseClass::Observation,
                 source: FamilyPremiseSource::Observation(newest.clone()),
             };
             let stated = |subject: &'static str, fact: String, field: &'static str| FamilyPremise {
-                subject,
+                subject: subject.into(),
                 fact,
                 class: PremiseClass::Claim,
                 source: FamilyPremiseSource::Request(field),

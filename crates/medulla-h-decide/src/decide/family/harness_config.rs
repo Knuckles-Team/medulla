@@ -1205,6 +1205,7 @@ pub(crate) fn replay(
         params: record.inputs.params.clone(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: record.inputs.evidence_streams.clone(),
     };
     let mut body = request_body(&request)?;
     let applied = match (body.assistant_profile_ref.is_some(), ctx.assistant_profile) {

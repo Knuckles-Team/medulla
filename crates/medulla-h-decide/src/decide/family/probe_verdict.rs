@@ -130,7 +130,7 @@ fn conclude_probe(
         })?;
     // The attack and each transform are definitions the verdict rests on.
     let mut premises = vec![FamilyPremise {
-        subject: "probe_verdict",
+        subject: "probe_verdict".into(),
         fact: format!("attack:{}", attack.component_id),
         class: PremiseClass::Definition,
         source: FamilyPremiseSource::Publisher {
@@ -146,7 +146,7 @@ fn conclude_probe(
         RedTeamTransform::from_attributes(&entry.component_id, &entry.attributes)
             .map_err(invalid)?;
         premises.push(FamilyPremise {
-            subject: "probe_verdict",
+            subject: "probe_verdict".into(),
             fact: format!("transform:{}", entry.component_id),
             class: PremiseClass::Definition,
             source: FamilyPremiseSource::Publisher {
@@ -192,7 +192,7 @@ fn conclude_probe(
             }));
         }
         premises.push(FamilyPremise {
-            subject: "probe_verdict",
+            subject: "probe_verdict".into(),
             fact: match given {
                 Some(value) => format!(
                     "scorer:{};score_permille={value};threshold_permille={}",

@@ -193,9 +193,9 @@ fn preferred_option(request: &DecideRequest) -> Result<Option<String>, String> {
 fn preference_premise(option_id: &str, honoured: bool) -> FamilyPremise {
     FamilyPremise {
         subject: if honoured {
-            "route_preference"
+            "route_preference".into()
         } else {
-            PREFERENCE_NOT_LEGAL.as_str()
+            PREFERENCE_NOT_LEGAL.as_str().into()
         },
         fact: format!(
             "{}{option_id}",
@@ -212,7 +212,7 @@ fn preference_premise(option_id: &str, honoured: bool) -> FamilyPremise {
 
 fn observed_cost_premise(option_id: &str, cost: u64) -> FamilyPremise {
     FamilyPremise {
-        subject: "observed_cost",
+        subject: "observed_cost".into(),
         fact: format!("{OBSERVED_COST_FACT}{option_id}={cost}"),
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Observation(format!("usage_ledger:{option_id}")),

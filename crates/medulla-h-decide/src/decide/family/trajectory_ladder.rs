@@ -66,7 +66,7 @@ fn ladder(request: &DecideRequest) -> Result<TrajectoryLadderRequest, String> {
 
 fn claim(fact: String, class: PremiseClass) -> FamilyPremise {
     FamilyPremise {
-        subject: "trajectory_ladder",
+        subject: "trajectory_ladder".into(),
         fact,
         class,
         source: FamilyPremiseSource::Request(PARAM_LADDER),

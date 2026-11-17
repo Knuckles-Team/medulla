@@ -49,7 +49,7 @@ fn shortfall(request: &DecideRequest) -> Result<Executed, String> {
     );
     let mut executed = advisory(ids)?;
     executed.family_premises = vec![FamilyPremise {
-        subject: "ingest_shortfall",
+        subject: "ingest_shortfall".into(),
         fact: window_fact(&window),
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params.window"),

@@ -234,7 +234,7 @@ fn cited_traces(traces: &BTreeMap<String, Vec<String>>, keys: &[&str]) -> Vec<St
 /// rests on.
 fn candidate_premise(option_id: &str, cited: &[String]) -> FamilyPremise {
     FamilyPremise {
-        subject: "skill_evolution",
+        subject: "skill_evolution".into(),
         fact: format!("candidate:{option_id}:traces={}", cited.join(",")),
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request(PARAM_CANDIDATE_TRACES),
@@ -301,7 +301,7 @@ fn evolve(
         premises.push(candidate_premise(&option_id, &cited));
         options.push((option_id, FULL_SCORE));
         premises.push(FamilyPremise {
-            subject: "skill_evolution",
+            subject: "skill_evolution".into(),
             fact: format!("gap:{}:{}", gap.skill_id, gap.requested_by_runs),
             class: PremiseClass::Claim,
             source: FamilyPremiseSource::Request(PARAM_REQUESTED_SKILLS),
@@ -317,7 +317,7 @@ fn evolve(
             _ => neologism.term.clone(),
         };
         premises.push(FamilyPremise {
-            subject: "skill_evolution",
+            subject: "skill_evolution".into(),
             fact: format!("unresolved_capability_iri:{iri}:{}", neologism.uses),
             class: PremiseClass::Claim,
             source: FamilyPremiseSource::Request(PARAM_USED_TERMS),
@@ -334,7 +334,7 @@ fn evolve(
             }
             if let Some(entry) = read.entries.iter().find(|e| &e.component_id == id) {
                 premises.push(FamilyPremise {
-                    subject: "skill_evolution",
+                    subject: "skill_evolution".into(),
                     fact: format!("library:{}", entry.component_id),
                     class: PremiseClass::Definition,
                     source: FamilyPremiseSource::Publisher {

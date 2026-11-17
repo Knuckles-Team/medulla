@@ -154,7 +154,7 @@ fn conclude_preference(
         let id = item.path_id.as_str();
         let cited = latest.get(id).cloned().unwrap_or_default();
         let observed = |subject: &'static str, fact: String| FamilyPremise {
-            subject,
+            subject: subject.into(),
             fact,
             class: PremiseClass::Observation,
             source: FamilyPremiseSource::Observation(cited.clone()),
@@ -182,7 +182,7 @@ fn conclude_preference(
     }
     for (id, code, _) in &eliminated {
         premises.push(FamilyPremise {
-            subject: "path_eliminated",
+            subject: "path_eliminated".into(),
             fact: format!("path:eliminated={code} path_id={id}"),
             class: PremiseClass::Proof,
             source: FamilyPremiseSource::Request("candidates"),

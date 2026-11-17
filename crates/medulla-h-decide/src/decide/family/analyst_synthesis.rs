@@ -47,7 +47,7 @@ fn expected_plan(request: &DecideRequest) -> Result<&str, String> {
 
 fn claim(fact: String) -> FamilyPremise {
     FamilyPremise {
-        subject: "analyst_synthesis",
+        subject: "analyst_synthesis".into(),
         fact,
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request(PARAM_SYNTHESIS),

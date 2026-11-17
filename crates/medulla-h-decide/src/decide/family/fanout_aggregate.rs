@@ -101,7 +101,7 @@ fn premises(
     let mut out = Vec::new();
     for result in body.results.iter() {
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "fanout_result:task={};status={};receipt={}",
                 result.task_id,
@@ -114,7 +114,7 @@ fn premises(
     }
     for entry in &aggregate.entries {
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "fanout_entry:task={};status={};value={}",
                 entry.task_id,
@@ -128,14 +128,14 @@ fn premises(
     if let Some(account) = &aggregate.summaries {
         for (task, digest, tokens) in &account.children {
             out.push(FamilyPremise {
-                subject: "fanout",
+                subject: "fanout".into(),
                 fact: format!("child_summary:child={task};digest={digest};tokens={tokens}"),
                 class: PremiseClass::Claim,
                 source: FamilyPremiseSource::Request("params.fanout"),
             });
         }
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "summary_budget:plan={};total={};limit={};remaining={}",
                 body.plan_digest,
@@ -147,7 +147,7 @@ fn premises(
             source: FamilyPremiseSource::Policy,
         });
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "fanout.knobs:max_child_summary_tokens={};max_summary_tokens={}",
                 knobs.max_child_summary_tokens, knobs.max_summary_tokens
@@ -158,7 +158,7 @@ fn premises(
     }
     if let Some(delivery) = &aggregate.delivery {
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "final_artifact:schema={}@{};kind={};digest={}",
                 delivery.schema_id,
@@ -173,7 +173,7 @@ fn premises(
             source: FamilyPremiseSource::Request("params.fanout"),
         });
         out.push(FamilyPremise {
-            subject: "fanout",
+            subject: "fanout".into(),
             fact: format!(
                 "fanout_delivery:plan={};coordinator={};receipts={};readback={};digest={}",
                 delivery.plan_digest,
@@ -187,7 +187,7 @@ fn premises(
         });
     }
     out.push(FamilyPremise {
-        subject: "fanout",
+        subject: "fanout".into(),
         fact: format!(
             "fanout_aggregate:op={};plan={};aggregate_digest={}",
             serde_json::to_value(aggregate.op)

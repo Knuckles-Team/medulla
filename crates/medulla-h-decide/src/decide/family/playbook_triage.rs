@@ -282,7 +282,7 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
     for event_id in &cited {
         if let Some(item) = declared.iter().find(|d| &d.event.event_id == event_id) {
             premises.push(FamilyPremise {
-                subject: "playbook_triage",
+                subject: "playbook_triage".into(),
                 fact: format!(
                     "event:{event_id}:service={}:kind={}",
                     item.event.service, item.event.kind
@@ -298,14 +298,14 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
             continue;
         };
         premises.push(FamilyPremise {
-            subject: "playbook_triage",
+            subject: "playbook_triage".into(),
             fact: format!("trigger:{trigger}:service={service}:playbook={playbook_id}"),
             class: PremiseClass::Claim,
             source: FamilyPremiseSource::Request("candidates"),
         });
         if let Some(digest) = digests.get(playbook_id) {
             premises.push(FamilyPremise {
-                subject: "playbook_triage",
+                subject: "playbook_triage".into(),
                 fact: format!("playbook:{playbook_id}:revision={}", playbook.revision),
                 class: PremiseClass::Definition,
                 source: FamilyPremiseSource::Publisher {
@@ -321,7 +321,7 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
             }
             if step.writes {
                 premises.push(FamilyPremise {
-                    subject: "playbook_triage",
+                    subject: "playbook_triage".into(),
                     fact: format!(
                         "{option_id}:writes=true:route={WRITE_ROUTE}:reason={REASON_EVALUATE_ONLY}:action={}",
                         step.action_ref

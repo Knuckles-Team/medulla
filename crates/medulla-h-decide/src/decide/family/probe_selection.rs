@@ -75,7 +75,7 @@ fn ranked(mut entries: Vec<(usize, &AgentComponentEntry)>) -> Vec<&AgentComponen
 
 fn definition(entry: &AgentComponentEntry) -> FamilyPremise {
     FamilyPremise {
-        subject: "probe_selection",
+        subject: "probe_selection".into(),
         fact: format!("selected:{}", entry.component_id),
         class: PremiseClass::Definition,
         source: FamilyPremiseSource::Publisher {
@@ -136,7 +136,7 @@ fn conclude_selection(ctx: &ExecutionContext, request: &DecideRequest) -> Result
     let mut executed = advisory(selected.iter().map(|e| e.component_id.clone()).collect())?;
     let mut premises: Vec<FamilyPremise> = selected.iter().map(|e| definition(e)).collect();
     premises.push(FamilyPremise {
-        subject: "probe_selection",
+        subject: "probe_selection".into(),
         fact: format!("goal:{goal_text}"),
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params"),
