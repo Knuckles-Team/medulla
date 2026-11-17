@@ -67,7 +67,7 @@ macro_rules! identifier {
         #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
         #[serde(try_from = "String", into = "String")]
         #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-        #[cfg_attr(feature = "contract-schema", schemars(transparent))]
+        #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
         pub struct $name(String);
 
         impl $name {
