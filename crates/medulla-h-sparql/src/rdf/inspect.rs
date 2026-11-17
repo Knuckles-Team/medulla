@@ -163,7 +163,9 @@ fn composed_documents(
                 .map(move |document| (id.to_string(), document))
         })
         .collect();
-    let found: BTreeSet<&str> = selected.iter().map(|(id, _)| id.as_str()).collect();
+    // A source exists when it is attached, even if it carries no document (an
+    // empty pack has neither ontology nor shapes).
+    let found: BTreeSet<&str> = sources.all().map(|(id, _)| id).collect();
     if let Some(missing) = wanted.iter().find(|id| !found.contains(**id)) {
         return Err(format!("unknown GraphSchema source '{missing}'"));
     }
