@@ -5508,6 +5508,7 @@ dependencies = [
  "medulla-persistence-records",
  "medulla-plan",
  "medulla-protocol-types",
+ "medulla-query-types",
  "medulla-raft",
  "medulla-rdf",
  "medulla-reasoner",
