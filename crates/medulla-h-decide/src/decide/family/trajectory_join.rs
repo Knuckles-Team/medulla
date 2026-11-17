@@ -7,7 +7,7 @@
 //! evidence among the sources and resolves as an `Optimization`. The harness
 //! applies the winner.
 
-use medulla_decision_stats::decision::trajectory_join::join;
+use medulla_decision_stats::decision::trajectory_join::{join, MAX_JOIN_TRAJECTORIES};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
@@ -33,6 +33,16 @@ fn parse(request: &DecideRequest) -> Result<&JoinRequest, String> {
             "{KIND} parameter {PARAM} has the wrong type"
         )));
     };
+    // A join over more than the bound refuses `CANDIDATE_SET_TOO_LARGE`
+    // (MEDULLA-DECISION-ENGINE-R753.752). The declared candidates cannot name more
+    // than `MAX_DECLARED_OPTIONS`, so the entry count is checked first: an
+    // oversize join is refused for its size, not for failing to declare itself.
+    if entries.entries.len() > MAX_JOIN_TRAJECTORIES {
+        return Err(StatisticalErrorCode::CandidateSetTooLarge.refusal(format!(
+            "a join takes at most {MAX_JOIN_TRAJECTORIES} trajectories, got {}",
+            entries.entries.len()
+        )));
+    }
     let mut ids: Vec<&str> = entries
         .entries
         .iter()

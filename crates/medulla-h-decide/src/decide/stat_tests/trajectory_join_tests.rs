@@ -26,7 +26,13 @@ fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
 fn join(schema: &ComponentDependency, entries: Vec<TrajectoryEntry>) -> DecideRequest {
     let mut ids: Vec<String> = entries.iter().map(|e| e.trajectory_id.clone()).collect();
     ids.sort();
-    let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+    // A request declares at most `MAX_DECLARED_OPTIONS` candidates; an oversize
+    // join declares the first of them and carries every entry.
+    let refs: Vec<&str> = ids
+        .iter()
+        .take(medulla_decision_types::decision::statistical::declared::MAX_DECLARED_OPTIONS)
+        .map(String::as_str)
+        .collect();
     kernel_request(
         schema,
         QuestionKind::TrajectoryJoin,
