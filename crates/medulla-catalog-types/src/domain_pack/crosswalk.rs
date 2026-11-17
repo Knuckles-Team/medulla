@@ -216,9 +216,7 @@ fn relation_agrees(relation: VocabularyCrosswalkRelation, pinned: Option<PinnedH
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::domain_pack::{
-        ApprovedTargetDeclaration, VOCABULARY_CROSSWALK_SCHEMA_VERSION,
-    };
+    use crate::domain_pack::{ApprovedTargetDeclaration, VOCABULARY_CROSSWALK_SCHEMA_VERSION};
 
     const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
     const SCHEMA: &str = "http://schema.org/";
@@ -492,13 +490,13 @@ mod tests {
     }
 
     fn pack_of(
-        kind: medulla_types::domain_pack::DomainPackKind,
+        kind: crate::domain_pack::DomainPackKind,
         crosswalks: Vec<VocabularyCrosswalk>,
     ) -> DomainPack {
         DomainPack {
             kind,
             version: 1,
-            classes: vec![medulla_types::domain_pack::DomainClass {
+            classes: vec![crate::domain_pack::DomainClass {
                 local_name: "Person".to_string(),
                 label: "Person".to_string(),
                 aligns_to_upper_ontology: None,
@@ -512,7 +510,7 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R097.2.2
     #[test]
     fn coverage_is_order_independent_for_medical_technology_labor() {
-        use medulla_types::domain_pack::DomainPackKind::{Hr, Medical, Technology};
+        use crate::domain_pack::DomainPackKind::{Hr, Medical, Technology};
         use VocabularyCrosswalkRelation::SeeAlso;
         let ctx = context();
         let declared: BTreeSet<String> = ctx.selected_sources.clone();

@@ -5,32 +5,32 @@
 //! the point is that every field shape round-trips, not that the numbers mean
 //! anything.
 
+use crate::solve::Algorithm;
+use crate::solve::BoundProof;
+use crate::solve::Certificate;
+use crate::solve::Coefficient;
+use crate::solve::ConstraintBody;
+use crate::solve::ConstraintSpec;
+use crate::solve::DualEntry;
+use crate::solve::Incumbent;
+use crate::solve::LagrangeDual;
+use crate::solve::LeafProof;
+use crate::solve::LevelValue;
+use crate::solve::ModelSpec;
+use crate::solve::ObjectiveLevelSpec;
+use crate::solve::ObjectiveTerm;
+use crate::solve::ObjectiveValue;
+use crate::solve::ProofNode;
+use crate::solve::Relation;
+use crate::solve::RowId;
+use crate::solve::SolveRequest;
+use crate::solve::SolveStatus;
+use crate::solve::SolverConfig;
+use crate::solve::SolverConfigSpec;
+use crate::solve::Term;
+use crate::solve::VarId;
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_query_types::solve_scalar::Sha256Digest;
-use medulla_types::solve::Algorithm;
-use medulla_types::solve::BoundProof;
-use medulla_types::solve::Certificate;
-use medulla_types::solve::Coefficient;
-use medulla_types::solve::ConstraintBody;
-use medulla_types::solve::ConstraintSpec;
-use medulla_types::solve::DualEntry;
-use medulla_types::solve::Incumbent;
-use medulla_types::solve::LagrangeDual;
-use medulla_types::solve::LeafProof;
-use medulla_types::solve::LevelValue;
-use medulla_types::solve::ModelSpec;
-use medulla_types::solve::ObjectiveLevelSpec;
-use medulla_types::solve::ObjectiveTerm;
-use medulla_types::solve::ObjectiveValue;
-use medulla_types::solve::ProofNode;
-use medulla_types::solve::Relation;
-use medulla_types::solve::RowId;
-use medulla_types::solve::SolveRequest;
-use medulla_types::solve::SolveStatus;
-use medulla_types::solve::SolverConfig;
-use medulla_types::solve::SolverConfigSpec;
-use medulla_types::solve::Term;
-use medulla_types::solve::VarId;
 
 /// A model with one of every constraint body shape.
 pub fn model() -> ModelSpec {

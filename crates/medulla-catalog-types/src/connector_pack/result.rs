@@ -8,10 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::connector_pack::{McpCatalogSnapshotBinding, PackHeadRef, PackSourceRegistration};
 use medulla_types::closed_error_codes;
-use medulla_types::connector_pack::{
-    McpCatalogSnapshotBinding, PackHeadRef, PackSourceRegistration,
-};
 use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// Why a pack was rejected. Screaming-snake on the wire, so the code a caller

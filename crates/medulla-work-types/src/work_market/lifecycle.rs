@@ -11,7 +11,7 @@ use super::offer::{
     WORK_OFFER_UTILITY_RATE_STAGE,
 };
 use super::{bounded, evidence_digest, GapStatus, MAX_MARKET_REF_BYTES};
-use medulla_types::work_item_read::WorkItemStatus;
+use crate::work_item_read::WorkItemStatus;
 
 /// How an upsert resolved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -14,6 +14,8 @@ use crate::decision::{
     UnknownCostRule, Violation, WhyNot, DECISION_POLICY_SCHEMA_VERSION,
     DECISION_RECORD_SCHEMA_VERSION,
 };
+use crate::solve::Algorithm;
+use crate::solve::ObjectiveValue;
 use medulla_agent_types::agent_fixtures::agent_library::mutation_context;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
@@ -21,8 +23,6 @@ use medulla_agent_types::{
     agent_component::ComponentDependency,
 };
 use medulla_query_types::solve_scalar::Scalar;
-use medulla_types::solve::Algorithm;
-use medulla_types::solve::ObjectiveValue;
 
 use super::contract_solver as solver;
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};

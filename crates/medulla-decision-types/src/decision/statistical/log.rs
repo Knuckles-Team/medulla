@@ -69,7 +69,7 @@ pub struct DecisionOutcomeEvaluation {
 ///
 /// A record visible only to its committer (a graph-sourced or declared one)
 /// could otherwise never be judged independently. Naming an evaluator issues
-/// a control lease of kind [`medulla_types::control_lease::DECISION_EVALUATION_LEASE_KIND`]
+/// a control lease of kind [`medulla_work_types::control_lease::DECISION_EVALUATION_LEASE_KIND`]
 /// that lets exactly that principal -- or any verified principal whose signed
 /// request context carries `role`, other than the committer -- join
 /// evaluations to exactly this record until it expires: it cannot read, list

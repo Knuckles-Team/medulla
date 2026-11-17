@@ -1,7 +1,6 @@
 //! Valid sample values for the connector pack surface.
 
-use medulla_agent_types::agent_component::DeclaredLatency;
-use medulla_types::connector_pack::{
+use crate::connector_pack::{
     ConnectorPackBindRequest, ConnectorPackConformanceEvidenceRequest, ConnectorPackImportRequest,
     ConnectorPackIndex, ConnectorPackOp, ConnectorPackReconcileRequest,
     ConnectorPackReprojectRequest, ConnectorPackRetireRequest, ConnectorPackRevokeEvidenceRequest,
@@ -11,6 +10,7 @@ use medulla_types::connector_pack::{
     PackEntry, PackEntryKind, PackHeadRef, PackModelFacts, PackProducer, PackRef, PackSection,
     PackToolMode, PackViolationCode, PackWarningCode, CONNECTOR_PACK_SCHEMA_VERSION,
 };
+use medulla_agent_types::agent_component::DeclaredLatency;
 use medulla_types::{contract::Digest256, contract::ResourceId};
 
 use medulla_agent_types::agent_fixtures::agent_library::mutation_context;

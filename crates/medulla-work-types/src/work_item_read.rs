@@ -24,7 +24,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use medulla_types::native_control::MAX_SUBMIT_REF_BYTES;
+use crate::native_control::MAX_SUBMIT_REF_BYTES;
 use medulla_types::tenant_cursor::CursorFamily;
 use medulla_types::{
     keyset_page::matches_pairs, keyset_page::validate_pair_filter, keyset_page::KeysetListing,
@@ -57,13 +57,13 @@ pub const WORK_ITEM_CHECKPOINT_DIGEST: &str = "run_checkpoint_digest";
 /// stands (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const WORK_ITEM_EFFECT_PHASE: &str = "effect_phase";
 pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 17] = [
-    medulla_types::native_control::WORK_ITEM_LIFECYCLE_REVISION,
+    crate::native_control::WORK_ITEM_LIFECYCLE_REVISION,
     RUN_ADMISSION_REQUEST,
     WORK_ITEM_CHECKPOINT_REF,
     WORK_ITEM_CHECKPOINT_REVISION,
     WORK_ITEM_CHECKPOINT_DIGEST,
-    medulla_types::run_completion::RUN_COMPLETION_BATCH,
-    medulla_types::run_completion::RUN_COMPLETION_DIGEST,
+    crate::run_completion::RUN_COMPLETION_BATCH,
+    crate::run_completion::RUN_COMPLETION_DIGEST,
     "run_owner_binding",
     WORK_ITEM_ROW_REVISION,
     WORK_ITEM_EVENT_BATCH,
@@ -150,9 +150,9 @@ pub(crate) fn stored_value<T: Copy>(table: &[(&str, T)], stored: &str) -> Option
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RunWorkItemView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub run_completion: Option<medulla_types::run_completion::CommittedRunCompletion>,
+    pub run_completion: Option<crate::run_completion::CommittedRunCompletion>,
     pub work_item: WorkItemView,
-    pub admission: medulla_types::native_control::SubmitWorkItemRequest,
+    pub admission: crate::native_control::SubmitWorkItemRequest,
 }
 
 /// Where a WorkItem's external effect stands. `Started` means an effect may

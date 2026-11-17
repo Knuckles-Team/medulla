@@ -2,7 +2,7 @@
 //! this module only describes the assertions its authorized issuer persists.
 use serde::{Deserialize, Serialize};
 
-use medulla_types::control_lease::IssueControlLeaseRequest;
+use crate::control_lease::IssueControlLeaseRequest;
 use medulla_types::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 
 pub const HOST_START_KIND: &str = "host.start";

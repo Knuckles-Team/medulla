@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::supply_chain_report::{ReportAbstention, SourceUsed};
+use crate::supply_chain_report::{ReportAbstention, SourceUsed};
 
 /// The closed set of served cross-source questions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

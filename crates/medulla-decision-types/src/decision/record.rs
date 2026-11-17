@@ -15,13 +15,13 @@ use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
 use super::primitive::PrimitiveContract;
 use super::request::AssemblyRequest;
+use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve::{Algorithm, Certificate};
 
 pub use outcome::{AbstainReason, DecisionOutcome, SlotAssignment, WhyNot};
 pub use premise::{

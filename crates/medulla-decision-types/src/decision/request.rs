@@ -215,7 +215,7 @@ pub struct AssemblyResult {
     /// The exact integer programme the record's certificate was issued over,
     /// so a client can verify the certificate without trusting the engine.
     #[serde(default)]
-    pub model: Option<medulla_types::solve::ModelSpec>,
+    pub model: Option<crate::solve::ModelSpec>,
     /// The selected model component's `definition_digest` (64 lowercase hex,
     /// SHA-256); `Some` exactly when the outcome is `Solved`.
     #[serde(default)]

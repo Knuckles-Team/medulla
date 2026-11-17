@@ -1,5 +1,5 @@
 //! GOC-19 — the WorkItem submission command-log admission core, built on
-//! GOC-03's [`medulla_types::commit_descriptor::CommitDescriptor`] currency.
+//! GOC-03's [`medulla_mutation_types::commit_descriptor::CommitDescriptor`] currency.
 //!
 //! # Scope and honesty about what this module is NOT
 //!
@@ -38,7 +38,7 @@
 //!    `commit_seq`/`fencing_token` does not represent forward progress for
 //!    its `authority_ref`, is rejected — mirroring the exact "strictly
 //!    greater fencing token on a newer sequence" rule
-//!    [`medulla_types::commit_descriptor::ProjectionCursor::advance`] already
+//!    [`medulla_mutation_types::commit_descriptor::ProjectionCursor::advance`] already
 //!    enforces and already has passing tests for.
 //!
 //! See `plans/graph-os-completion-program/lanes/GOC-19-atomic-workitem-command-log.md`.

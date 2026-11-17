@@ -9,12 +9,12 @@ use super::{
     MAX_DISCOVERY_ERROR_BYTES, MAX_FLEET_COMPONENT_ID_BYTES, MAX_FLEET_GRANT_DIGESTS,
     MAX_FLEET_LOOKUP_IDS, MAX_FLEET_PAGE_ROWS, MAX_FLEET_QUERY_BYTES,
 };
-use medulla_types::fleet_catalog::is_valid_server_name;
+use crate::fleet_catalog::is_valid_server_name;
 use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// The component-id prefix every connector-pack member carries. Overrides and
 /// content lookups only ever address pack members.
-const PACK_MEMBER_PREFIX: &str = medulla_types::connector_pack::ids::PACK_COMPONENT_ID_PREFIX;
+const PACK_MEMBER_PREFIX: &str = crate::connector_pack::ids::PACK_COMPONENT_ID_PREFIX;
 
 /// How many of each MCP primitive the probe saw.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]

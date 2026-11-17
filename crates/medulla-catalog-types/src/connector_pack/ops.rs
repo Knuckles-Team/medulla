@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn source_approval_is_a_mutating_pack_control_operation() {
-        let (_, op) = medulla_types::catalog_fixtures::contract_pack::ops()
+        let (_, op) = crate::catalog_fixtures::contract_pack::ops()
             .into_iter()
             .find(|(label, _)| *label == "ConnectorPack.approve_source")
             .expect("contract-wave samples carry source approval");
@@ -345,7 +345,7 @@ mod tests {
     #[test]
     fn operation_and_result_shapes_are_stable() {
         let mut observed = Vec::new();
-        for (label, op) in medulla_types::catalog_fixtures::contract_pack::ops() {
+        for (label, op) in crate::catalog_fixtures::contract_pack::ops() {
             let wire = serde_json::to_value(&op).unwrap();
             let tag = wire["op"]
                 .as_str()
@@ -370,22 +370,22 @@ mod tests {
             "an operation was added, removed or reshaped"
         );
 
-        use medulla_types::connector_pack::{PackDisposition, PackViolationCode, PackWarningCode};
-        for code in medulla_types::catalog_fixtures::contract_pack::every_violation_code() {
+        use crate::connector_pack::{PackDisposition, PackViolationCode, PackWarningCode};
+        for code in crate::catalog_fixtures::contract_pack::every_violation_code() {
             let wire = serde_json::to_value(code).unwrap();
             assert_eq!(
                 serde_json::from_value::<PackViolationCode>(wire).unwrap(),
                 code
             );
         }
-        for code in medulla_types::catalog_fixtures::contract_pack::every_warning_code() {
+        for code in crate::catalog_fixtures::contract_pack::every_warning_code() {
             let wire = serde_json::to_value(code).unwrap();
             assert_eq!(
                 serde_json::from_value::<PackWarningCode>(wire).unwrap(),
                 code
             );
         }
-        for disposition in medulla_types::catalog_fixtures::contract_pack::every_disposition() {
+        for disposition in crate::catalog_fixtures::contract_pack::every_disposition() {
             let wire = serde_json::to_value(disposition).unwrap();
             assert_eq!(
                 serde_json::from_value::<PackDisposition>(wire).unwrap(),

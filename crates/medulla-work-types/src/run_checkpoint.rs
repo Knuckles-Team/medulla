@@ -163,7 +163,7 @@ mod tests;
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RunCheckpointRead {
     pub context_id: String,
-    pub work_item: medulla_types::work_item_read::WorkItemView,
+    pub work_item: crate::work_item_read::WorkItemView,
     #[serde(flatten)]
     pub snapshot: RunCheckpointSnapshot,
 }

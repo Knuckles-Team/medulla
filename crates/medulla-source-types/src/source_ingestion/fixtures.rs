@@ -1,7 +1,7 @@
 //! One valid `SourceIngest` request, shared by the digest vector and the
 //! method-body vectors so both pin the value connectors actually send.
 
-use medulla_types::source_ingestion::{
+use crate::source_ingestion::{
     SourceCheckpoint, SourceIngestionBatch, SourceIngestionMode, SourceIngestionRequest,
     SourceJson, SourceRecord, SourceRecordProvenance,
 };

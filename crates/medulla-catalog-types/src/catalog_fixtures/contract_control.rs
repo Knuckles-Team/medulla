@@ -1,13 +1,13 @@
 //! Valid sample values for the schema-source, outbox and component-content
 //! surfaces.
 
+use crate::graph_schema::GraphSchemaOp;
 use medulla_agent_types::agent_component::AgentComponentContentRequest;
 use medulla_mutation_types::{
     mutation_outbox::MutationOutboxOp, mutation_outbox::NativeOutboxScope,
     mutation_outbox::NativeOutboxStore, mutation_outbox::OutboxPositionView,
     mutation_outbox::OutboxTarget, mutation_outbox::RewindTarget,
 };
-use medulla_types::graph_schema::GraphSchemaOp;
 
 use super::contract_pack::connector;
 
@@ -59,8 +59,8 @@ pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
 }
 
 /// A one-field repair contract (EH-403 / AUD-27 typed candidate).
-fn repair_contract() -> medulla_types::graph_schema::repair::RecordContract {
-    use medulla_types::graph_schema::repair::{FieldContract, JsonType, RecordContract};
+fn repair_contract() -> crate::graph_schema::repair::RecordContract {
+    use crate::graph_schema::repair::{FieldContract, JsonType, RecordContract};
     RecordContract {
         fields: [(
             "name".to_string(),

@@ -171,7 +171,7 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R001.1
     #[test]
     fn index_entry_round_trip_and_refusals() {
-        let index = medulla_types::catalog_fixtures::contract_pack::index();
+        let index = crate::catalog_fixtures::contract_pack::index();
         assert_eq!(msgpack_round_trip(&index), index);
         let json = serde_json::to_value(&index).unwrap();
         assert_eq!(

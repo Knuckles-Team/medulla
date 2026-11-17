@@ -128,8 +128,7 @@ mod tests {
     const SCOPE: [u8; 32] = [4; 32];
 
     fn request() -> McpSelfServedCatalogAttestRequest {
-        let candidate =
-            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let candidate = crate::connector_pack::catalog_authority::sample_authority_candidate();
         McpSelfServedCatalogAttestRequest {
             context: medulla_agent_types::agent_fixtures::agent_library::mutation_context(),
             connector: ResourceId::new("graph-os").unwrap(),
@@ -162,7 +161,7 @@ mod tests {
         prior: Option<&McpCatalogAuthorityRow>,
         candidate: &McpCatalogAuthorityCandidate,
     ) -> Result<McpCatalogAuthorityRow, String> {
-        medulla_types::connector_pack::catalog_authority::reconcile_after_row(prior, candidate)
+        crate::connector_pack::catalog_authority::reconcile_after_row(prior, candidate)
     }
 
     #[test]
@@ -213,8 +212,7 @@ mod tests {
             connector: "other".into(),
         };
         assert!(attest(Some(&first), &other_connector).is_err());
-        let mut mounted =
-            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let mut mounted = crate::connector_pack::catalog_authority::sample_authority_candidate();
         mounted.server_name = "graph-os".into();
         let mounted_row = attest(None, &mounted).unwrap();
         assert!(mounted_row.attestation.is_mounted_child());
@@ -229,8 +227,7 @@ mod tests {
 
     #[test]
     fn mounted_rows_encode_without_the_attestation_field() {
-        let mounted =
-            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let mounted = crate::connector_pack::catalog_authority::sample_authority_candidate();
         let row = attest(None, &mounted).unwrap();
         let encoded = rmp_serde::to_vec_named(&row).unwrap();
         let value: serde_json::Value = rmp_serde::from_slice(&encoded).unwrap();
@@ -255,7 +252,7 @@ mod tests {
     #[test]
     fn import_must_carry_the_current_binding_and_pinned_server_entry() {
         let row = attest(None, &candidate(&request(), 0)).unwrap();
-        let mut index = medulla_types::catalog_fixtures::contract_pack::index();
+        let mut index = crate::catalog_fixtures::contract_pack::index();
         index.connector = ResourceId::new("graph-os").unwrap();
         index.catalog = row.binding.clone();
         index.server.body.sha256 = row.component_digest;
@@ -271,7 +268,7 @@ mod tests {
         assert!(check_self_served_import(&row, &other).is_ok());
         let mounted = attest(
             None,
-            &medulla_types::connector_pack::catalog_authority::sample_authority_candidate(),
+            &crate::connector_pack::catalog_authority::sample_authority_candidate(),
         )
         .unwrap();
         assert!(check_self_served_import(&mounted, &stale).is_ok());

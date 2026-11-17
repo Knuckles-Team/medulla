@@ -17,7 +17,7 @@ use medulla_types::transition_refused::{
 };
 use serde::{Deserialize, Serialize};
 
-pub use medulla_types::work_item_read::WorkItemStatus;
+pub use crate::work_item_read::WorkItemStatus;
 
 /// The machine instance name: the `machine` field of every WorkItem refusal and the
 /// local name of the ontology instance `:WorkItemMachine`.
