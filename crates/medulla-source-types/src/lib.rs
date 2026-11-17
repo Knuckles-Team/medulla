@@ -43,6 +43,7 @@ pub mod source_changeset;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lifecycle;
 // MEDULLA-SDLC-R019.2 — delivery records.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delivery;
 // MEDULLA-SDLC-R030.1 — the defect machine: edge table D01 to D09 and its one transition function.
 pub mod defect_machine;
