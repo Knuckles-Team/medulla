@@ -110,9 +110,9 @@ consumer is the engine's own served test.
 - [ARBORA-FLEET-R084](https://github.com/Knuckles-Team/arbora/blob/main/specs/fleet-catalog-and-tools/requirements.md) — arbora serves the city layout read from these spatial facts (provider: this spec R003; consumer: arbora).
 - [OVERSTORY-CITY-R021](https://github.com/Knuckles-Team/overstory/blob/main/specs/arbora-city/requirements.md) — Overstory's Medulla-backed world layout follow-on consumes this vocabulary and layout (consumer: overstory; provider: this spec R001/R002/R003).
 
-## Amendments
+### Amendments
 
-- 2026-11-16 — Initial plan: spatial vocabulary as an extension of the core
-  ontology (not a parallel model), derived placement with stored overrides,
-  one served spatial query method. Cross-repo seams to arbora's layout read
-  and Overstory's world-layout follow-on named.
+2026-11-16 — Initial plan: spatial vocabulary as an extension of the core
+ontology (not a parallel model), derived placement with stored overrides,
+one served spatial query method. Cross-repo seams to arbora's layout read
+and Overstory's world-layout follow-on named.
