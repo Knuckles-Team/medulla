@@ -604,6 +604,7 @@ pub async fn unified_query(
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         ),
     )
