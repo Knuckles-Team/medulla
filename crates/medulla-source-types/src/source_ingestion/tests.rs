@@ -940,5 +940,8 @@ fn column_profiles_digest_vectors_match_the_python_client() {
         without.batch_digest().unwrap().to_hex(),
         "bfa1c9d59ba6faed1a195bcd61827444b6d2c6bd962551ab3157412384c915f3"
     );
-    assert_eq!(with.batch_digest().unwrap().to_hex(), "8a56a8e628f6ead40e4bcf96792891ef0974f42e4b6d8ca8d1566fa30ed2ebcb");
+    assert_eq!(
+        with.batch_digest().unwrap().to_hex(),
+        "8a56a8e628f6ead40e4bcf96792891ef0974f42e4b6d8ca8d1566fa30ed2ebcb"
+    );
 }
