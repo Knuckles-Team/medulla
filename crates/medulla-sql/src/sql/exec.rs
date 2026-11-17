@@ -1337,7 +1337,11 @@ pub(super) fn batches_to_result(
         rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))
     })?;
 
-    Ok(QueryResult { columns, rows })
+    Ok(QueryResult {
+        columns,
+        rows,
+        warnings: Vec::new(),
+    })
 }
 
 fn decode_rows<T, F>(

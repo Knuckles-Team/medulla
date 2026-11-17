@@ -2209,7 +2209,11 @@ fn finalize(
     for (cells, _) in rows.into_iter().skip(skip).take(cap) {
         out.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
     }
-    Ok(QueryResult { columns, rows: out })
+    Ok(QueryResult {
+        columns,
+        rows: out,
+        warnings: Vec::new(),
+    })
 }
 
 fn is_agg(e: &Expr) -> bool {
@@ -3198,6 +3202,7 @@ fn exec_write(core: &GraphCore, w: &WriteQuery, params: &Params) -> Result<Query
         return Ok(QueryResult {
             columns: Vec::new(),
             rows: Vec::new(),
+            warnings: Vec::new(),
         });
     }
     let post = core.analysis_snapshot();
@@ -3758,7 +3763,11 @@ fn project_write(
             .collect();
         rows.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
     }
-    Ok(QueryResult { columns, rows })
+    Ok(QueryResult {
+        columns,
+        rows,
+        warnings: Vec::new(),
+    })
 }
 
 /// The binding key an edge variable is stored under.
