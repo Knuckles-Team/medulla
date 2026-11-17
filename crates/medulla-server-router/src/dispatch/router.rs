@@ -60,6 +60,8 @@ use control_plane::{
     dispatch_agent_library_methods, dispatch_cluster_admin_methods,
     dispatch_compute_and_media_methods, dispatch_graph_translated_op_families,
 };
+#[cfg(all(feature = "query", feature = "jobs"))]
+use data_plane::dispatch_analytical_query_methods;
 #[cfg(feature = "query")]
 use data_plane::dispatch_sql_source_methods;
 use decision_plane::dispatch_decision_plane_methods;

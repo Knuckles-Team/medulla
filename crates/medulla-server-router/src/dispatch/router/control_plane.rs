@@ -573,7 +573,7 @@ pub async fn dispatch_compute_and_media_methods(
 }
 
 #[cfg(feature = "jobs")]
-async fn dispatch_compute_and_media_methods_arm_0(
+pub(super) async fn dispatch_compute_and_media_methods_arm_0(
     ctx: DispatchCtx<'_>,
     method: Method,
 ) -> Response {
