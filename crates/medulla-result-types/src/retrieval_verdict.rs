@@ -42,6 +42,8 @@ medulla_types::closed_error_codes! {
     /// Every typed refusal `Method::RetrievalRound` can answer with; the engine's error
     /// registry declares these so a refusal keeps its code on the wire.
     pub enum RetrievalErrorCode {
+        ArbitrationAbstain => "ARBITRATION_ABSTAIN",
+        CandidateGroundingRequired => "CANDIDATE_GROUNDING_REQUIRED",
         BudgetExceeded => "RETRIEVAL_BUDGET_EXCEEDED",
         ContractInvalid => "RETRIEVAL_CONTRACT_INVALID",
         EmbeddingRevisionMismatch => "RETRIEVAL_EMBEDDING_REVISION_MISMATCH",
