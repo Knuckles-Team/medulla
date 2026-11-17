@@ -475,19 +475,20 @@ fn run_compile(
 }
 
 /// The caller-bound part of the cache key, so one caller's bundle never serves
-/// another caller with different row visibility.
+/// another caller with different row visibility. The digest rides in the bundle's
+/// measurement, so it exists in every build: it does not borrow the result cache's
+/// hash, which only a `result-cache` build compiles.
 fn policy_digest(ctx: &QueryHandlerCtx<'_>) -> String {
-    format!(
-        "{:032x}",
-        rls_cache_hash(
-            "context_compile_policy",
-            b"",
-            #[cfg(feature = "security")]
-            ctx.caller,
-            #[cfg(feature = "security")]
-            ctx.rls,
-        )
-    )
+    let mut hasher = Sha256::new();
+    hasher.update(b"context_compile_policy");
+    #[cfg(feature = "security")]
+    {
+        hasher.update(b":rls:");
+        hasher.update(ctx.caller.as_bytes());
+    }
+    #[cfg(not(feature = "security"))]
+    let _ = ctx;
+    hex::encode(&hasher.finalize()[..16])
 }
 
 /// The connector server of each operation-bound source the caller may use, so a
