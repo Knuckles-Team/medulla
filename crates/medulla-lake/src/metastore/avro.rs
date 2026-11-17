@@ -107,18 +107,18 @@ fn column_array(
     column: &MetastoreColumn,
     records: &[Vec<(String, Value)>],
 ) -> Result<ArrayRef, MetastoreError> {
-    let field = |record: &Vec<(String, Value)>| {
+    fn field<'a>(record: &'a [(String, Value)], name: &str) -> Option<&'a Value> {
         record
             .iter()
-            .find(|(name, _)| *name == column.name)
+            .find(|(field_name, _)| field_name == name)
             .map(|(_, value)| plain(value))
             .filter(|value| !matches!(value, Value::Null))
-    };
+    }
     macro_rules! build {
         ($builder:expr, $convert:expr) => {{
             let mut builder = $builder;
             for record in records {
-                match field(record) {
+                match field(record, &column.name) {
                     None => builder.append_null(),
                     Some(value) => {
                         builder.append_value($convert(value).ok_or_else(|| mismatch(column))?)
@@ -195,8 +195,8 @@ pub fn read_avro(
         .iter()
         .map(|c| column_array(c, &records))
         .collect::<Result<Vec<_>, _>>()?;
-    let batch = RecordBatch::try_new(Arc::new(ArrowSchema::new(fields)), arrays)
-        .map_err(unreadable)?;
+    let batch =
+        RecordBatch::try_new(Arc::new(ArrowSchema::new(fields)), arrays).map_err(unreadable)?;
     let opened = OpenedFile {
         stripes_total: 0,
         stripes_read: 0,
