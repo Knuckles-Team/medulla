@@ -78,7 +78,6 @@ fn premise(check: &BoundCheck) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: MEASUREMENTS_PARAM.to_string(),
         },
-        trust_tier: None,
     }
 }
 
