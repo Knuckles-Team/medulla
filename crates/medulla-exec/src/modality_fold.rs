@@ -17,8 +17,11 @@ use crate::rowset::{Row, RowSet};
 /// A value handed to [`fold_modality`] that does not belong to the modality being folded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModalityFoldMismatch {
+    /// The storage kind the fold was asked to take.
     pub expected_kind: String,
+    /// The id of the offending row.
     pub row_id: String,
+    /// The storage kind the offending row reported.
     pub found_storage_kind: &'static str,
 }
 
