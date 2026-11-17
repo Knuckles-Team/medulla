@@ -118,6 +118,7 @@ fn the_skill<'a>(rows: &'a [FleetSkillRow], name: &str) -> &'a FleetSkillRow {
 #[tokio::test]
 async fn catalog_listing_renders_current_content() {
     let served = Served::new();
+    let _env = served.with_graph_persistence().await;
     bind(&served, CONNECTOR, ADMIN).await;
     let ontology_ref = ontology_id();
     let refs = [ontology_ref.as_str()];
@@ -168,6 +169,7 @@ async fn catalog_listing_renders_current_content() {
 #[tokio::test]
 async fn dangling_reference_is_refused() {
     let served = Served::new();
+    let _env = served.with_graph_persistence().await;
     bind(&served, CONNECTOR, ADMIN).await;
     let missing = format!("mcp:{CONNECTOR}/ontology/absent.ttl");
     let ontology_ref = ontology_id();
@@ -204,6 +206,7 @@ async fn dangling_reference_is_refused() {
 #[tokio::test]
 async fn render_carries_revision_and_digest() {
     let served = Served::new();
+    let _env = served.with_graph_persistence().await;
     bind(&served, CONNECTOR, ADMIN).await;
     let ontology_ref = ontology_id();
     let refs = [ontology_ref.as_str()];
