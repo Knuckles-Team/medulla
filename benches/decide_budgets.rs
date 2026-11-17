@@ -63,12 +63,12 @@ use medulla_decision_types::decision::run_governance::{
 };
 use medulla_decision_types::decision::skill_evolution::{PARAM_REQUESTED_SKILLS, PARAM_USED_TERMS};
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::statistical::harness_config::{
-    HarnessConfigEvaluationEvidence, HarnessEvidenceLimits,
-};
 use medulla_decision_types::decision::statistical::distilled::{DistilledUpload, TeacherJudgment};
 use medulla_decision_types::decision::statistical::features::{
     FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+};
+use medulla_decision_types::decision::statistical::harness_config::{
+    HarnessConfigEvaluationEvidence, HarnessEvidenceLimits,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
@@ -2384,6 +2384,8 @@ fn bench_trajectory_served(
             check_digest: format!("{:02x}", n % 127 + 128).repeat(32),
         })
         .collect();
+    let step_digests: Vec<&str> = steps.iter().map(|step| step.digest.as_str()).collect();
+    let trace_digest = medulla_decision_types::decision::digest::step_trace_digest(&step_digests);
     let verified = kernel_ask(
         &asked,
         QuestionKind::StepVerification,
@@ -2392,6 +2394,7 @@ fn bench_trajectory_served(
             steps: BoundedVec::new(steps).unwrap(),
             checks: BoundedVec::new(checks).unwrap(),
             attempts: 0,
+            trace_digest,
         })),
         "trace-1",
     );
@@ -2502,6 +2505,7 @@ async fn harness_config_record() -> (Harness, StatisticalDecisionRecord) {
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     let response = dispatch(
         &h,

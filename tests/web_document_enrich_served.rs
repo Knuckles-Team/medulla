@@ -870,6 +870,7 @@ async fn committed_executed_retrieval_record(state: &test_support::SharedState) 
         params: BoundedVec::default(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     };
     let batch: DecisionBatch = raw(call(
         state,
