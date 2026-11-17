@@ -28,6 +28,11 @@ pub(crate) const PROJECTION_SERVICE: &str = "connector-pack-projection";
 /// The fixed service principal the projection worker writes as.
 pub(crate) const PROJECTION_ACTOR: &str = "service:connector-pack-projection";
 
+/// The graph that records the glossary terms packs define
+/// (MEDULLA-FEDERATED-QUERY-R058.9); the actor holds one exact-graph grant on it
+/// beside the pack graphs.
+pub(crate) const COMMONS_GRAPH: &str = "__commons__";
+
 const GRANT: ServiceGraphGrant<'static> = ServiceGraphGrant {
     actor: PROJECTION_ACTOR,
     role_prefix: "pack-projection",

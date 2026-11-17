@@ -416,7 +416,8 @@ pub mod worker {
         .map(|_| true)
     }
 
-    /// Let the projection actor write exactly this row's pack graph. A build
+    /// Let the projection actor write exactly this row's pack graph and the
+    /// commons graph that holds the glossary terms. A build
     /// without the RBAC policy decides graph access by graph type alone, so
     /// there is nothing to provision there.
     async fn grant_projection_access(
@@ -429,7 +430,12 @@ pub mod worker {
             let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
                 tenant, connector,
             )?;
-            super::grant::ensure(&mut state.write().await.isolation, &graph)
+            let mut guard = state.write().await;
+            super::grant::ensure(&mut guard.isolation, &graph)?;
+            // The glossary terms a pack defines join the tenant's commons graph
+            // after the projection commits (MEDULLA-FEDERATED-QUERY-R058.9); the
+            // actor writes that one graph as well, through the same gateway.
+            super::grant::ensure(&mut guard.isolation, super::grant::COMMONS_GRAPH)
         }
         #[cfg(not(feature = "security"))]
         {
