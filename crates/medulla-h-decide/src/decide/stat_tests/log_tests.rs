@@ -372,19 +372,24 @@ pub(super) async fn mixed_origin_aggregates_exclude_synthetic(
     // Head-free exploration carries no synthetic fitted evidence. Reuse the
     // exact policy and question, so real and synthetic labels share the same
     // aggregation domain rather than escaping through a different policy.
-    let real = decide(
-        h,
-        request(
-            schema_pin,
-            None,
-            synthetic.inputs.policy.clone(),
-            QuestionSafety::Ordinary,
-        ),
-    )
-    .await
-    .unwrap()
-    .records
-    .as_slice()[0]
+    // The context is one no earlier decision of this caller matched: a matched
+    // context exploits its executed options instead of exploring
+    // (MEDULLA-DECISION-ENGINE-R020.1.2).
+    let mut real_request = request(
+        schema_pin,
+        None,
+        synthetic.inputs.policy.clone(),
+        QuestionSafety::Ordinary,
+    );
+    let mut params = real_request.params.as_slice().to_vec();
+    params.iter_mut().find(|p| p.name == "query").unwrap().value =
+        TypedValue::Text(format!("web search engine{}", " ".repeat(support as usize + 1)));
+    real_request.params = BoundedVec::new(params).unwrap();
+    let real = decide(h, real_request)
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
         .clone();
     assert!(!real.synthetic_evidence);
     assert!(matches!(real.outcome, StatisticalOutcome::Explored { .. }));
