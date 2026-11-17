@@ -594,14 +594,21 @@ fn authorize_table_txn_op(
         | TxnOp::DropExtension { .. }
         | TxnOp::CreateSequence { .. }
         | TxnOp::DropSequence { .. }
-        | TxnOp::CreateTrigger { .. }
-        | TxnOp::DropTrigger { .. }
         | TxnOp::CreateFunction { .. }
         | TxnOp::DropFunction { .. } => authority
             .require_admin(
                 "catalog-wide DDL (view/extension/function/property graph) over the shared tenant catalog",
             )
             .map_err(user_err),
+        // A trigger belongs to one table, so it follows that table's ownership (the
+        // ALTER privilege), not the shared catalog's administrator gate
+        // (MEDULLA-ENGINE-PARITY-R012.2).
+        TxnOp::CreateTrigger { spec } => {
+            authorize_alter_like(source, authority, &spec.table, provisional_creates)
+        }
+        TxnOp::DropTrigger { table, .. } => {
+            authorize_alter_like(source, authority, table, provisional_creates)
+        }
         TxnOp::PropertyGraphDdl(graph) => {
             authorize_property_graph_op(authority, table_store, graph)
         }
