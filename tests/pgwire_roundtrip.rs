@@ -1609,7 +1609,16 @@ async fn occ_conflict_over_wire() {
         .await
         .expect_err("A's commit conflicts with B's");
     let chain = error_chain(&refused);
-    assert!(chain.contains("40001"), "expected SQLSTATE 40001: {chain}");
+    // The SQLSTATE travels in the error's code field, not in its display text.
+    assert_eq!(
+        refused
+            .as_db_error()
+            .expect("a database error")
+            .code()
+            .code(),
+        "40001",
+        "expected SQLSTATE 40001: {chain}"
+    );
     assert!(
         chain.contains("txn_conflict"),
         "expected TXN_CONFLICT: {chain}"
