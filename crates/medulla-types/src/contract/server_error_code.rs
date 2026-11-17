@@ -531,7 +531,6 @@ closed_error_codes! {
         SqliteFileDenied => "SQLITE_FILE_DENIED",
         DuckdbFileDenied => "DUCKDB_FILE_DENIED",
         CapabilityUnsupported => "CAPABILITY_UNSUPPORTED",
-        SourceUnavailable => "SOURCE_UNAVAILABLE",
         SchemaDrift => "SCHEMA_DRIFT",
         SqliteSnapshotUnstable => "SQLITE_SNAPSHOT_UNSTABLE",
         SqliteWatermarkInvalid => "SQLITE_WATERMARK_INVALID",
@@ -810,9 +809,6 @@ closed_error_codes! {
         LineageCatalogAmbiguous => "LINEAGE_CATALOG_AMBIGUOUS",
         LineageCatalogMissing => "LINEAGE_CATALOG_MISSING",
         LineageImpactTooLarge => "LINEAGE_IMPACT_TOO_LARGE",
-        SchemaDrift => "SCHEMA_DRIFT",
-        /// A source's catalog probe is failed or not yet finished (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3).
-        SourceUnavailable => "SOURCE_UNAVAILABLE",
         /// A cross-source question names a class the request graph's schema does not name (MEDULLA-CQ-XSRC-R011).
         CqClassUnknown => "CQ_CLASS_UNKNOWN",
         // MEDULLA-DECISION-ENGINE-R615.6: the write-back approval queue refusals.
