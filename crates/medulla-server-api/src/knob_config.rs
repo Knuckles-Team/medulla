@@ -954,6 +954,7 @@ pub fn scheduler_config_from(
         analytics_slots: knobs.scheduler_analytics_slots,
         // One knob feeds both fields: `scheduler.analytics_slots` is the only source.
         analytics_workers: knobs.scheduler_analytics_slots,
+        analytics_workers: u32::try_from(knobs.analytics_workers).unwrap_or(u32::MAX),
         cores_per_mille: u16::try_from(knobs.scheduler_cores_per_mille).unwrap_or(u16::MAX),
         memory_per_worker_bytes: knobs.scheduler_memory_per_worker_bytes,
         max_queue_depth: knobs.scheduler_max_queue_depth,

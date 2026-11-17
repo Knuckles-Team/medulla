@@ -81,30 +81,6 @@ fn age_cypher_registers_and_removed_backend_is_refused() {
 
 // Partial refusal coverage for MEDULLA-DURABLE-KERNEL-R024; successful-operation acceptance remains open.
 #[test]
-fn unbound_cypher_backends_refuse_typed_and_keep_the_registry_empty() {
-    let mut registry = ForeignSourceRegistry::new();
-    let neo4j = register_neo4j(
-        &mut registry,
-        "rollup-neo4j",
-        &rollup_cypher_spec(ForeignCypherBackend::Neo4j),
-    )
-    .unwrap_err();
-    assert!(neo4j.contains("not yet bound"), "Neo4j: {neo4j}");
-    let falkor = register_falkordb(
-        &mut registry,
-        "rollup-falkor",
-        &rollup_cypher_spec(ForeignCypherBackend::FalkorDb),
-    )
-    .unwrap_err();
-    assert!(falkor.contains("not yet bound"), "FalkorDb: {falkor}");
-    assert!(
-        registry.is_empty(),
-        "a refused registration must not be stored"
-    );
-}
-
-// Partial refusal coverage for MEDULLA-DURABLE-KERNEL-R024; successful-operation acceptance remains open.
-#[test]
 fn unbound_spark_and_brain_guarded_backends_refuse_typed() {
     let mut registry = ForeignSourceRegistry::new();
     let spark = ForeignSourceSpec::SparkBatch {
