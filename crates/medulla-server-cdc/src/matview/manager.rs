@@ -559,14 +559,15 @@ impl PlanMatViewManager {
             .collect();
         due.sort();
         due.truncate(limit);
-        due.iter()
-            .filter_map(|name| views.get_mut(name))
-            .map(|t| {
+        let mut taken = Vec::with_capacity(due.len());
+        for name in &due {
+            if let Some(t) = views.get_mut(name) {
                 t.check_due = false;
                 t.since_check = 0;
-                t.def.clone()
-            })
-            .collect()
+                taken.push(t.def.clone());
+            }
+        }
+        taken
     }
 
     /// The stored definition for `name`, if any.
