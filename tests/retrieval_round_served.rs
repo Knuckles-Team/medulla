@@ -246,7 +246,9 @@ fn assert_unread(response: Response) {
 }
 
 fn error_of(response: Response) -> String {
-    response.error.expect("the round refuses")
+    // The wire splits a refusal into its code and detail; the detail names the terminal
+    // verdict and the exhausted dimension, so read both back as one text.
+    response.refusal_text().expect("the round refuses")
 }
 
 fn hashed(text: &str) -> Vec<f32> {
@@ -1699,13 +1701,15 @@ async fn feedback_continuation_is_validated_and_bounded() {
     assert_eq!(next.terms[0].term, "snapshot");
     assert_eq!(next.terms[0].weight, 1.0, "0.6 prior + 0.6 now, clamped");
 
-    // A terminal stop verdict returns no continuation.
+    // A terminal stop verdict returns no continuation. An exhausted limit is terminal and
+    // the round answers with the budget refusal (R082.4): the refusal carries the terminal
+    // verdict and no result, so no continuation reaches the caller.
     let mut last = request(None);
     last.feedback = Some(feedback_part(1, "replica recovery"));
     last.stop = Some(feedback_stop_part(Some(1)));
-    let done = decode(round_as(&state, None, last).await);
-    assert!(done.stop.expect("stop verdict").stop);
-    assert!(done.feedback.is_none(), "terminal verdict, no continuation");
+    let done = round_as(&state, None, last).await;
+    assert_eq!(done.error.as_deref(), Some(RETRIEVAL_BUDGET_EXCEEDED));
+    assert!(done.result.is_none(), "terminal verdict, no continuation");
 
     // A document this round did not return is refused before anything is described.
     let mut forged = request(None);
