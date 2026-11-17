@@ -740,6 +740,8 @@ closed_error_codes! {
         // served boundary reported each as an unclassified INTERNAL.
         AccessCheckUnavailable => "ACCESS_CHECK_UNAVAILABLE",
         ByteCeilingTooSmall => "BYTE_CEILING_TOO_SMALL",
+        CodeAnchorUnknown => "CODE_ANCHOR_UNKNOWN",
+        CodeDepthExceeded => "CODE_DEPTH_EXCEEDED",
         ContextItemCostInvalid => "CONTEXT_ITEM_COST_INVALID",
         ContextScopeForeign => "CONTEXT_SCOPE_FOREIGN",
         CorpusLineageTooDeep => "CORPUS_LINEAGE_TOO_DEEP",
@@ -764,6 +766,7 @@ closed_error_codes! {
         NlCorrectionUnauthorized => "NL_CORRECTION_UNAUTHORIZED",
         // MEDULLA-FEDERATED-QUERY-R058.6: the certified-definition loop ended in a mismatch.
         NlDefinitionConflict => "NL_DEFINITION_CONFLICT",
+        NlCorrectionUnauthorized => "NL_CORRECTION_UNAUTHORIZED",
         NlDefinitionConflict => "NL_DEFINITION_CONFLICT",
         NlMutationRefused => "NL_MUTATION_REFUSED",
         NlPlannerUnconfigured => "NL_PLANNER_UNCONFIGURED",
@@ -774,6 +777,8 @@ closed_error_codes! {
         ProfileRevisionConflict => "PROFILE_REVISION_CONFLICT",
         ProposalCursorInvalid => "PROPOSAL_CURSOR_INVALID",
         QueryTextTooLong => "QUERY_TEXT_TOO_LONG",
+        RerankKExceeded => "RERANK_K_EXCEEDED",
+        RerankScorerVersionMismatch => "RERANK_SCORER_VERSION_MISMATCH",
         SourceCoverageHopBudgetInvalid => "SOURCE_COVERAGE_HOP_BUDGET_INVALID",
         SourceCoverageNoClasses => "SOURCE_COVERAGE_NO_CLASSES",
         SourceCoverageTooManyClasses => "SOURCE_COVERAGE_TOO_MANY_CLASSES",
