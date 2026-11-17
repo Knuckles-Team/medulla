@@ -35,7 +35,8 @@ pub(super) fn put(
     value["label"] = json!(label);
     let bytes = rmp_serde::to_vec_named(&value)
         .map_err(|error| format!("ontology edit node encode failed: {error}"))?;
-    core.add_node(node_id, bytes);
+    // The node is read back by label, so write it as a committed one-shot write.
+    core.put_node(node_id, bytes);
     Ok(())
 }
 

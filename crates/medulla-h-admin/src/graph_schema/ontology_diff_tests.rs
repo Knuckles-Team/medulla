@@ -150,7 +150,7 @@ fn put_stored_query(core: &GraphCore, name: &str, text: &str) {
         "version": 1,
         "query": {"name": name, "version": 1, "text": text},
     });
-    core.add_node(
+    core.put_node(
         format!("stored_query:{name}:1"),
         rmp_serde::to_vec_named(&node).unwrap(),
     );
