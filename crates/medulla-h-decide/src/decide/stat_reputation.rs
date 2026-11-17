@@ -6,7 +6,8 @@
 //! * `option` — an executed option (a candidate, a source, an assembly slate), and
 //!   `agent` — the agent an executed option ran as: the success probability learned from
 //!   the independent evaluations of its runs, pooled empirical-Bayes across its kind's
-//!   population and discounted by age (half-life [`HALF_LIFE_MS`]);
+//!   population and discounted by age (half-life [`HALF_LIFE_MS`]), measured at the
+//!   newest outcome the reader can see so every reader of one log state agrees;
 //! * `forecaster` — a fitted decision head: its proper scores (Brier with the Murphy
 //!   decomposition, log loss, ECE) over the executions it forecast, each forecast
 //!   re-read from the record's own inputs.
@@ -72,6 +73,22 @@ struct Evidence {
     options: Vec<Outcome>,
     agents: Vec<Outcome>,
     forecasts: Vec<ResolvedForecast>,
+}
+
+impl Evidence {
+    /// The one instant every reader of this log evaluates it at: the newest outcome
+    /// the reader can see. Outcomes are discounted by their age at that instant, not at
+    /// the clock of the read, so every reader of one log state (the relation, UQL,
+    /// `EpistemicStatus`, `RankByProvenance`) gets the same value, and a replay of the
+    /// log gets it again (MEDULLA-DECISION-ENGINE-R118.1.2.1).
+    fn evaluated_at_ms(&self) -> u64 {
+        self.options
+            .iter()
+            .chain(&self.agents)
+            .map(|outcome| outcome.at_ms)
+            .max()
+            .unwrap_or(0)
+    }
 }
 
 /// One `reputation` row.
@@ -347,13 +364,9 @@ fn forecaster_row(record: TrackRecord, n_min: u64) -> ReputationRow {
 }
 
 /// Every `reputation` row the reader may see, options then agents then forecasters.
-fn rows(
-    store: &AgentLibraryStore,
-    reader: &LogReader,
-    now_ms: u64,
-) -> Result<Vec<ReputationRow>, String> {
+fn rows(store: &AgentLibraryStore, reader: &LogReader) -> Result<Vec<ReputationRow>, String> {
     let evidence = gather(store, reader)?;
-    let rules = rules(now_ms)?;
+    let rules = rules(evidence.evaluated_at_ms())?;
     let mut out: Vec<ReputationRow> = Vec::new();
     for (kind, outcomes) in [("option", &evidence.options), ("agent", &evidence.agents)] {
         out.extend(
@@ -377,12 +390,7 @@ pub(super) fn reputation_relation(
     store: &AgentLibraryStore,
     reader: &LogReader,
 ) -> Result<Relation, String> {
-    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    Ok(relation(
-        "reputation",
-        COLUMNS,
-        &rows(store, reader, now_ms)?,
-    ))
+    Ok(relation("reputation", COLUMNS, &rows(store, reader)?))
 }
 
 /// `subject`'s learned reliability (an option first, then an agent): the log's materialized
@@ -396,7 +404,7 @@ pub(super) fn learned_reliability(
     subject: &str,
 ) -> Result<SourceReliability, String> {
     let evidence = gather(store, reader)?;
-    let rules = rules(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())?;
+    let rules = rules(evidence.evaluated_at_ms())?;
     let mut sparse: Option<SourceReliability> = None;
     for outcomes in [&evidence.options, &evidence.agents] {
         let Some(row) = learned(outcomes, &rules)?
