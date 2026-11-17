@@ -99,7 +99,7 @@ These are required acceptance cases, not claims of completed tests.
 - `MEDULLA-FEDERATED-QUERY-R081.2`: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::repair_order_ends_at_round_limit`.
 - `MEDULLA-FEDERATED-QUERY-R081.3`: `crates/medulla-exec/src/exec.rs::tests::execute_returns_verdict_for_rule_plan`.
 - `MEDULLA-FEDERATED-QUERY-R081.4`: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::strict_insufficient_abstains`.
-- `MEDULLA-FEDERATED-QUERY-R081.5`: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::verdict_premise_lists_all_fields`.
+- `MEDULLA-FEDERATED-QUERY-R081.5`: `tests/retrieval_round_served.rs::sufficiency_premise_lists_all_six_fields`.
 - `MEDULLA-FEDERATED-QUERY-R081.6`: `tests/retrieval/test_sufficiency_served.py::test_insufficient_returns_boost_k`.
 
 ### MEDULLA-FEDERATED-QUERY-R082 tests
