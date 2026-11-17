@@ -22,6 +22,7 @@ use medulla_protocol_types::protocol::{
 };
 use medulla_query_types::nl_query::NlDialect;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::server_context::ServerContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_blob::blob::BlobStateExt;
 use medulla_types::acl::RequestContextClaims;
@@ -244,13 +245,31 @@ impl Served {
         }
     }
 
-    /// Run the projection worker until its outbox is drained.
+    /// Run the projection worker until the import outbox of each tenant is drained.
+    ///
+    /// The worker sweeps the import stream of the deployment tenant its request policy
+    /// names, so the one store shared by both tenants is swept once under each tenant's
+    /// own policy, exactly as that tenant's deployment would sweep it.
     async fn project(&self) {
-        let subscribed = AtomicBool::new(false);
-        while medulla_h_admin::connector_pack_projection::worker::sweep(&self.state, &subscribed)
+        for tenant in [TENANT, OTHER_TENANT] {
+            let policy_for = |name: &str| match name {
+                "MEDULLA_AUDIENCE" => Some("medulla-test".to_string()),
+                "MEDULLA_TENANT" => Some(tenant.to_string()),
+                "MEDULLA_POLICY_VERSION" => Some("policy-test".to_string()),
+                _ => None,
+            };
+            let own = Arc::new(ServerContext::build(None, &policy_for));
+            let shared = std::mem::replace(&mut self.state.write().await.context, own);
+            let subscribed = AtomicBool::new(false);
+            while medulla_h_admin::connector_pack_projection::worker::sweep(
+                &self.state,
+                &subscribed,
+            )
             .await
             .unwrap()
-        {}
+            {}
+            self.state.write().await.context = shared;
+        }
     }
 
     /// The subjects the served SPARQL answer of `tenant` holds for `QUESTION`, asked
