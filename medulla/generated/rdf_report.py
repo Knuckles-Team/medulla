@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from ._shared import Digest256
 
 
 class DatalogReasoningResult(BaseModel):
@@ -25,6 +27,22 @@ class OntologyClassView(BaseModel):
     iri: str
     label: str | None = None
     parents: list[str]
+
+
+class OntologyCoverageView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    declared: Annotated[int, Field(ge=0)]
+    graph: str = ""
+    mapped: list[str]
+    pack_digest: str
+    pack_revision: str
+    schema_digest: str
+    source_digest: str
+    source_id: str
+    source_revision: str
+    tenant: str | None = None
+    unmapped: list[OntologyUnmappedClassView]
 
 
 class OntologyCrosswalkView(BaseModel):
@@ -47,8 +65,10 @@ class OntologyInspection(BaseModel):
     classes: list[OntologyClassView]
     committed: bool = False
     composed_digest: str | None = None
+    coverage: list[OntologyCoverageView] = Field(default_factory=list)
     crosswalks: list[OntologyCrosswalkView] = Field(default_factory=list)
     datatype_properties: list[OntologyPropertyView]
+    external_coverage: list[OntologyExternalCoverageView] = Field(default_factory=list)
     object_properties: list[OntologyPropertyView]
     ontologies: list[str]
     schema_digests: list[str]
@@ -65,6 +85,76 @@ class OntologyPropertyView(BaseModel):
     label: str | None = None
     ranges: list[str]
     symmetric: bool
+
+
+class ExternalOntologyCoverage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    coverage_digest: Digest256
+    mapping_revision: str
+    pack_revision: str
+    platform_vocabulary_revision: str
+    schema_revision: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_revision: str
+    source_schema_digest: Digest256
+    terms: list[ExternalTerm]
+
+
+class ExternalTermKind(str, Enum):
+    CLASS = "class"
+    OBJECT_PROPERTY = "object_property"
+    DATATYPE_PROPERTY = "datatype_property"
+    ANNOTATION_PROPERTY = "annotation_property"
+    NAMED_INDIVIDUAL = "named_individual"
+
+
+class ExternalTermMapped(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Literal["mapped"] = "mapped"
+    platform_iri: str
+    provenance_digest: Digest256
+
+
+class ExternalUnmappedReason(str, Enum):
+    NO_DECLARED_MAPPING = "no_declared_mapping"
+
+
+class ExternalTermUnmapped(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Literal["unmapped"] = "unmapped"
+    reason: ExternalUnmappedReason
+
+
+ExternalTermResult = Annotated[
+    ExternalTermMapped | ExternalTermUnmapped, Field(discriminator="state")
+]
+
+
+class ExternalTerm(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    external_iri: str
+    kind: ExternalTermKind
+    result: ExternalTermResult
+
+
+class OntologyExternalCoverageView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    coverage: ExternalOntologyCoverage
+    graph: str = ""
+    source_id: str
+    tenant: str | None = None
+
+
+class OntologyUnmappedClassView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    class_iri: str
+    reason: str
 
 
 class OwlExplainResult(BaseModel):
@@ -201,10 +291,20 @@ ShaclValidationResult.model_rebuild()
 
 __all__ = [
     "DatalogReasoningResult",
+    "ExternalOntologyCoverage",
+    "ExternalTerm",
+    "ExternalTermKind",
+    "ExternalTermMapped",
+    "ExternalTermResult",
+    "ExternalTermUnmapped",
+    "ExternalUnmappedReason",
     "OntologyClassView",
+    "OntologyCoverageView",
     "OntologyCrosswalkView",
     "OntologyInspection",
+    "OntologyExternalCoverageView",
     "OntologyPropertyView",
+    "OntologyUnmappedClassView",
     "OwlExplainResult",
     "OwlPropertyFact",
     "OwlPropertyFactPremisesItem",
