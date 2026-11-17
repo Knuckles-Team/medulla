@@ -352,6 +352,20 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SCHEMA_DRIFT",
         ],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R029.2: the table context of an attached source refuses with
+    // the schema-context codes and the refusals of the probe and lineage reads it consumes.
+    (
+        "SchemaContext",
+        &[
+            "SCHEMA_CONTEXT_SOURCE_UNKNOWN",
+            "SCHEMA_CONTEXT_UNKNOWN_TABLE",
+            "SCHEMA_CONTEXT_UNMAPPED",
+            "SCHEMA_CONTEXT_CLASS_AMBIGUOUS",
+            "SCHEMA_DRIFT",
+            "SOURCE_UNAVAILABLE",
+            "LINEAGE_IMPACT_TOO_LARGE",
+        ],
+    ),
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
     ("SqlSourceBatch", &["CLUSTER_MUTATION_UNAVAILABLE"]),

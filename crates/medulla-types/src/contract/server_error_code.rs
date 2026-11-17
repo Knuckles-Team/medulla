@@ -735,6 +735,10 @@ closed_error_codes! {
         LineageCatalogMissing => "LINEAGE_CATALOG_MISSING",
         LineageImpactTooLarge => "LINEAGE_IMPACT_TOO_LARGE",
         SchemaDrift => "SCHEMA_DRIFT",
+        /// A source's catalog probe is failed or not yet finished (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3).
+        SourceUnavailable => "SOURCE_UNAVAILABLE",
+        /// A cross-source question names a class the request graph's schema does not name (MEDULLA-CQ-XSRC-R011).
+        CqClassUnknown => "CQ_CLASS_UNKNOWN",
         // MEDULLA-DECISION-ENGINE-R615.6: the write-back approval queue refusals.
         InvalidWritebackIdentifier => "INVALID_WRITEBACK_IDENTIFIER",
         InvalidWritebackAsOf => "INVALID_WRITEBACK_AS_OF",
