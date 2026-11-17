@@ -874,6 +874,22 @@ mod tests {
         rmp_serde::to_vec_named(&map).unwrap()
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R804.3
+    #[test]
+    fn put_node_keeps_the_label_index_correct_after_it_was_built() {
+        let core = GraphCore::new();
+        core.put_node("a".into(), props(serde_json::json!({"type": "Doc"})));
+        // Reading by label builds the lazy label index.
+        assert_eq!(core.get_nodes_by_label("Doc", 0).len(), 1);
+        core.put_node("b".into(), props(serde_json::json!({"type": "Doc"})));
+        let ids: Vec<String> = core
+            .get_nodes_by_label("Doc", 0)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(ids, ["a", "b"]);
+    }
+
     // ── read-your-own-writes overlay (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) ────────────────────────
 
     fn overlay_obj(map: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {

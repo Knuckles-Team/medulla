@@ -7,6 +7,21 @@ impl GraphCore {
         self.txn().add_node(node_id, properties_msgpack);
     }
 
+    /// Write one node as a committed, one-shot write: [`Self::add_node`] followed by
+    /// [`Self::mark_dirty`].
+    ///
+    /// `add_node` is the low-level writer and deliberately leaves the lazy secondary
+    /// indexes (label, node-id, property, path) and the write version to its caller:
+    /// the dispatch layer maintains them incrementally (`apply_coalescable_write`) and
+    /// then marks the graph dirty, and bulk builders (`build_projection`) must not pay
+    /// a version bump and a change notification per node. A caller that writes a node
+    /// directly and later reads it back by label, with no dispatch around it, must use
+    /// this method so the label index cannot serve a stale answer.
+    pub fn put_node(&self, node_id: String, properties_msgpack: Vec<u8>) {
+        self.add_node(node_id, properties_msgpack);
+        self.mark_dirty();
+    }
+
     /// Insert a node WITHOUT appending a ledger record (D-EGP-1, t1-grounding-0802).
     ///
     /// `add_node`'s ledger write hex-encodes the ENTIRE property blob byte-by-byte
