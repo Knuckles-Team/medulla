@@ -83,6 +83,7 @@ async fn register(
             Method::RegisterForeignSource {
                 name: name.to_string(),
                 source: spec,
+                quota: None,
             },
         ),
     )

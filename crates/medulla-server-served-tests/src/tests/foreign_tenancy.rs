@@ -600,6 +600,7 @@ async fn connected_sources_exclude_another_owners_source() {
         let register = Method::RegisterForeignSource {
             name: name.into(),
             source: federation_remote_spec(remote_addr.clone()),
+            quota: None,
         };
         assert_ok(&dispatch_as(&local, id, OWNER_A, register).await);
     }

@@ -240,6 +240,7 @@ impl Harness {
                             tool: "export_elements".to_string(),
                             capabilities: Default::default(),
                         },
+                        quota: None,
                     },
                 )
                 .await,
