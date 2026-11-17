@@ -219,7 +219,7 @@ impl Served {
         let (mut index, archive) = build_pack(connector);
         index.archive.blob_digest = self.upload(tenant, &archive).await;
         let key = format!(
-            "connector-pack:{tenant}:{connector}:import:{digest}:0",
+            "connector-pack:{connector}:import:{digest}:0",
             digest = index.pack_digest
         );
         let response = self
