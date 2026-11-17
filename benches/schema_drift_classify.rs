@@ -56,7 +56,10 @@ fn approved_contract() -> RecordContract {
             },
         );
     }
-    RecordContract { fields }
+    RecordContract {
+        authority: None,
+        fields,
+    }
 }
 
 /// The delivery that fits the contract exactly.
