@@ -1087,7 +1087,7 @@ fn uql_machine_classes_extend_core() {
 // spec: MEDULLA-MEDIA-VOCAB-R656.3
 #[test]
 fn gramps_pilot_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_types::gramps_pilot_machine::GRAMPS_PILOT_MACHINE);
+    sm::assert_matches(&medulla_catalog_types::gramps_pilot_machine::GRAMPS_PILOT_MACHINE);
 }
 // spec: MEDULLA-MEDIA-VOCAB-R656.3
 #[test]
@@ -1098,7 +1098,7 @@ fn gramps_pilot_machine_classes_extend_core() {
 // spec: MEDULLA-MEDIA-VOCAB-R656.4
 #[test]
 fn immich_pilot_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_types::immich_pilot_machine::IMMICH_PILOT_MACHINE);
+    sm::assert_matches(&medulla_catalog_types::immich_pilot_machine::IMMICH_PILOT_MACHINE);
 }
 // spec: MEDULLA-MEDIA-VOCAB-R656.4
 #[test]
