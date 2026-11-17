@@ -24,6 +24,18 @@ use super::{
     Served, ADMIN, TENANT,
 };
 
+/// The quota a registration without one of its own takes: the resolved
+/// `foreign.default_quota.*` knobs, as the register handler resolves them.
+fn default_quota() -> medulla_types::consolidation_isolation::SourceQuota {
+    let knobs = medulla_server_api::knob_config::knobs();
+    medulla_types::consolidation_isolation::SourceQuota {
+        max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
+            .unwrap_or(u32::MAX),
+        max_rows: knobs.foreign_default_quota_max_rows,
+        max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
+    }
+}
+
 fn ontology(connector: &str, body: String) -> Content {
     Content {
         kind: PackEntryKind::Ontology,
@@ -540,7 +552,12 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     let catalog =
         medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
     catalog
-        .register(&caller, registration.source_id.clone(), spec.clone())
+        .register(
+            &caller,
+            registration.source_id.clone(),
+            spec.clone(),
+            default_quota(),
+        )
         .unwrap();
     let descriptor =
         medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceBindingDescriptor {
@@ -583,7 +600,12 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         let wrong_catalog =
             medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
         wrong_catalog
-            .register(&caller, registration.source_id.clone(), wrong_spec.clone())
+            .register(
+                &caller,
+                registration.source_id.clone(),
+                wrong_spec.clone(),
+                default_quota(),
+            )
             .unwrap();
         let mut wrong_descriptor = descriptor.clone();
         wrong_descriptor.spec = wrong_spec;
