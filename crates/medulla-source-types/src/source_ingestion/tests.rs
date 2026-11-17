@@ -894,3 +894,51 @@ fn an_empty_profile_map_is_omitted_from_the_canonical_bytes() {
         .unwrap();
     assert!(!String::from_utf8_lossy(&bytes).contains("column_profiles"));
 }
+
+/// Cross-language digest vector (MEDULLA-DECISION-ENGINE-R079.4): the Python
+/// client pins the same two values in `tests/test_source_record_column_profiles.py`.
+fn column_profile_vector_batch(with_profile: bool) -> SourceIngestionBatch {
+    let mut record = json!({
+        "stream": "s",
+        "record_id": "r1",
+        "mapping_reference": "m",
+        "payload": {"b": 1, "a": 2},
+        "provenance": {
+            "connector": "c",
+            "adapter_kind": "sql",
+            "server": "srv",
+            "tool": "t",
+            "tool_schema_sha256": "0".repeat(64),
+            "source_uri": "u"
+        }
+    });
+    if with_profile {
+        record["column_profiles"] = json!({
+            "a": {
+                "sql_type": "numeric",
+                "is_foreign_key": false,
+                "distinct_ratio_q32": 2147483648u64,
+                "sample_count": 10
+            }
+        });
+    }
+    serde_json::from_value(json!({
+        "connector": "c",
+        "mode": "full",
+        "strict_schema": true,
+        "records": [record],
+        "provider_checkpoint": {"stream": "s", "position": {"k": 1}}
+    }))
+    .unwrap()
+}
+
+#[test]
+fn column_profiles_digest_vectors_match_the_python_client() {
+    let without = SourceIngestionRequest::new(column_profile_vector_batch(false)).unwrap();
+    let with = SourceIngestionRequest::new(column_profile_vector_batch(true)).unwrap();
+    assert_eq!(
+        without.batch_digest().unwrap().to_hex(),
+        "bfa1c9d59ba6faed1a195bcd61827444b6d2c6bd962551ab3157412384c915f3"
+    );
+    assert_eq!(with.batch_digest().unwrap().to_hex(), "8a56a8e628f6ead40e4bcf96792891ef0974f42e4b6d8ca8d1566fa30ed2ebcb");
+}

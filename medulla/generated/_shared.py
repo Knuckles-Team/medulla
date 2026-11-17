@@ -2090,10 +2090,12 @@ class SkillTransformation(BaseModel):
 class SqlColumnProfile(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    distinct_ratio_q32: Annotated[int, Field(ge=0)]
-    is_foreign_key: bool
-    sample_count: Annotated[int, Field(ge=0)]
+    # Rust declaration order: it is the named-MessagePack digest order, and the
+    # digest projection cannot address map values, so the model order is the wire order.
     sql_type: SqlColumnType
+    is_foreign_key: bool
+    distinct_ratio_q32: Annotated[int, Field(ge=0)]
+    sample_count: Annotated[int, Field(ge=0)]
 
 
 class SqlColumnType(str, Enum):

@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
 from ._shared import (
     Digest256,
@@ -292,6 +292,14 @@ class SourceRecord(BaseModel):
     stream: str
     updated_at: str | None = None
 
+    @field_validator("column_profiles")
+    @classmethod
+    def _empty_profiles_are_absent(
+        cls, value: dict[str, SqlColumnProfile] | None
+    ) -> dict[str, SqlColumnProfile] | None:
+        # Rust omits an empty map on the wire, so `{}` and None are one value.
+        return value or None
+
 
 class SourceRecordProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
@@ -433,6 +441,7 @@ class SourceIngestionRequest(SourceIngestionBatch):
             },
             omit_none_paths={
                 "records[*].updated_at",
+                "records[*].column_profiles",
                 "relationships[*].properties",
                 "provider_checkpoint.content_hash",
                 "provider_checkpoint.watermark",
@@ -449,6 +458,7 @@ class SourceIngestionRequest(SourceIngestionBatch):
                     "payload",
                     "updated_at",
                     "provenance",
+                    "column_profiles",
                 ),
                 "records[*].provenance": (
                     "connector",
