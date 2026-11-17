@@ -10,6 +10,8 @@ use medulla_table_store::tables::PropertyGraphCatalogRecord;
 use medulla_table_store::tables::TableStore;
 use medulla_tables::index::SecondaryIndexSpec;
 use medulla_tables::schema::{StoredFunction, TableSchema};
+use medulla_tables::sequence::SequenceSource;
+use std::sync::Arc;
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.
 pub(crate) const INDEX_STATUS_RELATION: &str = "medulla_index_status";
@@ -28,6 +30,9 @@ pub(crate) struct StoreCatalog {
     pub(crate) tables: Vec<TableSchema>,
     /// Every ordinary secondary index, for `pg_index`.
     pub(crate) secondary_indexes: Vec<SecondaryIndexSpec>,
+    /// The durable source `nextval`, `currval` and `setval` draw from; none when the
+    /// statement runs without a table store.
+    pub(crate) sequences: Option<Arc<dyn SequenceSource>>,
 }
 
 impl StoreCatalog {
@@ -48,6 +53,7 @@ impl StoreCatalog {
             statement_graph: None,
             tables,
             secondary_indexes: store.list_secondary_indexes(None)?,
+            sequences: Some(Arc::new(store.clone())),
         })
     }
 }

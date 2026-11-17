@@ -653,6 +653,7 @@ impl SqlContextCache {
         let user = materialize_user_tables(store)?;
         let catalog = StoreCatalog::read(store, &epoch.tenant)?;
         let built = build_ctx(snap, nodes, user)?;
+        register_sequences(&built.ctx, catalog.sequences.as_ref());
         register_views(&built.ctx, &catalog.views, &catalog.functions).await?;
         register_system_catalogs(
             &built.ctx,
@@ -803,6 +804,19 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
             batches_to_typed(&batches)
         })
     })?
+}
+
+/// Register `nextval`, `currval` and `setval` over the store's named sequences
+/// (MEDULLA-ENGINE-PARITY-R013.1); a statement without a store has none.
+fn register_sequences(
+    ctx: &SessionContext,
+    source: Option<&Arc<dyn medulla_tables::sequence::SequenceSource>>,
+) {
+    if let Some(source) = source {
+        for udf in medulla_sql_udfs::udfs::SequenceSession::new(Arc::clone(source)).udfs() {
+            ctx.register_udf(udf);
+        }
+    }
 }
 
 /// The materialized `SessionContext` plus the live-relation Arrow schemas the
@@ -1036,6 +1050,7 @@ fn collect_sql_batches(
     rt.block_on(async move {
         let built = build_ctx(snap, nodes, user_tables)?;
         let ctx = built.ctx;
+        register_sequences(&ctx, catalog.sequences.as_ref());
         register_views(&ctx, &catalog.views, &catalog.functions).await?;
         // CONCEPT:MEDULLA-KG.query.route-create-view-create — synthesize `pg_catalog` + `information_schema` from the live
         // relations (nodes/edges/user tables), the now-registered views, and the stored
