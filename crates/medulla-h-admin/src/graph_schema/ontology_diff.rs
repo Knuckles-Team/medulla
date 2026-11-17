@@ -227,19 +227,23 @@ fn compose_candidate(
     key: &str,
     to: &SchemaSide,
 ) -> Result<(), String> {
+    // The candidate stands where the stored ontology stands, so it carries that
+    // source's own origin: an attached source is refused unless its origin owns
+    // its key and holds a valid record.
+    let origin = sources
+        .dynamic
+        .get(key)
+        .map(|stored| stored.origin.clone())
+        .ok_or_else(|| format!("'{key}' is not an attached runtime ontology source"))?;
     let source = GraphSchemaSource::new(
-        SchemaSourceOrigin::Ontology {
-            connector: "diff".to_string(),
-            ontology_iri: key.to_string(),
-            revision: 0,
-            importer: String::new(),
-            history: Vec::new(),
-        },
+        origin,
         to.shapes_ttl.as_deref().map(Arc::from),
         Some(Arc::from(to.ontology_ttl.as_str())),
         0,
     )?;
     let mut staged = sources.clone();
+    // The candidate replaces the stored revision of this ontology.
+    staged.detach_dynamic(key);
     staged.attach_dynamic(key.to_string(), source)?;
     medulla_server_api::schema_compose::validate_entering_schema(&staged).map(|_| ())
 }
