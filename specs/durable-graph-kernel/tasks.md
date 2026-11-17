@@ -283,7 +283,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T275 MEDULLA-DURABLE-KERNEL-R874.8 JournalEntry/JournalState state machine: route 1 census findings through JournalState::apply
 - [ ] T276 MEDULLA-DURABLE-KERNEL-R874.9 ManagedIndexStatus/ManagedIndexState state machine: route 2 census findings through ManagedIndexState::apply
 - [ ] T277 MEDULLA-DURABLE-KERNEL-R874.10 MutationBatchRecord/MutationBatchStatus state machine: route 1 census findings through MutationBatchStatus::apply
-- [ ] T278 MEDULLA-DURABLE-KERNEL-R874.11 MutationOutboxStatusView/OutboxConsumerStatus state machine: route 7 census findings through OutboxConsumerStatus::apply
+- [ ] T278 MEDULLA-DURABLE-KERNEL-R874.11 Rename OutboxConsumerStatus to OutboxConsumerStanding (no machine): field `standing`, builder `consumer_standing`
 - [ ] T279 MEDULLA-DURABLE-KERNEL-R874.12 OperationAuditEvent/AuditStatus state machine: route 1 census findings through AuditStatus::apply
 - [ ] T280 MEDULLA-DURABLE-KERNEL-R874.13 OutboxRecord/OutboxDeliveryState state machine: route 8 census findings through OutboxDeliveryState::apply
 - [ ] T281 MEDULLA-DURABLE-KERNEL-R874.14 ParentTransactionRecord/ParentTransactionState state machine: route 4 census findings through ParentTransactionState::apply
