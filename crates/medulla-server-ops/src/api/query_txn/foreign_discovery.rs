@@ -19,7 +19,7 @@ use std::pin::Pin;
 
 use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
 use medulla_lake::metastore::scan::{list_all_tables, ScanLimits};
-use medulla_lake::metastore::MetastoreError;
+use medulla_lake::metastore::{MetastoreClient, MetastoreError};
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::metadata_acceleration::{MetadataContract, SourceCategory};
 use medulla_types::wire::ForeignSourceSpec;
@@ -186,6 +186,9 @@ pub fn category_of(spec: &ForeignSourceSpec) -> SourceCategory {
         ForeignSourceSpec::Trino { .. } => SourceCategory::OlapColumnar,
         ForeignSourceSpec::SparkBatch { .. } => SourceCategory::SparkEngine,
         ForeignSourceSpec::Metastore { .. } => SourceCategory::HadoopCatalog,
+        // The coverage matrix files the warehouse and lake sources (R020.2.2) under OLAP and
+        // columnar.
+        ForeignSourceSpec::Warehouse { .. } => SourceCategory::OlapColumnar,
         ForeignSourceSpec::RemoteEngine { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => SourceCategory::PropertyGraph,
@@ -407,6 +410,25 @@ fn declared_shape(spec: &ForeignSourceSpec) -> Vec<String> {
             format!("table={table}"),
             format!("columns={}", sorted(columns)),
             format!("watermark={}", watermark.as_deref().unwrap_or("")),
+        ],
+        ForeignSourceSpec::Warehouse {
+            config,
+            table,
+            columns,
+            id_column,
+            prefer_flight_sql,
+            snapshot_id,
+        } => vec![
+            "warehouse".into(),
+            format!("kind={:?}", config.kind),
+            format!("table={table}"),
+            format!("columns={}", sorted(columns)),
+            format!("id={id_column}"),
+            format!("flight_sql={prefer_flight_sql}"),
+            format!(
+                "snapshot={}",
+                snapshot_id.map(|id| id.to_string()).unwrap_or_default()
+            ),
         ],
         ForeignSourceSpec::Metastore {
             database_filter, ..
