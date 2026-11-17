@@ -106,6 +106,7 @@ fn decide_team(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

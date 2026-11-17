@@ -225,6 +225,7 @@ fn decide_with_runtime(
         matched: &[],
         designation: Some(&runtime),
         reader: None,
+        assistant_profile: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

@@ -91,11 +91,13 @@ fn ask_with(
         matched: &[],
         designation: None,
         reader: None,
+        assistant_profile: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
         &request,
         None,
+        0,
         "decider".to_string(),
         std::time::Instant::now(),
     )

@@ -212,6 +212,7 @@ fn decide_with_read(
         matched: &[],
         designation: Some(&runtime),
         reader: None,
+        assistant_profile: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

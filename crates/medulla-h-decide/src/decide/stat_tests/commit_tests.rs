@@ -127,6 +127,10 @@ async fn evidence_streams_are_sealed_and_read_back() {
                 policy: DecisionPolicyRef::Default,
                 solver: None,
                 evidence_streams: Default::default(),
+                primitive_edges: Default::default(),
+                replacements: Default::default(),
+                assistant_profile_ref: None,
+                coding_agent: None,
             };
             req.evidence_streams = BoundedVec::new(streams).unwrap();
             let response = super::super::assemble::handle_agent_assemble(
