@@ -6,6 +6,7 @@ use serde::de::DeserializeSeed;
 use serde::ser::SerializeMap;
 use serde::Serialize;
 
+use crate::outbox::{OutboxHeader, OutboxIntent};
 use medulla_identity_types::{
     authority::AdmissionOutcome, authority::AuthorityContext, authority::AuthorityScope,
     authority::DecisionOutcome, authority::EffectState, authority::IngressSurface,
@@ -15,7 +16,6 @@ use medulla_identity_types::{
     authority::VerifiedAuthority, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
     authority::AUTHORITY_PROTOCOL_V1,
 };
-use medulla_types::outbox::{OutboxHeader, OutboxIntent};
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
     contract::Ed25519Signature, contract::IdempotencyKey, contract::MethodId, contract::Nonce,

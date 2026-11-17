@@ -3,11 +3,11 @@ use super::envelope::MutationRequestEnvelope;
 use super::outbox_decode::ProvenanceBinding;
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
+use crate::outbox::OutboxIntent;
 use medulla_identity_types::{
     authority::AuthorityScope, authority::NonceReplayKey, authority::OperationReplayIdentity,
     authority::VerifiedAuthority,
 };
-use medulla_types::outbox::OutboxIntent;
 use medulla_types::{
     contract::BoundedVec, contract::OpaqueId, contract::ResourceId, contract::MAX_MUTATION_EFFECTS,
     contract::MAX_OUTBOX_INTENTS,

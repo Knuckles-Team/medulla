@@ -1,5 +1,5 @@
 use super::envelope::MutationRequestEnvelope;
-use medulla_types::outbox::OutboxIntent;
+use crate::outbox::OutboxIntent;
 use medulla_types::{contract::Digest256, contract::OpaqueId, contract::RequestedMutationResult};
 
 impl MutationRequestEnvelope {

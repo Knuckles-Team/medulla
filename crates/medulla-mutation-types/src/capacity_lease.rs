@@ -151,7 +151,7 @@ pub struct CapacityCell {
     /// (`ThrottleCapacityCell`) move only the ceiling, and only the operator
     /// (`UpdateCapacityCell`) declares the policy or the capacity itself.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub throttle: Option<medulla_types::capacity_throttle::CapacityThrottle>,
+    pub throttle: Option<crate::capacity_throttle::CapacityThrottle>,
 }
 
 impl CapacityCell {
@@ -881,7 +881,7 @@ mod tests {
     /// included, and never lifts the cell above its declared capacity.
     #[test]
     fn admission_is_measured_against_the_throttle_ceiling() {
-        use medulla_types::capacity_throttle::{CapacityThrottle, CapacityThrottlePolicy};
+        use crate::capacity_throttle::{CapacityThrottle, CapacityThrottlePolicy};
         let policy = CapacityThrottlePolicy {
             error_budget_ppm: 50_000,
             recovery_ppm: 10_000,
