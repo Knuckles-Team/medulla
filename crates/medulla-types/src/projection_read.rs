@@ -29,6 +29,7 @@ pub fn projection_mapping_prefix(tenant: &str, mapping_id: &str) -> String {
 
 /// The type of one projected column.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ProjectionColumnType {
@@ -52,6 +53,7 @@ impl ProjectionColumnType {
 
 /// One projected column: its relational name, the node field it reads and its type.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionColumn {
     pub name: String,
     pub field: String,
@@ -60,6 +62,7 @@ pub struct ProjectionColumn {
 
 /// One projected table: the node label it presents, its primary key column and columns.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionTable {
     pub name: String,
     pub label: String,
@@ -76,6 +79,7 @@ impl ProjectionTable {
 /// One stored mapping revision. `approval_state` is the text of
 /// `MappingApprovalState` (`approved`, `proposed`, `model-suggested`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionMapping {
     pub mapping_id: String,
     pub revision: u64,
@@ -85,6 +89,7 @@ pub struct ProjectionMapping {
 
 /// A comparison operator of a typed predicate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ProjectionCompare {
