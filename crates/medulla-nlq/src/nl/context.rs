@@ -555,6 +555,14 @@ impl SchemaContext {
                 hint_fields(schema, &tokens).join(", ")
             ));
         }
+        if !self.tables.is_empty() {
+            // The caller's readable SQL catalog tables are part of the one context
+            // every planner step reads (MEDULLA-FEDERATED-QUERY-R058.4.3).
+            out.push_str("SQL tables:\n");
+            for table in &self.tables {
+                out.push_str(&format!("  {} ({})\n", table.name, table.columns.join(", ")));
+            }
+        }
         if let Some(sources) = &self.foreign_sources {
             out.push_str(&format!(
                 "Foreign sources: {}\n",
