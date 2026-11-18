@@ -57,7 +57,9 @@ pub async fn read_profile_aggregate(
         .await
         .map_err(unavailable)?
         .map_err(unavailable)?;
-        let read = sqlx::query(statement).fetch_one(&pool).await;
+        let read = sqlx::query(sqlx::AssertSqlSafe(statement.to_string()))
+            .fetch_one(&pool)
+            .await;
         pool.close().await;
         let row = read.map_err(unavailable)?;
         return Ok(ProfileAggregate {
@@ -78,7 +80,9 @@ pub async fn read_profile_aggregate(
         .await
         .map_err(unavailable)?
         .map_err(unavailable)?;
-        let read = sqlx::query(statement).fetch_one(&pool).await;
+        let read = sqlx::query(sqlx::AssertSqlSafe(statement.to_string()))
+            .fetch_one(&pool)
+            .await;
         pool.close().await;
         let row = read.map_err(unavailable)?;
         return Ok(ProfileAggregate {
@@ -109,7 +113,9 @@ pub async fn read_column_sample(
         .await
         .map_err(unavailable)?
         .map_err(unavailable)?;
-        let read = sqlx::query(statement).fetch_all(&pool).await;
+        let read = sqlx::query(sqlx::AssertSqlSafe(statement.to_string()))
+            .fetch_all(&pool)
+            .await;
         pool.close().await;
         return read
             .map_err(unavailable)?
@@ -128,7 +134,9 @@ pub async fn read_column_sample(
         .await
         .map_err(unavailable)?
         .map_err(unavailable)?;
-        let read = sqlx::query(statement).fetch_all(&pool).await;
+        let read = sqlx::query(sqlx::AssertSqlSafe(statement.to_string()))
+            .fetch_all(&pool)
+            .await;
         pool.close().await;
         return read
             .map_err(unavailable)?
