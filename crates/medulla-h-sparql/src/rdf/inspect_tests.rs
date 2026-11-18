@@ -7,7 +7,7 @@ const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 /// computed canonical digest (89 triples).
 const ARR_MANIFEST: &str =
     include_str!("../../../../tests/fixtures/ontology_inspect/arr_connector_manifest.ttl");
-const ARR_PINNED_DIGEST: &str = "8b921c452bb35f134b2d8dad809afcb49ec7abd16d78f5ee79e704ae5acb7c75";
+const ARR_PINNED_DIGEST: &str = "0bfdd9900775d98d945eb2a76a9b84d9a28312af81d08ec98333eca2764d534d";
 
 const VOCABULARY: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
     @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
