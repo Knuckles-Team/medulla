@@ -75,6 +75,11 @@ The unknowns below were open when the rows were written. Each is decided in [res
 - How reconcile runs and plans are stored (R903.2), what a container with an unknown parent does (R904.2) and how atoms are packed (R003.2).
 - How claim-time admission and the lane table fit (R604.3), and what the batch report counts (R606.1).
 The unknowns that remained are resolved in [research.md](research.md): the governance and reconcile decisions and the ingest state machines.
+Three unknowns were resolved in [research.md](research.md):
+
+- Where does a record batch's governance refusal land, per record or per batch?
+- How does a source deletion reconcile without a side table?
+- How does `prepare` admit a non-record batch kind without a second pipeline?
 
 ## Phase 1: Design
 
@@ -96,6 +101,13 @@ The rules below bind every row.
 - **Special cases.** A normalization failure returns a quarantine outcome that commits restricted evidence and never advances a checkpoint (rule 3). A record with invalid governance is refused alone and the rest of its batch commits (R900.2).
 - **State.** Tasks, leases and dead letters live in the one job store. Reconcile runs and plans are graph facts (R903.2). Nothing is held in a side table.
 - **Environment.** Engine knobs (`ingest.retention_required` and the scheduler settings each row names); no per-tenant configuration file (rule 8).
+- **Owner.** Medulla. The queue, lease and retry policy live in `crates/medulla-server-ops/src/api/ingest.rs` and its handler crate; job bodies belong to the connectors through the SDK.
+- **Cohesion.** Admission, normalization, quarantine and the commit of one batch envelope share `prepare`, so they live in one module tree.
+- **Dependency direction.** Handler dispatch points down to the type, record and blob crates. The queue handler reaches the task queue only through `jobs_seam`, and the task-queue handler reaches ingest only through `ingest_seam`.
+- **Interface depth.** The served ingest and jobs methods. Rows extend the existing modules and add no parallel entry point.
+- **Special cases.** None per connector or source kind beyond the single `admit_extension` dispatch. A retired behaviour is deleted in the same change, with no shim.
+- **State.** The job lifecycle and the `enumeration_run` machine are explicit; envelopes, receipts and plans are graph facts written through the durable mutation path.
+- **Environment.** Each tunable is a named knob read once at startup and bounds-checked; no handler reads an environment variable.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
@@ -148,3 +160,6 @@ none
 Governance refusal is per record and writes nothing; the receipt carries `GovernanceReport{governed, refused, marked}`. Retention policy is the engine knob `ingest.retention_required`. The governance bench calls `admit_record_governance`. Rationale is in [research.md](research.md).
 
 Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enumeration` (stage pages, check the declared digest, plan with `plan_reconcile_digests`), `split_due`, `sweep_methods` (tombstone or Document cascade, marker and plan update) and `spawn_reconcile_sweep` (started in `src/main.rs`).
+
+## Non-record kind dispatch
+`source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
