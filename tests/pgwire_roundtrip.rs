@@ -1685,7 +1685,8 @@ async fn define_plan_view(
 async fn matview_status_catalog_reports_mode_and_reason() {
     use medulla_types::wire::{Op, Pred};
 
-    let state = test_support::seeded_wire_state(
+    // Plan views are unscoped, so only a `System` caller may define them.
+    let state = test_support::seeded_system_wire_state(
         "test",
         common::TEST_AGENT,
         Some(sql_test_persist_dir()),

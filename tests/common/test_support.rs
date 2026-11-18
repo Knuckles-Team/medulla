@@ -416,7 +416,17 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    use medulla_types::acl::{AgentIdentity, AgentRole};
+    wire_isolation_with_role(users, medulla_types::acl::AgentRole::Agent)
+}
+
+/// The wire fixture's isolation with every user registered under `role`. A `System`
+/// caller is not subject to row-level security, which the unscoped plan views require.
+#[cfg(feature = "security")]
+pub fn wire_isolation_with_role(
+    users: &[&str],
+    role: medulla_types::acl::AgentRole,
+) -> IsolationLayer {
+    use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 
     let mut isolation = IsolationLayer::new();
@@ -432,7 +442,7 @@ pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
     for user in users {
         isolation.register_agent(AgentIdentity {
             agent_id: (*user).to_string(),
-            role: AgentRole::Agent,
+            role: role.clone(),
             teams: Vec::new(),
             roles: vec!["commons-user".to_string()],
         });
@@ -463,6 +473,38 @@ pub fn seeded_wire_state(
         state.tsdb_store = Some(temporary_series("wire"));
     }
     Arc::new(RwLock::new(state))
+}
+
+/// Like [`seeded_wire_state`], with `user` registered as a `System` caller.
+#[cfg(feature = "security")]
+pub fn seeded_system_wire_state(
+    auth_secret: &str,
+    user: &str,
+    persist_dir: Option<String>,
+    persistence: Option<SharedPersistence>,
+) -> SharedState {
+    let mut state = make_state(
+        auth_secret,
+        wire_isolation_with_role(&[user], medulla_types::acl::AgentRole::System),
+        persist_dir,
+        persistence,
+    );
+    seed_wire_nodes(&state.registry, user);
+    #[cfg(feature = "tsdb")]
+    {
+        state.tsdb_store = Some(temporary_series("wire"));
+    }
+    Arc::new(RwLock::new(state))
+}
+
+#[cfg(not(feature = "security"))]
+pub fn seeded_system_wire_state(
+    auth_secret: &str,
+    user: &str,
+    persist_dir: Option<String>,
+    persistence: Option<SharedPersistence>,
+) -> SharedState {
+    seeded_wire_state(auth_secret, user, persist_dir, persistence)
 }
 
 pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
