@@ -275,7 +275,8 @@ fn term_key(term: &Term) -> Option<String> {
     match term {
         Term::NamedNode(n) => Some(format!("<{}>", n.as_str())),
         Term::BlankNode(b) => Some(format!("_:{}", b.as_str())),
-        Term::Literal(_) => None,
+        // A literal or a quoted triple is never an RDF list cell.
+        _ => None,
     }
 }
 
