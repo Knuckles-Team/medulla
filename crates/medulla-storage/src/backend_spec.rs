@@ -29,6 +29,7 @@ pub struct SecretRef(pub String);
 
 /// The declared durable-store backend for a graph.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "StorageBackendSpecWire")]
 #[serde(tag = "variant", rename_all = "snake_case", deny_unknown_fields)]
 pub enum StorageBackendSpec {
     /// redb on local disk: the default.
@@ -43,6 +44,44 @@ pub enum StorageBackendSpec {
         /// Hex layout digest naming an entry in the owner-store lineage registry.
         layout_digest: Option<String>,
     },
+}
+
+/// The decoding shape of [`StorageBackendSpec`]. Serde does not apply
+/// `deny_unknown_fields` to a unit variant of an internally tagged enum, so
+/// `{"variant":"local","dsn":"x"}` would decode; the empty struct variant here
+/// closes the `local` field set, and the object-store fields stay closed too.
+#[derive(Deserialize)]
+#[serde(tag = "variant", rename_all = "snake_case", deny_unknown_fields)]
+enum StorageBackendSpecWire {
+    Local {},
+    ObjectStore {
+        endpoint: Option<SecretRef>,
+        bucket: Option<SecretRef>,
+        root: Option<SecretRef>,
+        durability: Option<DurabilityClass>,
+        layout_digest: Option<String>,
+    },
+}
+
+impl From<StorageBackendSpecWire> for StorageBackendSpec {
+    fn from(wire: StorageBackendSpecWire) -> Self {
+        match wire {
+            StorageBackendSpecWire::Local {} => Self::Local,
+            StorageBackendSpecWire::ObjectStore {
+                endpoint,
+                bucket,
+                root,
+                durability,
+                layout_digest,
+            } => Self::ObjectStore {
+                endpoint,
+                bucket,
+                root,
+                durability,
+                layout_digest,
+            },
+        }
+    }
 }
 
 /// Typed, atomic refusal; none of these leaves any state changed.
