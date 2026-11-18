@@ -1931,9 +1931,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R700.5` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::stored_revision_replays_to_the_same_posterior` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.6` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.6` | `tests/decide/test_belief_revision_served.py::test_pass_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R701` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-decision-types/src/failure_patterns.rs::tests::failure_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.2` | `crates/medulla-epistemic/src/failure_patterns.rs::tests::cluster_is_linear_and_signatures_normalize` | L2 |
 | `MEDULLA-DECISION-ENGINE-R701.2` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.3` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::ingest_files_one_gap_per_topic` | L3 |
@@ -1942,9 +1942,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R701.5` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::gap_links_back_to_its_member_runs` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.6` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.6` | `tests/decide/test_failure_patterns_served.py::test_ingest_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R702` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.1` | `crates/medulla-decision-types/src/correction.rs::tests::correction_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R702.1` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702.1` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.2` | `crates/medulla-decision-stats/src/decision/correction.rs::tests::batch_holds_all_three_effects_and_k_is_bounded` | L2 |
 | `MEDULLA-DECISION-ENGINE-R702.2` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.3` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_reaches_the_handler` | L3 |

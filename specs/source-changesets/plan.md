@@ -57,6 +57,16 @@ none
 
 ## Phase 1: Design
 
+Design answers:
+
+- **Owner.** Medulla. Source lives in the engine blob store and the changeset chain; pure logic sits in `medulla-compute` and the handlers in `medulla-h-ingest`.
+- **Cohesion.** One chain and one blob store; trees, history indexes, gate verdicts, bisect and provenance all derive from changeset ids.
+- **Dependency direction.** Handlers in `medulla-h-ingest` point down to `medulla-compute`, `medulla-server-blob`, `medulla-server-auth` and the type crates; `medulla-compute` depends on no handler.
+- **Interface depth.** Few entry points: accept, read tree, history, record verdict, bisect, submit symbol edit. Each new derived index adds a pass over the chain, not a store.
+- **Special cases.** None per caller. A refusal leaves the chain unchanged and cross-tenant reads use the one request-boundary refusal.
+- **State.** The blob store and the chain hold all state; trees replay from a snapshot checkpoint and the derived indexes update incrementally, with no second copy of file bytes.
+- **Environment.** Limits are knobs of `SchedulerConfig` with defaults and units; no crate in this plan reads an environment variable.
+
 ### Architecture
 
 A repository's source has exactly two homes in the engine. Both are existing surfaces.

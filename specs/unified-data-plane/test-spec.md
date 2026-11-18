@@ -77,7 +77,7 @@ Authenticated Iceberg catalog (R039): a valid token lists and loads its own tabl
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.3`: `crates/medulla-ann/src/version.rs::tests::tag_requires_passing_verdict`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.4`: `crates/medulla-ann/src/version.rs::tests::blocked_promotion_tags_nothing`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.5`: `crates/medulla-catalog-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries`.
-- `MEDULLA-UNIFIED-DATA-PLANE-R040.6`: `tests/embedding/test_promotion_gate_served.py::test_regressed_modality_blocks_promotion`.
+- `MEDULLA-UNIFIED-DATA-PLANE-R040.6`: `tests/embedding/test_promotion_gate_served.py::test_regressed_modality_blocks_promotion` (planned).
 
 ## Planned acceptance: graph-backed projections
 
@@ -209,7 +209,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.7`: `tests/federation/test_w
 | Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.4` | `tests/web_document_enrich_served.rs::test_web_document_refusals`: Each case returns its code and writes nothing. |
 | Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.5` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: The receipt counts match a separate read of the chunks. |
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.6` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: Both backends store equal chunk sets, and `document_chunk_tree` meets the budgets. |
-| Extraction | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.7` | `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts`: Each extracted fact links to a chunk of the Document. |
+| Extraction | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.7` | `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts` (planned): Each extracted fact links to a chunk of the Document. |
 
 Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`.
 
@@ -220,16 +220,16 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | `MEDULLA-UNIFIED-DATA-PLANE-R761` | See each child. |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.1` | `crates/medulla-types/tests/profile.rs::profile_round_trips` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.2` | `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R761.3` | `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R761.4` | `tests/data_plane/test_profile_served.py::test_profile_refusals` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R761.5` | `tests/data_plane/test_profile_served.py::test_profile_method_recorded` |
+| `MEDULLA-UNIFIED-DATA-PLANE-R761.3` | `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R761.4` | `tests/data_plane/test_profile_served.py::test_profile_refusals` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R761.5` | `tests/data_plane/test_profile_served.py::test_profile_method_recorded` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.6` | `cargo bench --bench column_profile` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762` | See each child. |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.1` | `crates/medulla-types/tests/quality.rs::rule_round_trips` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.2` | `crates/medulla-core/src/quality.rs::tests::three_failures_open_one_incident` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.3` | `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.4` | `tests/data_plane/test_quality_served.py::test_quality_refusals` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.5` | `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.3` | `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.4` | `tests/data_plane/test_quality_served.py::test_quality_refusals` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.5` | `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.6` | `cargo bench --bench quality_evaluate` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R763` | See each child. |
 | `MEDULLA-UNIFIED-DATA-PLANE-R763.1` | `crates/medulla-types/tests/lineage.rs::column_edge_round_trips` |
@@ -251,7 +251,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | Row | Proving test |
 |---|---|
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.7` | `crates/medulla-types/tests/quality.rs::profile_yields_proposed_rules` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.8` | `tests/data_plane/test_quality_served.py::test_outside_scores_open_incident` |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.8` | `tests/data_plane/test_quality_served.py::test_outside_scores_open_incident` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R764.7` | `tests/data_plane/test_catalog_search_served.py::test_source_query_log_feeds_usage` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R764.8` | `tests/data_plane/test_catalog_search_served.py::test_frequent_users_and_join_suggestions` |
 

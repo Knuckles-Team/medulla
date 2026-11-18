@@ -2,14 +2,14 @@
 
 ## Positive
 
-- `tests/test_scm_blob.py::test_blob_stored_once_and_read_by_digest`. Identical bytes store once. The
+- `tests/test_scm_blob.py::test_blob_stored_once_and_read_by_digest` (planned). Identical bytes store once. The
   digest readback equals the original bytes. *(MEDULLA-SCM-R001)*
 - `tests/test_scm_changeset.py::test_changeset_stores_only_changed_paths`. A two-path changeset stores
   exactly two path entries. The chain readback returns the record unchanged. *(MEDULLA-SCM-R002)*
-- `tests/test_scm_accept.py::test_disjoint_writers_land_and_overlap_rebases_or_conflicts`. Two disjoint
+- `tests/test_scm_accept.py::test_disjoint_writers_land_and_overlap_rebases_or_conflicts` (planned). Two disjoint
   writers both land. Two overlapping writers land one and conflict the other with
   `SOURCE_CONFLICT{paths}`. *(MEDULLA-SCM-R003)*
-- `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay`. A subtree read at each revision
+- `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` (planned). A subtree read at each revision
   equals the full replay. The checkpoint path returns the same entries. *(MEDULLA-SCM-R004)*
 - `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild`. Incremental index state equals a
   from-scratch rebuild byte-for-byte. *(MEDULLA-SCM-R005)*
@@ -17,15 +17,15 @@
   updates only that file symbols. A structural no-op updates nothing. *(MEDULLA-SCM-R006)*
 - `tests/test_scm_path_access.py::test_prefix_grant_filters_reads_and_refuses_writes`. A prefix grant
   filters reads to the prefix. A write outside the prefix is refused. *(MEDULLA-SCM-R007)*
-- `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back`. Pass and fail
+- `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` (planned). Pass and fail
   verdicts read back byte-identically. An overwrite attempt is refused. *(MEDULLA-SCM-R008)*
 - `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision`. A seeded bisect names the
   seeded culprit. The recorded decision replays byte-identically. *(MEDULLA-SCM-R009)*
-- `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids`. Export then
+- `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids` (planned). Export then
   import preserves every commit id and tree id. *(MEDULLA-SCM-R010)*
 - `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay`. Concurrent accepts with
   crash and replay hold every chain invariant. *(MEDULLA-SCM-R011)*
-- `tests/test_scm_provenance.py::test_changeset_links_to_run_trace`. An agent changeset reads back with
+- `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` (planned). An agent changeset reads back with
   its run trace id. *(MEDULLA-SCM-R012)*
 
 ## Negative

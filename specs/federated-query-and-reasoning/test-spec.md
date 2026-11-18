@@ -781,9 +781,9 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R077.6` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.1` | `crates/medulla-table-store/src/tables/embedding_binding.rs::tests::advice_round_trip` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.1` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R077.6.2` | `crates/medulla-table-store/src/tables/column_advice.rs::tests::traffic_changes_rank_not_statistics` | L2 |
-| `MEDULLA-FEDERATED-QUERY-R077.6.2` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R077.6.3` | `tests/retrieval/test_column_advice_served.py::test_advice_relation_reads_production_observations` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R077.6.2` | `crates/medulla-table-store/src/tables/column_advice.rs::tests::traffic_changes_rank_not_statistics` (planned) | L2 |
+| `MEDULLA-FEDERATED-QUERY-R077.6.2` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R077.6.3` | `tests/retrieval/test_column_advice_served.py::test_advice_relation_reads_production_observations` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.4` | `tests/retrieval/test_column_advice_served.py::test_unembeddable_types_refuse_without_side_effects` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.5` | `tests/retrieval/test_column_advice_served.py::test_receipt_matches_observations_binding_unchanged` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.6` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
@@ -808,7 +808,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R085.3` | `crates/medulla-h-query/src/federation/source_query_tests.rs::changed_or_revoked_approval_refuses` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R085.4` | `crates/medulla-federation/src/federation_sql_tests.rs::approved_source_query_has_no_write_effects` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R085.5` | `tests/source_query_approval_served.rs::real_dispatch_issues_and_verifies_approval` | L3 |
-| `MEDULLA-FEDERATED-QUERY-R085.6` | `crates/medulla-h-query/src/federation/source_query_tests.rs::limits_clamp_to_tenant_ceiling` | L3 |
+| `MEDULLA-FEDERATED-QUERY-R085.6` | `crates/medulla-h-query/src/federation/source_query_tests.rs::limits_clamp_to_tenant_ceiling` (planned) | L3 |
 | `MEDULLA-FEDERATED-QUERY-R085.7` | `crates/medulla-result-types/src/source_query.rs::tests::errors_redact_literals_and_round_trip` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R085.8` | `tests/source_query_approval_served.rs::approval_to_verification_journey` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R006.1` | `tests/query/test_temporal_rules_served.py::test_derived_fact_origin_readback` | L4 |

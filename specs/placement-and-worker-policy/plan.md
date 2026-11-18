@@ -69,6 +69,15 @@ Unknown (see research.md): the production deployment template and fleet-tool com
 - **Special cases.** A request may only tighten the pinned policy, never widen a cap. A target with no declared facts abstains `UnknownFact` and is never guessed.
 - **State.** Durable state is the capacity ledger, the lease and schedule records and the stored row revisions. Every lifecycle runs on one explicit machine with one transition function.
 - **Environment.** The `placement.*` registry knobs, including `placement.node_budget` for the plan solver, and the persist directory.
+Design answers:
+
+- **Owner.** Medulla. The placement question, the worker policy and the association bound each keep one decision authority in the engine; callers ask and obey.
+- **Cohesion.** One decision vocabulary (question kind, typed body, typed refusal, why-not evidence) shared by placement, worker policy and the plan, so each concern reads the same records.
+- **Dependency direction.** Handlers in `medulla-h-decide` and `medulla-h-jobs` point down to `medulla-decision-types`, `medulla-decision-policy`, `medulla-work-types` and `medulla-resource`; no type crate points up to a handler.
+- **Interface depth.** Few entry points: `Decide` with a question kind, the submit path and the claim path. A new concern adds a question kind or a knob, not a method.
+- **Special cases.** None per caller. A request may only tighten a policy cap; the engine applies the same feasibility function to every caller.
+- **State.** The tenant graph, the job store and the capacity ledger hold all state; decide is evaluate-only, takes no lease and keeps none between calls.
+- **Environment.** Limits are named knobs with defaults and units in the engine-owned settings; no crate in this plan reads an environment variable.
 
 The placement question family (MEDULLA-PLACEMENT-R001): the `Placement` question kind, the target registry, the typed request body with refusals, the pure feasibility function, the headroom premise, the why-not evidence, the typed abstention and the served contract proof.
 

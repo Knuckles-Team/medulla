@@ -18,10 +18,10 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   topologies (contained, descendant, diverged, disjoint) return the declared outcomes from the
   closed set. Fast-forward produces a single-parent receipt. Up-to-date publishes nothing.
   *(MEDULLA-BRANCH-MERGE-R003)*
-- `tests/test_branch_three_way_merge.py::test_entity_level_outcomes`. Disjoint, one-sided, and
+- `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned). Disjoint, one-sided, and
   both-sides fixtures each produce the expected published target state. Unchanged entities adopt
   without row copy. *(MEDULLA-BRANCH-MERGE-R004)*
-- `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict`. Under
+- `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned). Under
   a pinned epistemic policy, the winner selects per the policy. The resolved row keeps the
   contradiction link. It keeps both evidence refs. Without a policy, the conflict stays open with
   both candidates queryable. *(MEDULLA-BRANCH-MERGE-R005)*
@@ -32,7 +32,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   receipt reads back byte-identically. Replay against the same inputs returns the original
   receipt. *(MEDULLA-BRANCH-MERGE-R007)*
 
-- `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks`. Disjoint hunks merge clean. Overlapping hunks and any binary overlap return `Conflict`. *(MEDULLA-BRANCH-MERGE-R008)*
+- `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned). Disjoint hunks merge clean. Overlapping hunks and any binary overlap return `Conflict`. *(MEDULLA-BRANCH-MERGE-R008)*
 - `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged`. A merge into a protected branch with one failing required gate refuses with `LANDING_GATE_BLOCKED` and leaves the target head unchanged. *(MEDULLA-BRANCH-MERGE-R009)*
 - `tests/test_branch_line_merge.py::test_disjoint_hunks_merge_and_overlap_conflicts`. Two edits to disjoint lines merge. One shared line conflicts with `SOURCE_CONFLICT`. *(MEDULLA-BRANCH-MERGE-R010)*
 

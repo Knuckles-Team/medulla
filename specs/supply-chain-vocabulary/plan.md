@@ -49,6 +49,16 @@ none
 
 ## Phase 1: Design
 
+Design answers:
+
+- **Owner.** Medulla, in `crates/medulla-core/ontology/`. Each source keeps its data and maps its native entities to these classes.
+- **Cohesion.** One core module constrains each property; physical, commercial, software and host-limit terms share one vocabulary and one propagation function.
+- **Dependency direction.** The ontology files sit at the bottom; `medulla-core` holds the propagation function, and `medulla-h-mining` adds one dependency on `medulla-core`; no ontology file names a connector.
+- **Interface depth.** One report question and one propagation query over the vocabulary; a new source adds a mapping, not a method.
+- **Special cases.** None per source. Joins cross only approved `owl:sameAs` links, and an unmapped class abstains instead of guessing.
+- **State.** The terms are compiled into the binary as core sources and no store is added; traversal is depth-bounded and keeps no state between calls.
+- **Environment.** The propagation budget is a named row with a unit; no crate in this plan reads an environment variable.
+
 ### Architecture
 
 Owner of every term: `Medulla`, `crates/medulla-core/ontology/`. Sources keep their data. Each source's ontology and access contract are attached and a `vg:VirtualMapping` (`virtual_graph-v1.ttl:107`, `vg:mapsOntologyClass` line 72, `vg:approved` line 94) maps its native entity to these classes. Source choice comes from `vg:SourceAuthority` rows (`MEDULLA-CQ-XSRC-R001`), planning from `MEDULLA-FEDERATED-QUERY-R072/R073`.

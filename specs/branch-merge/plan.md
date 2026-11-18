@@ -53,9 +53,23 @@ tests/test_branch_*.py                                 new: served tests
 
 ## Phase 0: Research
 
-No unknowns that block planning; decisions taken while building are recorded in [research.md](research.md).
+One unknown remained after the constraints were fixed; [research.md](research.md) resolves it.
+
+1. How does `BranchReadAt` answer a past version when the engine keeps only current state, and what is the diff built from?
 
 ## Phase 1: Design
+
+Design answers:
+
+- **Owner.** Medulla. The branch registry lives in `medulla-storage`, the handlers in `medulla-h-graph`, the line merge in `medulla-compute`, and the conflict decision in `medulla-h-decide` behind a trait.
+- **Cohesion.** One commit DAG, one entity-identity rule, one merge pass and one closed outcome vocabulary, so create, merge, diff and read-at share the same records.
+- **Dependency direction.** Handlers point down to `medulla-server-api` and the type crates; the conflict decision crosses to `medulla-h-decide` through `ConflictDecider`, so no handler calls a sibling handler.
+- **Interface depth.** Four methods (`CreateBranch`, `BranchMerge`, `BranchDiff`, `BranchReadAt`) over one registry; a new merge rule is a new case in the merge pass, not a new method.
+- **Special cases.** None per caller. The fast-forward path and the conflict path are two outcomes of the same classification.
+- **State.** The registry row and the append-only commit chain hold all state; the merge pass keeps none between calls.
+- **Environment.** `branch.diff_page_size` is the one named knob with a default and a unit; no crate in this plan reads an environment variable.
+
+Design decisions:
 
 1. **View semantics, not copy-on-branch.** Branch creation costs one registry row and no graph data.
 2. **Entity identity reuses existing authorities.** A node uses `(tenant, type, key)` and an edge uses `(source, target, relation_type)`.
