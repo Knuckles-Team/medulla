@@ -436,7 +436,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R802.5` | `tests/typed_packs/test_stewardship_served.py::test_request_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R802.6` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
 | `MEDULLA-TYPED-PACKS-R803` | See each child. |
-| `MEDULLA-TYPED-PACKS-R803.1` | `crates/medulla-types/tests/sensitive_detect.rs::records_round_trip`, `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values` |
+| `MEDULLA-TYPED-PACKS-R803.1` | `crates/medulla-query-types/tests/sensitive_detect.rs::records_round_trip`, `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values` (the second test is planned: its file does not exist yet) |
 | `MEDULLA-TYPED-PACKS-R803.2` | `crates/medulla-core/tests/sensitive_detect.rs::scan_proposes_claim_without_values` |
 | `MEDULLA-TYPED-PACKS-R803.3` | `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values` |
 | `MEDULLA-TYPED-PACKS-R803.4` | `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::detector_and_promotion_refusals` |

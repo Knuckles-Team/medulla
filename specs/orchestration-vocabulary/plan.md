@@ -53,7 +53,7 @@ tests/orchestration/                                        existing: served Pyt
 
 ## Phase 0: Research
 
-No unknowns; no research.md. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
+Unknowns and their resolution are in [research.md](research.md). They cover where the agent definition of R808 lives (the Agent Library entry) and how a knowledge scope is checked at publish. Each is decided there. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
 
 ## Phase 1: Design
 
@@ -97,6 +97,16 @@ One abstraction over process sources (owner, 2026-11-06). R014.9 adds the annota
 | `wait`, `boundary` | receive task, intermediate catch event, event-based gateway; boundary event | none (export loss, `MEDULLA-CQ-ORCH-R701.8`) |
 | `branch`, `fork`, `join` with `xor`, `and`, `or` | exclusive, parallel and inclusive gateways | XOR, AND and OR rule operators |
 | `state` (source only, folded) | none | intermediate event |
+
+The seven design answers that bind every row:
+
+- **Owner.** Medulla: the orchestration ontology files and shapes, `crates/medulla-work-types/src/orchestration/` and the served admission path. Each term has one writer and a named reader.
+- **Cohesion.** Step order reuses the one core `:precedes`. A definition, a harness component, a measured fact and a policy set each have one writer and become current only by a champion-pointer move.
+- **Dependency direction.** Handlers return the record and the mapper adds the code to the method set. Nothing imports a handler. The knowledge-scope check runs in the served handler because `medulla-persistence-records` cannot depend on `medulla-retrieval`.
+- **Interface depth.** Reads are UQL statements of `HARNESS_QUERIES` served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R803 to R807).
+- **Special cases.** One: unknown stays unknown. A missing measurement is `Unknown(reason)` or an abstention, never zero.
+- **State.** Definitions and measured facts are versioned graph records. A newer version never overwrites an older one.
+- **Environment.** Terms are data in the ontology and the shapes; no solver or handler carries a term list. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
 
 ## Phase 2: Task approach
 

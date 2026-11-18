@@ -80,6 +80,7 @@ Three unknowns were resolved in [research.md](research.md):
 - Where does a record batch's governance refusal land, per record or per batch?
 - How does a source deletion reconcile without a side table?
 - How does `prepare` admit a non-record batch kind without a second pipeline?
+Unknowns and their resolution are in [research.md](research.md). They cover how a containers batch is planned once and compiled to served methods, and how a knowledge scope names a container without a node id the client cannot compute (R904.3). Each is decided there with the rejected alternative.
 
 ## Phase 1: Design
 
@@ -121,6 +122,15 @@ One line per answer.
 - **Special cases.** None per connector. A batch kind selects an admission function; a connector never adds a branch to `prepare`.
 - **State.** Explicit machines for the ingest stage, the throughput window and the enumeration run (R911, R912); no boolean or nullable flag sits beside a state field.
 - **Environment.** Every tunable is a registered knob read through the knob registry (rule 8); the ingest path reads no environment variable.
+The seven design answers that bind every row:
+
+- **Owner.** Medulla's engine ingest handlers (queue, task queue and admission) and the job bodies they run. The SDK owns source effects and source credentials; the engine holds neither.
+- **Cohesion.** Every connector batch converges on `prepare` and `admit_records`. A batch commits one envelope. The ack handler is the only dead-letter writer.
+- **Dependency direction.** The queue handler and the task-queue handler reach each other through `jobs_seam` and `ingest_seam`, installed in `crates/medulla-server/src/seams_install.rs`. The ingest writer and the retrieval reader share `IN_CONTAINER` from `source_hierarchy`; `source_hierarchy` imports no retrieval code.
+- **Interface depth.** The served methods each row names and the batch kinds that `prepare` accepts. No row adds a public surface beyond them.
+- **Special cases.** One: a normalization failure returns a prepared quarantine outcome and still commits an envelope; it never bypasses the commit.
+- **State.** Queue, leases, retry, dead letter and checkpoints are engine state in the job store. Job bodies keep none.
+- **Environment.** Each tunable is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`. Retention is `ingest.retention_required`.
 
 ## Phase 2: Task approach
 
