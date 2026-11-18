@@ -285,6 +285,7 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T279 [US5] MEDULLA-CQ-CONN-R084.5 Finance method vocabulary
 - [ ] T280 [US5] MEDULLA-CQ-CONN-R084.6 Hot-path proof for the pack questions
 - [x] T280a [US5] MEDULLA-CQ-CONN-R084.7 A competency question abstains by name when its connector pack is not imported (Depends: MEDULLA-TYPED-PACKS-R101.1)
+- [ ] T288 [US5] MEDULLA-CQ-CONN-R084.7 A competency question abstains by name when its connector pack is not imported
 - [ ] T281 [US5] MEDULLA-CQ-CONN-R085.1 Model: the connector auto-onboard fixture
 - [ ] T282 [US5] MEDULLA-CQ-CONN-R085.2 Behavior: a parent-term question returns native and live connector rows
 - [ ] T283 [US5] MEDULLA-CQ-CONN-R085.3 Wiring: the check uses the production import and scan

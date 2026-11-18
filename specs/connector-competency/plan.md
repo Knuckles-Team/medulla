@@ -55,9 +55,21 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns that block planning; no research.md. The vocabulary terms that no module declares are reused or minted as listed in [data-model.md](data-model.md).
+Four unknowns were resolved in [research.md](research.md): how the served vocabulary test reads back an ingested record (R089), where a virtual-graph row gets its mapping IRI and fetch time (R067.5), which served surface carries a federated read over several sources and how an unreadable source is reported (R090), and what makes a foreign source keep a cache (R067.6). The vocabulary terms that no module declares are reused or minted as listed in [data-model.md](data-model.md).
 
 ## Phase 1: Design
+
+### Pre-untangled design
+
+One line per answer.
+
+- **Owner.** Medulla. Questions run through existing served methods: `Method::Uql` and `Method::Sparql` in `crates/medulla-protocol-types`, handled in `crates/medulla-h-query` and `crates/medulla-h-sparql`; foreign reads are `crates/medulla-federation`; pack import is `ConnectorPack.Import` over `crates/medulla-persistence`.
+- **Cohesion.** Every question reads the same connector pack, access contract and foreign source record, so the rows extend the one federation path instead of a per-connector acceptance path (`MEDULLA-CQ-CONN-R067.9`).
+- **Dependency direction.** Handlers in `medulla-h-query` and `medulla-h-sparql` point down to `medulla-federation`, `medulla-exec` and `medulla-source-types`, which point down to `medulla-core` and `medulla-graph-core`. No connector-specific crate exists and none is added.
+- **Interface depth.** One served read per question (`Method::Uql`, optionally with `foreign_executions`) and one served import (`ConnectorPack.Import`). A new per-question operation is refused by rule 1 above.
+- **Special cases.** None per connector in the engine: a connector differs only by its pack, mapping and fixture directory. An absent pack abstains by name (`PACK_NOT_IMPORTED`).
+- **State.** Pack heads and projections live in the connector pack store (`crates/medulla-persistence`); a source the caller cannot read is bound as an empty source and reported with `used: false`. The questions keep no state of their own.
+- **Environment.** No new knob or environment variable. Orphan handling uses the existing `MEDULLA_ONTOLOGY_ORPHANS` setting named in the rows.
 
 The rules below bind every row.
 
