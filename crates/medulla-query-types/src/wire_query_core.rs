@@ -1305,24 +1305,20 @@ mod tests {
 mod retrieval_constraints_tests {
     use super::*;
 
-    fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
-        BoundedVec::new(values).unwrap()
-    }
-
     fn sample_constraints() -> RetrievalConstraints {
         RetrievalConstraints {
             graph_revision: 17,
-            entity_predicates: bounded(vec![
+            entity_predicates: vec![
                 EntityPredicate::Eq {
                     property: "kind".to_string(),
                     value: PredLiteral::Str("Document".to_string()),
                 },
                 EntityPredicate::In {
                     property: "priority".to_string(),
-                    values: bounded(vec![PredLiteral::Num(1.0), PredLiteral::Num(2.0)]),
+                    values: vec![PredLiteral::Num(1.0), PredLiteral::Num(2.0)],
                 },
-            ]),
-            relationship_predicates: bounded(vec![
+            ],
+            relationship_predicates: vec![
                 RelationshipPredicate {
                     edge_kind: "supports".to_string(),
                     direction: EdgeDir::Out,
@@ -1341,7 +1337,7 @@ mod retrieval_constraints_tests {
                     },
                     quantifier: RelationshipQuantifier::NotExists,
                 },
-            ]),
+            ],
         }
     }
 
@@ -1361,12 +1357,10 @@ mod retrieval_constraints_tests {
     #[test]
     fn malformed_constraint_shapes_fail_before_planner_binding() {
         let mut constraints = sample_constraints();
-        let mut entity_predicates = constraints.entity_predicates.as_slice().to_vec();
-        entity_predicates[0] = EntityPredicate::In {
+        constraints.entity_predicates[0] = EntityPredicate::In {
             property: "priority".to_string(),
-            values: BoundedVec::default(),
+            values: Vec::new(),
         };
-        constraints.entity_predicates = bounded(entity_predicates);
         assert_eq!(
             constraints.validate(),
             Err(
@@ -1376,9 +1370,7 @@ mod retrieval_constraints_tests {
         );
 
         constraints = sample_constraints();
-        let mut relationship_predicates = constraints.relationship_predicates.as_slice().to_vec();
-        relationship_predicates[0].edge_kind.clear();
-        constraints.relationship_predicates = bounded(relationship_predicates);
+        constraints.relationship_predicates[0].edge_kind.clear();
         assert_eq!(
             constraints.validate(),
             Err(
