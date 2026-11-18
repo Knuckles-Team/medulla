@@ -33,7 +33,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   receipt. *(MEDULLA-BRANCH-MERGE-R007)*
 
 - `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned). Disjoint hunks merge clean. Overlapping hunks and any binary overlap return `Conflict`. *(MEDULLA-BRANCH-MERGE-R008)*
-- `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged`. A merge into a protected branch with one failing required gate refuses with `LANDING_GATE_BLOCKED` and leaves the target head unchanged. *(MEDULLA-BRANCH-MERGE-R009)*
+- `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged` (planned). A merge into a protected branch with one failing required gate refuses with `LANDING_GATE_BLOCKED` and leaves the target head unchanged. *(MEDULLA-BRANCH-MERGE-R009)*
 - `tests/test_branch_line_merge.py::test_disjoint_hunks_merge_and_overlap_conflicts`. Two edits to disjoint lines merge. One shared line conflicts with `SOURCE_CONFLICT`. *(MEDULLA-BRANCH-MERGE-R010)*
 
 ## Negative
