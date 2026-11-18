@@ -34,11 +34,13 @@ pub(crate) fn is_retryable_projection_error(error: &str) -> bool {
     RETRYABLE_PROJECTION_CODES.contains(&code)
 }
 
-/// Test seam: the connector whose next N projection body reads report the
-/// chunk store unavailable.
+/// Test seam: for each named connector, the number of its next projection body
+/// reads that report the chunk store unavailable. One entry per connector, so
+/// tests that inject different connectors never overwrite each other.
 #[cfg(all(test, feature = "redb", feature = "blob", feature = "shacl"))]
-pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<(String, u32)>> =
-    std::sync::Mutex::new(None);
+pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<
+    std::collections::BTreeMap<String, u32>,
+> = std::sync::Mutex::new(std::collections::BTreeMap::new());
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 mod capability;
@@ -161,16 +163,12 @@ async fn materialize_current_projection(
     {
         use medulla_kernel::lock_recovery::LockRecovery;
         let mut inject = INJECT_BLOB_UNAVAILABLE.lock_or_panic("injected blob failure");
-        if let Some((connector, left)) = inject.as_mut() {
-            if connector.as_str() == plan.connector.as_str() {
-                *left = left.saturating_sub(1);
-                if *left == 0 {
-                    *inject = None;
-                }
-                return Err(
-                    "PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into(),
-                );
+        if let Some(left) = inject.get_mut(plan.connector.as_str()) {
+            *left = left.saturating_sub(1);
+            if *left == 0 {
+                inject.remove(plan.connector.as_str());
             }
+            return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());
         }
     }
     let blob = state

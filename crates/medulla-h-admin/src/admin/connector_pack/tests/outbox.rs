@@ -654,10 +654,11 @@ async fn rejected_projection_is_visible_and_retried() {
         None,
     )
     .await;
-    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+    medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
         &INJECT_BLOB_UNAVAILABLE,
         "injected blob failure",
-    ) = Some((schema.to_string(), 1));
+    )
+    .insert(schema.to_string(), 1);
     let subscribed = AtomicBool::new(false);
     sweep(&served.state, &subscribed).await.unwrap();
     let status: MutationOutboxStatusView = ok(
@@ -734,7 +735,7 @@ fn ontology_entry(schema: &str) -> Content {
 #[tokio::test]
 async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
     use crate::admin::connector_pack::reproject::INJECT_BLOB_UNAVAILABLE;
-    use crate::connector_pack_projection::worker::{retry_due, RetryAt};
+    use crate::connector_pack_projection::worker::{retry_due, sweep_at, RetryAt};
     use medulla_persistence_records::connector_pack::projection_retry::RetryKnobs;
 
     let served = Served::new();
@@ -743,10 +744,11 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
     for schema in [failing, healthy] {
         bind(&served, schema, ADMIN).await;
     }
-    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+    medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
         &INJECT_BLOB_UNAVAILABLE,
         "injected blob failure",
-    ) = Some((failing.to_string(), u32::MAX));
+    )
+    .insert(failing.to_string(), u32::MAX);
     // The failing pack's row is ahead of the healthy one on the ordered outbox.
     for schema in [failing, healthy] {
         imported(
@@ -759,8 +761,18 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
         )
         .await;
     }
+    // Time is the test's own: every sweep is judged by the clock it is handed,
+    // and the retry backoff is walked past explicitly.
+    let knobs = RetryKnobs {
+        max_attempts: 3,
+        backoff_ms: 10,
+    };
+    let at = |now_ms: u64| RetryAt { now_ms, knobs };
+    let started_ms = 1_000_000u64;
     let subscribed = AtomicBool::new(false);
-    sweep(&served.state, &subscribed).await.unwrap();
+    sweep_at(&served.state, &subscribed, at(started_ms))
+        .await
+        .unwrap();
     let ids = searchable_ids(&served).await;
     assert!(
         ids.contains(&format!("mcp:{healthy}/tool/b")),
@@ -770,29 +782,54 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
 
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let connector = ResourceId::new(failing).unwrap();
-    let first = store
-        .connector_pack_projection_retry(TENANT, &connector)
-        .unwrap()
-        .expect("the failure moved into the pack's retry state");
-    assert_eq!(first.attempt, 1);
-    assert!(!first.is_terminal());
-    assert!(
-        !sweep(&served.state, &subscribed).await.unwrap(),
-        "the failing row was resolved; nothing is left leased on the outbox"
-    );
-
-    let knobs = RetryKnobs {
-        max_attempts: 3,
-        backoff_ms: 10,
-    };
-    let mut now_ms = first.next_attempt_ms;
-    for attempt in 2..=knobs.max_attempts {
-        now_ms += 1_000_000;
-        assert!(retry_due(&served.state, &store, TENANT, RetryAt { now_ms, knobs }).await);
-        let state = store
+    let retry_state = || {
+        store
             .connector_pack_projection_retry(TENANT, &connector)
             .unwrap()
-            .unwrap();
+    };
+    let first = retry_state().expect("the failure moved into the pack's retry state");
+    assert_eq!(first.attempt, 1);
+    assert!(!first.is_terminal());
+    assert_eq!(
+        first.next_attempt_ms,
+        started_ms + knobs.backoff_ms,
+        "the first retry waits one backoff from the sweep's own clock"
+    );
+    // The failing row was resolved: nothing is left pending or leased on the
+    // outbox, whatever the retry clock says.
+    let status: MutationOutboxStatusView = ok(
+        "Status",
+        outbox(
+            &served,
+            "outbox:status-after-failure",
+            MutationOutboxOp::Status {
+                target: target(),
+                consumer: CONSUMER.to_string(),
+            },
+        )
+        .await,
+    );
+    assert_eq!(status.status.pending, 0, "{status:?}");
+    assert!(status.head.is_none(), "{status:?}");
+
+    // Sweeps that run before the backoff ends retry nothing; the sweep at the
+    // moment it ends runs exactly one more attempt, until attempts are used up.
+    let mut due_ms = first.next_attempt_ms;
+    for attempt in 2..=knobs.max_attempts {
+        assert!(
+            !sweep_at(&served.state, &subscribed, at(due_ms - 1))
+                .await
+                .unwrap(),
+            "no retry is due one tick before the backoff ends"
+        );
+        assert_eq!(retry_state().unwrap().attempt, attempt - 1);
+        assert!(
+            sweep_at(&served.state, &subscribed, at(due_ms))
+                .await
+                .unwrap(),
+            "the retry runs when its backoff ends"
+        );
+        let state = retry_state().unwrap();
         assert_eq!(state.attempt, attempt);
         assert_eq!(state.code, "PACK_PROJECTION_BLOB_UNAVAILABLE");
         assert_eq!(
@@ -800,14 +837,19 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
             attempt == knobs.max_attempts,
             "{state:?}"
         );
+        due_ms = state.next_attempt_ms;
     }
+    // The healthy pack was never delayed by any of it.
+    assert!(searchable_ids(&served)
+        .await
+        .contains(&format!("mcp:{healthy}/tool/b")));
     assert!(
         !retry_due(
             &served.state,
             &store,
             TENANT,
             RetryAt {
-                now_ms: now_ms + 1_000_000,
+                now_ms: due_ms + 1_000_000,
                 knobs
             }
         )
@@ -824,8 +866,9 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
     assert!(!searchable_ids(&served)
         .await
         .contains(&format!("mcp:{failing}/tool/b")));
-    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+    medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
         &INJECT_BLOB_UNAVAILABLE,
         "injected blob failure",
-    ) = None;
+    )
+    .remove(failing);
 }

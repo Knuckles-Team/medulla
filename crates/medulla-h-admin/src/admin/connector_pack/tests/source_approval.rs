@@ -418,8 +418,12 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
         Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => bytes,
         other => panic!("expected foreign rows, got {other:?}"),
     };
-    let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(raw).unwrap();
-    assert_eq!(rows, vec![("supplier-1".to_string(), Some(0.5))]);
+    let rows: Vec<medulla_types::unified_row::UnifiedRow> = rmp_serde::from_slice(raw).unwrap();
+    let ranked: Vec<(&str, Option<f32>)> = rows
+        .iter()
+        .map(|row| (row.id.as_str(), row.score))
+        .collect();
+    assert_eq!(ranked, vec![("supplier-1", Some(0.5))]);
     let replay = served
         .call(
             "r722-four-phase:query-replay",
@@ -943,9 +947,9 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
         Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => bytes,
         other => panic!("expected joined rows, got {other:?}"),
     };
-    let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(raw).unwrap();
+    let rows: Vec<medulla_types::unified_row::UnifiedRow> = rmp_serde::from_slice(raw).unwrap();
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, "shared-1");
+    assert_eq!(rows[0].id, "shared-1");
     let replay = served
         .call(
             "r722-two-sources:replay",

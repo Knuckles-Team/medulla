@@ -110,6 +110,18 @@ pub mod worker {
         state: &Arc<RwLock<ServerState>>,
         subscribed: &AtomicBool,
     ) -> Result<bool, String> {
+        sweep_at(state, subscribed, RetryAt::now()).await
+    }
+
+    /// One sweep judged by `retry_at`: the clock the retry backoff is measured
+    /// against and the knobs it follows. Production passes [`RetryAt::now`]; a
+    /// test passes the time it has advanced to, so the backoff never depends on
+    /// the wall clock.
+    pub(crate) async fn sweep_at(
+        state: &Arc<RwLock<ServerState>>,
+        subscribed: &AtomicBool,
+        retry_at: RetryAt,
+    ) -> Result<bool, String> {
         let (anonymous, server) = {
             let state = state.read().await;
             (state.local_anonymous, state.context.clone())
@@ -138,7 +150,7 @@ pub mod worker {
         let claimed = outcome.claims.len();
         let mut progressed = claimed > 0;
         let mut committed_graphs = 0usize;
-        let outcomes = project_claims(state, &store, &tenant, &outcome.claims).await;
+        let outcomes = project_claims(state, &store, &tenant, &outcome.claims, retry_at).await;
         // The stream is strictly ordered: leases resolve in claim order, after
         // the projections (which ran concurrently across connectors) decided them.
         for (lease, (reason, projected)) in outcome.claims.into_iter().zip(outcomes) {
@@ -154,7 +166,7 @@ pub mod worker {
                 ),
             }
         }
-        progressed |= retry_due(state, &store, &tenant, RetryAt::now()).await;
+        progressed |= retry_due(state, &store, &tenant, retry_at).await;
         if progressed {
             // Bounded cadence: one INFO per non-empty sweep (a sweep claims at
             // most CLAIM_LIMIT rows), so a multi-minute drain is never silent
@@ -225,6 +237,7 @@ pub mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         claims: &[MutationOutboxLease],
+        retry_at: RetryAt,
     ) -> Vec<(Option<OutboxRejectReason>, bool)> {
         let mut groups: Vec<(Option<String>, Vec<(usize, Option<PackImportRecord>)>)> = Vec::new();
         for (index, lease) in claims.iter().enumerate() {
@@ -249,7 +262,10 @@ pub mod worker {
             tasks.spawn(async move {
                 let mut decided = Vec::with_capacity(rows.len());
                 for (index, record) in rows {
-                    decided.push((index, decide(&state, &store, &tenant, record).await));
+                    decided.push((
+                        index,
+                        decide(&state, &store, &tenant, record, retry_at).await,
+                    ));
                 }
                 decided
             });
@@ -284,6 +300,7 @@ pub mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         record: Option<PackImportRecord>,
+        retry_at: RetryAt,
     ) -> (Option<OutboxRejectReason>, bool) {
         match record {
             None => (Some(OutboxRejectReason::InvalidEvent), false),
@@ -304,15 +321,9 @@ pub mod worker {
                         %error,
                         "connector pack projection failed; the pack's retry state carries it"
                     );
-                    if let Err(failure) = schedule_retry(
-                        state,
-                        store,
-                        tenant,
-                        &record.connector,
-                        &error,
-                        RetryAt::now(),
-                    )
-                    .await
+                    if let Err(failure) =
+                        schedule_retry(state, store, tenant, &record.connector, &error, retry_at)
+                            .await
                     {
                         tracing::warn!(
                             code = "CONNECTOR_PACK_PROJECTION_RETRY_UNRECORDED",
@@ -386,7 +397,8 @@ pub mod worker {
             return Ok(false);
         }
         let plan = store.prepare_connector_pack_projection(tenant, connector)?;
-        let (anonymous, verified, context) = write_context(state, store, tenant, &plan).await?;
+        let (anonymous, verified, context) =
+            write_context(state, store, tenant, &plan, None).await?;
         if !anonymous {
             if let Err(error) = grant_projection_access(state, tenant, connector).await {
                 let error = format!("PACK_PROJECTION_GRANT_FAILED: {error}");
@@ -433,6 +445,7 @@ pub mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         plan: &medulla_persistence_records::connector_pack::projection::ConnectorPackProjectionPlan,
+        step: Option<&str>,
     ) -> Result<
         (
             bool,
@@ -445,10 +458,17 @@ pub mod worker {
             let state = state.read().await;
             (state.local_anonymous, state.context.clone())
         };
+        // The operation key names the record and, for a step that writes a
+        // different mutation of the same record (a retry attempt), the step: one
+        // key never stands for two different mutations.
+        let key_tail = match step {
+            Some(step) => format!("{step}:{}", plan.record_id),
+            None => plan.record_id.clone(),
+        };
         let verified = if anonymous {
-            VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
+            VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{key_tail}")))
         } else {
-            service_context(&server, &plan.record_id)?
+            service_context(&server, &key_tail)?
         };
         let context =
             medulla_persistence_records::agent_library::context::bind_agent_library_context(
@@ -513,7 +533,14 @@ pub mod worker {
         ) else {
             return Ok(());
         };
-        let (_, _, context) = write_context(state, store, tenant, &plan).await?;
+        let (_, _, context) = write_context(
+            state,
+            store,
+            tenant,
+            &plan,
+            Some(&format!("retry-{}", next.attempt)),
+        )
+        .await?;
         store.record_connector_pack_projection_retry(context, &plan, &next)
     }
 

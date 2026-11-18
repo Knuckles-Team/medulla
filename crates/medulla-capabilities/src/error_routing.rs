@@ -359,6 +359,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "AgentComponent",
         &[
+            "BODY_DIGEST_MISMATCH",
             "COMPONENT_WITHDRAWN",
             "LIFECYCLE_RETIRED_TERMINAL",
             "LIFECYCLE_STATE_MALFORMED",
