@@ -66,13 +66,13 @@ fn open_migrates_a_previous_patch_store_under_the_held_lock_and_keeps_rows() {
     let upgraded: Vec<_> = migration
         .stores
         .iter()
-        .map(|store| (store.file.as_str(), store.outcome))
+        .map(|store| (store.file.as_str(), store.status))
         .collect();
     assert_eq!(
         upgraded,
         [
-            ("graph-0.redb", StoreOutcome::Upgraded),
-            (AGENT_LIBRARY_FILE, StoreOutcome::Upgraded)
+            ("graph-0.redb", StoreStatus::Upgraded),
+            (AGENT_LIBRARY_FILE, StoreStatus::Upgraded)
         ]
     );
     assert_rows_kept(&shard, &library);
@@ -149,8 +149,8 @@ fn an_interrupted_migration_resumes_at_the_next_open() {
     assert_eq!(
         statuses(&halfway),
         [
-            ("graph-0.redb", StoreOutcome::Current),
-            (AGENT_LIBRARY_FILE, StoreOutcome::UpgradeAvailable)
+            ("graph-0.redb", StoreStatus::Current),
+            (AGENT_LIBRARY_FILE, StoreStatus::UpgradeAvailable)
         ]
     );
 
@@ -160,7 +160,7 @@ fn an_interrupted_migration_resumes_at_the_next_open() {
     assert!(resumed.resumed);
     assert_eq!(resumed.stores.len(), 1);
     assert_eq!(resumed.stores[0].file, AGENT_LIBRARY_FILE);
-    assert_eq!(resumed.stores[0].outcome, StoreOutcome::Upgraded);
+    assert_eq!(resumed.stores[0].status, StoreStatus::Upgraded);
     assert_eq!(read_journal_states(dir.path()), None);
     assert_rows_kept(&shard, &library);
     drop(held);
