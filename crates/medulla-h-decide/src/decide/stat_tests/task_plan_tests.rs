@@ -682,7 +682,6 @@ fn publish_skill_with_parent(
             ),
             component: draft,
             evaluation_receipt_digest: None,
-            blueprint: None,
         })
         .unwrap();
 }
