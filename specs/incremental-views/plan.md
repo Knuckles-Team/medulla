@@ -91,6 +91,14 @@ Five unknowns were resolved in [research.md](research.md): whether SQL row-chang
 
 ## Phase 1: Design
 
+- **Owner.** Medulla's incremental views: the circuit, the view manager and the SQL view maintenance.
+- **Cohesion.** Each row extends the circuit, the manager, the status board or the SQL maintenance step it names. Plan views and SQL views share one delta type.
+- **Dependency direction.** The delta and row types sit in `medulla-types`, below the table store, the SQL layer and the server. Each higher layer calls the lower one.
+- **Interface depth.** Callers use the plan view methods (define, get, refresh and drop) and SQL `CREATE MATERIALIZED VIEW`. The status board is one catalog relation.
+- **Special cases.** An operator that cannot be maintained incrementally falls back to full recompute with a typed reason, never a silently wrong answer.
+- **State.** Resident view state stays under the memory budget. The least recently changed view spills to `MATVIEW_OPERATOR_STATE`, and a view above its ceiling demotes.
+- **Environment.** The registry knobs `view.state_bytes` and `views.memory_bytes`, read from `MEDULLA_VIEW_STATE_BYTES` and `MEDULLA_VIEWS_MEMORY_BYTES`.
+
 ### Delta and circuit
 
 R002 moves `ZRow` and `Delta` into `medulla-types` so the table store can use them. The weight widens to `i64`. `Circuit::apply` consolidates first and returns the output delta for the feed (R010.1). Types are in [data-model.md](data-model.md).

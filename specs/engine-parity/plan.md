@@ -69,9 +69,17 @@ benches/engine_parity.rs                       new: W1 to W5 and the nightly gro
 
 ## Phase 0: Research
 
-No unknowns that block planning; no research.md.
+The unknowns the rows raised, and the decisions that closed them, are recorded in [research.md](research.md): the compatibility matrix and refusal forms, constraint and index design, sequences and triggers, wire logins and the capability report.
 
 ## Phase 1: Design
+
+- **Owner.** Medulla's engine parity work: the SQL front ends and the compatibility matrix, the wire listeners, the user-table store and the engine capability report.
+- **Cohesion.** Each row extends the matrix, the SQLSTATE table, the table store or the wire listener it names. No row adds a second store or a second path to a table.
+- **Dependency direction.** The table, SQL language and type crates sit below the wire crates. Wires call down and nothing below calls a wire.
+- **Interface depth.** Clients use their own protocol (PostgreSQL, MySQL, TDS or SQLite) and the served methods the rows name. No row adds a client API.
+- **Special cases.** A form outside the compatibility matrix answers `0A000`. An unknown refusal code keeps SQLSTATE `58000`.
+- **State.** Durable state is the user-table store (rows, constraints, indexes, sequences and triggers) in the redb owner file. Lifecycles run on explicit machines.
+- **Environment.** The persist directory and the registry knobs the rows name, for example `tables.deferred_fk_pending_max`.
 
 1. **One library, one committer per store file.** Group commit folds queued commands into one write transaction and one fsync; this plan adds only a bounded enqueue wait.
 2. **Native writes keep their version check.** Graph mutations keep `MEDULLA-DURABLE-KERNEL-R084`; footprints (R002) cover user-table transactions only.
