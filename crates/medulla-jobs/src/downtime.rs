@@ -5,7 +5,7 @@
 //! the foreground-activity reading as plain arguments, so the server crate owns
 //! every read of the clock, the queue and the graph.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -117,6 +117,11 @@ pub struct WindowContext {
     pub activity: ForegroundActivity,
     /// The window budget (`cpu_ms` and `memory_bytes` must be set).
     pub budget: ResourceBudget,
+    /// IRIs of the types that hold an unexpired lease or have a job in flight: not eligible.
+    pub held: BTreeSet<String>,
+    /// IRIs of the types that hold an unexpired lease: their budgets are not available to
+    /// the others.
+    pub leased: BTreeSet<String>,
     pub idle_max_rps: u32,
     pub idle_quiet_secs: u32,
 }
@@ -155,8 +160,10 @@ pub fn select_for_window(
     if !window_open(window, ctx) {
         return out;
     }
-    let mut eligible: Vec<&DowntimeJobType> =
-        types.iter().filter(|t| t.window == window.kind).collect();
+    let mut eligible: Vec<&DowntimeJobType> = types
+        .iter()
+        .filter(|t| t.window == window.kind && !ctx.held.contains(&t.iri))
+        .collect();
     eligible.sort_by(|a, b| {
         b.priority
             .cmp(&a.priority)
@@ -167,8 +174,24 @@ pub fn select_for_window(
             })
             .then_with(|| a.iri.cmp(&b.iri))
     });
-    let cpu_cap = ctx.budget.cpu_ms.unwrap_or(0);
-    let mem_cap = ctx.budget.memory_bytes.unwrap_or(0);
+    // Fit is measured against what is left of the window: the budgets of leased types are
+    // already spoken for, so a selected type is one that can then take its lease.
+    let (held_cpu, held_mem) =
+        types
+            .iter()
+            .filter(|t| ctx.leased.contains(&t.iri))
+            .fold((0u64, 0u64), |(cpu, mem), t| {
+                (
+                    cpu.saturating_add(t.budget.cpu_ms.unwrap_or(0)),
+                    mem.saturating_add(t.budget.memory_bytes.unwrap_or(0)),
+                )
+            });
+    let cpu_cap = ctx.budget.cpu_ms.unwrap_or(0).saturating_sub(held_cpu);
+    let mem_cap = ctx
+        .budget
+        .memory_bytes
+        .unwrap_or(0)
+        .saturating_sub(held_mem);
     let (mut cpu, mut mem) = (0u64, 0u64);
     for t in eligible {
         if !t.preconditions.iter().all(|p| eval.holds(p)) {
@@ -228,6 +251,8 @@ mod tests {
                 memory_bytes: Some(1 << 30),
                 ..Default::default()
             },
+            held: BTreeSet::new(),
+            leased: BTreeSet::new(),
             idle_max_rps: IDLE_MAX_RPS_DEFAULT,
             idle_quiet_secs: IDLE_QUIET_SECS_DEFAULT,
         }
@@ -288,6 +313,29 @@ mod tests {
         last.insert("dw:b".to_string(), 10);
         let sel = select_for_window(&tie, &IDLE, &last, &Eval, &ctx(1_000));
         assert_eq!(sel.selected, ["dw:b", "dw:a"]);
+        // A held type is not eligible, and the 100 it holds is not available to the others:
+        // a 350 window leaves 250 (both others fit), a 250 window leaves 150 (one fits) and
+        // a 150 window leaves 50 (none fits).
+        let mut held = ctx(350);
+        held.held.insert("dw:high".to_string());
+        held.leased.insert("dw:high".to_string());
+        let sel = select_for_window(&types, &IDLE, &BTreeMap::new(), &Eval, &held);
+        assert_eq!(sel.selected, ["dw:mid", "dw:low"]);
+        assert!(sel.skipped_budget.is_empty());
+        held.budget.cpu_ms = Some(250);
+        let sel = select_for_window(&types, &IDLE, &BTreeMap::new(), &Eval, &held);
+        assert_eq!(sel.selected, ["dw:mid"]);
+        assert_eq!(sel.skipped_budget, ["dw:low"]);
+        held.budget.cpu_ms = Some(150);
+        let sel = select_for_window(&types, &IDLE, &BTreeMap::new(), &Eval, &held);
+        assert!(sel.selected.is_empty());
+        assert_eq!(sel.skipped_budget, ["dw:mid", "dw:low"]);
+        // A type whose job is in flight after its lease expired is not eligible either, but it
+        // holds no lease, so the whole window is left to the others.
+        held.leased.clear();
+        held.budget.cpu_ms = Some(250);
+        let sel = select_for_window(&types, &IDLE, &BTreeMap::new(), &Eval, &held);
+        assert_eq!(sel.selected, ["dw:mid", "dw:low"]);
         // A busy foreground keeps the idle window closed.
         let mut busy = ctx(1_000);
         busy.activity.queue_empty = false;
