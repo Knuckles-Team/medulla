@@ -66,7 +66,14 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+The unknowns below were open when the rows were written. Each is decided in [research.md](research.md):
+
+- Whether governance refusal is per record or per batch, and where retention policy lives (R900.2 to R900.5).
+- What the governance bench measures (R900.6).
+- Whether access sync owns the read roles or the markings (R902.2).
+- Whether a new served method is its own chain, and where data-prep declarations are served (R001.1007 to R001.1009).
+- How reconcile runs and plans are stored (R903.2), what a container with an unknown parent does (R904.2) and how atoms are packed (R003.2).
+- How claim-time admission and the lane table fit (R604.3), and what the batch report counts (R606.1).
 
 ## Phase 1: Design
 
@@ -80,6 +87,14 @@ The rules below bind every row.
 6. **Wire changes carry no shim.** A changed Rust wire type updates the generated Python models in `medulla/generated/` and gets a Rust round-trip vector in the same change.
 7. **Names and ids.** Ids are framed digests built with `Digest256::framed` under a domain tag per kind. No component name carries a version suffix.
 8. **Knobs.** Each tunable value is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`.
+
+- **Owner.** Medulla's ingest handlers: `crates/medulla-h-ingest`, the jobs handler `crates/medulla-h-jobs` and the router arms that call them. The engine owns queue, lease, retry, dead-letter and metric state (rule 1).
+- **Cohesion.** Every connector batch converges on `prepare` and `admit_records` and commits one envelope (rules 2 and 3). A row extends that path or the one task-queue path; none adds a second.
+- **Dependency direction.** Handlers reach each other only through the seams in `crates/medulla-server-ops/src/api/ingest.rs`, installed in `seams_install.rs` (rule 5). Source and document types sit below the handlers.
+- **Interface depth.** A connector sends source batches and reads the receipt. A worker claims and acknowledges tasks. The served methods each row names are the whole surface.
+- **Special cases.** A normalization failure returns a quarantine outcome that commits restricted evidence and never advances a checkpoint (rule 3). A record with invalid governance is refused alone and the rest of its batch commits (R900.2).
+- **State.** Tasks, leases and dead letters live in the one job store. Reconcile runs and plans are graph facts (R903.2). Nothing is held in a side table.
+- **Environment.** Engine knobs (`ingest.retention_required` and the scheduler settings each row names); no per-tenant configuration file (rule 8).
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 

@@ -46,9 +46,20 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+The unknowns below were open when the rows were written. Each is decided in [research.md](research.md):
+
+- How a supersession is composed from existing methods and verified by the engine (R002.651.2).
+- Where a dead-letter redrive requeues its items, given which queue methods are built (R002.651.3).
 
 ## Phase 1: Design
+
+- **Owner.** Medulla's ingest handlers: `crates/medulla-h-ingest` lowers `IndexRepository` and `SourceIngest` to one `ChangeEnvelope`, and `crates/medulla-server-graph` commits it. The provider adapter is transport only.
+- **Cohesion.** One writer commits every repository and source observation through the mutation gateway. A row extends the index path or the source-ingestion path; none adds a second writer.
+- **Dependency direction.** The request boundary and graph ACL sit above the ingest handler, which sits above the parser, document and enrichment crates. No handler crate calls a sibling handler crate (R-IV).
+- **Interface depth.** A provider sends a snapshot or a governed source batch and reads the receipt. The served methods each row names are the whole surface.
+- **Special cases.** A parse that is unsupported or errors is its own outcome and never advances a ref (`IndexFileOutcome`). A refused write commits nothing.
+- **State.** Durable state is the graph store, the blob store for source bytes and the job store; file and ref lifecycles are explicit state machines (R802).
+- **Environment.** Engine knobs and `SchedulerConfig` keys each row names; the unit and contract tests need no live provider, credential or model endpoint.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 

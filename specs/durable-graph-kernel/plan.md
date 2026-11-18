@@ -64,7 +64,15 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns; no research.md.
+The unknowns below were open when the rows were written. Each is decided in [research.md](research.md):
+
+- How the RESP listener reaches the served KV methods without a store of its own (R860.3).
+- How a graph change feed is cursored over the one CDC feed (R043.100.2, R043.100.3).
+- How S3 objects map onto the native blob methods (R860.6).
+- How concept ids and lineage edges are keyed per tenant (R094.7).
+- What the served `Batch` method is (R871) and which wire types the census renames (R875).
+- How the served task-queue methods and the one claim store fit together (R072, R866).
+- How the downtime tick chooses types, takes leases and refuses (R101.3, R101.4, R101.6).
 
 ## Phase 1: Design
 
