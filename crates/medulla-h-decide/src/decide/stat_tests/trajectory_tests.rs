@@ -709,7 +709,8 @@ async fn decide_returns_pinned_trajectory_decisions() {
         value: TypedValue::Text("budget".into()),
     });
     request.params = BoundedVec::new(params).unwrap();
-    assert_eq!(decide(&h, request).await.unwrap_err(), "PARAMETER_INVALID");
+    let refused = decide(&h, request).await.unwrap_err();
+    assert_eq!(refused.split(": ").next(), Some("PARAMETER_INVALID"));
 }
 
 /// Decide `query` on the plan and return the sealed record, checking what every

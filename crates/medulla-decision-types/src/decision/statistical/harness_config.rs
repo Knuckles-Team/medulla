@@ -152,6 +152,12 @@ pub struct HarnessConfigEvaluationEvidence {
     /// when empty, so evidence of a question without candidates is unchanged.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub declared_options: BoundedVec<super::declared::DeclaredOption, 64>,
+    /// The evaluation run behind the measured plan-scaffold no-gain fact the
+    /// derivation read, digest included: a premise names only the run's id, so
+    /// the replay takes the digest from here (R128.13.2.1). Omitted when the
+    /// derivation read no such fact, so evidence without one is unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_scaffold_no_gain_run: Option<ObservationRef>,
 }
 
 impl HarnessConfigEvaluationEvidence {
@@ -774,6 +780,7 @@ mod tests {
             answer: full_answer,
             tool_subset_certificate: None,
             declared_options: BoundedVec::default(),
+            plan_scaffold_no_gain_run: None,
         });
         let wire = serde_json::to_vec(&inputs).unwrap();
         let restored: super::super::StatisticalInputs = serde_json::from_slice(&wire).unwrap();

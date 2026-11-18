@@ -979,6 +979,10 @@ fn derive_config(
         tool_subset_certificate,
         declared_options: BoundedVec::new(declared.to_vec())
             .map_err(|detail| invalid_parameter(detail))?,
+        plan_scaffold_no_gain_run: facts
+            .plan_scaffold_no_gain
+            .as_ref()
+            .map(|fact| fact.evaluation_run_ref.clone()),
     };
     Ok(Executed {
         matrix: None,
@@ -1137,13 +1141,24 @@ fn replayed_facts(
     let plan_scaffold_no_gain =
         stored_fact(record, model, "plan_scaffold_ablation", |v| v.parse().ok())?
             .map(|(value, provenance)| match provenance {
-                PremiseProvenance::Observation { evaluation_id } => Ok(MeasuredFact {
-                    value,
-                    evaluation_run_ref: ObservationRef {
-                        evaluation_id,
-                        digest: String::new(),
-                    },
-                }),
+                PremiseProvenance::Observation { evaluation_id } => {
+                    // The premise names the run's id; its digest rides the evidence.
+                    let digest = evidence
+                        .plan_scaffold_no_gain_run
+                        .as_ref()
+                        .filter(|run| run.evaluation_id == evaluation_id)
+                        .map(|run| run.digest.clone())
+                        .ok_or_else(|| {
+                            mismatch("the plan_scaffold_ablation run is not in the evidence")
+                        })?;
+                    Ok(MeasuredFact {
+                        value,
+                        evaluation_run_ref: ObservationRef {
+                            evaluation_id,
+                            digest,
+                        },
+                    })
+                }
                 _ => Err(mismatch(
                     "the plan_scaffold_ablation premise is not an observation",
                 )),
