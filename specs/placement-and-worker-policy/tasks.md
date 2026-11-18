@@ -92,6 +92,19 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T082 [US4] MEDULLA-PLACEMENT-R783.3 Inventory the sibling raft machines
 - [ ] T083 [US4] MEDULLA-PLACEMENT-R783.4 Shard drain machine
 - [ ] T084 [US4] MEDULLA-PLACEMENT-R783.5 Partition move machine: edge table
+- [x] T085 [US4] MEDULLA-PLACEMENT-R781.3 Delete the tombstone field from the record and the result. Size: M, 2 PRs, 5 hours.
+- [x] T086 [US4] MEDULLA-PLACEMENT-R781.4 Convert stored reservation records. Size: S, 1 PR, 3 hours.
+- [x] T091 [US4] MEDULLA-PLACEMENT-R784 Remaining lifecycles are explicit state machines (rollup)
+- [x] T092 [US4] MEDULLA-PLACEMENT-R784.1 CircuitBreaker/CircuitState state machine: route 3 census findings through CircuitState::apply
+- [x] T093 [US4] MEDULLA-PLACEMENT-R780.3 DevelopmentLaneHold/DevelopmentLaneHoldState state machine: route 1 census findings through HoldState::apply
+- [ ] T094 [US4] MEDULLA-PLACEMENT-R783.6 MembershipShrinkJournal/ShrinkStage state machine: route 2 census findings through MembershipShrinkJournal::advance
+- [ ] T095 [US4] MEDULLA-PLACEMENT-R783.7 MoveCheckpoint/MovePhase state machine: route 9 census findings through MovePhase::apply
+- [x] T096 [US4] MEDULLA-PLACEMENT-R784.2 OperationResult.status is an outcome, not a lifecycle: type renamed OperationResultOutcome, fixed at construction
+- [x] T097 [US4] MEDULLA-PLACEMENT-R783.8 PartitionMoveJournal/MoveStage state machine: route 9 census findings through PlacementEntry::apply_move
+- [ ] T098 [US4] MEDULLA-PLACEMENT-R783.9 PlacementEntry/PartitionState state machine: route 1 census findings through PlacementEntry::apply_move
+- [x] T099 [US4] MEDULLA-PLACEMENT-R784.3 ReadLeg.status is an outcome, not a lifecycle: renamed ReadLegOutcome, fixed at construction
+- [x] T100 [US4] MEDULLA-PLACEMENT-R781.5 ResourceReservationResult/ResourceReservationResultState state machine: route 1 census findings through ResourceReservationRecordState::apply
+- [x] T101 [US4] MEDULLA-PLACEMENT-R781.6 ResourceReservationSummary/ResourceReservationSummaryState state machine: route 1 census findings through ResourceReservationRecordState::apply
 - [ ] T085 [US4] MEDULLA-PLACEMENT-R781.3 Delete the tombstone field from the record and the result. Size: M, 2 PRs, 5 hours.
 - [ ] T086 [US4] MEDULLA-PLACEMENT-R781.4 Convert stored reservation records. Size: S, 1 PR, 3 hours.
 - [ ] T091 [US4] MEDULLA-PLACEMENT-R784 Remaining lifecycles are explicit state machines (rollup)
