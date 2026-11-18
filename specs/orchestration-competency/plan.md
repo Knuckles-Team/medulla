@@ -48,9 +48,17 @@ tests/orchestration/, tests/competency/                                         
 
 ## Phase 0: Research
 
-No unknowns. The two earlier open questions are resolved by the code: `AgentTemplate` is declared in `orchestration-v1.ttl`, and step order reuses the core `:precedes` property.
+Two earlier open questions were resolved by the code, and later decisions (process compilation as a pipeline of typed forms, and how acked broker messages are retained until their lease deadline) are recorded in [research.md](research.md). The two questions: `AgentTemplate` is declared in `orchestration-v1.ttl`, and step order reuses the core `:precedes` property.
 
 ## Phase 1: Design
+
+- **Owner.** Medulla: the orchestration ontology, its shapes and fixtures, and the decision, mining and graph handlers the rows name.
+- **Cohesion.** Each of the seven questions is one query over one fixture source. Each row extends the question, view or workflow type it names, and no row adds a second planner.
+- **Dependency direction.** The ontology files and type crates sit below the handler crates. Handlers call them and never call each other.
+- **Interface depth.** One composed answer, `AgentExecutionAnswer`, carries the seven parts, plus the served architecture view and process methods. A caller makes one call, not seven.
+- **Special cases.** A source that is not connected yields a typed abstention for its part, never an empty answer.
+- **State.** A workflow is the content of a stored `WorkflowPattern` in the one graph store. Reads write nothing.
+- **Environment.** The ontology and fixture files, the graph store and the registry knobs behind the nightly groups.
 
 ### Layer model
 

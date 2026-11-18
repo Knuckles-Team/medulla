@@ -62,6 +62,14 @@ Unknown (see research.md): the production deployment template and fleet-tool com
 
 ## Phase 1: Design
 
+- **Owner.** Medulla's placement and worker policy: the placement question family in the decision engine, the capacity ledger, the jobs and schedule store, and the raft placement machines.
+- **Cohesion.** Each row extends the family, ledger, store or machine it names. No row adds a second ledger, scheduler or placement path.
+- **Dependency direction.** The decision types, the policy solver and the shared types sit below the decide handler, the jobs crates and the raft crates. The lower crates never call a handler.
+- **Interface depth.** Callers use the served `Decide` method with the `Placement` or `PlacementPlan` question kind and the existing job, schedule and lease methods. No row adds a method.
+- **Special cases.** A request may only tighten the pinned policy, never widen a cap. A target with no declared facts abstains `UnknownFact` and is never guessed.
+- **State.** Durable state is the capacity ledger, the lease and schedule records and the stored row revisions. Every lifecycle runs on one explicit machine with one transition function.
+- **Environment.** The `placement.*` registry knobs, including `placement.node_budget` for the plan solver, and the persist directory.
+
 The placement question family (MEDULLA-PLACEMENT-R001): the `Placement` question kind, the target registry, the typed request body with refusals, the pure feasibility function, the headroom premise, the why-not evidence, the typed abstention and the served contract proof.
 
 ### Architecture
