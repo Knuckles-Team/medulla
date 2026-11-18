@@ -861,7 +861,7 @@ fn derive_config(
 ) -> Result<Executed, String> {
     let options: &[DeclaredOption] = applied.map_or(declared, |applied| applied.options.as_slice());
     let emptied = applied.is_some_and(|applied| applied.emptied);
-    let thresholds = HarnessDefaults::from_policy(policy)?;
+    let thresholds = HarnessDefaults::from_policy(policy).map_err(invalid_parameter)?;
     let bound = facts
         .task_token_upper_bound
         .map(u32::try_from)
