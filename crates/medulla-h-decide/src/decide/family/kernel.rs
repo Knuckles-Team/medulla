@@ -45,14 +45,20 @@ pub(super) fn shape<'a>(
     Ok(options.as_slice())
 }
 
-/// The one typed body parameter, named `name`; no other parameter is allowed.
+/// The one typed body parameter, named `name`; no other parameter is allowed
+/// beside the policy's safety measurements, which the safety stage reads
+/// (MEDULLA-DECISION-ENGINE-R001.100.2).
 pub(super) fn body<'a>(
     request: &'a DecideRequest,
     kind: &str,
     name: &str,
 ) -> Result<&'a TypedValue, String> {
-    match request.params.as_slice() {
-        [param] if param.name == name => Ok(&param.value),
+    let mut own = request
+        .params
+        .iter()
+        .filter(|param| param.name != super::super::safety_stage::MEASUREMENTS_PARAM);
+    match (own.next(), own.next()) {
+        (Some(param), None) if param.name == name => Ok(&param.value),
         _ => Err(invalid_parameter(format!(
             "{kind} takes exactly one parameter, {name}"
         ))),

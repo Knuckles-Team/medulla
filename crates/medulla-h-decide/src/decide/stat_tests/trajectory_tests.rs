@@ -203,8 +203,11 @@ fn pairwise(records: Vec<PairwiseRecord>, pinned: bool) -> PairwiseRequest {
     }
 }
 
+/// The registered code a refused trajectory decision leaves with; the refusal text
+/// is `CODE: detail`, and the test proves the code.
 async fn refused(h: &Harness, pin: &ComponentDependency, query: TrajectoryQuery) -> String {
-    decide(h, with_query(pin, query)).await.unwrap_err()
+    let text = decide(h, with_query(pin, query)).await.unwrap_err();
+    text.split(": ").next().unwrap_or_default().to_string()
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R140.104

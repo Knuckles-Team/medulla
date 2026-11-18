@@ -1156,6 +1156,10 @@ fn seal(
                 .unwrap_or(EvidenceClass::Proof)
         } else if let Some(sealed) = executed.family.as_ref().and_then(|a| a.evidence) {
             sealed
+        } else if let Some(hooked) = sealing.registry.evidence_class(&outcome) {
+            // A family that names its own evidence class owns it, whatever its
+            // premises are.
+            hooked
         } else if executed
             .family
             .as_ref()
