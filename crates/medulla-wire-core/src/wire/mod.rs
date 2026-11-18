@@ -2068,7 +2068,8 @@ impl WireSession {
         let (op, outcome) = match kind {
             StatementKind::CreateTable(plan) => (
                 TxnOp::CreateTable {
-                    schema: TableSchema::new(plan.name.clone(), to_store_columns(&plan.columns)?),
+                    schema: TableSchema::new(plan.name.clone(), to_store_columns(&plan.columns)?)
+                        .with_constraints(plan.constraints.clone()),
                     if_not_exists: plan.if_not_exists,
                 },
                 WireOutcome::command("CREATE TABLE"),
@@ -3219,7 +3220,7 @@ impl WireSession {
         let columns = to_store_columns(&plan.columns)?;
         let mut txn = TableTxn::new();
         txn.push(TxnOp::CreateTable {
-            schema: TableSchema::new(plan.name, columns),
+            schema: TableSchema::new(plan.name, columns).with_constraints(plan.constraints),
             if_not_exists: plan.if_not_exists,
         });
         self.commit_table_txn(graph, sql, txn).await?;
