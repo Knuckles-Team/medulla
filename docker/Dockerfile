@@ -13,7 +13,7 @@
 
 FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85ab0f263ef12f492d8476aa3a2e4e1e333f7d67fbdd923d00a506a516a /uv /bin/uv
-ARG EGS_VERSION=3.3.4
+ARG EGS_VERSION=3.3.5
 # Epoch that stamps every file this build creates; the release workflow pins it to
 # the tagged commit time, and a standalone build still gets a fixed value.
 ARG SOURCE_DATE_EPOCH=0
