@@ -84,6 +84,11 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
 - [ ] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
 - [ ] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
+- [x] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
+- [x] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
+- [x] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
+- [x] T459 [US1] MEDULLA-FEDERATED-QUERY-R039.1.7 Multimodal space: served declaration (prerequisite of T079, T080)
+- [x] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [ ] T081 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.6 Multimodal space: hot-path proof
 - [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
 - [ ] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior
@@ -410,7 +415,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
 - [ ] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
 - [x] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
-- [x] T389a [US4] MEDULLA-FEDERATED-QUERY-R722.9.1 Bound-driver precedence in source resolution (split from R722.9 to break the R722.3/R722.9 cycle)
+- [x] T460 [US4] MEDULLA-FEDERATED-QUERY-R722.9.1 Bound-driver precedence in source resolution (split from R722.9 to break the R722.3/R722.9 cycle)
 - [x] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
 - [ ] T453 [US4] MEDULLA-FEDERATED-QUERY-R722.11 Served Uql binds many approved foreign sources
 

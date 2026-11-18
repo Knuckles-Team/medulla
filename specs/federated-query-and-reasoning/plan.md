@@ -1167,6 +1167,16 @@ FleetSourceExecutor and live-row evidence remain pending under R722.3--R722.6.
 
 This amendment makes no R722.3--R722.6 status changes.
 
+The seven design answers that bind every row of this feature:
+
+- **Owner.** Medulla: the UQL grammar and plan AST (`medulla-uql`, `medulla-query-types`), the executor and federation crates, and the retrieval and decision handlers each row names. Connectors own their source calls.
+- **Cohesion.** Each row extends the one parse, plan, execute or serve path it names. A capability has one implementation and one served entry point. No row adds a second planner or a second row-set algebra (R720, R721).
+- **Dependency direction.** The parser and the executor depend on the plan AST in `medulla-query-types`. Handlers call the executor and federation crates. Nothing below a handler imports it.
+- **Interface depth.** UQL text and the served methods each row names. No row adds a public surface beyond them.
+- **Special cases.** An unsupported construct returns `UQL_UNSUPPORTED` with a stable span and never falls back silently. A capability stays off until its conformance oracle passes.
+- **State.** A query is stateless over one shared read snapshot. Durable state is the registries, verdicts and corrections each row names, and it is written through the mutation gateway.
+- **Environment.** Registry knobs named by each row. No row reads an environment variable of its own.
+
 ## Phase 2: Task approach
 
 [tasks.md](tasks.md) holds one line per leaf row, grouped by user story. Producer rows (model, then behavior) come before consumer rows (wiring, refusal, evidence, hot-path proof). Rows with no `Depends on` row carry `[P]` and run in parallel. Rollup rows get no task line; their children carry the work. Foreign-owner rows are tracked in the seams below, not in this list.

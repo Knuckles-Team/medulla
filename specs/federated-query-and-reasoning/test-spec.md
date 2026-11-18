@@ -744,17 +744,17 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R039.1.1` | `crates/medulla-index-types/src/embedding.rs::tests::modality_bindings_round_trip` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.1` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.2` | `crates/medulla-exec/src/exec/vector_rank.rs::tests::sixteen_pairs_match_oracle` | L2 |
-| `MEDULLA-FEDERATED-QUERY-R039.1.2` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R039.1.3` | `tests/retrieval/test_multimodal_served.py::test_registry_encoders_reach_index` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R039.1.4` | `tests/retrieval/test_multimodal_served.py::test_missing_embedding_shortfall_and_refusals` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R039.1.5` | `tests/retrieval/test_multimodal_served.py::test_receipt_matches_model_calls` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.2` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.3` | `tests/retrieval/test_multimodal_served.py::test_registry_encoders_reach_index` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.4` | `tests/retrieval/test_multimodal_served.py::test_missing_embedding_shortfall_and_refusals` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.5` | `tests/retrieval/test_multimodal_served.py::test_receipt_matches_model_calls` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.6` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.1` | `crates/medulla-types/src/wire_query_core.rs::tests::retrieval_constraints_round_trip_and_refuse_unknown_operator` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `crates/medulla-exec/src/exec/constraints.rs::tests::failed_constraint_excludes_top_candidate` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.3` | `tests/retrieval/test_constraints_served.py::test_optimized_and_unoptimized_plans_agree` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.1.4` | `tests/retrieval/test_constraints_served.py::test_refusals_rank_nothing` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.4` | `tests/retrieval/test_constraints_served.py::test_refusals_rank_nothing` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.5` | `tests/retrieval/test_constraints_served.py::test_excluded_never_reappears` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.6` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.9.7` | `tests/retrieval_round_served.rs::section_traversal_returns_spans_with_paths` | L3 |
@@ -788,14 +788,14 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R077.6.5` | `tests/retrieval/test_column_advice_served.py::test_receipt_matches_observations_binding_unchanged` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.6` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.2` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `crates/medulla-exec/src/exec/topic.rs::tests::two_backends_one_result_contract` | L1 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `crates/medulla-exec/src/exec/topic.rs::tests::order_matches_oracle_w0_w1_mid` | L2 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.3` | `tests/retrieval/test_topic_fusion_served.py::test_dense_and_topic_both_exercised` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.4` | `tests/retrieval/test_topic_fusion_served.py::test_incompatible_topics_refuse_before_fusion` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.5` | `tests/retrieval/test_topic_fusion_served.py::test_receipt_reproduces_final_score` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.6` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `crates/medulla-exec/src/exec/topic.rs::tests::two_backends_one_result_contract` (planned) | L1 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `crates/medulla-exec/src/exec/topic.rs::tests::order_matches_oracle_w0_w1_mid` (planned) | L2 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.3` | `tests/retrieval/test_topic_fusion_served.py::test_dense_and_topic_both_exercised` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.4` | `tests/retrieval/test_topic_fusion_served.py::test_incompatible_topics_refuse_before_fusion` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.5` | `tests/retrieval/test_topic_fusion_served.py::test_receipt_reproduces_final_score` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.6` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R084` | `tests/shex_served.rs::served_shex_contract_journey` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R084.1` | `tests/shex_served.rs::wire_report_preserves_shape_map` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R084.3` | `tests/shex_served.rs::bounded_constraints_report_results` | L3 |
