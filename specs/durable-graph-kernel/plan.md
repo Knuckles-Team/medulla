@@ -74,6 +74,7 @@ The unknowns below were open when the rows were written. Each is decided in [res
 - How the served task-queue methods and the one claim store fit together (R072, R866).
 - How the downtime tick chooses types, takes leases and refuses (R101.3, R101.4, R101.6).
 Five decisions were open when the rows were written; [research.md](research.md) records each: the RESP listener's entry to the served KV methods, the graph change feed over the one CDC feed, S3 objects as blobs, tenant-keyed concept ids and lineage edges, and the served `Batch` method.
+The unknowns the rows raised, and the decisions that closed them, are recorded in [research.md](research.md): how the RESP listener enters the served KV methods, the graph change feed, S3 objects as blobs, tenant-keyed concept and lineage rows, the served Batch method, copy graft and the read-only shard source, the benchmark gates, and the KV-cache tier ladder.
 
 ## Phase 1: Design
 
