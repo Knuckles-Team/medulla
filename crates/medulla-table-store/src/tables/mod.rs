@@ -61,6 +61,6 @@ pub use property_graph::{
 };
 pub use store::{
     install_trigger_depth_max, install_trigger_machine_source, resolve_trigger_spec,
-    retry_on_conflict, ConflictAction, IndexCatalogTxnOp, PropertyGraphTxnOp, TableStore,
-    TableTxn, TriggerMachineSource, TxnOp, TXN_RETRY_EXHAUSTED,
+    retry_on_conflict, ConflictAction, IndexCatalogTxnOp, PropertyGraphTxnOp, TableStore, TableTxn,
+    TriggerMachineSource, TxnOp, TXN_RETRY_EXHAUSTED,
 };
