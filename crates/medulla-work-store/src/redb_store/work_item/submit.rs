@@ -960,6 +960,9 @@ mod tests {
         })
     }
 
+    /// MEDULLA-UNIFIED-DATA-PLANE-R766: the closed kind registry submits every
+    /// kind including `research_web`, and an unknown kind is refused.
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R766
     #[test]
     fn research_web_kind_submits_and_unknown_kind_refuses() {
         let temp = open("research-web-kind");
