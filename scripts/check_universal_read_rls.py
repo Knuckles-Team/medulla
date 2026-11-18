@@ -233,8 +233,12 @@ def _check_sql_wire_read_contract(wire: str) -> None:
                 in wire_overlay_read,
                 "self.filter_view_for_verified_actor(&mut view).await?"
                 in wire_uql_read,
-                "exec_sql_typed_with_tables(&snap, projection.store(), &sql)"
-                in wire_sql_read,
+                re.search(
+                    r"exec_sql_typed_with_tables(?:_in_graph)?\(\s*&snap,"
+                    r"\s*projection\.store\(\),",
+                    wire_sql_read,
+                )
+                is not None,
                 "fn verified_actor(&self) -> WireResult<String>" in wire,
                 "self.check_access_for_kind(&graph, &kind).await?" in wire_execute,
                 ".check_access(graph, Self::crossmodal_access(&stmt))"
