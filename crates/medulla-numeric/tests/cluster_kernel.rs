@@ -576,7 +576,14 @@ fn rust_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
 fn kernel_has_no_ffi_and_no_target_cpu_flags() {
     let root = repo_root();
     let mut scanned = 0;
-    let config = std::fs::read_to_string(root.join(".cargo/config.toml")).unwrap_or_default();
+    // Only live settings count: the file's comments document the opt-in release flag
+    // and pin nothing.
+    let config: String = std::fs::read_to_string(root.join(".cargo/config.toml"))
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.trim_start().starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(
         !config.contains("target-cpu"),
         ".cargo/config.toml pins a CPU"
