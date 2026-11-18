@@ -1099,7 +1099,8 @@
 :Budget a owl:Class ;
     rdfs:label "Budget" ;
     rdfs:comment "A spending budget: a limit a person or household sets for a category and a period, against which ledger transactions are charged. BFO:GenericallyDependentContinuant." ;
-    rdfs:subClassOf bfo:0000031 .
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
 
 :LedgerTransaction a owl:Class ;
     rdfs:label "Ledger Transaction" ;

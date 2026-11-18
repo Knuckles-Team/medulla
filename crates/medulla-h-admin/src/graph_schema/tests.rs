@@ -54,16 +54,17 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             _ => None,
         })
         .collect();
-    // The listing reports the exact immutable catalog of 64 core sources (the state-machine vocabulary and its shapes included).
-    // Ten sources own both document kinds; every other source owns exactly
-    // one document kind. `core:sdd@1` gained its shapes document with the
+    // The listing reports the exact immutable catalog of 65 core sources (the state-machine vocabulary and its shapes included).
+    // Twelve sources own both document kinds (the A2A vocabulary gained its team
+    // shapes, and the identity metadata vocabulary ships with its shapes); every
+    // other source owns exactly one document kind. `core:sdd@1` gained its shapes document with the
     // SDLC lifecycle kinds/edges/shapes model (ef517a72c), and the placement
     // target vocabulary joined as a both-kinds source with MEDULLA-PLACEMENT-R001.5.
     let catalog = core.schema_sources();
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 64);
+    assert_eq!(core_ids.len(), 65);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -78,7 +79,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.ontology_sha256.is_some())
             .count(),
-        50
+        51
     );
     assert_eq!(
         initial
@@ -86,17 +87,19 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        24
+        26
     );
     for source in &initial.core_sources {
         let expected = if matches!(
             source.source_id.as_str(),
-            "core:archimate@1"
+            "core:a2a@1"
+                | "core:archimate@1"
                 | "core:commercial@1"
                 | "core:connector-pack@1"
                 | "core:data-platform@1"
                 | "core:decision@1"
                 | "core:harness@1"
+                | "core:identity_metadata@1"
                 | "core:infrastructure@1"
                 | "core:placement@1"
                 | "core:sdd@1"
