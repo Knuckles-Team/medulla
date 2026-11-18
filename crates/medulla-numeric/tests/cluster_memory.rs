@@ -45,13 +45,22 @@ unsafe impl GlobalAlloc for Counting {
 #[global_allocator]
 static ALLOCATOR: Counting = Counting;
 
+/// A well-mixed per-element hash, so the fixture holds far more than `k` distinct rows
+/// (a linear congruential pattern repeats every 125 rows at this width).
+fn splitmix(seed: u64) -> u64 {
+    let mut z = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    (z ^ (z >> 31)) >> 8
+}
+
 // spec: MEDULLA-CLUSTER-R006.3
 
 #[test]
 fn peak_live_bytes_within_formula() {
     let (n, dim, k) = (20_000usize, 64usize, 8_192usize);
     let data: Vec<f32> = (0..n * dim)
-        .map(|i| ((i * 2_654_435_761) % 1000) as f32 / 10.0)
+        .map(|i| (splitmix(i as u64) % 1000) as f32 / 10.0)
         .collect();
     let cfg = ClusterConfig {
         threads: 2,
