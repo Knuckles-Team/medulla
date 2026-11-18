@@ -90,6 +90,18 @@ The unknowns the rows raised, and the decisions that closed them, are recorded i
 
 Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); each seam has a document in `contracts/`.
 
+### Decisions (see research.md)
+
+- Sequences are persisted in the owner table `__sql_sequences__` under NUL-prefixed keys; `__sql_seq__` stays the per-table rowid counter. The new table is a layout change applied by the offline upgrade registry (R013.2).
+- One SQLSTATE table in `crates/medulla-wire-core/src/wire/sqlstate.rs`; both `user_err` functions read it.
+- `COPY ... TO STDOUT` is a plain read through the authorized read path.
+- Partial and expression indexes are used only by a planner that proves the predicate (R010.2).
+- `R005.1` depends on `R002.2` (its conflict-heavy workload); `R001.3` lands with `R005.1`.
+- `R015.1`: the hub is installed as the tenant store's row-change sink by `handle_sql`; the ring is the knob `cdc.ring_events`; a row event is a `Row` change on `ReadGraphChanges` gated by `cdc:read` and the table's SELECT grant.
+
+### Wire login resolution (R007.1)
+`resolve_wire_login` (`crates/medulla-wire-core/src/sql_wire_auth.rs`) checks the record, its state and the kind's verifier. The pgwire startup handler routes a login by its record: `Password` and engine agents run SCRAM, `Token` runs the cleartext password message, `Certificate` reads the mTLS leaf. A successful login acts as the record's `principal` (`bind_startup_from_client`). Records live in the process registry `wire_login_registry()`; R007.4 fills it from the identity store.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row, producer first within each user story. Tasks that edit `crates/medulla-table-store/src/tables/store.rs` run in series; hot-path proofs run in parallel.
@@ -118,15 +130,3 @@ none
 
 - Wire login grant and revoke: `MEDULLA-ENGINE-PARITY-R007.4` provides, `ARBORA-OPS-R858.1` consumes. Contract: [arbora-wire-logins.md](contracts/arbora-wire-logins.md).
 - Engine capability report: `MEDULLA-ENGINE-PARITY-R020.2` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-engine-capabilities.md](contracts/arbora-engine-capabilities.md).
-
-## Decisions (see research.md)
-
-- Sequences are persisted in the owner table `__sql_sequences__` under NUL-prefixed keys; `__sql_seq__` stays the per-table rowid counter. The new table is a layout change applied by the offline upgrade registry (R013.2).
-- One SQLSTATE table in `crates/medulla-wire-core/src/wire/sqlstate.rs`; both `user_err` functions read it.
-- `COPY ... TO STDOUT` is a plain read through the authorized read path.
-- Partial and expression indexes are used only by a planner that proves the predicate (R010.2).
-- `R005.1` depends on `R002.2` (its conflict-heavy workload); `R001.3` lands with `R005.1`.
-- `R015.1`: the hub is installed as the tenant store's row-change sink by `handle_sql`; the ring is the knob `cdc.ring_events`; a row event is a `Row` change on `ReadGraphChanges` gated by `cdc:read` and the table's SELECT grant.
-
-## Wire login resolution (R007.1)
-`resolve_wire_login` (`crates/medulla-wire-core/src/sql_wire_auth.rs`) checks the record, its state and the kind's verifier. The pgwire startup handler routes a login by its record: `Password` and engine agents run SCRAM, `Token` runs the cleartext password message, `Certificate` reads the mTLS leaf. A successful login acts as the record's `principal` (`bind_startup_from_client`). Records live in the process registry `wire_login_registry()`; R007.4 fills it from the identity store.
