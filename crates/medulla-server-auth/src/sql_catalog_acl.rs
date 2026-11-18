@@ -2115,6 +2115,7 @@ fn project_read_store(
         store: Some(store),
         path,
     };
+    let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
     for name in names {
         let authorized =
             open_authorized_table(authority, persist_dir, &name, SqlPrivilege::Select)?;
@@ -2132,6 +2133,21 @@ fn project_read_store(
                 .map(|row| row.iter().map(Cell::to_json).collect())
                 .collect();
             projection.store().insert_rows(&name, &col_order, &values)?;
+        }
+        // The projection holds only the rows the caller may see, so each ordinary index of
+        // the table is built over those rows under the projection's own scope; a read then
+        // plans against the same indexes (a partial index among them) as the tenant's store.
+        let projection_scope = projection.store().index_scope().to_string();
+        for spec in tenant.list_secondary_indexes(Some(&name))? {
+            let copy = medulla_tables::index::SecondaryIndexSpec {
+                tenant_scope: projection_scope.clone(),
+                ..spec
+            };
+            // An index is only an acceleration: a build the budget refuses leaves the read on
+            // the scan path, never a failed read.
+            if let Err(reason) = projection.store().create_secondary_index(&copy, true) {
+                tracing::debug!(table = %name, index = %copy.name, %reason, "projection index skipped");
+            }
         }
     }
     let projection_scope = projection.store().index_scope().to_string();
