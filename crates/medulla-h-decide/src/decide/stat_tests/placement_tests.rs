@@ -465,9 +465,13 @@ async fn placement_abstains_with_typed_reasons() {
     for code in ["PLACEMENT_FACTS_INVALID", "CAPACITY_UNAVAILABLE"] {
         assert!(table.iter().any(|c| c.as_str() == code), "{code}");
     }
+    // The abstentions are the fixed `AbstainReason` codes, kept apart from the
+    // registered tables (`record::outcome::codes_are_unique_and_stable` pins both).
     for code in ["INFEASIBLE", "UNKNOWN_FACT", "POLICY_LOOSENING"] {
         assert!(
-            medulla_decision_types::decision::codes::resolve(code).is_some(),
+            medulla_decision_types::decision::record::outcome::FIXED_CODES
+                .iter()
+                .any(|fixed| fixed.as_str() == code),
             "{code}"
         );
     }
