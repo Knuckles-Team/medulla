@@ -121,6 +121,7 @@ bootstrap skill, together with the [SDD full lifecycle](https://github.com/Knuck
 - [`MEDULLA-SDLC`](development-lifecycle/spec.md) — graph-native development lifecycle: the ecosystem is developed inside the engine, with lifecycle records, derived edges, defects and derived requirement state.
 - [`MEDULLA-BRANCH-MERGE`](branch-merge/spec.md) — agent branching, three-way merge, and epistemic conflict resolution.
 - [`MEDULLA-OBJECT-STORAGE-BACKEND`](object-storage-backend/spec.md) — object-storage-native durable store and comparative cost gate.
+- [`MEDULLA-WORLD-VIEW`](world-view-ontology/spec.md) — world-view spatial ontology and facts: the spatial vocabulary, the derived layout with stored overrides, and the served spatial query.
 - [`MEDULLA-UNIFIED-DATA-PLANE`](unified-data-plane/spec.md) — Medulla attached-source, dialect and app-admission owner contract
 - [`MEDULLA-DECISION-ENGINE`](decision-engine/spec.md) — governed decision and calibration engine contract.
 - [`MEDULLA-DURABLE-KERNEL`](durable-graph-kernel/spec.md) — durable graph state and recovery contract.
