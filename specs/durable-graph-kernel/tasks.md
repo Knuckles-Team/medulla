@@ -62,7 +62,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
 - [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 Pooler transaction mode keeps no session state across transactions
 - [x] T058 [US6] MEDULLA-DURABLE-KERNEL-R038.1 DurabilityClass is a typed enum with a declared loss-window bound and a refusal for an unrecognized name
-- [x] T059b [US6] MEDULLA-DURABLE-KERNEL-R038.3 A KV namespace declares its durability class, and the class is read back (Depends: R038.1, R038.2, R102)
 - [x] T059 [US6] MEDULLA-DURABLE-KERNEL-R038.2 The write path's durability selection: write_plan/refuse_if_durable_log_write are the one entry point a write admission calls
 - [x] T060 [US6] MEDULLA-DURABLE-KERNEL-R037.1 WorkloadClass is a typed classifier with a refusal for an unrecognized operation kind
 - [x] T061 [US6] MEDULLA-DURABLE-KERNEL-R037.2 route is the one dispatch entry point a wire listener calls to decide whether to allocate a DataFusion session
@@ -300,3 +299,4 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T292 MEDULLA-DURABLE-KERNEL-R875.4 ChangeEnvelopeOutcome discriminator `status` is a result tag: rename, no machine
 - [x] T293 MEDULLA-DURABLE-KERNEL-R875.5 SemanticIndexOutcome discriminator `status` is a result tag: rename, no machine
 - [ ] T294 MEDULLA-DURABLE-KERNEL-R875.6 Semantic index and audit wire mirrors follow their Rust machines: Python mirror follows the Rust machine
+- [x] T295 [US6] MEDULLA-DURABLE-KERNEL-R038.3 A KV namespace declares its durability class, and the class is read back (Depends: R038.1, R038.2, R102)

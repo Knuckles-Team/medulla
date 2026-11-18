@@ -174,7 +174,7 @@ All cases below are required future evidence.
 | Core metadata served proof | R071.1.6 | Real server returns the exact golden source/target/relation tuples below, not merely three results. A rejected Person-to-Event mapping preserves the prior schema. |
 | Domain served proof | R097.2.6 | Import medical, technology and labor fixtures with mapped and unmapped classes. Query exact coverage, restart, and read it again. |
 
-Proving integration owner: `tests/test_ontology_crosswalk_served.py` (planned). Use generated client operations and independent schema/pack readback. Mocked routes, inline-only inspection and direct helper calls cannot close these rows.
+Proving integration owner: `tests/typed_packs/test_ontology_crosswalk_served.py`. Use generated client operations and independent schema/pack readback. Mocked routes, inline-only inspection and direct helper calls cannot close these rows.
 
 ### Golden tuples and source-resolution refusals
 
