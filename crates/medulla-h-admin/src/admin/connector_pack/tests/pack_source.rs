@@ -159,7 +159,6 @@ async fn read_rows(
                 foreign_execution: Some(opened.execution),
                 foreign_executions: Default::default(),
                 code_map: None,
-                source_plan: None,
             },
         )
         .await;
