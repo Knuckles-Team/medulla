@@ -1835,315 +1835,50 @@ mod tests {
             .contains("immutable catalog"));
     }
 
+    /// Every core artifact lives under the one ontology IRI base
+    /// (`https://knuckles-team.github.io/ontology/<module>#`): none declares a
+    /// legacy namespace or the retired `eg:` prefix, a document's default
+    /// namespace is under the base, and every document names the shared core
+    /// vocabulary. The artifacts are authored by hand and change with every
+    /// vocabulary row, so no digest of their bytes is pinned.
     #[test]
-    fn core_artifact_bytes_and_legacy_iri_namespace_are_pinned() {
-        // Pin the exact bytes compiled by `include_str!`, rather than a
-        // pre-write renderer buffer (which may retain an extra terminal blank
-        // line). Runtime source identities are derived from these bytes.
-        let expected = [
-            (
-                "a2a",
-                "aab7e8c5b2d166b59c8385110e48413c8c33eed1c651149efab6fa378e464a3d",
-            ),
-            (
-                "action",
-                "43ba871c307002c6a73e064cd11beee3ad7aa4abf0e7def1f86b081f159d0419",
-            ),
-            (
-                "archimate",
-                "ad44f0623b4c10cfbc274edfe51dfb1bbd446c6f8eaea4a76a6545d8b74f54af",
-            ),
-            (
-                "capability",
-                "1ea2bda0a6da13f5fdf8c409894e874f9ff8bad33bfcfa3ca00311393a159b50",
-            ),
-            (
-                "argumentation",
-                "39a17baa75f4ea6957fdee9cc9f83bcdfaa67f1e6f1020a4a589d25c8193c0f2",
-            ),
-            (
-                "calendar",
-                "c1fb0d0db7e73345b10259bfcdabc4d28ff82465e53c403c276e3122c89d8264",
-            ),
-            (
-                "catalog",
-                "7bc1822191355438760e4ef6b2ce236c38472711c9a55785420e8eb46f2a9e84",
-            ),
-            (
-                "company",
-                "ce4b69dc216ce81c0fafc545a6ef9c05311c4c96d72b2d93af765293abc247d4",
-            ),
-            (
-                "company_infra",
-                "a743d603cb3904882a4c7b7cdd1f31c9033e5e14e33e5f052c2c140868eb6457",
-            ),
-            (
-                "connector-pack",
-                "78200cda4130a8683e135f72ebf2d023517a6543855eaf001c6e996c72951ceb",
-            ),
-            (
-                "concepts",
-                "2acdd5c6e747d72f344664b57274b8a37b27a0a0e2c8b6e5d9565a62f7cfc8a0",
-            ),
-            (
-                "foundation",
-                "53a5129685d4783f9cd26d0811cb3cfaae4fa6f887bcf2a5235f200952be1618",
-            ),
-            (
-                "foundation-shapes",
-                "ea25f85890441f7a30692f2a29fbbd147920446569b296bf0df714fe9796ea9a",
-            ),
-            (
-                "documentation",
-                "9b569a81a7fbe6cc021348438a463e2955ddcf73a454e217743c9639b2ac3523",
-            ),
-            (
-                "energy_geopolitics",
-                "7295a661a2ae8ed406148ab71616379d33dabed13c6dd5bbc818d657f5d080c7",
-            ),
-            (
-                "enterprise",
-                "481dfc20ceb7f25ec86cbf7abfc8c3e88b9de7c257b4026e6ed4ac48d87a3af2",
-            ),
-            (
-                "enterprise-shapes",
-                "5aac2c859334d1b31e8a4fd34e84493cc83b21fa51abc72700770afe25a5c40a",
-            ),
-            (
-                "governance-shapes",
-                "b345bec6efc2938ec82465349ae15736c7b9c5efe6cb198919d83f5f7178deab",
-            ),
-            (
-                "government",
-                "533004f14c356a04ee5a43a64f56ea5b4e4f2f0540f3ed5e380ab3ebefc5703c",
-            ),
-            (
-                "government-shapes",
-                "b99e9ef4ff684ea5ea42100bb00cb0036fc315485a37938c65c3273d917f9f34",
-            ),
-            (
-                "harness",
-                "902d250ed94d5956c43127f59fc088fcf620c51492dbe152e447e53ea6714810",
-            ),
-            (
-                "hr",
-                "7bd72f0b5053a0e4f085108f74171084763fe19a2028a232406f801d1c2d03f0",
-            ),
-            (
-                "identity",
-                "10a59460d20080a78bf9b145db9148a9ddb4fad91507e75920953dba64863fe7",
-            ),
-            (
-                "identity-shapes",
-                "e1713d09df43bfb9bb5f841388fcd544415bf10d365e4b1fc874f4cadf0ab346",
-            ),
-            (
-                "infrastructure",
-                "08e0765f1cff3b2fa134e460a8770623aed9b8adb310a66c800dbfd130fcc713",
-            ),
-            (
-                "medical",
-                "81e6964d89cbdc7669f29f852ef1fc64c3bc96092ca706c1005a13cc4031b6d2",
-            ),
-            (
-                "native_source_connector",
-                "9ab1e8346efb65705c6e73ee04b7f180b1d9434f64964ee4701f82ce11536944",
-            ),
-            (
-                "orchestration",
-                "29f630b677a2cd9bc8c76cd16b29f192b165d644e1c58ba23aa79cc7941817c8",
-            ),
-            (
-                "orchestration-shapes",
-                "26c674a9bdcaf89bd88becf0cb53bfbc91ed621e9c2b2f4bad43f9df14c4a3ab",
-            ),
-            // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and shapes.
-            (
-                "state_machines",
-                "10d8c03459db4487ed7be2ec7fa297e7f7032e51dd3bb662091f9169b4b5bd28",
-            ),
-            (
-                "state_machines-shapes",
-                "3e02da1f4dc166034129e13a3dcffb3695e551b2496eb86f095818267b5712cc",
-            ),
-            (
-                "personal",
-                "76376c1fe0dc941232951aefb5c9a745bb61169ba3d1a60cb037103e235adebf",
-            ),
-            (
-                "process_intelligence",
-                "cecbb5ee458bac25e466f2a24f9eeccbbc09c87d1aa4b33b3f149e0a13e25a7c",
-            ),
-            (
-                "sdd",
-                "0672a0fd093c48022a4c5dd1981c3a6178633ec9b9410858273fb9bf47a66795",
-            ),
-            (
-                "service_operations",
-                "f68d57da4314fc5b03b52ac75818631bedf62c20ddde31ab25844e881d82c1ec",
-            ),
-            (
-                "dataplatform",
-                "1140c5a8e9257295dbfa2da05329deeaf3a002686f1d6922b73dad144ddbdec2",
-            ),
-            (
-                "data-platform",
-                "3f88273dac9f47341224776e43773373e010fd3fcb62c2a09439ebdd7fcb29b7",
-            ),
-            (
-                "it4it_delivery",
-                "4c8534d899f7d07f93cf7eec6d42fb0ae79242624efe209646110576f8836756",
-            ),
-            (
-                "media",
-                "2cdcf57a14a3a8823cbb241d1707ed1c14cf58b9f4583849779a8b60a61dda84",
-            ),
-            (
-                "retrieval",
-                "309b0997e30f6f88ac04e7d0c042484baa602bd20d50cb8b755ef1d45d165c17",
-            ),
-            (
-                "sdd_spec",
-                "79e01851871a9c5090073cc5c48a69ccc650533a0e305bcafb5ae5c315c3c138",
-            ),
-            (
-                "sdlc_lifecycle",
-                "b6b207e3c50609622731e711efb32fd4d29ad96157c98996c24d34225f56acbd",
-            ),
-            (
-                "software",
-                "f4e3497c818d2673b722baa95d2dcbf07e9443aaa71b959b3437712ddf96ab22",
-            ),
-            (
-                "system",
-                "41ff66e257d1cd1cf7abab28cd4ab601c912b15c5b30b136204ec1b04874087d",
-            ),
-            (
-                "trm",
-                "952e1ce1f22353b93bbc135a86e18a650e1eab76ad42067dc5dbfcdb50bf4692",
-            ),
-            (
-                "life",
-                "d6380a04e0291b2883f908c09584828b0b2f0ad95ada6cdaf3e71674656648db",
-            ),
-            (
-                "environment",
-                "d2207c87d6c2d6de59dd82f4d0ec3ed5c5be78470426b138000df05504c7db76",
-            ),
-            (
-                "nutrition",
-                "a42d133f53e48fa715794e019a42b6a85676bba3022d00a3e3ee0d812dcff735",
-            ),
-            (
-                "world-model-shapes",
-                "a6de6c949346835a8d14cae17f740f2f5653d1b3517cc7d9f8ee5f41a01030cf",
-            ),
-            (
-                "swarm-topology",
-                "8d975a3e12ed6bae9e509c703e1dff2d279983d8e51b4365ce50419a20d6d22b",
-            ),
-            (
-                "swarm-topology-shapes",
-                "c09df577635071d5dae0594a0b67864740e47ae1e80ab372af82b4043d1471b0",
-            ),
-            // MEDULLA-PLACEMENT-R001.5: the placement module (ontology plus its
-            // shapes companion) joins the catalog; the pin follows the ontology.
-            (
-                "placement",
-                "5ffe8274813ab3d15d0b18aa74fc9f57d91d5b63dae7f769c88157ab36bd875c",
-            ),
-            // MEDULLA-IDENTITY-R023.8: the typed principal metadata module joins the
-            // catalog; the pin follows the ontology.
-            (
-                "identity_metadata",
-                "89c11478257f9f8dd7255901c56c8c108164cc246dca3724800c1e5804e19fe9",
-            ),
-            // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
-            // records; semantic acceptance/refusal fixtures live in
-            // src/server/graph_schema/finance_tests.rs. Pin both updated artifacts.
-            // R004.2.3-R004.2.6 added the portfolio-group, strategy and leverage records.
-            (
-                "finance",
-                "7fa703648bd099f16dd09bc453832f23403431c3ae69feaff5f04e6940cd8103",
-            ),
-            // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
-            (
-                "documentation-shapes",
-                "6c2657035352626f8b30ec2601a1e0e9dd61adcb0d6462f807e909f454feb42d",
-            ),
-            (
-                "finance-shapes",
-                "d794a71b8bc4b1f38205adb6350a35b3f88abe6d495ef3ef4f7f27c97cbf9785",
-            ),
-            (
-                "worldview",
-                "beb2ed7245284061c0fef87ad1319fa544b026702c1699a981e6886124f617c4",
-            ),
-            (
-                "metadata_catalog",
-                "27bc4fb179675f61467c6ce40722cd65ecc978818b14e8ef35911115411ffa96",
-            ),
-            (
-                "metadata_catalog-shapes",
-                "23c496142443f746b80c511a74b0a6eb0500a3a7e2c7cc7e9ee27a1f5b57a81e",
-            ),
-            (
-                "temporal-shapes",
-                "be2241b3492781f0f64fa90e6b306eca922f4a2fb1ef0c34032ca7c6310cb93c",
-            ),
-            (
-                "virtual-graph",
-                "a7f0f413b02a84f97b9373bf3c8933df38f78a6f8c43dfa785714cead6ccb70c",
-            ),
-            (
-                "virtual-graph-shapes",
-                "76f1c3999d30eb3f201f2642c2262e694ddf9f735c1935b3d5b0d9d3c5fa4f75",
-            ),
-            // MEDULLA-SUPPLY-VOCAB-R003.13: the commercial module (ontology plus its
-            // shapes companion) joins the catalog; the pin follows the ontology.
-            (
-                "commercial",
-                "e6115455b5d2e509deade8b189cebcb772ca3505f0f4d40967bd4d625f07c805",
-            ),
-            (
-                "supply_chain",
-                "bc37a15dd2ad4b1d351725943f5a267590981f8bea4e4316bc907ec27874b33e",
-            ),
-            // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack module (ontology
-            // plus its surface shapes companion) joins the catalog; the pin
-            // follows the ontology.
-            // The generated decision module (ontology plus shapes); the pin follows the ontology.
-            (
-                "decision",
-                "15c7aacce36cbf473f086497eb3e06caec75c8333538388a0f2f728af9101760",
-            ),
+    fn core_artifacts_use_only_the_one_ontology_iri_base() {
+        const BASE: &str = "https://knuckles-team.github.io/ontology/";
+        const LEGACY: [&str; 4] = [
+            "http://knuckles.team/kg",
+            "https://agent-utilities.dev/ontology",
+            "http://medulla/owl#",
+            "@prefix eg:",
         ];
         let catalog = current_core_catalog();
-        let pinned_modules: BTreeSet<_> = expected.iter().map(|(module, _)| *module).collect();
-        assert_eq!(
-            pinned_modules.len(),
-            expected.len(),
-            "duplicate core artifact pin"
-        );
-        assert_eq!(
-            expected.len(),
-            catalog.len(),
-            "every core source needs a byte pin"
-        );
-        for (module, digest) in expected {
-            let source = &catalog[&format!("core:{module}@1")];
-            // A module can carry both documents (commercial: ontology plus its
-            // shapes companion); the pin follows the ontology, the module's
-            // primary artifact, with the shapes-only modules unchanged.
-            let actual = source.ontology_sha256.or(source.shapes_sha256).unwrap();
-            assert_eq!(actual.to_hex(), digest, "artifact drift for {module}");
+        assert!(!catalog.is_empty(), "the core catalog has sources");
+        for (source_id, source) in catalog {
+            for document in [source.ontology_ttl.as_deref(), source.shapes_ttl.as_deref()]
+                .into_iter()
+                .flatten()
+            {
+                for legacy in LEGACY {
+                    assert!(
+                        !document.contains(legacy),
+                        "{source_id} still carries the legacy namespace {legacy}"
+                    );
+                }
+                for line in document.lines().filter(|l| l.starts_with("@prefix : <")) {
+                    assert!(
+                        line.starts_with(&format!("@prefix : <{BASE}")),
+                        "{source_id}: default namespace is outside the ontology base: {line}"
+                    );
+                }
+            }
             let document = source
                 .ontology_ttl
                 .as_deref()
                 .or(source.shapes_ttl.as_deref())
-                .unwrap();
-            assert!(document.contains("https://knuckles-team.github.io/ontology/core"));
-            assert!(!document.contains("@prefix eg:"));
+                .expect("a core source carries a document");
+            assert!(
+                document.contains(&format!("{BASE}core")),
+                "{source_id} does not name the core vocabulary"
+            );
         }
     }
 
