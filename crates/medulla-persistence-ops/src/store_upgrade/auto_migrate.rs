@@ -25,7 +25,7 @@ use medulla_storage::{classify_owner_store_format, OwnerLayout, OwnerStoreFormat
 use serde::{Deserialize, Serialize};
 
 use super::discover::{discover, StoreFile};
-use super::{apply_store, existing_directory, ApplyOptions, Staging, StoreReport, StoreStatus};
+use super::{apply_store, existing_directory, ApplyOptions, Staging, StoreReport, StoreOutcome};
 use super::{DEFAULT_STAGING_DIRECTORY, STAGING_SCRATCH_DIRECTORY};
 
 /// The switch. Unset or `true` turns automatic migration on.
@@ -263,8 +263,8 @@ fn refuse(migration: &mut AutoMigration, store: &StoreFile, error: AutoMigration
 fn migrate_store(store: &StoreFile, staging: &Staging) -> Result<StoreReport, AutoMigrationError> {
     tracing::info!(store = %store.name, "store migration: upgrading store");
     let report = apply_store(store, staging);
-    match report.status {
-        StoreStatus::Upgraded | StoreStatus::Current => {
+    match report.outcome {
+        StoreOutcome::Upgraded | StoreOutcome::Current => {
             tracing::info!(store = %store.name, "store migration: {}", report.detail);
             medulla_kernel::metrics::process().store_migration_step("store", "upgraded");
             Ok(report)
