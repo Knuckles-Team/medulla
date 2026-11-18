@@ -104,7 +104,7 @@ pub use exec::{
     exec_sql_arrow, exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables,
     exec_sql_typed, exec_sql_typed_cancellable, exec_sql_typed_with_tables,
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
-    QueryResult, SqlContextCache,
+    exec_sql_typed_with_tables_in_graph, QueryResult, SqlContextCache,
 };
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.

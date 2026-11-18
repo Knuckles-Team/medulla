@@ -2018,8 +2018,17 @@ impl WireSession {
         // path now — an in-txn overlaid snapshot could never have used the
         // served-context cache anyway (its buffered writes aren't reflected in
         // `version()`).
+        // The statement runs over `graph`, so `medulla_catalog.matviews` lists that
+        // graph's views (MEDULLA-INCREMENTAL-VIEWS-R005.3).
+        let statement_graph = graph.to_string();
         tokio::task::spawn_blocking(move || {
-            medulla_sql::sql::exec_sql_typed_with_tables(&snap, projection.store(), &sql)
+            medulla_sql::sql::exec_sql_typed_with_tables_in_graph(
+                &snap,
+                projection.store(),
+                Some(&statement_graph),
+                &sql,
+                &medulla_sql::sql::CancellationToken::new(),
+            )
         })
         .await
         .map_err(|e| user_err(format!("query task failed: {e}")))?
