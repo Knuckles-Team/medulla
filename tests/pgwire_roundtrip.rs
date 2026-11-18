@@ -1692,6 +1692,22 @@ async fn matview_status_catalog_reports_mode_and_reason() {
         Some(sql_test_persist_dir()),
         default_persistence(),
     );
+    // The plan filters on `year`, a property only the document nodes carry; a view over a
+    // property no node holds has no column to read.
+    {
+        let guard = state.read().await;
+        let core = guard.registry.get("__commons__").unwrap().core.clone();
+        let properties = serde_json::json!({
+            "type": "Doc",
+            "year": 2010,
+            "_visibility": "public",
+            "_owner": common::TEST_AGENT,
+        });
+        core.add_node(
+            "doc-1".to_string(),
+            rmp_serde::to_vec_named(&properties).expect("encode doc node"),
+        );
+    }
     let scan = || Op::Scan {
         label: "Doc".into(),
     };
