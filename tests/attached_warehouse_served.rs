@@ -266,7 +266,12 @@ async fn iceberg_and_duckdb_reads_match_native() {
         .filter(|(_, amount, _)| *amount >= 2200)
         .map(|(id, _, _)| *id)
         .collect();
-    assert_eq!(served_ids, native_ids);
+    assert_eq!(
+        served_ids,
+        native_ids,
+        "ordered numeric filter: served rows {:?}, native rows {native:?}",
+        rows(&ranged)
+    );
 
     // A column the table lacks is schema drift, not an empty column.
     let spec = warehouse(
