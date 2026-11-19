@@ -596,6 +596,7 @@ mod tests {
             | QuestionKind::ToolNecessity
             | QuestionKind::FeedbackLoop
             | QuestionKind::PlanningAdmission
+            | QuestionKind::ToolActionAdmission
             | QuestionKind::A2aRoute
             | QuestionKind::PaperAdmission
             | QuestionKind::HeldItemAdmission
@@ -636,7 +637,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            80,
+            81,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

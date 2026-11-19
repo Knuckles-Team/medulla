@@ -11,7 +11,7 @@
 
 use medulla_decision_stats::decision::retrieval::Verdict;
 use medulla_decision_types::decision::codes::CALIBRATION_TOO_FEW_PAIRS;
-use medulla_decision_types::decision::revision_subject::RevisionSubject;
+use medulla_decision_outcome_types::decision::promotion::RevisionSubject;
 use medulla_decision_types::decision::statistical::body::{
     canonical_body_bytes, content_digest_of,
 };

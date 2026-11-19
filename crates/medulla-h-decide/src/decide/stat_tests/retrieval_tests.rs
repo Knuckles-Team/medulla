@@ -141,6 +141,7 @@ fn returned_unclassed(ids: &[&str]) -> BoundedVec<ReturnedEvidence, 256> {
                 evidence_id: id.to_string(),
                 content_class: None,
                 raw_score_ppm: None,
+                source: None,
             })
             .collect(),
     )
@@ -154,6 +155,7 @@ fn returned(ids: &[&str], class: &str) -> BoundedVec<ReturnedEvidence, 256> {
                 evidence_id: id.to_string(),
                 content_class: Some(class.to_string()),
                 raw_score_ppm: None,
+                source: None,
             })
             .collect(),
     )

@@ -296,6 +296,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         // and a graph with no source refuses SEARCH_SOURCE_UNREGISTERED (R174.9.4).
         LearningWrite::RefreshFreshness { .. }
         | LearningWrite::RecordOutcome { .. }
+        | LearningWrite::FitCalibration { .. }
         | LearningWrite::EvaluateDrift { .. }
         | LearningWrite::FitCalibration { .. }
         | LearningWrite::RunOutcome { .. }

@@ -56,6 +56,11 @@ pub struct ReturnedEvidence {
     /// recorded it; read by the rerank calibration fit (R822).
     #[serde(default)]
     pub raw_score_ppm: Option<u32>,
+    /// The retrieval source that produced the unit (a connector or index
+    /// id); the per-source trust posterior is kept under it
+    /// (MEDULLA-DECISION-ENGINE-R821).
+    #[serde(default)]
+    pub source: Option<String>,
 }
 
 /// A fixed-point query vector: component `i` is `q16[i] / 2^16`, in the
@@ -408,6 +413,8 @@ mod tests {
                         evidence_id: id.to_string(),
                         content_class: None,
                     raw_score_ppm: None,
+                        source: None,
+                        raw_score_ppm: None,
                     })
                     .collect(),
             )
