@@ -51,7 +51,7 @@ def _submit_request() -> dict[str, object]:
         "work_item_id": "work-1",
         "idempotency_key": "submit-retry-1",
         "command_digest": "a" * 64,
-        "kind": "test",
+        "kind": "failure_cluster",
         "priority": 0,
         "depends_on": [],
         "input_ref": "input:1",

@@ -30,11 +30,14 @@ pub enum WorkItemKind {
     /// A delegated agent run (`DelegationRequest.kind`).
     #[serde(rename = "agent.execute")]
     AgentExecute,
+    /// One agent turn on the durable agent-turn queue (`agent_turn`).
+    #[serde(rename = "agent_turn")]
+    AgentTurn,
 }
 
 impl WorkItemKind {
     /// Every admitted kind, in registry order.
-    pub const REGISTRY: [WorkItemKind; 7] = [
+    pub const REGISTRY: [WorkItemKind; 8] = [
         Self::BrowserControl,
         Self::FailureCluster,
         Self::GapRemediation,
@@ -42,6 +45,7 @@ impl WorkItemKind {
         Self::ResearchWeb,
         Self::HostStart,
         Self::AgentExecute,
+        Self::AgentTurn,
     ];
 
     /// The wire string of this kind.
@@ -54,6 +58,7 @@ impl WorkItemKind {
             Self::ResearchWeb => crate::host_start::RESEARCH_WEB_KIND,
             Self::HostStart => crate::host_start::HOST_START_KIND,
             Self::AgentExecute => "agent.execute",
+            Self::AgentTurn => "agent_turn",
         }
     }
 

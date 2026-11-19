@@ -75,7 +75,7 @@ def _submit(client: Any, work_item_id: str, run_id: str, now_ms: int) -> dict[st
             "work_item_id": work_item_id,
             "idempotency_key": f"submit-{work_item_id}",
             "command_digest": uuid.uuid4().hex * 2,
-            "kind": "delegated_run",
+            "kind": "agent.execute",
             "priority": 0,
             "depends_on": [],
             "input_ref": "input:quota-trace",

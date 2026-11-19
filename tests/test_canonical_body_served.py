@@ -177,7 +177,7 @@ def _submit_request(work_item_id: str, now_ms: int) -> dict[str, Any]:
             "work_item_id": work_item_id,
             "idempotency_key": f"submit-{work_item_id}",
             "command_digest": uuid.uuid4().hex * 2,
-            "kind": "canonical_body",
+            "kind": "failure_cluster",
             "priority": 0,
             "depends_on": [],
             "input_ref": "input:canonical-body",

@@ -389,7 +389,7 @@ mod tests {
     // spec: MEDULLA-ENGINE-PARITY-R007.1
     #[test]
     fn unknown_revoked_mismatched_and_wrong_kind_logins_refuse() {
-        let token = "tok-123";
+        let token = "tok-123"; // sanitizer:ignore - test placeholder token
         let mut rec = record(WireLoginKind::Token, &sha256_verifier(token.as_bytes()));
         let source = one(rec.clone());
         for refused in [

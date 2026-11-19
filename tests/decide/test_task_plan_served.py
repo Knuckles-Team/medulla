@@ -133,7 +133,7 @@ def _persist_and_read(
             "work_item_id": None,
             "idempotency_key": run_id + ":submit",
             "command_digest": plan["plan_digest"].removeprefix("sha256:"),
-            "kind": "task-plan-fixture",
+            "kind": "failure_cluster",
             "priority": 0,
             "depends_on": [],
             "input_ref": run_id,
