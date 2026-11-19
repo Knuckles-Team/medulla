@@ -59,6 +59,7 @@ pub struct RoundFeedback {
 /// The retriever a reused strategy would run on, and the receipt that vouches for a
 /// changed target (MEDULLA-FEDERATED-QUERY-R081.8.100). The corpus and model revisions
 /// come from the round request, never from here.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StrategyReuse {
@@ -320,6 +321,7 @@ pub struct RoundRequest {
 /// The arbitration part of a round (MEDULLA-FEDERATED-QUERY-R083.3): the harness sends
 /// both candidates and the digest of the query they answer; the engine verifies every
 /// citation on the round's snapshot and returns the verdict.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ArbitrationPart {
@@ -336,6 +338,7 @@ pub struct ArbitrationPart {
 /// The body of an `ARBITRATION_ABSTAIN` refusal (MEDULLA-FEDERATED-QUERY-R083.4): the verdict
 /// with both candidates and their computed support, and the round's premises (including the
 /// `retrieval.arbitration` premise of R083.5). It names no chosen answer.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ArbitrationAbstention {

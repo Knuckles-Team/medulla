@@ -121,6 +121,7 @@ pub fn state_key(
 /// A query strategy bound to the retriever it was measured on
 /// (MEDULLA-FEDERATED-QUERY-R081.8.100). Nothing copies a strategy to another retriever:
 /// a changed target needs a [`TransferReceipt`].
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct QueryStrategy {
@@ -136,6 +137,7 @@ pub struct QueryStrategy {
 
 /// The measurement that lets a strategy run on a retriever it was not built for
 /// (MEDULLA-FEDERATED-QUERY-R081.8.100).
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TransferReceipt {

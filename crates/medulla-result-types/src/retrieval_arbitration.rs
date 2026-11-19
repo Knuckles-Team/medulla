@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This is closed so a caller cannot silently introduce a third provenance
 /// class that the R083 arbitration policy does not understand.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AnswerGrounding {
@@ -36,6 +37,7 @@ pub struct ArbitrationRefusal {
 }
 
 /// Whether the cited evidence backs a candidate's claims.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SupportState {
@@ -46,6 +48,7 @@ pub enum SupportState {
 }
 
 /// A byte span of one stored document, bound to the digest it was read at.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Citation {
@@ -56,6 +59,7 @@ pub struct Citation {
 }
 
 /// One claim of a candidate answer and the evidence span that backs it, if any.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Claim {
@@ -65,6 +69,7 @@ pub struct Claim {
 }
 
 /// One answer considered by the retrieval arbitration policy.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Candidate {
@@ -117,6 +122,7 @@ where
 }
 
 /// The closed set of outcomes from comparing the prior and retrieved answers.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ArbitrationChoice {
@@ -129,6 +135,7 @@ pub enum ArbitrationChoice {
 ///
 /// The `margin` is carried even when the choice is `Abstain`, so a later
 /// planner or evidence record can explain the policy threshold it applied.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ArbitrationVerdict {
