@@ -323,7 +323,8 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
     operates on a different class. The pack is imported and attached in a fresh
     graph so the shared graph's composed schema is left alone. The designation
     reads the tenant's capability index, so the tools of the pack the question
-    itself imported earlier (``earlier``) are designated too.
+    itself imported earlier (``earlier``) are designated too, and the packs other
+    served tests import concurrently are left out of the comparison.
     """
     client = await commons_connect()
     try:
@@ -350,7 +351,13 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
         while True:
             record = await _ask(decision, schema, graph, space, f"{CORE}Position")
             answer = (record.get("answer") or {}).get("value") or {}
-            designated = {d["entity_id"] for d in answer.get("designations", [])}
+            # Other served tests import packs into the same tenant concurrently, so
+            # only this test's own packs are compared; theirs are designated too.
+            designated = {
+                d["entity_id"]
+                for d in answer.get("designations", [])
+                if d["entity_id"].startswith((f"mcp:{earlier}/", f"mcp:{connector}/"))
+            }
             if designated == wanted:
                 break
             assert time.monotonic() < deadline, (designated, record)
