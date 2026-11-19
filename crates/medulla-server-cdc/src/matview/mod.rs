@@ -44,7 +44,7 @@ pub fn apply_delta(graph: &str, event: &medulla_query_types::wire::CdcEvent) -> 
 /// the view feeds once no matview lock is held.
 pub fn apply_delta_with_output(
     graph: &str,
-    event: &medulla_types::wire::CdcEvent,
+    event: &medulla_query_types::wire::CdcEvent,
 ) -> (usize, Vec<(String, medulla_types::delta::Delta)>) {
     manager().apply_delta_with_output(graph, event)
 }

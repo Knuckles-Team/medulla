@@ -10,7 +10,7 @@ use medulla_exec::exec::{apply, PlanCtx};
 use medulla_exec::rowset::{Cell, Column, ColumnType, RowSet, ID_COLUMN, SCORE_COLUMN};
 use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{GroupAgg, GroupAggFunc, Op};
+use medulla_query_types::wire::{GroupAgg, GroupAggFunc, Op};
 use serde_json::json;
 
 fn blob(value: serde_json::Value) -> Vec<u8> {

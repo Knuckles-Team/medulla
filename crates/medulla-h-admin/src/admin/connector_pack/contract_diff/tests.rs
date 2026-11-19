@@ -4,7 +4,7 @@ use medulla_catalog_types::connector_pack::contract_version::{
     ContractBreak, ContractBreakKind, PackContractVersion,
 };
 use medulla_core::stewardship::TargetScopes;
-use medulla_types::stewardship::{
+use medulla_catalog_types::stewardship::{
     ChangeRequestState, StewardRole, StewardshipAssignment, StewardshipScope,
 };
 

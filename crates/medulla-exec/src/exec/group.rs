@@ -15,7 +15,7 @@
 use std::collections::BTreeMap;
 
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::wire::{GroupAgg, GroupAggFunc};
+use medulla_query_types::wire::{GroupAgg, GroupAggFunc};
 use serde_json::Value;
 
 use super::PlanCtx;

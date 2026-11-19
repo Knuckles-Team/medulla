@@ -1656,7 +1656,7 @@ async fn define_plan_view(
     state: &test_support::SharedState,
     id: u64,
     name: &str,
-    ops: Vec<medulla_types::wire::Op>,
+    ops: Vec<medulla_query_types::wire::Op>,
 ) {
     let reply = test_support::dispatch(
         state,
@@ -1666,7 +1666,7 @@ async fn define_plan_view(
             medulla_protocol_types::protocol::Method::PlanMatViewDefine {
                 name: name.to_string(),
                 graph: "__commons__".to_string(),
-                plan: medulla_types::wire::Plan::new(ops),
+                plan: medulla_query_types::wire::Plan::new(ops),
             },
         ),
     )
@@ -1683,7 +1683,7 @@ async fn define_plan_view(
 #[cfg(feature = "matview")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn matview_status_catalog_reports_mode_and_reason() {
-    use medulla_types::wire::{Op, Pred};
+    use medulla_query_types::wire::{Op, Pred};
 
     // Plan views are unscoped, so only a `System` caller may define them.
     let state = test_support::seeded_system_wire_state(

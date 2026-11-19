@@ -269,7 +269,7 @@ async fn rdf_identifiers() {
 #[cfg(feature = "federation")]
 #[tokio::test]
 async fn inline_adapter_refused_named_source_grounds() {
-    use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+    use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
     let state = state();
     let registered = send(
         &state,

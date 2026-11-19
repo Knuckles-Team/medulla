@@ -1542,7 +1542,7 @@ mod tests {
     #[cfg(feature = "matview")]
     #[test]
     fn view_output_rows_reach_their_feed() {
-        use medulla_types::wire::{Op, Plan};
+        use medulla_query_types::wire::{Op, Plan};
 
         let (graph, view) = ("r010_1_graph", "r010_1_view");
         let plan = Plan::new(vec![Op::Scan {

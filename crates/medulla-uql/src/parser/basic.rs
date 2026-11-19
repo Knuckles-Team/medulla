@@ -169,7 +169,7 @@ impl<'a> Parser<'a> {
     /// `agg = ( COUNT [ "(" name ")" ] | ( SUM | MIN | MAX | AVG ) "(" name ")" ) [ AS name ]`
     /// (MEDULLA-FEDERATED-QUERY-R733).
     pub(super) fn group(&mut self) -> Result<Op, UqlError> {
-        use medulla_types::wire::{GroupAgg, GroupAggFunc};
+        use medulla_query_types::wire::{GroupAgg, GroupAggFunc};
         self.expect_kw("BY")?;
         let mut keys = vec![self.name("a GROUP key")?];
         while self.eat(&Tok::Comma) {

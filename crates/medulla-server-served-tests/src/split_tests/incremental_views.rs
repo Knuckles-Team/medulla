@@ -365,8 +365,8 @@ fn budget_node_id(graph: &str, i: usize) -> String {
 }
 
 #[cfg(all(feature = "matview", feature = "redb"))]
-fn scan_plan() -> medulla_types::wire::Plan {
-    medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
+fn scan_plan() -> medulla_query_types::wire::Plan {
+    medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
         label: "Doc".into(),
     }])
 }

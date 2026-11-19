@@ -80,7 +80,7 @@ async fn read_rows(
     approval: &ConnectorPackSourceApprovalResult,
 ) -> Result<Vec<(String, Option<f32>)>, String> {
     let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::ForeignScan {
-        source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+        source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
             name: source_name.to_string(),
         }),
         join: false,
@@ -219,7 +219,7 @@ async fn held_serves_none_approved_serves_rows_and_changed_contract_returns_to_h
                 "r722-pack-source:register",
                 Method::RegisterForeignSource {
                     name: source_name.clone(),
-                    source: medulla_types::wire::ForeignSourceSpec::Mcp {
+                    source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                         server: CONNECTOR.to_string(),
                         tool: "list_suppliers".to_string(),
                         capabilities: Default::default(),

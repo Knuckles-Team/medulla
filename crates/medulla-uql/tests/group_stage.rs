@@ -6,7 +6,7 @@ use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::{Cell, RowSet};
 use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{GroupAgg, GroupAggFunc, Op};
+use medulla_query_types::wire::{GroupAgg, GroupAggFunc, Op};
 use serde_json::json;
 
 fn blob(value: serde_json::Value) -> Vec<u8> {
