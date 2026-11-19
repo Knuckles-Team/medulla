@@ -13,7 +13,7 @@ Arbora sends one UQL statement of the `HARNESS_QUERIES` table through the engine
 
 ## Authoritative types
 
-The statement table in `crates/medulla-types/src/harness_metrics.rs` and the method variant in `crates/medulla-protocol-types/src/protocol/method/method_10.rs`.
+The statement table in `crates/medulla-mutation-types/src/harness_metrics.rs` and the method variant in `crates/medulla-protocol-types/src/protocol/method/method_10.rs`.
 
 ## Test vectors
 

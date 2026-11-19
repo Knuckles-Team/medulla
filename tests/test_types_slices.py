@@ -168,6 +168,7 @@ DOMAIN_SLICES = {
         "cross_store_scope",
         "fast_path",
         "graph_change_feed",
+        "harness_metrics",
         "health_incident",
         "hot_store_engine",
         "memory_sync",

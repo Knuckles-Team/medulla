@@ -22,8 +22,6 @@ pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
 pub mod transition_refused;
-// MEDULLA-ORCH-VOCAB-R010.1 — the closed harness metric statement table.
-pub mod harness_metrics;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_base;
 pub mod ontology_proposal;

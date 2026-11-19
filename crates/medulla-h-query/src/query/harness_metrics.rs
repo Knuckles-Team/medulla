@@ -1,5 +1,5 @@
 //! MEDULLA-ORCH-VOCAB-R010.1 to R010.5 and R010.101: the harness metric
-//! statements of `medulla_types::harness_metrics::HARNESS_QUERIES`, served by
+//! statements of `medulla_mutation_types::harness_metrics::HARNESS_QUERIES`, served by
 //! `Method::Uql`. The statement reads the `RunTrace` nodes of the caller's
 //! RLS-filtered snapshot, aggregates per group and returns rows; it writes
 //! nothing. `run_trace_usage` also reads the pinned `PriceTable` node of the
@@ -7,7 +7,7 @@
 
 use super::*;
 
-use medulla_types::harness_metrics::{
+use medulla_mutation_types::harness_metrics::{
     price_table_from_node, run_harness_query, run_trace_usage, HarnessQuery, RunTraceUsageQuery,
     RUN_TRACE_USAGE,
 };
