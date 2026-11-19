@@ -21,6 +21,7 @@ use super::data_plane_write::{
     commit_job_methods, edge_method, node_method, upsert_operations_to_methods,
 };
 use super::prelude_jobs::*;
+use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 use crate::quality_rule::{

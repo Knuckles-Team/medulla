@@ -17,6 +17,7 @@ use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
 
 use super::data_plane_write::{commit_job_methods, edge_method, node_method};
 use super::prelude_jobs::*;
+use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 use crate::quality_rule::tenant_node_id;
