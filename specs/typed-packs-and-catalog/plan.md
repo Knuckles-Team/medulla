@@ -629,3 +629,9 @@ none
 - Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
 - Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
 - Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
+
+#### explicit evidence withdrawal
+
+MEDULLA-TYPED-PACKS-R107.4: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
+
+The row keeps its acceptance requirements. This declaration records the evidence correction without changing test behavior or rewriting earlier commits.
