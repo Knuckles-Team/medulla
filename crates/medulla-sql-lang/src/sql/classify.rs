@@ -672,14 +672,14 @@ fn statement_form_name(stmt: &Statement) -> String {
 /// whose particular shape no arm decodes keeps the detail.
 fn refuse_form(form: &str, detail: &str) -> String {
     static MATRIX: std::sync::OnceLock<
-        medulla_types::pg_operational_surface::PgCompatibilityMatrix,
+        medulla_mutation_types::pg_operational_surface::PgCompatibilityMatrix,
     > = std::sync::OnceLock::new();
     let state = MATRIX
         .get_or_init(
-            medulla_types::pg_operational_surface::PgCompatibilityMatrix::with_served_forms,
+            medulla_mutation_types::pg_operational_surface::PgCompatibilityMatrix::with_served_forms,
         )
         .resolve_form(form);
-    if state == medulla_types::pg_operational_surface::SqlFormState::Refused {
+    if state == medulla_mutation_types::pg_operational_surface::SqlFormState::Refused {
         format!("FEATURE_NOT_SUPPORTED: {form} is not supported")
     } else {
         format!("FEATURE_NOT_SUPPORTED: {form}: unsupported statement shape: {detail}")

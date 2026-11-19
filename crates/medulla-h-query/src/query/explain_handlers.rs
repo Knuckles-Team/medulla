@@ -649,7 +649,7 @@ pub(crate) async fn handle_causal_verify(
     observations: Vec<std::collections::BTreeMap<String, f64>>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
-    let nrmse_max = medulla_types::scheduler_config::reasoning_knobs().causal_nrmse_max;
+    let nrmse_max = medulla_work_types::scheduler_config::reasoning_knobs().causal_nrmse_max;
     let resp = match compute_off_lock(req_id, move || {
         causal_verify_wire(&variables, &observations, nrmse_max)
     })

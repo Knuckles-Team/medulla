@@ -25,7 +25,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::server_context::ServerContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_blob::blob::BlobStateExt;
-use medulla_types::acl::RequestContextClaims;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_types::contract::{BoundedVec, Digest256, Nonce, ResourceId};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
