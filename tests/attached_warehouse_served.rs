@@ -269,8 +269,21 @@ async fn iceberg_and_duckdb_reads_match_native() {
     assert_eq!(
         served_ids,
         native_ids,
-        "ordered numeric filter: served rows {:?}, native rows {native:?}",
-        rows(&ranged)
+        "ordered numeric filter: served rows {:?}, native rows {native:?}; unfiltered {:?}; id>=22 {:?}",
+        rows(&ranged),
+        read(&state, 90, "lake_facts", &["id", "amount"], vec![]).await,
+        read(
+            &state,
+            91,
+            "lake_facts",
+            &["id"],
+            vec![predicate(
+                "id",
+                ForeignColumnComparison::Ge,
+                serde_json::json!(22)
+            )]
+        )
+        .await
     );
 
     // A column the table lacks is schema drift, not an empty column.
