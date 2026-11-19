@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::enrichment_machine::{EnrichmentEvent, ENRICHMENT_MACHINE};
 use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_types::ingestion_wire::{
     ExtractedEdge, IndexFileOutcome, IndexFileStatus, NativeRungEvidence, ParseResult,
@@ -17,7 +18,6 @@ use medulla_work_types::{
     native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
 };
 use sha2::{Digest, Sha256};
-use super::enrichment_machine::{EnrichmentEvent, ENRICHMENT_MACHINE};
 
 const MAX_OUTCOMES: usize = 4_096;
 // A plan is one native transaction. Never admit more than its atomic command

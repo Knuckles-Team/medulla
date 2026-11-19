@@ -8,10 +8,10 @@
 use std::collections::BTreeSet;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_sql::sql::exec_sql_typed_with_tables;
 use medulla_mutation_types::pg_operational_surface::{
     PgCompatibilityMatrix, SqlFormKind, SqlFormState,
 };
+use medulla_sql::sql::exec_sql_typed_with_tables;
 use medulla_sql_lang::sql::classify::{classify, StatementKind};
 
 // spec: MEDULLA-ENGINE-PARITY-R009.1

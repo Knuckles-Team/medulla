@@ -23,9 +23,9 @@ pub mod pgvector_ddl;
 /// SQL back through the same read path. Pure Rust — no new deps (folds into `sql`).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod plpgsql;
-pub mod sequence_ddl;
-pub mod trigger_ddl;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod select_names;
+pub mod sequence_ddl;
+pub mod trigger_ddl;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod typed_result;

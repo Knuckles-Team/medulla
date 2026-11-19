@@ -382,15 +382,12 @@ pub(super) async fn mixed_origin_aggregates_exclude_synthetic(
         QuestionSafety::Ordinary,
     );
     let mut params = real_request.params.as_slice().to_vec();
-    params.iter_mut().find(|p| p.name == "query").unwrap().value =
-        TypedValue::Text(format!("web search engine{}", " ".repeat(support as usize + 1)));
+    params.iter_mut().find(|p| p.name == "query").unwrap().value = TypedValue::Text(format!(
+        "web search engine{}",
+        " ".repeat(support as usize + 1)
+    ));
     real_request.params = BoundedVec::new(params).unwrap();
-    let real = decide(h, real_request)
-        .await
-        .unwrap()
-        .records
-        .as_slice()[0]
-        .clone();
+    let real = decide(h, real_request).await.unwrap().records.as_slice()[0].clone();
     assert!(!real.synthetic_evidence);
     assert!(matches!(real.outcome, StatisticalOutcome::Explored { .. }));
     assert_eq!(real.inputs.policy_digest, synthetic.inputs.policy_digest);
