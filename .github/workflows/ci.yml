@@ -1138,8 +1138,8 @@ jobs:
   # onnxruntime from ORT_DYLIB_PATH. These tests used to print SKIP and return when
   # it was unset; libtest hides stderr for passing tests, so 10 of 13 "passed" in
   # 0.00s without loading a model. They now FAIL without a runtime, so this job must
-  # provide one: scripts/fetch_onnxruntime.sh downloads the pinned official release
-  # (sha256-checked) and exits non-zero on any fetch or checksum failure. There is
+  # provide one: scripts/fetch_onnxruntime.sh extracts the library from the pinned official
+  # PyPI wheel (sha256-checked) and exits non-zero on any fetch or checksum failure. There is
   # deliberately no fallback. A missing runtime fails this job.
   #
   # Native build dependencies, by exact apt package name. espeak-rs-sys builds

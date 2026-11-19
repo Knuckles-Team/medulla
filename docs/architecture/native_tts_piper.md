@@ -49,9 +49,13 @@ cargo test -p medulla-tts-piper --all-features
 ```
 
 A missing or unreadable runtime FAILS every inference test. It never skips them.
-The script downloads the official ONNX Runtime 1.24.2 release, the version
-`ort-sys` 2.0.0-rc.12 pins (api-24), and checks its sha256.
+The script takes `libonnxruntime.so.1.24.2` from the official onnxruntime
+PyPI wheel (the version `ort-sys` 2.0.0-rc.12 pins, api-24) and checks the
+wheel's sha256. The GitHub release archive it used before is no longer served.
 
-Measured on 2026-09-13 on a build host without AVX2: all synthesis tests pass
-with this library. Debian's `libonnxruntime1.23` package does not work, because
-its API version is older than the pin.
+On 2026-09-13 the synthesis tests were measured passing on a build host without
+AVX2 with the GitHub release build of the same version. That measurement was
+not repeated for the PyPI wheel: the wheel is a different build, so whether it
+runs without AVX2 is established by the `tts-piper-inference` job, not assumed.
+Debian's `libonnxruntime1.23` package does not work, because its API version is
+older than the pin.
