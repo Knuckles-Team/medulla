@@ -19,8 +19,11 @@ pub const NO_SOLVED_TRACE: &str = "NO_SOLVED_TRACE";
 /// The property a `RunTrace` group key reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GroupKey {
+    /// The trace's model (`:runModel`).
     Model,
+    /// The trace's task class (`:runTaskClass`).
     TaskClass,
+    /// The harness configuration the trace ran with (`:appliedHarnessConfig`).
     Config,
 }
 
@@ -37,8 +40,11 @@ impl GroupKey {
 /// One statement of the table: its name, its group keys and its result columns.
 #[derive(Clone, Copy, Debug)]
 pub struct HarnessQuery {
+    /// The UQL statement name a caller sends.
     pub name: &'static str,
+    /// The keys each result row is grouped by, in order.
     pub groups: &'static [GroupKey],
+    /// The result columns, one value per column in each row.
     pub columns: &'static [&'static str],
 }
 
@@ -95,8 +101,11 @@ pub fn harness_query(text: &str) -> Option<&'static HarnessQuery> {
 /// when the group has nothing to divide by.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MetricRow {
+    /// The group key values joined into the row id.
     pub group: String,
+    /// One value per statement column; `None` when the column has no measurement.
     pub values: Vec<Option<f64>>,
+    /// The abstention reason when the group has nothing to divide by.
     pub abstained: Option<&'static str>,
 }
 
@@ -263,9 +272,13 @@ pub const COMPLETION_TIME_UNKNOWN: &str = "COMPLETION_TIME_UNKNOWN";
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UsageCategory {
+    /// Input tokens read without a cache hit.
     UncachedInput,
+    /// Input tokens served from the provider's cache.
     CachedInput,
+    /// Visible output tokens.
     Output,
+    /// Output tokens spent on reasoning.
     ReasoningOutput,
 }
 
@@ -293,8 +306,11 @@ impl UsageCategory {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UsageGroupKey {
+    /// Group by the trace's model.
     Model,
+    /// Group by the trace's project id.
     Project,
+    /// Group by the trace's agent id.
     Agent,
 }
 
@@ -322,7 +338,9 @@ impl UsageGroupKey {
 /// the previous answer's `snapshot_revision` and its last row id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UsageCursor {
+    /// The snapshot revision the previous page was read at.
     pub snapshot_revision: u64,
+    /// The last group of the previous page; the next page starts after it.
     pub after_group: String,
 }
 
@@ -348,13 +366,21 @@ impl UsageCursor {
 /// statement reads only the caller's visible snapshot.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunTraceUsageQuery {
+    /// The request schema version.
     pub schema_version: u16,
+    /// Inclusive start of the `completedAtMs` window.
     pub window_start_ms: u64,
+    /// Exclusive end of the `completedAtMs` window.
     pub window_end_ms: u64,
+    /// The grouping dimensions, in order.
     pub grouping: Vec<UsageGroupKey>,
+    /// The currency costs are reported in.
     pub currency: String,
+    /// The pinned `PriceTable` revision the costs use.
     pub price_table_revision: String,
+    /// The most groups one page returns.
     pub page_size: usize,
+    /// Where this page resumes; `None` for the first page.
     pub cursor: Option<UsageCursor>,
 }
 
@@ -438,8 +464,11 @@ pub fn price_table_from_node(props: &Map<String, Value>) -> Option<(String, Pric
 /// unknown) and the reason of each unknown column.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UsageRow {
+    /// The group key values joined into the row id.
     pub group: String,
+    /// One value per [`USAGE_COLUMNS`] column; `None` is unknown.
     pub values: Vec<Option<f64>>,
+    /// Each unknown column with the reason it is unknown.
     pub unknown: Vec<(&'static str, &'static str)>,
 }
 
@@ -447,7 +476,9 @@ pub struct UsageRow {
 /// warnings of unknown values and of traces that could not be attributed.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UsagePage {
+    /// The groups of this page, in group order.
     pub rows: Vec<UsageRow>,
+    /// Warnings for unknown values and for traces that could not be attributed.
     pub warnings: Vec<String>,
 }
 

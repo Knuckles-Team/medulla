@@ -77,7 +77,7 @@ pub(crate) fn handle_harness_metric(
 #[cfg(feature = "query")]
 fn text_param(params: &UqlParams, name: &str) -> Option<String> {
     match params.get(name)? {
-        medulla_types::wire::UqlParam::Str(text) => Some(text.clone()),
+        medulla_query_types::wire::UqlParam::Str(text) => Some(text.clone()),
         _ => None,
     }
 }
@@ -86,7 +86,7 @@ fn text_param(params: &UqlParams, name: &str) -> Option<String> {
 #[cfg(feature = "query")]
 fn number_param(params: &UqlParams, name: &str) -> Option<f64> {
     match params.get(name)? {
-        medulla_types::wire::UqlParam::Num(value) => Some(*value),
+        medulla_query_types::wire::UqlParam::Num(value) => Some(*value),
         _ => None,
     }
 }
@@ -142,7 +142,7 @@ fn handle_run_trace_usage(
     let rows = page
         .rows
         .into_iter()
-        .map(|row| medulla_types::wire::UqlRow {
+        .map(|row| medulla_query_types::wire::UqlRow {
             id: row.group,
             score: None,
             channels: row.values,
@@ -151,7 +151,7 @@ fn handle_run_trace_usage(
             provenance: Default::default(),
         })
         .collect();
-    let result = medulla_types::wire::UqlResult::Rows {
+    let result = medulla_query_types::wire::UqlResult::Rows {
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows,
         warnings: page.warnings,

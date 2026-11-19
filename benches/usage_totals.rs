@@ -9,8 +9,8 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use medulla_mutation_types::benchmark_claim::PriceTable;
 use medulla_mutation_types::harness_metrics::{run_trace_usage, RunTraceUsageQuery};
-use medulla_types::benchmark_claim::PriceTable;
 use serde_json::{json, Map, Value};
 
 const TRACES: usize = 1_000_000;

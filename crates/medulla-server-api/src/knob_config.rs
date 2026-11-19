@@ -929,10 +929,10 @@ pub fn knobs() -> &'static KnobConfig {
 pub fn scheduler_config_from(
     knobs: &KnobConfig,
 ) -> Result<
-    medulla_types::scheduler_config::SchedulerConfig,
-    medulla_types::scheduler_config::InvalidSchedulerConfig,
+    medulla_work_types::scheduler_config::SchedulerConfig,
+    medulla_work_types::scheduler_config::InvalidSchedulerConfig,
 > {
-    use medulla_types::scheduler_config::{AnnHubPruning, SchedulerConfig};
+    use medulla_work_types::scheduler_config::{AnnHubPruning, SchedulerConfig};
     let mut lane_floors = std::collections::BTreeMap::new();
     if knobs.scheduler_general_lane_floor > 0 {
         lane_floors.insert("general".to_string(), knobs.scheduler_general_lane_floor);
