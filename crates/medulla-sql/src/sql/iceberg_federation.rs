@@ -731,8 +731,12 @@ pub fn read_iceberg_table(
         }
     }
     let total = total_data_files(&table, request.snapshot_id);
+    // Project in the table's own column order: a projection listed in another order must not
+    // be able to pair one column's name with another column's values.
+    let mut projected = request.columns.clone();
+    projected.sort_by_key(|column| schema.index_of(column).unwrap_or(usize::MAX));
     let scan = ScanRequest {
-        columns: Some(request.columns.clone()),
+        columns: Some(projected),
         predicate: request
             .filters
             .iter()
