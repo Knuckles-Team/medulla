@@ -360,7 +360,9 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
             }
             if designated == wanted:
                 break
-            assert time.monotonic() < deadline, (designated, record)
+            assert time.monotonic() < deadline, (
+                f"designated {sorted(designated)} wanted {sorted(wanted)}"
+            )
             await asyncio.sleep(0.5)
         for pack in (earlier, connector):
             assert f"mcp:{pack}/tool/price_option" not in json.dumps(record), record
