@@ -9,8 +9,6 @@ use super::*;
 ))]
 use medulla_server_graph::dispatch::shared::timed_read;
 
-#[cfg(all(feature = "query", feature = "jobs"))]
-use super::control_plane::dispatch_compute_and_media_methods_arm_0;
 #[cfg(feature = "tsdb")]
 use super::data_plane_arms::dispatch_transaction_methods_arm_1;
 #[cfg(feature = "owl")]
