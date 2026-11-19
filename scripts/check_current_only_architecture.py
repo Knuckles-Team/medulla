@@ -553,7 +553,7 @@ def main() -> None:
         tree("crates/medulla-isolation/src/isolation.rs"),
         read("crates/medulla-isolation/src/rbac_persist.rs"),
     )
-    check_acl_roles(read("crates/medulla-types/src/acl.rs"))
+    check_acl_roles(read("crates/medulla-identity-types/src/acl.rs"))
     check_raft_snapshot(raft_store_source())
     check_retired_fallbacks(
         tree("crates/medulla-graph-core/src/graph.rs"),

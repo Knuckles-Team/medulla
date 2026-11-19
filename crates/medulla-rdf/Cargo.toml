@@ -148,7 +148,7 @@ medulla-geo = { path = "../medulla-geo" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
-# Ingest-worker machines (MEDULLA-INGEST-WORKER-R911, R912.1): the ontology test compares their edge tables.
+# Ingest-worker machines (MEDULLA-INGEST-WORKER-R911, MEDULLA-INGEST-WORKER-R912.1): the ontology test compares their edge tables.
 medulla-compute = { path = "../medulla-compute", features = ["ast"] }
 medulla-h-ingest = { path = "../medulla-h-ingest" }
 medulla-transaction = { path = "../medulla-transaction" }
