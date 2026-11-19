@@ -249,6 +249,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ToolNecessity => "tool_necessity",
         QuestionKind::FeedbackLoop => "feedback_loop",
         QuestionKind::PlanningAdmission => "planning_admission",
+        QuestionKind::ToolActionAdmission => "tool_action_admission",
         QuestionKind::A2aRoute => "a2a_route",
         QuestionKind::PaperAdmission => "paper_admission",
         QuestionKind::HeldItemAdmission => "held_item_admission",
