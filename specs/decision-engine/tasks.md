@@ -955,3 +955,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T944 [US6] MEDULLA-DECISION-ENGINE-R831.9 RouteChoice, RouteExecuted stage is a rule name, not a lifecycle stage: rename, no machine
 - [ ] T945 [US6] MEDULLA-DECISION-ENGINE-R831.10 HarnessPart discriminator `status` is a decision tag, not a lifecycle: rename, no machine
 - [ ] T946 [US6] MEDULLA-DECISION-ENGINE-R831.11 Decision-engine Python mirrors follow their Rust machines: Python mirror follows the Rust machine
+- [ ] T948 [US7] MEDULLA-DECISION-ENGINE-R135.16.1 Model: phrasings, match index and bound match
+- [ ] T949 [US7] MEDULLA-DECISION-ENGINE-R135.16.2 Behavior: index build, slot binding and nearest-program selection
+- [ ] T950 [US7] MEDULLA-DECISION-ENGINE-R135.16.3 Wiring: vectors at commit, candidates before conclude
+- [ ] T951 [US7] MEDULLA-DECISION-ENGINE-R135.16.4 Refusal: phrasings, thresholds and matches
+- [ ] T952 [US7] MEDULLA-DECISION-ENGINE-R135.16.5 Evidence: match premises
+- [ ] T953 [US7] MEDULLA-DECISION-ENGINE-R135.16.6 Hot-path proof: paraphrase match served end to end
+- [ ] T954 [US7] MEDULLA-DECISION-ENGINE-R135.17.1 Replay record model and commit
+- [ ] T955 [US7] MEDULLA-DECISION-ENGINE-R135.17.2 Demotion at lookup, its refusal and its evidence
+- [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program

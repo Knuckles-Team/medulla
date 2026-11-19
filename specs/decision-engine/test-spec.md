@@ -2172,3 +2172,31 @@ Every row below has a planned test at its exact post-split path; the row text na
 - `MEDULLA-DECISION-ENGINE-R831.9`: `crates/medulla-decision-stats/src/decision/route.rs::tests::route_rule_is_not_a_lifecycle_field` (planned, L1): proves: RouteChoice, RouteExecuted stage is a rule name, not a lifecycle stage: rename, no machine.
 - `MEDULLA-DECISION-ENGINE-R831.10`: `tests/test_wire_mirror_state_words.py::test_harness_part_tag_is_decision_not_status` (planned, L1): proves: HarnessPart discriminator `status` is a decision tag, not a lifecycle: rename, no machine.
 - `MEDULLA-DECISION-ENGINE-R831.11`: `tests/test_wire_mirror_state_words.py::test_decision_mirrors_type_state_as_the_rust_enum` (planned, L1): proves: Decision-engine Python mirrors follow their Rust machines: Python mirror follows the Rust machine.
+
+## MEDULLA-DECISION-ENGINE-R135.16 and R135.17 acceptance
+
+| Case | Row | Proving test and observation |
+|---|---|---|
+| Model | `MEDULLA-DECISION-ENGINE-R135.16.1` | A serde round trip keeps every field and refuses an unknown field. |
+| Behavior | `MEDULLA-DECISION-ENGINE-R135.16.2` | A paraphrase binds its slot and the fixed value; selection order and the tie rule hold. |
+| Wiring | `MEDULLA-DECISION-ENGINE-R135.16.3` | A commit writes the index, the phrasing nodes and one vector per node; a lookup reads them. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R135.16.4` | Each code is returned, and a refused commit leaves no row and no node. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R135.16.5` | The record lists score, threshold, source and bindings, with the right evidence class. |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R135.16.6` | Four served cases pass, and the nightly group meets its budget. |
+| Replay model | `MEDULLA-DECISION-ENGINE-R135.17.1` | Each outcome needs its fields, and a replay row is stored once. |
+| Demotion | `MEDULLA-DECISION-ENGINE-R135.17.2` | Fallbacks over the rate demote the program, with the count premises. |
+| Replay hot path | `MEDULLA-DECISION-ENGINE-R135.17.3` | Served fallback reports demote one program and leave the other. |
+
+- `MEDULLA-DECISION-ENGINE-R135.16`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::request_text_finds_the_nearest_program_and_binds_it` (planned, L3): proves semantic program lookup by request text. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.1`: `crates/medulla-decision-types/src/decision/program_store/semantic.rs::tests::match_types_round_trip` (planned, L1): proves the match model. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.2`: `crates/medulla-decision-types/src/decision/program_store/semantic.rs::tests::phrasing_binds_slots_and_fixed_values` (planned, L1) and `crates/medulla-decision-types/src/decision/program_store/semantic.rs::tests::nearest_program_at_threshold_wins_ties_by_signature` (planned, L1): prove binding and selection. The owning change adds them at these exact paths.
+- `MEDULLA-DECISION-ENGINE-R135.16.3`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::commit_writes_vectors_and_lookup_reads_them` (planned, L3): proves the commit and lookup wiring. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.4`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::each_match_refusal_names_its_code` (planned, L3): proves the refusals and abstentions. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.5`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::match_record_lists_score_threshold_and_bindings` (planned, L3): proves the match premises. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.6`: `tests/decide/test_program_store_served.py::test_paraphrase_reuses_program` (planned, L4): proves the served paraphrase match. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.17`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): proves replay outcomes and demotion. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.17.1`: `crates/medulla-decision-types/src/decision/program_store/replay.rs::tests::each_outcome_needs_its_fields` (planned, L1) and `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_row_is_stored_once` (planned, L3): prove the replay record. The owning change adds them at these exact paths.
+- `MEDULLA-DECISION-ENGINE-R135.17.2`: `crates/medulla-decision-types/src/decision/program_store/replay.rs::tests::window_and_rate_decide_demotion` (planned, L1) and `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): prove demotion. The owning change adds them at these exact paths.
+- `MEDULLA-DECISION-ENGINE-R135.17.3`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program` (planned, L4): proves the served demotion. The owning change adds it at this exact path.
+
+Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program_store_served.py::test_paraphrase_reuses_program`. Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.17`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program`.

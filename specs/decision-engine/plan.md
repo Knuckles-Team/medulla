@@ -167,6 +167,20 @@ Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualifie
 
 Pure kernels in `medulla-decision-stats` (`reward.rs`, `population.rs`, `trajectory_join.rs`, `step_verify.rs`) take the wire types of `medulla-decision-types` and the pinned knobs, and return typed answers. Six families in `medulla-h-decide/src/decide/family/` (`reward_decomposition`, `population_drift`, `fanout_width`, `trajectory_join`, `step_verification`, `adversarial_admission`) share the shape checks of `family/kernel.rs`, decode their one typed body, call the kernel and return `Executed::from_family` with a `FamilyAnswer` and claim premises; `stat_decide.rs` seals the answer, the premises and the evidence class. The served proofs are `reward_decomposition_tests.rs`, `population_tests.rs`, `trajectory_join_tests.rs` and `step_verification_tests.rs`, sharing `kernel_family_support.rs`.
 
+### Semantic program reuse (R135.16, R135.17)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla `crates/medulla-h-decide` and `crates/medulla-decision-types`. The harness sends a task signature, the request text and the program graph. It holds no matcher, no threshold and no binder.
+- Cohesion. Index build, slot binding and selection are pure functions in `program_store/semantic.rs`, beside the compiler they read. Replay rows and the demotion verdict sit in `program_store/replay.rs`.
+- Dependency direction. `run_record.rs` and the `program_lookup` family call the pure functions. `program_embedding.rs` adapts the configured embedder to the bounded provider of MEDULLA-FEDERATED-QUERY-R040.5.4. No new crate edge.
+- Interface depth. No new served method. `DecisionLog` `run_record` gains two optional commit fields and the `program_replay` kind. `Decide` `program_lookup` gains the parameters `request_text` and `program_graph`.
+- Special cases. An exact signature answers first and makes no embedding call. A program compiled from a workflow (R135.8) has no index and matches by exact signature only.
+- State. Program and phrasing vectors live in the semantic index of the program's graph, beside the R135.5 program node. The match index and the replay rows are decision artifacts. Nothing is held in memory beyond the provider cache.
+- Environment. The configured embedder defines one space. A graph that declares another space refuses the commit and makes the lookup abstain.
+
+Decisions. Answers are never reused across runs: the answer cache of MEDULLA-DURABLE-KERNEL-R800 already serves a result only while its dependency generations, volatility window and foreign watermarks are current (MEDULLA-FEDERATED-QUERY-R017, R018). The program is the unit of reuse, and the harness runs its steps on live data. A parameter binds only from the request text through a declared phrasing, or from a fixed value that every phrasing leaves out. A program with parameters and no phrasings never binds, so a stale literal is never replayed. Order: R135.16.1, .2, .3, .4, .5, .6, then R135.17.1, .2, .3.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks of different question families run in parallel. Tasks that edit the shared `decision_plane.rs` dispatch file run in series.
@@ -190,6 +204,7 @@ none
 - `Method::AgentAssemble` arm (`decision_plane.rs:64`) to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (`assemble.rs:46`) to `crates/medulla-compute/src/assemble/` and `crates/medulla-decision-policy/src/solve`.
 - `Method::DecisionCommit` arm (`decision_plane.rs:100`) to `handle_decision_commit` (`crates/medulla-h-decide/src/decide/commit.rs:22`) to the Agent Library transaction.
 - `Method::DecisionFit`, `Method::DecisionEval` and `Method::DecisionLog` arms (`decision_plane.rs:119`, `:126`, `:133`) to `crates/medulla-h-decide/src/decide/jobs.rs` and `log.rs`.
+- Program lookup by request text (R135.16): `stat_decide::serve` (`crates/medulla-h-decide/src/decide/stat_decide.rs:77`) to `with_program_candidates` in `crates/medulla-h-decide/src/decide/family/program_store.rs`, then `decide_blocking` (`stat_decide.rs:319`) to `ProgramLookupFamily::conclude`. The commit side is `stat_log::handle_log` (`stat_log.rs:541`) to `run_record::stage` (`run_record.rs:169`).
 - `Method::ConnectorPack` arm (`decision_plane.rs:161`) to `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`), which leaves an outbox row for the capability feed of `MEDULLA-DECISION-ENGINE-R172.7.2`.
 - Obsolete paths to delete: the per-kind `if` chains in `stat_decide.rs` and `candidates.rs` once the family registry lands.
 
@@ -215,4 +230,5 @@ Order: R829.1, R829.2, R829.3.
 - A2A routing and fleet calls: `MEDULLA-DECISION-ENGINE-R044.2` provides, `ARBORA-A2A-R023` consumes. Contract: [arbora-a2a-routing.md](contracts/arbora-a2a-routing.md).
 - Harness consumption of decisions: `MEDULLA-DECISION-ENGINE-R134.111` provides, `MERISTEM-HARNESS-CYCLE-R001` consumes. Contract: [harness-decision-consumption.md](contracts/harness-decision-consumption.md).
 - Connector path outcomes: `MEDULLA-DECISION-ENGINE-R159.3` provides, `SCION-CONNECTOR-CONTROL-R904` consumes. Contract: [connector-control-feedback.md](contracts/connector-control-feedback.md).
+- Program reuse in the run loop: `MEDULLA-DECISION-ENGINE-R135.16` and `MEDULLA-DECISION-ENGINE-R135.17` provide, `MERISTEM-HARNESS-CYCLE-R022` (children `.4` to `.8`) consumes. Contract: [harness-program-reuse.md](contracts/harness-program-reuse.md).
 - Governed write-back proposals: `MEDULLA-DECISION-ENGINE-R615` provides, `SCION-GOVERNED-WRITEBACK-R006` consumes. Contract: [governed-writeback-proposals.md](contracts/governed-writeback-proposals.md).

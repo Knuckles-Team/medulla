@@ -137,6 +137,7 @@ Independent test: the bound tests of `MEDULLA-DECISION-ENGINE-R133.1` run this s
 - **FR-015**: Usage ledger and price catalog. Rows: `MEDULLA-DECISION-ENGINE-R801`, `MEDULLA-DECISION-ENGINE-R802`, `MEDULLA-DECISION-ENGINE-R803`.
 - **FR-016**: Evolution-tuned decision knobs. Rows: `MEDULLA-DECISION-ENGINE-R179`, `MEDULLA-DECISION-ENGINE-R178`, `MEDULLA-DECISION-ENGINE-R812`.
 - **FR-017**: Task plans carry branch, join, decision and approval-wait steps, and process decisions evaluate DMN tables and gateway branches. Rows: `MEDULLA-DECISION-ENGINE-R134.111.14`, `MEDULLA-DECISION-ENGINE-R180`.
+- **FR-018**: A request text finds a stored program by embedding similarity and binds its parameters; reported replay fallbacks demote it. Rows: `MEDULLA-DECISION-ENGINE-R135.16`, `MEDULLA-DECISION-ENGINE-R135.17`.
 
 ## Success Criteria
 

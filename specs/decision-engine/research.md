@@ -1021,3 +1021,30 @@ Decision (DECISIONS DE-ONE-INSTRUCTION-DISCLOSURE): the event mode extends `Inst
 
 ## R143.3: the event rides FamilyAnswer through the one family answer slot
 The instruction-disclosure event is carried as `FamilyAnswer::DisclosureEvent` in the executed family answer (`Executed.answered`, resolution `Constraint`) and sealed in the record's `answer`; no per-family field is added to `Executed` (DE-EXECUTED-FAMILY-SHAPE). The decision log reader is the one `ExecutionContext.reader` (DE-LOG-READER).
+
+## R135.16 and R135.17: reuse the procedure, not the answer (2026-11-19)
+
+Two outside designs were assessed against the engine. The notes below describe their features only.
+
+**Assessed: a cache layer in front of an agent.** It has three parts. An intent router compares a request's embedding with stored example phrasings. Above a threshold it returns a structured target, and it calls no generative model. Versioned playbooks hold the steps that answered a request type. Session and long-term memory hold context. Measured behavior: a reused final answer goes stale, for example a refund that still reads "processing". A reused procedure, run again on live data, stays correct. It is about twice as fast, because it skips the planning model call.
+
+What the engine already owns. Compiled programs keyed by task signature are R135.1 to R135.6. A program is the versioned procedure: literals become parameters, and its digest names its version. Promotion on a pre-plan test receipt is R135.7. Task plans over the skill library are R134. Session and long-term memory are R651. The answer cache is MEDULLA-DURABLE-KERNEL-R800. It admits an answer by worth. It serves the answer only while every dependency generation is current (MEDULLA-FEDERATED-QUERY-R017). It also needs the volatility window and the foreign watermarks to be current (MEDULLA-FEDERATED-QUERY-R018, R800.2 to R800.4). A stale answer is a miss, never a hit. The engine stores no final agent answer for reuse. So freshness-bound answer reuse needs no new row, and a volatile request reuses a program, not an answer.
+
+Gaps found. `ProgramLookup` matched the exact task signature only, so a paraphrased request missed. It also returned no bound arguments, so a caller could not run a program without planning. Nothing recorded whether a reused program worked.
+
+Adopted:
+
+- R135.16: example phrasings and the task signature are embedded at commit through the bounded provider of MEDULLA-FEDERATED-QUERY-R040.5.4. They are stored in the semantic index of the program's graph. A lookup by request text returns the nearest program at or above its threshold, with every parameter bound, or abstains. Binding uses declared phrasing templates. It never replays a source literal that a phrasing marks as a slot. No generative model runs on this path.
+- R135.17: the caller reports each reuse as a hit, a fallback or an abstention. A program whose recent replays fall back at or above a rate stops being served.
+- MERISTEM-HARNESS-CYCLE-R022.4 to R022.8 (consumer): the run loop asks for a program before its planning call. On a match it runs the bound steps on live tools and skips planning. It falls back to full planning on an abstention or a failed step.
+
+**Assessed and rejected: knowledge-graph triples injected into a fine-tuned model's attention.** The method injects graph triples into the attention layers of a fine-tuned language model. Reasons for rejection:
+
+- It needs custom model weights. The engine holds no generative weights (R015).
+- Reported top-1 accuracy is 16 to 40 percent. That is below a threshold-gated exact or semantic match with abstention.
+- An answer carries no provenance. Every engine answer names its premises and evidence class (R002).
+- It has no update or invalidation path. A changed fact needs retraining, whereas R017 and R018 invalidate by dependency.
+- It answers single-hop questions only.
+- Its one reusable idea is hierarchical cluster pruning of the candidate set. MEDULLA-CLUSTER-R008.1 (coarse quantizer over clustered partitions) and the low-storage approximate index of MEDULLA-FEDERATED-QUERY-R040.5 already specify it.
+
+No row is added for the rejected method.
