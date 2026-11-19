@@ -314,14 +314,16 @@ async def _answer(client, question: str, connector: str) -> list[str]:
         await asyncio.sleep(0.5)
 
 
-async def _designate_position_tools(connector: str) -> None:
+async def _designate_position_tools(connector: str, earlier: str) -> None:
     """Question 1 through ``Decide`` kind ``capability_designation``.
 
     The finance pack's risk tools operate on ``:Position``; the served
     designation of that target class names exactly those tools, each with a
     ``target_designation`` premise citing the pack, and not the tool that
     operates on a different class. The pack is imported and attached in a fresh
-    graph so the shared graph's composed schema is left alone.
+    graph so the shared graph's composed schema is left alone. The designation
+    reads the tenant's capability index, so the tools of the pack the question
+    itself imported earlier (``earlier``) are designated too.
     """
     client = await commons_connect()
     try:
@@ -340,8 +342,9 @@ async def _designate_position_tools(connector: str) -> None:
         assert imported["result"] == "imported", imported
         await attach_pack(client, connector)
         wanted = {
-            f"mcp:{connector}/tool/var_historical",
-            f"mcp:{connector}/tool/stress_portfolio",
+            f"mcp:{pack}/tool/{tool}"
+            for pack in (earlier, connector)
+            for tool in ("var_historical", "stress_portfolio")
         }
         deadline = time.monotonic() + 180
         while True:
@@ -352,7 +355,8 @@ async def _designate_position_tools(connector: str) -> None:
                 break
             assert time.monotonic() < deadline, (designated, record)
             await asyncio.sleep(0.5)
-        assert f"mcp:{connector}/tool/price_option" not in json.dumps(record), record
+        for pack in (earlier, connector):
+            assert f"mcp:{pack}/tool/price_option" not in json.dumps(record), record
         facts = [p["fact"] for p in record["premises"]]
         for tool in wanted:
             assert any(
@@ -395,7 +399,7 @@ def test_pack_questions_end_to_end(question: str) -> None:
                 await _ingest(client, connector, records)
             await _answer(client, question, connector)
             if question == "q1_finance_algorithms":
-                await _designate_position_tools(f"{connector}d")
+                await _designate_position_tools(f"{connector}d", connector)
         finally:
             await client.close()
 
