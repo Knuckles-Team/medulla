@@ -108,6 +108,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-DECISION-ENGINE-R100.100.4: one context search over the caller's visible documents.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::RetrievalContextSearch { request } => {
+            return Ok(handle_context_search(hctx, *request).await)
+        }
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R650.3: one bundle compile over the caller's projected core.
     #[cfg(feature = "query")]
     let method = match method {
