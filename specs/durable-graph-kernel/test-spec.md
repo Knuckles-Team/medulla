@@ -314,7 +314,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R099`: `tests/shard_write_fanout.rs::
 | Evidence | `MEDULLA-DURABLE-KERNEL-R100.5` | A test reads the receipts and one digest comparison. |
 | Hot-path proof | `MEDULLA-DURABLE-KERNEL-R100.6` | The served test passes against real targets, and the benchmark receipt meets the budget. |
 
-Hot-path proof for `MEDULLA-DURABLE-KERNEL-R100`: `tests/mirror_graph_sinks_served.rs::each_sink_replays_after_outage`.
+Hot-path proof for `MEDULLA-DURABLE-KERNEL-R100`: `tests/mirror_graph_sinks_served.rs::each_sink_replays_after_outage` (planned).
 
 - MEDULLA-DURABLE-KERNEL-R028.2: terminal event readback, restart identity, tenant isolation, missing/corrupt binding refusal and legacy unavailability.
 ## MEDULLA-DURABLE-KERNEL-R101 acceptance
@@ -529,7 +529,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/test_service_layer.py::test_service_channel_group_leave_returns_leave_result` (L4) | `MEDULLA-DURABLE-KERNEL-R068` | A join, leave and rejoin over a served engine return each its own tagged result. | A leave never returns the stored join result. |
 | `crates/medulla-work-types/src/task_queue.rs::tests::each_type_round_trips_and_each_refusal_has_its_code` (L1) | `MEDULLA-DURABLE-KERNEL-R071` | Each type round-trips through serde with its bounds at the limit values. | Each out-of-bound field returns its registered refusal code. |
 | `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
-| `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
+| `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (planned) (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `tests/test_wire_vectors.py::test_task_queue_models_match_the_rust_vectors` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
 | `crates/medulla-work-types/src/worker_registry.rs::tests::register_heartbeat_and_expiry_at_the_exact_deadline` (L1) | `MEDULLA-DURABLE-KERNEL-R074.1` | Register, heartbeat and expire at the exact deadline. | Every refusal leaves the registry unchanged. |
 | `tests/worker_registry_served.rs::unknown_expired_and_cross_owner_requests_refuse` (L3) | `MEDULLA-DURABLE-KERNEL-R074.2` | Advance the injected clock past the ttl and the worker disappears. | An unknown worker returns WORKER_UNKNOWN and another principal returns ACCESS_DENIED. |

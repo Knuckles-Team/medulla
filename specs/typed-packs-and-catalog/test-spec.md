@@ -422,16 +422,16 @@ requires an error response with no result. Canonical artifact freshness passes. 
 |---|---|
 | `MEDULLA-TYPED-PACKS-R801` | See each child. |
 | `MEDULLA-TYPED-PACKS-R801.1` | `crates/medulla-types/tests/glossary.rs::term_round_trips_and_maps_to_skos` |
-| `MEDULLA-TYPED-PACKS-R801.2` | `crates/medulla-core/tests/glossary.rs::alt_label_search_finds_term_and_deprecated_names_replacement` |
-| `MEDULLA-TYPED-PACKS-R801.3` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_and_bind_term` |
-| `MEDULLA-TYPED-PACKS-R801.4` | `tests/typed_packs/test_glossary_served.py::test_glossary_refusals` |
-| `MEDULLA-TYPED-PACKS-R801.5` | `tests/typed_packs/test_glossary_served.py::test_status_history_reads_back` |
+| `MEDULLA-TYPED-PACKS-R801.2` | `crates/medulla-core/tests/glossary.rs::alt_label_search_finds_term_and_deprecated_names_replacement` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.3` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_and_bind_term` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.4` | `tests/typed_packs/test_glossary_served.py::test_glossary_refusals` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.5` | `tests/typed_packs/test_glossary_served.py::test_status_history_reads_back` (planned) |
 | `MEDULLA-TYPED-PACKS-R801.6` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_bind_term_and_review_lifecycle` |
 | `MEDULLA-TYPED-PACKS-R802` | See each child. |
 | `MEDULLA-TYPED-PACKS-R802.1` | `crates/medulla-types/tests/stewardship.rs::records_round_trip` |
 | `MEDULLA-TYPED-PACKS-R802.2` | `crates/medulla-core/tests/stewardship.rs::most_specific_assignment_wins_and_certification_expires` |
-| `MEDULLA-TYPED-PACKS-R802.3` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
-| `MEDULLA-TYPED-PACKS-R802.4` | `tests/typed_packs/test_stewardship_served.py::test_stewardship_refusals` |
+| `MEDULLA-TYPED-PACKS-R802.3` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` (planned) |
+| `MEDULLA-TYPED-PACKS-R802.4` | `tests/typed_packs/test_stewardship_served.py::test_stewardship_refusals` (planned) |
 | `MEDULLA-TYPED-PACKS-R802.5` | `tests/typed_packs/test_stewardship_served.py::test_request_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R802.6` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
 | `MEDULLA-TYPED-PACKS-R803` | See each child. |
@@ -451,8 +451,8 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R805` | See each child. |
 | `MEDULLA-TYPED-PACKS-R805.1` | `crates/medulla-types/tests/data_product.rs::records_round_trip` |
 | `MEDULLA-TYPED-PACKS-R805.2` | `crates/medulla-core/tests/data_product.rs::breach_records_violation` |
-| `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval` |
-| `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::product_refusals` |
+| `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval` (planned) |
+| `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::product_refusals` (planned) |
 | `MEDULLA-TYPED-PACKS-R805.5` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::violation_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R805.6` | `crates/medulla-core/src/data_product.rs::tests::contract_check_is_linear_in_promises`, `crates/medulla-core/benches/data_contract_check.rs` |
 
@@ -460,7 +460,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 
 | Row | Proving test |
 |---|---|
-| `MEDULLA-TYPED-PACKS-R801.7` | `tests/typed_packs/test_glossary_served.py::test_proposed_description_needs_review` |
+| `MEDULLA-TYPED-PACKS-R801.7` | `tests/typed_packs/test_glossary_served.py::test_proposed_description_needs_review` (planned) |
 | `MEDULLA-TYPED-PACKS-R802.7` | `tests/typed_packs/test_stewardship_served.py::test_deprecation_lowers_rank_and_emits_event` |
 | `MEDULLA-TYPED-PACKS-R802.8` | `tests/typed_packs/test_stewardship_served.py::test_critical_element_gaps_reported` |
 | `MEDULLA-TYPED-PACKS-R805.7` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::usage_cluster_yields_product_proposal` |
@@ -504,14 +504,14 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R108.13`: `tests/typed_packs/test_catalog_capabilities_served.py::test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset`
 - `MEDULLA-TYPED-PACKS-R108.14`: `tests/typed_packs/test_catalog_capabilities_served.py::test_dashboard_report_saved_query_and_template_register_with_reads_and_usage`
 - `MEDULLA-TYPED-PACKS-R108.15`: `tests/typed_packs/test_catalog_capabilities_served.py::test_model_asset_links_registry_ref_schemas_and_training_lineage_without_weights`
-- `MEDULLA-TYPED-PACKS-R108.16`: `tests/typed_packs/test_catalog_capabilities_served.py::test_one_search_ranks_all_families_with_usage_and_endorsement_boost`
+- `MEDULLA-TYPED-PACKS-R108.16`: `tests/typed_packs/test_catalog_capabilities_served.py::test_one_search_ranks_all_families_with_usage_and_endorsement_boost` (planned)
 
 - `MEDULLA-TYPED-PACKS-R109`: See each child.
-- `MEDULLA-TYPED-PACKS-R109.1`: `crates/medulla-types/tests/dashboard.rs::dashboard_asset_round_trips_and_shape_validates`.
-- `MEDULLA-TYPED-PACKS-R109.2`: `crates/medulla-core/tests/dashboard_asset.rs::save_bumps_revision_rebuilds_links_and_delete_keeps_then_purges`.
+- `MEDULLA-TYPED-PACKS-R109.1`: `crates/medulla-types/tests/dashboard.rs::dashboard_asset_round_trips_and_shape_validates` (planned).
+- `MEDULLA-TYPED-PACKS-R109.2`: `crates/medulla-core/tests/dashboard_asset.rs::save_bumps_revision_rebuilds_links_and_delete_keeps_then_purges` (planned).
 - `MEDULLA-TYPED-PACKS-R109.3`: `tests/typed_packs/test_dashboard_asset_served.py::test_save_share_delete_restore_reach_the_handler_with_grant_checks`.
 - `MEDULLA-TYPED-PACKS-R109.4`: `tests/typed_packs/test_dashboard_asset_served.py::test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse`.
-- `MEDULLA-TYPED-PACKS-R109.5`: `tests/typed_packs/test_dashboard_asset_served.py::test_revision_grant_and_delete_history_and_usage_are_served`.
+- `MEDULLA-TYPED-PACKS-R109.5`: `tests/typed_packs/test_dashboard_asset_served.py::test_revision_grant_and_delete_history_and_usage_are_served` (planned).
 - `MEDULLA-TYPED-PACKS-R109.6`: `tests/typed_packs/test_dashboard_asset_served.py::test_dashboard_save_conflict_share_lineage_search_and_soft_delete`.
 
 ## R085.7 original session reference inspection
@@ -780,11 +780,11 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R712`: `crates/medulla-catalog-types/src/graph_schema/drift.rs::tests::an_undeclared_policy_is_quarantine_and_quarantine_never_applies`, `tests/packs/test_schema_drift_served.py::test_breaking_drift_quarantines_and_activation_needs_approval`
 - `MEDULLA-TYPED-PACKS-R714`: `tests/packs/test_schema_drift_served.py::test_delivery_reports_drift_class`
 - `MEDULLA-TYPED-PACKS-R715`: `tests/packs/test_schema_drift_served.py::test_breaking_delivery_is_quarantined`
-- `MEDULLA-TYPED-PACKS-R801`: `tests/typed_packs/test_glossary_served.py::test_import_scheme_bind_term_and_review_lifecycle`
-- `MEDULLA-TYPED-PACKS-R802`: `tests/typed_packs/test_stewardship_served.py::test_change_request_flow`
+- `MEDULLA-TYPED-PACKS-R801`: `tests/typed_packs/test_glossary_served.py::test_import_scheme_bind_term_and_review_lifecycle` (planned)
+- `MEDULLA-TYPED-PACKS-R802`: `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` (planned)
 - `MEDULLA-TYPED-PACKS-R803`: `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values`
 - `MEDULLA-TYPED-PACKS-R804`: `crates/medulla-h-admin/src/graph_schema/ontology_diff_tests.rs::import_reports_impact_and_opens_change_request`
-- `MEDULLA-TYPED-PACKS-R805`: `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval`
+- `MEDULLA-TYPED-PACKS-R805`: `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval` (planned)
 - `MEDULLA-TYPED-PACKS-R106`: `tests/typed_packs/test_connector_catalog_served.py::test_catalog_search_finds_assets_with_owner_term_and_lineage`
 - `MEDULLA-TYPED-PACKS-R107`: `tests/typed_packs/test_pack_contract_served.py::test_breaking_release_waits_for_approval_then_serves`
 - `MEDULLA-TYPED-PACKS-R108`: `tests/typed_packs/test_catalog_assets_served.py::test_one_query_returns_agents_business_workflows_graphs_and_connector_assets`
