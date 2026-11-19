@@ -81,13 +81,14 @@ async def _ask(
     graph: str,
     space: dict[str, Any],
     target: str,
+    k: int = 3,
 ) -> dict[str, Any]:
     question = {
         "tenant_id": TEST_TENANT,
         "query_vector": vector(space["space_digest"]),
         "required_capabilities": [],
         "required_policy_tags": [],
-        "k": 3,
+        "k": k,
         "weights": {"cosine_q32": 0, "reward_q32": 0, "prior_q32": Q32_ONE},
         "ontology_prior": None,
         "target_classes": [target],

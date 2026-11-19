@@ -314,6 +314,11 @@ async def _answer(client, question: str, connector: str) -> list[str]:
         await asyncio.sleep(0.5)
 
 
+# The tenant's index holds every pack the served tests import into it, and the question
+# cuts to k designations: read wide enough that this test's own tools are never cut.
+DESIGNATION_K = 64
+
+
 async def _designate_position_tools(connector: str, earlier: str) -> None:
     """Question 1 through ``Decide`` kind ``capability_designation``.
 
@@ -349,7 +354,9 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
         }
         deadline = time.monotonic() + 180
         while True:
-            record = await _ask(decision, schema, graph, space, f"{CORE}Position")
+            record = await _ask(
+                decision, schema, graph, space, f"{CORE}Position", k=DESIGNATION_K
+            )
             answer = (record.get("answer") or {}).get("value") or {}
             # Other served tests import packs into the same tenant concurrently, so
             # only this test's own packs are compared; theirs are designated too.
