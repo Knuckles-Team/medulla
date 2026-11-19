@@ -274,10 +274,13 @@ async fn iceberg_and_duckdb_reads_match_native() {
         "sales.facts",
         &["region", "id", "missing_column"],
     );
-    assert!(register(&state, 4, "lake_drift", spec)
-        .await
-        .error
-        .is_none());
+    let drift_registered = register(&state, 4, "lake_drift", spec).await;
+    assert!(
+        drift_registered.error.is_none(),
+        "register drift: {:?} {:?}",
+        drift_registered.error,
+        drift_registered.error_detail
+    );
     let drift = read(&state, 5, "lake_drift", &["missing_column"], vec![]).await;
     assert!(
         refusal(&drift).starts_with("SCHEMA_DRIFT"),
