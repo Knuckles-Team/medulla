@@ -236,20 +236,20 @@ pub fn row_of(
         .collect()
 }
 
+/// The columns, rows and result digest `evaluate` returns.
+pub type EvaluatedRead = (
+    Vec<ProjectionColumnInfo>,
+    Vec<BTreeMap<String, Value>>,
+    String,
+);
+
 /// Validate the request against `table`, filter `rows`, order them by primary key,
 /// project the selected columns and compute the result digest.
 pub fn evaluate(
     table: &ProjectionTable,
     request: &ProjectionReadRequest,
     mut rows: Vec<BTreeMap<String, Value>>,
-) -> Result<
-    (
-        Vec<ProjectionColumnInfo>,
-        Vec<BTreeMap<String, Value>>,
-        String,
-    ),
-    ProjectionShapeError,
-> {
+) -> Result<EvaluatedRead, ProjectionShapeError> {
     let selected: Vec<&ProjectionColumn> = if request.columns.is_empty() {
         table.columns.iter().collect()
     } else {
