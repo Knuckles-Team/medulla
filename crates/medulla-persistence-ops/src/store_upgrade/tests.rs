@@ -117,11 +117,11 @@ fn old_graph_shard_of(
     path
 }
 
-pub(super) fn statuses(report: &Report) -> Vec<(&str, StoreOutcome)> {
+pub(super) fn statuses(report: &Report) -> Vec<(&str, StoreStatus)> {
     report
         .stores
         .iter()
-        .map(|store| (store.file.as_str(), store.outcome))
+        .map(|store| (store.file.as_str(), store.status))
         .collect()
 }
 
@@ -180,8 +180,8 @@ fn inspect_finds_nothing_to_do_on_current_stores_and_writes_nothing() {
     assert_eq!(
         statuses(&report),
         [
-            ("graph-0.redb", StoreOutcome::Current),
-            (AGENT_LIBRARY_FILE, StoreOutcome::Current)
+            ("graph-0.redb", StoreStatus::Current),
+            (AGENT_LIBRARY_FILE, StoreStatus::Current)
         ]
     );
     assert_eq!(before, (file_digest(&library), file_digest(&shard)));
@@ -219,7 +219,7 @@ fn inspect_reports_an_available_upgrade_without_changing_the_store() {
     );
     assert_eq!(
         statuses(&report),
-        [(AGENT_LIBRARY_FILE, StoreOutcome::UpgradeAvailable)]
+        [(AGENT_LIBRARY_FILE, StoreStatus::UpgradeAvailable)]
     );
     assert_eq!(report.stores[0].layout, Some("agent_library"));
     assert!(report.stores[0]
@@ -247,9 +247,9 @@ fn apply_upgrades_each_predecessor_keeps_its_rows_and_runs_once() {
     assert_eq!(
         statuses(&report),
         [
-            ("graph-0.redb", StoreOutcome::Upgraded),
-            ("graph-1.redb", StoreOutcome::Upgraded),
-            (AGENT_LIBRARY_FILE, StoreOutcome::Upgraded)
+            ("graph-0.redb", StoreStatus::Upgraded),
+            ("graph-1.redb", StoreStatus::Upgraded),
+            (AGENT_LIBRARY_FILE, StoreStatus::Upgraded)
         ]
     );
     assert!(report.stores[0]
@@ -289,9 +289,9 @@ fn apply_upgrades_each_predecessor_keeps_its_rows_and_runs_once() {
     assert_eq!(
         statuses(&again),
         [
-            ("graph-0.redb", StoreOutcome::Current),
-            ("graph-1.redb", StoreOutcome::Current),
-            (AGENT_LIBRARY_FILE, StoreOutcome::Current)
+            ("graph-0.redb", StoreStatus::Current),
+            ("graph-1.redb", StoreStatus::Current),
+            (AGENT_LIBRARY_FILE, StoreStatus::Current)
         ]
     );
     assert_eq!(upgraded, (file_digest(&library), file_digest(&shard)));
@@ -325,7 +325,7 @@ fn apply_upgrades_a_sql_catalog_and_keeps_its_rows() {
     let report = apply(dir.path(), &confirmed());
 
     assert_eq!(report.exit_code, EXIT_NOTHING_TO_DO, "{}", report.render());
-    assert_eq!(report.stores[0].outcome, StoreOutcome::Upgraded);
+    assert_eq!(report.stores[0].status, StoreStatus::Upgraded);
     assert_eq!(report.stores[0].layout, Some("sql"));
     assert_eq!(
         get(&catalog, SQL_ROWS, ("tenant-a:table", 7)),
@@ -397,8 +397,8 @@ fn a_format_with_no_upgrade_is_reported_and_never_modified() {
     create_predecessor_owner_file(&retired, identity("test:blob"), &BLOB_BEFORE_HOLDERS).unwrap();
     let before = (file_digest(&unknown), file_digest(&retired));
     let expected = [
-        (KV_COLD_CACHE_ONLY.file_name, StoreOutcome::UnknownFormat),
-        (BLOB_BEFORE_HOLDERS.file_name, StoreOutcome::NoUpgrade),
+        (KV_COLD_CACHE_ONLY.file_name, StoreStatus::UnknownFormat),
+        (BLOB_BEFORE_HOLDERS.file_name, StoreStatus::NoUpgrade),
     ];
 
     let inspected = inspect(dir.path());
@@ -425,7 +425,7 @@ fn apply_stops_at_the_first_failure_and_touches_no_later_store() {
     let report = apply(dir.path(), &confirmed());
 
     assert_eq!(report.exit_code, EXIT_FAILED, "{}", report.render());
-    assert_eq!(statuses(&report), [("graph-0.redb", StoreOutcome::Failed)]);
+    assert_eq!(statuses(&report), [("graph-0.redb", StoreStatus::Failed)]);
     assert_eq!(report.not_processed, 1);
     assert_eq!(summary(&report)["not_processed"], 1);
     assert_eq!(before, (file_digest(&shard), file_digest(&library)));
@@ -434,8 +434,8 @@ fn apply_stops_at_the_first_failure_and_touches_no_later_store() {
     assert_eq!(
         statuses(&inspect(dir.path())),
         [
-            ("graph-0.redb", StoreOutcome::UpgradeAvailable),
-            (AGENT_LIBRARY_FILE, StoreOutcome::UpgradeAvailable)
+            ("graph-0.redb", StoreStatus::UpgradeAvailable),
+            (AGENT_LIBRARY_FILE, StoreStatus::UpgradeAvailable)
         ]
     );
 }
@@ -528,7 +528,7 @@ fn a_predecessor_left_by_an_unclean_shutdown_is_still_upgraded() {
     let inspected = inspect(dir.path());
     assert_eq!(
         statuses(&inspected),
-        [(AGENT_LIBRARY_FILE, StoreOutcome::NotInspectable)]
+        [(AGENT_LIBRARY_FILE, StoreStatus::NotInspectable)]
     );
     assert_eq!(
         inspected.exit_code,
@@ -542,7 +542,7 @@ fn a_predecessor_left_by_an_unclean_shutdown_is_still_upgraded() {
     let report = apply(dir.path(), &confirmed());
     assert_eq!(
         statuses(&report),
-        [(AGENT_LIBRARY_FILE, StoreOutcome::Upgraded)]
+        [(AGENT_LIBRARY_FILE, StoreStatus::Upgraded)]
     );
     assert_eq!(report.exit_code, EXIT_NOTHING_TO_DO, "{}", report.render());
     assert_eq!(
