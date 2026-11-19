@@ -389,17 +389,43 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "GuardrailEntailment",
         &["GUARDRAIL_SCOPE_TOO_LARGE", "MALFORMED_GUARDRAIL_RULE"],
     ),
+    // MEDULLA-DURABLE-KERNEL-R074.2.
+    (
+        "WorkerRegister",
+        &[
+            "WORKER_ALREADY_REGISTERED",
+            "WORKER_REGISTRATION_INVALID",
+            "WORKER_TTL_INVALID",
+            "WORKER_CLOCK_REGRESSION",
+        ],
+    ),
+    (
+        "WorkerHeartbeat",
+        &[
+            "WORKER_UNKNOWN",
+            "WORKER_EXPIRED",
+            "WORKER_TTL_INVALID",
+            "WORKER_CLOCK_REGRESSION",
+        ],
+    ),
     // `ChangeEnvelope::validate` refuses carried engine-internal/native operations.
     (
         "ApplyChangeEnvelope",
         &[
             "CARRIER_INNER_METHOD_REFUSED",
             "CHANGE_ENVELOPE_CONTEXT_MISMATCH",
+            // MEDULLA-REPO-INGEST-R002.653.
+            "ENVELOPE_SOURCE_MISSING",
+            "SUPERSESSION_UNKNOWN_FACT",
         ],
     ),
     (
         "ApplyChangeEnvelopeDraft",
-        &["CARRIER_INNER_METHOD_REFUSED"],
+        &[
+            "CARRIER_INNER_METHOD_REFUSED",
+            "ENVELOPE_SOURCE_MISSING",
+            "SUPERSESSION_UNKNOWN_FACT",
+        ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.4.
     (
@@ -434,12 +460,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "VerifyIngestReadback",
         &[
+            "HYDRATION_BINDING_MISMATCH",
             "READBACK_DENIED",
             "READBACK_MISMATCH",
             "READBACK_PARTIAL",
             "READBACK_STALE",
         ],
     ),
+    // MEDULLA-REPO-INGEST-R002.651.4.
+    ("ProcessConformance", &["PROCESS_MODEL_UNKNOWN"]),
     // MEDULLA-SUPPLY-VOCAB-R009.3: ecosystem package risk propagation.
     (
         "MineRiskPropagation",

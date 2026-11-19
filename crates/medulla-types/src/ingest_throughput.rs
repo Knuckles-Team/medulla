@@ -141,13 +141,14 @@ pub fn measure_window(
         Some(newest) => newest >= fresh_floor_ms,
         None => false,
     };
+    let state = ThroughputState::observe(known)?;
     if !known {
         return Ok(ThroughputWindow {
             completed_distinct: 0,
             target,
             shortfall: target,
             bottleneck_stage: None,
-            state: ThroughputState::observe(known)?,
+            state,
         });
     }
 
@@ -187,7 +188,7 @@ pub fn measure_window(
         target,
         shortfall: target.saturating_sub(completed_distinct),
         bottleneck_stage,
-        state: ThroughputState::observe(known)?,
+        state,
     })
 }
 

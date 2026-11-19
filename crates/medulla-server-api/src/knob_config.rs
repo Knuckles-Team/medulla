@@ -245,6 +245,8 @@ knobs! {
     jobs_schedule_budget_period_s: u64 = "jobs.schedule_budget_period_s", U64(86_400), [1, 31_536_000], "seconds", Tunable;
     /// Schedule tick: how far back a new leader records missed windows.
     jobs_schedule_missed_lookback_s: u64 = "jobs.schedule_missed_lookback_s", U64(86_400), [60, 2_592_000], "seconds", Tunable;
+    /// Lifecycle edges: most `Release` nodes one derivation or release record reads (MEDULLA-SDLC-R001.3).
+    lifecycle_release_scan_limit: u64 = "lifecycle.release_scan_limit", U64(100_000), [1, 10_000_000], "releases", Tunable;
     /// User tables: times an auto-commit UPDATE or DELETE retries after `TXN_CONFLICT` before `TXN_RETRY_EXHAUSTED` (MEDULLA-ENGINE-PARITY-R004.2).
     tables_occ_max_retries: u64 = "tables.occ_max_retries", U64(3), [0, 10], "retries", Tunable;
     /// User tables: most deferred foreign keys one transaction may touch; a larger transaction refuses `DEFERRED_FK_PENDING_EXCEEDED` (MEDULLA-ENGINE-PARITY-R011.1).
@@ -409,6 +411,10 @@ knobs! {
     document_max_cascade_nodes: u64 = "document.max_cascade_nodes", U64(100_000), [1, 10_000_000], "nodes", Tunable;
     /// Most containers one served architecture view may hold (MEDULLA-CQ-ORCH-R010.2).
     architecture_view_max_containers: u64 = "architecture_view.max_containers", U64(512), [16, 4_096], "containers", Tunable;
+    /// Least property coverage an induced ontology proposal needs to be admitted (MEDULLA-INGEST-WORKER-R002.3).
+    ingest_proposal_min_coverage: f64 = "ingest.proposal_min_coverage", F64(0.8), [0.5, 1.0], "ratio", Tunable;
+    /// Most class redundancy an induced ontology proposal may carry and still be admitted (MEDULLA-INGEST-WORKER-R002.3).
+    ingest_proposal_max_redundancy: f64 = "ingest.proposal_max_redundancy", F64(0.1), [0.0, 0.5], "ratio", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).
@@ -531,6 +537,8 @@ knobs! {
     /// Longest `instructions` text of an assistant profile
     /// (MEDULLA-DECISION-ENGINE-R656.1).
     profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
+    /// Most steps plus flows of one imported canonical workflow (MEDULLA-CQ-ORCH-R701.2).
+    process_import_max_elements: u64 = "process.import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Context facts kept per node.
     context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
     /// Bytes per token in the context facts estimate.
@@ -702,6 +710,68 @@ knobs! {
     search_task_prior_degree: u64 = "search_task.prior_degree", U64(50), [5, 10_000], "edges", Tunable;
     /// Refinement rounds a search task may take before it must stand (MEDULLA-FEDERATED-QUERY-R702.2).
     search_task_refine_rounds: u32 = "search_task.refine_rounds", U64(3), [0, 8], "rounds", Tunable;
+    /// Scheduler: Worker pool size the scheduler admits against. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_total_workers: u32 = "scheduler.total_workers", U64(4), [0, 1_024], "workers", Tunable;
+    /// Scheduler: Workers reserved for the general lane; 0 reserves none. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_general_lane_floor: u32 = "scheduler.general_lane_floor", U64(0), [0, 1_024], "workers", Tunable;
+    /// Scheduler: Workers reserved for the hydration lane; 0 reserves none. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_hydration_lane_floor: u32 = "scheduler.hydration_lane_floor", U64(0), [0, 1_024], "workers", Tunable;
+    /// Scheduler: Fraction of a worker's cores the scheduler grants. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_cores_per_mille: u64 = "scheduler.cores_per_mille", U64(360), [0, 1_000], "per-mille", Tunable;
+    /// Scheduler: Memory budget per worker. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_memory_per_worker_bytes: u64 = "scheduler.memory_per_worker_bytes", U64(3_221_225_472), [1, 1_099_511_627_776], "bytes", Tunable;
+    /// Scheduler: Deepest task queue the scheduler admits. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_max_queue_depth: u64 = "scheduler.max_queue_depth", U64(1_024), [0, 100_000_000], "tasks", Tunable;
+    /// Scheduler: Task lease held by a claim. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_task_lease_ms: u64 = "scheduler.task_lease_ms", U64(60_000), [5_000, 300_000], "ms", Tunable;
+    /// Scheduler: Back-off hint carried by an admission refusal. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_retry_after_ms: u64 = "scheduler.retry_after_ms", U64(250), [50, 30_000], "ms", Tunable;
+    /// Scheduler: A worker silent for longer than this expires. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_worker_ttl_ms: u64 = "scheduler.worker_ttl_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
+    /// Scheduler: Slots the analytics pool may hold. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_analytics_slots: u32 = "scheduler.analytics_slots", U64(1), [0, 32], "slots", Tunable;
+    /// Scheduler: Largest baseline-hydration scope admitted. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_hydration_scope_cap: u32 = "scheduler.hydration_scope_cap", U64(10_000), [100, 1_000_000], "items", Tunable;
+    /// Scheduler: Target file count of one repository split part. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_hydration_split_target_files: u32 = "scheduler.hydration_split_target_files", U64(2_000), [100, 100_000], "files", Tunable;
+    /// Scheduler: Containers above which an architecture view is refused. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_architecture_view_max_containers: u32 = "scheduler.architecture_view_max_containers", U64(512), [16, 4_096], "containers", Tunable;
+    /// Scheduler: Bound of one repository enrichment run. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_enrich_timeout_ms: u64 = "scheduler.enrich_timeout_ms", U64(5_000), [100, 600_000], "ms", Tunable;
+    /// Downtime: Foreground request rate at or under which an idle window may open. (MEDULLA-DURABLE-KERNEL-R101.2).
+    downtime_idle_max_rps: u32 = "downtime.idle_max_rps", U64(1), [0, 100], "requests/s", Tunable;
+    /// Downtime: Seconds the foreground rate must stay quiet before an idle window opens. (MEDULLA-DURABLE-KERNEL-R101.2).
+    downtime_idle_quiet_secs: u32 = "downtime.idle_quiet_secs", U64(60), [10, 3_600], "s", Tunable;
+    /// Downtime: Share of one core, in permille, a downtime window may spend per second. (MEDULLA-DURABLE-KERNEL-R101.2).
+    downtime_window_cpu_permille: u32 = "downtime.window_cpu_permille", U64(250), [10, 1_000], "permille", Tunable;
+    /// Downtime: Memory a downtime window may hold. (MEDULLA-DURABLE-KERNEL-R101.2).
+    downtime_window_memory_bytes: u64 = "downtime.window_memory_bytes", U64(2_147_483_648), [268_435_456, 68_719_476_736], "bytes", Tunable;
+    /// Downtime: Seconds between downtime scheduler ticks. (MEDULLA-DURABLE-KERNEL-R101.3).
+    downtime_tick_secs: u64 = "downtime.tick_secs", U64(1), [1, 60], "s", Tunable;
+    /// Downtime: Milliseconds a running downtime job has to stop after foreground activity. (MEDULLA-DURABLE-KERNEL-R101.6).
+    downtime_preempt_deadline_ms: u64 = "downtime.preempt_deadline_ms", U64(250), [50, 5_000], "ms", Tunable;
+    /// Scheduler: Working-memory bound of one incremental index job. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_index_max_working_bytes: u64 = "scheduler.index_max_working_bytes", U64(1_073_741_824), [67_108_864, 68_719_476_736], "bytes", Tunable;
+    /// Scheduler: Most commits one history run applies. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_history_max_commits: u64 = "scheduler.history_max_commits", U64(100_000), [1, 1_000_000], "commits", Tunable;
+    /// Scheduler: Fewest co-changing commits for a coupling edge. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_history_support_floor: u64 = "scheduler.history_support_floor", U64(3), [1, 1_000], "commits", Tunable;
+    /// Scheduler: Lowest coupling confidence kept. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_history_confidence_floor_milli: u64 = "scheduler.history_confidence_floor_milli", U64(300), [0, 1_000], "milli", Tunable;
+    /// Scheduler: Most files of one commit that enter pair counting. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_history_max_files_per_commit: u64 = "scheduler.history_max_files_per_commit", U64(200), [2, 10_000], "files", Tunable;
+    /// Scheduler: Most steps plus flows of one imported process. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_process_import_max_elements: u64 = "scheduler.process_import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
+    /// Scheduler: Largest process document read. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_process_document_max_bytes: u64 = "scheduler.process_document_max_bytes", U64(16_777_216), [65_536, 268_435_456], "bytes", Tunable;
+    /// Scheduler: Deepest element nesting of a process document. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_process_document_max_depth: u32 = "scheduler.process_document_max_depth", U64(64), [8, 256], "levels", Tunable;
+    /// Scheduler: Largest submitted changeset blob. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_changeset_max_blob_bytes: u64 = "scheduler.changeset_max_blob_bytes", U64(134_217_728), [1_048_576, 4_294_967_296], "bytes", Tunable;
+    /// Scheduler: Byte ceiling of one low-storage ANN artifact. (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_ann_storage_ceiling_bytes: u64 = "scheduler.ann_storage_ceiling_bytes", U64(2_147_483_648), [1_048_576, 1_099_511_627_776], "bytes", Tunable;
+    /// Scheduler: hub-preserving pruning of compact ANN artifacts (MEDULLA-FEDERATED-QUERY-R040.5.5).
+    scheduler_ann_hub_pruning: bool = "scheduler.ann_hub_pruning", Bool(false), [false, true], "switch", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
@@ -776,7 +846,18 @@ pub fn load_knobs(
         }
         cli.push((name.to_string(), value.to_string()));
     }
-    resolve_all(&cli, &env)
+    let config = resolve_all(&cli, &env)?;
+    // The scheduler policy is checked as a whole (lane floors against the pool
+    // size), so a setting that is valid alone but not with the others refuses
+    // here, before any state is built from it (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_config_from(&config).map_err(|error| {
+        refusal(
+            ServerErrorCode::SchedulerConfigInvalid,
+            "scheduler",
+            error.to_string(),
+        )
+    })?;
+    Ok(config)
 }
 
 /// The list-valued server config key naming the directories an attached SQLite file may
@@ -843,6 +924,61 @@ pub fn knobs() -> &'static KnobConfig {
     INSTALLED.get_or_init(KnobConfig::default)
 }
 
+/// The scheduler policy built from the resolved knob values (MEDULLA-DURABLE-KERNEL-R076.2).
+/// Built once at startup and held in `ServerState`; there is no second settings store.
+pub fn scheduler_config_from(
+    knobs: &KnobConfig,
+) -> Result<
+    medulla_types::scheduler_config::SchedulerConfig,
+    medulla_types::scheduler_config::InvalidSchedulerConfig,
+> {
+    use medulla_types::scheduler_config::{AnnHubPruning, SchedulerConfig};
+    let mut lane_floors = std::collections::BTreeMap::new();
+    if knobs.scheduler_general_lane_floor > 0 {
+        lane_floors.insert("general".to_string(), knobs.scheduler_general_lane_floor);
+    }
+    if knobs.scheduler_hydration_lane_floor > 0 {
+        lane_floors.insert(
+            "hydration".to_string(),
+            knobs.scheduler_hydration_lane_floor,
+        );
+    }
+    let config = SchedulerConfig {
+        total_workers: knobs.scheduler_total_workers,
+        lane_floors,
+        task_lease_ms: knobs.scheduler_task_lease_ms,
+        retry_after_ms: knobs.scheduler_retry_after_ms,
+        worker_ttl_ms: knobs.scheduler_worker_ttl_ms,
+        analytics_slots: knobs.scheduler_analytics_slots,
+        // One knob feeds both fields: `scheduler.analytics_slots` is the only source.
+        analytics_workers: knobs.scheduler_analytics_slots,
+        cores_per_mille: u16::try_from(knobs.scheduler_cores_per_mille).unwrap_or(u16::MAX),
+        memory_per_worker_bytes: knobs.scheduler_memory_per_worker_bytes,
+        max_queue_depth: knobs.scheduler_max_queue_depth,
+        hydration_scope_cap: knobs.scheduler_hydration_scope_cap,
+        hydration_split_target_files: knobs.scheduler_hydration_split_target_files,
+        architecture_view_max_containers: knobs.scheduler_architecture_view_max_containers,
+        enrich_timeout_ms: knobs.scheduler_enrich_timeout_ms,
+        index_max_working_bytes: knobs.scheduler_index_max_working_bytes,
+        history_max_commits: knobs.scheduler_history_max_commits,
+        history_support_floor: knobs.scheduler_history_support_floor,
+        history_confidence_floor_milli: knobs.scheduler_history_confidence_floor_milli,
+        history_max_files_per_commit: knobs.scheduler_history_max_files_per_commit,
+        process_import_max_elements: knobs.scheduler_process_import_max_elements,
+        process_document_max_bytes: knobs.scheduler_process_document_max_bytes,
+        process_document_max_depth: knobs.scheduler_process_document_max_depth,
+        changeset_max_blob_bytes: knobs.scheduler_changeset_max_blob_bytes,
+        ann_storage_ceiling_bytes: knobs.scheduler_ann_storage_ceiling_bytes,
+        ann_hub_pruning: if knobs.scheduler_ann_hub_pruning {
+            AnnHubPruning::Enabled
+        } else {
+            AnnHubPruning::Disabled
+        },
+    };
+    config.validate()?;
+    Ok(config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -881,6 +1017,48 @@ mod tests {
         let refusal =
             load_knobs(&["xshard.decision_deadline_ms=soon".to_string()], none).unwrap_err();
         assert_eq!(refusal.code, ServerErrorCode::KnobInvalid);
+    }
+}
+
+#[cfg(test)]
+mod scheduler_knob_tests {
+    use super::*;
+
+    #[test]
+    fn scheduler_policy_is_built_from_resolved_knobs() {
+        let args = vec![
+            ("scheduler.task_lease_ms".to_string(), "90000".to_string()),
+            ("scheduler.worker_ttl_ms".to_string(), "45000".to_string()),
+            ("scheduler.analytics_slots".to_string(), "3".to_string()),
+            ("scheduler.general_lane_floor".to_string(), "2".to_string()),
+        ];
+        let resolved = resolve_all(&args, &|_| None).expect("knobs resolve");
+        let config = scheduler_config_from(&resolved).expect("policy validates");
+        assert_eq!(config.task_lease_ms, 90_000);
+        assert_eq!(config.worker_ttl_ms, 45_000);
+        assert_eq!(config.analytics_slots, 3);
+        assert_eq!(config.lane_floors.get("general"), Some(&2));
+        assert!(!config.lane_floors.contains_key("hydration"));
+        assert_eq!(config.retry_after_ms, 250);
+    }
+
+    #[test]
+    fn scheduler_knobs_refuse_out_of_range_values() {
+        for (name, bad) in [
+            ("scheduler.task_lease_ms", "4999"),
+            ("scheduler.retry_after_ms", "49"),
+            ("scheduler.worker_ttl_ms", "999"),
+            ("scheduler.analytics_slots", "33"),
+        ] {
+            let args = vec![(name.to_string(), bad.to_string())];
+            let refusal = resolve_all(&args, &|_| None).expect_err("out of range refuses");
+            assert_eq!(refusal.knob, name);
+        }
+    }
+
+    #[test]
+    fn default_scheduler_policy_is_valid() {
+        scheduler_config_from(&KnobConfig::default()).expect("defaults validate");
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R871

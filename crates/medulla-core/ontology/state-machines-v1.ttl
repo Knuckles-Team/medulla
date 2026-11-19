@@ -5148,3 +5148,118 @@
     :fromState :EnumerationRunMachine_Staging ;
     :toState :EnumerationRunMachine_Discarded ;
     :firedBy :EnumerationRunMachine_Event_Incomplete .
+# spec: MEDULLA-REPO-INGEST-R802.1
+# The IndexFile machine: the disposition of one input file of an index batch. A record starts as Success; the parser finding no capability for the file enters Unsupported and a parse failure enters Error. The Rust edge table INDEX_FILE_MACHINE is the same table.
+
+:IndexFileState a owl:Class ;
+    rdfs:label "IndexFile State" ;
+    rdfs:comment "A state of the IndexFile machine." ;
+    rdfs:subClassOf :State .
+
+:IndexFileTerminalState a owl:Class ;
+    rdfs:label "IndexFile Terminal State" ;
+    rdfs:comment "A terminal state of the IndexFile machine." ;
+    rdfs:subClassOf :TerminalState, :IndexFileState .
+
+:IndexFileTransition a owl:Class ;
+    rdfs:label "IndexFile Transition" ;
+    rdfs:comment "A transition of the IndexFile machine." ;
+    rdfs:subClassOf :Transition .
+
+:IndexFileEvent a owl:Class ;
+    rdfs:label "IndexFile Event" ;
+    rdfs:comment "An event of the IndexFile machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:IndexFileGuard a owl:Class ;
+    rdfs:label "IndexFile Guard" ;
+    rdfs:comment "A guard of the IndexFile machine; this machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:IndexFileMachine a :StateMachine ;
+    rdfs:label "IndexFile machine" ;
+    :initialState :IndexFileMachine_Success ;
+    :hasState :IndexFileMachine_Success, :IndexFileMachine_Unsupported, :IndexFileMachine_Error .
+
+:IndexFileMachine_Success a :IndexFileState ;
+    rdfs:label "IndexFile Success" ;
+    :storedForm "success" .
+
+:IndexFileMachine_Unsupported a :IndexFileTerminalState ;
+    rdfs:label "IndexFile Unsupported" ;
+    :storedForm "unsupported" .
+
+:IndexFileMachine_Error a :IndexFileTerminalState ;
+    rdfs:label "IndexFile Error" ;
+    :storedForm "error" .
+
+:IndexFileMachine_Event_FindUnsupported a :IndexFileEvent ;
+    rdfs:label "IndexFile FindUnsupported" .
+
+:IndexFileMachine_Event_FailParse a :IndexFileEvent ;
+    rdfs:label "IndexFile FailParse" .
+
+:IndexFileMachine_F01 a :IndexFileTransition ;
+    rdfs:label "IndexFile F01" ;
+    :edgeId "F01" ;
+    :fromState :IndexFileMachine_Success ;
+    :toState :IndexFileMachine_Unsupported ;
+    :firedBy :IndexFileMachine_Event_FindUnsupported .
+
+:IndexFileMachine_F02 a :IndexFileTransition ;
+    rdfs:label "IndexFile F02" ;
+    :edgeId "F02" ;
+    :fromState :IndexFileMachine_Success ;
+    :toState :IndexFileMachine_Error ;
+    :firedBy :IndexFileMachine_Event_FailParse .
+
+# spec: MEDULLA-REPO-INGEST-R802.2
+# The IndexRef machine: whether a declared ref still exists at the indexed revision. A ref starts Live; its disappearance enters Deleted. The Rust edge table INDEX_REF_MACHINE is the same table.
+
+:IndexRefState a owl:Class ;
+    rdfs:label "IndexRef State" ;
+    rdfs:comment "A state of the IndexRef machine." ;
+    rdfs:subClassOf :State .
+
+:IndexRefTerminalState a owl:Class ;
+    rdfs:label "IndexRef Terminal State" ;
+    rdfs:comment "A terminal state of the IndexRef machine." ;
+    rdfs:subClassOf :TerminalState, :IndexRefState .
+
+:IndexRefTransition a owl:Class ;
+    rdfs:label "IndexRef Transition" ;
+    rdfs:comment "A transition of the IndexRef machine." ;
+    rdfs:subClassOf :Transition .
+
+:IndexRefEvent a owl:Class ;
+    rdfs:label "IndexRef Event" ;
+    rdfs:comment "An event of the IndexRef machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:IndexRefGuard a owl:Class ;
+    rdfs:label "IndexRef Guard" ;
+    rdfs:comment "A guard of the IndexRef machine; this machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:IndexRefMachine a :StateMachine ;
+    rdfs:label "IndexRef machine" ;
+    :initialState :IndexRefMachine_Live ;
+    :hasState :IndexRefMachine_Live, :IndexRefMachine_Deleted .
+
+:IndexRefMachine_Live a :IndexRefState ;
+    rdfs:label "IndexRef Live" ;
+    :storedForm "live" .
+
+:IndexRefMachine_Deleted a :IndexRefTerminalState ;
+    rdfs:label "IndexRef Deleted" ;
+    :storedForm "deleted" .
+
+:IndexRefMachine_Event_Delete a :IndexRefEvent ;
+    rdfs:label "IndexRef Delete" .
+
+:IndexRefMachine_R01 a :IndexRefTransition ;
+    rdfs:label "IndexRef R01" ;
+    :edgeId "R01" ;
+    :fromState :IndexRefMachine_Live ;
+    :toState :IndexRefMachine_Deleted ;
+    :firedBy :IndexRefMachine_Event_Delete .

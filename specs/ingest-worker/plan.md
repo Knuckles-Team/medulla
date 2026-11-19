@@ -74,6 +74,7 @@ The unknowns below were open when the rows were written. Each is decided in [res
 - Whether a new served method is its own chain, and where data-prep declarations are served (R001.1007 to R001.1009).
 - How reconcile runs and plans are stored (R903.2), what a container with an unknown parent does (R904.2) and how atoms are packed (R003.2).
 - How claim-time admission and the lane table fit (R604.3), and what the batch report counts (R606.1).
+The unknowns that remained are resolved in [research.md](research.md): the governance and reconcile decisions and the ingest state machines.
 
 ## Phase 1: Design
 
@@ -97,6 +98,17 @@ The rules below bind every row.
 - **Environment.** Engine knobs (`ingest.retention_required` and the scheduler settings each row names); no per-tenant configuration file (rule 8).
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
+
+### Kernel
+One line per answer.
+
+- **Owner.** Medulla: `crates/medulla-h-ingest/src/source_ingestion.rs` and its `source_ingestion/` modules for admission, `crates/medulla-types` for the pure ingest rules and machines. Every connector batch reaches one `prepare`.
+- **Cohesion.** Record and permission admission share one receipt, one envelope builder and one refusal vocabulary, so they live in one module directory.
+- **Dependency direction.** The served ingest handlers in `medulla-server-ops` call down into `medulla-h-ingest`, which calls `medulla-source-types` and `medulla-types`; none of those points back up.
+- **Interface depth.** One entry point (`prepare`), one receipt type, one refusal set per kind. The kind logic modules expose only their admission function.
+- **Special cases.** None per connector. A batch kind selects an admission function; a connector never adds a branch to `prepare`.
+- **State.** Explicit machines for the ingest stage, the throughput window and the enumeration run (R911, R912); no boolean or nullable flag sits beside a state field.
+- **Environment.** Every tunable is a registered knob read through the knob registry (rule 8); the ingest path reads no environment variable.
 
 ## Phase 2: Task approach
 

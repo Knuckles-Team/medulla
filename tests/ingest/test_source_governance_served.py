@@ -77,3 +77,49 @@ async def test_receipt_counts_governed_refused_marked() -> None:
         assert len(receipt.raw_admissions) == 3
     finally:
         await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R900.3")
+@pytest.mark.asyncio
+async def test_policy_and_access_exist_with_the_node() -> None:
+    """The governance member is parsed before the node is built, so the node
+    exists with its access properties in the committed batch: a reader sees the
+    node and its policy together or neither."""
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    try:
+        record = _record(
+            connector,
+            "governed",
+            {
+                "classification": "restricted",
+                "access_public": False,
+                "access_markings": ["pii"],
+                "access_read_roles": ["audit"],
+            },
+        )
+        conflict = _record(
+            connector,
+            "conflict",
+            {"classification": "restricted", "access_public": True},
+        )
+        receipt = await _submit(
+            client, _governed(connector, 3, None, [record, conflict]), "gov-node"
+        )
+        assert receipt.committed_graph_version > 0
+        assert receipt.governance.refused == 1
+        nodes = await client.nodes.list_by_label("Document", 0)
+        found = {}
+        for node_id, _ in nodes:
+            props = await client.nodes.properties(node_id)
+            if props:
+                found[props.get("source_record_id")] = props
+        # The governed record is readable with its access properties; the
+        # record whose governance was refused left no node at all.
+        assert "conflict" not in found
+        props = found["governed"]
+        assert props["source_access_public"] is False
+        assert props["source_access_read_roles"] == ["audit"]
+        assert props["source_access_markings"] == ["pii"]
+    finally:
+        await _close(client, graph)
