@@ -14,14 +14,14 @@ use std::process::Command;
 const TABLE: &str = r#"{"version":1,"currency":"USD","minor_unit_exponent":2,"prices":{"cpu_ms":{"unit":"ms","unit_price":500000}}}"#;
 
 fn bin() -> std::path::PathBuf {
-    if let Some(path) = option_env!("CARGO_BIN_EXE_bench-claim") {
+    if let Some(path) = option_env!("CARGO_BIN_EXE_medulla-server") {
         return path.into();
     }
     let exe = std::env::current_exe().unwrap_or_default();
     exe.parent()
         .and_then(Path::parent)
         .unwrap_or_else(|| Path::new("."))
-        .join("bench-claim")
+        .join("medulla-server")
 }
 
 fn good() -> BenchmarkMeasurement {
@@ -60,7 +60,7 @@ fn admit(
     let mpath = dir.join("m.json");
     std::fs::write(&mpath, serde_json::to_string(m).unwrap()).unwrap();
     let mut cmd = Command::new(bin());
-    cmd.arg("admit").arg(&mpath);
+    cmd.arg("bench-claim").arg("admit").arg(&mpath);
     if let Some(t) = table {
         let tpath = dir.join("t.json");
         std::fs::write(&tpath, t).unwrap();

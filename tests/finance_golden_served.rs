@@ -137,7 +137,7 @@ impl Served {
 
     async fn account(&mut self, graph: &str, calendar: Option<&Value>) {
         let mut fields = vec![
-            ("accountId", "\"acct-1\"".to_string()),
+            ("accountId", "\"acct_1\"".to_string()),
             ("baseCurrency", "\"USD\"".to_string()),
             ("accountKind", "\"taxable\"".to_string()),
         ];
@@ -147,7 +147,7 @@ impl Served {
                 .replace('"', "\\\"");
             fields.push(("accountCalendar", format!("\"{json}\"")));
         }
-        self.put(graph, FinanceRecordKind::Account, "acct-1", fields)
+        self.put(graph, FinanceRecordKind::Account, "acct_1", fields)
             .await;
     }
 
@@ -161,7 +161,7 @@ impl Served {
         self.call(
             graph,
             Method::FinanceAccountProject {
-                account: "acct-1".into(),
+                account: "acct_1".into(),
                 as_of: as_of.into(),
                 known_at: known_at.into(),
                 basis_policy: policy.into(),
@@ -193,7 +193,7 @@ fn activity(position: &str, kind: &str, at: &str, quantity: &str) -> Vec<(&'stat
         ),
         (
             "activityAccount",
-            "<http://example.org/markets#acct-1>".to_string(),
+            "<http://example.org/markets#acct_1>".to_string(),
         ),
         ("activityKind", format!("\"{kind}\"")),
         ("activityQuantity", dec(quantity)),
