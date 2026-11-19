@@ -195,7 +195,7 @@ async fn iceberg_and_duckdb_reads_match_native() {
     let lake = Lake::serve(table.clone());
     let origin_allow = medulla_federation::federation_ssrf::HTTP_JSON_FEDERATION_ALLOW_ENV;
     std::env::set_var(origin_allow, &lake.base);
-    let state = test_support::state_with(SECRET, common::current_isolation(), None, None);
+    let state = test_support::durable_state(SECRET, common::current_isolation());
 
     // ── Iceberg: a partition-pruned, projected read equals the native scan ───────────────
     let spec = warehouse(
