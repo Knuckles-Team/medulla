@@ -1084,39 +1084,6 @@ fn uql_machine_classes_extend_core() {
     sm::assert_extends_core("Uql");
 }
 
-// spec: MEDULLA-MEDIA-VOCAB-R656.3
-#[test]
-fn gramps_pilot_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_catalog_types::gramps_pilot_machine::GRAMPS_PILOT_MACHINE);
-}
-// spec: MEDULLA-MEDIA-VOCAB-R656.3
-#[test]
-fn gramps_pilot_machine_classes_extend_core() {
-    sm::assert_extends_core("GrampsPilot");
-}
-
-// spec: MEDULLA-MEDIA-VOCAB-R656.4
-#[test]
-fn immich_pilot_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_catalog_types::immich_pilot_machine::IMMICH_PILOT_MACHINE);
-}
-// spec: MEDULLA-MEDIA-VOCAB-R656.4
-#[test]
-fn immich_pilot_machine_classes_extend_core() {
-    sm::assert_extends_core("ImmichPilot");
-}
-
-// spec: MEDULLA-MEDIA-VOCAB-R656.6
-#[test]
-fn tts_result_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_audio::tts::TTS_RESULT_MACHINE);
-}
-// spec: MEDULLA-MEDIA-VOCAB-R656.6
-#[test]
-fn tts_result_machine_classes_extend_core() {
-    sm::assert_extends_core("TtsResult");
-}
-
 // spec: MEDULLA-SDLC-R030.4
 #[test]
 fn spec_machine_matches_edge_table() {

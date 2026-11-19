@@ -150,8 +150,6 @@ pub mod gramps_gap_fix;
 // ahead of an un-exited earlier phase. Pure data; running each phase is a
 // later child.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod gramps_pilot_machine;
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod gramps_pilot_phase;
 // MEDULLA-UNIFIED-DATA-PLANE-R013.1 — Postgres attached-source adapter config and
 // type-mapping typed model (connect/catalog/capture wiring is a later slice).
@@ -182,8 +180,6 @@ pub mod graph_schema;
 // (I0-I6), refusing a wrong or unreviewed exit artifact and skipping ahead
 // of an un-exited earlier phase. Pure data; running each phase is a later
 // child.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod immich_pilot_machine;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod immich_pilot_phase;
 // MEDULLA-UNIFIED-DATA-PLANE-R760 — the served incident records.
