@@ -53,7 +53,7 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
     }
 }
 
-// spec: MEDULLA-DURABLE-KERNEL-R075
+// spec: MEDULLA-DURABLE-KERNEL-R075, MEDULLA-PLACEMENT-R002.600
 #[test]
 fn non_reserved_task_is_refused_when_only_reserved_capacity_remains() {
     let record = WorkerRecord {

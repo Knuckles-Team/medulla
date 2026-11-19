@@ -19,6 +19,7 @@ fn record() -> serde_json::Value {
     })
 }
 
+// spec: MEDULLA-SDLC-R019.2
 #[test]
 fn delivery_records_round_trip_and_refuse_unknown_values() {
     let delivery = decode_delivery(record()).expect("valid record decodes");

@@ -31,6 +31,7 @@ RUST_OWNER = (
 
 
 @pytest.mark.no_engine
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R739.3")
 def test_uql_proof_step_field_is_clause_not_stage() -> None:
     for body in (
         models.UqlProofStepReasonBody,
