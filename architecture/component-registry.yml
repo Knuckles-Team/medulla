@@ -3935,6 +3935,8 @@ components:
       - "tests/test_bitemporal_client.py"
       - "tests/test_bench_gate.py"
       - "tests/test_bench_helix_compare.py"
+      - "tests/test_engine_bench_gate.py"
+      - "tests/test_external_source_boundary.py"
       - "tests/test_bench_scale_internal.py"
       - "tests/test_bench_scale_smoke.py"
       - "tests/test_blob_cursor_lifecycle.py"
