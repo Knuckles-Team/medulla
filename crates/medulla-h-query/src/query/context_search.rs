@@ -209,9 +209,9 @@ pub(crate) async fn handle_context_search(
         .read_authority
         .and_then(GraphReadAuthority::carrier)
         .map_or(
-            medulla_types::graph_change_feed::authorization_revision("", &[]),
+            medulla_mutation_types::graph_change_feed::authorization_revision("", &[]),
             |carrier| {
-                medulla_types::graph_change_feed::authorization_revision(
+                medulla_mutation_types::graph_change_feed::authorization_revision(
                     carrier.agent_id(),
                     carrier.scopes(),
                 )
