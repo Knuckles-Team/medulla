@@ -770,6 +770,8 @@ knobs! {
     scheduler_process_import_max_elements: u64 = "scheduler.process_import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Scheduler: Largest process document read. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_process_document_max_bytes: u64 = "scheduler.process_document_max_bytes", U64(16_777_216), [65_536, 268_435_456], "bytes", Tunable;
+    /// Scheduler: Most tasks one tenant may hold active in the task queue (MEDULLA-DURABLE-KERNEL-R076.2).
+    scheduler_task_queue_tenant_max_active: u32 = "scheduler.task_queue_tenant_max_active", U64(4), [1, 4_096], "tasks", Tunable;
     /// Scheduler: Largest document text `EnrichDocument` processes (MEDULLA-REPO-INGEST-R652.4).
     scheduler_document_max_bytes: u64 = "scheduler.document_max_bytes", U64(67_108_864), [1_048_576, 1_073_741_824], "bytes", Tunable;
     /// Scheduler: Deepest element nesting of a process document. (MEDULLA-DURABLE-KERNEL-R076.2).

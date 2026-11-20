@@ -143,3 +143,14 @@ pub fn admit_worker_task(input: AdmitWorkerTaskInput<'_>) -> Response {
         Err(error) => Response::err(req_id, error),
     }
 }
+
+/// The wire text of a worker-registry refusal: `CODE: detail`, the form every
+/// typed refusal takes.
+pub(crate) fn refusal_text(refusal: &crate::worker_registry::WorkerRefusal) -> String {
+    match refusal {
+        crate::worker_registry::WorkerRefusal::AccessDenied => {
+            "ACCESS_DENIED: the worker belongs to another principal".to_string()
+        }
+        other => format!("{}: worker registry refused the request", other.code()),
+    }
+}
