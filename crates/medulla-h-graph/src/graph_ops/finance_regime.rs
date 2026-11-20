@@ -95,10 +95,9 @@ fn read_model(core: &GraphCore, scope: &str, model_id: &str) -> Result<PinnedMod
     })
 }
 
-/// A forecast with the model it came from, so the sizing input can reuse it.
+/// A finished forecast, ready for the sizing input to reuse.
 struct Forecasted {
     result: RegimeForecastResult,
-    top_state_probability: Vec<f64>,
 }
 
 fn from_numeric(refusal: RegimeForecastRefusal) -> Refusal {
@@ -204,7 +203,6 @@ fn run_forecast(
         &vectors,
     ));
     Ok(Forecasted {
-        top_state_probability: top.clone(),
         result: RegimeForecastResult {
             forecast_digest,
             revisions,

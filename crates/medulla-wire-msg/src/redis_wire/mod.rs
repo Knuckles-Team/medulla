@@ -410,12 +410,10 @@ enum Resp {
     Bulk(Option<Vec<u8>>),
     Array(Option<Vec<Resp>>),
     Map(Vec<(Resp, Resp)>),
-    Set(Vec<Resp>),
     /// A RESP3 push message (`>`, used for pub/sub delivery + subscribe confirms,
     /// CONCEPT:MEDULLA-KG.txn.pubsub-transactions). Downgrades to a plain array (`*`) on RESP2 — the RESP2
     /// wire has no distinct push type, exactly how real Redis behaves.
     Push(Vec<Resp>),
-    Double(f64),
     #[allow(dead_code)] // RESP3 boolean; the encoder handles it, no server reply builds one yet
     Bool(bool),
     Null,
@@ -455,9 +453,7 @@ impl Resp {
             Resp::Array(Some(items)) => encode_aggregate(b'*', items, proto, out),
             Resp::Array(None) => encode_null_array(proto, out),
             Resp::Map(pairs) => encode_map(pairs, proto, out),
-            Resp::Set(items) => encode_aggregate(b'~', items, proto, out),
             Resp::Push(items) => encode_aggregate(b'>', items, proto, out),
-            Resp::Double(d) => encode_double(*d, proto, out),
             Resp::Bool(b) => encode_bool(*b, proto, out),
         }
     }
@@ -508,16 +504,6 @@ fn encode_aggregate(resp3_prefix: u8, items: &[Resp], proto: u8, out: &mut Vec<u
     }
 }
 
-fn encode_double(d: f64, proto: u8, out: &mut Vec<u8>) {
-    if proto >= 3 {
-        out.push(b',');
-        out.extend_from_slice(fmt_double(d).as_bytes());
-        out.extend_from_slice(b"\r\n");
-    } else {
-        Resp::bulk_str(fmt_double(d)).encode(proto, out);
-    }
-}
-
 fn encode_bool(b: bool, proto: u8, out: &mut Vec<u8>) {
     if proto >= 3 {
         out.extend_from_slice(if b { b"#t\r\n" } else { b"#f\r\n" });
@@ -541,7 +527,7 @@ fn response_cost(resp: &Resp, total: &mut usize, items: &mut usize) -> bool {
     let payload_bytes = match resp {
         Resp::Simple(value) | Resp::Error(value) => value.len(),
         Resp::Bulk(Some(value)) => value.len(),
-        Resp::Array(Some(values)) | Resp::Set(values) | Resp::Push(values) => {
+        Resp::Array(Some(values)) | Resp::Push(values) => {
             return values
                 .iter()
                 .all(|value| response_cost(value, total, items));
@@ -554,7 +540,6 @@ fn response_cost(resp: &Resp, total: &mut usize, items: &mut usize) -> bool {
         Resp::Int(_)
         | Resp::Bulk(None)
         | Resp::Array(None)
-        | Resp::Double(_)
         | Resp::Bool(_)
         | Resp::Null => 0,
     };
@@ -571,16 +556,6 @@ fn responses_within_budget(responses: &[Resp]) -> bool {
     responses
         .iter()
         .all(|response| response_cost(response, &mut total, &mut items))
-}
-
-/// Format an `f64` the Redis way (bare integer when whole, else the shortest
-/// round-trippable decimal).
-fn fmt_double(d: f64) -> String {
-    if d.fract() == 0.0 && d.abs() < 1e15 {
-        format!("{}", d as i64)
-    } else {
-        format!("{d}")
-    }
 }
 
 /// Try to parse ONE complete command from `buf`. Supports the RESP array-of-bulk
@@ -1829,13 +1804,7 @@ mod tests {
         let map = Resp::Map(vec![(Resp::bulk_str("f"), Resp::bulk_str("v"))]);
         assert_eq!(enc(&map, 3), b"%1\r\n$1\r\nf\r\n$1\r\nv\r\n");
         assert_eq!(enc(&map, 2), b"*2\r\n$1\r\nf\r\n$1\r\nv\r\n");
-        // Set: '~' on RESP3, '*' on RESP2.
-        let set = Resp::Set(vec![Resp::bulk_str("m")]);
-        assert_eq!(enc(&set, 3), b"~1\r\n$1\r\nm\r\n");
-        assert_eq!(enc(&set, 2), b"*1\r\n$1\r\nm\r\n");
-        // Double + Bool + Null native on RESP3, downgraded on RESP2.
-        assert_eq!(enc(&Resp::Double(1.5), 3), b",1.5\r\n");
-        assert_eq!(enc(&Resp::Double(1.5), 2), b"$3\r\n1.5\r\n");
+        // Bool + Null native on RESP3, downgraded on RESP2.
         assert_eq!(enc(&Resp::Bool(true), 3), b"#t\r\n");
         assert_eq!(enc(&Resp::Bool(true), 2), b":1\r\n");
         assert_eq!(enc(&Resp::Null, 3), b"_\r\n");

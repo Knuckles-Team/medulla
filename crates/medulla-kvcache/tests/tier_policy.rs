@@ -220,6 +220,16 @@ mod tiering_replay;
 
 // spec: MEDULLA-DURABLE-KERNEL-R042.3
 #[test]
+fn long_context_check_covers_ten_million_tokens() {
+    let blocks = tiering_replay::blocks_for_tokens(tiering_replay::LONG_CONTEXT_TOKENS);
+    assert!(
+        blocks as u64 * tiering_replay::TOKENS_PER_BLOCK >= tiering_replay::LONG_CONTEXT_TOKENS,
+        "{blocks} blocks must cover the long-context token count"
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R042.3
+#[test]
 fn tiering_receipt_has_per_tier_hit_rate() {
     let trace = tiering_replay::Trace {
         blocks: 40,

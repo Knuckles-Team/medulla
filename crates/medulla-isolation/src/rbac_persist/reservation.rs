@@ -30,9 +30,6 @@ pub const RBAC_REVISION_STALE: &str = "RBAC_REVISION_STALE";
 /// A release named a transaction that holds no reservation.
 pub const RBAC_RESERVATION_UNKNOWN: &str = "RBAC_RESERVATION_UNKNOWN";
 
-/// Every refusal code this module emits (registered in the `commit` family).
-pub const REFUSALS: &[&str] = &[RBAC_RESERVED, RBAC_REVISION_STALE, RBAC_RESERVATION_UNKNOWN];
-
 /// One reservation of the authorization image.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReservationRecord {

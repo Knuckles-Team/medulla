@@ -54,16 +54,14 @@ impl RenderRefusal {
 
 impl std::fmt::Display for RenderRefusal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = self.code().as_str();
         match self {
-            Self::BodyMissing { component_id } => write!(
-                f,
-                "{}: the graph holds no body for skill {component_id}",
-                ServerErrorCode::RenderBodyMissing.as_str()
-            ),
+            Self::BodyMissing { component_id } => {
+                write!(f, "{code}: the graph holds no body for skill {component_id}")
+            }
             Self::DanglingOntologyRef { component_id, term } => write!(
                 f,
-                "{}: skill {component_id} references undefined term {term}",
-                ServerErrorCode::RenderDanglingOntologyRef.as_str()
+                "{code}: skill {component_id} references undefined term {term}"
             ),
         }
     }

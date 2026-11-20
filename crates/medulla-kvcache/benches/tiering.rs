@@ -17,7 +17,7 @@ fn main() {
         blocks: 128,
         block_bytes: 2 * 1024 * 1024,
         lookups: 2_000,
-        long_context_blocks: (replay::LONG_CONTEXT_TOKENS / replay::TOKENS_PER_BLOCK + 1) as usize,
+        long_context_blocks: replay::blocks_for_tokens(replay::LONG_CONTEXT_TOKENS),
         long_context_block_bytes: 4 * 1024,
     };
     let receipt = replay::replay(&trace);

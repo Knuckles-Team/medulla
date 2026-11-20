@@ -50,7 +50,7 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::startup::Authentication;
 use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
 
-use medulla_identity_types::identity::{sha256_verifier, WireLoginKind, WireLoginRecord};
+use medulla_identity_types::identity::WireLoginKind;
 use medulla_wire_core::sql_wire_auth::{
     resolve_wire_login, InvalidLogin, WireLoginSource, WireProof, INVALID_LOGIN_SQLSTATE,
 };
@@ -330,6 +330,7 @@ impl StartupHandler for EngineStartupHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_identity_types::identity::{sha256_verifier, WireLoginRecord};
     use medulla_wire_core::sql_wire_auth::{CachedWireLogins, WireLoginRegistry};
 
     fn record(kind: WireLoginKind, verifier: &str) -> WireLoginRecord {

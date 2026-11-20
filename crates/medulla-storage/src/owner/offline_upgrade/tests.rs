@@ -168,7 +168,7 @@ fn every_registered_upgrade_runs_once_and_reaches_the_current_layout() {
 #[test]
 fn graph_shard_upgrade_creates_empty_decision_certificate_table() {
     use crate::owner::graph_shard::{NODES, XSHARD_DECISION, XSHARD_DECISION_CERTIFICATE};
-    use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata};
+    use redb::{ReadableDatabase, ReadableTableMetadata};
 
     let predecessor = &GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES;
     let upgrade = registered_offline_upgrade(predecessor).expect("a registered upgrade");

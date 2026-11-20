@@ -38,13 +38,6 @@ pub const RBAC_UPGRADE_SOURCE_CHANGED: &str = "RBAC_UPGRADE_SOURCE_CHANGED";
 /// A revoke named a grant that does not exist.
 pub const RBAC_GRANT_UNKNOWN: &str = "RBAC_GRANT_UNKNOWN";
 
-/// Every refusal code this module emits (registered in the `commit` family).
-pub const REFUSALS: &[&str] = &[
-    RBAC_LAYOUT_OUTDATED,
-    RBAC_UPGRADE_SOURCE_CHANGED,
-    RBAC_GRANT_UNKNOWN,
-];
-
 /// One durable permission to use a profile.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProfileUseGrant {

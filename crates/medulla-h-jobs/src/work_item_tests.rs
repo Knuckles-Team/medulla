@@ -139,10 +139,6 @@ fn receipt(
     }
 }
 
-fn extension(fence: u64, trace_run: &str) -> TerminalOutcomeExtension {
-    extension_with(fence, trace_run, &[])
-}
-
 /// A recursive trace node receipt carrying `record` under `recursive_trace`.
 fn recursive_receipt(bundle: &CommitOutcomeBundle, record: &serde_json::Value) -> ReceiptNode {
     let id = record["node_id"].as_str().unwrap();

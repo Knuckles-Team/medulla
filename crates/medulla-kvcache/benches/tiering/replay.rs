@@ -17,6 +17,12 @@ pub const LONG_CONTEXT_TOKENS: u64 = 10_000_000;
 /// Tokens one block of the long-context check covers.
 pub const TOKENS_PER_BLOCK: u64 = 16_384;
 
+/// Blocks needed to cover `tokens` tokens, rounded up by one block so a partial
+/// trailing block is still replayed.
+pub fn blocks_for_tokens(tokens: u64) -> usize {
+    (tokens / TOKENS_PER_BLOCK + 1) as usize
+}
+
 /// Replay parameters.
 pub struct Trace {
     pub blocks: usize,
