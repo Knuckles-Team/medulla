@@ -5459,6 +5459,7 @@ dependencies = [
  "medulla-h-graph",
  "medulla-h-ingest",
  "medulla-h-jobs",
+ "medulla-h-query",
  "medulla-identity-types",
  "medulla-index-types",
  "medulla-isolation",
