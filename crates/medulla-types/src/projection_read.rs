@@ -29,7 +29,6 @@ pub fn projection_mapping_prefix(tenant: &str, mapping_id: &str) -> String {
 
 /// The type of one projected column.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ProjectionColumnType {
@@ -89,7 +88,6 @@ pub struct ProjectionMapping {
 
 /// A comparison operator of a typed predicate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ProjectionCompare {
