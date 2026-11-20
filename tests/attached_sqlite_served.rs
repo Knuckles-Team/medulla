@@ -63,6 +63,7 @@ fn rowids(envelopes: &[medulla_durable::change_envelope::ChangeEnvelope]) -> Vec
         .collect()
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2
 #[test]
 fn watermark_poll_emits_each_change_once() {
     let dir = tempfile::tempdir().unwrap();
