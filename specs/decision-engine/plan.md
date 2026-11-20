@@ -135,6 +135,7 @@ and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revi
 `Decide` with `QuestionKind::ThoughtSearch` runs `family/thought_search.rs`, which calls `stat_thought_search::conclude`: parse the typed `thought_search` and `task_class` params, read the strategy from `DecisionPolicy.reasoning`, validate the frontier, read the knobs through `ThoughtSearchKnobs::from_policy`, apply request lowerings, then run `choose_expansion`. The answer is sealed as `FamilyAnswer::ThoughtSearch` with `thought:*` and `knob:*` premises. Nothing is written.
 
 - R140.100 to R140.103: the four pure trajectory decisions (`trajectory_budget`, `trajectory_projection`, `branch_breadth`, `pairwise`) and their `trajectory.*`, `breadth.*` and `pairwise.*` knob table sit in `medulla-decision-types`; their refusal tables join `codes::FAMILY_TABLES` under `TaskPlan`. The projection shuffle is ChaCha8 (`rand_chacha`). The served wiring and the `trajectory_decisions_journey` root slice test land with R140.104 and R140.105.
+- R140.104: `stat_trajectory.rs` serves the four decisions from the `trajectory` parameter of a `task_plan` Decide (policy knobs, engine clock, `LogReader` outcome records) and `decide_blocking` binds the answer into `TaskPlan.trajectory`.
 
 ### R614.3 SemanticEnrich route
 
@@ -182,6 +183,16 @@ Pre-untangled design, one line per answer.
 Decisions. Answers are never reused across runs: the answer cache of MEDULLA-DURABLE-KERNEL-R800 already serves a result only while its dependency generations, volatility window and foreign watermarks are current (MEDULLA-FEDERATED-QUERY-R017, R018). The program is the unit of reuse, and the harness runs its steps on live data. A parameter binds only from the request text through a declared phrasing, or from a fixed value that every phrasing leaves out. A program with parameters and no phrasings never binds, so a stale literal is never replayed. Order: R135.16.1, .2, .3, .4, .5, .6, then R135.17.1, .2, .3.
 
 **Rerank calibration (R822).** `DecisionLog` `learn` `FitCalibration` fits an isotonic curve per scorer version from judged outcomes, refuses a fit below `retrieval.calibration_min_pairs`, and stores the curve by digest. `MovePointer` on `RerankCalibration` makes it the champion; `champion_calibration` is the one read used by `MEDULLA-FEDERATED-QUERY-R652.3`.
+
+### Safety bound stage (R001.100.1, R001.100.2)
+
+`stat_decide::decide_blocking` calls `safety_stage::apply` after the family concludes and before `seal`. The stage reads the pinned policy's `safety_bounds` (empty is a no-op and keeps the policy digest), the typed param `safety.measurements` (`TypedValue::SafetyMeasurements`, absent reads as no measurements) and `knob safety.max_measurement_age`, and runs `evaluate_bounds` at the engine clock of the decision (`ctx.now_ms`, which is the record's `created_at_ms`). Decisions the row leaves open, decided from its intent:
+
+- A withheld verdict replaces the whole concluded answer with the abstention: the family answer, route, calibration and explanation go with the outcome they described, so a withheld record carries no answer. The matrix and seed stay, so the record keeps its shape.
+- The abstention is `AbstainReason::Family` for the question's own kind with the violated bound's code from the `safety` table (`SAFETY_BOUND_EXCEEDED`, `SAFETY_MEASUREMENT_MISSING`, `SAFETY_MEASUREMENT_STALE`, `SAFETY_UNIT_MISMATCH`), registered in `codes::module_tables`.
+- Every bound leaves one premise `safety_bound:<bound_id>` (class `Claim`, provenance `Request { field: "safety.measurements" }`), whatever the verdict. Its fact reads `outcome=<label>;limit_q32=<n>;measured_q32=<n or none>`.
+- A `safety.measurements` param of another type is refused `PARAMETER_INVALID`.
+- Replay applies the same stage to the re-run outcome at the record's `created_at_ms`, so a withheld record replays to the same abstention.
 
 ## Phase 2: Task approach
 
@@ -234,88 +245,3 @@ Order: R829.1, R829.2, R829.3.
 - Connector path outcomes: `MEDULLA-DECISION-ENGINE-R159.3` provides, `SCION-CONNECTOR-CONTROL-R904` consumes. Contract: [connector-control-feedback.md](contracts/connector-control-feedback.md).
 - Program reuse in the run loop: `MEDULLA-DECISION-ENGINE-R135.16` and `MEDULLA-DECISION-ENGINE-R135.17` provide, `MERISTEM-HARNESS-CYCLE-R022` (children `.4` to `.8`) consumes. Contract: [harness-program-reuse.md](contracts/harness-program-reuse.md).
 - Governed write-back proposals: `MEDULLA-DECISION-ENGINE-R615` provides, `SCION-GOVERNED-WRITEBACK-R006` consumes. Contract: [governed-writeback-proposals.md](contracts/governed-writeback-proposals.md).
-
-## Loops and enrichment behaviour (R653.2-R653.8, R614.2)
-
-- Loop kernels are pure functions in `crates/medulla-statechart/src/loops.rs`; the handler
-  `crates/medulla-h-decide/src/decide/loops.rs` is the single writer and holds each loop as a loop-chart
-  instance plus a `loop_record` instance. Decisions: `research.md`, "Improvement loops".
-- Enrichment behaviours are pure functions in `crates/medulla-enrich/src/semantic.rs`.
-
-## Topology admission (R046.750, R046.751)
-
-`assemble::topology::admit::admit_topology(plan, depth, caps)` runs in `conclude::solved` on the sealed plan, adds
-`topology_cap:<name>=<value>` and `plan_digest:<digest>` premises, and abstains with the refusal code on a breach.
-Caps = topology policy caps, tightened by the pinned cap knobs, tightened by the request. Bench group
-`decide/topology_admit` with a `group_budgets` entry (p50 0.2 ms, p99 0.8 ms).
-
-## Run credit (R100.102)
-
-`stat_learning::dispatch` routes `LearningWrite::RunOutcome` to `stat_run_credit::record_run`, which reads the
-referenced decisions' stored retrieval outcomes, runs the pure kernel `medulla_decision_stats::decision::run_credit::credit_steps`
-and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revision
-(`run_credit/baseline/<sha256 of capability>/<inverted revision>`) in one batch. Knobs `run_credit.max_steps` and
-`run_credit.baseline_weight` come from the default decision policy.
-- R036.106: `ProfileGrantMachine` and the `rbac_profile_use_grant` owner table; the predecessor layout is upgraded only through the offline upgrade registry; the commit admission lists the caller's active grants as `profile_grant:<id>` premises (research.md).
-- R036.105.1 and R036.105.2: the coordinator-decision certificate lives in its own `xshard_decision_certificate` owner table with a graph-shard lineage predecessor and an offline-upgrade registry row, never under a reserved key of `XSHARD_PREPARE` or `XSHARD_DECISION`; `DecisionCommit` writes the pending marker and the terminal decision with the sealed certificate through `commit_cross_shard_recoverable`; the deadline is the knob `xshard.decision_deadline_ms` (research.md).
-- R036.105.2 handler order: `Coordinator::begin` (pending marker plus certificate request) runs before the owners reserve; the stale-catalog vote precedes the decision; the record is written only after a durable COMMIT; both owners resolve from `Coordinator::recover`. No backend refuses `DECISION_COORDINATOR_UNAVAILABLE` (research.md).
-- R113.2.5 and R113.3.1.1: the shared-owner commit path (record and evidence in one Agent Library transaction, lease as the graph participant, decided by the R036.105.2 coordinator decision) and the durable `decision_retry_allowance` table are the producers of R113.2.2 to R113.2.4 and R113.3.2.
-- R113.2.5 and R113.3.1.1: the shared-owner commit path (record and evidence in one Agent Library transaction, lease as the graph participant, decided by the R036.105.2 coordinator decision) and the durable `decision_retry_allowance` table are the producers of R113.2.2 to R113.2.4 and R113.3.2. The denial's allowance is a participant of the same coordinator transaction: staged on the Agent Library reservation, applied by the ABORT's resolution (DE-R113.3.2-ALLOWANCE-ATOMIC).
-
-## Thought search (R750.750 to R750.754)
-
-`Decide` with `QuestionKind::ThoughtSearch` runs `family/thought_search.rs`, which calls `stat_thought_search::conclude`: parse the typed `thought_search` and `task_class` params, read the strategy from `DecisionPolicy.reasoning`, validate the frontier, read the knobs through `ThoughtSearchKnobs::from_policy`, apply request lowerings, then run `choose_expansion`. The answer is sealed as `FamilyAnswer::ThoughtSearch` with `thought:*` and `knob:*` premises. Nothing is written.
-
-- R140.100 to R140.103: the four pure trajectory decisions (`trajectory_budget`, `trajectory_projection`, `branch_breadth`, `pairwise`) and their `trajectory.*`, `breadth.*` and `pairwise.*` knob table sit in `medulla-decision-types`; their refusal tables join `codes::FAMILY_TABLES` under `TaskPlan`. The projection shuffle is ChaCha8 (`rand_chacha`). The served wiring and the `trajectory_decisions_journey` root slice test land with R140.104 and R140.105.
-
-### R614.3 SemanticEnrich route
-
-`Method::SemanticEnrich` (method_11) is served by `graph_pipeline/semantic_enrichment.rs`: schedule gate, then the pure behaviours of `medulla-enrich`, then the digest-keyed write-set of `medulla-h-ingest::semantic_enrichment` committed through the ChangeEnvelope authority. Refusals map the typed `EnrichError` codes (registered in `ServerErrorCode` and the method's error routing) and write nothing.
-
-Scoped adapter wiring (R174.7.3, R174.7.4): `stat_adapter.rs` fits graph-scope retrieval-outcome adapters on the original split and every other scope through `fit_scoped`; `ensure_room` enforces `adapter.max_per_tenant` before an activation; `monitor` is the only automatic rollback path.
-
-Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualified_index` checks the receipt for a cycle's `index_adapter`, `stat_learning::prepare` decodes the kernel and gives the cycle a `NoEndpoint` embedder and a CPU lease, and `stat_generation_cycle::materialize_batch` applies the kernel to stored vectors batch by batch under the same checkpoint and state machine as a re-embed.
-Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
-
-Research frontier (R705.2): `expand_frontier` in `medulla-decision-stats` is a binary-heap walk over caller-supplied source nodes (Q32 expected value, id tie-break); the family `research_voi` (R705.3) supplies the nodes from the graph and reads `research.*` knobs through the registry.
-
-Feature matching (R707.2): `crates/medulla-decision-stats/src/decision/feature_match.rs` holds `canonical_id`, `entropy_mbit`, `score_pair`, `dedup` and `advance_ledger`, all pure; the family `feature_match` (R707.3) supplies embedding cosines and the `match.*` knobs, and the ledger handler calls `advance_ledger` with the revision the caller read.
-## Capability designation index (R172.2 to R172.6)
-
-The resident index is `crates/medulla-decision-memory/src/memory/capability_index/`: `postings.rs` (sorted posting lists), `arena.rs` (SQ8 codes, f32 vectors, `HnswIndex` for large pools), `shard.rs` (snapshots, upsert, tombstone, compaction, embedding pin, re-index swap) and `capability_index.rs` (tenant shards plus the commons shard, `read`). The blend is `crates/medulla-decision-rank/src/rank/capability_rank.rs`. Eligibility, reward update and the `designation.*` knobs are in `crates/medulla-decision-types/src/decision/capability_designation.rs`. The `Decide` family wiring, reward persistence and the decision-log op build on these.
-
-Scoped adapter wiring (R174.7.3, R174.7.4): `stat_adapter.rs` fits graph-scope retrieval-outcome adapters on the original split and every other scope through `fit_scoped`; `ensure_room` enforces `adapter.max_per_tenant` before an activation; `monitor` is the only automatic rollback path.
-- R172.5.1: the `capability_reward` table (storage registry, lineage predecessor `AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD`, offline upgrade row) and `AgentLibraryStore::put_capability_reward` / `capability_reward` / `capability_rewards` in `agent_library/reward.rs`.
-- R172.7 / R172.8: `family/capability_designation.rs` concludes from the resident index through `stat_designation.rs` (`DesignationRuntime`, `shared_capability_index`, `with_runtime`), `stat_decide::serve` reads the runtime, `seal` carries `FamilyAnswer::CapabilityDesignation` and its premises; tests in `stat_tests/capability_designation_tests.rs`.
-
-### DE-R172.12.6: commons generation space (current state)
-`DecisionLog.generation_space { logical, model? }` (class Read) returns `GenerationSpaceRead { logical, active?, model_space_digest? }`. Resolution lives in `crates/medulla-h-decide/src/decide/stat_generation_space.rs`; the cycle declares the shadow space through `GraphVectors::ensure_space`. The L4 journey (`tests/decide/test_capability_designation_pack_served.py`) establishes the commons generation through the served cycle, reads the space digest through `generation_space`, imports a pack and asks the designation question with a vector in that space.
-
-Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
-Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualified_index` checks the receipt for a cycle's `index_adapter`, `stat_learning::prepare` decodes the kernel and gives the cycle a `NoEndpoint` embedder and a CPU lease, and `stat_generation_cycle::materialize_batch` applies the kernel to stored vectors batch by batch under the same checkpoint and state machine as a re-embed.
-### DE-R172.12.6: commons generation space (current state)
-`DecisionLog.generation_space { logical, model? }` (class Read) returns `GenerationSpaceRead { logical, active?, model_space_digest? }`. Resolution lives in `crates/medulla-h-decide/src/decide/stat_generation_space.rs`; the cycle declares the shadow space through `GraphVectors::ensure_space`. The L4 journey (`tests/decide/test_capability_designation_pack_served.py`) establishes the commons generation through the served cycle, reads the space digest through `generation_space`, imports a pack and asks the designation question with a vector in that space.
-
-Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
-## Thought search (R750.750 to R750.754)
-
-`Decide` with `QuestionKind::ThoughtSearch` runs `family/thought_search.rs`, which calls `stat_thought_search::conclude`: parse the typed `thought_search` and `task_class` params, read the strategy from `DecisionPolicy.reasoning`, validate the frontier, read the knobs through `ThoughtSearchKnobs::from_policy`, apply request lowerings, then run `choose_expansion`. The answer is sealed as `FamilyAnswer::ThoughtSearch` with `thought:*` and `knob:*` premises. Nothing is written.
-
-- R140.100 to R140.103: the four pure trajectory decisions (`trajectory_budget`, `trajectory_projection`, `branch_breadth`, `pairwise`) and their `trajectory.*`, `breadth.*` and `pairwise.*` knob table sit in `medulla-decision-types`; their refusal tables join `codes::FAMILY_TABLES` under `TaskPlan`. The projection shuffle is ChaCha8 (`rand_chacha`). The served wiring and the `trajectory_decisions_journey` root slice test land with R140.104 and R140.105.
-### DE-R174.10: bootstrap edge (current state)
-`stat_generation_cycle::run_cycle` takes `GenerationCycleEvent::Bootstrapped` when `before.target()` is empty and the active graph declares no space; `stat_generation::store_bootstrap` stores the receipt and `bootstrap_qualified` qualifies the pointer move from it. Ontology: edge `G05` and event `Bootstrapped` in `state-machines-v1.ttl`.
-## Pure-kernel families (R751.751 to R753.755)
-
-Pure kernels in `medulla-decision-stats` (`reward.rs`, `population.rs`, `trajectory_join.rs`, `step_verify.rs`) take the wire types of `medulla-decision-types` and the pinned knobs, and return typed answers. Six families in `medulla-h-decide/src/decide/family/` (`reward_decomposition`, `population_drift`, `fanout_width`, `trajectory_join`, `step_verification`, `adversarial_admission`) share the shape checks of `family/kernel.rs`, decode their one typed body, call the kernel and return `Executed::from_family` with a `FamilyAnswer` and claim premises; `stat_decide.rs` seals the answer, the premises and the evidence class. The served proofs are `reward_decomposition_tests.rs`, `population_tests.rs`, `trajectory_join_tests.rs` and `step_verification_tests.rs`, sharing `kernel_family_support.rs`.
-**Rerank calibration (R822).** `DecisionLog` `learn` `FitCalibration` fits an isotonic curve per scorer version from judged outcomes, refuses a fit below `retrieval.calibration_min_pairs`, and stores the curve by digest. `MovePointer` on `RerankCalibration` makes it the champion; `champion_calibration` is the one read used by `MEDULLA-FEDERATED-QUERY-R652.3`.
-- R140.104: `stat_trajectory.rs` serves the four decisions from the `trajectory` parameter of a `task_plan` Decide (policy knobs, engine clock, `LogReader` outcome records) and `decide_blocking` binds the answer into `TaskPlan.trajectory`.
-
-## Safety bound stage (R001.100.1, R001.100.2)
-
-`stat_decide::decide_blocking` calls `safety_stage::apply` after the family concludes and before `seal`. The stage reads the pinned policy's `safety_bounds` (empty is a no-op and keeps the policy digest), the typed param `safety.measurements` (`TypedValue::SafetyMeasurements`, absent reads as no measurements) and `knob safety.max_measurement_age`, and runs `evaluate_bounds` at the engine clock of the decision (`ctx.now_ms`, which is the record's `created_at_ms`). Decisions the row leaves open, decided from its intent:
-
-- A withheld verdict replaces the whole concluded answer with the abstention: the family answer, route, calibration and explanation go with the outcome they described, so a withheld record carries no answer. The matrix and seed stay, so the record keeps its shape.
-- The abstention is `AbstainReason::Family` for the question's own kind with the violated bound's code from the `safety` table (`SAFETY_BOUND_EXCEEDED`, `SAFETY_MEASUREMENT_MISSING`, `SAFETY_MEASUREMENT_STALE`, `SAFETY_UNIT_MISMATCH`), registered in `codes::module_tables`.
-- Every bound leaves one premise `safety_bound:<bound_id>` (class `Claim`, provenance `Request { field: "safety.measurements" }`), whatever the verdict. Its fact reads `outcome=<label>;limit_q32=<n>;measured_q32=<n or none>`.
-- A `safety.measurements` param of another type is refused `PARAMETER_INVALID`.
-- Replay applies the same stage to the re-run outcome at the record's `created_at_ms`, so a withheld record replays to the same abstention.
