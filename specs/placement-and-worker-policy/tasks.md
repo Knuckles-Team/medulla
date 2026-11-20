@@ -26,7 +26,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T020 [US2] MEDULLA-PLACEMENT-R002.4 Consumer: admission returns a grant.
 - [ ] T021 [US2] MEDULLA-PLACEMENT-R002.5 Routing is engine-side only.
 - [ ] T022 [US2] MEDULLA-PLACEMENT-R002.14 Analytics pool size is a SchedulerConfig field.
-- [ ] T023 [US2] MEDULLA-PLACEMENT-R002.600 Integration proof: reserved-worker admission.
+- [x] T023 [US2] MEDULLA-PLACEMENT-R002.600 Integration proof: reserved-worker admission.
 - [ ] T024 [US3] MEDULLA-PLACEMENT-R003 Analytics payload bound is decided and defended (rollup).
 - [x] T025 [P] [US3] MEDULLA-PLACEMENT-R003.1 Name the constant.
 - [x] T026 [P] [US3] MEDULLA-PLACEMENT-R003.2 Separate refusal for cardinality.
@@ -68,7 +68,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T088 [US4] MEDULLA-PLACEMENT-R751.761 Leader lease record with an explicit state machine
 - [x] T089 [US4] MEDULLA-PLACEMENT-R751.762 Task-kind to job-spec table
 - [ ] T090 [US4] MEDULLA-PLACEMENT-R751.763 Served test harness can start two engines sharing one durable store
-- [ ] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.
+- [x] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.
 - [x] T063 [US4] MEDULLA-PLACEMENT-R751.754 Owned schedule record.
 - [x] T064 [US4] MEDULLA-PLACEMENT-R751.755 Per-schedule budget.
 - [x] T065 [US4] MEDULLA-PLACEMENT-R751.756 Pause and resume.
