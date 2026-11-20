@@ -635,3 +635,5 @@ none
 MEDULLA-TYPED-PACKS-R107.4: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
 
 The row keeps its acceptance requirements. This declaration records the evidence correction without changing test behavior or rewriting earlier commits.
+
+MEDULLA-TYPED-PACKS-R002.9: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
