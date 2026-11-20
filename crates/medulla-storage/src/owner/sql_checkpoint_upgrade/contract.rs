@@ -9,9 +9,9 @@ use super::super::lineage::{
 use crate::physical::incarnation::STORAGE_KERNEL_SCHEMA_VERSION;
 use crate::physical::manifest::{OwnerManifest, TableContract, TableOwnership};
 
-/// Frozen digests of the three real SQL predecessor layouts. They were recorded
-/// before source checkpoints, before durable ANN/edge registrations and before
-/// named sequences.
+/// Frozen digests of the four real SQL predecessor layouts. They were recorded
+/// before source checkpoints, before durable ANN/edge registrations, before
+/// named sequences and before the trigger reaction ledger.
 pub(super) const PRE_SOURCE_CHECKPOINTS: [u8; 32] = [
     0xb6, 0xb3, 0xee, 0x31, 0xc3, 0x24, 0x7b, 0xc8, 0x36, 0xd5, 0xfa, 0x39, 0x99, 0x45, 0x61, 0xcf,
     0x7e, 0xb1, 0xa5, 0x10, 0xeb, 0xeb, 0xe1, 0xa1, 0x45, 0xbe, 0x72, 0x3c, 0x6d, 0x2f, 0xc0, 0x16,
@@ -26,9 +26,12 @@ pub(super) const PRE_NAMED_SEQUENCES: [u8; 32] = [
     0x8f, 0x92, 0x18, 0x9f, 0x09, 0xd5, 0x23, 0xee, 0x7f, 0x8e, 0x08, 0x86, 0x07, 0x92, 0x43, 0x98,
 ];
 
-/// LAYOUT-REGEN needed: the gate fixer replaces this with the printed digest of
-/// the layout before the trigger reaction ledger.
-pub(super) const PRE_TRIGGER_REACTIONS: [u8; 32] = [0; 32];
+/// The layout before the trigger reaction ledger: named sequences present,
+/// `__sql_trigger_reactions__` absent (MEDULLA-ENGINE-PARITY-R012.2).
+pub(super) const PRE_TRIGGER_REACTIONS: [u8; 32] = [
+    0x3e, 0xcf, 0xfb, 0x1d, 0x99, 0xb5, 0x9b, 0x64, 0x90, 0x83, 0x0c, 0x66, 0xe7, 0xd0, 0x1d, 0x9a,
+    0xe4, 0xdf, 0x7c, 0x9e, 0x6a, 0xbf, 0xec, 0x82, 0xf2, 0xca, 0x98, 0x91, 0x7f, 0x13, 0xf7, 0xa0,
+];
 
 pub(super) fn contracts_for(manifest: &OwnerManifest) -> Result<Vec<TableContract>, String> {
     let current = expected_table_contracts(OwnerLayout::Sql);
