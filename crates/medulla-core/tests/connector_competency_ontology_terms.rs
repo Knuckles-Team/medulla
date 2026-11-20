@@ -1789,6 +1789,21 @@ mod ontology_audit_finance_v1 {
         parse_turtle(&ontology).expect("the registered finance ontology parses")
     }
 
+    // spec: MEDULLA-CQ-CONN-R075.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:finance-shapes@1", "finance-shapes");
+        let triples = parse_turtle(&shapes).expect("the registered finance shapes parse");
+        let shape = format!("{KG}FinancialInstrumentShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
+        assert!(has_iri(
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}FinancialInstrument")
+        ));
+    }
+
     // spec: MEDULLA-CQ-CONN-R075.3
     #[test]
     fn Budget_declared() {

@@ -103,7 +103,7 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T097 [US4] MEDULLA-CQ-CONN-R074.4 counterparty
 - [ ] T098 [US4] MEDULLA-CQ-CONN-R074.5 agreementExpiresAt
 - [ ] T099 [US4] MEDULLA-CQ-CONN-R074.6 hasRenewalAction
-- [ ] T100 [US4] MEDULLA-CQ-CONN-R075.1 Shapes companion for finance-v1 is already registered; bind its test
+- [x] T100 [US4] MEDULLA-CQ-CONN-R075.1 Shapes companion for finance-v1 is already registered; bind its test
 - [ ] T101 [US4] MEDULLA-CQ-CONN-R075.2 orderQty
 - [ ] T102 [US4] MEDULLA-CQ-CONN-R075.3 Budget
 - [ ] T103 [US4] MEDULLA-CQ-CONN-R075.4 budgetLimit
