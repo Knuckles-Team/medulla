@@ -456,8 +456,10 @@ where
             let value = V::from_bytes(&bytes);
             self.hits += 1;
             self.promotions += 1;
-            self.insert_hot(key.clone(), value, w.score + 1.0, clk);
-            return Ok(self.hot.get(key).map(|e| e.value.clone()));
+            // Answer with the decoded value: the promotion's own HOT enforcement may
+            // demote this block again when residents outscore it, and that is still a hit.
+            self.insert_hot(key.clone(), value.clone(), w.score + 1.0, clk);
+            return Ok(Some(value));
         }
         // COLD hit → read blob + decompress + promote to HOT.
         if let Some(m) = self.cold_meta.remove(key) {
@@ -475,8 +477,9 @@ where
                 let value = V::from_bytes(&bytes);
                 self.hits += 1;
                 self.promotions += 1;
-                self.insert_hot(key.clone(), value, m.score + 1.0, clk);
-                return Ok(self.hot.get(key).map(|e| e.value.clone()));
+                // As for WARM: the decoded value answers even if enforcement re-demotes it.
+                self.insert_hot(key.clone(), value.clone(), m.score + 1.0, clk);
+                return Ok(Some(value));
             }
         }
         self.misses += 1;

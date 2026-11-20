@@ -13,7 +13,7 @@ use arc_swap::ArcSwap;
 use medulla_decision_types::decision::capability_designation::{CapabilityRecord, Q32_ONE};
 use medulla_types::contract::OpaqueId;
 
-use super::arena::Arena;
+use super::arena::{normalized, Arena};
 use super::postings::Postings;
 
 /// Why the index refused a change or a question. Each variant maps to one
@@ -260,34 +260,45 @@ impl ShardSnapshot {
                         ),
                     });
                 }
-                self.pin_for(&record)?;
-                let replacing = self.by_entity.get(&record.entity_id).copied();
-                if replacing.is_none() && self.live.len() >= limits.max_records {
-                    return Err(IndexRefusal::CapacityExceeded {
-                        limit: limits.max_records,
-                    });
-                }
-                if let Some(slot) = replacing {
-                    self.drop_slot(slot);
-                }
-                if self.live.is_empty() && self.arena_dim() != usize::from(record.dim) {
-                    self.reset_for_dim(usize::from(record.dim));
-                }
-                if self.pin.is_none() {
-                    self.pin = Some(EmbeddingPin {
-                        embedding_version: record.embedding_version.clone(),
-                        dim: record.dim,
-                    });
-                }
-                let slot = self.arena.push(&vector);
-                self.postings
-                    .add(slot, &record.capabilities, &record.policy_tags);
-                self.by_entity.insert(record.entity_id.clone(), slot);
-                self.live.push(slot);
-                self.records.push(Some(record));
-                Ok(())
+                self.place(record, normalized(&vector), limits)
             }
         }
+    }
+
+    /// Admit a validated `record` with its unit vector into the next slot,
+    /// replacing the record of the same entity.
+    fn place(
+        &mut self,
+        record: CapabilityRecord,
+        unit: Vec<f32>,
+        limits: &ShardLimits,
+    ) -> Result<(), IndexRefusal> {
+        self.pin_for(&record)?;
+        let replacing = self.by_entity.get(&record.entity_id).copied();
+        if replacing.is_none() && self.live.len() >= limits.max_records {
+            return Err(IndexRefusal::CapacityExceeded {
+                limit: limits.max_records,
+            });
+        }
+        if let Some(slot) = replacing {
+            self.drop_slot(slot);
+        }
+        if self.live.is_empty() && self.arena_dim() != usize::from(record.dim) {
+            self.reset_for_dim(usize::from(record.dim));
+        }
+        if self.pin.is_none() {
+            self.pin = Some(EmbeddingPin {
+                embedding_version: record.embedding_version.clone(),
+                dim: record.dim,
+            });
+        }
+        let slot = self.arena.push_unit(unit);
+        self.postings
+            .add(slot, &record.capabilities, &record.policy_tags);
+        self.by_entity.insert(record.entity_id.clone(), slot);
+        self.live.push(slot);
+        self.records.push(Some(record));
+        Ok(())
     }
 
     /// A drained shard takes a new dimension: its tombstoned slots are dropped
@@ -314,8 +325,9 @@ impl ShardSnapshot {
             let record = self.records[*slot as usize]
                 .clone()
                 .expect("a live slot holds a record");
-            let vector = self.arena.vector(*slot).to_vec();
-            next.apply_change(Change::Upsert(record, vector), limits)
+            // The stored vector is already unit length: carry it over as is.
+            let unit = self.arena.vector(*slot).to_vec();
+            next.place(record, unit, limits)
                 .expect("live records re-insert into an empty generation");
         }
         next

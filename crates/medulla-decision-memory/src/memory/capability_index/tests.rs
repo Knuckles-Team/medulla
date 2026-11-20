@@ -137,7 +137,7 @@ fn sq8_scan_with_rescore_matches_exact_top_k() {
     let mut stored = Vec::new();
     for _ in 0..n {
         let v = rng.vector(dim);
-        arena.push(&v);
+        arena.push_unit(normalized(&v));
         stored.push(normalized(&v));
     }
     let pool: Vec<u32> = (0..n as u32).collect();

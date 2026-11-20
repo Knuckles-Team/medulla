@@ -135,15 +135,21 @@ pub fn expand_frontier(
     }
     let mut reads = Vec::new();
     let stop = loop {
-        if reads.len() as u64 >= limits.node_budget {
-            break FrontierStop::NodeBudget;
+        // The next read decides the stop reason: nothing left is `Exhausted`
+        // and a best value at the floor is `ValueFloor`, even when the budget
+        // is also spent; the budget stops the walk only while a read remains.
+        let ended = match heap.peek() {
+            None => Some(FrontierStop::Exhausted),
+            Some(best) if best.value <= floor => Some(FrontierStop::ValueFloor),
+            Some(_) if reads.len() as u64 >= limits.node_budget => Some(FrontierStop::NodeBudget),
+            Some(_) => None,
+        };
+        if let Some(ended) = ended {
+            break ended;
         }
         let Some(best) = heap.pop() else {
             break FrontierStop::Exhausted;
         };
-        if best.value <= floor {
-            break FrontierStop::ValueFloor;
-        }
         if best.depth < limits.depth_limit {
             if let Some(node) = nodes.get(&best.source_id) {
                 for link in &node.links {

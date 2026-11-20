@@ -3,8 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::{
-    decision::task_plan::plan_explicit_tasks, decision::task_plan::without_derived,
-    decision::task_plan::TaskPlan, decision::task_plan::TaskPlanProposal,
+    decision::task_plan::compute_plan_digest, decision::task_plan::plan_explicit_tasks,
+    decision::task_plan::without_derived, decision::task_plan::TaskPlan,
+    decision::task_plan::TaskPlanProposal,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +77,12 @@ impl PublishCurrentPlanRequest {
         match (&self.task_plan_proposal, &self.snapshot.task_plan) {
             (None, None) => {}
             (Some(proposal), Some(plan)) => {
+                // `without_derived` recomputes the digest of the stripped plan, so
+                // the supplied plan's own digest is checked first: it covers the
+                // derived critical chain and horizons the comparison drops.
+                if plan.plan_digest != compute_plan_digest(plan) {
+                    return Err("current-plan task plan digest must be recomputed".into());
+                }
                 if plan_explicit_tasks(proposal)? != without_derived(plan) {
                     return Err("current-plan task plan does not match canonical proposal".into());
                 }

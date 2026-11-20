@@ -58,10 +58,13 @@ impl Arena {
         self.scale.is_empty()
     }
 
-    /// Store `values` (normalized here) in the next slot and return it.
-    pub fn push(&mut self, values: &[f32]) -> u32 {
+    /// Store a unit vector (see [`normalized`]) in the next slot and return
+    /// it. The caller normalizes once: a compaction passes the stored vector
+    /// read back through [`Self::vector`] unchanged, because normalizing a unit
+    /// vector again moves its low bits and the same entity would then score
+    /// differently from a fresh build.
+    pub fn push_unit(&mut self, unit: Vec<f32>) -> u32 {
         let slot = self.scale.len() as u32;
-        let unit = normalized(values);
         let (low, high) = unit
             .iter()
             .fold((f32::MAX, f32::MIN), |(lo, hi), v| (lo.min(*v), hi.max(*v)));
