@@ -1158,7 +1158,7 @@ pub(super) fn fill_observed_costs(
             format!("the usage ledger refused the read: {error:?}"),
         )
     };
-    let catalog = medulla_types::usage::PriceCatalog {
+    let catalog = medulla_decision_types::usage::PriceCatalog {
         aliases: BTreeMap::new(),
         entries: store.price_entries(tenant_id).map_err(refused)?,
     };

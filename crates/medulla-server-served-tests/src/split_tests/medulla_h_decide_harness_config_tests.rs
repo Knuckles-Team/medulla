@@ -852,11 +852,11 @@ fn unverified_harness_evidence(
 async fn seed_assistant_profile(
     h: &Harness,
     tenant_scope: &str,
-    profile: &medulla_types::assistant_profile::AssistantProfile,
+    profile: &medulla_identity_types::assistant_profile::AssistantProfile,
 ) {
     h.seed_node(
         GRAPH,
-        &medulla_types::assistant_profile::profile_node_id(&profile.profile_id),
+        &medulla_identity_types::assistant_profile::profile_node_id(&profile.profile_id),
         serde_json::json!({
             "type": "AssistantProfile",
             "tenant_scope": tenant_scope,
@@ -870,9 +870,9 @@ fn assistant_profile(
     id: &str,
     owner: &str,
     allowlist: &[&str],
-    hints: medulla_types::assistant_profile::ModelHints,
-) -> medulla_types::assistant_profile::AssistantProfile {
-    medulla_types::assistant_profile::AssistantProfile {
+    hints: medulla_identity_types::assistant_profile::ModelHints,
+) -> medulla_identity_types::assistant_profile::AssistantProfile {
+    medulla_identity_types::assistant_profile::AssistantProfile {
         profile_id: id.to_string(),
         tenant: TENANT.to_string(),
         name: id.to_string(),
@@ -883,12 +883,12 @@ fn assistant_profile(
         owner_principal: owner.to_string(),
         shares: Vec::new(),
         revision: 3,
-        schema_version: medulla_types::assistant_profile::ASSISTANT_PROFILE_SCHEMA_VERSION,
+        schema_version: medulla_identity_types::assistant_profile::ASSISTANT_PROFILE_SCHEMA_VERSION,
     }
 }
 
-fn no_hints() -> medulla_types::assistant_profile::ModelHints {
-    medulla_types::assistant_profile::ModelHints {
+fn no_hints() -> medulla_identity_types::assistant_profile::ModelHints {
+    medulla_identity_types::assistant_profile::ModelHints {
         preferred_model_profile_refs: Vec::new(),
         max_context_tokens: None,
     }
@@ -947,7 +947,7 @@ async fn allowlist_narrows_tool_subset() {
         "prof-narrow",
         "decider",
         &["tool-b", "tool-c"],
-        medulla_types::assistant_profile::ModelHints {
+        medulla_identity_types::assistant_profile::ModelHints {
             preferred_model_profile_refs: Vec::new(),
             max_context_tokens: Some(500),
         },
@@ -979,7 +979,7 @@ async fn allowlist_narrows_tool_subset() {
         "prof-roomy",
         "decider",
         &["tool-a", "tool-b", "tool-c"],
-        medulla_types::assistant_profile::ModelHints {
+        medulla_identity_types::assistant_profile::ModelHints {
             preferred_model_profile_refs: Vec::new(),
             max_context_tokens: Some(5000),
         },
@@ -998,7 +998,7 @@ async fn allowlist_narrows_tool_subset() {
         "prof-hinted",
         "decider",
         &["tool-a", "tool-b", "tool-c"],
-        medulla_types::assistant_profile::ModelHints {
+        medulla_identity_types::assistant_profile::ModelHints {
             preferred_model_profile_refs: vec!["no-such-profile".to_string(), PROFILE.to_string()],
             max_context_tokens: None,
         },
@@ -1018,7 +1018,7 @@ async fn allowlist_narrows_tool_subset() {
         "prof-lost",
         "decider",
         &["tool-a"],
-        medulla_types::assistant_profile::ModelHints {
+        medulla_identity_types::assistant_profile::ModelHints {
             preferred_model_profile_refs: vec!["no-such-profile".to_string()],
             max_context_tokens: None,
         },

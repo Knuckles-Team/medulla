@@ -399,7 +399,7 @@ fn policy_pin(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPol
 
 /// Append one priced call of `model` for `tenant` and put its price.
 fn seed_model_cost(h: &Harness, tenant: &str, model: &str, out_per_mtok_micro: u64) {
-    use medulla_types::usage::{
+    use medulla_decision_types::usage::{
         PriceCatalog, PriceEntry, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
     };
     let entry = PriceEntry {
