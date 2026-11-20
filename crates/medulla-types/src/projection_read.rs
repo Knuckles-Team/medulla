@@ -101,6 +101,7 @@ pub enum ProjectionCompare {
 
 /// One typed predicate over one projected column.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionPredicate {
     pub column: String,
     pub op: ProjectionCompare,
@@ -109,6 +110,7 @@ pub struct ProjectionPredicate {
 
 /// A projection read: which mapping revision, which table, which columns and rows.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionReadRequest {
     pub tenant: String,
     pub actor: String,
@@ -143,6 +145,7 @@ impl ProjectionReadRequest {
 
 /// The name and type of one returned column.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionColumnInfo {
     pub name: String,
     pub column_type: ProjectionColumnType,
@@ -150,6 +153,7 @@ pub struct ProjectionColumnInfo {
 
 /// A projection read answer, bound to both revisions it was read at.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionReadResponse {
     pub mapping_revision: u64,
     pub graph_revision: u64,
