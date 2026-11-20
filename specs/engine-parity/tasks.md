@@ -45,7 +45,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T039 [US3] MEDULLA-ENGINE-PARITY-R014.2 Views and materialized views over tables: wiring and refusal
 - [ ] T040 [P] [US3] MEDULLA-ENGINE-PARITY-R014.3 Views and materialized views over tables: hot-path proof
 - [x] T041 [US4] MEDULLA-ENGINE-PARITY-R015.1 Change data capture for graph and table rows: model and behavior
-- [ ] T042 [US4] MEDULLA-ENGINE-PARITY-R015.2 Change data capture for graph and table rows: wiring and refusal
+- [x] T042 [US4] MEDULLA-ENGINE-PARITY-R015.2 Change data capture for graph and table rows: wiring and refusal
 - [ ] T043 [P] [US4] MEDULLA-ENGINE-PARITY-R015.3 Change data capture for graph and table rows: hot-path proof
 - [ ] T044 [US4] MEDULLA-ENGINE-PARITY-R016.1 Point-in-time recovery from a backup bundle and archived batches: model and behavior
 - [ ] T045 [US4] MEDULLA-ENGINE-PARITY-R016.2 Point-in-time recovery from a backup bundle and archived batches: wiring and refusal

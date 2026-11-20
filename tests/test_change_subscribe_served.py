@@ -35,7 +35,7 @@ def _rows(page, table):
     ]
 
 
-@pytest.mark.spec("MEDULLA-ENGINE-PARITY-R015.1")
+@pytest.mark.spec("MEDULLA-ENGINE-PARITY-R015.1", "MEDULLA-ENGINE-PARITY-R015.2")
 def test_cdc_read_resumes_and_expires(start_medulla_server, client):
     table = f"cdc_orders_{uuid.uuid4().hex[:8]}"
     client.query.sql(f"CREATE TABLE {table} (id int primary key, name text)")
