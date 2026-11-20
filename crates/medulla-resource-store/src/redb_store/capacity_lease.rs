@@ -175,12 +175,39 @@ fn method_now_ms(method: &Method) -> Result<u64, String> {
 /// principal, and the caller's replay identity lives in this module's
 /// `capacity_idempotency` row instead, which is exactly what puts the write
 /// outside operation-replay conflict semantics (RF-RULING-005).
+///
+/// This entry appends no audit entry. A writer built with `security` calls
+/// `commit_audited` instead. The arity of this function never depends on a
+/// feature: whether a capacity write is audited is the calling writer's
+/// `security` decision, and a dependency feature enabled through another
+/// crate cannot change the call it compiles against.
 pub fn commit(
     shard: &Shard,
     graph: &str,
     method: &Method,
     crypto: DurableCrypto<'_>,
-    #[cfg(feature = "security")] audit_tail: &mut medulla_store::redb_store::AuditTailCache,
+) -> Result<Vec<u8>, String> {
+    let committed_at_ms = method_now_ms(method)?;
+    let op_id = attempt_id();
+    let members = shard.graph_members(&[graph])?;
+    let (group, batches) = shard.admit_maintenance(&members, &op_id)?;
+    let write = ShardWrite::open(shard, &group, &members, &batches)?;
+    let bytes = apply(&write, graph, method, crypto)?;
+    write.finish()?;
+    shard.commit_drain(group, &batches, committed_at_ms)?;
+    Ok(bytes)
+}
+
+/// [`commit`] that also appends the method's audit entry, in the same admitted
+/// group, to the writer's per-graph audit tail. A replayed decision appends
+/// nothing.
+#[cfg(feature = "security")]
+pub fn commit_audited(
+    shard: &Shard,
+    graph: &str,
+    method: &Method,
+    crypto: DurableCrypto<'_>,
+    audit_tail: &mut medulla_store::redb_store::AuditTailCache,
 ) -> Result<Vec<u8>, String> {
     let committed_at_ms = method_now_ms(method)?;
     let op_id = attempt_id();
@@ -190,7 +217,6 @@ pub fn commit(
     let bytes = apply(&write, graph, method, crypto)?;
     // Scoped so the audit table handle is dropped before `write.finish()`
     // consumes the owner-row admission it borrows.
-    #[cfg(feature = "security")]
     let staged_audit_tail = {
         let mut staged = audit_tail.clone();
         if !result_is_replay(method, &bytes)? {
@@ -203,10 +229,7 @@ pub fn commit(
     };
     write.finish()?;
     shard.commit_drain(group, &batches, committed_at_ms)?;
-    #[cfg(feature = "security")]
-    {
-        *audit_tail = staged_audit_tail;
-    }
+    *audit_tail = staged_audit_tail;
     Ok(bytes)
 }
 

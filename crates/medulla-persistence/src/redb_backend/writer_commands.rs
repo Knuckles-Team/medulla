@@ -367,14 +367,17 @@ macro_rules! writer_command_arms {
             done,
         } => {
             flush(pending);
-            let res = medulla_resource_store::redb_store::capacity_lease::commit(
+            #[cfg(feature = "security")]
+            let res = medulla_resource_store::redb_store::capacity_lease::commit_audited(
                 shard,
                 &graph,
                 &method,
                 crypto,
-                #[cfg(feature = "security")]
                 &mut pending.audit_tail,
             );
+            #[cfg(not(feature = "security"))]
+            let res =
+                medulla_resource_store::redb_store::capacity_lease::commit(shard, &graph, &method, crypto);
             let _ = done.send(res);
             false
         }

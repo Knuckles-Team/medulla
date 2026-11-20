@@ -46,7 +46,7 @@ impl Harness {
 
     pub fn commit(&mut self, method: &Method) -> Result<Vec<u8>, String> {
         #[cfg(feature = "security")]
-        return super::super::commit(
+        return super::super::commit_audited(
             &self.shard,
             GRAPH,
             method,
