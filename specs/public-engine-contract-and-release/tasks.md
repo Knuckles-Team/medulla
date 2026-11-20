@@ -84,7 +84,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T075 [US3] MEDULLA-CONTRACT-R053.13 Retain the validated wheel for installed acceptance
 - [ ] T111 [US3] MEDULLA-CONTRACT-R053.14 Building one tag twice gives byte-identical artifacts: the release fixed point
 - [ ] T076 [US1] MEDULLA-CONTRACT-R054 The engine serves its method descriptors and scope registry
-- [ ] T077 [US4] MEDULLA-CONTRACT-R055 Decision reachability gate
+- [x] T077 [US4] MEDULLA-CONTRACT-R055 Decision reachability gate
 - [ ] T078 [US5] MEDULLA-CONTRACT-R056.1 Step 0: the server contract wave is removed before any move
 - [ ] T079 [US5] MEDULLA-CONTRACT-R056.2 Step 1: `medulla-store` holds the redb store, its layout and the sidecar store
 - [ ] T080 [US5] MEDULLA-CONTRACT-R056.3 Step 2: `medulla-kernel` holds the small shared modules

@@ -109,7 +109,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 | `MEDULLA-CONTRACT-R053.14` | `tests/test_release_reproducibility.py::test_publish_jobs_need_the_release_fixed_point_job` | L2 | A test reads `release.yml` and requires the fixed-point job in the `needs` of each publish job. |
 | `MEDULLA-CONTRACT-R053.14` | `tests/test_release_reproducibility.py::test_nightly_builds_the_linux_x86_64_wheel_twice_and_compares` | L2 | A test reads `nightly-wheel-reproducibility.yml` and requires a schedule, the Linux x86_64 target, a primary and a reproduction folded-wheel pass and the wheel comparison. |
 | `MEDULLA-CONTRACT-R054` | `crates/medulla-capabilities/tests/contract_registry.rs::served_descriptors_cover_all_fields` (planned) | L4 | and `tests/test_describe_contract_served.py::test_client_reads_descriptors_and_scopes` (L4). |
-| `MEDULLA-CONTRACT-R055` | `tests/test_check_decision_reachability.py::test_an_orphan_public_item_fails_the_gate` (planned) | L2 | The named test passes. |
+| `MEDULLA-CONTRACT-R055` | `tests/test_check_decision_reachability.py::test_an_orphan_public_item_fails_the_gate` | L2 | The named test passes. |
 | `MEDULLA-CONTRACT-R056.1` | `scripts/check_crate_graph.py::no_contract_modules` (planned) | L1 | (L1). |
 | `MEDULLA-CONTRACT-R056.2` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L1 | Test: the store crate's own tests pass under `-p medulla-store` (L1). |
 | `MEDULLA-CONTRACT-R056.3` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L1 | tests pass and no other crate re-declares these modules (L1). |
