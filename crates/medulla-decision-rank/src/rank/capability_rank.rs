@@ -261,7 +261,10 @@ mod tests {
             entry("a", at(0.99), None),
             entry("b", at(0.7), None),
         ];
-        let rewards: BTreeMap<_, _> = [reward("c", 1.0), reward("a", 0.0)].into_iter().collect();
+        // b carries the planted learned reward the second fixture recovers.
+        let rewards: BTreeMap<_, _> = [reward("c", 1.0), reward("a", 0.0), reward("b", 1.0)]
+            .into_iter()
+            .collect();
         let pure =
             rank_capability_candidates(pool.clone(), &question(3, 0, 0, None), &rewards, &policy());
         assert_eq!(order(&pure), ["a", "b", "c"]);

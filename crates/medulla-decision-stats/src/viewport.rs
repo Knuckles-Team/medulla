@@ -341,7 +341,14 @@ mod tests {
             }
         }
         assert_eq!(bins, oracle);
-        assert_eq!(bins.iter().map(|b| b.count).sum::<u64>(), 500);
+        // Every point inside the window is binned exactly once. The source's y runs to
+        // 102, so the ten points with y above 100 lie outside the window.
+        let in_window = points
+            .iter()
+            .filter(|(x, y)| *x <= 100.0 && *y <= 100.0)
+            .count() as u64;
+        assert_eq!(in_window, 490);
+        assert_eq!(bins.iter().map(|b| b.count).sum::<u64>(), in_window);
 
         // Points outside the window are not binned; upper edges fall in the last cell.
         let edge = bin_scatter(
@@ -387,7 +394,8 @@ mod tests {
         for col in 0..8u32 {
             let inside: Vec<&(i64, f64)> = line
                 .iter()
-                .filter(|(t, _)| (i128::from(*t) * 8 / 999) as u32 == col)
+                // The upper edge belongs to the last column, as `line_column` defines.
+                .filter(|(t, _)| (i128::from(*t) * 8 / 999).min(7) as u32 == col)
                 .collect();
             if inside.is_empty() {
                 continue;

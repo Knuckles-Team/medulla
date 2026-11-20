@@ -451,13 +451,14 @@ mod tests {
     fn miner_bounds_and_ratchet_verdict() {
         let sequences = vec![
             seq(&["a", "b", "c", "a", "b"]),
-            seq(&["a", "b", "c"]),
+            seq(&["a", "b", "c", "d"]),
             seq(&["x", "a", "b", "c", "d"]),
         ];
         let knobs = LoopKnobs::default();
         let mined = mine_patterns(&sequences, &knobs);
         // ab is in all three (once per sequence even when repeated), bc and
-        // abc in all three; nothing else reaches support 3.
+        // abc in all three; nothing else reaches support 3 (cd, bcd and abcd
+        // reach 2).
         let found: Vec<(Vec<String>, u32)> = mined
             .iter()
             .map(|p| (p.sequence.clone(), p.support))

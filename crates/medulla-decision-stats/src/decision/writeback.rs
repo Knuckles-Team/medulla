@@ -689,7 +689,17 @@ mod tests {
             rows,
             vec![("ext:a", RiskTier::Medium, 7), ("ext:z", RiskTier::High, 6)]
         );
-        assert!(creation_proposals(&[item("bad id", &[], 1)], &systems).is_err());
+        // A malformed external id is refused when the typed item is built, so
+        // it never reaches the proposal step; an id the composed creation id
+        // cannot carry is refused by the proposal step itself.
+        assert!(ResourceId::new("bad id").is_err());
+        let longest = "x".repeat(medulla_types::contract::MAX_RESOURCE_ID_BYTES);
+        assert_eq!(
+            creation_proposals(&[item(&longest, &[], 1)], &systems)
+                .unwrap_err()
+                .code,
+            INVALID_WRITEBACK_IDENTIFIER
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R615.3

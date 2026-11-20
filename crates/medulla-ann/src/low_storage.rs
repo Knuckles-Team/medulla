@@ -953,8 +953,13 @@ mod tests {
             artifact::encode(&index).unwrap()
         );
 
+        // Neighbour selection backfills every layer-0 list to m0 = 16 on this
+        // fixture, so any threshold at or below 16 makes every node a hub and
+        // prunes nothing. The default threshold (32) makes every node a
+        // non-hub; retention 0.875 keeps 14 of 16 layer-0 edges, which removes
+        // edges and keeps layer 0 connected (0.5 cuts its bridge edges).
         let mut policy = HubPruningPolicy::fixture(1, [4u8; 32]);
-        policy.degree_threshold = 12;
+        policy.retention = 0.875;
         let mut r = request();
         r.pruning = Some(policy);
         let pm = LowStorageAnnManifest::admit(r).unwrap();

@@ -295,9 +295,10 @@ mod tests {
             list(DiscoverArm::Expansion, &["b"]),
         ];
         let fused = fuse_arms(&arms, 60);
+        // b: 1/62 + 1/61 + 1/61; c: 1/63 + 1/62 (two arms) beats a: 1/61 (one arm).
         assert_eq!(
             fused.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(),
-            ["b", "a", "c"]
+            ["b", "c", "a"]
         );
         let b = &fused[0];
         let expected = 1.0 / 62.0 + 1.0 / 61.0 + 1.0 / 61.0;

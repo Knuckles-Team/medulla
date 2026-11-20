@@ -629,12 +629,16 @@ fn compile_reads_train_for_candidates_and_validation_only_for_scoring() {
     let mut request = request(OptimizerKind::BootstrapFewShotWithRandomSearch);
     request.budget.max_demonstrations = 6;
     request.budget.max_evaluator_calls = 4;
+    // A corpus binds each evidence locus to one example, so the copies take their own.
+    let locus = |label: &str| EvidenceLocusId::from_token(&token(label)).expect("locus id");
     let mut validation = request.corpus.examples[0].clone();
     validation.example_ref = opaque("example", "validation:0");
     validation.split = ExampleSplit::Validation;
+    validation.evidence[0].locus.id = locus("locus:validation:0");
     let mut held_out = request.corpus.examples[0].clone();
     held_out.example_ref = opaque("example", "test:0");
     held_out.split = ExampleSplit::Test;
+    held_out.evidence[0].locus.id = locus("locus:test:0");
     request.corpus.examples.push(validation.clone());
     request.corpus.examples.push(held_out.clone());
 

@@ -2644,10 +2644,13 @@ mod tests {
     /// bench: `gds.graph.project` materializes ONCE, then TWO DIFFERENT algorithm calls
     /// (`gds.pageRank`, `gds.betweenness`) naming the SAME `graphName` both SKIP the scan.
     /// Proven two ways: (1) the catalog's own hit/miss counters — deterministic and
-    /// contention-proof, the PRIMARY assertion; (2) a wall-clock comparison against an
-    /// equivalent UNNAMED (always-re-project) call on the SAME graph — the literal "bench",
-    /// logged either way (`--nocapture`) and asserted as a simple, contention-tolerant
-    /// directional inequality (reuse must be faster, with no specific ratio required).
+    /// contention-proof, the PRIMARY assertion; (2) the bench: an equivalent UNNAMED
+    /// (always-re-project) call on the SAME graph against a named reuse call. Each call's
+    /// catalog effect is asserted (the unnamed call never consults the catalog, the named
+    /// call is exactly one hit, so it skipped the scan) and the wall-clock pair is logged
+    /// (`--nocapture`). The wall-clock pair is not asserted: the projection scan is a small
+    /// share of one call, so its order flips on a contended runner, and the counters
+    /// already decide the property deterministically.
     #[cfg(feature = "result-cache")]
     #[test]
     fn w45_named_projection_reused_across_different_algorithms() {
@@ -2701,6 +2704,11 @@ mod tests {
         )
         .unwrap();
         let fresh_dur = t0.elapsed();
+        assert_eq!(
+            core.graph_projections().stats(),
+            (2, 0),
+            "an unnamed call re-projects from scratch and never consults the catalog"
+        );
 
         let (v_reuse, _) = core.analysis_snapshot_versioned();
         let t1 = std::time::Instant::now();
@@ -2717,12 +2725,6 @@ mod tests {
             "w45 projection-reuse bench (n=2000 nodes, k=4): \
              fresh(project+pageRank)={fresh_dur:?} reused(pageRank only, catalog hit)={reuse_dur:?}"
         );
-        assert!(
-            reuse_dur < fresh_dur,
-            "reusing a cataloged projection must be faster than re-projecting from scratch: \
-             fresh={fresh_dur:?} reuse={reuse_dur:?}"
-        );
-
         let (hits2, misses2) = core.graph_projections().stats();
         assert_eq!(hits2, 3, "the bench's own reuse call is a 3rd catalog hit");
         assert_eq!(misses2, 0);
