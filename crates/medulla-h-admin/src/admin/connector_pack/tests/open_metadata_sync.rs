@@ -161,6 +161,7 @@ impl Harness {
                             tool: "export_terms".to_string(),
                             capabilities: Default::default(),
                         },
+                        quota: None,
                     },
                 )
                 .await,
