@@ -365,7 +365,7 @@ No test named here has run; names describe acceptance obligations, not evidence.
 - `MEDULLA-TYPED-PACKS-R103.3`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::gateway_routes_ontology_import`.
 - `MEDULLA-TYPED-PACKS-R103.4`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::ontology_import_refusals_leave_schema_unchanged`.
 - `MEDULLA-TYPED-PACKS-R103.5`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::revision_records_digest_importer_and_classes`.
-- `MEDULLA-TYPED-PACKS-R103.6`: `tests/typed_packs/test_runtime_ontology_import_served.py::test_import_revise_withdraw_end_to_end`.
+- `MEDULLA-TYPED-PACKS-R103.6`: `tests/typed_packs/test_runtime_ontology_import_served.py::test_import_revise_withdraw_end_to_end` (planned).
 
 ## MEDULLA-TYPED-PACKS-R104 acceptance
 
