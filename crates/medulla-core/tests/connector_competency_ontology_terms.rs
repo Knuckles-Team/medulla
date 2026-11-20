@@ -1806,7 +1806,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.3
     #[test]
-    fn Budget_declared() {
+    fn budget_declared() {
         let triples = triples();
         let class = format!("{KG}Budget");
         assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
@@ -1820,7 +1820,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.5
     #[test]
-    fn LedgerTransaction_declared() {
+    fn ledger_transaction_declared() {
         let triples = triples();
         let class = format!("{KG}LedgerTransaction");
         assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));

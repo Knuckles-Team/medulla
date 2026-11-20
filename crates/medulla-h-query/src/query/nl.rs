@@ -76,10 +76,10 @@ pub(crate) struct NlPlanning {
 pub(crate) enum NlPlanned {
     Uql {
         uql: String,
-        plan: medulla_exec::algebra::Plan,
+        plan: Box<medulla_exec::algebra::Plan>,
         rewritten: Option<String>,
         certified: Vec<medulla_query_types::nl_query::CertifiedTermUse>,
-        evidence: NlPlanEvidence,
+        evidence: Box<NlPlanEvidence>,
     },
     Text {
         dialect: medulla_query_types::nl_query::NlDialect,
@@ -101,6 +101,15 @@ enum NlRun {
     Answered(Response),
 }
 
+/// What grounds an NL request on the caller's sources: the foreign sources it may name,
+/// the source catalogs and the SQL tables it can see.
+#[cfg(feature = "nl-query")]
+pub(crate) struct NlGrounding<'a> {
+    pub(crate) foreign_sources: Option<&'a std::collections::BTreeSet<String>>,
+    pub(crate) catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
+    pub(crate) tables: Vec<medulla_nlq::nl::context::NlTable>,
+}
+
 /// The NL → executable-UQL-plan resolution of [`handle_nl_query`]: resolve the
 /// configured/injected `NlPlanner`, ground it on the caller's snapshot (labels,
 /// stored property keys, relationships and the composed GraphSchema's ontology
@@ -114,9 +123,7 @@ pub(crate) fn handle_nl_query_plan(
     text: &str,
     view: &medulla_graph_core::graph::GraphView,
     req_id: u64,
-    foreign_sources: Option<&std::collections::BTreeSet<String>>,
-    catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
-    tables: Vec<medulla_nlq::nl::context::NlTable>,
+    grounding: NlGrounding<'_>,
     history: &[medulla_query_types::nl_query::NlTurn],
     planning: &NlPlanning,
 ) -> Result<NlPlanned, Response> {
@@ -148,6 +155,11 @@ pub(crate) fn handle_nl_query_plan(
         })?;
     let (text, rewritten) = nl_follow_up(planner.as_ref(), text, history, req_id)?;
     let text = text.as_str();
+    let NlGrounding {
+        foreign_sources,
+        catalogs,
+        tables,
+    } = grounding;
     let context = nl_schema_context(view, foreign_sources, catalogs, tables);
     // MEDULLA-FEDERATED-QUERY-R058.4.2: link the request to the schema and choose the
     // planner dialect before any planning step. UQL always has the planner resolved above;
@@ -254,10 +266,10 @@ pub(crate) fn handle_nl_query_plan(
     };
     Ok(NlPlanned::Uql {
         uql: candidate.uql,
-        plan: candidate.plan,
+        plan: Box::new(candidate.plan),
         rewritten,
         certified: candidate.certified,
-        evidence,
+        evidence: Box::new(evidence),
     })
 }
 
@@ -709,9 +721,11 @@ async fn run_nl_query(
         &text,
         &snap,
         req_id,
-        foreign_sources.as_ref(),
-        catalogs,
-        tables,
+        NlGrounding {
+            foreign_sources: foreign_sources.as_ref(),
+            catalogs,
+            tables,
+        },
         &history,
         &planning,
     )?;
@@ -722,7 +736,7 @@ async fn run_nl_query(
             rewritten,
             certified,
             evidence,
-        } => (uql, plan, rewritten, certified, evidence),
+        } => (uql, *plan, rewritten, certified, *evidence),
         NlPlanned::Text { dialect, text } => {
             return run_nl_text(ctx, dialect, text).await.map(NlRun::Answered)
         }

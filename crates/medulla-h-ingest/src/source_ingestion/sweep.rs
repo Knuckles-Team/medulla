@@ -229,7 +229,7 @@ fn page_bytes(page: &EnumerationPage) -> serde_bytes::ByteBuf {
 }
 
 fn page_digests(bytes: &serde_bytes::ByteBuf) -> Result<Vec<[u8; 32]>, String> {
-    if bytes.len() % 32 != 0 {
+    if !bytes.len().is_multiple_of(32) {
         return Err("SOURCE_ENUMERATION_STAGE_INVALID: staged page is not whole digests".into());
     }
     Ok(bytes
@@ -760,7 +760,7 @@ mod tests {
         complete.ids_digest = Some(digest_of_run(&listed));
         let error = admit_enumeration(input(&complete, &held, None, None, 1)).unwrap_err();
         assert!(error.starts_with("SOURCE_MASS_DELETE_GUARD"), "{error}");
-        assert!(MASS_DELETE_PERCENT < 90);
+        const { assert!(MASS_DELETE_PERCENT < 90) };
         // A wrong declared digest is refused before any plan.
         let mut wrong = page("run-4", 0, true, true, &listed);
         wrong.ids_digest = Some("00".repeat(32));

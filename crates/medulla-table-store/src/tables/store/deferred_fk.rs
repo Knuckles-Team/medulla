@@ -82,7 +82,6 @@ struct DeferredKey<'a> {
     position: usize,
     columns: &'a [String],
     ref_table: &'a str,
-    ref_columns: &'a [String],
 }
 
 fn deferred_keys_of<'a>(schema: &'a TableSchema) -> Vec<DeferredKey<'a>> {
@@ -92,16 +91,12 @@ fn deferred_keys_of<'a>(schema: &'a TableSchema) -> Vec<DeferredKey<'a>> {
         .enumerate()
         .filter_map(|(position, constraint)| match constraint {
             TableConstraint::ForeignKey {
-                columns,
-                ref_table,
-                ref_columns,
-                ..
+                columns, ref_table, ..
             } if constraint.is_deferred_foreign_key() => Some(DeferredKey {
                 child_table: schema.name.as_str(),
                 position,
                 columns,
                 ref_table,
-                ref_columns,
             }),
             _ => None,
         })

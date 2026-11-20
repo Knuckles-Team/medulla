@@ -85,13 +85,16 @@ pub enum ColumnDeriveFailure {
     Refused(String),
 }
 
+/// The column lineage derivation: `(sql, dialect, catalog source, target dataset)` to its edges.
+type ColumnDeriveFn<'a> =
+    dyn Fn(&str, LineageDialect, &str, &str) -> Result<LineageResult, ColumnDeriveFailure> + 'a;
+
 /// What the column lineage derivation needs from the server, through the `QueryApi` seam
 /// (MEDULLA-UNIFIED-DATA-PLANE-R763.3): the parser lives below `medulla-h-query` and is not
 /// linked here.
 pub struct ColumnLineageSeam<'a> {
     /// Derive the edges of `(sql, dialect, catalog source, target dataset)`.
-    pub derive:
-        &'a dyn Fn(&str, LineageDialect, &str, &str) -> Result<LineageResult, ColumnDeriveFailure>,
+    pub derive: &'a ColumnDeriveFn<'a>,
     /// Whether the graph already holds `(source_column, target_column, query_digest)`.
     pub known_column_edge: &'a dyn Fn(&str, &str, &str) -> bool,
 }
@@ -315,8 +318,7 @@ mod tests {
         assert_eq!(receipt.quarantined, 1);
         let blank = handle_lineage_ingest(vec![event(" ", "x", "y")], &|_, _| false, &NO_COLUMNS);
         assert!(blank
-            .err()
-            .expect("a blank method name is refused")
+            .expect_err("a blank method name is refused")
             .starts_with(LINEAGE_EVENT_MALFORMED));
     }
 
@@ -385,8 +387,7 @@ mod tests {
         let refused =
             handle_lineage_ingest(vec![sql_event("b", "SELECT 1")], &|_, _| false, &refusing);
         assert!(refused
-            .err()
-            .expect("the lineage ingest is refused")
+            .expect_err("the lineage ingest is refused")
             .starts_with("LINEAGE_CATALOG_MISSING"));
     }
 

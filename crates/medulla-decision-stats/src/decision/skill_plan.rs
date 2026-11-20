@@ -59,13 +59,16 @@ fn reaches(relevance_q32: i64, floor_micros: i64) -> bool {
     i128::from(relevance_q32) * 1_000_000 >= i128::from(floor_micros) << 32
 }
 
+/// One subtask id with the `Q32` relevance of every skill to it, skills in id order.
+type SubtaskRelevances = (String, Vec<(String, i64)>);
+
 /// The relevance of every visible skill to each subtask, as `Q32`: subtasks in
 /// id order, skills in id order. A duplicate subtask id refuses.
 pub fn skill_relevances(
     query: &SkillPlanQuery,
     skills: &[SkillDocument],
     knobs: &SkillPlanKnobs,
-) -> Result<Vec<(String, Vec<(String, i64)>)>, String> {
+) -> Result<Vec<SubtaskRelevances>, String> {
     let mut ordered: Vec<&SkillDocument> = skills.iter().collect();
     ordered.sort_by(|a, b| a.id.cmp(&b.id));
     let documents: Vec<&str> = ordered.iter().map(|s| s.text.as_str()).collect();
@@ -109,7 +112,7 @@ fn choose(
         let mut best: Option<(i64, &str)> = None;
         for (skill, relevance) in &row {
             // Strictly greater replaces, so the lowest skill id wins a tie.
-            if best.map_or(true, |(have, _)| *relevance > have) {
+            if best.is_none_or(|(have, _)| *relevance > have) {
                 best = Some((*relevance, skill.as_str()));
             }
         }

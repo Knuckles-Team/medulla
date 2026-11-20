@@ -196,7 +196,6 @@ pub(crate) async fn handle_source_coverage(
             .into_iter()
             .map(|facet| (facet.class, facet.property))
             .collect(),
-        ..SelectionQuery::default()
     };
     let verdicts = select_sources_with(&fixture, &classes, hops, &query);
     let reply = SourceCoverageReply {

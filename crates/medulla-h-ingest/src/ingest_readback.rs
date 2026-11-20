@@ -176,7 +176,7 @@ pub fn receipt_node_id(receipt: &ReadbackReceipt) -> String {
             receipt.principal.as_bytes(),
         ],
     )
-    .unwrap_or_else(|_| receipt.write_receipt_digest);
+    .unwrap_or(receipt.write_receipt_digest);
     format!("{ENVELOPE_PREFIX}{}", key.to_hex())
 }
 

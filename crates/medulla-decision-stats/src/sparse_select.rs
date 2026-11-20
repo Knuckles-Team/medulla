@@ -145,8 +145,9 @@ mod tests {
             b.swap(col, pivot);
             for row in col + 1..n {
                 let factor = a[row][col] / a[col][col];
-                for k in col..n {
-                    a[row][k] -= factor * a[col][k];
+                let (above, below) = a.split_at_mut(row);
+                for (target, pivot_value) in below[0][col..n].iter_mut().zip(&above[col][col..n]) {
+                    *target -= factor * pivot_value;
                 }
                 b[row] -= factor * b[col];
             }

@@ -320,8 +320,10 @@ pub async fn prepare(
         &batch_id,
         &resolved,
         &reconciliation,
-        &admitted.raw_admissions,
-        &admitted.relationship_raw_admissions,
+        &RawAdmissions {
+            records: &admitted.raw_admissions,
+            relationships: &admitted.relationship_raw_admissions,
+        },
         admitted.governance,
         &embedding_set,
     )?);
@@ -1385,13 +1387,13 @@ fn admit_records(
         governance: Default::default(),
     };
     let mut batch_raw_digests = BTreeSet::new();
+    let target = BlobTarget { authority, blob };
     for record in &batch.records {
         let Some(item) = admit_record(
             ctx,
             batch,
             record,
-            authority,
-            blob,
+            &target,
             resolved,
             policy_subject,
             &mut admitted.governance,
@@ -1900,13 +1902,19 @@ struct AdmittedRecord {
     policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
 
+/// Where a batch's raw blobs are admitted: the carrier authority and its blob cursors.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct BlobTarget<'a> {
+    authority: &'a CarrierAuthority,
+    blob: &'a Arc<medulla_server_blob::blob::BlobCursors>,
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_record(
     ctx: &PrepareContext<'_>,
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     record: &medulla_source_types::source_ingestion::SourceRecord,
-    authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
+    target: &BlobTarget<'_>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
     report: &mut medulla_types::source_governance::GovernanceReport,
@@ -1929,6 +1937,7 @@ fn admit_record(
     };
     let raw = rmp_serde::to_vec_named(record)
         .map_err(|error| format!("raw source record encoding failed: {error}"))?;
+    let BlobTarget { authority, blob } = *target;
     let raw_digest_hex = admit_raw(ctx, authority, blob, &raw)?;
     let raw_digest = Digest256::parse(&raw_digest_hex)?;
     let node_id = source_node_id(
@@ -2140,17 +2149,27 @@ fn raw_blob_reference(
     }
 }
 
+/// The raw admissions a batch's receipt reports: its records and its relationships.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct RawAdmissions<'a> {
+    records: &'a [RawAdmissionReceipt],
+    relationships: &'a [RawRelationshipAdmissionReceipt],
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn receipt_method(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     resolved: &ResolvedIngestionMappings,
     reconciliation: &ReconciliationPlan,
-    raw_admissions: &[RawAdmissionReceipt],
-    relationship_raw_admissions: &[RawRelationshipAdmissionReceipt],
+    admissions: &RawAdmissions<'_>,
     governance: medulla_types::source_governance::GovernanceReport,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
+    let RawAdmissions {
+        records: raw_admissions,
+        relationships: relationship_raw_admissions,
+    } = admissions;
     let properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
         "connector": batch.connector.as_str(),

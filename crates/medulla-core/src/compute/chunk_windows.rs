@@ -370,7 +370,7 @@ mod tests {
     fn mean_matches_numeric_oracle() {
         // Hand-computed oracle: mean of [3,4] and [1,0] is [2,2]; its L2 norm is
         // sqrt(8), so the document vector is [1/sqrt(2), 1/sqrt(2)].
-        let h = 0.707_106_781_186_547_6_f64;
+        let h = std::f64::consts::FRAC_1_SQRT_2;
         let v = aggregate_mean_chunks(&[vec![3.0, 4.0], vec![1.0, 0.0]]).unwrap();
         assert!(v.iter().all(|c| (f64::from(*c) - h).abs() <= 1e-6), "{v:?}");
         // a single chunk is its own normalised direction: [3,4] -> [0.6,0.8]

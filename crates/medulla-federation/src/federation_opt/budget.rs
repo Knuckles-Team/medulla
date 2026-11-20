@@ -14,8 +14,6 @@ pub const RESULT_INCOMPLETE: &str = "FEDERATION_RESULT_INCOMPLETE";
 /// Error code of an argument a web metasearch tool does not declare
 /// (MEDULLA-UNIFIED-DATA-PLANE-R038.7.4).
 pub const UNSUPPORTED_SEARCH_ARGUMENT: &str = "UNSUPPORTED_SEARCH_ARGUMENT";
-/// Error code of a connector that did not answer (MEDULLA-UNIFIED-DATA-PLANE-R038.7.4).
-pub const SOURCE_UNREACHABLE: &str = "SOURCE_UNREACHABLE";
 /// Error code of a vector query from another embedding space than the source's
 /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.4).
 pub const EMBEDDING_SPACE_MISMATCH: &str = "EMBEDDING_SPACE_MISMATCH";

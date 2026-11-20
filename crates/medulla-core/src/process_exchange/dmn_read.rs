@@ -133,11 +133,11 @@ fn table(element: &XmlElement) -> DmnTable {
                 id: id_of(rule),
                 input_entries: rule
                     .children_named("inputEntry")
-                    .map(|e| text_of_entry(e))
+                    .map(text_of_entry)
                     .collect(),
                 output_entries: rule
                     .children_named("outputEntry")
-                    .map(|e| text_of_entry(e))
+                    .map(text_of_entry)
                     .collect(),
             })
             .collect(),

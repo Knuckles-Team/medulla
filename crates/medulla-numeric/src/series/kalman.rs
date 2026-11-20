@@ -72,7 +72,7 @@ impl Kalman {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::detkernel::math::ln;
+    use crate::detkernel::math::{exp, ln};
 
     fn close(a: f64, b: f64) {
         assert!((a - b).abs() < 1e-12, "{a} != {b}");
@@ -171,20 +171,13 @@ mod tests {
 
     /// Independent oracle for `F = I`, `Q = q I`, scalar observation: textbook (non-Joseph)
     /// covariance update with an explicit scalar innovation variance.
-    fn oracle(
-        x: &mut Vec<f64>,
-        p: &mut Vec<f64>,
-        q: f64,
-        r: f64,
-        h: &[f64],
-        z: f64,
-    ) -> [Vec<f64>; 5] {
+    fn oracle(x: &mut [f64], p: &mut [f64], q: f64, r: f64, h: &[f64], z: f64) -> [Vec<f64>; 5] {
         let n = x.len();
-        let mut pm = p.clone();
+        let mut pm = p.to_vec();
         for i in 0..n {
             pm[i * n + i] += q;
         }
-        let prior = x.clone();
+        let prior = x.to_vec();
         let v = z - (0..n).map(|i| h[i] * x[i]).sum::<f64>();
         let ph: Vec<f64> = (0..n)
             .map(|i| (0..n).map(|j| pm[i * n + j] * h[j]).sum())
@@ -202,7 +195,7 @@ mod tests {
                 p[i * n + j] = pm[i * n + j] - k[i] * hp[j];
             }
         }
-        [prior, vec![v], k, x.clone(), p.clone()]
+        [prior, vec![v], k, x.to_vec(), p.to_vec()]
     }
 
     fn near(a: &[f64], b: &[f64]) {
@@ -303,7 +296,7 @@ mod tests {
                 let (step, variance, class) = f.observe_return(*r, None).unwrap();
                 let y = ln((r * r).max(VOLATILITY_FLOOR)) + LOG_CHI2_BIAS;
                 check_step(&step, &oracle(&mut x, &mut p, 0.01, 4.9348, &[1.0], y));
-                close(variance, x[0].exp());
+                close(variance, exp(x[0]));
                 classes.push(class);
                 means.push(step.mean[0].to_bits());
             }
@@ -355,7 +348,7 @@ mod tests {
                 match outcome {
                     Reversion::Theta(t) => {
                         assert!(x[0] > 0.0 && x[0] < 1.0);
-                        close(t, -x[0].ln());
+                        close(t, -ln(x[0]));
                     }
                     Reversion::NonReverting => assert!(!(x[0] > 0.0 && x[0] < 1.0)),
                 }
@@ -519,7 +512,8 @@ mod tests {
                 let k = p / s;
                 x += k * v;
                 p *= 1.0 - k;
-                (v / s.sqrt()).clamp(-8.0, 8.0).powi(2)
+                let clamped = (v / s.sqrt()).clamp(-8.0, 8.0);
+                clamped * clamped
             })
             .collect()
     }
@@ -704,7 +698,7 @@ mod tests {
             weights.push(step.weight);
             (x, p) = (xn, pn);
         }
-        assert!(weights.iter().any(|w| *w < 1.0) && weights.iter().any(|w| *w == 1.0));
+        assert!(weights.iter().any(|w| *w < 1.0) && weights.contains(&1.0));
         // Bounded correction: the heavy tail moves the state no more than the capped gain allows.
         let mut tail = fresh(1.0);
         let bounded = tail.update_robust(model, 1.0 + 1e6).unwrap();

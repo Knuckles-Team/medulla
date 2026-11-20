@@ -701,7 +701,7 @@ mod tests {
                     .collect(),
             };
             assert_eq!(
-                path_set_disjoint(&submitted, &[since.clone()]),
+                path_set_disjoint(&submitted, std::slice::from_ref(&since)),
                 medulla_transaction::occ::disjoint(&path_set_footprint(&submitted), &since_fp),
                 "the decision must equal the shared occ::disjoint verdict"
             );

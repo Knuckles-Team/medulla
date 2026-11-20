@@ -119,6 +119,8 @@ use crate::tables::index_plan::IndexPlan;
 /// Named rather than spelled inline so the tuple's meaning is stated once
 /// (clippy::type_complexity).
 type IndexChange = (u64, Option<Vec<Cell>>, Option<Vec<Cell>>);
+/// One updated row as `(old cells, new cells)`.
+type UpdatedRow = (Vec<Cell>, Vec<Cell>);
 
 /// Catalog system table: `table_name -> MessagePack(TableSchema)`.
 const CATALOG: TableDefinition<&str, &[u8]> = TableDefinition::new("__sql_catalog__");
@@ -7343,7 +7345,7 @@ fn update_rows_in(
     table: &str,
     set: &serde_json::Map<String, Value>,
     selector: &medulla_result_types::row_predicate::RowPredicate,
-) -> Result<Vec<(Vec<Cell>, Vec<Cell>)>, String> {
+) -> Result<Vec<UpdatedRow>, String> {
     update_rows_in_at(
         wtx,
         tenant_scope,
@@ -7362,12 +7364,12 @@ fn update_rows_in_at(
     table: &str,
     set: &serde_json::Map<String, Value>,
     selector: &medulla_result_types::row_predicate::RowPredicate,
-) -> Result<Vec<(Vec<Cell>, Vec<Cell>)>, String> {
+) -> Result<Vec<UpdatedRow>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
     let assigns = resolve_update_assignments(&schema, table, set)?;
     let width = schema.columns().len();
-    let mut updated: Vec<(Vec<Cell>, Vec<Cell>)> = Vec::new();
+    let mut updated: Vec<UpdatedRow> = Vec::new();
     // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001 — `(rowid, old_cells, new_cells)` for the parent-side
     // referential-action pass AFTER the write is staged.
     let mut changed: Vec<(u64, Vec<Cell>, Vec<Cell>)> = Vec::new();

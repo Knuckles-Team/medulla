@@ -279,7 +279,7 @@ fn select(map: &RevisionMap, query: &CodeMapQuery) -> Vec<String> {
             query
                 .symbol
                 .as_deref()
-                .map_or(true, |symbol| entry.name == symbol)
+                .is_none_or(|symbol| entry.name == symbol)
         })
         .filter_map(|entry| {
             if tokens.is_empty() {

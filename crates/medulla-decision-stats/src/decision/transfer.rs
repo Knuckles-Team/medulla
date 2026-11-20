@@ -462,7 +462,7 @@ mod tests {
         assert!(skill_candidates(&skill_rows(&pairs, "q", "opt"), &skill_knobs()).is_empty());
 
         // Three successes of one record fail the distinct-record floor.
-        let mut same = vec![
+        let mut same = [
             stored("b", "1", "judge-a", true, 0),
             stored("b", "1", "judge-b", true, 0),
             stored("b", "1", "judge-c", true, 0),

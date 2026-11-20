@@ -520,7 +520,14 @@ mod tests {
     #[test]
     fn kalman_volatility_independent_vectors() {
         // A seeded log-variance that never moves: sqrt(exp(ln 0.01) * 252).
-        let v = kalman_volatility(&[0.1, -0.1, 0.1], 0.0, 1.0, Some(0.01_f64.ln()), 1.0, 252.0);
+        let v = kalman_volatility(
+            &[0.1, -0.1, 0.1],
+            0.0,
+            1.0,
+            Some(math::ln(0.01)),
+            1.0,
+            252.0,
+        );
         for x in v {
             assert!((x - 2.52_f64.sqrt()).abs() < 1e-9);
         }

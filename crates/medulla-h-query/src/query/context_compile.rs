@@ -266,11 +266,11 @@ fn finite_score(score: f32) -> Result<f32, Refusal> {
     }
 }
 
+/// One arm's name with the scored ids it produced.
+type ArmScores = (&'static str, Vec<(String, f32)>);
+
 /// Score ids by the lexical and semantic arms; best first, at most `top_n`.
-fn arm_scores(
-    core: &GraphCore,
-    request: &ContextBundleRequest,
-) -> Result<Vec<(&'static str, Vec<(String, f32)>)>, Refusal> {
+fn arm_scores(core: &GraphCore, request: &ContextBundleRequest) -> Result<Vec<ArmScores>, Refusal> {
     let top_n = request.top_n as usize;
     let mut arms = Vec::new();
     if request.mode != ContextMode::Semantic {

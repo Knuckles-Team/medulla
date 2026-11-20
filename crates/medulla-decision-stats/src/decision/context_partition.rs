@@ -100,7 +100,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R029.2.1
     #[test]
     fn partition_is_exhaustive_and_disjoint() {
-        let mut rng = Lcg(0x29_2_1);
+        let mut rng = Lcg(0x2921);
         for case in 0..500 {
             let count = rng.next(12) as usize;
             let sources: Vec<AvailableContextSource> = (0..count)

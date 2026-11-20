@@ -49,13 +49,6 @@ fn internal(error: impl std::fmt::Display) -> StoredQueryRefusal {
     refuse(INTERNAL, error.to_string())
 }
 
-pub(crate) fn is_stored_query_method(method: &Method) -> bool {
-    matches!(
-        method,
-        Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }
-    )
-}
-
 /// Route one stored-query method to its handler.
 pub(crate) async fn dispatch_stored_query(
     ctx: &QueryHandlerCtx<'_>,

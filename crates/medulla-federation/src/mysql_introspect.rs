@@ -139,11 +139,14 @@ pub async fn read_information_schema(
 }
 
 async fn read_with(pool: &MySqlPool, schemas: &[String]) -> Result<InformationSchema, String> {
-    let mut out = InformationSchema::default();
-    out.version = sqlx::query_scalar::<_, String>("SELECT CAST(VERSION() AS CHAR)")
+    let version = sqlx::query_scalar::<_, String>("SELECT CAST(VERSION() AS CHAR)")
         .fetch_one(pool)
         .await
         .map_err(|_| "federation: mysql version unavailable".to_string())?;
+    let mut out = InformationSchema {
+        version,
+        ..InformationSchema::default()
+    };
     let scope: Vec<String> = if schemas.is_empty() {
         let current: Option<String> = sqlx::query_scalar("SELECT CAST(DATABASE() AS CHAR)")
             .fetch_one(pool)
