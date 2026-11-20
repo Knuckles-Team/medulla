@@ -201,6 +201,7 @@ pub(super) fn open_breaking_change(
 }
 
 /// The change requests `tenant` holds, oldest key first.
+#[cfg(test)]
 pub(super) fn change_requests_of(core: &GraphCore, tenant: &str) -> Vec<Value> {
     let mut found: Vec<(String, Value)> = core
         .get_nodes_by_label(CHANGE_REQUEST_LABEL, 0)

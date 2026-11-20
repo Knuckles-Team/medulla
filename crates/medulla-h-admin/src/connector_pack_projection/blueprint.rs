@@ -58,10 +58,10 @@ pub fn validate_prompt_blueprint(
     if object.get("type").and_then(Value::as_str) != Some("prompt") {
         found.push(violation("type", "must_be_prompt"));
     }
-    if !object
+    if object
         .get("source")
         .and_then(Value::as_str)
-        .is_some_and(|source| !source.trim().is_empty())
+        .is_none_or(|source| source.trim().is_empty())
     {
         found.push(violation("source", "must_name_provenance"));
     }
@@ -70,11 +70,11 @@ pub fn validate_prompt_blueprint(
             found.push(violation(top_level, "body_only_in_core_directive"));
         }
     }
-    if !object
+    if object
         .get("instructions")
         .and_then(|instructions| instructions.get("core_directive"))
         .and_then(Value::as_str)
-        .is_some_and(|body| !body.trim().is_empty())
+        .is_none_or(|body| body.trim().is_empty())
     {
         found.push(violation(
             "instructions.core_directive",
