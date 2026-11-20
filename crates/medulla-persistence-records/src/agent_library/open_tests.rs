@@ -14,7 +14,7 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         let read = store.read().unwrap();
         assert_eq!(
             medulla_storage::owner_table_names(medulla_storage::OwnerLayout::AgentLibrary).len(),
-            22
+            24
         );
         macro_rules! empty_table {
             ($table:ident) => {
@@ -34,6 +34,8 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         empty_table!(CONNECTOR_PACK_BODY_HOLDERS);
         empty_table!(CONNECTOR_PACK_BINDINGS);
         empty_table!(CAPABILITY_REWARD);
+        empty_table!(CONCEPT_IDS);
+        empty_table!(CONCEPT_LINEAGE_EDGES);
         let status = store
             .connector_pack_status("tenant-a", &ResourceId::new("fresh-pack").unwrap())
             .unwrap();

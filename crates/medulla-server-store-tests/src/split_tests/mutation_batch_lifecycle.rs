@@ -643,6 +643,13 @@ async fn branch_graph_lifecycle_commit_carries_the_owning_tenant() {
     .await
     .expect("a branch graph name commits under its owning tenant");
     assert!(!committed.replayed);
-    assert_eq!(committed.record.batch.identity.tenant().as_str(), TENANT);
+    // The committing tenant lives in the envelope authority: the durable bind
+    // rebinds a graph-scoped batch's identity to the shard's own scope, whose
+    // tenant is the reserved shard sentinel (RF-RULING-004 application note 2).
+    assert_eq!(committed.record.committing_tenant(), Ok(TENANT));
+    assert_eq!(
+        committed.record.batch.identity.tenant().as_str(),
+        medulla_storage::GRAPH_SHARD_TENANT
+    );
     persistence.shutdown();
 }
