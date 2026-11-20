@@ -41,9 +41,6 @@ use crate::decide::stat_support::invalid_parameter;
 use super::capability_designation::{designate, executed, Designated};
 use super::DecisionFamily;
 
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R176.4).
-pub use medulla_decision_types::decision::load_set::REFUSALS;
-
 /// The family of the `load_set` question kind.
 pub struct LoadSetFamily;
 
@@ -374,7 +371,7 @@ pub(crate) fn load_set_outcome(
     };
     Ok(executed(
         StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(|detail| invalid_parameter(detail))?,
+            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
             calibrated: false,
         },
         Some(FamilyExecuted {

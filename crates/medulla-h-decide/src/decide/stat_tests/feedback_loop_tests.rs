@@ -12,8 +12,9 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_types::contract::Digest256;
 
-use super::super::family::feedback_loop::latest_continuation;
-use super::super::stat_log::LogReader;
+use super::super::family::feedback_loop::feedback_of;
+use super::super::stat_log::{visible_entries, LogReader};
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 fn feedback(loop_id: &str, round: u32, findings: u32, tag: &str) -> FeedbackRecord {
     FeedbackRecord {
@@ -96,6 +97,43 @@ fn reader(tenant: &str, principal: &str) -> LogReader {
         roles: Vec::new(),
         retention: super::super::stat_retention::Retention::none(),
     }
+}
+
+/// The continuation one committed round sealed: the loop stops when its
+/// decision chose `stop`, for `NoFindings` when the round found nothing and
+/// for `RoundBound` otherwise.
+fn continuation_of(record: &StatisticalDecisionRecord) -> Option<Continuation> {
+    let feedback = feedback_of(record)?;
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        return None;
+    };
+    let stops = scores
+        .iter()
+        .any(|score| score.option_id == "stop" && score.score.value != 0);
+    let stop = stops.then_some(if feedback.finding_count == 0 {
+        StopReason::NoFindings
+    } else {
+        StopReason::RoundBound
+    });
+    Some(Continuation {
+        loop_id: feedback.loop_id.clone(),
+        round: feedback.round,
+        stop,
+    })
+}
+
+/// The continuation of `loop_id`: the latest committed round the reader can
+/// see (MEDULLA-DECISION-ENGINE-R169.3). `None` when no round is committed.
+fn latest_continuation(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    loop_id: &str,
+) -> Result<Option<Continuation>, String> {
+    Ok(visible_entries(store, reader)?
+        .iter()
+        .filter_map(|entry| continuation_of(&entry.record))
+        .filter(|continuation| continuation.loop_id == loop_id)
+        .max_by_key(|continuation| continuation.round))
 }
 
 fn continuation(h: &Harness, tenant: &str, principal: &str, loop_id: &str) -> Option<Continuation> {

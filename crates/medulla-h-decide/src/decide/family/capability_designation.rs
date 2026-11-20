@@ -47,10 +47,6 @@ use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;
 
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R172.8), declared
-/// beside the model so the uniqueness test of the code registry collects it.
-pub use medulla_decision_types::decision::capability_designation::REFUSALS;
-
 /// The family of the `capability_designation` question kind.
 pub struct CapabilityDesignationFamily;
 
@@ -243,8 +239,8 @@ fn closures_of(
         return Ok(Vec::new());
     }
     let request_id = resource(question_id)?;
-    let schema = SchemaClosure::new(schema_digest, projection.edges())
-        .map_err(|detail| invalid_parameter(detail))?;
+    let schema =
+        SchemaClosure::new(schema_digest, projection.edges()).map_err(invalid_parameter)?;
     ask.question
         .required_capabilities
         .iter()
@@ -443,10 +439,7 @@ pub(crate) fn designate(
             format!("k is {}, at most {} are allowed", question.k, knobs.max_k),
         ));
     }
-    question
-        .weights
-        .validate()
-        .map_err(|detail| invalid_parameter(detail))?;
+    question.weights.validate().map_err(invalid_parameter)?;
     let query = adapted_query(runtime, query_of(ask)?);
     if !question.required_capabilities.is_empty() || !question.target_classes.is_empty() {
         if let Some(detail) = &runtime.schema_error {
@@ -595,7 +588,7 @@ pub(crate) fn designate(
                 &question.query_vector.embedding_version,
                 &query,
             )
-            .map_err(|detail| invalid_parameter(detail))?;
+            .map_err(invalid_parameter)?;
         adapted_question = adapted;
         &adapted_question
     } else {
@@ -684,7 +677,7 @@ pub(crate) fn capability_designation_outcome(
         .collect();
     Ok(executed(
         StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(|detail| invalid_parameter(detail))?,
+            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
             calibrated: false,
         },
         Some(FamilyExecuted {

@@ -101,7 +101,7 @@ fn conclude(
                     "{}: {} names no published toolset",
                     UNKNOWN_ROLE.as_str(),
                     asked.agent_role_iri
-                )))
+                )));
             }
         }
     };
@@ -168,7 +168,7 @@ fn conclude(
         for (option, assigned) in ranked.iter_mut().zip(&chosen) {
             option.score.value = assigned.relevance_q32;
         }
-        *scores = BoundedVec::new(ranked).map_err(|detail| invalid(detail))?;
+        *scores = BoundedVec::new(ranked).map_err(invalid)?;
     }
     let rank_text = |rank: Option<u32>| rank.map_or("none".to_string(), |rank| rank.to_string());
     let mut premises: Vec<FamilyPremise> = chosen

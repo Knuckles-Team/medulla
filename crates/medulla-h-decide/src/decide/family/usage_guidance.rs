@@ -39,9 +39,6 @@ use crate::decide::stat_usage_guidance::{
 use super::capability_designation::executed;
 use super::DecisionFamily;
 
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R177.4).
-pub use medulla_decision_types::decision::usage_guidance::REFUSALS;
-
 /// The family of the `usage_guidance` question kind.
 pub struct UsageGuidanceFamily;
 
@@ -340,7 +337,7 @@ pub(crate) fn usage_guidance_outcome(
     };
     Ok(executed(
         StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(|detail| invalid_parameter(detail))?,
+            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
             calibrated: false,
         },
         Some(FamilyExecuted {

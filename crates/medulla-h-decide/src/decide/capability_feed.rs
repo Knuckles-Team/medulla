@@ -418,9 +418,7 @@ fn embed_one(
     text: String,
     generation: &(String, u16),
 ) -> Result<Vec<f32>, Settle> {
-    let vectors = embedder
-        .embed(&[text])
-        .map_err(|error| Settle::Retry(error))?;
+    let vectors = embedder.embed(&[text]).map_err(Settle::Retry)?;
     let vector = vectors
         .into_iter()
         .next()

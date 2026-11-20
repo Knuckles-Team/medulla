@@ -40,9 +40,6 @@ use super::DecisionFamily;
 /// The option an admitted artifact names.
 pub const ADMIT_OPTION: &str = "admit";
 
-/// The registered refusal codes of the family, in declaration order.
-pub const REFUSALS: &[RefusalCode] = codes::GENERATED_CODE_ADMISSION;
-
 /// The family of the `generated_code_admission` question kind.
 pub struct GeneratedCodeAdmissionFamily;
 

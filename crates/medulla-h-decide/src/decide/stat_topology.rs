@@ -98,7 +98,6 @@ pub(super) async fn with_read(
     filled.read = read;
     let mut params = request.params.as_slice().to_vec();
     params[0].value = TypedValue::Topology(Box::new(filled));
-    request.params = medulla_types::contract::BoundedVec::new(params)
-        .map_err(|detail| invalid_parameter(detail))?;
+    request.params = medulla_types::contract::BoundedVec::new(params).map_err(invalid_parameter)?;
     Ok(request)
 }

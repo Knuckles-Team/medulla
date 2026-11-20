@@ -6,7 +6,7 @@
 //! `effective_bound`). The two candidates are `continue` and `stop`. `Decide`
 //! is evaluate-only; the caller commits each round through the decision log,
 //! and the latest committed record of a loop id is the durable continuation
-//! ([`latest_continuation`]).
+//! (read back by the `latest_continuation` test helper).
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::checker_feedback::{
@@ -32,10 +32,6 @@ use crate::decide::stat_log::{visible_entries, LogReader};
 use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;
-
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R169.4), declared
-/// beside the model so the uniqueness test of the code registry collects it.
-pub use medulla_decision_types::decision::checker_feedback::REFUSALS;
 
 /// The param that carries one round's typed feedback record.
 pub(crate) const PARAM_FEEDBACK: &str = "feedback";
@@ -82,7 +78,9 @@ fn bound_of(params: &[TypedParam]) -> Result<i64, String> {
 }
 
 /// The feedback record a committed record sealed, when it is a feedback round.
-fn feedback_of(record: &StatisticalDecisionRecord) -> Option<&FeedbackRecord> {
+pub(in crate::decide) fn feedback_of(
+    record: &StatisticalDecisionRecord,
+) -> Option<&FeedbackRecord> {
     if record.question.kind != QuestionKind::FeedbackLoop {
         return None;
     }
@@ -96,45 +94,6 @@ fn feedback_of(record: &StatisticalDecisionRecord) -> Option<&FeedbackRecord> {
             }
             _ => None,
         })
-}
-
-/// The continuation one committed round sealed: the loop stops when its
-/// decision chose `stop`, for `NoFindings` when the round found nothing and
-/// for `RoundBound` otherwise.
-fn continuation_of(record: &StatisticalDecisionRecord) -> Option<Continuation> {
-    let feedback = feedback_of(record)?;
-    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
-        return None;
-    };
-    let stops = scores
-        .iter()
-        .any(|score| score.option_id == STOP && score.score.value != 0);
-    let stop = stops.then(|| {
-        if feedback.finding_count == 0 {
-            StopReason::NoFindings
-        } else {
-            StopReason::RoundBound
-        }
-    });
-    Some(Continuation {
-        loop_id: feedback.loop_id.clone(),
-        round: feedback.round,
-        stop,
-    })
-}
-
-/// The continuation of `loop_id`: the latest committed round the reader can
-/// see (MEDULLA-DECISION-ENGINE-R169.3). `None` when no round is committed.
-pub(crate) fn latest_continuation(
-    store: &AgentLibraryStore,
-    reader: &LogReader,
-    loop_id: &str,
-) -> Result<Option<Continuation>, String> {
-    Ok(visible_entries(store, reader)?
-        .iter()
-        .filter_map(|entry| continuation_of(&entry.record))
-        .filter(|continuation| continuation.loop_id == loop_id)
-        .max_by_key(|continuation| continuation.round))
 }
 
 fn executed(outcome: StatisticalOutcome) -> Executed {

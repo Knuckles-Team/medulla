@@ -174,7 +174,7 @@ pub(crate) fn request_body(request: &DecideRequest) -> Result<HarnessConfigReque
         _ => {
             return Err(invalid_parameter(
                 "a harness_config question requires a priority (text) param",
-            ))
+            ));
         }
     };
     let assistant_profile_ref = match param(request, "assistant_profile_ref") {
@@ -183,7 +183,7 @@ pub(crate) fn request_body(request: &DecideRequest) -> Result<HarnessConfigReque
         Some(_) => {
             return Err(invalid_parameter(
                 "assistant_profile_ref must be a non-empty iri",
-            ))
+            ));
         }
     };
     // Without an assistant profile the request names its model profile; with
@@ -201,12 +201,13 @@ pub(crate) fn request_body(request: &DecideRequest) -> Result<HarnessConfigReque
         expected_trajectory_tokens: optional_tokens(request, "expected_trajectory_tokens")?,
         required_capabilities: match param(request, "required_capabilities") {
             None => BoundedVec::default(),
-            Some(TypedValue::IriList(list)) => BoundedVec::new(list.iter().cloned().collect())
-                .map_err(|detail| invalid_parameter(detail))?,
+            Some(TypedValue::IriList(list)) => {
+                BoundedVec::new(list.iter().cloned().collect()).map_err(invalid_parameter)?
+            }
             Some(_) => {
                 return Err(invalid_parameter(
                     "required_capabilities must be an iri_list",
-                ))
+                ));
             }
         },
         assistant_profile_ref,
@@ -232,7 +233,7 @@ pub(crate) async fn resolve_profile(
         _ => {
             return Err(invalid_parameter(
                 "an assistant_profile_ref needs the graph param naming the graph that holds the profile",
-            ))
+            ));
         }
     };
     #[cfg(feature = "security")]
@@ -559,7 +560,7 @@ fn abstain_for_profile(
         missing.push(PROFILE_TOOL_NOT_ALLOWED.to_string());
     }
     Ok(HarnessPart::Abstained {
-        missing_fact: BoundedVec::new(missing).map_err(|detail| invalid_parameter(detail))?,
+        missing_fact: BoundedVec::new(missing).map_err(invalid_parameter)?,
         conservative_default: ActionSpace::ToolSet,
     })
 }
@@ -584,14 +585,13 @@ fn tool_subset_part(
             value: bounded_ids(ids)?,
         },
         Subset::Chosen(ids) => HarnessPart::Abstained {
-            missing_fact: BoundedVec::new(missing).map_err(|detail| invalid_parameter(detail))?,
+            missing_fact: BoundedVec::new(missing).map_err(invalid_parameter)?,
             conservative_default: bounded_ids(ids)?,
         },
         Subset::Missing(fact) => {
             missing.push(fact);
             HarnessPart::Abstained {
-                missing_fact: BoundedVec::new(missing)
-                    .map_err(|detail| invalid_parameter(detail))?,
+                missing_fact: BoundedVec::new(missing).map_err(invalid_parameter)?,
                 conservative_default: BoundedVec::default(),
             }
         }
@@ -817,7 +817,7 @@ fn conclude_config(
         _ => {
             return Err(invalid_parameter(
                 "a harness_config question declares its own tool candidates",
-            ))
+            ));
         }
     };
     let reference = body.assistant_profile_ref.clone();
@@ -833,7 +833,7 @@ fn conclude_config(
         (Some(reference), None) => {
             return Err(invalid_parameter(format!(
                 "assistant profile {reference} was not read by the serving path"
-            )))
+            )));
         }
     };
     let facts = read_facts(ctx.store, ctx.tenant_id, &body, graph_view)?;
@@ -977,8 +977,7 @@ fn derive_config(
         request: body,
         answer,
         tool_subset_certificate,
-        declared_options: BoundedVec::new(declared.to_vec())
-            .map_err(|detail| invalid_parameter(detail))?,
+        declared_options: BoundedVec::new(declared.to_vec()).map_err(invalid_parameter)?,
         plan_scaffold_no_gain_run: facts
             .plan_scaffold_no_gain
             .as_ref()
@@ -1062,7 +1061,7 @@ fn outcome_of(
             .collect();
         reasons.truncate(64);
         return Ok(StatisticalOutcome::Abstained {
-            reasons: BoundedVec::new(reasons).map_err(|detail| invalid_parameter(detail))?,
+            reasons: BoundedVec::new(reasons).map_err(invalid_parameter)?,
         });
     }
     let scores: Vec<ScoredOption> = parts
@@ -1205,7 +1204,7 @@ pub(crate) fn replay(
         _ => {
             return Err(mismatch(
                 "the evidence options are not the record's declared candidates",
-            ))
+            ));
         }
     }
     let request = DecideRequest {
@@ -1235,7 +1234,7 @@ pub(crate) fn replay(
         (true, None) => {
             return Err(mismatch(
                 "the record names an assistant profile the replay did not read",
-            ))
+            ));
         }
     };
     if body != evidence.request {

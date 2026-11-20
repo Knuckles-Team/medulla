@@ -308,12 +308,10 @@ pub(in crate::decide) async fn with_similarity(
         }
         params.push(TypedParam {
             name: nearest_neighbour_param(graph_param),
-            value: TypedValue::Text(
-                serde_json::to_string(&nearest).map_err(|error| invalid(error))?,
-            ),
+            value: TypedValue::Text(serde_json::to_string(&nearest).map_err(invalid)?),
         });
     }
-    request.params = BoundedVec::new(params).map_err(|detail| invalid(detail))?;
+    request.params = BoundedVec::new(params).map_err(invalid)?;
     Ok(request)
 }
 

@@ -610,8 +610,8 @@ fn review_params(
     }
     let knobs = medulla_server_api::knob_config::knobs();
     let outcomes: Vec<ReviewOutcome> = reviews.iter().map(|(_, outcome)| *outcome).collect();
-    let window = usize::try_from(knobs.er_drift_window).map_err(|e| invalid(e))?;
-    let max_ppm = u32::try_from(knobs.er_drift_max_ppm).map_err(|e| invalid(e))?;
+    let window = usize::try_from(knobs.er_drift_window).map_err(invalid)?;
+    let max_ppm = u32::try_from(knobs.er_drift_max_ppm).map_err(invalid)?;
     let (state, change_ppm) = match accept_rate_drift(&outcomes, window, max_ppm) {
         AcceptDrift::Insufficient { .. } => return Ok(params),
         AcceptDrift::Stable { change_ppm, .. } => ("stable", change_ppm),
@@ -670,8 +670,8 @@ pub(in crate::decide) async fn with_candidates(
         };
         let view = graph_vectors(state, verified.agent_id(), graph).await?;
         let knobs = medulla_server_api::knob_config::knobs();
-        let k = usize::try_from(knobs.er_candidate_k).map_err(|e| invalid(e))?;
-        let max_nodes = usize::try_from(knobs.er_index_max_nodes).map_err(|e| invalid(e))?;
+        let k = usize::try_from(knobs.er_candidate_k).map_err(invalid)?;
+        let max_nodes = usize::try_from(knobs.er_index_max_nodes).map_err(invalid)?;
         check_tenants(options.as_slice(), &view)?;
         let added = neighbour_options(options.as_slice(), &view, verified.tenant(), k, max_nodes)?;
         let mut all = options.as_slice().to_vec();
@@ -680,11 +680,11 @@ pub(in crate::decide) async fn with_candidates(
             all.sort_by(|a, b| a.option_id.cmp(&b.option_id));
         }
         request.candidates = CandidateSource::Declared {
-            options: BoundedVec::new(stamp_proposals(all, &view)?).map_err(|e| invalid(e))?,
+            options: BoundedVec::new(stamp_proposals(all, &view)?).map_err(invalid)?,
         };
     }
     params.extend(review_params(store, verified)?);
-    request.params = BoundedVec::new(params).map_err(|e| invalid(e))?;
+    request.params = BoundedVec::new(params).map_err(invalid)?;
     Ok(request)
 }
 
@@ -703,7 +703,7 @@ impl DecisionFamily for ResolveEntityFamily {
                          each an IRI",
                         medulla_decision_types::decision::codes::ENTITY_PAIR_INVALID.as_str(),
                         option.option_id
-                    ))
+                    ));
                 }
             };
             if left == right {

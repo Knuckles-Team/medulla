@@ -104,8 +104,7 @@ pub(super) fn promote(
         ));
     }
     // A rule that would not decode back from its component is refused up front.
-    GuardrailRule::from_attributes(&rule.rule_id, &rule.to_attributes())
-        .map_err(|detail| invalid(detail))?;
+    GuardrailRule::from_attributes(&rule.rule_id, &rule.to_attributes()).map_err(invalid)?;
     let named = named_resolutions(ctx, reader, resolution_ids)?;
     let human = named
         .iter()

@@ -44,10 +44,6 @@ use crate::decide::stat_support::{filtered_view, invalid_parameter};
 
 use super::DecisionFamily;
 
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R171.4), declared
-/// beside the model so the uniqueness test of the code registry collects it.
-pub use medulla_decision_types::decision::planning_admission::REFUSALS;
-
 /// The param that carries the typed plan.
 pub(crate) const PARAM_PLANNING_ADMISSION: &str = "planning_admission";
 /// The param that names the repository graph the view is derived from.

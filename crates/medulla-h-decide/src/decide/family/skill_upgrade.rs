@@ -31,10 +31,6 @@ use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;
 
-/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R167.4), declared
-/// beside the model so the uniqueness test of the code registry collects it.
-pub use medulla_decision_types::decision::skill_upgrade_request::REFUSALS;
-
 /// The param that carries the typed upgrade request.
 pub(crate) const PARAM_SKILL_UPGRADE: &str = "skill_upgrade";
 /// The single candidate of an upgrade question.
