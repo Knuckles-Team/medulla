@@ -228,7 +228,7 @@ fn no_writer_sets_content_outside_construction() {
             let code = line.split("//").next().unwrap_or("");
             let compact: String = code.split_whitespace().collect();
             assert!(
-                !(compact.contains(&assign) && !compact.contains(&compare)),
+                !compact.contains(&assign) || compact.contains(&compare),
                 "{name}:{}: seed plan content assigned after construction",
                 number + 1
             );

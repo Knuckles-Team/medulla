@@ -253,7 +253,7 @@ async fn orphan_grace_fault() {
     let served = Served::new();
     bind(&served, CONNECTOR, ADMIN).await;
     let kept = tool(CONNECTOR, "kept", "A tool a revision holds.");
-    imported(&served, &build_pack(CONNECTOR, &[kept.clone()]), None).await;
+    imported(&served, &build_pack(CONNECTOR, std::slice::from_ref(&kept)), None).await;
 
     // Two bodies staged and then abandoned by a fault before owner commit:
     // one staged long ago (its grace window has run out), one staged now.
@@ -414,7 +414,7 @@ async fn verified_body_read() {
     let served = Served::new();
     bind(&served, CONNECTOR, ADMIN).await;
     let verified = tool(CONNECTOR, "verified", "A tool whose body is verified.");
-    imported(&served, &build_pack(CONNECTOR, &[verified.clone()]), None).await;
+    imported(&served, &build_pack(CONNECTOR, std::slice::from_ref(&verified)), None).await;
     let request = |tenant: &str| Method::AgentComponent {
         op: AgentComponentOp::Content {
             request: AgentComponentContentRequest {

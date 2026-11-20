@@ -86,6 +86,9 @@ pub mod worker {
     /// Idle back-off between sweeps.
     const IDLE: Duration = Duration::from_millis(500);
 
+    /// One connector's claimed rows: claim index and its decoded import record.
+    type ConnectorClaims = (Option<String>, Vec<(usize, Option<PackImportRecord>)>);
+
     pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
         let subscribed = AtomicBool::new(false);
         loop {
@@ -239,7 +242,7 @@ pub mod worker {
         claims: &[MutationOutboxLease],
         retry_at: RetryAt,
     ) -> Vec<(Option<OutboxRejectReason>, bool)> {
-        let mut groups: Vec<(Option<String>, Vec<(usize, Option<PackImportRecord>)>)> = Vec::new();
+        let mut groups: Vec<ConnectorClaims> = Vec::new();
         for (index, lease) in claims.iter().enumerate() {
             let record = medulla_storage::decode_ledger_record::<PackImportRecord>(
                 &lease.record.intent.payload,

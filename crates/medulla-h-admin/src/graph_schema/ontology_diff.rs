@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use medulla_catalog_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiff};
 use medulla_graph_core::graph::{
-    GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin, MAX_SCHEMA_DOCUMENT_TRIPLES,
+    GraphSchemaSource, GraphSchemaSources, MAX_SCHEMA_DOCUMENT_TRIPLES,
 };
 use medulla_rdf::oxrdf::{Graph, NamedOrBlankNode, Term, Triple};
 use medulla_shacl::Severity;
