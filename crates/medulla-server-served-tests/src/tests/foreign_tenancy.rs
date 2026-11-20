@@ -426,7 +426,8 @@ async fn nl_query_foreign_leg_is_owner_scoped() {
         nl("FOREIGN \"remote_docs\" |> LIMIT 10"),
     )
     .await;
-    assert_eq!(b.error.as_deref(), Some("INVALID_ARGUMENT"));
+    // A grounding refusal on every step spends the budget (MEDULLA-FEDERATED-QUERY-R058.4.4).
+    assert_eq!(b.error.as_deref(), Some("NL_QUERY_STEPS_EXHAUSTED"));
     assert!(b.result.is_none());
     let detail = b.error_detail.as_deref().expect("grounding refusal detail");
     assert!(detail.contains("NL_SCHEMA_UNKNOWN_SOURCE"), "{detail}");
@@ -438,7 +439,7 @@ async fn nl_query_foreign_leg_is_owner_scoped() {
     {
         // Even an authorized foreign replacement cannot expose system's local schema.
         let hidden = dispatch_as(&local, 923, OWNER_A, nl(FOREIGN_UQL)).await;
-        assert_eq!(hidden.error.as_deref(), Some("INVALID_ARGUMENT"));
+        assert_eq!(hidden.error.as_deref(), Some("NL_QUERY_STEPS_EXHAUSTED"));
         assert!(hidden.result.is_none());
         let detail = hidden
             .error_detail
@@ -587,7 +588,7 @@ async fn connected_sources_exclude_another_owners_source() {
         .replace("RANK_PAGERDUTY", "2");
     let attach = Method::GraphSchema {
         op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
-            source_id: "authority-incident".into(),
+            source_id: "admin:authority-incident".into(),
             shapes_ttl: None,
             ontology_ttl: Some(document),
             if_composed_digest: None,

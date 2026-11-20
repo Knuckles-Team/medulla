@@ -59,6 +59,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     // MEDULLA-FEDERATED-QUERY-R608.4.
     ("CausalVerify", &["CAUSAL_"]),
+    // MEDULLA-CLUSTER-R001.3: k-means refuses with the clustering kernel's typed codes.
+    ("DsKMeans", &["CLUSTERING_"]),
     // MEDULLA-FEDERATED-QUERY-R708.4.
     ("StoredQuery", &["STORED_QUERY_"]),
     // MEDULLA-SRC-AUTH-R012.7: a sync passes through the refusal of the foreign read it consumes.
@@ -1321,7 +1323,9 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
         codes.insert("NL_STEPS_INVALID");
     }
     // MEDULLA-FEDERATED-QUERY-R058.4.4: the bounded-planning refusals.
-    if matches!(id, "NlQuery" | "NlQueryPlan") {
+    // NlQueryExplain shares NlQuery's run and refuses exactly like it
+    // (MEDULLA-FEDERATED-QUERY-R058.2.2.1).
+    if matches!(id, "NlQuery" | "NlQueryExplain" | "NlQueryPlan") {
         codes.extend([
             "NL_QUERY_STEPS_EXHAUSTED",
             "NL_PLANNER_UNCONFIGURED",
@@ -1384,7 +1388,9 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
 
 fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     // MEDULLA-FEDERATED-QUERY-R090.4 / R651.4: the planner and expansion-port refusals.
-    if matches!(d.id.as_str(), "Discover" | "NlQuery") {
+    // NlQueryExplain shares NlQuery's planning entry and refuses exactly like it
+    // (MEDULLA-FEDERATED-QUERY-R058.2.2.1).
+    if matches!(d.id.as_str(), "Discover" | "NlQuery" | "NlQueryExplain") {
         use medulla_types::ingestion_wire::{
             DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED, EXPANSION_PROVIDER_FAILED,
             EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,

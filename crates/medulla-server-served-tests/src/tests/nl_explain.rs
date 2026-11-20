@@ -112,8 +112,11 @@ async fn nl_query_explain_refuses_exactly_like_nl_query() {
     let state = echo_planned_fixture().await;
     let over_budget = "x".repeat(medulla_nlq::nl::NlQueryBudget::default().max_uql_len + 1);
     for (id, text, code) in [
-        (950, "MATCH ((( not uql", "INVALID_ARGUMENT"),
-        (952, over_budget.as_str(), "UQL_BUDGET_EXCEEDED"),
+        // Every step refused and the budget spent (MEDULLA-FEDERATED-QUERY-R058.4.4).
+        (950, "MATCH ((( not uql", "NL_QUERY_STEPS_EXHAUSTED"),
+        // Text above the 2,048-byte NL bound is refused before any planner call
+        // (MEDULLA-FEDERATED-QUERY-R651.4).
+        (952, over_budget.as_str(), "QUERY_TEXT_TOO_LONG"),
     ] {
         let plain = send(&state, id, nl(text)).await;
         let explained = send(&state, id, nl_explain(text)).await;
@@ -188,9 +191,11 @@ async fn nl_mutating_candidates_refuse_without_changing_graph_data() {
         let id = 980 + 2 * index as u64;
         let plain = send(&state, id, nl(text)).await;
         let explained = send(&state, id + 1, nl_explain(text)).await;
+        // A mutation-shaped candidate keeps its typed refusal and is refused at
+        // once, before a second step is spent (MEDULLA-FEDERATED-QUERY-R058.4.4).
         assert_eq!(
             plain.error.as_deref(),
-            Some("INVALID_ARGUMENT"),
+            Some("NL_MUTATION_REFUSED"),
             "{text}: {:?}",
             plain.error_detail
         );
@@ -200,7 +205,7 @@ async fn nl_mutating_candidates_refuse_without_changing_graph_data() {
         assert_eq!(explained.error_detail, plain.error_detail, "{text}");
         let detail = plain.error_detail.as_deref().expect("parse refusal detail");
         assert!(detail.contains(text), "{detail}");
-        assert!(detail.contains("step 2"), "{detail}");
+        assert!(!detail.contains("step 2"), "{detail}");
 
         let after = core.analysis_snapshot();
         assert_eq!(
@@ -241,7 +246,7 @@ async fn nl_query_grounds_names_on_the_graph_schema_before_running() {
     let plain = send(&state, 961, nl(text)).await;
     let explained = send(&state, 962, nl_explain(text)).await;
     assert!(plain.result.is_none() && explained.result.is_none());
-    assert_eq!(plain.error.as_deref(), Some("INVALID_ARGUMENT"));
+    assert_eq!(plain.error.as_deref(), Some("NL_QUERY_STEPS_EXHAUSTED"));
     let detail = plain.error_detail.clone().unwrap_or_default();
     assert!(detail.contains("NL_SCHEMA_UNKNOWN_PROPERTY"), "{detail}");
     assert!(detail.contains("step 2"), "{detail}");
@@ -287,7 +292,7 @@ async fn nl_query_grounds_foreign_names_from_the_verified_owner_registry() {
     // other principal's source name, owner or endpoint.
     let response = send(&state, 964, nl("MATCH (:Doc) |> FOREIGN \"known\"")).await;
     assert!(response.result.is_none());
-    assert_eq!(response.error.as_deref(), Some("INVALID_ARGUMENT"));
+    assert_eq!(response.error.as_deref(), Some("NL_QUERY_STEPS_EXHAUSTED"));
     let detail = response.error_detail.unwrap_or_default();
     assert!(detail.contains("NL_SCHEMA_UNKNOWN_SOURCE"), "{detail}");
     assert!(detail.contains("sources: none"), "{detail}");
