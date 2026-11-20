@@ -238,12 +238,6 @@ pub mod virtual_graph_view;
 // child.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod warehouse_conformance;
-// MEDULLA-UNIFIED-DATA-PLANE-R020.1 — typed federated warehouse/lake source-kind
-// model (Snowflake, BigQuery, DuckDB, Iceberg) and its per-kind required-field
-// refusal. Pure data; query pushdown and the conformance entry are later
-// children.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod warehouse_federation;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod web_source;
 // MEDULLA-UNIFIED-DATA-PLANE-R016.1 — typed SQL Server attached-source catalog

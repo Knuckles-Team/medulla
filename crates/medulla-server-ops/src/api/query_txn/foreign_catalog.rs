@@ -881,7 +881,7 @@ fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), Strin
             format!("INVALID_ARGUMENT: warehouse source config invalid: {missing}")
         })?;
         medulla_federation::warehouse_foreign::check_outbound(config)?;
-        if kind == medulla_types::warehouse_federation::WarehouseSourceKind::DuckDb {
+        if kind == medulla_query_types::warehouse_federation::WarehouseSourceKind::DuckDb {
             let path = config
                 .fields
                 .get("database_path")

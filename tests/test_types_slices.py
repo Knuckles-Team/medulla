@@ -93,6 +93,7 @@ QUERY_MODULES = (
     "rdf_report",
     "search_source",
     "series_expr",
+    "warehouse_federation",
     "wire",
     "wire_datascience",
     "wire_mining",
@@ -238,7 +239,6 @@ DOMAIN_SLICES = {
         "stewardship",
         "virtual_graph_view",
         "warehouse_conformance",
-        "warehouse_federation",
         "web_source",
     ),
     "medulla-source-types": (

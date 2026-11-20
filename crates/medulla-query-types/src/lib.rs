@@ -45,6 +45,10 @@ pub mod rdf_report;
 pub mod search_source;
 // EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
 pub mod series_expr;
+// MEDULLA-UNIFIED-DATA-PLANE-R020.1 — typed federated warehouse/lake source-kind
+// model (Snowflake, BigQuery, DuckDB, Iceberg) and its per-kind required-field
+// refusal. Pure data; the registered `ForeignSourceSpec::Warehouse` carries its config.
+pub mod warehouse_federation;
 // MEDULLA-FEDERATED-QUERY-R738.17 — the lifecycle of one EXPLAIN/PROFILE stage report.
 #[cfg(feature = "query")]
 pub mod uql_machine;

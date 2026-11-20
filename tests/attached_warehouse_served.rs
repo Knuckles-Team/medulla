@@ -25,7 +25,7 @@ use std::sync::OnceLock;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::knob_config::{install_allowed_roots, FOREIGN_DUCKDB_ALLOWED_ROOTS};
-use medulla_types::warehouse_federation::{WarehouseSourceConfig, WarehouseSourceKind};
+use medulla_query_types::warehouse_federation::{WarehouseSourceConfig, WarehouseSourceKind};
 use medulla_types::wire::{
     ForeignColumnComparison, ForeignColumnPredicate, ForeignColumnRow, ForeignSourceSpec,
 };

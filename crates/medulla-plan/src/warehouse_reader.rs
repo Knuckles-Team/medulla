@@ -18,7 +18,7 @@ use medulla_federation::warehouse_foreign::{
 use medulla_sql::sql::{
     read_iceberg_table, IcebergCompare, IcebergFilter, IcebergReadError, IcebergReadRequest,
 };
-use medulla_types::warehouse_federation::WarehouseSourceKind;
+use medulla_query_types::warehouse_federation::WarehouseSourceKind;
 
 use crate::warehouse_pushdown::{
     plan_pushdown, WarehousePushdownRefusal, WarehousePushdownRequest,

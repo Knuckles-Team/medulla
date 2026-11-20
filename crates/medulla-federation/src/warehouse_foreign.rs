@@ -9,7 +9,7 @@
 use std::sync::{Arc, RwLock};
 
 use medulla_exec::rowset::RowSet;
-use medulla_types::warehouse_federation::{WarehouseSourceConfig, WarehouseSourceKind};
+use medulla_query_types::warehouse_federation::{WarehouseSourceConfig, WarehouseSourceKind};
 
 use crate::federation::ForeignSource;
 use crate::federation_opt::{

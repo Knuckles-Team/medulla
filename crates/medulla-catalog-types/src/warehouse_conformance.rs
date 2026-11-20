@@ -2,7 +2,7 @@
 //! warehouse federation adapters (MEDULLA-UNIFIED-DATA-PLANE-R020.3): a builder over the
 //! generic [`crate::dialect_conformance::DialectConformanceEntry`]
 //! (MEDULLA-UNIFIED-DATA-PLANE-R022.1) that derives this row's `adapter` label directly
-//! from the closed [`crate::warehouse_federation::WarehouseSourceKind`]
+//! from the closed [`medulla_query_types::warehouse_federation::WarehouseSourceKind`]
 //! (MEDULLA-UNIFIED-DATA-PLANE-R020.1) rather than a caller-supplied string, and refuses a
 //! malformed entry or a blank engine version before it is admitted into a report.
 //! This is the typed-model slice (`.1`): no live warehouse/lake connection is needed
@@ -13,7 +13,7 @@
 use crate::dialect_conformance::{
     ConformanceDeviation, ConformanceOutcome, DialectConformanceEntry, InvalidConformanceEntry,
 };
-use crate::warehouse_federation::WarehouseSourceKind;
+use medulla_query_types::warehouse_federation::WarehouseSourceKind;
 
 /// Why a warehouse conformance entry was refused before being admitted into a
 /// report.
