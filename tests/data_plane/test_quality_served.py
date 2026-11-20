@@ -17,13 +17,18 @@ import pytest
 from _harness_envelope import draft_envelope, op
 from conftest import TEST_TENANT, request_context
 
+FOREIGN_TENANT = "tenant:foreign"
 
-def _client() -> Any:
+
+def _client(tenant: str | None = None) -> Any:
     from medulla.client import SyncMedullaClient
 
+    context = request_context()
+    if tenant is not None:
+        context["tenant"] = tenant
     return SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-        verified_context=request_context(),
+        verified_context=context,
     )
 
 
@@ -46,6 +51,7 @@ def _evaluate(client: Any, graph: str, target: str) -> list[dict]:
     raise AssertionError("quality job did not finish")
 
 
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762")
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.3")
 def test_rule_scores_and_incident(start_medulla_server) -> None:
     """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.3: scores, streak, incident."""
