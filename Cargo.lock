@@ -6567,6 +6567,7 @@ dependencies = [
 name = "medulla-quantum-core"
 version = "0.1.0"
 dependencies = [
+ "medulla-types",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -6793,6 +6794,7 @@ dependencies = [
  "medulla-mutation-types",
  "medulla-numeric",
  "medulla-protocol-types",
+ "medulla-quantum-core",
  "medulla-query-types",
  "medulla-raft",
  "medulla-raft-xshard",
