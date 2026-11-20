@@ -107,13 +107,20 @@ cat:actionType a owl:ObjectProperty ;
     rdfs:domain cat:ToolAsset ;
     rdfs:range rdfs:Class .
 
+cat:describes a owl:ObjectProperty ;
+    rdfs:label "describes" ;
+    rdfs:comment "The entity a catalog asset is about. The asset is a record of its subject, never the subject itself." ;
+    rdfs:domain cat:Asset .
+
 cat:describesSkill a owl:ObjectProperty ;
     rdfs:label "describes skill" ;
+    rdfs:subPropertyOf cat:describes ;
     rdfs:domain cat:SkillAsset ;
     rdfs:range :Skill .
 
 cat:describesAgent a owl:ObjectProperty ;
     rdfs:label "describes agent" ;
+    rdfs:subPropertyOf cat:describes ;
     rdfs:domain cat:AgentAsset ;
     rdfs:range :Agent .
 
@@ -278,42 +285,52 @@ cat:CriticalityClassification a owl:Class ;
     catn:openMetadataType "Criticality" .
 
 # -- Asset families (MEDULLA-TYPED-PACKS-R108.1) ---------------------------------------------
-# Every family class below is a cat:Asset subclass and extends the core class it describes.
+# Every family class below is a cat:Asset subclass only and rolls up to core through cat:Asset.
+# A catalog record about a person, team, agent or workflow is not that entity: a family whose
+# subject is a core entity links it with `cat:describes some :<Class>`, never by subclassing it
+# (cat:Asset is a BFO generically dependent continuant, disjoint from the subjects it describes).
 
 cat:AgentTemplateAsset a owl:Class ;
     rdfs:label "Agent Template Asset" ;
     rdfs:comment "An Agent Library template catalogued as an asset; it describes a :AgentTemplate." ;
-    rdfs:subClassOf cat:Asset, :AgentTemplate .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :AgentTemplate ] .
 
 cat:A2AAgentAsset a owl:Class ;
     rdfs:label "A2A Agent Asset" ;
     rdfs:comment "An A2A agent card catalogued as an asset; it describes a :Agent." ;
-    rdfs:subClassOf cat:Asset, :Agent .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Agent ] .
 
 cat:AgentVersion a owl:Class ;
     rdfs:label "Agent Version" ;
     rdfs:comment "One immutable published version of an agent asset." ;
-    rdfs:subClassOf cat:Asset, :Agent .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Agent ] .
 
 cat:OrgUnit a owl:Class ;
     rdfs:label "Organizational Unit" ;
     rdfs:comment "A business unit catalogued as an asset." ;
-    rdfs:subClassOf cat:Asset, :Organization, org:OrganizationalUnit .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Organization ] .
 
 cat:Team a owl:Class ;
     rdfs:label "Team Asset" ;
     rdfs:comment "A team catalogued as an asset." ;
-    rdfs:subClassOf cat:Asset, :Team .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Team ] .
 
 cat:Person a owl:Class ;
     rdfs:label "Person Asset" ;
     rdfs:comment "A person catalogued as an asset (an owner or a steward)." ;
-    rdfs:subClassOf cat:Asset, :Person .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Person ] .
 
 cat:Role a owl:Class ;
     rdfs:label "Role Asset" ;
     rdfs:comment "A business role catalogued as an asset." ;
-    rdfs:subClassOf cat:Asset, :Role .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Role ] .
 
 cat:BusinessDomain a owl:Class ;
     rdfs:label "Business Domain" ;
@@ -328,27 +345,32 @@ cat:Product a owl:Class ;
 cat:Service a owl:Class ;
     rdfs:label "Service Asset" ;
     rdfs:comment "A business service catalogued as an asset." ;
-    rdfs:subClassOf cat:Asset, :Service .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Service ] .
 
 cat:WorkflowDefinition a owl:Class ;
     rdfs:label "Workflow Definition" ;
     rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;
-    rdfs:subClassOf cat:Asset, :Workflow .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Workflow ] .
 
 cat:WorkflowRun a owl:Class ;
     rdfs:label "Workflow Run" ;
     rdfs:comment "One run of a workflow definition." ;
-    rdfs:subClassOf cat:Asset, :DurableExecutionUnit .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :DurableExecutionUnit ] .
 
 cat:WorkflowStep a owl:Class ;
     rdfs:label "Workflow Step" ;
     rdfs:comment "One step of a workflow definition." ;
-    rdfs:subClassOf cat:Asset, :WorkflowStep .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :WorkflowStep ] .
 
 cat:KnowledgeGraph a owl:Class ;
     rdfs:label "Knowledge Graph Asset" ;
     rdfs:comment "A graph catalogued as an asset, linked to its ontology, contract, source, freshness and steward." ;
-    rdfs:subClassOf cat:Asset, :Dataset .
+    rdfs:subClassOf cat:Asset ,
+        [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Dataset ] .
 
 cat:SpecialistPackage a owl:Class ;
     rdfs:label "Specialist Package" ;

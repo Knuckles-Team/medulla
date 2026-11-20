@@ -309,7 +309,9 @@ fn catalog_shapes_refuse_incomplete_or_open_vocabulary_records() {
 fn six_families_validate_and_share_one_parent_asset_class() {
     let triples = documents();
     let sub = format!("{RDFS}subClassOf");
-    // Every family class is a cat:Asset subclass, and each extends its core class.
+    // Every family class is a cat:Asset subclass. A family whose subject is a
+    // core entity links it with `cat:describes some :<Class>` and never
+    // subclasses it: a catalog record about a person is not the person.
     let families: [(&str, Option<&str>); 16] = [
         ("AgentTemplateAsset", Some("AgentTemplate")),
         ("A2AAgentAsset", Some("Agent")),
@@ -336,10 +338,36 @@ fn six_families_validate_and_share_one_parent_asset_class() {
         );
         if let Some(core) = core {
             assert!(
-                has_iri(&triples, &class, &sub, &format!("{KG}{core}")),
-                "{family} must extend core {core}"
+                !has_iri(&triples, &class, &sub, &format!("{KG}{core}")),
+                "{family} must not subclass core {core}"
+            );
+            assert!(
+                describes_some(&triples, &class, &format!("{KG}{core}")),
+                "{family} must be cat:describes some core {core}"
             );
         }
+    }
+    let describes = format!("{CAT}describes");
+    for sub_property in ["describesAgent", "describesSkill"] {
+        assert!(
+            has_iri(
+                &triples,
+                &format!("{CAT}{sub_property}"),
+                &format!("{RDFS}subPropertyOf"),
+                &describes
+            ),
+            "cat:{sub_property} must specialise cat:describes"
+        );
+    }
+    // The families are satisfiable alongside the BFO-rooted core.
+    let classification = Reasoner::from_triples(&triples).classify();
+    assert!(classification.consistent);
+    for (family, _) in families {
+        let class = format!("<{CAT}{family}>");
+        assert!(
+            !classification.unsatisfiable.contains(&class),
+            "{family} is unsatisfiable"
+        );
     }
 
     // A complete asset of each family validates.
@@ -369,4 +397,36 @@ fn six_families_validate_and_share_one_parent_asset_class() {
     assert!(!conforms(
         "<urn:a:p> a cat:Product ; cat:hasOwner <urn:g:a>, <urn:g:b> ."
     ));
+}
+
+/// True when `class` is `rdfs:subClassOf [ a owl:Restriction ; owl:onProperty
+/// cat:describes ; owl:someValuesFrom <filler> ]`.
+fn describes_some(triples: &[Triple], class: &str, filler: &str) -> bool {
+    use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term};
+    let named = |iri: &str| NamedNode::new(iri).unwrap();
+    let sub = named(&format!("{RDFS}subClassOf"));
+    let on_property = named(&format!("{OWL}onProperty"));
+    let some = named(&format!("{OWL}someValuesFrom"));
+    let restriction = named(&format!("{OWL}Restriction"));
+    let rdf_type = named(&format!("{RDF}type"));
+    let describes = Term::from(named(&format!("{CAT}describes")));
+    let filler = Term::from(named(filler));
+    let class = NamedOrBlankNode::from(named(class));
+    triples
+        .iter()
+        .filter(|t| t.subject == class && t.predicate == sub)
+        .filter_map(|t| match &t.object {
+            Term::BlankNode(node) => Some(NamedOrBlankNode::from(node.clone())),
+            _ => None,
+        })
+        .any(|node| {
+            let holds = |predicate: &NamedNode, object: &Term| {
+                triples
+                    .iter()
+                    .any(|t| t.subject == node && t.predicate == *predicate && t.object == *object)
+            };
+            holds(&rdf_type, &Term::from(restriction.clone()))
+                && holds(&on_property, &describes)
+                && holds(&some, &filler)
+        })
 }
