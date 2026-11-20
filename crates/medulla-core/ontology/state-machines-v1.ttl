@@ -4452,54 +4452,6 @@
     :initialState :InstanceMachine_Active ;
     :hasState :InstanceMachine_Active, :InstanceMachine_Final .
 
-:InstanceMachine_Active a :InstanceState ;
-    rdfs:label "Instance Active" ;
-:MutationCommitMachine_BeforeRows a :MutationCommitState ;
-    rdfs:label "Mutation Commit BeforeRows" ;
-    :storedForm "before_rows" .
-
-:MutationCommitMachine_AfterRowsBeforeMetadata a :MutationCommitState ;
-    rdfs:label "Mutation Commit AfterRowsBeforeMetadata" ;
-    :storedForm "after_rows_before_metadata" .
-
-:MutationCommitMachine_BeforeCommit a :MutationCommitState ;
-    rdfs:label "Mutation Commit BeforeCommit" ;
-    :storedForm "before_commit" .
-
-:MutationCommitMachine_AfterCommitBeforeAck a :MutationCommitTerminalState ;
-    rdfs:label "Mutation Commit AfterCommitBeforeAck" ;
-    :storedForm "after_commit_before_ack" .
-
-:MutationCommitMachine_Event_RowsWritten a :MutationCommitEvent ;
-    rdfs:label "Mutation Commit RowsWritten" .
-
-:MutationCommitMachine_Event_MetadataStaged a :MutationCommitEvent ;
-    rdfs:label "Mutation Commit MetadataStaged" .
-
-:MutationCommitMachine_Event_Committed a :MutationCommitEvent ;
-    rdfs:label "Mutation Commit Committed" .
-
-:MutationCommitMachine_M01 a :MutationCommitTransition ;
-    rdfs:label "Mutation Commit M01" ;
-    :edgeId "M01" ;
-    :fromState :MutationCommitMachine_BeforeRows ;
-    :toState :MutationCommitMachine_AfterRowsBeforeMetadata ;
-    :firedBy :MutationCommitMachine_Event_RowsWritten .
-
-:MutationCommitMachine_M02 a :MutationCommitTransition ;
-    rdfs:label "Mutation Commit M02" ;
-    :edgeId "M02" ;
-    :fromState :MutationCommitMachine_AfterRowsBeforeMetadata ;
-    :toState :MutationCommitMachine_BeforeCommit ;
-    :firedBy :MutationCommitMachine_Event_MetadataStaged .
-
-:MutationCommitMachine_M03 a :MutationCommitTransition ;
-    rdfs:label "Mutation Commit M03" ;
-    :edgeId "M03" ;
-    :fromState :MutationCommitMachine_BeforeCommit ;
-    :toState :MutationCommitMachine_AfterCommitBeforeAck ;
-    :firedBy :MutationCommitMachine_Event_Committed .
-
 # spec: MEDULLA-DURABLE-KERNEL-R874.2
 # The Commit machine. The Rust edge table COMMIT_MACHINE is the same table; the ontology
 # test asserts equal edge sets.
@@ -4707,49 +4659,8 @@
     :toState :ExactRetirementMachine_Unlinked ;
     :firedBy :ExactRetirementMachine_Event_Unlink .
 
-# spec: MEDULLA-DURABLE-KERNEL-R874.9
-# The ManagedIndex machine. The Rust edge table MANAGED_INDEX_MACHINE is the same table.
-
-:ManagedIndexState a owl:Class ;
-    rdfs:label "ManagedIndex State" ;
-    rdfs:comment "A state of the ManagedIndex machine." ;
-    rdfs:subClassOf :State .
-
-:ManagedIndexTerminalState a owl:Class ;
-    rdfs:label "ManagedIndex TerminalState" ;
-    rdfs:comment "A terminal state of the ManagedIndex machine." ;
-    rdfs:subClassOf :TerminalState, :ManagedIndexState .
-
-:ManagedIndexTransition a owl:Class ;
-    rdfs:label "ManagedIndex Transition" ;
-    rdfs:comment "A transition of the ManagedIndex machine." ;
-    rdfs:subClassOf :Transition .
-
-:ManagedIndexEvent a owl:Class ;
-    rdfs:label "ManagedIndex Event" ;
-    rdfs:comment "An event of the ManagedIndex machine." ;
-    rdfs:subClassOf :TransitionEvent .
-
-:ManagedIndexGuard a owl:Class ;
-    rdfs:label "ManagedIndex Guard" ;
-    rdfs:comment "A guard of the ManagedIndex machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:ManagedIndexMachine a :StateMachine ;
-    rdfs:label "ManagedIndex machine" ;
-    :initialState :ManagedIndexMachine_Requested ;
-    :hasState :ManagedIndexMachine_Requested, :ManagedIndexMachine_Backfilling, :ManagedIndexMachine_Active, :ManagedIndexMachine_Blocked .
-
-:ManagedIndexMachine_Requested a :ManagedIndexState ;
-    rdfs:label "ManagedIndex Requested" ;
-    :storedForm "requested" .
-
-:ManagedIndexMachine_Backfilling a :ManagedIndexState ;
-    rdfs:label "ManagedIndex Backfilling" ;
-    :storedForm "backfilling" .
-
-:ManagedIndexMachine_Active a :ManagedIndexTerminalState ;
-    rdfs:label "ManagedIndex Active" ;
+:InstanceMachine_Active a :InstanceState ;
+    rdfs:label "Instance Active" ;
     :storedForm "active" .
 
 :InstanceMachine_Final a :InstanceState ;
@@ -4823,16 +4734,6 @@
     rdfs:label "SqlForm Guard" ;
     rdfs:comment "A guard of the SqlForm machine." ;
     rdfs:subClassOf :TransitionGuard .
-:MutationBatchGuard a owl:Class ;
-    rdfs:label "MutationBatch Guard" ;
-    rdfs:comment "A guard of the MutationBatch machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:MutationBatchMachine a :StateMachine ;
-    rdfs:label "MutationBatch machine" ;
-    :initialState :MutationBatchMachine_Prepared ;
-    :hasState :MutationBatchMachine_Prepared, :MutationBatchMachine_Committed, :MutationBatchMachine_Aborted .
-
 :SqlFormMachine a :StateMachine ;
     rdfs:label "SqlForm machine" ;
     :initialState :SqlFormMachine_Refused ;
@@ -4931,16 +4832,6 @@
     rdfs:label "StatechartInstance Guard" ;
     rdfs:comment "A guard of the StatechartInstance machine." ;
     rdfs:subClassOf :TransitionGuard .
-:AuditGuard a owl:Class ;
-    rdfs:label "Audit Guard" ;
-    rdfs:comment "A guard of the Audit machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:AuditMachine a :StateMachine ;
-    rdfs:label "Audit machine" ;
-    :initialState :AuditMachine_Reserved ;
-    :hasState :AuditMachine_Reserved, :AuditMachine_Ok, :AuditMachine_Error, :AuditMachine_Denied .
-
 :StatechartInstanceMachine a :StateMachine ;
     rdfs:label "StatechartInstance machine" ;
     :initialState :StatechartInstanceMachine_Active ;
@@ -5021,16 +4912,6 @@
     rdfs:label "Shard Monitor Guard" ;
     rdfs:comment "A guard of the Shard Monitor machine." ;
     rdfs:subClassOf :TransitionGuard .
-:OutboxDeliveryGuard a owl:Class ;
-    rdfs:label "OutboxDelivery Guard" ;
-    rdfs:comment "A guard of the OutboxDelivery machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:OutboxDeliveryMachine a :StateMachine ;
-    rdfs:label "OutboxDelivery machine" ;
-    :initialState :OutboxDeliveryMachine_Pending ;
-    :hasState :OutboxDeliveryMachine_Pending, :OutboxDeliveryMachine_Leased, :OutboxDeliveryMachine_Delivered, :OutboxDeliveryMachine_FailedRetryable, :OutboxDeliveryMachine_FailedTerminal .
-
 :ShardMonitorMachine a :StateMachine ;
     rdfs:label "Shard Monitor machine" ;
     :initialState :ShardMonitorMachine_Warming ;
@@ -5176,16 +5057,6 @@
     rdfs:label "Enrichment Work Guard" ;
     rdfs:comment "A guard of the Enrichment Work machine." ;
     rdfs:subClassOf :TransitionGuard .
-:ParentTransactionGuard a owl:Class ;
-    rdfs:label "ParentTransaction Guard" ;
-    rdfs:comment "A guard of the ParentTransaction machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:ParentTransactionMachine a :StateMachine ;
-    rdfs:label "ParentTransaction machine" ;
-    :initialState :ParentTransactionMachine_Prepared ;
-    :hasState :ParentTransactionMachine_Prepared, :ParentTransactionMachine_DecidedCommit, :ParentTransactionMachine_DecidedAbort, :ParentTransactionMachine_FinalizedCommit, :ParentTransactionMachine_FinalizedAbort .
-
 :EnrichmentWorkMachine a :StateMachine ;
     rdfs:label "Enrichment Work machine" ;
     :initialState :EnrichmentWorkMachine_Classical ;
