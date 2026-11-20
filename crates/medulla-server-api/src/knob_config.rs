@@ -770,16 +770,6 @@ knobs! {
     scheduler_process_import_max_elements: u64 = "scheduler.process_import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Scheduler: Largest process document read. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_process_document_max_bytes: u64 = "scheduler.process_document_max_bytes", U64(16_777_216), [65_536, 268_435_456], "bytes", Tunable;
-    /// Scheduler: Most tasks one tenant may hold active in the task queue (MEDULLA-DURABLE-KERNEL-R076.2).
-    scheduler_task_queue_tenant_max_active: u32 = "scheduler.task_queue_tenant_max_active", U64(4), [1, 4_096], "tasks", Tunable;
-    /// Requirement state: most `Requirement` nodes one `SpecStatus` read scans (MEDULLA-SDLC-R005.3).
-    lifecycle_spec_row_scan_limit: u64 = "lifecycle.spec_row_scan_limit", U64(100_000), [1, 10_000_000], "rows", Tunable;
-    /// Source tree: a full tree snapshot is stored every this many changesets (MEDULLA-SCM-R004).
-    source_tree_checkpoint_interval: u64 = "source.tree_checkpoint_interval", U64(1000), [10, 100_000], "changesets", Tunable;
-    /// Source blame: most cells of one line-diff table before a file counts as wholly rewritten (MEDULLA-SCM-R005.2).
-    source_blame_diff_max_cells: u64 = "source.blame_diff_max_cells", U64(4_000_000), [10_000, 400_000_000], "cells", Tunable;
-    /// Scheduler: Largest document text `EnrichDocument` processes (MEDULLA-REPO-INGEST-R652.4).
-    scheduler_document_max_bytes: u64 = "scheduler.document_max_bytes", U64(67_108_864), [1_048_576, 1_073_741_824], "bytes", Tunable;
     /// Scheduler: Deepest element nesting of a process document. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_process_document_max_depth: u32 = "scheduler.process_document_max_depth", U64(64), [8, 256], "levels", Tunable;
     /// Scheduler: Largest submitted changeset blob. (MEDULLA-DURABLE-KERNEL-R076.2).
@@ -991,7 +981,6 @@ pub fn scheduler_config_from(
         process_import_max_elements: knobs.scheduler_process_import_max_elements,
         process_document_max_bytes: knobs.scheduler_process_document_max_bytes,
         process_document_max_depth: knobs.scheduler_process_document_max_depth,
-        document_max_bytes: knobs.scheduler_document_max_bytes,
         changeset_max_blob_bytes: knobs.scheduler_changeset_max_blob_bytes,
         ann_storage_ceiling_bytes: knobs.scheduler_ann_storage_ceiling_bytes,
         ann_hub_pruning: if knobs.scheduler_ann_hub_pruning {

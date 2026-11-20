@@ -173,3 +173,4 @@ Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enume
 
 ## Non-record kind dispatch
 `source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
+- Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim_admitted` in `crates/medulla-h-jobs/src/task_queue_served.rs`, reached from the router's control-plane task-queue arm; lane ownership in `lane_of_queue`; the ingest queue rule in `IngestSeam`.
