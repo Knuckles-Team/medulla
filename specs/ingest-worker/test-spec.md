@@ -59,7 +59,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R003.16` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::unknown_format_and_foreign_concept_are_refused` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R003.17.1` | `tests/ingest/test_transcript_served.py::test_same_tenant_unauthorized_reads_are_denied` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.18` | `tests/ingest/test_transcript_served.py::test_thread_messages_are_shared_within_scope` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R003.19` | `tests/typed_packs/test_connector_vocabulary_served.py::test_pack_record_of_each_new_term_round_trips` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R003.19` | `tests/typed_packs/test_connector_vocabulary_served.py::test_pack_record_of_each_new_term_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R604.1` | `crates/medulla-types/src/ingest_lanes.rs::tests::lane_ids_validate_and_round_trip` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R604.2` | `crates/medulla-types/src/ingest_lanes.rs::tests::every_stage_has_one_class` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R604.3` | `tests/ingest/test_lane_admission_served.py::test_claim_enforces_admission` | L4 | planned |
