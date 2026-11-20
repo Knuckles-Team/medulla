@@ -95,6 +95,9 @@ def _spec(connector: str, kind: str) -> dict[str, Any]:
         return {"Mcp": {"server": connector, "tool": OPERATION}}
     if kind == "a2a_skill":
         return {"A2a": {"agent": connector, "skill": OPERATION}}
+    if kind == "graphql_query":
+        # The bind seam checks the endpoint against the registered source id.
+        return {"GraphQl": {"endpoint": SOURCE_ID, "operation": OPERATION}}
     return {"Api": {"operation": OPERATION}}
 
 
@@ -107,6 +110,11 @@ def _host_fetch(fixture: FixtureSource, kind: str) -> tuple[int, bytes]:
         return _request(fixture.url + "/", body)
     if kind == "a2a_skill":
         return _request(fixture.url + "/", json.dumps({"skill": OPERATION}).encode())
+    if kind == "graphql_query":
+        body = json.dumps(
+            {"operationName": OPERATION, "query": "query list_items { items { id } }"}
+        ).encode()
+        return _request(fixture.url + "/", body)
     return _request(fixture.url + f"/{OPERATION}", None)
 
 
@@ -459,6 +467,11 @@ def test_2_a2a(clean_graph, tmp_path) -> None:
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.3")
 def test_3_api(clean_graph, tmp_path) -> None:
     _run_journey("http_endpoint", clean_graph, tmp_path)
+
+
+@pytest.mark.spec("MEDULLA-CQ-CONN-R067.4")
+def test_4_graphql(clean_graph, tmp_path) -> None:
+    _run_journey("graphql_query", clean_graph, tmp_path)
 
 
 VG_TABLE = "cc_items"

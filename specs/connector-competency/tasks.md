@@ -7,7 +7,7 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T001 [US3] MEDULLA-CQ-CONN-R067.1 MCP contract answers at query time
 - [ ] T002 [US3] MEDULLA-CQ-CONN-R067.2 A2A contract answers at query time
 - [ ] T003 [US3] MEDULLA-CQ-CONN-R067.3 API (REST) contract answers at query time
-- [ ] T004 [US3] MEDULLA-CQ-CONN-R067.4 GraphQL contract answers at query time
+- [x] T004 [US3] MEDULLA-CQ-CONN-R067.4 GraphQL contract answers at query time
 - [ ] T005 [US3] MEDULLA-CQ-CONN-R067.5 Virtual graph over a relational or document store answers at query time
 - [ ] T006 [US3] MEDULLA-CQ-CONN-R067.6 Materialisation is declared, never implicit
 - [ ] T007 [US3] MEDULLA-CQ-CONN-R067.7 Case table schema and loader
