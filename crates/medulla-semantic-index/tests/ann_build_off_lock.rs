@@ -49,6 +49,26 @@ impl ProgressSink for Hold {
     }
 }
 
+/// A worker that reports its outcome over a bounded channel; the waiter has a
+/// deadline, so a deadlocked build fails the test instead of hanging it.
+struct Reported<T>(std::sync::mpsc::Receiver<T>);
+
+impl<T> Reported<T> {
+    fn finish(self) -> T {
+        self.0
+            .recv_timeout(Duration::from_secs(60))
+            .expect("the build thread reported within the deadline")
+    }
+}
+
+fn spawn_reporting<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Reported<T> {
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let _ = tx.send(work());
+    });
+    Reported(rx)
+}
+
 fn wait_for(flag: &AtomicBool) {
     let began = Instant::now();
     while !flag.load(Ordering::SeqCst) {
@@ -76,7 +96,7 @@ fn build_held_midway_does_not_block_writers_or_queries() {
     };
     let builder = {
         let lock = lock.clone();
-        std::thread::spawn(move || build_off_lock(&lock, "g", false, &hooks))
+        spawn_reporting(move || build_off_lock(&lock, "g", false, &hooks))
     };
     wait_for(&hold.reached);
 
@@ -97,7 +117,7 @@ fn build_held_midway_does_not_block_writers_or_queries() {
     assert_eq!(hits.first().map(|h| h.0.as_str()), Some("late"));
 
     hold.release.store(true, Ordering::SeqCst);
-    assert_eq!(builder.join().unwrap(), BuildOutcome::Built);
+    assert_eq!(builder.finish(), BuildOutcome::Built);
     // The write that landed during the build is in the installed index.
     let store = lock.read();
     assert!(store.is_ready());
@@ -187,7 +207,7 @@ fn shifted_ingest_triggers_one_background_rebuild() {
     let rebuild = {
         let lock = lock.clone();
         let hooks = hooks.clone();
-        std::thread::spawn(move || build_off_lock(&lock, "g", true, &hooks))
+        spawn_reporting(move || build_off_lock(&lock, "g", true, &hooks))
     };
     wait_for(&hold.reached);
     // Serving continues on the old index while the rebuild trains; a second
@@ -202,7 +222,7 @@ fn shifted_ingest_triggers_one_background_rebuild() {
         BuildOutcome::Skipped
     );
     hold.release.store(true, Ordering::SeqCst);
-    assert_eq!(rebuild.join().unwrap(), BuildOutcome::Built);
+    assert_eq!(rebuild.finish(), BuildOutcome::Built);
     let store = lock.read();
     assert!(store.is_ready() && !store.ann_stale());
 }

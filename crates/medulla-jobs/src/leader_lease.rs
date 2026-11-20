@@ -217,13 +217,23 @@ pub trait LeaseCell {
 #[derive(Default)]
 pub struct MemoryLeaseCell(Mutex<LeaseRecord>);
 
+impl MemoryLeaseCell {
+    /// The lease record is authority state: after a holder panicked mid-update
+    /// its revision cannot be trusted, so refuse rather than serve it.
+    fn lock_cell(&self) -> std::sync::MutexGuard<'_, LeaseRecord> {
+        self.0.lock().unwrap_or_else(|_| {
+            panic!("memory lease cell: a holder panicked, so the lease record cannot be trusted")
+        })
+    }
+}
+
 impl LeaseCell for MemoryLeaseCell {
     fn read(&self) -> LeaseRecord {
-        self.0.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.lock_cell().clone()
     }
 
     fn compare_and_set(&self, expected_revision: u64, next: &LeaseRecord) -> bool {
-        let mut stored = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        let mut stored = self.lock_cell();
         if stored.revision != expected_revision {
             return false;
         }

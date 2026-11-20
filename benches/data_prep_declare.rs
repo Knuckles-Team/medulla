@@ -103,7 +103,7 @@ fn main() {
         })
         .collect();
     for handle in handles {
-        handle.join().expect("writer thread");
+        medulla_kernel::test_rendezvous::join_bounded(handle, "writer thread");
     }
     let mut samples = samples.lock().expect("samples").clone();
     samples.sort();

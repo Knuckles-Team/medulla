@@ -380,7 +380,7 @@ fn w5_conflict_heavy() -> Record {
     stop.store(true, Ordering::Relaxed);
     let mut samples: Vec<Duration> = handles
         .into_iter()
-        .flat_map(|h| h.join().expect("session thread"))
+        .flat_map(|h| medulla_kernel::test_rendezvous::join_bounded(h, "session thread"))
         .collect();
     let elapsed = started.elapsed().as_secs_f64();
     samples.sort();
@@ -504,7 +504,7 @@ fn disjoint_writers() -> Record {
         .collect();
     let mut samples: Vec<Duration> = handles
         .into_iter()
-        .flat_map(|h| h.join().expect("session thread"))
+        .flat_map(|h| medulla_kernel::test_rendezvous::join_bounded(h, "session thread"))
         .collect();
     let elapsed = started.elapsed().as_secs_f64();
     samples.sort();

@@ -369,18 +369,26 @@ mod tests {
         let single = single.into_order();
         let shared = Arc::new(Mutex::new(LoopQueue::new()));
         let all = entries();
-        let handles: Vec<_> = all
-            .chunks(8)
-            .map(|chunk| {
-                let (shared, chunk) = (Arc::clone(&shared), chunk.to_vec());
-                std::thread::spawn(move || {
-                    for entry in chunk {
-                        shared.lock().unwrap().push(entry);
-                    }
-                })
-            })
-            .collect();
-        handles.into_iter().for_each(|h| h.join().unwrap());
+        // Each worker reports completion over a bounded channel and the
+        // collector waits with a deadline, so a wedged worker fails the test
+        // instead of hanging it.
+        let (done_tx, done_rx) = std::sync::mpsc::sync_channel::<()>(8);
+        let mut spawned = 0;
+        for chunk in all.chunks(8) {
+            let (shared, chunk, done_tx) = (Arc::clone(&shared), chunk.to_vec(), done_tx.clone());
+            std::thread::spawn(move || {
+                for entry in chunk {
+                    shared.lock().unwrap().push(entry);
+                }
+                done_tx.send(()).expect("collector is waiting");
+            });
+            spawned += 1;
+        }
+        for _ in 0..spawned {
+            done_rx
+                .recv_timeout(std::time::Duration::from_secs(60))
+                .expect("a queue-push worker finished within the deadline");
+        }
         let threaded = Arc::try_unwrap(shared)
             .unwrap()
             .into_inner()

@@ -88,7 +88,7 @@ fn main() {
         .collect();
     let mut times: Vec<Duration> = handles
         .into_iter()
-        .flat_map(|h| h.join().expect("reader"))
+        .flat_map(|h| medulla_kernel::test_rendezvous::join_bounded(h, "reader"))
         .take(QUERIES)
         .collect();
     times.sort();
