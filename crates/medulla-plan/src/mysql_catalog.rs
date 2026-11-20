@@ -162,10 +162,19 @@ pub fn map_type(data_type: &str, column_type: &str) -> String {
         return "json".to_string();
     }
     if INTEGER_TYPES.contains(&data_type.as_str()) {
-        let suffix = column_type
-            .split_once(')')
-            .map(|(_, rest)| rest.trim())
-            .unwrap_or("");
+        // The attributes after the type and its optional display width:
+        // `bigint(20) unsigned` (MariaDB, MySQL before 8.0.19) and
+        // `bigint unsigned` (MySQL 8.0.19 and later, no display width) both
+        // keep `unsigned`.
+        let rest = column_type
+            .strip_prefix(data_type.as_str())
+            .unwrap_or(column_type.as_str())
+            .trim_start();
+        let suffix = match rest.strip_prefix('(') {
+            Some(width) => width.split_once(')').map_or("", |(_, rest)| rest),
+            None => rest,
+        }
+        .trim();
         return if suffix.is_empty() {
             data_type
         } else {
