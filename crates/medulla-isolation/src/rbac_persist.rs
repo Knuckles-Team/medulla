@@ -1184,9 +1184,7 @@ mod tests {
             &[("identities", b"{}".as_slice())],
         )
         .unwrap();
-        let error = super::upgrade_rbac_layout(inspected)
-            .err()
-            .expect("refused");
+        let error = super::upgrade_rbac_layout(inspected).expect_err("refused");
         assert!(
             error.to_string().starts_with("RBAC_UPGRADE_SOURCE_CHANGED"),
             "{error}"

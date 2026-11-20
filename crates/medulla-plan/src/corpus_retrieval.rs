@@ -186,7 +186,7 @@ pub fn session_hits(
         .iter()
         .filter(|t| t.session_id == session_id)
         .collect();
-    chosen.sort_by(|a, b| a.ordinal.cmp(&b.ordinal));
+    chosen.sort_by_key(|turn| turn.ordinal);
     let mut out = Vec::new();
     for turn in chosen {
         let at = match &needle {
@@ -279,7 +279,9 @@ pub fn dispatch(
     request.validate().map_err(CorpusError::Request)?;
     let limit = request.limit as usize;
     let mut result = CorpusResult::default();
-    let (mut scanned, mut visited, mut hops) = (0usize, 0usize, 0usize);
+    // `scanned` is set by every mode arm below, so it needs no placeholder.
+    let scanned: usize;
+    let (mut visited, mut hops) = (0usize, 0usize);
     match request.mode {
         CorpusMode::Grep => {
             let pattern = request

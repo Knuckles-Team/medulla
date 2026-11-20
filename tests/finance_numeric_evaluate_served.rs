@@ -457,7 +457,9 @@ async fn numeric_evaluate_rejects_oversize_input() {
         "KERNEL_STATE_BUDGET",
     );
     // The split ceiling: C(18, 9) = 48620 is served in shape, C(20, 10) = 184756 is not.
-    assert!(48_620 < MAX_CPCV_SPLITS && 184_756 > MAX_CPCV_SPLITS);
+    const {
+        assert!(48_620 < MAX_CPCV_SPLITS && 184_756 > MAX_CPCV_SPLITS);
+    }
     refused(
         &s.eval(Op::PurgedCpcv {
             n_samples: 100,

@@ -184,11 +184,8 @@ pub fn select_system_prompt(
         if !legal || candidate.confidence_q32 < 0 {
             continue;
         }
-        let ratio_q32 = if total == 0 {
-            1u128 << 32
-        } else {
-            (matched << 32) / total
-        };
+        // No required components: every candidate matches fully.
+        let ratio_q32 = (matched << 32).checked_div(total).unwrap_or(1u128 << 32);
         let score = ((ratio_q32 * candidate.confidence_q32 as u128) >> 32) as i64;
         let better = match best {
             None => true,

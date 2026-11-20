@@ -206,9 +206,7 @@ fn a_repository_sized_batch_is_one_envelope_with_a_bounded_notice() {
 #[test]
 fn a_batch_over_the_commit_budget_is_refused_whole() {
     let limit = medulla_protocol_types::mutation_batch::MAX_MUTATION_OPERATIONS;
-    let error = lower(&large_result(limit / 2 + 1))
-        .err()
-        .expect("over-budget batch is refused");
+    let error = lower(&large_result(limit / 2 + 1)).expect_err("over-budget batch is refused");
     assert!(error.starts_with(BATCH_TOO_LARGE), "{error}");
 }
 
@@ -237,9 +235,7 @@ fn a_batch_over_the_byte_ceiling_is_refused_and_a_halved_resend_succeeds() {
     // 200 operations (far under MAX_MUTATION_OPERATIONS) but ~60 MB encoded,
     // past MAX_WRITE_SET_BYTES (48 MiB): only the byte ceiling can refuse this.
     let oversized = byte_heavy_result(200, &big_value);
-    let error = lower(&oversized)
-        .err()
-        .expect("a batch past the write-byte ceiling is refused");
+    let error = lower(&oversized).expect_err("a batch past the write-byte ceiling is refused");
     assert!(error.starts_with(BATCH_TOO_LARGE), "{error}");
 
     // The halved resend: half the operations, half the bytes, well under the

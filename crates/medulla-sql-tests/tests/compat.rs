@@ -188,7 +188,7 @@ fn every_supported_entry_has_a_test() {
     // Each function sample is a read, and the ones with pinned shapes run.
     let view = GraphCore::new().analysis_snapshot();
     let store = medulla_table_store::tables::TableStore::open_scoped(
-        &std::env::temp_dir().join(format!(
+        std::env::temp_dir().join(format!(
             "medulla_compat_{}_{}.redb",
             std::process::id(),
             std::time::SystemTime::now()

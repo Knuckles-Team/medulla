@@ -521,7 +521,7 @@ pub fn source_access_verdict(
             return SourceAccessVerdict::Allowed;
         }
         if let Some(group_id) = entry.strip_prefix(SOURCE_GROUP_REF_PREFIX) {
-            let index = expanded.get_or_insert_with(|| groups());
+            let index = expanded.get_or_insert_with(&mut groups);
             if index.is_member(group_id, principal) {
                 return SourceAccessVerdict::Allowed;
             }

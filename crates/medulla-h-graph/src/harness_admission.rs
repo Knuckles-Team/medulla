@@ -721,7 +721,7 @@ fn run_trace_violation(props: &Props) -> Option<(&'static str, String)> {
     }
     for key in TRACE_ATTRIBUTION {
         if let Some(value) = props.get(*key) {
-            if !value.as_str().is_some_and(|text| !text.trim().is_empty()) {
+            if value.as_str().is_none_or(|text| text.trim().is_empty()) {
                 return Some((
                     "RunTraceCounterShape",
                     format!("{key} must be a non-empty string"),

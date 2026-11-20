@@ -267,7 +267,7 @@ fn admit_record(
     let mapping_version = props.get("mapping_version").cloned();
     let typed = typed_body(label, &props)?;
     if let Some(supersedes) = &supersedes {
-        if !supersedes.as_str().is_some_and(|id| !id.is_empty()) {
+        if supersedes.as_str().is_none_or(|id| id.is_empty()) {
             return Err(refuse(
                 ServerErrorCode::MetadataSchemaInvalid,
                 "supersedes must name a node id",

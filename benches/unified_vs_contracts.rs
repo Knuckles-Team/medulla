@@ -19,7 +19,6 @@
 #[allow(dead_code)]
 #[path = "../tests/common/mod.rs"]
 mod common;
-#[allow(dead_code)]
 #[path = "../tests/common/test_support.rs"]
 mod test_support;
 

@@ -837,7 +837,7 @@ mod tests {
         assert_eq!(back.codes, art.codes);
         assert_eq!(back.graph.neighbors, art.graph.neighbors);
         // Accounting is measured from the artifact itself.
-        assert_eq!(back.manifest.accounting.graph_bytes > 0, true);
+        assert!(back.manifest.accounting.graph_bytes > 0);
         assert_eq!(
             back.manifest.accounting.code_bytes,
             (n as usize * DIM + n as usize * 8 + 16) as u64

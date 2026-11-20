@@ -67,8 +67,7 @@ impl PackageRefusal {
 pub fn effective_capacity(budget: &ContextPackageBudget) -> Result<u64, PackageRefusal> {
     let window = budget
         .window_tokens
-        .checked_sub(budget.reserved_output_tokens)
-        .unwrap_or(0);
+        .saturating_sub(budget.reserved_output_tokens);
     let mut capacity = window;
     if let Some(caller) = budget.caller_ceiling_tokens {
         capacity = capacity.min(caller);
@@ -304,7 +303,7 @@ pub fn select_with(
                 .objective
                 .levels
                 .first()
-                .map(|level| level_known_sum(level))
+                .map(level_known_sum)
                 .unwrap_or(0),
         )
         .unwrap_or(i64::MIN),

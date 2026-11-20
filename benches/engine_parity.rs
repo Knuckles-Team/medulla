@@ -630,7 +630,7 @@ fn insert_accounts(store: &TableStore, table: &str, first_id: usize, rows: usize
         let values: Vec<Vec<serde_json::Value>> = (0..batch)
             .map(|offset| {
                 let id = first_id + done + offset;
-                let status = if next_random(&mut seed) % 10 == 0 {
+                let status = if next_random(&mut seed).is_multiple_of(10) {
                     "active"
                 } else {
                     "closed"

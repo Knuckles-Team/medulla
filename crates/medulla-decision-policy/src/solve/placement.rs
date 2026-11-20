@@ -461,8 +461,8 @@ mod tests {
                 host.host_iri
             );
             let row = load.entry(host.host_iri.as_str()).or_default();
-            for d in 0..3 {
-                row[d] += demand(service)[d];
+            for (slot, add) in row.iter_mut().zip(demand(service)) {
+                *slot += add;
             }
         }
         for host in hosts {

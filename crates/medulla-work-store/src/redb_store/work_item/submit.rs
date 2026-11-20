@@ -1031,7 +1031,7 @@ mod tests {
         .unwrap()
         .expect("the committed item is still readable");
         assert_eq!(
-            serde_json::to_value(&committed.status).unwrap(),
+            serde_json::to_value(committed.status).unwrap(),
             serde_json::json!("succeeded")
         );
 

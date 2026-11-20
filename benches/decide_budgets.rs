@@ -23,7 +23,6 @@ use std::time::{Duration, Instant};
 #[allow(dead_code)]
 #[path = "../tests/common/mod.rs"]
 mod common;
-#[allow(dead_code)]
 #[path = "../tests/common/test_support.rs"]
 mod test_support;
 
@@ -1316,7 +1315,7 @@ fn designation_record(
     let mut capabilities: std::collections::BTreeSet<String> = (0..8)
         .map(|slot| format!("cap:{}", (index * 7 + slot * 13) % 64))
         .collect();
-    if index % 25 == 0 {
+    if index.is_multiple_of(25) {
         capabilities.insert(RARE_CAPABILITY.to_string());
     }
     while capabilities.len() > 8 {

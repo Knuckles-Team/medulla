@@ -202,8 +202,8 @@ pub fn apply_activities_from(
     method: LotMethod,
 ) -> Result<LotLedger, LotError> {
     let LotLedger {
-        open: mut open,
-        closed: mut closed,
+        mut open,
+        mut closed,
     } = opening;
     let mut last_sequence: Option<u64> = None;
 

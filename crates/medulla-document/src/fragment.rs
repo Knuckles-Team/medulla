@@ -91,7 +91,7 @@ impl<'de> Deserialize<'de> for Fragment {
         let fragment = Fragment::new(wire.source, wire.span, wire.text, wire.modality)
             .map_err(serde::de::Error::custom)?;
         match wire.page {
-            Some(page) if page == 0 => Err(serde::de::Error::custom(span_invalid(
+            Some(0) => Err(serde::de::Error::custom(span_invalid(
                 "page numbers start at 1",
             ))),
             page => Ok(Fragment { page, ..fragment }),

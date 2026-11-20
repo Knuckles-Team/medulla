@@ -360,7 +360,7 @@ const BUDGET_SEED: [(&str, &str, usize); 3] = [
 #[cfg(all(feature = "matview", feature = "redb"))]
 fn budget_node_id(graph: &str, i: usize) -> String {
     let mut id = format!("{graph}-{i:06}-");
-    id.extend(std::iter::repeat('x').take(ID_LEN - id.len()));
+    id.extend(std::iter::repeat_n('x', ID_LEN - id.len()));
     id
 }
 

@@ -35,10 +35,7 @@ pub fn compare_features(
             {
                 None => MissingKind::Edge,
                 Some(container)
-                    if container
-                        .support
-                        .iter()
-                        .any(|path| *path == feature.attach_point.file) =>
+                    if container.support.contains(&feature.attach_point.file) =>
                 {
                     return None;
                 }
