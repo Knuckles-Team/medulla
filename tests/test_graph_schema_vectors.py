@@ -53,8 +53,9 @@ def test_import_ontology_vector() -> None:
         )
     )
     # The typed view carries every GraphSchemaCommitted field; a graph with no
-    # ontology edits answers without an edit head (MEDULLA-TYPED-PACKS-R651.5).
-    view = {**COMMITTED, "edit_head": None}
+    # ontology edits answers without an edit head (MEDULLA-TYPED-PACKS-R651.5),
+    # and a result that names no revision reads back without one (R103.2).
+    view = {**COMMITTED, "edit_head": None, "revision": None}
     assert committed == view
     assert withdrawn == view
     import_op = {

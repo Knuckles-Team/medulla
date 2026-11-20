@@ -115,6 +115,7 @@ fn validate(
         changed: false,
         edit_head: super::edits::head(core),
         ontology_diff: None,
+        revision: None,
     })
 }
 

@@ -489,6 +489,12 @@ pub struct GraphSchemaCommitted {
     /// (MEDULLA-TYPED-PACKS-R804.3); absent for every other operation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ontology_diff: Option<crate::ontology_diff::OntologyDiffReport>,
+    /// The active revision of the imported ontology after an `ImportOntology`
+    /// request: the next revision when it committed, the unchanged active one
+    /// for a same-digest repeat (MEDULLA-TYPED-PACKS-R103.2); absent for every
+    /// other operation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
 }
 
 /// What a runtime ontology import or withdrawal returns once R103.2 wires the

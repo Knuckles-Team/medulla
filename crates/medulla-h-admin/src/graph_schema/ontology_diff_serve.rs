@@ -78,6 +78,7 @@ fn committed(
         changed: false,
         edit_head: edits::head(core),
         ontology_diff: Some(report),
+        revision: None,
     }
 }
 

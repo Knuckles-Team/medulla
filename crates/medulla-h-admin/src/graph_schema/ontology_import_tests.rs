@@ -71,9 +71,12 @@ fn import_is_idempotent_by_digest_and_revises() {
     let first =
         import_ontology(&core, "g", &import_op(EX_A, None), &authority("alice", 10)).unwrap();
     assert!(first.changed);
+    assert_eq!(first.revision, Some(1));
     let repeat =
         import_ontology(&core, "g", &import_op(EX_A, None), &authority("alice", 11)).unwrap();
     assert!(!repeat.changed);
+    // A same-digest repeat answers with the revision already active.
+    assert_eq!(repeat.revision, Some(1));
     assert_eq!(repeat.composed_digest, first.composed_digest);
     assert_eq!(record(&core).0, 1);
 
@@ -85,6 +88,7 @@ fn import_is_idempotent_by_digest_and_revises() {
     )
     .unwrap();
     assert!(second.changed);
+    assert_eq!(second.revision, Some(2));
     let (revision, importer, history) = record(&core);
     assert_eq!(revision, 2);
     assert_eq!(importer, "alice");

@@ -407,6 +407,7 @@ pub(crate) fn apply_pack_source(
         changed,
         edit_head: edits::head(core),
         ontology_diff: None,
+        revision: None,
     })
 }
 
@@ -680,6 +681,7 @@ fn apply(
             changed,
             edit_head,
             ontology_diff: None,
+            revision: None,
         },
     )
 }

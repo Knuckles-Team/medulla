@@ -40,6 +40,7 @@ class GraphSchemaCommitted(BaseModel):
     edit_head: Digest256 | None = None
     graph: str
     graph_version: Annotated[int, Field(ge=0)]
+    revision: Annotated[int, Field(ge=0)] | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 

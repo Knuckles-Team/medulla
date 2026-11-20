@@ -100,6 +100,7 @@ fn committed(
     graph_name: &str,
     composed: Digest256,
     changed: bool,
+    revision: Option<u64>,
 ) -> GraphSchemaCommitted {
     GraphSchemaCommitted {
         schema_version: GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
@@ -109,6 +110,7 @@ fn committed(
         changed,
         edit_head: edits::head(core),
         ontology_diff: None,
+        revision,
     }
 }
 
@@ -236,6 +238,7 @@ pub(crate) fn import_ontology(
                 graph_name,
                 sources.composed_digest(),
                 false,
+                Some(prior_revision),
             ));
         }
     }
@@ -296,7 +299,7 @@ pub(crate) fn import_ontology(
         &digest,
         change_impact.as_ref(),
     )?;
-    Ok(committed(core, graph_name, composed, true))
+    Ok(committed(core, graph_name, composed, true, Some(revision)))
 }
 
 /// Withdraw one runtime ontology as a whole (R103.2): the source and its
@@ -345,7 +348,8 @@ pub(crate) fn withdraw_ontology(
     let composed = staged.composed_digest();
     core.install_schema_sources(Arc::new(staged));
     edits::record_change(core, ontology_iri, &source_id, before, None)?;
-    Ok(committed(core, graph_name, composed, true))
+    // A withdrawal leaves no active revision.
+    Ok(committed(core, graph_name, composed, true, None))
 }
 
 /// `RevertEdit`: append the inversions of every edit of one subject, newest
@@ -363,6 +367,7 @@ pub(crate) fn revert_edit(
         graph_name,
         core.schema_sources().composed_digest(),
         head != head_before,
+        None,
     ))
 }
 
