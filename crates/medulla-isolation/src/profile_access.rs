@@ -6,8 +6,8 @@
 //! is read under the same rule on both paths.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_types::acl::{GrantEffect, RbacAction, ResourceContext};
-use medulla_types::assistant_profile::{
+use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceContext};
+use medulla_identity_types::assistant_profile::{
     profile_node_id, profile_resource, shares_as_grants, AssistantProfile, ProfileShare,
 };
 
