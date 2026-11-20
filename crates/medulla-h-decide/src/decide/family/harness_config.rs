@@ -304,13 +304,10 @@ fn apply_profile(
     if let Some(max) = profile.model_hints.max_context_tokens {
         body.usable_context_budget_tokens = body.usable_context_budget_tokens.min(max);
     }
-    let (options, removed): (Vec<DeclaredOption>, Vec<DeclaredOption>) =
-        declared.iter().cloned().partition(|option| {
-            profile
-                .tool_allowlist
-                .iter()
-                .any(|allowed| *allowed == option.option_id)
-        });
+    let (options, removed): (Vec<DeclaredOption>, Vec<DeclaredOption>) = declared
+        .iter()
+        .cloned()
+        .partition(|option| profile.tool_allowlist.contains(&option.option_id));
     Ok(Applied {
         emptied: options.is_empty() && !declared.is_empty(),
         removed: removed.into_iter().map(|option| option.option_id).collect(),

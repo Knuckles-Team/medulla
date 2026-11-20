@@ -228,7 +228,7 @@ async fn assert_refusals_and_tenant_isolation(h: &Harness, schema: &ComponentDep
 
     // REVIEW_CLASS_UNSUPPORTED: a cited class outside the five.
     let error = refused(review_request(
-        &schema,
+        schema,
         &[finding("f1", "race_condition", "high")],
     ))
     .await;

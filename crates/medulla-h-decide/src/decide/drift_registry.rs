@@ -186,6 +186,9 @@ impl ShardMonitor {
 
 type Key = (String, String, u32);
 
+/// One firing shard: its index, the drift kinds firing and the refresh regions it covers.
+type FiringShard = (u32, Vec<DriftKind>, Vec<RegionRef>);
+
 /// The monitors of every served graph.
 #[derive(Default)]
 pub struct DriftRegistry {
@@ -250,7 +253,7 @@ impl DriftRegistry {
         tenant: &str,
         graph: &str,
         thresholds: &DriftThresholds,
-    ) -> (u32, Vec<(u32, Vec<DriftKind>, Vec<RegionRef>)>) {
+    ) -> (u32, Vec<FiringShard>) {
         let mut shards = self.shards.lock();
         let mut monitored = 0;
         let mut firing = Vec::new();

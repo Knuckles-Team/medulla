@@ -414,7 +414,7 @@ async fn stale_window_refuses() {
     for scope in ["agent-f", "agent-g", "agent-h"] {
         assert_eq!(stored_bytes(&h, TENANT, scope), None, "{scope}");
     }
-    assert_eq!(stored_bytes(&h, TENANT, "agent-e").is_some(), true);
+    assert!(stored_bytes(&h, TENANT, "agent-e").is_some());
     let again = submit(&h, stale).await.unwrap_err();
     assert!(again.starts_with("DELEGATION_WINDOW_STALE"), "{again}");
     assert_eq!(stored_bytes(&h, TENANT, "agent-a").unwrap(), sealed);

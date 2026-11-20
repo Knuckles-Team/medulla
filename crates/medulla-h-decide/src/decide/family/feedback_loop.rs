@@ -10,8 +10,8 @@
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::checker_feedback::{
-    effective_bound, next_round, Continuation, FeedbackRecord, StopReason, FEEDBACK_BOUND_INVALID,
-    FEEDBACK_REPLAYED_KEY, FEEDBACK_UNGRADED_OUTPUT, KNOBS,
+    effective_bound, next_round, FeedbackRecord, FEEDBACK_BOUND_INVALID, FEEDBACK_REPLAYED_KEY,
+    FEEDBACK_UNGRADED_OUTPUT, KNOBS,
 };
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
@@ -24,11 +24,10 @@ use medulla_decision_types::decision::{
     DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
-use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_types::contract::{BoundedVec, Digest256};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
-use crate::decide::stat_log::{visible_entries, LogReader};
+use crate::decide::stat_log::visible_entries;
 use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;

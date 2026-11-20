@@ -919,7 +919,7 @@ async fn disclosure_journey() {
     commit_event(&h, &timeout).await.unwrap();
 
     // 4. Distinct versions and hashes across the four committed events.
-    let events = [&initial, &relevance, &constraint, &timeout].map(|r| event_of(r));
+    let events = [&initial, &relevance, &constraint, &timeout].map(event_of);
     let versions: Vec<u32> = events.iter().map(|e| e.version).collect();
     assert_eq!(versions, vec![1, 2, 3, 4]);
     let triggers: Vec<DisclosureTrigger> = events.iter().map(|e| e.trigger).collect();

@@ -190,7 +190,14 @@ fn abstained_with(record: &StatisticalDecisionRecord, code: &str) {
 async fn matrix(h: &Harness) {
     let tasks = ["t1", "t2", "t3"];
     // (operator, reducer, all-success digests, expected outputs, outputs with t3 failed)
-    let matrix: Vec<(AggregationOp, Option<&str>, [char; 3], Vec<char>, Vec<char>)> = vec![
+    type MatrixCase = (
+        AggregationOp,
+        Option<&'static str>,
+        [char; 3],
+        Vec<char>,
+        Vec<char>,
+    );
+    let matrix: Vec<MatrixCase> = vec![
         (
             AggregationOp::Concat,
             None,
@@ -227,7 +234,7 @@ async fn matrix(h: &Harness) {
             .zip(digests)
             .map(|(task, c)| ok(task, c))
             .collect();
-        let batch = decide(&h, fanout_request(&h, op, reducer, plan(), &tasks, success))
+        let batch = decide(h, fanout_request(h, op, reducer, plan(), &tasks, success))
             .await
             .unwrap();
         let record = &batch.records.as_slice()[0];
@@ -238,7 +245,7 @@ async fn matrix(h: &Harness) {
 
         let mut gapped: Vec<FanoutSubtaskResult> = vec![ok("t1", digests[0]), ok("t2", digests[1])];
         gapped.push(failed("t3", "tool timed out"));
-        let batch = decide(&h, fanout_request(&h, op, reducer, plan(), &tasks, gapped))
+        let batch = decide(h, fanout_request(h, op, reducer, plan(), &tasks, gapped))
             .await
             .unwrap();
         let record = &batch.records.as_slice()[0];
@@ -258,9 +265,9 @@ async fn matrix(h: &Harness) {
     // A tie goes to the lowest task id carrying the digest, not the smaller digest.
     let tie = vec![ok("t1", 'b'), ok("t2", 'a')];
     let batch = decide(
-        &h,
+        h,
         fanout_request(
-            &h,
+            h,
             AggregationOp::MajorityVote,
             None,
             plan(),
@@ -278,15 +285,15 @@ async fn matrix(h: &Harness) {
 
 async fn refusals(h: &Harness) {
     let run = |results: Vec<FanoutSubtaskResult>, plan_digest: String, tasks: &[&str]| {
-        fanout_request(&h, AggregationOp::Concat, None, plan_digest, tasks, results)
+        fanout_request(h, AggregationOp::Concat, None, plan_digest, tasks, results)
     };
     let tasks = ["t1", "t2", "t3"];
-    let record = decide(&h, run(vec![ok("t1", 'a'), ok("t2", 'b')], plan(), &tasks))
+    let record = decide(h, run(vec![ok("t1", 'a'), ok("t2", 'b')], plan(), &tasks))
         .await
         .unwrap();
     abstained_with(&record.records.as_slice()[0], "FANOUT_CHILD_MISSING");
     let record = decide(
-        &h,
+        h,
         run(
             vec![ok("t1", 'a'), ok("t1", 'a'), ok("t2", 'b'), ok("t3", 'c')],
             plan(),
@@ -297,7 +304,7 @@ async fn refusals(h: &Harness) {
     .unwrap();
     abstained_with(&record.records.as_slice()[0], "FANOUT_CHILD_DUPLICATE");
     let record = decide(
-        &h,
+        h,
         run(
             vec![ok("t1", 'a'), ok("t2", 'b'), ok("t4", 'c')],
             plan(),
@@ -308,7 +315,7 @@ async fn refusals(h: &Harness) {
     .unwrap();
     abstained_with(&record.records.as_slice()[0], "FANOUT_CHILD_UNKNOWN");
     let record = decide(
-        &h,
+        h,
         run(
             vec![ok("t1", 'a'), ok("t2", 'b'), ok("t3", 'c')],
             "not-a-digest".to_string(),
@@ -319,7 +326,7 @@ async fn refusals(h: &Harness) {
     .unwrap();
     abstained_with(&record.records.as_slice()[0], "FANOUT_PLAN_MISMATCH");
     let record = decide(
-        &h,
+        h,
         run(
             vec![failed("t1", "x"), failed("t2", "y"), failed("t3", "z")],
             plan(),
@@ -338,7 +345,7 @@ async fn refusals(h: &Harness) {
     let mut texts = Vec::new();
     for bad in [foreign, missing] {
         let refused = decide(
-            &h,
+            h,
             run(vec![ok("t1", 'a'), ok("t2", 'b'), bad], plan(), &tasks),
         )
         .await
@@ -356,15 +363,15 @@ async fn readback(h: &Harness) {
     let tasks = ["t1", "t2", "t3"];
     let results = vec![ok("t1", 'a'), ok("t2", 'b'), failed("t3", "no route")];
     let batch = decide(
-        &h,
-        fanout_request(&h, AggregationOp::Concat, None, plan(), &tasks, results),
+        h,
+        fanout_request(h, AggregationOp::Concat, None, plan(), &tasks, results),
     )
     .await
     .unwrap();
     let record = batch.records.as_slice()[0].clone();
     let committed: DecisionLogCommitted = decode(
         log_op(
-            &h,
+            h,
             "decider",
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
@@ -379,7 +386,7 @@ async fn readback(h: &Harness) {
         record_id: committed.record_id.clone(),
     };
     let entry: DecisionLogEntry =
-        decode::<Option<DecisionLogEntry>>(log_op(&h, "decider", get(TENANT)).await)
+        decode::<Option<DecisionLogEntry>>(log_op(h, "decider", get(TENANT)).await)
             .unwrap()
             .expect("the committed record");
     let stored = entry.record;
@@ -425,8 +432,7 @@ async fn readback(h: &Harness) {
         recorded
     );
 
-    let refused =
-        decode::<Option<DecisionLogEntry>>(log_op(&h, "decider", get(OTHER_TENANT)).await);
+    let refused = decode::<Option<DecisionLogEntry>>(log_op(h, "decider", get(OTHER_TENANT)).await);
     assert!(refused.unwrap_err().starts_with("ACCESS_DENIED"));
 }
 

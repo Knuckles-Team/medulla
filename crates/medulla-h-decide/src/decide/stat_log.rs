@@ -899,13 +899,11 @@ fn dispatch(
             &tenant_id,
             computation,
         )?),
-        DecisionLogOp::RunRecord { .. } => {
-            return Err(refusal(
-                StatisticalErrorCode::ParameterInvalid,
-                "a run record is staged by `run_record::stage` and its graph link is committed \
-                 through the durable mutation path",
-            ))
-        }
+        DecisionLogOp::RunRecord { .. } => Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "a run record is staged by `run_record::stage` and its graph link is committed \
+             through the durable mutation path",
+        )),
         DecisionLogOp::CapabilityOutcome {
             entity_id,
             success,

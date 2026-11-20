@@ -281,57 +281,6 @@ fn solver(question_id: &str) -> impl FnOnce(&Model, &SolverConfig) -> Certificat
     }
 }
 
-/// The in-crate solver replacement table (MEDULLA-DECISION-ENGINE-R137.9),
-/// compiled only under `cfg(test)`: no served build carries it.
-#[cfg(test)]
-pub(in crate::decide) mod overrides {
-    use std::collections::BTreeMap;
-    use std::sync::{Mutex, OnceLock};
-
-    use medulla_decision_policy::solve::{Certificate, Model, SolverConfig};
-
-    /// A replacement solver.
-    pub(in crate::decide) type SolverFn = fn(&Model, &SolverConfig) -> Certificate;
-
-    /// A solver whose certificate claims the optimum but names an assignment
-    /// that breaks the capacity row: the independent verifier must reject it.
-    pub(in crate::decide) fn corrupting_solver(
-        model: &Model,
-        config: &SolverConfig,
-    ) -> Certificate {
-        let mut certificate = medulla_decision_policy::solve::solve(model, config);
-        if let Some(incumbent) = certificate.incumbent.as_mut() {
-            incumbent
-                .selected
-                .iter_mut()
-                .for_each(|picked| *picked = true);
-        }
-        certificate
-    }
-
-    fn table() -> &'static Mutex<BTreeMap<String, SolverFn>> {
-        static TABLE: OnceLock<Mutex<BTreeMap<String, SolverFn>>> = OnceLock::new();
-        TABLE.get_or_init(|| Mutex::new(BTreeMap::new()))
-    }
-
-    /// Replace the solver of the question `question_id`.
-    pub(in crate::decide) fn set(question_id: &str, solver: SolverFn) {
-        table()
-            .lock()
-            .expect("override table")
-            .insert(question_id.to_string(), solver);
-    }
-
-    pub(super) fn get(question_id: &str) -> Option<SolverFn> {
-        table()
-            .lock()
-            .expect("override table")
-            .get(question_id)
-            .copied()
-    }
-}
-
-/// The task class the request names, if any.
 fn task_class(request: &DecideRequest) -> Result<Option<&str>, String> {
     match param(request, PARAM_TASK_CLASS)? {
         None => Ok(None),
@@ -661,3 +610,55 @@ fn evidence_premises(
         )),
     ])
 }
+
+/// The in-crate solver replacement table (MEDULLA-DECISION-ENGINE-R137.9),
+/// compiled only under `cfg(test)`: no served build carries it.
+#[cfg(test)]
+pub(in crate::decide) mod overrides {
+    use std::collections::BTreeMap;
+    use std::sync::{Mutex, OnceLock};
+
+    use medulla_decision_policy::solve::{Certificate, Model, SolverConfig};
+
+    /// A replacement solver.
+    pub(in crate::decide) type SolverFn = fn(&Model, &SolverConfig) -> Certificate;
+
+    /// A solver whose certificate claims the optimum but names an assignment
+    /// that breaks the capacity row: the independent verifier must reject it.
+    pub(in crate::decide) fn corrupting_solver(
+        model: &Model,
+        config: &SolverConfig,
+    ) -> Certificate {
+        let mut certificate = medulla_decision_policy::solve::solve(model, config);
+        if let Some(incumbent) = certificate.incumbent.as_mut() {
+            incumbent
+                .selected
+                .iter_mut()
+                .for_each(|picked| *picked = true);
+        }
+        certificate
+    }
+
+    fn table() -> &'static Mutex<BTreeMap<String, SolverFn>> {
+        static TABLE: OnceLock<Mutex<BTreeMap<String, SolverFn>>> = OnceLock::new();
+        TABLE.get_or_init(|| Mutex::new(BTreeMap::new()))
+    }
+
+    /// Replace the solver of the question `question_id`.
+    pub(in crate::decide) fn set(question_id: &str, solver: SolverFn) {
+        table()
+            .lock()
+            .expect("override table")
+            .insert(question_id.to_string(), solver);
+    }
+
+    pub(super) fn get(question_id: &str) -> Option<SolverFn> {
+        table()
+            .lock()
+            .expect("override table")
+            .get(question_id)
+            .copied()
+    }
+}
+
+/// The task class the request names, if any.

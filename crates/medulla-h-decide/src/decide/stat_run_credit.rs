@@ -185,6 +185,9 @@ pub(super) fn record_run(
     ))
 }
 
+/// The rows a credit run stores: an artifact id and its encoded bytes.
+type CreditRows = Vec<(String, Vec<u8>)>;
+
 /// Run the kernel against the current baselines; the receipt and its rows.
 fn credit(
     ctx: &ExecutionContext,
@@ -192,7 +195,7 @@ fn credit(
     retrieved: &[medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome],
     outcome_digest: &str,
     weight: KnobValue,
-) -> Result<(RunCreditReceipt, Vec<(String, Vec<u8>)>), String> {
+) -> Result<(RunCreditReceipt, CreditRows), String> {
     let mut baselines = BTreeMap::new();
     for step in outcome.steps.iter() {
         if baselines.contains_key(&step.capability_iri) {

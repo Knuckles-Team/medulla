@@ -140,10 +140,7 @@ async fn admission_enforces_caps_and_replays() {
         format!("topology_cap:max_depth={}", asked.max_depth.min(8)),
         format!("topology_cap:max_rounds={}", asked.max_rounds.min(8)),
     ] {
-        assert!(
-            facts.iter().any(|f| *f == expected),
-            "{expected} in {facts:?}"
-        );
+        assert!(facts.contains(&expected), "{expected} in {facts:?}");
     }
     let digest = medulla_agent_types::agent_topology::enforcement::plan_digest(&plan);
     assert!(facts.iter().any(|f| *f == format!("plan_digest:{digest}")));

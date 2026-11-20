@@ -53,7 +53,7 @@ use super::stat_support::{invalid_parameter, resolve_policy};
 /// What a `task_plan` question concludes: the canonical plan, or the family's
 /// abstention when a proposer cannot cover a subtask (MEDULLA-DECISION-ENGINE-R134.6).
 pub(super) enum Planned {
-    Plan(TaskPlan, PlanNotes),
+    Plan(Box<TaskPlan>, PlanNotes),
     Abstain {
         code: RefusalCode,
         detail: String,
@@ -72,7 +72,7 @@ pub(super) struct PlanNotes {
 
 /// A proposer's result before canonicalization.
 enum Proposal {
-    Plan(TaskPlanProposal, PlanNotes),
+    Plan(Box<TaskPlanProposal>, PlanNotes),
     Abstain(Planned),
 }
 
@@ -114,7 +114,7 @@ fn abstention(message: &str, param: &str) -> Option<Planned> {
 
 fn proposed(result: Result<TaskPlanProposal, String>, param: &str) -> Result<Proposal, String> {
     match result {
-        Ok(proposal) => Ok(Proposal::Plan(proposal, PlanNotes::default())),
+        Ok(proposal) => Ok(Proposal::Plan(Box::new(proposal), PlanNotes::default())),
         Err(message) => match abstention(&message, param) {
             Some(planned) => Ok(Proposal::Abstain(planned)),
             None => Err(invalid_parameter(message)),
@@ -134,7 +134,7 @@ fn proposal_of(
 ) -> Result<Proposal, String> {
     match (param.name.as_str(), &param.value) {
         ("task_plan", TypedValue::TaskPlan(proposal)) => {
-            Ok(Proposal::Plan((**proposal).clone(), PlanNotes::default()))
+            Ok(Proposal::Plan(proposal.clone(), PlanNotes::default()))
         }
         ("decomposition", TypedValue::TaskDecomposition(facts)) => proposed(
             decompose_task(facts, &DecomposeKnobs::from_policy(policy)),
@@ -403,8 +403,8 @@ pub(super) fn plan_of_request(
     let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
     match task_plan(ctx, request, &resolved.policy)? {
         Some(Planned::Plan(plan, notes)) => {
-            let plan = with_skill_trees(ctx, request, principal, &resolved.policy, plan)?;
-            Ok(Some(Planned::Plan(plan, notes)))
+            let plan = with_skill_trees(ctx, request, principal, &resolved.policy, *plan)?;
+            Ok(Some(Planned::Plan(Box::new(plan), notes)))
         }
         other => Ok(other),
     }
@@ -507,7 +507,7 @@ pub(super) fn task_plan(
             "declared candidates must be exactly the sorted task ids without facts",
         ));
     }
-    Ok(Some(Planned::Plan(plan, notes)))
+    Ok(Some(Planned::Plan(Box::new(plan), notes)))
 }
 
 pub(super) fn outcome(_plan: &TaskPlan) -> StatisticalOutcome {

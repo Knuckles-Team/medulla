@@ -452,7 +452,7 @@ async fn unmeasured_and_stale_paths_refuse() {
 
     // None remains: the answer abstains with the code of the first
     // eliminated path in path_id order. The engine never defaults a rate.
-    let mut eliminated = vec![
+    let mut eliminated = [
         (unmeasured.clone(), PATH_UNMEASURED),
         (stale.clone(), PATH_WINDOW_STALE),
         (thin.clone(), PATH_OUTCOME_MISSING),

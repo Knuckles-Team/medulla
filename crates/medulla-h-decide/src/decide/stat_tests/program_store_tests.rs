@@ -586,7 +586,7 @@ mod preplan {
     use sha2::{Digest, Sha256};
 
     fn hex64(c: char) -> String {
-        std::iter::repeat(c).take(64).collect()
+        std::iter::repeat_n(c, 64).collect()
     }
 
     /// Store `body` in `tenant`'s Blob CAS, as the harness does through the

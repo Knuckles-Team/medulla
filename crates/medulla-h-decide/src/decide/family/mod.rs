@@ -647,8 +647,7 @@ mod tests {
             | QuestionKind::StepVerification
             | QuestionKind::AdversarialAdmission
             | QuestionKind::SkillEvolution
-            | QuestionKind::PlaybookTriage
-            | QuestionKind::ToolActionAdmission => true,
+            | QuestionKind::PlaybookTriage => true,
         };
         assert!(exhaustive);
         kinds

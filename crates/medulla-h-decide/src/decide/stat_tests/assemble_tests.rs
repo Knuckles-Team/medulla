@@ -309,8 +309,18 @@ async fn model_media_capability_and_unknown_code() {
 const SEARCH_CAP: &str = "urn:vendor:search";
 
 fn digest(c: char) -> String {
-    std::iter::repeat(c).take(64).collect()
+    std::iter::repeat_n(c, 64).collect()
 }
+
+/// A failed check: its label, the edges and replacements that break it, the
+/// stable refusal code and the option it removes.
+type RefusalCase = (
+    &'static str,
+    Vec<PrimitiveEdge>,
+    Vec<PrimitiveReplacement>,
+    &'static str,
+    &'static str,
+);
 
 /// One tool primitive: `input` -> `output` schema digests, comma-separated
 /// effects and declared capabilities.
@@ -407,13 +417,7 @@ async fn primitive_refusals_abstain_with_stable_codes() {
     );
 
     // Each failed check abstains with its stable code and removes one option.
-    let cases: [(
-        &str,
-        Vec<PrimitiveEdge>,
-        Vec<PrimitiveReplacement>,
-        &str,
-        &str,
-    ); 5] = [
+    let cases: [RefusalCase; 5] = [
         (
             "edge",
             vec![edge("p-search", "p-bad")],

@@ -31,9 +31,9 @@ fn score_of(rank: usize) -> u32 {
 fn cited_at(run: usize, rank: usize) -> bool {
     match rank {
         0..=3 => true,
-        4 => run % 2 == 0,
-        5 => run % 4 == 0,
-        7 => run % 10 == 0,
+        4 => run.is_multiple_of(2),
+        5 => run.is_multiple_of(4),
+        7 => run.is_multiple_of(10),
         _ => false,
     }
 }

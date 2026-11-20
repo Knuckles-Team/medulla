@@ -320,7 +320,7 @@ async fn comparative_refusals() {
         .and_then(|value| value.as_array_mut())
         .expect("the candidates travel in the typed param");
     let first = carried[0].clone();
-    carried.extend(std::iter::repeat(first).take(64));
+    carried.extend(std::iter::repeat_n(first, 64));
     let error = serde_json::from_value::<DecideRequest>(wire).unwrap_err();
     assert!(
         error.to_string().contains("COMPARATIVE_OVER_LIMIT"),
@@ -437,7 +437,8 @@ async fn mutating_a_bound_input_changes_the_plan_digest() {
     assert_eq!(plan.plan_digest.len(), 64);
 
     // Mutating any bound input changes the digest.
-    let mutations: Vec<(&str, Box<dyn Fn(&mut ComparativeAnalysisRequest)>)> = vec![
+    type Mutation = (&'static str, Box<dyn Fn(&mut ComparativeAnalysisRequest)>);
+    let mutations: Vec<Mutation> = vec![
         ("space id", Box::new(|b| b.space_id = "space:b".into())),
         ("space revision", Box::new(|b| b.space_revision = 4)),
         (

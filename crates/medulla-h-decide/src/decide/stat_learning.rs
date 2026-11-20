@@ -298,7 +298,6 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::RecordOutcome { .. }
         | LearningWrite::FitCalibration { .. }
         | LearningWrite::EvaluateDrift { .. }
-        | LearningWrite::FitCalibration { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),

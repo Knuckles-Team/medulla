@@ -105,8 +105,7 @@ async fn served_decide_reads_drift_and_picks_width() {
         .answer
         .as_ref()
         .and_then(|a| a.population_drift())
-        .unwrap()
-        .clone();
+        .unwrap();
     assert_eq!(calm.distance.value.value, 0);
     assert!(!calm.alert);
 
