@@ -91,7 +91,6 @@ async fn published_head(h: &Harness) -> (ComponentDependency, ComponentDependenc
                     item.label = ItemLabel::Gold {
                         acceptable: BoundedVec::new(vec![ids[1].clone()]).unwrap(),
                         source: LabelSource::SyntheticConstruction,
-                        served_record_digest: None,
                     };
                 }
                 item
