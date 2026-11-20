@@ -166,7 +166,14 @@ async fn read_rows(
         return Err(error);
     }
     match &response.result {
-        Some(ResultPayload::Raw(bytes)) => Ok(rmp_serde::from_slice(bytes).unwrap()),
+        Some(ResultPayload::Raw(bytes)) => {
+            let rows: Vec<medulla_types::unified_row::UnifiedRow> =
+                rmp_serde::from_slice(bytes).unwrap();
+            Ok(rows
+                .iter()
+                .map(medulla_types::unified_row::UnifiedRow::pair)
+                .collect())
+        }
         other => panic!("expected foreign rows, got {other:?}"),
     }
 }

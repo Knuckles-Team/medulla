@@ -1357,8 +1357,13 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
                 .map(|code| code.as_str())
                 .filter(|code| prefixes.iter().any(|prefix| code.starts_with(prefix))),
         );
-        // These two codes already belong to the connector-pack typed catalog.
-        codes.extend(["SOURCE_CONTRACT_MISMATCH", "SOURCE_REGISTRATION_NOT_FOUND"]);
+        // These codes already belong to the connector-pack typed catalog. A receipt
+        // whose pack head moved is refused as PACK_HEAD_CONFLICT (MEDULLA-FEDERATED-QUERY-R722.2).
+        codes.extend([
+            "PACK_HEAD_CONFLICT",
+            "SOURCE_CONTRACT_MISMATCH",
+            "SOURCE_REGISTRATION_NOT_FOUND",
+        ]);
     }
     // MEDULLA-IDENTITY-R610.4 / R610.5: every served graph read is scoped to the
     // verified tenant and audited.
