@@ -324,7 +324,7 @@ none
 - Gramps pilot corpus and phase exits: `MEDULLA-UNIFIED-DATA-PLANE-R026.2.2` provides, `CONN-GRAMPS-MCP-CONNECTOR-CONTENT-R001` consumes. Contract: [gramps-native-pilot.md](contracts/gramps-native-pilot.md).
 - Cross-application entity links: `MEDULLA-UNIFIED-DATA-PLANE-R030.3` provides, `CONN-IMMICH-API-R001` consumes. Contract: [immich-entity-links.md](contracts/immich-entity-links.md).
 
-## Catalog probe (R014.2.2, R014.2.3)
+### Catalog probe (R014.2.2, R014.2.3)
 
 Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.
 
@@ -336,7 +336,7 @@ and filters on the shared parser and appends `asset_usage.*` points. `Method::Ca
 read-only query-family method answered by `handle_usage` from those series; see research.md for
 the cursor, scope-stamping and refusal decisions.
 
-## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
+### Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
 
 `virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.
 
@@ -344,7 +344,7 @@ the cursor, scope-stamping and refusal decisions.
 `RegisterForeignSource` → `discover_source` (exhaustive `discoverer_for(SourceCategory)`) → catalog insert → `write_contract` (one durable `AddNode` of `vg:MetadataContract`). Live catalog read for PostgreSQL-wire and MySQL-family sources; declared-shape hash for the rest. See research.md.
 Projection read wiring (R026.4): `Method::ProjectionRead` is served by `handle_projection_read` in `crates/medulla-h-query/src/query/projection.rs` (types and pure evaluation in `crates/medulla-types/src/projection_read.rs`, codes `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`, `PROJECTION_ACCESS_DENIED`, `PROJECTION_READ_ONLY` in `ServerErrorCode`). The pgwire session binds `medulla.mapping` through `WireSession::bind_mapping`; `refuse_projection_write` in `crates/medulla-wire-core/src/wire/projection.rs` refuses writes. Served tests: `tests/projection_read_served.rs`.
 
-## Profile and quality jobs (R761.3, R762.3)
+### Profile and quality jobs (R761.3, R762.3)
 
 - Decision: profile and quality jobs write their graph nodes in one engine-internal batch keyed by the job id (`data_plane_write.rs`), so a retried attempt replays instead of writing twice. Rejected: a seam call per node.
 - Decision: incidents opened by a failing rule streak are correlated with `IncidentAuthority` and written in the job's own batch through the shared `medulla_stream::telemetry::incident_nodes` module (moved from the router so one shape serves both). Rejected: a `DecideApi` seam to `medulla-h-decide`.
