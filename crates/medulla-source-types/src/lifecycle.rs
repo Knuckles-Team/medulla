@@ -324,7 +324,7 @@ pub fn handle_record_release(
     let previous_head = existing
         .iter()
         .filter(|r| r.repo == release.repo && r.id() != release.id())
-        .filter(|r| chain.iter().any(|c| *c == r.changeset_head))
+        .filter(|r| chain.contains(&r.changeset_head))
         .max_by_key(|r| r.published_at)
         .map(|r| r.changeset_head.as_str());
     let contains = release_range(chain, previous_head, &release.changeset_head)?;

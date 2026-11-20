@@ -198,21 +198,20 @@ mod tests {
     // spec: MEDULLA-SDLC-R030.5
     #[test]
     fn no_writer_sets_state_outside_apply() {
-        for source in [include_str!("../../medulla-core/src/lifecycle/status.rs")] {
-            let production = source.split("#[cfg(test)]").next().unwrap();
-            let writes: Vec<&str> = production
-                .lines()
-                .map(str::trim)
-                .filter(|l| !l.starts_with("//"))
-                .filter(|l| {
-                    TASK_MACHINE.states.iter().any(|s| {
-                        let variant = format!("TaskState::{s:?}");
-                        l.contains(&format!("state: {variant}"))
-                            || l.contains(&format!(".state = {variant}"))
-                    })
+        let source = include_str!("../../medulla-core/src/lifecycle/status.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//"))
+            .filter(|l| {
+                TASK_MACHINE.states.iter().any(|s| {
+                    let variant = format!("TaskState::{s:?}");
+                    l.contains(&format!("state: {variant}"))
+                        || l.contains(&format!(".state = {variant}"))
                 })
-                .collect();
-            assert!(writes.is_empty(), "{writes:?}");
-        }
+            })
+            .collect();
+        assert!(writes.is_empty(), "{writes:?}");
     }
 }

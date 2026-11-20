@@ -308,7 +308,7 @@ pub fn identity_evidence(
 /// match proposes a merge; a version variant proposes a link; an opaque
 /// token alone never merges. `embedding_min` is `knob entity_link.embedding_min`.
 pub fn decide_merge(evidence: &[IdentityEvidence], embedding_min: f64) -> MergeDecision {
-    let has = |f: &dyn Fn(&IdentityEvidence) -> bool| evidence.iter().any(|e| f(e));
+    let has = |f: &dyn Fn(&IdentityEvidence) -> bool| evidence.iter().any(f);
     if has(&|e| matches!(e, IdentityEvidence::VersionVariant { .. })) {
         return MergeDecision::ProposeLink;
     }
