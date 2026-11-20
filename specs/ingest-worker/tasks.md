@@ -62,7 +62,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T055 [US1] MEDULLA-INGEST-WORKER-R605.6 Hot-path proof: page task overhead
 - [ ] T056 [US5] MEDULLA-INGEST-WORKER-R606.1 Model: the shared batch report and the provenance stamp
 - [ ] T057 [US5] MEDULLA-INGEST-WORKER-R606.2 Behavior: stamping, label normalization and per-source routing
-- [ ] T058 [US5] MEDULLA-INGEST-WORKER-R606.3 Wiring: SourceIngest is the sole write path for connector batches
+- [x] T058 [US5] MEDULLA-INGEST-WORKER-R606.3 Wiring: SourceIngest is the sole write path for connector batches
 - [ ] T059 [US5] MEDULLA-INGEST-WORKER-R606.4 Refusal: a batch without a source system
 - [ ] T060 [US5] MEDULLA-INGEST-WORKER-R606.5 Evidence: per-batch report
 - [ ] T061 [US5] MEDULLA-INGEST-WORKER-R606.6 Hot-path proof: materialization at batch size
@@ -70,7 +70,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T063 [US3] MEDULLA-INGEST-WORKER-R700.2 Behavior: bounded streaming readers
 - [ ] T064 [US3] MEDULLA-INGEST-WORKER-R700.3 Wiring: readers run inside document normalization
 - [ ] T065 [US3] MEDULLA-INGEST-WORKER-R700.4 Refusal: oversize, encrypted, unsupported or corrupt input
-- [ ] T066 [US3] MEDULLA-INGEST-WORKER-R700.5 Evidence: every fragment re-extracts from its span
+- [x] T066 [US3] MEDULLA-INGEST-WORKER-R700.5 Evidence: every fragment re-extracts from its span
 - [ ] T067 [US3] MEDULLA-INGEST-WORKER-R700.6 Hot-path proof: readers through the wire method
 - [ ] T068 [US4] MEDULLA-INGEST-WORKER-R701.1 Model
 - [ ] T069 [US4] MEDULLA-INGEST-WORKER-R701.2 Behavior

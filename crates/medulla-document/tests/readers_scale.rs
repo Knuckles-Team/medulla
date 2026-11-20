@@ -147,3 +147,42 @@ fn time_and_memory_scale_linearly() {
         READER_TOO_LARGE
     );
 }
+
+/// Every text-layer fragment re-extracts from its span: re-reading the source
+/// bytes at the fragment's byte span yields the fragment text, the character
+/// span is consistent with it, and the fragments cover the source in order.
+// spec: MEDULLA-INGEST-WORKER-R700.5
+#[test]
+fn spans_reextract_to_fragment_text() {
+    let registry = text_registry(ReaderLimits::new(MAX_BYTES, 2).unwrap()).unwrap();
+    let formats: [(&str, fn(usize) -> String); 2] = [("text/csv", csv), ("text/vtt", vtt)];
+    for (media_type, make) in formats {
+        for units in [10, 1_000] {
+            let source = make(units);
+            let fragments = registry.read(media_type, source.as_bytes()).unwrap();
+            assert!(!fragments.is_empty(), "{media_type} {units}: no fragments");
+            for fragment in &fragments {
+                let span = &fragment.span;
+                let reread = &source.as_bytes()[span.start_byte..span.end_byte];
+                assert_eq!(
+                    reread,
+                    fragment.text.as_bytes(),
+                    "{media_type} {units}: fragment {} does not re-extract",
+                    span.ordinal
+                );
+                assert_eq!(
+                    std::str::from_utf8(reread).unwrap().chars().count(),
+                    span.end_char - span.start_char,
+                    "{media_type} {units}: character span of fragment {}",
+                    span.ordinal
+                );
+            }
+            // Re-extracting every span in order loses nothing of the source.
+            let joined: Vec<u8> = fragments
+                .iter()
+                .flat_map(|f| source.as_bytes()[f.span.start_byte..f.span.end_byte].to_vec())
+                .collect();
+            assert_eq!(joined, source.as_bytes(), "{media_type} {units}");
+        }
+    }
+}
