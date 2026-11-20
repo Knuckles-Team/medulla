@@ -178,9 +178,13 @@ fn assert_fixture_parses(fixture: &str) {
 }
 
 fn assert_no_connector_name(fixture: &str, label: &str) {
+    // The organization ontology base is a namespace, not a connector; it is removed
+    // before the scan so its host name cannot be read as one. Every other IRI, prefixed
+    // name, literal and variable of the question is still scanned.
+    let question = fixture.replace(medulla_types::ontology_base::ONTOLOGY_BASE, "");
     for name in CONNECTOR_NAMES {
         assert!(
-            !fixture.contains(name),
+            !question.contains(name),
             "{label}: the class-only question must not name the connector '{name}'"
         );
     }
