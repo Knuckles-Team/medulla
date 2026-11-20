@@ -523,7 +523,7 @@ mod tests {
         };
         assert_eq!(
             audit_line(&attach_pack).as_deref(),
-            Some("GRAPH_SCHEMA|attach_pack|agent-utilities")
+            Some("GRAPH_SCHEMA|attach_pack|meristem")
         );
     }
 

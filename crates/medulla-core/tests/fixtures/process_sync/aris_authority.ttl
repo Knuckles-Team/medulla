@@ -27,7 +27,7 @@ ex:aris-process-authority a vg:SourceAuthority ;
     vg:authorityFor :ProcessModel ;
     vg:authorityMapping ex:aris-process-model ;
     vg:authorityRank 2 ;
-    vg:authorityContract "virtual-graph" ;
+    vg:authorityContract "mcp" ;
     vg:recordRole "federated_secondary" ;
     vg:syncDirection "both" ;
     vg:conflictRule "system_of_record_wins" ;

@@ -3957,6 +3957,11 @@
     rdfs:comment "An event of the Bar machine." ;
     rdfs:subClassOf :TransitionEvent .
 
+:BarGuard a owl:Class ;
+    rdfs:label "Bar Guard" ;
+    rdfs:comment "A guard of the Bar machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
 :BarMachine a :StateMachine ;
     rdfs:label "Bar machine" ;
     :initialState :BarMachine_Provisional ;
@@ -4003,6 +4008,11 @@
     rdfs:label "Signal data Event" ;
     rdfs:comment "An event of the Signal data machine." ;
     rdfs:subClassOf :TransitionEvent .
+
+:SignalDataGuard a owl:Class ;
+    rdfs:label "Signal data Guard" ;
+    rdfs:comment "A guard of the Signal data machine." ;
+    rdfs:subClassOf :TransitionGuard .
 
 :SignalDataMachine a :StateMachine ;
     rdfs:label "Signal data data machine" ;
@@ -4288,6 +4298,11 @@
     rdfs:comment "An event of the TraceOutcome machine." ;
     rdfs:subClassOf :TransitionEvent .
 
+:TraceOutcomeGuard a owl:Class ;
+    rdfs:label "TraceOutcome Guard" ;
+    rdfs:comment "A guard of the TraceOutcome machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
 :TraceOutcomeMachine a :StateMachine ;
     rdfs:label "TraceOutcome machine" ;
     :initialState :TraceOutcomeMachine_Pending ;
@@ -4376,6 +4391,11 @@
     rdfs:label "Uql Event" ;
     rdfs:comment "An event of the Uql machine." ;
     rdfs:subClassOf :TransitionEvent .
+
+:UqlGuard a owl:Class ;
+    rdfs:label "Uql Guard" ;
+    rdfs:comment "A guard of the Uql machine." ;
+    rdfs:subClassOf :TransitionGuard .
 
 :UqlMachine a :StateMachine ;
     rdfs:label "Uql machine" ;
@@ -5263,261 +5283,6 @@
     :fromState :IndexRefMachine_Live ;
     :toState :IndexRefMachine_Deleted ;
     :firedBy :IndexRefMachine_Event_Delete .
-:ImmichPilotMachine_Event_ExitReadFirstTools a :ImmichPilotEvent ;
-    rdfs:label "Immich Pilot ExitReadFirstTools" .
-
-:ImmichPilotMachine_Event_ExitCatalogRegistration a :ImmichPilotEvent ;
-    rdfs:label "Immich Pilot ExitCatalogRegistration" .
-
-:ImmichPilotMachine_Event_ExitIncrementalIngest a :ImmichPilotEvent ;
-    rdfs:label "Immich Pilot ExitIncrementalIngest" .
-
-:ImmichPilotMachine_Event_ExitFaceClusterNaming a :ImmichPilotEvent ;
-    rdfs:label "Immich Pilot ExitFaceClusterNaming" .
-
-:ImmichPilotMachine_Event_ExitCrossAppLinkApproval a :ImmichPilotEvent ;
-    rdfs:label "Immich Pilot ExitCrossAppLinkApproval" .
-
-:ImmichPilotMachine_I01 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I01" ;
-    :edgeId "I01" ;
-    :fromState :ImmichPilotMachine_I0ClientGeneration ;
-    :toState :ImmichPilotMachine_I1ReadFirstTools ;
-    :firedBy :ImmichPilotMachine_Event_ExitClientGeneration .
-
-:ImmichPilotMachine_I02 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I02" ;
-    :edgeId "I02" ;
-    :fromState :ImmichPilotMachine_I1ReadFirstTools ;
-    :toState :ImmichPilotMachine_I2CatalogRegistration ;
-    :firedBy :ImmichPilotMachine_Event_ExitReadFirstTools .
-
-:ImmichPilotMachine_I03 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I03" ;
-    :edgeId "I03" ;
-    :fromState :ImmichPilotMachine_I2CatalogRegistration ;
-    :toState :ImmichPilotMachine_I3IncrementalIngest ;
-    :firedBy :ImmichPilotMachine_Event_ExitCatalogRegistration .
-
-:ImmichPilotMachine_I04 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I04" ;
-    :edgeId "I04" ;
-    :fromState :ImmichPilotMachine_I3IncrementalIngest ;
-    :toState :ImmichPilotMachine_I4FaceClusterNaming ;
-    :firedBy :ImmichPilotMachine_Event_ExitIncrementalIngest .
-
-:ImmichPilotMachine_I05 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I05" ;
-    :edgeId "I05" ;
-    :fromState :ImmichPilotMachine_I4FaceClusterNaming ;
-    :toState :ImmichPilotMachine_I5CrossAppLinkApproval ;
-    :firedBy :ImmichPilotMachine_Event_ExitFaceClusterNaming .
-
-:ImmichPilotMachine_I06 a :ImmichPilotTransition ;
-    rdfs:label "Immich Pilot I06" ;
-    :edgeId "I06" ;
-    :fromState :ImmichPilotMachine_I5CrossAppLinkApproval ;
-    :toState :ImmichPilotMachine_I6HealthChecks ;
-    :firedBy :ImmichPilotMachine_Event_ExitCrossAppLinkApproval .
-
-# spec: MEDULLA-MEDIA-VOCAB-R656.6
-# The TTS job machine. The Rust edge table TTS_RESULT_MACHINE is
-# the same table; the ontology test asserts equal edge sets.
-
-:TtsResultState a owl:Class ;
-    rdfs:label "Tts Result State" ;
-    rdfs:comment "A state of the Tts Result machine." ;
-    rdfs:subClassOf :State .
-
-:TtsResultTerminalState a owl:Class ;
-    rdfs:label "Tts Result Terminal State" ;
-    rdfs:comment "A terminal state of the Tts Result machine." ;
-    rdfs:subClassOf :TerminalState, :TtsResultState .
-
-:TtsResultTransition a owl:Class ;
-    rdfs:label "Tts Result Transition" ;
-    rdfs:comment "A transition of the Tts Result machine." ;
-    rdfs:subClassOf :Transition .
-
-:TtsResultEvent a owl:Class ;
-    rdfs:label "Tts Result Event" ;
-    rdfs:comment "A event of the Tts Result machine." ;
-    rdfs:subClassOf :TransitionEvent .
-
-:TtsResultGuard a owl:Class ;
-    rdfs:label "Tts Result Guard" ;
-    rdfs:comment "A guard of the Tts Result machine." ;
-    rdfs:subClassOf :TransitionGuard .
-
-:TtsResultMachine a :StateMachine ;
-    rdfs:label "Tts Result machine" ;
-    :initialState :TtsResultMachine_Accepted ;
-    :hasState :TtsResultMachine_Accepted, :TtsResultMachine_Queued, :TtsResultMachine_Running, :TtsResultMachine_Chunking, :TtsResultMachine_Cancelling, :TtsResultMachine_Cancelled, :TtsResultMachine_Succeeded, :TtsResultMachine_Degraded, :TtsResultMachine_Failed .
-
-:TtsResultMachine_Accepted a :TtsResultState ;
-    rdfs:label "Tts Result Accepted" ;
-    :storedForm "Accepted" .
-
-:TtsResultMachine_Queued a :TtsResultState ;
-    rdfs:label "Tts Result Queued" ;
-    :storedForm "Queued" .
-
-:TtsResultMachine_Running a :TtsResultState ;
-    rdfs:label "Tts Result Running" ;
-    :storedForm "Running" .
-
-:TtsResultMachine_Chunking a :TtsResultState ;
-    rdfs:label "Tts Result Chunking" ;
-    :storedForm "Chunking" .
-
-:TtsResultMachine_Cancelling a :TtsResultState ;
-    rdfs:label "Tts Result Cancelling" ;
-    :storedForm "Cancelling" .
-
-:TtsResultMachine_Cancelled a :TtsResultTerminalState ;
-    rdfs:label "Tts Result Cancelled" ;
-    :storedForm "Cancelled" .
-
-:TtsResultMachine_Succeeded a :TtsResultTerminalState ;
-    rdfs:label "Tts Result Succeeded" ;
-    :storedForm "Succeeded" .
-
-:TtsResultMachine_Degraded a :TtsResultTerminalState ;
-    rdfs:label "Tts Result Degraded" ;
-    :storedForm "Degraded" .
-
-:TtsResultMachine_Failed a :TtsResultTerminalState ;
-    rdfs:label "Tts Result Failed" ;
-    :storedForm "Failed" .
-
-:TtsResultMachine_Event_Enqueue a :TtsResultEvent ;
-    rdfs:label "Tts Result Enqueue" .
-
-:TtsResultMachine_Event_Start a :TtsResultEvent ;
-    rdfs:label "Tts Result Start" .
-
-:TtsResultMachine_Event_BeginChunking a :TtsResultEvent ;
-    rdfs:label "Tts Result BeginChunking" .
-
-:TtsResultMachine_Event_Succeed a :TtsResultEvent ;
-    rdfs:label "Tts Result Succeed" .
-
-:TtsResultMachine_Event_Degrade a :TtsResultEvent ;
-    rdfs:label "Tts Result Degrade" .
-
-:TtsResultMachine_Event_Fail a :TtsResultEvent ;
-    rdfs:label "Tts Result Fail" .
-
-:TtsResultMachine_Event_RequestCancel a :TtsResultEvent ;
-    rdfs:label "Tts Result RequestCancel" .
-
-:TtsResultMachine_Event_ConfirmCancel a :TtsResultEvent ;
-    rdfs:label "Tts Result ConfirmCancel" .
-
-:TtsResultMachine_T01 a :TtsResultTransition ;
-    rdfs:label "Tts Result T01" ;
-    :edgeId "T01" ;
-    :fromState :TtsResultMachine_Accepted ;
-    :toState :TtsResultMachine_Queued ;
-    :firedBy :TtsResultMachine_Event_Enqueue .
-
-:TtsResultMachine_T02 a :TtsResultTransition ;
-    rdfs:label "Tts Result T02" ;
-    :edgeId "T02" ;
-    :fromState :TtsResultMachine_Queued ;
-    :toState :TtsResultMachine_Running ;
-    :firedBy :TtsResultMachine_Event_Start .
-
-:TtsResultMachine_T03 a :TtsResultTransition ;
-    rdfs:label "Tts Result T03" ;
-    :edgeId "T03" ;
-    :fromState :TtsResultMachine_Running ;
-    :toState :TtsResultMachine_Chunking ;
-    :firedBy :TtsResultMachine_Event_BeginChunking .
-
-:TtsResultMachine_T04 a :TtsResultTransition ;
-    rdfs:label "Tts Result T04" ;
-    :edgeId "T04" ;
-    :fromState :TtsResultMachine_Chunking ;
-    :toState :TtsResultMachine_Succeeded ;
-    :firedBy :TtsResultMachine_Event_Succeed .
-
-:TtsResultMachine_T05 a :TtsResultTransition ;
-    rdfs:label "Tts Result T05" ;
-    :edgeId "T05" ;
-    :fromState :TtsResultMachine_Chunking ;
-    :toState :TtsResultMachine_Degraded ;
-    :firedBy :TtsResultMachine_Event_Degrade .
-
-:TtsResultMachine_T06 a :TtsResultTransition ;
-    rdfs:label "Tts Result T06" ;
-    :edgeId "T06" ;
-    :fromState :TtsResultMachine_Running ;
-    :toState :TtsResultMachine_Degraded ;
-    :firedBy :TtsResultMachine_Event_Degrade .
-
-:TtsResultMachine_T07 a :TtsResultTransition ;
-    rdfs:label "Tts Result T07" ;
-    :edgeId "T07" ;
-    :fromState :TtsResultMachine_Accepted ;
-    :toState :TtsResultMachine_Failed ;
-    :firedBy :TtsResultMachine_Event_Fail .
-
-:TtsResultMachine_T08 a :TtsResultTransition ;
-    rdfs:label "Tts Result T08" ;
-    :edgeId "T08" ;
-    :fromState :TtsResultMachine_Queued ;
-    :toState :TtsResultMachine_Failed ;
-    :firedBy :TtsResultMachine_Event_Fail .
-
-:TtsResultMachine_T09 a :TtsResultTransition ;
-    rdfs:label "Tts Result T09" ;
-    :edgeId "T09" ;
-    :fromState :TtsResultMachine_Running ;
-    :toState :TtsResultMachine_Failed ;
-    :firedBy :TtsResultMachine_Event_Fail .
-
-:TtsResultMachine_T10 a :TtsResultTransition ;
-    rdfs:label "Tts Result T10" ;
-    :edgeId "T10" ;
-    :fromState :TtsResultMachine_Chunking ;
-    :toState :TtsResultMachine_Failed ;
-    :firedBy :TtsResultMachine_Event_Fail .
-
-:TtsResultMachine_T11 a :TtsResultTransition ;
-    rdfs:label "Tts Result T11" ;
-    :edgeId "T11" ;
-    :fromState :TtsResultMachine_Accepted ;
-    :toState :TtsResultMachine_Cancelling ;
-    :firedBy :TtsResultMachine_Event_RequestCancel .
-
-:TtsResultMachine_T12 a :TtsResultTransition ;
-    rdfs:label "Tts Result T12" ;
-    :edgeId "T12" ;
-    :fromState :TtsResultMachine_Queued ;
-    :toState :TtsResultMachine_Cancelling ;
-    :firedBy :TtsResultMachine_Event_RequestCancel .
-
-:TtsResultMachine_T13 a :TtsResultTransition ;
-    rdfs:label "Tts Result T13" ;
-    :edgeId "T13" ;
-    :fromState :TtsResultMachine_Running ;
-    :toState :TtsResultMachine_Cancelling ;
-    :firedBy :TtsResultMachine_Event_RequestCancel .
-
-:TtsResultMachine_T14 a :TtsResultTransition ;
-    rdfs:label "Tts Result T14" ;
-    :edgeId "T14" ;
-    :fromState :TtsResultMachine_Chunking ;
-    :toState :TtsResultMachine_Cancelling ;
-    :firedBy :TtsResultMachine_Event_RequestCancel .
-
-:TtsResultMachine_T15 a :TtsResultTransition ;
-    rdfs:label "Tts Result T15" ;
-    :edgeId "T15" ;
-    :fromState :TtsResultMachine_Cancelling ;
-    :toState :TtsResultMachine_Cancelled ;
-    :firedBy :TtsResultMachine_Event_ConfirmCancel .
 
 # spec: MEDULLA-SDLC-R030.4
 # The Spec machine. The Rust edge table SPEC_MACHINE is the same table; the ontology

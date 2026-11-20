@@ -176,7 +176,7 @@ fn sync_shapes_refuse_planted_faults() {
     );
     // 2. A federated_secondary needs syncDirection.
     refused_with(
-        &SECONDARY_ROW.replace(" ;\n    vg:syncDirection \"both\"", ""),
+        &SECONDARY_ROW.replace(" ;\nvg:syncDirection \"both\"", ""),
         "needs a syncDirection",
     );
     // 3. A federated_secondary needs conflictRule.
@@ -187,7 +187,7 @@ fn sync_shapes_refuse_planted_faults() {
     // 4. An accelerated secondary needs a materialisationReason (and its bound).
     let accelerated = SECONDARY_ROW.replace(
         "vg:syncDirection",
-        "vg:materialisation \"accelerated\" ; vg:freshnessMaxAgeSeconds 60 ; vg:syncDirection",
+        "vg:materialisation \"accelerated\" ; vg:freshnessMaxAgeSeconds \"60\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> ; vg:syncDirection",
     );
     refused_with(&accelerated, "needs a materialisationReason");
     let reasoned = accelerated.replace(

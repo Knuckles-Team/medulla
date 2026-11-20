@@ -2,6 +2,7 @@
 @prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix ex:  <urn:eg:fixture:process-sync:> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # MEDULLA-CQ-ORCH-R703.1: where process models and decision logic live. The process engine
 # connection is a federated secondary: graph-held models are the system of record, so the
@@ -36,7 +37,8 @@ ex:process-model-location a vg:SourceAuthority ; vg:authoritativeSource ex:proce
     vg:authorityRank 1 ; vg:authorityContract "mcp" ;
     vg:recordRole "federated_secondary" ; vg:syncDirection "both" ;
     vg:conflictRule "system_of_record_wins" ;
-    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ;
+    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger ;
+    kg:processSourceSystem "bpmn20" ;
     vg:materialisationReason "Graph-held models are the system of record." .
 
 ex:decision-logic-location a vg:SourceAuthority ; vg:authoritativeSource ex:process-engine ;
@@ -44,5 +46,6 @@ ex:decision-logic-location a vg:SourceAuthority ; vg:authoritativeSource ex:proc
     vg:authorityRank 1 ; vg:authorityContract "mcp" ;
     vg:recordRole "federated_secondary" ; vg:syncDirection "both" ;
     vg:conflictRule "system_of_record_wins" ;
-    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ;
+    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds "300"^^xsd:nonNegativeInteger ;
+    kg:processSourceSystem "bpmn20" ;
     vg:materialisationReason "Graph-held models are the system of record." .
