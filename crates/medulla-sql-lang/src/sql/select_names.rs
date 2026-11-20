@@ -50,6 +50,81 @@ fn lower(value: &str) -> String {
     value.to_lowercase()
 }
 
+/// The words PostgreSQL reserves outright (its documentation's SQL key word table,
+/// less the value functions such as `CURRENT_USER` that may stand in `FROM`). The
+/// parser `classify` uses lets some of them through as bare relation names
+/// (`SELECT FROM WHERE` parses as a read of a table named `where`); PostgreSQL does
+/// not, so an unquoted relation name spelled as one of them does not parse.
+const RESERVED: &[&str] = &[
+    "all",
+    "analyse",
+    "analyze",
+    "and",
+    "any",
+    "array",
+    "as",
+    "asc",
+    "asymmetric",
+    "both",
+    "case",
+    "cast",
+    "check",
+    "collate",
+    "column",
+    "constraint",
+    "create",
+    "default",
+    "deferrable",
+    "desc",
+    "distinct",
+    "do",
+    "else",
+    "end",
+    "except",
+    "false",
+    "fetch",
+    "for",
+    "foreign",
+    "from",
+    "grant",
+    "group",
+    "having",
+    "in",
+    "initially",
+    "intersect",
+    "into",
+    "lateral",
+    "leading",
+    "limit",
+    "not",
+    "null",
+    "offset",
+    "on",
+    "only",
+    "or",
+    "order",
+    "placing",
+    "primary",
+    "references",
+    "returning",
+    "select",
+    "some",
+    "symmetric",
+    "table",
+    "then",
+    "to",
+    "trailing",
+    "true",
+    "union",
+    "unique",
+    "using",
+    "variadic",
+    "when",
+    "where",
+    "window",
+    "with",
+];
+
 /// Parse `sql` and return the names of its one SELECT.
 pub fn select_names(sql: &str) -> Result<SelectNames, SelectNamesError> {
     let statements = Parser::parse_sql(&PostgreSqlDialect {}, sql)
@@ -97,12 +172,24 @@ pub fn select_names(sql: &str) -> Result<SelectNames, SelectNamesError> {
         scan_query(&subquery, &mut scan)?;
     }
     let mut tables = BTreeSet::new();
-    let _ = visit_relations(statement, |name| {
+    let reserved = visit_relations(statement, |name| {
+        for part in &name.0 {
+            if let ObjectNamePart::Identifier(ident) = part {
+                if ident.quote_style.is_none() && RESERVED.contains(&lower(&ident.value).as_str()) {
+                    return ControlFlow::Break(ident.value.clone());
+                }
+            }
+        }
         if let Some(ObjectNamePart::Identifier(ident)) = name.0.last() {
             tables.insert(lower(&ident.value));
         }
-        ControlFlow::<()>::Continue(())
+        ControlFlow::Continue(())
     });
+    if let ControlFlow::Break(word) = reserved {
+        return Err(SelectNamesError::Parse(format!(
+            "parse error: `{word}` is a reserved word and cannot name a relation unquoted"
+        )));
+    }
     let tables = tables.difference(&scan.hidden).cloned().collect();
     let columns = columns.difference(&scan.aliases).cloned().collect();
     Ok(SelectNames {
