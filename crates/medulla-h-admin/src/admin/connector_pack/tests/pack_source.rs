@@ -224,6 +224,7 @@ async fn held_serves_none_approved_serves_rows_and_changed_contract_returns_to_h
                         tool: "list_suppliers".to_string(),
                         capabilities: Default::default(),
                     },
+                    quota: None,
                 },
             )
             .await,

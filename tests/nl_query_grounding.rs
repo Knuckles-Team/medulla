@@ -285,6 +285,7 @@ async fn inline_adapter_refused_named_source_grounds() {
                     columns: Default::default(),
                 },
             },
+            quota: None,
         },
     )
     .await;
