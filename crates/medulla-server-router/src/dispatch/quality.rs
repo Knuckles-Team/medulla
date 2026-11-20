@@ -15,7 +15,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::typed_response;
-use medulla_types::quality::{QualityRule, QualityRuleReceipt};
+use medulla_catalog_types::quality::{QualityRule, QualityRuleReceipt};
 use tokio::sync::RwLock;
 
 /// Who asked, and which graph holds the rule.

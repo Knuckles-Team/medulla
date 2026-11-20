@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use medulla_exec::algebra::Op;
-use medulla_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
 
 use super::budget::BudgetMeter;
 use super::cache::FragmentCacheScope;

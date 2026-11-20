@@ -37,8 +37,8 @@ use medulla_stream::telemetry::incident_authority::IncidentAuthority;
 use medulla_stream::telemetry::incident_nodes::{
     incident_operations, incident_record, INCIDENT_TYPE,
 };
-use medulla_types::incident::{AnomalyReading, IncidentStatus};
-use medulla_types::quality::{QualityRule, RuleState};
+use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
+use medulla_catalog_types::quality::{QualityRule, RuleState};
 use serde_json::{Map, Value};
 
 /// The node type of one quality score.
@@ -791,7 +791,7 @@ fn typed_quality_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::quality::{QualityDimension, QualitySeverity};
+    use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
 
     fn target() -> QualityTarget {
         QualityTarget {

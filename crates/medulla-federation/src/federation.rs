@@ -2089,7 +2089,7 @@ pub struct ForeignSourceRegistry {
     bound_names: HashSet<String>,
     /// The per-query bounds each registered name may spend
     /// (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
-    quotas: HashMap<String, medulla_types::consolidation_isolation::SourceQuota>,
+    quotas: HashMap<String, medulla_catalog_types::consolidation_isolation::SourceQuota>,
     cache_scope: Option<Arc<crate::federation_opt::FragmentCacheScope>>,
 }
 
@@ -2199,14 +2199,14 @@ impl ForeignSourceRegistry {
     pub fn set_quota(
         &mut self,
         name: impl Into<String>,
-        quota: medulla_types::consolidation_isolation::SourceQuota,
+        quota: medulla_catalog_types::consolidation_isolation::SourceQuota,
     ) -> &mut Self {
         self.quotas.insert(name.into(), quota);
         self
     }
 
     /// The quota `name` was registered under (`None` for a source registered without one).
-    pub fn quota(&self, name: &str) -> Option<medulla_types::consolidation_isolation::SourceQuota> {
+    pub fn quota(&self, name: &str) -> Option<medulla_catalog_types::consolidation_isolation::SourceQuota> {
         self.quotas.get(name).copied()
     }
 

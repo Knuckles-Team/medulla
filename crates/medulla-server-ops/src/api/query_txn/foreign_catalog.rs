@@ -66,7 +66,7 @@ use medulla_catalog_types::{
 };
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_query_types::wire::ForeignSourceSpec;
-use medulla_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
 use medulla_types::contract::Digest256;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};

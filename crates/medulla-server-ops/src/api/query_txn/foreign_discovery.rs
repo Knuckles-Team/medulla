@@ -21,8 +21,8 @@ use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
 use medulla_lake::metastore::scan::{list_all_tables, ScanLimits};
 use medulla_lake::metastore::{MetastoreClient, MetastoreError};
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::metadata_acceleration::{MetadataContract, SourceCategory};
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_catalog_types::metadata_acceleration::{MetadataContract, SourceCategory};
+use medulla_query_types::wire::ForeignSourceSpec;
 use sha2::{Digest, Sha256};
 
 /// Discovery could not produce a contract; the registration is refused.
@@ -464,7 +464,7 @@ mod tests {
         ForeignSourceSpec::HttpJson {
             url: format!("https://{secretish}.example.invalid/items"),
             json_path: "$.items".into(),
-            field_map: medulla_types::wire::HttpFieldMap {
+            field_map: medulla_query_types::wire::HttpFieldMap {
                 id: "id".into(),
                 score: None,
                 columns: columns

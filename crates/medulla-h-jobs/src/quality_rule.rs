@@ -10,7 +10,7 @@
 //! evaluated is refused and writes nothing.
 
 use medulla_types::contract::Digest256;
-use medulla_types::quality::{InvalidQualityRule, QualityRule, QualityRuleReceipt, RuleState};
+use medulla_catalog_types::quality::{InvalidQualityRule, QualityRule, QualityRuleReceipt, RuleState};
 use serde_json::{json, Value};
 
 /// The node type of a stored quality rule.
@@ -83,7 +83,7 @@ pub fn put_quality_rule(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::quality::{QualityDimension, QualitySeverity};
+    use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
 
     fn rule(expression: &str, threshold: f64) -> QualityRule {
         QualityRule {

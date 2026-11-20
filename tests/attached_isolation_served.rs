@@ -17,8 +17,8 @@ use medulla_federation::federation_opt::mcp::{
     register_connector_row_source, ConnectorRowRequest, ConnectorRowSource, ConnectorRows,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::consolidation_isolation::SourceQuota;
-use medulla_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec, HttpFieldMap};
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_query_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec, HttpFieldMap};
 
 const SECRET: &str = "attached-isolation-secret";
 

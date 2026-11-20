@@ -57,10 +57,10 @@ pub fn contract_node_id(owner_scope: &str, name: &str) -> String {
 fn stored_contract(
     core: &medulla_graph_core::graph::GraphCore,
     node_id: &str,
-) -> Option<medulla_types::metadata_acceleration::MetadataContract> {
+) -> Option<medulla_catalog_types::metadata_acceleration::MetadataContract> {
     let blob = core.get_node_properties(node_id)?;
     let value: serde_json::Value = rmp_serde::from_slice(&blob).ok()?;
-    Some(medulla_types::metadata_acceleration::MetadataContract {
+    Some(medulla_catalog_types::metadata_acceleration::MetadataContract {
         source_kind: value.get("source_kind")?.as_str()?.to_string(),
         source_name: value.get("source_name")?.as_str()?.to_string(),
         schema_version: u32::try_from(value.get("schema_version")?.as_u64()?).ok()?,
@@ -75,8 +75,8 @@ async fn write_contract(
     req_id: u64,
     owner: &medulla_server_api::carrier::CarrierAuthority,
     node_id: String,
-    contract: &medulla_types::metadata_acceleration::MetadataContract,
-    stored: Option<&medulla_types::metadata_acceleration::MetadataContract>,
+    contract: &medulla_catalog_types::metadata_acceleration::MetadataContract,
+    stored: Option<&medulla_catalog_types::metadata_acceleration::MetadataContract>,
 ) -> Result<(), String> {
     if stored == Some(contract) {
         return Ok(());
@@ -179,7 +179,7 @@ pub async fn try_handle(
             // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a registration without a quota takes the
             // resolved `foreign.default_quota.*` knobs.
             let knobs = medulla_server_api::knob_config::knobs();
-            let quota = quota.unwrap_or(medulla_types::consolidation_isolation::SourceQuota {
+            let quota = quota.unwrap_or(medulla_catalog_types::consolidation_isolation::SourceQuota {
                 max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
                     .unwrap_or(u32::MAX),
                 max_rows: knobs.foreign_default_quota_max_rows,
