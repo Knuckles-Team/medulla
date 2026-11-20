@@ -787,8 +787,10 @@ ex:parent a owl:AsymmetricProperty .
         // relations, and the shared reference-term / quantity / observation vocabulary.
         // plus 24 for the CQ-CONN chunk 5 core-foundation terms and shapes (MEDULLA-CQ-CONN-R074);
         // plus 15 for the run-scope policy class and its two properties (MEDULLA-IDENTITY-R008.4)
-        // and 4 for the pack object-model `:ValueType` term (MEDULLA-TYPED-PACKS-R650.1).
-        assert_eq!(triples.len(), 1_138);
+        // and 4 for the pack object-model `:ValueType` term (MEDULLA-TYPED-PACKS-R650.1);
+        // plus 1: `:Playbook rdfs:subClassOf :Procedure`, the decision-engine playbook
+        // component kind (58788adb4c), on the one existing `:Playbook` declaration.
+        assert_eq!(triples.len(), 1_139);
         for required in [
             "https://knuckles-team.github.io/ontology/core#Concept",
             "https://knuckles-team.github.io/ontology/core#Evidence",
