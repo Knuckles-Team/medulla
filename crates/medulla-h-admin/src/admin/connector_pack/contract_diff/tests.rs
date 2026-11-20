@@ -95,7 +95,7 @@ fn non_breaking_applies_breaking_waits_and_queries_use_active_version() {
     second.shapes_ttl = Some(SHAPES.replace("sh:maxCount 5", "sh:maxCount 9"));
     second.mappings.insert("refunds".into());
     assert_eq!(
-        history.submit(second, &steward(), &scopes()).unwrap(),
+        history.submit(second.clone(), &steward(), &scopes()).unwrap(),
         ReleaseDisposition::Applied {
             supersedes: Some("1.0.0".into())
         }
@@ -108,18 +108,24 @@ fn non_breaking_applies_breaking_waits_and_queries_use_active_version() {
         ReleaseStatus::Superseded
     );
 
-    // Release 3: retypes a field, removes a class, retypes a property, narrows
-    // a shape and drops a mapping. It waits behind a change request.
-    let mut third = contract("3.0.0", "03");
+    // Release 3, built on the active release 2: retypes a field, removes a
+    // class, retypes a property, narrows a shape and drops a mapping. It waits
+    // behind a change request.
+    let mut third = second.clone();
+    third.version = contract("3.0.0", "03").version;
     third
         .fields
         .insert("tools.search.limit".into(), "string".into());
     third.fields.remove("tools.search.query");
-    third.ontology_ttl = ONTOLOGY
+    third.ontology_ttl = second
+        .ontology_ttl
         .replace("ex:Customer a owl:Class .", "")
         .replace("decimal", "string");
-    third.shapes_ttl = Some(SHAPES.replace("sh:minCount 0", "sh:minCount 1"));
-    third.mappings.clear();
+    third.shapes_ttl = second
+        .shapes_ttl
+        .as_ref()
+        .map(|shapes| shapes.replace("sh:minCount 0", "sh:minCount 1"));
+    third.mappings.remove("orders");
     let held = history
         .submit(third.clone(), &steward(), &scopes())
         .unwrap();
