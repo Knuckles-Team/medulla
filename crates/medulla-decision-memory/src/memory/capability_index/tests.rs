@@ -246,9 +246,18 @@ fn incremental_upsert_and_tombstone_match_rebuild() {
     let refused = small
         .apply(vec![
             Change::Tombstone(OpaqueId::new("a").unwrap()),
-            Change::Upsert(record("c", None, &[], "emb-v1", 2), vec![1.0, 1.0]),
-            Change::Upsert(record("d", None, &[], "emb-v1", 2), vec![1.0, 2.0]),
-            Change::Upsert(record("e", None, &[], "emb-v1", 2), vec![1.0, 3.0]),
+            Change::Upsert(
+                Box::new(record("c", None, &[], "emb-v1", 2)),
+                vec![1.0, 1.0],
+            ),
+            Change::Upsert(
+                Box::new(record("d", None, &[], "emb-v1", 2)),
+                vec![1.0, 2.0],
+            ),
+            Change::Upsert(
+                Box::new(record("e", None, &[], "emb-v1", 2)),
+                vec![1.0, 3.0],
+            ),
         ])
         .unwrap_err();
     assert_eq!(refused, IndexRefusal::CapacityExceeded { limit: 2 });

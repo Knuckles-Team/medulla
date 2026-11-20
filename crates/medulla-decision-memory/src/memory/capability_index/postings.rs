@@ -186,7 +186,7 @@ impl Postings {
         subtypes: &BTreeMap<String, BTreeSet<String>>,
     ) -> Vec<u32> {
         let mut pool: Option<Vec<u32>> = None;
-        let mut narrow = |pool: &mut Option<Vec<u32>>, list: Vec<u32>| {
+        let narrow = |pool: &mut Option<Vec<u32>>, list: Vec<u32>| {
             *pool = Some(match pool.take() {
                 Some(current) => intersect(&current, &list),
                 None => list,

@@ -408,7 +408,11 @@ async fn capability_designation_refusals() {
     let filler: Vec<Change> = (0..1001)
         .map(|n| {
             Change::Upsert(
-                record(Some(TENANT), &format!("filler-{n:04}"), &["cap:filler"]),
+                Box::new(record(
+                    Some(TENANT),
+                    &format!("filler-{n:04}"),
+                    &["cap:filler"],
+                )),
                 vec![0.0, 0.0, 1.0],
             )
         })
