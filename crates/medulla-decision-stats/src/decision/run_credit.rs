@@ -146,7 +146,6 @@ mod tests {
                     .map(|id| ReturnedEvidence {
                         evidence_id: id.to_string(),
                         content_class: None,
-                    raw_score_ppm: None,
                         source: None,
                         raw_score_ppm: None,
                     })
