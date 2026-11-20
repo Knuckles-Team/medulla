@@ -236,9 +236,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore reads bundle sources by content, not by physical identity
 - [ ] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: an explicit command re-binds a copied data directory
 - [ ] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves
-- [x] T295 [US3] MEDULLA-DURABLE-KERNEL-R862.1.1 A scoped read opens over a read-only store file
-- [x] T296 [US3] MEDULLA-DURABLE-KERNEL-R862.1.2 A graft copies a scope without touching its source
-- [x] T297 [US3] MEDULLA-DURABLE-KERNEL-R862.1.3 A read-only shard handle and one read trait
 - [x] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore reads bundle sources by content, not by physical identity
 - [x] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: an explicit command re-binds a copied data directory
 - [x] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves

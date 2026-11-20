@@ -55,7 +55,7 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-The unknowns the rows raised, and the decisions that closed them, are recorded in [research.md](research.md): where resource records and grants live, policy bundles, where conditions are judged, share transitions and refusals, offline conversion out of the none mode, and graph ownership signals. The replicated tenant provisioning gap named in [test-spec.md](test-spec.md) is an inherited limit that this work does not claim to fix.
+No unknowns that block planning; no research.md. The replicated tenant provisioning gap named in [test-spec.md](test-spec.md) is an inherited limit that this work does not claim to fix.
 
 ## Phase 1: Design
 
