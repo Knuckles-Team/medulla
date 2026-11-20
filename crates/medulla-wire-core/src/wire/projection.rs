@@ -92,7 +92,9 @@ mod tests {
     #[test]
     fn reads_and_unbound_sessions_are_not_refused() {
         assert!(refuse_projection_write(&kind("SELECT 1"), Some("gramps@3")).is_none());
-        assert!(refuse_projection_write(&kind("DELETE FROM people"), None).is_none());
+        // A write the classifier accepts (an unscoped DELETE is refused before
+        // any session check) is still not refused when no mapping is bound.
+        assert!(refuse_projection_write(&kind("DELETE FROM people WHERE id = 1"), None).is_none());
     }
 
     #[test]

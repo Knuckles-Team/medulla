@@ -2059,6 +2059,8 @@ fn retry_bound_refuses() {
 
     // Every attempt pins a snapshot, then a rival commits the same row before
     // the attempt commits: four conflicts in a row, one more than 3 retries.
+    // A batch id is the scope's durable receipt key, bound to one idempotency
+    // key, so every attempt and every rival proposes under its own batch id.
     let mut attempts = 0u32;
     let mut rival = 100i64;
     let err = retry_on_conflict(3, || {
@@ -2069,13 +2071,21 @@ fn retry_bound_refuses() {
         store
             .commit_txn_batch(
                 &occ_update(1, rival),
-                &commit_batch::batch(&store, "r", &format!("idem-rival-{rival}")),
+                &commit_batch::batch(
+                    &store,
+                    &format!("r-{rival}"),
+                    &format!("idem-rival-{rival}"),
+                ),
                 2,
             )
             .expect("rival commits");
         store.commit_txn_batch(
             &mine,
-            &commit_batch::batch(&store, "m", &format!("idem-mine-{attempts}")),
+            &commit_batch::batch(
+                &store,
+                &format!("m-{attempts}"),
+                &format!("idem-mine-{attempts}"),
+            ),
             3,
         )
     })
@@ -2095,14 +2105,18 @@ fn retry_bound_refuses() {
             store
                 .commit_txn_batch(
                     &occ_update(1, rival),
-                    &commit_batch::batch(&store, "r2", &format!("idem-r2-{rival}")),
+                    &commit_batch::batch(
+                        &store,
+                        &format!("r2-{rival}"),
+                        &format!("idem-r2-{rival}"),
+                    ),
                     4,
                 )
                 .expect("rival commits");
         }
         store.commit_txn_batch(
             &mine,
-            &commit_batch::batch(&store, "m2", &format!("idem-m2-{tries}")),
+            &commit_batch::batch(&store, &format!("m2-{tries}"), &format!("idem-m2-{tries}")),
             5,
         )
     })

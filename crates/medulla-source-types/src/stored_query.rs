@@ -464,7 +464,8 @@ mod tests {
         );
         assert_eq!(
             sql.render(&bound).unwrap(),
-            "SELECT id FROM nodes WHERE status = 'o''pen\" x\\' AND n > 3 -- $ignored 'x"
+            // The comment and the newline that ends it pass through unchanged.
+            "SELECT id FROM nodes WHERE status = 'o''pen\" x\\' AND n > 3 -- $ignored 'x\n"
         );
         let sparql = text_query(
             StoredQueryLanguage::Sparql,

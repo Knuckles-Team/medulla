@@ -3503,6 +3503,10 @@ mod tests {
             }],
         )
         .unwrap();
+        let stream_object_id = source_marker_id("t", batch).unwrap();
+        // The content-version object is material, so the envelope carries its
+        // governance proof exactly as `prepare` attaches it for the marker.
+        let marker_policy = policy(&stream_object_id, "t", &policy_subject("t").unwrap(), 1);
         let envelope = build_envelope(
             batch,
             &batch_id,
@@ -3510,10 +3514,10 @@ mod tests {
                 batch_digest,
                 mutation,
                 blobs: BTreeMap::new(),
-                policies: Vec::new(),
+                policies: vec![marker_policy],
                 lineage: Vec::new(),
                 mapping_revision: 1,
-                stream_object_id: source_marker_id("t", batch).unwrap(),
+                stream_object_id,
                 previous_stream_digest: previous,
             },
         )
