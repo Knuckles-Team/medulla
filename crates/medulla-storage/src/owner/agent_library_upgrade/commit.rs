@@ -122,7 +122,7 @@ fn open_agent_library_tables(
     write: &WriteTransaction,
     source: AgentLibrarySource,
 ) -> Result<(), String> {
-    if source == AgentLibrarySource::BeforeMcpCatalog {
+    if source == AgentLibrarySource::McpCatalog {
         write
             .open_table(MCP_CATALOG_CONFIGS)
             .map_err(|error| error.to_string())?;
@@ -132,11 +132,11 @@ fn open_agent_library_tables(
     }
     if matches!(
         source,
-        AgentLibrarySource::BeforeMcpCatalog | AgentLibrarySource::BeforeConceptLineage
+        AgentLibrarySource::McpCatalog | AgentLibrarySource::ConceptLineage
     ) {
         open_concept_lineage_tables(write)?;
     }
-    if source != AgentLibrarySource::BeforeRetryAllowances {
+    if source != AgentLibrarySource::RetryAllowances {
         open_capability_reward_table(write)?;
     }
     write

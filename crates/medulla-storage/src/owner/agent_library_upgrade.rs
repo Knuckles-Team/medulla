@@ -57,31 +57,31 @@ enum UpgradeTarget {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentLibrarySource {
     /// Before served MCP catalog authority rows.
-    BeforeMcpCatalog,
+    McpCatalog,
     /// Before the known concept ids and concept lineage edges.
-    BeforeConceptLineage,
+    ConceptLineage,
     /// Before the learned capability reward rows.
-    BeforeCapabilityReward,
+    CapabilityReward,
     /// Before the durable retry-allowance table.
-    BeforeRetryAllowances,
+    RetryAllowances,
 }
 
 impl AgentLibrarySource {
     fn descriptor(self) -> (&'static LayoutPredecessor, [u8; 32]) {
         match self {
-            Self::BeforeMcpCatalog => (
+            Self::McpCatalog => (
                 &AGENT_LIBRARY_BEFORE_MCP_CATALOG,
                 super::lineage::AGENT_LIBRARY_PRE_MCP_CATALOG_DIGEST,
             ),
-            Self::BeforeConceptLineage => (
+            Self::ConceptLineage => (
                 &AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
                 super::lineage::AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST,
             ),
-            Self::BeforeCapabilityReward => (
+            Self::CapabilityReward => (
                 &AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
                 super::lineage::AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST,
             ),
-            Self::BeforeRetryAllowances => (
+            Self::RetryAllowances => (
                 &AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
                 super::lineage::AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST,
             ),
@@ -210,7 +210,7 @@ pub fn inspect_agent_library_concept_lineage_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeConceptLineage),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::ConceptLineage),
     )
 }
 
@@ -227,7 +227,7 @@ pub fn inspect_agent_library_capability_reward_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeCapabilityReward),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::CapabilityReward),
     )
 }
 
@@ -242,7 +242,7 @@ pub fn inspect_agent_library_mcp_catalog_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeMcpCatalog),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::McpCatalog),
     )
 }
 
@@ -259,7 +259,7 @@ pub fn inspect_agent_library_retry_allowance_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeRetryAllowances),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::RetryAllowances),
     )
 }
 
@@ -377,7 +377,7 @@ pub fn upgrade_agent_library_mcp_catalog(
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
     upgrade_layout(
         token,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeMcpCatalog),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::McpCatalog),
     )
 }
 
@@ -389,7 +389,7 @@ pub fn upgrade_agent_library_retry_allowances(
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
     upgrade_layout(
         token,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeRetryAllowances),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::RetryAllowances),
     )
 }
 
@@ -400,7 +400,7 @@ pub fn upgrade_agent_library_capability_reward(
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
     upgrade_layout(
         token,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeCapabilityReward),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::CapabilityReward),
     )
 }
 
@@ -412,7 +412,7 @@ pub fn upgrade_agent_library_concept_lineage(
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
     upgrade_layout(
         token,
-        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeConceptLineage),
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::ConceptLineage),
     )
 }
 
