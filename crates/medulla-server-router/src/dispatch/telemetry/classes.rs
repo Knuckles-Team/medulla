@@ -13,9 +13,13 @@
 //! schedules it; its behaviour reaches the Workload through the declared
 //! `scheduledBy` relation (see [`super::declarations`]).
 //!
-//! A node's `type` may be a class IRI or a bare local name. A bare name is used
-//! only when every class carrying that local name falls under the same targets,
-//! so an ambiguous name binds nothing rather than being guessed.
+//! A node's `type` may be a class IRI or a bare local name. A bare name is
+//! resolved within the binding's own scope: only classes subsumed by a target
+//! class are candidates, so a same-named class outside every target (the SDLC
+//! lifecycle `Deployment`, a Process) does not shadow the fleet `Deployment`.
+//! A bare name is used only when every candidate falls under the same targets,
+//! so a name that is ambiguous within that scope binds nothing rather than
+//! being guessed.
 //!
 //! Classified hierarchies are cached, keyed by the graph's ontology digest, in
 //! a bounded most-recently-used cache: a derivation reclassifies only when the
@@ -62,13 +66,14 @@ impl BindableTypes {
                 continue;
             };
             let targets = targets_of(subsumers);
+            if targets.is_empty() {
+                continue;
+            }
             by_local_name
                 .entry(local_name(iri).to_string())
                 .or_default()
                 .push(targets.clone());
-            if !targets.is_empty() {
-                by_type.insert(iri.to_string(), targets);
-            }
+            by_type.insert(iri.to_string(), targets);
         }
         for (name, candidates) in by_local_name {
             if let Some(targets) = unambiguous(&candidates) {
@@ -97,11 +102,14 @@ fn targets_of(subsumers: &BTreeSet<String>) -> BTreeSet<EntityClass> {
         .collect()
 }
 
-/// The shared targets of every class carrying one local name, when there are
-/// any and they agree.
+/// The shared targets of every in-scope class carrying one local name, when
+/// they agree.
 fn unambiguous(candidates: &[BTreeSet<EntityClass>]) -> Option<&BTreeSet<EntityClass>> {
     let first = candidates.first()?;
-    (!first.is_empty() && candidates.iter().all(|targets| targets == first)).then_some(first)
+    candidates
+        .iter()
+        .all(|targets| targets == first)
+        .then_some(first)
 }
 
 fn local_name(iri: &str) -> &str {
