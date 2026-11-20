@@ -737,6 +737,10 @@ closed_error_codes! {
         ExpansionProviderUnconfigured => "EXPANSION_PROVIDER_UNCONFIGURED",
         IndexUnavailable => "INDEX_UNAVAILABLE",
         LineageEventMalformed => "LINEAGE_EVENT_MALFORMED",
+        // MEDULLA-FEDERATED-QUERY-R058.7: a correction without the certify scope.
+        NlCorrectionUnauthorized => "NL_CORRECTION_UNAUTHORIZED",
+        // MEDULLA-FEDERATED-QUERY-R058.6: the certified-definition loop ended in a mismatch.
+        NlDefinitionConflict => "NL_DEFINITION_CONFLICT",
         NlMutationRefused => "NL_MUTATION_REFUSED",
         NlPlannerUnconfigured => "NL_PLANNER_UNCONFIGURED",
         NlQueryStepsExhausted => "NL_QUERY_STEPS_EXHAUSTED",

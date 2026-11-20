@@ -381,6 +381,7 @@ METHOD_IDS = frozenset(
         "RankByProvenance",
         "NlQuery",
         "NlQueryExplain",
+        "NlQueryCorrect",
         "NlQueryPlan",
         "TxnUnifiedQuery",
         "TxnUql",

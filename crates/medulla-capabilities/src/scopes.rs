@@ -225,6 +225,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("query:decide", User, "engine"),
     entry("query:graphql", User, "engine"),
     entry("query:nl", User, "engine"),
+    // MEDULLA-FEDERATED-QUERY-R058.7: record a certified NL correction (`NlQueryCorrect`).
+    entry("query:nl:certify", User, "engine"),
     entry("query:read", User, "engine"),
     entry("query:retrieval", User, "engine"),
     entry("query:sql", User, "engine"),

@@ -306,6 +306,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "ArchitectureModelImport",
         # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
         "SourceSync",
+        # MEDULLA-FEDERATED-QUERY-R058.7: a certified NL correction commits one node.
+        "NlQueryCorrect",
     }
 )
 

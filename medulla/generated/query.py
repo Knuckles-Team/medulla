@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     RankByProvenanceRequest = _models.MethodRankByProvenanceParams
     NlQueryRequest = _models.MethodNlQueryParams
     NlQueryExplainRequest = _models.MethodNlQueryExplainParams
+    NlQueryCorrectRequest = _models.MethodNlQueryCorrectParams
     NlQueryPlanRequest = _models.MethodNlQueryPlanParams
     TxnUnifiedQueryRequest = _models.MethodTxnUnifiedQueryParams
     TxnUqlRequest = _models.MethodTxnUqlParams
@@ -1495,6 +1496,45 @@ async def send_nl_query_plan(
     return OpaqueResult("NlQueryPlan", payload)
 
 
+async def send_nl_query_correct(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        NlQueryCorrect
+    Authorization:
+        query:nl:certify
+    Durability:
+        GraphRedb
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - NL_CORRECTION_UNAUTHORIZED
+    """
+    models().MethodNlQueryCorrectParams.model_validate(params or {})
+    payload = await client._send(
+        "NlQueryCorrect",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("NlQueryCorrect", payload)
+
+
+def decode_nl_query_correct(result: OpaqueResult) -> _models.NlCorrection:
+    """Validate this method's result against its contract model."""
+    return decode_result("NlQueryCorrect", models().NlCorrection, result)
+
+
 def decode_nl_query_plan(result: OpaqueResult) -> _models.NlQueryPlanResult:
     """Validate this method's result against its contract model."""
     return decode_result("NlQueryPlan", models().NlQueryPlanResult, result)
@@ -1790,6 +1830,7 @@ _REQUEST_METHODS = frozenset(
         "RankByProvenance",
         "NlQuery",
         "NlQueryExplain",
+        "NlQueryCorrect",
         "NlQueryPlan",
         "TxnUnifiedQuery",
         "TxnUql",

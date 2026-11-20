@@ -467,6 +467,7 @@ SEND_BY_METHOD = {
     "MultiGraphBatchUpdate": transactions.send_multi_graph_batch_update,
     "MutationOutbox": transactions.send_mutation_outbox,
     "NlQuery": query.send_nl_query,
+    "NlQueryCorrect": query.send_nl_query_correct,
     "NlQueryExplain": query.send_nl_query_explain,
     "NlQueryPlan": query.send_nl_query_plan,
     "NodeCount": graph.send_node_count,
