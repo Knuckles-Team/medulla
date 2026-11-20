@@ -159,7 +159,7 @@ fn conclude(
     let outcome = match ranked.first() {
         Some(top) if top.score.score >= accept => {
             family_premises.push(FamilyPremise {
-                subject: "schema_mapping",
+                subject: "schema_mapping".into(),
                 fact: format!("mapping:{}={}", column.name, properties[top.index].iri),
                 class: top.score.class,
                 source: FamilyPremiseSource::Request("candidates.options"),

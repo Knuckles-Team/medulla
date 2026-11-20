@@ -124,7 +124,7 @@ fn admit(request: &DecideRequest, view: Option<&GraphView>) -> Result<Executed, 
     };
     let mut executed = advisory(vec![verdict.option_id().to_string()])?;
     executed.family_premises = vec![FamilyPremise {
-        subject: "tool_action",
+        subject: "tool_action".into(),
         fact: format!("trust_mark:{content_ref}"),
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Observation(content_ref.to_string()),
