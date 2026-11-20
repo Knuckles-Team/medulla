@@ -680,7 +680,9 @@ def main() -> None:
                 # `KvCall::namespace` -> `wire_namespace`, which binds the verified
                 # tenant+actor owner scope and the request graph.
                 kv.count('authority.namespace("kv-namespace", &scoped)') == 1,
-                kv.count("call.namespace(namespace)") == 5,
+                # Seven served KV methods: get, put, delete, scan, cas, and the
+                # durability-class declare and read (b2f958175e, bc86fc94ce).
+                kv.count("call.namespace(namespace)") == 7,
                 "wire_namespace(self.authority, self.graph, local, self.shared)" in kv,
                 # The opt-in shared namespace drops only the principal: it stays
                 # bound to the verified tenant and request graph.
