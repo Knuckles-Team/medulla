@@ -224,6 +224,9 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R001.7 | Nested valid objects retain every admitted field and extension value. | Missing task, wrong field types, nonfinite numbers and oversized objects refuse. | `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` |
 | MEDULLA-TYPED-PACKS-R001.8 | Repeated identical inputs produce the same bytes and render digest. | A changed variable changes the result; invalid input produces no render result. | `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` |
 | MEDULLA-TYPED-PACKS-R001.9 | Generated clients encode and decode every declared request, result and typed refusal. | Missing render provenance or an untyped fallback fails. | `tests/test_prompt_blueprint_contract.py::test_generated_prompt_contract` |
+| MEDULLA-TYPED-PACKS-R001.10 | Every comparable generated enum has the Rust wire values. | A Rust-only member, or a gate comparing fewer than 100 enums, fails. | `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` |
+| MEDULLA-TYPED-PACKS-R001.11 | Drift is reported per enum. | A planted mismatch is reported as python-only and rust-only members. | `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` |
+| MEDULLA-TYPED-PACKS-R001.12 | A rejection with an unknown code still decodes every violation. | The unknown code replaced by a pydantic error fails. | `tests/test_generated_enum_parity.py::test_unknown_violation_code_keeps_the_raw_code` |
 | MEDULLA-TYPED-PACKS-R002.1 | Staged bytes use their verified SHA-256 address. | A digest mismatch refuses; staging alone exposes no component. | `tests/test_connector_pack_storage.py::test_body_staging` |
 | MEDULLA-TYPED-PACKS-R002.2 | An unchanged import keeps exact holder/refcount values. | Repeated identical import cannot increment or decrement a holder. | `tests/test_connector_pack_storage.py::test_unchanged_holder` |
 | MEDULLA-TYPED-PACKS-R002.3 | A revised component binds its new body and preserves historical revision holders. | A changed revision cannot orphan a body held by history. | `tests/test_connector_pack_storage.py::test_revised_holder` |
@@ -574,6 +577,9 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R001.7`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` (planned)
 - `MEDULLA-TYPED-PACKS-R001.8`: `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` (planned)
 - `MEDULLA-TYPED-PACKS-R001.9`: `tests/test_prompt_blueprint_contract.py::test_prompt_wire_round_trip` (planned)
+- `MEDULLA-TYPED-PACKS-R001.10`: `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` (existing)
+- `MEDULLA-TYPED-PACKS-R001.11`: `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` (existing)
+- `MEDULLA-TYPED-PACKS-R001.12`: `tests/test_generated_enum_parity.py::test_unknown_violation_code_keeps_the_raw_code` (existing)
 - `MEDULLA-TYPED-PACKS-R002.1`: `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::body_staging` (planned)
 - `MEDULLA-TYPED-PACKS-R002.2`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entries` (existing)
 - `MEDULLA-TYPED-PACKS-R002.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entries` (existing)

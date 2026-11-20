@@ -3833,6 +3833,8 @@ class DecisionHeadBody(BaseModel):
 class DecisionJobKind(str, Enum):
     FIT = "fit"
     EVAL = "eval"
+    MEMORY_REWRITE = "memory_rewrite"
+    MEMORY_BENCHMARK = "memory_benchmark"
 
 
 class DecisionJobOutputFit(BaseModel):
@@ -30648,6 +30650,7 @@ class IncidentStatus(str, Enum):
     OPEN = "open"
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
+    CLOSED = "closed"
 
 
 class IncidentWriteReceipt(BaseModel):

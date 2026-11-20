@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ._shared import (
     AgentLibraryMutationContext,
@@ -568,6 +568,22 @@ class PackViolation(BaseModel):
     code: PackViolationCode
     detail: str
     uri: str | None = None
+    # The code as the engine sent it, set only when it is not a known member
+    # (then `code` is `PackViolationCode.UNKNOWN`).
+    raw_code: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _keep_unknown_code(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            code = value.get("code")
+            if isinstance(code, str) and code not in _KNOWN_VIOLATION_CODES():
+                return {**value, "code": PackViolationCode.UNKNOWN, "raw_code": code}
+        return value
+
+
+def _KNOWN_VIOLATION_CODES() -> frozenset[str]:
+    return frozenset(c.value for c in PackViolationCode)
 
 
 class PackViolationCode(str, Enum):
@@ -597,6 +613,24 @@ class PackViolationCode(str, Enum):
     PACK_MASS_WITHDRAWAL = "PACK_MASS_WITHDRAWAL"
     RETIRED_ENTRY_RETURNED = "RETIRED_ENTRY_RETURNED"
     ONTOLOGY_ORPHAN = "ONTOLOGY_ORPHAN"
+    CROSSWALK_SOURCE_UNKNOWN = "CROSSWALK_SOURCE_UNKNOWN"
+    CROSSWALK_SOURCE_OUT_OF_SCOPE = "CROSSWALK_SOURCE_OUT_OF_SCOPE"
+    CROSSWALK_TARGET_UNKNOWN = "CROSSWALK_TARGET_UNKNOWN"
+    CROSSWALK_CONFLICT = "CROSSWALK_CONFLICT"
+    CROSSWALK_CATEGORY_CONFLICT = "CROSSWALK_CATEGORY_CONFLICT"
+    CROSSWALK_LIMIT_EXCEEDED = "CROSSWALK_LIMIT_EXCEEDED"
+    CONCEPT_PATH_MALFORMED = "CONCEPT_PATH_MALFORMED"
+    CONCEPT_PATH_DUPLICATE_ALIAS = "CONCEPT_PATH_DUPLICATE_ALIAS"
+    CONCEPT_PATH_PARENT_CONFLICT = "CONCEPT_PATH_PARENT_CONFLICT"
+    CONCEPT_PATH_IRI_CONFLICT = "CONCEPT_PATH_IRI_CONFLICT"
+    CONCEPT_PATH_STALE_REVISION = "CONCEPT_PATH_STALE_REVISION"
+    NUTRIENT_ID_UNMAPPED = "NUTRIENT_ID_UNMAPPED"
+    CONTRACT_SHACL_VIOLATION = "CONTRACT_SHACL_VIOLATION"
+    ONTOLOGY_CORE_CONFLICT = "ONTOLOGY_CORE_CONFLICT"
+    PROMPT_BLUEPRINT_INVALID = "PROMPT_BLUEPRINT_INVALID"
+    # Client-only fallback for a code this client does not know; the raw
+    # code is kept in `PackViolation.raw_code`. Not an engine code.
+    UNKNOWN = "UNKNOWN"
 
 
 class PackWarning(BaseModel):

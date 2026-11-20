@@ -257,8 +257,9 @@ class AgentComponentKind(str, Enum):
     GUARDRAIL_RULE = "guardrail_rule"
     RULE_INVARIANT = "rule_invariant"
     RED_TEAM_ATTACK = "red_team_attack"
-    RED_TEAM_SCORER = "red_team_scorer"
     RED_TEAM_TRANSFORM = "red_team_transform"
+    RED_TEAM_SCORER = "red_team_scorer"
+    PLAYBOOK = "playbook"
 
 
 class AgentGraphEdge(BaseModel):
