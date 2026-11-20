@@ -271,6 +271,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R100.101.1
     #[test]
     fn coverage_sums_numerators_before_dividing() {
         let knobs = GroundedKnobs::default();

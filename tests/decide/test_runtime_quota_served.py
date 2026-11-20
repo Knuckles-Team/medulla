@@ -14,7 +14,6 @@ from medulla.client import WorkItemClient
 
 pytestmark = [
     pytest.mark.no_engine,
-    pytest.mark.spec("MEDULLA-DECISION-ENGINE-R133.6"),
 ]
 
 DELEGATOR = TEST_AGENT_ID
@@ -244,6 +243,7 @@ def _traces(client: Any) -> dict[str, Any]:
     return {node_id: props for node_id, props in nodes}
 
 
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R133.6")
 def test_quota_and_trace_end_to_end(authenticated_plan_client):
     client = authenticated_plan_client
     try:
