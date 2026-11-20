@@ -1178,7 +1178,7 @@ fn seal(
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
         outcome,
         answer: task_plan
-            .map(|plan| FamilyAnswer::TaskPlan(Box::new(plan)))
+            .map(FamilyAnswer::TaskPlan)
             .or_else(|| skill_upgrade_receipt(sealing.request, &executed.ladder.outcome))
             .or_else(|| planning_admission_answer(sealing.request, &executed.ladder.outcome))
             .or_else(|| comparative.map(|plan| FamilyAnswer::ComparativeAnalysis(Box::new(plan))))
