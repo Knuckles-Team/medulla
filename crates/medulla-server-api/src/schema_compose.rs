@@ -918,7 +918,10 @@ ex:parent a owl:AsymmetricProperty .
         // classes (5243ee05ff, 77c9135230, 8672367c18, 66bd834d53, e3b722cb57, 1aaaf3699e),
         // the census and source-sync terms (96f2014fed, 67ed2d3655, c186f8f45a, 0e18c73e41,
         // 9a697e08df) and the metadata-catalog asset families (d7dcd9c6c6, ee27ab98ec).
-        assert_eq!(composed.ontology.len(), 24_169);
+        // +1 (measured, 24_169 -> 24_170; MEDULLA-ORCH-VOCAB-R010.101): orchestration
+        // :PriceTable gains its core parent `rdfs:subClassOf bfo:0000031`
+        // (MEDULLA-TYPED-PACKS-R071.2).
+        assert_eq!(composed.ontology.len(), 24_170);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -1030,7 +1033,8 @@ ex:parent a owl:AsymmetricProperty .
         // the frozen train's vocabulary (see the total pin). It exceeds the total's
         // +1462 because the triples on the 48 module-header subjects fell from 218 to
         // 158 (imports unchanged at 81).
-        assert_eq!(semantic_axioms, 23_930);
+        // +1: the :PriceTable core-parent axiom (see the total pin).
+        assert_eq!(semantic_axioms, 23_931);
 
         let count_type = |object: &str| {
             composed
@@ -1124,7 +1128,9 @@ ex:parent a owl:AsymmetricProperty .
             // 2026-11-13 train's vocabulary rows.
             // +131 (measured, 1184 -> 1315 on e7acc0d6c7): the named subclass axioms of
             // the frozen train's vocabulary (see the total pin for the commits).
-            1315
+            // +1 (measured, 1315 -> 1316): :PriceTable rdfs:subClassOf bfo:0000031
+            // (MEDULLA-ORCH-VOCAB-R010.101; see the total pin).
+            1316
         );
     }
 

@@ -826,7 +826,7 @@
 
 :PriceTable a owl:Class ;
     rdfs:label "PriceTable" ;
-    rdfs:subClassOf prov:Entity ;
+    rdfs:subClassOf prov:Entity, bfo:0000031 ;
     rdfs:comment """One governed revision of model token prices (MEDULLA-ORCH-VOCAB-R010.101): an
     integer minor-unit numerator per one million tokens, keyed by model and token category, in one
     currency. A revision is a GovernedSet revision (MEDULLA-DECISION-ENGINE-R805.10).""" .
