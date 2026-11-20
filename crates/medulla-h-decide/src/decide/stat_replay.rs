@@ -427,12 +427,8 @@ fn replay_family_conclusion(
         &policy.digest,
         concluded,
     )?;
-    let (replayed, _) = super::safety_stage::apply(
-        &request,
-        &policy.policy,
-        record.created_at_ms,
-        replayed,
-    )?;
+    let (replayed, _) =
+        super::safety_stage::apply(&request, &policy.policy, record.created_at_ms, replayed)?;
     if replayed.ladder.outcome != record.outcome {
         return Err(mismatch(
             "re-running the family conclusion on its stored inputs gives another answer",

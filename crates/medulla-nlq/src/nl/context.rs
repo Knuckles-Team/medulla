@@ -560,7 +560,11 @@ impl SchemaContext {
             // every planner step reads (MEDULLA-FEDERATED-QUERY-R058.4.3).
             out.push_str("SQL tables:\n");
             for table in &self.tables {
-                out.push_str(&format!("  {} ({})\n", table.name, table.columns.join(", ")));
+                out.push_str(&format!(
+                    "  {} ({})\n",
+                    table.name,
+                    table.columns.join(", ")
+                ));
             }
         }
         if let Some(sources) = &self.foreign_sources {

@@ -31,10 +31,10 @@ use medulla_decision_types::decision::{
     PremiseRef, QuantScaleTag, QuantisedValue,
 };
 use medulla_graph_core::graph::GraphView;
+use medulla_identity_types::assistant_profile::AssistantProfile;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_identity_types::assistant_profile::AssistantProfile;
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
 

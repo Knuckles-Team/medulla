@@ -62,7 +62,8 @@ pub(super) struct ExecutionContext<'a> {
     /// The assistant profile a `harness_config` request names, read by the
     /// serving path under the profile store's visibility rule
     /// (MEDULLA-DECISION-ENGINE-R128.16).
-    pub(super) assistant_profile: Option<&'a medulla_identity_types::assistant_profile::AssistantProfile>,
+    pub(super) assistant_profile:
+        Option<&'a medulla_identity_types::assistant_profile::AssistantProfile>,
 }
 
 /// The pinned inputs of one decision.
