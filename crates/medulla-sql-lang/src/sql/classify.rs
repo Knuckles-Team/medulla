@@ -265,6 +265,8 @@ impl StatementKind {
         "drop_extension",
         "create_sequence",
         "drop_sequence",
+        "create_trigger",
+        "drop_trigger",
         "create_ann_index",
         "create_index",
         "drop_index",
