@@ -248,7 +248,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T237 [US2] MEDULLA-DURABLE-KERNEL-R030.1.4 Host-start producer is proven through signed dispatch and the installed consumer
 - [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes
 - [ ] T239 [US6] MEDULLA-DURABLE-KERNEL-R039.5 In-memory structures rebuild from the redb log
-- [ ] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
+- [x] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
 - [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic
 - [ ] T242 [US6] MEDULLA-DURABLE-KERNEL-R042.100.2 Measurement admission refusals
 - [x] T243 [US1] MEDULLA-DURABLE-KERNEL-R043.100.1 Feed types and snapshot digest

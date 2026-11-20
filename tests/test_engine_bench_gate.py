@@ -164,3 +164,35 @@ def test_baseline_file_matches_records_schema(tmp_path):
         check=False,
     )
     assert done.returncode == 0, done.stderr
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R042.7
+def test_gate_loads_records(tmp_path):
+    """The gate loads a recorded JSONL file: blank lines are skipped, the last
+    record of a workload wins, every workload of the parity spec is required and
+    a claim without one is refused with BENCH_WORKLOAD_MISSING."""
+    sys.path.insert(0, str(_GATE.parent))
+    try:
+        import engine_parity_bench_gate as gate
+    finally:
+        sys.path.remove(str(_GATE.parent))
+
+    path = tmp_path / "records.jsonl"
+    lines = [json.dumps(_record(n)) for n in _WORKLOADS]
+    lines.insert(2, "")
+    lines.append(json.dumps(_record("single_row_commit", p99=777)))
+    path.write_text("\n".join(lines) + "\n")
+
+    records = gate.load_records(path)
+    assert len(records) == len(_WORKLOADS) + 1
+    by_name = gate.check_workloads(records)
+    assert set(by_name) == set(_WORKLOADS)
+    assert by_name["single_row_commit"]["p99_us"] == 777
+
+    path.write_text(
+        "".join(json.dumps(_record(n)) + "\n" for n in _WORKLOADS if n != "bulk_load")
+    )
+    with pytest.raises(gate.GateRefusal) as refused:
+        gate.check_workloads(gate.load_records(path))
+    assert refused.value.code == "BENCH_WORKLOAD_MISSING"
+    assert "bulk_load" in str(refused.value)
