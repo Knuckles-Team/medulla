@@ -233,11 +233,6 @@ Order: R829.1, R829.2, R829.3.
 - Program reuse in the run loop: `MEDULLA-DECISION-ENGINE-R135.16` and `MEDULLA-DECISION-ENGINE-R135.17` provide, `MERISTEM-HARNESS-CYCLE-R022` (children `.4` to `.8`) consumes. Contract: [harness-program-reuse.md](contracts/harness-program-reuse.md).
 - Governed write-back proposals: `MEDULLA-DECISION-ENGINE-R615` provides, `SCION-GOVERNED-WRITEBACK-R006` consumes. Contract: [governed-writeback-proposals.md](contracts/governed-writeback-proposals.md).
 
-#### explicit evidence withdrawal
-
-MEDULLA-DECISION-ENGINE-R020.1.2: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
-
-The row keeps its acceptance requirements. This declaration records the evidence correction without changing test behavior or rewriting earlier commits.
 ## Loops and enrichment behaviour (R653.2-R653.8, R614.2)
 
 - Loop kernels are pure functions in `crates/medulla-statechart/src/loops.rs`; the handler
