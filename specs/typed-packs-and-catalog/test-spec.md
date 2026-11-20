@@ -803,7 +803,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R803.7`: `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest_tests.rs::enrich_proposes_claim_for_sensitive_document`
 - `MEDULLA-TYPED-PACKS-R806`: `tests/packs/test_schema_drift_methods_served.py::test_propose_then_approve_activates_once`
 - `MEDULLA-TYPED-PACKS-R807`: `tests/packs/test_conformance_evidence_served.py::test_evidence_written_read_revoked_and_tenant_scoped`
-- `MEDULLA-TYPED-PACKS-R808`: `tests/graph_schema_digest_served.rs::mismatch_and_drift_are_refused_and_digest_reads_back`
+- `MEDULLA-TYPED-PACKS-R808`: `tests/graph_schema_digest_served.rs::mismatch_and_drift_are_refused_and_digest_reads_back` (planned)
 - `MEDULLA-TYPED-PACKS-R809`: `tests/ontology/test_canonical_hash_served.py::test_reordered_serializations_hash_equal`
 - `MEDULLA-TYPED-PACKS-R110`: `tests/open_metadata_sync_served.rs::metadata_sync_round_trips_terms_assets_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.1`: `crates/medulla-rdf/tests/open_metadata.rs::mapped_types_resolve_one_class`
