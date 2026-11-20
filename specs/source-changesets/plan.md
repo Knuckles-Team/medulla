@@ -53,7 +53,9 @@ benches/source_symbol_edit.rs                         new: nightly bench
 
 ## Phase 0: Research
 
-none
+- Path-scoped access semantics (MEDULLA-SCM-R007): decided in `research.md`.
+- Proof of the derived history index against a rebuild (MEDULLA-SCM-R005): decided in `research.md`.
+- Agent principals and run provenance (MEDULLA-SCM-R012): decided in `research.md`.
 
 ## Phase 1: Design
 
