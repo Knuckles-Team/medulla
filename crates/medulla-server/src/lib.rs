@@ -83,8 +83,11 @@ pub fn join_engine_driver<T>(driver: std::thread::JoinHandle<T>) -> std::io::Res
 /// so Cargo's integration-test crates can share the assertion semantics.
 #[doc(hidden)]
 pub fn decode_unified_ids(response: &medulla_protocol_types::protocol::Response) -> Vec<String> {
-    let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(raw_result(response)).unwrap();
-    rows.into_iter().map(|(id, _)| id).collect()
+    // A row is a `UnifiedRow`: `[id, score]`, or `[id, score, {texts, values}]` when its
+    // source attached field values (a `TsScan` point carries its values).
+    let rows: Vec<medulla_types::unified_row::UnifiedRow> =
+        rmp_serde::from_slice(raw_result(response)).unwrap();
+    rows.into_iter().map(|row| row.id).collect()
 }
 
 /// Decode the row ids of a successful `Method::Uql` response (a `Rows` or `Profile`
