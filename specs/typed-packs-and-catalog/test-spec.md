@@ -660,7 +660,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R059`: `crates/medulla-h-admin/src/graph_schema/tests.rs::attach_validates_its_own_writes_and_never_scans_existing_data` (existing); `tests/packs/test_schema_attach_served.py::test_attach_does_not_scan_existing_data` (planned)
 - `MEDULLA-TYPED-PACKS-R061`: `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::low_level_source_seam_enforces_the_document_bound` (existing)
 - `MEDULLA-TYPED-PACKS-R062`: `crates/medulla-raft/src/raft/command/native/catalog.rs::tests::graph_schema_records_replicate_as_graph_state` (existing); `tests/packs/test_schema_attach_served.py::test_schema_replicates` (planned)
-- `MEDULLA-TYPED-PACKS-R063`: `crates/medulla-capabilities/tests/contract_registry.rs::schema_bump_enumerates_agent_layer_types` (existing)
+- `MEDULLA-TYPED-PACKS-R063`: `crates/medulla-capabilities/tests/contract_registry.rs::schema_bump_enumerates_agent_layer_types` (planned)
 - `MEDULLA-TYPED-PACKS-R064`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
 - `MEDULLA-TYPED-PACKS-R065`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::contract_pin_tests::server_pin_digest_carries_the_declared_sdk_contract_pin_opaquely` (existing)
 - `MEDULLA-TYPED-PACKS-R066.1`: `crates/medulla-core/tests/harness_shapes.rs::model_fact_shapes_reject_missing_run` (existing); `tests/typed_packs/test_model_harness_facts.py::test_shapes_reject_missing_run` (planned)
@@ -797,7 +797,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R085.6.1`: `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::credential_observation_preserves_state_and_existing_refusals`, `::omitted_refresh_preserves_legacy_touch_and_authority`
 - `MEDULLA-TYPED-PACKS-R094.8`: `tests/test_prompt_blueprints_served.py::test_source_effect_receipt_is_recorded_once`
 - `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-catalog-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
-- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
+- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest` (planned)
 - `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged`
 - `MEDULLA-TYPED-PACKS-R097.2.7.4`: `tests/typed_packs/test_external_schema_import_served.py::test_mapped_and_unmapped_terms_of_every_kind`
 - `MEDULLA-TYPED-PACKS-R803.7`: `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest_tests.rs::enrich_proposes_claim_for_sensitive_document`
