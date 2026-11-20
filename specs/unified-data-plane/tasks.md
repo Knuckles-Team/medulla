@@ -205,8 +205,6 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
 - [ ] T196 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
 - [ ] T197 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
-- [ ] T105a [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.8 Text columns: a `RowSet` carries typed text columns beside its value channels
-- [ ] T105b [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.9 Gateway provider: the engine reaches connector tools through the fleet gateway
 - [ ] T208 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.8 Text columns: a `RowSet` carries typed text columns beside its value channels
 - [ ] T209 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.9 Gateway provider: the engine reaches connector tools through the fleet gateway
 - [ ] T106 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.3 Every catalog route passes the carrier gate
