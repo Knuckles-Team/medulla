@@ -96,7 +96,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R013.4` | Oracle case | `crates/medulla-table-store/tests/matview_oracle.rs::join_agrees_after_every_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013.5` | Served proof | `tests/pgwire_roundtrip.rs::matview_join_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R014` | Documentation and quickstart | `tests/docs/test_incremental_views_doc.py::test_page_matches_knobs_codes_and_metrics` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R015` | Release gate | `crates/medulla-plan/tests/incremental_oracle_coverage.rs::every_accepted_construct_has_an_oracle_case` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R015` | Release gate | `crates/medulla-plan/tests/incremental_oracle_coverage.rs::every_accepted_construct_has_an_oracle_case` |
 
 ## Negative and boundary cases
 
