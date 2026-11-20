@@ -912,7 +912,13 @@ ex:parent a owl:AsymmetricProperty .
         // core:revision declared once (harness) instead of twice.
         // +60 (MEDULLA-TYPED-PACKS-R107.2): the PackRelease machine (four states, three
         // events, three edges) in state-machines-v1.ttl.
-        assert_eq!(composed.ontology.len(), 22_707);
+        // +1462 (measured composed count, 22_707 -> 24_169 on e7acc0d6c7): the
+        // vocabulary of this frozen train: the Decide families and :Playbook (58788adb4c,
+        // one declaration since e7acc0d6c7), the explicit state machines and their guard
+        // classes (5243ee05ff, 77c9135230, 8672367c18, 66bd834d53, e3b722cb57, 1aaaf3699e),
+        // the census and source-sync terms (96f2014fed, 67ed2d3655, c186f8f45a, 0e18c73e41,
+        // 9a697e08df) and the metadata-catalog asset families (d7dcd9c6c6, ee27ab98ec).
+        assert_eq!(composed.ontology.len(), 24_169);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -1020,7 +1026,11 @@ ex:parent a owl:AsymmetricProperty .
         // +1715 (measured, 20_693 -> 22_408): the semantic axioms of the 2026-11-13
         // train's vocabulary rows (see the total pin); the total grows less because
         // module-header triples fell.
-        assert_eq!(semantic_axioms, 22_408);
+        // +1522 (measured, 22_408 -> 23_930 on e7acc0d6c7): the semantic axioms of
+        // the frozen train's vocabulary (see the total pin). It exceeds the total's
+        // +1462 because the triples on the 48 module-header subjects fell from 218 to
+        // 158 (imports unchanged at 81).
+        assert_eq!(semantic_axioms, 23_930);
 
         let count_type = |object: &str| {
             composed
@@ -1112,7 +1122,9 @@ ex:parent a owl:AsymmetricProperty .
             // (MEDULLA-IDENTITY-R023.8).
             // +117 (measured, 1067 -> 1184): the named subclass axioms of the
             // 2026-11-13 train's vocabulary rows.
-            1184
+            // +131 (measured, 1184 -> 1315 on e7acc0d6c7): the named subclass axioms of
+            // the frozen train's vocabulary (see the total pin for the commits).
+            1315
         );
     }
 
