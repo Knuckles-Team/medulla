@@ -278,13 +278,13 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T272 [P] [US2] MEDULLA-CQ-CONN-R065.2 vector cross-source question
 - [ ] T273 [P] [US1] MEDULLA-CQ-CONN-R066.1 wger single-source question
 - [ ] T274 [P] [US2] MEDULLA-CQ-CONN-R066.2 wger cross-source question
-- [ ] T275 [US5] MEDULLA-CQ-CONN-R084.1 Which finance algorithms apply to analysis type X for instrument or position type Y, and which connector...
-- [ ] T276 [US5] MEDULLA-CQ-CONN-R084.2 What are my trades and positions, and which risk analyses apply to them?
-- [ ] T277 [US5] MEDULLA-CQ-CONN-R084.3 Which connector features, tools, prompts and skills can satisfy capability C, and under which ingest contract?
-- [ ] T278 [US5] MEDULLA-CQ-CONN-R084.4 Which connector ingest contracts govern record R, with their mappings, access policy and provenance...
+- [x] T275 [US5] MEDULLA-CQ-CONN-R084.1 Which finance algorithms apply to analysis type X for instrument or position type Y, and which connector...
+- [x] T276 [US5] MEDULLA-CQ-CONN-R084.2 What are my trades and positions, and which risk analyses apply to them?
+- [x] T277 [US5] MEDULLA-CQ-CONN-R084.3 Which connector features, tools, prompts and skills can satisfy capability C, and under which ingest contract?
+- [x] T278 [US5] MEDULLA-CQ-CONN-R084.4 Which connector ingest contracts govern record R, with their mappings, access policy and provenance...
 - [ ] T279 [US5] MEDULLA-CQ-CONN-R084.5 Finance method vocabulary
 - [ ] T280 [US5] MEDULLA-CQ-CONN-R084.6 Hot-path proof for the pack questions
-- [ ] T280a [US5] MEDULLA-CQ-CONN-R084.7 A competency question abstains by name when its connector pack is not imported (Depends: MEDULLA-TYPED-PACKS-R101.1)
+- [x] T280a [US5] MEDULLA-CQ-CONN-R084.7 A competency question abstains by name when its connector pack is not imported (Depends: MEDULLA-TYPED-PACKS-R101.1)
 - [ ] T281 [US5] MEDULLA-CQ-CONN-R085.1 Model: the connector auto-onboard fixture
 - [ ] T282 [US5] MEDULLA-CQ-CONN-R085.2 Behavior: a parent-term question returns native and live connector rows
 - [ ] T283 [US5] MEDULLA-CQ-CONN-R085.3 Wiring: the check uses the production import and scan
