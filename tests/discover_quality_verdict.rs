@@ -186,3 +186,164 @@ async fn drift_mode_names_adapter_and_shard_generations() {
     assert_eq!(shards.len(), 1, "{drifted}");
     assert_eq!(shards[0]["generation"], 1);
 }
+
+/// One served `Discover` with an optional policy reference, returned unchecked.
+async fn discover_raw(
+    state: &test_support::SharedState,
+    id: u64,
+    policy: Option<&str>,
+) -> medulla_protocol_types::protocol::Response {
+    let request = common::signed_request(
+        SECRET,
+        id,
+        GRAPH,
+        Method::Discover {
+            keywords: vec!["known".into()],
+            query_embedding: vec![1.0, 1.0, 2.0],
+            k: 5,
+            quality_policy_ref: policy.map(str::to_string),
+            hops: 0,
+            query_text: None,
+            mode: Default::default(),
+            as_of: None,
+            perspectives: None,
+            capability: None,
+        },
+    );
+    Box::pin(dispatch(state, request)).await
+}
+
+fn hit_ids(envelope: &serde_json::Value) -> Vec<String> {
+    envelope["hits"]
+        .as_array()
+        .expect("hits")
+        .iter()
+        .map(|h| h["id"].as_str().expect("hit id").to_string())
+        .collect()
+}
+
+async fn envelope_under(
+    state: &test_support::SharedState,
+    id: u64,
+    policy: Option<&str>,
+) -> serde_json::Value {
+    let response = discover_raw(state, id, policy).await;
+    assert!(response.error.is_none(), "op {id}: {:?}", response.error);
+    match response.result {
+        Some(ResultPayload::Json(envelope)) => envelope,
+        other => panic!("expected the Discover envelope, got {other:?}"),
+    }
+}
+
+fn quality_state() -> test_support::SharedState {
+    let (persist_dir, persistence) = common::tempdir_persistence();
+    test_support::state_with(
+        SECRET,
+        common::current_isolation(),
+        persist_dir,
+        persistence,
+    )
+}
+
+/// Verifies MEDULLA-FEDERATED-QUERY-R089.4: an unknown or wrong-typed policy reference is
+/// refused as `INVALID_ARGUMENT`, while a failed verdict is not a refusal and never
+/// changes the rows.
+// spec: MEDULLA-FEDERATED-QUERY-R089.4
+#[tokio::test]
+async fn unknown_policy_refuses_and_failed_verdict_keeps_rows() {
+    let state = quality_state();
+    for n in 0..8 {
+        write(&state, n, "known term").await;
+    }
+    send(
+        &state,
+        500,
+        Method::AddNode {
+            node_id: "policy-strict".into(),
+            properties_msgpack: pack(json!({
+                "type": "RetrievalQualityPolicy",
+                "revision": "strict-1",
+                "min_composite_quality": 1.0,
+                "min_population_ratio": 0.25,
+            })),
+        },
+    )
+    .await;
+    send(
+        &state,
+        501,
+        Method::AddNode {
+            node_id: "not-a-policy".into(),
+            properties_msgpack: pack(json!({"type": "Document", "name": "known"})),
+        },
+    )
+    .await;
+
+    for (id, reference) in [(600, "policy-absent"), (601, "not-a-policy")] {
+        let refused = discover_raw(&state, id, Some(reference)).await;
+        let error = refused.error.expect("an unknown policy is refused");
+        assert!(
+            format!("{error:?}").contains("INVALID_ARGUMENT"),
+            "{reference}: {error:?}"
+        );
+        assert!(refused.result.is_none(), "{reference} returned rows");
+    }
+
+    let default = envelope_under(&state, 602, None).await;
+    let strict = envelope_under(&state, 603, Some("policy-strict")).await;
+    assert_eq!(strict["verdict"]["gate_passed"], false, "{strict}");
+    assert!(!hit_ids(&strict).is_empty());
+    assert_eq!(hit_ids(&strict), hit_ids(&default), "rows and order unchanged");
+    assert_eq!(strict["hits"], default["hits"], "row content unchanged");
+}
+
+/// Verifies MEDULLA-FEDERATED-QUERY-R089.5: the verdict carries the policy revision, the
+/// index generation and the thresholds of this call, and Discover writes nothing.
+// spec: MEDULLA-FEDERATED-QUERY-R089.5
+#[tokio::test]
+async fn verdict_carries_revision_generation_and_thresholds() {
+    let state = quality_state();
+    for n in 0..4 {
+        write(&state, n, "known term").await;
+    }
+    send(
+        &state,
+        500,
+        Method::AddNode {
+            node_id: "policy-evidence".into(),
+            properties_msgpack: pack(json!({
+                "type": "RetrievalQualityPolicy",
+                "revision": "evidence-3",
+                "min_composite_quality": 0.5,
+                "min_population_ratio": 0.75,
+            })),
+        },
+    )
+    .await;
+
+    let before = verdict_under(&state, 600, Some("policy-evidence")).await;
+    assert_eq!(before["policy_revision"], "evidence-3", "{before}");
+    assert_eq!(
+        before["thresholds"]["min_composite_quality_q16"],
+        (0.5_f64 * 65_535.0).round()
+    );
+    assert_eq!(
+        before["thresholds"]["min_population_ratio_q16"],
+        (0.75_f64 * 65_535.0).round()
+    );
+    let generation = before["index_generation"].as_u64().expect("index_generation");
+
+    // Discover is a read: asking again leaves the generation and the verdict unchanged.
+    let again = verdict_under(&state, 601, Some("policy-evidence")).await;
+    assert_eq!(again["index_generation"].as_u64(), Some(generation));
+    assert_eq!(again["policy_revision"], before["policy_revision"]);
+    assert_eq!(again["thresholds"], before["thresholds"]);
+
+    // A write moves the index generation the verdict reports.
+    write(&state, 10, "known term").await;
+    let after = verdict_under(&state, 602, Some("policy-evidence")).await;
+    assert!(
+        after["index_generation"].as_u64().expect("index_generation") > generation,
+        "{before} -> {after}"
+    );
+}
