@@ -40,7 +40,14 @@ use medulla_server_api::state::ServerState;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
-#[cfg(all(feature = "redb", feature = "blob"))]
+// The sweep lowers a Document delete through `crate::document_delete`, so it needs that
+// module's features as well.
+#[cfg(all(
+    feature = "redb",
+    feature = "blob",
+    feature = "query",
+    feature = "modality-serving"
+))]
 pub mod sweep;
 
 pub struct PrepareContext<'a> {
