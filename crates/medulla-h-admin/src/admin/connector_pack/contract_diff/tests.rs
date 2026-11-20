@@ -95,7 +95,9 @@ fn non_breaking_applies_breaking_waits_and_queries_use_active_version() {
     second.shapes_ttl = Some(SHAPES.replace("sh:maxCount 5", "sh:maxCount 9"));
     second.mappings.insert("refunds".into());
     assert_eq!(
-        history.submit(second.clone(), &steward(), &scopes()).unwrap(),
+        history
+            .submit(second.clone(), &steward(), &scopes())
+            .unwrap(),
         ReleaseDisposition::Applied {
             supersedes: Some("1.0.0".into())
         }

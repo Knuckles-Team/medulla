@@ -741,7 +741,10 @@ mod preplan {
         else {
             panic!("a program record");
         };
-        let pattern = pattern.as_deref().cloned().expect("the pattern was promoted");
+        let pattern = pattern
+            .as_deref()
+            .cloned()
+            .expect("the pattern was promoted");
         assert!(pattern.verdict.tests_ran && pattern.verdict.artifacts_exist);
         assert_eq!(pattern.receipt, ok);
         assert_eq!(pattern.plan, binding());
