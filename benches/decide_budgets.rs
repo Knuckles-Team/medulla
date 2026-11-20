@@ -885,8 +885,8 @@ fn bench_distilled_rank(
     asked.question.question_id = "bench.distilled_rank".to_string();
     asked.candidates = CandidateSource::Graph {
         graph: GRAPH.to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(vec![
-            medulla_types::wire::Op::Scan {
+        plan: Box::new(medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::Scan {
                 label: "Tool".to_string(),
             },
         ])),

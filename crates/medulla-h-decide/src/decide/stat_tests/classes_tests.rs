@@ -127,8 +127,8 @@ async fn graph_class_request(h: &Harness, graph: &str, label: &str) -> DecideReq
     );
     request.candidates = CandidateSource::Graph {
         graph: graph.to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(vec![
-            medulla_types::wire::Op::Scan {
+        plan: Box::new(medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::Scan {
                 label: label.to_string(),
             },
         ])),

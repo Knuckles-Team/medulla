@@ -236,7 +236,7 @@ struct PoolReads {
 /// served `DecisionViews` of `decider` run it: (reliability, abstained).
 #[cfg(feature = "epistemic")]
 fn uql_read(h: &Harness, subject: &str, prior: f64) -> (Option<f64>, Option<f64>) {
-    use medulla_types::wire::UqlResult;
+    use medulla_query_types::wire::UqlResult;
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
     let authority =
         medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
