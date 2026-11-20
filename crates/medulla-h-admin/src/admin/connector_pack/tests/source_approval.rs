@@ -56,6 +56,7 @@ const CONTRACT: &str = r#"@prefix ac: <https://knuckles-team.github.io/ontology/
  ac:entity "Supplier" ; ac:keyField "id" ."#;
 
 // spec: MEDULLA-FEDERATED-QUERY-R722.2
+// spec: MEDULLA-FEDERATED-QUERY-R722.7
 #[tokio::test]
 async fn approve_source_requires_current_head_and_contract_digest() {
     let connector = "r722-approval";
