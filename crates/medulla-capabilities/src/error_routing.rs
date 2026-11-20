@@ -93,6 +93,9 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
             "SOURCE_APPROVAL_",
             "SOURCE_CONTRACT_",
             "SOURCE_REGISTRATION_",
+            // MEDULLA-FEDERATED-QUERY-R722.4: an access contract the import refuses.
+            "CONTRACT_APPROVAL",
+            "CONTRACT_SECRET",
             "IMPORTER_",
             "INVALID_IMPORTER",
             "INVALID_RETIREMENT",

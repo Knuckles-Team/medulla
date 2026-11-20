@@ -181,6 +181,10 @@ closed_error_codes! {
         ConnectorPackProjectionSweepFailed => "CONNECTOR_PACK_PROJECTION_SWEEP_FAILED",
         ConnectorPackReconcileFailed => "CONNECTOR_PACK_RECONCILE_FAILED",
         ConnectorPackUnbound => "CONNECTOR_PACK_UNBOUND",
+        /// A connector pack's access contract carries a publisher-set approval; only the operator approves a source (MEDULLA-FEDERATED-QUERY-R722.4).
+        ContractApproval => "CONTRACT_APPROVAL",
+        /// A connector pack's access contract carries a literal credential instead of a secret reference (MEDULLA-FEDERATED-QUERY-R722.4).
+        ContractSecret => "CONTRACT_SECRET",
         /// A connector has no current conformance evidence: missing, expired, revoked or another tenant's (MEDULLA-TYPED-PACKS-R807).
         ConformanceEvidenceAbsent => "CONFORMANCE_EVIDENCE_ABSENT",
         ConnectorRelationshipUnavailable => "CONNECTOR_RELATIONSHIP_UNAVAILABLE",
