@@ -7,11 +7,12 @@
 //! beside the live one and swap it atomically, so a reader never sees a mix.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use arc_swap::ArcSwap;
 use medulla_decision_types::decision::capability_designation::{CapabilityRecord, Q32_ONE};
 use medulla_types::contract::OpaqueId;
+use parking_lot::Mutex;
 
 use super::arena::{normalized, Arena};
 use super::postings::Postings;
@@ -84,7 +85,7 @@ pub struct EmbeddingPin {
 #[derive(Debug, Clone)]
 pub enum Change {
     /// Insert the record, or replace the record of the same entity.
-    Upsert(CapabilityRecord, Vec<f32>),
+    Upsert(Box<CapabilityRecord>, Vec<f32>),
     /// Remove an entity.
     Tombstone(OpaqueId),
 }
@@ -260,7 +261,7 @@ impl ShardSnapshot {
                         ),
                     });
                 }
-                self.place(record, normalized(&vector), limits)
+                self.place(*record, normalized(&vector), limits)
             }
         }
     }
@@ -367,7 +368,7 @@ impl Shard {
     /// Apply a batch all or nothing and publish one new epoch. Compaction runs
     /// when tombstones exceed the knob ratio, in the same publish.
     pub fn apply(&self, changes: Vec<Change>) -> Result<u64, IndexRefusal> {
-        let _writer = self.writer.lock().unwrap_or_else(|e| e.into_inner());
+        let _writer = self.writer.lock();
         let mut work = (*self.current.load_full()).clone();
         for change in changes {
             work.apply_change(change, &self.limits)?;
@@ -383,7 +384,7 @@ impl Shard {
 
     /// Insert or replace one record.
     pub fn upsert(&self, record: CapabilityRecord, vector: Vec<f32>) -> Result<u64, IndexRefusal> {
-        self.apply(vec![Change::Upsert(record, vector)])
+        self.apply(vec![Change::Upsert(Box::new(record), vector)])
     }
 
     /// Remove one entity.
@@ -393,7 +394,7 @@ impl Shard {
 
     /// Compact now: a new generation beside the live one, swapped atomically.
     pub fn compact(&self) -> u64 {
-        let _writer = self.writer.lock().unwrap_or_else(|e| e.into_inner());
+        let _writer = self.writer.lock();
         let mut next = self.current.load().compacted(&self.limits);
         next.epoch += 1;
         let epoch = next.epoch;
@@ -405,13 +406,13 @@ impl Shard {
     /// `records` beside the live one and swap it in. All records must share one
     /// version and dimension, else nothing changes.
     pub fn reindex(&self, records: Vec<(CapabilityRecord, Vec<f32>)>) -> Result<u64, IndexRefusal> {
-        let _writer = self.writer.lock().unwrap_or_else(|e| e.into_inner());
+        let _writer = self.writer.lock();
         let live = self.current.load_full();
         let mut next = ShardSnapshot::empty();
         next.generation = live.generation + 1;
         next.epoch = live.epoch + 1;
         for (record, vector) in records {
-            next.apply_change(Change::Upsert(record, vector), &self.limits)?;
+            next.apply_change(Change::Upsert(Box::new(record), vector), &self.limits)?;
         }
         let epoch = next.epoch;
         self.current.store(Arc::new(next));

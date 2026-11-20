@@ -57,6 +57,7 @@ pub fn derive_hmac_hex(secret: &str, domain: &[u8], principal: &str) -> String {
 // ---------------------------------------------------------------------------
 
 use medulla_identity_types::identity::{WireLoginKind, WireLoginRecord};
+use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::{Duration, Instant};
@@ -164,7 +165,7 @@ pub struct WireLoginRegistry {
 impl WireLoginRegistry {
     /// Store `record`; a login that exists with a different principal refuses.
     pub fn put(&self, record: WireLoginRecord) -> Result<(), String> {
-        let mut records = self.records.write().unwrap_or_else(|e| e.into_inner());
+        let mut records = self.records.write_recovering("wire login registry");
         if let Some(existing) = records.get(&record.login) {
             if existing.principal != record.principal {
                 return Err(format!("WIRE_LOGIN_EXISTS: {}", record.login));
@@ -178,8 +179,7 @@ impl WireLoginRegistry {
 impl WireLoginSource for WireLoginRegistry {
     fn find(&self, login: &str) -> Option<WireLoginRecord> {
         self.records
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
+            .lock_recovering("wire login registry")
             .get(login)
             .cloned()
     }
@@ -214,20 +214,14 @@ impl WireLoginSource for CachedWireLogins {
         if self.ttl.is_zero() {
             return self.inner.find(login);
         }
-        if let Some((at, hit)) = self
-            .cache
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(login)
-        {
+        if let Some((at, hit)) = self.cache.lock_recovering("wire login cache").get(login) {
             if at.elapsed() < self.ttl {
                 return hit.clone();
             }
         }
         let found = self.inner.find(login);
         self.cache
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
+            .write_recovering("wire login cache")
             .insert(login.to_string(), (Instant::now(), found.clone()));
         found
     }

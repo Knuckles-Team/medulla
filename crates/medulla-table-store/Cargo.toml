@@ -26,6 +26,7 @@ arrow-schema = { version = "58.4", optional = true }
 arrow = { version = "58.4", optional = true }
 datafusion = { version = "54", default-features = false, optional = true, features = ["nested_expressions", "sql"] }
 medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-ann = { path = "../medulla-ann", optional = true }

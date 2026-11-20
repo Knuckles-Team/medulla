@@ -4774,6 +4774,7 @@ dependencies = [
  "medulla-decision-types",
  "medulla-types",
  "medulla-work-types",
+ "parking_lot",
 ]
 
 [[package]]
@@ -8218,6 +8219,7 @@ dependencies = [
  "medulla-text",
  "medulla-transaction",
  "medulla-types",
+ "parking_lot",
  "petgraph",
  "redb",
  "rmp-serde",

@@ -7,12 +7,12 @@
 //! or wrote that a later commit wrote refuses the commit and nothing is kept.
 
 use std::collections::VecDeque;
-use std::sync::Mutex;
 
 use medulla_types::row_change::{RowChange, RowChangeKind};
 
 use medulla_tables::schema::{Cell, TableConstraint, TableSchema};
 use medulla_transaction::occ::{CommittedWrites, KeyRange, TxnFootprint};
+use parking_lot::{Mutex, MutexGuard};
 
 /// Refusal when a conflicting later commit wrote a footprint key.
 pub const TXN_CONFLICT: &str = "TXN_CONFLICT";
@@ -102,8 +102,8 @@ impl OccLog {
         }
     }
 
-    fn state(&self) -> std::sync::MutexGuard<'_, OccState> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    fn state(&self) -> MutexGuard<'_, OccState> {
+        self.state.lock()
     }
 
     /// The sequence of the latest recorded commit: the snapshot a `BEGIN` pins.
@@ -161,7 +161,6 @@ impl OccLog {
                 if last.commit_seq == commit_seq {
                     state.ring.pop_back();
                     state.commit_seq -= 1;
-                    return;
                 }
             }
         }

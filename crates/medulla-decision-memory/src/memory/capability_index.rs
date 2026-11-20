@@ -6,10 +6,11 @@
 //! no global lock: the shard map lock is held only to clone shard handles.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use medulla_decision_types::decision::capability_designation::CapabilityRecord;
 use medulla_types::contract::{OpaqueId, TenantId};
+use parking_lot::RwLock;
 
 pub mod arena;
 pub mod postings;
@@ -64,15 +65,10 @@ impl CapabilityIndex {
 
     fn shard_for(&self, tenant: Option<&TenantId>) -> Arc<Shard> {
         let key = tenant.cloned();
-        if let Some(shard) = self
-            .shards
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(&key)
-        {
+        if let Some(shard) = self.shards.read().get(&key) {
             return Arc::clone(shard);
         }
-        let mut shards = self.shards.write().unwrap_or_else(|e| e.into_inner());
+        let mut shards = self.shards.write();
         Arc::clone(
             shards
                 .entry(key)
@@ -81,11 +77,7 @@ impl CapabilityIndex {
     }
 
     fn existing(&self, tenant: Option<&TenantId>) -> Option<Arc<Shard>> {
-        self.shards
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(&tenant.cloned())
-            .cloned()
+        self.shards.read().get(&tenant.cloned()).cloned()
     }
 
     /// The shard of a tenant, or of the commons for `None`.

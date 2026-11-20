@@ -1339,9 +1339,7 @@ mod search_fusion {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.3
     #[test]
     fn served_search_reaches_fusion() {
-        let _held = super::super::tests::PORT_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let _held = super::super::tests::PORT_LOCK.lock();
         let port = Arc::new(IndexPort {
             seen: Mutex::new(Vec::new()),
         });
@@ -1417,7 +1415,7 @@ mod search_fusion {
 }
 
 /// Tests that replace the process-wide connector port take this lock.
-pub(super) static PORT_LOCK: Mutex<()> = Mutex::new(());
+pub(super) static PORT_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
 
 // ── web metasearch sources (MEDULLA-UNIFIED-DATA-PLANE-R038.7) ─────────────────────────
 
@@ -1591,7 +1589,7 @@ mod web_metasearch {
     #[cfg(feature = "text")]
     #[test]
     fn served_web_search_reaches_cache() {
-        let _held = PORT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _held = PORT_LOCK.lock();
         let port = WebPort::new(&THREE);
         super::super::mcp::register_connector_row_source(port.clone());
         let registry = registry();
