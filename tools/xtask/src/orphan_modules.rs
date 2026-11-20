@@ -390,6 +390,7 @@ mod tests {
         assert!(run_gate(t.path()).unwrap().roots.is_empty());
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R868
     #[test]
     fn the_unwired_topic_log_and_agent_peer_code_is_gone() {
         let root = crate::workspace_root();
