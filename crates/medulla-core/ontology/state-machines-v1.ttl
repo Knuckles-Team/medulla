@@ -5673,58 +5673,6 @@
     :toState :TaskMachine_Open ;
     :firedBy :TaskMachine_Event_Reopen .
 
-# spec: MEDULLA-DURABLE-KERNEL-R101.6
-# The DowntimePhase machine: whether a running downtime job works or is held back for
-# foreground activity. The Rust edge table `DowntimePhase::apply` is the same table.
-
-:DowntimePhaseState a owl:Class ;
-    rdfs:label "DowntimePhase State" ;
-    rdfs:comment "A state of the DowntimePhase machine." ;
-    rdfs:subClassOf :State .
-
-:DowntimePhaseTransition a owl:Class ;
-    rdfs:label "DowntimePhase Transition" ;
-    rdfs:comment "A transition of the DowntimePhase machine." ;
-    rdfs:subClassOf :Transition .
-
-:DowntimePhaseEvent a owl:Class ;
-    rdfs:label "DowntimePhase Event" ;
-    rdfs:comment "An event of the DowntimePhase machine." ;
-    rdfs:subClassOf :TransitionEvent .
-
-:DowntimePhaseMachine a :StateMachine ;
-    rdfs:label "DowntimePhase machine" ;
-    :initialState :DowntimePhaseMachine_Working ;
-    :hasState :DowntimePhaseMachine_Working, :DowntimePhaseMachine_Paused .
-
-:DowntimePhaseMachine_Working a :DowntimePhaseState ;
-    rdfs:label "DowntimePhase Working" ;
-    :storedForm "downtime:working" .
-
-:DowntimePhaseMachine_Paused a :DowntimePhaseState ;
-    rdfs:label "DowntimePhase Paused" ;
-    :storedForm "downtime:paused" .
-
-:DowntimePhaseMachine_Event_Preempt a :DowntimePhaseEvent ;
-    rdfs:label "DowntimePhase Preempt" .
-
-:DowntimePhaseMachine_Event_Resume a :DowntimePhaseEvent ;
-    rdfs:label "DowntimePhase Resume" .
-
-:DowntimePhaseMachine_D01 a :DowntimePhaseTransition ;
-    rdfs:label "DowntimePhase D01" ;
-    :edgeId "D01" ;
-    :fromState :DowntimePhaseMachine_Working ;
-    :toState :DowntimePhaseMachine_Paused ;
-    :firedBy :DowntimePhaseMachine_Event_Preempt .
-
-:DowntimePhaseMachine_D02 a :DowntimePhaseTransition ;
-    rdfs:label "DowntimePhase D02" ;
-    :edgeId "D02" ;
-    :fromState :DowntimePhaseMachine_Paused ;
-    :toState :DowntimePhaseMachine_Working ;
-    :firedBy :DowntimePhaseMachine_Event_Resume .
-
 # spec: MEDULLA-DURABLE-KERNEL-R874.15
 # The ParticipantTransaction machine. The Rust edge table PARTICIPANT_TRANSACTION_MACHINE is the same table.
 :ParticipantTransactionState a owl:Class ;
