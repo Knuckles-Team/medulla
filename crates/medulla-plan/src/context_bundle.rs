@@ -395,14 +395,19 @@ pub fn compile_with(
         .collect();
 
     let mut items = Vec::new();
-    let mut chosen_digests: BTreeSet<&str> = BTreeSet::new();
-    let mut chosen_units: BTreeSet<&str> = BTreeSet::new();
-    for candidate in &candidates {
-        if chosen.contains(candidate.candidate_id.as_str()) {
-            chosen_digests.insert(candidate.content_digest.as_str());
-            chosen_units.insert(candidate.evidence_unit.as_str());
-        }
-    }
+    let chosen_units: BTreeSet<&str> = candidates
+        .iter()
+        .filter(|candidate| chosen.contains(candidate.candidate_id.as_str()))
+        .map(|candidate| candidate.evidence_unit.as_str())
+        .collect();
+    // The content of a chosen item is every resolution of it, not only the one
+    // the solver picked: a unit enters the bundle at one resolution, so a hit
+    // repeating a chosen item's spans could never be dominated otherwise.
+    let chosen_digests: BTreeSet<&str> = candidates
+        .iter()
+        .filter(|candidate| chosen_units.contains(candidate.evidence_unit.as_str()))
+        .map(|candidate| candidate.content_digest.as_str())
+        .collect();
     for (node, hit) in &kept {
         if chosen_units.contains(node) {
             let candidate = candidates
