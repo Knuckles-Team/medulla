@@ -106,8 +106,16 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R025.3.1
     #[test]
     fn refuses_an_invalid_decision() {
-        let mut request = valid_request();
-        request.decision.outcome = None;
+        // Built without an outcome rather than assigned one afterwards: the crate's
+        // lake_catalog scan (MEDULLA-TYPED-PACKS-R810.4) refuses any `.outcome` write
+        // after construction.
+        let request = PgrxSpikeReviewRequest {
+            decision: PgrxSpikeDecision {
+                evidence: full_evidence(),
+                outcome: None,
+            },
+            ..valid_request()
+        };
         assert_eq!(
             request.approve(),
             Err(PgrxSpikeReviewRefusal::InvalidDecision(
