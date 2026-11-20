@@ -171,6 +171,6 @@ Governance refusal is per record and writes nothing; the receipt carries `Govern
 
 Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enumeration` (stage pages, check the declared digest, plan with `plan_reconcile_digests`), `split_due`, `sweep_methods` (tombstone or Document cascade, marker and plan update) and `spawn_reconcile_sweep` (started in `src/main.rs`).
 
-## Non-record kind dispatch
+### Non-record kind dispatch
 `source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
 - Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim_admitted` in `crates/medulla-h-jobs/src/task_queue_served.rs`, reached from the router's control-plane task-queue arm; lane ownership in `lane_of_queue`; the ingest queue rule in `IngestSeam`.
