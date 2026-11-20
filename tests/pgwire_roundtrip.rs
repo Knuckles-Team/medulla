@@ -2258,6 +2258,9 @@ fn error_fields(body: &[u8]) -> std::collections::HashMap<u8, String> {
     fields
 }
 
+/// The raw frames the proxy captured, shared with its relay task.
+type CapturedFrames = Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>>;
+
 /// A TCP relay between a client library and the listener that can put a raw frontend
 /// frame on the server side at a frame boundary and capture the server's answer up to
 /// its `ReadyForQuery`, so a test can send a message no client library emits. The
@@ -2265,7 +2268,7 @@ fn error_fields(body: &[u8]) -> std::collections::HashMap<u8, String> {
 struct RawFrameProxy {
     addr: String,
     to_server: Arc<tokio::sync::Mutex<tokio::net::tcp::OwnedWriteHalf>>,
-    capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>>,
+    capture: CapturedFrames,
     answered: Arc<tokio::sync::Notify>,
 }
 
@@ -2280,7 +2283,7 @@ impl RawFrameProxy {
             .expect("connect to the listener");
         let (from_server, to_server) = server.into_split();
         let to_server = Arc::new(tokio::sync::Mutex::new(to_server));
-        let capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>> = Arc::default();
+        let capture: CapturedFrames = Arc::default();
         let answered = Arc::new(tokio::sync::Notify::new());
         tokio::spawn(Self::relay(
             listener,
@@ -2303,7 +2306,7 @@ impl RawFrameProxy {
         listener: tokio::net::TcpListener,
         mut from_server: tokio::net::tcp::OwnedReadHalf,
         to_server: Arc<tokio::sync::Mutex<tokio::net::tcp::OwnedWriteHalf>>,
-        capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>>,
+        capture: CapturedFrames,
         answered: Arc<tokio::sync::Notify>,
     ) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};

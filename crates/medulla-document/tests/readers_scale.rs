@@ -76,10 +76,13 @@ fn measure(
     (Run { elapsed, peak }, fragments)
 }
 
+/// A media type and the generator of a source document of that type.
+type FormatGenerator = (&'static str, fn(usize) -> String);
+
 // spec: MEDULLA-INGEST-WORKER-R700.2
 #[test]
 fn time_and_memory_scale_linearly() {
-    let formats: [(&str, fn(usize) -> String); 3] =
+    let formats: [FormatGenerator; 3] =
         [("text/csv", csv), ("text/vtt", vtt), ("text/html", html)];
     for (media_type, make) in formats {
         let mut runs = Vec::new();

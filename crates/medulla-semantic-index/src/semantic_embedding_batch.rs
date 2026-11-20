@@ -163,6 +163,9 @@ fn refuse(code: EmbedErrorCode, detail: impl std::fmt::Display) -> String {
     format!("{}: {detail}", code.as_str())
 }
 
+/// One unresolved input: its cache key, its position in the request and its text.
+type PendingText<'t> = (Digest256, usize, &'t str);
+
 #[derive(Default)]
 struct Lru {
     map: HashMap<Digest256, (Vec<f32>, u64)>,
@@ -311,8 +314,8 @@ impl<'a> BoundedCachingEmbeddingProvider<'a> {
     /// the byte ceiling. A single input over the byte ceiling is refused.
     fn plan_batches<'t>(
         &self,
-        pending: &'t [(Digest256, usize, &'t str)],
-    ) -> Result<Vec<&'t [(Digest256, usize, &'t str)]>, String> {
+        pending: &'t [PendingText<'t>],
+    ) -> Result<Vec<&'t [PendingText<'t>]>, String> {
         let max_items = self.limits.embed_batch_items as usize;
         let max_bytes = self.limits.embed_batch_bytes as usize;
         let mut batches = Vec::new();
@@ -394,7 +397,7 @@ impl EmbeddingProvider for BoundedCachingEmbeddingProvider<'_> {
         }
 
         let mut resolved = HashMap::<Digest256, Vec<f32>>::with_capacity(unique.len());
-        let mut pending = Vec::<(Digest256, usize, &str)>::new();
+        let mut pending = Vec::<PendingText<'_>>::new();
         for (key, index, text) in unique {
             if let Some(vector) = self.touch(key) {
                 resolved.insert(key, vector);

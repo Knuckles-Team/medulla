@@ -1536,6 +1536,18 @@ fn register_syscat_table(
     Ok(())
 }
 
+/// The stored catalog state the synthetic system views are built from.
+#[derive(Clone, Copy)]
+pub(crate) struct SystemCatalogInputs<'a> {
+    pub(crate) user_relations: &'a [(String, SchemaRef)],
+    pub(crate) views: &'a [(String, String)],
+    pub(crate) functions: &'a [StoredFunction],
+    pub(crate) property_graphs: &'a [PropertyGraphCatalogRecord],
+    pub(crate) statement_graph: Option<&'a str>,
+    pub(crate) tables: &'a [TableSchema],
+    pub(crate) secondary_indexes: &'a [SecondaryIndexSpec],
+}
+
 /// Register the synthetic `pg_catalog` + `information_schema` system views and the
 /// catalog scalar functions into `ctx` (CONCEPT:MEDULLA-KG.query.route-create-view-create, extending CONCEPT:MEDULLA-KG.query.datafusion),
 /// synthesized from the live relations (`nodes`/`edges`/user tables), the durable views,
@@ -1546,14 +1558,17 @@ pub(crate) async fn register_system_catalogs(
     ctx: &SessionContext,
     nodes_schema: &SchemaRef,
     edges_schema: &SchemaRef,
-    user_relations: &[(String, SchemaRef)],
-    views: &[(String, String)],
-    functions: &[StoredFunction],
-    property_graphs: &[PropertyGraphCatalogRecord],
-    statement_graph: Option<&str>,
-    tables: &[TableSchema],
-    secondary_indexes: &[SecondaryIndexSpec],
+    inputs: &SystemCatalogInputs<'_>,
 ) -> Result<(), String> {
+    let SystemCatalogInputs {
+        user_relations,
+        views,
+        functions,
+        property_graphs,
+        statement_graph,
+        tables,
+        secondary_indexes,
+    } = *inputs;
     let rels = collect_relations(ctx, nodes_schema, edges_schema, user_relations, views).await;
 
     let constraints = constraint_rows(tables);

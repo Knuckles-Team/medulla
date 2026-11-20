@@ -393,7 +393,7 @@ async fn adaptive_selection_rescues_low_embedding_chunk() {
         other.error.is_some()
             || decode(other)
                 .selection
-                .map_or(true, |r| r.selected.is_empty())
+                .is_none_or(|r| r.selected.is_empty())
     );
 }
 
@@ -753,7 +753,9 @@ async fn put_section(
 /// `sec-doc` (document) over `sec-a` and `sec-b` (sections), which hold the source spans
 /// `span-a1`, `span-a2` and `span-b1`.
 async fn seed_sections(state: &Arc<RwLock<ServerState>>, graph: Option<&str>) {
-    let nodes: [(&str, Option<&str>, &[&str], &str, (u64, u64)); 6] = [
+    /// A section id, its parent, its child ids, its granularity and its span.
+    type SectionSeed<'a> = (&'a str, Option<&'a str>, &'a [&'a str], &'a str, (u64, u64));
+    let nodes: [SectionSeed<'_>; 6] = [
         ("sec-doc", None, &["sec-a", "sec-b"], "document", (0, 100)),
         (
             "sec-a",
@@ -773,7 +775,7 @@ async fn seed_sections(state: &Arc<RwLock<ServerState>>, graph: Option<&str>) {
             graph,
             id,
             parent,
-            &children,
+            children,
             granularity,
             span,
             DOC_REVISION,

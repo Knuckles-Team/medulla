@@ -2213,10 +2213,15 @@ mod ordered_chunk_tests {
         assert!(store.range("series", 40, 20).unwrap().is_empty());
     }
 
+    /// `(count, first, last, min, max)` of one cell.
+    type FoldedCell = (u64, (Ts, f64), (Ts, f64), f64, f64);
+    /// The folded cells of a series keyed by cell index.
+    type FoldedCells = BTreeMap<i64, FoldedCell>;
+
     /// Fold points into `(count, first, last, min, max)` per cell of width 25, finite values only.
     fn fold_cells(
         points: impl Iterator<Item = (Ts, f64)>,
-    ) -> BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)> {
+    ) -> FoldedCells {
         let mut cells = BTreeMap::new();
         for (ts, v) in points.filter(|(_, v)| v.is_finite()) {
             let c = cells.entry(ts / 25).or_insert((0, (ts, v), (ts, v), v, v));
@@ -2265,7 +2270,7 @@ mod ordered_chunk_tests {
                     .into_iter()
                     .map(|p| (p.ts, p.values[field])),
             );
-            let mut folded: BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)> = BTreeMap::new();
+            let mut folded: FoldedCells = BTreeMap::new();
             for block in &blocks {
                 match block {
                     RangeBlock::Points(pts) => {
@@ -2287,9 +2292,9 @@ mod ordered_chunk_tests {
     }
 
     fn merge_cell(
-        into: &mut BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)>,
+        into: &mut FoldedCells,
         cell: i64,
-        c: (u64, (Ts, f64), (Ts, f64), f64, f64),
+        c: FoldedCell,
     ) {
         match into.get_mut(&cell) {
             None => {

@@ -696,6 +696,9 @@ pub(crate) struct UserTableProvider {
     full: RwLock<Option<RecordBatch>>,
 }
 
+/// The rows of a covering partial index and the index's name.
+type PartialIndexRows = (String, Vec<Vec<Cell>>);
+
 impl UserTableProvider {
     pub fn new(store: TableStore, schema: TableSchema) -> Self {
         let arrow_schema = arrow_schema(&schema);
@@ -743,10 +746,7 @@ impl UserTableProvider {
 
     /// The rows of a partial index whose predicate the query's `WHERE` implies,
     /// with the index name. `None` falls back to the existing scan paths.
-    fn partial_index_rows(
-        &self,
-        filters: &[Expr],
-    ) -> Result<Option<(String, Vec<Vec<Cell>>)>, String> {
+    fn partial_index_rows(&self, filters: &[Expr]) -> Result<Option<PartialIndexRows>, String> {
         let leaves: Vec<CheckExpr> = filters
             .iter()
             .filter_map(|filter| check_leaf(filter, &self.schema))

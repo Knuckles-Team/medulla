@@ -24,7 +24,7 @@ pub use medulla_protocol_types::protocol::QueryResult;
 use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,
 };
-use super::catalog::register_system_catalogs;
+use super::catalog::{register_system_catalogs, SystemCatalogInputs};
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, reads_view_status, StoreCatalog};
@@ -659,13 +659,15 @@ impl SqlContextCache {
             &built.ctx,
             &built.nodes_schema,
             &built.edges_schema,
-            &built.user_relations,
-            &catalog.views,
-            &catalog.functions,
-            &catalog.property_graphs,
-            Some(&epoch.graph),
-            &catalog.tables,
-            &catalog.secondary_indexes,
+            &SystemCatalogInputs {
+                user_relations: &built.user_relations,
+                views: &catalog.views,
+                functions: &catalog.functions,
+                property_graphs: &catalog.property_graphs,
+                statement_graph: Some(&epoch.graph),
+                tables: &catalog.tables,
+                secondary_indexes: &catalog.secondary_indexes,
+            },
         )
         .await?;
         super::index_status::register(&built.ctx, &catalog.index_status)?;
@@ -1059,13 +1061,15 @@ fn collect_sql_batches(
             &ctx,
             &built.nodes_schema,
             &built.edges_schema,
-            &built.user_relations,
-            &catalog.views,
-            &catalog.functions,
-            &catalog.property_graphs,
-            catalog.statement_graph.as_deref(),
-            &catalog.tables,
-            &catalog.secondary_indexes,
+            &SystemCatalogInputs {
+                user_relations: &built.user_relations,
+                views: &catalog.views,
+                functions: &catalog.functions,
+                property_graphs: &catalog.property_graphs,
+                statement_graph: catalog.statement_graph.as_deref(),
+                tables: &catalog.tables,
+                secondary_indexes: &catalog.secondary_indexes,
+            },
         )
         .await?;
         super::index_status::register(&ctx, &catalog.index_status)?;

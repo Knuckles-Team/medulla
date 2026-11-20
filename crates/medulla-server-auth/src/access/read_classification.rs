@@ -463,31 +463,6 @@ pub(super) const REASON_ONTOLOGY_DIFF_READ_OP: &str =
 pub(super) const READ_ONLY_OPS: &[(&str, &str, &str)] =
     &[("GraphSchema", "diff_ontology", REASON_ONTOLOGY_DIFF_READ_OP)];
 
-#[cfg(test)]
-mod read_only_ops_tests {
-    use super::READ_ONLY_OPS;
-    use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
-    use medulla_types::contract::ResourceId;
-
-    // spec: MEDULLA-TYPED-PACKS-R804.3
-    #[test]
-    fn diff_ontology_is_a_classified_read_op_of_graph_schema() {
-        let op = GraphSchemaOp::DiffOntology {
-            connector: ResourceId::new("weather").unwrap(),
-            ontology_iri: "http://example.org/onto".to_string(),
-            from_revision: 1,
-            to: DiffTarget::Revision(1),
-        };
-        assert!(READ_ONLY_OPS
-            .iter()
-            .any(|(method, token, _)| *method == "GraphSchema" && *token == op.action_token()));
-        // No other graph-schema operation is a read.
-        for (method, token, _) in READ_ONLY_OPS {
-            assert_eq!((*method, *token), ("GraphSchema", "diff_ontology"));
-        }
-    }
-}
-
 pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_FOREIGN_READ_SESSION_OWNER_SCOPED
     ("ForeignReadAbort", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
@@ -753,3 +728,28 @@ pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
     ("ClusterHierarchyClusters", "VIZ-1: reads the derived cluster_hierarchy store, not graph rows; cluster membership still reflects graph structure, and that disclosure question is untraced"),
     ("ClusterHierarchyExpand", "VIZ-1: same store and same untraced disclosure question as ClusterHierarchyClusters"),
 ];
+
+#[cfg(test)]
+mod read_only_ops_tests {
+    use super::READ_ONLY_OPS;
+    use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
+    use medulla_types::contract::ResourceId;
+
+    // spec: MEDULLA-TYPED-PACKS-R804.3
+    #[test]
+    fn diff_ontology_is_a_classified_read_op_of_graph_schema() {
+        let op = GraphSchemaOp::DiffOntology {
+            connector: ResourceId::new("weather").unwrap(),
+            ontology_iri: "http://example.org/onto".to_string(),
+            from_revision: 1,
+            to: DiffTarget::Revision(1),
+        };
+        assert!(READ_ONLY_OPS
+            .iter()
+            .any(|(method, token, _)| *method == "GraphSchema" && *token == op.action_token()));
+        // No other graph-schema operation is a read.
+        for (method, token, _) in READ_ONLY_OPS {
+            assert_eq!((*method, *token), ("GraphSchema", "diff_ontology"));
+        }
+    }
+}

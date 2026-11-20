@@ -329,7 +329,9 @@ async fn forecast_matches_independent_powers() {
     negative[0] = vec![1.1, -0.1, 0.0];
     let mut loose = good.clone();
     loose[1][0] = 0.3;
-    let cases: Vec<(&str, Vec<&str>, Vec<Vec<f64>>)> = vec![
+    /// A model name, its state ids and its transition matrix.
+    type MatrixCase<'a> = (&'a str, Vec<&'a str>, Vec<Vec<f64>>);
+    let cases: Vec<MatrixCase<'_>> = vec![
         ("negative", IDS.to_vec(), negative),
         ("loose", IDS.to_vec(), loose),
         ("duplicate", vec!["bull", "bull", "bear"], good.clone()),
