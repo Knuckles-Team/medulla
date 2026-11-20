@@ -132,6 +132,16 @@ The seven design answers that bind every row:
 - **State.** Queue, leases, retry, dead letter and checkpoints are engine state in the job store. Job bodies keep none.
 - **Environment.** Each tunable is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`. Retention is `ingest.retention_required`.
 
+### Decisions: governance admission
+
+Governance refusal is per record and writes nothing; the receipt carries `GovernanceReport{governed, refused, marked}`. Retention policy is the engine knob `ingest.retention_required`. The governance bench calls `admit_record_governance`. Rationale is in [research.md](research.md).
+
+Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enumeration` (stage pages, check the declared digest, plan with `plan_reconcile_digests`), `split_due`, `sweep_methods` (tombstone or Document cascade, marker and plan update) and `spawn_reconcile_sweep` (started in `src/main.rs`).
+
+### Non-record kind dispatch
+`source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
+- Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim_admitted` in `crates/medulla-h-jobs/src/task_queue_served.rs`, reached from the router's control-plane task-queue arm; lane ownership in `lane_of_queue`; the ingest queue rule in `IngestSeam`.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Rows that edit `source_ingestion.rs` (`prepare`, `admit_record`) run in series; rows in separate new files run in parallel.
@@ -164,13 +174,3 @@ none
 - Source batch kinds from connectors: `MEDULLA-INGEST-WORKER-R902.3.1` provides, `SCION-SOURCE-INGEST-R805.1` consumes. Contract: [scion-source-batch-kinds.md](contracts/scion-source-batch-kinds.md).
 - Data-prep declaration: `MEDULLA-INGEST-WORKER-R001.1008` provides, `ARBORA-FLEET-R058` consumes. Contract: [arbora-data-prep-declaration.md](contracts/arbora-data-prep-declaration.md).
 - Document and transcript batches: `MEDULLA-INGEST-WORKER-R003.8` provides, `SCION-SOURCE-INGEST-R010` consumes. Contract: [scion-document-transcript-ingest.md](contracts/scion-document-transcript-ingest.md).
-
-### Decisions: governance admission
-
-Governance refusal is per record and writes nothing; the receipt carries `GovernanceReport{governed, refused, marked}`. Retention policy is the engine knob `ingest.retention_required`. The governance bench calls `admit_record_governance`. Rationale is in [research.md](research.md).
-
-Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enumeration` (stage pages, check the declared digest, plan with `plan_reconcile_digests`), `split_due`, `sweep_methods` (tombstone or Document cascade, marker and plan update) and `spawn_reconcile_sweep` (started in `src/main.rs`).
-
-### Non-record kind dispatch
-`source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
-- Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim_admitted` in `crates/medulla-h-jobs/src/task_queue_served.rs`, reached from the router's control-plane task-queue arm; lane ownership in `lane_of_queue`; the ingest queue rule in `IngestSeam`.
