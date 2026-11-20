@@ -17,7 +17,9 @@ use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, Ste
 use medulla_core::stewardship::{open_change_request, TargetScopes};
 use medulla_graph_core::graph::{GraphCore, SchemaSourceOrigin};
 use medulla_types::contract::{Digest256, ServerErrorCode, TenantId};
-use serde_json::{json, Value};
+use serde_json::json;
+#[cfg(test)]
+use serde_json::Value;
 
 use super::edits;
 use super::ontology_diff::{diff_axioms, impact, snapshot_from_core, SchemaSide};
