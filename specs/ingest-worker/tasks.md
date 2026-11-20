@@ -47,6 +47,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T041 [US3] MEDULLA-INGEST-WORKER-R003.16 Refusal: typed transcript errors
 - [ ] T042 [US3] MEDULLA-INGEST-WORKER-R003.17.1 Evidence: transcript and quarantine reads enforce stored policy
 - [ ] T043 [US3] MEDULLA-INGEST-WORKER-R003.18 Hot-path proof: transcripts through the wire method
+- [x] T124 [US3] MEDULLA-INGEST-WORKER-R003.19 Behavior: every ingested record carries the core provenance predicates
 - [ ] T044 [US1] MEDULLA-INGEST-WORKER-R604.1 Model: lanes, queue classes and lane metrics
 - [ ] T045 [US1] MEDULLA-INGEST-WORKER-R604.2 Behavior: ingest stage to queue class table
 - [ ] T046 [US1] MEDULLA-INGEST-WORKER-R604.3 Wiring: admission is enforced inside the claim
