@@ -4,7 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::promotion::RevisionStage;
+use super::promotion::{RevisionEvent, RevisionStage};
+use medulla_types::transition_refused::TransitionRefused;
 
 /// The schema version of [`RevisionProposalPage`].
 pub const REVISION_PROPOSAL_PAGE_SCHEMA_VERSION: u16 = 1;
@@ -30,6 +31,13 @@ pub struct RevisionRow {
 }
 
 impl RevisionRow {
+    /// The only writer of `stage`: delegates to [`RevisionStage::apply`] and
+    /// leaves the row untouched when the pair is refused.
+    pub fn transition(&mut self, event: RevisionEvent) -> Result<(), TransitionRefused> {
+        self.stage = self.stage.apply(event)?;
+        Ok(())
+    }
+
     /// The row's store key.
     pub fn key(&self) -> String {
         format!("{REVISION_KEY_PREFIX}{:020}:{}", self.created_ms, self.id)

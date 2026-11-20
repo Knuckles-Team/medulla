@@ -943,6 +943,19 @@ fn revision_machine_classes_extend_core() {
     sm::assert_extends_core("Revision");
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R831.2
+#[test]
+fn feature_ledger_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_decision_types::decision::feature_match::FEATURE_LEDGER_MACHINE);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R831.4
+#[test]
+fn profile_grant_and_reservation_matches_edge_table() {
+    sm::assert_matches(&medulla_types::profile_grant_machine::PROFILE_GRANT_MACHINE);
+    sm::assert_matches(&medulla_types::reservation_machine::RESERVATION_MACHINE);
+}
+
 // spec: MEDULLA-CLUSTER-R004.5
 #[test]
 fn cluster_run_machine_matches_edge_table() {

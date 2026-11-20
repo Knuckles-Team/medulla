@@ -152,6 +152,15 @@ pub struct LedgerEntry {
     pub plan_id: Option<String>,
 }
 
+impl LedgerEntry {
+    /// The only writer of `status`: delegates to [`LedgerStatus::apply`] and
+    /// leaves the entry untouched when the pair is refused.
+    pub fn transition(&mut self, event: LedgerEvent) -> Result<(), TransitionRefused> {
+        self.status = self.status.apply(event)?;
+        Ok(())
+    }
+}
+
 /// A plan that proposes to close a set of gaps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -342,6 +351,88 @@ mod tests {
                 }
             }
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.2
+    #[test]
+    fn every_legal_transition_applies() {
+        let legal = [
+            (LedgerStatus::Open, LedgerEvent::Plan, LedgerStatus::Planned),
+            (
+                LedgerStatus::Planned,
+                LedgerEvent::Close,
+                LedgerStatus::Closed,
+            ),
+        ];
+        assert_eq!(legal.len(), FEATURE_LEDGER_MACHINE.edges.len());
+        for (from, event, to) in legal {
+            assert_eq!(from.apply(event), Ok(to));
+            let mut entry = entry_in(from);
+            assert_eq!(entry.transition(event), Ok(()));
+            assert_eq!(entry.status, to);
+        }
+    }
+
+    fn entry_in(status: LedgerStatus) -> LedgerEntry {
+        LedgerEntry {
+            feature_id: "f1".into(),
+            status,
+            closed_by: None,
+            revision: 0,
+            match_ids: Vec::new(),
+            plan_id: None,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.2
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        for state in STATES {
+            for event in EVENTS {
+                if FEATURE_LEDGER_MACHINE
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    continue;
+                }
+                let refused = state.apply(event).unwrap_err();
+                assert_eq!(refused.machine, "FeatureLedgerMachine");
+                assert_eq!(refused.from, state.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+                // The holder keeps its state when the transition is refused.
+                let mut entry = entry_in(state);
+                assert_eq!(entry.transition(event), Err(refused));
+                assert_eq!(entry.status, state);
+            }
+        }
+    }
+
+    /// Lines that assign a `status` field outside the transition function.
+    // spec: MEDULLA-DECISION-ENGINE-R831.2
+    #[test]
+    fn no_writer_sets_status_outside_transition() {
+        for source in [
+            include_str!("../../../medulla-decision-stats/src/decision/feature_match.rs"),
+            include_str!("../../../medulla-h-decide/src/decide/feature_ledger.rs"),
+        ] {
+            let production = source.split("#[cfg(test)]").next().unwrap();
+            let writes: Vec<&str> = production
+                .lines()
+                .map(str::trim)
+                .filter(|l| !l.starts_with("//") && l.contains(".status = "))
+                .collect();
+            assert!(writes.is_empty(), "{writes:?}");
+        }
+        let own = include_str!("feature_match.rs");
+        let production = own.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//") && l.contains(".status = "))
+            .collect();
+        assert_eq!(writes, vec!["self.status = self.status.apply(event)?;"]);
     }
 
     const MACHINES: &str = include_str!("../../../medulla-core/ontology/state-machines-v1.ttl");

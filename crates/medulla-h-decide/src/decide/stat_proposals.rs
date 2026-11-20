@@ -126,9 +126,7 @@ fn retire_champions(
         if !same_subject || held.stage != RevisionStage::Champion || held.id == taking.id {
             continue;
         }
-        held.stage = held
-            .stage
-            .apply(RevisionEvent::Retire)
+        held.transition(RevisionEvent::Retire)
             .map_err(|refused| format!("REVISION_TRANSITION_REFUSED: {refused:?}"))?;
         store.swap_decision_artifact(tenant, &key, Some(bytes), encode_artifact(&held)?)?;
     }

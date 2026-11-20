@@ -237,15 +237,15 @@ pub const DISCLOSURE_UNAUTHORIZED: RefusalCode = RefusalCode::new("DISCLOSURE_UN
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum InstructionPhase {
+pub enum DisclosureTiming {
     /// Disclosed before execution starts.
     Initial,
     /// Withheld until its trigger occurs during the run.
     Runtime,
 }
 
-impl InstructionPhase {
-    /// The wire word of the phase.
+impl DisclosureTiming {
+    /// The wire word of the timing.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Initial => "initial",
@@ -253,7 +253,7 @@ impl InstructionPhase {
         }
     }
 
-    /// The phase named by a wire word.
+    /// The timing named by a wire word.
     pub fn parse(word: &str) -> Option<Self> {
         match word {
             "initial" => Some(Self::Initial),
@@ -274,7 +274,7 @@ pub struct InstructionVersion {
     pub version: u64,
     /// Digest of the instructions this version discloses.
     pub digest: String,
-    pub phase: InstructionPhase,
+    pub timing: DisclosureTiming,
     /// The trigger that releases a runtime version; absent for an initial one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_iri: Option<String>,
@@ -301,11 +301,11 @@ impl InstructionVersion {
             .trigger_iri
             .as_deref()
             .is_some_and(|iri| !iri.trim().is_empty());
-        match (self.phase, named) {
-            (InstructionPhase::Runtime, false) => {
+        match (self.timing, named) {
+            (DisclosureTiming::Runtime, false) => {
                 Err("a runtime instruction version names its trigger_iri".to_string())
             }
-            (InstructionPhase::Initial, _) if self.trigger_iri.is_some() => {
+            (DisclosureTiming::Initial, _) if self.trigger_iri.is_some() => {
                 Err("an initial instruction version names no trigger_iri".to_string())
             }
             _ => Ok(()),
@@ -448,13 +448,13 @@ mod version_tests {
     use super::*;
     use crate::decision::statistical::StatisticalErrorCode;
 
-    fn version(phase: InstructionPhase, trigger: Option<&str>) -> InstructionVersion {
+    fn version(timing: DisclosureTiming, trigger: Option<&str>) -> InstructionVersion {
         InstructionVersion {
             tenant_id: "tenant-a".to_string(),
             instruction_set_id: "set-a".to_string(),
             version: 3,
             digest: instructions_hash("do the thing"),
-            phase,
+            timing,
             trigger_iri: trigger.map(str::to_string),
         }
     }
@@ -473,7 +473,7 @@ mod version_tests {
     // spec: MEDULLA-DECISION-ENGINE-R137.100
     #[test]
     fn stored_version_round_trips_and_refuses_a_malformed_shape() {
-        let runtime = version(InstructionPhase::Runtime, Some("trigger:relevance"));
+        let runtime = version(DisclosureTiming::Runtime, Some("trigger:relevance"));
         assert_eq!(runtime.node_id(), "instruction-version:set-a:3");
         let value = runtime.to_node_properties();
         let props = value.as_object().unwrap();
@@ -484,8 +484,8 @@ mod version_tests {
 
         // A runtime version without a trigger and an initial one with a trigger
         // are not versions.
-        assert!(version(InstructionPhase::Runtime, None).validate().is_err());
-        assert!(version(InstructionPhase::Initial, Some("t"))
+        assert!(version(DisclosureTiming::Runtime, None).validate().is_err());
+        assert!(version(DisclosureTiming::Initial, Some("t"))
             .validate()
             .is_err());
         // A node without the marker, or with an unknown field, is not one.
@@ -495,5 +495,29 @@ mod version_tests {
         let mut extra = props.clone();
         extra.insert("surplus".to_string(), 1.into());
         assert_eq!(InstructionVersion::from_node_properties(&extra), None);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.6
+    #[test]
+    fn disclosure_timing_is_not_a_lifecycle_field() {
+        let runtime = version(DisclosureTiming::Runtime, Some("trigger:relevance"));
+        let value = runtime.to_node_properties();
+        let props = value.as_object().unwrap();
+        // The field is named for what it is; the wire words stay.
+        assert_eq!(props.get("timing"), Some(&serde_json::json!("runtime")));
+        assert!(!props.contains_key("phase"));
+        let initial = version(DisclosureTiming::Initial, None);
+        assert_eq!(
+            initial.to_node_properties()["timing"],
+            serde_json::json!("initial")
+        );
+        for word in ["initial", "runtime"] {
+            assert_eq!(DisclosureTiming::parse(word).unwrap().as_str(), word);
+        }
+        // A node under the retired field name is not a version.
+        let mut old = props.clone();
+        let timing = old.remove("timing").unwrap();
+        old.insert("phase".to_string(), timing);
+        assert_eq!(InstructionVersion::from_node_properties(&old), None);
     }
 }

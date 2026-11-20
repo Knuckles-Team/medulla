@@ -196,4 +196,50 @@ mod tests {
             )));
         }
     }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn every_legal_transition_applies() {
+        assert_eq!(RESERVATION_MACHINE.edges.len(), 2);
+        for event in EVENTS {
+            assert_eq!(ReservationState::Reserved.apply(event), Ok(event.target()));
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &RESERVATION_MACHINE;
+        for &state in machine.states {
+            for &event in machine.events {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    continue;
+                }
+                let refused = state.apply(event).unwrap_err();
+                assert_eq!(refused.machine, "ReservationMachine");
+                assert_eq!(refused.from, state.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.reason, TransitionRefusalReason::TerminalState);
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+            }
+        }
+    }
+
+    /// Lines that assign a `state` field outside the transition function.
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn no_writer_sets_state_outside_transition() {
+        let source = include_str!("../../medulla-isolation/src/rbac_persist/reservation.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//") && l.contains(".state = "))
+            .collect();
+        assert_eq!(writes, vec!["self.state = self.state.resolve(event)?;"]);
+    }
 }

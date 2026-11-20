@@ -7,7 +7,7 @@ use super::log_tests::log_op;
 use super::*;
 use medulla_decision_types::decision::task_plan::fanout::{
     aggregate_digest, ChildSummary, FanoutAggregateRequest, FanoutBudget, FanoutEntry,
-    FanoutStatus, FanoutSubtaskResult, FinalArtifactReceipt,
+    FanoutOutcome, FanoutSubtaskResult, FinalArtifactReceipt,
 };
 use medulla_decision_types::decision::task_plan::{
     plan_explicit_tasks, AggregationOp, FinalArtifactDecl, TaskPlanAggregation, TaskPlanProposal,
@@ -28,7 +28,7 @@ fn plan() -> String {
 fn ok(task: &str, c: char) -> FanoutSubtaskResult {
     FanoutSubtaskResult {
         task_id: task.to_string(),
-        status: FanoutStatus::Ok,
+        outcome: FanoutOutcome::Ok,
         result_digest: Some(digest(c)),
         receipt_id: format!("receipt-{task}"),
         receipt_digest: digest('7'),
@@ -40,7 +40,7 @@ fn ok(task: &str, c: char) -> FanoutSubtaskResult {
 fn failed(task: &str, gap: &str) -> FanoutSubtaskResult {
     FanoutSubtaskResult {
         task_id: task.to_string(),
-        status: FanoutStatus::Failed,
+        outcome: FanoutOutcome::Failed,
         result_digest: None,
         receipt_id: format!("receipt-{task}"),
         receipt_digest: digest('7'),
@@ -396,10 +396,10 @@ async fn readback(h: &Harness) {
             };
             FanoutEntry {
                 task_id: field("task="),
-                status: if field("status=") == "ok" {
-                    FanoutStatus::Ok
+                outcome: if field("status=") == "ok" {
+                    FanoutOutcome::Ok
                 } else {
-                    FanoutStatus::Failed
+                    FanoutOutcome::Failed
                 },
                 value: field("value="),
             }

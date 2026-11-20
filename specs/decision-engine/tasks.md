@@ -947,12 +947,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T934 [US6] MEDULLA-DECISION-ENGINE-R830.11 TrainingRunOutcome rename (not a lifecycle)
 - [ ] T935 [US6] MEDULLA-DECISION-ENGINE-R831 Census debt of the decision engine is closed (rollup)
 - [ ] T936 [US6] MEDULLA-DECISION-ENGINE-R831.1 VerifierCase/VerifierCaseState state machine: new VerifierCaseState::apply, route every writer through it
-- [ ] T937 [US6] MEDULLA-DECISION-ENGINE-R831.2 LedgerEntry/LedgerStatus state machine: holder-level transition delegating to LedgerStatus::apply
-- [ ] T938 [US6] MEDULLA-DECISION-ENGINE-R831.3 RevisionRow, OptimizationResult/RevisionStage state machine: holder-level transition delegating to RevisionStage::apply
-- [ ] T939 [US6] MEDULLA-DECISION-ENGINE-R831.4 ProfileUseGrant/ProfileGrantState, ReservationRecord/ReservationState state machine: holder-level transition delegating to ProfileGrantState and ReservationState::apply
+- [x] T937 [US6] MEDULLA-DECISION-ENGINE-R831.2 LedgerEntry/LedgerStatus state machine: holder-level transition delegating to LedgerStatus::apply
+- [x] T938 [US6] MEDULLA-DECISION-ENGINE-R831.3 RevisionRow, OptimizationResult/RevisionStage state machine: holder-level transition delegating to RevisionStage::apply
+- [x] T939 [US6] MEDULLA-DECISION-ENGINE-R831.4 ProfileUseGrant/ProfileGrantState, ReservationRecord/ReservationState state machine: holder-level transition delegating to ProfileGrantState and ReservationState::apply
 - [ ] T940 [US6] MEDULLA-DECISION-ENGINE-R831.5 AdapterMonitored/MonitorState is a verdict, not a lifecycle: rename, no machine
-- [ ] T941 [US6] MEDULLA-DECISION-ENGINE-R831.6 InstructionVersion, Asked/InstructionPhase is a disclosure timing, not a lifecycle: rename, no machine
-- [ ] T942 [US6] MEDULLA-DECISION-ENGINE-R831.7 FanoutEntry, FanoutSubtaskResult/FanoutStatus is a subtask outcome, not a lifecycle: rename, no machine
+- [x] T941 [US6] MEDULLA-DECISION-ENGINE-R831.6 InstructionVersion, Asked/InstructionPhase is a disclosure timing, not a lifecycle: rename, no machine
+- [x] T942 [US6] MEDULLA-DECISION-ENGINE-R831.7 FanoutEntry, FanoutSubtaskResult/FanoutStatus is a subtask outcome, not a lifecycle: rename, no machine
 - [ ] T943 [US6] MEDULLA-DECISION-ENGINE-R831.8 ProgramStep state names are node ids: rename, no machine
 - [ ] T944 [US6] MEDULLA-DECISION-ENGINE-R831.9 RouteChoice, RouteExecuted stage is a rule name, not a lifecycle stage: rename, no machine
 - [ ] T945 [US6] MEDULLA-DECISION-ENGINE-R831.10 HarnessPart discriminator `status` is a decision tag, not a lifecycle: rename, no machine

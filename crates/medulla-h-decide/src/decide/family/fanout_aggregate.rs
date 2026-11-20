@@ -105,7 +105,7 @@ fn premises(
             fact: format!(
                 "fanout_result:task={};status={};receipt={}",
                 result.task_id,
-                result.status.name(),
+                result.outcome.name(),
                 result.receipt_id
             ),
             class: PremiseClass::Claim,
@@ -118,7 +118,7 @@ fn premises(
             fact: format!(
                 "fanout_entry:task={};status={};value={}",
                 entry.task_id,
-                entry.status.name(),
+                entry.outcome.name(),
                 entry.value
             ),
             class: PremiseClass::Definition,

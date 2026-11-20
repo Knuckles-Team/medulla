@@ -49,6 +49,16 @@ pub struct ReservationRecord {
 }
 
 impl ReservationRecord {
+    /// The only writer of `state`: delegates to [`ReservationState::resolve`] (a repeat of the
+    /// applied decision replays). A refused event leaves the record untouched.
+    pub fn transition(
+        &mut self,
+        event: ReservationEvent,
+    ) -> Result<(), medulla_types::transition_refused::TransitionRefused> {
+        self.state = self.state.resolve(event)?;
+        Ok(())
+    }
+
     /// The evidence premise a commit record lists: `rbac_revision:<n>`.
     pub fn premise(&self) -> String {
         format!("rbac_revision:{}", self.revision)
@@ -168,17 +178,13 @@ impl RbacStore {
                 txn_id: txn_id.to_string(),
             });
         };
-        let next = held
-            .state
-            .resolve(event)
+        let mut resolved = held.clone();
+        resolved
+            .transition(event)
             .map_err(RbacPersistError::Machine)?;
-        if next == held.state {
+        if resolved.state == held.state {
             return Ok(held);
         }
-        let resolved = ReservationRecord {
-            state: next,
-            ..held
-        };
         let stored = resolved.clone();
         commit_authority_mutation(
             self,

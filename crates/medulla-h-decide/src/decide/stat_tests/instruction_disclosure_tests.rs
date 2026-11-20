@@ -8,7 +8,7 @@ use std::time::Instant;
 use super::super::stat_executor::ExecutionContext;
 use super::*;
 use medulla_decision_types::decision::instruction_disclosure::{
-    instructions_hash, InstructionPhase, InstructionVersion,
+    instructions_hash, DisclosureTiming, InstructionVersion,
 };
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 
@@ -21,7 +21,7 @@ fn version(
     tenant: &str,
     set: &str,
     version: u64,
-    phase: InstructionPhase,
+    timing: DisclosureTiming,
     trigger: Option<&str>,
 ) -> InstructionVersion {
     InstructionVersion {
@@ -29,7 +29,7 @@ fn version(
         instruction_set_id: set.to_string(),
         version,
         digest: instructions_hash(&format!("{set}-{version}")),
-        phase,
+        timing,
         trigger_iri: trigger.map(str::to_string),
     }
 }
@@ -52,7 +52,7 @@ fn view_of(versions: &[InstructionVersion]) -> medulla_graph_core::graph::GraphV
 /// Two sets: `set-a` holds two initial versions and two runtime refinements
 /// behind different triggers, `set-b` only an initial version.
 fn held() -> Vec<InstructionVersion> {
-    use InstructionPhase::{Initial, Runtime};
+    use DisclosureTiming::{Initial, Runtime};
     vec![
         version(TENANT, "set-a", 1, Initial, None),
         version(TENANT, "set-a", 2, Initial, None),
@@ -250,7 +250,7 @@ async fn initial_then_runtime_disclosure() {
 // spec: MEDULLA-DECISION-ENGINE-R137.100
 #[tokio::test]
 async fn stale_or_foreign_version_refuses() {
-    use InstructionPhase::Initial;
+    use DisclosureTiming::Initial;
     let h = Harness::new().await;
     let mut versions = held();
     // Another tenant holds a newer version of set-a and a set of its own.

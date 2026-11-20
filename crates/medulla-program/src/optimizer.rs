@@ -9,7 +9,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 
-use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+use medulla_decision_outcome_types::decision::promotion::{RevisionEvent, RevisionStage};
+use medulla_types::transition_refused::TransitionRefused;
 use medulla_modality::{OpaqueRef, PolicyEnvelope};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -507,6 +508,14 @@ pub struct OptimizationResult {
 }
 
 impl OptimizationResult {
+    /// The only writer of `stage` after construction: delegates to
+    /// [`RevisionStage::apply`] and leaves the result untouched when refused.
+    /// Construction chooses the initial stage from the evaluated outcome.
+    pub fn transition(&mut self, event: RevisionEvent) -> Result<(), TransitionRefused> {
+        self.stage = self.stage.apply(event)?;
+        Ok(())
+    }
+
     pub fn selected_candidate(&self) -> Option<&ProgramCandidate> {
         let selected = self.selected_candidate_ref.as_ref()?;
         self.candidates

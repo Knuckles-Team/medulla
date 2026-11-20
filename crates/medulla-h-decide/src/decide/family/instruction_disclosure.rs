@@ -22,7 +22,7 @@ use medulla_decision_stats::decision::instruction_disclosure::{
 };
 use medulla_decision_types::decision::instruction_disclosure::{
     instruction_version_prefix, instructions_hash, scan_limit, timeout_s, DisclosureEvent,
-    DisclosureTrigger, InstructionPhase, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
+    DisclosureTrigger, DisclosureTiming, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
 };
 use medulla_decision_types::decision::record::outcome::AbstainReason;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -64,7 +64,7 @@ pub struct InstructionDisclosureFamily;
 
 /// What the request asks.
 struct Asked {
-    phase: InstructionPhase,
+    timing: DisclosureTiming,
     run_id: String,
     sequence: u64,
     occurred: BTreeSet<String>,
@@ -75,7 +75,7 @@ struct Asked {
 fn asked(request: &DecideRequest) -> Result<Asked, String> {
     let word =
         text_param(request, "phase")?.ok_or_else(|| invalid("parameter phase is required"))?;
-    let phase = InstructionPhase::parse(word)
+    let timing = DisclosureTiming::parse(word)
         .ok_or_else(|| invalid("parameter phase is `initial` or `runtime`"))?;
     let run_id = text_param(request, "run_id")?
         .filter(|id| !id.trim().is_empty())
@@ -88,7 +88,7 @@ fn asked(request: &DecideRequest) -> Result<Asked, String> {
         Some(TypedValue::IriList(iris)) => iris.iter().cloned().collect(),
         Some(_) => return Err(invalid("parameter occurred_triggers is not an IRI list")),
     };
-    if phase == InstructionPhase::Initial && !occurred.is_empty() {
+    if timing == DisclosureTiming::Initial && !occurred.is_empty() {
         return Err(invalid("occurred_triggers apply to the runtime phase only"));
     }
     let mut sets: Vec<String> = json_param(request, "instruction_set_ids")?;
@@ -104,7 +104,7 @@ fn asked(request: &DecideRequest) -> Result<Asked, String> {
         Some(_) => json_param(request, "pinned_digests")?,
     };
     Ok(Asked {
-        phase,
+        timing,
         run_id,
         sequence,
         occurred,
@@ -332,10 +332,10 @@ fn versions_of(view: &GraphView, tenant: &str, set: &str) -> Vec<InstructionVers
 fn selected(asked: &Asked, versions: &[InstructionVersion]) -> Option<InstructionVersion> {
     versions
         .iter()
-        .filter(|version| match asked.phase {
-            InstructionPhase::Initial => version.phase == InstructionPhase::Initial,
-            InstructionPhase::Runtime => {
-                version.phase == InstructionPhase::Runtime
+        .filter(|version| match asked.timing {
+            DisclosureTiming::Initial => version.timing == DisclosureTiming::Initial,
+            DisclosureTiming::Runtime => {
+                version.timing == DisclosureTiming::Runtime
                     && version
                         .trigger_iri
                         .as_ref()
@@ -392,7 +392,7 @@ fn premise(fact: String, class: PremiseClass, source: FamilyPremiseSource) -> Fa
 fn premises_of(chosen: &[InstructionVersion], asked: &Asked) -> Vec<FamilyPremise> {
     let mut out = vec![
         premise(
-            format!("instruction_disclosure.phase={}", asked.phase.as_str()),
+            format!("instruction_disclosure.phase={}", asked.timing.as_str()),
             PremiseClass::Claim,
             FamilyPremiseSource::Request("params.phase"),
         ),

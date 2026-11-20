@@ -110,4 +110,51 @@ mod tests {
         assert!(text.contains(":toState :ProfileGrantMachine_Revoked"));
         assert!(text.contains(":firedBy :ProfileGrantMachine_Event_Revoke"));
     }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn every_legal_transition_applies() {
+        assert_eq!(PROFILE_GRANT_MACHINE.edges.len(), 1);
+        assert_eq!(
+            ProfileGrantState::Active.apply(ProfileGrantEvent::Revoke),
+            Ok(ProfileGrantState::Revoked)
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &PROFILE_GRANT_MACHINE;
+        for &state in machine.states {
+            for &event in machine.events {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    continue;
+                }
+                let refused = state.apply(event).unwrap_err();
+                assert_eq!(refused.machine, "ProfileGrantMachine");
+                assert_eq!(refused.from, state.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.reason, TransitionRefusalReason::TerminalState);
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+            }
+        }
+    }
+
+    /// Lines that assign a `state` field outside the transition function.
+    // spec: MEDULLA-DECISION-ENGINE-R831.4
+    #[test]
+    fn no_writer_sets_state_outside_transition() {
+        let source = include_str!("../../medulla-isolation/src/rbac_persist/profile_grant.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//") && l.contains(".state = "))
+            .collect();
+        assert_eq!(writes, vec!["self.state = self.state.apply(event)?;"]);
+    }
 }

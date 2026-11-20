@@ -63,6 +63,18 @@ pub struct ProfileUseGrant {
 }
 
 impl ProfileUseGrant {
+    /// The only writer of `state`: delegates to [`ProfileGrantState::apply`] and stamps
+    /// `state_changed_at_ms` in the same step. A refused event leaves the grant untouched.
+    pub fn transition(
+        &mut self,
+        event: ProfileGrantEvent,
+        at_ms: u64,
+    ) -> Result<(), medulla_types::transition_refused::TransitionRefused> {
+        self.state = self.state.apply(event)?;
+        self.state_changed_at_ms = at_ms;
+        Ok(())
+    }
+
     /// Whether the principal may use the profile under this grant right now.
     pub fn is_active(&self) -> bool {
         self.state == ProfileGrantState::Active
@@ -168,14 +180,10 @@ impl RbacStore {
             .into_iter()
             .find(|stored| stored.grant_id == grant_id)
             .ok_or_else(|| RbacPersistError::GrantUnknown(grant_id.to_string()))?;
-        let revoked = ProfileUseGrant {
-            state: held
-                .state
-                .apply(ProfileGrantEvent::Revoke)
-                .map_err(RbacPersistError::Machine)?,
-            state_changed_at_ms: revoked_at_ms,
-            ..held
-        };
+        let mut revoked = held;
+        revoked
+            .transition(ProfileGrantEvent::Revoke, revoked_at_ms)
+            .map_err(RbacPersistError::Machine)?;
         let row = serde_json::to_vec(&revoked)?;
         let key = revoked.grant_id.clone();
         commit_authority_mutation(

@@ -299,15 +299,11 @@ pub fn advance_ledger(
             found: entry.revision,
         });
     }
-    let status = entry
-        .status
-        .apply(event)
+    let mut next = entry.clone();
+    next.transition(event)
         .map_err(LedgerChangeError::Transition)?;
-    Ok(LedgerEntry {
-        status,
-        revision: entry.revision + 1,
-        ..entry.clone()
-    })
+    next.revision += 1;
+    Ok(next)
 }
 
 #[cfg(test)]

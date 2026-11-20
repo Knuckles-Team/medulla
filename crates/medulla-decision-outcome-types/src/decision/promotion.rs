@@ -612,6 +612,91 @@ mod tests {
         assert_eq!(REVISION_MACHINE.edges.len(), legal.len());
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R831.3
+    #[test]
+    fn every_legal_transition_applies() {
+        use RevisionEvent::*;
+        use RevisionStage::*;
+        let legal = [
+            (Draft, Evaluate, Evaluated),
+            (Evaluated, Publish, Published),
+            (Published, Promote, Champion),
+            (Champion, Retire, Retired),
+            (Published, Retire, Retired),
+            (Evaluated, Retire, Retired),
+            (Retired, Reinstate, Champion),
+        ];
+        assert_eq!(legal.len(), REVISION_MACHINE.edges.len());
+        for (from, event, to) in legal {
+            assert_eq!(from.apply(event), Ok(to));
+            let mut row = revision_row(from);
+            assert_eq!(row.transition(event), Ok(()));
+            assert_eq!(row.stage, to);
+        }
+    }
+
+    fn revision_row(stage: RevisionStage) -> super::super::revision_list::RevisionRow {
+        super::super::revision_list::RevisionRow {
+            id: "r1".into(),
+            subject_kind: "harness".into(),
+            subject_ref: "h1".into(),
+            stage,
+            digest: "d".into(),
+            evaluation_receipt_id: None,
+            created_ms: 1,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.3
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        for &from in REVISION_MACHINE.states {
+            for &event in REVISION_MACHINE.events {
+                if REVISION_MACHINE
+                    .edges
+                    .iter()
+                    .any(|e| e.from == from && e.event == event)
+                {
+                    continue;
+                }
+                let refused = from.apply(event).unwrap_err();
+                assert_eq!(refused.machine, "RevisionMachine");
+                assert_eq!(refused.from, from.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+                // The holder keeps its stage when the transition is refused.
+                let mut row = revision_row(from);
+                assert_eq!(row.transition(event), Err(refused));
+                assert_eq!(row.stage, from);
+            }
+        }
+    }
+
+    /// Lines that assign a `stage` field outside the transition function.
+    // spec: MEDULLA-DECISION-ENGINE-R831.3
+    #[test]
+    fn no_writer_sets_stage_outside_transition() {
+        for source in [
+            include_str!("../../../medulla-h-decide/src/decide/stat_proposals.rs"),
+            include_str!("../../../medulla-h-decide/src/decide/stat_pointer.rs"),
+            include_str!("../../../medulla-h-decide/src/decide/stat_harness_adoption.rs"),
+            include_str!("../../../medulla-program/src/optimizer.rs"),
+            include_str!("revision_list.rs"),
+        ] {
+            let production = source.split("#[cfg(test)]").next().unwrap();
+            let writes: Vec<&str> = production
+                .lines()
+                .map(str::trim)
+                .filter(|l| !l.starts_with("//") && l.contains(".stage = "))
+                .collect();
+            if source.contains("pub fn transition(&mut self, event: RevisionEvent)") {
+                assert_eq!(writes, vec!["self.stage = self.stage.apply(event)?;"]);
+            } else {
+                assert!(writes.is_empty(), "{writes:?}");
+            }
+        }
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R805.7
     #[test]
     fn promotion_knobs_lie_within_bounds_and_gate_knobs_are_fixed() {

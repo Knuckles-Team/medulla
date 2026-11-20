@@ -69,12 +69,12 @@ pub const REFUSALS: &[RefusalCode] = &[
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum FanoutStatus {
+pub enum FanoutOutcome {
     Ok,
     Failed,
 }
 
-impl FanoutStatus {
+impl FanoutOutcome {
     /// The wire name.
     pub fn name(self) -> &'static str {
         match self {
@@ -132,13 +132,13 @@ pub struct FinalArtifactReceipt {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct FanoutSubtaskResult {
     pub task_id: String,
-    pub status: FanoutStatus,
-    /// The output digest; present exactly when `status` is `ok`.
+    pub outcome: FanoutOutcome,
+    /// The output digest; present exactly when `outcome` is `ok`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub result_digest: Option<String>,
     pub receipt_id: String,
     pub receipt_digest: String,
-    /// Why the subtask failed; present exactly when `status` is `failed`.
+    /// Why the subtask failed; present exactly when `outcome` is `failed`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_gap: Option<String>,
     /// The summary an ok child returns; required when the request carries a budget.
@@ -174,7 +174,7 @@ pub struct FanoutAggregateRequest {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct FanoutEntry {
     pub task_id: String,
-    pub status: FanoutStatus,
+    pub outcome: FanoutOutcome,
     /// The result digest of an ok entry, the failure gap of a failed one.
     pub value: String,
 }
@@ -342,7 +342,7 @@ pub fn aggregate_digest(op: AggregationOp, entries: &[FanoutEntry], plan_digest:
         hasher.update([0u8]);
         hasher.update(entry.task_id.as_bytes());
         hasher.update([0u8]);
-        hasher.update(entry.status.name().as_bytes());
+        hasher.update(entry.outcome.name().as_bytes());
         hasher.update([0u8]);
         hasher.update(entry.value.as_bytes());
     }
@@ -408,13 +408,13 @@ pub fn aggregate_fanout(
             task_id: task_id.to_string(),
         };
         let result = by_task.get(task_id).ok_or_else(missing)?;
-        let value = match result.status {
-            FanoutStatus::Ok => result
+        let value = match result.outcome {
+            FanoutOutcome::Ok => result
                 .result_digest
                 .as_deref()
                 .filter(|digest| is_digest(digest))
                 .ok_or_else(missing)?,
-            FanoutStatus::Failed => result
+            FanoutOutcome::Failed => result
                 .failure_gap
                 .as_deref()
                 .filter(|gap| !gap.trim().is_empty())
@@ -422,13 +422,13 @@ pub fn aggregate_fanout(
         };
         entries.push(FanoutEntry {
             task_id: task_id.to_string(),
-            status: result.status,
+            outcome: result.outcome,
             value: value.to_string(),
         });
     }
     let ok: Vec<&FanoutEntry> = entries
         .iter()
-        .filter(|entry| entry.status == FanoutStatus::Ok)
+        .filter(|entry| entry.outcome == FanoutOutcome::Ok)
         .collect();
     if ok.is_empty() {
         return Err(FanoutRefusal::NoValidResult);
@@ -627,4 +627,40 @@ fn check_delivery(
         delivery_digest: digest_parts(&parts),
         child_receipt_ids,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.7
+    #[test]
+    fn fanout_outcome_is_not_a_lifecycle_field() {
+        let result = FanoutSubtaskResult {
+            task_id: "t1".to_string(),
+            outcome: FanoutOutcome::Failed,
+            result_digest: None,
+            receipt_id: "receipt-t1".to_string(),
+            receipt_digest: "d".repeat(64),
+            failure_gap: Some("tool timed out".to_string()),
+            summary: None,
+        };
+        let value = serde_json::to_value(&result).unwrap();
+        // The field is named for what it is; the wire words stay.
+        assert_eq!(value["outcome"], serde_json::json!("failed"));
+        assert!(value.get("status").is_none());
+        assert_eq!(FanoutOutcome::Ok.name(), "ok");
+        assert_eq!(FanoutOutcome::Failed.name(), "failed");
+        // The retired field name no longer parses.
+        let mut old = value.as_object().unwrap().clone();
+        let outcome = old.remove("outcome").unwrap();
+        old.insert("status".to_string(), outcome);
+        assert!(serde_json::from_value::<FanoutSubtaskResult>(old.into()).is_err());
+        let entry = FanoutEntry {
+            task_id: "t1".to_string(),
+            outcome: FanoutOutcome::Ok,
+            value: "x".to_string(),
+        };
+        assert_eq!(serde_json::to_value(&entry).unwrap()["outcome"], "ok");
+    }
 }
