@@ -281,6 +281,7 @@ fn solver(question_id: &str) -> impl FnOnce(&Model, &SolverConfig) -> Certificat
     }
 }
 
+/// The task class the request names, if any.
 fn task_class(request: &DecideRequest) -> Result<Option<&str>, String> {
     match param(request, PARAM_TASK_CLASS)? {
         None => Ok(None),
@@ -660,5 +661,3 @@ pub(in crate::decide) mod overrides {
             .copied()
     }
 }
-
-/// The task class the request names, if any.
