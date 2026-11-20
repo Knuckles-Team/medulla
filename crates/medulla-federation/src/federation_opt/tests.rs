@@ -1651,10 +1651,13 @@ mod web_metasearch {
             "{refused}"
         );
         assert_eq!(port.count(), 0);
-        // An expired entry never serves a read: with the connector down the read refuses.
         let query = WebQuery::new("needle");
         web_scan_at(&query, &remote, &session, t0).unwrap();
         port.down.store(true, Ordering::SeqCst);
+        // Inside the TTL the stored entry still serves although the connector is down.
+        web_scan_at(&query, &remote, &session, t0 + 1).unwrap();
+        // An expired entry never serves a read: with the connector down the read refuses.
+        // The expired lookup drops the entry, so this runs after the in-TTL read.
         let unreachable = web_scan_at(&query, &remote, &session, t0 + 2_001).unwrap_err();
         assert!(
             unreachable.starts_with("SOURCE_UNREACHABLE"),
@@ -1664,8 +1667,6 @@ mod web_metasearch {
             unreachable.contains("mcp:web#"),
             "names the source: {unreachable}"
         );
-        // Inside the TTL the stored entry still serves although the connector is down.
-        web_scan_at(&query, &remote, &session, t0 + 1).unwrap();
         // Results above `max_results` are cut and the trace says so.
         let many = WebPort::new(&[
             ("https://a/1", "1", "e"),

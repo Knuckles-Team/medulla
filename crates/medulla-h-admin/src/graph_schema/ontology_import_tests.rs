@@ -118,19 +118,51 @@ fn import_is_idempotent_by_digest_and_revises() {
 // spec: MEDULLA-TYPED-PACKS-R103.2
 #[test]
 fn history_keeps_the_newest_bounded_entries() {
+    // Every import validates the whole composed corpus as it enters the graph,
+    // so the record a full history of imports leaves behind is installed
+    // directly: revision MAX with MAX entries, the state MAX imports reach. The
+    // next import then has to drop the oldest entry.
+    let full = MAX_ONTOLOGY_REVISION_HISTORY as u64;
+    let class = |index: u64| {
+        format!("<http://example.org/onto#C{index}> a <http://www.w3.org/2002/07/owl#Class> .\n")
+    };
+    let active = class(full);
+    let history: Vec<OntologyRevisionEntry> = (1..=full)
+        .map(|revision| OntologyRevisionEntry {
+            digest: Digest256::sha256(class(revision).as_bytes()),
+            revision,
+            importer: "alice".to_string(),
+            at: revision,
+            change_impact: None,
+        })
+        .collect();
     let core = GraphCore::new();
-    for index in 0..(MAX_ONTOLOGY_REVISION_HISTORY as u64 + 1) {
-        let body = format!(
-            "<http://example.org/onto#C{index}> a <http://www.w3.org/2002/07/owl#Class> .\n"
-        );
-        import_ontology(
-            &core,
-            "g",
-            &import_op(&body, None),
-            &authority("alice", index),
-        )
-        .unwrap();
-    }
+    let seeded = GraphSchemaSource::new(
+        SchemaSourceOrigin::Ontology {
+            connector: "weather".to_string(),
+            ontology_iri: IRI.to_string(),
+            revision: full,
+            importer: "alice".to_string(),
+            history,
+        },
+        None,
+        Some(Arc::from(active.as_str())),
+        full,
+    )
+    .unwrap();
+    let mut sources = (*core.schema_sources()).clone();
+    sources.attach_dynamic(key(), seeded).unwrap();
+    core.install_schema_sources(Arc::new(sources));
+    assert_eq!(record(&core).2.len(), MAX_ONTOLOGY_REVISION_HISTORY);
+
+    let next = class(full + 1);
+    import_ontology(
+        &core,
+        "g",
+        &import_op(&next, Some(full)),
+        &authority("alice", full + 1),
+    )
+    .unwrap();
     let (revision, _, history) = record(&core);
     assert_eq!(revision, MAX_ONTOLOGY_REVISION_HISTORY as u64 + 1);
     assert_eq!(history.len(), MAX_ONTOLOGY_REVISION_HISTORY);

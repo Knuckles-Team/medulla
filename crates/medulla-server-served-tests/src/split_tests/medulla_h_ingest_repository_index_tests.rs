@@ -294,7 +294,16 @@ fn one_parse_per_unique_blob_across_branches() {
     let count = |kind: &str| result.nodes.iter().filter(|n| n.node_type == kind).count();
     assert_eq!(result.files_parsed, 3, "one parse per unique blob");
     assert_eq!(count("Blob"), 3);
-    assert_eq!(count("FileVersion"), 6, "a path/blob pair per branch");
+    // A FileVersion binds one path to one blob, so the six branch memberships
+    // share three FileVersions; each branch reaches its own through a
+    // `hasFileVersion` edge.
+    assert_eq!(count("FileVersion"), 3, "one per unique path/blob pair");
+    let memberships = result
+        .edges
+        .iter()
+        .filter(|e| e.edge_type == "hasFileVersion")
+        .count();
+    assert_eq!(memberships, 6, "a path/blob membership per branch");
     assert_eq!(count("Branch"), 3);
     let named = |name: &str| {
         result
