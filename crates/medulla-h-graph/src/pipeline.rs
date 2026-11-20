@@ -917,6 +917,26 @@ mod tests {
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::carrier::GraphReadAuthority;
 
+    /// An uncoded refusal reaches the wire as `INTERNAL` with only the fixed
+    /// head and its cause reference (MEDULLA-OBSERVE-R001.2): no refusal text.
+    fn assert_opaque_internal(error: Option<&str>, detail: Option<&str>) {
+        use medulla_protocol_types::protocol::UNCLASSIFIED_DETAIL;
+        assert_eq!(error, Some("INTERNAL"));
+        let detail = detail.expect("an opaque refusal carries its cause reference");
+        let cause = detail
+            .strip_prefix(UNCLASSIFIED_DETAIL)
+            .and_then(|rest| rest.strip_prefix(" (cause-"))
+            .and_then(|rest| rest.strip_suffix(')'))
+            .unwrap_or_else(|| panic!("detail is not opaque: {detail:?}"));
+        assert!(
+            cause.len() == 8
+                && cause
+                    .bytes()
+                    .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
+            "cause reference is not 8 lowercase hex digits: {detail:?}"
+        );
+    }
+
     fn node(props: Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&props).unwrap()
     }
@@ -1044,18 +1064,10 @@ mod tests {
             })),
         );
         let response = handle_predict(1, &core, "broken".into(), 1, None, vec![vec![1.0]], false);
-        assert_eq!(response.error.as_deref(), Some("INTERNAL"));
-        assert_eq!(
-            response.error_detail.as_deref(),
-            Some("unclassified engine refusal")
-        );
+        assert_opaque_internal(response.error.as_deref(), response.error_detail.as_deref());
         let response =
             handle_evaluate(2, &core, "broken".into(), 1, None, vec![vec![1.0]], vec![0]);
-        assert_eq!(response.error.as_deref(), Some("INTERNAL"));
-        assert_eq!(
-            response.error_detail.as_deref(),
-            Some("unclassified engine refusal")
-        );
+        assert_opaque_internal(response.error.as_deref(), response.error_detail.as_deref());
     }
 
     /// E2E acceptance: train + eval + serve + predict a node-classification pipeline
@@ -1372,11 +1384,7 @@ mod tests {
         match resp.result {
             Some(_) => panic!("alice must not resolve bob's private v1 model"),
             None => {
-                assert_eq!(resp.error.as_deref(), Some("INTERNAL"));
-                assert_eq!(
-                    resp.error_detail.as_deref(),
-                    Some("unclassified engine refusal")
-                );
+                assert_opaque_internal(resp.error.as_deref(), resp.error_detail.as_deref());
             }
         }
 

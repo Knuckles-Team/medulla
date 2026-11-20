@@ -748,10 +748,4 @@ pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
     ("ClusterHierarchyRefresh", "VIZ-1: recomputes the hierarchy by reading the whole graph; writes only the derived cluster_hierarchy store. Widest read of the three; disclosure question untraced"),
     ("ClusterHierarchyClusters", "VIZ-1: reads the derived cluster_hierarchy store, not graph rows; cluster membership still reflects graph structure, and that disclosure question is untraced"),
     ("ClusterHierarchyExpand", "VIZ-1: same store and same untraced disclosure question as ClusterHierarchyClusters"),
-    // MEDULLA-REPO-INGEST-R006.1: the wire + policy declaration has landed but
-    // the serving handler has not. When it lands it reads the corpus's
-    // `:StageReceipt` node rows, so it must move to RLS_ROUTED with a cited
-    // project_core/filter_view call site at that point. Parked here as a
-    // flagged TODO, not assumed safe in either direction.
-    ("MeasureIngestThroughput", "MEDULLA-REPO-INGEST-R006.1: serving handler not yet landed; it will read :StageReceipt node rows of the corpus graph, so it must move to RLS_ROUTED with a cited project_core/filter_view call site when it does"),
 ];

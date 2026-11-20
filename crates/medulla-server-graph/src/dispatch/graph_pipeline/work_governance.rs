@@ -35,10 +35,28 @@ pub async fn enforce_native_read_leadership(
     };
     match multi.read_barrier_group(routed.group_id).await {
         Ok(_) => Ok(()),
-        Err(error) => Err(Response::err(
-            req_id,
-            format!("{barrier_failure}: {error:?}"),
-        )),
+        Err(error) => {
+            // A ReadIndex barrier fails when this node stopped leading between the
+            // check above and the quorum round (a member rejoining with a higher
+            // term deposes it). That is the same stale route as the check above,
+            // so the caller gets the typed redirect to the current leader instead
+            // of an unclassified refusal.
+            let leader = routed.handle.current_leader().await;
+            if leader != Some(routed.handle.node_id) {
+                return Err(Response::stale_route(
+                    req_id,
+                    graph_name,
+                    routed.group_id,
+                    routed.epoch,
+                    leader,
+                    stale_hint,
+                ));
+            }
+            Err(Response::err(
+                req_id,
+                format!("{barrier_failure}: {error:?}"),
+            ))
+        }
     }
 }
 

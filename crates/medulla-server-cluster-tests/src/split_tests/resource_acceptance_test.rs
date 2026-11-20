@@ -2357,6 +2357,10 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
         ResourceReservationSummaryState::Released,
     )
     .await;
+    // The healed member's higher term can depose the leader after the update
+    // above committed; once it has caught up, every member follows one serving
+    // leader again, and that leader answers the public status read.
+    let new_leader = settled_graph_leader(&cluster, &[]).await;
     decode_status_result(dispatch_status(&cluster, new_leader, 6).await, 2);
 
     // Restart the killed member over its original durable redb directory, attach
