@@ -1441,6 +1441,21 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
             GraphSchemaErrorCode::as_str,
         ));
     }
+    if id == "GraphSchema" {
+        // MEDULLA-TYPED-PACKS-R103.4: the runtime ontology import, withdrawal
+        // and diff refusals (`ontology_import.rs`, `ontology_diff_serve.rs`).
+        codes.extend(
+            [
+                ServerErrorCode::ImporterMismatch,
+                ServerErrorCode::OntologyCoreConflict,
+                ServerErrorCode::OntologyDigestMismatch,
+                ServerErrorCode::OntologyRevisionConflict,
+                ServerErrorCode::ShaclViolation,
+                ServerErrorCode::TenantDenied,
+            ]
+            .map(|code| code.as_str()),
+        );
+    }
     if id.starts_with("ConnectorPack") {
         codes.extend(typed_codes(
             PackWriteErrorCode::ALL,
@@ -1647,6 +1662,22 @@ mod tests {
             "GovernedChange",
             "GOVERNED_NOT_REGISTERED"
         ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R103.4
+    #[test]
+    fn graph_schema_answers_the_runtime_ontology_refusals() {
+        for code in [
+            "IMPORTER_MISMATCH",
+            "ONTOLOGY_CORE_CONFLICT",
+            "ONTOLOGY_DIGEST_MISMATCH",
+            "ONTOLOGY_REVISION_CONFLICT",
+            "SHACL_VIOLATION",
+            "TENANT_DENIED",
+        ] {
+            assert!(method_allows_error("GraphSchema", code), "{code}");
+        }
+        assert!(!method_allows_error("GraphSchemaList", "IMPORTER_MISMATCH"));
     }
 
     #[test]
