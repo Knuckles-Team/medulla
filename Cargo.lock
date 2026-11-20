@@ -7159,6 +7159,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-result-types",
  "medulla-server-api",
+ "medulla-source-types",
  "medulla-sql",
  "medulla-sql-lang",
  "medulla-table-store",
