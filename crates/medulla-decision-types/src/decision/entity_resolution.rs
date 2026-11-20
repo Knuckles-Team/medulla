@@ -73,11 +73,9 @@ impl TierEvaluation {
     /// The evaluation of `tier` after `accepted` and `rejected` reviews.
     pub fn new(tier: ResolutionTier, accepted: u32, rejected: u32) -> Self {
         let total = u64::from(accepted) + u64::from(rejected);
-        let accept_rate_ppm = if total == 0 {
-            0
-        } else {
-            (u64::from(accepted) * 1_000_000 / total) as u32
-        };
+        let accept_rate_ppm = (u64::from(accepted) * 1_000_000)
+            .checked_div(total)
+            .map_or(0, |rate| rate as u32);
         Self {
             tier,
             accepted,

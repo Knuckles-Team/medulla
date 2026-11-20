@@ -86,7 +86,7 @@ pub enum RunRecord {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         plan_binding: Option<preplan::PlanBinding>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        preplan_receipt: Option<preplan::PrePlanTestReceipt>,
+        preplan_receipt: Option<Box<preplan::PrePlanTestReceipt>>,
     },
     /// Store one run-derived insight (MEDULLA-DECISION-ENGINE-R135.12). The
     /// wire value is checked by [`insight::Insight::from_value`], so an insight
@@ -126,7 +126,7 @@ pub enum StoredRun {
         program_node: String,
         /// The reusable pattern the commit promoted, when it asked for one.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        pattern: Option<preplan::ReusablePattern>,
+        pattern: Option<Box<preplan::ReusablePattern>>,
     },
     /// The insight as stored.
     Insight { insight: insight::Insight },

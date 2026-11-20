@@ -536,7 +536,7 @@ impl LowStorageArtifact {
         let head = n
             .checked_mul(8)
             .ok_or_else(|| artifact_invalid("code shape overflow"))?;
-        if codes.len() != head + n.checked_mul(dim).unwrap_or(usize::MAX) {
+        if codes.len() != head + n.saturating_mul(dim) {
             return Err(artifact_invalid("code shape does not match the graph"));
         }
         let mut sq_min = Vec::with_capacity(n);

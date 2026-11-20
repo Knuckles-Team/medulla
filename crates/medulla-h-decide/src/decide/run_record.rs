@@ -264,10 +264,10 @@ fn commit(
             // prior library stays as it was.
             let promoted = if reusable {
                 let binding = plan_binding.ok_or_else(|| PrePlanError::Missing.to_string())?;
-                let manifest = read_manifest(ctx, retention, preplan_receipt.as_ref());
+                let manifest = read_manifest(ctx, retention, preplan_receipt.as_deref());
                 let verdict = verify_preplan(
                     ctx.tenant_id,
-                    preplan_receipt.as_ref(),
+                    preplan_receipt.as_deref(),
                     &binding,
                     manifest?,
                     max_receipt_age_ms(&resolved.policy),
@@ -282,7 +282,7 @@ fn commit(
                     program_digest: program.program_digest.clone(),
                     source_run_id: program.source_run_id.clone(),
                     plan: binding,
-                    receipt,
+                    receipt: *receipt,
                     verdict,
                 })
             } else {
@@ -307,7 +307,7 @@ fn commit(
                 stored: StoredRun::CompiledProgram {
                     program,
                     program_node,
-                    pattern,
+                    pattern: pattern.map(Box::new),
                 },
                 replayed,
             })

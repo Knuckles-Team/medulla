@@ -649,7 +649,7 @@ mod preplan {
                 },
                 reusable: true,
                 plan_binding: binding,
-                preplan_receipt: receipt,
+                preplan_receipt: receipt.map(Box::new),
             },
         };
         decode(super::super::log_tests::log_op(h, "recorder", op).await)
@@ -741,7 +741,7 @@ mod preplan {
         else {
             panic!("a program record");
         };
-        let pattern = pattern.clone().expect("the pattern was promoted");
+        let pattern = pattern.as_deref().cloned().expect("the pattern was promoted");
         assert!(pattern.verdict.tests_ran && pattern.verdict.artifacts_exist);
         assert_eq!(pattern.receipt, ok);
         assert_eq!(pattern.plan, binding());

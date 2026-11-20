@@ -145,7 +145,7 @@ pub fn decompose_task(
             if !knobs.qualifies(candidate.score_q32) || !valid_id(&candidate.specialist_id) {
                 continue;
             }
-            let better = best.map_or(true, |have| {
+            let better = best.is_none_or(|have| {
                 candidate.score_q32 > have.score_q32
                     || (candidate.score_q32 == have.score_q32
                         && candidate.specialist_id < have.specialist_id)

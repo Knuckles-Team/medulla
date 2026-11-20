@@ -129,7 +129,8 @@ fn cholesky(s: &[f64], n: usize, tol: f64) -> Option<Vec<f64>> {
                 sum -= l[i * n + k] * l[j * n + k];
             }
             if i == j {
-                if !(sum > tol) {
+                // A NaN `sum` is incomparable and takes this branch too.
+                if sum.partial_cmp(&tol) != Some(core::cmp::Ordering::Greater) {
                     return None;
                 }
                 l[i * n + i] = sum.sqrt();
@@ -811,7 +812,10 @@ impl StateSpaceFilter {
         // Commit: nothing above touched `self`.
         let stat = w
             .iter()
-            .map(|c| c.clamp(-WHITENED_CLIP, WHITENED_CLIP).powi(2))
+            .map(|c| {
+                let x = c.clamp(-WHITENED_CLIP, WHITENED_CLIP);
+                x * x
+            })
             .sum::<f64>()
             / m as f64;
         let prior_mean = x_minus;

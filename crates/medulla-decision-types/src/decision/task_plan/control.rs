@@ -99,7 +99,7 @@ pub struct BranchArm {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct BranchSpec {
     pub kind: BranchKind,
-    pub arms: BoundedVec<BranchArm, 32>,
+    pub arms: BoundedVec<BranchArm, MAX_BRANCH_ARMS>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_arm: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -121,7 +121,7 @@ pub struct JoinSpec {
 pub struct DecisionSpec {
     pub decision_iri: String,
     #[serde(default)]
-    pub inputs: BoundedVec<String, 32>,
+    pub inputs: BoundedVec<String, MAX_DECISION_INPUTS>,
 }
 
 /// An approval wait. The role and the timeout are claims; the host decides who

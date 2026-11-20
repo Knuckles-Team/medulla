@@ -229,7 +229,8 @@ mod tests {
         use CapacityAdjustmentVerdict::{Allow, Refuse};
         use CapacityRefusalCode::*;
         assert_eq!(judge(&proposal(), "t", &observed()), Allow);
-        let faulty: [(Box<dyn Fn(&mut CapacityAdjustmentProposal)>, _); 8] = [
+        type Fault = Box<dyn Fn(&mut CapacityAdjustmentProposal)>;
+        let faulty: [(Fault, _); 8] = [
             (
                 Box::new(|p| p.proposal_digest = "ABC".into()),
                 DigestInvalid,

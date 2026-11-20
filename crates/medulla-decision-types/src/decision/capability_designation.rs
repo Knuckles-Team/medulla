@@ -1297,7 +1297,7 @@ mod tests {
                 &["https://knuckles-team.github.io/ontology/core#Summarize"],
                 &[],
             ),
-            &ask(&[skill.clone()], &[]),
+            &ask(std::slice::from_ref(&skill), &[]),
             &projection,
         );
         assert!(by_subtype.eligible && by_subtype.capabilities_matched);
@@ -1315,7 +1315,7 @@ mod tests {
         // An exact declaration needs no path.
         let exact = compute_capability_eligibility(
             &record(Some("tenant-a"), &[CORE_SKILL], &[]),
-            &ask(&[skill.clone()], &[]),
+            &ask(std::slice::from_ref(&skill), &[]),
             &projection,
         );
         assert!(exact.eligible && exact.subsumption_paths.is_empty());
@@ -1323,14 +1323,14 @@ mod tests {
         // A policy exclusion: the tag is missing, and an untagged record fails closed.
         let tagged = compute_capability_eligibility(
             &record(Some("tenant-a"), &[CORE_SKILL], &["internal"]),
-            &ask(&[skill.clone()], &["pii-safe"]),
+            &ask(std::slice::from_ref(&skill), &["pii-safe"]),
             &projection,
         );
         assert!(!tagged.eligible && !tagged.policy_matched);
         assert_eq!(tagged.missing_policy_tags, set::<String>(&["pii-safe"]));
         let untagged = compute_capability_eligibility(
             &record(Some("tenant-a"), &[CORE_SKILL], &[]),
-            &ask(&[skill.clone()], &["pii-safe"]),
+            &ask(std::slice::from_ref(&skill), &["pii-safe"]),
             &projection,
         );
         assert!(!untagged.eligible);
@@ -1339,14 +1339,14 @@ mod tests {
         // A commons record is visible to every tenant; a foreign record never is.
         let commons = compute_capability_eligibility(
             &record(None, &[CORE_SKILL], &[]),
-            &ask(&[skill.clone()], &[]),
+            &ask(std::slice::from_ref(&skill), &[]),
             &projection,
         );
         assert!(commons.eligible);
         assert_eq!(commons.tenant_match, TenantMatch::Commons);
         let foreign = compute_capability_eligibility(
             &record(Some("tenant-b"), &[CORE_SKILL], &[]),
-            &ask(&[skill.clone()], &[]),
+            &ask(std::slice::from_ref(&skill), &[]),
             &projection,
         );
         assert!(!foreign.eligible);
@@ -1356,7 +1356,7 @@ mod tests {
         // The combined filters: a missing capability and a missing tag together.
         let both = compute_capability_eligibility(
             &record(Some("tenant-a"), &["other"], &[]),
-            &ask(&[skill.clone()], &["pii-safe"]),
+            &ask(std::slice::from_ref(&skill), &["pii-safe"]),
             &projection,
         );
         assert!(!both.eligible);

@@ -918,7 +918,8 @@ fn control_fields_change_the_digest() {
         plan_plan_digest_again(),
         "the digest is stable"
     );
-    let edits: [(&str, fn(&mut serde_json::Value)); 6] = [
+    type Edit = fn(&mut serde_json::Value);
+    let edits: [(&str, Edit); 6] = [
         ("timeout", |v| {
             task_mut(v, "review")["approval"]["timeout_s"] = 3601.into()
         }),
