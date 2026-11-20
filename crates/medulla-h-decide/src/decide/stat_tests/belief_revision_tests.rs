@@ -115,7 +115,7 @@ async fn claim_of(h: &Harness, claim_id: &str) -> ClaimRecord {
         },
     )
     .await
-    .map(|got: medulla_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap()
 }
 
