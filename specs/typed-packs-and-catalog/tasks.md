@@ -148,6 +148,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T140 [US3] MEDULLA-TYPED-PACKS-R094.7 Approved repository-source effect dependency
 - [ ] T141 [US3] MEDULLA-TYPED-PACKS-R094.8 Record the source-effect receipt on the component revision
 - [ ] T142 [US3] MEDULLA-TYPED-PACKS-R096.1 A rejected projection never leaves a head dark without a state
+- [x] T329 [US3] MEDULLA-TYPED-PACKS-R096.2 Every import row resolves in its sweep; a failing pack retries from its own state
 - [ ] T143 [US3] MEDULLA-TYPED-PACKS-R097.1 HR domain vocabulary as a typed domain pack
 - [ ] T144 [US3] MEDULLA-TYPED-PACKS-R097.2.1 Crosswalk coverage model
 - [ ] T145 [US3] MEDULLA-TYPED-PACKS-R097.2.2 Crosswalk coverage behaviour
@@ -190,7 +191,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T182 [US4] MEDULLA-TYPED-PACKS-R103.5 Runtime ontology revision evidence
 - [ ] T183 [US4] MEDULLA-TYPED-PACKS-R103.6 Runtime ontology hot-path proof
 - [ ] T184 [US4] MEDULLA-TYPED-PACKS-R104.1 Model
-- [ ] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
+- [x] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
 - [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring
 - [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
 - [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
@@ -209,7 +210,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T201 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
 - [ ] T202 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
 - [ ] T203 [US4] MEDULLA-TYPED-PACKS-R106.6 Hot-path proof
-- [ ] T204 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
+- [x] T204 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
 - [ ] T205 [US4] MEDULLA-TYPED-PACKS-R107.1 Model
 - [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
 - [ ] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring

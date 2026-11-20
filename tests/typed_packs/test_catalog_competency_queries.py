@@ -152,6 +152,7 @@ def catalog_graph():
             client.close()
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.7")
 def test_owner_lineage_term_and_class_queries_answer_from_the_graph(catalog_graph):
     """R106.7 vectors return the same catalog entities through SPARQL and UQL."""
 

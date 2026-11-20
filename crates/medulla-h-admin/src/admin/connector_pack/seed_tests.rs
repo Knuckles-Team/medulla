@@ -71,6 +71,7 @@ fn seed(catalog_name: &str, content_digest: Digest256) -> SeedGraphImport {
     }
 }
 
+// spec: MEDULLA-TYPED-PACKS-R104.2
 /// MEDULLA-TYPED-PACKS-R104.2: a changed catalog part replaces only that part;
 /// identity and references remain byte-identical in the one prepared state.
 #[test]
