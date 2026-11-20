@@ -922,7 +922,21 @@ ex:parent a owl:AsymmetricProperty .
         // :PriceTable gains its core parent `rdfs:subClassOf bfo:0000031`
         // (MEDULLA-TYPED-PACKS-R071.2).
         // +12 (MEDULLA-DECISION-ENGINE-R128.8): the four harness-fact datatype properties.
-        assert_eq!(composed.ontology.len(), 24_182);
+        // +508 (measured, 24_182 -> 24_690 after the 2026-11-20 train landing; per-module
+        // composed deltas, which sum exactly):
+        // +474 state-machines-v1.ttl: the durable-kernel machines the group reconcile
+        // restored (8e8ccd96d0, 623a5bff8e, 82089d8966), net of the DowntimePhase fragment
+        // removed in 16a2505b7c (-39): Projection +90 (MEDULLA-DURABLE-KERNEL-R874.16),
+        // Semantic +88 (R874.18), ParticipantTransaction +76 (R874.15), Commit +72
+        // (R874.2, R874.3), SemanticSourceReconciliation +56 (R874.17), ExactRetirement +52
+        // (R874.6), DirectStateInstall +40 (R874.4).
+        // +28 metadata_catalog-v1.ttl: the catalog emitter (1428d48173, +5,
+        // MEDULLA-TYPED-PACKS-R108.2), the write guard markings (a1d247d269, +15, R108.4)
+        // and the inbound mapping annotations (82fb5ceaf9, +8, R110.3, R700.1).
+        // +6 the generated decision module: DecideRequest evidence_streams (49170bd1dd,
+        // MEDULLA-DECISION-ENGINE-R019.100.1) and StatisticalDecisionRecord
+        // retrieval_binding (f4cf39e513, R029.1), three triples each.
+        assert_eq!(composed.ontology.len(), 24_690);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -1036,7 +1050,9 @@ ex:parent a owl:AsymmetricProperty .
         // 158 (imports unchanged at 81).
         // +1: the :PriceTable core-parent axiom (see the total pin).
         // +12 (MEDULLA-DECISION-ENGINE-R128.8): the four harness-fact datatype properties.
-        assert_eq!(semantic_axioms, 23_943);
+        // +508 (measured, 23_943 -> 24_451): the train-landing vocabulary, all semantic
+        // axioms (see the total pin; headers stay at 48 subjects and imports at 81).
+        assert_eq!(semantic_axioms, 24_451);
 
         let count_type = |object: &str| {
             composed
@@ -1132,7 +1148,10 @@ ex:parent a owl:AsymmetricProperty .
             // the frozen train's vocabulary (see the total pin for the commits).
             // +1 (measured, 1315 -> 1316): :PriceTable rdfs:subClassOf bfo:0000031
             // (MEDULLA-ORCH-VOCAB-R010.101; see the total pin).
-            1316
+            // +42 (measured, 1316 -> 1358): six named subclass axioms for each of the
+            // seven restored durable-kernel machines' State, TerminalState, Transition,
+            // Event and Guard classes (see the total pin).
+            1358
         );
     }
 
