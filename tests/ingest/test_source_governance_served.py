@@ -18,6 +18,10 @@ from .test_source_stream_versions_served import (
     _submit,
 )
 
+# The core provenance predicate every ingested record carries
+# (MEDULLA-INGEST-WORKER-R003.19), under the one ontology IRI base.
+SOURCE_RECORD_ID = "https://knuckles-team.github.io/ontology/core#sourceRecordId"
+
 
 def _governed(connector: str, page: int, previous: int | None, records: list) -> dict:
     batch = _batch(connector, page, previous, "unused")
@@ -113,7 +117,7 @@ async def test_policy_and_access_exist_with_the_node() -> None:
         for node_id, _ in nodes:
             props = await client.nodes.properties(node_id)
             if props:
-                found[props.get("source_record_id")] = props
+                found[props.get(SOURCE_RECORD_ID)] = props
         # The governed record is readable with its access properties; the
         # record whose governance was refused left no node at all.
         assert "conflict" not in found
