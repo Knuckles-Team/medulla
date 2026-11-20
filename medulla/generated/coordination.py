@@ -855,7 +855,9 @@ def decode_commit_work_item_result(
 ) -> _models.WorkItemTransition_WorkItemCommitOutcome:
     """Validate this method's result against its contract model."""
     return decode_result(
-        "CommitWorkItemResult", models().WorkItemTransition_WorkItemCommitOutcome, result
+        "CommitWorkItemResult",
+        models().WorkItemTransition_WorkItemCommitOutcome,
+        result,
     )
 
 

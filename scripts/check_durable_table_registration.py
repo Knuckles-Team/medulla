@@ -67,6 +67,7 @@ ACCESS_FUNCTION = "owner_table_access"
 OWNER_MANIFEST = "crates/medulla-storage/src/owner/contract.rs"
 OWNER_CENSUS = "crates/medulla-storage/src/owner/registry.rs"
 OWNER_CENSUS_FUNCTION = "owner_table_names"
+RETIRED_CENSUS_FUNCTION = "retired_owner_table_names"
 LEDGER_CENSUS = "crates/medulla-storage/src/tables.rs"
 SHARD_CENSUS = "crates/medulla-storage/src/owner/graph_shard.rs"
 SHARD_CENSUS_CONSTANT = "GRAPH_SHARD_TABLES"
@@ -286,6 +287,9 @@ def registries() -> tuple[dict[str, set[str]], dict[str, list[str]]]:
 
     owner_body = _function_body(OWNER_CENSUS, OWNER_CENSUS_FUNCTION)
     owner_census = _literals(owner_body)
+    # A table the current layout retired is still declared: the registry names it
+    # so predecessor validation and the offline upgrade can read and delete it.
+    retired_census = _literals(_function_body(OWNER_CENSUS, RETIRED_CENSUS_FUNCTION))
     census_rules: list[str] = []
     if SHARD_CENSUS_CONSTANT in owner_body:
         census_rules.append(f"census:{SHARD_CENSUS_CONSTANT}")
@@ -296,7 +300,7 @@ def registries() -> tuple[dict[str, set[str]], dict[str, list[str]]]:
         {
             "owner_access_registry": _literals(access),
             "owner_manifest": _literals(manifest),
-            "declared_table_census": owner_census | ledger_census(),
+            "declared_table_census": owner_census | retired_census | ledger_census(),
             "owner_table_census": owner_census,
         },
         rules | {"graph_shard_census": sorted(shard)},
