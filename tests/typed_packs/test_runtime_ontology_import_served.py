@@ -65,7 +65,7 @@ def test_import_revise_withdraw_end_to_end() -> None:
                 class_body(iri, "Alpha"),
                 idempotency_key=f"import:{uuid.uuid4().hex}",
             )
-            assert first["changed"] is True
+            assert first["revision"] == 1
             assert await sees_class(owner, iri, "Alpha")
             assert not await sees_class(owner, iri, "Beta")
 
@@ -95,18 +95,15 @@ def test_import_revise_withdraw_end_to_end() -> None:
                 class_body(iri, "Alpha"),
                 idempotency_key=f"import:{uuid.uuid4().hex}",
             )
-            assert again["changed"] is False
-            # Revision 1 is still active: the revise names it as the prior
-            # revision, and the engine refuses it otherwise.
+            assert again["revision"] == 1
             second = await owner.rdf.import_ontology(
                 connector,
                 iri,
                 "2",
                 class_body(iri, "Alpha", "Beta"),
-                expected_prior_revision=1,
                 idempotency_key=f"import:{uuid.uuid4().hex}",
             )
-            assert second["changed"] is True
+            assert second["revision"] == 2
             assert await sees_class(owner, iri, "Beta")
 
             # A second tenant never sees the import.
@@ -125,8 +122,6 @@ def test_import_revise_withdraw_end_to_end() -> None:
                 await elsewhere.close()
                 await owner.tenants.delete(other_graph)
 
-            # The withdrawal names revision 2, which the engine checks against
-            # the active revision.
             await owner.rdf.withdraw_ontology(
                 connector,
                 iri,
