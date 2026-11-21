@@ -266,3 +266,81 @@ def test_card_rank_classify_project_journey(clean_graph):
     assert projected["edge_count"] == 1 and projected["unresolved"] == 1
     assert projected["more"] is False
     assert _counts(clean_graph) == (after_classify[0], after_classify[1] + 1)
+
+
+# spec: MEDULLA-DECISION-ENGINE-R614.4
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.4")
+def test_refusals_write_nothing(clean_graph):
+    _seed(clean_graph)
+    schema = publish(clean_graph, "enrich-schema", "feature_schema", _schema_body())
+    policy = _publish_policy(clean_graph)
+
+    def scheduled(op_name: str, subject: str) -> str:
+        return asyncio.run(_schedule(schema, policy, f"semantic:{op_name}:{subject}"))
+
+    card_schedule = scheduled("card", "sym:main")
+    rank_schedule = scheduled("rank_proposals", "sym:main")
+    classify_schedule = scheduled("classify", "doc:1")
+    project_schedule = scheduled("project", "Article")
+    card = {
+        "op": "card",
+        "subject": "sym:main",
+        "summary": "main wires the parser to the store",
+        "model": "model:text-7b",
+        "prompt_digest": "ab" * 32,
+        "schedule_record_id": card_schedule,
+    }
+    concept = {
+        "concept": "c:cache",
+        "impact_bp": 9000,
+        "confidence_bp": 8000,
+        "cost_units": 2,
+    }
+    rank = {
+        "op": "rank_proposals",
+        "schedule_record_id": rank_schedule,
+        "subject": "sym:main",
+    }
+    classify = {
+        "op": "classify",
+        "schedule_record_id": classify_schedule,
+        "subject": "doc:1",
+    }
+    project = {
+        "op": "project",
+        "schedule_record_id": project_schedule,
+        "subject": "Article",
+    }
+    rule = {
+        "id": "rule:category",
+        "taxonomy": TAXONOMY,
+        "property": "category",
+        "relation": "inCategory",
+    }
+    cases = [
+        # (expected code, request)
+        ("CARD_UNGROUNDED", {**card, "source_fact_ids": []}),
+        ("CARD_FACT_UNKNOWN", {**card, "source_fact_ids": ["fact:missing"]}),
+        (
+            "INVALID_CONFIDENCE",
+            {**rank, "concepts": [{**concept, "confidence_bp": 10_001}]},
+        ),
+        (
+            "INVALID_IDENTIFIER",
+            {**rank, "concepts": [{**concept, "concept": "bad concept"}]},
+        ),
+        ("TAXONOMY_EMPTY", {**classify, "taxonomy": "taxonomy-without-topics"}),
+        (
+            "PROJECTION_RULE_UNKNOWN_TAXONOMY",
+            {**project, "rules": [{**rule, "taxonomy": "taxonomy-unknown"}]},
+        ),
+        (
+            "ENRICHMENT_NOT_SCHEDULED",
+            {**card, "source_fact_ids": ["fact:1"], "schedule_record_id": "record:absent"},
+        ),
+    ]
+    for code, request in cases:
+        before = _counts(clean_graph)
+        with pytest.raises(EngineResponseError, match=code):
+            _call(clean_graph, request)
+        assert _counts(clean_graph) == before, code
