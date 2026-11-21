@@ -34535,7 +34535,8 @@ class GitExportPackReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     object_format: GitObjectFormat
-    pack_hex: str
+    pack_ref: str
+    pack_bytes: int
 
 
 class GitExportPackRequest(BaseModel):

@@ -33,15 +33,25 @@ mod served {
     };
     use medulla_source_types::source_path_grant::PathAccess;
 
-    /// Lowercase hex of `bytes`: the result contract is JSON, so the pack travels as text.
-    fn to_hex(bytes: &[u8]) -> String {
-        const DIGITS: &[u8; 16] = b"0123456789abcdef";
-        let mut out = String::with_capacity(bytes.len() * 2);
-        for byte in bytes {
-            out.push(DIGITS[(byte >> 4) as usize] as char);
-            out.push(DIGITS[(byte & 0x0f) as usize] as char);
-        }
-        out
+    /// Store `pack` as one content-addressed blob and answer its reference: the pack is
+    /// never carried in the reply (MEDULLA-SCM-R014).
+    pub(super) fn pack_receipt(
+        store: &dyn ChunkStore,
+        owner: &str,
+        object_format: medulla_source_types::source_changeset::GitObjectFormat,
+        pack: &[u8],
+    ) -> Result<GitExportPackReceipt, String> {
+        let blob = medulla_server_blob::blob::stream::stream_blob_put_owned(
+            store,
+            std::io::Cursor::new(pack),
+            0,
+            owner,
+        )?;
+        Ok(GitExportPackReceipt {
+            object_format,
+            pack_ref: format!("cas:sha256:{}", blob.digest),
+            pack_bytes: pack.len() as u64,
+        })
     }
 
     fn receipt_response(req_id: u64, receipt: GitExportPackReceipt) -> Response {
@@ -83,6 +93,12 @@ mod served {
             }
         };
         let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        // The pack lands under the caller's blob owner scope, the scope the caller's own
+        // blob read of `pack_ref` uses.
+        let owner = match medulla_server_api::carrier::CarrierAuthority::from_verified(verified) {
+            Ok(authority) => authority.owner_scope().to_string(),
+            Err(error) => return Response::err(req.id, error),
+        };
         let answered = target
             .read_blocking(move |registry, branch| {
                 let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
@@ -131,15 +147,13 @@ mod served {
                         denied.code()
                     )));
                 }
-                let blobs = ChunkStoreBlobs(store.as_ref(), "");
-                Ok(
-                    export_pack_with_format(&tree, &blobs, &resolved_wants, &resolved_haves)
-                        .map(|(object_format, pack)| GitExportPackReceipt {
-                            object_format,
-                            pack_hex: to_hex(&pack),
-                        })
-                        .map_err(|refusal| refusal.message()),
-                )
+                let blobs = ChunkStoreBlobs(store.as_ref(), &owner);
+                let (object_format, pack) =
+                    match export_pack_with_format(&tree, &blobs, &resolved_wants, &resolved_haves) {
+                        Ok(exported) => exported,
+                        Err(refusal) => return Ok(Err(refusal.message())),
+                    };
+                Ok(pack_receipt(store.as_ref(), &owner, object_format, &pack))
             })
             .await;
         match answered {
@@ -152,6 +166,36 @@ mod served {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub use served::handle_git_export_pack;
+
+#[cfg(all(test, feature = "redb", feature = "blob"))]
+mod tests {
+    use super::served::pack_receipt;
+    use medulla_server_blob::blob::store::RedbChunkStore;
+    use medulla_server_blob::blob::stream::stream_blob_get;
+    use medulla_source_types::source_changeset::GitObjectFormat;
+
+    // spec: MEDULLA-SCM-R014
+    #[test]
+    fn receipt_carries_a_blob_ref_not_hex() {
+        let dir = std::env::temp_dir().join(format!(
+            "git-export-pack-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_nanos())
+        ));
+        let store = RedbChunkStore::open(dir.to_str().expect("utf-8 temp path")).expect("store");
+        let pack = b"PACK\x00\x00\x00\x02 a pack body that is long enough to matter".to_vec();
+        let receipt =
+            pack_receipt(&store, "owner", GitObjectFormat::Sha1, &pack).expect("stores the pack");
+        assert!(receipt.pack_ref.starts_with("cas:sha256:"));
+        assert_eq!(receipt.pack_bytes, pack.len() as u64);
+        let digest = receipt.pack_ref.trim_start_matches("cas:sha256:");
+        let mut read = Vec::new();
+        stream_blob_get(&store, digest, &mut read).expect("reads the blob back");
+        assert_eq!(read, pack);
+    }
+}
 
 /// `GitExportPack` needs the `redb` branch registry and the `blob` store.
 #[cfg(not(all(feature = "redb", feature = "blob")))]

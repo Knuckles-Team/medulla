@@ -370,13 +370,15 @@ pub struct GitExportPackRequest {
     pub haves: Vec<String>,
 }
 
-/// The served answer of `GitExportPack`: the pack bytes in hex (the result
-/// contract is JSON).
+/// The served answer of `GitExportPack` (MEDULLA-SCM-R014): the version-2 pack as one
+/// content-addressed blob. `pack_ref` is `cas:sha256:<digest>`, read through the blob
+/// methods; the pack is never carried in the reply.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GitExportPackReceipt {
     pub object_format: GitObjectFormat,
-    pub pack_hex: String,
+    pub pack_ref: String,
+    pub pack_bytes: u64,
 }
 
 /// A request refused with the stable code and a detail naming the field.
@@ -582,9 +584,12 @@ fn is_hex64(value: &str) -> bool {
 
 const NAME_SET: fn(char) -> bool =
     |c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '/' | '-');
-/// The file modes a changeset path carries: regular, executable, symbolic link and
-/// (MEDULLA-SCM-R010) a submodule entry whose blob holds the hex commit id.
-const FILE_MODES: [u32; 4] = [0o100644, 0o100755, 0o120000, 0o160000];
+/// The file modes a native changeset path carries: regular, executable and symbolic link.
+const FILE_MODES: [u32; 3] = [0o100644, 0o100755, 0o120000];
+/// The file modes of an imported git commit (MEDULLA-SCM-R010): the native modes and a
+/// submodule entry (`160000`, a gitlink) whose blob holds the hex commit id. A gitlink is
+/// accepted only on git import.
+const IMPORT_FILE_MODES: [u32; 4] = [0o100644, 0o100755, 0o120000, 0o160000];
 
 fn invalid(detail: impl Into<String>) -> SubmitRefusal {
     SubmitRefusal::new(ChangesetRefusal::ChangesetInvalid, detail)
@@ -675,7 +680,12 @@ impl SubmitChangesetRequest {
                     return Err(invalid(format!("paths.renamed_from {from}")));
                 }
             }
-            if !FILE_MODES.contains(&entry.mode) {
+            let modes: &[u32] = if git_import {
+                &IMPORT_FILE_MODES
+            } else {
+                &FILE_MODES
+            };
+            if !modes.contains(&entry.mode) {
                 return Err(invalid(format!("paths.mode for {}", entry.path)));
             }
         }
@@ -740,5 +750,32 @@ mod tests {
             ChangesetRefusal::MergeBlobUnreadable.code(),
             "MERGE_BLOB_UNREADABLE"
         );
+    }
+
+    // spec: MEDULLA-SCM-R010
+    #[test]
+    fn gitlink_mode_valid_only_on_import() {
+        let request = SubmitChangesetRequest {
+            repo: "repo".into(),
+            branch: "main".into(),
+            base_head: None,
+            message: "add a submodule".into(),
+            paths: vec![SubmittedPath {
+                path: "vendor/lib".into(),
+                op: PathOp::Add,
+                blob: Some(SubmittedBlobRef {
+                    digest: "a".repeat(64),
+                    size: 40,
+                }),
+                mode: 0o160000,
+                renamed_from: None,
+            }],
+            trailers: None,
+            run_trace_id: None,
+        };
+        let refusal = request.validate().expect_err("a native gitlink refuses");
+        assert_eq!(refusal.refusal, ChangesetRefusal::ChangesetInvalid);
+        assert!(refusal.message().contains("paths.mode for vendor/lib"));
+        request.validate_import().expect("an imported gitlink validates");
     }
 }

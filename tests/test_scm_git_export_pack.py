@@ -137,7 +137,10 @@ async def _scenario(graph: str, workdir: Path) -> None:
         clone = workdir / "clone.git"
         clone.mkdir()
         _git(clone, "init", "-q", "--bare")
-        _git(clone, "index-pack", "--stdin", stdin=bytes.fromhex(exported["pack_hex"]))
+        assert exported["pack_ref"].startswith("cas:sha256:")
+        pack_bytes = await client.blob.fetch(exported["pack_ref"].removeprefix("cas:sha256:"))
+        assert len(pack_bytes) == exported["pack_bytes"]
+        _git(clone, "index-pack", "--stdin", stdin=pack_bytes)
         _git(clone, "update-ref", "refs/heads/main", head)
         _git(clone, "fsck", "--connectivity-only", "--strict")
         assert _git(clone, "rev-parse", "main^{tree}").decode().strip() == tree
