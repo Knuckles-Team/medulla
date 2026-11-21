@@ -93,10 +93,15 @@ pub trait TickEffects: Send + Sync {
 /// The knob values one tick plans with.
 #[derive(Clone, Copy, Debug)]
 pub struct TickKnobs {
+    /// Foreground request rate at or under which an idle window may open.
     pub idle_max_rps: u32,
+    /// Seconds the foreground rate must stay quiet before an idle window opens.
     pub idle_quiet_secs: u32,
+    /// Share of one core, in permille, a downtime window may spend per second.
     pub window_cpu_permille: u32,
+    /// Memory, in bytes, a downtime window may hold.
     pub window_memory_bytes: u64,
+    /// Seconds between downtime scheduler ticks.
     pub tick_secs: u64,
 }
 
@@ -117,8 +122,11 @@ impl TickKnobs {
 /// The types one tick chose, before any lease.
 #[derive(Debug, Default, PartialEq)]
 pub struct TickPlan {
+    /// The job types chosen to run in this window.
     pub selected: Vec<DowntimeJobType>,
+    /// The job types skipped because a precondition did not hold.
     pub skipped_precondition: Vec<String>,
+    /// The job types skipped because the window's budget ran out.
     pub skipped_budget: Vec<String>,
 }
 
