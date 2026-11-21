@@ -86,3 +86,31 @@ def test_cdc_read_resumes_and_expires(start_medulla_server, client):
     retained = client.graph.read_graph_changes(safe, limit=50, table=table)
     assert retained["events"], "the retained window still reads"
     assert all(op == "insert" for op, _ in _rows(retained, table))
+
+
+@pytest.mark.spec("MEDULLA-ENGINE-PARITY-R015.3")
+def test_thousand_changes_arrive_in_order(start_medulla_server, client):
+    total = 1_000
+    table = f"cdc_burst_{uuid.uuid4().hex[:8]}"
+    client.query.sql(f"CREATE TABLE {table} (id int primary key, name text)")
+    snapshot = client.graph.open_graph_snapshot()
+
+    for key in range(total):
+        client.query.sql(f"INSERT INTO {table} (id, name) VALUES ({key}, 'burst')")
+
+    # Poll the feed from the snapshot's cursor, page by page, until it is drained.
+    cursor = snapshot["high_water_cursor"]
+    seen: list[tuple[str, str]] = []
+    ordinals: list[int] = []
+    while True:
+        page = client.graph.read_graph_changes(cursor, limit=250, table=table)
+        if not page["events"]:
+            break
+        seen.extend(_rows(page, table))
+        ordinals.extend(event["event_ordinal"] for event in page["events"])
+        cursor = page["next_cursor"]
+
+    # Every commit arrives once, in commit order, with no gap.
+    assert seen == [("insert", str(key)) for key in range(total)]
+    assert ordinals == sorted(ordinals)
+    assert len(set(ordinals)) == total
