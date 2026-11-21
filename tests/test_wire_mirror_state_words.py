@@ -114,3 +114,38 @@ def test_harness_part_tag_is_decision_not_status() -> None:
         models.HarnessPart_ActionSpaceDecided.model_validate(
             {"status": "decided", "value": "tool_set"}
         )
+
+
+# spec: MEDULLA-TYPED-PACKS-R811.1
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R811.1")
+def test_conformance_evidence_types_state_as_the_rust_enum() -> None:
+    from medulla.generated import connector_pack
+
+    evidence = connector_pack.ConformanceEvidence
+    state = connector_pack.ConformanceEvidenceState
+    # The mirror types the state as the closed enum, never as `str` or free text.
+    assert _annotation(evidence, "state") is state
+    assert issubclass(state, enum.Enum)
+    assert {member.value for member in state} == {"active", "revoked"}
+    # The mirror holds no transition function: the Rust machine is the only writer.
+    assert not any(
+        name in vars(evidence) for name in ("apply", "revoke", "transition")
+    )
+
+    fields = {
+        "connector": "conn",
+        "expires_at": 20,
+        "issued_at": 10,
+        "pack_digest": "a" * 64,
+        "revision": 1,
+        "tenant_id": "tenant",
+        "tool_fingerprints": {"tool://conn/search": "b" * 64},
+    }
+    accepted = evidence.model_validate({"state": "active", **fields})
+    assert accepted.state is state.ACTIVE
+    revoked = evidence.model_validate({"state": "revoked", "revoked_at": 15, **fields})
+    assert revoked.state is state.REVOKED
+    # A word outside the enum is refused when decoded.
+    for word in ("expired", "Active", "", "closed"):
+        with pytest.raises(ValidationError):
+            evidence.model_validate({"state": word, **fields})
