@@ -98,7 +98,7 @@ pub fn apply_revision(
         .find(|e| e.idempotency_key == event.idempotency_key && e.digest == event.text_digest)
     {
         return Ok(Revision {
-            state: state.clone(),
+            transcript: state.clone(),
             revision: stored.revision,
             replayed: true,
         });
