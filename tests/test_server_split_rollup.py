@@ -187,3 +187,56 @@ def test_handler_crates_depend_on_server_api_and_leaves_only() -> None:
     ]
     assert not bad, f"handler crates depend on the router, server or each other: {bad}"
     assert all("medulla-server-api" in _path_deps(crate) for crate in HANDLERS)
+
+
+def _dependency_tables(manifest: dict) -> list[tuple[str, dict]]:
+    """Every dependency table of a parsed manifest, with its table path."""
+    kinds = ("dependencies", "dev-dependencies", "build-dependencies")
+    tables = [(kind, manifest[kind]) for kind in kinds if kind in manifest]
+    for platform, body in manifest.get("target", {}).items():
+        tables.extend(
+            (f"target.{platform}.{kind}", body[kind]) for kind in kinds if kind in body
+        )
+    workspace = manifest.get("workspace", {})
+    if "dependencies" in workspace:
+        tables.append(("workspace.dependencies", workspace["dependencies"]))
+    return tables
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.15")
+def test_served_tests_live_in_the_served_tests_crate() -> None:
+    # spec: MEDULLA-CONTRACT-R056.15
+    failures: list[str] = []
+    handlers = sorted(
+        path for path in (REPO / "crates").glob("medulla-h-*") if path.is_dir()
+    )
+    # Rule 1: no handler manifest names the router, in any dependency table.
+    for crate in handlers:
+        manifest_path = crate / "Cargo.toml"
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        for table, deps in _dependency_tables(manifest):
+            if "medulla-server-router" in deps:
+                failures.append(
+                    f"{manifest_path.relative_to(REPO)}: [{table}] names medulla-server-router"
+                )
+    # Rule 2: no handler source names the router crate.
+    for crate in handlers:
+        for source in sorted(crate.rglob("*.rs")):
+            if "medulla_server_router" in source.read_text(encoding="utf-8"):
+                failures.append(
+                    f"{source.relative_to(REPO)}: names medulla_server_router"
+                )
+    # Rule 3: a served-test module of one handler crate is named for that crate.
+    split_tests = REPO / "crates" / "medulla-server-served-tests" / "src" / "split_tests"
+    modules = sorted(split_tests.glob("*.rs")) if split_tests.is_dir() else []
+    if not modules:
+        failures.append(f"{split_tests.relative_to(REPO)}: no served-test module")
+    for module in modules:
+        if not module.name.startswith("medulla_h_"):
+            continue
+        handler = "-".join(module.stem.split("_")[:3])
+        if not (REPO / "crates" / handler).is_dir():
+            failures.append(
+                f"{module.relative_to(REPO)}: names no handler crate ({handler} does not exist)"
+            )
+    assert not failures, "\n".join(failures)
