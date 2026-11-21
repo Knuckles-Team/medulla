@@ -15457,6 +15457,13 @@ class MethodStewardship(BaseModel):
     params: MethodStewardshipParams
 
 
+class MethodDashboardAsset(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DashboardAsset"]
+    params: MethodDashboardAssetParams
+
+
 class MethodClassificationClaim(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16802,6 +16809,7 @@ Method = Annotated[
         MethodClassificationClaim,
         MethodGlossary,
         MethodStewardship,
+        MethodDashboardAsset,
         MethodLineageIngest,
         MethodListMemorySnapshots,
         MethodLiveArtifactGet,
@@ -33824,6 +33832,97 @@ StewardshipOp = Annotated[
 ]
 
 
+class DashboardRole(str, Enum):
+    VIEW = "view"
+    EDIT = "edit"
+
+
+class DashboardGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal_or_group: str
+    role: DashboardRole
+
+
+class DashboardPanel(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    source: str
+    query: str
+    terms: list[str] = Field(default_factory=list)
+    concepts: list[str] = Field(default_factory=list)
+
+
+class DashboardBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    panels: list[DashboardPanel]
+    layout: Any = None
+    parameters: Any = None
+
+
+class DashboardReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    revision: Annotated[int, Field(ge=0)]
+    owner: str
+    grants: list[DashboardGrant]
+    body: DashboardBody | None = None
+    removed_at_ms: Annotated[int, Field(ge=0)] | None = None
+    usage_count: Annotated[int, Field(ge=0)]
+    last_viewed_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class DashboardAssetOpSave(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["save"]
+    id: str
+    body: DashboardBody
+    revision: Annotated[int, Field(ge=0)]
+
+
+class DashboardAssetOpShare(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["share"]
+    id: str
+    grants: list[DashboardGrant]
+
+
+class DashboardAssetOpDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["delete"]
+    id: str
+
+
+class DashboardAssetOpRestore(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["restore"]
+    id: str
+
+
+class DashboardAssetOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["get"]
+    id: str
+
+
+DashboardAssetOp = Annotated[
+    DashboardAssetOpSave
+    | DashboardAssetOpShare
+    | DashboardAssetOpDelete
+    | DashboardAssetOpRestore
+    | DashboardAssetOpGet,
+    Field(discriminator="op"),
+]
+
+
 class ClassificationClaimOpReject(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -34298,6 +34397,12 @@ class MethodStewardshipParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     op: StewardshipOp
+
+
+class MethodDashboardAssetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: DashboardAssetOp
 
 
 class MethodClassificationClaimParams(BaseModel):
@@ -42483,6 +42588,19 @@ __all__ = [
     "StewardshipOpApply",
     "StewardshipOpCertify",
     "StewardshipOpMarkCritical",
+    "MethodDashboardAsset",
+    "MethodDashboardAssetParams",
+    "DashboardRole",
+    "DashboardGrant",
+    "DashboardPanel",
+    "DashboardBody",
+    "DashboardReceipt",
+    "DashboardAssetOp",
+    "DashboardAssetOpSave",
+    "DashboardAssetOpShare",
+    "DashboardAssetOpDelete",
+    "DashboardAssetOpRestore",
+    "DashboardAssetOpGet",
     "ClaimKind",
     "ClassificationClaimState",
     "ClassificationClaimProvenance",

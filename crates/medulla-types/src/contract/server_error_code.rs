@@ -671,6 +671,14 @@ closed_error_codes! {
         LineageEdgeUnpaired => "LINEAGE_EDGE_UNPAIRED",
         /// A catalog batch exceeds `catalog.onboard_batch_max_triples` (MEDULLA-TYPED-PACKS-R106.4).
         CatalogBatchTooLarge => "CATALOG_BATCH_TOO_LARGE",
+        /// A dashboard save carried a stale revision; the refusal names the current one (MEDULLA-TYPED-PACKS-R109.4).
+        DashboardRevisionConflict => "DASHBOARD_REVISION_CONFLICT",
+        /// A dashboard read without a grant, or a write without the `edit` role (MEDULLA-TYPED-PACKS-R109.4).
+        DashboardNotGranted => "DASHBOARD_NOT_GRANTED",
+        /// A dashboard panel has no query, or the body is over `catalog.dashboard_body_max_bytes` (MEDULLA-TYPED-PACKS-R109.4).
+        DashboardBodyInvalid => "DASHBOARD_BODY_INVALID",
+        /// A dashboard read of an asset whose body was purged after its retention (MEDULLA-TYPED-PACKS-R109.4).
+        DashboardPurged => "DASHBOARD_PURGED",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
         /// An outside quality score names a rule the tenant has no approved copy of (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
         QualityRuleUnknown => "QUALITY_RULE_UNKNOWN",

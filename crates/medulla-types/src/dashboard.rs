@@ -13,6 +13,42 @@ pub const DASHBOARD_REVISION_STALE: &str = "DASHBOARD_REVISION_STALE";
 /// The refusal code of an empty id, owner or grant principal, or a grant listed twice.
 pub const DASHBOARD_INVALID: &str = "DASHBOARD_INVALID";
 
+/// `knob catalog.dashboard_retention_days`: how long a deleted dashboard keeps its body.
+pub const DASHBOARD_RETENTION_DAYS_KNOB: &str = "catalog.dashboard_retention_days";
+/// Default of the retention knob, in days.
+pub const DASHBOARD_RETENTION_DAYS_DEFAULT: u64 = 30;
+/// Inclusive bounds of the retention knob, in days.
+pub const DASHBOARD_RETENTION_DAYS_RANGE: (u64, u64) = (1, 365);
+/// Environment override of the retention knob.
+pub const ENV_DASHBOARD_RETENTION_DAYS: &str = "MEDULLA_CATALOG_DASHBOARD_RETENTION_DAYS";
+
+/// The effective retention in days: the environment value inside the bounds, the default
+/// otherwise.
+pub fn dashboard_retention_days() -> u64 {
+    std::env::var(ENV_DASHBOARD_RETENTION_DAYS)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|n| {
+            (DASHBOARD_RETENTION_DAYS_RANGE.0..=DASHBOARD_RETENTION_DAYS_RANGE.1).contains(n)
+        })
+        .unwrap_or(DASHBOARD_RETENTION_DAYS_DEFAULT)
+}
+
+/// Label of the asset node `dashboard:<id>`.
+pub const DASHBOARD_ASSET_LABEL: &str = "DashboardAsset";
+/// Label of the history node `dashboard_revision:<id>:<n>`.
+pub const DASHBOARD_REVISION_LABEL: &str = "DashboardRevision";
+
+/// The node id of a dashboard asset.
+pub fn dashboard_node_id(id: &str) -> String {
+    format!("dashboard:{id}")
+}
+
+/// The node id of one saved revision of a dashboard.
+pub fn dashboard_revision_node_id(id: &str, revision: u64) -> String {
+    format!("dashboard_revision:{id}:{revision}")
+}
+
 /// `knob catalog.dashboard_body_max_bytes`: largest stored body.
 pub const DASHBOARD_BODY_MAX_BYTES_KNOB: &str = "catalog.dashboard_body_max_bytes";
 /// Default of the body size knob.
@@ -37,6 +73,7 @@ pub fn dashboard_body_max_bytes() -> u64 {
 /// What a grant lets its holder do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum DashboardRole {
     /// Read the dashboard.
     View,
@@ -47,6 +84,7 @@ pub enum DashboardRole {
 /// A grant of one role to one principal or group.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DashboardGrant {
     /// The principal or group the grant names.
     pub principal_or_group: String,
@@ -57,6 +95,7 @@ pub struct DashboardGrant {
 /// One panel and the links that name its data source, query, terms and concepts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DashboardPanel {
     /// The panel id, unique in the dashboard.
     pub id: String,
@@ -76,6 +115,7 @@ pub struct DashboardPanel {
 /// engine.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DashboardBody {
     /// The panels.
     pub panels: Vec<DashboardPanel>,
@@ -90,6 +130,7 @@ pub struct DashboardBody {
 /// A dashboard catalog asset.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DashboardAsset {
     /// The asset id.
     pub id: String,
@@ -142,4 +183,69 @@ impl DashboardAsset {
         }
         Ok(())
     }
+}
+
+/// One dashboard operation (`Method::DashboardAsset`, MEDULLA-TYPED-PACKS-R109.3).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DashboardAssetOp {
+    /// Store `body` as the next revision. `revision` is the revision the caller read; a new
+    /// dashboard carries 0 and the caller becomes its owner.
+    Save {
+        /// The dashboard id.
+        id: String,
+        /// The body to store.
+        body: DashboardBody,
+        /// The revision the caller read.
+        revision: u64,
+    },
+    /// Replace the grants. Only the owner may.
+    Share {
+        /// The dashboard id.
+        id: String,
+        /// The grants that replace the stored ones.
+        grants: Vec<DashboardGrant>,
+    },
+    /// Soft delete: the body stays for `catalog.dashboard_retention_days`. Only the owner may.
+    Delete {
+        /// The dashboard id.
+        id: String,
+    },
+    /// Bring a deleted dashboard back inside its retention. Only the owner may.
+    Restore {
+        /// The dashboard id.
+        id: String,
+    },
+    /// Read the dashboard through the handler: checks the grant and counts the view.
+    Get {
+        /// The dashboard id.
+        id: String,
+    },
+}
+
+/// What every dashboard operation answers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DashboardReceipt {
+    /// The dashboard id.
+    pub id: String,
+    /// The current revision.
+    pub revision: u64,
+    /// The owning principal.
+    pub owner: String,
+    /// The stored grants.
+    pub grants: Vec<DashboardGrant>,
+    /// The body; present on `Get` and `Save`, absent once purged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body: Option<DashboardBody>,
+    /// When it was deleted; absent while live.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub removed_at_ms: Option<u64>,
+    /// How many reads the handler has counted.
+    pub usage_count: u64,
+    /// When the handler last served a read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_viewed_ms: Option<u64>,
 }

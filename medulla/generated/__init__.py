@@ -435,6 +435,7 @@ SEND_BY_METHOD = {
     "ClassificationClaim": ingestion.send_classification_claim,
     "Glossary": ingestion.send_glossary,
     "Stewardship": ingestion.send_stewardship,
+    "DashboardAsset": ingestion.send_dashboard_asset,
     "IndexRepository": ingestion.send_index_repository,
     "InvalidateEdge": graph.send_invalidate_edge,
     "IssueControlLease": coordination.send_issue_control_lease,

@@ -285,6 +285,8 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::Glossary { .. } => Some("__glossary"),
         // MEDULLA-TYPED-PACKS-R802.3: like the glossary ops.
         Method::Stewardship { .. } => Some("__stewardship"),
+        // MEDULLA-TYPED-PACKS-R109.3: like the stewardship ops.
+        Method::DashboardAsset { .. } => Some("__dashboard"),
         // MEDULLA-SDLC-R002.3: like the incident writes.
         Method::RecordRelease { .. }
         | Method::RecordDeployment { .. }

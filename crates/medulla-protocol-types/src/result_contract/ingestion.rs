@@ -110,6 +110,12 @@ method_results! {
     StewardshipApply(Stewardship / "apply") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     StewardshipCertify(Stewardship / "certify") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     StewardshipMarkCritical(Stewardship / "mark_critical") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    // MEDULLA-TYPED-PACKS-R109.3: every dashboard op answers one receipt.
+    DashboardAssetSave(DashboardAsset / "save") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetShare(DashboardAsset / "share") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetDelete(DashboardAsset / "delete") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetRestore(DashboardAsset / "restore") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetGet(DashboardAsset / "get") => Raw<medulla_types::dashboard::DashboardReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;

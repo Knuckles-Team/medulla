@@ -307,6 +307,15 @@ $($variants)*
         op: Box<medulla_catalog_types::stewardship::StewardshipOp>,
     },
 
+    // ── Dashboard asset (MEDULLA-TYPED-PACKS-R109.3) ───────────────────────
+    /// One dashboard op in the caller's tenant: `Save` (carrying the revision the
+    /// caller read), `Share`, `Delete`, `Restore` or `Get`. Scope `dashboard:write`.
+    /// Refusals: `DASHBOARD_REVISION_CONFLICT`, `DASHBOARD_NOT_GRANTED`,
+    /// `DASHBOARD_BODY_INVALID`, `DASHBOARD_PURGED`.
+    DashboardAsset {
+        op: Box<medulla_types::dashboard::DashboardAssetOp>,
+    },
+
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
     /// Validate and register one action spec in the request graph's registry.
     ActionRegister {

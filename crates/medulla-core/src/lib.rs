@@ -25,6 +25,8 @@ pub mod broker;
 /// (MEDULLA-FEDERATED-QUERY-R039.2).
 pub mod compute;
 /// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
+/// Dashboard asset rules: grants, revisions, soft delete and purge (MEDULLA-TYPED-PACKS-R109.2).
+pub mod dashboard;
 pub mod data_product;
 pub mod decay;
 pub mod domain_pack;

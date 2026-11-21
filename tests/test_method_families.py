@@ -286,6 +286,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "Glossary",
         # MEDULLA-TYPED-PACKS-R802.3: the stewardship ops, like the glossary ops.
         "Stewardship",
+        # MEDULLA-TYPED-PACKS-R109.3: the dashboard ops, like the stewardship ops.
+        "DashboardAsset",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",

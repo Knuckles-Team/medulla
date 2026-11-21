@@ -551,6 +551,7 @@ METHOD_IDS = frozenset(
         "ClassificationClaim",
         "Glossary",
         "Stewardship",
+        "DashboardAsset",
         "LineageIngest",
         "ListMemorySnapshots",
         "LiveArtifactGet",

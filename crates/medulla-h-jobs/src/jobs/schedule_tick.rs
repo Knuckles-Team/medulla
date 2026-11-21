@@ -141,6 +141,7 @@ async fn tick_pass(
         .jobs_schedule_missed_lookback_s
         .saturating_mul(1_000);
     for (graph, core) in graphs {
+        purge_due_dashboards(state, &graph, &core, host, now_ms, poll_s).await?;
         let schedules = cache.schedules(&graph, &core, now_ms);
         let mut due = Vec::new();
         for record in &schedules {
@@ -252,6 +253,61 @@ async fn tick_pass(
         }
     }
     Ok(())
+}
+
+/// Purge the dashboards of `graph` whose retention has ended (MEDULLA-TYPED-PACKS-R109.2).
+///
+/// Runs on the leader only: the graph's leader lease is contended as the schedule windows
+/// contend it, and a pass that does not hold it purges nothing. It reads the `DashboardAsset`
+/// nodes with `removed_at_ms` set, tests each with `medulla_core::dashboard::purge_due` against
+/// the `catalog.dashboard_retention_days` knob and commits one batch that nulls the body on the
+/// asset node and on every `DashboardRevision` node, keeping the revision nodes themselves.
+async fn purge_due_dashboards(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    core: &GraphCore,
+    host: &str,
+    now_ms: u64,
+    poll_s: u64,
+) -> Result<(), String> {
+    use medulla_core::dashboard::{purge_due, purge_operations, state_from_properties};
+    let retention_days = medulla_types::dashboard::dashboard_retention_days();
+    let mut operations = Vec::new();
+    for id in core
+        .nodes_by_property("type", medulla_types::dashboard::DASHBOARD_ASSET_LABEL)
+        .unwrap_or_default()
+    {
+        let Some(Value::Object(properties)) = decode_node(core, &id) else {
+            continue;
+        };
+        let Some(stored) = state_from_properties(&properties) else {
+            continue;
+        };
+        if purge_due(&stored, now_ms, retention_days) {
+            operations.extend(purge_operations(&stored.asset.id, stored.asset.revision));
+        }
+    }
+    if operations.is_empty() {
+        return Ok(());
+    }
+    if decode_node(core, LEASE_NODE_ID).is_none() {
+        commit(
+            state,
+            graph,
+            vec![upsert(LEASE_NODE_ID, LeaseRecord::default().to_fields())],
+        )
+        .await?;
+    }
+    let cell = GraphLeaseCell { core };
+    let ttl_ms = poll_s.max(1) * 3_000;
+    let Some(fence) = contend(&cell, host, now_ms, ttl_ms).map_err(|e| format!("{e:?}"))? else {
+        return Ok(());
+    };
+    cell.read()
+        .leadership()
+        .authorize(host, fence, now_ms)
+        .map_err(|e| e.to_string())?;
+    commit(state, graph, operations).await
 }
 
 /// The run record of a schedule, the initial one when none is stored.

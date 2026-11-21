@@ -116,7 +116,7 @@ async fn serve(
 }
 
 /// The stored term of `iri` in the caller's tenant, with its node properties.
-async fn stored_term(
+pub(super) async fn stored_term(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     iri: &str,

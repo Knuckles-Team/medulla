@@ -1771,6 +1771,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "DashboardAsset",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DASHBOARD_REVISION_CONFLICT",
+            "DASHBOARD_NOT_GRANTED",
+            "DASHBOARD_BODY_INVALID",
+            "DASHBOARD_PURGED",
+        ],
+    ),
+    (
         "DataProductRegister",
         &[
             "TENANT_SCOPE_REQUIRED",

@@ -41,6 +41,8 @@ use medulla_server_api::state::ServerState;
 pub mod change_envelope;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod change_envelope_draft;
+#[allow(missing_docs)]
+pub mod dashboard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod glossary;
 #[allow(missing_docs)]

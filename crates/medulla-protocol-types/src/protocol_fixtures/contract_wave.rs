@@ -122,7 +122,66 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
     samples.extend(stewardship_ops().into_iter().map(|(label, op)| {
         (label, Method::Stewardship { op: Box::new(op) })
     }));
+    samples.extend(dashboard_ops().into_iter().map(|(label, op)| {
+        (label, Method::DashboardAsset { op: Box::new(op) })
+    }));
     samples
+}
+
+/// One valid `DashboardAsset` op per op (MEDULLA-TYPED-PACKS-R109.3).
+fn dashboard_ops() -> Vec<(&'static str, medulla_types::dashboard::DashboardAssetOp)> {
+    use medulla_types::dashboard::{
+        DashboardAssetOp, DashboardBody, DashboardGrant, DashboardPanel, DashboardRole,
+    };
+    let body = DashboardBody {
+        panels: vec![DashboardPanel {
+            id: "p1".to_string(),
+            source: "orders".to_string(),
+            query: "SELECT 1".to_string(),
+            terms: vec![],
+            concepts: vec![],
+        }],
+        layout: serde_json::Value::Null,
+        parameters: serde_json::Value::Null,
+    };
+    vec![
+        (
+            "DashboardAsset.save",
+            DashboardAssetOp::Save {
+                id: "dash-1".to_string(),
+                body,
+                revision: 0,
+            },
+        ),
+        (
+            "DashboardAsset.share",
+            DashboardAssetOp::Share {
+                id: "dash-1".to_string(),
+                grants: vec![DashboardGrant {
+                    principal_or_group: "group:sales".to_string(),
+                    role: DashboardRole::View,
+                }],
+            },
+        ),
+        (
+            "DashboardAsset.delete",
+            DashboardAssetOp::Delete {
+                id: "dash-1".to_string(),
+            },
+        ),
+        (
+            "DashboardAsset.restore",
+            DashboardAssetOp::Restore {
+                id: "dash-1".to_string(),
+            },
+        ),
+        (
+            "DashboardAsset.get",
+            DashboardAssetOp::Get {
+                id: "dash-1".to_string(),
+            },
+        ),
+    ]
 }
 
 /// One valid `Stewardship` op per op (MEDULLA-TYPED-PACKS-R802.3).

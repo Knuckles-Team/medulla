@@ -890,6 +890,12 @@ decode_stewardship_certify = contract_decoder("Stewardship", "StewardshipReceipt
 decode_stewardship_mark_critical = contract_decoder(
     "Stewardship", "StewardshipReceipt", "mark_critical"
 )
+send_dashboard_asset = contract_sender("DashboardAsset", "MethodDashboardAssetParams")
+decode_dashboard_asset_save = contract_decoder("DashboardAsset", "DashboardReceipt", "save")
+decode_dashboard_asset_share = contract_decoder("DashboardAsset", "DashboardReceipt", "share")
+decode_dashboard_asset_delete = contract_decoder("DashboardAsset", "DashboardReceipt", "delete")
+decode_dashboard_asset_restore = contract_decoder("DashboardAsset", "DashboardReceipt", "restore")
+decode_dashboard_asset_get = contract_decoder("DashboardAsset", "DashboardReceipt", "get")
 send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
 decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
 send_measure_ingest_throughput = contract_sender(

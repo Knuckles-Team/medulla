@@ -179,6 +179,17 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 }
             })
         }
+        // MEDULLA-TYPED-PACKS-R109.3: the line names the op and the dashboard id, never the body.
+        Method::DashboardAsset { op } => {
+            use medulla_types::dashboard::DashboardAssetOp;
+            Some(match op.as_ref() {
+                DashboardAssetOp::Save { id, .. } => format!("DASHBOARD|save|{id}"),
+                DashboardAssetOp::Share { id, .. } => format!("DASHBOARD|share|{id}"),
+                DashboardAssetOp::Delete { id } => format!("DASHBOARD|delete|{id}"),
+                DashboardAssetOp::Restore { id } => format!("DASHBOARD|restore|{id}"),
+                DashboardAssetOp::Get { id } => format!("DASHBOARD|get|{id}"),
+            })
+        }
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
         Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
         // MEDULLA-SDLC-R017.3: the line names the project and the kind, never the statement.

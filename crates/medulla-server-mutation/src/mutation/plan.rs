@@ -1088,6 +1088,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::ClassificationClaim { .. }
             | Method::Glossary { .. }
             | Method::Stewardship { .. }
+            | Method::DashboardAsset { .. }
             | Method::RecordRelease { .. }
             | Method::RecordDeployment { .. }
             | Method::GoalPut { .. }

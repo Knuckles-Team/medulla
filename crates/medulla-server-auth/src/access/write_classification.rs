@@ -473,6 +473,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::Glossary { .. }
                 // MEDULLA-TYPED-PACKS-R802.3: the stewardship ops.
                 | Method::Stewardship { .. }
+                // MEDULLA-TYPED-PACKS-R109.3: the dashboard ops.
+                | Method::DashboardAsset { .. }
                 // MEDULLA-SDLC-R002.3: release and deployment records.
                 | Method::RecordRelease { .. }
                 | Method::RecordDeployment { .. }
