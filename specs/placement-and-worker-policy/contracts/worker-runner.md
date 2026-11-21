@@ -9,4 +9,4 @@ The SDK runner's call sequence: `register_worker`, `admit_worker_task`, `task_qu
 
 ## Refusal codes
 
-`ADMIT_HELD_FOR_RESERVE`, `TASK_LEASE_EXPIRED`. The engine holds no source credential; bodies read sources with SDK credentials.
+`ADMIT_HELD_FOR_RESERVE`, `TASK_ACK_LEASE_EXPIRED`, `TASK_ACK_NOT_CLAIMED`. The engine holds no source credential; bodies read sources with SDK credentials.

@@ -1216,7 +1216,6 @@ Resolved rows now list their edge table, single writer and proof tests: R874.4, 
 Four of them reuse ontology blocks already on main; R874.10, R874.13 and R874.14 add new blocks.
 New row R874.21 deletes the orphan `:CommitMachine` and `:ProjectionMachine` blocks left by the retired rows.
 The rollup now states the shared budget and benchmark, and its root test is the landed audit machine (R874.12).
-## Amendments
 
 ### 2026-11-20 — kernel build gaps (misc)
 
@@ -1232,3 +1231,9 @@ Build lanes stopped on open questions in these rows. Each entry states the decis
 - `MEDULLA-DURABLE-KERNEL-R870` withdrawn. Reason: duplicates the path-grant check of MEDULLA-SCM-R007.
 - `MEDULLA-DURABLE-KERNEL-R028.5.4` and `MEDULLA-DURABLE-KERNEL-R039.4.2`: the bench seam is `test_shard::apply` with `run_fixture::seed_claim` under the `test-support` feature.
 
+### 2026-11-20 — task-queue lease renewal
+
+Amendment, 2026-11-20. New row `MEDULLA-DURABLE-KERNEL-R072.1` owns the served `TaskQueueRenew`.
+Ingest rows R001.12 and R001.14 renew task leases, but main serves only enqueue, claim and ack.
+They cited the path-grant row R870 for that, which was wrong. They now depend on R072.1.
+Renewal reuses the ack ownership rule and the two ack refusal codes, so no second lease rule exists.

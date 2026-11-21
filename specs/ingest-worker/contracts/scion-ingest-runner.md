@@ -9,7 +9,7 @@ The runner registers with `register_worker`, receives a grant from `admit_worker
 
 ## Refusal codes
 
-`ADMIT_HELD_FOR_RESERVE` is a signal to back off, never to try another lane. `TASK_LEASE_EXPIRED` refuses a renew or ack on an expired or foreign lease. `INGEST_QUEUE_FULL` refuses a producer above the depth limit.
+`ADMIT_HELD_FOR_RESERVE` is a signal to back off, never to try another lane. `TASK_ACK_LEASE_EXPIRED` refuses a renew or ack on a lapsed lease, and `TASK_ACK_NOT_CLAIMED` on a foreign one. `INGEST_QUEUE_FULL` refuses a producer above the depth limit.
 
 ## Authoritative types
 
