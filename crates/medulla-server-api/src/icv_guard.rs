@@ -344,7 +344,7 @@ fn guard_metric_terms(
     }
     let mut known: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     // Terms in the same write.
-    let term_subjects: std::collections::BTreeSet<&NamedOrBlankNode> = base
+    let term_subjects: std::collections::HashSet<&NamedOrBlankNode> = base
         .iter()
         .chain(triples)
         .filter(|t| {
