@@ -353,6 +353,29 @@ pub struct ResourceGrant {
     pub expires_at_ms: u64,
 }
 
+/// The engine's answer to `Method::CheckResourceAccess` (MEDULLA-IDENTITY-R704.2).
+///
+/// The decision is a reply, not an error, so the caller sees why a call is refused. A caller
+/// may cache an allow until `revocation_revision` moves or `expires_at_ms` passes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ResourceAccessDecision {
+    /// Whether the call is allowed.
+    pub allow: bool,
+    /// The grant that allows it; `None` on a refusal.
+    pub grant_id: Option<String>,
+    /// The scopes the call may carry at most; empty on a refusal.
+    pub scope_ceiling: Vec<String>,
+    /// When the allowing grant ends, in unix milliseconds; `None` on a refusal.
+    pub expires_at_ms: Option<u64>,
+    /// The policy revision the decision was made at.
+    pub revocation_revision: u64,
+    /// Why the call is refused: `RESOURCE_UNKNOWN`, `RESOURCE_GRANT_MISSING` or
+    /// `GRANT_EXPIRED`; `None` on an allow.
+    pub reason_code: Option<String>,
+}
+
 /// A bounded, non-empty field without whitespace or control characters.
 fn resource_grant_field(value: &str) -> Result<(), IdentityRefusal> {
     if value.is_empty()

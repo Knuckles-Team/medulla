@@ -47,6 +47,25 @@ pub async fn dispatch_identity_and_access_methods(
             dispatch_boxed(dispatch_check_access(ctx, agent_id, access)).await
         }
 
+        // May an agent call one operation of a protocol resource now (MEDULLA-IDENTITY-R704.2),
+        // gated `security:check`. The decision is a reply; a refusal carries its reason code.
+        #[cfg(feature = "security")]
+        Method::CheckResourceAccess {
+            agent_id,
+            resource_ref,
+            protocol,
+            operation,
+        } => {
+            dispatch_boxed(dispatch_check_resource_access(
+                ctx,
+                agent_id,
+                resource_ref,
+                protocol,
+                operation,
+            ))
+            .await
+        }
+
         // ── RBAC policy administration (CONCEPT:MEDULLA-KG.compute.feature) ──────────────────
         // Gated at the handler; a non-security build has no arm and falls to the
         // dispatch "not available in this build" catch-all (mirrors MEDULLA-090).
@@ -238,6 +257,96 @@ async fn dispatch_check_access(
             decision,
         ),
     )
+}
+
+/// `CheckResourceAccess` (MEDULLA-IDENTITY-R704.2): the resource grant decision for one agent,
+/// resource, protocol and operation, under one read of the isolation layer.
+#[cfg(feature = "security")]
+async fn dispatch_check_resource_access(
+    ctx: DispatchCtx<'_>,
+    agent_id: String,
+    resource_ref: String,
+    protocol: medulla_identity_types::acl::ResourceProtocol,
+    operation: String,
+) -> Response {
+    let req_id = ctx.req.id;
+    let now_ms = medulla_server_api::txn::now_ms();
+    let s = timed_read(ctx.state).await;
+    let decision = resource_access_decision(
+        &s.isolation,
+        &agent_id,
+        &resource_ref,
+        protocol,
+        &operation,
+        now_ms,
+    );
+    drop(s);
+    Response::ok(
+        req_id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::security::CheckResourceAccess>(
+            decision,
+        ),
+    )
+}
+
+/// The decision itself: the subjects are the agent and every role of its registered identity
+/// (an unregistered agent has none); no grant naming the resource is `RESOURCE_UNKNOWN`, none
+/// matching a subject, protocol and operation is `RESOURCE_GRANT_MISSING`, every match ended
+/// is `GRANT_EXPIRED`, otherwise the unexpired match with the latest expiry (ties by id)
+/// allows.
+#[cfg(feature = "security")]
+fn resource_access_decision(
+    isolation: &medulla_isolation::isolation::IsolationLayer,
+    agent_id: &str,
+    resource_ref: &str,
+    protocol: medulla_identity_types::acl::ResourceProtocol,
+    operation: &str,
+    now_ms: u64,
+) -> medulla_identity_types::acl::ResourceAccessDecision {
+    use medulla_identity_types::acl::{ResourceAccessDecision, ResourceGrantSubject};
+    use medulla_types::contract::ServerErrorCode;
+
+    let revocation_revision = isolation.policy_revision();
+    let refusal = |code: ServerErrorCode| ResourceAccessDecision {
+        allow: false,
+        grant_id: None,
+        scope_ceiling: Vec::new(),
+        expires_at_ms: None,
+        revocation_revision,
+        reason_code: Some(code.as_str().to_string()),
+    };
+    let ledger = isolation.rbac().resource_grants();
+    if !ledger.names_resource(resource_ref) {
+        return refusal(ServerErrorCode::ResourceUnknown);
+    }
+    let mut subjects = vec![ResourceGrantSubject::Principal(agent_id.to_string())];
+    if let Some(identity) = isolation.get_identity(agent_id) {
+        subjects.extend(identity.roles.into_iter().map(ResourceGrantSubject::Role));
+    }
+    let mut matching = ledger
+        .matching(&subjects, resource_ref, protocol, operation)
+        .peekable();
+    if matching.peek().is_none() {
+        return refusal(ServerErrorCode::ResourceGrantMissing);
+    }
+    let live = matching
+        .filter(|grant| grant.expires_at_ms > now_ms)
+        .max_by(|a, b| {
+            a.expires_at_ms
+                .cmp(&b.expires_at_ms)
+                .then_with(|| b.grant_id.cmp(&a.grant_id))
+        });
+    match live {
+        Some(grant) => ResourceAccessDecision {
+            allow: true,
+            grant_id: Some(grant.grant_id.clone()),
+            scope_ceiling: grant.scope_ceiling.clone(),
+            expires_at_ms: Some(grant.expires_at_ms),
+            revocation_revision,
+            reason_code: None,
+        },
+        None => refusal(ServerErrorCode::GrantExpired),
+    }
 }
 
 struct IdentityRegistrationMode<'a> {

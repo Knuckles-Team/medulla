@@ -178,6 +178,10 @@ closed_error_codes! {
         /// A plan view has an op with no incremental form, so it recomputes (MEDULLA-INCREMENTAL-VIEWS-R005.5).
         MatviewNotIncremental => "MATVIEW_NOT_INCREMENTAL",
         DelegationUnknown => "DELEGATION_UNKNOWN",
+        // MEDULLA-IDENTITY-R704.2: the refusal reasons of a resource access decision.
+        ResourceUnknown => "RESOURCE_UNKNOWN",
+        ResourceGrantMissing => "RESOURCE_GRANT_MISSING",
+        GrantExpired => "GRANT_EXPIRED",
         // MEDULLA-UNIFIED-DATA-PLANE-R651.4: the DocumentDelete refusals.
         CascadeTooLarge => "CASCADE_TOO_LARGE",
         DocumentDeleteUnavailable => "DOCUMENT_DELETE_UNAVAILABLE",

@@ -245,6 +245,7 @@ method_results! {
     GetIdentity(GetIdentity) => Json<Option<AgentIdentity>>;
     GetDelegationRecord(GetDelegationRecord) => Json<medulla_identity_types::identity::DelegationState>;
     CheckAccess(CheckAccess) => Json<AccessDecision>;
+    CheckResourceAccess(CheckResourceAccess) => Json<medulla_identity_types::acl::ResourceAccessDecision>;
     // Every identity op answers one tagged reply; no reply variant can
     // carry a hash, token or sealed secret.
     Identity(Identity) => Json<medulla_identity_types::identity::IdentityReply<medulla_identity_types::acl::RequestContextClaims>>;

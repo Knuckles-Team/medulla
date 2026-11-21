@@ -9485,6 +9485,50 @@ class ConsensusClient:
         ).payload
         return bool(decision["allowed"])
 
+    async def check_resource_access(
+        self,
+        agent_id: str,
+        resource_ref: str,
+        protocol: str,
+        operation: str,
+        *,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """May ``agent_id`` call ``operation`` of the ``protocol`` resource
+        ``resource_ref`` now (``Method::CheckResourceAccess``,
+        ``authz_action: security:check``)?
+
+        ``protocol`` is ``mcp`` or ``a2a``. The reply is the engine's decision:
+        ``allow``, ``grant_id``, ``scope_ceiling``, ``expires_at_ms``,
+        ``revocation_revision`` and, on a refusal, ``reason_code``
+        (``RESOURCE_UNKNOWN``, ``RESOURCE_GRANT_MISSING`` or ``GRANT_EXPIRED``).
+        A refusal is a reply, not an error; a caller may cache an allow until
+        ``revocation_revision`` moves or ``expires_at_ms`` passes. A failed call
+        raises; it is never read as a refusal.
+        """
+        for name, value in (
+            ("agent_id", agent_id),
+            ("resource_ref", resource_ref),
+            ("operation", operation),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a non-empty opaque identifier")
+        if protocol not in ("mcp", "a2a"):
+            raise ValueError("protocol must be 'mcp' or 'a2a'")
+        decision = (
+            await _gen.security.send_check_resource_access(
+                self._client,
+                {
+                    "agent_id": agent_id,
+                    "resource_ref": resource_ref,
+                    "protocol": protocol,
+                    "operation": operation,
+                },
+                graph=graph,
+            )
+        ).payload
+        return cast(dict[str, Any], decision)
+
     async def apply_multisig_mutation(
         self,
         signer_keys: dict[str, str],

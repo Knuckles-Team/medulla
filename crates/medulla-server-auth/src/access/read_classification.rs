@@ -324,6 +324,8 @@ pub(super) const REASON_TELEMETRY_TENANT_SCOPED: &str =
     "GetTelemetrySnapshot reads the in-process observability series store (crates/medulla-server-obs/src/obs/telemetry_snapshot.rs), never a GraphView/GraphCore: it keeps only series whose `medulla_tenant` label equals the verified request tenant and refuses a tenant argument that differs, so authority is the verified tenant plus the exact telemetry:read scope rather than per-node _owner/_visibility/_grants";
 pub(super) const REASON_IDENTITY_ACCESS_CHECK: &str =
     "src/server/dispatch/router/identity_access.rs's CheckAccess arm answers IsolationLayer::check_access (the same decision check_graph_access applies to a principal's own requests) for one named principal on the REQUEST graph, after first requiring the CALLER's own Read access to that graph. It returns one boolean, never a GraphView row, identity or policy, so there is nothing for RLS to filter; its own authz_action is security:check (not security:admin), which reveals no more than whether that principal's request would be admitted";
+pub(super) const REASON_RESOURCE_ACCESS_CHECK: &str =
+    "CheckResourceAccess answers from the resource grant ledger of the RBAC policy image (crates/medulla-identity-types/src/resource_grant.rs) for one named agent, resource, protocol and operation. It is control-plane policy metadata, not one resolved graph's rows: it never constructs a GraphView/GraphCore, so there is no per-node RLS to filter on. It returns one decision (allow, grant id, scope ceiling, expiry, revision or a refusal reason), never the ledger, and its authz_action is security:check, the same as CheckAccess; a request for another tenant is refused at the door";
 pub(super) const REASON_CLUSTER_TOPOLOGY_READ: &str =
     "src/server/handlers/topology.rs::handle_cluster_members answers from the durable NodeInfoStore + live MultiRaft membership (self-reported node/raft-group topology) -- not one resolved graph's rows, never touches core/GraphView/project_core. Gated by its own authz_action `cluster:topology-read` (crates/medulla-capabilities/src/lib.rs), deliberately NOT kg:admin (REASON_CLUSTER_ADMIN_GATED) so ordinary service roles can re-resolve after a failover -- a distinct, weaker gate than the admin-only cluster methods above, so it gets its own reason rather than being folded into theirs";
 // BUG-044-class facade audit (push/medulla-merge-artifacts): `QueryWorkItemReservation`/
@@ -561,6 +563,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("ClusterMembers", REASON_CLUSTER_TOPOLOGY_READ),
     ("GetIdentity", REASON_IDENTITY_STORE_ADMIN_GATED),
     ("CheckAccess", REASON_IDENTITY_ACCESS_CHECK),
+    ("CheckResourceAccess", REASON_RESOURCE_ACCESS_CHECK),
     ("GetTelemetrySnapshot", REASON_TELEMETRY_TENANT_SCOPED),
     (
         "GetDelegationRecord",

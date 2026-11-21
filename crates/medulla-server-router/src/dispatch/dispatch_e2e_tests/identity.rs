@@ -27,6 +27,7 @@ mod client_session;
 mod delegation_record;
 mod policy_bundle;
 mod refusal_contract;
+mod resource_access;
 mod resolution_context;
 mod revocation;
 mod stale_verdict;

@@ -465,6 +465,18 @@ $($variants)*
         access: medulla_identity_types::acl::AccessCheck,
     },
 
+    /// May `agent_id` call `operation` of the protocol resource `resource_ref` right now
+    /// (MEDULLA-IDENTITY-R704.2)? The engine answers from its resource grant ledger: the
+    /// reply carries the allowing grant, its scope ceiling and expiry, and the policy
+    /// revision the decision was made at, or the reason the call is refused. A refusal is
+    /// a reply, not an error. Gated `security:check`, the action of `CheckAccess`.
+    CheckResourceAccess {
+        agent_id: String,
+        resource_ref: String,
+        protocol: medulla_identity_types::acl::ResourceProtocol,
+        operation: String,
+    },
+
     /// Administer the RBAC role/grant policy (CONCEPT:MEDULLA-KG.compute.feature). Unconditional in the
     /// enum; the handler is gated behind the `security` feature (a non-security build
     /// falls to the dispatch "not available in this build" catch-all, like MEDULLA-090's

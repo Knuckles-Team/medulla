@@ -575,6 +575,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetIdentity { .. }
         | Method::GetDelegationRecord { .. }
         | Method::CheckAccess { .. }
+        | Method::CheckResourceAccess { .. }
         | Method::TsListSeries
         | Method::UpdateDevelopmentLaneQuota { .. }
         | Method::Reconcile { .. }
