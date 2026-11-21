@@ -132,9 +132,9 @@ plots only and never places an order.
 - the indicator version;
 - the parameter hash.
 
-`signal_advance` moves a `SignalState` forward by final bars that come after
-its last bar. Each bar is one O(1) step from the state's exact kernel
-checkpoint. A bar at or before the last bar is refused: that change needs a
+`signal_advance` moves a `SignalCheckpoint` (the `checkpoint` field of the request)
+forward by final bars that come after its last bar. Each bar is one O(1) step from
+the checkpoint's exact kernel state. A bar at or before the last bar is refused: that change needs a
 replay.
 
 `signal_replay` processes every bar version in the order it became knowable:

@@ -56,10 +56,10 @@ pub fn handle(req_id: u64, op: FinanceMarketOp) -> Response {
         FinanceMarketOp::SignalReplay { request } => {
             answer::<results::FinanceMarketSignalReplay>(req_id, signal::replay(&request))
         }
-        FinanceMarketOp::SignalAdvance { state, bars } => {
+        FinanceMarketOp::SignalAdvance { checkpoint, bars } => {
             answer::<results::FinanceMarketSignalAdvance>(
                 req_id,
-                signal::advance_wire(&state, &bars),
+                signal::advance_wire(&checkpoint, &bars),
             )
         }
         FinanceMarketOp::SignalScan { request } => {

@@ -7,7 +7,7 @@
 //! confirmed bar brings a stale signal back to `Valid`. No state is terminal.
 //! [`DataStatus::apply`] is the only function that produces a new status, and a refused event
 //! is the typed `TRANSITION_REFUSED` naming the machine, the current state and the event. The
-//! status lives in `SignalState.data_status`; the ontology description is `SignalDataMachine` in
+//! status lives in `SignalCheckpoint.data_status`; the ontology description is `SignalDataMachine` in
 //! `state-machines-v1.ttl`.
 
 use medulla_types::transition_refused::{

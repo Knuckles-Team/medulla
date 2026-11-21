@@ -8,7 +8,7 @@ use super::chart::DecimateRequest;
 use super::evidence::{BacktestRunDraft, FlipConfidenceRequest};
 use super::liquidity::LiquidityPanelRequest;
 use super::scan::ScanRequest;
-use super::signal::{IndicatorSpec, SignalReplayRequest, SignalState};
+use super::signal::{IndicatorSpec, SignalCheckpoint, SignalReplayRequest};
 use super::snapshot::AnalysisSnapshotDraft;
 
 /// One market-signal operation.
@@ -45,9 +45,9 @@ pub enum FinanceMarketOp {
     },
     /// Replay every bar version of one series through a trailing-trend signal.
     SignalReplay { request: SignalReplayRequest },
-    /// Advance a signal state by new final bars after its last one, in O(1) each.
+    /// Advance an indicator checkpoint by new final bars after its last one, in O(1) each.
     SignalAdvance {
-        state: SignalState,
+        checkpoint: SignalCheckpoint,
         bars: Vec<BarRecord>,
     },
     /// The latest-state scanner view over many signal states.
@@ -63,4 +63,28 @@ pub enum FinanceMarketOp {
     /// Validate an analysis and seal it as a content-addressed snapshot with
     /// its notices; re-sealing a stored draft verifies the record.
     AnalysisSnapshot { draft: AnalysisSnapshotDraft },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R906.2
+    #[test]
+    fn signal_advance_carries_a_checkpoint_not_a_state() {
+        let old = r#"{"op":"signal_advance","state":{},"bars":[]}"#;
+        let error = serde_json::from_str::<FinanceMarketOp>(old)
+            .expect_err("the old field name is refused");
+        assert!(
+            error.to_string().contains("unknown field `state`"),
+            "{error}"
+        );
+        let new = r#"{"op":"signal_advance","checkpoint":{},"bars":[]}"#;
+        let error = serde_json::from_str::<FinanceMarketOp>(new)
+            .expect_err("an empty checkpoint is incomplete");
+        assert!(
+            !error.to_string().contains("unknown field `checkpoint`"),
+            "{error}"
+        );
+    }
 }

@@ -18,8 +18,8 @@ use super::signal_machine::SignalEvent;
 use super::supertrend::{step as trail_step, TrailParams};
 use super::{
     BarRecord, BarStatus, DataStatus, FlipRecord, FlipRecordKind, IndicatorSpec, MarketError,
-    MarketResult, SeriesIdentity, SignalAdvanced, SignalKey, SignalReplay, SignalReplayRequest,
-    SignalState, SuperTrendCheckpoint, TrendFlip, INVALID_BAR, INVALID_REQUEST,
+    MarketResult, SeriesIdentity, SignalAdvanced, SignalCheckpoint, SignalKey, SignalReplay,
+    SignalReplayRequest, SuperTrendCheckpoint, TrendFlip, INVALID_BAR, INVALID_REQUEST,
     REVISION_NEEDS_REPLAY,
 };
 
@@ -65,8 +65,8 @@ pub fn event_id(key_digest: &str, bar_close: i64) -> String {
 }
 
 /// The state before any bar.
-pub fn initial_state(key: SignalKey, spec: IndicatorSpec) -> SignalState {
-    SignalState {
+pub fn initial_state(key: SignalKey, spec: IndicatorSpec) -> SignalCheckpoint {
+    SignalCheckpoint {
         key,
         spec,
         direction: None,
@@ -90,7 +90,7 @@ fn status_after(current: DataStatus, event: SignalEvent) -> MarketResult<DataSta
         .map_err(|refused| MarketError::new(INVALID_REQUEST, format!("{refused:?}")))
 }
 
-fn check_next(state: &SignalState, bar: &BarRecord) -> MarketResult<()> {
+fn check_next(state: &SignalCheckpoint, bar: &BarRecord) -> MarketResult<()> {
     if bar.status != BarStatus::Final {
         return Err(MarketError::new(
             INVALID_BAR,
@@ -114,7 +114,7 @@ fn check_next(state: &SignalState, bar: &BarRecord) -> MarketResult<()> {
 
 /// One final bar, strictly after the state's last bar.
 fn advance_one(
-    state: &mut SignalState,
+    state: &mut SignalCheckpoint,
     params: TrailParams,
     bar: &BarRecord,
 ) -> MarketResult<Option<TrendFlip>> {
@@ -160,9 +160,9 @@ fn advance_one(
 
 /// Advance `state` by final bars after its last one, in order.
 pub fn advance(
-    state: &SignalState,
+    state: &SignalCheckpoint,
     bars: &[BarRecord],
-) -> MarketResult<(SignalState, Vec<TrendFlip>)> {
+) -> MarketResult<(SignalCheckpoint, Vec<TrendFlip>)> {
     let params = TrailParams::of(state.spec.kind)?;
     let mut next = state.clone();
     let mut flips = Vec::new();
@@ -173,7 +173,7 @@ pub fn advance(
 }
 
 /// [`advance`] as its wire result.
-pub fn advance_wire(state: &SignalState, bars: &[BarRecord]) -> MarketResult<SignalAdvanced> {
+pub fn advance_wire(state: &SignalCheckpoint, bars: &[BarRecord]) -> MarketResult<SignalAdvanced> {
     let (state, flips) = advance(state, bars)?;
     Ok(SignalAdvanced { state, flips })
 }
@@ -201,7 +201,7 @@ struct Projection {
     spec: IndicatorSpec,
     params: TrailParams,
     versions: BTreeMap<i64, BarRecord>,
-    state: SignalState,
+    state: SignalCheckpoint,
     /// Standing (emitted, not retracted) records by event id.
     standing: BTreeMap<String, FlipRecord>,
     records: Vec<FlipRecord>,
@@ -332,7 +332,7 @@ fn arrivals(request: &SignalReplayRequest) -> Vec<BarRecord> {
     known
 }
 
-fn mark_stale(state: &mut SignalState, as_of: Option<i64>, stale_after: Option<i64>) {
+fn mark_stale(state: &mut SignalCheckpoint, as_of: Option<i64>, stale_after: Option<i64>) {
     let (Some(now), Some(bound), Some(close)) = (as_of, stale_after, state.last_bar_close) else {
         return;
     };

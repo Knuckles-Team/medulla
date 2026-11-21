@@ -106,7 +106,9 @@ def test_signal_replay_scan_and_advance_agree(clean_graph):
         "signal_replay",
         request={"series": SERIES, "spec": SPEC, "records": bars[:6]},
     )["state"]
-    advanced = clean_graph.finance.market("signal_advance", state=head, bars=bars[6:])
+    advanced = clean_graph.finance.market(
+        "signal_advance", checkpoint=head, bars=bars[6:]
+    )
     assert advanced["state"] == state
     page = clean_graph.finance.market(
         "signal_scan", request={"states": [head, state], "limit": 10}

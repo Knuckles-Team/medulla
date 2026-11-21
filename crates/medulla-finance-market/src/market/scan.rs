@@ -13,13 +13,13 @@ use std::collections::BTreeMap;
 use super::fixed::basis_points;
 use super::{
     DataStatus, Direction, MarketResult, ScanCounts, ScanFilter, ScanPage, ScanRequest, ScanRow,
-    SignalState,
+    SignalCheckpoint,
 };
 
 /// Rows returned by one scan at most.
 pub const MAX_SCAN_ROWS: u32 = 10_000;
 
-fn recency(state: &SignalState) -> (Option<i64>, u64, &str) {
+fn recency(state: &SignalCheckpoint) -> (Option<i64>, u64, &str) {
     (
         state.last_bar_close,
         state.kernel.bars,
@@ -30,13 +30,13 @@ fn recency(state: &SignalState) -> (Option<i64>, u64, &str) {
 /// One latest state per signal key.
 #[derive(Debug, Clone, Default)]
 pub struct SignalIndex {
-    states: BTreeMap<String, SignalState>,
+    states: BTreeMap<String, SignalCheckpoint>,
     superseded: u64,
 }
 
 impl SignalIndex {
     /// Hold `state` unless a state at least as recent is already held.
-    pub fn upsert(&mut self, state: SignalState) -> bool {
+    pub fn upsert(&mut self, state: SignalCheckpoint) -> bool {
         let digest = state.key.digest.clone();
         let newer = self
             .states
@@ -59,13 +59,13 @@ impl SignalIndex {
         self.states.is_empty()
     }
 
-    pub fn get(&self, key_digest: &str) -> Option<&SignalState> {
+    pub fn get(&self, key_digest: &str) -> Option<&SignalCheckpoint> {
         self.states.get(key_digest)
     }
 
     /// Filter, count and page the held states.
     pub fn scan(&self, filter: &ScanFilter, limit: u32) -> ScanPage {
-        let kept: Vec<&SignalState> = self
+        let kept: Vec<&SignalCheckpoint> = self
             .states
             .values()
             .filter(|state| keeps(filter, state))
@@ -87,7 +87,7 @@ impl SignalIndex {
     }
 }
 
-fn keeps(filter: &ScanFilter, state: &SignalState) -> bool {
+fn keeps(filter: &ScanFilter, state: &SignalCheckpoint) -> bool {
     let direction_ok = filter
         .direction
         .is_none_or(|wanted| state.direction == Some(wanted));
@@ -101,7 +101,7 @@ fn keeps(filter: &ScanFilter, state: &SignalState) -> bool {
     direction_ok && status_ok && flip_ok && timeframe_ok
 }
 
-fn count(counts: &mut ScanCounts, state: &SignalState) {
+fn count(counts: &mut ScanCounts, state: &SignalCheckpoint) {
     counts.total += 1;
     match state.data_status {
         DataStatus::Warming => counts.warming += 1,
@@ -115,7 +115,7 @@ fn count(counts: &mut ScanCounts, state: &SignalState) {
     }
 }
 
-fn row(state: &SignalState) -> ScanRow {
+fn row(state: &SignalCheckpoint) -> ScanRow {
     let change = match (state.last_close, state.flip_reference_price) {
         (Some(close), Some(reference)) if reference != 0 => {
             Some(basis_points(close - reference, reference))

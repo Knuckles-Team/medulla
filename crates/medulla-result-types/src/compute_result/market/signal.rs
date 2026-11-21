@@ -148,12 +148,13 @@ pub struct SuperTrendCheckpoint {
     pub ha_close: Option<i64>,
 }
 
-/// The latest state of one signal. A projection of the final bars: rebuilt by
-/// replay, advanced one final bar at a time.
+/// The indicator checkpoint of one signal: a projection of the final bars, rebuilt by
+/// replay and handed back by the caller so the next bars continue from it. It has no
+/// closed set of states and no transitions (MEDULLA-FINANCE-PRIMITIVES-R906.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct SignalState {
+pub struct SignalCheckpoint {
     pub key: SignalKey,
     pub spec: IndicatorSpec,
     pub direction: Option<Direction>,
@@ -246,7 +247,7 @@ pub struct SignalReplayRequest {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SignalReplay {
-    pub state: SignalState,
+    pub state: SignalCheckpoint,
     pub records: Vec<FlipRecord>,
     pub current: Vec<TrendFlip>,
 }
@@ -256,7 +257,7 @@ pub struct SignalReplay {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SignalAdvanced {
-    pub state: SignalState,
+    pub state: SignalCheckpoint,
     pub flips: Vec<TrendFlip>,
 }
 

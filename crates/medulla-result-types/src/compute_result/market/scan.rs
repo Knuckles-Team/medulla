@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::bars::Timeframe;
-use super::signal::{DataStatus, Direction, SignalState};
+use super::signal::{DataStatus, Direction, SignalCheckpoint};
 
 /// Which states a scan keeps. Empty `statuses` keeps every status.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ pub struct ScanFilter {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ScanRequest {
-    pub states: Vec<SignalState>,
+    pub states: Vec<SignalCheckpoint>,
     #[serde(default)]
     pub filter: ScanFilter,
     pub limit: u32,

@@ -6269,8 +6269,8 @@ class FinanceMarketOpSignalAdvance(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     bars: list[BarRecord]
+    checkpoint: SignalCheckpoint
     op: Literal["signal_advance"]
-    state: SignalState
 
 
 class FinanceMarketOpSignalScan(BaseModel):
@@ -22865,7 +22865,7 @@ class ScanRequest(BaseModel):
 
     filter: ScanFilter | None = None
     limit: Annotated[int, Field(ge=0)]
-    states: list[SignalState]
+    states: list[SignalCheckpoint]
 
 
 class ScanRow(BaseModel):
@@ -25123,7 +25123,7 @@ class SignalAdvanced(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     flips: list[TrendFlip]
-    state: SignalState
+    state: SignalCheckpoint
 
 
 class SignalKey(BaseModel):
@@ -25140,7 +25140,7 @@ class SignalReplay(BaseModel):
 
     current: list[TrendFlip]
     records: list[FlipRecord]
-    state: SignalState
+    state: SignalCheckpoint
 
 
 class SignalReplayRequest(BaseModel):
@@ -25153,7 +25153,7 @@ class SignalReplayRequest(BaseModel):
     stale_after: int | None = None
 
 
-class SignalState(BaseModel):
+class SignalCheckpoint(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     atr: int | None = None
@@ -38165,10 +38165,10 @@ __all__ = [
     "ShortcutDetector",
     "ShortlistProvenance",
     "SignalAdvanced",
+    "SignalCheckpoint",
     "SignalKey",
     "SignalReplay",
     "SignalReplayRequest",
-    "SignalState",
     "SkillOp",
     "SkillType",
     "SkillTypeSource",

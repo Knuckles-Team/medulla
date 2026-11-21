@@ -40,8 +40,8 @@ pub use op::FinanceMarketOp;
 pub use scan::{ScanCounts, ScanFilter, ScanPage, ScanRequest, ScanRow};
 pub use signal::{
     CandleBasis, DataStatus, Direction, FlipRecord, FlipRecordKind, IndicatorKind, IndicatorPoint,
-    IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalKey, SignalReplay,
-    SignalReplayRequest, SignalState, SuperTrendCheckpoint, TrendFlip,
+    IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalCheckpoint, SignalKey,
+    SignalReplay, SignalReplayRequest, SuperTrendCheckpoint, TrendFlip,
 };
 pub use snapshot::{
     AnalysisSnapshot, AnalysisSnapshotDraft, BarWindow, ClaimAuthor, ClaimSource, SnapshotClaim,

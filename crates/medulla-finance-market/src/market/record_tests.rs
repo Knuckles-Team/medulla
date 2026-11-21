@@ -12,7 +12,7 @@ use super::{
     BacktestRunDraft, BarRecord, CandleBasis, CostModel, DataRevisionRef, DataStatus, Direction,
     FillRule, FinalityFilter, FlipAbstainReason, FlipConfidence, FlipConfidenceRequest,
     FlipFeatures, FlipOutcomeSample, FlipRecordKind, IndicatorKind, IndicatorSpec, ScanFilter,
-    SignalState, Timeframe, TradeFill, UniverseMember, ValidationInputs, INVALID_REQUEST,
+    SignalCheckpoint, Timeframe, TradeFill, UniverseMember, ValidationInputs, INVALID_REQUEST,
     LOOK_AHEAD, OUT_OF_ORDER,
 };
 
@@ -144,7 +144,7 @@ fn a_stale_or_empty_series_reports_its_data_status() {
     assert_eq!(warming.state.last_flip_at, None);
 }
 
-fn state_for(listing: &str, bars: &[BarRecord]) -> SignalState {
+fn state_for(listing: &str, bars: &[BarRecord]) -> SignalCheckpoint {
     let mut identity = series();
     identity.listing_id = listing.to_string();
     let mut replay_request = request(bars.to_vec(), None);
