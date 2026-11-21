@@ -174,3 +174,86 @@ async def test_group_change_applies_without_rewrite() -> None:
     finally:
         await client.close()
         await _close(owner, graph)
+
+
+def _access_batch(connector: str, page: int, record_id: str, synced_at: int) -> dict:
+    return {
+        "connector": connector,
+        "kind": "access",
+        "mode": "delta",
+        "strict_schema": True,
+        "records": [],
+        "relationships": [],
+        "withdrawals": [],
+        "extension": {
+            "access": [
+                {
+                    "source": connector,
+                    "record_ref": record_id,
+                    "access_public": False,
+                    "read_principals": [MEMBER],
+                    "read_groups": [],
+                    "synced_at": synced_at,
+                }
+            ]
+        },
+        "provider_checkpoint": {"stream": STREAM, "position": {"permissions": page}},
+        "expected_previous_checkpoint": None,
+    }
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R902.5")
+@pytest.mark.spec("MEDULLA-IDENTITY-R706")
+@pytest.mark.asyncio
+async def test_stale_restricted_record_fails_closed() -> None:
+    connector = _connector()
+    owner, graph = await _ingest_client(connector)
+    client = await _connector_client(connector, graph)
+    try:
+        records = _governed(
+            connector,
+            2,
+            None,
+            [
+                _record(
+                    connector,
+                    "guarded",
+                    {
+                        "classification": "restricted",
+                        "access_public": False,
+                        "access_read_roles": [MEMBER],
+                    },
+                )
+            ],
+        )
+        await _submit(client, records, "records")
+        _grant_graph_read(graph)
+
+        now_ms = int(time.time() * 1000)
+        two_hours_ms = 2 * 3_600 * 1_000
+        fresh = await _submit(
+            client, _access_batch(connector, 1, "guarded", now_ms), "fresh"
+        )
+        assert fresh.access is not None
+        assert (fresh.access.updated, fresh.access.refused, fresh.access.stale) == (1, 0, 0)
+        assert _visible_source_ids(MEMBER, graph), "a freshly synced record is read"
+
+        # The same record synced past the bound (knob `ingest.acl_stale_after_s`,
+        # default one hour) is restricted and stale: the read gate fails closed.
+        aged = await _submit(
+            client,
+            _access_batch(connector, 2, "guarded", now_ms - two_hours_ms),
+            "aged",
+        )
+        assert aged.access is not None and aged.access.stale == 0
+        assert not _visible_source_ids(MEMBER, graph), "a stale restricted record is denied"
+
+        # The next batch counts the record as stale, and a fresh sync restores the read.
+        renewed = await _submit(
+            client, _access_batch(connector, 3, "guarded", now_ms), "renewed"
+        )
+        assert renewed.access is not None and renewed.access.stale == 1
+        assert _visible_source_ids(MEMBER, graph), "a renewed sync reads again"
+    finally:
+        await client.close()
+        await _close(owner, graph)

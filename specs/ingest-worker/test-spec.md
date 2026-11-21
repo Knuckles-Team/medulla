@@ -114,7 +114,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R902.2` | `crates/medulla-h-ingest/src/source_ingestion/permissions.rs::tests::access_batch_leaves_content_unchanged` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R902.3.1` | `crates/medulla-source-types/src/source_ingestion/tests.rs::batch_kind_requires_matching_extension` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R902.4` | `crates/medulla-types/tests/ingest_rules.rs::unknown_records_and_oversized_groups_are_refused` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R902.5` | `tests/ingest/test_source_permission_sync_served.py::test_stale_restricted_record_fails_closed` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R902.5` | `tests/ingest/test_source_permission_sync_served.py::test_stale_restricted_record_fails_closed` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R902.6` | `benches/ingest_permission_sync.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R903.1` | `crates/medulla-types/tests/source_governance.rs::reconcile_plan_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R903.2` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::missing_records_delete_after_grace` | L2 | exists |
