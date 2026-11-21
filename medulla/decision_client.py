@@ -232,6 +232,31 @@ def task_plan_request(
     )
 
 
+def skill_plan_request(
+    tenant_id: str,
+    question_id: str,
+    query: Mapping[str, Any],
+    feature_schema: Mapping[str, Any],
+    *,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build an automatic ``TaskPlan`` question over the tenant's published skills.
+
+    ``query`` is the ``SkillPlanQuery`` wire shape: ``output_task_id`` and
+    ``subtasks`` (``id``, ``text``, ``depends_on``). The engine covers each
+    subtask with a published skill and returns the dependency-ordered plan.
+    """
+    return decide_request(
+        tenant_id,
+        (question_id, "task_plan", "ordinary"),
+        declared(DeclaredOption(task["id"]) for task in query["subtasks"]),
+        feature_schema,
+        policy=policy,
+        params=[param("skill_query", "skill_plan_query", query)],
+        max_records=1,
+    )
+
+
 def tool_assignment_request(
     tenant_id: str,
     question_id: str,

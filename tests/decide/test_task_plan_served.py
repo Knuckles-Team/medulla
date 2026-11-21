@@ -20,7 +20,11 @@ from conftest import (
 )
 
 from medulla.client import EngineResponseError, SyncMedullaClient
-from medulla.decision_client import task_plan_request, verify_task_plan_receipt
+from medulla.decision_client import (
+    skill_plan_request,
+    task_plan_request,
+    verify_task_plan_receipt,
+)
 
 # Public loopback fixture value shared with tests/conftest.py; not a credential.
 TEST_AUTH_FIXTURE_VALUE = "-".join(("test", "epistemic", "graph", "secret"))
@@ -299,6 +303,84 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
         invalid["params"][0]["value"]["value"]["output_task_id"] = "b"
         with pytest.raises(Exception, match="DISCONNECTED_OUTPUT"):
             client._send("Decide", {"request": invalid})
+    finally:
+        client.close()
+
+
+# spec: MEDULLA-DECISION-ENGINE-R134.8
+def test_automatic_plan_end_to_end(authenticated_plan_client):
+    client = authenticated_plan_client
+    try:
+        pin = publish(
+            client,
+            "task-plan-schema-" + uuid.uuid4().hex,
+            "feature_schema",
+            schema_body(),
+        )
+        skills = {
+            "skill-search": "search documents archive retrieval",
+            "skill-audit": "audit security findings evidence review",
+            "skill-report": "summarise findings report writing narrative",
+        }
+        for skill_id, summary in skills.items():
+            publish(client, skill_id, "skill", schema_body(), summary=summary)
+        query = {
+            "output_task_id": "c",
+            "subtasks": [
+                {"id": "a", "text": skills["skill-search"], "depends_on": []},
+                {"id": "b", "text": skills["skill-audit"], "depends_on": []},
+                {"id": "c", "text": skills["skill-report"], "depends_on": ["a", "b"]},
+            ],
+        }
+        asked = skill_plan_request(TEST_TENANT, "fixture-skill-plan", query, pin)
+        first = client._send("Decide", {"request": asked})["records"][0]
+        plan = first["answer"]["value"]
+        # Dependency-ordered tasks, each with one assignee.
+        order = [task["task_id"] for task in plan["tasks"]]
+        assert sorted(order) == ["a", "b", "c"]
+        assert order.index("c") > order.index("a")
+        assert order.index("c") > order.index("b")
+        assignees = {task["task_id"]: task["assignee"] for task in plan["tasks"]}
+        assert assignees == {
+            "a": "skill-search",
+            "b": "skill-audit",
+            "c": "skill-report",
+        }
+        assert plan["output_task_id"] == "c"
+        assert first["evidence_class"] == "claim"
+        assert first["resolution_kind"] == "constraint"
+        # The assignment premises name each assignee.
+        for task_id, skill_id in assignees.items():
+            assert any(
+                p["subject"] == task_id
+                and f"task_plan_assignment:assignee={skill_id};" in p["fact"]
+                for p in first["premises"]
+            )
+        # A caller proposal of the same tasks seals the same plan digest.
+        proposal = {
+            "tasks": [
+                {
+                    "task_id": task["task_id"],
+                    "prompt": task["prompt"],
+                    "depends_on": task["depends_on"],
+                    "assignee": task["assignee"],
+                }
+                for task in plan["tasks"]
+            ],
+            "output_task_id": "c",
+            "max_concurrency": plan["max_concurrency"],
+            "max_steps": plan["max_steps"],
+        }
+        caller = task_plan_request(TEST_TENANT, "fixture-caller-plan", proposal, pin)
+        caller_plan = client._send("Decide", {"request": caller})["records"][0][
+            "answer"
+        ]["value"]
+        assert caller_plan["plan_digest"] == plan["plan_digest"]
+        # Replay: the identical request answers the same plan.
+        second = client._send("Decide", {"request": asked})["records"][0]
+        replayed = second["answer"]["value"]
+        assert replayed["plan_digest"] == plan["plan_digest"]
+        assert replayed["tasks"] == plan["tasks"]
     finally:
         client.close()
 

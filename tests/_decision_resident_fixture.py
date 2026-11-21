@@ -15,7 +15,7 @@ from medulla.decision_client import (
 DIGEST = "sha256:" + "1" * 64
 
 
-def publication(component_id, kind, body, receipt=None):
+def publication(component_id, kind, body, receipt=None, summary=None):
     context = dict(
         request_id=1,
         principal="principal:sha256:" + "a" * 64,
@@ -40,7 +40,7 @@ def publication(component_id, kind, body, receipt=None):
         content_ref=None,
         facts={"facts": "opaque"},
         provenance={"origin": "native"},
-        summary=component_id,
+        summary=component_id if summary is None else summary,
         classification=[],
         requires=[],
         declared_capabilities=[],
@@ -67,9 +67,9 @@ def publication(component_id, kind, body, receipt=None):
     }
 
 
-def publish(client, component_id, kind, body, receipt=None):
+def publish(client, component_id, kind, body, receipt=None, summary=None):
     result = client._send(
-        "AgentComponent", publication(component_id, kind, body, receipt)
+        "AgentComponent", publication(component_id, kind, body, receipt, summary)
     )
     entry = result["component"]
     return {
