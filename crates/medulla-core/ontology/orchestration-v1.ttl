@@ -729,6 +729,17 @@
     rdfs:domain :CompiledProgram ;
     rdfs:range :RunTrace .
 
+:ProgramPhrasing a owl:Class ;
+    rdfs:label "ProgramPhrasing" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "MEDULLA-DECISION-ENGINE-R135.16.3 — one wording of the request a CompiledProgram answers, embedded so a lookup finds the program by meaning." .
+
+:phrasingOf a owl:ObjectProperty ;
+    rdfs:label "phrasing of" ;
+    rdfs:comment "MEDULLA-DECISION-ENGINE-R135.16.3 — ProgramPhrasing -[:phrasingOf]-> the CompiledProgram it words." ;
+    rdfs:domain :ProgramPhrasing ;
+    rdfs:range :CompiledProgram .
+
 :WorkflowPattern a owl:Class ;
     rdfs:label "WorkflowPattern" ;
     rdfs:subClassOf bfo:0000001 ;

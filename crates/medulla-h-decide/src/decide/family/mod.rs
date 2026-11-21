@@ -104,6 +104,7 @@ pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::{disclosure_view, event_premise_fact};
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
+pub(in crate::decide) use program_store::with_program_candidates;
 pub(in crate::decide) use resolve_entity::with_candidates;
 pub(in crate::decide) use runtime_quota::quota_view;
 pub(in crate::decide) use skill_evolution::with_skill_embeddings;

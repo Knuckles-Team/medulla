@@ -131,6 +131,8 @@ mod stat_verdict_dataset;
 mod stat_writeback;
 // MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
 #[cfg(feature = "decide")]
+mod program_embedding;
+#[cfg(feature = "decide")]
 mod run_record;
 #[cfg(feature = "decide")]
 mod stat_retention;

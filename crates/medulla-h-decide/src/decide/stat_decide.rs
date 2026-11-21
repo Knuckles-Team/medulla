@@ -235,6 +235,16 @@ async fn serve(
             super::family::with_similarity(state, store.as_ref(), verified, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::ProgramLookup {
+        // A `program_lookup` question with `request_text` embeds the text and records the
+        // nearest program candidates in its own parameter (MEDULLA-DECISION-ENGINE-R135.16.3).
+        telemetry::stage_async(
+            telemetry::Stage::Candidates,
+            &family,
+            verified.tenant(),
+            super::family::with_program_candidates(state, store.as_ref(), verified, request),
+        )
+        .await?
     } else if request.question.kind == QuestionKind::ResolveEntity {
         // A `resolve_entity` question grows its candidate pairs from the
         // tenant's own embedded neighbours and reads the reviews of earlier

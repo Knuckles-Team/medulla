@@ -8,6 +8,7 @@
 
 use super::super::run_governance::{RunTraceRecord, StepKind, TraceScalar};
 use super::{literal_walk, CompiledProgram, ProgramError, ProgramParameterKind};
+use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
 use medulla_types::contract::BoundedVec;
 use serde::{Deserialize, Serialize};
 
@@ -174,6 +175,61 @@ pub struct ProgramCandidates {
     pub embedding_calls: u32,
     pub hits: BoundedVec<ProgramHit, 64>,
     pub unavailable: Option<String>,
+}
+
+/// Abstain reason: the best score is below the program's threshold.
+pub const PROGRAM_BELOW_THRESHOLD: RefusalCode = RefusalCode::new("PROGRAM_BELOW_THRESHOLD");
+/// Abstain reason: no phrasing fits the request text, or a capture does not convert.
+pub const PROGRAM_SLOTS_UNBOUND: RefusalCode = RefusalCode::new("PROGRAM_SLOTS_UNBOUND");
+/// Abstain reason: the matched program's index is not executable.
+pub const PROGRAM_NOT_EXECUTABLE: RefusalCode = RefusalCode::new("PROGRAM_NOT_EXECUTABLE");
+/// Abstain reason: the candidate search could not embed the request text.
+pub const PROGRAM_EMBEDDING_UNAVAILABLE: RefusalCode =
+    RefusalCode::new("PROGRAM_EMBEDDING_UNAVAILABLE");
+
+/// Every abstain code of the semantic lookup, joined to `program_store::REFUSALS`.
+pub const MATCH_REFUSALS: &[RefusalCode] = &[
+    PROGRAM_BELOW_THRESHOLD,
+    PROGRAM_SLOTS_UNBOUND,
+    PROGRAM_NOT_EXECUTABLE,
+    PROGRAM_EMBEDDING_UNAVAILABLE,
+];
+
+/// Why a semantic lookup abstains (MEDULLA-DECISION-ENGINE-R135.16.3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MatchRefusal {
+    BelowThreshold { score_micros: i64, threshold_micros: i64 },
+    SlotsUnbound { parameters: Vec<String> },
+    NotExecutable { task_signature: String },
+    EmbeddingUnavailable { cause: String },
+}
+
+impl DecisionRefusal for MatchRefusal {
+    fn code(&self) -> RefusalCode {
+        match self {
+            Self::BelowThreshold { .. } => PROGRAM_BELOW_THRESHOLD,
+            Self::SlotsUnbound { .. } => PROGRAM_SLOTS_UNBOUND,
+            Self::NotExecutable { .. } => PROGRAM_NOT_EXECUTABLE,
+            Self::EmbeddingUnavailable { .. } => PROGRAM_EMBEDDING_UNAVAILABLE,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::BelowThreshold { score_micros, threshold_micros } => format!(
+                "the best score {score_micros} is below the threshold {threshold_micros}"
+            ),
+            Self::SlotsUnbound { parameters } => {
+                format!("the request text binds no value for {}", parameters.join(", "))
+            }
+            Self::NotExecutable { task_signature } => {
+                format!("the program of `{task_signature}` is not executable")
+            }
+            Self::EmbeddingUnavailable { cause } => {
+                format!("the request text could not be embedded: {cause}")
+            }
+        }
+    }
 }
 
 /// The pointer key of the match stored for `task_signature`.

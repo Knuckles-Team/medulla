@@ -23,6 +23,10 @@ use medulla_decision_types::decision::program_store::{
     program_key, program_node_id,
     replay::{replay_key, StoredReplay},
     run_trace_key, CompiledProgram, ProgramError, ProgramKnobs,
+    semantic::{
+        build_match_index, match_key, phrasing_node_id, ProgramMatchIndex, ProgramPhrasing,
+        PHRASING_NODE_CLASS, PHRASING_OF,
+    },
     RunRecord, RunRecordStored, StoredRun, StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS,
     RUN_TRACE_FIELD,
 };
@@ -51,11 +55,21 @@ use super::SharedState;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
+/// The vectors one committed program carries into the graph (MEDULLA-DECISION-ENGINE-R135.16.3):
+/// internal to the commit, never on the wire.
+pub(super) struct ProgramVectors {
+    /// The vector of the task signature, the program node's embedding.
+    pub signature: Vec<f32>,
+    /// One vector per phrasing, in phrasing order.
+    pub phrasings: Vec<Vec<f32>>,
+}
+
 /// The graph node and edge a compiled run commits through the durable path.
 pub(super) struct StagedLink {
     pub graph: String,
     pub core: Arc<medulla_graph_core::graph::GraphCore>,
-    /// The program node write, then its `compiled_from` edge write.
+    /// The program node write, its `compiled_from` edge write, then (with vectors) the program
+    /// embedding and each phrasing's node, `phrasing_of` edge and embedding.
     pub methods: Vec<Method>,
 }
 
@@ -141,6 +155,8 @@ fn link_batch(
     trace_node: &str,
     tenant: &str,
     principal: &str,
+    phrasings: &[ProgramPhrasing],
+    vectors: Option<&ProgramVectors>,
 ) -> Result<Vec<Method>, String> {
     let encode = |value: serde_json::Value| {
         rmp_serde::to_vec_named(&value).map_err(|error| {
@@ -159,7 +175,7 @@ fn link_batch(
         "_owner": principal,
     }))?;
     let edge = encode(serde_json::json!({"relationship": COMPILED_FROM, "tenant": tenant}))?;
-    Ok(vec![
+    let mut methods = vec![
         Method::AddNode {
             node_id: node_id.to_string(),
             properties_msgpack: node,
@@ -169,7 +185,64 @@ fn link_batch(
             target_id: trace_node.to_string(),
             properties_msgpack: edge,
         },
-    ])
+    ];
+    let Some(vectors) = vectors else {
+        return Ok(methods);
+    };
+    methods.push(Method::AddEmbedding {
+        node_id: node_id.to_string(),
+        embedding: vectors.signature.clone(),
+    });
+    for (k, (phrasing, vector)) in phrasings.iter().zip(&vectors.phrasings).enumerate() {
+        let phrasing_id = phrasing_node_id(&program.task_signature, k);
+        methods.push(Method::AddNode {
+            node_id: phrasing_id.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "type": PHRASING_NODE_CLASS,
+                "task_signature": program.task_signature,
+                "program_digest": program.program_digest,
+                "text": phrasing.text,
+                "_owner": principal,
+            }))?,
+        });
+        methods.push(Method::AddEdge {
+            source_id: phrasing_id.clone(),
+            target_id: node_id.to_string(),
+            properties_msgpack: encode(
+                serde_json::json!({"relationship": PHRASING_OF, "tenant": tenant}),
+            )?,
+        });
+        methods.push(Method::AddEmbedding {
+            node_id: phrasing_id,
+            embedding: vector.clone(),
+        });
+    }
+    Ok(methods)
+}
+
+/// The text a phrasing is embedded from: each `{p<k>}` placeholder replaced by one space and
+/// whitespace collapsed.
+fn phrasing_embedding_text(text: &str) -> String {
+    let mut plain = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find("{p") {
+        plain.push_str(&rest[..open]);
+        let tail = &rest[open + 1..];
+        match tail.find('}') {
+            Some(close)
+                if tail[1..close].bytes().all(|b| b.is_ascii_digit()) && close > 1 =>
+            {
+                plain.push(' ');
+                rest = &tail[close + 1..];
+            }
+            _ => {
+                plain.push_str("{p");
+                rest = &rest[open + 2..];
+            }
+        }
+    }
+    plain.push_str(rest);
+    plain.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Store one run record's artifacts and stage its graph link. A refused
@@ -187,7 +260,18 @@ pub(super) fn stage(
         RunRecord::CompiledProgram { source, .. } => Some(source.clone()),
         _ => None,
     };
-    let stored = commit(ctx, retention, committer, record, view)?;
+    let phrasings: Vec<ProgramPhrasing> = match &record {
+        RunRecord::CompiledProgram { phrasings, .. } => phrasings
+            .as_slice()
+            .iter()
+            .map(|phrasing| ProgramPhrasing {
+                text: phrasing.text.trim().to_string(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    let mut vectors = None;
+    let stored = commit(ctx, retention, committer, record, view, &mut vectors)?;
     let link = match (&stored.stored, source, view) {
         (
             StoredRun::CompiledProgram {
@@ -204,6 +288,8 @@ pub(super) fn stage(
                 &source.node_id,
                 ctx.tenant_id,
                 principal,
+                &phrasings,
+                vectors.as_ref(),
             )?;
             Some(StagedLink {
                 graph: source.graph,
@@ -246,6 +332,7 @@ fn commit(
     principal: &str,
     record: RunRecord,
     view: Option<&GraphVectors>,
+    vectors: &mut Option<ProgramVectors>,
 ) -> Result<RunRecordStored, String> {
     match record {
         RunRecord::CompiledProgram {
@@ -255,7 +342,8 @@ fn commit(
             reusable,
             plan_binding,
             preplan_receipt,
-            ..
+            phrasings,
+            match_threshold_micros,
         } => {
             let resolved = resolve_policy(ctx.store, ctx.tenant_id, &policy)?;
             let knobs = ProgramKnobs::from_policy(&resolved.policy);
@@ -300,10 +388,59 @@ fn commit(
             } else {
                 None
             };
+            // MEDULLA-DECISION-ENGINE-R135.16.3: the match index is built, and with phrasings
+            // the graph's embedding space is checked and the texts embedded, before any
+            // `store_once`, so a refusal stores nothing.
+            let trimmed: Vec<ProgramPhrasing> = phrasings
+                .as_slice()
+                .iter()
+                .map(|phrasing| ProgramPhrasing {
+                    text: phrasing.text.trim().to_string(),
+                })
+                .collect();
+            let mut index = build_match_index(&trace, &program, &trimmed, match_threshold_micros)
+                .map_err(program_refusal)?;
+            if !trimmed.is_empty() {
+                let embedder = super::program_embedding::SpacedEmbedder::configured()
+                    .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                if !view.admits_space(&embedder.space.digest) {
+                    return Err(refusal(
+                        StatisticalErrorCode::ParameterInvalid,
+                        "PROGRAM_EMBEDDING_SPACE_MISMATCH: the graph declares another embedding \
+                         space than the configured one",
+                    ));
+                }
+                view.ensure_space(&embedder.space)
+                    .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                index.space_digest = Some(embedder.space.digest.clone());
+                let texts: Vec<String> = std::iter::once(program.task_signature.clone())
+                    .chain(trimmed.iter().map(|phrasing| phrasing_embedding_text(&phrasing.text)))
+                    .collect();
+                let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+                let (mut embedded, _calls) = super::program_embedding::embed_texts(
+                    &embedder,
+                    ctx.tenant_id,
+                    &resolved.digest,
+                    &refs,
+                )
+                .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                let signature = embedded.remove(0);
+                *vectors = Some(ProgramVectors {
+                    signature,
+                    phrasings: embedded,
+                });
+            }
             let key = program_key(&program.task_signature);
             let program_node = program_node_id(&program.task_signature);
             let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
             let program = store_once(ctx, key.clone(), "compiled program", program, |a, b| a == b)?;
+            let _index: ProgramMatchIndex = store_once(
+                ctx,
+                match_key(&program.task_signature),
+                "program match index",
+                index,
+                |a, b| a == b,
+            )?;
             let pattern = match promoted {
                 None => None,
                 Some(pattern) => Some(store_once(

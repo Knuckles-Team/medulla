@@ -5,7 +5,19 @@ use super::*;
 use medulla_decision_types::decision::program_store::replay::{
     replay_key, ProgramReplay, ReplayOutcome, REPLAY_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::program_store::{RunRecord, RunRecordStored, StoredRun};
+use medulla_decision_types::decision::program_store::semantic::{
+    match_key, phrasing_node_id, MatchKind, ProgramCandidates, ProgramMatch, ProgramMatchIndex,
+    ProgramPhrasing,
+};
+use medulla_decision_types::decision::program_store::{
+    program_node_id, RunRecord, RunRecordStored, StoredRun,
+};
+use medulla_decision_types::decision::run_governance::RunOutcome;
+use medulla_decision_types::decision::StatisticalOutcome;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+
+use medulla_decision_types::decision::program_store::TraceSource;
+use super::program_store_tests::{commit_op, lookup_request, trace, Fixture, GRAPH};
 
 fn replay(outcome: ReplayOutcome) -> ProgramReplay {
     ProgramReplay {
@@ -76,4 +88,128 @@ async fn replay_row_is_stored_once() {
     assert!(refused.contains("REPLAY_RECORD_INVALID"), "{refused}");
     let key = replay_key("summarize-report", "run-8");
     assert!(h.store.decision_artifact(TENANT, &key).unwrap().is_none());
+}
+
+fn run_rows(h: &Harness) -> usize {
+    h.store
+        .decision_artifacts_with_prefix(TENANT, "run_record/", 100)
+        .unwrap()
+        .len()
+}
+
+fn with_text(mut request: DecideRequest, signature: &str, text: &str) -> DecideRequest {
+    let param = |name: &str, value: &str| TypedParam {
+        name: name.to_string(),
+        value: TypedValue::Text(value.to_string()),
+    };
+    request.params = BoundedVec::new(vec![
+        param("task_signature", signature),
+        param("request_text", text),
+        param("program_graph", GRAPH),
+    ])
+    .unwrap();
+    request
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R135.16.3
+#[tokio::test]
+async fn commit_writes_vectors_and_lookup_reads_them() {
+    let f = Fixture::new().await;
+    let run = trace("run-1", RunOutcome::Succeeded, 3, "weekly");
+    f.add_trace_node(&run, "recorder").await;
+    let source = TraceSource {
+        graph: GRAPH.to_string(),
+        node_id: format!("trace:{}", run.run_id),
+    };
+    let committed = commit_op(
+        &f,
+        DecisionLogOp::RunRecord {
+            tenant_id: TENANT.to_string(),
+            record: RunRecord::CompiledProgram {
+                trace: run,
+                policy: DecisionPolicyRef::Default,
+                source,
+                reusable: false,
+                plan_binding: None,
+                preplan_receipt: None,
+                phrasings: BoundedVec::new(vec![ProgramPhrasing {
+                    text: "summarize the {p0} report".into(),
+                }])
+                .unwrap(),
+                match_threshold_micros: Some(500_000),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    // The stored index, the phrasing node, its `phrasing_of` edge and one vector per node.
+    let bytes = f
+        .h
+        .store
+        .decision_artifact(TENANT, &match_key("summarize-report"))
+        .unwrap()
+        .expect("every commit stores an index");
+    let index: ProgramMatchIndex = decode_artifact(&bytes, "program match index").unwrap();
+    assert_eq!(index.slots.as_slice(), ["p0"]);
+    assert!(index.space_digest.is_some());
+    let program_node = program_node_id("summarize-report");
+    let phrasing_node = phrasing_node_id("summarize-report", 0);
+    assert!(f.core.get_node_properties(&phrasing_node).is_some());
+    assert!(f.core.get_successors(&phrasing_node).unwrap().contains(&program_node));
+    let store = f.core.semantic_store.read();
+    assert!(store.get_embedding(&program_node).is_some());
+    assert!(store.get_embedding(&phrasing_node).is_some());
+    drop(store);
+    assert_eq!(run_rows(&f.h), 2, "the program and its index");
+    assert!(!committed.replayed);
+
+    // The semantic answer through `Decide`: a nearest phrasing, parameters bound, nothing written.
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+    let request = with_text(
+        lookup_request(&f.h, None),
+        "another-task",
+        "summarize the weekly report",
+    );
+    let batch = decide(&f.h, request).await.unwrap();
+    let StatisticalOutcome::Advisory { scores, .. } = &batch.records.as_slice()[0].outcome else {
+        panic!("a semantic match, got {:?}", batch.records.as_slice()[0].outcome);
+    };
+    let body = scores.as_slice()[0]
+        .option_id
+        .strip_prefix("program_match:")
+        .expect("a program_match answer");
+    let matched: ProgramMatch = serde_json::from_str(body).unwrap();
+    assert_eq!(matched.task_signature, "summarize-report");
+    assert_eq!(matched.match_kind, MatchKind::Semantic);
+    assert_eq!(matched.matched_node.as_deref(), Some(phrasing_node.as_str()));
+    assert_eq!(run_rows(&f.h), 2, "Decide wrote nothing");
+
+    // An exact hit records no hits and makes zero embedding calls.
+    let exact = with_text(
+        lookup_request(&f.h, None),
+        "summarize-report",
+        "summarize the weekly report",
+    );
+    let recorded = super::super::family::with_program_candidates(
+        &f.h.state,
+        f.h.store.as_ref(),
+        &verified,
+        exact,
+    )
+    .await
+    .unwrap();
+    let candidates: ProgramCandidates = match &recorded
+        .params
+        .as_slice()
+        .iter()
+        .find(|param| param.name == "program_candidates")
+        .unwrap()
+        .value
+    {
+        TypedValue::Text(json) => serde_json::from_str(json).unwrap(),
+        other => panic!("candidates are text, got {other:?}"),
+    };
+    assert_eq!(candidates.embedding_calls, 0);
+    assert!(candidates.hits.is_empty());
 }

@@ -18,7 +18,7 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 const FOREIGN: &str = "tenant-foreign";
 const SIGNATURE: &str = "summarize-report";
 
-fn trace(run_id: &str, outcome: RunOutcome, steps: usize, title: &str) -> RunTraceRecord {
+pub(super) fn trace(run_id: &str, outcome: RunOutcome, steps: usize, title: &str) -> RunTraceRecord {
     let make = |index: usize| TraceStep {
         index: index as u32,
         kind: StepKind::ToolCall,
@@ -48,23 +48,23 @@ fn trace(run_id: &str, outcome: RunOutcome, steps: usize, title: &str) -> RunTra
 }
 
 /// The graph the source `RunTrace` nodes and workflows live in.
-const GRAPH: &str = "run-graph";
+pub(super) const GRAPH: &str = "run-graph";
 
-fn trace_node_id(run_id: &str) -> String {
+pub(super) fn trace_node_id(run_id: &str) -> String {
     format!("trace:{run_id}")
 }
 
 /// A served harness whose principals are provisioned, with one graph and a
 /// durable MutationBatch backend: a run record's program node and its link are
 /// graph facts, committed through the durable path.
-struct Fixture {
-    h: Harness,
-    core: Arc<medulla_graph_core::graph::GraphCore>,
+pub(super) struct Fixture {
+    pub(super) h: Harness,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     backend: Arc<medulla_persistence::redb_backend::RedbBackend>,
 }
 
 impl Fixture {
-    async fn new() -> Self {
+    pub(super) async fn new() -> Self {
         let mut isolation = ServerState::test_isolation("recorder");
         isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
             agent_id: "decider".into(),
@@ -101,7 +101,7 @@ impl Fixture {
     /// Commit the `RunTrace` receipt node of `trace`, owned by `owner`, through
     /// the durable graph path, as the run's terminal commit leaves it: the
     /// program's `compiled_from` edge needs a durable endpoint.
-    async fn add_trace_node(&self, trace: &RunTraceRecord, owner: &str) -> String {
+    pub(super) async fn add_trace_node(&self, trace: &RunTraceRecord, owner: &str) -> String {
         static BATCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let id = trace_node_id(&trace.run_id);
         let props = serde_json::json!({
@@ -167,7 +167,7 @@ impl std::ops::Deref for Fixture {
     }
 }
 
-fn run_record_op(trace: RunTraceRecord) -> DecisionLogOp {
+pub(super) fn run_record_op(trace: RunTraceRecord) -> DecisionLogOp {
     let source = TraceSource {
         graph: GRAPH.to_string(),
         node_id: trace_node_id(&trace.run_id),
@@ -199,7 +199,7 @@ fn program_of(stored: &RunRecordStored) -> CompiledProgram {
     }
 }
 
-async fn commit_op(f: &Fixture, op: DecisionLogOp) -> Result<RunRecordStored, String> {
+pub(super) async fn commit_op(f: &Fixture, op: DecisionLogOp) -> Result<RunRecordStored, String> {
     decode(super::log_tests::log_op(&f.h, "recorder", op).await)
 }
 
@@ -210,7 +210,7 @@ async fn commit_run(f: &Fixture, trace: RunTraceRecord) -> Result<RunRecordStore
     commit_op(f, run_record_op(trace)).await
 }
 
-fn lookup_request(h: &Harness, signature: Option<&str>) -> DecideRequest {
+pub(super) fn lookup_request(h: &Harness, signature: Option<&str>) -> DecideRequest {
     let (schema, _) = publish_route_schema(h);
     let params = signature
         .map(|text| {
@@ -317,7 +317,7 @@ async fn decide_routes_program_lookup() {
         .unwrap();
     assert!(!stored.replayed);
     assert_eq!(stored.key, program_key(SIGNATURE));
-    assert_eq!(stored_rows(&h, TENANT), 1);
+    assert_eq!(stored_rows(&h, TENANT), 2); // the program and its match index (R135.16.3)
 
     // The served lookup returns the committed program, equal field for field.
     let batch = decide(&h, lookup_request(&h, Some(SIGNATURE)))
@@ -328,7 +328,7 @@ async fn decide_routes_program_lookup() {
     assert_eq!(record.question.kind, QuestionKind::ProgramLookup);
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
-    assert_eq!(stored_rows(&h, TENANT), 1, "Decide wrote nothing");
+    assert_eq!(stored_rows(&h, TENANT), 2, "Decide wrote nothing");
 
     // The premises (R135.5) name the signature, the counts and the source run.
     let premise = |fact: &str| record.premises.iter().find(|p| p.fact == fact);
@@ -357,7 +357,7 @@ async fn decide_routes_program_lookup() {
         .await
         .unwrap_err();
     assert!(conflict.starts_with("IDEMPOTENCY_CONFLICT"), "{conflict}");
-    assert_eq!(stored_rows(&h, TENANT), 1);
+    assert_eq!(stored_rows(&h, TENANT), 2);
 
     // Another tenant's program is never returned: the same signature stored
     // under a foreign tenant is invisible here, and visible to its own tenant.

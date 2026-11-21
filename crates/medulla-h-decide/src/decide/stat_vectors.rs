@@ -184,6 +184,28 @@ impl GraphVectors {
             .map_err(|error| error.to_string())
     }
 
+    /// The top `k` VISIBLE rows for `query` whose node `allow` keeps; empty for a query of
+    /// another width. `allow` sees the node's stored properties.
+    pub(super) fn probe_filtered(
+        &self,
+        query: &[f32],
+        k: usize,
+        allow: impl Fn(&serde_json::Value) -> bool,
+    ) -> Vec<(String, f32)> {
+        if query.len() != self.dimensions() {
+            return Vec::new();
+        }
+        let hits = self
+            .core
+            .semantic_store
+            .read()
+            .semantic_search(query, k.saturating_mul(PROBE_OVERFETCH));
+        hits.into_iter()
+            .filter(|(id, _)| self.visible_properties(id).is_some_and(|node| allow(&node)))
+            .take(k)
+            .collect()
+    }
+
     /// The top `k` VISIBLE rows for `query`; empty for a query of another width.
     pub(super) fn probe(&self, query: &[f32], k: usize) -> Vec<(String, f32)> {
         if query.len() != self.dimensions() {

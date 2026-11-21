@@ -8,7 +8,15 @@
 //! `NO_PROGRAM`.
 
 use medulla_decision_types::decision::program_store::preplan::{pattern_key, ReusablePattern};
-use medulla_decision_types::decision::program_store::{CompiledProgram, NoProgram};
+use medulla_decision_types::decision::program_store::semantic::{
+    bind_request, bind_steps, match_key, select_match, MatchKind, MatchRefusal, ProgramCandidates,
+    ProgramHit, ProgramMatch, ProgramMatchIndex, Selection, MATCH_ANSWER_PREFIX,
+    MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES, PARAM_PROGRAM_GRAPH,
+    PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
+};
+use medulla_decision_types::decision::program_store::{
+    CompiledProgram, NoProgram, ProgramKnobs,
+};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
@@ -23,8 +31,19 @@ use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
+use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_types::contract::BoundedVec;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
 use super::support::{abstained, advisory, invalid, single_option, text_param};
 use super::DecisionFamily;
+use crate::decide::program_embedding::{embed_texts, SpacedEmbedder};
+use crate::decide::stat_support::resolve_policy;
+use crate::decide::stat_vectors::graph_vectors;
 
 /// The one option a program lookup question declares.
 pub const PROGRAM_OPTION: &str = "program";
@@ -82,6 +101,250 @@ fn claim(fact: String, field: &'static str) -> FamilyPremise {
     }
 }
 
+/// The match index stored for `task_signature`, if any.
+fn stored_index(
+    ctx: &ExecutionContext,
+    task_signature: &str,
+) -> Result<Option<ProgramMatchIndex>, String> {
+    let Some(bytes) = ctx
+        .store
+        .decision_artifact(ctx.tenant_id, &match_key(task_signature))?
+    else {
+        return Ok(None);
+    };
+    decode_artifact(&bytes, "program match index").map(Some)
+}
+
+/// The semantic answer of a lookup that carries `request_text` (R135.16.3): the exact program,
+/// else the nearest candidate; its parameters are bound from the text.
+fn semantic(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    task_signature: &str,
+) -> Result<Executed, String> {
+    let request_text = text_param(request, PARAM_REQUEST_TEXT)?.unwrap_or_default();
+    let candidates: ProgramCandidates = match text_param(request, PARAM_PROGRAM_CANDIDATES)? {
+        Some(json) => serde_json::from_str(json)
+            .map_err(|error| invalid(format!("program_candidates is unreadable: {error}")))?,
+        None => return Err(invalid("a request_text lookup carries recorded candidates")),
+    };
+    let default_micros = {
+        let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+        ProgramKnobs::from_policy(&resolved.policy).match_threshold_micros
+    };
+    let (chosen, kind, score, threshold, node) = if stored(ctx, task_signature)?.is_some() {
+        let own = stored_index(ctx, task_signature)?
+            .and_then(|index| index.threshold_micros)
+            .unwrap_or(default_micros);
+        (task_signature.to_string(), MatchKind::Exact, None, own, None)
+    } else {
+        if let Some(cause) = &candidates.unavailable {
+            return Ok(abstained(
+                QuestionKind::ProgramLookup,
+                &MatchRefusal::EmbeddingUnavailable {
+                    cause: cause.clone(),
+                },
+            ));
+        }
+        let threshold_of = |signature: &str| -> Option<Option<i64>> {
+            stored_index(ctx, signature)
+                .ok()
+                .flatten()
+                .map(|index| index.threshold_micros)
+        };
+        match select_match(&candidates, threshold_of, default_micros) {
+            Selection::Selected {
+                task_signature,
+                node_id,
+                score_micros,
+                threshold_micros,
+            } => (
+                task_signature,
+                MatchKind::Semantic,
+                Some(score_micros),
+                threshold_micros,
+                Some(node_id),
+            ),
+            Selection::BelowThreshold {
+                score_micros,
+                threshold_micros,
+            } => {
+                return Ok(abstained(
+                    QuestionKind::ProgramLookup,
+                    &MatchRefusal::BelowThreshold {
+                        score_micros,
+                        threshold_micros,
+                    },
+                ))
+            }
+            Selection::NoProgram => {
+                return Ok(abstained(
+                    QuestionKind::ProgramLookup,
+                    &NoProgram {
+                        task_signature: task_signature.to_string(),
+                    },
+                ))
+            }
+        }
+    };
+    let Some(program) = stored(ctx, &chosen)? else {
+        return Ok(abstained(
+            QuestionKind::ProgramLookup,
+            &NoProgram {
+                task_signature: chosen,
+            },
+        ));
+    };
+    // A program with no index matches by exact signature only: it has no slots to bind.
+    let (bindings, steps) = match stored_index(ctx, &chosen)? {
+        None => (Vec::new(), Vec::new()),
+        Some(index) => {
+            let bindings = match bind_request(&index, request_text) {
+                Ok(bindings) => bindings,
+                Err(unbound) => {
+                    return Ok(abstained(
+                        QuestionKind::ProgramLookup,
+                        &MatchRefusal::SlotsUnbound {
+                            parameters: unbound.parameters,
+                        },
+                    ))
+                }
+            };
+            if !index.executable {
+                return Ok(abstained(
+                    QuestionKind::ProgramLookup,
+                    &MatchRefusal::NotExecutable {
+                        task_signature: chosen,
+                    },
+                ));
+            }
+            let steps = bind_steps(&index, &bindings);
+            (bindings, steps)
+        }
+    };
+    let matched = ProgramMatch {
+        schema_version: MATCH_SCHEMA_VERSION,
+        task_signature: chosen.clone(),
+        program_digest: program.program_digest.clone(),
+        match_kind: kind,
+        score_micros: score,
+        threshold_micros: threshold,
+        matched_node: node,
+        bindings: BoundedVec::new(bindings).map_err(invalid)?,
+        steps: BoundedVec::new(steps).map_err(invalid)?,
+    };
+    let body = serde_json::to_string(&matched)
+        .map_err(|error| invalid(format!("program match encoding failed: {error}")))?;
+    let mut executed = advisory(vec![format!("{MATCH_ANSWER_PREFIX}{body}")])?;
+    executed.family_premises = vec![
+        claim(format!("program.task_signature={chosen}"), PARAM_TASK_SIGNATURE),
+        claim(
+            format!("program.match_score_micros={}", score.unwrap_or(1_000_000)),
+            PARAM_REQUEST_TEXT,
+        ),
+    ];
+    Ok(executed)
+}
+
+/// Record the nearest program candidates of `request_text` in the request's own parameter
+/// (MEDULLA-DECISION-ENGINE-R135.16.3). A request without `request_text` passes unchanged.
+pub(in crate::decide) async fn with_program_candidates(
+    state: &Arc<RwLock<ServerState>>,
+    store: &AgentLibraryStore,
+    verified: &VerifiedRequestContext,
+    mut request: DecideRequest,
+) -> Result<DecideRequest, String> {
+    let Some(request_text) = text_param(&request, PARAM_REQUEST_TEXT)?.map(str::to_string) else {
+        return Ok(request);
+    };
+    if request
+        .params
+        .as_slice()
+        .iter()
+        .any(|param| param.name == PARAM_PROGRAM_CANDIDATES)
+    {
+        return Err(invalid(
+            "PROGRAM_CANDIDATES_RESERVED: program_candidates is recorded by the engine",
+        ));
+    }
+    if request_text.len() > MAX_REQUEST_TEXT_BYTES {
+        return Err(invalid(format!(
+            "REQUEST_TEXT_TOO_LONG: request_text is over {MAX_REQUEST_TEXT_BYTES} bytes"
+        )));
+    }
+    let graph = text_param(&request, PARAM_PROGRAM_GRAPH)?
+        .filter(|name| !name.trim().is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| invalid("PROGRAM_GRAPH_REQUIRED: request_text needs program_graph"))?;
+    let task_signature = signature(&request)?.to_string();
+    let exact = store
+        .decision_artifact(
+            &request.tenant_id,
+            &medulla_decision_types::decision::program_store::program_key(&task_signature),
+        )?
+        .is_some();
+    let mut candidates = ProgramCandidates {
+        space_digest: None,
+        embedding_calls: 0,
+        hits: BoundedVec::default(),
+        unavailable: None,
+    };
+    if !exact {
+        let resolved = resolve_policy(store, &request.tenant_id, &request.policy)?;
+        let k = ProgramKnobs::from_policy(&resolved.policy).match_candidates;
+        let view = graph_vectors(state, verified.agent_id(), &graph).await?;
+        let embedder = SpacedEmbedder::configured()?;
+        candidates.space_digest = Some(embedder.space.digest.clone());
+        if !view.admits_space(&embedder.space.digest) {
+            candidates.unavailable =
+                Some("PROGRAM_EMBEDDING_SPACE_MISMATCH: the graph holds another space".to_string());
+        } else {
+            let tenant = request.tenant_id.clone();
+            let policy_digest = resolved.digest.clone();
+            let embedded = tokio::task::spawn_blocking(move || {
+                embed_texts(&embedder, &tenant, &policy_digest, &[request_text.as_str()])
+            })
+            .await
+            .map_err(|error| invalid(format!("embedding task failed: {error}")))?;
+            match embedded {
+                Err(cause) => candidates.unavailable = Some(cause),
+                Ok((mut vectors, calls)) => {
+                    candidates.embedding_calls = u32::try_from(calls).unwrap_or(u32::MAX);
+                    let query = vectors.remove(0);
+                    let hits: Vec<ProgramHit> = view
+                        .probe_filtered(&query, k, |node| {
+                            matches!(
+                                node.get("type").and_then(|t| t.as_str()),
+                                Some(PROGRAM_CLASS) | Some(PHRASING_NODE_CLASS)
+                            )
+                        })
+                        .into_iter()
+                        .filter_map(|(node_id, cosine)| {
+                            let node = view.visible_properties(&node_id)?;
+                            Some(ProgramHit {
+                                task_signature: node.get("task_signature")?.as_str()?.to_string(),
+                                node_id,
+                                score_micros: (f64::from(cosine) * 1_000_000.0).round() as i64,
+                            })
+                        })
+                        .collect();
+                    candidates.hits = BoundedVec::new(hits).map_err(invalid)?;
+                }
+            }
+        }
+    }
+    let mut params = request.params.as_slice().to_vec();
+    params.push(TypedParam {
+        name: PARAM_PROGRAM_CANDIDATES.to_string(),
+        value: TypedValue::Text(serde_json::to_string(&candidates).map_err(invalid)?),
+    });
+    request.params = BoundedVec::new(params).map_err(invalid)?;
+    Ok(request)
+}
+
+/// The class of a stored program node.
+const PROGRAM_CLASS: &str = medulla_decision_types::decision::program_store::PROGRAM_NODE_CLASS;
+
 impl DecisionFamily for ProgramLookupFamily {
     fn validate_candidates(
         &self,
@@ -104,6 +367,9 @@ impl DecisionFamily for ProgramLookupFamily {
     ) -> Option<Result<Executed, String>> {
         Some((|| {
             let task_signature = signature(request)?;
+            if text_param(request, PARAM_REQUEST_TEXT)?.is_some() {
+                return semantic(ctx, request, task_signature);
+            }
             let mut executed = match stored(ctx, task_signature)? {
                 None => abstained(
                     QuestionKind::ProgramLookup,
