@@ -156,3 +156,20 @@ def test_missing_evidence_illegal_state_and_unknown_marking_refuse(served) -> No
         _op(client, graph, {"op": "reject", "claim_id": claim_id})
     with pytest.raises(Exception, match="CLAIM_STATE_ILLEGAL"):
         _op(client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["y"]})
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.5")
+def test_marking_sets_and_promoter_read_back(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R652.5: the claim node records the evidence."""
+    graph, client = served
+    asset = "col:orders.email"
+    claim_id = _claim_id(asset, "pii")
+    _op(client, graph, {"op": "propose", "claim": _claim(asset, "pii", evidence=["scan:1"])})
+    _op(client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["review:1"]})
+
+    node = _props(client, graph, claim_id)
+    assert node["state"] == "promoted"
+    assert node["before_markings"] == []
+    assert node["after_markings"] == ["pii"]
+    assert node["promoted_by"] == request_context(roles=[STEWARD])["principal"]
+    assert node["evidence"] == ["scan:1", "review:1"]
