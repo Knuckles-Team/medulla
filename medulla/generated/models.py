@@ -14542,6 +14542,13 @@ class MethodQualityRulePut(BaseModel):
     params: MethodQualityRulePutParams
 
 
+class MethodClassificationClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ClassificationClaim"]
+    params: MethodClassificationClaimParams
+
+
 class MethodLineageIngest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15785,6 +15792,7 @@ Method = Annotated[
         MethodIncidentRelatedClaims,
         MethodIncidentSetStatus,
         MethodQualityRulePut,
+        MethodClassificationClaim,
         MethodLineageIngest,
         MethodListMemorySnapshots,
         MethodLiveArtifactGet,
@@ -31086,6 +31094,9 @@ RuleReasonResponseSameAsItem = Annotated[
 ScopeTenantId = str
 
 
+Marking = str
+
+
 Secret = str
 
 
@@ -32087,6 +32098,85 @@ class QualityRuleReceipt(BaseModel):
     state: RuleStateProposed | RuleStateApproved
 
 
+class ClaimKind(str, Enum):
+    DETECTOR = "detector"
+    PROPAGATED = "propagated"
+    MANUAL = "manual"
+
+
+class ClaimState(str, Enum):
+    PROPOSED = "proposed"
+    PROMOTED = "promoted"
+    REJECTED = "rejected"
+
+
+class ClaimProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: ClaimKind
+    detector_id: str | None = None
+    sample_size: Annotated[int, Field(ge=0)] | None = None
+    hit_ratio: float | None = None
+    scanned_at_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class ClassificationClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    categories: list[Marking]
+    provenance: ClaimProvenance
+    state: ClaimState
+    evidence: list[str] = Field(default_factory=list)
+
+
+class ClaimRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    claim: ClassificationClaim
+    before_markings: list[Marking] = Field(default_factory=list)
+    after_markings: list[Marking] = Field(default_factory=list)
+    promoted_by: str | None = None
+
+
+class ClassificationClaimResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: ClaimRecord
+    propagated: list[ClaimRecord] = Field(default_factory=list)
+
+
+class ClassificationClaimOpPropose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["propose"]
+    claim: ClassificationClaim
+
+
+class ClassificationClaimOpPromote(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["promote"]
+    claim_id: str
+    evidence: list[str] = Field(default_factory=list)
+
+
+class ClassificationClaimOpReject(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["reject"]
+    claim_id: str
+
+
+ClassificationClaimOp = Annotated[
+    ClassificationClaimOpPropose
+    | ClassificationClaimOpPromote
+    | ClassificationClaimOpReject,
+    Field(discriminator="op"),
+]
+
+
 class LifecycleTransition(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32454,6 +32544,12 @@ class MethodQualityRulePutParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     rule: QualityRule
+
+
+class MethodClassificationClaimParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: ClassificationClaimOp
 
 
 class MethodLineageIngestParams(BaseModel):
@@ -38506,6 +38602,19 @@ __all__ = [
     "MethodIncidentSetStatusParams",
     "MethodQualityRulePut",
     "MethodQualityRulePutParams",
+    "MethodClassificationClaim",
+    "MethodClassificationClaimParams",
+    "ClaimKind",
+    "ClaimState",
+    "ClaimProvenance",
+    "ClassificationClaim",
+    "ClaimRecord",
+    "ClassificationClaimResult",
+    "ClassificationClaimOp",
+    "ClassificationClaimOpPropose",
+    "ClassificationClaimOpPromote",
+    "ClassificationClaimOpReject",
+    "Marking",
     "MethodIndexRepository",
     "MethodIndexRepositoryParams",
     "MethodInvalidateEdge",

@@ -1564,6 +1564,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
     ),
     (
+        "ClassificationClaim",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CLAIM_EVIDENCE_MISSING",
+            "CLAIM_STATE_ILLEGAL",
+            "CLAIM_UNKNOWN_MARKING",
+            "STEWARD_ROLE_MISSING",
+        ],
+    ),
+    (
         "QualityRulePut",
         &[
             "TENANT_SCOPE_REQUIRED",

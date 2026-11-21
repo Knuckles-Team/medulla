@@ -91,6 +91,8 @@ method_results! {
     IncidentSetStatus(IncidentSetStatus) => Raw<IncidentWriteReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: the stored rule, its node and its state.
     QualityRulePut(QualityRulePut) => Raw<medulla_catalog_types::quality::QualityRuleReceipt>;
+    // MEDULLA-TYPED-PACKS-R652.3: the claim and the claims it proposed downstream.
+    ClassificationClaim(ClassificationClaim) => Raw<medulla_identity_types::classification::ClassificationClaimResult>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;

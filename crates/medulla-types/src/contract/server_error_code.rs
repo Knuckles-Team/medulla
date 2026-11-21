@@ -542,6 +542,14 @@ closed_error_codes! {
         DetectorPatternInvalid => "DETECTOR_PATTERN_INVALID",
         /// A sensitive scan limit lies outside its knob range (MEDULLA-TYPED-PACKS-R803.2).
         ScanLimitsInvalid => "SCAN_LIMITS_INVALID",
+        /// A promotion with no evidence item (MEDULLA-TYPED-PACKS-R652.4).
+        ClaimEvidenceMissing => "CLAIM_EVIDENCE_MISSING",
+        /// A claim move outside `proposed` to `promoted` or `rejected` (MEDULLA-TYPED-PACKS-R652.4).
+        ClaimStateIllegal => "CLAIM_STATE_ILLEGAL",
+        /// A claim category that is not a registered marking (MEDULLA-TYPED-PACKS-R652.4).
+        ClaimUnknownMarking => "CLAIM_UNKNOWN_MARKING",
+        /// The actor holds neither the steward nor the owner role (MEDULLA-TYPED-PACKS-R652.4; shared with stewardship approval, R802.4).
+        StewardRoleMissing => "STEWARD_ROLE_MISSING",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
         /// An outside quality score names a rule the tenant has no approved copy of (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
         QualityRuleUnknown => "QUALITY_RULE_UNKNOWN",

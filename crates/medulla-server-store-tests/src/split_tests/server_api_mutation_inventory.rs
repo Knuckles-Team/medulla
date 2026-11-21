@@ -62,6 +62,7 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("IncidentCorrelate");
     covered.insert("IncidentSetStatus");
     covered.insert("QualityRulePut");
+    covered.insert("ClassificationClaim");
     covered.insert("RecordRelease");
     covered.insert("RecordDeployment");
     covered.insert("GoalPut");

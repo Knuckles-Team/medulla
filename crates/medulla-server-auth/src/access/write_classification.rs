@@ -466,6 +466,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::IncidentSetStatus { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R762.3: the quality rule write.
                 | Method::QualityRulePut { .. }
+                // MEDULLA-TYPED-PACKS-R652.3: the classification claim ops.
+                | Method::ClassificationClaim { .. }
                 // MEDULLA-SDLC-R002.3: release and deployment records.
                 | Method::RecordRelease { .. }
                 | Method::RecordDeployment { .. }

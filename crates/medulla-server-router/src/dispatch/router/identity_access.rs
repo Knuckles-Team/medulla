@@ -117,8 +117,22 @@ async fn dispatch_identity_store_method(
     method: Method,
 ) -> ControlFlow<Response, Method> {
     #[cfg(not(feature = "security"))]
-    let _ = ctx;
+    let _ = &ctx;
     match method {
+        // MEDULLA-TYPED-PACKS-R652.3: the classification claim ops, served beside `Identity`.
+        Method::ClassificationClaim { op } => ControlFlow::Break(
+            medulla_server_identity::dispatch::classification::dispatch_classification(
+                ctx.state,
+                medulla_server_identity::dispatch::classification::ClassificationTarget {
+                    graph: &ctx.req.graph,
+                    req_id: ctx.req.id,
+                    caller: ctx.req.agent_id.as_deref(),
+                    verified: ctx.verified_context,
+                },
+                op,
+            )
+            .await,
+        ),
         #[cfg(feature = "security")]
         Method::Identity { op, stamp } => ControlFlow::Break(
             medulla_server_identity::dispatch::identity_store::dispatch_identity(

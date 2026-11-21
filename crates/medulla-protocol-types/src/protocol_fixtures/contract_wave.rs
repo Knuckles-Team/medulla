@@ -113,7 +113,53 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             .into_iter()
             .map(|(label, op)| (label, Method::MutationOutbox { op: Box::new(op) })),
     );
+    samples.extend(classification_claim_ops().into_iter().map(|(label, op)| {
+        (label, Method::ClassificationClaim { op })
+    }));
     samples
+}
+
+/// One valid `ClassificationClaim` op per op (MEDULLA-TYPED-PACKS-R652.3).
+fn classification_claim_ops() -> Vec<(
+    &'static str,
+    medulla_identity_types::classification::ClassificationClaimOp,
+)> {
+    use medulla_identity_types::classification::{
+        ClaimKind, ClaimProvenance, ClaimState, ClassificationClaim, ClassificationClaimOp,
+    };
+    use medulla_identity_types::tenancy::Marking;
+    let claim = ClassificationClaim {
+        asset: "col:orders.card".to_string(),
+        categories: vec![Marking::new("payment_card").expect("a valid marking")],
+        provenance: ClaimProvenance {
+            kind: ClaimKind::Manual,
+            detector_id: None,
+            sample_size: None,
+            hit_ratio: None,
+            scanned_at_ms: None,
+        },
+        state: ClaimState::Proposed,
+        evidence: vec!["review:1".to_string()],
+    };
+    vec![
+        (
+            "ClassificationClaim.propose",
+            ClassificationClaimOp::Propose { claim },
+        ),
+        (
+            "ClassificationClaim.promote",
+            ClassificationClaimOp::Promote {
+                claim_id: "classification_claim:col:orders.card:payment_card".to_string(),
+                evidence: vec!["review:2".to_string()],
+            },
+        ),
+        (
+            "ClassificationClaim.reject",
+            ClassificationClaimOp::Reject {
+                claim_id: "classification_claim:col:orders.card:payment_card".to_string(),
+            },
+        ),
+    ]
 }
 
 /// One sample per new METHOD (not per op), for tests that only need to reach

@@ -419,6 +419,7 @@ SEND_BY_METHOD = {
     "IncidentRelatedClaims": ingestion.send_incident_related_claims,
     "IncidentSetStatus": ingestion.send_incident_set_status,
     "QualityRulePut": ingestion.send_quality_rule_put,
+    "ClassificationClaim": ingestion.send_classification_claim,
     "IndexRepository": ingestion.send_index_repository,
     "InvalidateEdge": graph.send_invalidate_edge,
     "IssueControlLease": coordination.send_issue_control_lease,

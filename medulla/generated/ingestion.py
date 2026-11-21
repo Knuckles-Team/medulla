@@ -821,6 +821,12 @@ decode_incident_set_status = contract_decoder(
 )
 send_quality_rule_put = contract_sender("QualityRulePut", "MethodQualityRulePutParams")
 decode_quality_rule_put = contract_decoder("QualityRulePut", "QualityRuleReceipt")
+send_classification_claim = contract_sender(
+    "ClassificationClaim", "MethodClassificationClaimParams"
+)
+decode_classification_claim = contract_decoder(
+    "ClassificationClaim", "ClassificationClaimResult"
+)
 send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
 decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
 send_measure_ingest_throughput = contract_sender(

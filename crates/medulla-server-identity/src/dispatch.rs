@@ -11,6 +11,8 @@
 // (`--no-default-features --features server`) with E0405 while the default full build,
 // which enables `redb`, stayed green. See plans/complex/lane-reports/WD10-R-DISPATCH.md.
 
+/// MEDULLA-TYPED-PACKS-R652.3: the served `Method::ClassificationClaim`.
+pub mod classification;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod elevation;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

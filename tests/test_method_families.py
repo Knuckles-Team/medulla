@@ -275,6 +275,9 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         # MEDULLA-UNIFIED-DATA-PLANE-R762.3: the quality rule write self-translates
         # into one BatchUpdate, like the incident writes.
         "QualityRulePut",
+        # MEDULLA-TYPED-PACKS-R652.3: the classification claim ops self-translate
+        # into request-graph writes, like the quality rule write.
+        "ClassificationClaim",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",

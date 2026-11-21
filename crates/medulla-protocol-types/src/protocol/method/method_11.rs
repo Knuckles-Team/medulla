@@ -280,6 +280,16 @@ $($variants)*
         rule: medulla_catalog_types::quality::QualityRule,
     },
 
+    // ── Classification claims (MEDULLA-TYPED-PACKS-R652.3) ─────────────────
+    /// One classification claim op in the caller's tenant: `Propose` a claim,
+    /// `Promote` it (steward or owner role and evidence; stamps the markings on
+    /// the asset and proposes them downstream along lineage) or `Reject` it.
+    /// Scope `classification:write`. Refusals: `CLAIM_EVIDENCE_MISSING`,
+    /// `CLAIM_STATE_ILLEGAL`, `CLAIM_UNKNOWN_MARKING`, `STEWARD_ROLE_MISSING`.
+    ClassificationClaim {
+        op: medulla_identity_types::classification::ClassificationClaimOp,
+    },
+
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
     /// Validate and register one action spec in the request graph's registry.
     ActionRegister {

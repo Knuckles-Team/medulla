@@ -127,6 +127,19 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "RECORD_DEPLOYMENT|{}|{}",
             deployment.environment, deployment.workload
         )),
+        // MEDULLA-TYPED-PACKS-R652.3: the line names the op and the claim, never the evidence.
+        Method::ClassificationClaim { op } => Some(match op {
+            medulla_identity_types::classification::ClassificationClaimOp::Propose { claim } => {
+                format!("CLASSIFICATION_CLAIM|propose|{}", claim.claim_id())
+            }
+            medulla_identity_types::classification::ClassificationClaimOp::Promote {
+                claim_id,
+                ..
+            } => format!("CLASSIFICATION_CLAIM|promote|{claim_id}"),
+            medulla_identity_types::classification::ClassificationClaimOp::Reject { claim_id } => {
+                format!("CLASSIFICATION_CLAIM|reject|{claim_id}")
+            }
+        }),
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
         Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
         _ => record_write_audit_line(method),

@@ -7813,6 +7813,8 @@ dependencies = [
  "medulla-types",
  "rand 0.8.8",
  "redb",
+ "rmp-serde",
+ "serde_json",
  "sha1 0.10.7",
  "sha2 0.10.9",
  "tokio",
