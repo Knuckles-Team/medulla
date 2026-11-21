@@ -661,6 +661,8 @@ impl GraphRegistry {
                 cancellation,
             },
         );
+        readiness_events::opening(name);
+        readiness_events::ready(name);
         Ok(())
     }
 
@@ -777,6 +779,7 @@ impl GraphRegistry {
                 incarnation_id,
             ))),
         );
+        readiness_events::opening(name);
     }
 
     /// Capture immutable catalog metadata and cloneable materializer state for a
@@ -924,6 +927,8 @@ impl GraphRegistry {
         }
         self.install_graph(ticket, core);
         self.record_complete_manifest(ticket, source_snapshot_version);
+        readiness_events::opening(ticket.name());
+        readiness_events::ready(ticket.name());
         true
     }
 
@@ -974,6 +979,11 @@ impl GraphRegistry {
                     manifest.fail(false);
                 }
             }
+            readiness_events::degraded(
+                ticket.name(),
+                "PARTIAL_MATERIALIZATION",
+                "a secondary index is not valid after the graph loaded",
+            );
             return false;
         }
         true
@@ -1107,6 +1117,12 @@ impl GraphRegistry {
             loaded_nodes,
             loaded_edges,
         );
+        readiness_events::opening(ticket.name());
+        if complete {
+            readiness_events::ready(ticket.name());
+        } else {
+            readiness_events::materializing(ticket.name());
+        }
         PagedOpenOutcome {
             resident: true,
             cursor,
@@ -1202,6 +1218,11 @@ impl GraphRegistry {
             if let Ok(mut manifest) = manifest_ref.write() {
                 manifest.fail(true);
             }
+            readiness_events::degraded(
+                ticket.name(),
+                "PARTIAL_MATERIALIZATION",
+                "the source snapshot changed while the graph was paged in",
+            );
             return None;
         }
         if made_no_progress(manifest_ref, &page) {
@@ -1213,8 +1234,14 @@ impl GraphRegistry {
             if let Ok(mut manifest) = manifest_ref.write() {
                 manifest.fail(true);
             }
+            readiness_events::degraded(
+                ticket.name(),
+                "NO_PROGRESS",
+                "a page advanced no cursor and loaded no rows",
+            );
             return None;
         }
+        readiness_events::materializing(ticket.name());
         apply_material_page(&handle.core, &page);
         let next_cursor = page.next_cursor.clone();
         advance_partial_manifest(manifest_ref, &page, next_cursor.clone());
@@ -1225,6 +1252,19 @@ impl GraphRegistry {
             // outcome (index validity is orthogonal to node-id completeness).
             handle.core.mark_bloom_complete();
             finish_materialization(manifest_ref, &handle.core);
+            let valid = manifest_ref
+                .read()
+                .map(|manifest| manifest.valid)
+                .unwrap_or(false);
+            if valid {
+                readiness_events::ready(ticket.name());
+            } else {
+                readiness_events::degraded(
+                    ticket.name(),
+                    "PARTIAL_MATERIALIZATION",
+                    "a secondary index is not valid after the last page",
+                );
+            }
         }
         next_cursor
     }
@@ -1262,6 +1302,7 @@ impl GraphRegistry {
                 *manifest = MaterializationManifest::catalog_only(entry.incarnation_id);
             }
         }
+        readiness_events::opening(name);
         true
     }
 
@@ -1326,6 +1367,7 @@ impl GraphRegistry {
             entry.cancellation.store(true, Ordering::Release);
         }
         self.materialization.remove(name);
+        medulla_observe::readiness().remove(name);
         let had_catalog = catalog.is_some();
         let had_resident = resident.is_some();
         if had_catalog || had_resident {
@@ -2257,5 +2299,60 @@ mod tests {
         assert!(rendered.contains("has_node_keyset: true"));
         assert!(rendered.contains("has_edge_keyset: true"));
         assert!(!rendered.contains("sensitive"));
+    }
+}
+
+/// Readiness events of the graph registry (MEDULLA-OBSERVE-R007.1). The registry is the one
+/// caller that moves a graph's `ReadinessMachine`: open, eviction, paging and a failed or
+/// complete manifest each map to one event. A refused pair is logged, never hidden.
+mod readiness_events {
+    use medulla_observe::machine::readiness::{DegradeReason, ReadinessEvent, ReadinessState};
+
+    fn apply(name: &str, event: ReadinessEvent) {
+        if let Err(refused) = medulla_observe::readiness().apply(name, event, None) {
+            tracing::debug!(graph = name, %refused, "readiness event refused");
+        }
+    }
+
+    fn state(name: &str) -> Option<ReadinessState> {
+        medulla_observe::readiness().get(name).map(|row| row.state)
+    }
+
+    /// The graph is being opened: a new row starts `Opening`, a `Ready` or `Degraded` one
+    /// reopens.
+    pub(super) fn opening(name: &str) {
+        match state(name) {
+            Some(ReadinessState::Ready | ReadinessState::Degraded) => {
+                apply(name, ReadinessEvent::Reopen)
+            }
+            _ => medulla_observe::readiness().open(name),
+        }
+    }
+
+    /// Paging into memory began or continues.
+    pub(super) fn materializing(name: &str) {
+        if matches!(
+            state(name),
+            Some(ReadinessState::Opening | ReadinessState::Migrating)
+        ) {
+            apply(name, ReadinessEvent::BeginMaterialize);
+        }
+    }
+
+    /// The manifest is complete.
+    pub(super) fn ready(name: &str) {
+        apply(name, ReadinessEvent::Materialized);
+    }
+
+    /// The manifest failed: the graph cannot serve complete reads.
+    pub(super) fn degraded(name: &str, code: &str, detail: &str) {
+        let reason = DegradeReason {
+            code: code.to_string(),
+            task: None,
+            detail: detail.to_string(),
+        };
+        if let Err(refused) = medulla_observe::readiness().degrade(name, reason) {
+            tracing::debug!(graph = name, %refused, "readiness degrade refused");
+        }
     }
 }

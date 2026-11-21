@@ -19,12 +19,20 @@ pub mod spawn;
 
 use std::sync::OnceLock;
 
+use registry::readiness::ReadinessRegistry;
 use registry::tasks::TaskRegistry;
 
 /// The process-wide task registry. Tests build isolated instances with [`TaskRegistry::new`].
 pub fn global() -> &'static TaskRegistry {
     static GLOBAL: OnceLock<TaskRegistry> = OnceLock::new();
     GLOBAL.get_or_init(|| TaskRegistry::new(registry::tasks::DEFAULT_TASK_REGISTRY_CAPACITY))
+}
+
+/// The process-wide readiness registry (MEDULLA-OBSERVE-R007.1). Tests build isolated
+/// instances with [`ReadinessRegistry::new`].
+pub fn readiness() -> &'static ReadinessRegistry {
+    static GLOBAL: OnceLock<ReadinessRegistry> = OnceLock::new();
+    GLOBAL.get_or_init(ReadinessRegistry::new)
 }
 
 /// Jobs the process-wide registry could not list since start: the live table was full or the

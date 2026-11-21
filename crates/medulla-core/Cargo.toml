@@ -97,6 +97,7 @@ aho-corasick = "1.1"
 # cache-invalidation debug logs compile in every build. No-op without a subscriber, so the
 # default/Pi build pays nothing.
 tracing = { version = "0.1" }
+medulla-observe = { path = "../medulla-observe" }
 # CONCEPT:MEDULLA-014 — all-core parallel brute-force fallback (only under `ann`).
 rayon = { version = "1.12", optional = true }
 # CONCEPT:MEDULLA-303 — durable RBAC/identity persistence: the `security` feature persists

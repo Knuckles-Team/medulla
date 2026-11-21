@@ -5132,6 +5132,7 @@ dependencies = [
  "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-mutation-types",
+ "medulla-observe",
  "medulla-protocol-types",
  "medulla-query-cache",
  "medulla-query-types",
