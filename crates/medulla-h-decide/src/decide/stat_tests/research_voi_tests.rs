@@ -315,3 +315,66 @@ async fn spent_units_are_recorded_per_subtask() {
     // caller does not belong to, before any pin is read.
     assert!(error.starts_with("ACCESS_DENIED"), "{error}");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R705.6
+#[tokio::test]
+async fn budget_stops_at_marginal_value() {
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+
+    // A frontier and a budget: the reads follow the ranking and the walk reports
+    // its spent units, then observes `stop` once the best value reaches the floor.
+    let batch = decide(&h, request(&pins.0, frontier(), 3_000_000))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let answer = record
+        .answer
+        .as_ref()
+        .and_then(|a| a.research())
+        .expect("the family answers a research walk");
+    assert_eq!(answer.stop, ResearchStop::ValueFloor);
+    assert_eq!(answer.spent_micro, 1_000_000);
+    assert_eq!(
+        answer
+            .reads
+            .iter()
+            .map(|r| r.subtask.as_str())
+            .collect::<Vec<_>>(),
+        vec!["intro", "method"]
+    );
+    let facts = facts(&record);
+    assert!(facts.contains(&"research:spent=1000000"), "{facts:?}");
+
+    // A budget with half a unit left ends the walk on the budget with no read.
+    let tight = decide(&h, request(&pins.0, frontier(), 1_500_000))
+        .await
+        .unwrap();
+    let answer = tight.records.as_slice()[0]
+        .answer
+        .as_ref()
+        .and_then(|a| a.research())
+        .unwrap();
+    assert_eq!(answer.stop, ResearchStop::Budget);
+    assert!(answer.reads.is_empty());
+
+    // A subtask whose budget is gone abstains with its code, naming the subtask.
+    let mut exhausted = frontier();
+    exhausted.push(budget("b-intro", "intro", 1));
+    exhausted.sort_by(|a, b| a.option_id.cmp(&b.option_id));
+    let record = decide(&h, request(&pins.0, exhausted, 3_000_000))
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    let (code, detail) = family_abstention(&record.outcome);
+    assert_eq!(code, RESEARCH_NO_BUDGET.as_str());
+    assert!(detail.contains("intro"), "{detail}");
+
+    // Cross-tenant negative: another tenant is refused before any read.
+    let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 3_000_000)).await;
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
+}
