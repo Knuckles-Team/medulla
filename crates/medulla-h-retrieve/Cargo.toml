@@ -19,6 +19,7 @@ medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-geo = { path = "../medulla-geo", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-persistence = { path = "../medulla-persistence" }

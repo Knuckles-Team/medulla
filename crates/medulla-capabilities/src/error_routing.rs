@@ -299,7 +299,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R077.6.4: a pinned read of `information_schema.vector_advice`.
-    ("Sql", &["COLUMN_TYPE_UNSUPPORTED", "SCHEMA_REVISION_STALE"]),
+    (
+        "Sql",
+        &[
+            "COLUMN_TYPE_UNSUPPORTED",
+            "SCHEMA_REVISION_STALE",
+            // MEDULLA-FEDERATED-QUERY-R077.5: a `NEAREST` read over a column vector binding.
+            "COLUMN_NOT_BOUND",
+            "SEARCH_PROBE_MODEL_MISMATCH",
+            "QUERY_ENCODER_UNAVAILABLE",
+        ],
+    ),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
     ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
     // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an

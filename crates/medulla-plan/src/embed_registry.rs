@@ -96,6 +96,41 @@ impl ModalityEncoderRegistry {
     }
 }
 
+impl ModalityEncoderRegistry {
+    /// The text encoder of the space `(space_id, dimensions, revision)` for a caller that
+    /// knows the space and not an encoder id (MEDULLA-FEDERATED-QUERY-R077.5: a column
+    /// binding names its model, never an encoder). Every entry embeds a query that reaches
+    /// it as text, so the entry registered under the space's own id is taken when there is
+    /// one, else the first entry of the exact tuple in id order. No entry of that tuple is
+    /// `QUERY_ENCODER_UNAVAILABLE`.
+    pub fn lookup_by_space(
+        &self,
+        space_id: &str,
+        dimensions: usize,
+        revision: &str,
+    ) -> Result<&'static dyn TextEmbedder, String> {
+        let unavailable = |why: &str| {
+            format!(
+                "{}: space `{space_id}` ({dimensions} dimensions, revision `{revision}`) {why}",
+                ServerErrorCode::QueryEncoderUnavailable
+            )
+        };
+        let entries = self
+            .entries
+            .read()
+            .map_err(|_| unavailable("has an unreadable encoder registry"))?;
+        let matches = |entry: &Entry| {
+            entry.space_id == space_id && entry.dimensions == dimensions && entry.revision == revision
+        };
+        entries
+            .get(space_id)
+            .filter(|entry| matches(entry))
+            .or_else(|| entries.values().find(|entry| matches(entry)))
+            .map(|entry| entry.encoder)
+            .ok_or_else(|| unavailable("has no registered encoder"))
+    }
+}
+
 /// The one process-wide registry the served query path binds from.
 pub fn modality_encoders() -> &'static ModalityEncoderRegistry {
     static REGISTRY: OnceLock<ModalityEncoderRegistry> = OnceLock::new();
@@ -126,6 +161,28 @@ mod tests {
             ("enc-text", "space-a", 8, "r2"),
         ] {
             let error = registry.lookup(id, space, dim, revision).err().unwrap();
+            assert!(error.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{error}");
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R077.5
+    #[test]
+    fn lookup_by_space_finds_the_entry_of_the_exact_tuple() {
+        let registry = ModalityEncoderRegistry::new();
+        registry
+            .register("enc-a", "space-a", 8, "r1", Box::new(HashEmbedder::new(8)))
+            .unwrap();
+        assert_eq!(
+            registry
+                .lookup_by_space("space-a", 8, "r1")
+                .unwrap()
+                .embed("x")
+                .unwrap()
+                .len(),
+            8
+        );
+        for (space, dim, revision) in [("space-b", 8, "r1"), ("space-a", 4, "r1"), ("space-a", 8, "r2")] {
+            let error = registry.lookup_by_space(space, dim, revision).err().unwrap();
             assert!(error.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{error}");
         }
     }

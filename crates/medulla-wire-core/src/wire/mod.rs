@@ -2147,6 +2147,7 @@ impl WireSession {
                 &statement,
                 read_only.as_deref(),
                 &request_graph,
+                None,
             )
         })
         .await

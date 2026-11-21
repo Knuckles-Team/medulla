@@ -17,6 +17,12 @@ pub struct SqlColumnRef {
 }
 
 impl SqlColumnRef {
+    /// MEDULLA-FEDERATED-QUERY-R077.5: the one canonical id of the binding that vectorizes this
+    /// column, `binding:{table_id}.{column_id}`.
+    pub fn binding_id(&self) -> String {
+        format!("binding:{}.{}", self.table_id, self.column_id)
+    }
+
     pub(crate) fn canonical_cbor(&self, kind: SemanticSelectorKind) -> Vec<u8> {
         cbor::map([
             ("kind", cbor::text(kind.as_str())),

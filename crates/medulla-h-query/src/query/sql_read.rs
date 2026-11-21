@@ -674,12 +674,16 @@ pub(super) async fn catalog_sql_response(
     let timeout_task = crate::request_cancel::spawn_timeout(cancel.clone());
     let cancel_for_task = cancel.clone();
     let resp = match compute_off_lock(req_id, move || {
+        // MEDULLA-FEDERATED-QUERY-R077.5: a `NEAREST` read probes its column's live generation
+        // before the projection is built; any other statement has no probe.
+        let nearest = super::sql_nearest::plan_nearest(&authority, &persist_dir, &query)?;
         let authorized = medulla_server_auth::sql_catalog_acl::authorized_read_store_for_query(
             &authority,
             &persist_dir,
             &query,
             read_only.as_deref(),
             &graph,
+            nearest.as_ref(),
         )?;
         medulla_sql::sql::exec_sql_typed_with_tables_hive(
             &snap,

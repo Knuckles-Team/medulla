@@ -756,6 +756,13 @@ impl SemanticIndexService {
     pub fn live_generation(&self) -> Result<Option<u64>, SemanticCodeError> {
         self.store.live_generation()
     }
+
+    /// The live generation and its image, or `None` when this binding has no live
+    /// generation (MEDULLA-FEDERATED-QUERY-R077.5). A pass-through to the one serving read:
+    /// it writes nothing and serves only the live generation.
+    pub fn read_live(&self) -> Result<Option<(u64, SemanticGenerationImage)>, SemanticCodeError> {
+        self.store.read_live()
+    }
 }
 
 /// Shared `SemanticBinding` test-fixture builder for this module's own unit

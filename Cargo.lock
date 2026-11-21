@@ -6137,6 +6137,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-rdf",
+ "medulla-semantic-index",
  "medulla-server-api",
  "medulla-server-auth",
  "medulla-storage",

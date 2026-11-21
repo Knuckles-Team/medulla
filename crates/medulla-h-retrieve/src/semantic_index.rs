@@ -23,6 +23,8 @@ mod contracts;
 mod dispatch;
 #[path = "semantic_index/reads.rs"]
 mod reads;
+#[path = "semantic_index/search.rs"]
+pub mod search;
 #[path = "semantic_index/source.rs"]
 mod source;
 #[path = "semantic_index/worker.rs"]

@@ -1133,6 +1133,23 @@ fn collect_sql_batches_with(
     let mut nodes = nodes;
     let mut user_tables = user_tables;
 
+    // MEDULLA-FEDERATED-QUERY-R077.5: a `NEAREST` statement ranks by the projection's probe
+    // ranking; one that reaches the executor without a ranking is not served here.
+    let nearest = match super::nearest::nearest_calls(sql) {
+        0 => None,
+        _ => Some(
+            catalog
+                .source_store
+                .as_ref()
+                .and_then(|store| store.nearest().cloned())
+                .ok_or_else(|| {
+                    "METHOD_NOT_YET_SERVED: NEAREST needs the semantic binding probe of its column"
+                        .to_string()
+                })?,
+        ),
+    };
+    let explain_nearest = nearest.is_some() && super::read_only::explained_statement(sql).is_some();
+
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -1182,11 +1199,18 @@ fn collect_sql_batches_with(
         if let Some(rows) = &catalog.vector_advice {
             super::vector_advice::register(&ctx, rows)?;
         }
+        if let Some(ranking) = &nearest {
+            ctx.register_udf(super::nearest::nearest_udf(Arc::clone(ranking)));
+        }
         let df = ctx.sql(&sql).await.map_err(|e| format!("sql: {e}"))?;
         if let Some(store) = &catalog.source_store {
             record_text_search_usage(store, df.logical_plan());
         }
-        super::spill::collect_default(df, cancel).await
+        let mut batches = super::spill::collect_default(df, cancel).await?;
+        if let (true, Some(ranking)) = (explain_nearest, &nearest) {
+            super::nearest::append_vector_scan(&mut batches, ranking)?;
+        }
+        Ok(batches)
     })
 }
 

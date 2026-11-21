@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 use medulla_tables::schema::Cell;
 
+use medulla_table_store::tables::nearest::{NearestProbe, NearestRanking};
 use medulla_table_store::tables::TableStore;
 
 use medulla_sql::sql::UserAnnDecision;
@@ -45,12 +46,16 @@ use medulla_server_api::carrier::CarrierAuthority;
 /// read of a user table, that table holds only its nearest visible rows; every
 /// other table is the full visible copy [`super::authorized_read_store`] makes. The
 /// caller's read-only relations (EH-066) join the projection when `query` can see them.
+/// A `NEAREST` read (MEDULLA-FEDERATED-QUERY-R077.5) passes the probe its column's live
+/// generation answered: the probed table then holds only the visible rows that are hits, and
+/// the projection carries their ranking. The pgwire caller passes `None`.
 pub fn authorized_read_store_for_query(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     query: &str,
     read_only: Option<&dyn super::ReadOnlyRelations>,
     graph: &RequestGraph,
+    nearest: Option<&NearestProbe>,
 ) -> Result<AuthorizedReadStore, String> {
     let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
     let narrowing = match medulla_sql::sql::user_ann_decision(query, &tenant)? {
@@ -65,7 +70,13 @@ pub fn authorized_read_store_for_query(
         UserAnnDecision::NotApplicable => None,
     };
     let read_only = read_only.filter(|_| super::wants_read_only_relations(query));
-    let projection = project_read_store(authority, persist_dir, narrowing.as_ref(), read_only)?;
+    let projection = project_read_store(
+        authority,
+        persist_dir,
+        narrowing.as_ref(),
+        read_only,
+        nearest,
+    )?;
     adopt_index_status(authority, persist_dir, &tenant, projection.store())?;
     adopt_edge_index_status(&tenant, graph, projection.store())?;
     Ok(projection)
@@ -155,6 +166,69 @@ pub(super) fn visible_rows(
 }
 
 impl AuthorizedTable {
+    /// The visible rows of this table that are hits of `probe`, and their ranking
+    /// (MEDULLA-FEDERATED-QUERY-R077.5). It scans the rows [`Self::select`] returns, so the
+    /// caller's row-level security applies and a hidden row that ranks in the top `k` is
+    /// dropped. There is no reverse index from a source entity id to a row, so the scan is
+    /// linear in the visible rows, as the projection copy already is. Each kept row's entity
+    /// id is derived from its primary key exactly as the ingest of the binding derived it.
+    pub(super) fn select_nearest(
+        &self,
+        probe: &NearestProbe,
+    ) -> Result<(Vec<Vec<Cell>>, NearestRanking), String> {
+        use medulla_index_types::semantic_index::{
+            SemanticDigest, SemanticSqlSourceIdentity, SqlColumnRef, SEMANTIC_SQL_CATALOG_ID,
+            SEMANTIC_SQL_SCHEMA_ID,
+        };
+        let schema = self.schema()?;
+        let column_index = schema
+            .column_index(&probe.column)
+            .ok_or_else(|| ACCESS_DENIED.to_string())?;
+        let primary_key = super::primary_key_indexes(&schema)?;
+        let selector = SqlColumnRef {
+            catalog_id: SEMANTIC_SQL_CATALOG_ID.to_string(),
+            schema_id: SEMANTIC_SQL_SCHEMA_ID.to_string(),
+            table_id: probe.table.clone(),
+            column_id: probe.column.clone(),
+        };
+        let distances: std::collections::HashMap<&str, f32> = probe
+            .hits
+            .iter()
+            .map(|(id, distance)| (id.as_str(), *distance))
+            .collect();
+        let mut kept = Vec::new();
+        let mut ranking = NearestRanking {
+            explain: probe.explain_line(),
+            ..NearestRanking::default()
+        };
+        for row in self.select(None)? {
+            let Some(Cell::Text(text)) = row.get(column_index) else {
+                continue;
+            };
+            // A row with no usable primary key was never ingested, so it is no hit.
+            let Ok(digest) = super::semantic_record_identity_digest(
+                self.authority.tenant_scope(),
+                &selector,
+                &schema,
+                &row,
+                &primary_key,
+            ) else {
+                continue;
+            };
+            let entity = SemanticSqlSourceIdentity::create(
+                &selector,
+                self.authority.tenant_scope(),
+                SemanticDigest::from_bytes(digest),
+            )
+            .source_entity_id();
+            if let Some(distance) = distances.get(entity.as_str()) {
+                ranking.record(text.clone(), f64::from(*distance));
+                kept.push(row);
+            }
+        }
+        Ok((kept, ranking))
+    }
+
     /// The nearest rows of `pushdown` this actor may see: row-level security AND
     /// the statement's admissible `WHERE` run inside the maintained probe, under
     /// the same current-authority check as [`Self::select`].
@@ -263,7 +337,8 @@ mod tests {
 
     fn projected_rows(dir: &Path, who: &str, sql: &str) -> Vec<Vec<Value>> {
         let projection =
-            authorized_read_store_for_query(&authority(who), dir, sql, None, &no_graph()).unwrap();
+            authorized_read_store_for_query(&authority(who), dir, sql, None, &no_graph(), None)
+                .unwrap();
         let view = medulla_graph_core::graph::GraphView::default();
         medulla_sql::sql::exec_sql_typed_with_tables(&view, projection.store(), sql)
             .unwrap()
@@ -378,5 +453,87 @@ mod tests {
             ]
         );
         assert!(status_rows(&dir, "mallory").is_empty());
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R077.5: a `NEAREST` probe keeps only the visible rows whose
+    /// entity id is a hit, and ranks their column text by the hit distance.
+    // spec: MEDULLA-FEDERATED-QUERY-R077.5
+    #[test]
+    fn select_nearest_keeps_the_visible_hits_and_ranks_their_text() {
+        use medulla_index_types::semantic_index::{
+            SemanticDigest, SemanticSqlSourceIdentity, SqlColumnRef,
+        };
+        let dir = test_persist_dir();
+        let alice = authority("alice");
+        let schema = TableSchema::new(
+            "notes",
+            vec![
+                Column::new("id", ColumnType::Text, false, true),
+                Column::new("body", ColumnType::Text, true, false),
+            ],
+        );
+        create_owned_table(&alice, &dir, &schema, false).unwrap();
+        let columns = ["id".to_string(), "body".to_string()];
+        let rows = vec![
+            vec![json!("n1"), json!("alpha")],
+            vec![json!("n2"), json!("beta")],
+            vec![json!("n3"), json!("gamma")],
+        ];
+        open_authorized_table(&alice, &dir, "notes", SqlPrivilege::Insert)
+            .unwrap()
+            .insert(&columns, &rows)
+            .unwrap();
+        let selector = SqlColumnRef {
+            catalog_id: "tenant".into(),
+            schema_id: "public".into(),
+            table_id: "notes".into(),
+            column_id: "body".into(),
+        };
+        let entity = |id: &str| {
+            let row = vec![Cell::Text(id.to_string()), Cell::Text(String::new())];
+            let digest = super::super::semantic_record_identity_digest(
+                alice.tenant_scope(),
+                &selector,
+                &schema,
+                &row,
+                &[0],
+            )
+            .unwrap();
+            SemanticSqlSourceIdentity::create(
+                &selector,
+                alice.tenant_scope(),
+                SemanticDigest::from_bytes(digest),
+            )
+            .source_entity_id()
+        };
+        let probe = NearestProbe {
+            table: "notes".into(),
+            column: "body".into(),
+            binding_id: selector.binding_id(),
+            generation: 2,
+            space: "model-digest".into(),
+            // n3 is not a hit; an unknown entity matches no row.
+            hits: vec![
+                (entity("n2"), 0.1),
+                (entity("n1"), 0.4),
+                ("semantic-sql-source:absent".into(), 0.0),
+            ],
+        };
+        let authorized =
+            open_authorized_table(&alice, &dir, "notes", SqlPrivilege::Select).unwrap();
+        let (kept, ranking) = authorized.select_nearest(&probe).unwrap();
+        let texts: Vec<&Cell> = kept.iter().map(|row| &row[1]).collect();
+        assert_eq!(texts.len(), 2, "{kept:?}");
+        assert!(kept.iter().any(|row| row[1] == Cell::Text("alpha".into())));
+        assert!(kept.iter().any(|row| row[1] == Cell::Text("beta".into())));
+        assert_eq!(ranking.distances["beta"], f64::from(0.1_f32));
+        assert_eq!(ranking.distances["alpha"], f64::from(0.4_f32));
+        assert_eq!(
+            ranking.explain,
+            "VectorScan binding=binding:notes.body space=model-digest generation=2"
+        );
+        // Another caller with no grant on the table is refused before any probe is read.
+        assert!(open_authorized_table(&authority("mallory"), &dir, "notes", SqlPrivilege::Select)
+            .is_err());
     }
 }

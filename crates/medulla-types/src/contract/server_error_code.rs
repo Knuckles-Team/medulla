@@ -294,6 +294,12 @@ closed_error_codes! {
         /// MEDULLA-FEDERATED-QUERY-R039.1.3: no engine-local encoder is registered for the
         /// query modality in the request's embedding space.
         QueryEncoderUnavailable => "QUERY_ENCODER_UNAVAILABLE",
+        /// MEDULLA-FEDERATED-QUERY-R077.5: a `NEAREST` read names a column with no semantic binding
+        /// or no live generation.
+        ColumnNotBound => "COLUMN_NOT_BOUND",
+        /// MEDULLA-FEDERATED-QUERY-R077.5: the query vector or the live generation does not match
+        /// the binding's model identity.
+        SearchProbeModelMismatch => "SEARCH_PROBE_MODEL_MISMATCH",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a retrieval constraint predicate is malformed or unsupported.
         ConstraintInvalid => "CONSTRAINT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a graph revision other than the one the query reads.

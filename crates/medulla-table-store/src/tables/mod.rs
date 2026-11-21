@@ -33,6 +33,7 @@ pub mod embedding_binding;
 pub mod index_plan;
 pub mod matview;
 pub mod matview_incremental;
+pub mod nearest;
 pub mod property_graph;
 pub mod store;
 

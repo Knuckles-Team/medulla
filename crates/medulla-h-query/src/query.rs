@@ -157,6 +157,8 @@ pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 mod code_map;
 mod sql_read;
 pub(crate) use sql_read::*;
+#[cfg(feature = "query")]
+mod sql_nearest;
 pub mod state_machine_next;
 #[cfg(feature = "query")]
 mod access_port;

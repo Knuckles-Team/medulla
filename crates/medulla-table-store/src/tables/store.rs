@@ -654,6 +654,10 @@ pub struct TableStore {
     /// created when the tenant's handle is first opened and shared by every
     /// clone, including a per-read projection that adopts it.
     column_usage: Arc<super::column_advice::ColumnUsageCounters>,
+    /// The nearest-neighbour ranking one projection carries for a `NEAREST` read
+    /// (MEDULLA-FEDERATED-QUERY-R077.5); `None` on a tenant store and on every projection
+    /// that serves no `NEAREST` statement.
+    nearest: Option<Arc<super::nearest::NearestRanking>>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -760,6 +764,7 @@ impl TableStore {
             row_sink: Arc::default(),
             deferred_fk: Arc::default(),
             column_usage: Arc::default(),
+            nearest: None,
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -806,6 +811,18 @@ impl TableStore {
         counters: Arc<super::column_advice::ColumnUsageCounters>,
     ) -> Self {
         self.column_usage = counters;
+        self
+    }
+
+    /// The nearest-neighbour ranking this projection carries, if it serves a `NEAREST` read.
+    pub fn nearest(&self) -> Option<&Arc<super::nearest::NearestRanking>> {
+        self.nearest.as_ref()
+    }
+
+    /// This projection, carrying `ranking` for the statement's `NEAREST` calls.
+    #[must_use]
+    pub fn with_nearest(mut self, ranking: Arc<super::nearest::NearestRanking>) -> Self {
+        self.nearest = Some(ranking);
         self
     }
 

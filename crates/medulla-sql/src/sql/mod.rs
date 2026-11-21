@@ -95,6 +95,9 @@ mod vector_advice;
 mod pgfamily_tests;
 mod read_only;
 pub use read_only::require_single_read;
+/// `ORDER BY NEAREST(column, 'text')` (MEDULLA-FEDERATED-QUERY-R077.5): the recognized form
+/// and the ranking function of a column vector read.
+pub mod nearest;
 
 pub use ann::ColumnVectorBinding;
 pub use ann_filter::{AnnDeclineReason, AnnQueryShape};

@@ -2097,7 +2097,7 @@ pub fn authorized_read_store(
     authority: &CarrierAuthority,
     persist_dir: &Path,
 ) -> Result<AuthorizedReadStore, String> {
-    project_read_store(authority, persist_dir, None, None)
+    project_read_store(authority, persist_dir, None, None, None)
 }
 
 /// [`authorized_read_store`], with the one table a maintained-ANN read narrows
@@ -2107,6 +2107,7 @@ fn project_read_store(
     persist_dir: &Path,
     narrowing: Option<&medulla_sql::sql::UserAnnPushdown>,
     read_only: Option<&dyn ReadOnlyRelations>,
+    nearest: Option<&medulla_table_store::tables::nearest::NearestProbe>,
 ) -> Result<AuthorizedReadStore, String> {
     let names = selectable_tables(authority, persist_dir)?;
     let property_graphs = authorized_property_graph_records(authority, persist_dir)?;
@@ -2118,11 +2119,20 @@ fn project_read_store(
         store: Some(store.with_column_usage(std::sync::Arc::clone(tenant.column_usage()))),
         path,
     };
+    let mut ranking = None;
     for name in names {
         let authorized =
             open_authorized_table(authority, persist_dir, &name, SqlPrivilege::Select)?;
         let schema = authorized.schema()?;
-        let rows = ann_projection::visible_rows(&authorized, &name, narrowing)?;
+        // MEDULLA-FEDERATED-QUERY-R077.5: the probed table holds only the visible hits.
+        let rows = match nearest.filter(|probe| probe.table.eq_ignore_ascii_case(&name)) {
+            Some(probe) => {
+                let (rows, ranked) = authorized.select_nearest(probe)?;
+                ranking = Some(ranked);
+                rows
+            }
+            None => ann_projection::visible_rows(&authorized, &name, narrowing)?,
+        };
         projection.store().create_table(&schema, true)?;
         if !rows.is_empty() {
             let col_order: Vec<String> = schema
@@ -2151,6 +2161,13 @@ fn project_read_store(
                 tracing::debug!(table = %name, index = %copy.name, %reason, "projection index skipped");
             }
         }
+    }
+    let mut projection = projection;
+    if let Some(ranked) = ranking {
+        projection.store = projection
+            .store
+            .take()
+            .map(|store| store.with_nearest(std::sync::Arc::new(ranked)));
     }
     let projection_scope = projection.store().index_scope().to_string();
     for record in property_graphs {

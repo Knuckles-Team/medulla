@@ -39,7 +39,7 @@ pub fn require_single_read(sql: &str) -> Result<(), String> {
 }
 
 /// The statement an `EXPLAIN` wraps, re-serialized; `None` for anything else.
-fn explained_statement(sql: &str) -> Option<String> {
+pub(super) fn explained_statement(sql: &str) -> Option<String> {
     let stmts = Parser::parse_sql(&PostgreSqlDialect {}, sql).ok()?;
     match stmts.as_slice() {
         [Statement::Explain { statement, .. }] => Some(statement.to_string()),

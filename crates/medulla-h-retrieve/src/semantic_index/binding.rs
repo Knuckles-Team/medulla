@@ -156,6 +156,13 @@ fn check_sql_column_source(
     let SemanticSourceSelector::SqlColumnRef(selector) = &binding.source_selector else {
         return Ok(());
     };
+    // MEDULLA-FEDERATED-QUERY-R077.5: a column has at most one binding, under one canonical id.
+    if binding.binding_id != selector.binding_id() {
+        return Err(invalid_semantic_input(
+            ctx.req_id,
+            "semantic SQL column binding id",
+        ));
+    }
     let denied = || Response::err(ctx.req_id, ACCESS_DENIED);
     let table = open_authorized_table(
         ctx.authority,
