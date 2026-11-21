@@ -638,3 +638,32 @@ cat:hasFreshness a owl:ObjectProperty ;
     rdfs:label "has freshness" ;
     rdfs:comment "The freshness record of a graph asset." ;
     rdfs:domain cat:KnowledgeGraph .
+
+cat:Metric a owl:Class ;
+    rdfs:label "Metric" ;
+    rdfs:comment "A business metric or KPI catalogued as an asset (MEDULLA-TYPED-PACKS-R108.11): its name, business domain, unit and a formula written as UQL expression text. The formula references glossary terms as {term:<prefLabel>} and ontology properties as {prop:<IRI>}; the engine evaluates it at query time through UQL over virtual sources." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:metricName a owl:DatatypeProperty ;
+    rdfs:label "metric name" ;
+    rdfs:comment "The non-blank name of a metric." ;
+    rdfs:domain cat:Metric ;
+    rdfs:range xsd:string .
+
+cat:metricDomain a owl:ObjectProperty ;
+    rdfs:label "metric domain" ;
+    rdfs:comment "The business domain a metric belongs to." ;
+    rdfs:domain cat:Metric ;
+    rdfs:range cat:BusinessDomain .
+
+cat:metricFormula a owl:DatatypeProperty ;
+    rdfs:label "metric formula" ;
+    rdfs:comment "UQL expression text of at most 4096 bytes; references are {term:<prefLabel>} and {prop:<IRI>}." ;
+    rdfs:domain cat:Metric ;
+    rdfs:range xsd:string .
+
+cat:metricUnit a owl:DatatypeProperty ;
+    rdfs:label "metric unit" ;
+    rdfs:comment "The non-blank unit a metric is measured in." ;
+    rdfs:domain cat:Metric ;
+    rdfs:range xsd:string .

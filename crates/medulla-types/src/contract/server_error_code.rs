@@ -665,6 +665,8 @@ closed_error_codes! {
         ChangeRequestStale => "CHANGE_REQUEST_STALE",
         /// An article write carries a version below the stored one, or a new article does not start in draft (MEDULLA-TYPED-PACKS-R108.13).
         ArticleVersionInvalid => "ARTICLE_VERSION_INVALID",
+        /// A `cat:Metric` formula names an unknown glossary term or carries a malformed reference (MEDULLA-TYPED-PACKS-R108.11).
+        MetricTermUnresolved => "METRIC_TERM_UNRESOLVED",
         /// The approver opened the change request (MEDULLA-TYPED-PACKS-R802.4).
         SelfApprovalDenied => "SELF_APPROVAL_DENIED",
         /// An access request names no purpose (MEDULLA-TYPED-PACKS-R805.4).

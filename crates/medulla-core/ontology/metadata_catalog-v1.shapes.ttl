@@ -176,3 +176,15 @@ cat:AnnotationShape a sh:NodeShape ;
     [ sh:path cat:annotationRevision ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ],
     [ sh:path cat:rating ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:maxInclusive 5 ],
     [ sh:path cat:inReplyTo ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .
+
+# A metric has one non-blank name and unit, one business domain and one formula of at most
+# 4096 bytes (MEDULLA-TYPED-PACKS-R108.11). Term resolution is the catalog write guard's.
+cat:MetricShape a sh:NodeShape ;
+    sh:targetClass cat:Metric ;
+    sh:property [ sh:path cat:metricName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                  sh:pattern "\\S" ],
+    [ sh:path cat:metricDomain ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:metricFormula ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+      sh:maxLength 4096 ],
+    [ sh:path cat:metricUnit ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+      sh:pattern "\\S" ] .

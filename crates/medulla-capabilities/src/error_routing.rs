@@ -2028,6 +2028,7 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
             "LINEAGE_EDGE_UNPAIRED",
             "CATALOG_BATCH_TOO_LARGE",
             "ARTICLE_VERSION_INVALID",
+            "METRIC_TERM_UNRESOLVED",
         ]);
     }
     // MEDULLA-TYPED-PACKS-R650.4: the object-model guard refuses a value or link

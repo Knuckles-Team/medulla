@@ -667,3 +667,46 @@ def test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_ass
                 admin.tenants.delete(graph)
         finally:
             admin.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.11")
+def test_metric_formula_binds_terms_and_unknown_term_refuses(catalog_graph):
+    """Verifies MEDULLA-TYPED-PACKS-R108.11: a metric formula names glossary terms by label."""
+    admin = catalog_graph
+    domain = "urn:medulla:asset:domain:finance"
+    term = "urn:medulla:term:revenue"
+
+    def metric(node: str, formula: str, extra: str = "") -> str:
+        escaped = formula.replace("\\", "\\\\").replace('"', '\\"')
+        return (
+            f"{PREFIX}<{domain}> a cat:BusinessDomain ; skos:prefLabel \"finance\" .\n"
+            f"<{node}> a cat:Metric ; skos:prefLabel \"{node}\" ;\n"
+            f"  cat:metricName \"Net revenue\" ; cat:metricDomain <{domain}> ;\n"
+            f"  cat:metricUnit \"USD\" ; cat:metricFormula \"{escaped}\" .\n{extra}"
+        )
+
+    term_turtle = (
+        f"{PREFIX}<{term}> a cat:CatalogGlossaryTerm ; skos:prefLabel \"Revenue\" ;\n"
+        f"  cat:definesClass cat:Asset .\n"
+    )
+
+    # An unknown term refuses, and the write changes nothing: the later write that
+    # introduces the term and the metric together is the first to land.
+    with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
+        admin.rdf.add_triples(turtle=metric("urn:metric:a", "{term:Revenue} - 1"))
+    # A term never resolves by node IRI.
+    with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
+        admin.rdf.add_triples(turtle=metric("urn:metric:b", f"{{term:{term}}}"))
+    # Another prefix, an unclosed brace and a property that is not an absolute IRI refuse.
+    for bad in ("{column:revenue}", "{term:Revenue", "{prop:has space}", "{prop:relative}"):
+        with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
+            admin.rdf.add_triples(turtle=metric("urn:metric:c", bad))
+
+    # A term and its metric may arrive together; labels are trimmed and case-sensitive.
+    admin.rdf.add_triples(
+        turtle=metric("urn:metric:both", "{term: Revenue } / {prop:http://schema.org/price}", term_turtle)
+    )
+    # A later metric resolves the stored term; a different case does not.
+    admin.rdf.add_triples(turtle=metric("urn:metric:later", "{term:Revenue} * 2"))
+    with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
+        admin.rdf.add_triples(turtle=metric("urn:metric:case", "{term:revenue}"))
