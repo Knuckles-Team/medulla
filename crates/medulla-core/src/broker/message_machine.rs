@@ -1,6 +1,6 @@
 //! MEDULLA-CQ-ORCH-R810.1 — the broker message as one explicit state machine.
 //!
-//! `MessageState::apply` is the one transition function. The edge table is B01 to B08.
+//! `MessageState::apply` is the one transition function. The edge table is B01 to B10.
 //! The broker writers in `broker.rs` and `broker/consume_scan.rs` decide every status
 //! change with it (MEDULLA-CQ-ORCH-R810.3).
 
@@ -24,6 +24,8 @@ pub enum MessageState {
     Expired,
     /// The `dead_lettered` state.
     DeadLettered,
+    /// The `purged` state: an acked message removed after its retention.
+    Purged,
 }
 
 /// An event of `BrokerMessageMachine`.
@@ -41,6 +43,8 @@ pub enum MessageEvent {
     LeaseLapse,
     /// The `Expire` event.
     Expire,
+    /// The `Purge` event: an acked message past its retention.
+    Purge,
 }
 
 impl MachineState for MessageState {
@@ -51,6 +55,7 @@ impl MachineState for MessageState {
             Self::Acked => "acked",
             Self::Expired => "expired",
             Self::DeadLettered => "dead_lettered",
+            Self::Purged => "purged",
         }
     }
 }
@@ -64,6 +69,7 @@ impl MachineEvent for MessageEvent {
             Self::NackDead => "NackDead",
             Self::LeaseLapse => "LeaseLapse",
             Self::Expire => "Expire",
+            Self::Purge => "Purge",
         }
     }
 }
@@ -85,6 +91,12 @@ pub const BROKER_MESSAGE_GUARD_LEASE_UNTIL_PASSED: &str = "LeaseUntilPassed";
 /// Guard of `BrokerMessageMachine`: expires_at has passed.
 pub const BROKER_MESSAGE_GUARD_EXPIRES_AT_PASSED: &str = "ExpiresAtPassed";
 
+/// Guard of `BrokerMessageMachine`: `acked_at` plus `ACKED_RETENTION_MS` has passed.
+pub const BROKER_MESSAGE_GUARD_ACK_RETENTION_PASSED: &str = "AckRetentionPassed";
+
+/// How long an acked message stays `Acked` before `sweep_expired` purges it: 24 hours.
+pub const ACKED_RETENTION_MS: u64 = 86_400_000;
+
 /// `BrokerMessageMachine`: the closed edge table. Every other pair of state and event is refused.
 pub static BROKER_MESSAGE_MACHINE: MachineDef<MessageState, MessageEvent, &'static str> =
     MachineDef {
@@ -95,10 +107,11 @@ pub static BROKER_MESSAGE_MACHINE: MachineDef<MessageState, MessageEvent, &'stat
             MessageState::Acked,
             MessageState::Expired,
             MessageState::DeadLettered,
+            MessageState::Purged,
         ],
         initial: MessageState::Pending,
         terminals: &[
-            MessageState::Acked,
+            MessageState::Purged,
             MessageState::Expired,
             MessageState::DeadLettered,
         ],
@@ -109,6 +122,7 @@ pub static BROKER_MESSAGE_MACHINE: MachineDef<MessageState, MessageEvent, &'stat
             MessageEvent::NackDead,
             MessageEvent::LeaseLapse,
             MessageEvent::Expire,
+            MessageEvent::Purge,
         ],
         guards: &[
             BROKER_MESSAGE_GUARD_DELIVER_AT_PASSED_NOT_EXPIRED,
@@ -118,6 +132,7 @@ pub static BROKER_MESSAGE_MACHINE: MachineDef<MessageState, MessageEvent, &'stat
             BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES_ATTEMPTS_REACHED_MAX,
             BROKER_MESSAGE_GUARD_LEASE_UNTIL_PASSED,
             BROKER_MESSAGE_GUARD_EXPIRES_AT_PASSED,
+            BROKER_MESSAGE_GUARD_ACK_RETENTION_PASSED,
         ],
         edges: &[
             Edge {
@@ -176,6 +191,20 @@ pub static BROKER_MESSAGE_MACHINE: MachineDef<MessageState, MessageEvent, &'stat
                 guard: Some(BROKER_MESSAGE_GUARD_EXPIRES_AT_PASSED),
                 to: MessageState::Expired,
             },
+            Edge {
+                id: "B09",
+                from: MessageState::Acked,
+                event: MessageEvent::Ack,
+                guard: Some(BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES),
+                to: MessageState::Acked,
+            },
+            Edge {
+                id: "B10",
+                from: MessageState::Acked,
+                event: MessageEvent::Purge,
+                guard: Some(BROKER_MESSAGE_GUARD_ACK_RETENTION_PASSED),
+                to: MessageState::Purged,
+            },
         ],
     };
 
@@ -204,6 +233,8 @@ pub struct MessageFacts {
     pub claimant_matches: bool,
     /// The delivery count is below the queue's maximum.
     pub attempts_below_max: bool,
+    /// When the message was acked (`acked_at_ms`); `None` while it is not acked.
+    pub acked_at: Option<u64>,
 }
 
 impl MessageFacts {
@@ -228,6 +259,9 @@ impl MessageFacts {
                 }
                 BROKER_MESSAGE_GUARD_LEASE_UNTIL_PASSED => lease_lapsed,
                 BROKER_MESSAGE_GUARD_EXPIRES_AT_PASSED => expired,
+                BROKER_MESSAGE_GUARD_ACK_RETENTION_PASSED => self
+                    .acked_at
+                    .is_some_and(|at| at.saturating_add(ACKED_RETENTION_MS) <= now_ms),
                 _ => false,
             }
         }
@@ -248,12 +282,14 @@ pub enum Claimable {
 }
 
 impl MessageState {
-    /// Read the stored status text of a live message. Terminal messages are removed from
-    /// the queue, so only `pending` and `claimed` are stored on a live row.
+    /// Read the stored status text of a live message: `pending`, `claimed` or `acked`
+    /// (an acked message stays until `sweep_expired` purges it). Other terminal messages
+    /// are removed from the queue.
     pub fn from_stored(text: &str) -> Option<Self> {
         match text {
             "pending" => Some(Self::Pending),
             "claimed" => Some(Self::Claimed),
+            "acked" => Some(Self::Acked),
             _ => None,
         }
     }
@@ -418,6 +454,43 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.4
+
+    #[test]
+    fn edge_b09_acked_ack() {
+        edge_case(
+            "B09",
+            MessageState::Acked,
+            MessageEvent::Ack,
+            MessageState::Acked,
+        );
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.4
+
+    #[test]
+    fn edge_b10_acked_purge() {
+        edge_case(
+            "B10",
+            MessageState::Acked,
+            MessageEvent::Purge,
+            MessageState::Purged,
+        );
+        use super::{MessageFacts, ACKED_RETENTION_MS};
+        let facts = MessageFacts {
+            acked_at: Some(1_000),
+            ..MessageFacts::default()
+        };
+        let before = 1_000 + ACKED_RETENTION_MS - 1;
+        assert!(MessageState::Acked
+            .apply(MessageEvent::Purge, facts.guard(before))
+            .is_err());
+        assert_eq!(
+            MessageState::Acked.apply(MessageEvent::Purge, facts.guard(before + 1)),
+            Ok(MessageState::Purged)
+        );
+    }
+
     // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
@@ -459,8 +532,8 @@ mod tests {
     #[test]
     fn every_transition_and_refusal_is_covered() {
         let machine = &BROKER_MESSAGE_MACHINE;
-        assert_eq!(machine.edges.len(), 8);
-        assert_eq!(machine.states.len(), 5);
+        assert_eq!(machine.edges.len(), 10);
+        assert_eq!(machine.states.len(), 6);
         let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
         ids.dedup();
         assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");

@@ -10,14 +10,13 @@
 
 use super::message_machine::{Claimable as MachineClaimable, MessageFacts, MessageState};
 use super::*;
-use medulla_types::transition_refused::MachineState;
 
 /// A claim candidate distilled from a scanned message node.
 pub(super) struct Candidate {
     pub(super) id: String,
     priority: i64,
     seq: i64,
-    pub(super) status: String,
+    pub(super) status: MessageState,
     pub(super) lease_until: Option<u64>,
 }
 
@@ -95,6 +94,7 @@ pub(super) fn message_facts(obj: &serde_json::Map<String, serde_json::Value>) ->
         expires_at: f_u64(obj, "expires_at"),
         claimant_matches: false,
         attempts_below_max: false,
+        acked_at: f_u64(obj, "acked_at_ms"),
     }
 }
 
@@ -128,7 +128,7 @@ fn scan_candidate(
         id: id.to_string(),
         priority: f_i64(obj, "priority", 0),
         seq: f_i64(obj, "seq", i64::MAX),
-        status: stored.stored().into(),
+        status: stored,
         lease_until: f_u64(obj, "lease_until"),
     }
 }
@@ -148,5 +148,25 @@ pub(super) fn dead_letter_expired(
                 dead_letter(core, queue, &id, &v, "expired", now_ms);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-CQ-ORCH-R810.5
+
+    #[test]
+    fn candidate_carries_the_machine_state() {
+        let obj = serde_json::json!({"priority": 2, "seq": 7, "lease_until": 90})
+            .as_object()
+            .cloned()
+            .unwrap();
+        let candidate = scan_candidate("m1", &obj, MessageState::Claimed);
+        assert_eq!(candidate.status, MessageState::Claimed);
+        assert_eq!(candidate.lease_until, Some(90));
+        let pending = scan_candidate("m2", &obj, MessageState::Pending);
+        assert_eq!(pending.status, MessageState::Pending);
     }
 }

@@ -115,7 +115,7 @@ async def test_broker_wire_shapes() -> None:
         "events", "user.y", b"p", producer_id="prodA", seq=1, now_ms=100
     )
     msg = await b.consume("q1", group="g", consumer="c1", now_ms=100, prefetch=1)
-    await b.ack("q1", "msg:1")
+    await b.ack("q1", "msg:1", consumer="c1", now_ms=100)
     await b.reject("q1", "msg:1", requeue=True, now_ms=100)
 
     methods = [m for m, _, _ in fake.sent]
@@ -323,7 +323,7 @@ def test_broker_streams_live(live_client) -> None:
     msg = c.broker.consume("orders", group="g1", consumer="c1", now_ms=now, prefetch=0)
     assert msg is not None
     node_id, _props = msg
-    assert c.broker.ack("orders", node_id) is True
+    assert c.broker.ack("orders", node_id, consumer="c1", now_ms=now) is True
     # Queue drained.
     assert c.broker.consume("orders", group="g1", consumer="c1", now_ms=now) is None
 

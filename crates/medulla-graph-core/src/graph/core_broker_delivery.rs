@@ -33,29 +33,44 @@ impl GraphCore {
             txn.remove_node(lookup_id);
             return false;
         }
-        let Some(properties) = txn.node_row_map(&node_id) else {
+        let Some(mut properties) = txn.node_row_map(&node_id) else {
             txn.remove_node(lookup_id);
             return false;
         };
-        let current = properties.get("status").and_then(serde_json::Value::as_str)
-            == Some("claimed")
-            && properties
-                .get("delivery_tag")
-                .and_then(serde_json::Value::as_i64)
-                == Some(delivery_tag);
-        if !current {
+        let status = properties.get("status").and_then(serde_json::Value::as_str);
+        let current_tag = properties
+            .get("delivery_tag")
+            .and_then(serde_json::Value::as_i64)
+            == Some(delivery_tag);
+        let owned = properties
+            .get("owner_consumer")
+            .and_then(serde_json::Value::as_str)
+            == Some(consumer);
+        if status == Some("acked") && current_tag && owned {
+            // The repeated ack by the claimant: nothing is written (MEDULLA-CQ-ORCH-R810.4).
+            return true;
+        }
+        if status != Some("claimed") || !current_tag {
             txn.remove_node(lookup_id);
             return false;
         }
-        if properties
-            .get("owner_consumer")
-            .and_then(serde_json::Value::as_str)
-            != Some(consumer)
-        {
+        if !owned {
             return false;
         }
-        txn.remove_node(lookup_id);
-        txn.remove_node(node_id);
+        // The message stays `acked` and its lookup node stays until the sweep purges both.
+        // A tag ack carries no clock, so the ack time is the claim time of this delivery.
+        let acked_at = properties
+            .get("claimed_at")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0);
+        properties.insert("status".into(), serde_json::Value::String("acked".into()));
+        properties.insert("acked_at_ms".into(), serde_json::Value::from(acked_at));
+        properties.insert("lease_until".into(), serde_json::Value::Null);
+        let value = serde_json::Value::Object(properties);
+        let Ok(blob) = rmp_serde::to_vec_named(&value) else {
+            return false;
+        };
+        txn.add_node(node_id, blob);
         true
     }
 

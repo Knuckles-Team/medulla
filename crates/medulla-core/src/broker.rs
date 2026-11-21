@@ -36,7 +36,6 @@ use medulla_graph_core::graph::GraphCore;
 
 // MEDULLA-CQ-ORCH-R810.1 — the broker message machine (edge table B01 to B08).
 pub mod message_machine;
-pub mod migrate_status;
 use medulla_types::transition_refused::{MachineState, TransitionRefused};
 use message_machine::{MessageEvent, MessageFacts, MessageState};
 mod producer;
@@ -281,7 +280,7 @@ pub fn broker_consume(
             queue,
             group,
             consumer,
-            &cand.status,
+            cand.status.stored(),
             cand.lease_until,
             now_ms,
             lease_ms,
@@ -293,21 +292,54 @@ pub fn broker_consume(
     None
 }
 
-/// Acknowledge (remove) a claimed message, freeing its consumer's in-flight slot
-/// (CONCEPT:MEDULLA-KG.compute.groups-qos-prefetch-honoring). Returns whether the message existed.
-pub fn broker_ack(core: &GraphCore, _queue: &str, node_id: &str) -> bool {
-    let existed = core.has_node(node_id);
-    if existed {
-        // MEDULLA-284: drop the message's delivery-tag reverse-lookup node (if it was
-        // consumed via the tag path) so ack-by-id and ack-by-tag never leak it.
-        if let Some(o) = node_object(core, node_id) {
-            if let Some(tag) = o.get("delivery_tag").and_then(|v| v.as_i64()) {
-                core.remove_node(dtag_lookup_node_id(tag));
-            }
-        }
-        core.remove_node(node_id.to_string());
+/// Acknowledge a claimed message, freeing its consumer's in-flight slot
+/// (CONCEPT:MEDULLA-KG.compute.groups-qos-prefetch-honoring). The message stays `Acked` until
+/// `sweep_expired` purges it, so a repeated ack by the claimant answers `true` and writes
+/// nothing (B09), and an absent message answers `false` (MEDULLA-CQ-ORCH-R810.4).
+/// `MessageState::apply` decides the ack: the claimant must match and the lease must be live.
+pub fn broker_ack(
+    core: &GraphCore,
+    _queue: &str,
+    node_id: &str,
+    consumer: &str,
+    now_ms: u64,
+) -> Result<bool, TransitionRefused> {
+    let Some(blob) = core.get_node_properties(node_id) else {
+        return Ok(false);
+    };
+    let Ok(v) = decode_property(&blob) else {
+        return Ok(false);
+    };
+    let Some(obj) = v.as_object() else {
+        return Ok(false);
+    };
+    let Some(state) = MessageState::from_stored(f_str(obj, "status")) else {
+        return Ok(false);
+    };
+    let facts = MessageFacts {
+        claimant_matches: f_str(obj, "owner_consumer") == consumer,
+        ..consume_scan::message_facts(obj)
+    };
+    let next = state.apply(MessageEvent::Ack, facts.guard(now_ms))?;
+    if state == next {
+        // B09: the repeated ack by the claimant writes nothing.
+        return Ok(true);
     }
-    existed
+    // MEDULLA-284: drop the message's delivery-tag reverse-lookup node (if it was
+    // consumed via the tag path) so ack-by-id and ack-by-tag never leak it.
+    if let Some(tag) = obj.get("delivery_tag").and_then(|v| v.as_i64()) {
+        core.remove_node(dtag_lookup_node_id(tag));
+    }
+    // B02: keep the node as `Acked`; the lease ends and the ack time is recorded.
+    let mut updates = serde_json::Map::new();
+    updates.insert(
+        "status".into(),
+        serde_json::Value::String(next.stored().into()),
+    );
+    updates.insert("acked_at_ms".into(), serde_json::Value::from(now_ms));
+    updates.insert("lease_until".into(), serde_json::Value::Null);
+    core.compare_and_set_fields(node_id, &serde_json::Map::new(), &updates);
+    Ok(true)
 }
 
 /// Reject a claimed message (CONCEPT:MEDULLA-KG.compute.dead-letter-queues). If `requeue` and the message's
@@ -484,6 +516,16 @@ pub fn sweep_expired(core: &GraphCore, now_ms: u64) -> usize {
             };
             let facts = consume_scan::message_facts(object);
             if state
+                .apply(MessageEvent::Purge, facts.guard(now_ms))
+                .is_ok()
+            {
+                // B10: an acked message past its retention is removed with its lookup node.
+                if let Some(tag) = object.get("delivery_tag").and_then(|v| v.as_i64()) {
+                    core.remove_node(dtag_lookup_node_id(tag));
+                }
+                core.remove_node(id.clone());
+                acted += 1;
+            } else if state
                 .apply(MessageEvent::Expire, facts.guard(now_ms))
                 .is_ok()
             {
@@ -813,7 +855,7 @@ pub fn publish_confirmed(
     }
 }
 
-/// Acknowledge (remove) a claimed message by its consumer `delivery_tag` (CONCEPT:
+/// Acknowledge a claimed message by its consumer `delivery_tag` (CONCEPT:
 /// MEDULLA-284) — the tag-addressed sibling of [`broker_ack`], for a consumer that tracks
 /// tags instead of node ids. The caller must name the current owner; status, tag,
 /// and owner are fenced atomically before either lookup or message is removed.
@@ -1300,7 +1342,7 @@ mod tests {
         let mut order = Vec::new();
         while let Some((id, p)) = broker_consume(&core, "q", "g", "c", 0, 0, 0) {
             order.push(payload_of(&p));
-            broker_ack(&core, "q", &id);
+            broker_ack(&core, "q", &id, "c", 0).unwrap();
         }
         // p5 band FIFO (b then c), then p1 (d), then p0 (a).
         assert_eq!(
@@ -1318,7 +1360,7 @@ mod tests {
         let mut order = Vec::new();
         while let Some((id, p)) = broker_consume(&core, "q", "g", "c", 0, 0, 0) {
             order.push(payload_of(&p));
-            broker_ack(&core, "q", &id);
+            broker_ack(&core, "q", &id, "c", 0).unwrap();
         }
         assert_eq!(order, vec![b"1".to_vec(), b"2".to_vec(), b"3".to_vec()]);
     }
@@ -1370,7 +1412,7 @@ mod tests {
                                                           // At t=1: only the immediate one is due.
         let (id, p) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
         assert_eq!(payload_of(&p), b"now".to_vec());
-        broker_ack(&core, "q", &id);
+        broker_ack(&core, "q", &id, "c", 1).unwrap();
         assert!(broker_consume(&core, "q", "g", "c", 1, 0, 0).is_none()); // delayed still held
     }
 
@@ -1393,7 +1435,7 @@ mod tests {
         let (_id1, p1) = broker_consume(&core, "q", "g", "c2", 100, 0, 1).unwrap();
         assert_eq!(payload_of(&p1), b"m1".to_vec());
         // c1 acks → its slot frees → it can claim again.
-        assert!(broker_ack(&core, "q", &id0));
+        assert_eq!(broker_ack(&core, "q", &id0, "c1", 100), Ok(true));
         let (_id2, p2) = broker_consume(&core, "q", "g", "c1", 100, 0, 1).unwrap();
         assert_eq!(payload_of(&p2), b"m2".to_vec());
     }
@@ -1418,13 +1460,74 @@ mod tests {
     }
 
     #[test]
-    fn eg280_ack_removes_message() {
+    fn eg280_ack_keeps_the_message_acked_until_purged() {
         let core = rig();
         assert_eq!(publish(&core, "ex", "k", b"x"), 1);
         let (id, _) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
-        assert!(broker_ack(&core, "q", &id));
+        assert_eq!(broker_ack(&core, "q", &id, "c", 1), Ok(true));
+        assert!(core.has_node(&id), "an acked message is kept");
+        assert!(broker_consume(&core, "q", "g", "c", 2, 0, 0).is_none());
+        assert_eq!(
+            broker_ack(&core, "q", "no-such-message", "c", 1),
+            Ok(false),
+            "an unknown id answers false"
+        );
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.4
+
+    #[test]
+    fn second_ack_by_the_claimant_is_true_and_writes_nothing() {
+        let core = rig();
+        assert_eq!(publish(&core, "ex", "k", b"x"), 1);
+        let (id, _) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
+        assert_eq!(broker_ack(&core, "q", &id, "c", 5), Ok(true));
+        let first = core.get_node_properties(&id).unwrap();
+        assert_eq!(broker_ack(&core, "q", &id, "c", 9), Ok(true));
+        assert_eq!(
+            core.get_node_properties(&id).unwrap(),
+            first,
+            "the repeated ack writes nothing"
+        );
+        let props = node_object(&core, &id).unwrap();
+        assert_eq!(f_str(&props, "status"), MessageState::Acked.stored());
+        assert_eq!(f_u64(&props, "acked_at_ms"), Some(5));
+        // Another consumer cannot ack it.
+        assert!(broker_ack(&core, "q", &id, "other", 9).is_err());
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.4
+
+    #[test]
+    fn ack_after_lease_lapse_is_refused() {
+        let core = rig();
+        assert_eq!(publish(&core, "ex", "k", b"x"), 1);
+        let (id, _) = broker_consume(&core, "q", "g", "c1", 1000, 100, 0).unwrap();
+        let refused = broker_ack(&core, "q", &id, "c1", 1100).unwrap_err();
+        assert_eq!(refused.machine, "BrokerMessageMachine");
+        assert_eq!(refused.from, MessageState::Claimed.stored());
+        assert_eq!(refused.event, "Ack");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        let (id2, _) = broker_consume(&core, "q", "g", "c2", 1100, 100, 0).unwrap();
+        assert_eq!(id2, id);
+        assert_eq!(broker_ack(&core, "q", &id, "c2", 1150), Ok(true));
+        assert_eq!(broker_ack(&core, "q", &id, "c2", 1160), Ok(true));
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.4
+
+    #[test]
+    fn sweep_purges_an_acked_message_after_the_retention() {
+        use message_machine::ACKED_RETENTION_MS;
+        let core = rig();
+        assert_eq!(publish(&core, "ex", "k", b"x"), 1);
+        let (id, _) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
+        assert_eq!(broker_ack(&core, "q", &id, "c", 1000), Ok(true));
+        assert_eq!(sweep_expired(&core, 1000 + ACKED_RETENTION_MS - 1), 0);
+        assert!(core.has_node(&id));
+        assert_eq!(sweep_expired(&core, 1000 + ACKED_RETENTION_MS), 1);
         assert!(!core.has_node(&id));
-        assert!(!broker_ack(&core, "q", &id), "second ack is a no-op");
+        assert_eq!(broker_ack(&core, "q", &id, "c", 1000 + ACKED_RETENTION_MS), Ok(false));
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1606,7 +1709,7 @@ mod tests {
         let mut got = Vec::new();
         while let Some((id, p)) = broker_consume(&core, "q", "g", "c", 10, 0, 0) {
             got.push(payload_of(&p));
-            broker_ack(&core, "q", &id);
+            broker_ack(&core, "q", &id, "c", 10).unwrap();
         }
         assert_eq!(got, vec![b"a".to_vec(), b"b".to_vec(), b"c".to_vec()]);
     }
@@ -1627,19 +1730,20 @@ mod tests {
     }
 
     #[test]
-    fn eg284_manual_ack_by_tag_removes_message() {
+    fn eg284_manual_ack_by_tag_keeps_message_acked() {
         let core = rig();
         assert_eq!(publish(&core, "ex", "k", b"m"), 1);
         // Consume stamps a monotonic consumer delivery-tag on the claimed message.
         let (id, p) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
         let tag = p.get("delivery_tag").and_then(|v| v.as_i64()).unwrap();
         assert_eq!(tag, 1);
-        // Ack BY TAG removes the message + its reverse-lookup node.
+        // Ack BY TAG keeps the message as acked, with its reverse-lookup node, until the purge.
         assert!(broker_ack_tag(&core, tag, "c"));
-        assert!(!core.has_node(&id));
-        assert!(!core.has_node(&dtag_lookup_node_id(tag)));
-        // A second ack of the same tag is a no-op.
-        assert!(!broker_ack_tag(&core, tag, "c"));
+        assert!(core.has_node(&id));
+        assert!(core.has_node(&dtag_lookup_node_id(tag)));
+        // A second ack of the same tag by the owner answers true and writes nothing.
+        assert!(broker_ack_tag(&core, tag, "c"));
+        assert!(!broker_ack_tag(&core, tag, "other"));
     }
 
     #[test]
@@ -1659,7 +1763,7 @@ mod tests {
         assert_eq!(tag2, 2, "a fresh delivery-tag is issued on re-claim");
         // Ack the redelivery to finish.
         assert!(broker_ack_tag(&core, tag2, "c"));
-        assert!(!core.has_node(&id));
+        assert!(broker_consume(&core, "q", "g", "c", 3, 0, 0).is_none());
     }
 
     #[test]
@@ -1802,7 +1906,7 @@ mod tests {
         let mut got = Vec::new();
         while let Some((id, p)) = broker_consume(&core, "q", "g", "c", 10, 0, 0) {
             got.push(payload_of(&p));
-            broker_ack(&core, "q", &id);
+            broker_ack(&core, "q", &id, "c", 10).unwrap();
         }
         assert_eq!(got, vec![b"m0".to_vec(), b"m1".to_vec()]);
     }
@@ -1841,7 +1945,7 @@ mod tests {
         let mut n = 0;
         while let Some((id, _)) = broker_consume(&core, "q", "g", "c", 1, 0, 0) {
             n += 1;
-            broker_ack(&core, "q", &id);
+            broker_ack(&core, "q", &id, "c", 1).unwrap();
         }
         assert_eq!(n, 3, "no-producer-id path is at-least-once (all delivered)");
         // Node shape matches a plain publish (no producer/idempotency fields leaked).

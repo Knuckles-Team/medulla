@@ -558,8 +558,13 @@ fn apply_broker_queue(core: &GraphCore, m: &Method) -> bool {
             );
         }
         #[cfg(feature = "broker")]
-        Method::BrokerAck { queue, node_id } => {
-            let _ = crate::broker::broker_ack(core, queue, node_id);
+        Method::BrokerAck {
+            queue,
+            node_id,
+            consumer,
+            now_ms,
+        } => {
+            let _ = crate::broker::broker_ack(core, queue, node_id, consumer, *now_ms);
         }
         #[cfg(feature = "broker")]
         Method::BrokerReject {

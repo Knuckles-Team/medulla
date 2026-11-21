@@ -1383,7 +1383,7 @@
 :BrokerMessageMachine a :StateMachine ;
     rdfs:label "BrokerMessage machine" ;
     :initialState :BrokerMessageMachine_Pending ;
-    :hasState :BrokerMessageMachine_Pending, :BrokerMessageMachine_Claimed, :BrokerMessageMachine_Acked, :BrokerMessageMachine_Expired, :BrokerMessageMachine_DeadLettered .
+    :hasState :BrokerMessageMachine_Pending, :BrokerMessageMachine_Claimed, :BrokerMessageMachine_Acked, :BrokerMessageMachine_Expired, :BrokerMessageMachine_DeadLettered, :BrokerMessageMachine_Purged .
 
 :BrokerMessageMachine_Pending a :BrokerMessageState ;
     rdfs:label "BrokerMessage Pending" ;
@@ -1393,7 +1393,7 @@
     rdfs:label "BrokerMessage Claimed" ;
     :storedForm "claimed" .
 
-:BrokerMessageMachine_Acked a :BrokerMessageTerminalState ;
+:BrokerMessageMachine_Acked a :BrokerMessageState ;
     rdfs:label "BrokerMessage Acked" ;
     :storedForm "acked" .
 
@@ -1404,6 +1404,10 @@
 :BrokerMessageMachine_DeadLettered a :BrokerMessageTerminalState ;
     rdfs:label "BrokerMessage DeadLettered" ;
     :storedForm "dead_lettered" .
+
+:BrokerMessageMachine_Purged a :BrokerMessageTerminalState ;
+    rdfs:label "BrokerMessage Purged" ;
+    :storedForm "purged" .
 
 :BrokerMessageMachine_Event_Claim a :BrokerMessageEvent ;
     rdfs:label "BrokerMessage Claim" .
@@ -1422,6 +1426,9 @@
 
 :BrokerMessageMachine_Event_Expire a :BrokerMessageEvent ;
     rdfs:label "BrokerMessage Expire" .
+
+:BrokerMessageMachine_Event_Purge a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage Purge" .
 
 :BrokerMessageMachine_Guard_DeliverAtPassedNotExpired a :BrokerMessageGuard ;
     rdfs:label "BrokerMessage DeliverAtPassedNotExpired" ;
@@ -1450,6 +1457,10 @@
 :BrokerMessageMachine_Guard_ExpiresAtPassed a :BrokerMessageGuard ;
     rdfs:label "BrokerMessage ExpiresAtPassed" ;
     rdfs:comment "Guard: expires_at has passed." .
+
+:BrokerMessageMachine_Guard_AckRetentionPassed a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage AckRetentionPassed" ;
+    rdfs:comment "Guard: acked_at plus the ack retention has passed." .
 
 :BrokerMessageMachine_B01 a :BrokerMessageTransition ;
     rdfs:label "BrokerMessage B01" ;
@@ -1514,6 +1525,23 @@
     :toState :BrokerMessageMachine_Expired ;
     :guardedBy :BrokerMessageMachine_Guard_ExpiresAtPassed ;
     :firedBy :BrokerMessageMachine_Event_Expire .
+
+# spec: MEDULLA-CQ-ORCH-R810.4
+:BrokerMessageMachine_B09 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B09" ;
+    :edgeId "B09" ;
+    :fromState :BrokerMessageMachine_Acked ;
+    :toState :BrokerMessageMachine_Acked ;
+    :guardedBy :BrokerMessageMachine_Guard_ClaimantMatches ;
+    :firedBy :BrokerMessageMachine_Event_Ack .
+
+:BrokerMessageMachine_B10 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B10" ;
+    :edgeId "B10" ;
+    :fromState :BrokerMessageMachine_Acked ;
+    :toState :BrokerMessageMachine_Purged ;
+    :guardedBy :BrokerMessageMachine_Guard_AckRetentionPassed ;
+    :firedBy :BrokerMessageMachine_Event_Purge .
 
 # spec: MEDULLA-SDLC-R030.2
 # The Defect machine. The Rust edge table DEFECT_MACHINE is the same table; the ontology

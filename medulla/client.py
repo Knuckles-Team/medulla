@@ -15025,7 +15025,7 @@ class BrokerClient:
         msg = await client.broker.consume("q1", group="g", consumer="c1", now_ms=now)
         if msg:
             node_id, props = msg
-            await client.broker.ack("q1", node_id)
+            await client.broker.ack("q1", node_id, consumer="c1", now_ms=now)
     """
 
     def __init__(self, client: MedullaClient) -> None:
@@ -15246,11 +15246,20 @@ class BrokerClient:
         node_id, props = claimed
         return node_id, props
 
-    async def ack(self, queue: str, node_id: str) -> bool:
-        """Acknowledge (remove) a claimed message, freeing the consumer's in-flight slot
-        (MEDULLA-280). Returns ``True`` if the message existed."""
+    async def ack(self, queue: str, node_id: str, *, consumer: str, now_ms: int) -> bool:
+        """Acknowledge a claimed message, freeing the consumer's in-flight slot
+        (MEDULLA-280). The message stays acked until the sweep purges it. Returns
+        ``True`` when this call acked it or ``consumer`` had already acked it, and
+        ``False`` when no message exists. A different consumer, or a lapsed lease,
+        answers ``TRANSITION_REFUSED``."""
         return await _gen.messaging.send_broker_ack(
-            self._client, {"queue": queue, "node_id": node_id}
+            self._client,
+            {
+                "queue": queue,
+                "node_id": node_id,
+                "consumer": consumer,
+                "now_ms": int(now_ms),
+            },
         )
 
     async def reject(

@@ -619,8 +619,8 @@ export class MedullaThinClient {
       prefetch,
     });
   }
-  brokerAck(queue, node_id) {
-    return this._send("BrokerAck", { queue, node_id });
+  brokerAck(queue, node_id, { consumer, nowMs }) {
+    return this._send("BrokerAck", { queue, node_id, consumer, now_ms: nowMs });
   }
   brokerReject(queue, node_id, { requeue, nowMs }) {
     return this._send("BrokerReject", { queue, node_id, requeue, now_ms: nowMs });

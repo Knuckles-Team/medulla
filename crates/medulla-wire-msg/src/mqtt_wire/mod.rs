@@ -536,7 +536,7 @@ async fn pump_subscription(
         // Header byte: PUBLISH, QoS 0 (flags 0).
         write_packet(socket, PKT_PUBLISH << 4, &p).await?;
         // QoS-0 delivery: finalize immediately.
-        broker_wire::ack_message(state, graph, actor, next_req_id, queue, &node_id).await;
+        broker_wire::ack_message(state, graph, actor, next_req_id, queue, &node_id, consumer).await;
     }
     Ok(())
 }

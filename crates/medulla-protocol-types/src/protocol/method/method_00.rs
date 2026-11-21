@@ -214,12 +214,18 @@ macro_rules! __eg_method_chunk_0 {
         prefetch: u32,
     },
 
-    /// Acknowledge (remove) a claimed message, freeing the consumer's in-flight slot
-    /// (CONCEPT:MEDULLA-KG.compute.groups-qos-prefetch-honoring). Returns `Bool(true)` if the message existed.
+    /// Acknowledge a claimed message, freeing the consumer's in-flight slot
+    /// (CONCEPT:MEDULLA-KG.compute.groups-qos-prefetch-honoring). The message stays `Acked`
+    /// until the sweep purges it. `consumer` is the claimant and `now_ms` the explicit clock
+    /// that decides the lease guard. Returns `Bool(true)` when the message is acked by this
+    /// call or was already acked by this consumer, `Bool(false)` when no message exists, and
+    /// `TRANSITION_REFUSED` when the claimant or the lease does not hold.
     #[cfg(feature = "broker")]
     BrokerAck {
         queue: String,
         node_id: String,
+        consumer: String,
+        now_ms: u64,
     },
 
     /// Reject a claimed message (CONCEPT:MEDULLA-KG.compute.dead-letter-queues). If `requeue` and the delivery count

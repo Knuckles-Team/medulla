@@ -871,7 +871,7 @@ pub(super) fn broker_consume_audit_line(method: &Method) -> Option<String> {
         #[cfg(feature = "broker")]
         Method::BrokerConsume { queue, .. } => Some(format!("BROKER_CONSUME|{queue}")),
         #[cfg(feature = "broker")]
-        Method::BrokerAck { queue, node_id } => Some(format!("BROKER_ACK|{queue}|{node_id}")),
+        Method::BrokerAck { queue, node_id, .. } => Some(format!("BROKER_ACK|{queue}|{node_id}")),
         #[cfg(feature = "broker")]
         Method::BrokerReject { queue, node_id, .. } => {
             Some(format!("BROKER_REJECT|{queue}|{node_id}"))

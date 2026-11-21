@@ -345,6 +345,7 @@ pub async fn ack_message(
     next_id: fn() -> u64,
     queue: &str,
     node_id: &str,
+    consumer: &str,
 ) {
     let _ = engine_call(
         state,
@@ -354,6 +355,8 @@ pub async fn ack_message(
         Method::BrokerAck {
             queue: queue.to_string(),
             node_id: node_id.to_string(),
+            consumer: consumer.to_string(),
+            now_ms: current_time_ms(),
         },
     )
     .await;

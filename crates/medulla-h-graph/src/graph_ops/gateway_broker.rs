@@ -336,10 +336,18 @@ async fn try_handle_delivery(
             })
             .await
         }
-        Method::BrokerAck { queue, node_id } => {
-            let (queue, node_id) = (queue.clone(), node_id.clone());
+        Method::BrokerAck {
+            queue,
+            node_id,
+            consumer,
+            now_ms,
+        } => {
+            let (queue, node_id, consumer, now_ms) =
+                (queue.clone(), node_id.clone(), consumer.clone(), *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = medulla_core::broker::broker_ack(core, &queue, &node_id);
+                let existed =
+                    medulla_core::broker::broker_ack(core, &queue, &node_id, &consumer, now_ms)
+                        .map_err(|refused| refused.to_string())?;
                 Ok(ResultPayload::scalar::<results::BrokerAck>(existed))
             })
             .await

@@ -174,7 +174,7 @@ struct ConnectionState {
     authenticated_actor: Option<String>,
     delivery_tag: u64,
     // delivery-tag → (queue, graph node id) for native broker acknowledgement.
-    unacked: std::collections::HashMap<u64, (String, String)>,
+    unacked: std::collections::HashMap<u64, (String, String, String)>,
     // CONCEPT:MEDULLA-KG.ingest.broker-reject-publish publisher confirms: channels switched into confirm mode + their
     // per-channel 1-based publish sequence (the delivery-tag returned in basic.ack/nack).
     confirm_channels: std::collections::HashSet<u16>,
@@ -678,7 +678,7 @@ async fn handle_basic_get(
     match claim_one(&ctx.state, &ctx.graph, actor, &queue, actor, 1).await {
         Some((node_id, rk, ex, body)) => {
             let tag = next_delivery_tag(&mut ctx.delivery_tag)?;
-            ctx.unacked.insert(tag, (queue, node_id));
+            ctx.unacked.insert(tag, (queue, node_id, actor.to_string()));
             let mut p = method_header(C_BASIC, 71); // get-ok
             put_u64(&mut p, tag);
             p.push(0); // redelivered = false
@@ -714,9 +714,17 @@ async fn handle_basic_ack(
     if !c.valid {
         return Err(invalid_data("invalid AMQP basic.ack arguments"));
     }
-    if let Some((queue, node_id)) = ctx.unacked.remove(&tag) {
-        broker_wire::ack_message(&ctx.state, &ctx.graph, actor, next_req_id, &queue, &node_id)
-            .await;
+    if let Some((queue, node_id, consumer)) = ctx.unacked.remove(&tag) {
+        broker_wire::ack_message(
+            &ctx.state,
+            &ctx.graph,
+            actor,
+            next_req_id,
+            &queue,
+            &node_id,
+            &consumer,
+        )
+        .await;
     }
     Ok(FrameAction::Continue)
 }
@@ -729,7 +737,7 @@ async fn pump_consumers(
     actor: &str,
     consumers: &[Consumer],
     delivery_tag: &mut u64,
-    unacked: &mut std::collections::HashMap<u64, (String, String)>,
+    unacked: &mut std::collections::HashMap<u64, (String, String, String)>,
 ) -> std::io::Result<()> {
     const MAX_PER_POLL: usize = 32;
     for cons in consumers {
@@ -750,7 +758,10 @@ async fn pump_consumers(
                 break;
             };
             let tag = next_delivery_tag(delivery_tag)?;
-            unacked.insert(tag, (cons.queue.clone(), node_id));
+            unacked.insert(
+                tag,
+                (cons.queue.clone(), node_id, cons.consumer_id.clone()),
+            );
             let mut p = method_header(C_BASIC, 60); // basic.deliver
             put_shortstr(&mut p, cons.tag.as_bytes());
             put_u64(&mut p, tag);

@@ -15725,7 +15725,9 @@ class MethodBlobUnrefParams(BaseModel):
 class MethodBrokerAckParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    consumer: str
     node_id: str
+    now_ms: Annotated[int, Field(ge=0)]
     queue: str
 
 

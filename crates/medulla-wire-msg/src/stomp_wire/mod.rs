@@ -242,7 +242,7 @@ async fn handle_connection(
     let mut authenticated_actor: Option<String> = None;
     let mut subs: Vec<Subscription> = Vec::new();
     // ack-id → (queue, graph node id) for native broker acknowledgement.
-    let mut unacked: std::collections::HashMap<String, (String, String)> =
+    let mut unacked: std::collections::HashMap<String, (String, String, String)> =
         std::collections::HashMap::new();
     let context = ConnectionContext {
         state: &state,
@@ -314,7 +314,7 @@ async fn drain_buffered_frames(
     buf: &mut Vec<u8>,
     authenticated_actor: &mut Option<String>,
     subs: &mut Vec<Subscription>,
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<FrameAction> {
     let mut consumed_total = 0usize;
     while let Some(nul_relative) = buf[consumed_total..].iter().position(|byte| *byte == 0) {
@@ -350,7 +350,7 @@ async fn handle_frame(
     frame: &Frame,
     authenticated_actor: &mut Option<String>,
     subs: &mut Vec<Subscription>,
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<FrameAction> {
     if authenticated_actor.is_none() && !matches!(frame.command.as_str(), "CONNECT" | "STOMP") {
         return Err(invalid_data("STOMP command received before CONNECT"));
@@ -410,7 +410,7 @@ async fn handle_authenticated_command(
     frame: &Frame,
     actor: &str,
     subs: &mut Vec<Subscription>,
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<FrameAction> {
     if frame.header("transaction").is_some() {
         return Err(invalid_data("STOMP transactions are unsupported"));
@@ -518,11 +518,11 @@ async fn handle_ack(
     context: &ConnectionContext<'_>,
     actor: &str,
     frame: &Frame,
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<()> {
     // STOMP 1.2 ACK carries the message's `ack` id in the `id` header.
     let ack_id = required_header(frame, "id")?;
-    if let Some((queue, node_id)) = unacked.remove(&ack_id) {
+    if let Some((queue, node_id, consumer)) = unacked.remove(&ack_id) {
         broker_wire::ack_message(
             context.state,
             context.graph,
@@ -530,6 +530,7 @@ async fn handle_ack(
             next_req_id,
             &queue,
             &node_id,
+            &consumer,
         )
         .await;
     }
@@ -541,10 +542,10 @@ async fn handle_nack(
     context: &ConnectionContext<'_>,
     actor: &str,
     frame: &Frame,
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<()> {
     let ack_id = required_header(frame, "id")?;
-    if let Some((queue, node_id)) = unacked.remove(&ack_id) {
+    if let Some((queue, node_id, _consumer)) = unacked.remove(&ack_id) {
         requeue_message(context.state, context.graph, actor, &queue, &node_id).await;
     }
     maybe_receipt(socket, frame).await
@@ -579,7 +580,7 @@ async fn pump_subscriptions(
     graph: &str,
     actor: &str,
     subs: &[Subscription],
-    unacked: &mut std::collections::HashMap<String, (String, String)>,
+    unacked: &mut std::collections::HashMap<String, (String, String, String)>,
 ) -> std::io::Result<()> {
     const MAX_PER_POLL: usize = 32;
     for sub in subs {
@@ -615,11 +616,22 @@ async fn pump_subscriptions(
             write_frame(socket, &msg).await?;
             match sub.ack {
                 AckMode::Auto => {
-                    broker_wire::ack_message(state, graph, actor, next_req_id, &sub.queue, &node_id)
-                        .await
+                    broker_wire::ack_message(
+                        state,
+                        graph,
+                        actor,
+                        next_req_id,
+                        &sub.queue,
+                        &node_id,
+                        &sub.consumer_id,
+                    )
+                    .await
                 }
                 AckMode::Client | AckMode::ClientIndividual => {
-                    unacked.insert(node_id.clone(), (sub.queue.clone(), node_id));
+                    unacked.insert(
+                        node_id.clone(),
+                        (sub.queue.clone(), node_id, sub.consumer_id.clone()),
+                    );
                 }
             }
         }

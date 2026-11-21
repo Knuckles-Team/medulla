@@ -546,6 +546,8 @@ mod tests {
             Method::BrokerAck {
                 queue: "q".into(),
                 node_id: "x".into(),
+                consumer: "c".into(),
+                now_ms: 0,
             },
             #[cfg(feature = "broker")]
             Method::BrokerReject {

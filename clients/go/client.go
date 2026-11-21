@@ -599,8 +599,10 @@ type brokerConsumeParams struct {
 }
 
 type brokerAckParams struct {
-	Queue  string `msgpack:"queue"`
-	NodeID string `msgpack:"node_id"`
+	Queue    string `msgpack:"queue"`
+	NodeID   string `msgpack:"node_id"`
+	Consumer string `msgpack:"consumer"`
+	NowMs    uint64 `msgpack:"now_ms"`
 }
 
 type brokerRejectParams struct {
@@ -780,8 +782,8 @@ func (c *Client) BrokerConsume(queue, group, consumer string, nowMs, leaseMs uin
 	}, "")
 }
 
-func (c *Client) BrokerAck(queue, nodeID string) (any, error) {
-	return c.send("BrokerAck", brokerAckParams{Queue: queue, NodeID: nodeID}, "")
+func (c *Client) BrokerAck(queue, nodeID, consumer string, nowMs uint64) (any, error) {
+	return c.send("BrokerAck", brokerAckParams{Queue: queue, NodeID: nodeID, Consumer: consumer, NowMs: nowMs}, "")
 }
 
 func (c *Client) BrokerReject(queue, nodeID string, requeue bool, nowMs uint64) (any, error) {
