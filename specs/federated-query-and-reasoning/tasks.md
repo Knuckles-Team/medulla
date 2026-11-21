@@ -140,7 +140,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T129 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.701 Trino and Spark sources: refusal, evidence and hot-path proof
 - [ ] T130 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.700 Graph integrity validation as named shapes: model and behavior; write `tests/query/test_graph_integrity_shapes_served.py::test_violating_rows_carry_shape_columns` (code on main)
 - [ ] T131 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.701 Graph integrity validation: refusal, evidence and hot-path proof
-- [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 NL planner routes catalog questions to CatalogSearch
+- [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 RETIRED: catalog questions use the catalog relevance function of TYPED-PACKS R108.16
 - [ ] T133 [P] [US1] MEDULLA-FEDERATED-QUERY-R720.1 Epistemic row fields
 - [ ] T134 [US1] MEDULLA-FEDERATED-QUERY-R720.2 Confidence, belief and decay stages
 - [x] T432 [US1] MEDULLA-FEDERATED-QUERY-R720.8 EXPLAIN reports the plan DAG and root count
@@ -170,7 +170,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
 - [ ] T159 [P] [US1] MEDULLA-FEDERATED-QUERY-R725 Viewport bins and selection resolve methods
 - [x] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
-- [ ] T161 [US1] MEDULLA-FEDERATED-QUERY-R727 Natural-language answers take context from AtomContext
+- [ ] T161 [US1] MEDULLA-FEDERATED-QUERY-R727 RETIRED: a cited-passage answer is the served AtomContext read
 - [x] T162 [US1] MEDULLA-FEDERATED-QUERY-R728 Exhaustive OpKind and PredKind printer and parser round trip
 - [ ] T163 [US1] MEDULLA-FEDERATED-QUERY-R729 Federated pushdown to connector raw-source tools
 - [x] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate

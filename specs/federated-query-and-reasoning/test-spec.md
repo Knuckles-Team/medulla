@@ -376,7 +376,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R089`: `tests/discover_quality_verdi
 | Refusal | `MEDULLA-FEDERATED-QUERY-R090.4` | Each case returns its code and no rows. |
 | Evidence | `MEDULLA-FEDERATED-QUERY-R090.5` | A test reads each field. |
 | Hot-path proof | `MEDULLA-FEDERATED-QUERY-R090.6` | `tests/retrieval/test_discover_planning_served.py::test_deep_recency_multihop` passes, and the nightly `cargo bench --features server,security,query --bench discover_planning` meets `discover/standard_1m` (15 ms p99) and `discover/deep_overhead` (40 ms p99). |
-| Wiring | `MEDULLA-FEDERATED-QUERY-R090.7` | `tests/retrieval/test_discover_planning_served.py::test_deep_arms_use_scoped_adapter` observes one adapter application per arm and refresh provenance. |
+| Wiring | `MEDULLA-FEDERATED-QUERY-R090.7` | `tests/retrieval/test_discover_planning_served.py::test_deep_arms_use_scoped_adapter` reads `plan.expansions[].adapter_digest`, one per expansion, and asserts it is absent with no adapter. |
 
 Hot-path proof for `MEDULLA-FEDERATED-QUERY-R090`: `tests/retrieval/test_discover_planning_served.py::test_deep_recency_multihop`.
 
@@ -521,7 +521,7 @@ These are planned acceptance cases. They have not run. They establish no native,
 | `MEDULLA-FEDERATED-QUERY-R040.5.3` | Core `EmbeddingProvider::regenerate_eligible` plus embeddingless compact query and rescore integration | The test changes one source revision and verifies selective regeneration. A compact query makes no source fetch. Exact rescore stays under source, byte, and item ceilings. The provider refuses a stale digest, model space, encoding policy, generation, or failed replacement. The prior complete generation stays active. |
 | `MEDULLA-FEDERATED-QUERY-R040.5.4` | Core `EmbeddingProvider` multi-source batch and cache seam | The test sends duplicate source rows and verifies one counted provider effect. It exercises bounded batches and the exact-key cache. It verifies that keys hold tenant, source digest, space, and policy. It refuses exhausted budgets, wrong vectors, provider failures, stale keys, and foreign-tenant lookups. `TextEmbedder` stays unchanged. |
 | `MEDULLA-FEDERATED-QUERY-R040.5.5` | Compact graph pruning tests | With pruning disabled, the topology is byte-identical. With a pinned policy, edges are deterministic, hubs stay, no edge dangles, and the graph stays connected. The test refuses invalid bounds, missing digests, policy mismatch, and disconnected output. It reports measured recall and storage per fixture. |
-| `MEDULLA-FEDERATED-QUERY-R040.5.6` | `tests/retrieval/test_low_storage_ann_served.py::test_revision_bound_low_storage_ann_path` | The test builds, updates, restarts, queries, and reads the receipt independently through authenticated `UnifiedQuery`. It compares fixed corpus and selectivity workloads with the exact full-scan oracle. It reads source-text, model, and build-space digests and the generation. It reads bytes, rows, visits, p50, p99, rescore, batch, and cache counters. It reads recall@k. It refuses budget exhaustion, a stale generation, unauthorized source, and an incomplete receipt before any effect. No external storage-savings claim serves as acceptance. |
+| `MEDULLA-FEDERATED-QUERY-R040.5.6` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` | The test builds, updates, restarts, queries, and reads the receipt independently through authenticated `UnifiedQuery`. It compares fixed corpus and selectivity workloads with the exact full-scan oracle. It reads source-text, model, and build-space digests and the generation. It reads bytes, rows, visits, p50, p99, rescore, batch, and cache counters. It reads recall@k. It refuses budget exhaustion, a stale generation, unauthorized source, and an incomplete receipt before any effect. No external storage-savings claim serves as acceptance. |
 
 The benchmark matrix records actual results under declared ceilings. It sets no storage or accuracy target. A deterministic hash embedder serves seam and refusal tests. Semantic quality needs a pinned real model and independent readback. These cases do not replace R039.1.1, R039.2.1, R040.3, R040.4 or R059. Those rows stay required.
 
@@ -955,7 +955,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R053.700:** `crates/medulla-federation/src/federation_spark.rs::tests::submission_id_idempotent_and_fenced` (planned), `tests/query/test_spark_trino_sources_served.py::test_resubmission_returns_same_submission` (L4); `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs::tests::identical_submission_resumes_one_execution_per_owner` (L2). Trino and Spark sources with idempotent submission: model and behavior. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R053.701:** `tests/query/test_spark_trino_sources_served.py::test_resubmission_returns_same_submission` (L4); `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs::tests::identical_submission_resumes_one_execution_per_owner` (L2). Trino and Spark sources: refusal, evidence and hot-path proof. It asserts one id for two identical submissions, both refusals, and a cross-tenant negative.
 - **MEDULLA-FEDERATED-QUERY-R005.700:** `crates/medulla-exec/src/exec/dispatch/shape_integrity.rs::tests::finding_per_shape_and_bound`, `tests/query/test_graph_integrity_shapes_served.py::test_violating_rows_carry_shape_columns` (planned). Graph integrity validation as named shapes: model and behavior. The L1 test builds one violation per shape, asserts severity and the blocking flag, and asserts one visit per element; the L4 test reads `shape.severity` and `shape.blocks` from `UqlRow.provenance` of the kept rows (no refusal; `FAIL ON FATAL` is R005.701).
-- **MEDULLA-FEDERATED-QUERY-R005.701:** `tests/query/test_graph_integrity_shapes_served.py::test_fatal_finding_blocks` (planned). Graph integrity validation: refusal, evidence and hot-path proof. It asserts the blocking finding and its shape id. It asserts the gap result over a budget-exceeding graph. A second tenant sees nothing. The benchmark receipt meets the budget.
+- **MEDULLA-FEDERATED-QUERY-R005.701:** `tests/query/test_graph_integrity_shapes_served.py::test_fatal_finding_blocks` (planned). Graph integrity validation: refusal, evidence and hot-path proof. It asserts `FAIL ON FATAL` refuses `SHAPE_FATAL_FINDING` with the shape id for a fatal shape, does not refuse a warn shape, and does not refuse the gap result over a budget-exceeding graph. The L1 test `crates/medulla-uql/src/parser/shape.rs::tests::fail_on_fatal_round_trips` covers the grammar. The benchmark receipt meets the budget.
 
 ## Planned bindings, range 4
 
@@ -963,7 +963,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 
 | Kind | Requirement | Test |
 |---|---|---|
-| Planned | `MEDULLA-FEDERATED-QUERY-R008.1` | `tests/data_plane/test_catalog_search_served.py::test_nl_catalog_question_returns_search_hits` |
+| Retired | `MEDULLA-FEDERATED-QUERY-R008.1` | retired; proven by MEDULLA-TYPED-PACKS-R108.16 |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703` | `tests/retrieval/test_access_check_served.py::test_denied_hit_never_enters_bundle` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.3` | `tests/retrieval/test_access_check_served.py::test_denied_hit_never_enters_bundle` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
@@ -1099,7 +1099,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R724` | `tests/served_schema_projections.rs::projections_follow_caller_grants_and_hide_other_boundaries` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R727` | `tests/query/test_nl_answer_atoms_served.py::test_answer_cites_atom_provenance` |
+| Retired | `MEDULLA-FEDERATED-QUERY-R727` | retired; `AtomContext` is proven by MEDULLA-INGEST-WORKER-R003.3 |
 | Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
