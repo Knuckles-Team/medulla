@@ -20,7 +20,7 @@ use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
-    handle_file_defect, Defect, DefectWrite, FileDefectRequest, DEFECT_RECORD_PROPERTY,
+    handle_file_defect, Defect, DefectWrite, FileDefectRequest,
     DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
     ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
@@ -443,10 +443,7 @@ async fn load_defects(
         .filter(|(node_id, blob)| authority.can_see_node(blob, core.is_schema_node(node_id)))
         .filter_map(|(_, blob)| {
             let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
-            if node.get("tenant_id").and_then(Value::as_str).is_some_and(|owner| owner != tenant) {
-                return None;
-            }
-            serde_json::from_str::<Defect>(node.get(DEFECT_RECORD_PROPERTY)?.as_str()?).ok()
+            medulla_source_types::lifecycle::defect_from_node(&node, tenant)
         })
         .filter(|defect| defect.repo == repo)
         .collect();
@@ -455,27 +452,9 @@ async fn load_defects(
     Ok(defects)
 }
 
-/// The one `Defect` node of a filing; the status, severity and signature are flat properties
-/// beside the canonical record so a UQL read needs no JSON decode. `culprit_changeset` is not
-/// written here (a bisect writes it, MEDULLA-SCM-R009), and an upsert keeps it.
+/// The one `Defect` node of a filing, stamped with the verified tenant and owner.
 fn defect_properties(write: &DefectWrite, target: &SdlcTarget<'_>) -> Result<Map<String, Value>, String> {
-    let defect = &write.defect;
-    let body = serde_json::to_string(defect).map_err(|_| "defect record encoding failed".to_string())?;
-    let enum_name = |value: Result<Value, serde_json::Error>| {
-        value.ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default()
-    };
-    let mut properties = Map::new();
-    properties.insert("type".into(), DEFECT_TYPE.into());
-    properties.insert(DEFECT_RECORD_PROPERTY.into(), body.into());
-    properties.insert("repo".into(), defect.repo.clone().into());
-    properties.insert("defect_id".into(), defect.id.clone().into());
-    properties.insert("title".into(), defect.title.clone().into());
-    properties.insert("signature_digest".into(), defect.signature_digest.clone().into());
-    properties.insert("status".into(), enum_name(serde_json::to_value(defect.status)).into());
-    properties.insert("severity".into(), enum_name(serde_json::to_value(defect.severity)).into());
-    properties.insert("intake".into(), enum_name(serde_json::to_value(defect.intake)).into());
-    properties.insert("symptom_count".into(), (defect.symptoms.len() as u64).into());
-    properties.insert("created_at".into(), defect.created_at.into());
+    let mut properties = write.node_properties()?;
     stamp(&mut properties, target);
     Ok(properties)
 }

@@ -186,3 +186,9 @@ medulla-rdf = { path = "../medulla-rdf", features = ["rdf", "owl", "sparql"] }
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-reasoner = { path = "../medulla-reasoner", features = ["owl", "sparql-star"] }
+
+# Defect intake over 100,000 symptoms of 1,000 signatures (MEDULLA-SDLC-R003.6): nightly budget.
+[[bench]]
+name = "defect_intake"
+path = "benches/defect_intake.rs"
+harness = false

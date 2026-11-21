@@ -38,6 +38,7 @@ use medulla_stream::telemetry::incident_nodes::{
 pub const ABOUT: &str = "about";
 
 const MAX_INCIDENTS_READ: usize = 100_000;
+const MAX_SYMBOLS_READ: usize = 1_000_000;
 const DEFAULT_CLAIM_LIMIT: u32 = 100;
 const MAX_CLAIM_LIMIT: u32 = 1_000;
 
@@ -125,7 +126,7 @@ pub async fn handle_incident_set_status(
         authority
             .set_status(tenant, &incident_id, status)
             .map_err(refusal)?;
-        commit(state, &target, &authority, vec![incident_id]).await
+        commit(state, &target, &authority, vec![incident_id], Vec::new()).await
     }
     .await;
     typed_response::<IncidentSetStatusResult>(target.req_id, result)
@@ -142,7 +143,99 @@ async fn correlate(
     let touched = authority
         .correlate(tenant, anomalies, window_ms)
         .map_err(refusal)?;
-    commit(state, target, &authority, touched).await
+    let defects = incident_defect_operations(state, target, &authority).await?;
+    commit(state, target, &authority, touched, defects).await
+}
+
+/// MEDULLA-SDLC-R003.3: an incident whose newly added evidence names a code symbol files one
+/// symptom, in the incident's own batch. A frame is an evidence `entity_ref` or `signal`
+/// line; it names a symbol when the one frame resolution of `SymbolIndex` finds a `SYMBOL`
+/// node of the request graph for it. Evidence the incident already held adds nothing, so a
+/// replayed batch files nothing.
+async fn incident_defect_operations(
+    state: &Arc<RwLock<ServerState>>,
+    target: &IncidentTarget<'_>,
+    authority: &IncidentAuthority,
+) -> Result<Vec<Value>, String> {
+    let filings: Vec<(String, AnomalyReading)> = authority
+        .changes()
+        .flat_map(|(record, added)| added.iter().map(move |reading| (record.id.clone(), reading.clone())))
+        .collect();
+    if filings.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (loaded, _) = load(state, target).await?;
+    let graph = loaded.read.project_core(&loaded.core);
+    let index = medulla_source_types::stack_frame::SymbolIndex::new(
+        graph
+            .get_nodes_by_label(medulla_source_types::stack_frame::SYMBOL_TYPE, MAX_SYMBOLS_READ)
+            .into_iter()
+            .filter_map(|(id, blob)| {
+                let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
+                medulla_source_types::stack_frame::SymbolRef::from_node(&id, &node)
+            })
+            .collect(),
+    );
+    if index.is_empty() {
+        return Ok(Vec::new());
+    }
+    let tenant = target.verified.tenant();
+    let seam = medulla_server_ops::api::ingest::ingest_seam(state)
+        .await
+        .ok_or_else(|| "INGEST_SEAM_UNAVAILABLE: the defect book is not installed".to_string())?;
+    let mut stored = std::collections::BTreeMap::<String, Vec<medulla_source_types::lifecycle::Defect>>::new();
+    let mut operations = Vec::new();
+    for (incident_id, reading) in filings {
+        let Some(symbol) = index
+            .resolve_frame(&reading.entity_ref)
+            .or_else(|| index.resolve_frame(&reading.signal))
+        else {
+            continue;
+        };
+        let request = medulla_source_types::lifecycle::handle_file_defect(
+            medulla_source_types::lifecycle::FileDefectRequest {
+                repo: target.graph.to_owned(),
+                intake: medulla_source_types::lifecycle::DefectIntake::Incident,
+                title: format!("incident {} at {}", reading.signal, symbol.qualified_symbol),
+                severity: None,
+                source_record_id: incident_id,
+                observed_at: reading.at_ms,
+                text: format!("incident {} at {}", reading.signal, symbol.qualified_symbol),
+            },
+        )
+        .map_err(|e| e.to_string())?;
+        let repo = request.repo.clone();
+        if !stored.contains_key(&repo) {
+            let mut defects: Vec<medulla_source_types::lifecycle::Defect> = loaded
+                .core
+                .get_nodes_by_label(medulla_source_types::lifecycle::DEFECT_TYPE, MAX_INCIDENTS_READ)
+                .into_iter()
+                .filter_map(|(_, blob)| {
+                    let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
+                    medulla_source_types::lifecycle::defect_from_node(&node, tenant)
+                })
+                .filter(|defect| defect.repo == repo)
+                .collect();
+            defects.sort_by(|left, right| left.id.cmp(&right.id));
+            stored.insert(repo.clone(), defects);
+        }
+        let existing = stored.get(&repo).cloned().unwrap_or_default();
+        let write = seam.file_defect(existing, request);
+        // A second reading of the same batch files against the book this one just changed.
+        let book = stored.entry(repo).or_default();
+        book.retain(|defect| defect.id != write.defect.id);
+        book.push(write.defect.clone());
+        book.sort_by(|left, right| left.id.cmp(&right.id));
+        let mut properties = write.node_properties()?;
+        properties.insert("tenant_id".into(), tenant.into());
+        properties.insert("_owner".into(), target.verified.agent_id().into());
+        operations.push(serde_json::json!({
+            "op": "upsert_node",
+            "id": write.node_id(),
+            "properties": properties,
+        }));
+    }
+    Ok(operations)
 }
 
 /// A refusal as its registered wire code.
@@ -254,12 +347,14 @@ async fn commit(
     target: &IncidentTarget<'_>,
     authority: &IncidentAuthority,
     ids: Vec<String>,
+    defects: Vec<Value>,
 ) -> Result<IncidentWriteReceipt, String> {
-    let (operations, nodes_written) = incident_operations(
+    let (mut operations, nodes_written) = incident_operations(
         authority.changes(),
         target.verified.tenant(),
         target.verified.agent_id(),
     )?;
+    operations.extend(defects);
     if !operations.is_empty() {
         let operations_msgpack = rmp_serde::to_vec_named(&operations)
             .map_err(|_| "incident batch encoding failed".to_string())?;

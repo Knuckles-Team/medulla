@@ -29,6 +29,16 @@ pub trait IngestApi: Send + Sync {
         lookup: &dyn Fn(&str) -> Option<serde_json::Value>,
         closed_by: &str,
     ) -> bool;
+
+    /// File one symptom against `existing`, the stored defects of `request.repo`, through the
+    /// one defect book (MEDULLA-SDLC-R003.3). Handler crates below `medulla-h-ingest` (the
+    /// run-trace admission, the incident handler) reach the book through this method; the
+    /// caller reads the stored defects and writes the returned node.
+    fn file_defect(
+        &self,
+        existing: Vec<medulla_source_types::lifecycle::Defect>,
+        request: medulla_source_types::lifecycle::FileDefectRequest,
+    ) -> medulla_source_types::lifecycle::DefectWrite;
 }
 
 /// Graph handler behaviour reachable from crates below `medulla-h-graph`.

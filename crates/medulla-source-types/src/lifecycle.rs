@@ -1094,6 +1094,30 @@ impl DefectWrite {
         defect_node_id(&self.defect.repo, &self.defect.id)
     }
 
+    /// The flat properties of the one `Defect` node of this filing, without the tenant stamp. The
+    /// status, severity and signature are flat beside the canonical record so a UQL read needs
+    /// no JSON decode. `culprit_changeset` is not written here (a bisect writes it, MEDULLA-SCM-R009).
+    pub fn node_properties(&self) -> Result<serde_json::Map<String, serde_json::Value>, String> {
+        let defect = &self.defect;
+        let body = serde_json::to_string(defect).map_err(|_| "defect record encoding failed".to_string())?;
+        let enum_name = |value: Result<serde_json::Value, serde_json::Error>| {
+            value.ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default()
+        };
+        let mut properties = serde_json::Map::new();
+        properties.insert("type".into(), DEFECT_TYPE.into());
+        properties.insert(DEFECT_RECORD_PROPERTY.into(), body.into());
+        properties.insert("repo".into(), defect.repo.clone().into());
+        properties.insert("defect_id".into(), defect.id.clone().into());
+        properties.insert("title".into(), defect.title.clone().into());
+        properties.insert("signature_digest".into(), defect.signature_digest.clone().into());
+        properties.insert("status".into(), enum_name(serde_json::to_value(defect.status)).into());
+        properties.insert("severity".into(), enum_name(serde_json::to_value(defect.severity)).into());
+        properties.insert("intake".into(), enum_name(serde_json::to_value(defect.intake)).into());
+        properties.insert("symptom_count".into(), (defect.symptoms.len() as u64).into());
+        properties.insert("created_at".into(), defect.created_at.into());
+        Ok(properties)
+    }
+
     /// The receipt of this filing.
     pub fn receipt(&self) -> FileDefectReceipt {
         FileDefectReceipt {
@@ -1104,6 +1128,15 @@ impl DefectWrite {
             symptoms: self.defect.symptoms.len() as u64,
         }
     }
+}
+
+/// The stored defect of one decoded `Defect` node, when it belongs to `tenant`. A node of
+/// another owner, or without the canonical record, is not read.
+pub fn defect_from_node(node: &serde_json::Value, tenant: &str) -> Option<Defect> {
+    if node.get("tenant_id").and_then(serde_json::Value::as_str).is_some_and(|owner| owner != tenant) {
+        return None;
+    }
+    serde_json::from_str::<Defect>(node.get(DEFECT_RECORD_PROPERTY)?.as_str()?).ok()
 }
 
 /// Check one filing's bounds; the served `FileDefect` and every in-process caller go through

@@ -201,3 +201,108 @@ async def _dedupe_scenario(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-SDLC-R003.6")
 def test_symptoms_dedupe_to_signatures():
     asyncio.run(_dedupe_scenario(f"sdlc-defect-dedupe-{uuid.uuid4().hex[:8]}"))
+
+
+async def _add_node(client: MedullaClient, graph: str, node_id: str, props: dict):
+    from medulla.generated import graph as generated_graph
+
+    await generated_graph.send_add_node(
+        client,
+        {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
+        graph,
+    )
+
+
+async def _run_trace_scenario(graph: str) -> None:
+    client = await _client(graph)
+    try:
+        failed = {
+            "node_type": "RunTrace",
+            "run_trace_id": "trace-a",
+            "runTaskClass": "fix",
+        }
+        # A finished run files nothing; a failed one opens a defect of its own.
+        await _add_node(
+            client,
+            graph,
+            "run:ok",
+            {**failed, "run_trace_id": "trace-ok", "terminationReason": "final_answer"},
+        )
+        absent = await client._send(
+            "Uql", {"text": "MATCH (:Defect)", "params": {}}, graph=graph
+        )
+        assert absent["rows"] == []
+        await _add_node(
+            client, graph, "run:a", {**failed, "terminationReason": "step_budget"}
+        )
+        defect = await _defect(client, graph, "def-0001")
+        assert defect["intake"] == "run_failure" and defect["symptom_count"] == 1
+        record = json.loads(defect["defect_record"])
+        assert record["symptoms"][0]["source_record_id"] == "trace-a"
+        # The same failure of the next run lands on the same defect.
+        await _add_node(
+            client,
+            graph,
+            "run:b",
+            {**failed, "run_trace_id": "trace-b", "terminationReason": "step_budget"},
+        )
+        assert (await _defect(client, graph, "def-0001"))["symptom_count"] == 2
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R003.3
+@pytest.mark.spec("MEDULLA-SDLC-R003.3")
+def test_failed_run_trace_opens_defect():
+    asyncio.run(_run_trace_scenario(f"sdlc-defect-run-{uuid.uuid4().hex[:8]}"))
+
+
+async def _incident_scenario(graph: str) -> None:
+    client = await _client(graph)
+    try:
+        await _add_node(
+            client,
+            graph,
+            "symbol:handler",
+            {
+                "type": "SYMBOL",
+                "file_path": "src/handler.rs",
+                "line": "10",
+                "end_line": "40",
+                "qualified_symbol": "Handler::serve",
+            },
+        )
+        reading = {
+            "entity_ref": "panic at src/handler.rs:22:5",
+            "signal": "error_rate",
+            "observed": 9.0,
+            "baseline": 1.0,
+            "at_ms": 10,
+        }
+        recorded = _body(
+            await client._send(
+                "IncidentRecordAnomaly",
+                {"anomaly": reading, "window_ms": 60_000},
+                graph,
+            )
+        )
+        assert recorded["incident_ids"]
+        defect = await _defect(client, graph, "def-0001")
+        assert defect["intake"] == "incident" and defect["symptom_count"] == 1
+        record = json.loads(defect["defect_record"])
+        assert "Handler::serve" in record["symptoms"][0]["text"]
+        # A replayed reading adds no evidence, so it files nothing.
+        await client._send(
+            "IncidentRecordAnomaly", {"anomaly": reading, "window_ms": 60_000}, graph
+        )
+        assert (await _defect(client, graph, "def-0001"))["symptom_count"] == 1
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R003.3
+@pytest.mark.spec("MEDULLA-SDLC-R003.3")
+def test_incident_naming_a_symbol_opens_defect():
+    asyncio.run(_incident_scenario(f"sdlc-defect-inc-{uuid.uuid4().hex[:8]}"))

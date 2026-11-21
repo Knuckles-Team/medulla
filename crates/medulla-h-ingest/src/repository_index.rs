@@ -48,6 +48,14 @@ impl medulla_server_ops::api::ingest::IngestApi for IngestSeam {
             properties.get("type").and_then(|t| t.as_str()) == Some(medulla_source_types::source_changeset::COMMIT_TYPE)
         })
     }
+
+    fn file_defect(
+        &self,
+        existing: Vec<medulla_source_types::lifecycle::Defect>,
+        request: medulla_source_types::lifecycle::FileDefectRequest,
+    ) -> medulla_source_types::lifecycle::DefectWrite {
+        crate::defect_intake::file_defect(existing, request)
+    }
 }
 
 /// The projection edge a tombstone is reported as; it lowers to a removal.
