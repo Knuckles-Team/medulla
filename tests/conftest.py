@@ -81,6 +81,14 @@ def request_context(
     }
 
 
+def tenant_request_context(tenant: str, **kwargs: object) -> dict[str, object]:
+    """Claims for a second verified tenant against the same engine (PY-TWO-TENANTS)."""
+
+    context = request_context(**kwargs)  # type: ignore[arg-type]
+    context["tenant"] = tenant
+    return context
+
+
 def bootstrap_context() -> dict[str, object]:
     return request_context(roles=[], scopes=["security:bootstrap"])
 

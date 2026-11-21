@@ -43,6 +43,7 @@ fn policies() -> PolicySet {
             })
             .collect(),
         row_filters: Vec::new(),
+        ..PolicySet::default()
     }
 }
 

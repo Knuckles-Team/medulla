@@ -118,8 +118,22 @@ pub(crate) async fn handle_uql(
     let source_coverage = legs.foreign_coverage.clone();
     #[cfg(not(feature = "federation"))]
     let source_coverage: Vec<medulla_query_types::wire::UqlSourceCoverage> = Vec::new();
+    // MEDULLA-FEDERATED-QUERY-R706.7: the caller tenant's masking policies, read
+    // from the tenant graph itself (an unfiltered snapshot: a policy the caller
+    // cannot see must still apply to them). A malformed record refuses the query.
+    let policies = match medulla_exec::policy_mask::load_policy_set(
+        ctx.graph_name,
+        &ctx.core.analysis_snapshot(),
+    ) {
+        Ok(set) => set,
+        Err(error) => return Ok(Response::err(req_id, error.to_string())),
+    };
+    let policy_digest = medulla_exec::policy_mask::policy_digest(&policies);
+    let principal = ctx.caller.to_string();
+    #[cfg(not(feature = "result-cache"))]
+    let _ = &policy_digest;
     #[cfg(feature = "result-cache")]
-    let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs) {
+    let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs, &policy_digest) {
         Ok(key) => key,
         Err(error) => return Ok(Response::err(req_id, error)),
     };
@@ -173,7 +187,11 @@ pub(crate) async fn handle_uql(
         },
         &scope,
         move |_plan, plan_ctx| {
-            let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;
+            let bound = plan_ctx
+                .clone()
+                .with_policies(&policies)
+                .with_principal(&principal);
+            let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, &bound)?;
             if let medulla_query_types::wire::UqlResult::Rows {
                 snapshot_revision,
                 knowledge_revision: reported_knowledge_revision,
@@ -283,12 +301,13 @@ fn uql_cache_key(
     params: &std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
     stmt: &medulla_uql::Statement,
     legs: &ServedPlanLegs,
+    policy_digest: &str,
 ) -> Result<Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>, String> {
     use medulla_uql::{Body, Mode};
     if stmt.mode == Mode::Profile || !legs.cache_admissible() {
         return Ok(None);
     }
-    let payload = msgpack_bytes(&(text, params))?;
+    let payload = msgpack_bytes(&(text, params, policy_digest))?;
     let hash = served_cache_hash(ctx, "uql", payload, legs);
     let dep = match (&stmt.body, stmt.mode, stmt.annotations.any()) {
         (Body::Pipeline(plan), Mode::Run, false) => {

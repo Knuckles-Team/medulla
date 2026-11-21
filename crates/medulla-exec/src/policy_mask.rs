@@ -56,6 +56,11 @@ pub struct PolicySet {
     pub masks: Vec<MaskPolicy>,
     #[serde(default)]
     pub row_filters: Vec<RowFilterPolicy>,
+    /// Column name -> the classification tags its promoted claims give it
+    /// (MEDULLA-FEDERATED-QUERY-R706.7). A column with no entry carries no tag, so
+    /// only a projection that names a tag itself is bound to its policy.
+    #[serde(default)]
+    pub column_tags: std::collections::BTreeMap<String, Vec<String>>,
 }
 
 impl PolicySet {
@@ -69,6 +74,17 @@ impl PolicySet {
     /// tag the loader (R706.7) resolves off the R652 column claims.
     pub fn mask_for(&self, tag: &str) -> Option<&MaskPolicy> {
         self.masks.iter().find(|m| m.tag == tag)
+    }
+
+    /// The mask policy that covers `column`: the policy of the tag the column's
+    /// promoted claims give it, or of the tag the projection names directly.
+    pub fn mask_for_column(&self, column: &str) -> Option<&MaskPolicy> {
+        self.mask_for(column).or_else(|| {
+            self.column_tags
+                .get(column)?
+                .iter()
+                .find_map(|tag| self.mask_for(tag))
+        })
     }
 
     /// The row-filter policy bound to `tag`, if any.
@@ -237,7 +253,7 @@ pub fn apply_policies(
     for op in plan.ops.iter_mut() {
         if let Op::Project { channels } = op {
             for channel in channels.iter_mut() {
-                let Some(mask) = set.mask_for(channel) else {
+                let Some(mask) = set.mask_for_column(channel) else {
                     continue;
                 };
                 if mask
@@ -304,6 +320,164 @@ fn join_row_filter(plan: &mut Plan, pred: Pred) {
     } else if !plan.ops.is_empty() {
         plan.ops.insert(1, Op::Filter { preds: vec![pred] });
     }
+}
+
+/// The node label of a tenant policy record (MEDULLA-FEDERATED-QUERY-R706.7).
+pub const QUERY_POLICY_LABEL: &str = "QueryPolicy";
+
+/// The node label of a classification claim record (MEDULLA-TYPED-PACKS-R652).
+pub const CLASSIFICATION_CLAIM_LABEL: &str = "ClassificationClaim";
+
+/// The claim state whose markings bind a column to a tag.
+const PROMOTED_STATE: &str = "promoted";
+
+/// A policy or claim record that cannot be read as written: the query is
+/// refused, never run unmasked (MEDULLA-FEDERATED-QUERY-R706.7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyLoadError {
+    /// `POLICY_RECORD_INVALID`.
+    pub code: &'static str,
+    /// The node id of the malformed record.
+    pub record: String,
+    /// The field that failed.
+    pub field: &'static str,
+}
+
+impl std::fmt::Display for PolicyLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {} ({})", self.code, self.record, self.field)
+    }
+}
+
+impl std::error::Error for PolicyLoadError {}
+
+fn invalid(record: &str, field: &'static str) -> PolicyLoadError {
+    PolicyLoadError {
+        code: medulla_types::contract::ServerErrorCode::PolicyRecordInvalid.as_str(),
+        record: record.to_string(),
+        field,
+    }
+}
+
+fn string_list(
+    object: &serde_json::Value,
+    key: &'static str,
+    record: &str,
+) -> Result<Vec<String>, PolicyLoadError> {
+    match object.get(key) {
+        None | Some(serde_json::Value::Null) => Ok(Vec::new()),
+        Some(serde_json::Value::Array(items)) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| invalid(record, key))
+            })
+            .collect(),
+        Some(_) => Err(invalid(record, key)),
+    }
+}
+
+fn required_str<'v>(
+    object: &'v serde_json::Value,
+    key: &'static str,
+    record: &str,
+) -> Result<&'v str, PolicyLoadError> {
+    object
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .filter(|text| !text.trim().is_empty())
+        .ok_or_else(|| invalid(record, key))
+}
+
+/// A record that names another tenant is not this tenant's; one that names none
+/// belongs to the graph it is stored in (the graph is the tenant's).
+fn belongs_to(object: &serde_json::Value, tenant: &str) -> bool {
+    object
+        .get("tenant")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|owner| owner == tenant)
+}
+
+/// Loads the caller's tenant policy set (MEDULLA-FEDERATED-QUERY-R706.7).
+///
+/// `view` is the tenant graph's own snapshot (never another tenant's). Policies
+/// are the `QueryPolicy` records written through `Method::ApplyMutation` under the
+/// admin scope: `kind` is `mask` (with `tag`, `method`, optional
+/// `principals_exempt`) or `row_filter` (with `tag`, `predicate`). Tag-to-column
+/// binding reads the PROMOTED `ClassificationClaim` records: each names its column
+/// node (`asset`, `col:<qualified name>`) and its markings (`categories`); a
+/// column with no promoted claim carries no tag and is unmasked. Records are
+/// read in node-id order, so the set and its digest are deterministic. A malformed
+/// record refuses with `POLICY_RECORD_INVALID`; nothing runs unmasked.
+pub fn load_policy_set(
+    tenant: &str,
+    view: &medulla_graph_core::graph::GraphView,
+) -> Result<PolicySet, PolicyLoadError> {
+    let mut ids: Vec<&String> = view.node_properties.keys().collect();
+    ids.sort_unstable();
+    let mut set = PolicySet::default();
+    for id in ids {
+        let Some(blob) = view.node_properties.get(id) else {
+            continue;
+        };
+        let Ok(object) = medulla_types::msgpack::decode_property_value(blob.as_slice()) else {
+            continue;
+        };
+        if !belongs_to(&object, tenant) {
+            continue;
+        }
+        if medulla_graph_core::graph::node_carries_label(&object, QUERY_POLICY_LABEL) {
+            let tag = required_str(&object, "tag", id)?.to_string();
+            match required_str(&object, "kind", id)? {
+                "mask" => {
+                    let method: MaskMethod = serde_json::from_value(serde_json::Value::String(
+                        required_str(&object, "method", id)?.to_string(),
+                    ))
+                    .map_err(|_| invalid(id, "method"))?;
+                    set.masks.push(MaskPolicy {
+                        tag,
+                        principals_exempt: string_list(&object, "principals_exempt", id)?,
+                        method,
+                    });
+                }
+                "row_filter" => set.row_filters.push(RowFilterPolicy {
+                    tag,
+                    predicate: required_str(&object, "predicate", id)?.to_string(),
+                }),
+                _ => return Err(invalid(id, "kind")),
+            }
+        } else if medulla_graph_core::graph::node_carries_label(&object, CLASSIFICATION_CLAIM_LABEL)
+        {
+            if object.get("state").and_then(serde_json::Value::as_str) != Some(PROMOTED_STATE) {
+                continue;
+            }
+            let asset = required_str(&object, "asset", id)?;
+            let Some(qualified) = asset.strip_prefix("col:") else {
+                // A claim on a non-column asset binds no column.
+                continue;
+            };
+            let tags = string_list(&object, "categories", id)?;
+            let leaf = qualified.rsplit('.').next().unwrap_or(qualified);
+            for column in [qualified, leaf] {
+                let entry = set.column_tags.entry(column.to_string()).or_default();
+                for tag in &tags {
+                    if !entry.contains(tag) {
+                        entry.push(tag.clone());
+                    }
+                }
+            }
+        }
+    }
+    Ok(set)
+}
+
+/// The digest of a loaded policy set: lowercase SHA-256 hex over its canonical
+/// JSON. It joins the cache key and the plan identity of a query, so a changed
+/// policy never serves an answer computed under another (MEDULLA-FEDERATED-QUERY-R706.7).
+pub fn policy_digest(set: &PolicySet) -> String {
+    let canonical = serde_json::to_vec(set).unwrap_or_default();
+    sha256_hex(&canonical)
 }
 
 /// One SQL SELECT-list entry → (column, optional alias): `col AS alias`, `col
@@ -607,6 +781,7 @@ mod tests {
                 tag: "region.eu".into(),
                 predicate: "region = 'eu'".into(),
             }],
+            ..PolicySet::default()
         };
         let principal = PrincipalRef::from("role:dpo");
         let applied = apply_policies(&mut plan, &set, &principal);
@@ -638,5 +813,111 @@ mod tests {
             "the row filter AND-joins the tenant predicate"
         );
         assert!(matches!(&preds[1], Pred::Eq { prop, value } if prop == "region" && value == "eu"));
+    }
+
+    fn view_of(nodes: &[(&str, serde_json::Value)]) -> medulla_graph_core::graph::GraphView {
+        let mut view = medulla_graph_core::graph::GraphView::default();
+        for (id, props) in nodes {
+            let blob = rmp_serde::to_vec_named(props).expect("encode");
+            view.node_properties
+                .insert((*id).to_string(), std::sync::Arc::new(blob));
+        }
+        view
+    }
+
+    fn mask_record(tag: &str, tenant: &str) -> serde_json::Value {
+        serde_json::json!({
+            "node_type": "QueryPolicy", "kind": "mask", "tag": tag,
+            "method": "redact", "principals_exempt": ["role:dpo"], "tenant": tenant,
+        })
+    }
+
+    fn claim_record(asset: &str, state: &str, tag: &str) -> serde_json::Value {
+        serde_json::json!({
+            "node_type": "ClassificationClaim", "asset": asset,
+            "state": state, "categories": [tag],
+        })
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R706.7
+    #[test]
+    fn loader_binds_policies_to_promoted_claim_columns_only() {
+        let view = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            (
+                "p2",
+                serde_json::json!({"node_type": "QueryPolicy", "kind": "row_filter",
+                    "tag": "region.eu", "predicate": "region = 'eu'"}),
+            ),
+            (
+                "c1",
+                claim_record("col:people.email", "promoted", "pii.email"),
+            ),
+            (
+                "c2",
+                claim_record("col:people.phone", "proposed", "pii.email"),
+            ),
+            (
+                "c3",
+                claim_record("col:people.notes", "rejected", "pii.email"),
+            ),
+        ]);
+        let set = load_policy_set("acme", &view).expect("loads");
+        assert_eq!(set.masks.len(), 1);
+        assert_eq!(set.row_filters.len(), 1);
+        assert!(set.mask_for_column("email").is_some(), "leaf name is bound");
+        assert!(set.mask_for_column("people.email").is_some());
+        assert!(
+            set.mask_for_column("phone").is_none(),
+            "a proposed claim binds nothing"
+        );
+        assert!(
+            set.mask_for_column("notes").is_none(),
+            "a rejected claim binds nothing"
+        );
+        assert!(
+            set.mask_for_column("unclaimed").is_none(),
+            "a column with no claim is unmasked"
+        );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R706.7
+    #[test]
+    fn loader_never_crosses_tenants() {
+        let view = view_of(&[
+            ("p1", mask_record("pii.email", "other")),
+            (
+                "c1",
+                claim_record("col:people.email", "promoted", "pii.email"),
+            ),
+        ]);
+        let set = load_policy_set("acme", &view).expect("loads");
+        assert!(
+            set.masks.is_empty(),
+            "another tenant's policy is not loaded"
+        );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R706.7
+    #[test]
+    fn loader_refuses_malformed_records_and_digest_tracks_the_set() {
+        let bad = view_of(&[(
+            "p1",
+            serde_json::json!({"node_type": "QueryPolicy", "kind": "mask",
+                "tag": "pii.email", "method": "scramble"}),
+        )]);
+        let error = load_policy_set("acme", &bad).expect_err("unknown method refuses");
+        assert_eq!(error.code, "POLICY_RECORD_INVALID");
+        assert_eq!(error.record, "p1");
+
+        let one = view_of(&[("p1", mask_record("pii.email", "acme"))]);
+        let two = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            ("p2", mask_record("pii.ssn", "acme")),
+        ]);
+        let a = policy_digest(&load_policy_set("acme", &one).unwrap());
+        let b = policy_digest(&load_policy_set("acme", &two).unwrap());
+        assert_ne!(a, b);
+        assert_eq!(a, policy_digest(&load_policy_set("acme", &one).unwrap()));
     }
 }

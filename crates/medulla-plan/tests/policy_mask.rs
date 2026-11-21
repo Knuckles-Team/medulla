@@ -62,6 +62,7 @@ fn policy_set() -> PolicySet {
             tag: "region.eu".into(),
             predicate: "region = 'eu'".into(),
         }],
+        ..PolicySet::default()
     }
 }
 
@@ -189,6 +190,7 @@ fn one_rewrite_serves_every_language() {
             tag: "region.eu".into(),
             predicate: "region = 'eu'".into(),
         }],
+        ..PolicySet::default()
     };
     let (sparql, applied) =
         sparql_read_rewrite("SELECT ?x ?y WHERE ?s ?p ?o", &row_filter_set, &principal)
