@@ -102,7 +102,7 @@ pub fn list_heads(core: &GraphCore, prefix: &str) -> Vec<MemorySnapshotHead> {
     let mut heads: Vec<MemorySnapshotHead> = core
         .get_nodes_by_label(HEAD_LABEL, usize::MAX)
         .into_iter()
-        .filter_map(|(_, bytes)| decode::<RevisionRow>(&bytes))
+        .filter_map(|(_, bytes)| decode_row::<RevisionRow>(&bytes))
         .map(|row| row.head)
         .filter(|head| head.doc_id.as_str().starts_with(prefix))
         .collect();
@@ -117,7 +117,7 @@ pub fn candidates(core: &GraphCore, doc: &DocId) -> Vec<(u64, CandidateRow)> {
         .into_iter()
         .filter_map(|(id, bytes)| {
             let n = id.strip_prefix(&prefix)?.parse::<u64>().ok()?;
-            Some((n, decode::<CandidateRow>(&bytes)?))
+            Some((n, decode_row::<CandidateRow>(&bytes)?))
         })
         .collect()
 }
