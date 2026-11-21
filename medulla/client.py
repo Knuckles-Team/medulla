@@ -7408,9 +7408,10 @@ class GraphOperationsClient:
         (MEDULLA-FEDERATED-QUERY-R654.3).
 
         ``question`` is ``how``, ``usage`` or ``impact``. Returns ``{status,
-        anchors, usages, impact, hubs, candidates}``. An ambiguous anchor answers
-        ``status = ambiguous`` with ``candidates``; a stale repository answers
-        ``degraded``. A depth above 6 is refused ``CODE_DEPTH_EXCEEDED`` and an
+        anchors, usages, impact, hubs, candidates, missing_repositories}``. An
+        ambiguous anchor answers ``status = ambiguous`` with ``candidates``; a
+        stale repository answers ``degraded`` and names it in
+        ``missing_repositories`` (empty otherwise). A depth above 6 is refused ``CODE_DEPTH_EXCEEDED`` and an
         anchor with no match ``CODE_ANCHOR_UNKNOWN``.
         """
         request: dict[str, Any] = {"anchor": anchor, "question": question}
