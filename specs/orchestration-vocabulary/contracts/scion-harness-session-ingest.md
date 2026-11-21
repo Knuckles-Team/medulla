@@ -5,7 +5,7 @@ Consumer: scion SCION-SOURCE-INGEST-R013
 
 ## Wire shape
 
-The connector sync sends `IndexHarnessSessionBatch` with a manifest, a sync receipt and one record per session. Medulla verifies every record against its committed `RunTrace` and writes index nodes linked to the trace. An identical batch is idempotent across restart.
+The connector sync sends `IndexHarnessSessionBatch` with a manifest (`manifest_id`, `manifest_revision` 1, `manifest_digest`, `declared_total`), a sync receipt (`sync_receipt_id`, `sync_receipt_digest`, `source_cursor`), one record per indexable session and one `UnavailableSession` per declared session whose source is missing. Medulla verifies every record against its committed `RunTrace` and writes index nodes linked to the trace. An identical batch is idempotent across restart.
 
 ## Refusal codes
 
