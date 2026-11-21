@@ -98,3 +98,120 @@ fn storage_apply_with_confirm_reports_nothing_to_do_on_an_empty_data_directory()
         "expected the apply verb recorded in the report: {stdout}"
     );
 }
+
+fn shard_identity() -> medulla_storage::PhysicalStoreIdentity {
+    medulla_storage::PhysicalStoreIdentity::new(
+        medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE,
+    )
+    .expect("shard physical identity")
+}
+
+fn open_shard(path: &std::path::Path) -> Result<medulla_storage::StorageKernel, String> {
+    medulla_storage::StorageKernel::open_owner::<medulla_storage::GraphShardOwner>(
+        path,
+        shard_identity(),
+        None,
+    )
+}
+
+/// A source data directory holding one graph shard and a byte copy of it.
+fn source_and_copy() -> (tempfile::TempDir, tempfile::TempDir) {
+    let source = tempfile::tempdir().expect("source directory");
+    let copy = tempfile::tempdir().expect("copy directory");
+    drop(
+        medulla_storage::StorageKernel::create_owner::<medulla_storage::GraphShardOwner>(
+            &source.path().join("graph-0.redb"),
+            shard_identity(),
+            None,
+        )
+        .expect("create the source shard"),
+    );
+    std::fs::copy(
+        source.path().join("graph-0.redb"),
+        copy.path().join("graph-0.redb"),
+    )
+    .expect("copy the shard");
+    (source, copy)
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R862.2
+#[test]
+fn rebind_copied_store_then_open() {
+    let (source, copy) = source_and_copy();
+    let copied = copy.path().join("graph-0.redb");
+    let copy_dir = copy.path().to_str().expect("utf8 path");
+    let source_dir = source.path().to_str().expect("utf8 path");
+
+    assert!(
+        open_shard(&copied).is_err(),
+        "the ordinary open must refuse a copied store"
+    );
+    let before_source =
+        medulla_storage::recovery_store_data_fingerprint(&source.path().join("graph-0.redb"))
+            .expect("source fingerprint");
+    let before_copy =
+        medulla_storage::recovery_store_data_fingerprint(&copied).expect("copy fingerprint");
+    assert_eq!(before_source, before_copy);
+
+    let output = run(&[
+        "store-upgrade",
+        "rebind",
+        copy_dir,
+        "--copied-from",
+        source_dir,
+        "--confirm",
+    ]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout: {} stderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    drop(open_shard(&copied).expect("the rebound copy opens"));
+    assert_eq!(
+        medulla_storage::recovery_store_data_fingerprint(&copied).expect("fingerprint"),
+        before_source,
+        "the rebind changed data rows"
+    );
+
+    let again = run(&[
+        "store-upgrade",
+        "rebind",
+        copy_dir,
+        "--copied-from",
+        source_dir,
+        "--confirm",
+    ]);
+    assert_eq!(again.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&again.stdout).contains("nothing to do"),
+        "a second run must report nothing to do: {}",
+        String::from_utf8_lossy(&again.stdout)
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R862.2
+#[test]
+fn rebind_without_confirm_writes_nothing() {
+    let (source, copy) = source_and_copy();
+    let copied = copy.path().join("graph-0.redb");
+    let before = std::fs::read(&copied).expect("read the copy");
+
+    let output = run(&[
+        "store-upgrade",
+        "rebind",
+        copy.path().to_str().expect("utf8 path"),
+        "--copied-from",
+        source.path().to_str().expect("utf8 path"),
+    ]);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("REBIND_NOT_CONFIRMED"),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(std::fs::read(&copied).expect("read the copy"), before);
+    assert!(open_shard(&copied).is_err(), "the copy was rebound anyway");
+}

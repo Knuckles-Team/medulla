@@ -28,12 +28,15 @@ use medulla_storage::{
 
 mod auto_migrate;
 mod discover;
+mod rebind;
 mod report;
 
 pub use auto_migrate::{
     auto_migrate_enabled, migrate_on_open, AutoMigration, AutoMigrationError, Refused,
     AUTO_MIGRATE_ENV, AUTO_MIGRATE_STAGING_ENV,
 };
+
+pub use rebind::{rebind, RebindOptions};
 
 use discover::{discover, store_identity, StoreFile};
 pub use report::{

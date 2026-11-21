@@ -720,7 +720,7 @@ impl medulla_storage::PrivatePayloadIntegrity for TxnRecoveryPrivateIntegrity {
 /// rather than of any one shard (none is constructed yet at this call site). `None` without the
 /// `security` feature or the key: the write/read path already fails closed itself there.
 #[cfg(feature = "security")]
-pub(crate) fn admin_mutations_private_integrity(
+pub fn admin_mutations_private_integrity(
 ) -> Option<Arc<dyn medulla_storage::PrivatePayloadIntegrity>> {
     medulla_kernel::crypto::ValueCipher::from_env_for_txn_recovery().map(|cipher| {
         Arc::new(TxnRecoveryPrivateIntegrity(cipher))
@@ -729,7 +729,7 @@ pub(crate) fn admin_mutations_private_integrity(
 }
 
 #[cfg(not(feature = "security"))]
-pub(crate) fn admin_mutations_private_integrity(
+pub fn admin_mutations_private_integrity(
 ) -> Option<Arc<dyn medulla_storage::PrivatePayloadIntegrity>> {
     None
 }

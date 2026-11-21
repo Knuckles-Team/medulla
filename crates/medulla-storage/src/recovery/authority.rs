@@ -4,7 +4,7 @@ use crate::physical::binding::decode_binding;
 use crate::physical::incarnation::{require_persisted_root, StoreIncarnation, STORE_ROOT_KEY};
 use crate::physical::manifest::OwnerManifest;
 use crate::tables::{OWNER_MANIFEST, SCOPE_BINDINGS, STORE_ROOT};
-use redb::{ReadableTable, WriteTransaction};
+use redb::{ReadableDatabase, ReadableTable, WriteTransaction};
 use std::ops::Bound;
 use std::path::Path;
 
@@ -121,6 +121,20 @@ fn rebind_serving_scopes(wtx: &WriteTransaction, adopted: &StoreIncarnation) -> 
         after = Some(key);
     }
     Ok(())
+}
+
+/// Whether the file at `path` already carries the root derived from its own
+/// path. It opens the file read-only and writes nothing. A copied store that
+/// has not been rebound answers `false`; a store at its native path, or one
+/// already rebound, answers `true`.
+pub fn store_root_is_current(path: &Path) -> Result<bool, String> {
+    let (derived, _) = StoreIncarnation::derive(path)?;
+    let database = redb::ReadOnlyDatabase::open(path).map_err(|error| error.to_string())?;
+    let rtx = database.begin_read().map_err(|error| error.to_string())?;
+    let root = rtx
+        .open_table(STORE_ROOT)
+        .map_err(|error| error.to_string())?;
+    Ok(require_persisted_root(&root)? == derived)
 }
 
 /// Rebind a store that has been COPIED to a new path so it can be opened there.

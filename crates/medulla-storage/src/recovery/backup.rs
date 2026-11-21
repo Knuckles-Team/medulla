@@ -8,7 +8,7 @@ use crate::recovery::evidence::{copy_table, HashSnapshot};
 use crate::recovery::validate::{validate_live_recovery_store, RecoveryStoreCounts};
 use crate::tables::{visit_ledger_content_tables, visit_ledger_tables, SCOPE_BINDINGS};
 use crate::StorageKernel;
-use redb::{ReadTransaction, ReadableTable, WriteTransaction};
+use redb::{ReadTransaction, ReadableDatabase, ReadableTable, WriteTransaction};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 
@@ -32,6 +32,26 @@ pub(crate) fn recovery_store_fingerprint_of(store: &PhysicalStore) -> Result<[u8
         }};
     }
     visit_ledger_tables!(hash);
+    Ok(hasher.finalize().into())
+}
+
+/// Content fingerprint over the DATA tables of one owner file: the ledger tables
+/// of `visit_ledger_content_tables!`, which exclude the physical-identity tables
+/// (`STORE_ROOT`, `SCOPE_BINDINGS`, `OWNER_MANIFEST`) that a rebind rewrites. It
+/// opens the file read-only and checks no physical root, so it measures a copied
+/// store before and after its rebind and the source it was copied from
+/// (MEDULLA-DURABLE-KERNEL-R862.2).
+pub fn recovery_store_data_fingerprint(path: &Path) -> Result<[u8; 32], String> {
+    let database = redb::ReadOnlyDatabase::open(path).map_err(|error| error.to_string())?;
+    let rtx = database.begin_read().map_err(|error| error.to_string())?;
+    let snapshot = HashSnapshot::Read(&rtx);
+    let mut hasher = Sha256::new();
+    macro_rules! hash {
+        ($table:expr) => {{
+            snapshot.hash_table(&mut hasher, $table)?;
+        }};
+    }
+    visit_ledger_content_tables!(hash);
     Ok(hasher.finalize().into())
 }
 

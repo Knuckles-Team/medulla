@@ -30,6 +30,7 @@ pub enum StoreStatus {
     Current,
     UpgradeAvailable,
     Upgraded,
+    Rebound,
     NoUpgrade,
     UnknownFormat,
     NotInspectable,
@@ -194,6 +195,9 @@ impl Report {
         if let Some(error) = &self.error {
             out.push_str(&format!("  refused: {error}\n"));
         }
+        if self.verb == "rebind" && self.outcome == "nothing_to_do" {
+            out.push_str("nothing to do\n");
+        }
         out.push_str(&serde_json::to_string(self).expect("a store-upgrade report is plain JSON"));
         out.push('\n');
         out
@@ -219,12 +223,16 @@ fn outcome(exit_code: i32, stores: &[StoreReport]) -> &'static str {
     let upgraded = stores
         .iter()
         .any(|store| store.status == StoreStatus::Upgraded);
+    let rebound = stores
+        .iter()
+        .any(|store| store.status == StoreStatus::Rebound);
     match exit_code {
         EXIT_FAILED => "failed",
         EXIT_BLOCKED => "blocked",
         EXIT_UNDETERMINED => "undetermined",
         EXIT_UPGRADE_AVAILABLE => "upgrade_available",
         _ if upgraded => "upgraded",
+        _ if rebound => "rebound",
         _ => "nothing_to_do",
     }
 }

@@ -128,8 +128,10 @@ pub use recovery::adopt::{
 pub use recovery::archive::{
     parse_replay_target, replay_to, ArchiveBounds, ArchiveRefusal, ReplayTarget,
 };
-pub use recovery::authority::rebind_copied_store;
-pub use recovery::backup::{backup_recovery_store, recovery_store_fingerprint};
+pub use recovery::authority::{rebind_copied_store, store_root_is_current};
+pub use recovery::backup::{
+    backup_recovery_store, recovery_store_data_fingerprint, recovery_store_fingerprint,
+};
 pub use recovery::evidence::{
     backup_strict_recovery_store, prove_scope_bindings_reanchored_read_only,
     strict_recovery_evidence, strict_recovery_evidence_read_only, StrictRecoveryEvidence,

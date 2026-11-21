@@ -6,7 +6,10 @@
 
 use std::path::PathBuf;
 
-use medulla_persistence_ops::{store_upgrade, store_upgrade::ApplyOptions};
+use medulla_persistence_ops::{
+    store_upgrade,
+    store_upgrade::{ApplyOptions, RebindOptions},
+};
 
 #[derive(clap::Subcommand, Debug)]
 pub(super) enum OperatorCommand {
@@ -50,6 +53,21 @@ pub(super) enum StoreUpgradeVerb {
         #[arg(long, value_name = "BYTES")]
         max_store_bytes: Option<u64>,
     },
+    /// Re-bind a data directory that was copied from another one. Each store
+    /// binds to the device and inode of its file, so a copy refuses the ordinary
+    /// open. The engine must be stopped. A store that already carries the root of
+    /// its own path is skipped. Exit status: 0 done or nothing to do, 1 refused.
+    Rebind {
+        /// The copied data directory.
+        #[arg(env = "GRAPH_SERVICE_PERSIST_DIR", value_name = "DATA_DIR")]
+        data_dir: PathBuf,
+        /// The data directory the copy was made from. Its stores are read only.
+        #[arg(long, value_name = "SOURCE_DATA_DIR")]
+        copied_from: PathBuf,
+        /// Required: confirm that the copied store roots may be rewritten.
+        #[arg(long)]
+        confirm: bool,
+    },
 }
 
 /// Run an offline operator command instead of the service, when the command
@@ -77,6 +95,17 @@ impl OperatorCommand {
                     confirm,
                     staging_dir,
                     max_store_bytes,
+                },
+            ),
+            StoreUpgradeVerb::Rebind {
+                data_dir,
+                copied_from,
+                confirm,
+            } => store_upgrade::rebind(
+                &data_dir,
+                &RebindOptions {
+                    copied_from,
+                    confirm,
                 },
             ),
         };
@@ -111,6 +140,22 @@ mod tests {
             apply.command,
             Some(OperatorCommand::StoreUpgrade {
                 verb: StoreUpgradeVerb::Apply { confirm: true, .. }
+            })
+        ));
+        let rebind = Cli::try_parse_from([
+            "server",
+            "store-upgrade",
+            "rebind",
+            "/copy",
+            "--copied-from",
+            "/data",
+            "--confirm",
+        ])
+        .unwrap();
+        assert!(matches!(
+            rebind.command,
+            Some(OperatorCommand::StoreUpgrade {
+                verb: StoreUpgradeVerb::Rebind { confirm: true, .. }
             })
         ));
         assert!(Cli::try_parse_from(["server"]).unwrap().command.is_none());
