@@ -2,6 +2,9 @@
 # serde types in crates/medulla-types (the source of truth).
 """Generated engine-contract client surface (RF-RULING-003)."""
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from . import (
     agent_component,
     cluster,
@@ -74,7 +77,7 @@ __all__ = [
 ]
 
 # method id -> the generated coroutine that sends it.
-SEND_BY_METHOD = {
+SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "AccessRequestDecide": storage.send_access_request_decide,
     "AccessRequestOpen": storage.send_access_request_open,
     "AcquireCapacity": coordination.send_acquire_capacity,

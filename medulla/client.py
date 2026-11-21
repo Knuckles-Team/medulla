@@ -864,7 +864,7 @@ class ModalityApplyOutcome(TypedDict):
     event_sequence: int
 
 
-class LifecycleState(enum.StrEnum):
+class LifecycleState(enum.StrEnum):  # type: ignore[name-defined]
     """The lifecycle of one served modality record: the members of the engine's
     ``LifecycleState`` contract enum. Python owns no transition; every lifecycle
     change is a served call, and an illegal one raises the engine's typed
@@ -2793,7 +2793,8 @@ class TransitionRefusedError(EngineResponseError):
 class TopicCorpusStaleError(EngineResponseError):
     """Raised for ``TOPIC_CORPUS_STALE`` (MEDULLA-FEDERATED-QUERY-R040.2.4).
 
-    ``topics`` is the corpus revision the topic centroids describe and ``current`` is the
+    ``topics`` is the corpus revision the topic centroids describe and ``current`` is
+    the
     corpus (graph) revision the retriever read, as structured fields.
     """
 
@@ -3187,7 +3188,8 @@ class StatechartClient:
         state = await client.statechart.get_state(instance["instance_id"])
 
     ``send_event``'s response includes ``fired`` (``False`` when every guard is false;
-    an event with no defined transition is refused ``STATECHART_NO_TRANSITION``) and the resulting
+    an event with no defined transition is refused ``STATECHART_NO_TRANSITION``) and the
+    resulting
     ``instance["configuration"]["active"]`` (the new active state(s)).
     """
 
@@ -4957,14 +4959,13 @@ class TaskQueueClient:
             },
             idempotency_key=idempotency_key,
         )
-        return cast(
-            "TaskEnqueued", _gen.coordination.decode_task_queue_enqueue(result)
-        )
+        return cast("TaskEnqueued", _gen.coordination.decode_task_queue_enqueue(result))
 
     async def claim(
         self, *, worker_id: str, grant_id: str, lease_ms: int
     ) -> ClaimedTask | None:
-        """Lease the next ready task to ``worker_id``, or ``None`` when none is ready."""
+        """Lease the next ready task to ``worker_id``, or ``None`` when none is
+        ready."""
         result = await _gen.coordination.send_task_queue_claim(
             self._client,
             {"worker_id": worker_id, "grant_id": grant_id, "lease_ms": lease_ms},
@@ -4982,9 +4983,7 @@ class TaskQueueClient:
             self._client,
             {"task_id": task_id, "worker_id": worker_id, "lease_ms": lease_ms},
         )
-        return cast(
-            "TaskRenewed", _gen.coordination.decode_task_queue_renew(result)
-        )
+        return cast("TaskRenewed", _gen.coordination.decode_task_queue_renew(result))
 
     async def ack(
         self,
@@ -5060,7 +5059,8 @@ class ControlLeaseClient:
         """Issue one source-query approval through the native issuer.
 
         ``source_approval`` is the connector-pack source-approval receipt; the engine
-        re-verifies it and derives the authority from the verified request. The reply holds
+        re-verifies it and derives the authority from the verified request. The reply
+        holds
         the approved query; the stored grant holds digests only.
         """
         if not isinstance(request, Mapping):
@@ -5091,17 +5091,24 @@ class ControlLeaseClient:
         """Verify one source-query approval (MEDULLA-FEDERATED-QUERY-R085.3).
 
         ``request`` is ``{approved_query, observed_source_revision,
-        observed_schema_digest, observed_snapshot_ref, phase}``; ``source_approval`` is the
-        connector-pack source-approval receipt, a candidate the engine re-verifies against
-        the durable record. A read: nothing is written. Returns ``{approval_id, query_id,
-        query_digest, lease_revision, checked_at_ms, valid_until_ms}``. A changed request,
-        another caller, a missing, revoked or expired lease, or a changed observed identity
+        observed_schema_digest, observed_snapshot_ref, phase}``; ``source_approval`` is
+        the
+        connector-pack source-approval receipt, a candidate the engine re-verifies
+        against
+        the durable record. A read: nothing is written. Returns ``{approval_id,
+        query_id,
+        query_digest, lease_revision, checked_at_ms, valid_until_ms}``. A changed
+        request,
+        another caller, a missing, revoked or expired lease, or a changed observed
+        identity
         refuses with ``SOURCE_QUERY_<KIND>``.
         """
         if not isinstance(request, Mapping):
             raise TypeError("VerifySourceQueryApproval.request must be a mapping")
         if not isinstance(source_approval, Mapping):
-            raise TypeError("VerifySourceQueryApproval.source_approval must be a mapping")
+            raise TypeError(
+                "VerifySourceQueryApproval.source_approval must be a mapping"
+            )
         value = (
             await _gen.query.send_verify_source_query_approval(
                 self._client,
@@ -7508,7 +7515,8 @@ class GraphOperationsClient:
         anchors, usages, impact, hubs, candidates, missing_repositories}``. An
         ambiguous anchor answers ``status = ambiguous`` with ``candidates``; a
         stale repository answers ``degraded`` and names it in
-        ``missing_repositories`` (empty otherwise). A depth above 6 is refused ``CODE_DEPTH_EXCEEDED`` and an
+        ``missing_repositories`` (empty otherwise). A depth above 6 is refused
+        ``CODE_DEPTH_EXCEEDED`` and an
         anchor with no match ``CODE_ANCHOR_UNKNOWN``.
         """
         request: dict[str, Any] = {"anchor": anchor, "question": question}
@@ -7807,9 +7815,11 @@ class GraphOperationsClient:
         """Write one BPMN 2.0 or DMN 1.3 document from a stored model or workflow
         (MEDULLA-CQ-ORCH-R702.10, R702.11).
 
-        ``source`` is ``{"kind": "model", "model_iri": ..., "version": <optional, latest when omitted>}`` or
+        ``source`` is ``{"kind": "model", "model_iri": ..., "version": <optional, latest
+        when omitted>}`` or
         ``{"kind": "workflow", "workflow_id": ..., "version": ...}``; ``format`` is
-        ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest, canonical_model_digest}`` where
+        ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest,
+        canonical_model_digest}`` where
         ``document`` is ``{format, document: <bytes>}``.
         """
         params: dict[str, Any] = {"source": source, "format": format}
@@ -7857,7 +7867,8 @@ class GraphOperationsClient:
         the write-back queue an approver approves and releases. Each conflict carries a
         ``reason`` (``both_changed`` or ``source_version_ahead``); ``skipped`` lists the
         source types no catalog class carries, each with its first record key and count
-        (MEDULLA-TYPED-PACKS-R110.6), and ``by_type`` counts the accepted records per type. A secondary the authority rows do not
+        (MEDULLA-TYPED-PACKS-R110.6), and ``by_type`` counts the accepted records per
+        type. A secondary the authority rows do not
         name, a class without a system of record or an adapter, or a change the
         direction forbids is refused with its ``SYNC_*`` code and writes nothing.
         """
@@ -13193,7 +13204,8 @@ class QueryClient:
         """Run ONE cross-modal plan (CONCEPT:AU-KG.compute.vector/209) and return ranked
         rows.
 
-        ``retrieval`` is the one carrier of hard ``constraints``, ``topic`` fusion and the
+        ``retrieval`` is the one carrier of hard ``constraints``, ``topic`` fusion and
+        the
         ``modality`` pair (``{"query": ..., "target": ...}``); a part that fails
         validation refuses with its registered code before anything runs.
 
@@ -13255,9 +13267,11 @@ class QueryClient:
         (MEDULLA-FEDERATED-QUERY-R039).
 
         The same plan and ``retrieval`` request as :meth:`unified`, answered as the rows
-        plus a ``shortfall`` that is present exactly when a ``Rank`` then ``Limit k`` step
+        plus a ``shortfall`` that is present exactly when a ``Rank`` then ``Limit k``
+        step
         returned fewer than ``k`` rows: ``requested``, ``found`` and a ``reason`` of
-        ``eligible_exhausted``, ``missing_embedding`` or ``budget_exhausted``. A ``k`` of
+        ``eligible_exhausted``, ``missing_embedding`` or ``budget_exhausted``. A ``k``
+        of
         zero refuses ``RETRIEVAL_K_INVALID``. The answer is never cached."""
         from .generated.models import RankedRows
 
@@ -13362,8 +13376,10 @@ class QueryClient:
           row filter the plan is rewritten under; no masked value rides on a record)
           and ``"kept_plans"`` (one ``{"source", "plan_digest", "receipt_job_id",
           "baseline_digest", "replays", "p50_before_us", "p50_after_us", "bytes_before",
-          "bytes_after"}`` per foreign source the statement reads that has a kept plan) and,
-          only when ``"kept_plans"`` is empty, ``"baseline_digest"`` (the baseline plan in
+          "bytes_after"}`` per foreign source the statement reads that has a kept plan)
+          and,
+          only when ``"kept_plans"`` is empty, ``"baseline_digest"`` (the baseline plan
+          in
           force for the first observed source the statement reads).
           Authenticated servers may also include their optional
           ``"plan_digest"`` and ``"query_digest"`` pins; callers must forward
@@ -13791,8 +13807,10 @@ class QueryClient:
 
         ``acceleration`` is the optional per-source acceleration policy
         (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2): ``{"source_supports_copy": bool,
-        "hot_subset_predicate": str, "freshness_watermark": str | None}``. A copy answers a
-        fragment only while the watermark (RFC 3339) plus ``acceleration.watermark_ttl_ms``
+        "hot_subset_predicate": str, "freshness_watermark": str | None}``. A copy
+        answers a
+        fragment only while the watermark (RFC 3339) plus
+        ``acceleration.watermark_ttl_ms``
         has not passed; a hot-subset predicate on a source without copy refuses
         ``COPY_CAPABILITY_MISSING``. Absent, every fragment runs live.
         """
@@ -15827,7 +15845,9 @@ class BrokerClient:
         node_id, props = claimed
         return node_id, props
 
-    async def ack(self, queue: str, node_id: str, *, consumer: str, now_ms: int) -> bool:
+    async def ack(
+        self, queue: str, node_id: str, *, consumer: str, now_ms: int
+    ) -> bool:
         """Acknowledge a claimed message, freeing the consumer's in-flight slot
         (MEDULLA-280). The message stays acked until the sweep purges it. Returns
         ``True`` when this call acked it or ``consumer`` had already acked it, and
@@ -16138,10 +16158,13 @@ class RbacClient:
         """The deterministic ownership plan of ``graph`` (MEDULLA-IDENTITY-R700.3).
 
         Read-only. The reply holds the ``signals`` and their ``signals_digest``, the
-        ``plan`` and its ``plan_digest``, and ``applied`` (the newest stored apply of the
+        ``plan`` and its ``plan_digest``, and ``applied`` (the newest stored apply of
+        the
         graph, or ``None``)."""
         return (
-            await _gen.security.send_graph_ownership_plan(self._client, {"graph": graph})
+            await _gen.security.send_graph_ownership_plan(
+                self._client, {"graph": graph}
+            )
         ).payload
 
     async def ownership_apply(
@@ -16250,7 +16273,8 @@ class JobsClient:
     ``{"Running": {"lease": ..., "checkpoint": ...}}`` / ``{"Succeeded": {"result_ref",
     "checkpoint"}}``
     / ``{"Failed": {"reason", "checkpoint"}}`` / ``{"Cancelled": {"checkpoint"}}`` and
-    so on — take the dict's one key as the state name. Authenticated standalone executors use the fenced
+    so on — take the dict's one key as the state name. Authenticated standalone
+    executors use the fenced
     ``worker_*`` methods below; they never open ``jobs.redb`` directly. Durable jobs
     are included in the mandatory main build.
     """
@@ -16351,7 +16375,8 @@ class JobsClient:
     async def cancel(self, job_id: str) -> dict[str, Any]:
         """Cooperatively cancel ``job_id`` — immediate (transitions straight to
         ``Cancelled``) if it is still ``Submitted`` or waiting in ``Backoff``; otherwise
-        the job moves to ``CancelRequested`` and the running executor observes it at its next
+        the job moves to ``CancelRequested`` and the running executor observes it at its
+        next
         checkpoint and stops. Raises ``RuntimeError`` if ``job_id`` is already in a
         TERMINAL state (``Succeeded``/``Failed``/``Cancelled``) — cancelling a
         finished job is an explicit invalid-transition error, not a silent no-op (an
@@ -19266,7 +19291,8 @@ class MedullaClient:
 
     async def apply_mutation(self, event_type: str, query: str) -> dict[str, Any]:
         """The SPARQL UPDATE report: ``operations``, ``inserted``, ``deleted``,
-        ``updated_graphs`` and ``created_graphs``, then ``request_sha256`` (the SHA-256 of
+        ``updated_graphs`` and ``created_graphs``, then ``request_sha256`` (the SHA-256
+        of
         the update text) and ``batch_id`` (the committed batch; empty for the per-graph
         gateway). The per-graph gateway and the
         coordinated ``sparql_http_update_v1`` saga answer this same shape."""
