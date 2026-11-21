@@ -27,6 +27,10 @@ pub enum IntrospectSection {
     Build,
     /// The recent event ring.
     Events,
+    /// The semantic indexes the engine maintains for its own vocabularies, one row each
+    /// (MEDULLA-MEDIA-VOCAB-R001.102.2): `bookmark_index` reads `bound` or
+    /// `unbound (no text embedder)`, so a missing embedder is never silent.
+    Indexes,
 }
 
 impl IntrospectSection {
@@ -41,6 +45,7 @@ impl IntrospectSection {
             Self::Startup => "startup",
             Self::Build => "build",
             Self::Events => "events",
+            Self::Indexes => "indexes",
         }
     }
 }

@@ -77,6 +77,7 @@ fn read_section(
         IntrospectSection::Tasks => tasks_page(limit, cursor),
         IntrospectSection::Readiness => Ok(readiness_page(limit, cursor)),
         IntrospectSection::Build => Ok(build_page(cursor)),
+        IntrospectSection::Indexes => Ok(indexes_page(cursor)),
         IntrospectSection::Startup => Ok(startup_page(limit, cursor)),
         IntrospectSection::Requests => requests_page(limit, cursor),
         IntrospectSection::Locks => Ok(locks_page(limit, cursor)),
@@ -210,6 +211,53 @@ fn build_page(cursor: Option<&str>) -> IntrospectPage {
         next_cursor: None,
         seq: 0,
     }
+}
+
+/// The `indexes` section: one row per engine-maintained semantic index, key ascending. The
+/// bookmark index needs a bound text embedder; with none, its row says so
+/// (MEDULLA-MEDIA-VOCAB-R001.102.2), so authoring nothing is never silent.
+fn indexes_page(cursor: Option<&str>) -> IntrospectPage {
+    const KEY: &str = "bookmark_index";
+    let rows = if cursor.is_some_and(|last| last >= KEY) {
+        Vec::new()
+    } else {
+        let row = match bound_text_space() {
+            Some((space_id, dimensions)) => json!({
+                "key": KEY,
+                "state": "bound",
+                "report": format!("{KEY}: bound ({space_id})"),
+                "space_id": space_id,
+                "dimensions": dimensions,
+            }),
+            None => json!({
+                "key": KEY,
+                "state": "unbound",
+                "report": format!("{KEY}: unbound (no text embedder)"),
+                "space_id": null,
+                "dimensions": null,
+            }),
+        };
+        vec![row]
+    };
+    IntrospectPage {
+        section: IntrospectSection::Indexes,
+        rows,
+        next_cursor: None,
+        seq: 0,
+    }
+}
+
+/// The space id and width of the bound text embedder, or `None` when none is bound.
+#[cfg(feature = "query")]
+fn bound_text_space() -> Option<(String, usize)> {
+    medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity()
+        .map(|identity| (identity.space_id, identity.dimensions))
+}
+
+/// Without the `query` feature no text embedder can be bound.
+#[cfg(not(feature = "query"))]
+fn bound_text_space() -> Option<(String, usize)> {
+    None
 }
 
 /// The `startup` section: the recorded boot steps. The key is `<started_unix_ms>:<name>:<graph>`

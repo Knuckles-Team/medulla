@@ -8128,6 +8128,7 @@ class IntrospectSection(str, Enum):
     STARTUP = "startup"
     BUILD = "build"
     EVENTS = "events"
+    INDEXES = "indexes"
 
 
 class GraphType(str, Enum):
