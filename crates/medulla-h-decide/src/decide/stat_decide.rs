@@ -448,6 +448,7 @@ pub(super) fn decide_blocking(
             graph_version,
             &principal,
             registry,
+            request.params.as_slice(),
         )
     })?;
     let (pinned, policy, provider_binding) =

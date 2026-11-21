@@ -33,7 +33,11 @@ use medulla_decision_types::{
 };
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::StatisticalErrorCode,
+    decision::statistical::TypedParam, decision::statistical::TypedValue,
 };
+use medulla_types::contract::BoundedVec;
+
+use super::features::capability_text::capability_features;
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
@@ -494,6 +498,7 @@ pub(super) fn read_candidates(
     graph_version: u64,
     principal: &str,
     family: &dyn DecisionFamily,
+    params: &[TypedParam],
 ) -> Result<ReadCandidates, String> {
     match source {
         CandidateSource::AgentLibrary { scope } => library_candidates(store, tenant_id, scope),
@@ -516,7 +521,37 @@ pub(super) fn read_candidates(
                     ),
                 ));
             }
-            declared_candidates(options, principal, family)
+            let query = params
+                .iter()
+                .find_map(|param| match (&*param.name, &param.value) {
+                    ("query", TypedValue::Text(text)) => Some(text.as_str()),
+                    _ => None,
+                })
+                .ok_or_else(|| {
+                    refusal(
+                        StatisticalErrorCode::ParameterInvalid,
+                        "a rank catalog question carries a text param named query",
+                    )
+                })?;
+            // Medulla computes the features from the candidate text; the
+            // embedding model is not reachable from the candidate stage, so
+            // semantic_similarity is absent.
+            let features = capability_features(query, options, None);
+            let featured = options
+                .iter()
+                .zip(features)
+                .map(|(option, numbers)| {
+                    let mut option = option.clone();
+                    option.numbers = BoundedVec::new(numbers).map_err(|_| {
+                        refusal(
+                            StatisticalErrorCode::ParameterInvalid,
+                            "a rank catalog candidate carries no numbers",
+                        )
+                    })?;
+                    Ok(option)
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            declared_candidates(&featured, principal, family)
         }
         CandidateSource::Graph { graph, plan } => {
             let view = graph_view.ok_or_else(|| {

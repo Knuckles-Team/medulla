@@ -58,6 +58,7 @@ medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-decision-memory = { path = "../medulla-decision-memory" }
 medulla-decision-rank = { path = "../medulla-decision-rank" }
 medulla-retrieval = { path = "../medulla-retrieval" }
+medulla-text = { path = "../medulla-text" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }

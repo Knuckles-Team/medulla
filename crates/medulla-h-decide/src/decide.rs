@@ -35,6 +35,8 @@ mod candidates;
 #[cfg(feature = "decide")]
 pub mod connector_points;
 #[cfg(feature = "decide")]
+mod features;
+#[cfg(feature = "decide")]
 #[cfg(feature = "redb")]
 pub mod capability_feed;
 #[cfg(feature = "decide")]
