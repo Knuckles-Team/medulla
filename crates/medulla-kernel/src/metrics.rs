@@ -59,6 +59,8 @@ mod outbox;
 // Ingest job outcomes and dead letters (MEDULLA-INGEST-WORKER-R001.13).
 mod ingest;
 pub use ingest::IngestJobOutcome;
+// Retention cleanup removals by reason (MEDULLA-DURABLE-KERNEL-R700.5).
+mod retention;
 // Shard-writer inflight gauge and commit histogram (MEDULLA-DURABLE-KERNEL-R099.5).
 mod shard_writer;
 // Automatic store migration at open (MEDULLA-DURABLE-KERNEL-R070.1).

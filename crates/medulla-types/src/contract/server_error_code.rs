@@ -163,6 +163,10 @@ closed_error_codes! {
         MemsyncIncarnationExpired => "MEMSYNC_INCARNATION_EXPIRED",
         MemsyncNotAvailable => "MEMSYNC_NOT_AVAILABLE",
         MemsyncRetentionExhausted => "MEMSYNC_RETENTION_EXHAUSTED",
+        /// MEDULLA-DURABLE-KERNEL-R700.4: a retention policy declares no hold check.
+        RetentionHoldCheckRequired => "RETENTION_HOLD_CHECK_REQUIRED",
+        /// MEDULLA-DURABLE-KERNEL-R700.4: a retention policy has zero age or an out-of-range batch.
+        RetentionPolicyInvalid => "RETENTION_POLICY_INVALID",
         MemsyncStorageUnavailable => "MEMSYNC_STORAGE_UNAVAILABLE",
         MemsyncVersionMalformed => "MEMSYNC_VERSION_MALFORMED",
         /// A plan view has an op with no incremental form, so it recomputes (MEDULLA-INCREMENTAL-VIEWS-R005.5).

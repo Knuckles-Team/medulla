@@ -10,6 +10,13 @@ use serde::{Deserialize, Serialize};
 /// The largest batch one cleanup step may remove in a single `MutationBatch`.
 pub const MAX_RETENTION_BATCH: u32 = 10_000;
 
+/// The refusal code of a policy with zero age or an out-of-range batch
+/// (MEDULLA-DURABLE-KERNEL-R700.4).
+pub const RETENTION_POLICY_INVALID: &str = "RETENTION_POLICY_INVALID";
+/// The refusal code of a policy that declares no hold check
+/// (MEDULLA-DURABLE-KERNEL-R700.4).
+pub const RETENTION_HOLD_CHECK_REQUIRED: &str = "RETENTION_HOLD_CHECK_REQUIRED";
+
 /// A check that keeps a candidate from removal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -31,10 +38,20 @@ pub struct RetentionPolicy {
 pub enum RetentionPolicyError {
     #[error("RETENTION_HOLD_CHECK_REQUIRED: a retention policy must declare a hold check")]
     HoldCheckRequired,
-    #[error("a retention policy age must be above zero")]
+    #[error("RETENTION_POLICY_INVALID: a retention policy age must be above zero")]
     ZeroAge,
-    #[error("a retention batch must be between 1 and {MAX_RETENTION_BATCH}")]
+    #[error("RETENTION_POLICY_INVALID: a retention batch must be between 1 and {MAX_RETENTION_BATCH}")]
     BatchOutOfRange,
+}
+
+impl RetentionPolicyError {
+    /// The wire-stable refusal code of this error.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::HoldCheckRequired => RETENTION_HOLD_CHECK_REQUIRED,
+            Self::ZeroAge | Self::BatchOutOfRange => RETENTION_POLICY_INVALID,
+        }
+    }
 }
 
 impl RetentionPolicy {
@@ -153,5 +170,18 @@ mod tests {
         let err = serde_json::from_str::<RetentionPolicy>(r#"{"age_ms":1,"batch":1,"holds":[]}"#)
             .unwrap_err();
         assert!(err.to_string().contains("RETENTION_HOLD_CHECK_REQUIRED"));
+        let err = serde_json::from_str::<RetentionPolicy>(
+            r#"{"age_ms":0,"batch":1,"holds":["legal_hold"]}"#,
+        )
+        .unwrap_err();
+        assert!(err.to_string().starts_with("RETENTION_POLICY_INVALID"));
+        assert_eq!(
+            RetentionPolicyError::BatchOutOfRange.code(),
+            RETENTION_POLICY_INVALID
+        );
+        assert_eq!(
+            RetentionPolicyError::HoldCheckRequired.code(),
+            RETENTION_HOLD_CHECK_REQUIRED
+        );
     }
 }

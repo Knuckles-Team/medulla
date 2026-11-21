@@ -676,6 +676,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REPOSITORY_BATCH_TOO_LARGE",
         ],
     ),
+    // MEDULLA-DURABLE-KERNEL-R700.4: a retention policy the engine refuses to run.
+    (
+        "RetentionCleanupRun",
+        &["RETENTION_HOLD_CHECK_REQUIRED", "RETENTION_POLICY_INVALID"],
+    ),
     // `analytics_pool_config` refuses an invalid scheduler policy
     // (MEDULLA-DURABLE-KERNEL-R082.9).
     ("AnalyticsJob", &["SCHEDULER_CONFIG_INVALID"]),
