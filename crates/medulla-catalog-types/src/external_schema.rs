@@ -175,6 +175,19 @@ impl ExternalOntologyCoverage {
             .expect("the framing domain is fixed and the field count is bounded by memory")
     }
 
+    /// Check version and non-empty revisions.
+    fn validate_fields(&self) -> Result<(), ExternalSchemaError> {
+        version(self.schema_version)?;
+        require(&self.source_revision, "source_revision")?;
+        require(&self.mapping_revision, "mapping_revision")?;
+        require(&self.pack_revision, "pack_revision")?;
+        require(&self.schema_revision, "schema_revision")?;
+        require(
+            &self.platform_vocabulary_revision,
+            "platform_vocabulary_revision",
+        )
+    }
+
     /// Check version, non-empty revisions, sorted unique terms and the digest.
     pub fn validate(&self) -> Result<(), ExternalSchemaError> {
         version(self.schema_version)?;
@@ -204,6 +217,106 @@ impl ExternalOntologyCoverage {
         }
         Ok(())
     }
+}
+
+/// The external schema, its revisions and the terms and declared mappings one pack import
+/// brings. The terms are in any order.
+#[derive(Debug, Clone, Copy)]
+pub struct ExternalCoverageInput<'a> {
+    /// Digest of the external schema.
+    pub source_schema_digest: Digest256,
+    /// Revision of the external schema.
+    pub source_revision: &'a str,
+    /// Revision of the declared mappings.
+    pub mapping_revision: &'a str,
+    /// The pack revision being imported.
+    pub pack_revision: &'a str,
+    /// The graph schema revision.
+    pub schema_revision: &'a str,
+    /// The platform vocabulary revision.
+    pub platform_vocabulary_revision: &'a str,
+    /// Every term of the external schema with its kind.
+    pub terms: &'a [(String, ExternalTermKind)],
+    /// The mappings the connector declared.
+    pub mappings: &'a [ExternalTermMapping],
+}
+
+/// The provenance digest of one adopted mapping: the original external IRI and kind, the
+/// source schema and revisions, and the platform term.
+fn provenance_digest(mapping: &ExternalTermMapping) -> Digest256 {
+    let fields: [&[u8]; 7] = [
+        mapping.external_iri.as_bytes(),
+        kind_tag(mapping.external_kind).as_bytes(),
+        mapping.source_schema_digest.as_bytes(),
+        mapping.source_revision.as_bytes(),
+        mapping.mapping_revision.as_bytes(),
+        mapping.platform_iri.as_bytes(),
+        kind_tag(mapping.platform_kind).as_bytes(),
+    ];
+    Digest256::framed(b"medulla.external_term_provenance", &fields)
+        .expect("the framing domain is fixed and the field count is small")
+}
+
+/// Build the coverage record of one external schema for one pack revision
+/// (MEDULLA-TYPED-PACKS-R097.2.7.2). Only a declared mapping of the same source schema and
+/// revision, whose platform target has the kind of the external term, is adopted; every other
+/// term is reported as unmapped and none is added as a platform term. When two adopted
+/// mappings name one term, the smaller platform IRI wins, so the input order never changes the
+/// result. The terms are sorted by `external_iri` before the digest is computed.
+pub fn compute_external_coverage(
+    input: &ExternalCoverageInput<'_>,
+) -> Result<ExternalOntologyCoverage, ExternalSchemaError> {
+    for mapping in input.mappings {
+        mapping.validate()?;
+    }
+    let mut external: Vec<&(String, ExternalTermKind)> = input.terms.iter().collect();
+    external.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+    let mut terms: Vec<ExternalTerm> = Vec::with_capacity(external.len());
+    for (iri, kind) in external {
+        if terms.last().is_some_and(|last| &last.external_iri == iri) {
+            return Err(ExternalSchemaError::DuplicateIri(iri.clone()));
+        }
+        let adopted = input
+            .mappings
+            .iter()
+            .filter(|m| {
+                &m.external_iri == iri
+                    && m.external_kind == *kind
+                    && m.platform_kind == *kind
+                    && m.source_schema_digest == input.source_schema_digest
+                    && m.source_revision == input.source_revision
+                    && m.mapping_revision == input.mapping_revision
+            })
+            .min_by(|a, b| a.platform_iri.cmp(&b.platform_iri));
+        let result = match adopted {
+            Some(mapping) => ExternalTermResult::Mapped {
+                platform_iri: mapping.platform_iri.clone(),
+                provenance_digest: provenance_digest(mapping),
+            },
+            None => ExternalTermResult::Unmapped {
+                reason: ExternalUnmappedReason::NoDeclaredMapping,
+            },
+        };
+        terms.push(ExternalTerm {
+            external_iri: iri.clone(),
+            kind: *kind,
+            result,
+        });
+    }
+    let mut coverage = ExternalOntologyCoverage {
+        schema_version: EXTERNAL_SCHEMA_VERSION,
+        source_schema_digest: input.source_schema_digest,
+        source_revision: input.source_revision.to_string(),
+        mapping_revision: input.mapping_revision.to_string(),
+        pack_revision: input.pack_revision.to_string(),
+        schema_revision: input.schema_revision.to_string(),
+        platform_vocabulary_revision: input.platform_vocabulary_revision.to_string(),
+        terms,
+        coverage_digest: Digest256::sha256(b""),
+    };
+    coverage.validate_fields()?;
+    coverage.coverage_digest = coverage.compute_digest();
+    Ok(coverage)
 }
 
 #[cfg(test)]
@@ -305,6 +418,81 @@ mod tests {
         assert!(matches!(
             stale.validate(),
             Err(ExternalSchemaError::CoverageDigestMismatch { .. })
+        ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.2.7.2
+    #[test]
+    fn reordered_inputs_give_identical_digest() {
+        let digest = Digest256::sha256(b"external schema");
+        let adopted = mapping();
+        let mut wrong_kind = mapping();
+        wrong_kind.external_iri = format!("{EX}status");
+        wrong_kind.external_kind = ExternalTermKind::DatatypeProperty;
+        wrong_kind.platform_kind = ExternalTermKind::ObjectProperty;
+        let terms = vec![
+            (format!("{EX}status"), ExternalTermKind::DatatypeProperty),
+            (format!("{EX}Patient"), ExternalTermKind::Class),
+            (format!("{EX}Ward"), ExternalTermKind::Class),
+        ];
+        let mappings = vec![adopted.clone(), wrong_kind.clone()];
+        let build = |terms: &[(String, ExternalTermKind)], mappings: &[ExternalTermMapping]| {
+            compute_external_coverage(&ExternalCoverageInput {
+                source_schema_digest: digest,
+                source_revision: "ext-2026-01",
+                mapping_revision: "map-1",
+                pack_revision: "pack-3",
+                schema_revision: "schema-9",
+                platform_vocabulary_revision: "kg-2026",
+                terms,
+                mappings,
+            })
+            .expect("coverage")
+        };
+        let first = build(&terms, &mappings);
+        first.validate().expect("the built coverage validates");
+        let hex = first.coverage_digest.to_hex();
+        assert_eq!(hex.len(), 64);
+        assert!(hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
+
+        let mut reversed_terms = terms.clone();
+        reversed_terms.reverse();
+        let mut reversed_mappings = mappings.clone();
+        reversed_mappings.reverse();
+        let second = build(&reversed_terms, &reversed_mappings);
+        assert_eq!(first, second);
+        assert_eq!(first.coverage_digest, second.coverage_digest);
+
+        // Sorted by IRI; the compatible mapping is adopted, the kind-incompatible and the
+        // undeclared terms are reported and never become platform terms.
+        let iris: Vec<&str> = first.terms.iter().map(|t| t.external_iri.as_str()).collect();
+        assert_eq!(
+            iris,
+            vec![
+                format!("{EX}Patient"),
+                format!("{EX}Ward"),
+                format!("{EX}status")
+            ]
+        );
+        assert!(matches!(first.terms[0].result, ExternalTermResult::Mapped { .. }));
+        assert!(matches!(first.terms[1].result, ExternalTermResult::Unmapped { .. }));
+        assert!(matches!(first.terms[2].result, ExternalTermResult::Unmapped { .. }));
+
+        // A term listed twice refuses.
+        let mut duplicated = terms.clone();
+        duplicated.push((format!("{EX}Ward"), ExternalTermKind::Class));
+        assert!(matches!(
+            compute_external_coverage(&ExternalCoverageInput {
+                source_schema_digest: digest,
+                source_revision: "ext-2026-01",
+                mapping_revision: "map-1",
+                pack_revision: "pack-3",
+                schema_revision: "schema-9",
+                platform_vocabulary_revision: "kg-2026",
+                terms: &duplicated,
+                mappings: &mappings,
+            }),
+            Err(ExternalSchemaError::DuplicateIri(_))
         ));
     }
 }
