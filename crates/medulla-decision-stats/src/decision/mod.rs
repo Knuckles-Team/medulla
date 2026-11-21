@@ -69,6 +69,7 @@ pub mod promotion;
 pub mod quant;
 pub mod ranking_eval;
 pub mod rapid_r083;
+pub mod recommend;
 pub mod refusal;
 pub mod replay;
 pub mod research_voi;

@@ -1198,6 +1198,7 @@ mod held_item_admission_tests;
 // MEDULLA-DECISION-ENGINE-R826: the serving, process and ingest families.
 #[cfg(feature = "redb")]
 mod capacity_tests;
+mod item_recommendation_tests;
 mod ingest_shortfall_tests;
 mod process_remediation_tests;
 mod serving_technique_tests;
