@@ -91,7 +91,10 @@ pub fn is_durable_mutation(m: &Method) -> bool {
         )
     ) || matches!(
         m,
-        Method::ClaimNext { .. } | Method::ClearGraph | Method::AddEmbedding { .. }
+        Method::ClaimNext { .. }
+            | Method::ClearGraph
+            | Method::AddEmbedding { .. }
+            | Method::DeclareEmbeddingSpace { .. }
     )
 }
 
@@ -353,6 +356,17 @@ fn apply_base_embedding(core: &GraphCore, m: &Method) -> bool {
                     node_id = node_id.as_str(),
                     %error,
                     "AddEmbedding replay rejected — the durable pre-image had an unexpected dimension"
+                );
+            }
+        }
+        // MEDULLA-FEDERATED-QUERY-R039.1.7: replaying the declaration is the same pure
+        // `declare_space` the live apply ran, so it reproduces the same semantic store row.
+        Method::DeclareEmbeddingSpace { space } => {
+            if let Err(error) = core.semantic_store.write().declare_space(space.clone()) {
+                tracing::warn!(
+                    digest = space.digest.as_str(),
+                    %error,
+                    "DeclareEmbeddingSpace replay rejected"
                 );
             }
         }

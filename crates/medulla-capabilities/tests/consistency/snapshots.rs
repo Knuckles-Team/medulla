@@ -20,6 +20,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R700.3: gateway-routed argument-map upsert.
     "ArgumentMapPut",
     "RetrievalFeedbackRecord",
+    "DeclareEmbeddingSpace",
     "ApplyChangeEnvelope",
     // A draft becomes ApplyChangeEnvelope(s) at the request boundary, so it
     // carries their mutation, durability, audit and CDC effects.
@@ -361,6 +362,7 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     // `durable_apply::apply_argument_map`.
     "ArgumentMapPut",
     "RetrievalFeedbackRecord",
+    "DeclareEmbeddingSpace",
     "ClaimNext",
     "Batch",
     "ClaimWorkItem",
@@ -609,6 +611,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R700.3: gateway-routed argument-map upsert.
     "ArgumentMapPut",
     "RetrievalFeedbackRecord",
+    "DeclareEmbeddingSpace",
     "ApplyChangeEnvelope",
     // A draft becomes ApplyChangeEnvelope(s) at the request boundary, so it
     // carries their mutation, durability, audit and CDC effects.

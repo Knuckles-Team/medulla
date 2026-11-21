@@ -210,6 +210,11 @@ impl VersionState {
                     self.unreplayable.insert("BatchUpdate.add_embedding".to_string());
                     entries.extend(other("BatchUpdate.add_embedding", image_ref));
                 }
+                BatchOperation::DeclareEmbeddingSpace { .. } => {
+                    self.unreplayable
+                        .insert("BatchUpdate.declare_embedding_space".to_string());
+                    entries.extend(other("BatchUpdate.declare_embedding_space", image_ref));
+                }
             }
         }
         entries

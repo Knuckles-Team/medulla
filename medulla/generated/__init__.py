@@ -219,6 +219,7 @@ SEND_BY_METHOD = {
     "DecisionEval": coordination.send_decision_eval,
     "DecisionFit": coordination.send_decision_fit,
     "DecisionLog": coordination.send_decision_log,
+    "DeclareEmbeddingSpace": ingestion.send_declare_embedding_space,
     "DeclareExchange": messaging.send_declare_exchange,
     "DeclareQueue": messaging.send_declare_queue,
     "DeferWorkItem": coordination.send_defer_work_item,

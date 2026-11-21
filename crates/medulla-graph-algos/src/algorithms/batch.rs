@@ -34,6 +34,10 @@ pub enum BatchOperation {
         id: String,
         embedding: Vec<f32>,
     },
+    /// MEDULLA-FEDERATED-QUERY-R039.1.7: declare the graph's pinned embedding space.
+    DeclareEmbeddingSpace {
+        space: medulla_semantic_index::semantic::EmbeddingSpaceRef,
+    },
 }
 
 const MAX_BATCH_UPDATE_BYTES: usize = 32 * 1024 * 1024;
@@ -154,6 +158,26 @@ fn decode_batch_embedding_op(
     Ok(BatchOperation::AddEmbedding { id, embedding })
 }
 
+/// Decode one `declare_embedding_space` batch operation: `space` is the serialized pinned
+/// space, validated structurally before any state is touched.
+fn decode_batch_space_op(
+    operation: &serde_json::Value,
+    index: usize,
+) -> Result<BatchOperation, String> {
+    let space: medulla_semantic_index::semantic::EmbeddingSpaceRef = operation
+        .get("space")
+        .cloned()
+        .ok_or_else(|| format!("BatchUpdate op[{index}] requires 'space'"))
+        .and_then(|value| {
+            serde_json::from_value(value)
+                .map_err(|error| format!("BatchUpdate op[{index}] 'space' is invalid: {error}"))
+        })?;
+    space
+        .validate()
+        .map_err(|error| format!("BatchUpdate op[{index}] {error}"))?;
+    Ok(BatchOperation::DeclareEmbeddingSpace { space })
+}
+
 pub fn decode_batch_operations(operations_msgpack: &[u8]) -> Result<Vec<BatchOperation>, String> {
     let operations: Vec<serde_json::Value> = medulla_types::msgpack::decode_bounded(
         operations_msgpack,
@@ -193,6 +217,7 @@ pub fn decode_batch_operations(operations_msgpack: &[u8]) -> Result<Vec<BatchOpe
                 target: required_batch_id(operation, index, "target")?,
             },
             "add_embedding" => decode_batch_embedding_op(operation, index)?,
+            "declare_embedding_space" => decode_batch_space_op(operation, index)?,
             _ => return Err(format!("BatchUpdate op[{index}] has an unknown operation")),
         };
         decoded.push(decoded_operation);
@@ -344,6 +369,15 @@ fn prepare_batch_operations_with(
                     &mut node_exists,
                 )?;
             }
+            BatchOperation::DeclareEmbeddingSpace { space } => {
+                // The stored-row width rule, run up front like every embedding op.
+                if expected_embedding_dim != 0 && expected_embedding_dim != space.dimensions {
+                    return Err(format!(
+                        "BatchUpdate op[{index}] semantic store rows carry {expected_embedding_dim} dimensions; declared space `{}` requires {}",
+                        space.digest, space.dimensions
+                    ));
+                }
+            }
         }
     }
     Ok(())
@@ -376,6 +410,7 @@ fn batch_summary(operations: &[BatchOperation]) -> BatchUpdateSummary {
             }
             BatchOperation::RemoveEdge { .. } => summary.removed_edges += 1,
             BatchOperation::AddEmbedding { .. } => summary.added_embeddings += 1,
+            BatchOperation::DeclareEmbeddingSpace { .. } => {}
         }
     }
     summary
@@ -410,6 +445,7 @@ pub fn batch_update_preview(
 /// a local `enum` there, unchanged.
 enum SemanticAction {
     Upsert(String, Vec<f32>),
+    Declare(medulla_semantic_index::semantic::EmbeddingSpaceRef),
     Remove(String),
 }
 
@@ -476,6 +512,9 @@ fn apply_batch_operation(
         BatchOperation::AddEmbedding { id, embedding } => {
             semantic_actions.push(SemanticAction::Upsert(id, embedding));
         }
+        BatchOperation::DeclareEmbeddingSpace { space } => {
+            semantic_actions.push(SemanticAction::Declare(space));
+        }
     }
     Ok(())
 }
@@ -540,6 +579,7 @@ pub fn batch_update(core: &GraphCore, operations_msgpack: &[u8]) -> Result<Vec<u
                 SemanticAction::Remove(id) => {
                     semantic.remove_embedding(&id);
                 }
+                SemanticAction::Declare(space) => semantic.declare_space(space)?,
             }
         }
     }

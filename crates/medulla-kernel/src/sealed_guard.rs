@@ -130,7 +130,8 @@ fn batch_writes(operations_msgpack: &[u8]) -> Result<Vec<NodeWrite<'static>>, St
             BatchOperation::RemoveNode { id } => Some(NodeWrite::Remove(id.into())),
             BatchOperation::AddEdge { .. }
             | BatchOperation::RemoveEdge { .. }
-            | BatchOperation::AddEmbedding { .. } => None,
+            | BatchOperation::AddEmbedding { .. }
+            | BatchOperation::DeclareEmbeddingSpace { .. } => None,
         })
         .collect();
     Ok(writes)

@@ -85,6 +85,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "SyncMemorySnapshot",
     "SyncMemorySnapshotStore",
     "AddEmbedding",
+    "DeclareEmbeddingSpace",
     "InvalidateEdge",
     "SupersedeEdge",
     "ClearGraph",
@@ -304,6 +305,7 @@ fn scene_trajectory_method_name(m: &Method) -> Option<&'static str> {
 fn embedding_edge_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::AddEmbedding { .. } => Some("AddEmbedding"),
+        Method::DeclareEmbeddingSpace { .. } => Some("DeclareEmbeddingSpace"),
         Method::InvalidateEdge { .. } => Some("InvalidateEdge"),
         Method::SupersedeEdge { .. } => Some("SupersedeEdge"),
         _ => None,

@@ -58,6 +58,8 @@ method_results! {
     IndexRepository(IndexRepository) => Json<IndexResult>;
     ObserveScreen(ObserveScreen) => Json<ScreenObservationResult>;
     AddEmbedding(AddEmbedding) => Text<String>;
+    // MEDULLA-FEDERATED-QUERY-R039.1.7: the declared space digest.
+    DeclareEmbeddingSpace(DeclareEmbeddingSpace) => Text<String>;
     SourceIngest(SourceIngest) => Raw<SourceIngestionOutcome>;
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-REPO-INGEST-R006.1: the daily paper target over :StageReceipt nodes.

@@ -167,6 +167,7 @@ _DURABLE_AT_BASE = (
         "ArgumentMapPut",
         # MEDULLA-FEDERATED-QUERY-R705.3: the feedback record commits one graph node.
         "RetrievalFeedbackRecord",
+        "DeclareEmbeddingSpace",
     }
 )
 
@@ -180,6 +181,7 @@ _ATOMIC_BATCH_ROWS_AT_BASE = frozenset(
         "RemoveEdge",
         "BatchUpdate",
         "AddEmbedding",
+        "DeclareEmbeddingSpace",
         "ClearGraph",
         "ClearLedger",
         "CreateGraph",
@@ -327,6 +329,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "ArgumentMapPut",
         # MEDULLA-FEDERATED-QUERY-R705.3: the feedback record commits one graph node.
         "RetrievalFeedbackRecord",
+        "DeclareEmbeddingSpace",
         # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
         "ArchitectureModelImport",
         # MEDULLA-CQ-ORCH-R700.3: the process compile commits the workflow version.

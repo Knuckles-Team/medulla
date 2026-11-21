@@ -364,6 +364,13 @@ $($variants)*
         embedding: Vec<f32>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R039.1.7: declare the pinned (multimodal) embedding space of
+    /// the request's graph. Rides the same graph mutation commit as `AddEmbedding` and
+    /// rewrites the graph's semantic store row; the result is the declared space digest.
+    DeclareEmbeddingSpace {
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
+    },
+
     SemanticSearch {
         query_embedding: Vec<f32>,
         n_results: usize,

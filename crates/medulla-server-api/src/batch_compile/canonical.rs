@@ -386,6 +386,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         Method::RunUdf { .. } | Method::RegisterUdf { .. } => default_mutation_domain(surface),
         Method::ApplyMultisigMutation { .. }
         | Method::AddEmbedding { .. }
+        | Method::DeclareEmbeddingSpace { .. }
         | Method::JoinChannel { .. }
         | Method::AddSceneObject { .. }
         | Method::VerifyWorkItemClaimCapability { .. }

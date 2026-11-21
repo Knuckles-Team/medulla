@@ -21,6 +21,7 @@ pub fn supports_atomic_batch_rows(method: &Method) -> bool {
                 | Method::RemoveEdge { .. }
                 | Method::BatchUpdate { .. }
                 | Method::AddEmbedding { .. }
+                | Method::DeclareEmbeddingSpace { .. }
                 | Method::ClearGraph
                 | Method::ClearLedger
                 | Method::CreateGraph { .. }
@@ -377,6 +378,19 @@ pub fn upsert_durable_embedding(
     store
         .add_embedding(node_id.to_string(), embedding.to_vec())
         .map_err(|error| error.to_string())?;
+    write_semantic_store(semantic, graph, &store, crypto)
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.7: declare the graph's pinned embedding space on its
+/// durable semantic store row, with the one validator `SemanticStore::declare_space` applies.
+pub fn declare_durable_embedding_space(
+    semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
+    graph: &str,
+    space: &medulla_semantic_index::semantic::EmbeddingSpaceRef,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    let mut store = read_semantic_store(semantic, graph, crypto)?.unwrap_or_default();
+    store.declare_space(space.clone())?;
     write_semantic_store(semantic, graph, &store, crypto)
 }
 

@@ -1139,6 +1139,29 @@ pub(super) fn apply_add_embedding(
     Ok(ResultPayload::String("ok".to_string()))
 }
 
+/// `DeclareEmbeddingSpace` (MEDULLA-FEDERATED-QUERY-R039.1.7): declare the graph's pinned
+/// space on the live semantic store with the one validator `declare_space` applies, after the
+/// durable declaration row committed. Returns the declared space digest.
+pub(super) fn apply_declare_embedding_space(
+    core: &GraphCore,
+    method: &Method,
+) -> Result<ResultPayload, String> {
+    let Method::DeclareEmbeddingSpace { space } = method else {
+        return Err("apply_declare_embedding_space received another method".to_string());
+    };
+    let space = space.clone();
+    let source_version = core.version();
+    let digest = space.digest.clone();
+    core.semantic_store.write().declare_space(space)?;
+    core.maintain_indexes_at(
+        &medulla_graph_core::index::ChangeSet::new(),
+        source_version.saturating_add(1),
+        core.node_count(),
+        core.edge_count(),
+    );
+    Ok(ResultPayload::String(digest))
+}
+
 /// Feed the committed vector and the node's text tokens to the drift monitors.
 fn report_embedding_write(
     core: &GraphCore,

@@ -815,6 +815,9 @@ pub(super) fn query_audit_line(method: &Method) -> Option<String> {
             hex::encode(Sha256::digest(query.as_bytes()))
         )),
         Method::AddEmbedding { node_id, .. } => Some(format!("ADD_EMBEDDING|{node_id}")),
+        Method::DeclareEmbeddingSpace { space } => {
+            Some(format!("DECLARE_EMBEDDING_SPACE|{}", space.digest))
+        }
         #[cfg(feature = "rdf")]
         Method::AddTriples { .. } => Some("ADD_TRIPLES".to_string()),
         #[cfg(feature = "rdf")]

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     ParseFilesRequest = _models.MethodParseFilesParams
     ObserveScreenRequest = _models.MethodObserveScreenParams
     AddEmbeddingRequest = _models.MethodAddEmbeddingParams
+    DeclareEmbeddingSpaceRequest = _models.MethodDeclareEmbeddingSpaceParams
     SemanticIndexRequest = _models.MethodSemanticIndexParams
     SemanticSearchRequest = _models.MethodSemanticSearchParams
     DiscoverRequest = _models.MethodDiscoverParams
@@ -506,6 +507,46 @@ async def send_add_embedding(
     return expect_string("AddEmbedding", payload)
 
 
+async def send_declare_embedding_space(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> str:
+    """Send one engine-contract request.
+
+    Method:
+        DeclareEmbeddingSpace
+    Authorization:
+        node:write
+    Durability:
+        GraphRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::String
+    Result schema:
+        contract/schemas/result.ingestion.json
+        #/methods/DeclareEmbeddingSpace
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodDeclareEmbeddingSpaceParams.model_validate(params or {})
+    payload = await client._send(
+        "DeclareEmbeddingSpace",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return expect_string("DeclareEmbeddingSpace", payload)
+
+
 async def send_semantic_index(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -746,6 +787,7 @@ _REQUEST_METHODS = frozenset(
         "ParseFiles",
         "ObserveScreen",
         "AddEmbedding",
+        "DeclareEmbeddingSpace",
         "SemanticIndex",
         "SemanticSearch",
         "Discover",

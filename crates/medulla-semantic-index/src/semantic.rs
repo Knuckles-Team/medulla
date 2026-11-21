@@ -19,6 +19,7 @@ mod backend;
 mod backend;
 
 pub use backend::SemanticStore;
+pub use medulla_index_types::embedding::EmbeddingSpaceRef;
 #[cfg(feature = "ann")]
 pub use backend::{build_off_lock, BuildHooks, BuildOutcome};
 pub use medulla_numeric::cluster::{CancelToken, ClusterConfig, Progress, ProgressSink};
@@ -120,20 +121,41 @@ impl SemanticStore {
         self.space.as_ref()
     }
 
-    /// Declare the immutable space used by model-produced queries. Existing raw
-    /// rows may be adopted only when their width matches the declaration.
-    pub fn declare_space(
-        &mut self,
-        space: medulla_index_types::embedding::EmbeddingSpaceRef,
-    ) -> Result<(), String> {
-        if validate_space_declaration(self.space.as_ref(), &space)? {
-            return Ok(());
+    /// MEDULLA-FEDERATED-QUERY-R039.1.7: the one declaration validator. Runs the structural
+    /// check, the replace-refusal and the stored-row width check without mutating; returns
+    /// `Ok(true)` when this exact space is already declared (a no-op declaration).
+    fn declaration_outcome(
+        &self,
+        space: &medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<bool, String> {
+        if validate_space_declaration(self.space.as_ref(), space)? {
+            return Ok(true);
         }
         if let Some(dim) = self.mismatched_row_dim(space.dimensions) {
             return Err(format!(
                 "semantic store rows carry {dim} dimensions; declared space `{}` requires {}",
                 space.digest, space.dimensions
             ));
+        }
+        Ok(false)
+    }
+
+    /// Whether [`Self::declare_space`] would accept `space`, without mutating the store.
+    pub fn check_space_declaration(
+        &self,
+        space: &medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<(), String> {
+        self.declaration_outcome(space).map(|_| ())
+    }
+
+    /// Declare the immutable space used by model-produced queries. Existing raw
+    /// rows may be adopted only when their width matches the declaration.
+    pub fn declare_space(
+        &mut self,
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<(), String> {
+        if self.declaration_outcome(&space)? {
+            return Ok(());
         }
         commit_space_declaration(&mut self.space, &self.generation, space);
         Ok(())
@@ -540,5 +562,52 @@ mod check_embedding_dimension_tests {
     #[test]
     fn valid_vector_matching_store_dim_is_accepted() {
         assert_eq!(check_embedding_dimension(&[1.0, 2.0, 3.0], 3), Ok(3));
+    }
+}
+
+#[cfg(test)]
+mod space_declaration_tests {
+    use super::*;
+
+    fn space(model: &str, dimensions: usize) -> EmbeddingSpaceRef {
+        EmbeddingSpaceRef::pinned(model, "1", "a".repeat(64), "b".repeat(64), dimensions, true)
+            .unwrap()
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R039.1.7
+    #[test]
+    fn check_space_declaration_matches_declare_space() {
+        let valid = space("m", 3);
+        let different = space("other", 3);
+        let mut invalid = space("m", 3);
+        invalid.id.clear();
+        let wide = space("m", 4);
+
+        // A valid space on an empty store.
+        let mut store = SemanticStore::new();
+        assert_eq!(store.check_space_declaration(&valid), Ok(()));
+        assert!(store.space().is_none());
+        assert_eq!(store.declare_space(valid.clone()), Ok(()));
+
+        // The identical space again, a different space, an invalid space.
+        assert_eq!(store.check_space_declaration(&valid), Ok(()));
+        let mut probe = store.clone();
+        assert_eq!(probe.declare_space(valid.clone()), Ok(()));
+        let check = store.check_space_declaration(&different);
+        assert!(check.is_err());
+        assert_eq!(check, probe.declare_space(different.clone()));
+        let check = store.check_space_declaration(&invalid);
+        assert!(check.is_err());
+        assert_eq!(check, probe.declare_space(invalid.clone()));
+        assert_eq!(store.space(), Some(&valid));
+
+        // A width-mismatched store.
+        let mut rows = SemanticStore::new();
+        rows.add_embedding("n".into(), vec![1.0, 0.0, 0.0]).unwrap();
+        let mut rows_probe = rows.clone();
+        let check = rows.check_space_declaration(&wide);
+        assert!(check.is_err());
+        assert_eq!(check, rows_probe.declare_space(wide));
+        assert!(rows.space().is_none());
     }
 }

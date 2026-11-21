@@ -93,7 +93,9 @@ fn is_scene(method: &Method) -> bool {
 fn is_trajectory(method: &Method) -> bool {
     matches!(
         method,
-        Method::AppendStep { .. } | Method::AddEmbedding { .. }
+        Method::AppendStep { .. }
+            | Method::AddEmbedding { .. }
+            | Method::DeclareEmbeddingSpace { .. }
     )
 }
 
@@ -714,6 +716,13 @@ async fn try_handle_trajectory(
             };
             commit_gateway(ctx, plan, method, move |core| {
                 super::gateway_graph::apply_add_embedding(core, node_id, embedding, &scope)
+            })
+            .await
+        }
+        Method::DeclareEmbeddingSpace { .. } => {
+            let declared = method.clone();
+            commit_gateway(ctx, plan, method, move |core| {
+                super::gateway_graph::apply_declare_embedding_space(core, &declared)
             })
             .await
         }

@@ -104,6 +104,9 @@ pub fn apply_method_rows_ref(
         Method::AddEmbedding { node_id, embedding } => {
             upsert_durable_embedding(semantic, graph, node_id, embedding, crypto)?;
         }
+        Method::DeclareEmbeddingSpace { space } => {
+            declare_durable_embedding_space(semantic, graph, space, crypto)?;
+        }
         Method::MintWorkItemClaimCapability { .. }
         | Method::VerifyWorkItemClaimCapability { .. } => {
             return Err(

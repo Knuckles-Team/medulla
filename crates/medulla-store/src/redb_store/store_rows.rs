@@ -426,7 +426,9 @@ pub fn apply_batch_rows(
     let has_semantic_operations = operations.iter().any(|operation| {
         matches!(
             operation,
-            BatchOperation::RemoveNode { .. } | BatchOperation::AddEmbedding { .. }
+            BatchOperation::RemoveNode { .. }
+                | BatchOperation::AddEmbedding { .. }
+                | BatchOperation::DeclareEmbeddingSpace { .. }
         )
     });
     // Load the graph's vector store at most once. A large embedding batch must not
@@ -490,6 +492,10 @@ pub fn apply_batch_rows(
                     nodes,
                     &mut semantic_store,
                 )?;
+                semantic_dirty = true;
+            }
+            BatchOperation::DeclareEmbeddingSpace { space } => {
+                semantic_store.declare_space(space)?;
                 semantic_dirty = true;
             }
         }

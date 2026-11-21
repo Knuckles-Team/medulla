@@ -13103,6 +13103,13 @@ class MethodAddEmbedding(BaseModel):
     params: MethodAddEmbeddingParams
 
 
+class MethodDeclareEmbeddingSpace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeclareEmbeddingSpace"]
+    params: MethodDeclareEmbeddingSpaceParams
+
+
 class MethodSemanticSearch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16455,6 +16462,7 @@ Method = Annotated[
         MethodIndexRepository,
         MethodObserveScreen,
         MethodAddEmbedding,
+        MethodDeclareEmbeddingSpace,
         MethodSemanticSearch,
         MethodDiscover,
         MethodMatchOntologyTerms,
@@ -16908,6 +16916,12 @@ class MethodAddEmbeddingParams(BaseModel):
 
     embedding: list[float]
     node_id: str
+
+
+class MethodDeclareEmbeddingSpaceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    space: EmbeddingSpaceRef
 
 
 class MethodAddNodeParams(BaseModel):
@@ -41704,6 +41718,8 @@ __all__ = [
     "MethodAddEdgeParams",
     "MethodAddEmbedding",
     "MethodAddEmbeddingParams",
+    "MethodDeclareEmbeddingSpace",
+    "MethodDeclareEmbeddingSpaceParams",
     "MethodAddNode",
     "MethodAddNodeParams",
     "MethodAddSceneObject",

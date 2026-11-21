@@ -744,8 +744,8 @@ pub(super) async fn try_handle_semantic_compute(
     let GraphOpsContext { req_id, core, .. } = ctx;
     let method = adapt_query_vector(&ctx, method).await;
     ControlFlow::Break(match method {
-        Method::AddEmbedding { .. } => unreachable!(
-            "AddEmbedding is mutation::GATEWAY_ROUTED; dispatch_graph_op must route it \
+        Method::AddEmbedding { .. } | Method::DeclareEmbeddingSpace { .. } => unreachable!(
+            "AddEmbedding and DeclareEmbeddingSpace are mutation::GATEWAY_ROUTED; dispatch_graph_op must route them \
                  through try_handle_gateway before it ever reaches this terminal handler"
         ),
         Method::SemanticSearch {

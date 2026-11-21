@@ -693,7 +693,8 @@ pub fn batch_node_touches(operations_msgpack: &[u8]) -> Result<Vec<NodeTouch>, S
                 BatchOperation::RemoveNode { id } => Some(NodeTouch::Remove { id }),
                 BatchOperation::AddEdge { .. }
                 | BatchOperation::RemoveEdge { .. }
-                | BatchOperation::AddEmbedding { .. } => None,
+                | BatchOperation::AddEmbedding { .. }
+                | BatchOperation::DeclareEmbeddingSpace { .. } => None,
             })
             .collect(),
     )

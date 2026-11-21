@@ -239,6 +239,7 @@ pub(super) fn preserves_node_derived_indexes(method: &Method) -> bool {
         Method::AddEdge { .. }
             | Method::RemoveEdge { .. }
             | Method::AddEmbedding { .. }
+            | Method::DeclareEmbeddingSpace { .. }
             | Method::InvalidateEdge { .. }
     )
 }
@@ -308,6 +309,14 @@ pub(super) fn prepublish_success(core: &GraphCore, method: &Method) -> Option<Re
         // row-local fast path, so `apply` runs directly against the live `ctx.core`.
         | Method::ClearLedger
         | Method::AddEmbedding { .. } => Some(ResultPayload::String("ok".to_string())),
+        // MEDULLA-FEDERATED-QUERY-R039.1.7: the live store checks the declaration first, so a
+        // refusal never reaches the durable commit; the result is the declared space digest.
+        Method::DeclareEmbeddingSpace { space } => core
+            .semantic_store
+            .read()
+            .check_space_declaration(space)
+            .ok()
+            .map(|()| ResultPayload::String(space.digest.clone())),
         Method::AddEdge {
             source_id,
             target_id,

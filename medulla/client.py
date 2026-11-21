@@ -7147,6 +7147,15 @@ class GraphOperationsClient:
             self._client, {"node_id": node_id, "embedding": embedding}
         )
 
+    async def declare_embedding_space(
+        self, space: dict[str, Any], graph: str | None = None
+    ) -> str:
+        """Declare the graph's pinned embedding space; returns the space digest
+        (MEDULLA-FEDERATED-QUERY-R039.1.7)."""
+        return await _gen.ingestion.send_declare_embedding_space(
+            self._client, {"space": space}, graph
+        )
+
     async def semantic_search(
         self, query_embedding: list[float], n_results: int = 5
     ) -> list[tuple[str, float]]:

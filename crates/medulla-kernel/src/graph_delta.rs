@@ -189,6 +189,7 @@ impl GraphRowDelta {
                     | Method::AddEdge { .. }
                     | Method::RemoveEdge { .. }
                     | Method::AddEmbedding { .. }
+                    | Method::DeclareEmbeddingSpace { .. }
             )
         }) {
             return Err("graph row delta contains a non-row operation".to_string());
@@ -226,7 +227,10 @@ impl GraphRowDelta {
         self.operations.iter().all(|method| {
             matches!(
                 method,
-                Method::AddEdge { .. } | Method::RemoveEdge { .. } | Method::AddEmbedding { .. }
+                Method::AddEdge { .. }
+                    | Method::RemoveEdge { .. }
+                    | Method::AddEmbedding { .. }
+                    | Method::DeclareEmbeddingSpace { .. }
             )
         })
     }
@@ -532,6 +536,7 @@ fn apply_row_operation(
         Method::AddEmbedding { node_id, embedding } => semantic
             .add_embedding(node_id.clone(), embedding.clone())
             .map_err(|error| error.to_string())?,
+        Method::DeclareEmbeddingSpace { space } => semantic.declare_space(space.clone())?,
         _ => return Err("graph row delta contains a non-projectable operation".to_string()),
     }
     Ok(())

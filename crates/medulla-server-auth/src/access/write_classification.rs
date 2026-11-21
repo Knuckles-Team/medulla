@@ -436,6 +436,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::Rollback { .. }
                 | Method::ClearGraph
                 | Method::AddEmbedding { .. }
+                | Method::DeclareEmbeddingSpace { .. }
                 | Method::PruneByLifecycle { .. }
                 | Method::DecaySweep { .. }
                 | Method::TouchNodes { .. }
