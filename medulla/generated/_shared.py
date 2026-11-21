@@ -2334,6 +2334,7 @@ QuestionKind = (
     | Literal["playbook_triage"]
     | Literal["trajectory_ladder"]
     | Literal["analyst_synthesis"]
+    | Literal["process_plan"]
 )
 
 
