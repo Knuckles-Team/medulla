@@ -217,6 +217,51 @@ pub struct ProjectRules {
     pub layers: Vec<RuleLayer>,
 }
 
+impl ProjectRules {
+    /// The effective facts of the layered rule files (MEDULLA-DECISION-ENGINE-R617.2.1). Layers
+    /// apply in listed order; a later layer overrides an earlier fact with the same `scope`
+    /// and `fact_id`. Each effective fact is a `Semantic` [`MemoryRecord`] whose `topics` hold
+    /// its scope and whose id joins scope and fact id. The result is in (scope, fact id) order.
+    /// Cost is O(facts).
+    pub fn effective_facts(&self, timestamp_ms: i64) -> Result<Vec<MemoryRecord>, MemoryError> {
+        let mut effective: std::collections::BTreeMap<(&str, &str), &ScopedFact> =
+            std::collections::BTreeMap::new();
+        for layer in &self.layers {
+            for fact in &layer.facts {
+                effective.insert((fact.scope.as_str(), fact.fact_id.as_str()), fact);
+            }
+        }
+        effective
+            .into_values()
+            .map(|fact| {
+                Ok(MemoryRecord {
+                    memory_id: identifier(format!("{}:{}", fact.scope.as_str(), fact.fact_id.as_str()), "memory_id")?,
+                    tenant: self.tenant.clone(),
+                    kind: MemoryKind::Rule,
+                    tier: MemoryTier::Semantic,
+                    text: fact.rule.clone(),
+                    provenance_key: None,
+                    session_id: None,
+                    timestamp_ms,
+                    topics: vec![fact.scope.as_str().to_string()],
+                    pattern_key: None,
+                    importance: 1.0,
+                    access_count: 0,
+                    last_access_ms: 0,
+                    last_decay_ms: 0,
+                    forgotten: false,
+                    legal_hold: false,
+                    expires_at_ms: None,
+                    support_count: 0,
+                    token_estimate: u32::try_from(fact.rule.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+                    attachments: Vec::new(),
+                    schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+                })
+            })
+            .collect()
+    }
+}
+
 /// A memory class the retention policy may prune.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -1032,6 +1077,46 @@ impl<'de> Deserialize<'de> for Episode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.2.1
+    #[test]
+    fn later_layer_overrides_earlier_fact() {
+        let fact = |id: &str, scope: &str, rule: &str| ScopedFact {
+            fact_id: ResourceId::new(id).unwrap(),
+            scope: ResourceId::new(scope).unwrap(),
+            rule: rule.into(),
+        };
+        let layer = |id: &str, facts: Vec<ScopedFact>| RuleLayer {
+            layer_id: ResourceId::new(id).unwrap(),
+            source: ResourceId::new(format!("{id}.md")).unwrap(),
+            facts,
+        };
+        let rules = ProjectRules {
+            tenant: TenantId::new("tenant-a").unwrap(),
+            project_id: ResourceId::new("project:1").unwrap(),
+            layers: vec![
+                layer("user", vec![fact("style", "repo", "tabs"), fact("lint", "repo", "off")]),
+                layer("project", vec![fact("style", "repo", "spaces")]),
+                layer("directory", vec![fact("style", "repo", "two spaces"), fact("style", "docs", "prose")]),
+            ],
+        };
+        let effective = rules.effective_facts(7).unwrap();
+        // The later layer wins for one scope and fact id; another scope keeps its own fact.
+        let texts: Vec<(&str, &str)> = effective
+            .iter()
+            .map(|record| (record.memory_id.as_str(), record.text.as_str()))
+            .collect();
+        assert_eq!(
+            texts,
+            [("docs:style", "prose"), ("repo:lint", "off"), ("repo:style", "two spaces")]
+        );
+        for record in &effective {
+            assert_eq!(record.tier, MemoryTier::Semantic);
+            assert_eq!(record.topics.len(), 1);
+            assert_eq!(record.timestamp_ms, 7);
+        }
+        assert_eq!(effective[2].topics, ["repo"]);
+    }
 
     fn message(id: &str) -> ConversationMessage {
         ConversationMessage {
