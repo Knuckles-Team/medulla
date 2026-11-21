@@ -493,9 +493,12 @@ fn effective_scorer() -> ScorerId {
 /// receipt says so.
 async fn champion_rerank_curve(ctx: &QueryHandlerCtx<'_>) -> Option<RerankCurve> {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-    let tenant =
-        medulla_server_ops::api::admin::served_adapter::carrier_tenant(ctx.read_authority)?
-            .to_string();
+    // The verified carrier tenant: the partition decision state is served from.
+    let tenant = ctx
+        .read_authority
+        .and_then(medulla_server_api::carrier::GraphReadAuthority::carrier)
+        .map(medulla_server_api::carrier::CarrierAuthority::tenant_scope)?
+        .to_string();
     let store = ctx.state.read().await.agent_library()?;
     let scorer = effective_scorer();
     let version = scorer.version.clone();
