@@ -35892,6 +35892,7 @@ class MethodCrossSourceQuestionParams(BaseModel):
 class MethodSupplyChainImpactParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    contracts: list[str] = Field(default_factory=list)
     roots: list[str]
 
 

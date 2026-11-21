@@ -9,8 +9,11 @@
 //! cross-repo (owner: Arbora) and is not claimed here; this slice fixes the
 //! method body and proves its output matches the typed model.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use medulla_source_types::{
-    supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow,
+    supply_chain_report::assemble_supply_chain_report, supply_chain_report::ContractCoverage,
+    supply_chain_report::ImpactRow,
     supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
     supply_chain_report::sources_used_from_audit, supply_chain_report::SupplyChainImpactReport,
 };
@@ -22,21 +25,60 @@ use crate::source_selection::{
 /// Plan `roots` (the question's ontology classes) against the authority
 /// fixture and assemble the supply-chain impact report from the recorded
 /// rows. A class whose rank-1 source is not connected becomes a typed
-/// abstention, never a silent fallback (MEDULLA-CQ-XSRC-R005.4).
+/// abstention, never a silent fallback (MEDULLA-CQ-XSRC-R005.4). `contracts` are the asked-about
+/// customer contract ids and `covers` the `(contract, service)` pairs of their `coversService`
+/// edges; both empty gives the base report (MEDULLA-SUPPLY-VOCAB-R005.9).
 pub fn supply_chain_impact(
     fixture: &CoverageFixture,
     roots: &[String],
     hop_budget: usize,
     rows: &[ImpactRow],
+    contracts: &[String],
+    covers: &[(String, String)],
 ) -> Result<SupplyChainImpactReport, ReportError> {
     let results = select_sources(fixture, roots, hop_budget);
     // `sources_used` is the authority audit of the same verdicts, entry for entry
     // (MEDULLA-SRC-AUTH-R007.4): there is no second builder.
     let audit = audit_from(&results);
-    let abstentions = abstentions_from(&results);
+    let mut abstentions = abstentions_from(&results);
+    let (coverage, contract_abstentions) = contract_coverage(contracts, covers);
+    abstentions.extend(contract_abstentions);
     let mut report = assemble_supply_chain_report(rows, &[], &abstentions)?;
     report.sources_used = sources_used_from_audit(&audit.used)?;
+    report.contract_coverage = coverage;
     Ok(report)
+}
+
+/// The contract coverage read (MEDULLA-SUPPLY-VOCAB-R005.9): one [`ContractCoverage`] per asked
+/// contract with at least one `(contract, service)` pair (contracts sorted, services sorted and
+/// deduplicated), and one [`ReportAbstention::ContractUncovered`] per asked contract with none,
+/// so a contract with no edge is named, never an empty success. Pairs for a contract that was
+/// not asked about are ignored.
+pub fn contract_coverage(
+    contracts: &[String],
+    covers: &[(String, String)],
+) -> (Vec<ContractCoverage>, Vec<ReportAbstention>) {
+    let asked: BTreeSet<&String> = contracts.iter().collect();
+    let mut by_contract: BTreeMap<&String, BTreeSet<&String>> = BTreeMap::new();
+    for (contract, service) in covers {
+        if asked.contains(contract) {
+            by_contract.entry(contract).or_default().insert(service);
+        }
+    }
+    let mut coverage = Vec::new();
+    let mut abstentions = Vec::new();
+    for contract in asked {
+        match by_contract.get(contract) {
+            Some(services) => coverage.push(ContractCoverage {
+                contract: contract.clone(),
+                services: services.iter().map(|service| (*service).clone()).collect(),
+            }),
+            None => abstentions.push(ReportAbstention::ContractUncovered {
+                contract: contract.clone(),
+            }),
+        }
+    }
+    (coverage, abstentions)
 }
 
 /// Map the planner's coverage results onto the report's typed abstentions
@@ -130,7 +172,7 @@ mod tests {
             impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: "gitlab-mcp".to_string(),
         }];
-        let report = supply_chain_impact(&fixture, &roots, 2, &rows).expect("the report assembles");
+        let report = supply_chain_impact(&fixture, &roots, 2, &rows, &[], &[]).expect("the report assembles");
         let encoded = serde_json::to_string(&report).expect("the report encodes");
         let decoded: SupplyChainImpactReport =
             serde_json::from_str(&encoded).expect("the encoding is the typed model");
@@ -147,6 +189,40 @@ mod tests {
             ReportAbstention::Unconnected { source, class }
                 if source == "dockerhub-mcp" && class == "ContainerImage"
         )));
+    }
+
+    // spec: MEDULLA-SUPPLY-VOCAB-R005.9
+    #[test]
+    fn contract_without_edge_is_contract_uncovered() {
+        let contracts = vec!["contract-2".to_string(), "contract-1".to_string()];
+        let covers = vec![
+            ("contract-1".to_string(), "svc-b".to_string()),
+            ("contract-1".to_string(), "svc-a".to_string()),
+            ("contract-1".to_string(), "svc-a".to_string()),
+            ("contract-9".to_string(), "svc-z".to_string()),
+        ];
+        let (coverage, abstentions) = contract_coverage(&contracts, &covers);
+        assert_eq!(
+            coverage,
+            vec![ContractCoverage {
+                contract: "contract-1".to_string(),
+                services: vec!["svc-a".to_string(), "svc-b".to_string()],
+            }]
+        );
+        assert_eq!(
+            abstentions,
+            vec![ReportAbstention::ContractUncovered {
+                contract: "contract-2".to_string()
+            }]
+        );
+        // The served report carries both, and no contract asked means the base report.
+        let report = supply_chain_impact(&CoverageFixture::new(), &[], 0, &[], &contracts, &covers)
+            .expect("the report assembles");
+        assert_eq!(report.contract_coverage, coverage);
+        assert_eq!(report.abstentions, abstentions);
+        let base = supply_chain_impact(&CoverageFixture::new(), &[], 0, &[], &[], &covers)
+            .expect("the base report assembles");
+        assert!(base.contract_coverage.is_empty() && base.abstentions.is_empty());
     }
 
     // spec: MEDULLA-CQ-XSRC-R006.3
@@ -219,7 +295,7 @@ mod tests {
             "Vulnerability".to_string(),
             "ContainerImage".to_string(),
         ];
-        let report = supply_chain_impact(&fixture, &roots, 0, &[]).expect("the report assembles");
+        let report = supply_chain_impact(&fixture, &roots, 0, &[], &[], &[]).expect("the report assembles");
         let audit = audit_from(&select_sources(&fixture, &roots, 0));
         // One entry per used audit entry, in the audit's order, with its premises and mode.
         assert!(!audit.used.is_empty());

@@ -35,6 +35,9 @@ const MAX_SERVICES: usize = 1000;
 /// The node property that names the source that served a component version.
 const SOURCE_PROPERTY: &str = "source";
 
+/// The relationship of the curated contract-to-service edge (MEDULLA-SUPPLY-VOCAB-R005.9).
+const COVERS_SERVICE: &str = "coversService";
+
 /// The local name of an IRI (`...#Service` and `.../Service` give `Service`).
 fn local_name(iri: &str) -> &str {
     iri.rsplit(['#', '/']).next().unwrap_or(iri)
@@ -77,19 +80,9 @@ fn relation_of(blob: &[u8]) -> Option<String> {
         .map(|relation| local_name(relation).to_string())
 }
 
-/// One impact row per (service, component version, supplier, vulnerability) the caller may
-/// read: the service `usesComponent` a version, the version is `supplyChainVersionOf` a
-/// component, the component is `publishedBy` a supplier, and a vulnerability
-/// `affectsComponent` the version. The row's source is the version node's `source`
-/// property; a version with no source refuses the whole answer, it is never defaulted
-/// (`CQ_XSRC_ITEM_WITHOUT_SOURCE`).
-fn impact_rows(
-    core: &GraphCore,
-    read_authority: Option<&GraphReadAuthority>,
-) -> Result<Vec<ImpactRow>, String> {
+/// The snapshot's edges as (relation local name, source id) -> target ids.
+fn outgoing_edges(core: &GraphCore) -> BTreeMap<(String, String), BTreeSet<String>> {
     let view = core.analysis_snapshot();
-    let visible = |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
-    // relation local name -> source id -> target ids, from the snapshot's edges.
     let mut out: BTreeMap<(String, String), BTreeSet<String>> = BTreeMap::new();
     for ((source, target), blobs) in &view.edge_properties {
         for blob in blobs {
@@ -100,6 +93,51 @@ fn impact_rows(
             }
         }
     }
+    out
+}
+
+/// The `(contract, service)` pairs of the asked contracts' `coversService` edges
+/// (MEDULLA-SUPPLY-VOCAB-R005.9), read from the caller's row-projected view: a contract or a
+/// service the caller may not read is absent, never counted. A contract id that names no node
+/// the caller may read is `PARAMETER_INVALID`, the same answer for a denied and a missing node.
+fn contract_covers(
+    core: &GraphCore,
+    read_authority: Option<&GraphReadAuthority>,
+    contracts: &[String],
+) -> Result<Vec<(String, String)>, String> {
+    let visible = |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
+    let out = outgoing_edges(core);
+    let mut covers = Vec::new();
+    for contract in contracts {
+        if !core.has_node(contract) || !visible(contract) {
+            return Err(format!(
+                "PARAMETER_INVALID: contract {contract} names no node the caller may read"
+            ));
+        }
+        if let Some(services) = out.get(&(COVERS_SERVICE.to_string(), contract.clone())) {
+            covers.extend(
+                services
+                    .iter()
+                    .filter(|service| visible(service))
+                    .map(|service| (contract.clone(), service.clone())),
+            );
+        }
+    }
+    Ok(covers)
+}
+
+/// One impact row per (service, component version, supplier, vulnerability) the caller may
+/// read: the service `usesComponent` a version, the version is `supplyChainVersionOf` a
+/// component, the component is `publishedBy` a supplier, and a vulnerability
+/// `affectsComponent` the version. The row's source is the version node's `source`
+/// property; a version with no source refuses the whole answer, it is never defaulted
+/// (`CQ_XSRC_ITEM_WITHOUT_SOURCE`).
+fn impact_rows(
+    core: &GraphCore,
+    read_authority: Option<&GraphReadAuthority>,
+) -> Result<Vec<ImpactRow>, String> {
+    let visible = |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
+    let out = outgoing_edges(core);
     let targets = |relation: &str, from: &str| -> Vec<String> {
         out.get(&(relation.to_string(), from.to_string()))
             .map(|ids| ids.iter().cloned().collect())
@@ -168,6 +206,7 @@ pub async fn handle(
     core: &GraphCore,
     read_authority: Option<&GraphReadAuthority>,
     roots: &[String],
+    contracts: &[String],
 ) -> Response {
     if roots.is_empty() || roots.iter().any(|root| root.trim().is_empty()) {
         return Response::err(
@@ -222,7 +261,11 @@ pub async fn handle(
         Ok(rows) => rows,
         Err(refusal) => return Response::err(req_id, refusal),
     };
-    match supply_chain_impact(&fixture, &roots, HOP_BUDGET, &rows) {
+    let covers = match contract_covers(core, read_authority, contracts) {
+        Ok(covers) => covers,
+        Err(refusal) => return Response::err(req_id, refusal),
+    };
+    match supply_chain_impact(&fixture, &roots, HOP_BUDGET, &rows, contracts, &covers) {
         Ok(report) => Response::ok(
             req_id,
             ResultPayload::of::<medulla_protocol_types::result_contract::query::SupplyChainImpact>(
@@ -251,5 +294,53 @@ mod tests {
         assert_eq!(resolved, vec!["https://example.org/ns/Supplier".to_string()]);
         let refusal = resolve_roots(&fixture, &["Gadget".to_string()]).unwrap_err();
         assert!(refusal.starts_with("CQ_CLASS_UNKNOWN"));
+    }
+
+    fn node(core: &GraphCore, id: &str, kind: &str) {
+        let properties = serde_json::json!({ "type": kind });
+        core.add_node(
+            id.to_string(),
+            rmp_serde::to_vec_named(&properties).expect("encode node"),
+        );
+    }
+
+    fn link(core: &GraphCore, from: &str, relation: &str, to: &str) {
+        let properties = serde_json::json!({ "relationship": relation });
+        core.add_edge(
+            from.to_string(),
+            to.to_string(),
+            rmp_serde::to_vec_named(&properties).expect("encode edge"),
+        )
+        .expect("add edge");
+    }
+
+    // spec: MEDULLA-SUPPLY-VOCAB-R005.9
+    #[test]
+    fn contract_covers_reads_only_the_curated_edges_of_readable_contracts() {
+        let core = GraphCore::new();
+        node(&core, "contract-1", "CustomerContract");
+        node(&core, "contract-2", "CustomerContract");
+        node(&core, "svc-a", "Service");
+        node(&core, "svc-b", "Service");
+        link(&core, "contract-1", "coversService", "svc-b");
+        link(&core, "contract-1", "coversService", "svc-a");
+        link(&core, "contract-2", "mentions", "svc-a");
+
+        let covers = contract_covers(
+            &core,
+            None,
+            &["contract-1".to_string(), "contract-2".to_string()],
+        )
+        .expect("both contracts name a node");
+        assert_eq!(
+            covers,
+            vec![
+                ("contract-1".to_string(), "svc-a".to_string()),
+                ("contract-1".to_string(), "svc-b".to_string()),
+            ],
+            "only coversService edges count; contract-2 has none"
+        );
+        let refusal = contract_covers(&core, None, &["contract-9".to_string()]).unwrap_err();
+        assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
     }
 }

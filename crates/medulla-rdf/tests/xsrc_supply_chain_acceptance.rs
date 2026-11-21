@@ -176,7 +176,7 @@ fn the_recorded_responses_answer_the_impact_question_with_provenance() {
         "https://knuckles-team.github.io/ontology/core#Vulnerability".to_string(),
     ];
 
-    let report = supply_chain_impact(&fixture, &roots, 1, &impact_rows)
+    let report = supply_chain_impact(&fixture, &roots, 1, &impact_rows, &[], &[])
         .expect("the report assembles from the planned rows");
 
     // At least one ServiceImpact with a supplier, a component version and a

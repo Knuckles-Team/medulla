@@ -75,8 +75,13 @@ def _attach_seed(client: Any, graph: str) -> None:
     )
 
 
-def _ask(client: Any, graph: str, roots: list[str]) -> dict:
-    return _decode(client._send("SupplyChainImpact", {"roots": roots}, graph))
+def _ask(
+    client: Any, graph: str, roots: list[str], contracts: list[str] | None = None
+) -> dict:
+    params: dict[str, Any] = {"roots": roots}
+    if contracts is not None:
+        params["contracts"] = contracts
+    return _decode(client._send("SupplyChainImpact", params, graph))
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R011")
@@ -124,6 +129,44 @@ def test_method_returns_typed_report(start_medulla_server) -> None:
         _add_edge(client, graph, "svc-checkout", "usesComponent", "ver-orphan")
         with pytest.raises(Exception, match="CQ_XSRC_ITEM_WITHOUT_SOURCE"):
             _ask(client, graph, ROOTS)
+    finally:
+        client.tenants.delete(graph)
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-SUPPLY-VOCAB-R005.9")
+def test_uncovered_contract_abstains_until_link_is_approved(start_medulla_server) -> None:
+    """Verifies MEDULLA-SUPPLY-VOCAB-R005.9: a contract with no `coversService` edge is
+    `contract_uncovered`; once a steward's approved link is written the report lists the
+    service; a contract that names no node is refused."""
+    graph = f"supply-chain-contract-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        _attach_seed(client, graph)
+        _add_node(client, graph, "svc-checkout", {"type": "Service", "name": "checkout"})
+        _add_node(client, graph, "contract-1", {"type": "CustomerContract"})
+
+        before = _ask(client, graph, ROOTS, ["contract-1"])
+        assert "contract_coverage" not in before
+        assert {"kind": "contract_uncovered", "contract": "contract-1"} in before[
+            "abstentions"
+        ]
+
+        # The steward's approved change request writes the edge through AddEdge.
+        _add_edge(client, graph, "contract-1", "coversService", "svc-checkout")
+        after = _ask(client, graph, ROOTS, ["contract-1"])
+        assert after["contract_coverage"] == [
+            {"contract": "contract-1", "services": ["svc-checkout"]}
+        ]
+        assert {"kind": "contract_uncovered", "contract": "contract-1"} not in after[
+            "abstentions"
+        ]
+
+        # No contract asked is the base report.
+        assert "contract_coverage" not in _ask(client, graph, ROOTS)
+        with pytest.raises(Exception, match="PARAMETER_INVALID"):
+            _ask(client, graph, ROOTS, ["contract-missing"])
     finally:
         client.tenants.delete(graph)
         client.close()

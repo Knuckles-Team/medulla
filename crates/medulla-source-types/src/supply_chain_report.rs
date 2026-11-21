@@ -30,6 +30,23 @@ pub struct SupplyChainImpactReport {
     /// The typed abstentions; a non-empty list never turns the report into an
     /// error.
     pub abstentions: Vec<ReportAbstention>,
+    /// The services each asked-about customer contract covers, from the curated
+    /// `coversService` edges (MEDULLA-SUPPLY-VOCAB-R005.9); empty when no contract was asked
+    /// about (and then omitted from the wire, so the answer is the base report). Sorted by
+    /// contract.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contract_coverage: Vec<ContractCoverage>,
+}
+
+/// The services one customer contract covers (MEDULLA-SUPPLY-VOCAB-R005.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContractCoverage {
+    /// The `:CustomerContract` node id.
+    pub contract: String,
+    /// The target ids of the contract's `coversService` edges, sorted.
+    pub services: Vec<String>,
 }
 
 /// The impact of the supply chain on one service.
@@ -250,6 +267,10 @@ pub enum ReportAbstention {
     Proposed { source: String, class: String },
     /// The source's role cannot answer a question that needs current state.
     RoleInsufficient { source: String, class: String },
+    /// The asked-about customer contract has no `coversService` edge
+    /// (MEDULLA-SUPPLY-VOCAB-R005.9). `Uncovered` stays the class-level verdict of
+    /// `select_sources`.
+    ContractUncovered { contract: String },
 }
 
 impl ReportAbstention {
@@ -264,6 +285,7 @@ impl ReportAbstention {
             Self::Ambiguous { source, class } => (6, source.clone(), class.clone()),
             Self::Proposed { source, class } => (7, source.clone(), class.clone()),
             Self::RoleInsufficient { source, class } => (8, source.clone(), class.clone()),
+            Self::ContractUncovered { contract } => (9, String::new(), contract.clone()),
         }
     }
 }
@@ -364,6 +386,7 @@ pub fn assemble_supply_chain_report(
         service_impacts,
         sources_used,
         abstentions,
+        contract_coverage: Vec::new(),
     })
 }
 

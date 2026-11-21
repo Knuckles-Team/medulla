@@ -47,7 +47,7 @@ Ecosystem risk: a finding on a leaf package reaches every transitive dependent w
 
 Each entry below is planned. The test file or function does not exist in the tree yet; the owning change adds it at this exact path.
 
-- `MEDULLA-SUPPLY-VOCAB-R005.9`: `crates/medulla-core/tests/supply_chain_competency.rs::uncovered_contract_abstains_until_link_is_approved` (planned, L3).
+- `MEDULLA-SUPPLY-VOCAB-R005.9`: `tests/federated/test_supply_chain_impact_served.py::test_uncovered_contract_abstains_until_link_is_approved` (L3); `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::contract_without_edge_is_contract_uncovered` (L1).
 - `MEDULLA-SUPPLY-VOCAB-R005`, `MEDULLA-SUPPLY-VOCAB-R006`: `tests/connector_competency/test_competency_served.py::test_case` (planned, L3), owned by the connector competency spec.
 - `MEDULLA-SUPPLY-VOCAB-R009.3`: `crates/medulla-h-mining/src/mining/impact/tests.rs::served_impact_lists_dependents` (planned, L3).
 - `MEDULLA-SUPPLY-VOCAB-R009`, `MEDULLA-SUPPLY-VOCAB-R009.6`: `crates/medulla-h-mining/src/mining/impact/tests.rs::served_impact_over_dependency_chain` (planned, L3).

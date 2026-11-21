@@ -41,7 +41,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T035 [US5] MEDULLA-SUPPLY-VOCAB-R005.5 Mapping fixture: servicenow `Incident`, `Change` and CI relation to `kg:affectsService`
 - [ ] T036 [US5] MEDULLA-SUPPLY-VOCAB-R005.6 Mapping fixture: salesforce `Account` to `kg:Customer` and `Contract` to `kg:CustomerContract`
 - [ ] T037 [US5] MEDULLA-SUPPLY-VOCAB-R005.8 Mapping fixture: twenty `Company` to `kg:Customer` (rank 2)
-- [ ] T038 [US5] MEDULLA-SUPPLY-VOCAB-R005.9 Curated contract-to-service link
+- [x] T038 [US5] MEDULLA-SUPPLY-VOCAB-R005.9 Curated contract-to-service link
 - [ ] T039 [US5] MEDULLA-SUPPLY-VOCAB-R006.3 Mapping fixture: container-manager workload and image to `kg:deployedAs` and `kg:usesImage`
 - [ ] T040 [US5] MEDULLA-SUPPLY-VOCAB-R006.4 Mapping fixture: uptime monitor to service health
 - [ ] T041 [US5] MEDULLA-SUPPLY-VOCAB-R006.5 Mapping fixture: dockerhub image, SBOM and Scout CVEs to `containsComponent` and `Vulnerability`

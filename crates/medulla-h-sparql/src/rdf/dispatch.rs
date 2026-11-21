@@ -36,13 +36,14 @@ pub async fn try_handle(
     }
     // MEDULLA-CQ-XSRC-R011: the caller's own foreign catalog and the graph's rows; writes nothing.
     #[cfg(feature = "federation")]
-    if let Method::SupplyChainImpact { roots } = &method {
+    if let Method::SupplyChainImpact { roots, contracts } = &method {
         return Ok(crate::supply_chain_impact::handle(
             req_id,
             state,
             &core,
             read_authority,
             roots,
+            contracts,
         )
         .await);
     }

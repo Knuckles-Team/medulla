@@ -345,8 +345,14 @@ $($variants)*
     /// caller has not registered is a typed abstention in the answer. An unknown root refuses
     /// `CQ_CLASS_UNKNOWN`; a blank or empty `roots` refuses `PARAMETER_INVALID`; a caller with no
     /// verified tenant refuses `TENANT_DENIED`. Reads, commits nothing.
+    /// MEDULLA-SUPPLY-VOCAB-R005.9: `contracts` are the `:CustomerContract` node ids the caller
+    /// asks about; the report lists the services each covers through its `coversService` edges
+    /// and names a contract with none as `ContractUncovered`. Empty reads no contract. A contract
+    /// id that names no node the caller may read refuses `PARAMETER_INVALID`.
     SupplyChainImpact {
         roots: Vec<String>,
+        #[serde(default)]
+        contracts: Vec<String>,
     },
     /// MEDULLA-UNIFIED-DATA-PLANE-R764.8: the frequent users of one asset and the joins and
     /// filters common on it, from usage the engine recorded itself. Read only. Refuses
