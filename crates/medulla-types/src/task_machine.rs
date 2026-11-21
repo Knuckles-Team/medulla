@@ -207,7 +207,8 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let source = include_str!("../../medulla-geo/src/geotask.rs");
-        assert!(source.contains("with_status"), "the writer routes through the machine");
-
+        assert!(source.contains("pub fn apply(&mut self, event: TaskEvent)"), "the writer routes through the machine");
+        assert!(!source.contains("fn with_status"), "no builder sets the status directly");
+        assert!(!source.contains("enum TaskStatus"), "the status enum is the machine kind");
     }
 }

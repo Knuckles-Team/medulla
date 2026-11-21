@@ -22,6 +22,8 @@
 //! pure spatial accelerator a caller rebuilds (or persists, via the STR R-tree's serde) as
 //! tasks change.
 
+use medulla_types::task_machine::{TaskEvent, TaskStatusKind};
+use medulla_types::transition_refused::TransitionRefused;
 use serde::{Deserialize, Serialize};
 
 use crate::geometry::{Bbox, Geometry, Point, Polygon};
@@ -35,29 +37,6 @@ where
     <Option<T> as serde::Deserialize>::deserialize(deserializer)
 }
 
-/// The lifecycle status of a [`GeoTask`] (CONCEPT:MEDULLA-KG.domains.geo-task). `Pending` tasks are the ones the
-/// assignment queries hand out.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TaskStatus {
-    /// Unassigned, awaiting a resource — the assignable state.
-    Pending,
-    /// Assigned to a resource but not yet started.
-    Assigned,
-    /// Work in progress.
-    InProgress,
-    /// Finished.
-    Done,
-    /// Cancelled / withdrawn.
-    Cancelled,
-}
-
-impl TaskStatus {
-    /// Is this task assignable (i.e. `Pending`)?
-    pub fn is_pending(&self) -> bool {
-        matches!(self, TaskStatus::Pending)
-    }
-}
-
 /// A geolocated unit of work (CONCEPT:MEDULLA-KG.domains.geo-task): a stable `id`, a map `location`, a `status`
 /// and an optional `service_area` geometry (the region the task covers — e.g. a delivery
 /// zone). Plain serde so the caller can persist it however it likes.
@@ -66,7 +45,7 @@ impl TaskStatus {
 pub struct GeoTask {
     pub id: u64,
     pub location: Point,
-    pub status: TaskStatus,
+    pub status: TaskStatusKind,
     #[serde(deserialize_with = "deserialize_required_option")]
     pub service_area: Option<Geometry>,
 }
@@ -77,15 +56,22 @@ impl GeoTask {
         Self {
             id,
             location,
-            status: TaskStatus::Pending,
+            status: TaskStatusKind::initial(),
             service_area: None,
         }
     }
 
-    /// This task with an explicit status (builder style).
-    pub fn with_status(mut self, status: TaskStatus) -> Self {
-        self.status = status;
-        self
+    /// Move the task along `GeoTaskMachine` (MEDULLA-FEDERATED-QUERY-R738.8). This is the one
+    /// writer of `status` after construction: an illegal pair is refused with
+    /// `TRANSITION_REFUSED` and changes nothing.
+    pub fn apply(&mut self, event: TaskEvent) -> Result<(), TransitionRefused> {
+        self.status = self.status.apply(event)?;
+        Ok(())
+    }
+
+    /// Is this task assignable (i.e. `Pending`)?
+    pub fn is_pending(&self) -> bool {
+        self.status == TaskStatusKind::Pending
     }
 
     /// This task with a service-area geometry (builder style).
@@ -206,7 +192,7 @@ impl GeoTaskIndex {
         let mut k = 8.min(self.tasks.len().max(1));
         loop {
             let hits = self.nearest(resource, k);
-            if let Some(hit) = hits.iter().find(|(t, _)| t.status.is_pending()) {
+            if let Some(hit) = hits.iter().find(|(t, _)| t.is_pending()) {
                 return Some(*hit);
             }
             if hits.len() >= self.tasks.len() {
@@ -226,7 +212,7 @@ impl GeoTaskIndex {
             .tasks
             .iter()
             .enumerate()
-            .filter(|(_, t)| t.status.is_pending())
+            .filter(|(_, t)| t.is_pending())
             .map(|(i, _)| i)
             .collect();
         // All (distance, resource, task) pairs, sorted ascending by distance.
@@ -298,11 +284,20 @@ mod tests {
     use super::*;
     use crate::geometry::LineString;
 
+    /// A task driven to `Done` through the machine's own events.
+    fn done_task(id: u64, location: Point) -> GeoTask {
+        let mut task = GeoTask::new(id, location);
+        for event in [TaskEvent::Assign, TaskEvent::Start, TaskEvent::Complete] {
+            task.apply(event).unwrap();
+        }
+        task
+    }
+
     fn sample_tasks() -> Vec<GeoTask> {
         vec![
             GeoTask::new(1, Point::new(0.0, 0.0)),
             GeoTask::new(2, Point::new(10.0, 10.0)),
-            GeoTask::new(3, Point::new(5.0, 5.0)).with_status(TaskStatus::Done),
+            done_task(3, Point::new(5.0, 5.0)),
             GeoTask::new(4, Point::new(2.0, 3.0)),
             GeoTask::new(5, Point::new(-4.0, 8.0)),
         ]
@@ -362,7 +357,7 @@ mod tests {
         let idx = GeoTaskIndex::build(sample_tasks());
         // Nearest to (5,5) is task 3 (Done) — assignment must skip it and pick a pending one.
         let (t, _d) = idx.assign_nearest_task(&Point::new(5.0, 5.0)).unwrap();
-        assert!(t.status.is_pending());
+        assert!(t.is_pending());
         assert_ne!(t.id, 3, "the Done task is not assignable");
         assert_eq!(t.id, 4, "nearest pending is (2,3)");
     }
@@ -428,9 +423,7 @@ mod tests {
     #[test]
     fn eg267_geotask_serde_round_trip() {
         // A task persists via serde (the caller owns storage) and reloads identically.
-        let t = GeoTask::new(7, Point::new(1.5, -2.5))
-            .with_status(TaskStatus::InProgress)
-            .with_service_area(Geometry::Polygon(Polygon::new(
+        let mut t = GeoTask::new(7, Point::new(1.5, -2.5)).with_service_area(Geometry::Polygon(Polygon::new(
                 LineString::new(vec![
                     Point::new(0.0, 0.0),
                     Point::new(3.0, 0.0),
@@ -439,8 +432,28 @@ mod tests {
                 ]),
                 Vec::new(),
             )));
+        t.apply(TaskEvent::Assign).unwrap();
+        t.apply(TaskEvent::Start).unwrap();
         let s = serde_json::to_string(&t).unwrap();
+        assert!(s.contains("\"status\":\"in_progress\""));
         let back: GeoTask = serde_json::from_str(&s).unwrap();
         assert_eq!(t, back);
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R738.8
+    #[test]
+    fn status_moves_only_through_apply() {
+        let mut task = GeoTask::new(1, Point::new(0.0, 0.0));
+        assert!(task.is_pending());
+        // An illegal pair is refused and changes nothing.
+        let refused = task.apply(TaskEvent::Complete).unwrap_err();
+        assert_eq!(refused.machine, "GeoTaskMachine");
+        assert_eq!(task.status, TaskStatusKind::Pending);
+        task.apply(TaskEvent::Assign).unwrap();
+        assert_eq!(task.status, TaskStatusKind::Assigned);
+        task.apply(TaskEvent::Cancel).unwrap();
+        assert_eq!(task.status, TaskStatusKind::Cancelled);
+        assert!(task.apply(TaskEvent::Assign).is_err());
+        assert!(!task.is_pending());
     }
 }

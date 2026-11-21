@@ -5549,6 +5549,7 @@ name = "medulla-geo"
 version = "0.1.0"
 dependencies = [
  "medulla-modality",
+ "medulla-types",
  "serde",
  "serde_json",
 ]

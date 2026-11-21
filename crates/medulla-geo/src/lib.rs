@@ -101,7 +101,7 @@ pub use algebra::{buffer, centroid, convex_hull, difference, intersection, simpl
 pub use crs::{reproject, Crs, SridGeometry};
 pub use geodesic::{geodesic_area, geodesic_ring_area, haversine_distance, vincenty_distance};
 pub use geometry::{Bbox, Geometry, LineString, Point, Polygon};
-pub use geotask::{nearest_resource, Assignment, GeoTask, GeoTaskIndex, TaskStatus};
+pub use geotask::{nearest_resource, Assignment, GeoTask, GeoTaskIndex};
 pub use gpx::{read_gpx, Gpx};
 pub use kml::{read_kml, write_kml, Kml, Placemark};
 pub use predicates::{

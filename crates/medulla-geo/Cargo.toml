@@ -19,6 +19,8 @@ name = "medulla_geo"
 # workspace-wide) backs ONLY the GeoJSON reader/writer, behind the `geo-io` feature.
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+# The one `GeoTaskMachine` the task status runs on (MEDULLA-FEDERATED-QUERY-R738.8); `kernels` layer over the `contract` layer.
+medulla-types = { path = "../medulla-types" }
 # GeoJSON (CONCEPT:MEDULLA-264) reuses serde_json — a dep already compiled everywhere in the
 # workspace, NOT a new heavy dep, and medulla-geo is already OUT of `pi` so this never touches
 # the Raspberry-Pi build. Optional so a serde_json-free consumer can still get geometry +
