@@ -28,7 +28,7 @@ pub struct SlotAssignment {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum AbstainReason {
     /// A required capability no candidate covers.
-    UncoveredCapability { iri: String },
+    UncoveredCapability { capability: String },
     /// A declared capability IRI that is not a native term.
     UnresolvedCapabilityIri { iri: String },
     /// Free text no mapping resolved to a task.

@@ -197,7 +197,7 @@ pub fn every_violation() -> Vec<Violation> {
 pub fn every_abstain_reason() -> Vec<AbstainReason> {
     vec![
         AbstainReason::UncoveredCapability {
-            iri: "eg:capability/retrieval".to_string(),
+            capability: "eg:capability/retrieval".to_string(),
         },
         AbstainReason::UnresolvedCapabilityIri {
             iri: "urn:vendor:thing".to_string(),

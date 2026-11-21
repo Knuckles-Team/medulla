@@ -374,7 +374,7 @@ impl Rows<'_> {
         let mut reasons: Vec<AbstainReason> = self
             .uncovered
             .iter()
-            .map(|iri| AbstainReason::UncoveredCapability { iri: iri.clone() })
+            .map(|iri| AbstainReason::UncoveredCapability { capability: iri.clone() })
             .collect();
         if !self.infeasible.is_empty() {
             let constraints = self.infeasible.iter().take(64).cloned().collect();

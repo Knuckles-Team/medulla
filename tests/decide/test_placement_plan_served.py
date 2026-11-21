@@ -91,7 +91,8 @@ def test_plan_over_wire(authenticated_plan_client):
     # No host declares `backtest`: the decision abstains and names it.
     gap = _decide(client, services)
     assert gap["outcome"]["outcome"] == "abstained", gap["outcome"]
-    assert "Backtest" in str(gap["outcome"]), gap["outcome"]
+    assert "uncovered_capability" in str(gap["outcome"]), gap["outcome"]
+    assert "backtest" in str(gap["outcome"]), gap["outcome"]
 
     # One host declares it: the plan solves and only the service that needs it moves.
     client.lifecycle.batch_update([_host("host:delta", ["backtest"])])

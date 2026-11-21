@@ -235,7 +235,7 @@ pub(super) fn abstained(
     let derivations: Vec<CoverageDerivation> = reasons
         .iter()
         .filter_map(|reason| {
-            let AbstainReason::UncoveredCapability { iri } = reason else {
+            let AbstainReason::UncoveredCapability { capability: iri } = reason else {
                 return None;
             };
             coverage_derivation(iri, None)

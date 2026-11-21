@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class AbstainReasonUncoveredCapability(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    iri: str
+    capability: str
     reason: Literal["uncovered_capability"]
 
 

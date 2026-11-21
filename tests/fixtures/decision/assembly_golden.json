@@ -2844,7 +2844,7 @@
         "reasons": [
           {
             "reason": "uncovered_capability",
-            "iri": "eg:capability/action/process-exec"
+            "capability": "eg:capability/action/process-exec"
           }
         ]
       },

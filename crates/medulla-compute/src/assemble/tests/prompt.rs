@@ -54,7 +54,7 @@ fn selection_scores_by_match_and_confidence_and_abstains() {
     assert_eq!(
         select_system_prompt(&need, &[task], 1_000_000),
         Err(AbstainReason::UncoveredCapability {
-            iri: "urn:t:a".into()
+            capability: "urn:t:a".into()
         })
     );
 
@@ -63,13 +63,13 @@ fn selection_scores_by_match_and_confidence_and_abstains() {
     assert_eq!(
         select_system_prompt(&need, &[only_b], 1_000_000),
         Err(AbstainReason::UncoveredCapability {
-            iri: "urn:t:a".into()
+            capability: "urn:t:a".into()
         })
     );
     assert_eq!(
         select_system_prompt(&need, &[], 1_000_000),
         Err(AbstainReason::UncoveredCapability {
-            iri: "urn:t:a".into()
+            capability: "urn:t:a".into()
         })
     );
 }

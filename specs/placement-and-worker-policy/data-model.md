@@ -19,7 +19,7 @@ Governing plan: [plan.md](plan.md). This file lists the types, vocabulary and se
 | `RoutingDecision` (new) | `job_id`, `required_capability`, `candidates` (at most 64), `chosen`, `topology_generation` | R004.5 |
 | `HostBudget` (new, `placement_plan.rs`) | `host_iri`, `cpu_millis`, `memory_bytes`, `storage_bytes`, `capabilities` | R700.1 |
 | `ServiceSpec` (new) | `service_iri`, `cpu_millis`, `memory_bytes`, `storage_bytes`, `required_capability`, `current_host` | R700.1 |
-| `PlacementPlan` (new) | `placements`, `moves`, `certificate_digest` | R700.1 |
+| `PlacementPlan` (new) | `placements`, `moves`, `certificate_digest`, `objective`, `bound`, `node_count` | R700.1, R700.5 |
 
 ## Ontology (`crates/medulla-core/ontology/placement.ttl`, new)
 

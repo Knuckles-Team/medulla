@@ -728,7 +728,7 @@ async fn assemble_abstains_on_uncovered_component() {
         );
     };
     match reasons.as_slice().first() {
-        Some(AbstainReason::UncoveredCapability { iri }) => assert!(!iri.is_empty()),
+        Some(AbstainReason::UncoveredCapability { capability }) => assert!(!capability.is_empty()),
         other => panic!("expected the uncovered capability first, got {other:?}"),
     }
     assert!(

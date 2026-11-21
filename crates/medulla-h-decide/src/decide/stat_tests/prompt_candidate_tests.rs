@@ -50,7 +50,7 @@ fn assemble_selects_covering_candidate_and_abstains_without_one() {
     assert_eq!(
         abstained,
         Err(AbstainReason::UncoveredCapability {
-            iri: "urn:task:c".into()
+            capability: "urn:task:c".into()
         })
     );
 }

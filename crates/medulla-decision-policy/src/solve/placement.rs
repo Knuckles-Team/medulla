@@ -25,6 +25,7 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::knob_families::placement::PlanKnobs;
+use medulla_decision_types::decision::statistical::placement::HeavyCapability;
 use medulla_decision_types::decision::statistical::placement_plan::{
     HostBudget, PlacementPlan, ServiceMove, ServicePlacement, ServiceSpec,
 };
@@ -95,22 +96,21 @@ pub fn plan_services(
         return Err("PARAMETER_INVALID: a host is named twice".to_string());
     }
 
-    // A service no host can take abstains naming the capability gap.
-    let gaps: Vec<String> = services
+    // A service no host can take abstains with the typed `UncoveredCapability`
+    // naming each missing capability once, in sorted order.
+    let gaps: std::collections::BTreeSet<HeavyCapability> = services
         .iter()
         .filter(|service| !hosts.iter().any(|host| capable(host, service)))
-        .map(|service| {
-            format!(
-                "{}: requires capability {:?}",
-                service.service_iri,
-                service
-                    .required_capability
-                    .expect("only a required capability can be missing")
-            )
-        })
+        .filter_map(|service| service.required_capability)
         .collect();
     if !gaps.is_empty() {
-        return infeasible(gaps);
+        return Ok(PlanOutcome::Abstained(
+            gaps.into_iter()
+                .map(|capability| AbstainReason::UncoveredCapability {
+                    capability: capability_name(capability),
+                })
+                .collect(),
+        ));
     }
 
     // Stayers: services whose current host is declared, capable and fits.
@@ -156,9 +156,21 @@ pub fn plan_services(
             placements,
             moves: Vec::new(),
             certificate_digest: String::from(digest),
+            objective: Scalar::new(0),
+            bound: Some(Scalar::new(0)),
+            node_count: 0,
         }));
     }
     solve_residual(hosts, services, &residual, (&mut stays, &used), knobs)
+}
+
+/// The wire name of a capability (`backtest`, `gpu`, ...), the spelling the
+/// placement ontology and a host's `capabilities` declare.
+fn capability_name(capability: HeavyCapability) -> String {
+    serde_json::to_value(capability)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_else(|| format!("{capability:?}"))
 }
 
 fn infeasible(constraints: Vec<String>) -> Result<PlanOutcome, String> {
@@ -176,6 +188,26 @@ fn budget_exhausted(lower_bound: Option<Scalar>) -> Result<PlanOutcome, String> 
             lower_bound: lower_bound.unwrap_or(Scalar::new(0)),
         },
     ]))
+}
+
+/// The first resource (`cpu`, `memory` or `storage`) whose demand of service
+/// `s` exceeds the free room of every capable host, `capacity` when each
+/// dimension fits some host on its own.
+fn first_exceeded(
+    hosts: &[HostBudget],
+    services: &[ServiceSpec],
+    s: usize,
+    used: &[[u64; 3]],
+) -> &'static str {
+    let need = demand(&services[s]);
+    (0..3)
+        .find(|&d| {
+            hosts.iter().enumerate().all(|(h, host)| {
+                !capable(host, &services[s])
+                    || need[d] > budget(host)[d].saturating_sub(used[h][d])
+            })
+        })
+        .map_or("capacity", |d| DIMENSIONS[d])
 }
 
 /// Build and solve the program over the services that cannot stay.
@@ -222,8 +254,9 @@ fn solve_residual(
             .collect();
         if vars.is_empty() {
             return infeasible(vec![format!(
-                "{}: no capable host has room",
-                services[s].service_iri
+                "{}: {} exceeded",
+                services[s].service_iri,
+                first_exceeded(hosts, services, s, used)
             )]);
         }
         constraints.push(ConstraintSpec {
@@ -355,10 +388,17 @@ fn solve_residual(
             })
         })
         .collect();
+    let objective = certificate
+        .incumbent
+        .as_ref()
+        .map_or(Scalar::new(0), |incumbent| incumbent.objective.scalar);
     Ok(PlanOutcome::Planned(PlacementPlan {
         placements,
         moves,
         certificate_digest: String::from(certificate.digest()),
+        objective,
+        bound: certificate.lower_bound,
+        node_count: certificate.nodes_expanded,
     }))
 }
 
@@ -514,10 +554,12 @@ mod tests {
         else {
             panic!("a capability gap must abstain")
         };
-        let [AbstainReason::Infeasible { constraints }] = reasons.as_slice() else {
-            panic!("{reasons:?}")
-        };
-        assert!(constraints.as_slice()[0].ends_with("requires capability Backtest"));
+        assert_eq!(
+            reasons,
+            vec![AbstainReason::UncoveredCapability {
+                capability: "backtest".to_string()
+            }]
+        );
 
         // A program above the solver's variable limit abstains BudgetExhausted.
         let wide: Vec<HostBudget> = (0..MAX_VARIABLES + 1)

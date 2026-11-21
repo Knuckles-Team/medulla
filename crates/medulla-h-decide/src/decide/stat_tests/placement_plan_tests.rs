@@ -200,13 +200,13 @@ async fn capability_gap_abstains_and_plan_solves() {
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         panic!("a capability gap must abstain: {:?}", record.outcome)
     };
-    let named = reasons.iter().any(|reason| match reason {
-        AbstainReason::Infeasible { constraints } => constraints
-            .iter()
-            .any(|constraint| constraint.contains("Backtest")),
-        _ => false,
+    let named = reasons.iter().any(|reason| {
+        matches!(
+            reason,
+            AbstainReason::UncoveredCapability { capability } if capability == "backtest"
+        )
     });
-    assert!(named, "the abstention names Backtest: {reasons:?}");
+    assert!(named, "the abstention names backtest: {reasons:?}");
     assert!(record.answer.is_none(), "an abstention seals no plan");
 
     // After one host declares the capability the plan solves with the minimum moves: only
@@ -230,4 +230,69 @@ async fn capability_gap_abstains_and_plan_solves() {
     assert_eq!(plan.moves[0].from_host, "host:alpha");
     assert_eq!(plan.moves[0].to_host, "host:delta");
     plan.check().unwrap();
+}
+
+// spec: MEDULLA-PLACEMENT-R700.4
+#[tokio::test]
+async fn plan_refusals_by_reason() {
+    let h = plan_harness(&[("host:alpha", &[])]).await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+
+    // A capability no host declares abstains with the typed reason.
+    let gap = vec![service("svc:a", 250, Some(HeavyCapability::Gpu), None)];
+    let batch = decide(&h, plan_request(&schema_pin, gap, None)).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("a capability gap must abstain: {:?}", record.outcome)
+    };
+    assert_eq!(
+        reasons.as_slice(),
+        [AbstainReason::UncoveredCapability {
+            capability: "gpu".to_string()
+        }]
+    );
+    assert!(record.answer.is_none(), "an abstention seals no plan");
+
+    // A plan that cannot fit names the first exceeded resource.
+    let overrun = vec![service("svc:big", 9_000, None, None)];
+    let batch = decide(&h, plan_request(&schema_pin, overrun, None))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("an overrun must abstain: {:?}", record.outcome)
+    };
+    let [AbstainReason::Infeasible { constraints }] = reasons.as_slice() else {
+        panic!("{reasons:?}")
+    };
+    assert!(
+        constraints.iter().any(|constraint| constraint.ends_with("cpu exceeded")),
+        "{constraints:?}"
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R700.5
+#[tokio::test]
+async fn plan_record_replays_from_inputs() {
+    let h = plan_harness(&[("host:alpha", &[]), ("host:beta", &[])]).await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+    let services = vec![
+        service("svc:a", 250, None, Some("host:alpha")),
+        service("svc:b", 250, None, None),
+    ];
+    let first = decide(&h, plan_request(&schema_pin, services.clone(), None))
+        .await
+        .unwrap();
+    let second = decide(&h, plan_request(&schema_pin, services, None))
+        .await
+        .unwrap();
+    let plan_of = |batch: &DecisionBatch| match &batch.records.as_slice()[0].answer {
+        Some(FamilyAnswer::PlacementPlan(plan)) => plan.clone(),
+        other => panic!("a placement plan is sealed: {other:?}"),
+    };
+    let (plan, again) = (plan_of(&first), plan_of(&second));
+    assert_eq!(plan, again, "the same inputs reproduce the same plan");
+    plan.check().unwrap();
+    assert!(plan.node_count > 0, "the solver certificate counts its nodes");
+    assert!(plan.bound.is_some(), "the certificate carries its bound");
 }

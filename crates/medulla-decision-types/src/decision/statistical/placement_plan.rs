@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_query_types::solve_scalar::Scalar;
+
 use super::placement::HeavyCapability;
 
 /// Most hosts one request may carry.
@@ -65,6 +67,13 @@ pub struct PlacementPlan {
     pub placements: Vec<ServicePlacement>,
     pub moves: Vec<ServiceMove>,
     pub certificate_digest: String,
+    /// The solver's scalar objective of the plan (MEDULLA-PLACEMENT-R700.5);
+    /// zero for a plan in which every service stays and no program is solved.
+    pub objective: Scalar,
+    /// The certified lower bound of the solve, when the proof carries one.
+    pub bound: Option<Scalar>,
+    /// Search nodes the solver expanded; zero when no program is solved.
+    pub node_count: u64,
 }
 
 /// The name of the one parameter a `placement_plan` question carries
@@ -175,6 +184,9 @@ mod tests {
                 to_host: h.host_iri.clone(),
             }],
             certificate_digest: "a".repeat(64),
+            objective: Scalar::new(2),
+            bound: Some(Scalar::new(2)),
+            node_count: 7,
         };
         let h2: HostBudget = serde_json::from_str(&serde_json::to_string(&h).unwrap()).unwrap();
         let s2: ServiceSpec = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();

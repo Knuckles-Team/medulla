@@ -155,7 +155,7 @@ fn retired_and_withdrawn_and_denied_candidates_are_eliminated_with_their_rule() 
     // step can bring an eliminated option back to cover it.
     assert!(reasons(&assembly).iter().any(|reason| *reason
         == AbstainReason::UncoveredCapability {
-            iri: "eg:capability/retrieval".to_string()
+            capability: "eg:capability/retrieval".to_string()
         }));
 }
 

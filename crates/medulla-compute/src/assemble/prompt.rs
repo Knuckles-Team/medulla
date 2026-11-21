@@ -216,7 +216,7 @@ pub fn select_system_prompt(
         .or_else(|| required.iter().next())
         .cloned()
         .unwrap_or_default();
-    Err(AbstainReason::UncoveredCapability { iri })
+    Err(AbstainReason::UncoveredCapability { capability: iri })
 }
 
 #[cfg(test)]

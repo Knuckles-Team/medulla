@@ -64,7 +64,7 @@ pub(super) fn attribute(inputs: &DecisionInputs, decided: &mut Decided) {
     let mapped: Vec<AbstainReason> = reasons
         .iter()
         .map(|reason| match reason {
-            AbstainReason::UncoveredCapability { iri }
+            AbstainReason::UncoveredCapability { capability: iri }
                 if profile
                     .blocked_capabilities
                     .iter()
