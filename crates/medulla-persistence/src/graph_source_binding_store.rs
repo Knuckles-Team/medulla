@@ -25,8 +25,11 @@ type Durable =
 /// One stored binding: its tenant, its id and the selector JSON.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphSourceBindingRow {
+    /// The tenant the binding belongs to.
     pub tenant: String,
+    /// The binding id, unique within the tenant.
     pub binding_id: String,
+    /// The binding's selector, as JSON.
     pub selector_json: String,
 }
 

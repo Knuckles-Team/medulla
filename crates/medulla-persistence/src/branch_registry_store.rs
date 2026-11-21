@@ -257,7 +257,9 @@ pub enum MergeHeadMove {
     /// A two-parent merge commit (the target head first, the source head
     /// second). `replay_key` is `(source_head, target_head, merge_base)`.
     Merge {
+        /// The replay key `(source_head, target_head, merge_base)`.
         replay_key: String,
+        /// The merge commit to write.
         input: BranchCommitInput,
     },
 }
@@ -265,6 +267,7 @@ pub enum MergeHeadMove {
 /// What one merge publication writes into the registry, in one transaction.
 #[derive(Debug, Clone)]
 pub struct MergeWrite {
+    /// How the target head moves.
     pub head_move: MergeHeadMove,
     /// History index rows (relative keys) copied into the target when it lacks
     /// them; a row the target already holds is left as it is.
