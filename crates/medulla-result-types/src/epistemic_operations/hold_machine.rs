@@ -253,6 +253,42 @@ mod tests {
             .is_err());
     }
 
+    // spec: MEDULLA-PLACEMENT-R780.3
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &LANE_HOLD_MACHINE;
+        assert!(!machine.edges.is_empty());
+        for edge in machine.edges {
+            assert_eq!(edge.from.apply(edge.event, |_| true), Ok(edge.to), "{}", edge.id);
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R780.3
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &LANE_HOLD_MACHINE;
+        for &state in machine.states {
+            for &event in machine.events {
+                let has_edge = machine
+                    .edges
+                    .iter()
+                    .any(|edge| edge.from == state && edge.event == event);
+                if has_edge {
+                    continue;
+                }
+                let refused = state.apply(event, |_| true).unwrap_err();
+                let expected = if machine.is_terminal(state) {
+                    TransitionRefusalReason::TerminalState
+                } else {
+                    TransitionRefusalReason::IllegalTransition
+                };
+                assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+                assert_eq!(refused.machine, "LaneHoldMachine");
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+            }
+        }
+    }
+
     // spec: MEDULLA-PLACEMENT-R780.1
     #[test]
     fn refusal_carries_machine_from_event() {
