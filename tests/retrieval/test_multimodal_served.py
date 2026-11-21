@@ -33,6 +33,7 @@ from conftest import (
 )
 
 from medulla.client import EngineResponseError, SyncMedullaClient
+from medulla.generated.models import RankedRows, ShortfallReason
 
 ENCODER = "builtin:hash"
 DIMENSIONS = 8
@@ -61,7 +62,10 @@ def declare(cl: Any, graph: str, declared: dict[str, Any]) -> str:
     return cl.graph.declare_embedding_space(declared, graph)
 
 
-def unified(cl: Any, graph: str, ops: list[dict[str, Any]], pair: dict[str, str]) -> Any:
+def unified(
+    cl: Any, graph: str, ops: list[dict[str, Any]], pair: dict[str, str]
+) -> RankedRows:
+    """The served answer, validated against the generated ``RankedRows`` model."""
     result = cl._send(
         "UnifiedQuery",
         {"plan": {"ops": ops, "report_shortfall": True}, "retrieval": {"modality": pair}},
@@ -69,7 +73,7 @@ def unified(cl: Any, graph: str, ops: list[dict[str, Any]], pair: dict[str, str]
     )
     if isinstance(result, (bytes, bytearray)):
         result = msgpack.unpackb(result, raw=False)
-    return result
+    return RankedRows.model_validate(result)
 
 
 def _ranked_ops(text: str, k: int) -> list[dict[str, Any]]:
@@ -101,11 +105,12 @@ def test_missing_embedding_shortfall_and_refusals(start_medulla_server) -> None:
         assert declare(cl, graph, space()) == "space-digest-a"
 
         answer = unified(cl, graph, _ranked_ops("entry", 4), _TEXT_TO_TEXT)
-        shortfall = answer["shortfall"]
-        assert shortfall["requested"] == 4
-        assert shortfall["found"] == 2
-        assert shortfall["missing"] == 2
-        assert shortfall["reason"] == "missing_embedding"
+        shortfall = answer.shortfall
+        assert shortfall is not None
+        assert shortfall.requested == 4
+        assert shortfall.found == 2
+        assert shortfall.missing == 2
+        assert shortfall.reason == ShortfallReason.MISSING_EMBEDDING
 
         # A graph whose text binding names no registered encoder refuses.
         other = f"multimodal-unbound-{uuid.uuid4().hex[:8]}"
@@ -147,15 +152,16 @@ def test_receipt_matches_model_calls(start_medulla_server) -> None:
         put(cl, graph, "b", {"type": "Doc"}, hashed("b"))
         declare(cl, graph, space())
         answer = unified(cl, graph, _ranked_ops("entry", 2), _TEXT_TO_TEXT)
-        modality = answer["receipt"]["modality"]
-        assert modality["modality_direction"] == "text->text"
-        assert modality["space_id"] == ENCODER
-        assert modality["model_revisions"] == [REVISION]
-        assert modality["authorized_shortfall_counts"] is None
-        assert modality["encoding_calls"] == [
+        assert answer.receipt is not None and answer.receipt.modality is not None
+        modality = answer.receipt.modality
+        assert modality.modality_direction == "text->text"
+        assert modality.space_id == ENCODER
+        assert modality.model_revisions == [REVISION]
+        assert modality.authorized_shortfall_counts is None
+        assert [call.model_dump() for call in modality.encoding_calls] == [
             {"model": ENCODER, "modality": "text", "input_digest": _digest("entry")}
         ]
-        assert isinstance(modality["index_generation"], int)
+        assert isinstance(modality.index_generation, int)
     finally:
         cl.tenants.delete(graph)
         cl.close()
@@ -232,5 +238,5 @@ def test_declared_space_is_durable_and_refuses_a_different_one(tmp_path) -> None
         assert "already declares embedding space" in str(still_refused.value)
         assert declare(cl, graph, space()) == "space-digest-a"
         served = unified(cl, graph, _ranked_ops("entry", 1), _TEXT_TO_TEXT)
-        assert "QUERY_ENCODER_UNAVAILABLE" not in str(served)
-        assert served["receipt"]["modality"]["space_id"] == ENCODER
+        assert served.receipt is not None and served.receipt.modality is not None
+        assert served.receipt.modality.space_id == ENCODER
