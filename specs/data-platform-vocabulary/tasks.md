@@ -45,4 +45,4 @@ One task per leaf row of `requirements.md`, producers first: shared terms and re
 - [ ] T039 [US5] MEDULLA-DATAPLAT-VOCAB-R009.3 DurableUnit/DurableUnitStatus state machine: route 1 census findings through DurableUnitStatus::apply
 - [ ] T040 [US5] MEDULLA-DATAPLAT-VOCAB-R009.4 GlossaryTerm/GlossaryTermStatus state machine: route 1 census findings through GlossaryTermStatus::apply
 - [ ] T041 [US5] MEDULLA-DATAPLAT-VOCAB-R009.5 OntologyProposal/ProposalState state machine: route 2 census findings through ProposalState::apply
-- [ ] T042 [US5] MEDULLA-DATAPLAT-VOCAB-R009.6 ProposedQualityRule/RuleState state machine: route 1 census findings through RuleState::apply
+- [ ] T042 [US5] MEDULLA-DATAPLAT-VOCAB-R009.6 Add `QualityRuleMachine` on the `Copy` kind `RuleStateKind` in `crates/medulla-types/src/quality_rule_machine.rs` (edge QR01 Proposed --Approve--> Approved); give `RuleState` `kind`/`initial`/`approve`; route `propose_rules`, `ProposedQualityRule::approve` and `put_quality_rule` through it; add the `:QualityRuleMachine` Turtle block and the two `state_machine_vocabulary.rs` tests
