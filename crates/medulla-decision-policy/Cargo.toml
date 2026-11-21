@@ -38,3 +38,11 @@ name = "solve_cover"
 path = "benches/solve_cover.rs"
 harness = false
 required-features = ["solve"]
+
+# Placement-plan solve bench (MEDULLA-PLACEMENT-R700.6), group `decide/placement_plan`.
+# Run: `cargo bench -p medulla-decision-policy --features solve --bench placement_plan`.
+[[bench]]
+name = "placement_plan"
+path = "benches/placement_plan.rs"
+harness = false
+required-features = ["solve"]
