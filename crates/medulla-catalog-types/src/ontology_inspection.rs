@@ -141,6 +141,16 @@ pub struct OntologyCoverageView {
     pub unmapped: Vec<OntologyUnmappedClassView>,
     /// SHA-256 over the revision and the sorted declared class set.
     pub source_digest: String,
+    /// The tenant that imported the pack (MEDULLA-TYPED-PACKS-R097.2.5).
+    pub tenant_id: String,
+    /// The graph the pack was activated on.
+    pub graph: String,
+    /// The immutable pack revision the coverage was computed for.
+    pub pack_record_id: String,
+    /// The target vocabulary revisions of the committed crosswalks, sorted.
+    pub target_vocabulary_revisions: Vec<String>,
+    /// The composed schema digest the coverage was computed against.
+    pub schema_digest: String,
 }
 
 /// What `OntologyInspect` read: the vocabulary, SHACL targets and identity of a

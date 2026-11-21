@@ -21,6 +21,9 @@ const VOCABULARY: &str = "@prefix : <https://knuckles-team.github.io/ontology/co
     :name a owl:DatatypeProperty ; rdfs:range xsd:string .\n\
     :AgentShape a sh:NodeShape ; sh:targetClass :Agent .\n";
 
+/// The graph the inspection fixtures are read on.
+const TEST_GRAPH: &str = "inspect-graph";
+
 fn kg(local: &str) -> String {
     format!("{KG}{local}")
 }
@@ -30,7 +33,7 @@ fn inline(documents: &[&str]) -> Result<OntologyInspection, String> {
         .iter()
         .map(|document| document.to_string())
         .collect();
-    inspect(&GraphCore::new(), &documents, &[])
+    inspect(&GraphCore::new(), TEST_GRAPH, &documents, &[])
 }
 
 #[test]
@@ -112,7 +115,7 @@ fn a_document_with_blank_nodes_has_no_canonical_digest() {
 #[test]
 fn the_composed_schema_reads_the_live_core_catalog() {
     let core = GraphCore::new();
-    let all = inspect(&core, &[], &[]).unwrap();
+    let all = inspect(&core, TEST_GRAPH, &[], &[]).unwrap();
     assert!(all.composed_digest.is_some());
     assert!(all.triple_count > 0);
     assert!(
@@ -124,7 +127,7 @@ fn the_composed_schema_reads_the_live_core_catalog() {
 
     // A named-source filter reads a strict subset of the same composed catalog
     // (same composed digest, fewer triples than the unfiltered read).
-    let catalog = inspect(&core, &[], &["core:catalog@1".to_string()]).unwrap();
+    let catalog = inspect(&core, TEST_GRAPH, &[], &["core:catalog@1".to_string()]).unwrap();
     assert_eq!(catalog.schema_digests.len(), 1);
     assert_eq!(catalog.composed_digest, all.composed_digest);
     assert!(catalog.triple_count <= all.triple_count);
@@ -136,11 +139,12 @@ fn ambiguous_unknown_and_malformed_requests_are_refused() {
     let core = GraphCore::new();
     let both = inspect(
         &core,
+        TEST_GRAPH,
         &[VOCABULARY.to_string()],
         &["core:catalog@1".to_string()],
     );
     assert!(both.unwrap_err().contains("not both"));
-    let unknown = inspect(&core, &[], &["core:no-such@1".to_string()]);
+    let unknown = inspect(&core, TEST_GRAPH, &[], &["core:no-such@1".to_string()]);
     assert!(unknown
         .unwrap_err()
         .contains("unknown GraphSchema source 'core:no-such@1'"));
@@ -186,7 +190,7 @@ fn literal_lexical_forms_never_become_named_vocabulary_links() {
 #[test]
 fn inspection_rejects_document_count_and_bytes_before_parsing() {
     let documents = vec![String::new(); MAX_INSPECT_DOCUMENTS + 1];
-    assert!(inspect(&GraphCore::new(), &documents, &[])
+    assert!(inspect(&GraphCore::new(), TEST_GRAPH, &documents, &[])
         .unwrap_err()
         .contains("documents exceed"));
     let bytes = medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES;
@@ -197,7 +201,7 @@ fn inspection_rejects_document_count_and_bytes_before_parsing() {
         .contains(&format!("maximum of {bytes} bytes")));
     let boundary = " ".repeat(bytes);
     assert_eq!(inline(&[&boundary]).unwrap().triple_count, 0);
-    assert!(inspect(&GraphCore::new(), &documents[..MAX_INSPECT_DOCUMENTS], &[]).is_ok());
+    assert!(inspect(&GraphCore::new(), TEST_GRAPH, &documents[..MAX_INSPECT_DOCUMENTS], &[]).is_ok());
 }
 
 #[test]
@@ -271,7 +275,7 @@ fn inspection_returns_composed_crosswalks() {
     let core = GraphCore::new();
     core.install_schema_sources(std::sync::Arc::new(sources));
 
-    let view = inspect(&core, &[], &[]).unwrap();
+    let view = inspect(&core, TEST_GRAPH, &[], &[]).unwrap();
     assert!(view.committed);
     assert_eq!(view.composed_digest.as_deref(), Some(composed.as_str()));
     let mut expected: Vec<(String, String, String)> = records
@@ -348,10 +352,22 @@ fn inspection_reports_pack_revision_coverage() {
         .with_crosswalks(records)
         .with_crosswalk_coverage(coverage)
     };
+    let bound = |coverage: medulla_catalog_types::domain_pack::CrosswalkCoverage| {
+        medulla_catalog_types::domain_pack::BoundCrosswalkCoverage {
+            coverage,
+            binding: medulla_catalog_types::domain_pack::CrosswalkCoverageBinding {
+                tenant_id: "tenant-a".to_string(),
+                graph: TEST_GRAPH.to_string(),
+                pack_record_id: "record-1".to_string(),
+                target_vocabulary_revisions: vec!["target-rev".to_string()],
+                schema_digest: "ab".repeat(32),
+            },
+        }
+    };
     sources
         .attach_dynamic(
             "pack:metadata".to_string(),
-            pack("metadata", records.clone(), Some(coverage.clone())),
+            pack("metadata", records.clone(), Some(bound(coverage.clone()))),
         )
         .unwrap();
     sources
@@ -360,7 +376,7 @@ fn inspection_reports_pack_revision_coverage() {
     let core = GraphCore::new();
     core.install_schema_sources(std::sync::Arc::new(sources));
 
-    let view = inspect(&core, &[], &[]).unwrap();
+    let view = inspect(&core, TEST_GRAPH, &[], &[]).unwrap();
     assert_eq!(
         view.coverage.len(),
         1,
@@ -375,9 +391,18 @@ fn inspection_reports_pack_revision_coverage() {
     assert_eq!(served.unmapped[0].class_iri, kg("Planner"));
     assert_eq!(served.unmapped[0].reason, "no_declared_mapping");
     assert_eq!(served.source_digest, coverage.source_digest);
+    assert_eq!(served.tenant_id, "tenant-a");
+    assert_eq!(served.graph, TEST_GRAPH);
+    assert_eq!(served.pack_record_id, "record-1");
+    assert_eq!(served.target_vocabulary_revisions, vec!["target-rev".to_string()]);
+    assert_eq!(served.schema_digest, "ab".repeat(32));
+
+    // A coverage bound to another graph is not reported on this one.
+    let elsewhere = inspect(&core, "another-graph", &[], &[]).unwrap();
+    assert!(elsewhere.coverage.is_empty());
 
     // Selecting another source reports nothing; inline inspection reports none.
-    let other = inspect(&core, &[], &["pack:bare".to_string()]).unwrap();
+    let other = inspect(&core, TEST_GRAPH, &[], &["pack:bare".to_string()]).unwrap();
     assert!(other.coverage.is_empty());
     assert!(inline(&[VOCABULARY]).unwrap().coverage.is_empty());
 }

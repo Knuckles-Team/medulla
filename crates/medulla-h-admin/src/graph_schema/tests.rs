@@ -805,7 +805,13 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
 
     let sources = core.schema_sources();
     let stored = sources.dynamic.get("pack:coverage-pack").unwrap();
-    let coverage = stored.crosswalk_coverage.as_ref().expect("coverage stored");
+    let bound = stored.crosswalk_coverage.as_ref().expect("coverage stored");
+    assert_eq!(bound.binding.tenant_id, PACK_TENANT);
+    assert_eq!(bound.binding.graph, "pack__coverage-pack");
+    assert_eq!(bound.binding.pack_record_id, "record-1");
+    assert_eq!(bound.binding.target_vocabulary_revisions.len(), 1);
+    assert_eq!(bound.binding.schema_digest, sources.composed_digest().to_hex());
+    let coverage = &bound.coverage;
     let person = "https://knuckles-team.github.io/ontology/core#Person".to_string();
     assert_eq!(coverage.mapped, vec![person.clone()]);
     assert!(coverage

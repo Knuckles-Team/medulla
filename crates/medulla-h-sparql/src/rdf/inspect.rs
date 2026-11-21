@@ -44,10 +44,11 @@ const TRACKED: &[&str] = &[
 pub(super) fn handle_ontology_inspect(
     req_id: u64,
     core: &GraphCore,
+    graph: &str,
     documents: &[String],
     source_ids: &[String],
 ) -> Response {
-    match inspect(core, documents, source_ids) {
+    match inspect(core, graph, documents, source_ids) {
         Ok(view) => Response::ok(
             req_id,
             ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::OntologyInspect>(
@@ -70,11 +71,12 @@ struct Inspected {
 
 fn inspect(
     core: &GraphCore,
+    graph: &str,
     documents: &[String],
     source_ids: &[String],
 ) -> Result<OntologyInspection, String> {
     let inspected = if documents.is_empty() {
-        composed_documents(&core.schema_sources(), source_ids)?
+        composed_documents(&core.schema_sources(), graph, source_ids)?
     } else if source_ids.is_empty() {
         inline_documents(documents)?
     } else {
@@ -153,6 +155,7 @@ fn inline_documents(documents: &[String]) -> Result<Inspected, String> {
 
 fn composed_documents(
     sources: &GraphSchemaSources,
+    graph: &str,
     source_ids: &[String],
 ) -> Result<Inspected, String> {
     let wanted: BTreeSet<&str> = source_ids.iter().map(String::as_str).collect();
@@ -174,7 +177,7 @@ fn composed_documents(
     }
     let mut inspected = parsed(&selected, Some(sources.composed_digest().to_hex()))?;
     inspected.crosswalks = crosswalk_views(sources, &wanted);
-    inspected.coverage = coverage_views(sources, &wanted);
+    inspected.coverage = coverage_views(sources, graph, &wanted);
     inspected.external_coverage = external_coverage_views(sources, &wanted);
     Ok(inspected)
 }
@@ -226,13 +229,19 @@ fn crosswalk_views(
 /// proved equal to the pinned revision.
 fn coverage_views(
     sources: &GraphSchemaSources,
+    graph: &str,
     wanted: &BTreeSet<&str>,
 ) -> Vec<OntologyCoverageView> {
     let mut views: Vec<OntologyCoverageView> = sources
         .all()
         .filter(|(id, _)| wanted.is_empty() || wanted.contains(id))
         .filter_map(|(id, source)| {
-            let coverage = source.crosswalk_coverage.as_ref()?;
+            let bound = source.crosswalk_coverage.as_ref()?;
+            // A coverage bound to another graph is not this graph's.
+            if bound.binding.graph != graph {
+                return None;
+            }
+            let coverage = &bound.coverage;
             let revision = source.crosswalks.first()?.source_revision.clone();
             Some(OntologyCoverageView {
                 source_id: id.to_string(),
@@ -248,6 +257,11 @@ fn coverage_views(
                     })
                     .collect(),
                 source_digest: coverage.source_digest.clone(),
+                tenant_id: bound.binding.tenant_id.clone(),
+                graph: bound.binding.graph.clone(),
+                pack_record_id: bound.binding.pack_record_id.clone(),
+                target_vocabulary_revisions: bound.binding.target_vocabulary_revisions.clone(),
+                schema_digest: bound.binding.schema_digest.clone(),
             })
         })
         .collect();

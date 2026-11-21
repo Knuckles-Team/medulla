@@ -501,7 +501,24 @@ pub(crate) fn apply_pack_source(
         if_composed_digest,
     )?;
     medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
-    let coverage = revalidate_pack_crosswalks(&sources, &records)?;
+    let coverage = revalidate_pack_crosswalks(&sources, &records)?.map(|coverage| {
+        // Bound here, the only place that knows the graph: the schema the coverage was
+        // computed against is the one just validated (MEDULLA-TYPED-PACKS-R097.2.5).
+        let revisions: std::collections::BTreeSet<String> = records
+            .iter()
+            .map(|record| record.target_vocabulary_revision.clone())
+            .collect();
+        medulla_catalog_types::domain_pack::BoundCrosswalkCoverage {
+            coverage,
+            binding: medulla_catalog_types::domain_pack::CrosswalkCoverageBinding {
+                tenant_id: tenant.to_string(),
+                graph: graph_name.to_string(),
+                pack_record_id: record_id.to_string(),
+                target_vocabulary_revisions: revisions.into_iter().collect(),
+                schema_digest: sources.composed_digest().to_hex(),
+            },
+        }
+    });
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.set_dynamic_crosswalk_coverage(&source_id, coverage) || changed;
     if changed {

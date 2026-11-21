@@ -474,6 +474,7 @@ async fn try_handle_validation(
         } => Some(super::inspect::handle_ontology_inspect(
             req_id,
             core,
+            graph_name,
             documents,
             source_ids,
         )),

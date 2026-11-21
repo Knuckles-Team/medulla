@@ -93,15 +93,15 @@ class OntologyCoverageView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     declared: Annotated[int, Field(ge=0)]
-    graph: str = ""
+    graph: str
     mapped: list[str]
-    pack_digest: str = ""
-    pack_revision: str = ""
-    schema_digest: str = ""
+    pack_record_id: str
+    schema_digest: str
     source_digest: str
     source_id: str
     source_revision: str
-    tenant: str | None = None
+    target_vocabulary_revisions: list[str]
+    tenant_id: str
     unmapped: list[OntologyUnmappedClassView]
 
 

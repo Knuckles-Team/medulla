@@ -423,6 +423,33 @@ pub struct CrosswalkCoverage {
     pub source_digest: String,
 }
 
+/// What a crosswalk coverage was bound to at activation, the only place that knows the
+/// graph (MEDULLA-TYPED-PACKS-R097.2.5).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CrosswalkCoverageBinding {
+    /// The tenant that imported the pack.
+    pub tenant_id: String,
+    /// The graph the pack was activated on.
+    pub graph: String,
+    /// The immutable pack revision the coverage was computed for.
+    pub pack_record_id: String,
+    /// The sorted, deduplicated `target_vocabulary_revision` of the pack's records.
+    pub target_vocabulary_revisions: Vec<String>,
+    /// The composed schema digest the coverage was computed against.
+    pub schema_digest: String,
+}
+
+/// A crosswalk coverage with the binding of the activation that computed it
+/// (MEDULLA-TYPED-PACKS-R097.2.5). `CrosswalkCoverage` itself is unchanged, so the import,
+/// which has no graph, computes the same coverage.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BoundCrosswalkCoverage {
+    pub coverage: CrosswalkCoverage,
+    pub binding: CrosswalkCoverageBinding,
+}
+
 /// A coverage report that does not describe its declared class set.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CrosswalkCoverageError {

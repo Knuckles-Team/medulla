@@ -374,3 +374,42 @@ def test_refused_domain_import_preserves_heads_and_digests() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.5")
+def test_coverage_matches_pack_status_and_schema_reads() -> None:
+    fixture = load_fixture()
+
+    async def exercise() -> None:
+        client = await connect()
+        try:
+            revision = await core_revision(client)
+            connector = _connector("xwalk-bound")
+            imported = await import_entries(
+                client, connector, _entries(connector, fixture, revision)
+            )
+            assert imported["result"] == "imported", imported
+            composed = await attach_pack(client, connector)
+            head = await _pack_head(client, connector)
+
+            view = await inspect_committed(client)
+            report = next(
+                c for c in view.coverage if c.source_id == f"pack:{connector}"
+            )
+            # The binding names the importer, the immutable pack revision and the
+            # vocabulary revisions of the committed crosswalks.
+            assert report.tenant_id == TEST_TENANT
+            assert report.graph
+            assert report.pack_record_id == head.record_id
+            assert report.target_vocabulary_revisions == [
+                fixture["target_vocabulary_revision"]
+            ]
+            # The schema digest is the composed digest GraphSchema reads for the graph.
+            classes = await reasoning.send_graph_schema_classes(
+                client, {"kind": "class", "cursor": None, "limit": 1}
+            )
+            assert report.schema_digest == classes.composed_digest == composed
+        finally:
+            await client.close()
+
+    asyncio.run(exercise())

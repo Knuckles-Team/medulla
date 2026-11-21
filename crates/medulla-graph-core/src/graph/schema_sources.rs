@@ -156,10 +156,11 @@ pub struct GraphSchemaSource {
     pub contract: Option<medulla_catalog_types::graph_schema::repair::RecordContract>,
     /// The crosswalk coverage of the core revision these crosswalks were
     /// validated against, computed by the pack activation
-    /// (MEDULLA-TYPED-PACKS-R097.2.3). Derived from `crosswalks` and the pinned
+    /// (MEDULLA-TYPED-PACKS-R097.2.3), with the tenant, graph, pack record and schema
+    /// digest it was bound to (R097.2.5). Derived from `crosswalks` and the pinned
     /// revision, so it is outside both the composed digest and document identity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub crosswalk_coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+    pub crosswalk_coverage: Option<medulla_catalog_types::domain_pack::BoundCrosswalkCoverage>,
     /// The coverage of each external schema this pack source carries, computed by the
     /// pack activation with `compute_external_coverage`
     /// (MEDULLA-TYPED-PACKS-R097.2.7.3). Derived from the pack's `external_schema`
@@ -238,7 +239,7 @@ impl GraphSchemaSource {
     /// The same source carrying the coverage its activation computed.
     pub fn with_crosswalk_coverage(
         mut self,
-        coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+        coverage: Option<medulla_catalog_types::domain_pack::BoundCrosswalkCoverage>,
     ) -> Self {
         self.crosswalk_coverage = coverage;
         self
@@ -489,7 +490,7 @@ impl GraphSchemaSources {
     pub fn set_dynamic_crosswalk_coverage(
         &mut self,
         source_id: &str,
-        coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+        coverage: Option<medulla_catalog_types::domain_pack::BoundCrosswalkCoverage>,
     ) -> bool {
         match self.dynamic.get_mut(source_id) {
             Some(source) if source.crosswalk_coverage != coverage => {
