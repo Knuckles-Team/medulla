@@ -410,6 +410,19 @@ pub(super) struct DedupPlan {
     pub duplicates: u64,
 }
 
+/// `(atoms_emitted, atoms_refused)` of a deduplicated batch (MEDULLA-INGEST-WORKER-R003.5):
+/// the atoms of `Original` documents, which `atom_methods` stores, and the atoms of
+/// `NearDuplicate` documents, which are linked to the original and not stored.
+pub(super) fn atom_counts(documents: &[DocumentOutput]) -> (u64, u64) {
+    documents.iter().fold((0, 0), |(emitted, refused), output| {
+        let atoms = output.atoms.len() as u64;
+        match output.dedup {
+            DedupOutcome::Original => (emitted + atoms, refused),
+            DedupOutcome::NearDuplicate { .. } => (emitted, refused + atoms),
+        }
+    })
+}
+
 /// The writes that store one original document's atoms (MEDULLA-INGEST-WORKER-R003.3): per
 /// atom one `KnowledgeAtom` node and one `atom_of` edge to the document's record node. A near
 /// duplicate stores none (R702.4). The second element is the written node ids, each of which

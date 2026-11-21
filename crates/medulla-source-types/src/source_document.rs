@@ -40,6 +40,15 @@ pub struct DocumentReport {
     /// (MEDULLA-INGEST-WORKER-R702.4). A link is not a refusal and has no error code.
     #[serde(default)]
     pub duplicates: u64,
+    /// Atoms stored from documents whose dedup outcome is `Original`: the atoms
+    /// `atom_methods` writes (MEDULLA-INGEST-WORKER-R003.5).
+    #[serde(default)]
+    pub atoms_emitted: u64,
+    /// Atoms of near-duplicate documents: linked to the original, not stored
+    /// (MEDULLA-INGEST-WORKER-R003.5). An atom without a provenance key is not
+    /// counted: it quarantines the whole batch (R003.10).
+    #[serde(default)]
+    pub atoms_refused: u64,
 }
 
 /// Why a normalized document does not fit the request it claims to come from.

@@ -34,7 +34,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T027 [US3] MEDULLA-INGEST-WORKER-R003.2 Behavior: atom decomposition and context selection
 - [ ] T028 [US3] MEDULLA-INGEST-WORKER-R003.3 Wiring: decompose at ingest and select at query
 - [ ] T029 [US3] MEDULLA-INGEST-WORKER-R003.4 Refusal
-- [ ] T030 [US3] MEDULLA-INGEST-WORKER-R003.5 Evidence: atom counts
+- [x] T030 [US3] MEDULLA-INGEST-WORKER-R003.5 Evidence: atom counts
 - [ ] T031 [US3] MEDULLA-INGEST-WORKER-R003.6 Hot-path proof: ingest, then answer from atoms
 - [ ] T032 [US3] MEDULLA-INGEST-WORKER-R003.7 Model
 - [ ] T033 [US3] MEDULLA-INGEST-WORKER-R003.8 Behavior: document normalization and the complete_document check

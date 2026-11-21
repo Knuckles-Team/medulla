@@ -378,6 +378,7 @@ pub async fn prepare(
         medulla_server_api::knob_config::knobs().ingest_lsh_jaccard_threshold,
         ctx.graph_version.saturating_add(1),
     )?;
+    let (atoms_emitted, atoms_refused) = documents::atom_counts(&dedup.documents);
     let reconciliation = reconcile_batch(
         &ctx,
         batch,
@@ -529,6 +530,8 @@ pub async fn prepare(
         admitted.row_versions,
         medulla_source_types::source_document::DocumentReport {
             duplicates,
+            atoms_emitted,
+            atoms_refused,
         },
         &embedding_set,
     )?);
@@ -587,6 +590,8 @@ pub async fn prepare(
         row_versions: admitted.row_versions,
         documents: medulla_source_types::source_document::DocumentReport {
             duplicates,
+            atoms_emitted,
+            atoms_refused,
         },
         access: None,
         reconcile: None,

@@ -46,7 +46,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R003.2` | `crates/medulla-document/src/atoms.rs::tests::decompose_kinds_and_split` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R003.3` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R003.4` | `crates/medulla-types/tests/ingest_rules.rs::an_atom_without_provenance_is_refused_and_no_relevant_atom_gives_an_empty_context` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R003.5` | `tests/ingest/test_knowledge_atoms_served.py::test_counts_in_receipt_and_context` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R003.5` | `tests/ingest/test_knowledge_atoms_served.py::test_counts_in_receipt_and_context` | L4 |
 | `MEDULLA-INGEST-WORKER-R003.6` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.7` | `crates/medulla-source-types/src/source_document.rs::tests::document_receipt_round_trips` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.8` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::complete_document_is_idempotent` | L3 | planned |

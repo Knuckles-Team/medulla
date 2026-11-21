@@ -15,7 +15,7 @@ import pytest
 
 from medulla.generated.source_ingestion import SourceIngestionDisposition
 
-from .test_lsh_dedup_served import SOURCE_RECORD_ID, _document_client
+from .test_lsh_dedup_served import SOURCE_RECORD_ID, _document_client, _text
 from .test_source_stream_versions_served import _batch, _close, _connector, _submit
 
 TEXT = (
@@ -65,5 +65,36 @@ async def test_ingest_then_context_cites_provenance() -> None:
         assert (await client.graph.atom_context("zebra"))["atoms"] == []
         with pytest.raises(Exception, match="PARAMETER_INVALID"):
             await client.graph.atom_context("   ")
+    finally:
+        await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.5")
+@pytest.mark.asyncio
+async def test_counts_in_receipt_and_context() -> None:
+    """One original and one near duplicate in one batch: the receipt counts the
+    stored atoms and the linked-not-stored atoms, and `AtomContext` reports the
+    atoms it selected and their word count."""
+    connector = _connector()
+    client, graph = await _document_client(connector)
+    try:
+        batch = _batch(connector, 2, None, "unused")
+        base = batch["records"][0]
+        batch["records"] = [
+            {**base, "record_id": "base", "payload": {"id": 1, "text": _text("w", "end")}},
+            {**base, "record_id": "near", "payload": {"id": 2, "text": _text("w", "tail")}},
+        ]
+        receipt = await _submit(client, batch, f"counts-{uuid.uuid4().hex[:6]}")
+        assert receipt.disposition is SourceIngestionDisposition.COMMITTED
+        stored = await client.nodes.list_by_label("KnowledgeAtom", 0)
+        assert receipt.documents.atoms_emitted == len(stored) >= 1
+        assert receipt.documents.atoms_refused >= 1
+        assert receipt.documents.duplicates == 1
+
+        context = await client.graph.atom_context("w0", 2000)
+        assert context["atoms_selected"] == len(context["atoms"]) >= 1
+        assert context["tokens_used"] == sum(
+            len(atom["text"].split()) for atom in context["atoms"]
+        )
     finally:
         await _close(client, graph)

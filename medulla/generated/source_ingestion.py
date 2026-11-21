@@ -202,6 +202,8 @@ class GovernanceReport(BaseModel):
 class DocumentReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    atoms_emitted: Annotated[int, Field(ge=0)] = 0
+    atoms_refused: Annotated[int, Field(ge=0)] = 0
     duplicates: Annotated[int, Field(ge=0)] = 0
 
 
