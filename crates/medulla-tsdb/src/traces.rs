@@ -55,12 +55,43 @@ pub struct Span {
     pub start_time: i64,
     /// Span duration, nanoseconds.
     pub duration: i64,
-    /// Status text (`OK` / `ERROR` / empty when unset).
-    pub status: String,
+    /// How the span ended, set once when it ends. Its stored and wire text is `""`, `"OK"` or
+    /// `"ERROR"`, under the key `status`.
+    #[serde(rename = "status")]
+    pub outcome: SpanOutcome,
     /// Dynamic attributes (schema-on-read), sorted for stable serialization.
     pub attributes: BTreeMap<String, String>,
     /// Timeline events attached to the span.
     pub events: Vec<SpanEvent>,
+}
+
+/// How a span ended (MEDULLA-UNIFIED-DATA-PLANE-R768.2.1). A closed set, so a word outside it
+/// does not decode; the text form is the one the stored and wire spans have always carried.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
+)]
+pub enum SpanOutcome {
+    /// No outcome was reported.
+    #[default]
+    #[serde(rename = "")]
+    Unset,
+    /// The span ended well.
+    #[serde(rename = "OK")]
+    Ok,
+    /// The span ended in error.
+    #[serde(rename = "ERROR")]
+    Error,
+}
+
+impl SpanOutcome {
+    /// The stored and wire text of the outcome: `""`, `"OK"` or `"ERROR"`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unset => "",
+            Self::Ok => "OK",
+            Self::Error => "ERROR",
+        }
+    }
 }
 
 impl Span {
@@ -529,10 +560,32 @@ mod tests {
             operation: op.into(),
             start_time: start,
             duration: dur,
-            status: "OK".into(),
+            outcome: SpanOutcome::Ok,
             attributes: BTreeMap::new(),
             events: Vec::new(),
         }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R768.2.1
+    #[test]
+    fn span_outcome_is_closed_and_keeps_its_text_form() {
+        for (outcome, text) in [
+            (SpanOutcome::Unset, ""),
+            (SpanOutcome::Ok, "OK"),
+            (SpanOutcome::Error, "ERROR"),
+        ] {
+            assert_eq!(outcome.as_str(), text);
+            let json = serde_json::to_string(&outcome).unwrap();
+            assert_eq!(json, format!("\"{text}\""));
+            assert_eq!(serde_json::from_str::<SpanOutcome>(&json).unwrap(), outcome);
+        }
+        assert!(serde_json::from_str::<SpanOutcome>("\"WARN\"").is_err());
+        // A span keeps the key `status` on the wire.
+        let span = span("t", "s", "", "svc", "op", 1, 1);
+        let value = serde_json::to_value(&span).unwrap();
+        assert_eq!(value["status"], "OK");
+        assert!(value.get("outcome").is_none());
+        assert_eq!(serde_json::from_value::<Span>(value).unwrap(), span);
     }
 
     /// CONCEPT:MEDULLA-OS.observability.trace-assembly — a flat span list assembles into a parent→children tree, with

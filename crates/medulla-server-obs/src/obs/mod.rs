@@ -898,7 +898,7 @@ mod tests {
             operation: "POST /order".into(),
             start_time: 100,
             duration: 50,
-            status: "OK".into(),
+            outcome: medulla_tsdb::traces::SpanOutcome::Ok,
             attributes: BTreeMap::new(),
             events: Vec::new(),
         };

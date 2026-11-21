@@ -17,7 +17,7 @@ pub(super) fn probe_traces(scale: usize) -> Result<Observation, ProbeError> {
             operation: "probe".to_string(),
             start_time: index as i64,
             duration: 1,
-            status: "OK".to_string(),
+            outcome: medulla_tsdb::traces::SpanOutcome::Ok,
             attributes: BTreeMap::new(),
             events: Vec::new(),
         })

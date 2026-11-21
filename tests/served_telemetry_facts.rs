@@ -107,12 +107,11 @@ fn spans(service: &str, tenant: &str, failing_everywhere: bool) -> Vec<Span> {
                 operation: "handle".into(),
                 start_time: (start_ms * 1_000_000) as i64,
                 duration: 20_000_000,
-                status: if hot || failing_everywhere {
-                    "ERROR"
+                outcome: if hot || failing_everywhere {
+                    medulla_tsdb::traces::SpanOutcome::Error
                 } else {
-                    "OK"
-                }
-                .into(),
+                    medulla_tsdb::traces::SpanOutcome::Ok
+                },
                 attributes: BTreeMap::from([("medulla_tenant".to_string(), tenant.to_string())]),
                 events: Vec::new(),
             });

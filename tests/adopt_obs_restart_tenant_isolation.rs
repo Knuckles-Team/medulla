@@ -58,7 +58,7 @@ fn span(
         operation: operation.to_string(),
         start_time,
         duration: 10,
-        status: "OK".to_string(),
+        outcome: medulla_tsdb::traces::SpanOutcome::Ok,
         attributes: BTreeMap::new(),
         events: Vec::new(),
     }

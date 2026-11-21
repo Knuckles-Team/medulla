@@ -23,7 +23,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_tsdb::traces::{AssembledTrace, ServiceEdge, Span, SpanEvent, SpanNode, TraceQuery};
+use medulla_tsdb::traces::{
+    AssembledTrace, ServiceEdge, Span, SpanEvent, SpanNode, SpanOutcome, TraceQuery,
+};
 
 use crate::obs::ObsState;
 
@@ -225,7 +227,7 @@ fn otlp_span(sp: &serde_json::Value, service: &str) -> Span {
             .to_string(),
         start_time: start,
         duration: end.saturating_sub(start).max(0),
-        status: otlp_status(sp),
+        outcome: otlp_status(sp),
         attributes: otlp_attrs(sp.get("attributes")),
         events: otlp_events(sp.get("events")),
     }
@@ -243,23 +245,23 @@ fn otlp_nano(v: &serde_json::Value, key: &str) -> i64 {
     }
 }
 
-/// Map an OTLP status object (`{code}`) onto a status text. `STATUS_CODE_ERROR`/`2`
-/// ⇒ `ERROR`; `STATUS_CODE_OK`/`1` ⇒ `OK`; unset ⇒ empty.
-fn otlp_status(sp: &serde_json::Value) -> String {
+/// Map an OTLP status object (`{code}`) onto a span outcome. `STATUS_CODE_ERROR`/`2`
+/// ⇒ `Error`; `STATUS_CODE_OK`/`1` ⇒ `Ok`; anything else or absent ⇒ `Unset`.
+fn otlp_status(sp: &serde_json::Value) -> SpanOutcome {
     let code = sp.get("status").and_then(|s| s.get("code"));
     match code {
         Some(c) => {
             let s = c.as_str().map(|x| x.to_string()).unwrap_or_default();
             let n = c.as_i64().unwrap_or(-1);
             if s.contains("ERROR") || n == 2 {
-                "ERROR".to_string()
+                SpanOutcome::Error
             } else if s.contains("OK") || n == 1 {
-                "OK".to_string()
+                SpanOutcome::Ok
             } else {
-                String::new()
+                SpanOutcome::Unset
             }
         }
-        None => String::new(),
+        None => SpanOutcome::Unset,
     }
 }
 
@@ -504,7 +506,7 @@ fn span_node_json(n: &SpanNode) -> serde_json::Value {
         "operationName": s.operation,
         "startTime": s.start_time,
         "duration": s.duration,
-        "status": s.status,
+        "status": s.outcome,
         "tags": s.attributes,
         "events": s.events.iter().map(|e| serde_json::json!({
             "timestamp": e.ts, "name": e.name, "attributes": e.attrs,
@@ -581,7 +583,7 @@ mod tests {
         assert_eq!(spans[0].span_id, "s1");
         assert_eq!(spans[0].operation, "POST /charge");
         assert_eq!(spans[0].duration, 600, "1600 - 1000");
-        assert_eq!(spans[0].status, "ERROR");
+        assert_eq!(spans[0].outcome, SpanOutcome::Error);
         assert_eq!(spans[0].attributes.get("http.status_code").unwrap(), "500");
         assert_eq!(spans[0].events.len(), 1);
         assert_eq!(spans[0].events[0].name, "exception");

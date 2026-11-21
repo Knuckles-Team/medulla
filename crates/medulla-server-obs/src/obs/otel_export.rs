@@ -23,7 +23,7 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_tsdb::traces::Span;
+use medulla_tsdb::traces::{Span, SpanOutcome};
 
 use super::ObsState;
 
@@ -217,11 +217,11 @@ fn is_sum_metric(name: &str) -> bool {
 
 /// Map a status text back onto an OTLP status code object (the inverse of the MEDULLA-163
 /// ingest mapping): `ERROR` ⇒ `STATUS_CODE_ERROR`, `OK` ⇒ `STATUS_CODE_OK`, else unset.
-fn otlp_status_obj(status: &str) -> serde_json::Value {
-    let code = match status {
-        "ERROR" => "STATUS_CODE_ERROR",
-        "OK" => "STATUS_CODE_OK",
-        _ => "STATUS_CODE_UNSET",
+fn otlp_status_obj(outcome: &SpanOutcome) -> serde_json::Value {
+    let code = match outcome {
+        SpanOutcome::Error => "STATUS_CODE_ERROR",
+        SpanOutcome::Ok => "STATUS_CODE_OK",
+        SpanOutcome::Unset => "STATUS_CODE_UNSET",
     };
     serde_json::json!({ "code": code })
 }
@@ -254,7 +254,7 @@ fn span_to_otlp(sp: &Span) -> serde_json::Value {
         "name": sp.operation,
         "startTimeUnixNano": sp.start_time.to_string(),
         "endTimeUnixNano": sp.end_time().to_string(),
-        "status": otlp_status_obj(&sp.status),
+        "status": otlp_status_obj(&sp.outcome),
         "attributes": attrs,
         "events": events,
     })
@@ -413,7 +413,7 @@ mod tests {
                 operation: "GET /buy".into(),
                 start_time: 1000,
                 duration: 2000,
-                status: "OK".into(),
+                outcome: SpanOutcome::Ok,
                 attributes: BTreeMap::new(),
                 events: Vec::new(),
             },
@@ -425,7 +425,7 @@ mod tests {
                 operation: "charge".into(),
                 start_time: 1500,
                 duration: 1300,
-                status: "ERROR".into(),
+                outcome: SpanOutcome::Error,
                 attributes: {
                     let mut m = BTreeMap::new();
                     m.insert("http.status_code".to_string(), "500".to_string());
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(api.parent_span_id, "g1");
         assert_eq!(api.operation, "charge");
         assert_eq!(api.duration, 1300, "endTime 2800 - startTime 1500");
-        assert_eq!(api.status, "ERROR");
+        assert_eq!(api.outcome, SpanOutcome::Error);
         assert_eq!(api.attributes.get("http.status_code").unwrap(), "500");
     }
 

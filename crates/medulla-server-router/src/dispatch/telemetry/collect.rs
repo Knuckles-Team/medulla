@@ -192,7 +192,7 @@ pub fn span_signal(span: &medulla_tsdb::traces::Span) -> TelemetrySignal {
     TelemetrySignal::span(
         span.trace_id.clone(),
         (span.start_time, span.duration),
-        &span.status,
+        span.outcome.as_str(),
         &span.service,
         span.attributes.clone(),
     )

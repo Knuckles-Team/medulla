@@ -272,7 +272,7 @@ impl ConformanceTestable for Span {
             operation: "GET /".to_string(),
             start_time: 1_700_000_000_000_000_000,
             duration: 500_000,
-            status: "OK".to_string(),
+            outcome: crate::traces::SpanOutcome::Ok,
             attributes: Default::default(),
             events: Vec::new(),
         }
