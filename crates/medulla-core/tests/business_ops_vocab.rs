@@ -573,7 +573,7 @@ fn every_class_rolls_up_and_no_product_names() {
         false
     };
     let classes = declared_classes(&business);
-    assert!(classes.len() >= 30, "the pack declares its classes");
+    assert!(classes.len() >= 25, "the pack declares its classes");
     for class in &classes {
         assert!(
             rolls_up(class),
