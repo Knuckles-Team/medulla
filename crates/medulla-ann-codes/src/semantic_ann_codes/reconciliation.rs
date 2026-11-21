@@ -15,7 +15,8 @@ use super::{
 };
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticDigest,
-    semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticSourceKind, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticSourceRevision, semantic_index::SemanticSqlSourceManifest,
 };
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES};
 use medulla_transaction::AdmittedMutation;
@@ -63,12 +64,6 @@ pub(crate) struct SemanticSourceReconciliationCheckpoint {
     pub(crate) source_bytes_seen: u64,
     pub(crate) pages_seen: u64,
     pub(crate) complete_snapshot_receipt_digest: Option<SemanticDigest>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct SqlSourceRevision<'a> {
-    pub(super) authority: &'a str,
-    pub(super) epoch: u64,
 }
 
 impl SemanticCodeStore {
@@ -523,9 +518,9 @@ fn ensure_manifest_within_binding(
             "SQL source manifest is outside its durable binding authority",
         ));
     }
-    let manifest_revision = sql_source_revision_parts(&manifest.source_revision)
+    let manifest_revision = SemanticSourceRevision::parse(&manifest.source_revision)
         .ok_or_else(|| corrupt("SQL source manifest has no canonical source authority"))?;
-    let binding_revision = sql_source_revision_parts(&binding.source_revision)
+    let binding_revision = SemanticSourceRevision::parse(&binding.source_revision)
         .ok_or_else(|| corrupt("durable binding has no canonical SQL source authority"))?;
     if manifest_revision.authority != binding_revision.authority {
         return Err(corrupt(
@@ -537,37 +532,13 @@ fn ensure_manifest_within_binding(
 
 pub(super) fn valid_source_entity_id_for_reconciliation(entity: &str) -> bool {
     entity.len() <= SEMANTIC_RECONCILIATION_MAX_ENTITY_BYTES
-        && entity
-            .strip_prefix("semantic-sql-source:")
-            .and_then(|digest| SemanticDigest::parse(digest).ok())
-            .is_some()
-}
-
-/// Parse the tenant-wide SQL source revision emitted by the authoritative SQL
-/// snapshot port.  The authority digest is part of the lineage, so equal
-/// numeric epochs from two SQL owners cannot be compared as one stream.
-pub(super) fn sql_source_revision_parts(revision: &str) -> Option<SqlSourceRevision<'_>> {
-    let rest = revision.strip_prefix("sql-source:")?;
-    let (authority, epoch) = rest.rsplit_once(":epoch:")?;
-    let digest = authority.strip_prefix("sha256:")?;
-    if digest.len() != 64
-        || digest
-            .bytes()
-            .any(|byte| !matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
-    {
-        return None;
-    }
-    let epoch = epoch.parse().ok()?;
-    if epoch == 0 {
-        return None;
-    }
-    Some(SqlSourceRevision { authority, epoch })
+        && SemanticSourceKind::parse_entity_id(entity).is_some()
 }
 
 pub(super) fn compare_source_revision(left: &str, right: &str) -> std::cmp::Ordering {
     match (
-        sql_source_revision_parts(left),
-        sql_source_revision_parts(right),
+        SemanticSourceRevision::parse(left),
+        SemanticSourceRevision::parse(right),
     ) {
         (Some(left_parts), Some(right_parts)) if left_parts.authority == right_parts.authority => {
             left_parts
@@ -584,7 +555,7 @@ pub(super) fn compare_source_revision(left: &str, right: &str) -> std::cmp::Orde
 /// is insufficient because two SQL resources can commit the same table.
 pub(super) fn validate_sql_source_revision(revision: &str) -> Result<(), SemanticCodeError> {
     ensure(
-        sql_source_revision_parts(revision).is_some(),
+        SemanticSourceRevision::parse(revision).is_some(),
         "semantic SQL refresh revision must bind a canonical source authority and nonzero epoch",
     )
 }

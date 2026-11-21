@@ -525,9 +525,9 @@ impl SemanticIndexRequest {
         Ok(())
     }
 
-    pub fn require_implemented_selector(&self) -> Result<(), SemanticIndexError> {
+    pub fn require_buildable_selector(&self) -> Result<(), SemanticIndexError> {
         if let SemanticIndexCommand::CreateBinding { draft } = &self.command {
-            draft.source_selector.require_implemented()?;
+            draft.source_selector.require_buildable()?;
         }
         Ok(())
     }

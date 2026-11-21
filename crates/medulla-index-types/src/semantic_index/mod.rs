@@ -25,6 +25,7 @@ mod selector;
 mod semantic_machine;
 mod selector_ref;
 mod source_dirty;
+mod source_kind;
 mod source_manifest;
 mod stage;
 mod state;
@@ -93,14 +94,15 @@ pub use request::{
 pub use response::{
     SemanticIndexOutcome, SemanticIndexResponse, SemanticIndexResult, SemanticSearchHit,
 };
-pub use selector::{SemanticSelectorKind, SemanticSourceSelector};
+pub use selector::{BuildableSelector, SemanticSelectorKind, SemanticSourceSelector};
 pub use selector_ref::{
     AgentLibraryCompositeRef, CanonicalTextAssetRef, GraphTextPropertyRef,
     LakehouseVectorProjectionRef, MultimodalAssetRef, SqlColumnRef, TimeSeriesWindowRef,
-    SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
+    SEMANTIC_GRAPH_SCHEMA_ID, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
 pub use semantic_machine::{SemanticEvent, SemanticGuard, SEMANTIC_MACHINE};
 pub use source_dirty::SemanticSourceDirtyIntent;
+pub use source_kind::{SemanticSourceKind, SemanticSourceRevision};
 pub use source_manifest::{
     SemanticGraphProjectionManifest, SemanticGraphProjectionManifestDraft,
     SemanticSqlSourceIdentity, SemanticSqlSourceManifest, SemanticSqlSourceManifestDraft,

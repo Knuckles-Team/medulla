@@ -19,7 +19,8 @@ use medulla_index_types::{
     semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
     semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
     semantic_index::SemanticIndexError, semantic_index::SemanticIndexFilter,
-    semantic_index::SemanticSourceDirtyIntent, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticSourceDirtyIntent, semantic_index::SemanticSourceKind,
+    semantic_index::SemanticSourceRevision, semantic_index::SemanticSqlSourceManifest,
     semantic_index::SemanticSqlSourceManifestDraft, semantic_index::SemanticStage,
     semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
     semantic_index::SemanticStageIntentDraft, semantic_index::SemanticStageScope,
@@ -54,15 +55,16 @@ pub fn sql_source_revision_for_epoch(
     authority_digest: SemanticDigest,
     source_epoch: u64,
 ) -> Result<String, SemanticIndexError> {
-    if source_epoch == 0 {
-        return Err(SemanticIndexError::InvalidField {
-            field: "source_epoch".to_string(),
-            reason: "tenant SQL source epoch must be nonzero".to_string(),
-        });
-    }
-    Ok(format!(
-        "sql-source:{authority_digest}:epoch:{source_epoch}"
-    ))
+    SemanticSourceKind::Sql.revision_for_epoch(authority_digest, source_epoch)
+}
+
+/// Construct the canonical graph source revision, `graph-source:<digest>:epoch:<n>`, from the
+/// digest of the (tenant, graph, type, property) authority and the graph's version.
+pub fn graph_source_revision_for_epoch(
+    authority_digest: SemanticDigest,
+    source_epoch: u64,
+) -> Result<String, SemanticIndexError> {
+    SemanticSourceKind::Graph.revision_for_epoch(authority_digest, source_epoch)
 }
 
 /// The raw value resolved from the authoritative SQL source.
@@ -228,10 +230,7 @@ fn validate_reconciliation_page(
 }
 
 fn valid_source_entity_id(entity: &str) -> bool {
-    entity
-        .strip_prefix("semantic-sql-source:")
-        .and_then(|digest| SemanticDigest::parse(digest).ok())
-        .is_some()
+    SemanticSourceKind::parse_entity_id(entity).is_some()
 }
 
 fn admission_result(

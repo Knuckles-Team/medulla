@@ -71,17 +71,32 @@ impl SemanticSourceSelector {
         }
     }
 
-    /// Refuse every declared-but-unimplemented selector. There is no string,
-    /// expression, or fallback route that can reinterpret it as a SQL column.
-    pub fn require_implemented(&self) -> Result<&SqlColumnRef, SemanticIndexError> {
+    /// Refuse every selector that has no build path. SQL columns and graph text
+    /// properties are buildable; every other declared selector is refused. There is
+    /// no string, expression, or fallback route that can reinterpret one kind as
+    /// the other.
+    pub fn require_buildable(&self) -> Result<BuildableSelector<'_>, SemanticIndexError> {
         match self {
             Self::SqlColumnRef(selector) => {
                 selector.validate()?;
-                Ok(selector)
+                Ok(BuildableSelector::Sql(selector))
+            }
+            Self::GraphTextPropertyRef(selector) => {
+                selector.validate()?;
+                Ok(BuildableSelector::Graph(selector))
             }
             _ => Err(SemanticIndexError::UnsupportedSelector {
                 selector: self.kind(),
             }),
+        }
+    }
+
+    /// The SQL column of a SQL-sourced binding. A graph selector is refused as a
+    /// source-manifest mismatch: a graph source never masquerades as SQL.
+    pub fn require_sql_column(&self) -> Result<&SqlColumnRef, SemanticIndexError> {
+        match self.require_buildable()? {
+            BuildableSelector::Sql(selector) => Ok(selector),
+            BuildableSelector::Graph(_) => Err(SemanticIndexError::SourceManifestMismatch),
         }
     }
 
@@ -95,6 +110,26 @@ impl SemanticSourceSelector {
             Self::TimeSeriesWindowRef(value) => value.canonical_cbor(self.kind()),
             Self::LakehouseVectorProjectionRef(value) => value.canonical_cbor(self.kind()),
         }
+    }
+}
+
+/// The selectors a semantic index can be built from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BuildableSelector<'a> {
+    Sql(&'a SqlColumnRef),
+    Graph(&'a GraphTextPropertyRef),
+}
+
+impl GraphTextPropertyRef {
+    fn validate(&self) -> Result<(), SemanticIndexError> {
+        for (field, value) in [
+            ("graph_id", &self.graph_id),
+            ("type_id", &self.type_id),
+            ("property_id", &self.property_id),
+        ] {
+            validate_id(field, value)?;
+        }
+        Ok(())
     }
 }
 
@@ -139,21 +174,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sql_column_is_the_only_implemented_selector() {
+    fn sql_column_and_graph_property_are_the_buildable_selectors() {
         let sql = SemanticSourceSelector::SqlColumnRef(SqlColumnRef {
             catalog_id: SEMANTIC_SQL_CATALOG_ID.into(),
             schema_id: SEMANTIC_SQL_SCHEMA_ID.into(),
             table_id: "table".into(),
             column_id: "body".into(),
         });
-        assert!(sql.require_implemented().is_ok());
+        assert!(matches!(
+            sql.require_buildable(),
+            Ok(BuildableSelector::Sql(_))
+        ));
+        let graph = SemanticSourceSelector::GraphTextPropertyRef(GraphTextPropertyRef {
+            graph_id: "graph".into(),
+            type_id: "document".into(),
+            property_id: "body".into(),
+        });
+        assert!(matches!(
+            graph.require_buildable(),
+            Ok(BuildableSelector::Graph(_))
+        ));
+        assert_eq!(
+            graph.require_sql_column(),
+            Err(SemanticIndexError::SourceManifestMismatch)
+        );
+        let blank_graph = SemanticSourceSelector::GraphTextPropertyRef(GraphTextPropertyRef {
+            graph_id: " graph".into(),
+            type_id: "document".into(),
+            property_id: "body".into(),
+        });
+        assert!(matches!(
+            blank_graph.require_buildable(),
+            Err(SemanticIndexError::InvalidField { .. })
+        ));
 
         let unsupported = [
-            SemanticSourceSelector::GraphTextPropertyRef(GraphTextPropertyRef {
-                graph_id: "graph".into(),
-                type_id: "document".into(),
-                property_id: "body".into(),
-            }),
             SemanticSourceSelector::CanonicalTextAsset(CanonicalTextAssetRef {
                 asset_id: "asset".into(),
                 asset_revision: "1".into(),
@@ -190,7 +245,7 @@ mod tests {
         ];
         for selector in unsupported {
             assert_eq!(
-                selector.require_implemented(),
+                selector.require_buildable(),
                 Err(SemanticIndexError::UnsupportedSelector {
                     selector: selector.kind(),
                 })
@@ -204,7 +259,7 @@ mod tests {
             column_id: "body".into(),
         });
         assert!(matches!(
-            wrong_catalog.require_implemented(),
+            wrong_catalog.require_buildable(),
             Err(SemanticIndexError::InvalidField { .. })
         ));
     }

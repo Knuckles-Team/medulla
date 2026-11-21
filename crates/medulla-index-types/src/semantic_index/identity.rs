@@ -450,7 +450,7 @@ impl SemanticBinding {
 }
 
 fn validate_draft(draft: &SemanticBindingDraft) -> Result<(), SemanticIndexError> {
-    draft.source_selector.require_implemented()?;
+    draft.source_selector.require_buildable()?;
     for (field, value) in [
         ("binding_id", draft.binding_id.as_str()),
         ("tenant_id", draft.tenant_id.as_str()),
@@ -1036,5 +1036,83 @@ mod tests {
         let live = building.apply_state_transition(&to_live).unwrap();
         assert_eq!(live.binding_digest, pending.binding_digest);
         assert_eq!(live.ann_index_identity, pending.ann_index_identity);
+    }
+    fn graph_selector() -> crate::semantic_index::GraphTextPropertyRef {
+        crate::semantic_index::GraphTextPropertyRef {
+            graph_id: "media".into(),
+            type_id: "Bookmark".into(),
+            property_id: "text".into(),
+        }
+    }
+
+    fn graph_draft() -> SemanticBindingDraft {
+        let mut draft = draft();
+        draft.binding_id = "bookmark".into();
+        draft.source_selector = SemanticSourceSelector::GraphTextPropertyRef(graph_selector());
+        draft
+    }
+
+    #[test]
+    fn a_graph_binding_is_created_and_its_identity_validates_against_it() {
+        let binding = SemanticBinding::create(graph_draft()).unwrap();
+        let identity = crate::semantic_index::SemanticSqlSourceIdentity::create_graph(
+            &graph_selector(),
+            "tenant-a",
+            crate::semantic_index::SemanticDigest::from_bytes([9; 32]),
+        );
+        identity.validate().unwrap();
+        identity.validate_against_binding(&binding).unwrap();
+        assert!(identity.source_entity_id().starts_with("semantic-graph-source:sha256:"));
+    }
+
+    #[test]
+    fn a_graph_identity_never_validates_against_a_sql_binding_and_back() {
+        let sql_binding = SemanticBinding::create(draft()).unwrap();
+        let graph_binding = SemanticBinding::create(graph_draft()).unwrap();
+        let record = crate::semantic_index::SemanticDigest::from_bytes([4; 32]);
+        let graph = crate::semantic_index::SemanticSqlSourceIdentity::create_graph(
+            &graph_selector(),
+            "tenant-a",
+            record,
+        );
+        let sql = crate::semantic_index::SemanticSqlSourceIdentity::create(
+            &SqlColumnRef {
+                catalog_id: SEMANTIC_SQL_CATALOG_ID.into(),
+                schema_id: "public".into(),
+                table_id: "articles".into(),
+                column_id: "body".into(),
+            },
+            "tenant-a",
+            record,
+        );
+        assert_eq!(
+            graph.validate_against_binding(&sql_binding),
+            Err(SemanticIndexError::SourceManifestMismatch)
+        );
+        assert_eq!(
+            sql.validate_against_binding(&graph_binding),
+            Err(SemanticIndexError::SourceManifestMismatch)
+        );
+        assert_ne!(graph.source_entity_id(), sql.source_entity_id());
+    }
+
+    #[test]
+    fn a_graph_identity_with_edited_coordinates_fails_its_digest() {
+        let mut identity = crate::semantic_index::SemanticSqlSourceIdentity::create_graph(
+            &graph_selector(),
+            "tenant-a",
+            crate::semantic_index::SemanticDigest::from_bytes([1; 32]),
+        );
+        identity.table_id = "Other".into();
+        assert!(matches!(
+            identity.validate(),
+            Err(SemanticIndexError::DigestMismatch { .. })
+        ));
+        let mut relabelled = identity.clone();
+        relabelled.source_kind = crate::semantic_index::SemanticSourceKind::Sql;
+        assert_eq!(
+            relabelled.validate(),
+            Err(SemanticIndexError::SourceManifestMismatch)
+        );
     }
 }

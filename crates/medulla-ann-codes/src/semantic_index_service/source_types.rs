@@ -83,7 +83,7 @@ impl SemanticSqlSourceReadPage {
     pub(super) const MAX_SOURCE_BYTES: usize = 8 * 1024 * 1024;
 
     pub fn validate(&self) -> Result<(), SemanticIndexError> {
-        if sql_source_revision_parts(&self.source_revision).is_none() {
+        if SemanticSourceRevision::parse(&self.source_revision).is_none() {
             return Err(SemanticIndexError::SourceManifestMismatch);
         }
         if self.sources.len() > Self::MAX_SOURCES {

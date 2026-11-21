@@ -487,7 +487,7 @@ impl AuthorizedSqlSourceReadPort {
         binding: &SemanticBinding,
         cursor: Option<&[u8]>,
     ) -> Result<AuthorizedSqlSourcePage, SemanticIndexError> {
-        let selector = binding.source_selector.require_implemented()?;
+        let selector = binding.source_selector.require_sql_column()?;
         if binding.tenant_id != self.authority.tenant_scope()
             || binding.actor_scope != self.authority.actor_scope()
             || binding.effective_actor_scope != self.authority.agent_id()

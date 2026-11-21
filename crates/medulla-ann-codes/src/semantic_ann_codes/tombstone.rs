@@ -6,10 +6,11 @@
 //! the admitted write against the durable binding, reconciliation checkpoint,
 //! prior progress and the retained receipt that completed it.
 
+use medulla_index_types::semantic_index::SemanticSourceRevision;
 use super::batch::MetadataMutation;
 use super::persist::replace_bytes;
 use super::reconciliation::{
-    compare_source_revision, sql_source_revision_parts, valid_source_entity_id_for_reconciliation,
+    compare_source_revision, valid_source_entity_id_for_reconciliation,
     validate_sql_source_revision, SemanticSourceReconciliationCheckpoint,
     SemanticSourceReconciliationPhase, SEMANTIC_RECONCILIATION_CHECKPOINT_ENTITY,
 };
@@ -179,11 +180,11 @@ impl SemanticCodeStore {
             "semantic reconciliation tombstone binding proof is stale",
         )?;
         let binding_revision =
-            sql_source_revision_parts(&binding.source_revision).ok_or_else(|| {
+            SemanticSourceRevision::parse(&binding.source_revision).ok_or_else(|| {
                 corrupt("durable semantic binding has a non-canonical SQL source revision")
             })?;
         let intent_revision =
-            sql_source_revision_parts(&intent.source_revision).ok_or_else(|| {
+            SemanticSourceRevision::parse(&intent.source_revision).ok_or_else(|| {
                 refused("semantic reconciliation tombstone has a non-canonical SQL source revision")
             })?;
         ensure(
@@ -241,7 +242,7 @@ impl SemanticCodeStore {
         })?;
         let old: SemanticSourceProgress = decode_valid(&raw)?;
         validate_sql_source_revision(&old.source_revision)?;
-        let old_revision = sql_source_revision_parts(&old.source_revision).ok_or_else(|| {
+        let old_revision = SemanticSourceRevision::parse(&old.source_revision).ok_or_else(|| {
             corrupt("semantic source progress has a non-canonical SQL source revision")
         })?;
         if old_revision.authority != authority {
@@ -440,11 +441,11 @@ pub(super) fn replace_reconciled_sql_manifest(
         "semantic tombstone source manifest does not retain the prior identity",
     )?;
     let existing_revision =
-        sql_source_revision_parts(&existing.source_revision).ok_or_else(|| {
+        SemanticSourceRevision::parse(&existing.source_revision).ok_or_else(|| {
             corrupt("retained SQL source manifest has a non-canonical source revision")
         })?;
     let manifest_revision =
-        sql_source_revision_parts(&manifest.source_revision).ok_or_else(|| {
+        SemanticSourceRevision::parse(&manifest.source_revision).ok_or_else(|| {
             corrupt("replacement SQL source manifest has a non-canonical source revision")
         })?;
     ensure(

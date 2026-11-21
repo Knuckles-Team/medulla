@@ -2,12 +2,17 @@ use serde::{Deserialize, Serialize};
 
 use super::digest::{
     cbor, domain_digest, SemanticDigest, SEMANTIC_GRAPH_PROJECTION_MANIFEST_DIGEST_DOMAIN,
-    SEMANTIC_SQL_SOURCE_IDENTITY_DIGEST_DOMAIN, SEMANTIC_SQL_SOURCE_MANIFEST_DIGEST_DOMAIN,
+    SEMANTIC_GRAPH_SOURCE_IDENTITY_DIGEST_DOMAIN, SEMANTIC_SQL_SOURCE_IDENTITY_DIGEST_DOMAIN,
+    SEMANTIC_SQL_SOURCE_MANIFEST_DIGEST_DOMAIN,
 };
 use super::generation::SemanticStageScope;
 use super::identity::{validate_generation, validate_text, SemanticBinding};
 use super::selector::SemanticSourceSelector;
-use super::selector_ref::{SqlColumnRef, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID};
+use super::selector_ref::{
+    GraphTextPropertyRef, SqlColumnRef, SEMANTIC_GRAPH_SCHEMA_ID, SEMANTIC_SQL_CATALOG_ID,
+    SEMANTIC_SQL_SCHEMA_ID,
+};
+use super::source_kind::SemanticSourceKind;
 use super::stage::{SemanticStage, SemanticStageTransition};
 use super::state::SemanticIndexError;
 
@@ -15,6 +20,10 @@ use super::state::SemanticIndexError;
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SemanticSqlSourceIdentity {
+    /// The kind of source this identity names. A graph identity carries the graph id as its
+    /// catalog, the node type as its table and the text property as its column.
+    #[serde(default)]
+    pub source_kind: SemanticSourceKind,
     pub tenant_scope: String,
     pub catalog_id: String,
     pub schema_id: String,
@@ -33,6 +42,7 @@ impl SemanticSqlSourceIdentity {
         record_identity_digest: SemanticDigest,
     ) -> Self {
         let mut identity = Self {
+            source_kind: SemanticSourceKind::Sql,
             tenant_scope: tenant_scope.into(),
             catalog_id: selector.catalog_id.clone(),
             schema_id: selector.schema_id.clone(),
@@ -45,8 +55,29 @@ impl SemanticSqlSourceIdentity {
         identity
     }
 
+    /// The identity of one node of a graph text-property source. `record_identity_digest` is the
+    /// digest of the node id, so the entity id is deterministic from the node id.
+    pub fn create_graph(
+        selector: &GraphTextPropertyRef,
+        tenant_scope: impl Into<String>,
+        record_identity_digest: SemanticDigest,
+    ) -> Self {
+        let mut identity = Self {
+            source_kind: SemanticSourceKind::Graph,
+            tenant_scope: tenant_scope.into(),
+            catalog_id: selector.graph_id.clone(),
+            schema_id: SEMANTIC_GRAPH_SCHEMA_ID.to_string(),
+            table_id: selector.type_id.clone(),
+            column_id: selector.property_id.clone(),
+            record_identity_digest,
+            source_identity_digest: SemanticDigest::from_bytes([0; 32]),
+        };
+        identity.source_identity_digest = identity.compute_digest();
+        identity
+    }
+
     pub fn source_entity_id(&self) -> String {
-        format!("semantic-sql-source:{}", self.source_identity_digest)
+        self.source_kind.entity_id(self.source_identity_digest)
     }
 
     pub fn validate(&self) -> Result<(), SemanticIndexError> {
@@ -59,7 +90,14 @@ impl SemanticSqlSourceIdentity {
         ] {
             validate_text(field, value)?;
         }
-        if self.catalog_id != SEMANTIC_SQL_CATALOG_ID || self.schema_id != SEMANTIC_SQL_SCHEMA_ID {
+        let coordinates_match_kind = match self.source_kind {
+            SemanticSourceKind::Sql => {
+                self.catalog_id == SEMANTIC_SQL_CATALOG_ID
+                    && self.schema_id == SEMANTIC_SQL_SCHEMA_ID
+            }
+            SemanticSourceKind::Graph => self.schema_id == SEMANTIC_GRAPH_SCHEMA_ID,
+        };
+        if !coordinates_match_kind {
             return Err(SemanticIndexError::SourceManifestMismatch);
         }
         if self.source_identity_digest != self.compute_digest() {
@@ -75,14 +113,31 @@ impl SemanticSqlSourceIdentity {
         binding: &SemanticBinding,
     ) -> Result<(), SemanticIndexError> {
         self.validate()?;
-        let SemanticSourceSelector::SqlColumnRef(selector) = &binding.source_selector else {
-            return Err(SemanticIndexError::SourceManifestMismatch);
+        // The identity's kind must be the binding selector's kind: neither kind is ever read as
+        // the other.
+        let (kind, catalog, schema, table, column) = match &binding.source_selector {
+            SemanticSourceSelector::SqlColumnRef(selector) => (
+                SemanticSourceKind::Sql,
+                selector.catalog_id.as_str(),
+                selector.schema_id.as_str(),
+                selector.table_id.as_str(),
+                selector.column_id.as_str(),
+            ),
+            SemanticSourceSelector::GraphTextPropertyRef(selector) => (
+                SemanticSourceKind::Graph,
+                selector.graph_id.as_str(),
+                SEMANTIC_GRAPH_SCHEMA_ID,
+                selector.type_id.as_str(),
+                selector.property_id.as_str(),
+            ),
+            _ => return Err(SemanticIndexError::SourceManifestMismatch),
         };
-        if self.tenant_scope != binding.tenant_id
-            || self.catalog_id != selector.catalog_id
-            || self.schema_id != selector.schema_id
-            || self.table_id != selector.table_id
-            || self.column_id != selector.column_id
+        if self.source_kind != kind
+            || self.tenant_scope != binding.tenant_id
+            || self.catalog_id != catalog
+            || self.schema_id != schema
+            || self.table_id != table
+            || self.column_id != column
         {
             return Err(SemanticIndexError::SourceManifestMismatch);
         }
@@ -101,7 +156,11 @@ impl SemanticSqlSourceIdentity {
                 cbor::digest(self.record_identity_digest),
             ),
         ]);
-        domain_digest(SEMANTIC_SQL_SOURCE_IDENTITY_DIGEST_DOMAIN, subject)
+        let domain = match self.source_kind {
+            SemanticSourceKind::Sql => SEMANTIC_SQL_SOURCE_IDENTITY_DIGEST_DOMAIN,
+            SemanticSourceKind::Graph => SEMANTIC_GRAPH_SOURCE_IDENTITY_DIGEST_DOMAIN,
+        };
+        domain_digest(domain, subject)
     }
 }
 

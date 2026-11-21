@@ -8,12 +8,13 @@
 //! writes the replacement binding, its fresh progress, the superseded old
 //! progress and the moved head.
 
+use medulla_index_types::semantic_index::{SemanticSourceKind, SemanticSourceRevision};
 use super::batch::{
     binding_subject, mutation_row, operation_batch_id, require_attribution, MetadataMutation,
 };
 use super::persist::{put_bytes_once, replace_bytes};
 use super::reconciliation::{
-    compare_source_revision, sql_source_revision_parts, validate_sql_source_revision,
+    compare_source_revision, validate_sql_source_revision,
 };
 use super::record::{decode, encode, encode_valid, row};
 use super::stage::{
@@ -455,13 +456,16 @@ fn refresh_changes_authority(current: &SemanticBinding, replacement: &SemanticBi
     scope(replacement) != scope(current) || model(replacement) != model(current)
 }
 
-/// A SQL-sourced live head may only be refreshed to a newer epoch of the same
+/// A source-lineage (SQL or graph) live head may only be refreshed to a newer epoch of the same
 /// source authority; any other head only to a revision that sorts after it.
 pub(super) fn ensure_newer_source_revision(
     current: &str,
     replacement: &str,
 ) -> Result<(), SemanticCodeError> {
-    if !current.starts_with("sql-source:") {
+    if !SemanticSourceKind::ALL
+        .iter()
+        .any(|kind| current.starts_with(&format!("{}:", kind.revision_tag())))
+    {
         if compare_source_revision(replacement, current) != Ordering::Greater {
             return Err(refused(
                 "semantic refresh source revision is not newer than the live head",
@@ -469,9 +473,9 @@ pub(super) fn ensure_newer_source_revision(
         }
         return Ok(());
     }
-    let current_revision = sql_source_revision_parts(current)
+    let current_revision = SemanticSourceRevision::parse(current)
         .ok_or_else(|| refused("semantic refresh live head has an invalid SQL source revision"))?;
-    let replacement_revision = sql_source_revision_parts(replacement).ok_or_else(|| {
+    let replacement_revision = SemanticSourceRevision::parse(replacement).ok_or_else(|| {
         refused("semantic refresh replacement has an invalid SQL source revision")
     })?;
     if current_revision.authority != replacement_revision.authority

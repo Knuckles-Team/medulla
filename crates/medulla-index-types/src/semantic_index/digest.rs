@@ -24,6 +24,8 @@ pub const SEMANTIC_SQL_SOURCE_MANIFEST_DIGEST_DOMAIN: &[u8] =
     b"au-eg/semantic-sql-source-manifest/v1";
 pub const SEMANTIC_SQL_SOURCE_IDENTITY_DIGEST_DOMAIN: &[u8] =
     b"au-eg/semantic-sql-source-identity/v1";
+pub const SEMANTIC_GRAPH_SOURCE_IDENTITY_DIGEST_DOMAIN: &[u8] =
+    b"au-eg/semantic-graph-source-identity/v1";
 pub const SEMANTIC_GRAPH_PROJECTION_MANIFEST_DIGEST_DOMAIN: &[u8] =
     b"au-eg/semantic-graph-projection-manifest/v1";
 pub const SEMANTIC_AUTHORIZATION_RECEIPT_DIGEST_DOMAIN: &[u8] =

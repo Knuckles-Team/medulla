@@ -5,6 +5,8 @@ use super::SemanticSelectorKind;
 
 pub const SEMANTIC_SQL_CATALOG_ID: &str = "tenant";
 pub const SEMANTIC_SQL_SCHEMA_ID: &str = "public";
+/// The schema coordinate of a graph source identity, which has no SQL schema.
+pub const SEMANTIC_GRAPH_SCHEMA_ID: &str = "graph";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -1693,7 +1693,7 @@ impl AuthorizedTable {
             cluster_source_ordering_required(),
         )?;
         let selector = source_selector
-            .require_implemented()
+            .require_sql_column()
             .map_err(|_| ACCESS_DENIED.to_string())?;
         if selector.table_id != self.table {
             return Err(ACCESS_DENIED.to_string());

@@ -34,13 +34,7 @@ pub(super) fn validate_source_dirty_record(
         });
     }
     if record.identity.tenant().as_str() != binding.tenant_id
-        || !matches!(
-            record.identity.scope(),
-            medulla_mutation_types::mutation_scope::MutationScope::Native {
-                domain: medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
-                ..
-            }
-        )
+        || !dirty_scope_matches_selector(binding, record.identity.scope())
     {
         return Err(SemanticIndexError::SourceManifestMismatch);
     }
@@ -50,6 +44,29 @@ pub(super) fn validate_source_dirty_record(
         return Err(SemanticIndexError::SourceManifestMismatch);
     }
     Ok(wakeup)
+}
+
+/// A SQL binding is woken by a native SQL-catalog scope; a graph binding only by a commit to
+/// its own graph. Neither scope kind wakes the other.
+fn dirty_scope_matches_selector(
+    binding: &SemanticBinding,
+    scope: &medulla_mutation_types::mutation_scope::MutationScope,
+) -> bool {
+    use medulla_index_types::semantic_index::SemanticSourceSelector;
+    use medulla_mutation_types::mutation_scope::{DurabilityDomain, MutationScope};
+    match (&binding.source_selector, scope) {
+        (
+            SemanticSourceSelector::SqlColumnRef(_),
+            MutationScope::Native {
+                domain: DurabilityDomain::SqlCatalog,
+                ..
+            },
+        ) => true,
+        (SemanticSourceSelector::GraphTextPropertyRef(selector), MutationScope::Graph { graph }) => {
+            graph.as_str() == selector.graph_id
+        }
+        _ => false,
+    }
 }
 
 /// Expand the coarse SQL source fact into the binding-specific S1 intent.
@@ -71,26 +88,6 @@ pub(super) fn source_dirty_to_s1(
         return Err(SemanticIndexError::SourceManifestMismatch);
     }
     coalesce_authoritative_revision_to_s1(binding, source_entity_id, source_revision, input_digest)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct SqlSourceRevision<'a> {
-    authority: &'a str,
-    epoch: u64,
-}
-
-/// Parse the canonical tenant-wide SQL source revision.  The authority is
-/// deliberately parsed before the epoch so a numerically newer foreign
-/// source cannot supersede the tenant's current source lineage.
-pub(super) fn sql_source_revision_parts(revision: &str) -> Option<SqlSourceRevision<'_>> {
-    let rest = revision.strip_prefix("sql-source:")?;
-    let (authority, epoch) = rest.rsplit_once(":epoch:")?;
-    SemanticDigest::parse(authority).ok()?;
-    let epoch = epoch.parse().ok()?;
-    if epoch == 0 {
-        return None;
-    }
-    Some(SqlSourceRevision { authority, epoch })
 }
 
 pub(super) fn validate_manifest_against_binding(
@@ -139,9 +136,9 @@ pub(super) fn coalesce_authoritative_revision_to_s1(
     source_revision: &str,
     source_content_digest: SemanticDigest,
 ) -> Result<SemanticStageIntent, SemanticIndexError> {
-    let source = sql_source_revision_parts(source_revision)
+    let source = SemanticSourceRevision::parse(source_revision)
         .ok_or(SemanticIndexError::SourceManifestMismatch)?;
-    let binding_revision = sql_source_revision_parts(&binding.source_revision)
+    let binding_revision = SemanticSourceRevision::parse(&binding.source_revision)
         .ok_or(SemanticIndexError::SourceManifestMismatch)?;
     if binding_revision.authority != source.authority {
         return Err(SemanticIndexError::SourceManifestMismatch);
@@ -181,9 +178,9 @@ pub(super) fn validate_sql_revision_lineage(
     current_revision: &str,
     replacement_revision: &str,
 ) -> Result<(), SemanticIndexError> {
-    let current = sql_source_revision_parts(current_revision)
+    let current = SemanticSourceRevision::parse(current_revision)
         .ok_or(SemanticIndexError::SourceManifestMismatch)?;
-    let replacement = sql_source_revision_parts(replacement_revision)
+    let replacement = SemanticSourceRevision::parse(replacement_revision)
         .ok_or(SemanticIndexError::SourceManifestMismatch)?;
     if current.authority != replacement.authority {
         return Err(SemanticIndexError::SourceManifestMismatch);
@@ -366,13 +363,13 @@ pub(super) fn validate_page_revision_against_binding(
     binding: &SemanticBinding,
     source_revision: &str,
 ) -> Result<(), SemanticCodeError> {
-    let page = sql_source_revision_parts(source_revision).ok_or_else(|| {
+    let page = SemanticSourceRevision::parse(source_revision).ok_or_else(|| {
         SemanticCodeError::Refused(
             "authoritative SQL source page has a non-canonical source revision".to_string(),
         )
     })?;
     let binding_revision =
-        sql_source_revision_parts(&binding.source_revision).ok_or_else(|| {
+        SemanticSourceRevision::parse(&binding.source_revision).ok_or_else(|| {
             SemanticCodeError::Corrupt(
                 "durable semantic binding has a non-canonical SQL source revision".to_string(),
             )

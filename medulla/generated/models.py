@@ -26363,6 +26363,11 @@ SemanticSourceSelector = Annotated[
 ]
 
 
+class SemanticSourceKind(str, Enum):
+    SQL = "sql"
+    GRAPH = "graph"
+
+
 class SemanticSqlSourceIdentity(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -26371,6 +26376,7 @@ class SemanticSqlSourceIdentity(BaseModel):
     record_identity_digest: SemanticDigest
     schema_id: str
     source_identity_digest: SemanticDigest
+    source_kind: SemanticSourceKind = SemanticSourceKind.SQL
     table_id: str
     tenant_scope: str
 
