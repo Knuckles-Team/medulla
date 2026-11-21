@@ -127,7 +127,7 @@ fn admission(upgrade: &SkillUpgradeRequest) -> Result<Executed, String> {
         }])
         .expect("one score fits the bound"),
         false,
-    ))
+    )))
 }
 
 impl DecisionFamily for SkillUpgradeFamily {
