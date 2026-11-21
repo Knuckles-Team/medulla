@@ -250,7 +250,7 @@ impl TruthMaintenance {
         self.materializations.insert(
             id.clone(),
             Materialization {
-                id,
+                id: id.clone(),
                 depends_on,
                 generating_activity,
                 status: prior.unwrap_or(MATERIALIZATION_STATUS_MACHINE.initial),

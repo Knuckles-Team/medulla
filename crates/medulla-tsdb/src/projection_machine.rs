@@ -164,11 +164,11 @@ mod tests {
         for status in ProjectionStatus::ALL {
             assert_eq!(ProjectionStatus::from_stored(status.stored()), Some(status));
             let json = serde_json::to_string(&status).unwrap();
-            assert_eq!(json, format!("\\"{}\\"", status.stored()));
+            assert_eq!(json, format!("\"{}\"", status.stored()));
             assert_eq!(serde_json::from_str::<ProjectionStatus>(&json).unwrap(), status);
         }
         assert_eq!(ProjectionStatus::from_stored("healthy"), None);
-        assert!(serde_json::from_str::<ProjectionStatus>("\\"healthy\\"").is_err());
+        assert!(serde_json::from_str::<ProjectionStatus>("\"healthy\"").is_err());
     }
 
     /// No writer in `store.rs` sets the stored status except through `apply`.

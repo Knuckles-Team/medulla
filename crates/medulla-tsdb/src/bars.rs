@@ -12,9 +12,8 @@ use medulla_finance_market::market::resolve::resolve;
 use medulla_finance_market::{
     market::codec::decode, market::codec::encode, market::codec::BAR_FIELDS,
 };
-use medulla_finance_market::{
-    market::BarRecord, market::FinalityFilter, market::MarketResult, market::SeriesPoint,
-};
+use medulla_finance_market::market::MarketResult;
+use medulla_result_types::compute_result::market::{BarRecord, FinalityFilter, SeriesPoint};
 
 use crate::point::Point;
 
