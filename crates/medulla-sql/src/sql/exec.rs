@@ -24,7 +24,10 @@ pub use medulla_protocol_types::protocol::QueryResult;
 use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,
 };
-use super::catalog::{register_system_catalogs, SystemCatalogInputs};
+use super::catalog::{
+    reads_session_views, refuse_catalog_view_write, register_system_catalogs, PgStatActivityRow,
+    SystemCatalogInputs,
+};
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, reads_view_status, StoreCatalog};
@@ -358,7 +361,23 @@ pub fn exec_sql_typed_with_tables_in_graph(
     sql: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
-    exec_sql_typed_with_tables_in_graph_hive(view, store, graph, sql, cancel, None)
+    exec_sql_typed_with_tables_in_graph_sessions(view, store, graph, sql, cancel, &[])
+}
+
+/// As [`exec_sql_typed_with_tables_in_graph`], answering `pg_catalog.pg_stat_activity` and
+/// `pg_catalog.pg_stat_database` from `sessions` (MEDULLA-DURABLE-KERNEL-R035.3.1). The caller
+/// filters `sessions`; this crate does no authorization. A write naming one of the session
+/// views refuses `READ_ONLY_CATALOG_VIEW`.
+pub fn exec_sql_typed_with_tables_in_graph_sessions(
+    view: &GraphView,
+    store: &TableStore,
+    graph: Option<&str>,
+    sql: &str,
+    cancel: &CancellationToken,
+    sessions: &[PgStatActivityRow],
+) -> Result<TypedQueryResult, String> {
+    refuse_catalog_view_write(sql)?;
+    exec_in_graph(view, store, graph, sql, cancel, None, sessions)
 }
 
 /// As [`exec_sql_typed_with_tables_cancellable`], binding the caller's metastore sources to the
@@ -385,12 +404,26 @@ pub fn exec_sql_typed_with_tables_in_graph_hive(
     cancel: &CancellationToken,
     hive: Option<Arc<super::metastore_federation::HiveScope>>,
 ) -> Result<TypedQueryResult, String> {
+    exec_in_graph(view, store, graph, sql, cancel, hive, &[])
+}
+
+/// The one body behind the in-graph readers: `sessions` feed the session views.
+fn exec_in_graph(
+    view: &GraphView,
+    store: &TableStore,
+    graph: Option<&str>,
+    sql: &str,
+    cancel: &CancellationToken,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+    sessions: &[PgStatActivityRow],
+) -> Result<TypedQueryResult, String> {
     // The store's catalog objects: stored functions (CONCEPT:MEDULLA-KG.query.create-drop-function,
     // expanded into the query text before planning), durable views, property graphs, the
     // pgvector ANN registrations (CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313) and the
     // managed-index status rows (EH-352).
     let mut catalog = StoreCatalog::read(store, store.index_scope())?;
     catalog.statement_graph = graph.map(str::to_string);
+    catalog.sessions = sessions.to_vec();
     if reads_vector_advice(sql) {
         catalog.vector_advice = Some(super::vector_advice::read_advice(
             store,
@@ -406,7 +439,7 @@ pub fn exec_sql_typed_with_tables_in_graph_hive(
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
         let run_sql = |q: &str| {
-            exec_sql_typed_with_tables_in_graph_hive(view, store, graph, q, cancel, hive.clone())
+            exec_in_graph(view, store, graph, q, cancel, hive.clone(), sessions)
         };
         if let Some(res) =
             medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)?
@@ -712,6 +745,7 @@ impl SqlContextCache {
                 statement_graph: Some(&epoch.graph),
                 tables: &catalog.tables,
                 secondary_indexes: &catalog.secondary_indexes,
+                sessions: &[],
             },
         )
         .await?;
@@ -817,6 +851,7 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
     if ann_pushdown_may_apply(sql, &ann_indexes)
         || reads_index_status(sql)
         || reads_view_status(sql)
+        || reads_session_views(sql)
         || reads_vector_advice(sql)
     {
         return exec_sql_typed_with_tables_in_graph(view, store, Some(graph), sql, cancel);
@@ -1139,6 +1174,7 @@ fn collect_sql_batches_with(
                 statement_graph: catalog.statement_graph.as_deref(),
                 tables: &catalog.tables,
                 secondary_indexes: &catalog.secondary_indexes,
+                sessions: &catalog.sessions,
             },
         )
         .await?;

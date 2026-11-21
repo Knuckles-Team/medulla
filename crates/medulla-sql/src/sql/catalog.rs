@@ -691,21 +691,191 @@ fn shaped_empty_pg_catalog() -> Vec<(&'static str, Vec<(&'static str, DataType)>
                 ("spcoptions", DataType::Utf8),
             ],
         ),
+        // The engine holds no relation lock visible to SQL: writers serialize inside the
+        // storage kernel, so `pg_locks` answers shaped and empty (MEDULLA-DURABLE-KERNEL-R035.3.1).
         (
-            "pg_stat_activity",
+            "pg_locks",
             vec![
-                ("datid", DataType::Int32),
-                ("datname", DataType::Utf8),
+                ("locktype", DataType::Utf8),
+                ("database", DataType::Int32),
+                ("relation", DataType::Int32),
                 ("pid", DataType::Int32),
-                ("usename", DataType::Utf8),
-                ("application_name", DataType::Utf8),
-                ("client_addr", DataType::Utf8),
-                ("backend_start", DataType::Utf8),
-                ("state", DataType::Utf8),
-                ("query", DataType::Utf8),
+                ("mode", DataType::Utf8),
+                ("granted", DataType::Boolean),
             ],
         ),
     ]
+}
+
+/// One backend session as the catalog's `pg_stat_activity` and `pg_stat_database`
+/// views see it (MEDULLA-DURABLE-KERNEL-R035.3.1). The caller supplies the rows,
+/// already filtered to what the caller may see; this crate does no authorization.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PgStatActivityRow {
+    /// The backend key pid of the session.
+    pub pid: i32,
+    pub tenant: String,
+    pub principal: String,
+    /// The graph the session is bound to: `datname`.
+    pub graph: String,
+    /// `idle`, `active` or `idle in transaction`.
+    pub state: &'static str,
+    /// Unix milliseconds of the current statement's start: `backend_start`.
+    pub query_start_ms: i64,
+    pub query: String,
+}
+
+/// The relations a write must never name: they are answered from engine state, not stored.
+const READ_ONLY_CATALOG_VIEWS: [&str; 3] = ["pg_stat_activity", "pg_stat_database", "pg_locks"];
+
+/// Refuse an `INSERT`, `UPDATE` or `DELETE` naming `pg_stat_activity`,
+/// `pg_stat_database` or `pg_locks`, with the `READ_ONLY_CATALOG_VIEW` prefix the
+/// wire maps to SQLSTATE `42809`. Any other statement passes. Pure.
+pub(crate) fn refuse_catalog_view_write(sql: &str) -> Result<(), String> {
+    let lowered = sql.trim_start().to_ascii_lowercase();
+    let rest = if let Some(rest) = lowered.strip_prefix("insert") {
+        rest.trim_start().strip_prefix("into")
+    } else if let Some(rest) = lowered.strip_prefix("update") {
+        Some(rest)
+    } else if let Some(rest) = lowered.strip_prefix("delete") {
+        rest.trim_start().strip_prefix("from")
+    } else {
+        None
+    };
+    let Some(rest) = rest else {
+        return Ok(());
+    };
+    let rest = rest.trim_start();
+    let rest = rest.strip_prefix("only").map_or(rest, |after| {
+        if after.starts_with(char::is_whitespace) {
+            after.trim_start()
+        } else {
+            rest
+        }
+    });
+    let target = rest
+        .split(|c: char| c.is_whitespace() || matches!(c, '(' | ';' | ','))
+        .next()
+        .unwrap_or("");
+    let segments: Vec<&str> = target.split('.').map(|s| s.trim_matches('"')).collect();
+    let relation = segments.last().copied().unwrap_or("");
+    let schema_ok = match segments.len() {
+        1 => true,
+        2 => segments[0] == "pg_catalog",
+        _ => false,
+    };
+    if schema_ok && READ_ONLY_CATALOG_VIEWS.contains(&relation) {
+        return Err(format!(
+            "READ_ONLY_CATALOG_VIEW: pg_catalog.{relation} is a read-only catalog view"
+        ));
+    }
+    Ok(())
+}
+
+/// Whether `sql` may read the session views. Session state moves without a catalog
+/// write, so such a statement never uses a cached context. Over-approximates on
+/// purpose: a false positive only skips the cache.
+pub(crate) fn reads_session_views(sql: &str) -> bool {
+    let lowered = sql.to_ascii_lowercase();
+    lowered.contains("pg_stat_activity") || lowered.contains("pg_stat_database")
+}
+
+/// RFC 3339 UTC text of Unix milliseconds, to the millisecond.
+fn rfc3339_utc(ms: i64) -> String {
+    let secs = ms.div_euclid(1000);
+    let millis = ms.rem_euclid(1000);
+    let days = secs.div_euclid(86_400);
+    let rem = secs.rem_euclid(86_400);
+    let (hour, minute, second) = (rem / 3600, rem % 3600 / 60, rem % 60);
+    // Civil date from days since 1970-01-01 (proleptic Gregorian).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millis:03}Z")
+}
+
+/// `pg_catalog.pg_stat_activity`: one row per supplied session, with the nine
+/// columns the shaped relation always had.
+fn pg_stat_activity_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("datid", DataType::Int32, false),
+        Field::new("datname", DataType::Utf8, false),
+        Field::new("pid", DataType::Int32, false),
+        Field::new("usename", DataType::Utf8, false),
+        Field::new("application_name", DataType::Utf8, false),
+        Field::new("client_addr", DataType::Utf8, false),
+        Field::new("backend_start", DataType::Utf8, false),
+        Field::new("state", DataType::Utf8, false),
+        Field::new("query", DataType::Utf8, false),
+    ]));
+    let n = sessions.len();
+    let starts: Vec<String> = sessions
+        .iter()
+        .map(|row| rfc3339_utc(row.query_start_ms))
+        .collect();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int32Array::from(vec![DATABASE_OID; n])),
+            Arc::new(StringArray::from(
+                sessions.iter().map(|r| r.graph.as_str()).collect::<Vec<_>>(),
+            )),
+            Arc::new(Int32Array::from(
+                sessions.iter().map(|r| r.pid).collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                sessions
+                    .iter()
+                    .map(|r| r.principal.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(vec![""; n])),
+            Arc::new(StringArray::from(vec![""; n])),
+            Arc::new(StringArray::from(
+                starts.iter().map(String::as_str).collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                sessions.iter().map(|r| r.state).collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                sessions.iter().map(|r| r.query.as_str()).collect::<Vec<_>>(),
+            )),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("pg_stat_activity batch: {e}"))
+}
+
+/// `pg_catalog.pg_stat_database`: one row per distinct graph among the supplied
+/// sessions, with the number of those sessions in `numbackends`.
+fn pg_stat_database_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("datid", DataType::Int32, false),
+        Field::new("datname", DataType::Utf8, false),
+        Field::new("numbackends", DataType::Int32, false),
+    ]));
+    let mut per_graph: std::collections::BTreeMap<&str, i32> = std::collections::BTreeMap::new();
+    for row in sessions {
+        let count = per_graph.entry(row.graph.as_str()).or_insert(0);
+        *count = count.saturating_add(1);
+    }
+    let n = per_graph.len();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int32Array::from(vec![DATABASE_OID; n])),
+            Arc::new(StringArray::from(per_graph.keys().copied().collect::<Vec<_>>())),
+            Arc::new(Int32Array::from(per_graph.values().copied().collect::<Vec<_>>())),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("pg_stat_database batch: {e}"))
 }
 
 /// A catalog relation that is SHAPED but always empty: the column list is the whole
@@ -1546,6 +1716,8 @@ pub(crate) struct SystemCatalogInputs<'a> {
     pub(crate) statement_graph: Option<&'a str>,
     pub(crate) tables: &'a [TableSchema],
     pub(crate) secondary_indexes: &'a [SecondaryIndexSpec],
+    /// The sessions `pg_stat_activity` and `pg_stat_database` answer from.
+    pub(crate) sessions: &'a [PgStatActivityRow],
 }
 
 /// Register the synthetic `pg_catalog` + `information_schema` system views and the
@@ -1568,6 +1740,7 @@ pub(crate) async fn register_system_catalogs(
         statement_graph,
         tables,
         secondary_indexes,
+        sessions,
     } = *inputs;
     let rels = collect_relations(ctx, nodes_schema, edges_schema, user_relations, views).await;
 
@@ -1596,6 +1769,8 @@ pub(crate) async fn register_system_catalogs(
     for (name, columns) in shaped_empty_pg_catalog() {
         register_syscat_table(&pg_schema, name, empty_catalog_batch(name, &columns)?)?;
     }
+    register_syscat_table(&pg_schema, "pg_stat_activity", pg_stat_activity_batch(sessions)?)?;
+    register_syscat_table(&pg_schema, "pg_stat_database", pg_stat_database_batch(sessions)?)?;
     register_syscat_table(&pg_schema, "pg_proc", pg_proc_batch(functions)?)?;
     register_syscat_table(&pg_schema, "pg_database", pg_database_batch()?)?;
     register_syscat_table(&pg_schema, "pg_settings", pg_settings_batch()?)?;
@@ -1686,4 +1861,106 @@ pub(crate) async fn register_system_catalogs(
     )));
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sql::exec::exec_sql_typed_with_tables_in_graph_sessions;
+    use crate::sql::spill::CancellationToken;
+    use medulla_graph_core::graph::GraphView;
+    use medulla_table_store::tables::TableStore;
+
+    fn session(pid: i32, graph: &str, principal: &str, state: &'static str) -> PgStatActivityRow {
+        PgStatActivityRow {
+            pid,
+            tenant: "tenant-a".to_string(),
+            principal: principal.to_string(),
+            graph: graph.to_string(),
+            state,
+            query_start_ms: 1_700_000_000_123,
+            query: format!("SELECT {pid}"),
+        }
+    }
+
+    fn rows(
+        store: &TableStore,
+        sessions: &[PgStatActivityRow],
+        sql: &str,
+    ) -> Result<Vec<Vec<serde_json::Value>>, String> {
+        exec_sql_typed_with_tables_in_graph_sessions(
+            &GraphView::default(),
+            store,
+            Some("g1"),
+            sql,
+            &CancellationToken::new(),
+            sessions,
+        )
+        .map(|result| result.rows)
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R035.3.1
+    #[test]
+    fn stat_views_answer_supplied_sessions_and_refuse_writes() {
+        let (store, _path) = TableStore::open_temp().unwrap();
+        let sessions = [
+            session(101, "g1", "principal-a", "active"),
+            session(102, "g2", "principal-b", "idle"),
+        ];
+
+        let activity = rows(
+            &store,
+            &sessions,
+            "SELECT pid, datname, usename, state, query, backend_start \
+             FROM pg_catalog.pg_stat_activity ORDER BY pid",
+        )
+        .unwrap();
+        assert_eq!(activity.len(), 2);
+        assert_eq!(activity[0][0], serde_json::json!(101));
+        assert_eq!(activity[0][1], serde_json::json!("g1"));
+        assert_eq!(activity[0][2], serde_json::json!("principal-a"));
+        assert_eq!(activity[0][3], serde_json::json!("active"));
+        assert_eq!(activity[0][4], serde_json::json!("SELECT 101"));
+        assert_eq!(
+            activity[0][5],
+            serde_json::json!("2023-11-14T22:13:20.123Z")
+        );
+
+        let databases = rows(
+            &store,
+            &sessions,
+            "SELECT datname, numbackends FROM pg_catalog.pg_stat_database ORDER BY datname",
+        )
+        .unwrap();
+        assert_eq!(
+            databases,
+            vec![
+                vec![serde_json::json!("g1"), serde_json::json!(1)],
+                vec![serde_json::json!("g2"), serde_json::json!(1)],
+            ]
+        );
+
+        assert!(rows(&store, &sessions, "SELECT * FROM pg_catalog.pg_locks")
+            .unwrap()
+            .is_empty());
+        // With no supplied sessions the views are empty.
+        assert!(rows(&store, &[], "SELECT * FROM pg_catalog.pg_stat_activity")
+            .unwrap()
+            .is_empty());
+
+        for write in [
+            "INSERT INTO pg_catalog.pg_stat_activity (pid) VALUES (1)",
+            "UPDATE pg_stat_database SET numbackends = 0",
+            "DELETE FROM pg_catalog.pg_locks",
+        ] {
+            let refused = rows(&store, &sessions, write).unwrap_err();
+            assert!(
+                refused.starts_with("READ_ONLY_CATALOG_VIEW"),
+                "{write}: {refused}"
+            );
+        }
+        // A write to anything else is not this refusal.
+        assert!(refuse_catalog_view_write("INSERT INTO owners VALUES (1)").is_ok());
+        assert!(refuse_catalog_view_write("SELECT * FROM pg_locks").is_ok());
+    }
 }

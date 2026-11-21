@@ -40,6 +40,9 @@ pub(crate) struct StoreCatalog {
     /// The rows of `information_schema.vector_advice`, read once for a
     /// statement that names the relation.
     pub(crate) vector_advice: Option<Vec<ColumnVectorAdvice>>,
+    /// The sessions `pg_stat_activity` and `pg_stat_database` answer from
+    /// (MEDULLA-DURABLE-KERNEL-R035.3.1); the caller supplies them filtered.
+    pub(crate) sessions: Vec<super::catalog::PgStatActivityRow>,
 }
 
 impl StoreCatalog {
@@ -63,6 +66,7 @@ impl StoreCatalog {
             sequences: Some(Arc::new(store.clone())),
             source_store: Some(store.clone()),
             vector_advice: None,
+            sessions: Vec::new(),
         })
     }
 }

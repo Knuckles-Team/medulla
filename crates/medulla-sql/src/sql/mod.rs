@@ -110,8 +110,10 @@ pub use exec::{
     exec_sql_typed, exec_sql_typed_cancellable, exec_sql_typed_with_tables,
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
     exec_sql_typed_with_tables_hive, exec_sql_typed_with_tables_in_graph,
-    exec_sql_typed_with_tables_in_graph_hive, QueryResult, SqlContextCache,
+    exec_sql_typed_with_tables_in_graph_hive, exec_sql_typed_with_tables_in_graph_sessions,
+    QueryResult, SqlContextCache,
 };
+pub use catalog::PgStatActivityRow;
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.
 pub use providers::SqlCache;
