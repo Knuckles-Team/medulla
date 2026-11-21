@@ -687,6 +687,26 @@ $($variants)*
     DataPrepDeclarationRead {
         request: Box<medulla_ingestion_types::data_prep_declaration::DataPrepDeclarationReadRequest>,
     },
+    /// MEDULLA-INGEST-WORKER-R003.17.1: read one stored transcript thread page (text, clocks,
+    /// concept links and provenance) of the verified tenant. Needs the stored policy action
+    /// `source:transcript:read`, held exactly. Tenant and graph come from verified context only.
+    TranscriptRead {
+        connector: medulla_types::contract::ResourceId,
+        stream: medulla_types::contract::ResourceId,
+        session_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        after_sequence: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        limit: Option<u32>,
+    },
+    /// MEDULLA-INGEST-WORKER-R003.17.1: read the stored evidence of one quarantined batch. Needs
+    /// the stored policy action `source:quarantine:read`, held exactly, whatever the caller's
+    /// tenant membership.
+    QuarantineRead {
+        connector: medulla_types::contract::ResourceId,
+        stream: medulla_types::contract::ResourceId,
+        batch_id: String,
+    },
 
     // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────
     /// Read one document's head, or the retained `revision`, with its bytes.

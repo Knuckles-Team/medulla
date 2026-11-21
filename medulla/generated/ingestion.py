@@ -22,11 +22,13 @@ from .index_repository import (
 )
 from .models import _EgOctets
 from .source_ingestion import (
+    QuarantineReadView,
     SourceIngestionAccepted,
     SourceIngestionOutcome,
     SourceIngestionQuarantined,
     SourceIngestionRequest,
     SourceIngestStatus,
+    TranscriptReadView,
 )
 
 if TYPE_CHECKING:
@@ -817,6 +819,20 @@ send_data_prep_declaration_read = contract_sender(
 decode_data_prep_declaration_read = contract_decoder(
     "DataPrepDeclarationRead", "DataPrepDeclarationView"
 )
+send_transcript_read = contract_sender("TranscriptRead", "MethodTranscriptReadParams")
+send_quarantine_read = contract_sender("QuarantineRead", "MethodQuarantineReadParams")
+
+
+def decode_transcript_read(result: OpaqueResult) -> TranscriptReadView:
+    """Validate the TranscriptRead result against TranscriptReadView."""
+    return decode_result("TranscriptRead", TranscriptReadView, result)
+
+
+def decode_quarantine_read(result: OpaqueResult) -> QuarantineReadView:
+    """Validate the QuarantineRead result against QuarantineReadView."""
+    return decode_result("QuarantineRead", QuarantineReadView, result)
+
+
 send_document_delete = contract_sender("DocumentDelete", "MethodDocumentDeleteParams")
 decode_document_delete = contract_decoder("DocumentDelete", "DocumentDeleteReceipt")
 send_verify_ingest_readback = contract_sender(

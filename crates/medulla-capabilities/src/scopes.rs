@@ -279,7 +279,11 @@ pub const SCOPES: &[ScopeEntry] = &[
     // MEDULLA-FEDERATED-QUERY-R085.2: the native source-query approval issuer.
     entry("source:approve-query", ServiceOnly, "engine"),
     entry("source:ingest", User, "engine"),
+    // MEDULLA-INGEST-WORKER-R003.17.1: the stored quarantine evidence read.
+    entry("source:quarantine:read", User, "engine"),
     entry("source:sync", User, "engine"),
+    // MEDULLA-INGEST-WORKER-R003.17.1: the stored transcript read.
+    entry("source:transcript:read", User, "engine"),
     entry("sparql:read", User, "engine"),
     entry("statechart:write", User, "engine"),
     entry("stream:admin", Admin, "engine"),

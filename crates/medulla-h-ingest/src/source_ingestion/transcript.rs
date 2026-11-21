@@ -21,8 +21,8 @@ use medulla_document::TranscriptDialect;
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{SourceIngestionRequest, SourceJson};
 use medulla_source_types::source_transcript::{
-    TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptReceipt, TranscriptThread,
-    SEGMENT_CLOCKS,
+    TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptReadRequest,
+    TranscriptReadView, TranscriptReceipt, TranscriptThread, SEGMENT_CLOCKS,
 };
 use medulla_types::contract::Digest256;
 
@@ -264,6 +264,152 @@ pub(super) fn transcript_receipt(
     })
 }
 
+/// A stored node's decoded properties, or `None` when the node is absent or the caller's row
+/// authority does not admit it.
+fn visible_properties(
+    core: &medulla_graph_core::graph::GraphCore,
+    visible: &dyn Fn(&str) -> bool,
+    node_id: &str,
+) -> Option<serde_json::Value> {
+    if !visible(node_id) {
+        return None;
+    }
+    let blob = core.get_node_properties(node_id)?;
+    medulla_types::msgpack::decode_property_value(&blob).ok()
+}
+
+/// `read_transcript` (MEDULLA-INGEST-WORKER-R003.17.1): one page of the stored thread of
+/// `(connector, stream, session_id)` under the verified tenant. The caller must hold the stored
+/// policy action `source:transcript:read` exactly, whatever its graph grants: a same-tenant caller
+/// without it gets `ACCESS_DENIED` and no text. Rows the caller's row authority does not admit
+/// read as absent. Messages come back in thread order after `after_sequence`, at most `limit`.
+pub fn read_transcript(
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    core: &medulla_graph_core::graph::GraphCore,
+    visible: &dyn Fn(&str) -> bool,
+    request: &TranscriptReadRequest,
+) -> Result<TranscriptReadView, String> {
+    use medulla_source_types::source_transcript::{
+        TranscriptReadMessage, TranscriptThreadRead, TRANSCRIPT_READ_ACTION,
+        TRANSCRIPT_READ_DEFAULT_LIMIT, TRANSCRIPT_READ_MAX_LIMIT,
+    };
+    if !verified.allows_action(TRANSCRIPT_READ_ACTION) {
+        return Err(format!(
+            "ACCESS_DENIED: transcript reads require {TRANSCRIPT_READ_ACTION}"
+        ));
+    }
+    if request.session_id.trim().is_empty() {
+        return Err("INVALID_ARGUMENT: session_id must not be blank".to_string());
+    }
+    let limit = request.limit.unwrap_or(TRANSCRIPT_READ_DEFAULT_LIMIT);
+    if limit == 0 || limit > TRANSCRIPT_READ_MAX_LIMIT {
+        return Err(format!(
+            "INVALID_ARGUMENT: limit must be within 1..={TRANSCRIPT_READ_MAX_LIMIT}"
+        ));
+    }
+    let thread_id = thread_identity(
+        verified.tenant(),
+        request.connector.as_str(),
+        request.stream.as_str(),
+        &request.session_id,
+    )?;
+    let thread_node = format!("transcript-thread:{thread_id}");
+    let Some(thread) = visible_properties(core, visible, &thread_node) else {
+        return Ok(TranscriptReadView { thread: None });
+    };
+    if thread.get("type").and_then(serde_json::Value::as_str) != Some("Transcript") {
+        return Ok(TranscriptReadView { thread: None });
+    }
+    let mut rows: Vec<(u64, String, serde_json::Value)> = Vec::new();
+    for node_id in core.get_predecessors(&thread_node)? {
+        let Some(message_id) = node_id.strip_prefix("transcript-message:") else {
+            continue;
+        };
+        let of_thread = core
+            .typed_edges_between(&node_id, &thread_node)
+            .iter()
+            .any(|(relationship, _)| relationship == TRANSCRIPT_OF);
+        if !of_thread {
+            continue;
+        }
+        let Some(properties) = visible_properties(core, visible, &node_id) else {
+            continue;
+        };
+        let Some(sequence) = properties.get("sequence").and_then(serde_json::Value::as_u64) else {
+            continue;
+        };
+        if request.after_sequence.is_some_and(|after| sequence <= after) {
+            continue;
+        }
+        rows.push((sequence, message_id.to_string(), properties));
+    }
+    rows.sort_by_key(|(sequence, _, _)| *sequence);
+    let more = rows.len() > limit as usize;
+    rows.truncate(limit as usize);
+    let next_after_sequence = if more {
+        rows.last().map(|(sequence, _, _)| *sequence)
+    } else {
+        None
+    };
+    let mut messages = Vec::with_capacity(rows.len());
+    for (sequence, message_id, properties) in rows {
+        let node_id = format!("transcript-message:{message_id}");
+        let text = |key: &str| {
+            properties
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        };
+        let clock = |key: &str| properties.get(key).and_then(serde_json::Value::as_i64);
+        let mut concept_refs = Vec::new();
+        for target in core.get_successors(&node_id)? {
+            let mentions = core
+                .typed_edges_between(&node_id, &target)
+                .iter()
+                .any(|(relationship, _)| relationship == MENTIONS_CONCEPT);
+            if mentions {
+                concept_refs.push(target);
+            }
+        }
+        concept_refs.sort();
+        let role = properties
+            .get("role")
+            .cloned()
+            .and_then(|role| serde_json::from_value(role).ok())
+            .ok_or_else(|| format!("INTERNAL: stored message {node_id} has no readable role"))?;
+        messages.push(TranscriptReadMessage {
+            message_id,
+            sequence,
+            role,
+            text: text("text").unwrap_or_default(),
+            source_record_id: text("source_record_id").unwrap_or_default(),
+            source_uri: text("source_uri").unwrap_or_default(),
+            storage_time_ms: clock("storage_time"),
+            event_time_ms: clock("event_time"),
+            narrative_time_ms: clock("narrative_time"),
+            concept_refs,
+        });
+    }
+    let dialect = thread
+        .get("dialect")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let message_count = thread
+        .get("message_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    Ok(TranscriptReadView {
+        thread: Some(TranscriptThreadRead {
+            thread_id,
+            dialect,
+            message_count,
+            messages,
+            next_after_sequence,
+        }),
+    })
+}
+
 /// `parse_dialect`: the declared transcript format of a thread header. Only a name in
 /// `TranscriptDialect::ALL` is accepted (MEDULLA-INGEST-WORKER-R003.16); the dialect is a
 /// provenance label because the producer has already parsed the source lines.
@@ -453,6 +599,107 @@ mod tests {
         assert!(missing.unwrap_err().starts_with("TRANSCRIPT_INVALID:"));
         let short = self::thread(&request, &["m1", "m2"]);
         assert!(validate_transcript("t1", &request, &short, &sent, |_| true).is_err());
+    }
+
+    /// The graph a transcripts batch of three messages wrote, with the concept it names.
+    fn stored_thread(tenant: &str) -> (medulla_graph_core::graph::GraphCore, SourceIngestionRequest) {
+        let request = request();
+        let decoded = decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
+        let validated = validate_transcript(
+            tenant,
+            &request,
+            &decoded.thread,
+            &decoded.messages,
+            |id| id == "concept-a",
+        )
+        .unwrap();
+        let admission = transcript_methods(&decoded, &validated).unwrap();
+        let core = medulla_graph_core::graph::GraphCore::new();
+        core.add_node(
+            "concept-a".to_string(),
+            rmp_serde::to_vec_named(&serde_json::json!({"type": "Concept"})).unwrap(),
+        );
+        for method in admission.methods {
+            match method {
+                Method::AddNode {
+                    node_id,
+                    properties_msgpack,
+                } => core.add_node(node_id, properties_msgpack),
+                Method::AddEdge {
+                    source_id,
+                    target_id,
+                    properties_msgpack,
+                } => core.add_edge(source_id, target_id, properties_msgpack).unwrap(),
+                other => panic!("a transcript write-set holds no {other:?}"),
+            }
+        }
+        (core, request)
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.17.1
+    #[test]
+    fn transcript_read_enforces_the_stored_policy_action() {
+        use medulla_server_api::authority_context::VerifiedRequestContext;
+        let (core, request) = stored_thread("t1");
+        let batch = request.as_batch();
+        let read = |limit: Option<u32>, after: Option<u64>| TranscriptReadRequest {
+            connector: batch.connector.clone(),
+            stream: batch.provider_checkpoint.stream.clone(),
+            session_id: "session-1".into(),
+            after_sequence: after,
+            limit,
+        };
+        let all = |_: &str| true;
+        let holder = VerifiedRequestContext::verified_for_test_with_scopes(
+            "agent:reader",
+            "t1",
+            &["kg:read", "source:transcript:read"],
+        );
+        // A same-tenant caller with a graph read grant but without the action is refused,
+        // and the refusal carries no text.
+        let outsider = VerifiedRequestContext::verified_for_test_with_scopes(
+            "agent:outsider",
+            "t1",
+            &["kg:read"],
+        );
+        let denied = read_transcript(&outsider, &core, &all, &read(None, None)).unwrap_err();
+        assert!(denied.starts_with("ACCESS_DENIED:"), "{denied}");
+        assert!(!denied.contains("text of"), "{denied}");
+
+        // The holder reads the thread in order, with clocks, concept links and provenance.
+        let view = read_transcript(&holder, &core, &all, &read(None, None)).unwrap();
+        let thread = view.thread.expect("the stored thread");
+        assert_eq!(thread.message_count, 3);
+        assert!(!thread.dialect.is_empty());
+        let sequences: Vec<u64> = thread.messages.iter().map(|m| m.sequence).collect();
+        assert_eq!(sequences, [0, 1, 2]);
+        assert_eq!(thread.messages[0].text, "text of m1");
+        assert_eq!(thread.messages[0].source_record_id, "record-m1");
+        assert_eq!(thread.messages[0].concept_refs, vec!["concept-a".to_string()]);
+        assert!(thread.messages[0].event_time_ms.is_some());
+        assert!(thread.next_after_sequence.is_none());
+
+        // A page: the limit cuts the thread and names where the next page starts.
+        let page = read_transcript(&holder, &core, &all, &read(Some(2), None)).unwrap();
+        let page = page.thread.expect("the first page");
+        assert_eq!(page.messages.len(), 2);
+        assert_eq!(page.next_after_sequence, Some(1));
+        let rest = read_transcript(&holder, &core, &all, &read(Some(2), Some(1))).unwrap();
+        let rest = rest.thread.expect("the second page");
+        assert_eq!(rest.messages.iter().map(|m| m.sequence).collect::<Vec<_>>(), [2]);
+
+        // Rows the caller's row authority hides, and another tenant, read as absent.
+        let none = |_: &str| false;
+        assert!(read_transcript(&holder, &core, &none, &read(None, None)).unwrap().thread.is_none());
+        let foreign = VerifiedRequestContext::verified_for_test_with_scopes(
+            "agent:reader",
+            "t2",
+            &["kg:read", "source:transcript:read"],
+        );
+        assert!(read_transcript(&foreign, &core, &all, &read(None, None)).unwrap().thread.is_none());
+        // A limit outside 1..=1000 is refused.
+        let refused = read_transcript(&holder, &core, &all, &read(Some(0), None)).unwrap_err();
+        assert!(refused.starts_with("INVALID_ARGUMENT:"), "{refused}");
     }
 
     // spec: MEDULLA-INGEST-WORKER-R003.17

@@ -145,6 +145,82 @@ fn normalization_failed(detail: impl std::fmt::Display) -> DocumentIngestError {
     DocumentIngestError::NormalizationFailed(detail.to_string())
 }
 
+/// `read_quarantine` (MEDULLA-INGEST-WORKER-R003.17.1): the stored evidence of the quarantined
+/// batch `batch_id` of `(connector, stream)` under the verified tenant. The caller must hold the
+/// stored policy action `source:quarantine:read` exactly, whatever its tenant membership or graph
+/// grants: a caller without it gets `ACCESS_DENIED` and no evidence. A row the caller's row
+/// authority does not admit reads as absent. Source text is never stored, so it is never returned.
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub fn read_quarantine(
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    core: &medulla_graph_core::graph::GraphCore,
+    visible: &dyn Fn(&str) -> bool,
+    connector: &medulla_types::contract::ResourceId,
+    stream: &medulla_types::contract::ResourceId,
+    batch_id: &str,
+) -> Result<medulla_source_types::source_document::QuarantineReadView, String> {
+    use medulla_source_types::source_document::{
+        QuarantineEvidence, QuarantineReadView, QUARANTINE_READ_ACTION,
+    };
+    if !verified.allows_action(QUARANTINE_READ_ACTION) {
+        return Err(format!(
+            "ACCESS_DENIED: quarantine reads require {QUARANTINE_READ_ACTION}"
+        ));
+    }
+    if batch_id.trim().is_empty() || batch_id.len() > 256 {
+        return Err("INVALID_ARGUMENT: batch_id must be 1..=256 bytes".to_string());
+    }
+    let node_id = super::quarantine_node_id(
+        verified.tenant(),
+        connector.as_str(),
+        stream.as_str(),
+        batch_id,
+    )?;
+    let absent = Ok(QuarantineReadView { quarantine: None });
+    if !visible(&node_id) {
+        return absent;
+    }
+    let Some(blob) = core.get_node_properties(&node_id) else {
+        return absent;
+    };
+    let stored = medulla_types::msgpack::decode_property_value(&blob)
+        .map_err(|error| format!("INTERNAL: stored quarantine {node_id} does not decode: {error}"))?;
+    if stored.get("type").and_then(serde_json::Value::as_str) != Some("SourceQuarantine") {
+        return absent;
+    }
+    let field = |key: &str| {
+        stored
+            .get(key)
+            .cloned()
+            .ok_or_else(|| format!("INTERNAL: stored quarantine {node_id} has no {key}"))
+    };
+    let text = |key: &str| {
+        stored
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| format!("INTERNAL: stored quarantine {node_id} has no {key}"))
+    };
+    let corrupt = |error: serde_json::Error| {
+        format!("INTERNAL: stored quarantine {node_id} is unreadable: {error}")
+    };
+    let prior = match stored.get("prior_accepted_checkpoint") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(value) => Some(serde_json::from_value(value.clone()).map_err(corrupt)?),
+    };
+    Ok(QuarantineReadView {
+        quarantine: Some(QuarantineEvidence {
+            restricted_evidence_ref: format!("quarantine:{node_id}"),
+            reason: serde_json::from_value(field("reason")?).map_err(corrupt)?,
+            rule_id: text("rule_id")?,
+            source_digest: medulla_types::contract::Digest256::parse(&text("source_digest")?)?,
+            mapping_revision: text("mapping_revision")?,
+            replay: serde_json::from_value(field("replay")?).map_err(corrupt)?,
+            prior_accepted_checkpoint: prior,
+        }),
+    })
+}
+
 /// Normalize every document-class record of `batch`. Records of other classes
 /// are untouched. The first record that fails `complete_document` fails the
 /// batch.

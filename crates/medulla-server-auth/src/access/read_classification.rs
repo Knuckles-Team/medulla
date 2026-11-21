@@ -113,6 +113,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // through `CoreDeclarationView`, whose `visible` closure is
     // `read_authority.node_visible` (graph_pipeline/data_prep.rs).
     "DataPrepDeclarationRead",
+    // MEDULLA-INGEST-WORKER-R003.17.1: both handlers read their nodes only through
+    // `read_authority.node_visible` (graph_pipeline/source_reads.rs).
+    "TranscriptRead",
+    "QuarantineRead",
     "DegreeCentrality",
     "DegreeCentralityAll",
     "DiffAgainst",

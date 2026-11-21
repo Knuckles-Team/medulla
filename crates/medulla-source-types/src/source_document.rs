@@ -212,6 +212,36 @@ pub struct QuarantineReceipt {
     pub committed_graph_version: u64,
 }
 
+/// The stored policy action a quarantine read needs (MEDULLA-INGEST-WORKER-R003.17.1). It is held
+/// exactly (or through a wildcard of its domain), independent of tenant membership.
+pub const QUARANTINE_READ_ACTION: &str = "source:quarantine:read";
+
+/// The stored evidence of one quarantined batch, read back by `QuarantineRead`: the receipt fields
+/// the evidence node holds. Source text is never stored, so it is never returned.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QuarantineEvidence {
+    pub restricted_evidence_ref: String,
+    pub reason: QuarantineReason,
+    pub rule_id: String,
+    pub source_digest: Digest256,
+    pub mapping_revision: String,
+    pub replay: ReplayDisposition,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prior_accepted_checkpoint: Option<SourceCheckpoint>,
+}
+
+/// What `QuarantineRead` answers: the evidence, or `None` when the batch has no stored or visible
+/// quarantine.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QuarantineReadView {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quarantine: Option<QuarantineEvidence>,
+}
+
 /// The terminal outcome of one source-ingestion batch.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "outcome", content = "receipt", rename_all = "snake_case")]

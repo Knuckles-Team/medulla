@@ -519,6 +519,8 @@ METHOD_IDS = frozenset(
         "CreateBranch",
         "CreateMatView",
         "DataPrepDeclarationRead",
+        "TranscriptRead",
+        "QuarantineRead",
         "DataPrepDeclare",
         "DataProductRegister",
         "DistributedCompute",

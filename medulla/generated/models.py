@@ -15552,6 +15552,20 @@ class MethodDataPrepDeclarationRead(BaseModel):
     params: MethodDataPrepDeclarationReadParams
 
 
+class MethodQuarantineRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["QuarantineRead"]
+    params: MethodQuarantineReadParams
+
+
+class MethodTranscriptRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TranscriptRead"]
+    params: MethodTranscriptReadParams
+
+
 class MethodDocumentDelete(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17066,6 +17080,8 @@ Method = Annotated[
         MethodDataProductRegister,
         MethodDataPrepDeclarationRead,
         MethodDataPrepDeclare,
+        MethodTranscriptRead,
+        MethodQuarantineRead,
         MethodDocumentDelete,
         MethodFinanceAlertRaise,
         MethodFinanceFactorRecord,
@@ -35021,6 +35037,24 @@ class MethodDataPrepDeclarationReadParams(BaseModel):
     request: DataPrepDeclarationReadRequest
 
 
+class MethodQuarantineReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    batch_id: str
+    connector: str
+    stream: str
+
+
+class MethodTranscriptReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after_sequence: Annotated[int, Field(ge=0)] | None = None
+    connector: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    session_id: str
+    stream: str
+
+
 class MethodDataPrepDeclareParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -44571,6 +44605,10 @@ __all__ = [
     "MethodDistributedComputeParams",
     "MethodDataPrepDeclarationRead",
     "MethodDataPrepDeclarationReadParams",
+    "MethodTranscriptRead",
+    "MethodTranscriptReadParams",
+    "MethodQuarantineRead",
+    "MethodQuarantineReadParams",
     "MethodDataPrepDeclare",
     "MethodDataPrepDeclareParams",
     "MethodDocumentDelete",

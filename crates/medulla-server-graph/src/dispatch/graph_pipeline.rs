@@ -35,6 +35,8 @@ mod pipeline;
 // EH-280 — the durable, graph-scoped route of a branch-aware IndexRepository.
 mod repository_index;
 mod semantic_enrichment;
+// MEDULLA-INGEST-WORKER-R003.17.1 — the stored transcript and quarantine reads.
+mod source_reads;
 mod web_ingest;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
 pub use repository_index::drain_repository_enrichment_once;

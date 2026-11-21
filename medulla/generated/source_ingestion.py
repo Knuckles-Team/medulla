@@ -762,6 +762,55 @@ class QuarantineReceipt(BaseModel):
     source_digest: Digest256
 
 
+class QuarantineEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    mapping_revision: str
+    prior_accepted_checkpoint: SourceCheckpoint | None = None
+    reason: QuarantineReason
+    replay: ReplayDisposition
+    restricted_evidence_ref: str
+    rule_id: str
+    source_digest: Digest256
+
+
+class QuarantineReadView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    quarantine: QuarantineEvidence | None = None
+
+
+class TranscriptReadMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    concept_refs: list[str] = Field(default_factory=list)
+    event_time_ms: int | None = None
+    message_id: str
+    narrative_time_ms: int | None = None
+    role: Literal["system", "user", "assistant", "tool"]
+    sequence: Annotated[int, Field(ge=0)]
+    source_record_id: str
+    source_uri: str
+    storage_time_ms: int | None = None
+    text: str
+
+
+class TranscriptThreadRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dialect: str
+    message_count: Annotated[int, Field(ge=0)]
+    messages: list[TranscriptReadMessage]
+    next_after_sequence: Annotated[int, Field(ge=0)] | None = None
+    thread_id: str
+
+
+class TranscriptReadView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    thread: TranscriptThreadRead | None = None
+
+
 class SourceIngestionAccepted(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -807,6 +856,16 @@ TranscriptReceipt.model_rebuild()
 SourceIngestionReceipt.model_rebuild()
 
 QuarantineReceipt.model_rebuild()
+
+QuarantineEvidence.model_rebuild()
+
+QuarantineReadView.model_rebuild()
+
+TranscriptReadMessage.model_rebuild()
+
+TranscriptThreadRead.model_rebuild()
+
+TranscriptReadView.model_rebuild()
 
 SourceIngestionAccepted.model_rebuild()
 
@@ -867,6 +926,11 @@ __all__ = [
     "SourceIngestionReceipt",
     "QuarantineReason",
     "QuarantineReceipt",
+    "QuarantineEvidence",
+    "QuarantineReadView",
+    "TranscriptReadMessage",
+    "TranscriptThreadRead",
+    "TranscriptReadView",
     "ReplayDisposition",
     "SourceIngestionAccepted",
     "SourceIngestionOutcome",

@@ -119,6 +119,74 @@ pub struct TranscriptReceipt {
     pub accepted_checkpoint_digest: Digest256,
 }
 
+/// The stored policy action a transcript read needs (MEDULLA-INGEST-WORKER-R003.17.1). It is
+/// held exactly (or through a wildcard of its domain): `kg:read` does not imply it.
+pub const TRANSCRIPT_READ_ACTION: &str = "source:transcript:read";
+
+/// Messages one `TranscriptRead` answers when it names no limit.
+pub const TRANSCRIPT_READ_DEFAULT_LIMIT: u32 = 200;
+
+/// The most messages one `TranscriptRead` answers.
+pub const TRANSCRIPT_READ_MAX_LIMIT: u32 = 1_000;
+
+/// What one `TranscriptRead` names: the thread by its source identity, and the page. Tenant and
+/// graph are never fields: they come from verified authority.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranscriptReadRequest {
+    pub connector: ResourceId,
+    pub stream: ResourceId,
+    pub session_id: String,
+    pub after_sequence: Option<u64>,
+    pub limit: Option<u32>,
+}
+
+/// One stored message of a thread as a `TranscriptRead` returns it: the text, the clocks the
+/// source supplied (absent stays absent), the concept links and the provenance it was read from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TranscriptReadMessage {
+    pub message_id: String,
+    /// The 0-based position in the thread.
+    pub sequence: u64,
+    pub role: TranscriptRole,
+    pub text: String,
+    pub source_record_id: String,
+    pub source_uri: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage_time_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_time_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub narrative_time_ms: Option<i64>,
+    #[serde(default)]
+    pub concept_refs: Vec<String>,
+}
+
+/// One page of a stored thread, in thread order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TranscriptThreadRead {
+    pub thread_id: String,
+    pub dialect: String,
+    pub message_count: u64,
+    pub messages: Vec<TranscriptReadMessage>,
+    /// The `after_sequence` of the next page; absent on the last page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_after_sequence: Option<u64>,
+}
+
+/// What `TranscriptRead` answers: the thread page, or `None` when no thread of that identity is
+/// stored or visible to the caller.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TranscriptReadView {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread: Option<TranscriptThreadRead>,
+}
+
 /// A transcript refusal with a stable wire code (MEDULLA-INGEST-WORKER-R003.16). Each happens
 /// before any graph mutation and publishes no thread, message or concept link.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
