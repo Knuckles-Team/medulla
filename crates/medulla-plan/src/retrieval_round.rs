@@ -76,6 +76,10 @@ pub struct RoundKnobs {
     pub arbitration_margin: f64,
     /// `knob retrieval.forest.similar_k`, neighbours (MEDULLA-FEDERATED-QUERY-R736.2).
     pub forest_similar_k: usize,
+    /// `knob retrieval.forest.redundancy_weight`, weight (MEDULLA-FEDERATED-QUERY-R736.3).
+    pub forest_redundancy_weight: f64,
+    /// `knob retrieval.forest.conflict_weight`, weight (MEDULLA-FEDERATED-QUERY-R736.3).
+    pub forest_conflict_weight: f64,
 }
 
 impl Default for RoundKnobs {
@@ -101,6 +105,8 @@ impl Default for RoundKnobs {
             transfer_min_threshold: 0.6,
             arbitration_margin: 0.10,
             forest_similar_k: 8,
+            forest_redundancy_weight: 0.5,
+            forest_conflict_weight: 1.0,
         }
     }
 }
@@ -1041,6 +1047,8 @@ mod tests {
         transfer_min_threshold: 0.6,
         arbitration_margin: 0.10,
         forest_similar_k: 8,
+        forest_redundancy_weight: 0.5,
+        forest_conflict_weight: 1.0,
     };
 
     fn blob(label: &str) -> Vec<u8> {

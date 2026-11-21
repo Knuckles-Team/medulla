@@ -47,6 +47,8 @@ impl ForestRefusal {
 pub struct EvidenceCandidate {
     /// The candidate memory.
     pub memory_id: String,
+    /// The seed id or candidate id whose relation gave the candidate its kept support.
+    pub parent: String,
     /// Direct support: the seed-to-candidate score, in `0..=1`.
     pub support: f32,
     /// The cost of checking the relation that links the candidate to its parent, in `0..=1`.
@@ -56,9 +58,11 @@ pub struct EvidenceCandidate {
 }
 
 impl EvidenceCandidate {
-    /// A candidate whose two scores are finite and inside `0..=1` and whose id is not empty.
+    /// A candidate whose two scores are finite and inside `0..=1` and whose id and parent
+    /// are not empty.
     pub fn new(
         memory_id: impl Into<String>,
+        parent: impl Into<String>,
         support: f32,
         verify_cost: f32,
         tokens: u32,
@@ -66,6 +70,10 @@ impl EvidenceCandidate {
         let memory_id = memory_id.into();
         if memory_id.is_empty() {
             return Err("INVALID_ARGUMENT: candidate memory_id is empty".to_string());
+        }
+        let parent = parent.into();
+        if parent.is_empty() {
+            return Err("INVALID_ARGUMENT: candidate parent is empty".to_string());
         }
         for (field, value) in [("support", support), ("verify_cost", verify_cost)] {
             if !value.is_finite() || !(0.0..=1.0).contains(&value) {
@@ -76,6 +84,7 @@ impl EvidenceCandidate {
         }
         Ok(Self {
             memory_id,
+            parent,
             support,
             verify_cost,
             tokens,

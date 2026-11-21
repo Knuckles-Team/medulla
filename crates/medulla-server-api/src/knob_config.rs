@@ -309,6 +309,10 @@ knobs! {
     retrieval_saturation_epsilon: f64 = "retrieval.saturation_epsilon", F64(0.01), [0.0, 0.2], "score", Tunable;
     /// Evidence forest: most similarity neighbours one memory contributes to the candidate walk (MEDULLA-FEDERATED-QUERY-R736.2).
     retrieval_forest_similar_k: u64 = "retrieval.forest.similar_k", U64(8), [1, 64], "neighbours", Tunable;
+    /// Evidence forest: how much a candidate's gain shrinks per unit of similarity to a chosen candidate (MEDULLA-FEDERATED-QUERY-R736.3).
+    retrieval_forest_redundancy_weight: f64 = "retrieval.forest.redundancy_weight", F64(0.5), [0.0, 4.0], "weight", Tunable;
+    /// Evidence forest: above zero, a candidate in conflict with a chosen candidate is dropped (MEDULLA-FEDERATED-QUERY-R736.3).
+    retrieval_forest_conflict_weight: f64 = "retrieval.forest.conflict_weight", F64(1.0), [0.0, 4.0], "weight", Tunable;
     /// Retrieval round: most chunks the reranker scores for selection.
     retrieval_rerank_pool: u64 = "retrieval.rerank_pool", U64(50), [1, 256], "chunks", Tunable;
     /// Retrieval round: most nDCG at 10 an adaptive selection policy may lose to its baseline.

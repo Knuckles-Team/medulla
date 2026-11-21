@@ -9,7 +9,7 @@ use medulla_result_types::evidence_forest::{
 // spec: MEDULLA-FEDERATED-QUERY-R736.1
 #[test]
 fn scores_stay_separate_and_bounded() {
-    let candidate = EvidenceCandidate::new("m1", 0.8, 0.3, 120).unwrap();
+    let candidate = EvidenceCandidate::new("m1", "seed", 0.8, 0.3, 120).unwrap();
     assert_eq!(candidate.support, 0.8);
     assert_eq!(candidate.verify_cost, 0.3);
     let round_trip: EvidenceCandidate =
@@ -23,10 +23,12 @@ fn scores_stay_separate_and_bounded() {
         (f32::NAN, 0.0),
         (0.0, f32::INFINITY),
     ] {
-        assert!(EvidenceCandidate::new("m", support, cost, 1).is_err());
+        assert!(EvidenceCandidate::new("m", "seed", support, cost, 1).is_err());
     }
     // A bound value at either end passes.
-    assert!(EvidenceCandidate::new("m", 0.0, 1.0, 1).is_ok());
+    assert!(EvidenceCandidate::new("m", "seed", 0.0, 1.0, 1).is_ok());
+    // An empty parent is refused.
+    assert!(EvidenceCandidate::new("m", "", 0.5, 0.5, 1).is_err());
 
     let selection = ForestSelection::new(
         vec!["a".into()],

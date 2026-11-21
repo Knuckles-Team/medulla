@@ -42,6 +42,8 @@ fn round_knobs() -> RoundKnobs {
         transfer_min_threshold: knobs.retrieval_transfer_min_threshold,
         arbitration_margin: knobs.retrieval_arbitration_margin,
         forest_similar_k: size(knobs.retrieval_forest_similar_k),
+        forest_redundancy_weight: knobs.retrieval_forest_redundancy_weight,
+        forest_conflict_weight: knobs.retrieval_forest_conflict_weight,
     }
 }
 

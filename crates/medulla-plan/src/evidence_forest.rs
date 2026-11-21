@@ -16,7 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_graph_core::graph::{edge_weight_in_view, GraphView};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_result_types::evidence_forest::{
-    check_candidate_cap, check_seeds, EvidenceCandidate, ForestRefusal,
+    check_budget, check_candidate_cap, check_seeds, EvidenceCandidate, ForestRefusal,
+    ForestSelection,
 };
 
 /// Default `knob retrieval.forest.hops`.
@@ -84,6 +85,7 @@ pub fn expand_candidates(
                 }
                 let candidate = EvidenceCandidate::new(
                     relation.target.clone(),
+                    parent.clone(),
                     reached,
                     relation.verify_cost.clamp(0.0, 1.0),
                     relation.tokens,
@@ -119,6 +121,134 @@ pub fn forest_limits(hops: Option<u32>, cap: Option<usize>) -> (u32, usize) {
         hops.unwrap_or(DEFAULT_FOREST_HOPS),
         cap.unwrap_or(DEFAULT_FOREST_CANDIDATE_CAP),
     )
+}
+
+/// The penalties one forest selection applies (`knob retrieval.forest.redundancy_weight` and
+/// `knob retrieval.forest.conflict_weight`, MEDULLA-FEDERATED-QUERY-R736.3).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ForestPenalty {
+    /// How much a candidate's gain shrinks per unit of similarity to a chosen candidate.
+    pub redundancy_weight: f32,
+    /// Above zero, a candidate that conflicts with a chosen candidate is dropped for good.
+    pub conflict_weight: f32,
+}
+
+impl Default for ForestPenalty {
+    fn default() -> Self {
+        Self {
+            redundancy_weight: 0.5,
+            conflict_weight: 1.0,
+        }
+    }
+}
+
+/// How candidates relate to one another: the selection reads redundancy and conflict here.
+pub trait ForestRelations {
+    /// Similarity of two memories in `0..=1`.
+    fn similarity(&self, a: &str, b: &str) -> f32;
+    /// Whether the two memories contradict each other.
+    fn conflicts(&self, a: &str, b: &str) -> bool;
+}
+
+/// Select a forest of `candidates` under `budget_tokens`, greedily by gain per token
+/// (MEDULLA-FEDERATED-QUERY-R736.3). A candidate is eligible when its parent is a seed or an
+/// already chosen candidate. Its gain is `(support - verify_cost)` shrunk by its redundancy
+/// with the chosen set; a candidate in conflict with a chosen one is dropped for good. The
+/// highest positive score wins, ties go to the lower memory id. Selection stops when the best
+/// candidate no longer fits the remaining budget or no positive score remains; every candidate
+/// not chosen is in `dropped`, in the order it was considered. The same inputs give the same
+/// forest.
+pub fn select_forest(
+    candidates: &[EvidenceCandidate],
+    seeds: &[String],
+    relations: &dyn ForestRelations,
+    budget_tokens: u32,
+    penalty: ForestPenalty,
+) -> Result<ForestSelection, ForestRefusal> {
+    check_budget(budget_tokens)?;
+    let seed_set: BTreeSet<&str> = seeds.iter().map(String::as_str).collect();
+    let mut chosen: Vec<&EvidenceCandidate> = Vec::new();
+    let mut chosen_ids: BTreeSet<&str> = BTreeSet::new();
+    let mut dropped: Vec<String> = Vec::new();
+    let mut dropped_ids: BTreeSet<&str> = BTreeSet::new();
+    let mut roots: Vec<String> = Vec::new();
+    let mut edges: Vec<(String, String)> = Vec::new();
+    let mut remaining = budget_tokens;
+    loop {
+        let mut best: Option<(f32, &EvidenceCandidate)> = None;
+        for candidate in candidates {
+            let id = candidate.memory_id.as_str();
+            if chosen_ids.contains(id) || dropped_ids.contains(id) {
+                continue;
+            }
+            let parent = candidate.parent.as_str();
+            if !seed_set.contains(parent) && !chosen_ids.contains(parent) {
+                continue;
+            }
+            if penalty.conflict_weight > 0.0
+                && chosen.iter().any(|held| relations.conflicts(id, &held.memory_id))
+            {
+                dropped.push(candidate.memory_id.clone());
+                dropped_ids.insert(id);
+                continue;
+            }
+            let redundancy = chosen
+                .iter()
+                .map(|held| relations.similarity(id, &held.memory_id))
+                .fold(0.0_f32, f32::max);
+            let gain = (candidate.support - candidate.verify_cost)
+                * (1.0 - penalty.redundancy_weight * redundancy);
+            let score = gain / candidate.tokens.max(1) as f32;
+            if score <= 0.0 || score.is_nan() {
+                continue;
+            }
+            let better = match best {
+                None => true,
+                Some((held_score, held)) => match score.total_cmp(&held_score) {
+                    std::cmp::Ordering::Greater => true,
+                    std::cmp::Ordering::Equal => candidate.memory_id < held.memory_id,
+                    std::cmp::Ordering::Less => false,
+                },
+            };
+            if better {
+                best = Some((score, candidate));
+            }
+        }
+        let Some((_, pick)) = best else { break };
+        if pick.tokens > remaining {
+            // The best candidate does not fit: it and every unchosen one are dropped.
+            dropped.push(pick.memory_id.clone());
+            dropped_ids.insert(pick.memory_id.as_str());
+            break;
+        }
+        remaining -= pick.tokens;
+        if seed_set.contains(pick.parent.as_str()) {
+            roots.push(pick.memory_id.clone());
+        } else {
+            edges.push((pick.parent.clone(), pick.memory_id.clone()));
+        }
+        chosen_ids.insert(pick.memory_id.as_str());
+        chosen.push(pick);
+    }
+    // Every candidate not chosen is left out, in the order it was considered.
+    for candidate in candidates {
+        let id = candidate.memory_id.as_str();
+        if !chosen_ids.contains(id) && !dropped_ids.contains(id) {
+            dropped.push(candidate.memory_id.clone());
+        }
+    }
+    if chosen.is_empty() {
+        return Ok(ForestSelection {
+            dropped,
+            ..ForestSelection::default()
+        });
+    }
+    Ok(ForestSelection {
+        roots,
+        edges,
+        tokens_used: budget_tokens - remaining,
+        dropped,
+    })
 }
 
 /// Schema relations cost this much to check (MEDULLA-FEDERATED-QUERY-R736.2).
@@ -198,6 +328,48 @@ impl ForestGraph for PlanForestGraph<'_> {
             }
         }
         out
+    }
+}
+
+impl ForestRelations for PlanForestGraph<'_> {
+    /// The cosine of the two stored embeddings clamped to `0..=1`; `0.0` when either has none.
+    fn similarity(&self, a: &str, b: &str) -> f32 {
+        let (Some(x), Some(y)) = (self.semantic.get_embedding(a), self.semantic.get_embedding(b))
+        else {
+            return 0.0;
+        };
+        if x.len() != y.len() {
+            return 0.0;
+        }
+        let dot: f32 = x.iter().zip(&y).map(|(p, q)| p * q).sum();
+        let norm = x.iter().map(|p| p * p).sum::<f32>().sqrt() * y.iter().map(|q| q * q).sum::<f32>().sqrt();
+        if norm == 0.0 || !norm.is_finite() {
+            return 0.0;
+        }
+        (dot / norm).clamp(0.0, 1.0)
+    }
+
+    /// An edge between the two in either direction whose relationship is `CONTRADICTS` or
+    /// `ATTACKS`.
+    fn conflicts(&self, a: &str, b: &str) -> bool {
+        [(a, b), (b, a)].into_iter().any(|(src, tgt)| {
+            self.view
+                .edge_properties
+                .get(&(src.to_string(), tgt.to_string()))
+                .is_some_and(|blobs| {
+                    blobs.iter().any(|blob| {
+                        medulla_types::msgpack::decode_property_object(blob)
+                            .ok()
+                            .and_then(|props| {
+                                props
+                                    .get("relationship")
+                                    .and_then(serde_json::Value::as_str)
+                                    .map(|r| matches!(r, "CONTRADICTS" | "ATTACKS"))
+                            })
+                            .unwrap_or(false)
+                    })
+                })
+        })
     }
 }
 
