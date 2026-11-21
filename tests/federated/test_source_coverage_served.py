@@ -213,3 +213,26 @@ def test_swapping_authority_rank_changes_sources_used() -> None:
     assert [entry["source"] for entry in second["audit"]["used"]] == ["pagerduty-mcp"]
     assert _incident(second)["source"] == "pagerduty-mcp"
     assert first["audit"]["used"] != second["audit"]["used"]
+
+
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R007.4")
+def test_report_sources_used_equal_audit() -> None:
+    owner = _client(_agent("report"))
+    _register(owner, "servicenow-mcp", "pagerduty-mcp")
+    _attach_document(TWO_SOURCES)
+
+    audit = _coverage(owner, [INCIDENT])["audit"]["used"]
+    reply = owner._send("SupplyChainImpact", {"roots": [INCIDENT]}, GRAPH)
+    if isinstance(reply, (bytes, bytearray)):
+        reply = msgpack.unpackb(reply, raw=False)
+
+    # One `sources_used` entry per audit entry, same order, same source, class, premises
+    # and mode; the report has no second builder (R007.4).
+    assert audit, "the connected sources must produce a used audit entry"
+    assert [
+        (e["source"], e["class_served"], e["authority_premise"], e["mode"])
+        for e in reply["sources_used"]
+    ] == [
+        (e["source"], e["concept"], "; ".join(e["premises"]), e["mode"] or "live")
+        for e in audit
+    ]
