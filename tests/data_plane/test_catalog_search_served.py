@@ -448,3 +448,69 @@ def test_usage_cluster_yields_product_proposal(
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+_CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
+_COMPONENTS = (
+    f"PREFIX cat: <{_CATALOG}>\n"
+    "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+    "SELECT ?asset ?components ?score WHERE {\n"
+    "  ?asset skos:prefLabel ?name .\n"
+    '  BIND(cat:rankComponents(?asset, "nodes") AS ?components)\n'
+    '  BIND(cat:relevance(?asset, "nodes") AS ?score)\n'
+    "  FILTER(?score > 0)\n"
+    "}"
+)
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.5")
+def test_hit_components_listed(start_medulla_server) -> None:
+    """Every hit lists its text, vector and usage components; they sum to the score."""
+    import json
+    from medulla.client import SyncMedullaClient
+
+    graph = f"components-{uuid.uuid4().hex[:8]}"
+    admin = _client()
+    admin.tenants.create(graph, graph_type="Global")
+    client = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        graph_name=graph,
+        verified_context=request_context(),
+    )
+    try:
+        client.rdf.add_triples(
+            turtle=(
+                f"@prefix cat: <{_CATALOG}> .\n"
+                "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+                '<urn:medulla:asset:table:nodes> a cat:DataResource ; skos:prefLabel "nodes" .\n'
+                '<urn:medulla:asset:table:unused> a cat:DataResource ; '
+                'skos:prefLabel "nodes archive" .\n'
+            )
+        )
+        # The reads of the asset named `nodes` come only from the server's own dispatch.
+        for _ in range(5):
+            _sql(client, graph, "SELECT count(*) AS n FROM nodes")
+
+        rows = client.rdf.sparql(_COMPONENTS)
+        by_asset = {row["asset"].strip("<>"): row for row in rows}
+        assert set(by_asset) == {
+            "urn:medulla:asset:table:nodes",
+            "urn:medulla:asset:table:unused",
+        }
+        for row in by_asset.values():
+            parts = json.loads(row["components"])
+            total = parts["text"] + parts["vector"] + parts["usage"]
+            # The components add up to the score before the trust ratio.
+            assert abs(total * parts["trust"] - float(row["score"])) < 1e-9
+            assert abs(parts["score"] - float(row["score"])) < 1e-9
+            # The usage prior never exceeds its cap of the fused score.
+            assert parts["usage"] <= 0.20 * total + 1e-9
+
+        used = json.loads(by_asset["urn:medulla:asset:table:nodes"]["components"])
+        unused = json.loads(by_asset["urn:medulla:asset:table:unused"]["components"])
+        assert used["usage"] > 0
+        assert unused["usage"] == 0
+    finally:
+        client.close()
+        admin.tenants.delete(graph)
+        admin.close()
