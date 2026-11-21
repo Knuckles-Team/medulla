@@ -229,6 +229,8 @@ pub(crate) fn render_sql_columns(
     let cast_type = match dialect {
         SqlDialect::Postgres => "TEXT",
         SqlDialect::MySql => "CHAR",
+        // ClickHouse's text type.
+        SqlDialect::ColumnarAnalytic => "String",
     };
     let projection = fields
         .iter()
