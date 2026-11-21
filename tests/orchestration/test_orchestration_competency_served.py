@@ -383,6 +383,10 @@ def test_composed_answer_has_seven_parts_with_provenance(clean_graph) -> None:
     second = clean_graph._send("AgentExecutionAnswer", params)
     assert first["task_iri"] == "urn:task:xyz"
     assert first == second, "the answer is stable over two calls"
+    sealed = clean_graph._send("AgentAssemble", {"request": params["request"]["assembly"]})
+    assert first["certificate_digest"] == sealed["record"]["record_digest"], (
+        "certificate_digest is the digest of the sealed AgentAssemble record"
+    )
     for name in _PARTS:
         part = first["parts"][name]
         assert part["evidence_class"], (name, part)
