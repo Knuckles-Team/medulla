@@ -197,8 +197,8 @@ impl FamilyPremise {
                 },
                 FamilyPremiseSource::Bound(provenance) => provenance.clone(),
             },
-        },
-        trust_tier: None,
+            trust_tier: None,
+        }
     }
 }
 

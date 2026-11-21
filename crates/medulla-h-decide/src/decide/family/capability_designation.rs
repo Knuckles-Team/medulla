@@ -215,8 +215,8 @@ fn premise(
         fact,
         class,
         provenance,
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 fn resource(value: &str) -> Result<ResourceId, String> {

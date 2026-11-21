@@ -46,8 +46,8 @@ fn premise(breach: &LimitBreach) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: GUARDED_ACTION_PARAM.to_string(),
         },
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 /// Check the policy's limits against the request's action and fold the verdict

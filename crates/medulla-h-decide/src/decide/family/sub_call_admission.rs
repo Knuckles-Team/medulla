@@ -39,8 +39,8 @@ fn claim(fact: String) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: "params.sub_call".to_string(),
         },
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 impl DecisionFamily for SubCallAdmissionFamily {

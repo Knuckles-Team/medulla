@@ -186,8 +186,8 @@ fn direct_premise(iri: &str) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: DIRECT_CAPABILITY_FIELD.to_string(),
         },
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 /// Add every capability `task` requires, under `provenance` and `class`.

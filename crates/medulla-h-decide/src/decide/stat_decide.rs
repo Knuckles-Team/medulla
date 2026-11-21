@@ -824,8 +824,8 @@ fn premise(
         fact: fact.to_string(),
         class,
         provenance,
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 /// One CLAIM premise per rule-derived class (EH-200): a derivation over a

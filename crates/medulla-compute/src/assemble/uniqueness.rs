@@ -191,8 +191,8 @@ fn premise(subject: &str, fact: &str, provenance: PremiseProvenance) -> PremiseR
         fact: fact.to_string(),
         class: PremiseClass::Proof,
         provenance,
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 /// The R001.2.2 premise: the is_a coverage alone fixed the answer.

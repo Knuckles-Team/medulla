@@ -111,8 +111,8 @@ fn triple_premise(
         fact: format!("guidance:triple={cite}"),
         class: PremiseClass::Claim,
         provenance,
-    },
-    trust_tier: None,
+        trust_tier: None,
+    }
 }
 
 fn resolve<'a>(facts: &'a PackFacts) -> Vec<Resolved<'a>> {
