@@ -13,6 +13,7 @@
 //! the fixed relationship vocabulary of the caller's graph schema).
 
 use medulla_result_types::retrieval_verdict::TermFeedback;
+use medulla_types::ingestion_wire::{QueryFilters, RelationalIntent};
 use serde::{Deserialize, Serialize};
 
 /// Largest query text an expansion request accepts, in bytes.
@@ -20,28 +21,6 @@ pub const MAX_QUERY_BYTES: usize = 2_048;
 /// Smallest and largest number of perspectives one request may ask for.
 pub const PERSPECTIVES_MIN: u8 = 1;
 pub const PERSPECTIVES_MAX: u8 = 8;
-
-/// Structured filters lifted out of the query text.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct QueryFilters {
-    pub types: Vec<String>,
-    pub sources: Vec<String>,
-    pub tags: Vec<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub after: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub before: Option<String>,
-}
-
-/// A subject-relation-object reading of the query.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RelationalIntent {
-    pub subject: String,
-    pub relation: String,
-    pub object: String,
-}
 
 /// One relationship of the caller's graph schema: its stored name and, when
 /// the ontology declares one, its `rdfs:label`.
@@ -72,6 +51,17 @@ pub struct QueryAnalysis {
     pub terms: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub intent: Option<RelationalIntent>,
+}
+
+/// The relationship vocabulary of one graph snapshot: every relationship name its edges
+/// carry (`SchemaContext::relationships`), in name order. The ontology label is not read
+/// here, so a relationship is matched by its stored name.
+pub fn relationship_names(view: &medulla_graph_core::graph::GraphView) -> Vec<RelationshipName> {
+    medulla_nlq::nl::context::SchemaContext::from_view(view)
+        .relationships()
+        .iter()
+        .map(|name| RelationshipName::new(name.clone(), None))
+        .collect()
 }
 
 /// Analyse `text` against the relationship vocabulary of the caller's graph.

@@ -430,6 +430,40 @@ pub enum DiscoverDegraded {
     ProviderFailed { message: String },
 }
 
+/// Structured filters lifted out of a query text: `key:value` tokens with keys `type`,
+/// `source`, `tag`, `after` and `before` (MEDULLA-FEDERATED-QUERY-R651.1, R651.5).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QueryFilters {
+    pub types: Vec<String>,
+    pub sources: Vec<String>,
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<String>,
+}
+
+/// A subject-relation-object reading of a query (MEDULLA-FEDERATED-QUERY-R651.1, R651.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RelationalIntent {
+    pub subject: String,
+    pub relation: String,
+    pub object: String,
+}
+
+/// What the model-free analysis read out of a `deep` request's text (R651.5).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DiscoverAnalysis {
+    pub filters: QueryFilters,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent: Option<RelationalIntent>,
+}
+
 /// The plan a `Discover` answer was produced by (R090.1, R090.4, R090.5).
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -439,6 +473,9 @@ pub struct DiscoverPlan {
     /// Set when a `deep` request degraded to `standard` (`provider_failed`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub degraded: Option<DiscoverDegraded>,
+    /// The parsed filters and relational intent of a `deep` request's text (R651.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub analysis: Option<DiscoverAnalysis>,
 }
 
 /// The planner fields of a `Discover` request, checked as one unit (R090.1, R090.4).

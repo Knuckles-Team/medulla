@@ -142,6 +142,64 @@ def test_one_port_serves_discover_and_feedback(stub_engine) -> None:
         client.tenants.delete(graph)
 
 
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.5")
+def test_analysis_and_expansion_evidence(stub_engine) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R651.5.
+
+    A deep request over a graph whose edges carry `owns` returns the parsed filters and
+    the relational intent in `plan.analysis`, and every expansion's digest, kind, provider
+    id and provider revision in `plan.expansions`. A standard request plans nothing.
+    """
+    sock, _ = stub_engine
+    client = connect(sock)
+    graph = f"evi-{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        _doc(client, graph, "d1", "replica notes")
+        _doc(client, graph, "d2", "team notes")
+        client._send(
+            "AddEdge",
+            {
+                "source_id": "d2",
+                "target_id": "d1",
+                "properties_msgpack": msgpack.packb({"relationship": "owns"}),
+            },
+            graph,
+        )
+        plan = _deep(client, graph, text="type:Doc after:2026-01-01 team owns replica")[
+            "plan"
+        ]
+        assert plan["analysis"]["filters"] == {
+            "types": ["Doc"],
+            "sources": [],
+            "tags": [],
+            "after": "2026-01-01",
+        }
+        assert plan["analysis"]["intent"] == {
+            "subject": "team",
+            "relation": "owns",
+            "object": "replica",
+        }
+        assert plan["expansions"]
+        for item in plan["expansions"]:
+            assert len(item["digest"]) == 64
+            assert item["kind"] in {"hypothetical", "sub_query", "perspective"}
+            assert item["provider_id"]
+            assert item["provider_revision"]
+        no_relation = _deep(client, graph, text="team replica")["plan"]
+        assert no_relation["analysis"]["intent"] is None
+        standard = _decode(
+            client._send(
+                "Discover",
+                {"keywords": ["replica"], "query_embedding": [], "k": 5},
+                graph,
+            )
+        )["plan"]
+        assert "analysis" not in standard or standard["analysis"] is None
+    finally:
+        client.tenants.delete(graph)
+
+
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.4")
 def test_expansion_refusals(tmp_path_factory) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R651.4.

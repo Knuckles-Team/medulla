@@ -69,6 +69,8 @@ pub(crate) struct DeepArms {
     pub vectors: Vec<Vec<f32>>,
     pub evidence: Vec<ExpansionEvidence>,
     pub degraded: Option<DiscoverDegraded>,
+    /// The filters and relational intent read from the query text (R651.5).
+    pub analysis: Option<medulla_types::ingestion_wire::DiscoverAnalysis>,
 }
 
 /// Plan one `Discover` request. Blocking (the provider and the embedder are network
@@ -76,6 +78,7 @@ pub(crate) struct DeepArms {
 #[cfg(feature = "query")]
 pub(crate) fn plan_discover(
     request: &medulla_types::ingestion_wire::DiscoverPlanRequest,
+    relationships: &[medulla_plan::query_understanding::RelationshipName],
     expansions: usize,
     perspectives: Option<u32>,
 ) -> Result<DeepArms, PlanRefusal> {
@@ -117,6 +120,15 @@ pub(crate) fn plan_discover(
             code: "INVALID_ARGUMENT",
             detail: "mode deep needs a non-empty query_text".into(),
         })?;
+    // R651.2, R651.5: the model-free analysis runs before any provider call and is part of
+    // the plan evidence, also when the provider later fails.
+    let analysis = {
+        let read = medulla_plan::query_understanding::understand(text, relationships);
+        Some(medulla_types::ingestion_wire::DiscoverAnalysis {
+            filters: read.filters,
+            intent: read.intent,
+        })
+    };
     let wanted = match perspectives {
         Some(asked) => u8::try_from(asked).unwrap_or(PERSPECTIVES_MAX),
         None => u8::try_from(expansions.clamp(1, 8)).unwrap_or(8),
@@ -166,6 +178,7 @@ pub(crate) fn plan_discover(
         Err(ExpansionError::ProviderFailed { message }) => {
             return Ok(DeepArms {
                 degraded: Some(DiscoverDegraded::ProviderFailed { message }),
+                analysis: analysis.clone(),
                 ..DeepArms::default()
             })
         }
@@ -182,13 +195,17 @@ pub(crate) fn plan_discover(
             degraded: Some(DiscoverDegraded::ProviderFailed {
                 message: "no text embedder is bound".into(),
             }),
+            analysis: analysis.clone(),
             ..DeepArms::default()
         });
     };
     let (provider_id, provider_revision) = provider
         .map(|p| (p.provider_id(), p.provider_revision()))
         .unwrap_or_default();
-    let mut arms = DeepArms::default();
+    let mut arms = DeepArms {
+        analysis,
+        ..DeepArms::default()
+    };
     for item in items {
         match embedder.embed(&item.text) {
             Ok(vector) => {
@@ -208,6 +225,7 @@ pub(crate) fn plan_discover(
             Err(message) => {
                 return Ok(DeepArms {
                     degraded: Some(DiscoverDegraded::ProviderFailed { message }),
+                    analysis: analysis.clone(),
                     ..DeepArms::default()
                 })
             }
@@ -331,18 +349,18 @@ mod tests {
             mode: DiscoverMode::Deep,
             ..Default::default()
         };
-        let over = plan_discover(&deep("replica".into()), 4, Some(9)).unwrap_err();
+        let over = plan_discover(&deep("replica".into()), &[], 4, Some(9)).unwrap_err();
         assert_eq!(over.code, EXPANSION_FANOUT_EXCEEDED);
-        let none = plan_discover(&deep("replica".into()), 4, Some(0)).unwrap_err();
+        let none = plan_discover(&deep("replica".into()), &[], 4, Some(0)).unwrap_err();
         assert_eq!(none.code, "INVALID_ARGUMENT");
-        let long = plan_discover(&deep("x".repeat(2049)), 4, Some(3)).unwrap_err();
+        let long = plan_discover(&deep("x".repeat(2049)), &[], 4, Some(3)).unwrap_err();
         assert_eq!(long.code, QUERY_TEXT_TOO_LONG);
         // Standard mode checks the count too and runs no provider.
         let standard = DiscoverPlanRequest::default();
-        let over = plan_discover(&standard, 4, Some(9)).unwrap_err();
+        let over = plan_discover(&standard, &[], 4, Some(9)).unwrap_err();
         assert_eq!(over.code, EXPANSION_FANOUT_EXCEEDED);
         assert_eq!(
-            plan_discover(&standard, 4, Some(3)).unwrap(),
+            plan_discover(&standard, &[], 4, Some(3)).unwrap(),
             DeepArms::default()
         );
     }

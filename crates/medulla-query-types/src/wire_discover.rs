@@ -21,8 +21,8 @@ mod discover_plan_tests {
     use super::*;
     use crate::wire::{DiscoverThresholds, RetrievalVerdict};
     use medulla_types::ingestion_wire::{
-        ArmRank, DiscoverArm, DiscoverDegraded, DiscoverHit, DiscoverPlan, DiscoverPlanRequest,
-        ExpansionEvidence, QUERY_TEXT_TOO_LONG,
+        ArmRank, DiscoverAnalysis, DiscoverArm, DiscoverDegraded, DiscoverHit, DiscoverPlan, DiscoverPlanRequest,
+        ExpansionEvidence, QueryFilters, QUERY_TEXT_TOO_LONG,
     };
 
     fn hit() -> DiscoverHit {
@@ -78,6 +78,13 @@ mod discover_plan_tests {
                 }],
                 degraded: Some(DiscoverDegraded::ProviderFailed {
                     message: "down".into(),
+                }),
+                analysis: Some(DiscoverAnalysis {
+                    filters: QueryFilters {
+                        types: vec!["Doc".into()],
+                        ..QueryFilters::default()
+                    },
+                    intent: None,
                 }),
             },
         };

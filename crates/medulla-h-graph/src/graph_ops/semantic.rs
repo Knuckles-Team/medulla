@@ -384,6 +384,7 @@ fn discover(
                 plan: DiscoverPlan {
                     expansions: deep.evidence,
                     degraded: deep.degraded,
+                    analysis: deep.analysis,
                 },
             },
         ),
@@ -446,8 +447,15 @@ async fn handle_discover(
         hops,
     };
     let expansions = medulla_server_api::knob_config::knobs().discover_expansions as usize;
+    let planned_core = Arc::clone(core);
     let planned = match compute_off_lock(req_id, move || {
-        super::discover_plan::plan_discover(&request, expansions, perspectives)
+        // Only a `deep` request reads the vocabulary; `standard` plans nothing.
+        let relationships = if request.mode == medulla_types::ingestion_wire::DiscoverMode::Deep {
+            medulla_plan::query_understanding::relationship_names(&planned_core.analysis_snapshot())
+        } else {
+            Vec::new()
+        };
+        super::discover_plan::plan_discover(&request, &relationships, expansions, perspectives)
     })
     .await
     {
