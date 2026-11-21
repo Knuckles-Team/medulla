@@ -72,7 +72,6 @@ pub mod ranking_eval;
 pub mod rapid_r083;
 pub mod recommend;
 pub mod refusal;
-pub mod team_score;
 pub mod replay;
 pub mod research_voi;
 pub mod retrieval;

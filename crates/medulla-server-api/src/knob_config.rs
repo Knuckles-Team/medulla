@@ -588,7 +588,6 @@ knobs! {
     /// Most steps plus flows of one imported canonical workflow (MEDULLA-CQ-ORCH-R701.2).
     process_import_max_elements: u64 = "process.import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Team score: weight of the prior, as a count of outcomes. (MEDULLA-ORCH-VOCAB-R751.751).
-    team_score_prior_strength: u32 = "team_score.prior_strength", U64(5), [1, 1_000], "outcomes", Tunable;
     /// Most columns one `DatasetProfile` job profiles (MEDULLA-UNIFIED-DATA-PLANE-R761.3).
     profile_max_columns: u64 = "profile.max_columns", U64(256), [1, 4_096], "columns", Tunable;
     /// Connect and read timeout of a profile read on an attached SQL source
