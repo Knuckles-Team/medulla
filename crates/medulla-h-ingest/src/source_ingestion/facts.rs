@@ -108,6 +108,9 @@ pub struct HeldClaim {
     pub chunks: BTreeSet<String>,
     /// The Documents the claim derives from.
     pub documents: BTreeSet<String>,
+    /// The Document each grounding chunk belongs to, so the Documents of the surviving
+    /// chunks can be recomputed when a chunk is dropped.
+    pub chunk_documents: BTreeMap<String, String>,
     /// The stored node properties, rewritten whole when only the chunk set changes.
     pub properties: serde_json::Value,
 }
@@ -165,6 +168,18 @@ pub fn held_chunk(
         }),
         _ => Err(invalid("source_chunk names a node that is not a stored chunk")),
     }
+}
+
+fn string_map(value: Option<&serde_json::Value>) -> BTreeMap<String, String> {
+    value
+        .and_then(|value| value.as_object())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|(key, item)| item.as_str().map(|item| (key.clone(), item.to_string())))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn string_set(value: Option<&serde_json::Value>) -> BTreeSet<String> {
@@ -235,6 +250,7 @@ pub fn held_claim(properties: &serde_json::Value) -> Option<HeldClaim> {
         confidence: properties.get("fact")?.get("confidence")?.as_f64()?,
         chunks: string_set(properties.get("chunks")),
         documents: string_set(properties.get("documents")),
+        chunk_documents: string_map(properties.get("chunk_documents")),
         properties: properties.clone(),
     })
 }
@@ -460,7 +476,10 @@ fn ground_claim_properties(
     let mut documents = before.documents.clone();
     documents.insert(chunk.document_id.clone());
     properties["chunks"] = serde_json::json!(chunks);
+    let mut chunk_documents = before.chunk_documents.clone();
+    chunk_documents.insert(chunk.chunk_id.clone(), chunk.document_id.clone());
     properties["documents"] = serde_json::json!(documents);
+    properties["chunk_documents"] = serde_json::json!(chunk_documents);
 }
 
 /// The `extractedFrom` edge to the chunk and, once per Document, the `derivedFrom` edge to it.
@@ -512,8 +531,25 @@ fn supersede_claim(
         }
         return Ok(());
     }
+    // The Documents and `derivedFrom` edges follow the surviving chunks: a Document no
+    // surviving chunk belongs to stops grounding the claim.
+    let chunk_documents: BTreeMap<String, String> = stored
+        .chunk_documents
+        .iter()
+        .filter(|(chunk, _)| remaining.contains(*chunk))
+        .map(|(chunk, document)| (chunk.clone(), document.clone()))
+        .collect();
+    let documents: BTreeSet<String> = chunk_documents.values().cloned().collect();
+    for document in stored.documents.difference(&documents) {
+        admission.methods.push(Method::RemoveEdge {
+            source_id: claim_id.to_string(),
+            target_id: document.clone(),
+        });
+    }
     let mut properties = stored.properties.clone();
     properties["chunks"] = serde_json::json!(remaining);
+    properties["documents"] = serde_json::json!(documents);
+    properties["chunk_documents"] = serde_json::json!(chunk_documents);
     for target in dropped_edges {
         admission.methods.push(Method::RemoveEdge {
             source_id: claim_id.to_string(),
@@ -719,6 +755,7 @@ pub fn admit_facts(
             confidence: 0.0,
             chunks: BTreeSet::new(),
             documents: BTreeSet::new(),
+            chunk_documents: BTreeMap::new(),
             properties: serde_json::Value::Null,
         };
         let before = stored_claim.unwrap_or(&empty);
@@ -1159,6 +1196,84 @@ mod tests {
             .count();
         // The unstated claim and its atom.
         assert_eq!(removed, 2);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.7
+    #[test]
+    fn a_surviving_claim_recomputes_its_documents_and_derived_from_edges() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let fresh = |chunk_id: &str, document_id: &str, held: &BTreeMap<String, HeldClaim>| {
+            let chunk = HeldChunk {
+                chunk_id: chunk_id.into(),
+                document_id: document_id.into(),
+                content_hash: chunk_content_hash(chunk_id),
+                prior_claims: BTreeSet::new(),
+            };
+            admit_facts(
+                "t1",
+                &decoded(vec![fact("Ada Lovelace", "Note G", 10)]),
+                &cache,
+                held,
+                &BTreeMap::new(),
+                2,
+                Some(&chunk),
+            )
+            .unwrap()
+        };
+        let claim_of = |admission: &FactAdmission| {
+            admission
+                .methods
+                .iter()
+                .find_map(|method| match (method, node_properties_opt(method)) {
+                    (Method::AddNode { node_id, .. }, Some(properties))
+                        if properties["type"] == CANDIDATE_CLAIM_NODE_TYPE =>
+                    {
+                        Some((node_id.clone(), properties))
+                    }
+                    _ => None,
+                })
+                .expect("claim write")
+        };
+        let first = fresh("chunk:a", "doc:a", &BTreeMap::new());
+        let (claim_id, properties) = claim_of(&first);
+        let mut held = BTreeMap::new();
+        held.insert(claim_id.clone(), held_claim(&properties).expect("held claim"));
+        let second = fresh("chunk:b", "doc:b", &held);
+        let (_, properties) = claim_of(&second);
+        assert_eq!(properties["documents"], serde_json::json!(["doc:a", "doc:b"]));
+        let both = held_claim(&properties).expect("held claim");
+        let mut stored = BTreeMap::new();
+        stored.insert(claim_id.clone(), both);
+        let record_id = chunk_facts_id("t1", "chunk:b").unwrap();
+        let record = serde_json::json!({ "claim_ids": [claim_id.clone()] });
+        let read = |id: &str| {
+            if id == record_id {
+                Some(record.clone())
+            } else {
+                stored.get(id).map(|claim| claim.properties.clone())
+            }
+        };
+        let methods = supersede_removed_chunks("t1", &["chunk:b".to_string()], &read).unwrap();
+        let rewritten = methods
+            .iter()
+            .find_map(|method| match (method, node_properties_opt(method)) {
+                (Method::AddNode { node_id, .. }, Some(properties)) if *node_id == claim_id => {
+                    Some(properties)
+                }
+                _ => None,
+            })
+            .expect("surviving claim rewritten");
+        assert_eq!(rewritten["chunks"], serde_json::json!(["chunk:a"]));
+        assert_eq!(rewritten["documents"], serde_json::json!(["doc:a"]));
+        assert!(methods.iter().any(|method| matches!(
+            method,
+            Method::RemoveEdge { source_id, target_id }
+                if *source_id == claim_id && target_id == "doc:b"
+        )));
+        assert!(!methods.iter().any(|method| matches!(
+            method,
+            Method::RemoveEdge { target_id, .. } if target_id == "doc:a"
+        )));
     }
 
     // spec: MEDULLA-INGEST-WORKER-R701.3
