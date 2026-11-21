@@ -52,7 +52,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T046 [US3] MEDULLA-CQ-ORCH-R009.6 Probe 6: delegate listing containers
 - [ ] T047 [US4] MEDULLA-CQ-ORCH-R010.1 Architecture view model
 - [ ] T048 [US4] MEDULLA-CQ-ORCH-R010.2 Architecture view derivation
-- [ ] T049 [US4] MEDULLA-CQ-ORCH-R010.3 Architecture view wiring
+- [x] T049 [US4] MEDULLA-CQ-ORCH-R010.3 Architecture view wiring
 - [ ] T050 [US4] MEDULLA-CQ-ORCH-R010.4 Architecture view refusal
 - [ ] T051 [US4] MEDULLA-CQ-ORCH-R010.5 Architecture view evidence
 - [ ] T052 [US4] MEDULLA-CQ-ORCH-R010.6 Architecture view hot-path proof
