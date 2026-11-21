@@ -764,6 +764,326 @@ pub fn cite_requirements(
     })
 }
 
+/// The links of one requirement row that name other records: the rows it depends on and
+/// the seam files it provides or consumes (MEDULLA-SDLC-R014.12).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SpecRowLinks {
+    pub row_id: String,
+    pub depends_on: Vec<String>,
+    pub seam_provider: Vec<String>,
+    pub seam_consumer: Vec<String>,
+}
+
+fn links_of<'a>(
+    links: &'a mut Vec<SpecRowLinks>,
+    index: &mut BTreeMap<String, usize>,
+    row_id: &str,
+) -> &'a mut SpecRowLinks {
+    let at = *index.entry(row_id.to_string()).or_insert_with(|| {
+        links.push(SpecRowLinks {
+            row_id: row_id.to_string(),
+            ..SpecRowLinks::default()
+        });
+        links.len() - 1
+    });
+    &mut links[at]
+}
+
+/// The row id a requirements table line starts with: `| `ID` | ...`.
+fn row_line_id(line: &str) -> Option<&str> {
+    let rest = line.trim_start().strip_prefix('|')?.trim_start();
+    let id = rest.strip_prefix('`')?.split('`').next()?;
+    is_row_id(id).then_some(id)
+}
+
+/// The tokens after every `Depends:` of `text`, each up to the next `|` or the end of
+/// the line, split on `,` and whitespace with backticks stripped, kept when they are row ids.
+fn depends_tokens(text: &str, out: &mut Vec<String>) {
+    for line in text.lines() {
+        let mut rest = line;
+        while let Some(at) = rest.find("Depends:") {
+            rest = &rest[at + "Depends:".len()..];
+            let clause = rest.split('|').next().unwrap_or_default();
+            for token in clause.split(|c: char| c == ',' || c.is_whitespace()) {
+                let token = token.replace('`', "");
+                let token = token.trim_matches(|c: char| matches!(c, '.' | ';' | '(' | ')'));
+                if is_row_id(token) && !out.iter().any(|seen| seen == token) {
+                    out.push(token.to_string());
+                }
+            }
+        }
+    }
+}
+
+/// Parse the row links of the spec files of one repository tree (`(path, bytes)`).
+///
+/// A row is a requirements table line `| `ID` | ... |`; its text runs to the next table
+/// line or blank line, so a `Depends:` line under the row belongs to it. A file under
+/// `contracts/` whose lines are `Provider: <text>` and `Consumer: <text>` records the seam
+/// side on the row id that is the last token of the line accepted by `is_row_id`. Lines
+/// that parse to nothing are ignored.
+pub fn parse_row_links(files: &[(String, Vec<u8>)]) -> Vec<SpecRowLinks> {
+    let mut links: Vec<SpecRowLinks> = Vec::new();
+    let mut index: BTreeMap<String, usize> = BTreeMap::new();
+    for (path, bytes) in files {
+        if !is_spec_artifact(path) {
+            continue;
+        }
+        let Ok(text) = std::str::from_utf8(bytes) else {
+            continue;
+        };
+        if path.contains("/contracts/") || path.starts_with("contracts/") {
+            for line in text.lines() {
+                let line = line.trim();
+                let provider = line.starts_with("Provider:");
+                if !provider && !line.starts_with("Consumer:") {
+                    continue;
+                }
+                let row = line
+                    .split_whitespace()
+                    .rev()
+                    .map(|t| t.trim_matches(|c: char| matches!(c, '`' | '.' | ',' | ';')))
+                    .find(|t| is_row_id(t));
+                if let Some(row) = row {
+                    let entry = links_of(&mut links, &mut index, row);
+                    let side = if provider {
+                        &mut entry.seam_provider
+                    } else {
+                        &mut entry.seam_consumer
+                    };
+                    if !side.contains(path) {
+                        side.push(path.clone());
+                    }
+                }
+            }
+            continue;
+        }
+        let mut current: Option<(String, String)> = None;
+        let flush = |current: &mut Option<(String, String)>,
+                         links: &mut Vec<SpecRowLinks>,
+                         index: &mut BTreeMap<String, usize>| {
+            if let Some((row, body)) = current.take() {
+                let mut depends = Vec::new();
+                depends_tokens(&body, &mut depends);
+                let entry = links_of(links, index, &row);
+                for dependency in depends {
+                    if !entry.depends_on.contains(&dependency) {
+                        entry.depends_on.push(dependency);
+                    }
+                }
+            }
+        };
+        for line in text.lines() {
+            if let Some(id) = row_line_id(line) {
+                flush(&mut current, &mut links, &mut index);
+                current = Some((id.to_string(), line.to_string()));
+            } else if line.trim().is_empty() || line.trim_start().starts_with('|') {
+                flush(&mut current, &mut links, &mut index);
+            } else if let Some((_, body)) = current.as_mut() {
+                body.push('\n');
+                body.push_str(line);
+            }
+        }
+        flush(&mut current, &mut links, &mut index);
+    }
+    links
+}
+
+/// The test binding markers of a repository tree: in a file whose path names a test, a
+/// `spec: <ROW-ID>` comment or a `spec("<ROW-ID>")` marker binds that row to the file.
+pub fn parse_test_bindings(
+    files: &[(String, Vec<u8>)],
+) -> Vec<medulla_core::lifecycle::derive::TestBinding> {
+    let mut bound: BTreeSet<(String, String)> = BTreeSet::new();
+    for (path, bytes) in files {
+        if is_spec_artifact(path) || !path.to_ascii_lowercase().contains("test") {
+            continue;
+        }
+        let Ok(text) = std::str::from_utf8(bytes) else {
+            continue;
+        };
+        for line in text.lines() {
+            let mut ids: Vec<&str> = Vec::new();
+            if let Some(at) = line.find("spec:") {
+                if let Some(token) = line[at + "spec:".len()..].split_whitespace().next() {
+                    ids.push(token.trim_matches(|c: char| matches!(c, '`' | '.' | ',' | '"')));
+                }
+            }
+            if let Some(at) = line.find("spec(\"") {
+                if let Some(token) = line[at + "spec(\"".len()..].split('"').next() {
+                    ids.push(token);
+                }
+            }
+            for id in ids.into_iter().filter(|id| is_row_id(id)) {
+                bound.insert((id.to_string(), path.clone()));
+            }
+        }
+    }
+    bound
+        .into_iter()
+        .map(
+            |(requirement, test)| medulla_core::lifecycle::derive::TestBinding {
+                requirement,
+                test,
+            },
+        )
+        .collect()
+}
+
+/// The node id of a bound test file of one repository.
+pub fn test_file_node_id(repo: &str, path: &str) -> String {
+    format!("testfile:{repo}:{path}")
+}
+
+/// The node id of one seam file of one repository.
+pub fn seam_node_id(repo: &str, path: &str) -> String {
+    format!("seam:{repo}:{path}")
+}
+
+/// The inputs of [`link_history_to_rows`] (MEDULLA-SDLC-R014.12).
+pub struct SpecHistoryInput<'a> {
+    pub repo: &'a str,
+    /// The default-branch head commit id.
+    pub rev: &'a str,
+    /// The repository's row ids, in order.
+    pub ids: &'a [String],
+    pub links: &'a [SpecRowLinks],
+    /// The whole default-branch chain, oldest first.
+    pub chain: &'a [Changeset],
+    /// The delta slice: the only changesets whose `implementedByCommit` and `commitHash`
+    /// operations are emitted. On a first ingest it equals `chain`.
+    pub new_changesets: &'a [Changeset],
+    pub bindings: &'a [medulla_core::lifecycle::derive::TestBinding],
+    /// The test file paths on the default branch at the head.
+    pub existing_test_paths: &'a BTreeSet<String>,
+}
+
+/// Link rows to commits, tests, dependencies and seams, and derive each row status
+/// (MEDULLA-SDLC-R014.12).
+///
+/// A `Spec:` trailer gives one `implementedByCommit` edge per row id, from the requirement
+/// node to the changeset node, and the changeset node gains `commitHash`; a native
+/// changeset (no git origin) gets neither. A bound test path gives a `boundTest` edge to
+/// the `testfile:` node, and a `verifiedBy` edge too when the path exists at the head. Each
+/// row gets one `rowStatus` property from `derive_spec_status`. A `Depends:` id that is a
+/// row of the repository gives a `dependsOnRow` edge; a seam side gives `seamProvider` or
+/// `seamConsumer`. A trailer id that is no row refuses with `REQUIREMENT_UNRESOLVED` and
+/// no operation is produced.
+pub fn link_history_to_rows(input: &SpecHistoryInput<'_>) -> Result<RequirementProjection, String> {
+    let rows: BTreeSet<&str> = input.ids.iter().map(String::as_str).collect();
+    let (mut nodes, mut links) = (Vec::new(), Vec::new());
+    for changeset in input.new_changesets {
+        let source = changeset_node_id(input.repo, &changeset.id);
+        let mut properties = serde_json::json!({
+            "type": "Changeset",
+            "repo": input.repo,
+            "changeset_id": changeset.id,
+        });
+        let commit = changeset.git.as_ref().map(|git| git.commit_id.as_str());
+        if let Some(commit) = commit {
+            properties["commitHash"] = commit.into();
+        }
+        for row_id in &changeset.trailers.spec_ids {
+            if !rows.contains(row_id.as_str()) {
+                return Err(format!(
+                    "{}: {row_id} (cited by changeset {}) resolves to no row",
+                    EngineErrorCode::RequirementUnresolved.as_str(),
+                    changeset.id
+                ));
+            }
+            if commit.is_some() {
+                links.push(edge(
+                    &requirement_node_id(input.repo, row_id),
+                    &source,
+                    "implementedByCommit",
+                ));
+            }
+        }
+        if commit.is_some() {
+            nodes.push(node(&source, properties));
+        }
+    }
+    let mut test_nodes: BTreeSet<&str> = BTreeSet::new();
+    for binding in input.bindings {
+        if !rows.contains(binding.requirement.as_str()) {
+            continue;
+        }
+        let source = requirement_node_id(input.repo, &binding.requirement);
+        let target = test_file_node_id(input.repo, &binding.test);
+        if test_nodes.insert(binding.test.as_str()) {
+            nodes.push(node(
+                &target,
+                serde_json::json!({"type": "TestFile", "path": binding.test, "repo": input.repo}),
+            ));
+        }
+        links.push(edge(&source, &target, "boundTest"));
+        if input.existing_test_paths.contains(&binding.test) {
+            links.push(edge(&source, &target, "verifiedBy"));
+        }
+    }
+    let status = medulla_core::lifecycle::status::derive_spec_status(
+        input.repo,
+        input.rev,
+        input.ids,
+        input.chain,
+        input.bindings,
+    );
+    for row in &status.rows {
+        let state = serde_json::to_value(row.state).map_err(|error| error.to_string())?;
+        nodes.push(node(
+            &requirement_node_id(input.repo, &row.id),
+            serde_json::json!({
+                "type": "Requirement",
+                "rowId": row.id,
+                "repo": input.repo,
+                "rowStatus": state,
+            }),
+        ));
+    }
+    let mut seam_nodes: BTreeSet<&str> = BTreeSet::new();
+    for row_links in input.links {
+        if !rows.contains(row_links.row_id.as_str()) {
+            continue;
+        }
+        let source = requirement_node_id(input.repo, &row_links.row_id);
+        for dependency in &row_links.depends_on {
+            if rows.contains(dependency.as_str()) {
+                links.push(edge(
+                    &source,
+                    &requirement_node_id(input.repo, dependency),
+                    "dependsOnRow",
+                ));
+            }
+        }
+        for (paths, relationship) in [
+            (&row_links.seam_provider, "seamProvider"),
+            (&row_links.seam_consumer, "seamConsumer"),
+        ] {
+            for path in paths {
+                let target = seam_node_id(input.repo, path);
+                if seam_nodes.insert(path.as_str()) {
+                    nodes.push(node(
+                        &target,
+                        serde_json::json!({"type": "SeamSide", "path": path, "repo": input.repo}),
+                    ));
+                }
+                links.push(edge(&source, &target, relationship));
+            }
+        }
+    }
+    let (count_nodes, count_edges) = (nodes.len() as u32, links.len() as u32);
+    nodes.extend(links);
+    Ok(RequirementProjection {
+        operations: nodes,
+        nodes: count_nodes,
+        edges: count_edges,
+    })
+}
+
+/// The artifact entry whose records are `row=STATE`: the `rowStatus` last written per row,
+/// which a delta pass compares with the status it derives (MEDULLA-SDLC-R014.12).
+pub const ROW_STATUS_ARTIFACT: &str = "rowstatus";
+
 /// What the engine already holds of one artifact file: the digest it was ingested
 /// under and the ids of the requirement records it produced.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1098,11 +1418,13 @@ fn append_policy_candidates(
 /// the index. A path that repeats in `files` is read once, at its first occurrence. A
 /// stored file that is absent from this batch is not removed here; the batch need not
 /// carry every file, and the returned plan names `removed` for a caller that holds the
-/// full tree.
+/// full tree. `chain` is the whole default-branch changeset chain, oldest first, and
+/// `changesets` its delta after the last cited changeset (MEDULLA-SDLC-R014.12).
 pub fn project_spec_artifacts(
     repo: &str,
     files: &[(String, Vec<u8>)],
     stored: &BTreeMap<String, StoredArtifact>,
+    chain: &[Changeset],
     changesets: &[Changeset],
     branch: &str,
     commit: &str,
@@ -1148,21 +1470,21 @@ pub fn project_spec_artifacts(
             Unresolved::Skip,
         )?
     };
+    // The requirement node ids of this plan plus the ones already stored.
+    let requirement_prefix = requirement_node_id(repo, "");
+    let mut known: BTreeSet<String> = stored
+        .values()
+        .flat_map(|artifact| artifact.records.iter())
+        .filter(|id| id.starts_with(&requirement_prefix))
+        .cloned()
+        .collect();
+    known.extend(
+        plan.operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
+            .filter_map(|op| op["id"].as_str().map(str::to_string)),
+    );
     if let Some(last) = changesets.last() {
-        // The requirement node ids of this plan plus the ones already stored.
-        let requirement_prefix = requirement_node_id(repo, "");
-        let mut known: BTreeSet<String> = stored
-            .values()
-            .flat_map(|artifact| artifact.records.iter())
-            .filter(|id| id.starts_with(&requirement_prefix))
-            .cloned()
-            .collect();
-        known.extend(
-            plan.operations
-                .iter()
-                .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
-                .filter_map(|op| op["id"].as_str().map(str::to_string)),
-        );
         let cited = cite_requirements(repo, changesets, &known)?;
         let mut records: Vec<String> = stored
             .get(CHANGESETS_ARTIFACT)
@@ -1204,6 +1526,103 @@ pub fn project_spec_artifacts(
         ordered.extend(links);
         plan.operations = ordered;
     }
+    // MEDULLA-SDLC-R014.12: rows link to commits, tests, dependencies and seams, and each
+    // row carries its derived status.
+    let ids: Vec<String> = known
+        .iter()
+        .filter_map(|id| id.strip_prefix(&requirement_prefix).map(str::to_string))
+        .collect();
+    let links = parse_row_links(files);
+    let bindings = parse_test_bindings(files);
+    let existing_test_paths: BTreeSet<String> = files
+        .iter()
+        .map(|(path, _)| path)
+        .filter(|path| !is_spec_artifact(path) && path.to_ascii_lowercase().contains("test"))
+        .cloned()
+        .collect();
+    let history = link_history_to_rows(&SpecHistoryInput {
+        repo,
+        rev: commit,
+        ids: &ids,
+        links: &links,
+        chain,
+        new_changesets: changesets,
+        bindings: &bindings,
+        existing_test_paths: &existing_test_paths,
+    })?;
+    // A delta pass re-emits the history of a row only when its file was rewritten, its
+    // derived status differs from the stored one, or a new changeset cites it.
+    let rewritten: BTreeSet<&str> = plan
+        .operations
+        .iter()
+        .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
+        .filter_map(|op| op["id"].as_str())
+        .collect();
+    let stored_status: BTreeMap<&str, &str> = stored
+        .get(ROW_STATUS_ARTIFACT)
+        .map(|artifact| {
+            artifact
+                .records
+                .iter()
+                .filter_map(|record| record.split_once('='))
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut touched: BTreeSet<String> = rewritten.iter().map(|id| id.to_string()).collect();
+    touched.extend(
+        changesets
+            .iter()
+            .flat_map(|changeset| changeset.trailers.spec_ids.iter())
+            .map(|row| requirement_node_id(repo, row)),
+    );
+    let mut statuses: Vec<String> = Vec::new();
+    for op in &history.operations {
+        let properties = &op["properties"];
+        if let (Some(row), Some(state)) = (properties["rowId"].as_str(), properties["rowStatus"].as_str()) {
+            statuses.push(format!("{row}={state}"));
+            if stored_status.get(row) != Some(&state) {
+                touched.insert(requirement_node_id(repo, row));
+            }
+        }
+    }
+    let mut kept: Vec<serde_json::Value> = Vec::new();
+    let mut referenced: BTreeSet<String> = BTreeSet::new();
+    for op in &history.operations {
+        if op["op"] == "upsert_edge" {
+            if op["source"].as_str().is_some_and(|source| touched.contains(source)) {
+                referenced.extend(op["target"].as_str().map(str::to_string));
+                kept.push(op.clone());
+            }
+        }
+    }
+    let mut history_ops: Vec<serde_json::Value> = Vec::new();
+    for op in &history.operations {
+        if op["op"] != "upsert_node" {
+            continue;
+        }
+        let keep = match op["properties"]["type"].as_str() {
+            Some("Requirement") => op["id"].as_str().is_some_and(|id| touched.contains(id)),
+            Some("TestFile" | "SeamSide") => op["id"].as_str().is_some_and(|id| referenced.contains(id)),
+            _ => true,
+        };
+        if keep {
+            history_ops.push(op.clone());
+        }
+    }
+    if history_ops.iter().any(|op| op["properties"]["type"] == "Requirement") {
+        history_ops.push(node(
+            &artifact_node_id(repo, ROW_STATUS_ARTIFACT),
+            serde_json::json!({
+                "type": "SpecArtifactFile",
+                "repo": repo,
+                "file": ROW_STATUS_ARTIFACT,
+                "digest": digest_of(&statuses.join(",")),
+                "records": statuses.join(","),
+            }),
+        ));
+    }
+    history_ops.extend(kept);
+    merge_history(&mut plan.operations, history_ops);
     for op in &plan.operations {
         match op["op"].as_str() {
             Some("upsert_node") => result.nodes.push(index_node(op)),
@@ -1214,6 +1633,34 @@ pub fn project_spec_artifacts(
     append_classified(&classified, result);
     append_policy_candidates(repo, commit, files, &classified, result);
     Ok(plan)
+}
+
+/// Fold the history operations into the plan: a node the plan already writes gains the
+/// new properties in place, so a Requirement or Changeset node is written once.
+fn merge_history(plan: &mut Vec<serde_json::Value>, history: Vec<serde_json::Value>) {
+    let (history_nodes, history_edges): (Vec<_>, Vec<_>) = history
+        .into_iter()
+        .partition(|op| op["op"] == "upsert_node");
+    let mut extra_nodes = Vec::new();
+    for op in history_nodes {
+        let existing = plan
+            .iter_mut()
+            .find(|candidate| candidate["op"] == "upsert_node" && candidate["id"] == op["id"]);
+        match (existing, op["properties"].as_object()) {
+            (Some(existing), Some(properties)) => {
+                for (key, value) in properties {
+                    existing["properties"][key] = value.clone();
+                }
+            }
+            _ => extra_nodes.push(op),
+        }
+    }
+    let first_edge = plan
+        .iter()
+        .position(|op| op["op"] != "upsert_node")
+        .unwrap_or(plan.len());
+    plan.splice(first_edge..first_edge, extra_nodes);
+    plan.extend(history_edges);
 }
 
 fn index_node(op: &serde_json::Value) -> medulla_ingestion_types::ingestion_wire::ExtractedNode {
@@ -1613,7 +2060,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         ];
         let mut first = IndexResult::default();
         let plan =
-            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], "main", "c0ffee", &mut first)
+            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], &[], "main", "c0ffee", &mut first)
                 .expect("first batch");
         assert_eq!(plan.reingested, ["specs/a/requirements.md"]);
         // The DEMO-R002 `Depends: OTHER-R009` names another repository; it is skipped.
@@ -1630,7 +2077,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let mut stored = BTreeMap::new();
         stored_after(&plan, &mut stored);
         let mut again = IndexResult::default();
-        let idle = project_spec_artifacts("demo", &files, &stored, &[], "main", "c0ffee", &mut again)
+        let idle = project_spec_artifacts("demo", &files, &stored, &[], &[], "main", "c0ffee", &mut again)
             .expect("idle");
         assert!(idle.reingested.is_empty());
         assert!(again.nodes.is_empty() && again.edges.is_empty());
@@ -1776,6 +2223,203 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         }
     }
 
+    // spec: MEDULLA-SDLC-R014.12
+    #[test]
+    fn history_links_rows_to_commits_tests_and_dependencies() {
+        use medulla_source_types::source_changeset::{GitObjectFormat, GitOrigin};
+
+        let requirements = format!("{REQUIREMENTS}Depends: DEMO-R001\n");
+        let files: Vec<(String, Vec<u8>)> = vec![
+            ("specs/a/requirements.md".into(), requirements.into_bytes()),
+            (
+                "specs/a/contracts/seam.md".into(),
+                b"# Seam\nProvider: demo DEMO-R001\nConsumer: other OTHER-R002\nConsumer: demo DEMO-R003.\n"
+                    .to_vec(),
+            ),
+            (
+                "tests/demo/test_base.py".into(),
+                b"@pytest.mark.spec(\"DEMO-R001\")\n".to_vec(),
+            ),
+            (
+                "tests/demo/test_third.py".into(),
+                b"# spec: DEMO-R003\n".to_vec(),
+            ),
+        ];
+        let links = parse_row_links(&files);
+        let of = |id: &str| links.iter().find(|l| l.row_id == id).expect("row links");
+        assert_eq!(of("DEMO-R002").depends_on, ["DEMO-R001", "OTHER-R009"]);
+        assert_eq!(of("DEMO-R003").depends_on, ["DEMO-R001"]);
+        assert_eq!(of("DEMO-R001").seam_provider, ["specs/a/contracts/seam.md"]);
+        assert_eq!(of("DEMO-R003").seam_consumer, ["specs/a/contracts/seam.md"]);
+        // A row of another repository is recorded but never linked: it is no row here.
+        assert_eq!(of("OTHER-R002").seam_consumer, ["specs/a/contracts/seam.md"]);
+
+        let bindings = parse_test_bindings(&files);
+        assert_eq!(bindings.len(), 2);
+        let ids: Vec<String> = ["DEMO-R001", "DEMO-R002", "DEMO-R003"]
+            .map(String::from)
+            .to_vec();
+        let mut git_changeset = changeset("c1", 1700, &["DEMO-R001"]);
+        git_changeset.git = Some(GitOrigin {
+            object_format: GitObjectFormat::Sha1,
+            commit_id: "a".repeat(40),
+            tree_id: "b".repeat(40),
+            parent_commit_ids: Vec::new(),
+            side_pack_digest: None,
+            raw_headers: String::new(),
+        });
+        let chain = [git_changeset, changeset("c2", 1800, &["DEMO-R002"])];
+        // Only the first test file is present at the head.
+        let existing: BTreeSet<String> = BTreeSet::from(["tests/demo/test_base.py".to_string()]);
+        let input = SpecHistoryInput {
+            repo: "demo",
+            rev: "c2",
+            ids: &ids,
+            links: &links,
+            chain: &chain,
+            new_changesets: &chain,
+            bindings: &bindings,
+            existing_test_paths: &existing,
+        };
+        let p = link_history_to_rows(&input).expect("links");
+        let r1 = requirement_node_id("demo", "DEMO-R001");
+        let r2 = requirement_node_id("demo", "DEMO-R002");
+        assert_eq!(
+            edges_of(&p, &r1, "implementedByCommit"),
+            [changeset_node_id("demo", "c1")]
+        );
+        // A native changeset gets no commitHash and no implementedByCommit edge.
+        assert!(edges_of(&p, &r2, "implementedByCommit").is_empty());
+        let commit_node = |id: &str| {
+            p.operations
+                .iter()
+                .find(|op| op["id"] == changeset_node_id("demo", id).as_str())
+        };
+        assert_eq!(
+            commit_node("c1").expect("git changeset node")["properties"]["commitHash"],
+            "a".repeat(40).as_str()
+        );
+        assert!(commit_node("c2").is_none());
+        assert_eq!(
+            edges_of(&p, &r1, "boundTest"),
+            ["testfile:demo:tests/demo/test_base.py"]
+        );
+        assert_eq!(
+            edges_of(&p, &r1, "verifiedBy"),
+            ["testfile:demo:tests/demo/test_base.py"]
+        );
+        let r3 = requirement_node_id("demo", "DEMO-R003");
+        assert_eq!(
+            edges_of(&p, &r3, "boundTest"),
+            ["testfile:demo:tests/demo/test_third.py"]
+        );
+        assert!(edges_of(&p, &r3, "verifiedBy").is_empty());
+        assert_eq!(edges_of(&p, &r3, "dependsOnRow"), [r1.clone()]);
+        assert_eq!(edges_of(&p, &r2, "dependsOnRow"), [r1.clone()]);
+        assert_eq!(
+            edges_of(&p, &r1, "seamProvider"),
+            ["seam:demo:specs/a/contracts/seam.md"]
+        );
+        let status = |id: &str| {
+            p.operations
+                .iter()
+                .find(|op| op["id"] == requirement_node_id("demo", id).as_str() && op["op"] == "upsert_node")
+                .and_then(|op| op["properties"]["rowStatus"].as_str())
+                .map(str::to_string)
+        };
+        assert_eq!(status("DEMO-R001").as_deref(), Some("VERIFIED"));
+        assert_eq!(status("DEMO-R002").as_deref(), Some("LANDED"));
+        assert_eq!(status("DEMO-R003").as_deref(), Some("SPECIFIED"));
+        println!("HISTORY\t{}\t{}", p.nodes, p.edges);
+
+        // A trailer id that is no row refuses and produces nothing.
+        let unknown = [changeset("c3", 1900, &["DEMO-R999"])];
+        let refused = link_history_to_rows(&SpecHistoryInput {
+            new_changesets: &unknown,
+            chain: &unknown,
+            ..input
+        })
+        .unwrap_err();
+        assert!(refused.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
+    }
+
+    // spec: MEDULLA-SDLC-R014.12
+    #[test]
+    fn history_delta_emits_only_new_commits() {
+        use medulla_ingestion_types::ingestion_wire::IndexResult;
+        use medulla_source_types::source_changeset::{GitObjectFormat, GitOrigin};
+
+        let git = |id: &str, at: u64, rows: &[&str]| {
+            let mut c = changeset(id, at, rows);
+            c.git = Some(GitOrigin {
+                object_format: GitObjectFormat::Sha1,
+                commit_id: format!("{id:0>40}"),
+                tree_id: "b".repeat(40),
+                parent_commit_ids: Vec::new(),
+                side_pack_digest: None,
+                raw_headers: String::new(),
+            });
+            c
+        };
+        let files = vec![(
+            "specs/a/requirements.md".to_string(),
+            REQUIREMENTS.as_bytes().to_vec(),
+        )];
+        let first_chain = [git("c1", 1700, &["DEMO-R001"])];
+        let mut first = IndexResult::default();
+        let plan = project_spec_artifacts(
+            "demo",
+            &files,
+            &BTreeMap::new(),
+            &first_chain,
+            &first_chain,
+            "main",
+            "head1",
+            &mut first,
+        )
+        .expect("first ingest");
+        assert!(first.edges.iter().any(|e| e.edge_type == "implementedByCommit"
+            && e.target == "changeset:demo:c1"));
+        let mut stored = BTreeMap::new();
+        stored_after(&plan, &mut stored);
+        assert!(stored.contains_key(ROW_STATUS_ARTIFACT));
+
+        // The next pass reads the chain, but only c2 is new.
+        let chain = [first_chain[0].clone(), git("c2", 1800, &["DEMO-R002"])];
+        let mut delta = IndexResult::default();
+        let started = std::time::Instant::now();
+        project_spec_artifacts(
+            "demo",
+            &files,
+            &stored,
+            &chain,
+            &chain[1..],
+            "main",
+            "head2",
+            &mut delta,
+        )
+        .expect("delta");
+        let elapsed = started.elapsed();
+        assert!(elapsed < std::time::Duration::from_secs(2), "{elapsed:?}");
+        let commits: Vec<&str> = delta
+            .edges
+            .iter()
+            .filter(|e| e.edge_type == "implementedByCommit")
+            .map(|e| e.target.as_str())
+            .collect();
+        assert_eq!(commits, ["changeset:demo:c2"]);
+        let statuses: Vec<(&str, &str)> = delta
+            .nodes
+            .iter()
+            .filter_map(|n| {
+                Some((n.node_id.as_str(), n.properties.get("rowStatus")?.as_str()))
+            })
+            .collect();
+        // Only DEMO-R002 changed status; DEMO-R001 and DEMO-R003 are not rewritten.
+        assert_eq!(statuses, [("requirement:demo:DEMO-R002", "LANDED")]);
+        println!("HISTORY_DELTA\t{}\t{}", commits.len(), elapsed.as_micros());
+    }
+
     // spec: MEDULLA-SDLC-R014.3
     #[test]
     fn cite_requirements_links_trailers_and_refuses_unknown_ids() {
@@ -1834,6 +2478,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &files,
             &BTreeMap::new(),
             &changesets,
+            &changesets,
             "main",
             "c0ffee",
             &mut first,
@@ -1859,13 +2504,23 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         stored_after(&plan, &mut stored);
         assert_eq!(stored[CHANGESETS_ARTIFACT].digest, "c1");
         let mut again = IndexResult::default();
-        project_spec_artifacts("demo", &files, &stored, &[], "main", "c0ffee", &mut again).expect("idle");
+        project_spec_artifacts(
+            "demo",
+            &files,
+            &stored,
+            &changesets,
+            &[],
+            "main",
+            "c0ffee",
+            &mut again,
+        )
+        .expect("idle");
         assert!(again.nodes.is_empty() && again.edges.is_empty());
 
         // An id that resolves to no row refuses and writes nothing.
         let unknown = [changeset("c2", 1800, &["DEMO-R999"])];
         let mut refused = IndexResult::default();
-        let error = project_spec_artifacts("demo", &files, &stored, &unknown, "main", "c0ffee", &mut refused)
+        let error = project_spec_artifacts("demo", &files, &stored, &unknown, &unknown, "main", "c0ffee", &mut refused)
             .unwrap_err();
         assert!(error.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
         assert!(refused.nodes.is_empty() && refused.edges.is_empty());
@@ -1945,7 +2600,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .filter(|(path, _)| path == "specs/x/notes.md" || path.starts_with(".specify/"))
             .cloned()
             .collect();
-        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], "main", "c0ffee", &mut result)
+        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], &[], "main", "c0ffee", &mut result)
             .expect("projects");
         let diagnostics = result.file_outcomes[0].diagnostics.as_slice();
         assert_eq!(diagnostics.len(), 1);

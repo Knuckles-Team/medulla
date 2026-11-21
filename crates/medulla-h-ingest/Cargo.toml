@@ -127,6 +127,11 @@ path = "benches/lifecycle_record_deployment.rs"
 harness = false
 
 [[bench]]
+name = "lifecycle_spec_history_ingest"
+path = "benches/lifecycle_spec_history_ingest.rs"
+harness = false
+
+[[bench]]
 name = "lifecycle_project_mode"
 path = "benches/lifecycle_project_mode.rs"
 harness = false

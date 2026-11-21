@@ -53,10 +53,20 @@ fn validate_scope_paths(
         .try_for_each(validate_ast_logical_path)
 }
 
+/// The changesets of one branch: the whole chain and the delta after the last cited one,
+/// both oldest first.
+#[cfg(feature = "ast")]
+#[derive(Default)]
+struct ChangesetChain {
+    chain: Vec<medulla_source_types::source_changeset::Changeset>,
+    delta: Vec<medulla_source_types::source_changeset::Changeset>,
+}
+
 /// The changesets of the repository's branch chain that follow the last one cited
 /// (MEDULLA-SDLC-R014.3), oldest first. The last cited changeset id is the `digest` of the
 /// stored artifact entry named `changesets`. A branch with no chain gives no changesets and
 /// no error; a payload that is not a changeset (a branch write) is not one and is skipped.
+/// The whole chain comes back too, for the derived row status (MEDULLA-SDLC-R014.12).
 #[cfg(all(feature = "ast", feature = "redb"))]
 async fn branch_changesets(
     ctx: &GraphOpRouting<'_>,
@@ -65,7 +75,7 @@ async fn branch_changesets(
         String,
         medulla_h_ingest::source_ingestion::spec_projection::StoredArtifact,
     >,
-) -> Result<Vec<medulla_source_types::source_changeset::Changeset>, String> {
+) -> Result<ChangesetChain, String> {
     use medulla_source_types::source_changeset::decode_changeset;
     let registry = {
         let guard = ctx.state.read().await;
@@ -80,8 +90,10 @@ async fn branch_changesets(
         .get(medulla_h_ingest::source_ingestion::spec_projection::CHANGESETS_ARTIFACT)
         .map(|artifact| artifact.digest.clone());
     tokio::task::spawn_blocking(move || {
-        let mut changesets = Vec::new();
-        // `chain` answers newest first: stop at the last changeset already cited.
+        let mut chain = Vec::new();
+        // `chain` answers newest first. The delta stops at the last changeset already
+        // cited; the whole chain is kept for the row status (MEDULLA-SDLC-R014.12).
+        let mut delta_len = None;
         for commit in registry.chain(&reference)? {
             let Some(bytes) = registry.commit_payload(&reference, &commit.id)? else {
                 continue;
@@ -89,13 +101,17 @@ async fn branch_changesets(
             let Ok(changeset) = decode_changeset(&bytes) else {
                 continue;
             };
-            if last_cited.as_deref() == Some(changeset.id.as_str()) {
-                break;
+            if delta_len.is_none() && last_cited.as_deref() == Some(changeset.id.as_str()) {
+                delta_len = Some(chain.len());
             }
-            changesets.push(changeset);
+            chain.push(changeset);
         }
-        changesets.reverse();
-        Ok::<_, String>(changesets)
+        let delta_len = delta_len.unwrap_or(chain.len());
+        // Newest first becomes oldest first; the delta is the newest `delta_len` entries.
+        let mut delta: Vec<_> = chain[..delta_len].to_vec();
+        delta.reverse();
+        chain.reverse();
+        Ok::<_, String>(ChangesetChain { chain, delta })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -110,8 +126,8 @@ async fn branch_changesets(
         String,
         medulla_h_ingest::source_ingestion::spec_projection::StoredArtifact,
     >,
-) -> Result<Vec<medulla_source_types::source_changeset::Changeset>, String> {
-    Ok(Vec::new())
+) -> Result<ChangesetChain, String> {
+    Ok(ChangesetChain::default())
 }
 
 /// Decode, validate and parse+project one scoped batch (off the reactor).
@@ -138,7 +154,10 @@ async fn index_scoped(
         .branch
         .clone()
         .unwrap_or_else(|| medulla_mutation_types::branch::RESERVED_BRANCH_NAME.to_string());
-    let changesets = branch_changesets(&ctx, &branch_name, &stored_specs)
+    let ChangesetChain {
+        chain,
+        delta: changesets,
+    } = branch_changesets(&ctx, &branch_name, &stored_specs)
         .await
         .map_err(|error| Response::err(req_id, error))?;
     // MEDULLA-ORCH-VOCAB-R012.7.2: the commit a policy candidate cites is the revision of
@@ -169,6 +188,7 @@ async fn index_scoped(
                 &scope.repository_id,
                 &files,
                 &stored_specs,
+                &chain,
                 &changesets,
                 &branch_name,
                 &commit,
