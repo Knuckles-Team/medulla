@@ -163,3 +163,51 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
     let unknown = export(&state, 11, 9, None, false).await;
     assert_eq!(unknown.error.as_deref(), Some("PROCESS_IMPORT_UNKNOWN_MODEL"));
 }
+
+fn node_properties(
+    state: &test_support::SharedState,
+    id: &str,
+) -> serde_json::Map<String, serde_json::Value> {
+    let guard = state.try_read().unwrap();
+    let core = &guard.registry.get(GRAPH).unwrap().core;
+    let bytes = core
+        .get_nodes()
+        .into_iter()
+        .find(|(node, _)| node == id)
+        .unwrap_or_else(|| panic!("node {id} is stored"))
+        .1;
+    medulla_types::msgpack::decode_property_object(&bytes).expect("node properties")
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.5
+#[tokio::test(flavor = "multi_thread")]
+async fn stored_steps_keep_source_ids() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "process-import-evidence",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let stated = workflow(EPC_SIDE);
+    let imported: ProcessModelImported = payload(import(&state, 2, EPC_SIDE, Some(0)).await);
+
+    let node = node_properties(&state, &imported.workflow_id);
+    assert_eq!(node["workflowDigest"], stated.digest);
+    assert_eq!(node["importedFrom"], stated.source.model_id);
+    let annex: serde_json::Value =
+        serde_json::from_str(node["processAnnex"].as_str().unwrap()).unwrap();
+    assert_eq!(annex, serde_json::to_value(&stated.annex).unwrap());
+    assert!(!stated.annex.is_empty(), "the EPC side keeps an annex");
+
+    for step in &stated.steps {
+        let stored = node_properties(&state, &format!("{}:step:{}", imported.workflow_id, step.id));
+        assert_eq!(stored["sourceSystem"], "aris_epc");
+        assert_eq!(stored["sourceModelId"], stated.source.model_id);
+        assert_eq!(
+            stored["sourceElementId"].as_str(),
+            stated.source.elements.get(&step.id).map(String::as_str)
+        );
+    }
+}

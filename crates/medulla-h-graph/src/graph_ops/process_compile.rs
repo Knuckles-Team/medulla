@@ -269,7 +269,49 @@ pub(super) fn admit_import(
     .map_err(|error: ImportError| refuse(error.code(), error))?;
     let stored = check_version(core, workflow_id, expected_version)?;
     let version = stored + 1;
-    let operations = vec![workflow_node(tenant, workflow_id, version, &admitted, &[])?];
+    let annex = serde_json::to_string(&admitted.annex).map_err(|error| {
+        refuse(
+            "PARAMETER_INVALID",
+            format!("annex encoding failed: {error}"),
+        )
+    })?;
+    let node_id = workflow_node_id(workflow_id, version);
+    let system = serde_json::to_value(admitted.source.system)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_string))
+        .unwrap_or_default();
+    let mut operations = vec![workflow_node(
+        tenant,
+        workflow_id,
+        version,
+        &admitted,
+        &[
+            ("importedFrom", admitted.source.model_id.as_str()),
+            ("processAnnex", annex.as_str()),
+        ],
+    )?];
+    for step in &admitted.steps {
+        let step_id = format!("{node_id}:step:{}", step.id);
+        operations.push(serde_json::json!({
+            "op": "upsert_node",
+            "id": step_id,
+            "properties": {
+                "type": "WorkflowStep",
+                "tenant_id": tenant,
+                "stepId": step.id,
+                "label": step.label,
+                "sourceSystem": system,
+                "sourceModelId": admitted.source.model_id,
+                "sourceElementId": admitted.source.elements.get(&step.id),
+            },
+        }));
+        operations.push(serde_json::json!({
+            "op": "upsert_edge",
+            "source": node_id,
+            "target": step_id,
+            "properties": { "relationship": "hasStep" },
+        }));
+    }
     Ok(Admitted {
         write: batch(&operations)?,
         answer: ProcessModelImported {
