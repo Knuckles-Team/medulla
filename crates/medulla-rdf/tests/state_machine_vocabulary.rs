@@ -1463,3 +1463,10 @@ fn semantic_machine_matches_edge_table() {
     sm::assert_matches(&medulla_index_types::semantic_index::SEMANTIC_MACHINE);
     sm::assert_extends_core("Semantic");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.6
+#[test]
+fn exact_retirement_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_direct_state::direct_state::EXACT_RETIREMENT_MACHINE);
+    sm::assert_extends_core("ExactRetirement");
+}
