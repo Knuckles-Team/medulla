@@ -17,12 +17,14 @@ import uuid
 from typing import Any
 
 import pytest
-from conftest import TEST_AGENT_ID, TEST_SIGNER_KEY, request_context
+from conftest import request_context
 from pydantic import TypeAdapter
 
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.ingestion import (
     SourceIngestStatusRequest,
+    decode_quarantine_read,
+    send_quarantine_read,
     send_source_ingest_status,
 )
 from medulla.generated.source_ingestion import (
@@ -198,58 +200,54 @@ async def test_quarantine_preserves_prior_checkpoint() -> None:
         await _close(client, graph)
 
 
-async def _hidden(call: Any) -> bool:
-    """True when the read is refused or returns nothing."""
-    try:
-        value = await call
-    except EngineResponseError:
-        return True
-    return not value
+async def _reader(graph: str, scopes: list[str]) -> MedullaClient:
+    """A same-tenant principal whose verified claims carry exactly `scopes`."""
+    return await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(scopes=scopes),
+        graph_name=graph,
+    )
 
 
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.12")
 @pytest.mark.asyncio
 async def test_quarantine_reads_require_policy() -> None:
+    """The stored policy action of a quarantine read is `source:quarantine:read`, held
+    exactly. A same-tenant caller with a graph read grant but without it is refused and
+    sees no evidence, and cannot resubmit the batch to obtain the receipt."""
     connector = _connector()
     client, graph = await _document_client(connector)
+    holder: MedullaClient | None = None
     outsider: MedullaClient | None = None
     try:
         batch = _documents_batch(connector, 2, None, [("bad", "")])
         outcome = await _outcome(client, batch, "policy")
         assert outcome.outcome == "quarantined", outcome
-        node_id = outcome.receipt.restricted_evidence_ref.removeprefix("quarantine:")
+        receipt = outcome.receipt
+        node_id = receipt.restricted_evidence_ref.removeprefix("quarantine:")
         assert await client.nodes.properties(node_id), (
             "the submitter reads its evidence"
         )
+        batch_id = f"source-ingest:{str(receipt.source_digest).removeprefix('sha256:')}"
+        params = {"connector": connector, "stream": STREAM, "batch_id": batch_id}
 
-        # A principal of the same tenant may read the graph but the stored policy of the
-        # evidence does not name it.
-        tag = uuid.uuid4().hex[:8]
-        agent_id, role = f"service:quarantine-outsider-{tag}", f"suite:quarantine-{tag}"
-        await client.rbac.add_role(role)
-        await client.rbac.add_grant(role, {"Graph": graph}, "Read")
-        await client.consensus.register_identity(
-            agent_id,
-            "Agent",
-            [],
-            [role],
-            signer_id=TEST_AGENT_ID,
-            signer_key=TEST_SIGNER_KEY,
-        )
-        outsider = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-            verified_context=request_context(agent_id=agent_id),
-            graph_name=graph,
-        )
-        assert await _hidden(outsider.nodes.properties(node_id))
-        assert await _hidden(outsider.nodes.list_by_label(QUARANTINE_LABEL, 0))
+        holder = await _reader(graph, ["kg:read", "source:quarantine:read"])
+        view = decode_quarantine_read(await send_quarantine_read(holder, params))
+        assert view.quarantine is not None
+        assert view.quarantine.restricted_evidence_ref == receipt.restricted_evidence_ref
+        assert view.quarantine.rule_id == RULE_ID
+        assert view.quarantine.reason is QuarantineReason.NORMALIZATION_FAILED
+
+        outsider = await _reader(graph, ["kg:read"])
+        with pytest.raises(EngineResponseError) as denied:
+            await send_quarantine_read(outsider, params)
+        assert "ACCESS_DENIED" in str(denied.value)
+        assert RULE_ID not in str(denied.value)
         # Neither a resubmission nor the raw reference gives the outsider the receipt.
         with pytest.raises(EngineResponseError):
             await _outcome(outsider, batch, "policy-outsider")
-        assert await _hidden(
-            outsider.nodes.properties(outcome.receipt.restricted_evidence_ref)
-        )
     finally:
-        if outsider is not None:
-            await outsider.close()
+        for reader in (holder, outsider):
+            if reader is not None:
+                await reader.close()
         await _close(client, graph)
