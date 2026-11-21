@@ -7783,7 +7783,7 @@ class GraphOperationsClient:
 
         ``source`` is ``{"kind": "model", "model_iri": ...}`` or
         ``{"kind": "workflow", "workflow_id": ..., "version": ...}``; ``format`` is
-        ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest}`` where
+        ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest, canonical_model_digest}`` where
         ``document`` is ``{format, document: <bytes>}``.
         """
         params: dict[str, Any] = {"source": source, "format": format}
