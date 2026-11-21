@@ -252,6 +252,53 @@ pub struct SkillOp {
     pub seed: u64,
 }
 
+/// A UQL `EVALUATE kernel OF c [AGAINST c2] [key value ...]` stage
+/// (MEDULLA-FEDERATED-QUERY-R726): which numeric evaluation kernel runs over the named
+/// value channels of each series, with which numeric parameters. `kernel` is one of
+/// [`EVALUATE_KERNELS`]; `channels` has exactly the kernel's channel arity; `params`
+/// lists `(key, value)` in the order written, each key at most once.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EvaluateOp {
+    pub kernel: String,
+    pub channels: Vec<String>,
+    #[serde(default)]
+    pub params: Vec<(String, f64)>,
+}
+
+/// One row of the `EVALUATE` kernel table: the kernel name, how many value channels it
+/// reads (`OF c` for one, `OF c AGAINST c2` for two, none for a kernel that takes only
+/// parameters) and the parameter keys it accepts.
+#[derive(Clone, Copy, Debug)]
+pub struct EvaluateKernel {
+    pub name: &'static str,
+    pub channels: usize,
+    pub params: &'static [&'static str],
+}
+
+/// The kernels `EVALUATE` names and their parameter keys
+/// (MEDULLA-FINANCE-PRIMITIVES-R002.2.3.6 to R002.2.3.15). The executor and the UQL
+/// parser and printer read this one table.
+pub const EVALUATE_KERNELS: &[EvaluateKernel] = &[
+    EvaluateKernel { name: "diebold_mariano", channels: 2, params: &["HORIZON"] },
+    EvaluateKernel { name: "deflated_sharpe", channels: 1, params: &["TRIALS", "OBSERVED"] },
+    EvaluateKernel {
+        name: "purged_cpcv",
+        channels: 0,
+        params: &["SAMPLES", "GROUPS", "TEST", "PURGE", "EMBARGO"],
+    },
+    EvaluateKernel { name: "probability_of_backtest_overfit", channels: 2, params: &[] },
+    EvaluateKernel { name: "brier", channels: 2, params: &[] },
+    EvaluateKernel { name: "ou_calibrate", channels: 1, params: &["DT"] },
+    EvaluateKernel { name: "adf", channels: 1, params: &["MAXLAG"] },
+    EvaluateKernel { name: "regime_hmm", channels: 1, params: &["STATES", "ITER", "TOL"] },
+];
+
+/// The table row of `name` (ASCII case-insensitive), if it is an `EVALUATE` kernel.
+pub fn evaluate_kernel(name: &str) -> Option<&'static EvaluateKernel> {
+    EVALUATE_KERNELS.iter().find(|k| k.name.eq_ignore_ascii_case(name))
+}
+
 /// A UQL `MOTIF` / `DISCORD` stage (EH-529): which value channel is searched, for what,
 /// how many hits, and the seed of the matrix profile's anytime diagonal order.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

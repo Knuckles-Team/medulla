@@ -31,6 +31,9 @@ closed_error_codes! {
         ParameterType => "UQL_PARAMETER_TYPE",
         UnusedParameter => "UQL_UNUSED_PARAMETER",
         FeatureNotInBuild => "UQL_FEATURE_NOT_IN_BUILD",
+        /// `EVALUATE kernel ...` (MEDULLA-FEDERATED-QUERY-R726): the kernel name is not
+        /// one of `medulla_query_types::series_expr::EVALUATE_KERNELS`. Refused at parse time.
+        EvaluateKernel => "UQL_E_EVALUATE_KERNEL",
         /// `WITH KNOWLEDGE` (MEDULLA-FEDERATED-QUERY-R028.1): a row's provenance or
         /// policy frame was omitted — no snapshot binding. A typed absence, never an
         /// empty success; the annotated result is refused whole.

@@ -88,6 +88,36 @@ pub(super) fn skill(spec: &crate::series_expr::SkillOp) -> Printed {
     Ok(out)
 }
 
+/// `EVALUATE kernel [OF c [AGAINST c2]] [KEY value ...]` (MEDULLA-FEDERATED-QUERY-R726).
+/// The kernel must be in the kernel table and its channel count the kernel's arity
+/// (a plan the parser would refuse has no spelling).
+#[cfg(feature = "timeseries")]
+pub(super) fn evaluate(spec: &crate::series_expr::EvaluateOp) -> Printed {
+    let Some(kernel) = crate::series_expr::evaluate_kernel(&spec.kernel) else {
+        return Err(refuse(
+            UqlPrintCode::DegenerateShape,
+            format!("`{}` is not an EVALUATE kernel", spec.kernel),
+        ));
+    };
+    if spec.channels.len() != kernel.channels {
+        return Err(refuse(
+            UqlPrintCode::DegenerateShape,
+            format!("EVALUATE {} reads {} channel(s)", kernel.name, kernel.channels),
+        ));
+    }
+    let mut out = format!("EVALUATE {}", kernel.name);
+    if let Some((first, rest)) = spec.channels.split_first() {
+        out.push_str(&format!(" OF {}", uql_ident(first)));
+        if let Some(second) = rest.first() {
+            out.push_str(&format!(" AGAINST {}", uql_ident(second)));
+        }
+    }
+    for (key, value) in &spec.params {
+        out.push_str(&format!(" {key} {}", uql_num(*value)?));
+    }
+    Ok(out)
+}
+
 /// `MOTIF OF c LIKE [..] TOP k` / `MOTIF OF c LENGTH m TOP k` / `DISCORD OF c LENGTH m
 /// TOP k`, then `SEED s` when non-zero (EH-529). The channel and `TOP` are always
 /// printed (the canonical form); a parsed stage without them takes `v0` and `TOP 3`.

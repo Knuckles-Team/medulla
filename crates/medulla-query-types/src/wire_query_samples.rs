@@ -203,6 +203,14 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             },
         },
         #[cfg(feature = "timeseries")]
+        OpKind::Evaluate => Op::Evaluate {
+            spec: crate::series_expr::EvaluateOp {
+                kernel: "diebold_mariano".into(),
+                channels: vec!["v0".into(), "score".into()],
+                params: vec![("HORIZON".into(), 1.0)],
+            },
+        },
+        #[cfg(feature = "timeseries")]
         OpKind::Motif => Op::Motif {
             spec: crate::series_expr::MotifOp {
                 channel: "v1".into(),

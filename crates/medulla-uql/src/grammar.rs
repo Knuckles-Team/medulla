@@ -245,6 +245,14 @@ pub const PRODUCTIONS: &[Production] = &[
        (rows <series>:skill@<h>; channels mean_ic ic_std icir ic_lo ic_hi n n_eff ir, EH-522)",
       "TSSCAN ['svc.p95'] FROM 0 TO 3600 |> DERIVE ret(v0, 1) AS r \
        |> SKILL v0 AGAINST r HORIZONS [1, 5] WINDOW 30 BOOTSTRAP 200 SEED 7 |> RETURN mean_ic, icir"),
+    p("evaluate", Stage, &["EVALUATE"], Some(Timeseries),
+      "\"EVALUATE\" kernel [ \"OF\" name [ \"AGAINST\" name ] ] { key number }",
+      "Evaluate{spec}: one numeric kernel (diebold_mariano deflated_sharpe purged_cpcv \
+       probability_of_backtest_overfit brier ou_calibrate adf regime_hmm) over the named value \
+       channels of each series; `key` is a parameter of that kernel \
+       (MEDULLA-FEDERATED-QUERY-R726)",
+      "TSSCAN ['svc.p95'] FROM 0 TO 3600 |> DERIVE ret(v0, 1) AS r \
+       |> EVALUATE diebold_mariano OF v0 AGAINST r HORIZON 1"),
     p("motif", Stage, &["MOTIF"], Some(Timeseries),
       "\"MOTIF\" \"OF\" name \
        ( \"LIKE\" \"[\" num { \",\" num } \"]\" | \"LENGTH\" int ) \"TOP\" int [ \"SEED\" int ]",

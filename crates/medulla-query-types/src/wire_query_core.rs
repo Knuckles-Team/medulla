@@ -801,6 +801,13 @@ pub enum Op {
     /// (`medulla_numeric::evaluation::skill::feature_skill`).
     #[cfg(feature = "timeseries")]
     Skill { spec: crate::series_expr::SkillOp },
+    /// REPORT (series, MEDULLA-FEDERATED-QUERY-R726, UQL `EVALUATE kernel OF c [AGAINST c2]
+    /// [key value ...]`) — one numeric evaluation kernel of
+    /// `crate::series_expr::EVALUATE_KERNELS` over the named value channels of each
+    /// series, a report stage after `Skill`. Kernel names and parameter keys are the ones
+    /// of MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15.
+    #[cfg(feature = "timeseries")]
+    Evaluate { spec: crate::series_expr::EvaluateOp },
     /// REPORT (series, EH-529 motif / discord search, UQL `MOTIF [OF c] LIKE shape [TOP k]`,
     /// `MOTIF [OF c] LENGTH m [TOP k] [SEED s]`, `DISCORD [OF c] LENGTH m [TOP k] [SEED s]`)
     /// — per series, over value channel `c` in timestamp order: the `k` non-overlapping

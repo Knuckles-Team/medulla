@@ -17,6 +17,12 @@ mod shape;
 pub(super) const UNSUPPORTED_MODALITY_OP: &str =
     "plan operator requires a modality feature not enabled in this build";
 
+/// The refusal for an `EVALUATE` stage while its executor is unlanded
+/// (MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15).
+#[cfg(feature = "timeseries")]
+const EVALUATE_EXECUTOR_UNAVAILABLE: &str =
+    "UQL_E_EVALUATE_KERNEL: the EVALUATE kernel executor is not available in this build";
+
 /// Is `op` one of the 7 `epistemic` ops (`EvidenceFor`/`Contradicts`/`SupportedBy`/
 /// `BeliefAsOf`/`SourceReliability`/`ConfidenceOp`/`ExplainBelief`)? Used by
 /// [`crate::optimizer`]'s reorder-exclusion check, which — unlike [`apply`]'s own
@@ -133,6 +139,13 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Skill { .. }
         | Op::Motif { .. }
         | Op::Events { .. } => apply_timeseries(op, input, ctx),
+
+        // `EVALUATE` (MEDULLA-FEDERATED-QUERY-R726) is parsed, printed and planned; its
+        // executor and the kernel registry it calls are MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15
+        // and R002.2.5. Until those land the stage refuses with a typed error rather than
+        // running a partial kernel.
+        #[cfg(feature = "timeseries")]
+        Op::Evaluate { .. } => Err(EVALUATE_EXECUTOR_UNAVAILABLE.into()),
 
         // `medulla-types/query` (which gates this whole module) surfaces the FULL `Op` wire
         // contract, so modality ops whose executor lives behind an medulla-plan feature the

@@ -49,6 +49,7 @@ mod attribute;
 mod basic;
 pub(super) mod call_stored;
 mod cursor;
+mod evaluate;
 mod lists;
 mod literal;
 mod modality;
@@ -161,6 +162,7 @@ impl<'a> Parser<'a> {
             ("TSSCAN", Self::tsscan),
             ("DERIVE", Self::derive),
             ("SKILL", Self::skill),
+            ("EVALUATE", Self::evaluate),
             ("MOTIF", Self::motif),
             ("DISCORD", Self::discord),
             ("EVENTS", Self::events),

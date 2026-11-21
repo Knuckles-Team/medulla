@@ -116,6 +116,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "EMBEDDING",
     "ENGINE",
     "EQUALS",
+    "EVALUATE",
     "EVENTS",
     "EVIDENCE",
     "EXISTS",
@@ -410,6 +411,8 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Derive { columns } => super::wire_query_uql_modal::derive(columns),
         #[cfg(feature = "timeseries")]
         Op::Skill { spec } => super::wire_query_uql_modal::skill(spec),
+        #[cfg(feature = "timeseries")]
+        Op::Evaluate { spec } => super::wire_query_uql_modal::evaluate(spec),
         #[cfg(feature = "timeseries")]
         Op::Motif { spec } => super::wire_query_uql_modal::motif(spec),
         #[cfg(feature = "timeseries")]

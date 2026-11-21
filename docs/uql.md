@@ -89,6 +89,7 @@ unit               = "ns" | "us" | "ms" | "s" | "m" | "min" | "h" | "d" (plural 
 agg                = "MEAN" | "AVG" | "SUM" | "MIN" | "MAX" | "COUNT" | "FIRST" | "LAST" ;
 derive             = "DERIVE" sexpr "AS" name { "," sexpr "AS" name } ;   (* feature `timeseries` *)
 skill              = "SKILL" name "AGAINST" name "HORIZONS" "[" int { "," int } "]" "WINDOW" int [ "BOOTSTRAP" int "SEED" int ] ;   (* feature `timeseries` *)
+evaluate           = "EVALUATE" kernel [ "OF" name [ "AGAINST" name ] ] { key number } ;   (* feature `timeseries` *)
 motif              = "MOTIF" "OF" name ( "LIKE" "[" num { "," num } "]" | "LENGTH" int ) "TOP" int [ "SEED" int ] ;   (* feature `timeseries` *)
 discord            = "DISCORD" "OF" name "LENGTH" int "TOP" int [ "SEED" int ] ;   (* feature `timeseries` *)
 events             = "EVENTS" name { "," name } ;   (* feature `timeseries` *)
@@ -280,6 +281,7 @@ earlier one; a transaction's staged point shadows both.
 |--------|-----|
 | `DERIVE zscore(ewma(v0, 12), 60) AS lat_z` | `Derive{columns}` — per-series incremental operators in timestamp order |
 | `SKILL v0 AGAINST r HORIZONS [1, 5] WINDOW 30` | `Skill{spec}` — rolling rank-IC predictive skill per horizon |
+| `EVALUATE diebold_mariano OF v0 AGAINST r HORIZON 1` | `Evaluate{spec}` — one numeric kernel (`diebold_mariano`, `deflated_sharpe`, `purged_cpcv`, `probability_of_backtest_overfit`, `brier`, `ou_calibrate`, `adf`, `regime_hmm`) over the named channels; an unknown kernel is `UQL_E_EVALUATE_KERNEL` |
 
 A `DERIVE` expression calls `lag diff ret logret` (count `k`), `rmean rstd rsum rmin rmax
 rrank zscore` (window `w`), `ewma` (span), `ewma_halflife`, `abs sign neg clip(x, lo, hi)`,
