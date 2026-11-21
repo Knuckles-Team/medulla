@@ -334,7 +334,7 @@ pub const PRODUCTIONS: &[Production] = &[
         Some(Owl),
         "\"VALIDATE\" \"SHAPE\" ( iri | string | name ) [ \"USING\" string ] \
          [ \"KEEP\" ( \"CONFORMING\" | \"VIOLATING\" ) ]",
-        "ValidateShape{shape, shapes, projection_base, keep} (no USING ⇒ the graph's GraphSchema shapes)",
+        "ValidateShape{shape, shapes, projection_base, keep, fail_on_fatal} (no USING ⇒ the graph's GraphSchema shapes)",
         "MATCH (:Person) |> VALIDATE SHAPE <http://ex/PersonShape> KEEP VIOLATING",
     ),
     p("prob", Stage, &["PROB"], Some(Probabilistic),

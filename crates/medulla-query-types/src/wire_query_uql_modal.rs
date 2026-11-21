@@ -184,6 +184,7 @@ pub(super) fn validate_shape(
     shapes: &str,
     projection_base: &str,
     keep: ShapeKeep,
+    fail_on_fatal: bool,
 ) -> Printed {
     let mut out = format!("VALIDATE SHAPE {}", iri_or_string(shape));
     if !shapes.is_empty() {
@@ -194,6 +195,9 @@ pub(super) fn validate_shape(
     }
     if keep == ShapeKeep::Violating {
         out.push_str(" KEEP VIOLATING");
+    }
+    if fail_on_fatal {
+        out.push_str(" FAIL ON FATAL");
     }
     Ok(out)
 }

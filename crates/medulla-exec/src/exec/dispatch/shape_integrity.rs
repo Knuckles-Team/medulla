@@ -26,6 +26,33 @@ use crate::rowset::{RowSet, TextChannels};
 /// Most findings one shape retains.
 pub const MAX_FINDINGS_PER_SHAPE: usize = 10_000;
 
+/// The opt-in `FAIL ON FATAL` refusal (MEDULLA-FEDERATED-QUERY-R005.701): when any kept row
+/// carries `shape.blocks = "true"`, refuse `SHAPE_FATAL_FINDING` naming the shape id of the first
+/// blocking row in row order and the kept rows' severity counts; no rows are returned. A `gap`
+/// result and rows with no finding carry no `shape.blocks`, so they never refuse.
+pub(super) fn refuse_on_fatal(rows: RowSet) -> Result<RowSet, String> {
+    let blocking = rows
+        .rows()
+        .iter()
+        .find(|row| rows.text(&row.id, "shape.blocks") == Some("true"));
+    let Some(first) = blocking else {
+        return Ok(rows);
+    };
+    let shape_id = rows.text(&first.id, "shape.shape_id").unwrap_or_default();
+    let count = |severity: &str| {
+        rows.rows()
+            .iter()
+            .filter(|row| rows.text(&row.id, "shape.severity") == Some(severity))
+            .count()
+    };
+    Err(format!(
+        "SHAPE_FATAL_FINDING: {shape_id} fatal={} warn={} info={}",
+        count("fatal"),
+        count("warn"),
+        count("info"),
+    ))
+}
+
 /// What one scan visited, so a test can assert one visit per element.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct ScanVisits {
@@ -262,6 +289,27 @@ mod tests {
 
     fn ids(rows: &RowSet) -> Vec<&str> {
         rows.rows().iter().map(|row| row.id.as_str()).collect()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R005.701
+    #[test]
+    fn fail_on_fatal_refuses_blocking_findings_only() {
+        // A fatal shape's kept row blocks: the refusal names the code, the shape id and the
+        // severity counts, and returns no rows.
+        let fatal = run("integrity:invalid_reference:owner", ShapeKeep::Violating, None);
+        let refused = refuse_on_fatal(fatal).unwrap_err();
+        assert!(refused.starts_with("SHAPE_FATAL_FINDING: "), "{refused}");
+        assert!(refused.contains("fatal=1 warn=0 info=0"), "{refused}");
+        // A warn shape is not blocking: the rows come back.
+        let warn = run("integrity:required_property:name", ShapeKeep::Violating, None);
+        assert_eq!(ids(&refuse_on_fatal(warn).unwrap()), ["c"]);
+        // A conforming result carries no finding and never refuses.
+        let clean = run("integrity:invalid_reference:owner", ShapeKeep::Conforming, None);
+        assert!(refuse_on_fatal(clean).is_ok());
+        // A gap result scanned nothing, so nothing is claimed and the clause does not refuse.
+        let gap = run("integrity:invalid_reference:owner", ShapeKeep::Violating, Some(1));
+        assert_eq!(gap.text("a", "shape.coverage"), Some("gap:0/1"));
+        assert_eq!(ids(&refuse_on_fatal(gap).unwrap()), ["a", "b", "c", "d"]);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R005.700

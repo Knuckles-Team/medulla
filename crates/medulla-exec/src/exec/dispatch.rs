@@ -406,7 +406,16 @@ pub(super) fn apply_text_and_owl(op: &Op, input: RowSet, ctx: &PlanCtx) -> Resul
             shapes,
             projection_base,
             keep,
-        } => shape::validate_shape(ctx, input, shape, shapes, projection_base, *keep),
+            fail_on_fatal,
+        } => shape::validate_shape(
+            ctx,
+            input,
+            shape,
+            shapes,
+            projection_base,
+            *keep,
+            *fail_on_fatal,
+        ),
         // `input` may go unused here when a build enables neither `text` nor `owl` (the
         // routing arm in `apply` still exists under `any(text, owl)`); bind it explicitly
         // so the parameter is never reported unused in that configuration.

@@ -411,6 +411,7 @@ mod served_shapes_tests {
                 shapes: String::new(),
                 projection_base: String::new(),
                 keep: ShapeKeep::Violating,
+                fail_on_fatal: false,
             },
         ]);
         let rows = medulla_exec::exec::execute(&plan, &ctx).unwrap();

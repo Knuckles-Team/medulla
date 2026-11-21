@@ -630,7 +630,7 @@ pub enum Op {
     /// FILTER (semantic, SHACL — EH-196) — validate every row's node, as an explicit
     /// SHACL focus node, against the ONE named `shape` of the `shapes` graph over the
     /// request graph's RDF projection, and keep the rows `keep` names. The UQL
-    /// `VALIDATE SHAPE <shape> USING "<turtle>" [PROJECT "<namespace>"] [KEEP CONFORMING|VIOLATING]` stage lowers
+    /// `VALIDATE SHAPE <shape> USING "<turtle>" [PROJECT "<namespace>"] [KEEP CONFORMING|VIOLATING] [FAIL ON FATAL]` stage lowers
     /// here. A shape that is not declared in the shapes graph, or a row whose id is not
     /// an RDF term without an explicit projection, is an error — never a vacuous pass. Gated by `owl-plan`, like the other
     /// semantic plan ops.
@@ -646,6 +646,10 @@ pub enum Op {
         projection_base: String,
         /// Which rows survive.
         keep: ShapeKeep,
+        /// `FAIL ON FATAL` (MEDULLA-FEDERATED-QUERY-R005.701): refuse `SHAPE_FATAL_FINDING`
+        /// when a kept row carries a blocking finding.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        fail_on_fatal: bool,
     },
     /// UDF (WASM) — transform the current `RowSet` through a registered, SANDBOXED
     /// WebAssembly user function (CONCEPT:MEDULLA-KG.query.rowset-execution). The executor serializes the input

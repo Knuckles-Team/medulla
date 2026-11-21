@@ -85,6 +85,7 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             shapes: "@prefix sh: <http://www.w3.org/ns/shacl#> .".into(),
             projection_base: String::new(),
             keep: ShapeKeep::Violating,
+            fail_on_fatal: true,
         },
         #[cfg(feature = "wasm-udf")]
         OpKind::Udf => Op::Udf {

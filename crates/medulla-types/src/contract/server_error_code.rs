@@ -556,6 +556,7 @@ closed_error_codes! {
         ScopeExceedsPolicy => "SCOPE_EXCEEDS_POLICY",
         ScopePolicyUnreadable => "SCOPE_POLICY_UNREADABLE",
         ShaclViolation => "SHACL_VIOLATION",
+        ShapeFatalFinding => "SHAPE_FATAL_FINDING",
         ShapeUnknown => "SHAPE_UNKNOWN",
         SeedBulkData => "SEED_BULK_DATA",
         SearchCapabilityInvalid => "SEARCH_CAPABILITY_INVALID",

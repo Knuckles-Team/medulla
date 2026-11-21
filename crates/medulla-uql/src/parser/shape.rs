@@ -66,11 +66,13 @@ impl Parser<'_> {
             String::new()
         };
         let keep = self.parse_shape_keep()?;
+        let fail_on_fatal = self.parse_shape_fail_on_fatal()?;
         Ok(Op::ValidateShape {
             shape,
             shapes,
             projection_base,
             keep,
+            fail_on_fatal,
         })
     }
 
@@ -87,6 +89,22 @@ impl Parser<'_> {
         let keep = *keep;
         self.bump();
         Ok(keep)
+    }
+
+    /// The optional last clause `FAIL ON FATAL` (MEDULLA-FEDERATED-QUERY-R005.701).
+    #[cfg(feature = "owl")]
+    fn parse_shape_fail_on_fatal(&mut self) -> Result<bool, UqlError> {
+        if !self.peek_kw("FAIL") {
+            return Ok(false);
+        }
+        self.bump();
+        if !self.eat_kw("ON") {
+            return Err(self.err_here("expected `ON FATAL` after `FAIL`"));
+        }
+        if !self.eat_kw("FATAL") {
+            return Err(self.err_here("expected `FATAL` after `FAIL ON`"));
+        }
+        Ok(true)
     }
 
     /// `VALIDATE SHAPE` in a build WITHOUT `owl`: the variant is cfg'd out, so the
@@ -117,6 +135,7 @@ mod tests {
                 shapes: "ttl".into(),
                 projection_base: String::new(),
                 keep: ShapeKeep::Conforming,
+                fail_on_fatal: false,
             }
         );
     }
@@ -145,6 +164,7 @@ mod tests {
                 shapes: String::new(),
                 projection_base: String::new(),
                 keep: ShapeKeep::Conforming,
+                fail_on_fatal: false,
             }
         );
         let bad_keep =
@@ -160,6 +180,34 @@ mod tests {
         assert!(
             matches!(op, Op::ValidateShape { projection_base, keep: ShapeKeep::Violating, .. } if projection_base == "http://ex/")
         );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R005.701
+    #[test]
+    fn fail_on_fatal_round_trips() {
+        let src = "MATCH (:P) |> VALIDATE SHAPE 'integrity:invalid_reference:ref' KEEP VIOLATING FAIL ON FATAL";
+        let plan = parse(src).expect("parses");
+        let op = plan.ops.last().expect("a stage").clone();
+        assert!(matches!(
+            op,
+            Op::ValidateShape {
+                keep: ShapeKeep::Violating,
+                fail_on_fatal: true,
+                ..
+            }
+        ));
+        // Printed last, and parsed back to the same plan.
+        let printed = plan.to_uql().expect("prints");
+        assert!(printed.ends_with("KEEP VIOLATING FAIL ON FATAL"), "{printed}");
+        assert_eq!(parse(&printed).expect("re-parses"), plan);
+        // The clause is optional and case-insensitive; a clause alone, with no `FATAL`, is
+        // a positioned error.
+        assert!(matches!(
+            stage("MATCH (:P) |> VALIDATE SHAPE <http://ex/S> fail on fatal"),
+            Op::ValidateShape { fail_on_fatal: true, .. }
+        ));
+        let bad = parse("MATCH (:P) |> VALIDATE SHAPE <http://ex/S> FAIL ON").unwrap_err();
+        assert!(bad.msg.contains("FATAL"), "{}", bad.msg);
     }
 
     #[test]

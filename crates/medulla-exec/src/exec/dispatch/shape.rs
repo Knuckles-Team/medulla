@@ -26,6 +26,7 @@ pub(super) fn validate_shape(
     shapes: &str,
     projection_base: &str,
     keep: ShapeKeep,
+    fail_on_fatal: bool,
 ) -> Result<RowSet, String> {
     if input.is_empty() {
         return Ok(input);
@@ -33,7 +34,12 @@ pub(super) fn validate_shape(
     // MEDULLA-FEDERATED-QUERY-R005.700: an integrity shape is a named structural rule,
     // run in one pass by `run_named_shapes`; every other reference is a SHACL shape.
     if let Some(integrity) = medulla_types::shape_report::IntegrityShape::parse(shape)? {
-        return super::shape_integrity::run_named_shapes(ctx, input, &integrity, keep);
+        let rows = super::shape_integrity::run_named_shapes(ctx, input, &integrity, keep)?;
+        return if fail_on_fatal {
+            super::shape_integrity::refuse_on_fatal(rows)
+        } else {
+            Ok(rows)
+        };
     }
     let shapes_graph = shapes_graph(ctx, shapes)?;
     let projection = medulla_rdf::sparql::Projection::from_wire(projection_base, "");
