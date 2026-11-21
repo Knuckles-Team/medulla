@@ -39,5 +39,8 @@ closed_error_codes! {
         RequirementUnresolved => "REQUIREMENT_UNRESOLVED",
         /// A contract names a row that no spec holds (MEDULLA-SDLC-R014.4).
         ContractRowUnresolved => "CONTRACT_ROW_UNRESOLVED",
+        /// A requirement row cites a `Principle:` key that resolves to no constitution
+        /// principle of its repository (MEDULLA-SDLC-R014.6.2).
+        PrincipleUnresolved => "PRINCIPLE_UNRESOLVED",
     }
 }

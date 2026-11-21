@@ -650,6 +650,141 @@ fn plan_phase(title: &str) -> Result<Option<&'static str>, ()> {
     Ok(rest[digits.len()..].starts_with(':').then_some(*phase))
 }
 
+/// The refusal code of a `Principle:` key that resolves to no principle (R014.6.2).
+pub const PRINCIPLE_UNRESOLVED: &str = "PRINCIPLE_UNRESOLVED";
+
+/// Whether `file` is the constitution of a repository: `.specify/memory/constitution.md`.
+fn is_constitution_file(file: &str) -> bool {
+    file == ".specify/memory/constitution.md" || file.ends_with("/.specify/memory/constitution.md")
+}
+
+/// The node id of one constitution principle: `principle:{repo}:{key}`.
+pub fn principle_node_id(repo: &str, key: &str) -> String {
+    format!("principle:{repo}:{key}")
+}
+
+/// The first token after `Article ` or `Principle ` in a level 2 or 3 heading: the key of the
+/// principle (`Article XXXI: Title` gives `XXXI`).
+fn principle_key(heading: &str) -> Option<&str> {
+    let title = heading.trim_start_matches('#').trim();
+    let rest = title
+        .strip_prefix("Article ")
+        .or_else(|| title.strip_prefix("Principle "))?;
+    let key = rest
+        .split_whitespace()
+        .next()?
+        .trim_end_matches([':', '.', ')']);
+    (!key.is_empty()).then_some(key)
+}
+
+/// Project a constitution into principle records (MEDULLA-SDLC-R014.6.2): one
+/// `ConstitutionPrinciple` per level 2 or 3 heading (outside code fences) that starts with
+/// `Article ` or `Principle `, with its `repo`, `key`, `title` (the whole heading text) and the
+/// `digest` of its section.
+pub fn project_principles(repo: &str, file: &str, text: &str) -> RequirementProjection {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut fence = false;
+    let mut headings: Vec<(usize, usize, bool)> = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        if line.starts_with("```") {
+            fence = !fence;
+        }
+        if !fence && line.starts_with('#') {
+            let level = line.chars().take_while(|c| *c == '#').count();
+            headings.push((index, level, matches!(level, 2 | 3)));
+        }
+    }
+    let mut nodes = Vec::new();
+    for (position, (index, level, candidate)) in headings.iter().enumerate() {
+        let Some(key) = candidate.then(|| principle_key(lines[*index])).flatten() else {
+            continue;
+        };
+        // The section runs to the next heading of the same or a higher level.
+        let end = headings[position + 1..]
+            .iter()
+            .find(|(_, next, _)| next <= level)
+            .map_or(lines.len(), |(next, _, _)| *next);
+        let body = lines[*index..end].join("\n");
+        nodes.push(node(
+            &principle_node_id(repo, key),
+            serde_json::json!({
+                "type": "ConstitutionPrinciple",
+                "repo": repo,
+                "key": key,
+                "title": lines[*index].trim_start_matches('#').trim(),
+                "digest": digest_of(&body),
+                "file": file,
+            }),
+        ));
+    }
+    let count = nodes.len() as u32;
+    RequirementProjection {
+        operations: nodes,
+        nodes: count,
+        edges: 0,
+    }
+}
+
+/// The principle keys a requirement row's text cites: `Principle: <key>[, <key>]`, keys
+/// separated by commas with backticks stripped. Reading stops at the first piece that is not a
+/// key.
+fn cited_principles(text: &str) -> Vec<String> {
+    let mut keys: Vec<String> = Vec::new();
+    let mut rest = text;
+    while let Some(at) = rest.find("Principle:") {
+        rest = &rest[at + "Principle:".len()..];
+        let segment = rest.split(['\n', '|', ';']).next().unwrap_or_default();
+        for piece in segment.split(',') {
+            let token = piece
+                .trim()
+                .trim_matches('`')
+                .split_whitespace()
+                .next()
+                .unwrap_or_default()
+                .trim_matches(|c: char| !c.is_ascii_alphanumeric());
+            let is_key = !token.is_empty()
+                && token.len() <= 16
+                && token.chars().all(|c| c.is_ascii_alphanumeric());
+            if !is_key {
+                break;
+            }
+            if !keys.iter().any(|held| held == token) {
+                keys.push(token.to_string());
+            }
+        }
+    }
+    keys
+}
+
+/// The `governedBy` edges of the requirement nodes among `operations`, one per cited key that
+/// resolves in `known_principles`. A key that resolves to none refuses `PRINCIPLE_UNRESOLVED`.
+/// This is the only writer of `governedBy`.
+fn governed_by_edges(
+    repo: &str,
+    operations: &[serde_json::Value],
+    known_principles: &BTreeSet<String>,
+) -> Result<Vec<serde_json::Value>, String> {
+    let mut edges = Vec::new();
+    for op in operations {
+        if op["op"] != "upsert_node" || op["properties"]["type"] != "Requirement" {
+            continue;
+        }
+        let (Some(id), Some(text)) = (op["id"].as_str(), op["properties"]["text"].as_str()) else {
+            continue;
+        };
+        for key in cited_principles(text) {
+            let target = principle_node_id(repo, &key);
+            if !known_principles.contains(&target) {
+                return Err(format!(
+                    "{PRINCIPLE_UNRESOLVED}: {key} (cited by {id}) resolves to no principle"
+                ));
+            }
+            edges.push(edge(id, &target, "governedBy"));
+        }
+    }
+    Ok(edges)
+}
+
 /// Whether `file` names a tasks document (`tasks.md` or `<dir>/tasks.md`).
 fn is_tasks_file(file: &str) -> bool {
     file == "tasks.md" || file.ends_with("/tasks.md")
@@ -1326,6 +1461,30 @@ fn reingest_in(
             );
         }
     }
+    // The principles of the repository: those its stored artifacts hold and those the changed
+    // constitution defines (MEDULLA-SDLC-R014.6.2).
+    let principle_prefix = principle_node_id(repo, "");
+    let mut known_principles: BTreeSet<String> = BTreeSet::new();
+    for (name, old) in stored {
+        if !changed.iter().any(|(changed_name, ..)| *changed_name == name.as_str()) {
+            known_principles.extend(
+                old.records
+                    .iter()
+                    .filter(|id| id.starts_with(&principle_prefix))
+                    .cloned(),
+            );
+        }
+    }
+    for (name, text, _, _) in &changed {
+        if is_constitution_file(name) {
+            known_principles.extend(
+                project_principles(repo, name, text)
+                    .operations
+                    .iter()
+                    .filter_map(|op| op["id"].as_str().map(str::to_string)),
+            );
+        }
+    }
     for (_, _, _, projection) in &changed {
         known_rows.extend(
             projection
@@ -1342,11 +1501,15 @@ fn reingest_in(
         } else {
             Vec::new()
         };
-        let task_operations = if is_tasks_file(name) {
+        let mut task_operations = if is_tasks_file(name) {
             project_tasks(repo, name, text, &known_rows).operations
         } else {
             Vec::new()
         };
+        if is_constitution_file(name) {
+            task_operations.extend(project_principles(repo, name, text).operations);
+        }
+        task_operations.extend(governed_by_edges(repo, &projection.operations, &known_principles)?);
         let mut records = Vec::new();
         for op in projection
             .operations
@@ -1358,7 +1521,10 @@ fn reingest_in(
             if op["op"] == "upsert_node" {
                 if matches!(
                     op["properties"]["type"].as_str(),
-                    Some("Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "TaskLine")
+                    Some(
+                    "Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "TaskLine"
+                        | "ConstitutionPrinciple"
+                )
                 ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
                 }
@@ -1400,7 +1566,8 @@ fn reingest_in(
 
 /// A spec artifact file of a repository tree: Markdown under a `specs/` directory.
 fn is_spec_artifact(path: &str) -> bool {
-    path.ends_with(".md") && (path.starts_with("specs/") || path.contains("/specs/"))
+    (path.ends_with(".md") && (path.starts_with("specs/") || path.contains("/specs/")))
+        || is_constitution_file(path)
 }
 
 /// The artifact files the engine already holds for `repo`, read off the `SpecArtifactFile`
@@ -2368,6 +2535,57 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         assert_eq!((p.nodes, p.edges), (4, 1));
         // A re-projection of the same text is byte-equal, so an unchanged digest rewrites nothing.
         assert_eq!(project_tasks("demo", "specs/x/tasks.md", tasks, &known).operations, p.operations);
+    }
+
+    // spec: MEDULLA-SDLC-R014.6.2
+    #[test]
+    fn principles_project_and_rows_link_through_governed_by() {
+        let constitution = "# Constitution\n\n## Article XXXI: Gates\nBody.\n\n\
+### Principle VII — Specs first\nMore.\n\n## Governance\nNot a principle.\n\
+```\n## Article IX: in a fence\n```\n";
+        let p = project_principles("demo", ".specify/memory/constitution.md", constitution);
+        let nodes: Vec<&serde_json::Value> = p.operations.iter().collect();
+        let ids: Vec<&str> = nodes.iter().map(|n| n["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["principle:demo:XXXI", "principle:demo:VII"]);
+        assert_eq!(nodes[0]["properties"]["type"], "ConstitutionPrinciple");
+        assert_eq!(nodes[0]["properties"]["key"], "XXXI");
+        assert_eq!(nodes[0]["properties"]["title"], "Article XXXI: Gates");
+        assert_eq!(nodes[0]["properties"]["repo"], "demo");
+        assert_eq!(nodes[0]["properties"]["digest"].as_str().unwrap().len(), 64);
+        assert_eq!((p.nodes, p.edges), (2, 0));
+
+        // Keys are comma separated, backticks stripped; a repeat counts once.
+        assert_eq!(
+            cited_principles("Does x. Principle: `XXXI`, VII, XXXI. More text."),
+            ["XXXI", "VII"]
+        );
+        assert!(cited_principles("no citation here").is_empty());
+
+        let known = BTreeSet::from([
+            principle_node_id("demo", "XXXI"),
+            principle_node_id("demo", "VII"),
+        ]);
+        let row = |text: &str| {
+            vec![node(
+                &requirement_node_id("demo", "DEMO-R001"),
+                serde_json::json!({"type": "Requirement", "text": text}),
+            )]
+        };
+        let edges = governed_by_edges("demo", &row("Principle: XXXI, VII"), &known).expect("resolves");
+        let pairs: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|e| (e["source"].as_str().unwrap(), e["target"].as_str().unwrap()))
+            .collect();
+        assert_eq!(
+            pairs,
+            [
+                ("requirement:demo:DEMO-R001", "principle:demo:XXXI"),
+                ("requirement:demo:DEMO-R001", "principle:demo:VII")
+            ]
+        );
+        assert!(edges.iter().all(|e| e["properties"]["relationship"] == "governedBy"));
+        let refusal = governed_by_edges("demo", &row("Principle: XXXI, LX"), &known).unwrap_err();
+        assert!(refusal.starts_with("PRINCIPLE_UNRESOLVED: LX"));
     }
 
     // spec: MEDULLA-SDLC-R014.7
