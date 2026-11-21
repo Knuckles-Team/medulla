@@ -63,6 +63,14 @@ impl KernelMetrics {
     pub fn epistemic_materializations_staled(&self, _n: u64) {}
     pub fn statechart_divergence(&self, _machine: &str) {}
     pub fn record_job(&self, _outcome: super::IngestJobOutcome, _queue: &str) {}
+    pub fn set_lane_gauges(
+        &self,
+        _lane: &str,
+        _queue_class: medulla_types::ingest_lanes::QueueClass,
+        _metrics: &medulla_types::ingest_lanes::LaneMetrics,
+    ) {
+    }
+    pub fn admit_refused(&self, _lane: &str) {}
     pub fn render(&self) -> String {
         String::new()
     }

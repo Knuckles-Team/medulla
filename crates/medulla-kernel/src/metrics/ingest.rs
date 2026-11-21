@@ -9,6 +9,8 @@
 
 #[cfg(feature = "metrics")]
 use super::KernelMetrics;
+#[cfg(feature = "metrics")]
+use medulla_types::ingest_lanes::{LaneMetrics, QueueClass};
 
 /// The closed set of ingest job outcomes, the `outcome` label of
 /// `medulla_ingest_jobs_total`.
@@ -58,5 +60,31 @@ impl KernelMetrics {
                 .with_label_values(&[queue])
                 .inc();
         }
+    }
+
+    /// Set the lane gauges from one lane's [`LaneMetrics`] (MEDULLA-INGEST-WORKER-R604.5):
+    /// `medulla_lane_depth{lane,queue_class}`, `medulla_lane_oldest_age_seconds{lane}` and
+    /// `medulla_lane_inflight{lane}`. These are the only depth and oldest-age gauges of
+    /// ingest.
+    pub fn set_lane_gauges(&self, lane: &str, queue_class: QueueClass, metrics: &LaneMetrics) {
+        let class = match queue_class {
+            QueueClass::Fast => "fast",
+            QueueClass::Medium => "medium",
+            QueueClass::SlowHeavy => "slow_heavy",
+        };
+        self.lane_depth
+            .with_label_values(&[lane, class])
+            .set(i64::try_from(metrics.depth).unwrap_or(i64::MAX));
+        self.lane_oldest_age_seconds
+            .with_label_values(&[lane])
+            .set(i64::try_from(metrics.oldest_age_ms / 1_000).unwrap_or(i64::MAX));
+        self.lane_inflight
+            .with_label_values(&[lane])
+            .set(i64::try_from(metrics.inflight).unwrap_or(i64::MAX));
+    }
+
+    /// Count one claim that worker admission refused in `lane`.
+    pub fn admit_refused(&self, lane: &str) {
+        self.admit_refused_total.with_label_values(&[lane]).inc();
     }
 }

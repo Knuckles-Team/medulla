@@ -65,7 +65,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R604.2` | `crates/medulla-types/src/ingest_lanes.rs::tests::every_stage_has_one_class` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R604.3` | `tests/ingest/test_lane_admission_served.py::test_claim_enforces_admission` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R604.4` | `tests/ingest/test_lane_admission_served.py::test_reserve_refusal_has_code_and_retry_hint` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R604.5` | `crates/medulla-kernel/src/metrics/tests.rs::lane_gauges_after_success_and_refusal` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R604.5` | `crates/medulla-kernel/src/metrics/tests.rs::lane_gauges_after_success_and_refusal` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R604.6` | `benches/ingest_claim_admit.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R605.1` | `crates/medulla-ingestion-types/src/ingest_drain.rs::tests::types_round_trip_and_reject_bad_ids` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest/src/ingest_drain.rs::tests::ack_with_cursor_enqueues_next_page` | L3 | planned |

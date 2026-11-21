@@ -199,3 +199,31 @@ fn ingest_metrics_after_success_retry_dead_letter() {
         );
     }
 }
+
+// spec: MEDULLA-INGEST-WORKER-R604.5
+#[test]
+fn lane_gauges_after_success_and_refusal() {
+    use medulla_types::ingest_lanes::{LaneMetrics, QueueClass};
+    let m = KernelMetrics::new();
+    // One admitted claim moves the lane's depth, oldest age and in-flight gauges.
+    m.set_lane_gauges(
+        "general",
+        QueueClass::Fast,
+        &LaneMetrics {
+            depth: 3,
+            oldest_age_ms: 42_000,
+            inflight: 1,
+        },
+    );
+    // One refused claim counts against its lane only.
+    m.admit_refused("hydration");
+    let out = m.render();
+    assert!(
+        out.contains("medulla_lane_depth{lane=\"general\",queue_class=\"fast\"} 3"),
+        "{out}"
+    );
+    assert!(out.contains("medulla_lane_oldest_age_seconds{lane=\"general\"} 42"), "{out}");
+    assert!(out.contains("medulla_lane_inflight{lane=\"general\"} 1"), "{out}");
+    assert!(out.contains("medulla_admit_refused_total{lane=\"hydration\"} 1"), "{out}");
+    assert!(!out.contains("medulla_admit_refused_total{lane=\"general\"}"), "{out}");
+}
