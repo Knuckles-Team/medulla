@@ -1117,6 +1117,7 @@ pub fn scheduler_config_from(
             AnnHubPruning::Disabled
         },
         orchestration_limits: Default::default(),
+        ingest_retry: Default::default(),
     };
     config.validate()?;
     Ok(config)

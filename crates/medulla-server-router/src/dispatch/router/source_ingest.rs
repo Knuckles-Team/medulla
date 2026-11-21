@@ -1,6 +1,8 @@
 use super::*;
 
 use medulla_protocol_types::result_contract::ingestion as ingestion_results;
+#[cfg(feature = "jobs")]
+use medulla_protocol_types::result_contract::coordination as coordination_results;
 
 /// Source ingestion: parse a file or a batch of files, index a repository,
 /// observe a screen. All are stateless parses that never touch `state`.
@@ -29,8 +31,73 @@ pub async fn dispatch_source_ingest_methods(
         Method::ObserveScreen { obs_msgpack } => {
             dispatch_boxed(observe_screen(ctx, obs_msgpack)).await
         }
+        // MEDULLA-INGEST-WORKER-R001.4.1: the served ingest enqueue.
+        #[cfg(feature = "jobs")]
+        Method::IngestEnqueue { envelope } => {
+            dispatch_boxed(ingest_enqueue(ctx, *envelope)).await
+        }
+        #[cfg(not(feature = "jobs"))]
+        Method::IngestEnqueue { .. } => Response::err(
+            ctx.req.id,
+            "UNAVAILABLE: ingest enqueue requires the `jobs` feature".to_string(),
+        ),
         other => return ControlFlow::Continue(other),
     })
+}
+
+/// Serve `IngestEnqueue`: read the policy and the queue load, then map the job
+/// onto its reserved task queue through the one producer.
+#[cfg(feature = "jobs")]
+async fn ingest_enqueue(
+    ctx: DispatchCtx<'_>,
+    envelope: medulla_source_types::ingest_job::IngestJobEnvelope,
+) -> Response {
+    let req_id = ctx.req.id;
+    let (persist_dir, config_store) = {
+        let guard = ctx.state.read().await;
+        let store = match medulla_persistence::scheduler_config_store::shared_scheduler_config_store(
+            &guard,
+        ) {
+            Ok(store) => store,
+            Err(error) => return Response::err(req_id, format!("INTERNAL: {error}")),
+        };
+        (guard.persist_dir.clone(), store)
+    };
+    let config = match medulla_h_jobs::scheduler_config::effective_config(&config_store) {
+        Ok(config) => config,
+        Err(error) => return Response::err(req_id, error),
+    };
+    let jobs = medulla_server_ops::api::ingest::jobs_seam(ctx.state).await;
+    let tenant = ctx.verified_context.tenant();
+    let queue = envelope.lane().queue_name();
+    let depth = match jobs.as_ref() {
+        Some(jobs) => match jobs.task_queue_load(&persist_dir, tenant, queue) {
+            Ok((queued, running, _)) => queued.saturating_add(running),
+            Err(error) => return Response::err(req_id, error),
+        },
+        None => 0,
+    };
+    let caller = medulla_h_ingest::ingest_queue::IngestCaller {
+        persist_dir,
+        tenant: tenant.to_string(),
+        principal: ctx.verified_context.principal().to_string(),
+    };
+    let policy =
+        medulla_source_types::ingest_job::IngestRetryPolicy::from_limits(&config.ingest_retry);
+    match medulla_h_ingest::ingest_queue::enqueue_ingest_job(
+        jobs,
+        &caller,
+        &envelope,
+        &policy,
+        depth,
+        config.max_queue_depth,
+    ) {
+        Ok(receipt) => Response::ok(
+            req_id,
+            ResultPayload::of::<coordination_results::IngestEnqueue>(receipt),
+        ),
+        Err(error) => Response::err(req_id, format!("{}: {}", error.code.as_str(), error.detail)),
+    }
 }
 
 async fn parse_file(ctx: DispatchCtx<'_>, file_path: String, source: Vec<u8>) -> Response {

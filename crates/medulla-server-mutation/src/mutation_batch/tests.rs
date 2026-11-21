@@ -451,6 +451,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("TsDefineStateSpace", "TimeSeries"),
     ("AnalyticsJob", "AnalyticsJob"),
     ("TaskQueueEnqueue", "AnalyticsJob"),
+    ("IngestEnqueue", "AnalyticsJob"),
     ("TaskQueueClaim", "AnalyticsJob"),
     ("SetSchedulerConfig", "AnalyticsJob"),
     ("TaskQueueAck", "AnalyticsJob"),

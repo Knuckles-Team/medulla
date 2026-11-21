@@ -74,6 +74,8 @@ method_results! {
     ActionRegister(ActionRegister) => Raw<String>;
     // MEDULLA-DURABLE-KERNEL-R072: the stored task id, the leased task or nil, the recorded outcome.
     TaskQueueEnqueue(TaskQueueEnqueue) => Raw<medulla_work_types::task_queue::TaskEnqueued>;
+    // MEDULLA-INGEST-WORKER-R001.4.1: the receipt of one ingest enqueue.
+    IngestEnqueue(IngestEnqueue) => Raw<medulla_source_types::ingest_job::IngestEnqueueReceipt>;
     TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
     TaskQueueRenew(TaskQueueRenew) => Raw<medulla_work_types::task_queue::TaskRenewed>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;

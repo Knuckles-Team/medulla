@@ -57,6 +57,19 @@ pub struct TaskSubmit {
     pub priority: u8,
     /// Earliest engine time at which the task may be leased.
     pub not_before_ms: i64,
+    /// When set, the job is stored under this id instead of a minted one.
+    pub job_id: Option<String>,
+    /// When set, replaces the default redelivery bound.
+    pub max_attempts: Option<u32>,
+}
+
+/// The queued and running task counts of one tenant queue and the enqueue time
+/// of its oldest pending task (MEDULLA-INGEST-WORKER-R001.4.1).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TaskQueueLoad {
+    pub queued: u64,
+    pub running: u64,
+    pub oldest_enqueued_at_ms: Option<i64>,
 }
 
 /// The result of [`JobStore::submit_task`].
@@ -160,7 +173,10 @@ impl JobStore {
         };
         validate_priority(&policy)?;
         validate_placement(&policy)?;
-        let job_id = self.next_job_id();
+        let job_id = match spec.job_id {
+            Some(id) => id,
+            None => self.next_job_id(),
+        };
         let key = task_ledger_key(&spec.tenant, &spec.queue, &spec.idempotency_key);
         if !self.claim_idempotency(&key, &job_id)? {
             return Ok(TaskSubmitOutcome::Duplicate);
@@ -183,7 +199,7 @@ impl JobStore {
             },
             input_payload: Some(spec.payload_ref.into_bytes()),
             retry: RetryPolicy {
-                max_attempts: TASK_MAX_ATTEMPTS,
+                max_attempts: spec.max_attempts.unwrap_or(TASK_MAX_ATTEMPTS),
                 backoff_ms: 0,
                 attempts_made: 0,
             },
@@ -199,6 +215,35 @@ impl JobStore {
         };
         self.put_raw(&job)?;
         Ok(TaskSubmitOutcome::Enqueued(job))
+    }
+
+    /// The queued and running counts and the oldest enqueue time of one tenant
+    /// queue. Two index seeks; the cost does not grow with the queue.
+    pub fn task_queue_load(&self, tenant: &str, queue: &str) -> Result<TaskQueueLoad> {
+        let read = self.scoped_read()?;
+        let (queued, running) = read
+            .open_owner_table(TASK_QUEUE_TOTALS)
+            .map_err(redb_err)?
+            .get((tenant, queue))
+            .map_err(redb_err)?
+            .map(|value| value.value())
+            .unwrap_or((0, 0));
+        let oldest_table = read.open_owner_table(TASK_QUEUE_OLDEST).map_err(redb_err)?;
+        let oldest = oldest_table
+            .range_inclusive(
+                (tenant, queue, i64::MIN, ""),
+                (tenant, queue, i64::MAX, "\u{10ffff}"),
+            )
+            .map_err(redb_err)?
+            .next()
+            .transpose()
+            .map_err(redb_err)?
+            .map(|(key, _)| key.value().2);
+        Ok(TaskQueueLoad {
+            queued,
+            running,
+            oldest_enqueued_at_ms: oldest,
+        })
     }
 
     /// Lease the next ready task that requires `tenant_capability`, through the
@@ -411,5 +456,81 @@ mod tests {
         // The lease lapses: the task is no longer running.
         let lapsed = store.task_lane_counts("cap-a", 1_002 + 60_001).unwrap();
         assert_eq!(lapsed.values().map(|(running, _)| *running).sum::<u32>(), 0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dev_scope_grant::open_dev_store_in_dir;
+
+    const CAPABILITY: &str = "eg:task_tenant:test";
+
+    fn submit(store: &JobStore, key: &str, queue: &str, now_ms: i64) -> String {
+        let spec = TaskSubmit {
+            tenant: "acme".to_string(),
+            actor: "principal:test".to_string(),
+            tenant_capability: CAPABILITY.to_string(),
+            queue: queue.to_string(),
+            kind: "work".to_string(),
+            payload_ref: "{}".to_string(),
+            idempotency_key: key.to_string(),
+            priority: 5,
+            not_before_ms: 0,
+            job_id: None,
+            max_attempts: None,
+        };
+        match store.submit_task(spec, now_ms).unwrap() {
+            TaskSubmitOutcome::Enqueued(job) => job.job_id,
+            TaskSubmitOutcome::Duplicate => panic!("unexpected duplicate"),
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.4.1
+    #[test]
+    fn task_queue_load_counts_queued_running_and_oldest() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let empty = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!(empty, TaskQueueLoad::default());
+
+        let first = submit(&store, "a", "ingest", 1_000);
+        submit(&store, "b", "ingest", 2_000);
+        submit(&store, "c", "ingest", 3_000);
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!(
+            load,
+            TaskQueueLoad {
+                queued: 3,
+                running: 0,
+                oldest_enqueued_at_ms: Some(1_000)
+            }
+        );
+        assert_eq!(store.task_queue_load("other-tenant", "ingest").unwrap(), TaskQueueLoad::default());
+
+        let claim = store
+            .claim_task("worker-1", CAPABILITY, 4_000, 60_000)
+            .unwrap()
+            .expect("a ready task");
+        let claimed_id = claim.job.job_id.clone();
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (2, 1));
+
+        store
+            .ack_task(
+                "acme",
+                &claimed_id,
+                "worker-1",
+                TaskAckOutcome::Succeeded,
+                "",
+                5_000,
+            )
+            .unwrap();
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (2, 0));
+        // The acked task was the oldest or one of the others; the oldest left is
+        // the earliest of the two still pending.
+        let expected_oldest = if claimed_id == first { 2_000 } else { 1_000 };
+        assert_eq!(load.oldest_enqueued_at_ms, Some(expected_oldest));
     }
 }

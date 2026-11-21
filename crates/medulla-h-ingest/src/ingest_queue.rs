@@ -9,10 +9,10 @@
 use std::fmt;
 use std::sync::Arc;
 
-use medulla_server_ops::api::ingest::JobsApi;
+use medulla_server_ops::api::ingest::{IngestTaskWrite, JobsApi};
 use medulla_source_types::ingest_job::{
     partition_key, target_embeds_credentials, task_id, IngestEnqueueReceipt, IngestJobEnvelope,
-    IngestJobError, IngestRetryPolicy,
+    IngestJobError, IngestJobKind, IngestRetryPolicy, INGEST_TASK_PAYLOAD_MAX_BYTES,
 };
 use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_types::contract::ServerErrorCode;
@@ -38,9 +38,31 @@ fn rejected(code: ServerErrorCode, detail: String) -> IngestEnqueueError {
     IngestEnqueueError { code, detail }
 }
 
+/// The verified identity and store location one ingest enqueue runs under
+/// (MEDULLA-INGEST-WORKER-R001.4.1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IngestCaller {
+    /// The configured persist directory of the engine.
+    pub persist_dir: Option<String>,
+    /// The tenant of the verified request context.
+    pub tenant: String,
+    /// The principal of the verified request context.
+    pub principal: String,
+}
+
+/// The snake-case name of a job kind, the `kind` of its task.
+fn kind_name(kind: IngestJobKind) -> &'static str {
+    match kind {
+        IngestJobKind::Document => "document",
+        IngestJobKind::Codebase => "codebase",
+        IngestJobKind::SkillWorkflows => "skill_workflows",
+        IngestJobKind::CapabilityHydration => "capability_hydration",
+    }
+}
+
 /// Map one ingest job onto the served task queue.
 ///
-/// `verified_tenant` is the tenant of the verified request context; the
+/// `caller.tenant` is the tenant of the verified request context; the
 /// envelope tenant must equal it. The envelope is validated against `policy`,
 /// the `ingest_retry` key of `SchedulerConfig`. The queue is
 /// `lane_for(kind).queue_name()`, the partition is `partition_key(envelope)`
@@ -51,7 +73,7 @@ fn rejected(code: ServerErrorCode, detail: String) -> IngestEnqueueError {
 /// returns the first receipt with `deduplicated` true and writes nothing.
 pub fn enqueue_ingest_job(
     jobs: Option<Arc<dyn JobsApi>>,
-    verified_tenant: &str,
+    caller: &IngestCaller,
     envelope: &IngestJobEnvelope,
     policy: &IngestRetryPolicy,
     current_depth: u64,
@@ -59,7 +81,7 @@ pub fn enqueue_ingest_job(
 ) -> Result<IngestEnqueueReceipt, IngestEnqueueError> {
     let outcome = enqueue_unrecorded(
         jobs,
-        verified_tenant,
+        caller,
         envelope,
         policy,
         current_depth,
@@ -77,12 +99,13 @@ pub fn enqueue_ingest_job(
 
 fn enqueue_unrecorded(
     jobs: Option<Arc<dyn JobsApi>>,
-    verified_tenant: &str,
+    caller: &IngestCaller,
     envelope: &IngestJobEnvelope,
     policy: &IngestRetryPolicy,
     current_depth: u64,
     max_depth: u64,
 ) -> Result<IngestEnqueueReceipt, IngestEnqueueError> {
+    let verified_tenant = caller.tenant.as_str();
     if envelope.tenant != verified_tenant {
         return Err(rejected(
             ServerErrorCode::IngestTenantMismatch,
@@ -119,10 +142,27 @@ fn enqueue_unrecorded(
     })?;
     let task = task_id(envelope);
     let partition = partition_key(envelope);
-    let body = serde_json::to_value(envelope)
+    let payload = serde_json::to_string(envelope)
         .map_err(|error| rejected(ServerErrorCode::IngestJobInvalid, error.to_string()))?;
+    if payload.len() > INGEST_TASK_PAYLOAD_MAX_BYTES {
+        return Err(rejected(
+            ServerErrorCode::IngestJobInvalid,
+            format!(
+                "ingest payload of {} bytes exceeds the limit of {INGEST_TASK_PAYLOAD_MAX_BYTES}",
+                payload.len()
+            ),
+        ));
+    }
+    let write = IngestTaskWrite {
+        tenant: verified_tenant,
+        actor: caller.principal.as_str(),
+        queue,
+        kind: kind_name(envelope.kind),
+        task_id: &task,
+        payload: &payload,
+    };
     let deduplicated = jobs
-        .enqueue_ingest_task(queue, &task, &partition.render(), body)
+        .enqueue_ingest_task(&caller.persist_dir, &write)
         .map_err(|error| rejected(ServerErrorCode::IngestJobInvalid, error))?;
     Ok(IngestEnqueueReceipt {
         task_id: task,
@@ -148,18 +188,16 @@ mod tests {
     impl JobsApi for RecordingJobs {
         fn enqueue_ingest_task(
             &self,
-            queue: &str,
-            task_id: &str,
-            partition: &str,
-            envelope: serde_json::Value,
+            _persist_dir: &Option<String>,
+            write: &IngestTaskWrite<'_>,
         ) -> Result<bool, String> {
             self.calls.lock().unwrap().push((
-                queue.to_string(),
-                task_id.to_string(),
-                partition.to_string(),
-                envelope.to_string(),
+                write.queue.to_string(),
+                write.task_id.to_string(),
+                write.kind.to_string(),
+                write.payload.to_string(),
             ));
-            Ok(self.preexisting_task_id.as_deref() == Some(task_id))
+            Ok(self.preexisting_task_id.as_deref() == Some(write.task_id))
         }
     }
 
@@ -182,6 +220,14 @@ mod tests {
         }
     }
 
+    fn caller(tenant: &str) -> IngestCaller {
+        IngestCaller {
+            persist_dir: None,
+            tenant: tenant.to_string(),
+            principal: "principal:test".to_string(),
+        }
+    }
+
     fn policy() -> IngestRetryPolicy {
         IngestRetryPolicy {
             max_attempts: 5,
@@ -198,7 +244,7 @@ mod tests {
         let expected = task_id(&e);
         let jobs = recording_jobs(None);
         let receipt =
-            enqueue_ingest_job(Some(jobs.clone()), "t1", &e, &policy(), 3, 10_000).unwrap();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 3, 10_000).unwrap();
         assert_eq!(receipt.task_id, expected);
         assert_eq!(receipt.queue, "ingest");
         assert_eq!(receipt.partition, "t1/repo-a/document");
@@ -207,7 +253,7 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].0, "ingest");
         assert_eq!(calls[0].1, expected);
-        assert_eq!(calls[0].2, "t1/repo-a/document");
+        assert_eq!(calls[0].2, "document");
         let stored: IngestJobEnvelope = serde_json::from_str(&calls[0].3).unwrap();
         assert_eq!(stored, e);
     }
@@ -217,11 +263,11 @@ mod tests {
     fn duplicate_task_id_returns_the_first_receipt_with_deduplicated_true() {
         let e = env();
         let first =
-            enqueue_ingest_job(Some(recording_jobs(None)), "t1", &e, &policy(), 0, 10_000).unwrap();
+            enqueue_ingest_job(Some(recording_jobs(None)), &caller("t1"), &e, &policy(), 0, 10_000).unwrap();
         assert!(!first.deduplicated);
         let jobs = recording_jobs(Some(first.task_id.clone()));
         let second =
-            enqueue_ingest_job(Some(jobs.clone()), "t1", &e, &policy(), 1, 10_000).unwrap();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 1, 10_000).unwrap();
         assert_eq!(second.task_id, first.task_id);
         assert_eq!(second.queue, first.queue);
         assert_eq!(second.partition, first.partition);
@@ -235,7 +281,7 @@ mod tests {
         // A forged tenant is refused before any queue write.
         let jobs = recording_jobs(None);
         let err =
-            enqueue_ingest_job(Some(jobs.clone()), "t2", &e, &policy(), 0, 10_000).unwrap_err();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t2"), &e, &policy(), 0, 10_000).unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestTenantMismatch);
         assert!(err.detail.contains("t2"));
         assert!(jobs.calls.lock().unwrap().is_empty());
@@ -246,7 +292,7 @@ mod tests {
         };
         let jobs = recording_jobs(None);
         let err =
-            enqueue_ingest_job(Some(jobs.clone()), "t1", &cred, &policy(), 0, 10_000).unwrap_err();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &cred, &policy(), 0, 10_000).unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestJobInvalid);
         assert_eq!(err.detail, IngestJobError::TargetHasCredential.to_string());
         assert!(jobs.calls.lock().unwrap().is_empty());
@@ -257,7 +303,7 @@ mod tests {
         };
         let err = enqueue_ingest_job(
             Some(recording_jobs(None)),
-            "t1",
+            &caller("t1"),
             &over,
             &policy(),
             0,
@@ -268,13 +314,13 @@ mod tests {
         assert!(err.detail.contains("attempt"));
         // A full queue refuses before the write.
         let jobs = recording_jobs(None);
-        let err = enqueue_ingest_job(Some(jobs.clone()), "t1", &e, &policy(), 10_000, 10_000)
+        let err = enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 10_000, 10_000)
             .unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestQueueFull);
         assert!(err.detail.contains("ingest"));
         assert!(jobs.calls.lock().unwrap().is_empty());
         // Without the seam the refusal stays in the closed vocabulary.
-        let err = enqueue_ingest_job(None, "t1", &e, &policy(), 0, 10_000).unwrap_err();
+        let err = enqueue_ingest_job(None, &caller("t1"), &e, &policy(), 0, 10_000).unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestJobInvalid);
         assert!(err.detail.contains("seam"));
     }

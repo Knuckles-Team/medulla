@@ -433,6 +433,15 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
+    /// Enqueue one validated ingest job on its reserved `jobs.redb` task queue
+    /// under the deterministic task id (MEDULLA-INGEST-WORKER-R001.4.1). Scope
+    /// `task:enqueue`. A repeat returns the first receipt. Refusals:
+    /// `INGEST_JOB_INVALID`, `INGEST_TENANT_MISMATCH`, `INGEST_QUEUE_FULL`,
+    /// `UNAVAILABLE` without the `jobs` feature.
+    IngestEnqueue {
+        envelope: Box<medulla_source_types::ingest_job::IngestJobEnvelope>,
+    },
+
     /// Read the tree of a repository as of one changeset commit
     /// (MEDULLA-SCM-R004): the files `{path, blob_digest, mode}` under `prefix`
     /// at `rev` on `branch`, at most `depth` path segments below the prefix

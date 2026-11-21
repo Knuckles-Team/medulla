@@ -152,6 +152,70 @@ impl Default for OrchestrationLimits {
     }
 }
 
+/// Default `ingest_retry.max_attempts` (MEDULLA-INGEST-WORKER-R001.4.1).
+pub const DEFAULT_INGEST_MAX_ATTEMPTS: u32 = 5;
+/// Default `ingest_retry.base_delay_ms`.
+pub const DEFAULT_INGEST_BASE_DELAY_MS: u64 = 1_000;
+/// Default `ingest_retry.max_delay_ms`.
+pub const DEFAULT_INGEST_MAX_DELAY_MS: u64 = 60_000;
+/// Default `ingest_retry.jitter_milli`.
+pub const DEFAULT_INGEST_JITTER_MILLI: u16 = 200;
+/// Inclusive bounds of `ingest_retry.max_attempts`.
+pub const INGEST_MAX_ATTEMPTS_BOUNDS: (u32, u32) = (1, 100);
+/// Inclusive bounds of `ingest_retry.base_delay_ms`.
+pub const INGEST_BASE_DELAY_MS_BOUNDS: (u64, u64) = (1, 3_600_000);
+/// Inclusive bounds of `ingest_retry.max_delay_ms`.
+pub const INGEST_MAX_DELAY_MS_BOUNDS: (u64, u64) = (1, 86_400_000);
+/// Inclusive bounds of `ingest_retry.jitter_milli`.
+pub const INGEST_JITTER_MILLI_BOUNDS: (u16, u16) = (0, 1_000);
+
+/// Retry limits of the ingest queue (MEDULLA-INGEST-WORKER-R001.4.1). Integer
+/// fields only, so `SchedulerConfig` keeps `Eq`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IngestRetryLimits {
+    /// Most deliveries of one ingest job before it dead-letters.
+    pub max_attempts: u32,
+    /// Delay before the first redelivery, in milliseconds.
+    pub base_delay_ms: u64,
+    /// Ceiling of the redelivery delay, in milliseconds.
+    pub max_delay_ms: u64,
+    /// Share of the delay that may be removed at random, in thousandths.
+    pub jitter_milli: u16,
+}
+
+impl Default for IngestRetryLimits {
+    fn default() -> Self {
+        Self {
+            max_attempts: DEFAULT_INGEST_MAX_ATTEMPTS,
+            base_delay_ms: DEFAULT_INGEST_BASE_DELAY_MS,
+            max_delay_ms: DEFAULT_INGEST_MAX_DELAY_MS,
+            jitter_milli: DEFAULT_INGEST_JITTER_MILLI,
+        }
+    }
+}
+
+impl IngestRetryLimits {
+    /// Refuse a field outside its bound and a base delay above the max delay.
+    pub fn validate(&self) -> Result<(), InvalidSchedulerConfig> {
+        let in_bounds = (INGEST_MAX_ATTEMPTS_BOUNDS.0..=INGEST_MAX_ATTEMPTS_BOUNDS.1)
+            .contains(&self.max_attempts)
+            && (INGEST_BASE_DELAY_MS_BOUNDS.0..=INGEST_BASE_DELAY_MS_BOUNDS.1)
+                .contains(&self.base_delay_ms)
+            && (INGEST_MAX_DELAY_MS_BOUNDS.0..=INGEST_MAX_DELAY_MS_BOUNDS.1)
+                .contains(&self.max_delay_ms)
+            && (INGEST_JITTER_MILLI_BOUNDS.0..=INGEST_JITTER_MILLI_BOUNDS.1)
+                .contains(&self.jitter_milli)
+            && self.base_delay_ms <= self.max_delay_ms;
+        if in_bounds {
+            Ok(())
+        } else {
+            Err(InvalidSchedulerConfig::IngestRetryOutOfRange)
+        }
+    }
+}
+
 fn default_ann_storage_ceiling_bytes() -> u64 {
     DEFAULT_ANN_STORAGE_CEILING_BYTES
 }
@@ -448,6 +512,9 @@ pub struct SchedulerConfig {
     /// Bounds of the orchestration workers (MEDULLA-ORCH-VOCAB-R003.6.1).
     #[serde(default)]
     pub orchestration_limits: OrchestrationLimits,
+    /// Retry limits of the ingest queue (MEDULLA-INGEST-WORKER-R001.4.1).
+    #[serde(default)]
+    pub ingest_retry: IngestRetryLimits,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -473,6 +540,7 @@ pub enum InvalidSchedulerConfig {
     TreeCheckpointIntervalOutOfRange,
     AnnStorageCeilingBytesOutOfRange,
     ProjectionBatchOutOfRange,
+    IngestRetryOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
@@ -553,6 +621,14 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler orchestration_limits.projection_batch must be within [{}, {}]",
                 PROJECTION_BATCH_BOUNDS.0, PROJECTION_BATCH_BOUNDS.1
+            ),
+            Self::IngestRetryOutOfRange => write!(
+                f,
+                "scheduler ingest_retry must keep max_attempts in [{}, {}], base_delay_ms in [{}, {}], max_delay_ms in [{}, {}], jitter_milli in [{}, {}] and base_delay_ms at most max_delay_ms",
+                INGEST_MAX_ATTEMPTS_BOUNDS.0, INGEST_MAX_ATTEMPTS_BOUNDS.1,
+                INGEST_BASE_DELAY_MS_BOUNDS.0, INGEST_BASE_DELAY_MS_BOUNDS.1,
+                INGEST_MAX_DELAY_MS_BOUNDS.0, INGEST_MAX_DELAY_MS_BOUNDS.1,
+                INGEST_JITTER_MILLI_BOUNDS.0, INGEST_JITTER_MILLI_BOUNDS.1
             ),
             Self::AnnStorageCeilingBytesOutOfRange => write!(
                 f,
@@ -662,6 +738,7 @@ impl SchedulerConfig {
         {
             return Err(InvalidSchedulerConfig::ProjectionBatchOutOfRange);
         }
+        self.ingest_retry.validate()?;
         let history = [
             self.history_max_commits,
             self.history_support_floor,

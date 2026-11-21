@@ -1341,6 +1341,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "TaskQueueEnqueue",
         &["TASK_DUPLICATE", "TASK_QUEUE_NAME_BLANK"],
     ),
+    // MEDULLA-INGEST-WORKER-R001.4.1: the served ingest enqueue refusals.
+    (
+        "IngestEnqueue",
+        &[
+            "INGEST_JOB_INVALID",
+            "INGEST_QUEUE_FULL",
+            "INGEST_TENANT_MISMATCH",
+        ],
+    ),
     ("TaskQueueClaim", &["TASK_LEASE_ZERO"]),
     // MEDULLA-DURABLE-KERNEL-R072.1: a renewal refused for its lease.
     (

@@ -93,6 +93,7 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         // MEDULLA-DURABLE-KERNEL-R072: the served task queue is a typed facade over
         // the same jobs.redb store, so its writes commit in the analytics-job owner.
         Method::TaskQueueEnqueue { .. }
+        | Method::IngestEnqueue { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
         | Method::TaskQueueRenew { .. }
@@ -768,6 +769,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ActionSubmit { .. }
         // MEDULLA-DURABLE-KERNEL-R072: claimed by `owner_domain` (jobs.redb).
         | Method::TaskQueueEnqueue { .. }
+        | Method::IngestEnqueue { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
         | Method::TaskQueueRenew { .. }
@@ -1030,6 +1032,7 @@ pub fn surface_for(method: &Method) -> Option<MutationSurface> {
         (
             _,
             Method::TaskQueueEnqueue { .. }
+            | Method::IngestEnqueue { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }
             | Method::TaskQueueRenew { .. }

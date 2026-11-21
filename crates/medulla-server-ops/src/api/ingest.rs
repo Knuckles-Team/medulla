@@ -66,6 +66,24 @@ pub struct DowntimeJobRequest {
     pub idempotency_key: String,
 }
 
+/// One ingest task write the jobs seam stores on its reserved queue
+/// (MEDULLA-INGEST-WORKER-R001.4.1).
+#[derive(Clone, Copy, Debug)]
+pub struct IngestTaskWrite<'a> {
+    /// The verified tenant.
+    pub tenant: &'a str,
+    /// The verified principal.
+    pub actor: &'a str,
+    /// The reserved ingest queue name.
+    pub queue: &'a str,
+    /// The snake-case ingest job kind.
+    pub kind: &'a str,
+    /// The deterministic 64-hex task id.
+    pub task_id: &'a str,
+    /// The canonical JSON of the envelope.
+    pub payload: &'a str,
+}
+
 /// Jobs handler behaviour reachable from crates below `medulla-h-jobs`.
 pub trait JobsApi: Send + Sync {
     /// Register the downtime intents the engine ships (`plan_evolution` and
@@ -117,11 +135,21 @@ pub trait JobsApi: Send + Sync {
     #[allow(unused_variables)]
     fn enqueue_ingest_task(
         &self,
-        queue: &str,
-        task_id: &str,
-        partition: &str,
-        envelope: serde_json::Value,
+        persist_dir: &Option<String>,
+        write: &IngestTaskWrite<'_>,
     ) -> Result<bool, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
+    /// The queued count, running count and oldest enqueue time of one tenant
+    /// task queue (MEDULLA-INGEST-WORKER-R001.4.1).
+    #[allow(unused_variables)]
+    fn task_queue_load(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        queue: &str,
+    ) -> Result<(u64, u64, Option<i64>), String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 }

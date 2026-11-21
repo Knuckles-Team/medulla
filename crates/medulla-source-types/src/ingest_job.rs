@@ -176,6 +176,17 @@ pub struct IngestRetryPolicy {
 }
 
 impl IngestRetryPolicy {
+    /// The policy the scheduler configuration carries as integer limits
+    /// (MEDULLA-INGEST-WORKER-R001.4.1).
+    pub fn from_limits(limits: &medulla_work_types::scheduler_config::IngestRetryLimits) -> Self {
+        Self {
+            max_attempts: limits.max_attempts,
+            base_delay_ms: limits.base_delay_ms,
+            max_delay_ms: limits.max_delay_ms,
+            jitter: f64::from(limits.jitter_milli) / 1000.0,
+        }
+    }
+
     pub fn validate(&self) -> Result<(), IngestJobError> {
         if self.max_attempts == 0 {
             return Err(IngestJobError::ZeroAttempts);
@@ -229,6 +240,18 @@ pub struct IngestEnqueueReceipt {
     pub partition: String,
     /// True when the task already existed and the write did nothing.
     pub deduplicated: bool,
+}
+
+/// Largest canonical envelope payload one ingest task carries, in bytes
+/// (MEDULLA-INGEST-WORKER-R001.4.1).
+pub const INGEST_TASK_PAYLOAD_MAX_BYTES: usize = 16384;
+
+/// The lane whose reserved task queue is named `queue`, or `None` when the
+/// queue is not an ingest queue (MEDULLA-INGEST-WORKER-R001.4.1).
+pub fn ingest_lane_of_queue(queue: &str) -> Option<IngestLane> {
+    [IngestLane::General, IngestLane::Hydration]
+        .into_iter()
+        .find(|lane| lane.queue_name() == queue)
 }
 
 /// The domain tag under which the ingest task id is framed.
@@ -485,5 +508,24 @@ mod tests {
         assert!(!target_embeds_credentials("postgres://host/db"));
         assert!(!target_embeds_credentials("host@not-a-uri"));
         assert!(!target_embeds_credentials("docs/readme.md"));
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.4.1
+    #[test]
+    fn reserved_queues_map_to_lanes_and_limits_build_the_policy() {
+        assert_eq!(ingest_lane_of_queue("ingest"), Some(IngestLane::General));
+        assert_eq!(
+            ingest_lane_of_queue("ingest-hydration"),
+            Some(IngestLane::Hydration)
+        );
+        assert_eq!(ingest_lane_of_queue("other"), None);
+        let policy = IngestRetryPolicy::from_limits(
+            &medulla_work_types::scheduler_config::IngestRetryLimits::default(),
+        );
+        assert_eq!(policy.max_attempts, 5);
+        assert_eq!(policy.base_delay_ms, 1000);
+        assert_eq!(policy.max_delay_ms, 60000);
+        assert!((policy.jitter - 0.2).abs() < f64::EPSILON);
+        assert!(policy.validate().is_ok());
     }
 }

@@ -95,6 +95,15 @@ pub fn enqueue(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskEnqueue)
     if request.kind.trim().is_empty() {
         return invalid(req_id, "task kind must not be blank");
     }
+    if medulla_source_types::ingest_job::ingest_lane_of_queue(&request.queue).is_some() {
+        return invalid(
+            req_id,
+            &format!(
+                "queue '{}' is written only by IngestEnqueue",
+                request.queue
+            ),
+        );
+    }
     let spec = TaskSubmit {
         tenant: call.tenant.to_string(),
         actor: call.principal.to_string(),
@@ -105,6 +114,8 @@ pub fn enqueue(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskEnqueue)
         idempotency_key: request.idempotency_key,
         priority: request.priority,
         not_before_ms: i64::try_from(request.not_before_ms).unwrap_or(i64::MAX),
+        job_id: None,
+        max_attempts: None,
     };
     match store.submit_task(spec, call.now_ms) {
         Ok(TaskSubmitOutcome::Enqueued(job)) => answer(
@@ -345,4 +356,109 @@ pub async fn try_handle(
         ),
         other => return Err(other),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_jobs::dev_scope_grant::open_dev_store_in_dir;
+    use medulla_source_types::ingest_job::{task_id, IngestJobEnvelope, IngestJobKind};
+
+    fn call<'a>(now_ms: i64) -> TaskQueueCall<'a> {
+        TaskQueueCall {
+            req_id: 1,
+            tenant: "acme",
+            principal: "principal:test",
+            now_ms,
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.4.1
+    #[test]
+    fn ingest_task_keeps_its_digest_id_and_reserved_queue_refuses() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let envelope = IngestJobEnvelope {
+            job_id: "job-1".into(),
+            tenant: "acme".into(),
+            corpus_key: "repo-a".into(),
+            kind: IngestJobKind::Document,
+            target: "docs/readme.md".into(),
+            attempt: 1,
+            page: None,
+        };
+        let digest = task_id(&envelope);
+        // The write the jobs seam performs for `IngestEnqueue`.
+        let outcome = store
+            .submit_task(
+                TaskSubmit {
+                    tenant: "acme".into(),
+                    actor: "principal:test".into(),
+                    tenant_capability: tenant_capability("acme"),
+                    queue: "ingest".into(),
+                    kind: "document".into(),
+                    payload_ref: serde_json::to_string(&envelope).unwrap(),
+                    idempotency_key: digest.clone(),
+                    priority: medulla_work_types::task_queue::default_priority(),
+                    not_before_ms: 0,
+                    job_id: Some(digest.clone()),
+                    max_attempts: Some(u32::MAX),
+                },
+                1_000,
+            )
+            .unwrap();
+        match outcome {
+            TaskSubmitOutcome::Enqueued(job) => assert_eq!(job.job_id, digest),
+            TaskSubmitOutcome::Duplicate => panic!("first write is not a duplicate"),
+        }
+        let claimed = claim(
+            &store,
+            &call(2_000),
+            TaskClaim {
+                worker_id: "worker-1".into(),
+                grant_id: "grant-1".into(),
+                lease_ms: 30_000,
+            },
+        );
+        assert!(claimed.error.is_none(), "claim refused: {:?}", claimed.error);
+        let leased = store
+            .task_queue_load("acme", "ingest")
+            .expect("queue load readable");
+        assert_eq!((leased.queued, leased.running), (0, 1));
+        let acked = ack(
+            &store,
+            &call(3_000),
+            TaskAck {
+                task_id: digest.clone(),
+                worker_id: "worker-1".into(),
+                outcome: TaskOutcome::Succeeded,
+                detail: String::new(),
+            },
+        );
+        assert!(
+            acked.error.is_none(),
+            "the claimed id is the receipt id: {:?}",
+            acked.error
+        );
+
+        // The generic enqueue refuses the reserved queue and writes nothing.
+        let refused = enqueue(
+            &store,
+            &call(4_000),
+            TaskEnqueue {
+                queue: "ingest".into(),
+                kind: "document".into(),
+                payload_ref: "{}".into(),
+                idempotency_key: "k".into(),
+                priority: medulla_work_types::task_queue::default_priority(),
+                not_before_ms: 0,
+            },
+        );
+        assert!(refused.error.is_some());
+        let detail = format!("{:?}", refused);
+        assert!(detail.contains("INVALID_ARGUMENT"), "{detail}");
+        assert!(detail.contains("written only by IngestEnqueue"), "{detail}");
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (0, 0));
+    }
 }

@@ -150,6 +150,7 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("AnalyticsJob", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, CONCEPT:INT-P2-1), mirrors RbacAdmin's access.rs coverage gap"),
     ("SetSchedulerConfig", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R076.2), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueEnqueue", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072), mirrors AnalyticsJob's access.rs coverage gap"),
+    ("IngestEnqueue", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-INGEST-WORKER-R001.4.1), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueClaim", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueRenew", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072.1), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueAck", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072), mirrors AnalyticsJob's access.rs coverage gap"),

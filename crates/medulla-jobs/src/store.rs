@@ -60,7 +60,8 @@ mod task_queue;
 use index_keys::{capability_index_key, tenant_index_key};
 use serde::de::DeserializeOwned;
 pub use task_queue::{
-    ClaimFamily, TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome, TASK_FAMILY_PREFIX,
+    ClaimFamily, TaskAckError, TaskAckOutcome, TaskQueueLoad, TaskSubmit, TaskSubmitOutcome,
+    TASK_FAMILY_PREFIX,
 };
 
 use crate::intent::JobIntent;
@@ -99,7 +100,16 @@ const JOB_DEADLINE: TableDefinition<'static, (i64, &str), ()> =
 const JOB_CANCELLATION: TableDefinition<'static, &str, ()> =
     TableDefinition::new("analytics_job_cancellation_reconcile");
 
-const SCHEDULER_INDEX_VERSION: u64 = 2;
+/// (tenant, queue) to (queued, running) task counts, one row per queue that
+/// holds a non-terminal task (MEDULLA-INGEST-WORKER-R001.4.1).
+const TASK_QUEUE_TOTALS: TableDefinition<'static, (&str, &str), (u64, u64)> =
+    TableDefinition::new("analytics_job_task_queue_totals");
+/// (tenant, queue, created_at_ms, job id) of every non-terminal task, so the
+/// oldest enqueue time of a queue is one range seek.
+const TASK_QUEUE_OLDEST: TableDefinition<'static, (&str, &str, i64, &str), ()> =
+    TableDefinition::new("analytics_job_task_queue_oldest");
+
+const SCHEDULER_INDEX_VERSION: u64 = 3;
 const META_INDEX_VERSION: &str = "scheduler_index_version";
 const META_MAX_JOB_SEQUENCE: &str = "max_job_sequence";
 const UNCONSTRAINED_CAPABILITY_ANCHOR: &str = "0";
@@ -1766,6 +1776,74 @@ fn clear_scheduler_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>) -> Result<()
         .map_err(redb_err)?
         .retain(|_, _| false)
         .map_err(redb_err)?;
+    wtx.open_table(TASK_QUEUE_TOTALS)
+        .map_err(redb_err)?
+        .retain(|_, _| false)
+        .map_err(redb_err)?;
+    wtx.open_table(TASK_QUEUE_OLDEST)
+        .map_err(redb_err)?
+        .retain(|_, _| false)
+        .map_err(redb_err)?;
+    Ok(())
+}
+
+/// The queue name of a job of the `task.` family, `None` for every other job.
+fn task_queue_of(job: &AnalyticsJob) -> Option<&str> {
+    job.algo.family.strip_prefix(TASK_FAMILY_PREFIX)
+}
+
+/// Add (`add`) or remove one task from the queue load indexes: `Submitted`
+/// counts as queued, `Running` as running, and a terminal state counts as
+/// neither (MEDULLA-INGEST-WORKER-R001.4.1).
+fn adjust_task_queue_load(
+    wtx: &AdmittedOwnerWrite<'_, JobsOwner>,
+    job: &AnalyticsJob,
+    add: bool,
+) -> Result<()> {
+    let Some(queue) = task_queue_of(job) else {
+        return Ok(());
+    };
+    let (queued, running) = match &job.state {
+        JobState::Submitted => (1u64, 0u64),
+        JobState::Running { .. } => (0, 1),
+        _ => return Ok(()),
+    };
+    let tenant = job.policy.tenant.as_str();
+    {
+        let mut totals = wtx.open_table(TASK_QUEUE_TOTALS).map_err(redb_err)?;
+        let (q, r) = totals
+            .get((tenant, queue))
+            .map_err(redb_err)?
+            .map(|value| value.value())
+            .unwrap_or((0, 0));
+        let next = if add {
+            (
+                q.checked_add(queued)
+                    .ok_or_else(|| codec_err("task queue count overflow"))?,
+                r.checked_add(running)
+                    .ok_or_else(|| codec_err("task queue count overflow"))?,
+            )
+        } else {
+            (
+                q.checked_sub(queued)
+                    .ok_or_else(|| codec_err("task queue count underflow"))?,
+                r.checked_sub(running)
+                    .ok_or_else(|| codec_err("task queue count underflow"))?,
+            )
+        };
+        if next == (0, 0) {
+            totals.remove((tenant, queue)).map_err(redb_err)?;
+        } else {
+            totals.insert((tenant, queue), next).map_err(redb_err)?;
+        }
+    }
+    let mut oldest = wtx.open_table(TASK_QUEUE_OLDEST).map_err(redb_err)?;
+    let key = (tenant, queue, job.created_at_ms, job.job_id.as_str());
+    if add {
+        oldest.insert(key, ()).map_err(redb_err)?;
+    } else {
+        oldest.remove(key).map_err(redb_err)?;
+    }
     Ok(())
 }
 
@@ -1799,6 +1877,7 @@ fn persist_job_image(
 }
 
 fn add_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJob) -> Result<()> {
+    adjust_task_queue_load(wtx, job, true)?;
     if ready_indexed(job) {
         let rank = priority_rank(job.policy.priority);
         wtx.open_table(JOB_READY)
@@ -1850,6 +1929,7 @@ fn add_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJob) 
 }
 
 fn remove_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJob) -> Result<()> {
+    adjust_task_queue_load(wtx, job, false)?;
     if ready_indexed(job) {
         let rank = priority_rank(job.policy.priority);
         wtx.open_table(JOB_READY)

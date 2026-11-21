@@ -153,6 +153,48 @@ impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
         Ok(())
     }
 
+    fn enqueue_ingest_task(
+        &self,
+        persist_dir: &Option<String>,
+        write: &medulla_server_ops::api::ingest::IngestTaskWrite<'_>,
+    ) -> Result<bool, String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        let spec = medulla_jobs::TaskSubmit {
+            tenant: write.tenant.to_string(),
+            actor: write.actor.to_string(),
+            tenant_capability: crate::task_queue::tenant_capability(write.tenant),
+            queue: write.queue.to_string(),
+            kind: write.kind.to_string(),
+            payload_ref: write.payload.to_string(),
+            idempotency_key: write.task_id.to_string(),
+            priority: medulla_work_types::task_queue::default_priority(),
+            not_before_ms: 0,
+            job_id: Some(write.task_id.to_string()),
+            max_attempts: Some(u32::MAX),
+        };
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
+        match store
+            .submit_task(spec, now_ms)
+            .map_err(|error| job_refusal(&error))?
+        {
+            medulla_jobs::TaskSubmitOutcome::Enqueued(_) => Ok(false),
+            medulla_jobs::TaskSubmitOutcome::Duplicate => Ok(true),
+        }
+    }
+
+    fn task_queue_load(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        queue: &str,
+    ) -> Result<(u64, u64, Option<i64>), String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        let load = store
+            .task_queue_load(tenant, queue)
+            .map_err(|error| job_refusal(&error))?;
+        Ok((load.queued, load.running, load.oldest_enqueued_at_ms))
+    }
+
     fn intent_registered(
         &self,
         persist_dir: &Option<String>,
