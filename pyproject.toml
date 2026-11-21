@@ -68,6 +68,9 @@ test = [
     # collection on both files with ModuleNotFoundError before a single test ran.
     "maturin>=1.15.0,<2.0",
     "pyyaml>=6.0.3",
+    # MEDULLA-ENGINE-PARITY-R019.3: seeds the outside PostgreSQL table of the federated
+    # join pushdown test (`tests/test_external_source_boundary.py`).
+    "psycopg[binary]>=3.2",
 ]
 owl = [
     "pyoxigraph>=0.5.11",

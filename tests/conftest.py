@@ -585,6 +585,18 @@ def engine_pair(tmp_path):
 
 
 @pytest.fixture
+def outside_postgres_dsn() -> str:
+    """The DSN of the outside PostgreSQL server the test environment provides
+    (MEDULLA-ENGINE-PARITY-R019.3). An unset variable fails the test, never skips it."""
+    dsn = os.environ.get("MEDULLA_TEST_POSTGRES_DSN")
+    assert dsn, (
+        "MEDULLA_TEST_POSTGRES_DSN is unset: the L4 job must declare a PostgreSQL service "
+        "and export its DSN"
+    )
+    return dsn
+
+
+@pytest.fixture
 def clean_graph():
     """Returns a clean MedullaClient instance for each test case."""
     socket_path = os.environ.get("GRAPH_SERVICE_SOCKET")
