@@ -264,6 +264,54 @@ async fn quality_gate_routes() {
     assert_eq!(stored_bytes(&h, "tenant-b", "agent-a"), None);
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R157.5
+#[tokio::test]
+async fn quality_evidence_binds() {
+    let h = Harness::new().await;
+    let end = now_ms() - 1_000;
+    // The pinned policy changes one knob, so the listed value is not the
+    // default.
+    let policy = knob_policy(&h, "policy-quality-min", "delegation.quality_min", 700_000);
+    let request = quality_request(
+        TENANT,
+        "agent-e",
+        end,
+        &[900_000, 800_000, 850_000],
+        800_000,
+        policy,
+    );
+    let start = request.window.start_ms;
+    submit(&h, request).await.unwrap();
+
+    // The artifact lists the window, the metric, the quality, the threshold,
+    // the minimum observation count and the admission decision.
+    let artifact = stored(&h, "agent-e");
+    assert_eq!(artifact.window.start_ms, start);
+    assert_eq!(artifact.window.end_ms, end);
+    assert_eq!(artifact.window.observation_count, 3);
+    let threshold = artifact.threshold.as_ref().expect("the threshold judged");
+    assert_eq!(threshold.metric_name, "task_success");
+    assert_eq!(threshold.minimum_value, 800_000);
+    assert_eq!(threshold.min_observations, 3);
+    assert_eq!(artifact.admission.quality_value, 850_000);
+    assert!(artifact.admission.admitted);
+
+    // It lists each knob read as `knob:<name>=<value>`, in table order, with
+    // the pinned value where the policy changed one.
+    assert_eq!(
+        artifact.admission.knobs,
+        vec![
+            "knob:delegation.min_observations=20".to_string(),
+            "knob:delegation.quality_min=700000".to_string(),
+            "knob:delegation.min_window=3600".to_string(),
+            "knob:delegation.window_max_age=86400".to_string(),
+        ]
+    );
+
+    // The caller supplied the observations, so the evidence is a claim.
+    assert_eq!(artifact.admission.evidence_class, EvidenceClass::Claim);
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R157.4
 #[tokio::test]
 async fn stale_window_refuses() {

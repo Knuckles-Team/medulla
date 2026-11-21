@@ -11,6 +11,7 @@ use crate::decision::record::outcome::RefusalCode;
 use crate::decision::request::DecisionPolicyRef;
 use crate::decision::statistical::StatisticalErrorCode;
 use medulla_types::contract::{BoundedVec, Digest256};
+use medulla_types::evidence_class::EvidenceClass;
 
 /// The largest micro-unit score.
 pub const MICRO_ONE: u32 = 1_000_000;
@@ -92,6 +93,19 @@ pub struct DelegationAdmission {
     pub reason: String,
     pub quality_value: u32,
     pub quality_evidence_digest: Digest256,
+    /// Each `delegation.*` knob the judgement read, as `knob:<name>=<value>`
+    /// (MEDULLA-DECISION-ENGINE-R157.5).
+    #[serde(default)]
+    pub knobs: Vec<String>,
+    /// The class of the evidence: `Claim`, because the caller supplies the
+    /// observations (MEDULLA-DECISION-ENGINE-R157.5).
+    #[serde(default = "claim_class")]
+    pub evidence_class: EvidenceClass,
+}
+
+/// The class an admission's evidence carries: the caller supplied it.
+fn claim_class() -> EvidenceClass {
+    EvidenceClass::Claim
 }
 
 impl QualityObservation {
@@ -143,6 +157,19 @@ pub struct DelegationKnobs {
 }
 
 impl DelegationKnobs {
+    /// Every knob this judgement read, as `knob:<name>=<value>` in table order.
+    pub fn listed(&self) -> Vec<String> {
+        [
+            (&KNOBS[0], self.min_observations),
+            (&KNOBS[1], self.quality_min),
+            (&KNOBS[2], self.min_window_s),
+            (&KNOBS[3], self.window_max_age_s),
+        ]
+        .iter()
+        .map(|(spec, value)| format!("knob:{}={}", spec.name, value))
+        .collect()
+    }
+
     /// The values the policy pins, or the defaults.
     pub fn from_policy(policy: &crate::decision::policy::DecisionPolicy) -> Self {
         let value = |spec: &KnobSpec| match policy.knob(spec) {
@@ -194,6 +221,8 @@ pub fn admit_delegation(
         },
         quality_value,
         quality_evidence_digest: evidence_digest(&kept),
+        knobs: knobs.listed(),
+        evidence_class: EvidenceClass::Claim,
     }
 }
 
@@ -395,6 +424,8 @@ mod tests {
             reason: "quality at or above threshold".into(),
             quality_value: 800_000,
             quality_evidence_digest: evidence_digest(&observations),
+            knobs: Vec::new(),
+            evidence_class: EvidenceClass::Claim,
         };
         let window = DelegationQualityWindow {
             start_ms: 1,
