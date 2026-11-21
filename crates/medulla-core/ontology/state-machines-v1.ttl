@@ -7187,3 +7187,113 @@
     :fromState :MutationBatchMachine_Prepared ;
     :toState :MutationBatchMachine_Committed ;
     :firedBy :MutationBatchMachine_Event_Commit .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.13
+# The OutboxDelivery machine. The Rust edge table OUTBOX_DELIVERY_MACHINE is the same table.
+
+:OutboxDeliveryState a owl:Class ;
+    rdfs:label "OutboxDelivery State" ;
+    rdfs:comment "A state of the OutboxDelivery machine." ;
+    rdfs:subClassOf :State .
+
+:OutboxDeliveryTerminalState a owl:Class ;
+    rdfs:label "OutboxDelivery TerminalState" ;
+    rdfs:comment "A terminal state of the OutboxDelivery machine." ;
+    rdfs:subClassOf :TerminalState, :OutboxDeliveryState .
+
+:OutboxDeliveryTransition a owl:Class ;
+    rdfs:label "OutboxDelivery Transition" ;
+    rdfs:comment "A transition of the OutboxDelivery machine." ;
+    rdfs:subClassOf :Transition .
+
+:OutboxDeliveryEvent a owl:Class ;
+    rdfs:label "OutboxDelivery Event" ;
+    rdfs:comment "An event of the OutboxDelivery machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:OutboxDeliveryGuard a owl:Class ;
+    rdfs:label "OutboxDelivery Guard" ;
+    rdfs:comment "A guard of the OutboxDelivery machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:OutboxDeliveryMachine a :StateMachine ;
+    rdfs:label "OutboxDelivery machine" ;
+    :initialState :OutboxDeliveryMachine_Pending ;
+    :hasState :OutboxDeliveryMachine_Pending, :OutboxDeliveryMachine_Leased, :OutboxDeliveryMachine_Delivered, :OutboxDeliveryMachine_FailedRetryable, :OutboxDeliveryMachine_FailedTerminal .
+
+:OutboxDeliveryMachine_Pending a :OutboxDeliveryState ;
+    rdfs:label "OutboxDelivery Pending" ;
+    :storedForm "pending" .
+
+:OutboxDeliveryMachine_Leased a :OutboxDeliveryState ;
+    rdfs:label "OutboxDelivery Leased" ;
+    :storedForm "leased" .
+
+:OutboxDeliveryMachine_Delivered a :OutboxDeliveryTerminalState ;
+    rdfs:label "OutboxDelivery Delivered" ;
+    :storedForm "delivered" .
+
+:OutboxDeliveryMachine_FailedRetryable a :OutboxDeliveryState ;
+    rdfs:label "OutboxDelivery FailedRetryable" ;
+    :storedForm "failed_retryable" .
+
+:OutboxDeliveryMachine_FailedTerminal a :OutboxDeliveryTerminalState ;
+    rdfs:label "OutboxDelivery FailedTerminal" ;
+    :storedForm "failed_terminal" .
+
+:OutboxDeliveryMachine_Event_Lease a :OutboxDeliveryEvent ;
+    rdfs:label "OutboxDelivery Lease" .
+
+:OutboxDeliveryMachine_Event_Deliver a :OutboxDeliveryEvent ;
+    rdfs:label "OutboxDelivery Deliver" .
+
+:OutboxDeliveryMachine_Event_FailRetryable a :OutboxDeliveryEvent ;
+    rdfs:label "OutboxDelivery FailRetryable" .
+
+:OutboxDeliveryMachine_Event_FailTerminal a :OutboxDeliveryEvent ;
+    rdfs:label "OutboxDelivery FailTerminal" .
+
+:OutboxDeliveryMachine_Guard_SameAttempt a :OutboxDeliveryGuard ;
+    rdfs:label "OutboxDelivery guard SameAttempt" .
+
+:OutboxDeliveryMachine_Guard_NextAttempt a :OutboxDeliveryGuard ;
+    rdfs:label "OutboxDelivery guard NextAttempt" .
+
+:OutboxDeliveryMachine_O01 a :OutboxDeliveryTransition ;
+    rdfs:label "OutboxDelivery O01" ;
+    :edgeId "O01" ;
+    :fromState :OutboxDeliveryMachine_Pending ;
+    :toState :OutboxDeliveryMachine_Leased ;
+    :firedBy :OutboxDeliveryMachine_Event_Lease .
+
+:OutboxDeliveryMachine_O02 a :OutboxDeliveryTransition ;
+    rdfs:label "OutboxDelivery O02" ;
+    :edgeId "O02" ;
+    :fromState :OutboxDeliveryMachine_Leased ;
+    :toState :OutboxDeliveryMachine_Delivered ;
+    :guardedBy :OutboxDeliveryMachine_Guard_SameAttempt ;
+    :firedBy :OutboxDeliveryMachine_Event_Deliver .
+
+:OutboxDeliveryMachine_O03 a :OutboxDeliveryTransition ;
+    rdfs:label "OutboxDelivery O03" ;
+    :edgeId "O03" ;
+    :fromState :OutboxDeliveryMachine_Leased ;
+    :toState :OutboxDeliveryMachine_FailedRetryable ;
+    :guardedBy :OutboxDeliveryMachine_Guard_SameAttempt ;
+    :firedBy :OutboxDeliveryMachine_Event_FailRetryable .
+
+:OutboxDeliveryMachine_O04 a :OutboxDeliveryTransition ;
+    rdfs:label "OutboxDelivery O04" ;
+    :edgeId "O04" ;
+    :fromState :OutboxDeliveryMachine_Leased ;
+    :toState :OutboxDeliveryMachine_FailedTerminal ;
+    :guardedBy :OutboxDeliveryMachine_Guard_SameAttempt ;
+    :firedBy :OutboxDeliveryMachine_Event_FailTerminal .
+
+:OutboxDeliveryMachine_O05 a :OutboxDeliveryTransition ;
+    rdfs:label "OutboxDelivery O05" ;
+    :edgeId "O05" ;
+    :fromState :OutboxDeliveryMachine_FailedRetryable ;
+    :toState :OutboxDeliveryMachine_Leased ;
+    :guardedBy :OutboxDeliveryMachine_Guard_NextAttempt ;
+    :firedBy :OutboxDeliveryMachine_Event_Lease .

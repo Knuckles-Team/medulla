@@ -4,6 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::mutation::{MutationReceipt, MutationRequestEnvelope};
+use crate::outbox_delivery_machine::{
+    OutboxDeliveryEvent, OutboxDeliveryFacts, OUTBOX_DELIVERY_MACHINE,
+};
 use medulla_identity_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::RecordBytes,
@@ -296,14 +299,19 @@ impl OutboxDeliveryReceipt {
     }
 
     fn validate_first_receipt(&self) -> Result<(), String> {
-        if self.previous_receipt_id.is_some()
-            || self.attempt != 1
-            || self.lease_epoch == 0
-            || self.state != OutboxDeliveryState::Leased
-        {
+        if self.previous_receipt_id.is_some() || self.attempt != 1 || self.lease_epoch == 0 {
             return Err("first delivery receipt must be the first lease".into());
         }
-        Ok(())
+        // The first receipt applies the event that reaches its state to the record's
+        // initial state, so only the first lease is accepted.
+        let facts = OutboxDeliveryFacts {
+            same_attempt: false,
+            next_attempt: false,
+        };
+        match OutboxDeliveryEvent::reaching(self.state) {
+            Some(event) if OUTBOX_DELIVERY_MACHINE.initial.apply(event, facts).is_ok() => Ok(()),
+            _ => Err("first delivery receipt must be the first lease".into()),
+        }
     }
 
     fn validate_successor_receipt(
@@ -332,35 +340,19 @@ impl OutboxDeliveryReceipt {
     }
 
     fn validate_state_transition(&self, previous: &Self) -> Result<(), String> {
-        match (previous.state, self.state) {
-            (OutboxDeliveryState::Leased, OutboxDeliveryState::Delivered)
-            | (OutboxDeliveryState::Leased, OutboxDeliveryState::FailedRetryable)
-            | (OutboxDeliveryState::Leased, OutboxDeliveryState::FailedTerminal) => {
-                self.validate_same_attempt_transition(previous)
-            }
-            (OutboxDeliveryState::FailedRetryable, OutboxDeliveryState::Leased) => {
-                self.validate_retry_transition(previous)
-            }
-            _ => Err("invalid outbox delivery state transition".into()),
-        }
-    }
-
-    fn validate_same_attempt_transition(&self, previous: &Self) -> Result<(), String> {
-        if self.attempt != previous.attempt || self.lease_epoch != previous.lease_epoch {
-            return Err("invalid outbox delivery state transition".into());
-        }
-        Ok(())
-    }
-
-    fn validate_retry_transition(&self, previous: &Self) -> Result<(), String> {
-        let expected_attempt = previous
-            .attempt
-            .checked_add(1)
-            .ok_or_else(|| "outbox delivery attempt overflow".to_string())?;
-        if self.attempt != expected_attempt || self.lease_epoch <= previous.lease_epoch {
-            return Err("invalid outbox delivery state transition".into());
-        }
-        Ok(())
+        let event = OutboxDeliveryEvent::reaching(self.state)
+            .ok_or_else(|| "invalid outbox delivery state transition".to_string())?;
+        let facts = OutboxDeliveryFacts {
+            same_attempt: self.attempt == previous.attempt
+                && self.lease_epoch == previous.lease_epoch,
+            next_attempt: previous.attempt.checked_add(1) == Some(self.attempt)
+                && self.lease_epoch > previous.lease_epoch,
+        };
+        previous
+            .state
+            .apply(event, facts)
+            .map(|_| ())
+            .map_err(|refused| refused.to_string())
     }
 
     fn validate_binding(&self, record: &OutboxRecord) -> Result<(), String> {

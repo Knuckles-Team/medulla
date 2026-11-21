@@ -1327,3 +1327,10 @@ fn exact_retirement_machine_matches_edge_table() {
     sm::assert_matches(&medulla_direct_state::direct_state::EXACT_RETIREMENT_MACHINE);
     sm::assert_extends_core("ExactRetirement");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.13
+#[test]
+fn outbox_delivery_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_mutation_types::outbox_delivery_machine::OUTBOX_DELIVERY_MACHINE);
+    sm::assert_extends_core("OutboxDelivery");
+}

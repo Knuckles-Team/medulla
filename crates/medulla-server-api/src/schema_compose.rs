@@ -951,7 +951,9 @@ ex:parent a owl:AsymmetricProperty .
         // state-machines-v1.ttl (rdflib per-file delta).
         // +40 (MEDULLA-DURABLE-KERNEL-R874.10): the :MutationBatchMachine block (two states,
         // one event, one edge) in state-machines-v1.ttl.
-        assert_eq!(composed.ontology.len(), 24_760);
+        // +90 (MEDULLA-DURABLE-KERNEL-R874.13): the :OutboxDeliveryMachine block (five states,
+        // four events, two guards, five edges) in state-machines-v1.ttl.
+        assert_eq!(composed.ontology.len(), 24_850);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

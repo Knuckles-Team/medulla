@@ -54,6 +54,8 @@ pub mod mutation_scope;
 // RF-RULING-004 — mutation-kernel-owned outbox intent, delivery, and cursor DTOs.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod outbox;
+// MEDULLA-DURABLE-KERNEL-R874.13 -- the outbox-delivery state machine.
+pub mod outbox_delivery_machine;
 // MEDULLA-DURABLE-KERNEL-R035 — the PostgreSQL wire protocol's required
 // operational surfaces and a fail-closed compatibility matrix. Pure serde,
 // no dep.
