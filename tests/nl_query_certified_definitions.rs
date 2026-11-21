@@ -273,3 +273,49 @@ async fn recorded_correction_grounds_the_next_plan() {
     assert_eq!(certified.certified_terms.len(), 1);
     assert_eq!(certified.certified_terms[0].version, "3");
 }
+
+fn pack_term(source: &str, definition: &str) -> serde_json::Value {
+    serde_json::json!({"type": "GlossaryTerm", "name": "churn rate", "source": source,
+        "definition": definition, "status": "certified", "version": "1",
+        "lineage": ["amount_paid"]})
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.9
+#[tokio::test]
+async fn conflicting_sources_record_one_conflict() {
+    let state = state();
+    seed(&state).await;
+    let first = pack_term("pack-a", "customers lost in the month");
+    let second = pack_term("pack-b", "revenue lost in the month");
+    add_node(&state, 30, "churn-a", first.clone()).await;
+
+    // One source defines the term: certified, nothing to reconcile.
+    let core = medulla_graph_core::graph::GraphCore::new();
+    let blob = |value: &serde_json::Value| rmp_serde::to_vec_named(value).unwrap();
+    core.add_node("churn-a".into(), blob(&first));
+    assert!(medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
+        .is_empty());
+
+    // A second source defines it differently: exactly one conflict fact links both.
+    add_node(&state, 31, "churn-b", second.clone()).await;
+    core.add_node("churn-b".into(), blob(&second));
+    let conflicts =
+        medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot());
+    assert_eq!(conflicts.len(), 1, "{conflicts:?}");
+    let conflict = &conflicts[0];
+    assert_eq!((conflict.left_id.as_str(), conflict.right_id.as_str()), ("churn-a", "churn-b"));
+    assert_ne!(conflict.left_definition, conflict.right_definition);
+
+    // Before the fact is recorded the term is still certified.
+    let before = explained(&explain(&state, 32, "what is the churn rate of orders").await);
+    assert_eq!(before.certified_terms.len(), 1, "{:?}", before.certified_terms);
+
+    // Recording it makes the term uncertified for planning; recording the pair again is
+    // the same node, and the reconcile no longer reports it.
+    add_node(&state, 33, &conflict.node_id(), conflict.properties()).await;
+    let after = explained(&explain(&state, 34, "what is the churn rate of orders").await);
+    assert!(after.certified_terms.is_empty(), "{:?}", after.certified_terms);
+    core.add_node(conflict.node_id(), blob(&conflict.properties()));
+    assert!(medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
+        .is_empty());
+}

@@ -113,9 +113,140 @@ impl CertifiedTerm {
     }
 }
 
+/// The node label of a recorded conflict between two sources' definitions of one term
+/// (MEDULLA-FEDERATED-QUERY-R058.9).
+pub const TERM_CONFLICT_LABEL: &str = "TermConflict";
+/// The `status` of a conflict no certifier has resolved.
+pub const CONFLICT_OPEN: &str = "open";
+
+/// Two sources that define one glossary term with different meanings. The fact links
+/// both definition nodes; it merges nothing (MEDULLA-FEDERATED-QUERY-R058.9).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TermConflict {
+    pub term: String,
+    pub left_id: String,
+    pub right_id: String,
+    pub left_source: String,
+    pub right_source: String,
+    pub left_definition: String,
+    pub right_definition: String,
+}
+
+impl TermConflict {
+    /// The one node id of this pair, so recording it twice is one fact.
+    pub fn node_id(&self) -> String {
+        format!("term-conflict:{}:{}:{}", norm(&self.term), self.left_id, self.right_id)
+    }
+
+    /// The properties of the conflict fact node, status `open`.
+    pub fn properties(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": TERM_CONFLICT_LABEL,
+            "term": self.term,
+            "left": self.left_id,
+            "right": self.right_id,
+            "left_source": self.left_source,
+            "right_source": self.right_source,
+            "status": CONFLICT_OPEN,
+        })
+    }
+}
+
+fn node_props(
+    blob: &[u8],
+) -> Option<serde_json::Map<String, serde_json::Value>> {
+    match medulla_types::msgpack::decode_property_value(blob) {
+        Ok(serde_json::Value::Object(props)) => Some(props),
+        _ => None,
+    }
+}
+
+fn prop_text(props: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
+    props
+        .get(key)
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn same_meaning(a: &str, b: &str) -> bool {
+    let words = |text: &str| -> Vec<String> {
+        text.split_whitespace().map(str::to_lowercase).collect()
+    };
+    words(a) == words(b)
+}
+
+/// Find the glossary terms two different sources define with the same name and different
+/// meanings and return one [`TermConflict`] per pair not yet recorded. Definitions are
+/// reported, never merged: neither node changes. A term from the same source, or a pair
+/// with equal definitions, is no conflict.
+pub fn reconcile_term_definitions(view: &GraphView) -> Vec<TermConflict> {
+    // (normalized name) -> terms, each (node id, name, source, definition).
+    let mut by_name: std::collections::BTreeMap<String, Vec<(String, String, String, String)>> =
+        Default::default();
+    for (id, blob) in view.node_properties.iter() {
+        let Some(props) = node_props(blob.as_slice()) else {
+            continue;
+        };
+        let is_term = ["type", "node_type", "label"]
+            .iter()
+            .any(|k| props.get(*k).and_then(|v| v.as_str()) == Some(GLOSSARY_TERM_LABEL));
+        let name = prop_text(&props, "name");
+        if !is_term || name.is_empty() {
+            continue;
+        }
+        by_name.entry(norm(&name)).or_default().push((
+            id.to_string(),
+            name,
+            prop_text(&props, "source"),
+            prop_text(&props, "definition"),
+        ));
+    }
+    let mut found = Vec::new();
+    for terms in by_name.values_mut() {
+        terms.sort();
+        for (i, left) in terms.iter().enumerate() {
+            for right in &terms[i + 1..] {
+                if left.2 == right.2 || same_meaning(&left.3, &right.3) {
+                    continue;
+                }
+                let conflict = TermConflict {
+                    term: left.1.clone(),
+                    left_id: left.0.clone(),
+                    right_id: right.0.clone(),
+                    left_source: left.2.clone(),
+                    right_source: right.2.clone(),
+                    left_definition: left.3.clone(),
+                    right_definition: right.3.clone(),
+                };
+                if !view.node_properties.contains_key(conflict.node_id().as_str()) {
+                    found.push(conflict);
+                }
+            }
+        }
+    }
+    found.sort_by_key(TermConflict::node_id);
+    found
+}
+
+/// The normalized names of terms with an open conflict fact.
+fn open_conflict_terms(view: &GraphView) -> BTreeSet<String> {
+    view.node_properties
+        .values()
+        .filter_map(|blob| node_props(blob.as_slice()))
+        .filter(|props| {
+            prop_text(props, "type") == TERM_CONFLICT_LABEL
+                && prop_text(props, "status") == CONFLICT_OPEN
+        })
+        .map(|props| norm(&prop_text(&props, "term")))
+        .collect()
+}
+
 /// The certified terms of `view`, in name order, one per name (the highest
-/// version wins when a name repeats).
+/// version wins when a name repeats). A term with an open conflict is uncertified until
+/// a certifier resolves it (MEDULLA-FEDERATED-QUERY-R058.9).
 pub fn certified_terms(view: &GraphView) -> Vec<CertifiedTerm> {
+    let conflicted = open_conflict_terms(view);
     let mut terms: std::collections::BTreeMap<String, CertifiedTerm> = Default::default();
     for blob in view.node_properties.values() {
         let Ok(serde_json::Value::Object(props)) =
@@ -126,6 +257,9 @@ pub fn certified_terms(view: &GraphView) -> Vec<CertifiedTerm> {
         let Some(term) = CertifiedTerm::from_properties(&props) else {
             continue;
         };
+        if conflicted.contains(&norm(&term.name)) {
+            continue;
+        }
         match terms.get(&term.name) {
             Some(held) if held.version >= term.version => {}
             _ => {
