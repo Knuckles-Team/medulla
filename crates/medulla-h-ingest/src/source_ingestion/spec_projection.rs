@@ -963,6 +963,106 @@ pub fn stored_artifacts(
         .collect()
 }
 
+/// The classification of the spec files of one batch (MEDULLA-ORCH-VOCAB-R012.4).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct ClassifiedSpecFiles {
+    /// One `upsert_node` per classified or unknown file.
+    pub operations: Vec<serde_json::Value>,
+    /// The paths no rule matched, in batch order.
+    pub unknown: Vec<String>,
+}
+
+/// The id of the node that records how a spec file was classified.
+pub fn spec_kind_node_id(repo: &str, path: &str) -> String {
+    format!("speckind:{repo}:{path}")
+}
+
+/// Classify every spec file of a batch by the named rules of `classify_spec_file_by_rule`
+/// (MEDULLA-ORCH-VOCAB-R012.4, R012.5). A considered file is a `.md` file that satisfies
+/// [`is_spec_artifact`] or has a `.specify` path segment; a path that repeats is read once at
+/// its first occurrence and a file that is not UTF-8 is skipped. A file with a kind becomes a
+/// node of its class with `repo`, `path`, `classifiedByRule` and `blob_digest`. A file that
+/// matches no rule is written as a plain `Document` with no kind and no rule, and its path is
+/// listed in `unknown`: an unknown file is not guessed.
+pub fn classify_spec_files(repo: &str, files: &[(String, Vec<u8>)]) -> ClassifiedSpecFiles {
+    use medulla_core::spec_folder::{classify_spec_file_by_rule, parse_front_matter};
+
+    let mut seen = BTreeSet::new();
+    let mut out = ClassifiedSpecFiles::default();
+    for (path, bytes) in files {
+        let considered = path.ends_with(".md")
+            && (is_spec_artifact(path) || path.split('/').any(|segment| segment == ".specify"));
+        if !considered || !seen.insert(path.as_str()) {
+            continue;
+        }
+        let Ok(text) = std::str::from_utf8(bytes) else {
+            continue;
+        };
+        let blob_digest = format!("sha256:{}", digest_of(text));
+        let id = spec_kind_node_id(repo, path);
+        match classify_spec_file_by_rule(path, &parse_front_matter(text)) {
+            Ok((kind, rule)) => {
+                let class = kind.class_name();
+                out.operations.push(node(
+                    &id,
+                    serde_json::json!({
+                        "type": class,
+                        "repo": repo,
+                        "path": path,
+                        "classifiedByRule": rule,
+                        "blob_digest": blob_digest,
+                    }),
+                ));
+            }
+            Err(_) => {
+                out.operations.push(node(
+                    &id,
+                    serde_json::json!({
+                        "type": "Document",
+                        "repo": repo,
+                        "path": path,
+                        "blob_digest": blob_digest,
+                    }),
+                ));
+                out.unknown.push(path.clone());
+            }
+        }
+    }
+    out
+}
+
+/// Append the classification to the index result: its nodes, and for each unknown file the
+/// `SPEC_FILE_UNKNOWN_KIND` diagnostic on that file's outcome. An outcome that is absent or
+/// whose diagnostics are full is skipped, and the verdict never changes.
+fn append_classified(
+    classified: &ClassifiedSpecFiles,
+    result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
+) {
+    use medulla_ingestion_types::ingestion_wire::IndexDiagnostic;
+    use medulla_types::contract::BoundedVec;
+
+    for op in &classified.operations {
+        result.nodes.push(index_node(op));
+    }
+    for path in &classified.unknown {
+        let Some(outcome) = result
+            .file_outcomes
+            .iter_mut()
+            .find(|outcome| outcome.file_path == *path)
+        else {
+            continue;
+        };
+        let mut diagnostics = outcome.diagnostics.as_slice().to_vec();
+        diagnostics.push(IndexDiagnostic {
+            code: "SPEC_FILE_UNKNOWN_KIND".to_owned(),
+            message: path.clone(),
+        });
+        if let Ok(bounded) = BoundedVec::new(diagnostics) {
+            outcome.diagnostics = bounded;
+        }
+    }
+}
+
 /// The `SourceIngest` and `IndexRepository` worker loop's entry for spec artifacts
 /// (MEDULLA-SDLC-R014.2): called with the files of one scoped repository batch, it
 /// re-ingests only the spec artifact files whose digest differs from `stored` and lowers
@@ -985,7 +1085,9 @@ pub fn project_spec_artifacts(
         .filter(|(path, _)| is_spec_artifact(path) && seen.insert(path.as_str()))
         .filter_map(|(path, bytes)| Some((path.as_str(), std::str::from_utf8(bytes).ok()?)))
         .collect();
+    let classified = classify_spec_files(repo, files);
     if texts.is_empty() && changesets.is_empty() {
+        append_classified(&classified, result);
         return Ok(ReingestPlan {
             operations: Vec::new(),
             reingested: Vec::new(),
@@ -1079,6 +1181,7 @@ pub fn project_spec_artifacts(
             _ => {}
         }
     }
+    append_classified(&classified, result);
     Ok(plan)
 }
 
@@ -1735,5 +1838,92 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         assert!(error.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
         assert!(refused.nodes.is_empty() && refused.edges.is_empty());
         println!("CITE_REFUSED\t{error}");
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R012.4
+    #[test]
+    fn unknown_spec_file_is_plain_document_with_diagnostic() {
+        use medulla_ingestion_types::ingestion_wire::{
+            IndexFileOutcome, IndexFileVerdict, IndexResult,
+        };
+        use medulla_types::contract::BoundedVec;
+
+        let files: Vec<(String, Vec<u8>)> = vec![
+            ("specs/x/notes.md".into(), b"just notes\n".to_vec()),
+            ("specs/x/tasks.md".into(), b"- [ ] T1 do it\n".to_vec()),
+            ("specs/x/spec.md".into(), b"# Spec\n".to_vec()),
+            (".specify/memory/constitution.md".into(), b"# Rules\n".to_vec()),
+            ("specs/x/goal.md".into(), b"---\ngoal: ship\n---\n".to_vec()),
+            ("specs/x/memory/lesson.md".into(), b"lesson\n".to_vec()),
+            // Read once, at the first occurrence; not UTF-8 is skipped; not a spec file ignored.
+            ("specs/x/spec.md".into(), b"# Other\n".to_vec()),
+            ("specs/x/binary.md".into(), vec![0xff, 0xfe]),
+            ("src/lib.rs".into(), b"fn main() {}".to_vec()),
+        ];
+        let classified = classify_spec_files("demo", &files);
+        assert_eq!(classified.unknown, vec!["specs/x/notes.md".to_string()]);
+        let by_path = |path: &str| {
+            classified
+                .operations
+                .iter()
+                .find(|op| op["id"] == spec_kind_node_id("demo", path).as_str())
+                .unwrap_or_else(|| panic!("{path} is written"))
+        };
+        assert_eq!(classified.operations.len(), 6);
+        let plain = &by_path("specs/x/notes.md")["properties"];
+        assert_eq!(plain["type"], "Document");
+        assert!(plain.get("classifiedByRule").is_none());
+        assert_eq!(plain["path"], "specs/x/notes.md");
+        for (path, class, rule) in [
+            ("specs/x/tasks.md", "SpecTask", "tasks-file"),
+            ("specs/x/spec.md", "Specification", "spec-document"),
+            (".specify/memory/constitution.md", "SpecPolicy", "constitution-file"),
+            ("specs/x/goal.md", "SpecGoal", "goal-front-matter"),
+            ("specs/x/memory/lesson.md", "SpecMemory", "memory-folder"),
+        ] {
+            let properties = &by_path(path)["properties"];
+            assert_eq!(properties["type"], class, "{path}");
+            assert_eq!(properties["classifiedByRule"], rule, "{path}");
+            assert_eq!(properties["repo"], "demo");
+            assert!(properties["blob_digest"].as_str().unwrap().starts_with("sha256:"));
+        }
+        // The first occurrence of a repeated path wins.
+        assert_eq!(
+            by_path("specs/x/spec.md")["properties"]["blob_digest"],
+            format!("sha256:{}", digest_of("# Spec\n")).as_str()
+        );
+
+        // Through the projection: the unknown file's outcome gains the diagnostic.
+        let outcome = |path: &str| IndexFileOutcome {
+            file_path: path.to_string(),
+            verdict: IndexFileVerdict::Success,
+            content_digest: String::new(),
+            parser_capability_digest: String::new(),
+            diagnostics: BoundedVec::new(Vec::new()).unwrap(),
+        };
+        let mut result = IndexResult::default();
+        result.file_outcomes = vec![
+            outcome("specs/x/notes.md"),
+            outcome(".specify/memory/constitution.md"),
+        ];
+        let batch: Vec<(String, Vec<u8>)> = files
+            .iter()
+            .filter(|(path, _)| path == "specs/x/notes.md" || path.starts_with(".specify/"))
+            .cloned()
+            .collect();
+        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], "main", &mut result)
+            .expect("projects");
+        let diagnostics = result.file_outcomes[0].diagnostics.as_slice();
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].code, "SPEC_FILE_UNKNOWN_KIND");
+        assert_eq!(diagnostics[0].message, "specs/x/notes.md");
+        assert!(result.file_outcomes[1].diagnostics.as_slice().is_empty());
+        assert_eq!(result.file_outcomes[0].verdict, IndexFileVerdict::Success);
+        assert!(result
+            .nodes
+            .iter()
+            .any(|node| node.node_id
+                == spec_kind_node_id("demo", ".specify/memory/constitution.md")
+                && node.node_type == "SpecPolicy"));
     }
 }
