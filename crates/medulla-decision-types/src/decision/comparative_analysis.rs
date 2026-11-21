@@ -151,8 +151,10 @@ pub enum ComparativeAnalysisStage {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ComparativeStageBudget {
-    /// The stage.
-    pub stage: ComparativeAnalysisStage,
+    /// The stage this budget is for. It names a stage, it is not a lifecycle state
+    /// (MEDULLA-DECISION-ENGINE-R830.2); the wire key stays `stage`.
+    #[serde(rename = "stage")]
+    pub stage_id: ComparativeAnalysisStage,
     /// The most model calls the stage may make.
     pub max_calls: u32,
 }
@@ -277,7 +279,7 @@ mod tests {
             ComparativeAnalysisStage::Extraction,
         ] {
             round_trip(&ComparativeStageBudget {
-                stage,
+                stage_id: stage,
                 max_calls: 4,
             });
         }
@@ -299,15 +301,15 @@ mod tests {
             extraction_importance_threshold: q32(3 << 30),
             stage_budgets: BoundedVec::new(vec![
                 ComparativeStageBudget {
-                    stage: ComparativeAnalysisStage::Discovery,
+                    stage_id: ComparativeAnalysisStage::Discovery,
                     max_calls: 4,
                 },
                 ComparativeStageBudget {
-                    stage: ComparativeAnalysisStage::Synthesis,
+                    stage_id: ComparativeAnalysisStage::Synthesis,
                     max_calls: 4,
                 },
                 ComparativeStageBudget {
-                    stage: ComparativeAnalysisStage::Extraction,
+                    stage_id: ComparativeAnalysisStage::Extraction,
                     max_calls: 4,
                 },
             ])
@@ -334,5 +336,24 @@ mod tests {
             .unwrap()
             .push(serde_json::to_value(candidate(64)).unwrap());
         assert!(serde_json::from_value::<ComparativeAnalysisRequest>(wire).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.2
+    #[test]
+    fn no_writer_sets_stage_outside_apply() {
+        // The census named `stage` on the budget. It says which stage a budget is for, so the
+        // Rust field is `stage_id` and the wire key is unchanged.
+        let budget: ComparativeStageBudget = serde_json::from_value(serde_json::json!({
+            "stage": "synthesis", "max_calls": 4
+        }))
+        .expect("wire key stage");
+        assert_eq!(budget.stage_id, ComparativeAnalysisStage::Synthesis);
+        assert_eq!(
+            serde_json::to_value(budget).unwrap(),
+            serde_json::json!({"stage": "synthesis", "max_calls": 4})
+        );
+        let source = include_str!("comparative_analysis.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(".stage_id ="));
     }
 }

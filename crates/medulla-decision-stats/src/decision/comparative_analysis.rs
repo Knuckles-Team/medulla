@@ -179,7 +179,7 @@ pub fn plan_comparative_analysis(
             stages
                 .iter()
                 .map(|(stage, max_calls)| ComparativeStageBudget {
-                    stage: *stage,
+                    stage_id: *stage,
                     max_calls: *max_calls,
                 })
                 .collect(),
@@ -311,7 +311,7 @@ mod tests {
         assert!(exact
             .stage_budgets
             .iter()
-            .all(|b| { b.stage != ComparativeAnalysisStage::Discovery || b.max_calls == 0 }));
+            .all(|b| { b.stage_id != ComparativeAnalysisStage::Discovery || b.max_calls == 0 }));
         // The ceiling above its knob maximum, and a zero ceiling that needs calls.
         for ceiling in [67, 0] {
             let refused = plan_comparative_analysis(

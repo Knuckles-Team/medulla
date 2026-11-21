@@ -140,7 +140,7 @@ async fn served_decide_returns_budgeted_plan() {
     let budgets: Vec<_> = plan
         .stage_budgets
         .iter()
-        .map(|b| (b.stage, b.max_calls))
+        .map(|b| (b.stage_id, b.max_calls))
         .collect();
     assert_eq!(
         budgets,
@@ -236,7 +236,7 @@ async fn decide_returns_plan_without_model_execution() {
     let discovery = plan
         .stage_budgets
         .iter()
-        .find(|b| b.stage == ComparativeAnalysisStage::Discovery)
+        .find(|b| b.stage_id == ComparativeAnalysisStage::Discovery)
         .unwrap();
     assert_eq!(discovery.max_calls, 0);
     assert_eq!(transport.0.load(Ordering::SeqCst), 0);

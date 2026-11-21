@@ -187,7 +187,7 @@ pub(in crate::decide) fn premises(plan: &ComparativeAnalysisPlan) -> Vec<Premise
     out.extend(plan.stage_budgets.iter().map(|budget| {
         claim(format!(
             "comparative:stage={}/{}",
-            stage_name(budget.stage),
+            stage_name(budget.stage_id),
             budget.max_calls
         ))
     }));
