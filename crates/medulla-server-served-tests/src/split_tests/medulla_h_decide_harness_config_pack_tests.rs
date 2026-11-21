@@ -13,6 +13,7 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, DecisionBatch, StatisticalDecisionRecord,
 };
 use medulla_h_decide::decide::stat_test_support::{decode, Harness};
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::{Method, Request};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
@@ -129,8 +130,7 @@ async fn two_tool_pack_subset_respects_budget() {
     // The two sized tools: only the 400-token tool fits the 500-token budget.
     let two = imported_candidates(&h, asked.clone(), &["a", "b"]);
     let record = decide(&h, two).await;
-    let answer = answer(&record);
-    match answer.tool_subset {
+    match answer(&record).tool_subset {
         HarnessPart::Decided { value } => {
             assert_eq!(value.as_slice(), [tool_component("a")]);
         }
