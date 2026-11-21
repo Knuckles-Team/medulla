@@ -14,6 +14,7 @@
 
 pub mod machine;
 pub mod registry;
+pub mod spawn;
 
 use std::sync::OnceLock;
 
