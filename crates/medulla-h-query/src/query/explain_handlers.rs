@@ -374,7 +374,8 @@ pub(crate) async fn handle_recompute_materialization(
             id: medulla_epistemic::projection_identity(&derived_id),
             depends_on: Vec::new(),
             generating_activity: None,
-            status: "Queued".to_string(),
+            status: medulla_protocol_types::protocol::RECOMPUTE_QUEUED_STATUS
+                .to_string(),
             source_graph_version: target_graph_version,
             fence_epoch: 0,
             projection_pending: true,
@@ -431,7 +432,7 @@ pub(crate) async fn handle_recompute_materialization(
         id: materialization.materialization_ref,
         depends_on: materialization.dependency_refs,
         generating_activity: materialization.generator_ref,
-        status: format!("{:?}", materialization.status),
+        status: materialization.status.result_text().to_string(),
         source_graph_version: materialization.source_graph_version,
         fence_epoch,
         projection_pending: false,
@@ -463,7 +464,7 @@ pub(crate) async fn handle_materialization_status(
             Err(error) => return Ok(Response::err(req_id, error)),
         };
     let result = medulla_protocol_types::protocol::MaterializationStatusResult {
-        status: status.map(|status| format!("{status:?}")),
+        status: status.map(|status| status.result_text().to_string()),
         source_graph_version,
     };
     Ok(result_response::<query_results::MaterializationStatus>(

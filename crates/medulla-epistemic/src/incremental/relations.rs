@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{decode, opaque_identity, remove_value, IncrementalDelta, IncrementalReasoningIndex};
+use medulla_types::materialization_status_machine::MaterializationEvent;
+
+use super::{
+    decode, opaque_identity, refused, remove_value, IncrementalDelta, IncrementalReasoningIndex,
+};
 
 impl IncrementalReasoningIndex {
     pub(super) fn canonical_edge_generators(&self) -> BTreeMap<String, String> {
@@ -31,14 +35,19 @@ impl IncrementalReasoningIndex {
         self.replace_materialization_generator(materialization, generator);
     }
 
-    pub(super) fn add_edge(&mut self, source: &str, target: &str, properties: &[u8]) -> bool {
+    pub(super) fn add_edge(
+        &mut self,
+        source: &str,
+        target: &str,
+        properties: &[u8],
+    ) -> Result<bool, String> {
         let Some(relationship) = decode(properties).and_then(|value| {
             value
                 .get("relationship")
                 .and_then(serde_json::Value::as_str)
                 .map(str::to_ascii_uppercase)
         }) else {
-            return false;
+            return Ok(false);
         };
         if !matches!(
             relationship.as_str(),
@@ -50,7 +59,7 @@ impl IncrementalReasoningIndex {
                 | "DERIVED_FROM"
                 | "GENERATED_BY"
         ) {
-            return false;
+            return Ok(false);
         }
         self.add_edge_relationship(source, target, &relationship)
     }
@@ -60,13 +69,13 @@ impl IncrementalReasoningIndex {
         source: &str,
         target: &str,
         relationship: &str,
-    ) -> bool {
+    ) -> Result<bool, String> {
         let source = opaque_identity(source);
         let target = opaque_identity(target);
         if matches!(relationship, "DERIVED_FROM" | "GENERATED_BY") {
             self.provenance_edges
                 .insert((source.clone(), target.clone()), relationship.to_string());
-            self.materializations.insert(source.clone());
+            self.register_status(&source)?;
             // Both provenance relationships are invalidation dependencies. The
             // canonical generator is the lexicographically first GENERATED_BY
             // target, matching GraphView's BTreeMap bootstrap order regardless of
@@ -76,11 +85,9 @@ impl IncrementalReasoningIndex {
                 .or_default()
                 .insert(target);
             self.reconcile_edge_generator(&source);
-            self.stale_materializations.remove(&source);
-            self.retracted_materializations.remove(&source);
-            return true;
+            return Ok(true);
         }
-        self.remove_edge_refs(&source, &target);
+        self.remove_edge_refs(&source, &target)?;
         self.epistemic_edges
             .insert((source.clone(), target.clone()), relationship.to_string());
         match relationship {
@@ -96,14 +103,14 @@ impl IncrementalReasoningIndex {
             }
             _ => {}
         }
-        true
+        Ok(true)
     }
 
-    pub(super) fn remove_edge(&mut self, source: &str, target: &str) -> bool {
+    pub(super) fn remove_edge(&mut self, source: &str, target: &str) -> Result<bool, String> {
         self.remove_edge_refs(&opaque_identity(source), &opaque_identity(target))
     }
 
-    pub(super) fn remove_edge_refs(&mut self, source: &str, target: &str) -> bool {
+    pub(super) fn remove_edge_refs(&mut self, source: &str, target: &str) -> Result<bool, String> {
         if let Some(relationship) = self
             .provenance_edges
             .remove(&(source.to_string(), target.to_string()))
@@ -114,14 +121,15 @@ impl IncrementalReasoningIndex {
             if relationship == "GENERATED_BY" {
                 self.reconcile_edge_generator(source);
             }
-            self.stale_materializations.insert(source.to_string());
-            return true;
+            self.fire(source, MaterializationEvent::Invalidate)
+                .map_err(refused)?;
+            return Ok(true);
         }
         let removed = self
             .epistemic_edges
             .remove(&(source.to_string(), target.to_string()));
         let Some(relationship) = removed else {
-            return false;
+            return Ok(false);
         };
         if matches!(relationship.as_str(), "CAUSES" | "ENABLES") {
             remove_value(&mut self.causal_out, source, target);
@@ -130,10 +138,14 @@ impl IncrementalReasoningIndex {
             remove_value(&mut self.conflicts, source, target);
             remove_value(&mut self.conflicts, target, source);
         }
-        true
+        Ok(true)
     }
 
-    pub(super) fn remove_incident(&mut self, node_id: &str, delta: &mut IncrementalDelta) {
+    pub(super) fn remove_incident(
+        &mut self,
+        node_id: &str,
+        delta: &mut IncrementalDelta,
+    ) -> Result<(), String> {
         let node_id = opaque_identity(node_id);
         let edges = self
             .epistemic_edges
@@ -143,13 +155,18 @@ impl IncrementalReasoningIndex {
             .cloned()
             .collect::<Vec<_>>();
         for (source, target) in edges {
-            if self.remove_edge_refs(&source, &target) {
+            if self.remove_edge_refs(&source, &target)? {
                 delta.edge_changes += 1;
             }
         }
+        Ok(())
     }
 
-    pub(super) fn stale_dependents(&mut self, changed: &str, delta: &mut IncrementalDelta) {
+    pub(super) fn stale_dependents(
+        &mut self,
+        changed: &str,
+        delta: &mut IncrementalDelta,
+    ) -> Result<(), String> {
         let mut frontier = vec![opaque_identity(changed)];
         let mut visited = BTreeSet::new();
         while let Some(subject) = frontier.pop() {
@@ -163,11 +180,15 @@ impl IncrementalReasoningIndex {
                 .map(|(id, _)| id.clone())
                 .collect::<Vec<_>>();
             for dependent in dependents {
-                if self.stale_materializations.insert(dependent.clone()) {
+                if self
+                    .fire(&dependent, MaterializationEvent::Invalidate)
+                    .map_err(refused)?
+                {
                     delta.newly_stale.insert(dependent.clone());
                 }
                 frontier.push(dependent);
             }
         }
+        Ok(())
     }
 }

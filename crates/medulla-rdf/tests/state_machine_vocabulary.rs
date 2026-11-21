@@ -1616,3 +1616,17 @@ fn application_admission_machine_matches_edge_table() {
 fn application_admission_machine_classes_extend_core() {
     sm::assert_extends_core("ApplicationAdmission");
 }
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
+#[test]
+fn materialization_status_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_types::materialization_status_machine::MATERIALIZATION_STATUS_MACHINE,
+    );
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
+#[test]
+fn materialization_status_machine_classes_extend_core() {
+    sm::assert_extends_core("MaterializationStatus");
+}

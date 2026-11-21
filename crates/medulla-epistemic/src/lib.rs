@@ -128,14 +128,13 @@ pub use tms::{
 #[cfg(feature = "epistemic-tms")]
 pub use incremental::{
     projection_identity, IncrementalDelta, IncrementalReasoningEvent, IncrementalReasoningIndex,
-    ProjectedMaterialization, ProjectedMaterializationStatus, ProjectionInvalidationKind,
-    ProjectionPosition, ReasoningProjectionWakeup, WakeupEventSource, MAX_INLINE_WAKEUP_EVENTS,
+    ProjectedMaterialization, ProjectionInvalidationKind, ProjectionPosition,
+    ReasoningProjectionWakeup, WakeupEventSource, MAX_INLINE_WAKEUP_EVENTS,
     REASONING_PROJECTION_VERSION,
 };
 #[cfg(feature = "epistemic-tms")]
 pub use recompute::{
-    register_from_provenance, resolve_provenance, ChangeEvent, Materialization,
-    MaterializationStatus, TruthMaintenance,
+    register_from_provenance, resolve_provenance, ChangeEvent, Materialization, TruthMaintenance,
 };
 
 // EPI-P3-4 — policy-aware proof redaction + selective disclosure (see `src/redact.rs`

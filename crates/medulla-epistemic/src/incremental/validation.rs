@@ -47,6 +47,7 @@ fn validate_schema_and_position(index: &IncrementalReasoningIndex) -> Result<(),
 }
 
 fn validate_materialization_state(index: &IncrementalReasoningIndex) -> Result<(), String> {
+    // A materialization has exactly one status, so "stale and retracted" is not representable.
     let materialization_state_is_known = index
         .materialization_deps
         .keys()
@@ -57,21 +58,10 @@ fn validate_materialization_state(index: &IncrementalReasoningIndex) -> Result<(
                 .values()
                 .flat_map(|values| values.iter()),
         )
-        .chain(index.stale_materializations.iter())
-        .chain(index.retracted_materializations.iter())
-        .all(|materialization| index.materializations.contains(materialization));
+        .all(|materialization| index.materializations.contains_key(materialization));
     if !materialization_state_is_known {
         return Err(
             "reasoning projection contains state for an unknown materialization".to_string(),
-        );
-    }
-    if index
-        .stale_materializations
-        .iter()
-        .any(|materialization| index.retracted_materializations.contains(materialization))
-    {
-        return Err(
-            "reasoning projection materialization cannot be stale and retracted".to_string(),
         );
     }
     Ok(())
@@ -82,7 +72,7 @@ fn valid_ref(value: &str) -> bool {
 }
 
 fn validate_opaque_references(index: &IncrementalReasoningIndex) -> Result<(), String> {
-    let all_refs_valid = index.materializations.iter().all(|value| valid_ref(value))
+    let all_refs_valid = index.materializations.keys().all(|value| valid_ref(value))
         && index
             .materialization_deps
             .iter()
@@ -111,12 +101,7 @@ fn validate_opaque_references(index: &IncrementalReasoningIndex) -> Result<(), S
             .all(|(source, targets)| {
                 valid_ref(source) && targets.iter().all(|target| valid_ref(target))
             })
-        && index
-            .stale_materializations
-            .iter()
-            .chain(index.retracted_materializations.iter())
-            .chain(index.recompute_fences.keys())
-            .all(|value| valid_ref(value));
+        && index.recompute_fences.keys().all(|value| valid_ref(value));
     if !all_refs_valid {
         return Err("reasoning projection contains a non-opaque identity".to_string());
     }
@@ -209,7 +194,7 @@ fn validate_recompute_fences(index: &IncrementalReasoningIndex) -> Result<(), St
         .recompute_fences
         .iter()
         .any(|(materialization, epoch)| {
-            !index.materializations.contains(materialization)
+            !index.materializations.contains_key(materialization)
                 || *epoch == 0
                 || *epoch > index.recompute_epoch
         });

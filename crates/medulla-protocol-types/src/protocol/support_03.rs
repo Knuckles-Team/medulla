@@ -17,6 +17,13 @@ pub struct RecomputeMaterializationResult {
     pub projection_pending: bool,
 }
 
+/// The `status` of a `RecomputeMaterializationResult` whose recompute intent is committed
+/// but whose durable projection image is not yet acknowledged (`projection_pending`). It is
+/// a rendering for that pending answer, not a materialization status
+/// (MEDULLA-INCREMENTAL-VIEWS-R016.1).
+#[cfg(feature = "epistemic")]
+pub const RECOMPUTE_QUEUED_STATUS: &str = "Queued";
+
 /// Materialized result of a `Method::MaterializationStatus` run (Seam 3). `status`
 /// is one of `"Fresh"`/`"Stale"`/`"Retracted"`, or `None` when `id` was never
 /// registered (or a build without `epistemic-tms` never populates the index).

@@ -19,6 +19,8 @@ pub mod profile_grant_machine;
 pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
+// MEDULLA-INCREMENTAL-VIEWS-R016.1 — the materialization status as one explicit state machine.
+pub mod materialization_status_machine;
 pub mod edit_machine;
 pub mod gap_machine;
 // MEDULLA-DATAPLAT-VOCAB-R009 — the data-platform lifecycles as explicit state machines.

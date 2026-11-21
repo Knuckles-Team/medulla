@@ -2,20 +2,24 @@ use std::collections::BTreeSet;
 
 use medulla_graph_core::graph::GraphView;
 use medulla_protocol_types::protocol::Method;
+use medulla_types::materialization_status_machine::{
+    MaterializationEvent, MaterializationStatus,
+};
 
 use super::{
-    opaque_identity, IncrementalDelta, IncrementalReasoningIndex, ProjectionInvalidationKind,
-    ProjectionPosition,
+    opaque_identity, refused, IncrementalDelta, IncrementalReasoningIndex,
+    ProjectionInvalidationKind, ProjectionPosition,
 };
 
 impl IncrementalReasoningIndex {
     /// One-time bootstrap when no projection snapshot exists. Unsupported or corrupt
     /// persisted snapshots are rejected by the current reader. Steady-state updates
-    /// are exclusively change-driven through [`Self::apply_batch`].
-    pub fn from_graph_view(view: &GraphView) -> Self {
+    /// are exclusively change-driven through [`Self::apply_batch`]. A machine refusal
+    /// while registering a materialization fails the bootstrap.
+    pub fn from_graph_view(view: &GraphView) -> Result<Self, String> {
         let mut index = Self::default();
         for node_id in view.node_properties.keys() {
-            index.register_from_graph_view(view, node_id);
+            index.register_from_graph_view(view, node_id)?;
         }
         // A `(source, target)` pair may carry several parallel property entries —
         // e.g. a provenance `GENERATED_BY` edge AND a separate epistemic `SUPPORTS`
@@ -26,10 +30,10 @@ impl IncrementalReasoningIndex {
         // `relationship`, so visiting every version is the correct, non-lossy read.
         for ((source, target), versions) in &view.edge_properties {
             for properties in versions {
-                index.add_edge(source, target, properties);
+                index.add_edge(source, target, properties)?;
             }
         }
-        index
+        Ok(index)
     }
 
     /// Apply one committed batch exactly once. Replaying the same outbox lease is
@@ -44,7 +48,7 @@ impl IncrementalReasoningIndex {
         };
         let mut delta = IncrementalDelta::default();
         for method in methods {
-            apply_method(self, method, &mut delta);
+            apply_method(self, method, &mut delta)?;
         }
         self.position = Some(position);
         Ok(delta)
@@ -64,8 +68,13 @@ impl IncrementalReasoningIndex {
             .unwrap_or_default()
     }
 
-    pub fn stale_materializations(&self) -> &BTreeSet<String> {
-        &self.stale_materializations
+    /// The opaque refs of every stale materialization, in key order.
+    pub fn stale_materialization_refs(&self) -> Vec<String> {
+        self.materializations
+            .iter()
+            .filter(|(_, status)| **status == MaterializationStatus::Stale)
+            .map(|(node_ref, _)| node_ref.clone())
+            .collect()
     }
 }
 
@@ -73,16 +82,14 @@ fn apply_method(
     index: &mut IncrementalReasoningIndex,
     method: &Method,
     delta: &mut IncrementalDelta,
-) {
+) -> Result<(), String> {
     match method {
         Method::AddNode {
             node_id,
             properties_msgpack,
         } => apply_add_node(index, node_id, properties_msgpack, delta),
         Method::RemoveNode { node_id } => apply_remove_node(index, node_id, delta),
-        Method::CompareAndSetNodeFields { node_id, .. } => {
-            index.stale_dependents(node_id, delta);
-        }
+        Method::CompareAndSetNodeFields { node_id, .. } => index.stale_dependents(node_id, delta),
         Method::AddEdge {
             source_id,
             target_id,
@@ -93,9 +100,9 @@ fn apply_method(
             target_id,
         } => apply_remove_edge(index, source_id, target_id, delta),
         Method::ApplyMutation { event_type, query } => {
-            apply_invalidation(index, event_type, query, delta);
+            apply_invalidation(index, event_type, query, delta)
         }
-        _ => {}
+        _ => Ok(()),
     }
 }
 
@@ -104,29 +111,25 @@ fn apply_add_node(
     node_id: &str,
     properties: &[u8],
     delta: &mut IncrementalDelta,
-) {
-    index.stale_dependents(node_id, delta);
-    index.register_materialization(node_id, properties);
+) -> Result<(), String> {
+    index.stale_dependents(node_id, delta)?;
+    index.register_materialization(node_id, properties)
 }
 
 fn apply_remove_node(
     index: &mut IncrementalReasoningIndex,
     node_id: &str,
     delta: &mut IncrementalDelta,
-) {
+) -> Result<(), String> {
     let node_ref = opaque_identity(node_id);
-    let was_materialization = index.materializations.contains(&node_ref);
-    index.remove_incident(node_id, delta);
+    index.remove_incident(node_id, delta)?;
     index.materialization_deps.remove(&node_ref);
     index.remove_materialization_generator(&node_ref);
-    index.stale_materializations.remove(&node_ref);
-    if was_materialization {
-        index.retracted_materializations.insert(node_ref);
-    } else {
-        index.materializations.remove(&node_ref);
-        index.retracted_materializations.remove(&node_ref);
-    }
-    index.stale_dependents(node_id, delta);
+    // Removing a materialization retracts it; a node that is not one has no status to write.
+    index
+        .fire(&node_ref, MaterializationEvent::Retract)
+        .map_err(refused)?;
+    index.stale_dependents(node_id, delta)
 }
 
 fn apply_add_edge(
@@ -135,13 +138,14 @@ fn apply_add_edge(
     target_id: &str,
     properties: &[u8],
     delta: &mut IncrementalDelta,
-) {
-    if index.add_edge(source_id, target_id, properties) {
+) -> Result<(), String> {
+    if index.add_edge(source_id, target_id, properties)? {
         delta.edge_changes += 1;
-        index.stale_dependents(&format!("{source_id}->{target_id}"), delta);
-        index.stale_dependents(source_id, delta);
-        index.stale_dependents(target_id, delta);
+        index.stale_dependents(&format!("{source_id}->{target_id}"), delta)?;
+        index.stale_dependents(source_id, delta)?;
+        index.stale_dependents(target_id, delta)?;
     }
+    Ok(())
 }
 
 fn apply_remove_edge(
@@ -149,13 +153,13 @@ fn apply_remove_edge(
     source_id: &str,
     target_id: &str,
     delta: &mut IncrementalDelta,
-) {
-    if index.remove_edge(source_id, target_id) {
+) -> Result<(), String> {
+    if index.remove_edge(source_id, target_id)? {
         delta.edge_changes += 1;
     }
-    index.stale_dependents(&format!("{source_id}->{target_id}"), delta);
-    index.stale_dependents(source_id, delta);
-    index.stale_dependents(target_id, delta);
+    index.stale_dependents(&format!("{source_id}->{target_id}"), delta)?;
+    index.stale_dependents(source_id, delta)?;
+    index.stale_dependents(target_id, delta)
 }
 
 fn apply_invalidation(
@@ -163,7 +167,7 @@ fn apply_invalidation(
     event_type: &str,
     query: &str,
     delta: &mut IncrementalDelta,
-) {
+) -> Result<(), String> {
     let kind = match event_type {
         "policy_changed" => Some(ProjectionInvalidationKind::PolicyChanged),
         "model_retired" => Some(ProjectionInvalidationKind::ModelRetired),
@@ -171,6 +175,7 @@ fn apply_invalidation(
         _ => None,
     };
     if let Some(kind) = kind {
-        delta.newly_stale.extend(index.invalidate(kind, query));
+        delta.newly_stale.extend(index.invalidate(kind, query)?);
     }
+    Ok(())
 }

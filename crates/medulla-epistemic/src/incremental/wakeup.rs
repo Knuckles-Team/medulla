@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_graph_core::graph::GraphView;
+use medulla_types::materialization_status_machine::MaterializationEvent;
 
 use super::{
-    opaque_identity, IncrementalDelta, IncrementalReasoningEvent, IncrementalReasoningIndex,
+    opaque_identity, refused, IncrementalDelta, IncrementalReasoningEvent, IncrementalReasoningIndex,
     ProjectionInvalidationKind, ProjectionPosition, ReasoningProjectionWakeup, WakeupEventSource,
 };
 
@@ -38,7 +39,7 @@ impl IncrementalReasoningIndex {
                 apply_event(self, event, &mut context)?;
             }
         }
-        let delta = complete_wakeup(self, view, touched_nodes, touched_edges, delta);
+        let delta = complete_wakeup(self, view, touched_nodes, touched_edges, delta)?;
         self.position = Some(position);
         Ok(delta)
     }
@@ -75,7 +76,7 @@ fn apply_event(
             apply_node_removed(index, node_ref, context)
         }
         IncrementalReasoningEvent::NodeChanged { node_ref } => {
-            index.stale_dependents(node_ref, context.delta);
+            index.stale_dependents(node_ref, context.delta)?;
             context.touched_nodes.insert(node_ref.clone());
             Ok(())
         }
@@ -116,13 +117,13 @@ fn apply_node_upserted(
     is_materialization: bool,
     context: &mut WakeupContext<'_>,
 ) -> Result<(), String> {
-    index.stale_dependents(node_ref, context.delta);
+    index.stale_dependents(node_ref, context.delta)?;
     if is_materialization {
         index.register_materialization_refs(
             node_ref,
             dependency_refs.clone(),
             generator_ref.clone(),
-        );
+        )?;
     } else {
         index.clear_materialization_state(node_ref);
     }
@@ -135,20 +136,14 @@ fn apply_node_removed(
     node_ref: &str,
     context: &mut WakeupContext<'_>,
 ) -> Result<(), String> {
-    let was_materialization = index.materializations.contains(node_ref);
-    index.remove_incident(node_ref, context.delta);
+    index.remove_incident(node_ref, context.delta)?;
     index.materialization_deps.remove(node_ref);
     index.remove_materialization_generator(node_ref);
-    index.stale_materializations.remove(node_ref);
-    if was_materialization {
-        index
-            .retracted_materializations
-            .insert(node_ref.to_string());
-    } else {
-        index.materializations.remove(node_ref);
-        index.retracted_materializations.remove(node_ref);
-    }
-    index.stale_dependents(node_ref, context.delta);
+    // Removing a materialization retracts it; a node that is not one has no status to write.
+    index
+        .fire(node_ref, MaterializationEvent::Retract)
+        .map_err(refused)?;
+    index.stale_dependents(node_ref, context.delta)?;
     context.touched_nodes.insert(node_ref.to_string());
     Ok(())
 }
@@ -161,10 +156,10 @@ fn apply_edge_upserted(
     context: &mut WakeupContext<'_>,
 ) -> Result<(), String> {
     if let Some(relationship) = relationship {
-        index.add_edge_relationship(source_ref, target_ref, relationship);
+        index.add_edge_relationship(source_ref, target_ref, relationship)?;
     }
-    index.stale_dependents(source_ref, context.delta);
-    index.stale_dependents(target_ref, context.delta);
+    index.stale_dependents(source_ref, context.delta)?;
+    index.stale_dependents(target_ref, context.delta)?;
     context
         .touched_edges
         .insert((source_ref.to_string(), target_ref.to_string()));
@@ -177,11 +172,11 @@ fn apply_edge_removed(
     target_ref: &str,
     context: &mut WakeupContext<'_>,
 ) -> Result<(), String> {
-    if index.remove_edge_refs(source_ref, target_ref) {
+    if index.remove_edge_refs(source_ref, target_ref)? {
         context.delta.edge_changes += 1;
     }
-    index.stale_dependents(source_ref, context.delta);
-    index.stale_dependents(target_ref, context.delta);
+    index.stale_dependents(source_ref, context.delta)?;
+    index.stale_dependents(target_ref, context.delta)?;
     context
         .touched_edges
         .insert((source_ref.to_string(), target_ref.to_string()));
@@ -202,7 +197,7 @@ fn apply_invalidation(
     };
     delta
         .newly_stale
-        .extend(index.invalidate(kind, subject_ref));
+        .extend(index.invalidate(kind, subject_ref)?);
     Ok(())
 }
 
@@ -211,14 +206,15 @@ fn apply_invalidate_all(
     context: &mut WakeupContext<'_>,
 ) -> Result<(), String> {
     let prior_epoch = index.recompute_epoch;
-    let mut rebuilt = IncrementalReasoningIndex::from_graph_view(context.view);
+    let mut rebuilt = IncrementalReasoningIndex::from_graph_view(context.view)?;
     rebuilt.recompute_epoch = prior_epoch;
-    for materialization in &rebuilt.materializations {
+    let materializations: Vec<String> = rebuilt.materializations.keys().cloned().collect();
+    for materialization in materializations {
         if rebuilt
-            .stale_materializations
-            .insert(materialization.clone())
+            .fire(&materialization, MaterializationEvent::Invalidate)
+            .map_err(refused)?
         {
-            context.delta.newly_stale.insert(materialization.clone());
+            context.delta.newly_stale.insert(materialization);
         }
     }
     *index = rebuilt;
@@ -233,7 +229,7 @@ fn complete_wakeup(
     touched_nodes: BTreeSet<String>,
     touched_edges: BTreeSet<(String, String)>,
     delta: IncrementalDelta,
-) -> IncrementalDelta {
+) -> Result<IncrementalDelta, String> {
     let source_nodes = view
         .node_properties
         .keys()
@@ -241,11 +237,11 @@ fn complete_wakeup(
         .collect::<BTreeMap<_, _>>();
     for node_ref in touched_nodes {
         if let Some(node_id) = source_nodes.get(&node_ref) {
-            index.refresh_from_graph_view(view, node_id);
+            index.refresh_from_graph_view(view, node_id)?;
         }
     }
     for (source_ref, target_ref) in touched_edges {
-        index.remove_edge_refs(&source_ref, &target_ref);
+        index.remove_edge_refs(&source_ref, &target_ref)?;
         let Some(source_id) = source_nodes.get(&source_ref) else {
             continue;
         };
@@ -257,8 +253,8 @@ fn complete_wakeup(
             .get(&(source_id.to_string(), target_id.to_string()))
             .and_then(|versions| versions.last())
         {
-            index.add_edge(source_id, target_id, properties);
+            index.add_edge(source_id, target_id, properties)?;
         }
     }
-    delta
+    Ok(delta)
 }

@@ -395,7 +395,8 @@ async fn initialize_index(
         match load_index(persist_dir.as_deref(), &graph_fname) {
             Ok(Some(_)) => Ok(true),
             Ok(None) => {
-                let index = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot());
+                let index =
+                    IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot())?;
                 persist_index(persist_dir.as_deref(), &graph_fname, &index)?;
                 Ok(true)
             }
@@ -580,7 +581,7 @@ async fn apply_lease_and_publish(
         persist_index(persist_dir.as_deref(), &graph_fname, &index)?;
         Ok((
             delta.newly_stale.len(),
-            index.stale_materializations().len(),
+            index.stale_materialization_refs().len(),
         ))
     })
     .await
@@ -654,6 +655,7 @@ fn snapshot_path(persist_dir: Option<&str>, graph_fname: &str) -> Option<PathBuf
     Some(
         Path::new(root)
             .join("reasoning-projections")
+            .join(format!("v{}", medulla_epistemic::REASONING_PROJECTION_VERSION))
             .join(format!("{digest}.msgpack")),
     )
 }
@@ -798,7 +800,7 @@ pub async fn materialization_status(
     node_id: &str,
 ) -> Result<
     (
-        Option<medulla_epistemic::ProjectedMaterializationStatus>,
+        Option<medulla_types::materialization_status_machine::MaterializationStatus>,
         u64,
     ),
     String,
@@ -821,7 +823,7 @@ pub async fn stale_materializations(
         .as_ref()
         .map_or(0, |position| position.source_graph_version);
     Ok((
-        index.stale_materializations().iter().cloned().collect(),
+        index.stale_materialization_refs(),
         source_graph_version,
     ))
 }
@@ -858,7 +860,7 @@ pub async fn recompute_materialization(
         Ok((
             materialization,
             fence_epoch,
-            index.stale_materializations().len(),
+            index.stale_materialization_refs().len(),
         ))
     })
     .await?;
@@ -971,7 +973,10 @@ fn prepare_snapshot_directory(root: &Path, parent: &Path) -> Result<(), String> 
     }
     std::fs::create_dir_all(parent)
         .map_err(|_| "reasoning projection snapshot directory is unavailable".to_string())?;
-    for directory in [root, parent] {
+    // The versioned directory sits under `reasoning-projections`; both are checked, so an
+    // image of an older version is never read and neither level can be a link.
+    let projections = parent.parent().unwrap_or(parent);
+    for directory in [root, projections, parent] {
         let metadata = std::fs::symlink_metadata(directory)
             .map_err(|_| "reasoning projection snapshot directory is unavailable".to_string())?;
         if metadata.file_type().is_symlink() || !metadata.is_dir() {
@@ -1170,7 +1175,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{Condvar, Mutex as StdMutex};
 
-    use medulla_epistemic::ProjectedMaterializationStatus;
+    use medulla_types::materialization_status_machine::MaterializationStatus;
     use medulla_protocol_types::protocol::Method;
 
     #[cfg(feature = "redb")]
@@ -1609,7 +1614,7 @@ mod tests {
                 .unwrap();
         assert_eq!(
             materialization.status,
-            ProjectedMaterializationStatus::Fresh
+            MaterializationStatus::Fresh
         );
         assert_eq!(fence_epoch, 1);
         assert_eq!(
@@ -1617,7 +1622,7 @@ mod tests {
                 .await
                 .unwrap()
                 .status_of("derived"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
         let _ = std::fs::remove_dir_all(root);
     }
@@ -2106,7 +2111,7 @@ mod tests {
         assert_eq!(rebuilt.status_of("retired-derived"), None);
         assert_eq!(
             rebuilt.status_of("fresh-derived"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
 
         subscribed_graphs().write().await.remove(&graph_fname);

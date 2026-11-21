@@ -9439,3 +9439,94 @@
     :fromState :ApplicationAdmissionMachine_ParityConfirmed ;
     :toState :ApplicationAdmissionMachine_RolledBack ;
     :firedBy :ApplicationAdmissionMachine_Event_RollBack .
+
+# spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
+# The MaterializationStatus machine: a materialization is fresh, stale or retracted. The Rust
+# edge table MATERIALIZATION_STATUS_MACHINE is the same table; the ontology test asserts equal
+# edge sets.
+
+:MaterializationStatusState a owl:Class ;
+    rdfs:label "Materialization Status State" ;
+    rdfs:comment "A state of the MaterializationStatus machine." ;
+    rdfs:subClassOf :State .
+
+:MaterializationStatusTerminalState a owl:Class ;
+    rdfs:label "Materialization Status Terminal State" ;
+    rdfs:comment "A terminal state of the MaterializationStatus machine; the machine has none." ;
+    rdfs:subClassOf :TerminalState, :MaterializationStatusState .
+
+:MaterializationStatusTransition a owl:Class ;
+    rdfs:label "Materialization Status Transition" ;
+    rdfs:comment "A transition of the MaterializationStatus machine." ;
+    rdfs:subClassOf :Transition .
+
+:MaterializationStatusEvent a owl:Class ;
+    rdfs:label "Materialization Status Event" ;
+    rdfs:comment "An event of the MaterializationStatus machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MaterializationStatusGuard a owl:Class ;
+    rdfs:label "Materialization Status Guard" ;
+    rdfs:comment "A guard of the MaterializationStatus machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MaterializationStatusMachine a :StateMachine ;
+    rdfs:label "Materialization status machine" ;
+    :initialState :MaterializationStatusMachine_Fresh ;
+    :hasState :MaterializationStatusMachine_Fresh, :MaterializationStatusMachine_Stale, :MaterializationStatusMachine_Retracted .
+
+:MaterializationStatusMachine_Fresh a :MaterializationStatusState ;
+    rdfs:label "Materialization Fresh" ;
+    :storedForm "fresh" .
+
+:MaterializationStatusMachine_Stale a :MaterializationStatusState ;
+    rdfs:label "Materialization Stale" ;
+    :storedForm "stale" .
+
+:MaterializationStatusMachine_Retracted a :MaterializationStatusState ;
+    rdfs:label "Materialization Retracted" ;
+    :storedForm "retracted" .
+
+:MaterializationStatusMachine_Event_Invalidate a :MaterializationStatusEvent ;
+    rdfs:label "Materialization Invalidate" .
+
+:MaterializationStatusMachine_Event_Retract a :MaterializationStatusEvent ;
+    rdfs:label "Materialization Retract" .
+
+:MaterializationStatusMachine_Event_Register a :MaterializationStatusEvent ;
+    rdfs:label "Materialization Register" .
+
+:MaterializationStatusMachine_M01 a :MaterializationStatusTransition ;
+    rdfs:label "Materialization M01" ;
+    :edgeId "M01" ;
+    :fromState :MaterializationStatusMachine_Fresh ;
+    :toState :MaterializationStatusMachine_Stale ;
+    :firedBy :MaterializationStatusMachine_Event_Invalidate .
+
+:MaterializationStatusMachine_M02 a :MaterializationStatusTransition ;
+    rdfs:label "Materialization M02" ;
+    :edgeId "M02" ;
+    :fromState :MaterializationStatusMachine_Fresh ;
+    :toState :MaterializationStatusMachine_Retracted ;
+    :firedBy :MaterializationStatusMachine_Event_Retract .
+
+:MaterializationStatusMachine_M03 a :MaterializationStatusTransition ;
+    rdfs:label "Materialization M03" ;
+    :edgeId "M03" ;
+    :fromState :MaterializationStatusMachine_Stale ;
+    :toState :MaterializationStatusMachine_Retracted ;
+    :firedBy :MaterializationStatusMachine_Event_Retract .
+
+:MaterializationStatusMachine_M04 a :MaterializationStatusTransition ;
+    rdfs:label "Materialization M04" ;
+    :edgeId "M04" ;
+    :fromState :MaterializationStatusMachine_Stale ;
+    :toState :MaterializationStatusMachine_Fresh ;
+    :firedBy :MaterializationStatusMachine_Event_Register .
+
+:MaterializationStatusMachine_M05 a :MaterializationStatusTransition ;
+    rdfs:label "Materialization M05" ;
+    :edgeId "M05" ;
+    :fromState :MaterializationStatusMachine_Retracted ;
+    :toState :MaterializationStatusMachine_Fresh ;
+    :firedBy :MaterializationStatusMachine_Event_Register .

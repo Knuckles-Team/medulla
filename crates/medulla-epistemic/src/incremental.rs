@@ -7,11 +7,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_types::materialization_status_machine::MaterializationStatus;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// Current durable schema for the compact reasoning projection snapshot.
-pub const REASONING_PROJECTION_VERSION: u16 = 4;
+pub const REASONING_PROJECTION_VERSION: u16 = 5;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -31,14 +32,14 @@ pub struct IncrementalReasoningIndex {
     causal_out: BTreeMap<String, BTreeSet<String>>,
     conflicts: BTreeMap<String, BTreeSet<String>>,
     provenance_edges: BTreeMap<(String, String), String>,
-    materializations: BTreeSet<String>,
+    /// Opaque materialization ref to its status: the one persisted status field, written
+    /// only by `fire` (`incremental/materializations.rs`, MEDULLA-INCREMENTAL-VIEWS-R016.1).
+    materializations: BTreeMap<String, MaterializationStatus>,
     materialization_deps: BTreeMap<String, BTreeSet<String>>,
     materialization_generators: BTreeMap<String, String>,
     /// Durable reverse of `materialization_generators`, maintained in the same
     /// snapshot mutation so generator invalidation never scans all materializations.
     generator_materializations: BTreeMap<String, BTreeSet<String>>,
-    stale_materializations: BTreeSet<String>,
-    retracted_materializations: BTreeSet<String>,
     recompute_epoch: u64,
     recompute_fences: BTreeMap<String, u64>,
 }
@@ -52,12 +53,10 @@ impl Default for IncrementalReasoningIndex {
             causal_out: BTreeMap::new(),
             conflicts: BTreeMap::new(),
             provenance_edges: BTreeMap::new(),
-            materializations: BTreeSet::new(),
+            materializations: BTreeMap::new(),
             materialization_deps: BTreeMap::new(),
             materialization_generators: BTreeMap::new(),
             generator_materializations: BTreeMap::new(),
-            stale_materializations: BTreeSet::new(),
-            retracted_materializations: BTreeSet::new(),
             recompute_epoch: 0,
             recompute_fences: BTreeMap::new(),
         }
@@ -70,17 +69,6 @@ pub struct IncrementalDelta {
     pub newly_stale: BTreeSet<String>,
 }
 
-/// Durable status served from the incremental projection. Source graph identifiers
-/// never enter this value; callers address a materialization by its graph id and the
-/// projection resolves it to the same domain-separated opaque reference it persists.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProjectedMaterializationStatus {
-    Fresh,
-    Stale,
-    Retracted,
-}
-
 /// Privacy-safe materialization metadata returned by projection reads/recompute.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -88,7 +76,10 @@ pub struct ProjectedMaterialization {
     pub materialization_ref: String,
     pub dependency_refs: Vec<String>,
     pub generator_ref: Option<String>,
-    pub status: ProjectedMaterializationStatus,
+    /// Served from the incremental projection. Source graph identifiers never enter
+    /// this value; callers address a materialization by its graph id and the projection
+    /// resolves it to the same domain-separated opaque reference it persists.
+    pub status: MaterializationStatus,
     pub source_graph_version: u64,
 }
 
@@ -112,6 +103,11 @@ pub use events::{
     IncrementalReasoningEvent, ReasoningProjectionWakeup, WakeupEventSource,
     MAX_INLINE_WAKEUP_EVENTS,
 };
+
+/// A machine refusal as the `String` error every projection writer returns.
+fn refused(error: medulla_types::transition_refused::TransitionRefused) -> String {
+    error.to_string()
+}
 
 /// Stable domain-separated projection identity. Calling it with an identity that
 /// is already in this namespace is idempotent, which lets transitive dependency
@@ -278,7 +274,7 @@ mod tests {
             .unwrap(),
         );
         let view = core.analysis_snapshot();
-        let mut index = IncrementalReasoningIndex::from_graph_view(&view);
+        let mut index = IncrementalReasoningIndex::from_graph_view(&view).unwrap();
         let wakeup = ReasoningProjectionWakeup::new(
             1,
             "b".repeat(64),
@@ -302,7 +298,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Stale)
+            Some(MaterializationStatus::Stale)
         );
     }
 
@@ -322,7 +318,7 @@ mod tests {
             .unwrap(),
         );
         let view = core.analysis_snapshot();
-        let mut index = IncrementalReasoningIndex::from_graph_view(&view);
+        let mut index = IncrementalReasoningIndex::from_graph_view(&view).unwrap();
         index
             .apply_batch(
                 ProjectionPosition {
@@ -333,10 +329,10 @@ mod tests {
                 &[],
             )
             .unwrap();
-        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base");
+        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base").unwrap();
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Stale)
+            Some(MaterializationStatus::Stale)
         );
 
         // The generic committed-operation outbox row precedes the projection
@@ -374,7 +370,7 @@ mod tests {
 
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
         assert_eq!(
             index
@@ -499,12 +495,14 @@ mod tests {
         let mut restored: IncrementalReasoningIndex = rmp_serde::from_slice(&bytes).unwrap();
         restored.validate().unwrap();
         assert_eq!(
-            restored.invalidate(ProjectionInvalidationKind::ModelRetired, "model-v1"),
+            restored
+                .invalidate(ProjectionInvalidationKind::ModelRetired, "model-v1")
+                .unwrap(),
             BTreeSet::from([opaque_identity("derived-a"), opaque_identity("derived-b"),])
         );
         assert_eq!(
             restored.status_of("derived-c"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
 
         let derived_a = opaque_identity("derived-a");
@@ -512,13 +510,14 @@ mod tests {
             &derived_a,
             BTreeSet::new(),
             Some("model-v2".to_string()),
-        );
+        )
+        .unwrap();
         let remaining_model_v1_output = BTreeSet::from([opaque_identity("derived-b")]);
         assert_eq!(
             restored.generator_materializations.get(&model_v1),
             Some(&remaining_model_v1_output)
         );
-        restored.refresh_materialization("derived-b", None);
+        restored.refresh_materialization("derived-b", None).unwrap();
         assert!(!restored.generator_materializations.contains_key(&model_v1));
         restored.validate().unwrap();
     }
@@ -601,7 +600,7 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot());
+        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
 
         let mut incremental = IncrementalReasoningIndex::default();
         incremental
@@ -650,7 +649,7 @@ mod tests {
             )
             .unwrap();
         }
-        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot());
+        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
 
         // Deliberately reverse source-graph order. Incremental arrival order must
         // not alter the canonical generator or either reverse dependency index.
@@ -704,7 +703,8 @@ mod tests {
             &materialization,
             BTreeSet::new(),
             Some("model".to_string()),
-        );
+        )
+        .unwrap();
         index.generator_materializations.clear();
         assert!(index
             .validate()
@@ -719,7 +719,8 @@ mod tests {
             &opaque_identity("derived"),
             &opaque_identity("model"),
             "GENERATED_BY",
-        );
+        )
+        .unwrap();
         index.remove_materialization_generator(&opaque_identity("derived"));
         assert!(index
             .validate()
@@ -750,14 +751,16 @@ mod tests {
             .unwrap();
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
 
-        let changed = index.invalidate(ProjectionInvalidationKind::PolicyChanged, "policy-scope");
+        let changed = index
+            .invalidate(ProjectionInvalidationKind::PolicyChanged, "policy-scope")
+            .unwrap();
         assert_eq!(changed, BTreeSet::from([opaque_identity("derived")]));
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Stale)
+            Some(MaterializationStatus::Stale)
         );
 
         let fence = index.claim_recompute("derived", 1).unwrap();
@@ -774,11 +777,13 @@ mod tests {
             .unwrap();
         assert_eq!(
             index.status_of("derived"),
-            Some(ProjectedMaterializationStatus::Fresh)
+            Some(MaterializationStatus::Fresh)
         );
 
         assert_eq!(
-            index.invalidate(ProjectionInvalidationKind::ModelRetired, "model-v1"),
+            index
+                .invalidate(ProjectionInvalidationKind::ModelRetired, "model-v1")
+                .unwrap(),
             BTreeSet::from([opaque_identity("derived")])
         );
         let fence = index.claim_recompute("derived", 1).unwrap();
@@ -791,7 +796,9 @@ mod tests {
             )
             .unwrap();
         assert_eq!(
-            index.invalidate(ProjectionInvalidationKind::OntologyEvolved, "ontology-v2",),
+            index
+                .invalidate(ProjectionInvalidationKind::OntologyEvolved, "ontology-v2")
+                .unwrap(),
             BTreeSet::from([opaque_identity("derived")])
         );
     }
@@ -815,7 +822,7 @@ mod tests {
                 }],
             )
             .unwrap();
-        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base");
+        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base").unwrap();
         let fence = index.claim_recompute("derived", 1).unwrap();
         index
             .apply_batch(
@@ -836,5 +843,152 @@ mod tests {
             )
             .unwrap_err()
             .contains("STALE_RECOMPUTE_FENCE"));
+    }
+
+    fn position(batch: &str, version: u64) -> ProjectionPosition {
+        ProjectionPosition {
+            batch_id: batch.into(),
+            ordinal: 0,
+            source_graph_version: version,
+        }
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
+    #[test]
+    fn invalidating_a_retracted_materialization_keeps_it_retracted() {
+        use medulla_types::materialization_status_machine::MaterializationEvent;
+
+        let mut index = IncrementalReasoningIndex::default();
+        let node = |id: &str, properties: serde_json::Value| Method::AddNode {
+            node_id: id.into(),
+            properties_msgpack: rmp_serde::to_vec_named(&properties).unwrap(),
+        };
+        index
+            .apply_batch(
+                position("create", 1),
+                &[
+                    node("base", serde_json::json!({})),
+                    node("derived", serde_json::json!({"invalidation_deps": ["base"]})),
+                ],
+            )
+            .unwrap();
+        assert_eq!(
+            index.status_of("derived"),
+            Some(MaterializationStatus::Fresh)
+        );
+
+        // Removing the materialization retracts it.
+        index
+            .apply_batch(
+                position("remove", 2),
+                &[Method::RemoveNode {
+                    node_id: "derived".into(),
+                }],
+            )
+            .unwrap();
+        assert_eq!(
+            index.status_of("derived"),
+            Some(MaterializationStatus::Retracted)
+        );
+
+        // Updating one of its inputs does not make it stale: retraction dominates.
+        index
+            .apply_batch(
+                position("update", 3),
+                &[Method::CompareAndSetNodeFields {
+                    node_id: "base".into(),
+                    conditions_msgpack: Vec::new(),
+                    updates_msgpack: Vec::new(),
+                }],
+            )
+            .unwrap();
+        assert_eq!(
+            index.status_of("derived"),
+            Some(MaterializationStatus::Retracted)
+        );
+        // The writer itself answers the absorbed pairs without a transition.
+        let derived = opaque_identity("derived");
+        assert_eq!(index.fire(&derived, MaterializationEvent::Invalidate), Ok(false));
+        assert_eq!(index.fire(&derived, MaterializationEvent::Retract), Ok(false));
+        assert_eq!(index.fire("unknown", MaterializationEvent::Invalidate), Ok(false));
+        assert_eq!(
+            index.status_of("derived"),
+            Some(MaterializationStatus::Retracted)
+        );
+        index.validate().unwrap();
+    }
+
+    /// The source of every file under `src/incremental/` and of `src/recompute.rs`, with
+    /// each file's `#[cfg(test)]` module cut off.
+    fn status_writer_sources() -> Vec<(String, String)> {
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut paths: Vec<std::path::PathBuf> = std::fs::read_dir(src.join("incremental"))
+            .expect("src/incremental exists")
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "rs"))
+            .collect();
+        paths.push(src.join("recompute.rs"));
+        paths.sort();
+        paths
+            .into_iter()
+            .map(|path| {
+                let text = std::fs::read_to_string(&path).expect("a source file reads");
+                let code = text
+                    .split("#[cfg(test)]")
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                (path.file_name().unwrap().to_string_lossy().into_owned(), code)
+            })
+            .collect()
+    }
+
+    /// The lines of `code` outside any function named `fire`, with the line number.
+    fn lines_outside_fire(code: &str) -> Vec<(usize, &str)> {
+        let mut inside_fire = false;
+        let mut kept = Vec::new();
+        for (number, line) in code.lines().enumerate() {
+            let trimmed = line.trim_start();
+            let declares_function = trimmed.starts_with("fn ")
+                || trimmed.starts_with("pub fn ")
+                || trimmed.starts_with("pub(super) fn ")
+                || trimmed.starts_with("pub(crate) fn ");
+            if declares_function {
+                inside_fire = trimmed.contains(" fire(");
+            }
+            if !inside_fire {
+                kept.push((number + 1, line));
+            }
+        }
+        kept
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
+    #[test]
+    fn no_writer_sets_status_outside_fire() {
+        let sources = status_writer_sources();
+        let mut fire_definitions = 0;
+        let mut violations = Vec::new();
+        for (name, code) in &sources {
+            fire_definitions += code.matches("fn fire(").count();
+            for (number, line) in lines_outside_fire(code) {
+                let line = line.split("//").next().unwrap_or_default();
+                // An assignment (`status = ..`), a status placed into an entry
+                // (`status: MaterializationStatus::..`) or into a map (`insert(.., Status::..)`).
+                // A new entry takes `MATERIALIZATION_STATUS_MACHINE.initial`, which names no variant.
+                let assigns_status = line.contains(".status = ") || line.contains("status = ");
+                let places_a_status = line.contains("status: MaterializationStatus::")
+                    || (line.contains("insert(") && line.contains("MaterializationStatus::"));
+                if assigns_status || places_a_status {
+                    violations.push(format!("{name}:{number}: {}", line.trim()));
+                }
+            }
+        }
+        assert_eq!(fire_definitions, 2, "the durable and the in-memory `fire`");
+        assert!(
+            violations.is_empty(),
+            "a status is written outside `fire`: {violations:?}"
+        );
     }
 }

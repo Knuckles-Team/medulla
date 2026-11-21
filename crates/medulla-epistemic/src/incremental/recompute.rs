@@ -2,9 +2,13 @@ use std::collections::BTreeSet;
 
 use medulla_graph_core::graph::GraphView;
 
+use medulla_types::materialization_status_machine::{
+    MaterializationEvent, MaterializationStatus, MATERIALIZATION_STATUS_MACHINE,
+};
+
 use super::{
-    opaque_identity, IncrementalDelta, IncrementalReasoningIndex, ProjectedMaterialization,
-    ProjectedMaterializationStatus, ProjectionInvalidationKind, ProjectionPosition,
+    opaque_identity, refused, IncrementalDelta, IncrementalReasoningIndex,
+    ProjectedMaterialization, ProjectionInvalidationKind, ProjectionPosition,
 };
 
 impl IncrementalReasoningIndex {
@@ -32,22 +36,14 @@ impl IncrementalReasoningIndex {
         Ok(Some(position))
     }
 
-    pub fn status_of(&self, node_id: &str) -> Option<ProjectedMaterializationStatus> {
-        let node_ref = opaque_identity(node_id);
-        if self.retracted_materializations.contains(&node_ref) {
-            Some(ProjectedMaterializationStatus::Retracted)
-        } else if self.stale_materializations.contains(&node_ref) {
-            Some(ProjectedMaterializationStatus::Stale)
-        } else if self.materializations.contains(&node_ref) {
-            Some(ProjectedMaterializationStatus::Fresh)
-        } else {
-            None
-        }
+    pub fn status_of(&self, node_id: &str) -> Option<MaterializationStatus> {
+        self.materializations.get(&opaque_identity(node_id)).copied()
     }
+
 
     pub fn materialization(&self, node_id: &str) -> Option<ProjectedMaterialization> {
         let materialization_ref = opaque_identity(node_id);
-        let status = self.status_of(node_id)?;
+        let current = self.status_of(node_id)?;
         Some(ProjectedMaterialization {
             dependency_refs: self
                 .materialization_deps
@@ -61,7 +57,7 @@ impl IncrementalReasoningIndex {
                 .get(&materialization_ref)
                 .cloned(),
             materialization_ref,
-            status,
+            status: current,
             source_graph_version: self
                 .position
                 .as_ref()
@@ -85,9 +81,10 @@ impl IncrementalReasoningIndex {
             return Err("STALE_RECOMPUTE_FENCE: projection watermark changed".to_string());
         }
         let node_ref = opaque_identity(node_id);
-        if !self.stale_materializations.contains(&node_ref)
-            && !self.retracted_materializations.contains(&node_ref)
-        {
+        if !matches!(
+            self.materializations.get(&node_ref),
+            Some(MaterializationStatus::Stale | MaterializationStatus::Retracted)
+        ) {
             return Err("recompute requires a stale or retracted materialization".to_string());
         }
         self.recompute_epoch = self
@@ -121,14 +118,16 @@ impl IncrementalReasoningIndex {
         }
         match provenance {
             Some((dependencies, generator)) => {
-                self.register_materialization_refs(&node_ref, dependencies, generator);
+                self.register_materialization_refs(&node_ref, dependencies, generator)?;
             }
             None => {
-                self.materializations.insert(node_ref.clone());
                 self.materialization_deps.remove(&node_ref);
                 self.remove_materialization_generator(&node_ref);
-                self.stale_materializations.remove(&node_ref);
-                self.retracted_materializations.insert(node_ref.clone());
+                self.materializations
+                    .entry(node_ref.clone())
+                    .or_insert(MATERIALIZATION_STATUS_MACHINE.initial);
+                self.fire(&node_ref, MaterializationEvent::Retract)
+                    .map_err(refused)?;
             }
         }
         self.recompute_fences.remove(&node_ref);
@@ -185,11 +184,11 @@ impl IncrementalReasoningIndex {
         &mut self,
         kind: ProjectionInvalidationKind,
         subject: &str,
-    ) -> BTreeSet<String> {
+    ) -> Result<BTreeSet<String>, String> {
         let mut delta = IncrementalDelta::default();
         match kind {
             ProjectionInvalidationKind::PolicyChanged => {
-                self.stale_dependents(subject, &mut delta);
+                self.stale_dependents(subject, &mut delta)?;
             }
             ProjectionInvalidationKind::ModelRetired
             | ProjectionInvalidationKind::OntologyEvolved => {
@@ -200,14 +199,17 @@ impl IncrementalReasoningIndex {
                     .cloned()
                     .unwrap_or_default();
                 for materialization in generated {
-                    if self.stale_materializations.insert(materialization.clone()) {
+                    if self
+                        .fire(&materialization, MaterializationEvent::Invalidate)
+                        .map_err(refused)?
+                    {
                         delta.newly_stale.insert(materialization.clone());
                     }
-                    self.stale_dependents(&materialization, &mut delta);
+                    self.stale_dependents(&materialization, &mut delta)?;
                 }
             }
         }
-        delta.newly_stale
+        Ok(delta.newly_stale)
     }
 }
 

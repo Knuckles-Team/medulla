@@ -68,28 +68,14 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use medulla_graph_core::graph::GraphView;
+use medulla_types::materialization_status_machine::{
+    MaterializationEvent, MaterializationStatus, MATERIALIZATION_STATUS_MACHINE,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;
 use crate::incremental::remove_value;
 use crate::tms::{self, RetractionResult};
-
-/// Lifecycle state of one tracked [`Materialization`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MaterializationStatus {
-    /// Computed from its current `depends_on` set; nothing it depends on
-    /// (transitively) has changed since.
-    Fresh,
-    /// At least one input it (transitively) depends on changed since this was
-    /// computed — the current value is not to be trusted as-is, but has not been
-    /// thrown away: a [`TruthMaintenance::recompute`] may restore it (possibly to
-    /// the very same value), or dependency-directed retraction may still reinstate
-    /// what it depended on. Strictly transient — see module docs.
-    Stale,
-    /// Withdrawn outright: either this id itself WAS the thing that changed/was
-    /// deleted, or a recompute concluded no valid value exists anymore.
-    Retracted,
-}
 
 /// What changed, upstream of zero or more tracked materializations. See the module
 /// server integration described in the module docs for committed-event mapping.
@@ -234,7 +220,8 @@ impl TruthMaintenance {
 
     /// Register (or re-register) a materialization: `id` derives from every id in
     /// `depends_on`, optionally via `generating_activity`. Starts (or resets to)
-    /// `Fresh`. Re-registering `id` replaces its previous dependency set entirely
+    /// `Fresh` (the machine's initial state; a prior entry keeps its status and takes the
+    /// `Register` event). Re-registering `id` replaces its previous dependency set entirely
     /// (the reverse index is cleaned of stale entries first) — the shape
     /// [`Self::recompute`] relies on when a fresh computation discovers a different
     /// input set than the stale value had.
@@ -245,6 +232,7 @@ impl TruthMaintenance {
         generating_activity: Option<String>,
     ) {
         let id = id.into();
+        let prior = self.materializations.get(&id).map(|m| m.status);
         self.unregister(&id);
         let depends_on: BTreeSet<String> = depends_on.into_iter().map(Into::into).collect();
         for dep in &depends_on {
@@ -265,9 +253,29 @@ impl TruthMaintenance {
                 id,
                 depends_on,
                 generating_activity,
-                status: MaterializationStatus::Fresh,
+                status: prior.unwrap_or(MATERIALIZATION_STATUS_MACHINE.initial),
             },
         );
+        self.fire(&id, MaterializationEvent::Register);
+    }
+
+    /// The one writer of a materialization's status: `false` for an unknown id, an absorbed
+    /// pair (see [`MaterializationStatus::absorbs`]) or a refusal (none exists past the
+    /// absorb check), else the status becomes `apply(event)` and the answer is `true`.
+    fn fire(&mut self, id: &str, event: MaterializationEvent) -> bool {
+        let Some(materialization) = self.materializations.get_mut(id) else {
+            return false;
+        };
+        if materialization.status.absorbs(event) {
+            return false;
+        }
+        match materialization.status.apply(event) {
+            Ok(next) => {
+                materialization.status = next;
+                true
+            }
+            Err(_) => false,
+        }
     }
 
     /// Drop `id` and its reverse-index entries. Does not touch anything that
@@ -365,8 +373,8 @@ impl TruthMaintenance {
 
         // The subject itself, if tracked.
         if event.retracts_subject() {
-            if let Some(m) = self.materializations.get_mut(&subject) {
-                m.status = MaterializationStatus::Retracted;
+            if self.materializations.contains_key(&subject) {
+                self.fire(&subject, MaterializationEvent::Retract);
                 changed.insert(subject);
             }
         } else if self.stale_unless_retracted(&subject) {
@@ -381,14 +389,7 @@ impl TruthMaintenance {
     /// whether a status change actually happened, so callers can build `changed`
     /// sets without a second lookup.
     fn stale_unless_retracted(&mut self, id: &str) -> bool {
-        match self.materializations.get_mut(id) {
-            Some(m) if m.status != MaterializationStatus::Retracted => {
-                let was_stale = m.status == MaterializationStatus::Stale;
-                m.status = MaterializationStatus::Stale;
-                !was_stale
-            }
-            _ => false,
-        }
+        self.fire(id, MaterializationEvent::Invalidate)
     }
 
     /// Recompute a `Stale`/`Retracted` materialization: run `f` to produce a fresh
@@ -412,9 +413,7 @@ impl TruthMaintenance {
                 Ok(value)
             }
             Err(err) => {
-                if let Some(m) = self.materializations.get_mut(id) {
-                    m.status = MaterializationStatus::Retracted;
-                }
+                self.fire(id, MaterializationEvent::Retract);
                 Err(err)
             }
         }
