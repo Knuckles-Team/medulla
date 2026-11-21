@@ -9,7 +9,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T002 [US1] MEDULLA-SDLC-R001.1 Model: lifecycle kinds, edges and shapes.
 - [ ] T003 [US1] MEDULLA-SDLC-R001.2 Behavior.
 - [ ] T139 [US1] MEDULLA-SDLC-R001.2.1 Behavior: the run that produced a changeset is a derived edge (`produced.run_trace`, `ProducedBy` in `is_derived`, `RULE_VERSION` 2).
-- [ ] T004 [US1] MEDULLA-SDLC-R001.3 Wiring: derive edges when a changeset is accepted or a commit is indexed.
+- [ ] T004 [US1] MEDULLA-SDLC-R001.3 Wiring: derive edges when a changeset is accepted or a commit is indexed, writing the `commit:<changeset.id>` node in the same batch (move `commit_node_id` and `COMMIT_TYPE` into `medulla-source-types`).
 - [ ] T005 [US1] MEDULLA-SDLC-R001.4 Refusal.
 - [ ] T006 [US1] MEDULLA-SDLC-R001.5 Evidence.
 - [ ] T007 [US1] MEDULLA-SDLC-R001.6 Hot-path proof: served derivation and nightly budget.
