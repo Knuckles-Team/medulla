@@ -7189,6 +7189,55 @@ class GraphOperationsClient:
             raise RuntimeError("SourceCoverage must answer with an object")
         return result
 
+
+    async def code_context(
+        self,
+        anchor: str,
+        question: str,
+        *,
+        depth: int | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """How, usage or impact context of one code symbol
+        (MEDULLA-FEDERATED-QUERY-R654.3).
+
+        ``question`` is ``how``, ``usage`` or ``impact``. Returns ``{status,
+        anchors, usages, impact, hubs, candidates}``. An ambiguous anchor answers
+        ``status = ambiguous`` with ``candidates``; a stale repository answers
+        ``degraded``. A depth above 6 is refused ``CODE_DEPTH_EXCEEDED`` and an
+        anchor with no match ``CODE_ANCHOR_UNKNOWN``.
+        """
+        request: dict[str, Any] = {"anchor": anchor, "question": question}
+        if depth is not None:
+            request["depth"] = depth
+        if limit is not None:
+            request["limit"] = limit
+        result = await self._client._send(
+            "CodeContext", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("CodeContext must answer with an object")
+        return result
+
+    async def diagnose(self, symptom: str) -> dict[str, Any]:
+        """The ordered causal chain behind one operations symptom
+        (MEDULLA-FEDERATED-QUERY-R654.3).
+
+        Returns ``{symptom, chain}`` where each link has ``stage``, ``node_id``,
+        ``relationship`` and ``evidence_ids``. A node that is not a
+        ``HealthAnomaly`` is refused ``CODE_ANCHOR_UNKNOWN``.
+        """
+        result = await self._client._send(
+            "Diagnose", {"request": {"symptom": symptom}}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("Diagnose must answer with an object")
+        return result
+
     async def context_compile(
         self,
         query_text: str,

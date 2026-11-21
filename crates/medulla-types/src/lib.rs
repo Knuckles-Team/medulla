@@ -37,6 +37,8 @@ pub mod ingest_rules;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
 pub mod corpus_retrieval;
+// MEDULLA-FEDERATED-QUERY-R654.1 — served CodeContext and Diagnose wire records.
+pub mod code_context;
 pub mod participant;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;

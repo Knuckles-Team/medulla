@@ -81,6 +81,9 @@ method_results! {
     RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchResult>;
     // MEDULLA-FEDERATED-QUERY-R702.3: the accepted task or the typed rejection of one synthesis.
     SynthesizeSearchTask(SynthesizeSearchTask) => Raw<medulla_work_types::search_task::SynthesizeSearchTaskAnswer>;
+    // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis.
+    CodeContext(CodeContext) => Raw<medulla_types::code_context::CodeContextAnswer>;
+    Diagnose(Diagnose) => Raw<medulla_types::code_context::SymptomDiagnosis>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.

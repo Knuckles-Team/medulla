@@ -731,6 +731,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
+    // MEDULLA-FEDERATED-QUERY-R654.4: a walk past the depth cap, or an anchor or
+    // symptom the index does not hold.
+    ("CodeContext", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
+    ("Diagnose", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
     (
         "CorpusRetrieve",
         &[

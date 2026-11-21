@@ -505,6 +505,10 @@ knobs! {
     revision_proposals_page_limit: u64 = "revision_proposals.page_limit", U64(100), [1, 1_000], "rows", Tunable;
     /// Identity ownership writer share.
     identity_ownership_writer_share: f64 = "identity.ownership_writer_share", F64(0.10), [0.01, 0.5], "fraction", Tunable;
+    /// Code context: default breadth-first depth of a `CodeContext` walk.
+    code_context_depth: u64 = "code.context_depth", U64(3), [1, 6], "hops", Tunable;
+    /// Code context: visited-node cap of a `CodeContext` walk.
+    code_max_nodes: u64 = "code.max_nodes", U64(512), [32, 8192], "nodes", Tunable;
     /// Retrieval lineage depth.
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
     /// Schema drift gate: most records of one stream sampled to infer a delivery shape.

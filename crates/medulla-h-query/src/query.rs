@@ -166,6 +166,8 @@ mod catalog_search;
 #[cfg(feature = "query")]
 mod column_lineage;
 #[cfg(feature = "query")]
+mod code_context;
+#[cfg(feature = "query")]
 mod context_compile;
 #[cfg(feature = "query")]
 mod context_search;
@@ -179,6 +181,8 @@ mod source_coverage;
 pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
 pub(crate) use column_lineage::handle_column_lineage;
+#[cfg(feature = "query")]
+pub(crate) use code_context::{handle_code_context, handle_diagnose};
 #[cfg(feature = "query")]
 pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]

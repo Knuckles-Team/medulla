@@ -158,6 +158,13 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis over the projected core.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::CodeContext { request } => return Ok(handle_code_context(hctx, *request).await),
+        Method::Diagnose { request } => return Ok(handle_diagnose(hctx, *request).await),
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R653.3: one corpus read over the caller's projected core.
     #[cfg(feature = "query")]
     let method = match method {

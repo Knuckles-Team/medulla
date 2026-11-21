@@ -716,6 +716,18 @@ $($variants)*
         request: Box<medulla_types::corpus_retrieval::CorpusRequest>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R654.3: how, usage or impact context of one code
+    /// symbol over the caller's projected core. A read; nothing is committed.
+    CodeContext {
+        request: Box<medulla_types::code_context::CodeContextRequest>,
+    },
+
+    /// MEDULLA-FEDERATED-QUERY-R654.3: the ordered causal chain behind one
+    /// operations symptom. A read; nothing is committed.
+    Diagnose {
+        request: Box<medulla_types::code_context::DiagnoseRequest>,
+    },
+
     /// MEDULLA-FEDERATED-QUERY-R039.2.5: encode one document through the pinned chunk
     /// recipe and publish its single vector, with the encoding receipt, as the next
     /// vector generation. Durable write; a refused encoding writes nothing and the

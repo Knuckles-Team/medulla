@@ -1,0 +1,166 @@
+"""Served code context and symptom diagnosis (MEDULLA-FEDERATED-QUERY-R654.3).
+
+`CodeContext` and `Diagnose` read the caller's projected graph through the one
+kernel in `medulla-plan`; this file stands up the served path and compares what
+comes back with what the kernel computes for the same graph.
+"""
+
+from __future__ import annotations
+
+import os
+import uuid
+from typing import Any
+
+import msgpack
+import pytest
+from conftest import request_context
+
+_SYMBOLS = {
+    "sym-run": "repo/a.rs::run",
+    "sym-main": "repo/a.rs::main",
+    "sym-parse": "repo/b.rs::parse",
+    "sym-lex": "repo/b.rs::lex",
+}
+_CALLS = [
+    ("sym-run", "sym-main"),
+    ("sym-main", "sym-parse"),
+    ("sym-main", "sym-lex"),
+    ("sym-parse", "sym-lex"),
+]
+
+
+def _client() -> Any:
+    from medulla.client import SyncMedullaClient
+
+    return SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+
+
+def _node(client: Any, graph: str, node_id: str, props: dict[str, Any]) -> None:
+    client._send(
+        "AddNode",
+        {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
+        graph,
+    )
+
+
+def _edge(client: Any, graph: str, src: str, tgt: str, **props: Any) -> None:
+    client._send(
+        "AddEdge",
+        {
+            "source_id": src,
+            "target_id": tgt,
+            "properties_msgpack": msgpack.packb(props),
+        },
+        graph,
+    )
+
+
+def _fixture(client: Any, graph: str) -> None:
+    for node_id, name in _SYMBOLS.items():
+        _node(
+            client,
+            graph,
+            node_id,
+            {"type": "Symbol", "symbol_type": "function", "qualified_name": name},
+        )
+    for caller, callee in _CALLS:
+        _edge(client, graph, caller, callee, relationship="calls")
+    _node(client, graph, "chg1", {"type": "Change", "at_ms": 10})
+    _node(client, graph, "dep1", {"type": "Deployment", "at_ms": 20})
+    _node(client, graph, "svc", {"type": "Service", "at_ms": 30})
+    _node(client, graph, "anom", {"type": "HealthAnomaly", "at_ms": 40})
+    _edge(
+        client, graph, "anom", "svc", relationship="dependsOn", evidence_ids=["e-dep"]
+    )
+    _edge(client, graph, "chg1", "svc", relationship="changes", evidence_ids=["e-chg"])
+    _edge(
+        client, graph, "dep1", "svc", relationship="deployedTo", evidence_ids=["e-dpl"]
+    )
+
+
+def _unpack(result: Any) -> dict[str, Any]:
+    if isinstance(result, (bytes, bytearray)):
+        result = msgpack.unpackb(result, raw=False)
+    return result
+
+
+def _call(client: Any, graph: str, method: str, request: dict[str, Any]) -> Any:
+    return _unpack(client._send(method, {"request": request}, graph))
+
+
+def _with_graph(body: Any) -> None:
+    graph = f"code-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        _fixture(client, graph)
+        body(client, graph)
+    finally:
+        client.tenants.delete(graph)
+        client.close()
+
+
+def _kernel_expected_code_context() -> dict[str, Any]:
+    """The kernel's answer for `how` around `main`, derived from the fixture alone.
+
+    Callers walk the call edges backward and callees forward, one hop count per
+    symbol, ordered by hops then symbol; the hub of the visited subgraph is the
+    only symbol on shortest paths between others.
+    """
+    main = _SYMBOLS["sym-main"]
+    return {
+        "anchors": [main],
+        "usages": [{"symbol": _SYMBOLS["sym-run"], "hops": 1}],
+        "impact": [
+            {"symbol": _SYMBOLS["sym-lex"], "hops": 1},
+            {"symbol": _SYMBOLS["sym-parse"], "hops": 1},
+        ],
+        "hub": main,
+    }
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.3")
+def test_methods_reach_kernels(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.3: served output equals the kernels."""
+
+    def body(client: Any, graph: str) -> None:
+        expected = _kernel_expected_code_context()
+        served = _call(
+            client, graph, "CodeContext", {"anchor": "::main", "question": "how"}
+        )
+        assert served["status"] == "ok"
+        assert served["anchors"] == expected["anchors"]
+        assert served["usages"] == expected["usages"]
+        assert served["impact"] == expected["impact"]
+        assert served["candidates"] == []
+        assert served["hubs"][0]["symbol"] == expected["hub"]
+        assert served["hubs"][0]["score"] > 0.0
+
+        usage = _call(
+            client, graph, "CodeContext", {"anchor": "::lex", "question": "usage"}
+        )
+        assert [n["symbol"] for n in usage["usages"]] == [
+            _SYMBOLS["sym-main"],
+            _SYMBOLS["sym-parse"],
+            _SYMBOLS["sym-run"],
+        ]
+        assert [n["hops"] for n in usage["usages"]] == [1, 1, 2]
+        assert usage["impact"] == []
+
+        diagnosis = _call(client, graph, "Diagnose", {"symptom": "anom"})
+        assert diagnosis["symptom"] == "anom"
+        assert [(link["stage"], link["node_id"]) for link in diagnosis["chain"]] == [
+            ("change", "chg1"),
+            ("deploy", "dep1"),
+            ("dependency", "svc"),
+            ("symptom", "anom"),
+        ]
+        by_node = {link["node_id"]: link for link in diagnosis["chain"]}
+        assert by_node["chg1"]["relationship"] == "change"
+        assert by_node["chg1"]["evidence_ids"] == ["e-chg"]
+        assert by_node["svc"]["relationship"] == "depends_on"
+
+    _with_graph(body)
