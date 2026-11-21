@@ -6,12 +6,12 @@
 //! `READBACK_DENIED`, not a silent match. `lower` turns a `Matched` receipt
 //! into the one `:ReadbackReceipt` node the route commits.
 
-use medulla_protocol_types::protocol::Method;
-use medulla_types::contract::Digest256;
-use medulla_types::ingest_readback::{
+use medulla_ingestion_types::ingest_readback::{
     ReadbackReceipt, ReadbackVerdict, VerifyIngestReadbackRequest, READBACK_DENIED,
     READBACK_MISMATCH, READBACK_PARTIAL, READBACK_STALE,
 };
+use medulla_protocol_types::protocol::Method;
+use medulla_types::contract::Digest256;
 use serde_json::json;
 
 use super::repository_index::{EnvelopeLabels, IndexWriteSet};
@@ -207,7 +207,7 @@ pub fn lower(receipt: &ReadbackReceipt) -> Result<IndexWriteSet, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::ingest_readback::ReadbackExpectation;
+    use medulla_ingestion_types::ingest_readback::ReadbackExpectation;
     use std::collections::BTreeMap;
 
     struct View(u64, BTreeMap<String, NodeRead>);

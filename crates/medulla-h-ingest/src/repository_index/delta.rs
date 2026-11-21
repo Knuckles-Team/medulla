@@ -16,7 +16,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexDelta, IndexResult};
+use medulla_ingestion_types::ingestion_wire::{
+    ExtractedEdge, ExtractedNode, IndexDelta, IndexResult,
+};
 
 /// A generation of the repository code map: only `complete` generations may
 /// become the current one, and only a generation whose `base_revision` matches
@@ -265,10 +267,10 @@ fn exhausted(limit: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use medulla_types::contract::BoundedVec;
-    use medulla_types::ingestion_wire::{
+    use medulla_ingestion_types::ingestion_wire::{
         IndexDeltaChange, IndexDeltaRename, MAX_INDEX_DELTA_PATHS,
     };
+    use medulla_types::contract::BoundedVec;
     use medulla_work_types::scheduler_config;
 
     use super::*;

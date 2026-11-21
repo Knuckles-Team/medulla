@@ -785,7 +785,7 @@ pub fn project_spec_artifacts(
     repo: &str,
     files: &[(String, Vec<u8>)],
     stored: &BTreeMap<String, StoredArtifact>,
-    result: &mut medulla_types::ingestion_wire::IndexResult,
+    result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
 ) -> Result<ReingestPlan, String> {
     let mut seen = BTreeSet::new();
     let texts: Vec<(&str, &str)> = files
@@ -825,22 +825,22 @@ pub fn project_spec_artifacts(
     Ok(plan)
 }
 
-fn index_node(op: &serde_json::Value) -> medulla_types::ingestion_wire::ExtractedNode {
+fn index_node(op: &serde_json::Value) -> medulla_ingestion_types::ingestion_wire::ExtractedNode {
     let properties: std::collections::HashMap<String, String> = op["properties"]
         .as_object()
         .into_iter()
         .flatten()
         .filter_map(|(key, value)| Some((key.clone(), value.as_str()?.to_owned())))
         .collect();
-    medulla_types::ingestion_wire::ExtractedNode {
+    medulla_ingestion_types::ingestion_wire::ExtractedNode {
         node_id: op["id"].as_str().unwrap_or_default().to_owned(),
         node_type: properties.get("type").cloned().unwrap_or_default(),
         properties,
     }
 }
 
-fn index_edge(op: &serde_json::Value) -> medulla_types::ingestion_wire::ExtractedEdge {
-    medulla_types::ingestion_wire::ExtractedEdge {
+fn index_edge(op: &serde_json::Value) -> medulla_ingestion_types::ingestion_wire::ExtractedEdge {
+    medulla_ingestion_types::ingestion_wire::ExtractedEdge {
         source: op["source"].as_str().unwrap_or_default().to_owned(),
         target: op["target"].as_str().unwrap_or_default().to_owned(),
         edge_type: op["properties"]["relationship"]
@@ -1211,7 +1211,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
     // spec: MEDULLA-SDLC-R014.2
     #[test]
     fn index_batch_lowers_only_changed_spec_files_into_the_result() {
-        use medulla_types::ingestion_wire::IndexResult;
+        use medulla_ingestion_types::ingestion_wire::IndexResult;
 
         let files = vec![
             (

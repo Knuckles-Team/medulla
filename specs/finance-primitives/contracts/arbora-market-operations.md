@@ -13,7 +13,7 @@ Arbora sends `Method::FinanceRecordPut { kind, schema_version, record, expected_
 
 ## Authoritative types
 
-`FinanceRecordKind` and `FINANCE_RECORD_POLICY` in `crates/medulla-types/src/wire_finance.rs`, and the `Method` variants in `crates/medulla-protocol-types/src/protocol/method/method_04.rs`.
+`FinanceRecordKind` and `FINANCE_RECORD_POLICY` in `crates/medulla-finance-types/src/wire_finance.rs`, and the `Method` variants in `crates/medulla-protocol-types/src/protocol/method/method_04.rs`.
 
 ## Test vectors
 

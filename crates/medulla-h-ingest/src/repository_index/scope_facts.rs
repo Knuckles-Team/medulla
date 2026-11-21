@@ -12,8 +12,8 @@ use std::collections::BTreeSet;
 
 use medulla_enrich::history::CommitRecord;
 use medulla_enrich::Id;
+use medulla_ingestion_types::ingestion_wire::{IndexCommit, IndexRepositoryScope, IndexResult};
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::ingestion_wire::{IndexCommit, IndexRepositoryScope, IndexResult};
 
 use super::ecosystem::{node, package_node_id, packages};
 
@@ -126,7 +126,7 @@ fn validate_commit(commit: &IndexCommit) -> Result<(), String> {
 
 fn commit_node(
     commit: &IndexCommit,
-) -> Result<medulla_types::ingestion_wire::ExtractedNode, String> {
+) -> Result<medulla_ingestion_types::ingestion_wire::ExtractedNode, String> {
     let changes = serde_json::to_string(commit.changes.as_slice())
         .map_err(|error| refuse(ServerErrorCode::InvalidFacts, error))?;
     let parents = commit.parents.join(",");

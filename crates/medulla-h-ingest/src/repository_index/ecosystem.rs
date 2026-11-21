@@ -14,7 +14,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
+use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
 /// The registered refusal code of a layer dependency cycle.
 pub const LAYER_CYCLE: &str = "LAYER_CYCLE";

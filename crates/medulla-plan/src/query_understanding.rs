@@ -12,8 +12,8 @@
 //! called and nothing is written. Cost is linear in the query length (times
 //! the fixed relationship vocabulary of the caller's graph schema).
 
+use medulla_ingestion_types::ingestion_wire::{QueryFilters, RelationalIntent};
 use medulla_result_types::retrieval_verdict::TermFeedback;
-use medulla_types::ingestion_wire::{QueryFilters, RelationalIntent};
 use serde::{Deserialize, Serialize};
 
 /// Largest query text an expansion request accepts, in bytes.

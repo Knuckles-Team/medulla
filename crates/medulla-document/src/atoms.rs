@@ -3,10 +3,10 @@
 //! Each chunk of `chunk_text` becomes one or more typed [`KnowledgeAtom`]s. A
 //! chunk longer than the word limit splits at sentence ends. The kind comes from
 //! the first matching rule: procedure, event, preference, otherwise fact.
-//! Context selection over the atoms is `medulla_types::ingest_rules::select_atoms`.
+//! Context selection over the atoms is `medulla_ingestion_types::ingest_rules::select_atoms`.
 
+use medulla_ingestion_types::knowledge_atom::{AtomKind, KnowledgeAtom};
 use medulla_types::contract::Digest256;
-use medulla_types::knowledge_atom::{AtomKind, KnowledgeAtom};
 
 use crate::processing::ChunkSpan;
 

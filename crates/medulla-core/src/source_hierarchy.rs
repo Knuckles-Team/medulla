@@ -8,9 +8,9 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_ingestion_types::ingest_rules::{check_container_tree, MAX_CONTAINER_DEPTH};
+use medulla_ingestion_types::source_governance::SourceContainer;
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::{check_container_tree, MAX_CONTAINER_DEPTH};
-use medulla_types::source_governance::SourceContainer;
 use serde_json::{json, Value};
 
 /// The digest domain a container node id is framed under.

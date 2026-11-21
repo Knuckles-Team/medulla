@@ -192,7 +192,7 @@ fn discover(
     req_id: u64,
 ) -> Response {
     use super::discover_plan::{fuse_arms, recency_boost, ArmList};
-    use medulla_types::ingestion_wire::{DiscoverArm, DiscoverPlan};
+    use medulla_ingestion_types::ingestion_wire::{DiscoverArm, DiscoverPlan};
 
     let k = call.k;
     let knobs = medulla_server_api::knob_config::knobs();
@@ -213,7 +213,7 @@ fn discover(
     // Score: the weighted blend (standard) or reciprocal-rank fusion over the arms (deep).
     let mut arm_ranks: std::collections::HashMap<
         String,
-        Vec<medulla_types::ingestion_wire::ArmRank>,
+        Vec<medulla_ingestion_types::ingestion_wire::ArmRank>,
     > = std::collections::HashMap::new();
     let mut ranked: Vec<(String, f32)> = if is_deep {
         let by_score = |mut v: Vec<(String, f32)>| {
@@ -317,12 +317,12 @@ fn discover(
     // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
     let planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
 
-    let results: Vec<medulla_types::ingestion_wire::DiscoverHit> = planned
+    let results: Vec<medulla_ingestion_types::ingestion_wire::DiscoverHit> = planned
         .into_iter()
         .map(|hit| {
             let (name, description, node_type) = node_text(core, &hit.id);
             let web = web_provenance(core, &hit.id);
-            medulla_types::ingestion_wire::DiscoverHit {
+            medulla_ingestion_types::ingestion_wire::DiscoverHit {
                 url: web.url,
                 retrieved_at: web.retrieved_at,
                 backend: web.backend,
@@ -433,14 +433,14 @@ async fn handle_discover(
     k: usize,
     hops: u32,
     query_text: Option<String>,
-    mode: medulla_types::ingestion_wire::DiscoverMode,
+    mode: medulla_ingestion_types::ingestion_wire::DiscoverMode,
     as_of: Option<i64>,
     perspectives: Option<u32>,
     served: (Option<String>, Option<String>),
     quality_policy_ref: Option<String>,
 ) -> Response {
     let (tenant, adapter_digest) = served;
-    let request = medulla_types::ingestion_wire::DiscoverPlanRequest {
+    let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
         query_text,
         mode,
         as_of,
@@ -450,7 +450,9 @@ async fn handle_discover(
     let planned_core = Arc::clone(core);
     let planned = match compute_off_lock(req_id, move || {
         // Only a `deep` request reads the vocabulary; `standard` plans nothing.
-        let relationships = if request.mode == medulla_types::ingestion_wire::DiscoverMode::Deep {
+        let relationships = if request.mode
+            == medulla_ingestion_types::ingestion_wire::DiscoverMode::Deep
+        {
             medulla_plan::query_understanding::relationship_names(&planned_core.analysis_snapshot())
         } else {
             Vec::new()

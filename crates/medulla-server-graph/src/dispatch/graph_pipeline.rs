@@ -130,7 +130,7 @@ pub async fn dispatch_knowledge_stream(
     req_id: u64,
     caller: Option<&str>,
     verified_context: &VerifiedRequestContext,
-    request: medulla_types::knowledge_stream::KnowledgeStreamRequest,
+    request: medulla_ingestion_types::knowledge_stream::KnowledgeStreamRequest,
     authority: medulla_h_query::knowledge_stream::KnowledgeStreamAuthority,
 ) -> Response {
     dispatch_graph_op_inner(

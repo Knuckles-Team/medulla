@@ -10,10 +10,10 @@
 use super::repository_index::commit_context;
 use super::*;
 use medulla_h_ingest::data_prep_declaration as prep;
-use medulla_types::contract::ServerErrorCode;
-use medulla_types::data_prep_declaration::{
+use medulla_ingestion_types::data_prep_declaration::{
     DataPrepDeclarationReadRequest, DataPrepDeclareReceipt, DataPrepDeclareRequest,
 };
+use medulla_types::contract::ServerErrorCode;
 
 /// Route the data-prep declaration methods; hand any other method back.
 pub async fn route_data_prep(ctx: GraphOpRouting<'_>, method: Method) -> Result<Response, Method> {

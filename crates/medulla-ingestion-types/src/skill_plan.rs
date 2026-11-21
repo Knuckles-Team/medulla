@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// The step grammar this compiler reads: an ordered list under `## Steps`.
 pub const SKILL_GRAMMAR_REVISION: &str = "skill-steps-1";

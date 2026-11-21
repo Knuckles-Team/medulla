@@ -13,12 +13,12 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use medulla_ingestion_types::ingest_rules::plan_reconcile_digests;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::state::ServerState;
 use medulla_source_types::source_ingestion::batch_kind::EnumerationPage;
 use medulla_source_types::source_ingestion::SourceEntityRef;
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::plan_reconcile_digests;
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
@@ -618,9 +618,9 @@ pub fn spawn_reconcile_sweep(state: Arc<RwLock<ServerState>>) -> tokio::task::Jo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_ingestion_types::ingest_rules::MASS_DELETE_PERCENT;
     use medulla_source_types::source_ingestion::batch_kind::MAX_ENUMERATION_IDS;
     use medulla_types::contract::{BoundedVec, ResourceId};
-    use medulla_types::ingest_rules::MASS_DELETE_PERCENT;
 
     fn entity(id: &str) -> SourceEntityRef {
         SourceEntityRef {

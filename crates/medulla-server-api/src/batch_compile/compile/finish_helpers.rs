@@ -65,13 +65,13 @@ pub(super) fn compiled_scope_identity(
 /// envelope and the one header `schema` holds the kind's schema name:
 /// [`compiled_outbox`] adds the scope and actor headers itself.
 pub(super) fn finance_alert_intent(
-    envelope: &medulla_types::finance_event_envelope::FinanceAlertEnvelope,
+    envelope: &medulla_finance_types::finance_event_envelope::FinanceAlertEnvelope,
 ) -> Result<MutationOutboxIntent, String> {
     envelope
         .validate()
         .map_err(|error| format!("ALERT_ENVELOPE_INVALID: {error}"))?;
     Ok(MutationOutboxIntent {
-        topic: medulla_types::finance_event_envelope::FINANCE_EVENTS_TOPIC.to_string(),
+        topic: medulla_finance_types::finance_event_envelope::FINANCE_EVENTS_TOPIC.to_string(),
         key: envelope.event_id.clone(),
         payload: envelope.canonical_msgpack()?,
         headers: BTreeMap::from([(

@@ -13,9 +13,9 @@ use crate::protocol::{
 use crate::protocol::{ExplainPlanResult, ExplainPolicyResult};
 use medulla_decision_types::decision::DecisionBatch;
 use medulla_index_types::{managed_index::EdgeIndexStatusView, managed_index::EdgeSearchView};
-use medulla_result_types::epistemic_operations::EvidenceBundle;
 #[cfg(feature = "knowledge-batch")]
-use medulla_types::knowledge_stream::KnowledgeStreamBatch;
+use medulla_ingestion_types::knowledge_stream::KnowledgeStreamBatch;
+use medulla_result_types::epistemic_operations::EvidenceBundle;
 use medulla_types::types::ContextView;
 
 method_results! {

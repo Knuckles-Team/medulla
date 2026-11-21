@@ -19,10 +19,12 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_ingestion_types::ingestion_wire::{
+    IndexFileVersion, IndexRepositoryScope, IndexTombstone,
+};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_server_blob::blob::BlobStateExt;
 use medulla_types::contract::BoundedVec;
-use medulla_types::ingestion_wire::{IndexFileVersion, IndexRepositoryScope, IndexTombstone};
 use sha2::{Digest, Sha256};
 
 const SECRET: &str = "repository-index-durable-secret";
@@ -35,10 +37,10 @@ fn digest(content: &[u8]) -> String {
     format!("sha256:{}", hex::encode(Sha256::digest(content)))
 }
 
-use medulla_types::test_support::repository_index::live_ref as live;
+use medulla_ingestion_types::ingestion_wire::fixtures::live_ref as live;
 
 fn member(ref_name: &str, path: &str, content: &[u8]) -> IndexFileVersion {
-    medulla_types::test_support::repository_index::file_version(ref_name, path, digest(content))
+    medulla_ingestion_types::ingestion_wire::fixtures::file_version(ref_name, path, digest(content))
 }
 
 fn scope(versions: Vec<IndexFileVersion>, tombstones: Vec<IndexTombstone>) -> IndexRepositoryScope {

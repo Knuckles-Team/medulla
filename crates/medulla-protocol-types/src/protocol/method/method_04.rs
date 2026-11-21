@@ -74,7 +74,7 @@ $($variants)*
     // Embeds a `finance` domain type → gated with the feature.
     #[cfg(feature = "finance")]
     FinanceMatchOrders {
-        orders: Vec<medulla_types::wire_finance::Order>,
+        orders: Vec<medulla_finance_types::wire_finance::Order>,
     },
 
 
@@ -332,8 +332,8 @@ $($variants)*
     // Embeds `finance` domain types → gated with the feature.
     #[cfg(feature = "finance")]
     FinanceForensicReport {
-        this_year: medulla_types::wire_finance::YearData,
-        prior_year: medulla_types::wire_finance::YearData,
+        this_year: medulla_finance_types::wire_finance::YearData,
+        prior_year: medulla_finance_types::wire_finance::YearData,
     },
 
 
@@ -588,9 +588,9 @@ $($variants)*
     /// `RECORD_DERIVED_READONLY` and writes nothing.
     #[cfg(feature = "finance")]
     FinanceRecordPut {
-        kind: medulla_types::wire_finance::FinanceRecordKind,
+        kind: medulla_finance_types::wire_finance::FinanceRecordKind,
         schema_version: String,
-        record: medulla_types::wire_finance::FinanceRecord,
+        record: medulla_finance_types::wire_finance::FinanceRecord,
         #[serde(default)]
         expected_head: Option<u64>,
     },
@@ -598,7 +598,7 @@ $($variants)*
     /// Read one finance-v1 record of any kind under the verified tenant.
     #[cfg(feature = "finance")]
     FinanceRecordGet {
-        kind: medulla_types::wire_finance::FinanceRecordKind,
+        kind: medulla_finance_types::wire_finance::FinanceRecordKind,
         record_id: String,
     },
 
@@ -642,7 +642,7 @@ $($variants)*
     /// door takes no decision; callers evaluate the alert conditions.
     #[cfg(feature = "finance")]
     FinanceAlertRaise {
-        envelope: Box<medulla_types::finance_event_envelope::FinanceAlertEnvelope>,
+        envelope: Box<medulla_finance_types::finance_event_envelope::FinanceAlertEnvelope>,
     },
 
     /// MEDULLA-FINANCE-PRIMITIVES-R018.5: rank factors like `FinanceFactorRank` (same

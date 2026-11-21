@@ -2,11 +2,9 @@
 //! DAG: it depends only on serde. Everything else (`medulla-core`, `medulla-compute`,
 //! `medulla-server`, the `medulla` facade) depends on it, never the reverse.
 //!
-//! It also owns the pure-data types that the protocol enum embeds but whose
-//! behavior lives upstream: `wire_finance` (finance DTOs); the access-control
-//! vocabulary (`AgentRole`/`AgentIdentity`) lives in `medulla-identity-types`. The upstream modules re-export these
-//! (`pub use medulla_types::wire_finance::Order;`) so their algorithm code is unchanged —
-//! the data lives at the bottom of the DAG, the logic stays where it belongs.
+//! Domain wire types live in their slices: finance DTOs in `medulla-finance-types`,
+//! ingestion records in `medulla-ingestion-types`, the access-control vocabulary
+//! (`AgentRole`/`AgentIdentity`) in `medulla-identity-types`.
 
 pub mod row_change;
 // MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
@@ -27,22 +25,12 @@ pub mod transition_refused;
 pub mod shape_report;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_base;
-pub mod ontology_proposal;
-// MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
-pub mod knowledge_atom;
 // MEDULLA-INGEST-WORKER-R604.1 — ingest lanes, queue classes and lane metrics.
 pub mod ingest_lanes;
-// MEDULLA-INGEST-WORKER-R701.1 — extracted facts, candidate claims and evidence spans.
-pub mod extracted_fact;
-// MEDULLA-INGEST-WORKER-R900.1/R902.1/R903.1/R904.1 — source governance records.
-pub mod source_governance;
 // MEDULLA-INGEST-WORKER-R900.4/R901.4/R902.4/R903.4/R904.4/R701.2/R701.4/R002.4/R003.4 — pure ingest refusal rules.
-pub mod ingest_materialize;
-pub mod ingest_rules;
-// MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
-pub mod code_health;
 pub mod dashboard;
 pub mod corpus_retrieval;
+pub mod ingest_materialize;
 // MEDULLA-FEDERATED-QUERY-R654.1 — served CodeContext and Diagnose wire records.
 pub mod code_context;
 pub mod participant;
@@ -67,34 +55,14 @@ pub mod durability_class;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
 
-// MEDULLA-DURABLE-KERNEL-R036 — the mirror-sink side: sink kind (fan-out/postgres)
-// and durable per-mirror cursor with a non-empty-position guard. Pure serde, no dep.
-pub mod ingestion_wire;
-// CONCEPT:INT-P2-2 — the native statechart engine's wire op (`StatechartOp`), gated
-// `statechart`. Lives here (not in `medulla-statechart`, which sits ABOVE this crate in the
-// DAG) for the SAME reason `jobs` does: `protocol::Method::Statechart` carries it over
-// the wire, and `protocol` is bottom-of-DAG. Pure serde — no dep.
-#[cfg(feature = "knowledge-batch")]
-pub mod knowledge_stream;
 #[cfg(feature = "modality-serving")]
 pub mod modality;
 pub mod msgpack;
 // X10 — the operator view of one owner's mutation outbox: standing, dead
 // letters and bounded re-delivery.
 pub mod lease_vocab;
-// MEDULLA-FINANCE-PRIMITIVES-R011.1 — the typed finance alert envelope staged for
-// the finance outbox topic family; net-new slice (model + validation +
-// refusal tests only, no outbox-append wiring yet).
-#[cfg(feature = "finance")]
-pub mod finance_event_envelope;
-// MEDULLA-FINANCE-PRIMITIVES-R751.750 — the strategy research record types.
-#[cfg(feature = "finance")]
-pub mod finance_research;
 // MEDULLA-FINANCE-PRIMITIVES-R902 — probabilistic forecast samples, never a kernel input.
 pub mod finance_forecast;
-// MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
-// `Method::WalletKeyTrustGet`.
-pub mod finance_wallet_trust;
 // MEDULLA-FINANCE-PRIMITIVES-R013.2.6 — the accounting projection read by
 // `Method::FinanceAccountProject`.
 pub mod finance_accounting;
@@ -109,18 +77,10 @@ pub mod tenant_cursor;
 // The three-bound keyset page shared by the tenant-bound native listings.
 pub mod keyset_page;
 pub mod projection_read;
-// Finance wire DTOs; the query and data-science wire family lives in `medulla-query-types`.
-#[cfg(feature = "finance")]
-pub mod wire_finance;
 
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the
 // bottom of the DAG so `medulla-core` can evaluate it; `medulla-query` decodes SQL into it.
 // CONCEPT:MEDULLA-KG.compute.uncertainty-values — surface the distribution VALUE at the crate root for callers.
-#[cfg(feature = "knowledge-batch")]
-pub use knowledge_stream::{
-    KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamCursor, KnowledgeStreamProjection,
-    KnowledgeStreamQuery, KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
-};
 #[cfg(feature = "modality-serving")]
 pub use modality::{
     ServedModalityIngestItem, ServedModalityKind, ServedModalityOp, ServedNativePredicate,
@@ -131,19 +91,10 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
-// MEDULLA-INGEST-WORKER-R001.1006: data-prep declaration model.
-pub mod data_prep_declaration;
-// MEDULLA-INGEST-WORKER-R605.1: drains, page checkpoints, graph routes, stage profiles.
-pub mod ingest_drain;
 // MEDULLA-ORCH-VOCAB-R009.700 — a durable run unit mirrored as a run-trace node.
 pub mod durable_unit;
-// MEDULLA-REPO-INGEST-R002.1.1: skill-document compilation records.
-pub mod skill_plan;
-// MEDULLA-REPO-INGEST-R002.650: ingest capability types.
-pub mod ingest_capabilities;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
 pub mod code_map;
-pub mod ingest_readback;
 pub mod ingest_throughput;
 // MEDULLA-INGEST-WORKER-R911.3: the ingest stage machine.
 pub mod ingest_machine;

@@ -7,17 +7,16 @@
 //! failing one is stored `Draft` with the failing check. The refusal lives in the
 //! per-item receipt, never as a batch refusal.
 
+use medulla_ingestion_types::ingest_rules::judge_proposal;
+use medulla_ingestion_types::ontology_proposal::{ProposalState, ProposalThresholds};
 use medulla_protocol_types::protocol::Method;
-use medulla_source_types::source_ingestion::{
-    ProposalSubmission, SourceJson, MAX_OBSERVED_TERMS,
-};
-use medulla_types::ingest_rules::judge_proposal;
-use medulla_types::ontology_proposal::{ProposalState, ProposalThresholds};
+use medulla_source_types::source_ingestion::{ProposalSubmission, SourceJson, MAX_OBSERVED_TERMS};
 use medulla_types::contract::ServerErrorCode;
 use serde::Serialize;
 
 /// Most submissions one batch carries.
-pub const MAX_SUBMISSIONS: usize = medulla_source_types::source_ingestion::batch_kind::MAX_PROPOSALS;
+pub const MAX_SUBMISSIONS: usize =
+    medulla_source_types::source_ingestion::batch_kind::MAX_PROPOSALS;
 
 /// The judgment of one submission, as it appears in the batch receipt.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -43,7 +42,10 @@ pub struct ProposalAdmission {
 }
 
 fn invalid(detail: impl std::fmt::Display) -> String {
-    format!("{}: {detail}", ServerErrorCode::SourceBatchKindMismatch.as_str())
+    format!(
+        "{}: {detail}",
+        ServerErrorCode::SourceBatchKindMismatch.as_str()
+    )
 }
 
 /// Decode the elements of a `proposals` extension.
@@ -84,20 +86,23 @@ pub fn admit_proposals(
     let mut admission = ProposalAdmission::default();
     for submission in submissions {
         let mut proposal = submission.proposal.clone();
-        let (state, refusal, failing_check) =
-            match judge_proposal(&proposal, &submission.observed_terms, thresholds) {
-                Ok(decision) => (decision.state, None, None),
-                Err(refusal) => (
-                    ProposalState::Draft,
-                    Some(refusal.code()),
-                    match &refusal {
-                        medulla_types::ingest_rules::IngestRefusal::ProposalNotAdmitted(check) => {
-                            Some(format!("{check:?}").to_lowercase())
-                        }
-                        _ => None,
-                    },
-                ),
-            };
+        let (state, refusal, failing_check) = match judge_proposal(
+            &proposal,
+            &submission.observed_terms,
+            thresholds,
+        ) {
+            Ok(decision) => (decision.state, None, None),
+            Err(refusal) => (
+                ProposalState::Draft,
+                Some(refusal.code()),
+                match &refusal {
+                    medulla_ingestion_types::ingest_rules::IngestRefusal::ProposalNotAdmitted(
+                        check,
+                    ) => Some(format!("{check:?}").to_lowercase()),
+                    _ => None,
+                },
+            ),
+        };
         proposal.state = state;
         let node_id = proposal_node_id(&proposal.proposal_id);
         let properties = serde_json::json!({
@@ -166,14 +171,19 @@ mod tests {
             admission.items[1].refusal.as_deref(),
             Some("PROPOSAL_NOT_ADMITTED")
         );
-        assert_eq!(admission.items[1].failing_check.as_deref(), Some("coverage"));
+        assert_eq!(
+            admission.items[1].failing_check.as_deref(),
+            Some("coverage")
+        );
         assert_eq!(admission.methods.len(), 2);
 
         // Submissions are bounded.
         let too_many: Vec<SourceJson> = (0..=MAX_SUBMISSIONS)
             .map(|i| {
-                SourceJson::new(serde_json::to_value(submission(&format!("p{i}"), &[], &[])).unwrap())
-                    .unwrap()
+                SourceJson::new(
+                    serde_json::to_value(submission(&format!("p{i}"), &[], &[])).unwrap(),
+                )
+                .unwrap()
             })
             .collect();
         assert!(decode_proposals(&too_many).is_err());

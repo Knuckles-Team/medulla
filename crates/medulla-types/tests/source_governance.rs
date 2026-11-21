@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::source_governance::{
+use medulla_ingestion_types::source_governance::{
     AccessSnapshot, ReconcilePlan, SourceContainer, SourceEnumeration, SourceGovernanceError,
     SourceGroup,
 };

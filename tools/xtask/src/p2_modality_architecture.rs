@@ -25,7 +25,7 @@ const RETIRED_MODALITY_FEATURES: [&str; 2] = ["codec", "extract"];
 const GRAPH_DISPATCH: &str = "crates/medulla-server-graph/src/dispatch.rs";
 const MUTATION: &str = "crates/medulla-server-mutation/src/mutation.rs";
 const RAFT: &str = "crates/medulla-raft/src/raft/mod.rs";
-const WIRE: &str = "crates/medulla-types/src/knowledge_stream.rs";
+const WIRE: &str = "crates/medulla-ingestion-types/src/knowledge_stream.rs";
 const INGEST: &str = "crates/medulla-server-ops/src/api/ingest.rs";
 const PYTHON_CLIENT: &str = "medulla/client.py";
 

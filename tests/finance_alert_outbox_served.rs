@@ -13,9 +13,9 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_finance_types::finance_event_envelope::{FinanceAlertEnvelope, FinanceAlertKind};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_transaction::OutboxClaimBudget;
-use medulla_types::finance_event_envelope::{FinanceAlertEnvelope, FinanceAlertKind};
 
 const SECRET: &str = "medulla-fin-r011-2-served-alert-secret";
 const GRAPH: &str = "fin-r011-2";

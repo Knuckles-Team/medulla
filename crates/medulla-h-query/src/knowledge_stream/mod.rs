@@ -24,17 +24,17 @@ use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_identity_types::acl::RequestContextClaims;
+use medulla_ingestion_types::knowledge_stream::KnowledgeResultFamily;
+use medulla_ingestion_types::knowledge_stream::KnowledgeStreamBatch;
+use medulla_ingestion_types::knowledge_stream::KnowledgeStreamCursor;
+#[cfg(any(test, feature = "test-support"))]
+pub use medulla_ingestion_types::knowledge_stream::KnowledgeStreamProjection;
+use medulla_ingestion_types::knowledge_stream::KnowledgeStreamQuery;
+use medulla_ingestion_types::knowledge_stream::KnowledgeStreamRequest;
+use medulla_ingestion_types::knowledge_stream::KNOWLEDGE_STREAM_SCHEMA_VERSION;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_types::knowledge_stream::KnowledgeResultFamily;
-use medulla_types::knowledge_stream::KnowledgeStreamBatch;
-use medulla_types::knowledge_stream::KnowledgeStreamCursor;
-#[cfg(any(test, feature = "test-support"))]
-pub use medulla_types::knowledge_stream::KnowledgeStreamProjection;
-use medulla_types::knowledge_stream::KnowledgeStreamQuery;
-use medulla_types::knowledge_stream::KnowledgeStreamRequest;
-use medulla_types::knowledge_stream::KNOWLEDGE_STREAM_SCHEMA_VERSION;
 
 #[cfg(feature = "security")]
 use medulla_isolation::rbac_persist::RbacPolicyStore;

@@ -16,7 +16,9 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-pub use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, ScreenObservationResult};
+pub use medulla_ingestion_types::ingestion_wire::{
+    ExtractedEdge, ExtractedNode, ScreenObservationResult,
+};
 
 /// One accessible element from the in-sandbox `a11y-dump` (AT-SPI) capture.
 #[derive(Deserialize, Default, Clone, Debug)]

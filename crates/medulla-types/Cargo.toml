@@ -247,3 +247,4 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-query-types = { path = "../medulla-query-types" }
+medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }

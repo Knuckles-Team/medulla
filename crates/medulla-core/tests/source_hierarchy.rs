@@ -4,7 +4,7 @@ use medulla_core::source_hierarchy::{
     container_node_id, subtree, upsert_containers, ContainerUpsert, CONTAINER_NODE_PREFIX,
 };
 use medulla_graph_core::graph::GraphCore;
-use medulla_types::source_governance::SourceContainer;
+use medulla_ingestion_types::source_governance::SourceContainer;
 
 fn container(id: &str, parent: Option<&str>) -> SourceContainer {
     SourceContainer {

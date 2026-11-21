@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tree_sitter::{Language, Node, Parser};
 
-use medulla_types::{
-    contract::BoundedVec,
-    ingestion_wire::{IndexDiagnostic, IndexFileOutcome, IndexFileStatus},
-};
+use medulla_ingestion_types::ingestion_wire::{IndexDiagnostic, IndexFileOutcome, IndexFileStatus};
+use medulla_types::contract::BoundedVec;
 use sha2::{Digest, Sha256};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -16,7 +14,7 @@ pub struct SymbolMetadata {
     pub args: Vec<String>,
 }
 
-pub use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, ParseResult};
+pub use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, ParseResult};
 
 #[path = "tree_sitter_ast.rs"]
 mod ast;

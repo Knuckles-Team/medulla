@@ -4,21 +4,21 @@
 use super::index_branches;
 use crate::parser::branch_scope::{blob_node_id, branch_node_id, content_digest, file_version_id};
 use crate::parser::enrichment_admission::{native_admissions, NativePolicyVerdict, UnitKey};
-use medulla_types::contract::BoundedVec;
-use medulla_types::ingestion_wire::{
+use medulla_ingestion_types::ingestion_wire::{
     IndexFileStatus, IndexFileVersion, IndexRef, IndexRefStatus, IndexRepositoryScope, IndexResult,
     IndexTombstone,
 };
+use medulla_types::contract::BoundedVec;
 
 const REPO: &str = "forge/team/project";
 const UTIL: &str = "def shared():\n    return 1\n";
 const APP_MAIN: &str = "from pkg.util import shared\n\ndef run():\n    return shared()\n";
 const APP_FEATURE: &str = "from pkg.util import shared\n\ndef run():\n    return shared() + 1\n";
 
-use medulla_types::test_support::repository_index::live_ref as live;
+use medulla_ingestion_types::ingestion_wire::fixtures::live_ref as live;
 
 fn member(ref_name: &str, path: &str, content: &str) -> IndexFileVersion {
-    medulla_types::test_support::repository_index::file_version(
+    medulla_ingestion_types::ingestion_wire::fixtures::file_version(
         ref_name,
         path,
         content_digest(content.as_bytes()),

@@ -13,7 +13,7 @@
 use std::time::{Duration, Instant};
 
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::plan_reconcile_digests;
+use medulla_ingestion_types::ingest_rules::plan_reconcile_digests;
 
 const HELD: usize = 1_000_000;
 /// Every hundredth held record is missing from the enumeration: 1 percent, below the

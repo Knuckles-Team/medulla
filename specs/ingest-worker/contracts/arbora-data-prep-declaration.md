@@ -13,7 +13,7 @@ The host sends `DataPrepDeclare` with a capability, sorted opaque field referenc
 
 ## Authoritative types
 
-`DataPrepDeclaration` in `crates/medulla-types/src/data_prep_declaration.rs`.
+`DataPrepDeclaration` in `crates/medulla-ingestion-types/src/data_prep_declaration.rs`.
 
 ## Test vectors
 

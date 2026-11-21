@@ -2,18 +2,18 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::extracted_fact::{EvidenceSpan, ExtractedFact, GroundingResult};
-use medulla_types::ingest_rules::{
+use medulla_ingestion_types::extracted_fact::{EvidenceSpan, ExtractedFact, GroundingResult};
+use medulla_ingestion_types::ingest_rules::{
     check_access_target, check_atom_provenance, check_container_tree, check_group_size,
     check_row_version, ground_fact, judge_proposal, plan_reconcile, select_atoms, FactDeduper,
     GroundingCache, IngestRefusal, RowVersionDecision, MAX_CONTAINER_DEPTH, MAX_GROUP_MEMBERS,
 };
-use medulla_types::knowledge_atom::{AtomKind, KnowledgeAtom};
-use medulla_types::ontology_proposal::{
+use medulla_ingestion_types::knowledge_atom::{AtomKind, KnowledgeAtom};
+use medulla_ingestion_types::ontology_proposal::{
     OntologyProposal, ProposalCheck, ProposalProvenance, ProposalState, ProposalThresholds,
     ProposedClass,
 };
-use medulla_types::source_governance::{RecordGovernance, SourceContainer, SourceGroup};
+use medulla_ingestion_types::source_governance::{RecordGovernance, SourceContainer, SourceGroup};
 use serde_json::json;
 
 fn set(items: &[&str]) -> BTreeSet<String> {
@@ -338,7 +338,7 @@ fn an_atom_without_provenance_is_refused_and_no_relevant_atom_gives_an_empty_con
 // spec: MEDULLA-INGEST-WORKER-R903.2
 #[test]
 fn digest_plan_matches_the_set_plan_and_keeps_the_guards() {
-    use medulla_types::ingest_rules::plan_reconcile_digests;
+    use medulla_ingestion_types::ingest_rules::plan_reconcile_digests;
     let digest = |n: u8| [n; 32];
     let held: Vec<[u8; 32]> = (1..=10).map(digest).collect();
     let enumerated: Vec<[u8; 32]> = (1..=9).map(digest).collect();

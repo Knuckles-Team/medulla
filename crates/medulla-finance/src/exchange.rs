@@ -6,7 +6,7 @@
 
 /// A single order in the book. Defined in `medulla-types::wire` (the `protocol`
 /// enum embeds it); re-exported here so the matching code below is unchanged.
-pub use medulla_types::wire_finance::Order;
+pub use medulla_finance_types::wire_finance::Order;
 
 pub use medulla_result_types::compute_result::finance::Fill;
 

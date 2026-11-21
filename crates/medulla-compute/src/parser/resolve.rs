@@ -27,7 +27,7 @@ mod imports;
 use imports::family_of;
 use imports::{call_family, resolve_import, split_csv};
 
-pub use medulla_types::ingestion_wire::IndexResult;
+pub use medulla_ingestion_types::ingestion_wire::IndexResult;
 
 /// The deterministic cost ladder's provenance is persisted on every emitted
 /// repository edge, rather than inferred later from its relationship name.
@@ -65,7 +65,9 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     let mut indexed = resolve(files, &results);
     indexed.files_parsed = file_outcomes
         .iter()
-        .filter(|outcome| outcome.status == medulla_types::ingestion_wire::IndexFileStatus::Success)
+        .filter(|outcome| {
+            outcome.status == medulla_ingestion_types::ingestion_wire::IndexFileStatus::Success
+        })
         .count();
     let mut evidence =
         super::enrichment_admission::record_native_evidence(&results, &file_outcomes);

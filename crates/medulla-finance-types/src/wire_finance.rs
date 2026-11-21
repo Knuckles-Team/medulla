@@ -247,7 +247,7 @@ mod finance_record_version_tests {
 
     #[test]
     fn record_refusals_are_registered_server_error_codes() {
-        use crate::contract::ServerErrorCode;
+        use medulla_types::contract::ServerErrorCode;
         for code in [
             finance_record_refusal::VERSION_UNKNOWN,
             finance_record_refusal::DERIVED_READONLY,

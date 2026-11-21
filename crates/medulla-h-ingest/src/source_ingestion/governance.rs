@@ -6,9 +6,11 @@
 //! record. The member is consumed here and never mapped. Parsing is
 //! O(properties) and takes no lock.
 
+use medulla_ingestion_types::ingest_rules::IngestRefusal;
+use medulla_ingestion_types::source_governance::{
+    Classification, GovernanceReport, RecordGovernance,
+};
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::IngestRefusal;
-use medulla_types::source_governance::{Classification, GovernanceReport, RecordGovernance};
 
 /// The payload member that carries a record's governance.
 pub const GOVERNANCE_MEMBER: &str = "_governance";

@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// What the writer's receipt promised for one result id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

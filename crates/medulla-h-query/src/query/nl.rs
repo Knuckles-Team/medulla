@@ -129,14 +129,14 @@ pub(crate) fn handle_nl_query_plan(
 ) -> Result<NlPlanned, Response> {
     // MEDULLA-FEDERATED-QUERY-R651.4: the same bound `Discover` holds, refused before any
     // planner call so nothing is retrieved or asked.
-    if text.len() > medulla_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES {
+    if text.len() > medulla_ingestion_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES {
         return Err(Response::err(
             req_id,
             format!(
                 "{}: NlQuery: text is {} bytes; the limit is {}",
-                medulla_types::ingestion_wire::QUERY_TEXT_TOO_LONG,
+                medulla_ingestion_types::ingestion_wire::QUERY_TEXT_TOO_LONG,
                 text.len(),
-                medulla_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES
+                medulla_ingestion_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES
             ),
         ));
     }

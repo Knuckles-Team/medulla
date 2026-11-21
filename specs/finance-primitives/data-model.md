@@ -7,7 +7,7 @@ This file describes the entities the finance rows add or extend. Classes and sha
 ### Account
 
 - Fields: tenant, owner, base currency, account kind, source identity, policy scope, schema version.
-- Owner: `crates/medulla-types/src/wire_finance.rs` (kind `FinanceRecordKind::Account`) and the `AccountShape` of the shapes file.
+- Owner: `crates/medulla-finance-types/src/wire_finance.rs` (kind `FinanceRecordKind::Account`) and the `AccountShape` of the shapes file.
 - Rule: client-writable; every key includes the tenant.
 
 ### Activity
@@ -48,7 +48,7 @@ This file describes the entities the finance rows add or extend. Classes and sha
 ### FinanceAlertEnvelope
 
 - Fields: `event_id`, `kind`, `listing_id`, `occurred_at_unix_nanos`, `message`.
-- Owner: `crates/medulla-types/src/finance_event_envelope.rs`; `finance.flip` keeps its stable event ID.
+- Owner: `crates/medulla-finance-types/src/finance_event_envelope.rs`; `finance.flip` keeps its stable event ID.
 
 ### StateSpaceModel and StateSpaceCheckpoint
 

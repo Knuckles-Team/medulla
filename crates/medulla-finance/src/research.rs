@@ -4,7 +4,7 @@
 //! component scores. Evidence resolution and debate round order read the graph
 //! and stay in the handler, so this crate holds no graph dependency.
 
-pub use medulla_types::finance_research::ScoreComponent as Component;
+pub use medulla_finance_types::finance_research::ScoreComponent as Component;
 
 /// Why a research record was refused. Each variant is one stable wire code
 /// (a registered `ServerErrorCode`), rendered `<code>: detail`.

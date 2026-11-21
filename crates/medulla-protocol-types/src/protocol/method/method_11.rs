@@ -543,14 +543,14 @@ $($variants)*
     /// ChangeEnvelope, an equal content digest writes nothing, and a payload
     /// outside the grammar refuses `DATA_PREP_DECLARATION_INVALID` or
     /// `DATA_PREP_DECLARATION_TOO_LARGE` and changes nothing. See
-    /// [`medulla_types::data_prep_declaration`].
+    /// [`medulla_ingestion_types::data_prep_declaration`].
     DataPrepDeclare {
-        request: Box<medulla_types::data_prep_declaration::DataPrepDeclareRequest>,
+        request: Box<medulla_ingestion_types::data_prep_declaration::DataPrepDeclareRequest>,
     },
     /// Read one tenant's stored declaration of a data-prep capability
     /// (absent when none was declared), under the caller's row authority.
     DataPrepDeclarationRead {
-        request: Box<medulla_types::data_prep_declaration::DataPrepDeclarationReadRequest>,
+        request: Box<medulla_ingestion_types::data_prep_declaration::DataPrepDeclarationReadRequest>,
     },
 
     // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────

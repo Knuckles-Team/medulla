@@ -16,8 +16,10 @@ mod test_support;
 
 use std::collections::BTreeMap;
 
+use medulla_finance_types::wire_finance::{
+    FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION,
+};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
-use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 
 const SECRET: &str = "medulla-fin-r004-3-2-served-records-secret";
 const GRAPH: &str = "fin-r004-3-2";

@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use medulla_ingestion_types::source_governance::{AccessReport, GovernanceReport, ReconcileReport};
 use medulla_types::{
     contract::BoundedVec,
     contract::BoundedWriter,
@@ -19,7 +20,6 @@ use medulla_types::{
     contract::MAX_MUTATION_ENVELOPE_BYTES,
     contract::MAX_RECORD_BYTES,
     ingest_materialize::{ClassReport, IngestBatchReport, MAX_CLASS_REPORTS},
-    source_governance::{AccessReport, GovernanceReport, ReconcileReport},
 };
 
 pub mod batch_kind;
@@ -156,7 +156,7 @@ pub const MAX_OBSERVED_TERMS: usize = 4_096;
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProposalSubmission {
-    pub proposal: medulla_types::ontology_proposal::OntologyProposal,
+    pub proposal: medulla_ingestion_types::ontology_proposal::OntologyProposal,
     #[serde(default)]
     pub observed_terms: Vec<String>,
 }

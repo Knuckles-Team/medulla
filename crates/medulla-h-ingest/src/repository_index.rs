@@ -14,6 +14,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use medulla_protocol_types::{
     change_envelope::ChangeEnvelope, change_envelope::ContentVersion,
     change_envelope::ContentVersionPosition, change_envelope::MaterialClass,
@@ -21,7 +22,6 @@ use medulla_protocol_types::{
     change_envelope::PrivacyAttestation, change_envelope::CHANGE_ENVELOPE_VERSION,
 };
 use medulla_types::contract::Digest256;
-use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
@@ -395,9 +395,9 @@ pub fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, Strin
 
 #[cfg(test)]
 mod tests {
+    use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
     use medulla_protocol_types::mutation_batch::MAX_MUTATION_OPERATIONS;
     use medulla_protocol_types::protocol::Method;
-    use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
     use super::*;
 

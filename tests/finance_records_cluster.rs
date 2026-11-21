@@ -24,6 +24,9 @@ use std::time::Duration;
 use openraft::async_runtime::watch::WatchReceiver;
 use tokio::sync::RwLock;
 
+use medulla_finance_types::wire_finance::{
+    FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION,
+};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_raft::raft::config::RaftClusterConfig;
 use medulla_raft::raft::node::{self, StartedNode};
@@ -31,7 +34,6 @@ use medulla_raft::raft::NodeId;
 use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 
 const SECRET: &str = "medulla-fin-r004-3-2-9-cluster-secret";
 const GRAPH: &str = "fin-r004-3-2-9";

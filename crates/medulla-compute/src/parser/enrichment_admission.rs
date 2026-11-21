@@ -9,10 +9,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::enrichment_machine::{EnrichmentEvent, ENRICHMENT_MACHINE};
-use medulla_result_types::epistemic_operations::RequestContext;
-use medulla_types::ingestion_wire::{
+use medulla_ingestion_types::ingestion_wire::{
     ExtractedEdge, IndexFileOutcome, IndexFileStatus, NativeRungEvidence, ParseResult,
 };
+use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_work_types::{
     native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
     native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
@@ -1068,7 +1068,7 @@ mod tests {
             symbols_extracted: 0,
         };
         let asserted = ParseResult {
-            nodes: vec![medulla_types::ingestion_wire::ExtractedNode {
+            nodes: vec![medulla_ingestion_types::ingestion_wire::ExtractedNode {
                 node_id: "symbol:a".into(),
                 node_type: "SYMBOL".into(),
                 properties: Default::default(),

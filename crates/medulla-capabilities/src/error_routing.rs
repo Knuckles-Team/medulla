@@ -760,7 +760,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
     // MEDULLA-FEDERATED-QUERY-R654.4: a walk past the depth cap, or an anchor or
     // symptom the index does not hold.
-    ("CodeContext", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
+    (
+        "CodeContext",
+        &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"],
+    ),
     ("Diagnose", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
     (
         "CorpusRetrieve",
@@ -1563,7 +1566,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     // NlQueryExplain shares NlQuery's planning entry and refuses exactly like it
     // (MEDULLA-FEDERATED-QUERY-R058.2.2.1).
     if matches!(d.id.as_str(), "Discover" | "NlQuery" | "NlQueryExplain") {
-        use medulla_types::ingestion_wire::{
+        use medulla_ingestion_types::ingestion_wire::{
             DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED, EXPANSION_PROVIDER_FAILED,
             EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,
         };

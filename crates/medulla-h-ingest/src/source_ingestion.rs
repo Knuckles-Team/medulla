@@ -40,14 +40,14 @@ use medulla_server_api::state::ServerState;
 pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
-#[cfg(all(feature = "redb", feature = "blob"))]
-pub mod transcript;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
 pub mod spec_projection;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod transcript;
 // The sweep lowers a Document delete through `crate::document_delete`, so it needs that
 // module's features as well.
 #[cfg(all(
@@ -90,11 +90,11 @@ pub struct PreparedSourceIngestion {
     relationship_count: u64,
     tombstoned_count: u64,
     relationship_tombstoned_count: u64,
-    governance: medulla_types::source_governance::GovernanceReport,
+    governance: medulla_ingestion_types::source_governance::GovernanceReport,
     /// Counts of an `access` batch (R902.5); `None` for every other kind.
-    access: Option<medulla_types::source_governance::AccessReport>,
+    access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
-    reconcile: Option<medulla_types::source_governance::ReconcileReport>,
+    reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport>,
     committed_graph_version: u64,
     /// Drift of each approved stream of the batch (R714); empty on a replay.
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
@@ -446,17 +446,18 @@ async fn prepare_extension_batch(
     let mut proposal_items = Vec::new();
     let mut access = None;
     #[allow(unused_mut)]
-    let mut reconcile: Option<medulla_types::source_governance::ReconcileReport> = None;
+    let mut reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport> = None;
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
             let snapshots = decode_permission_items::<
-                medulla_types::source_governance::AccessSnapshot,
+                medulla_ingestion_types::source_governance::AccessSnapshot,
             >(items.as_slice(), |snapshot| {
                 snapshot.validate().map_err(|error| error.to_string())
             })?;
-            let node_id_of = |snapshot: &medulla_types::source_governance::AccessSnapshot| {
-                source_node_id(ctx.tenant_scope, connector, stream, &snapshot.record_ref)
-            };
+            let node_id_of =
+                |snapshot: &medulla_ingestion_types::source_governance::AccessSnapshot| {
+                    source_node_id(ctx.tenant_scope, connector, stream, &snapshot.record_ref)
+                };
             let held =
                 read_held_records(persistence.as_ref(), &graph_fname, &snapshots, &node_id_of)
                     .await?;
@@ -467,7 +468,7 @@ async fn prepare_extension_batch(
                 permission_clock_ms(),
                 medulla_server_api::knob_config::knobs().ingest_acl_stale_after_s,
             )?;
-            access = Some(medulla_types::source_governance::AccessReport {
+            access = Some(medulla_ingestion_types::source_governance::AccessReport {
                 updated: admission.updates.len() as u64,
                 refused: admission.refused.len() as u64,
                 stale: admission.stale,
@@ -483,10 +484,11 @@ async fn prepare_extension_batch(
             }
         }
         Some(SourceBatchExtension::Groups(items)) => {
-            let groups = decode_permission_items::<medulla_types::source_governance::SourceGroup>(
-                items.as_slice(),
-                |group| group.validate().map_err(|error| error.to_string()),
-            )?;
+            let groups = decode_permission_items::<
+                medulla_ingestion_types::source_governance::SourceGroup,
+            >(items.as_slice(), |group| {
+                group.validate().map_err(|error| error.to_string())
+            })?;
             let admission = permissions::admit_groups(&groups, |group| {
                 source_scoped_id(
                     "source_group",
@@ -556,7 +558,7 @@ async fn prepare_extension_batch(
             })?;
             let lifted =
                 admin_override && admission.missing_count * 100 > held.len() as u64 * 20;
-            reconcile = Some(medulla_types::source_governance::ReconcileReport {
+            reconcile = Some(medulla_ingestion_types::source_governance::ReconcileReport {
                 ids_digest: admission.ids_digest.clone(),
                 missing_count: admission.missing_count,
                 deleted_count: 0,
@@ -576,7 +578,7 @@ async fn prepare_extension_batch(
             let knobs = medulla_server_api::knob_config::knobs();
             let admission = proposals::admit_proposals(
                 &proposals::decode_proposals(items.as_slice())?,
-                &medulla_types::ontology_proposal::ProposalThresholds {
+                &medulla_ingestion_types::ontology_proposal::ProposalThresholds {
                     min_coverage: knobs.ingest_proposal_min_coverage,
                     max_redundancy: knobs.ingest_proposal_max_redundancy,
                 },
@@ -723,8 +725,10 @@ async fn read_held_containers(
 async fn read_held_records(
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    snapshots: &[medulla_types::source_governance::AccessSnapshot],
-    node_id_of: &impl Fn(&medulla_types::source_governance::AccessSnapshot) -> Result<String, String>,
+    snapshots: &[medulla_ingestion_types::source_governance::AccessSnapshot],
+    node_id_of: &impl Fn(
+        &medulla_ingestion_types::source_governance::AccessSnapshot,
+    ) -> Result<String, String>,
 ) -> Result<BTreeMap<String, permissions::HeldRecord>, String> {
     let mut held = BTreeMap::new();
     for snapshot in snapshots {
@@ -776,8 +780,8 @@ fn permission_receipt_method(
     batch_id: &str,
     applied: u64,
     proposal_items: &[proposals::ProposalItemReceipt],
-    access: Option<medulla_types::source_governance::AccessReport>,
-    reconcile: Option<&medulla_types::source_governance::ReconcileReport>,
+    access: Option<medulla_ingestion_types::source_governance::AccessReport>,
+    reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
 ) -> Result<Method, String> {
     let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -794,7 +798,7 @@ fn permission_receipt_method(
         "relationship_live_set_digest": null,
         "withdrawals": [],
         "relationship_tombstones": [],
-        "governance": medulla_types::source_governance::GovernanceReport::default(),
+        "governance": medulla_ingestion_types::source_governance::GovernanceReport::default(),
         "record_count": 0,
         "relationship_count": 0,
         "tombstoned_count": 0,
@@ -890,7 +894,7 @@ struct AdmittedRecords {
     lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
     policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
     tombstone_count: usize,
-    governance: medulla_types::source_governance::GovernanceReport,
+    governance: medulla_ingestion_types::source_governance::GovernanceReport,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2066,7 +2070,7 @@ fn admit_record(
     target: &BlobTarget<'_>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
-    report: &mut medulla_types::source_governance::GovernanceReport,
+    report: &mut medulla_ingestion_types::source_governance::GovernanceReport,
 ) -> Result<Option<AdmittedRecord>, String> {
     // Governance parses before anything is written or the node is built
     // (MEDULLA-INGEST-WORKER-R900.2): a refused record leaves no state.
@@ -2312,7 +2316,7 @@ fn receipt_method(
     resolved: &ResolvedIngestionMappings,
     reconciliation: &ReconciliationPlan,
     admissions: &RawAdmissions<'_>,
-    governance: medulla_types::source_governance::GovernanceReport,
+    governance: medulla_ingestion_types::source_governance::GovernanceReport,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
     let RawAdmissions {
@@ -2725,7 +2729,7 @@ fn replay_optional_receipt_value<T: serde::de::DeserializeOwned>(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_governance(
     receipt: &serde_json::Value,
-) -> Result<medulla_types::source_governance::GovernanceReport, String> {
+) -> Result<medulla_ingestion_types::source_governance::GovernanceReport, String> {
     receipt
         .get("governance")
         .cloned()

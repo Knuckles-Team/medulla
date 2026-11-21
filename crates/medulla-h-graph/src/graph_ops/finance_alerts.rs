@@ -14,7 +14,7 @@
 use super::*;
 
 #[cfg(feature = "finance")]
-use medulla_types::finance_event_envelope::FinanceAlertEnvelope;
+use medulla_finance_types::finance_event_envelope::FinanceAlertEnvelope;
 
 /// The node property naming the opaque verified tenant scope of the raiser.
 #[cfg(feature = "finance")]

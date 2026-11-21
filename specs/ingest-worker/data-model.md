@@ -28,13 +28,13 @@ This file lists the entities that the ingest worker rows add. Each is a typed Ru
 ### DrainHandle, PageCheckpoint, GraphRoute and StageProfile
 
 - Fields: drain id, page index and cursor, graph and route scope, stage wall time, tokens and embeddings.
-- Owner: `crates/medulla-types/src/ingest_drain.rs`.
+- Owner: `crates/medulla-ingestion-types/src/ingest_drain.rs`.
 - Rule: `route_ingest_graph` picks the first match of connector, repository, tenant, then the default graph.
 
 ### DataPrepDeclaration
 
 - Fields: `capability`, sorted `field_refs`, `policy_digest`.
-- Owner: `crates/medulla-types/src/data_prep_declaration.rs`.
+- Owner: `crates/medulla-ingestion-types/src/data_prep_declaration.rs`.
 - Rule: `deny_unknown_fields`; a value with `:` or `/` is refused.
 
 ### SourceBatchKind and SourceBatchExtension
@@ -45,7 +45,7 @@ This file lists the entities that the ingest worker rows add. Each is a typed Ru
 ### KnowledgeAtom, NormalizedDocument and QuarantineReceipt
 
 - Fields: atom id, kind, text, provenance key and tenant; document id, source digest and atom ids; typed reason and replay disposition.
-- Owners: `crates/medulla-types/src/knowledge_atom.rs` and `crates/medulla-source-types/src/source_document.rs`.
+- Owners: `crates/medulla-ingestion-types/src/knowledge_atom.rs` and `crates/medulla-source-types/src/source_document.rs`.
 
 ### TranscriptThread and TranscriptMessage
 
@@ -60,11 +60,11 @@ This file lists the entities that the ingest worker rows add. Each is a typed Ru
 ### OntologyProposal, ExtractedFact and CandidateClaim
 
 - Fields: classes, properties, `Draft` or `Admitted` state; subject, predicate, object, evidence span and confidence.
-- Owners: `crates/medulla-types/src/ontology_proposal.rs` and `crates/medulla-types/src/extracted_fact.rs`.
+- Owners: `crates/medulla-ingestion-types/src/ontology_proposal.rs` and `crates/medulla-ingestion-types/src/extracted_fact.rs`.
 
 ### RecordGovernance, AccessSnapshot, SourceGroup, SourceEnumeration, ReconcilePlan and SourceContainer
 
-- Owner: `crates/medulla-types/src/source_governance.rs`.
+- Owner: `crates/medulla-ingestion-types/src/source_governance.rs`.
 - Rule: classification is a closed set; role and marking sets hold at most 256 entries.
 
 ### IngestBatchReport and ClassReport

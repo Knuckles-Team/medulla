@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 pub const MAX_INDEX_DIAGNOSTICS_PER_FILE: usize = 8;
 
@@ -537,5 +537,31 @@ impl DiscoverPlanRequest {
             }
         }
         Ok(())
+    }
+}
+
+/// Branch-aware `IndexRepository` fixtures shared by medulla-compute's projection
+/// tests and the root crate's durable repository-index test (EH-280). Enabled by
+/// the `test-support` feature, because `cfg(test)` does not cross a crate boundary.
+#[cfg(any(test, feature = "test-support"))]
+pub mod fixtures {
+    use super::{IndexFileVersion, IndexRef, IndexRefStatus};
+
+    /// A live ref whose revision id is `revision` repeated to a 40-hex git id.
+    pub fn live_ref(name: &str, revision: char) -> IndexRef {
+        IndexRef {
+            ref_name: name.to_string(),
+            revision_id: revision.to_string().repeat(40),
+            status: IndexRefStatus::Live,
+        }
+    }
+
+    /// One file version on `ref_name` at `path`, pinned to `blob_digest`.
+    pub fn file_version(ref_name: &str, path: &str, blob_digest: String) -> IndexFileVersion {
+        IndexFileVersion {
+            ref_name: ref_name.to_string(),
+            path: path.to_string(),
+            blob_digest,
+        }
     }
 }

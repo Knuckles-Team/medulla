@@ -870,10 +870,13 @@ mod tests {
         }
     }
 
-    fn alert(kind: medulla_types::finance_event_envelope::FinanceAlertKind, id: &str) -> Method {
+    fn alert(
+        kind: medulla_finance_types::finance_event_envelope::FinanceAlertKind,
+        id: &str,
+    ) -> Method {
         Method::FinanceAlertRaise {
             envelope: Box::new(
-                medulla_types::finance_event_envelope::FinanceAlertEnvelope {
+                medulla_finance_types::finance_event_envelope::FinanceAlertEnvelope {
                     event_id: id.into(),
                     kind,
                     listing_id: "NASDAQ:AAPL".into(),
@@ -887,7 +890,7 @@ mod tests {
     // spec: MEDULLA-FINANCE-PRIMITIVES-R011.2.1
     #[test]
     fn finance_alert_intents_preserve_schema_and_identity() {
-        use medulla_types::finance_event_envelope::FinanceAlertKind as Kind;
+        use medulla_finance_types::finance_event_envelope::FinanceAlertKind as Kind;
         for (kind, schema) in [
             (Kind::Price, "finance.alert.price.v1"),
             (Kind::TrendFlip, "finance.alert.trend_flip.v1"),

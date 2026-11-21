@@ -55,7 +55,7 @@ impl readback::ReadbackView for CallerView<'_, '_> {
 /// Compare the receipt with the caller's reads, then commit the readback node.
 pub async fn handle_verify_ingest_readback(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::ingest_readback::VerifyIngestReadbackRequest,
+    request: medulla_ingestion_types::ingest_readback::VerifyIngestReadbackRequest,
 ) -> Response {
     let req_id = ctx.req_id;
     let receipt = {

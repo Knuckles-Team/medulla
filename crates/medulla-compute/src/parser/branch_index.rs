@@ -19,7 +19,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use medulla_types::ingestion_wire::{
+use medulla_ingestion_types::ingestion_wire::{
     ExtractedEdge, IndexFileOutcome, IndexFileStatus, IndexRepositoryScope, IndexResult,
     ParseResult,
 };

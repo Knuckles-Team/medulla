@@ -611,7 +611,7 @@ enum SourceIngestionRoute {
     /// same placement fence and ChangeEnvelope authority as source ingestion.
     IndexRepository {
         files_msgpack: Vec<u8>,
-        scope: Box<medulla_types::ingestion_wire::IndexRepositoryScope>,
+        scope: Box<medulla_ingestion_types::ingestion_wire::IndexRepositoryScope>,
     },
 }
 

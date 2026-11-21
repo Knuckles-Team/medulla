@@ -218,7 +218,7 @@ $($variants)*
     /// every id matches. Refuses `READBACK_DENIED`, `READBACK_PARTIAL`,
     /// `READBACK_STALE` or `READBACK_MISMATCH` and then changes nothing.
     VerifyIngestReadback {
-        request: Box<medulla_types::ingest_readback::VerifyIngestReadbackRequest>,
+        request: Box<medulla_ingestion_types::ingest_readback::VerifyIngestReadbackRequest>,
     },
     /// EG-owned D18 source change sets and append-only write-back receipts.
     /// The engine records governed observations; it never calls a vendor API.

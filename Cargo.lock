@@ -4817,6 +4817,7 @@ dependencies = [
  "medulla-decision-types",
  "medulla-identity-types",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-mutation-types",
  "medulla-protocol-types",
  "medulla-query-types",
@@ -4883,6 +4884,7 @@ dependencies = [
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-modality",
  "medulla-mutation-types",
@@ -4954,6 +4956,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-identity-types",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-mutation-types",
  "medulla-protocol-types",
@@ -5157,6 +5160,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-catalog-types",
  "medulla-decision-types",
+ "medulla-ingestion-types",
  "medulla-modality",
  "medulla-query-types",
  "medulla-source-types",
@@ -5232,6 +5236,7 @@ dependencies = [
  "medulla-finance",
  "medulla-finance-market",
  "medulla-finance-quant",
+ "medulla-finance-types",
  "medulla-geo",
  "medulla-graph-algos",
  "medulla-graph-core",
@@ -5250,6 +5255,7 @@ dependencies = [
  "medulla-identity-types",
  "medulla-image",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-jobs",
  "medulla-kernel",
@@ -5487,6 +5493,7 @@ dependencies = [
 name = "medulla-finance"
 version = "0.1.0"
 dependencies = [
+ "medulla-finance-types",
  "medulla-numeric",
  "medulla-result-types",
  "medulla-types",
@@ -5521,6 +5528,18 @@ dependencies = [
  "nalgebra",
  "ndarray 0.17.2",
  "rand 0.8.8",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "medulla-finance-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
 ]
@@ -5795,9 +5814,11 @@ dependencies = [
  "medulla-finance",
  "medulla-finance-market",
  "medulla-finance-quant",
+ "medulla-finance-types",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-mining",
@@ -5861,6 +5882,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-identity-types",
  "medulla-image",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-modality",
@@ -6019,6 +6041,7 @@ dependencies = [
  "medulla-h-sparql",
  "medulla-identity-types",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-mining",
@@ -6257,6 +6280,18 @@ dependencies = [
 [[package]]
 name = "medulla-ingest"
 version = "0.1.0"
+
+[[package]]
+name = "medulla-ingestion-types"
+version = "0.1.0"
+dependencies = [
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "medulla-isolation"
@@ -6739,6 +6774,7 @@ dependencies = [
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-modality",
  "medulla-mutation-types",
  "medulla-nlq",
@@ -6801,8 +6837,10 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-decision-outcome-types",
  "medulla-decision-types",
+ "medulla-finance-types",
  "medulla-identity-types",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-modality",
  "medulla-mutation-types",
  "medulla-query-types",
@@ -6950,6 +6988,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-types",
  "rmp-serde",
  "schemars 1.2.3",
@@ -7371,6 +7410,7 @@ dependencies = [
  "medulla-epistemic",
  "medulla-exec",
  "medulla-federation",
+ "medulla-finance-types",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-graphql",
@@ -7561,6 +7601,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-h-ingest",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-persistence",
@@ -7666,6 +7707,7 @@ dependencies = [
  "medulla-h-sparql",
  "medulla-h-txn",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-modality",
@@ -8041,6 +8083,7 @@ dependencies = [
  "medulla-h-retrieve",
  "medulla-identity-types",
  "medulla-index-types",
+ "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-modality",
@@ -8185,6 +8228,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-catalog-types",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-query-types",
  "medulla-types",
  "rmp-serde",
@@ -8657,6 +8701,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-decision-types",
  "medulla-identity-types",
+ "medulla-ingestion-types",
  "medulla-mutation-types",
  "medulla-protocol-types",
  "medulla-query-types",

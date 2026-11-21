@@ -8,8 +8,8 @@
 use medulla_server_blob::blob::BlobStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_ingestion_types::ingestion_wire::IndexResult;
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::ingestion_wire::IndexResult;
 use serde::{Deserialize, Serialize};
 
 use super::super::*;
@@ -421,10 +421,12 @@ mod tests {
     use medulla_compute::parser::enrichment_admission::EnrichmentCandidate;
     use medulla_compute::parser::enrichment_admission::EnrichmentStage;
     #[cfg(feature = "blob")]
-    use medulla_server_blob::blob::store::ChunkStore;
+    use medulla_ingestion_types::ingestion_wire::ExtractedNode;
+    use medulla_ingestion_types::ingestion_wire::{
+        IndexFileOutcome, IndexFileStatus, NativeRungEvidence,
+    };
     #[cfg(feature = "blob")]
-    use medulla_types::ingestion_wire::ExtractedNode;
-    use medulla_types::ingestion_wire::{IndexFileOutcome, IndexFileStatus, NativeRungEvidence};
+    use medulla_server_blob::blob::store::ChunkStore;
 
     #[test]
     fn pending_snapshot_collects_beyond_one_native_page() {

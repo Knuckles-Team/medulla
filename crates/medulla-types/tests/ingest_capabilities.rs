@@ -1,10 +1,10 @@
 //! Ingest capability types (MEDULLA-REPO-INGEST-R002.650).
 
-use medulla_types::contract::Digest256;
-use medulla_types::ingest_capabilities::{
+use medulla_ingestion_types::ingest_capabilities::{
     ConformanceReport, DeadLetterItem, FragmentAddress, Supersession,
     INGEST_CAPABILITIES_SCHEMA_VERSION,
 };
+use medulla_types::contract::Digest256;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

@@ -31,24 +31,46 @@ STAY_SET = frozenset(
         "test_support",
     }
 )
+# Modules not in the stay set that no move of MEDULLA-SDLC-R021.3 to R021.6 names.
 REMAINING = (
-    "code_health",
-    "data_prep_declaration",
-    "extracted_fact",
-    "finance_event_envelope",
-    "finance_research",
-    "finance_wallet_trust",
-    "ingest_capabilities",
-    "ingest_drain",
-    "ingest_readback",
-    "ingest_rules",
-    "ingestion_wire",
-    "knowledge_atom",
-    "knowledge_stream",
-    "ontology_proposal",
-    "skill_plan",
-    "source_governance",
-    "wire_finance",
+    "archimate_exchange",
+    "capability_machine",
+    "claim_machine",
+    "code_context",
+    "code_map",
+    "contract_catalog",
+    "contradiction_machine",
+    "corpus_retrieval",
+    "dashboard",
+    "deployment_profile",
+    "finance_accounting",
+    "finance_forecast",
+    "gap_machine",
+    "gap_topic_machine",
+    "ingest_lanes",
+    "ingest_machine",
+    "ingest_materialize",
+    "ingest_throughput",
+    "numeric_kernel",
+    "ontology_base",
+    "participant",
+    "process_exchange",
+    "process_import",
+    "profile_grant_machine",
+    "projection_read",
+    "refusal_code",
+    "regime_forecast",
+    "reservation_machine",
+    "retrieval",
+    "retrieval_round",
+    "row_change",
+    "schedule_machine",
+    "semantic_enrichment",
+    "shape_report",
+    "task_machine",
+    "throughput_machine",
+    "unified_row",
+    "viewport",
 )
 SLICES = (
     "medulla-query-types",
@@ -258,6 +280,51 @@ def test_domain_modules_live_in_their_owning_slice() -> None:
                 assert _modules(crate) & set(modules) == set(), crate
     # Hard cutover: no importer still names a moved module through medulla-types.
     moved = "|".join(module for modules in DOMAIN_SLICES.values() for module in modules)
+    old_path = re.compile(r"\bmedulla_types::(" + moved + r")\b")
+    stale = [
+        str(path.relative_to(ROOT))
+        for top in ("crates", "src", "tests", "benches")
+        for path in (ROOT / top).rglob("*.rs")
+        if "target" not in path.parts
+        and old_path.search(path.read_text(encoding="utf-8", errors="ignore"))
+    ]
+    assert stale == []
+
+
+FINANCE_MODULES = (
+    "finance_event_envelope",
+    "finance_research",
+    "finance_wallet_trust",
+    "wire_finance",
+)
+INGESTION_MODULES = (
+    "code_health",
+    "data_prep_declaration",
+    "extracted_fact",
+    "ingest_capabilities",
+    "ingest_drain",
+    "ingest_readback",
+    "ingest_rules",
+    "ingestion_wire",
+    "knowledge_atom",
+    "knowledge_stream",
+    "ontology_proposal",
+    "skill_plan",
+    "source_governance",
+)
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R021.6")
+def test_finance_and_ingestion_modules_live_in_their_slices() -> None:
+    owners = {
+        "medulla-finance-types": FINANCE_MODULES,
+        "medulla-ingestion-types": INGESTION_MODULES,
+    }
+    for owner, modules in owners.items():
+        assert _modules(owner) == set(modules), owner
+        # Both slices are contract types over medulla-types alone.
+        assert _dependencies(owner) == {"medulla-types"}, owner
+    moved = "|".join((*FINANCE_MODULES, *INGESTION_MODULES))
     old_path = re.compile(r"\bmedulla_types::(" + moved + r")\b")
     stale = [
         str(path.relative_to(ROOT))

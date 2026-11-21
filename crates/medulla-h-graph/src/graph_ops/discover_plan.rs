@@ -46,7 +46,9 @@ pub(crate) fn expand_seeds(
     expand_hops(core, &seeds, hops, fanout, knobs.discover_hop_decay, k)
 }
 
-use medulla_types::ingestion_wire::{ArmRank, DiscoverArm, DiscoverDegraded, ExpansionEvidence};
+use medulla_ingestion_types::ingestion_wire::{
+    ArmRank, DiscoverArm, DiscoverDegraded, ExpansionEvidence,
+};
 
 /// A planner refusal: the wire code and its detail. No rows, no writes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,25 +72,25 @@ pub(crate) struct DeepArms {
     pub evidence: Vec<ExpansionEvidence>,
     pub degraded: Option<DiscoverDegraded>,
     /// The filters and relational intent read from the query text (R651.5).
-    pub analysis: Option<medulla_types::ingestion_wire::DiscoverAnalysis>,
+    pub analysis: Option<medulla_ingestion_types::ingestion_wire::DiscoverAnalysis>,
 }
 
 /// Plan one `Discover` request. Blocking (the provider and the embedder are network
 /// clients): the caller runs it off the reactor.
 #[cfg(feature = "query")]
 pub(crate) fn plan_discover(
-    request: &medulla_types::ingestion_wire::DiscoverPlanRequest,
+    request: &medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest,
     relationships: &[medulla_plan::query_understanding::RelationshipName],
     expansions: usize,
     perspectives: Option<u32>,
 ) -> Result<DeepArms, PlanRefusal> {
+    use medulla_ingestion_types::ingestion_wire::{
+        DiscoverMode, DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED,
+        EXPANSION_PROVIDER_FAILED, EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,
+    };
     use medulla_plan::query_understanding::{
         expansion_provider, run_expansion, ExpansionError, ExpansionKind, ExpansionRequest,
         PERSPECTIVES_MAX, PERSPECTIVES_MIN,
-    };
-    use medulla_types::ingestion_wire::{
-        DiscoverMode, DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED,
-        EXPANSION_PROVIDER_FAILED, EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,
     };
     request.validate().map_err(|refusal| PlanRefusal {
         code: refusal.code(),
@@ -124,7 +126,7 @@ pub(crate) fn plan_discover(
     // the plan evidence, also when the provider later fails.
     let analysis = {
         let read = medulla_plan::query_understanding::understand(text, relationships);
-        Some(medulla_types::ingestion_wire::DiscoverAnalysis {
+        Some(medulla_ingestion_types::ingestion_wire::DiscoverAnalysis {
             filters: read.filters,
             intent: read.intent,
         })
@@ -341,7 +343,7 @@ mod tests {
     #[cfg(feature = "query")]
     #[test]
     fn explicit_perspectives_are_checked_before_any_provider_call() {
-        use medulla_types::ingestion_wire::{
+        use medulla_ingestion_types::ingestion_wire::{
             DiscoverMode, DiscoverPlanRequest, EXPANSION_FANOUT_EXCEEDED, QUERY_TEXT_TOO_LONG,
         };
         let deep = |text: String| DiscoverPlanRequest {

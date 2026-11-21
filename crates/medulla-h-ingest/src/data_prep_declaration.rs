@@ -13,12 +13,12 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_protocol_types::protocol::Method;
-use medulla_types::contract::Digest256;
-use medulla_types::data_prep_declaration::{
+use medulla_ingestion_types::data_prep_declaration::{
     DataPrepDeclaration, DataPrepDeclarationError, DataPrepDeclarationView,
     DATA_PREP_DECLARATION_INVALID, DATA_PREP_DECLARATION_TOO_LARGE, MAX_FIELD_REFS,
 };
+use medulla_protocol_types::protocol::Method;
+use medulla_types::contract::Digest256;
 use serde_json::json;
 
 use super::repository_index::{EnvelopeLabels, IndexWriteSet};

@@ -9,6 +9,10 @@ use medulla_index_types::{
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageLeasePage,
     semantic_index::SemanticStageTransition,
 };
+use medulla_ingestion_types::{
+    ingestion_wire::IndexResult, ingestion_wire::ParseResult,
+    ingestion_wire::ScreenObservationResult,
+};
 #[cfg(feature = "asr-native")]
 use medulla_query_types::asr_wire::AsrTranscription;
 #[cfg(feature = "quantum")]
@@ -20,10 +24,6 @@ use medulla_query_types::wire::DiscoverResult;
 use medulla_source_types::{
     source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
     source_ingestion::SourceIngestionReceipt,
-};
-use medulla_types::{
-    ingestion_wire::IndexResult, ingestion_wire::ParseResult,
-    ingestion_wire::ScreenObservationResult,
 };
 #[cfg(feature = "modality-serving")]
 mod modality;
@@ -62,7 +62,7 @@ method_results! {
     // MEDULLA-REPO-INGEST-R006.1: the daily paper target over :StageReceipt nodes.
     IngestThroughputWindow(MeasureIngestThroughput) => Raw<medulla_types::ingest_throughput::ThroughputWindow>;
     // MEDULLA-REPO-INGEST-R002.100: the independent readback receipt.
-    VerifyIngestReadback(VerifyIngestReadback) => Raw<medulla_types::ingest_readback::ReadbackReceipt>;
+    VerifyIngestReadback(VerifyIngestReadback) => Raw<medulla_ingestion_types::ingest_readback::ReadbackReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
     // MEDULLA-DECISION-ENGINE-R614.3: what one scheduled enrichment wrote.
@@ -72,8 +72,8 @@ method_results! {
     MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryContext>;
     MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryCommitReceipt>;
     // MEDULLA-INGEST-WORKER-R001.1007/.1008: what one declaration did, and the stored declaration.
-    DataPrepDeclare(DataPrepDeclare) => Raw<medulla_types::data_prep_declaration::DataPrepDeclareReceipt>;
-    DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_types::data_prep_declaration::DataPrepDeclarationView>;
+    DataPrepDeclare(DataPrepDeclare) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclareReceipt>;
+    DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclarationView>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
     DocumentDelete(DocumentDelete) => Raw<medulla_query_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.

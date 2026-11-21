@@ -8,8 +8,10 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_finance_types::finance_wallet_trust::{
+    current_record, WalletKeyTrust, WALLET_KEY_TRUST_LABEL,
+};
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::finance_wallet_trust::{current_record, WalletKeyTrust, WALLET_KEY_TRUST_LABEL};
 
 /// Page size of the label scan; every page is read.
 const PAGE: usize = 1024;

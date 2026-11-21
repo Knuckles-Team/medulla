@@ -1,7 +1,7 @@
 //! The `Discover` answer envelope (MEDULLA-FEDERATED-QUERY-R089.1). It lives here, not beside
 //! `DiscoverHit`, because its verdict is a query wire type and medulla-types sits below this crate.
 
-use medulla_types::ingestion_wire::{DiscoverHit, DiscoverPlan};
+use medulla_ingestion_types::ingestion_wire::{DiscoverHit, DiscoverPlan};
 use serde::{Deserialize, Serialize};
 
 use crate::wire::RetrievalVerdict;
@@ -20,9 +20,9 @@ pub struct DiscoverResult {
 mod discover_plan_tests {
     use super::*;
     use crate::wire::{DiscoverThresholds, RetrievalVerdict};
-    use medulla_types::ingestion_wire::{
-        ArmRank, DiscoverAnalysis, DiscoverArm, DiscoverDegraded, DiscoverHit, DiscoverPlan, DiscoverPlanRequest,
-        ExpansionEvidence, QueryFilters, QUERY_TEXT_TOO_LONG,
+    use medulla_ingestion_types::ingestion_wire::{
+        ArmRank, DiscoverAnalysis, DiscoverArm, DiscoverDegraded, DiscoverHit, DiscoverPlan,
+        DiscoverPlanRequest, ExpansionEvidence, QueryFilters, QUERY_TEXT_TOO_LONG,
     };
 
     fn hit() -> DiscoverHit {

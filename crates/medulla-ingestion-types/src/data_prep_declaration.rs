@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Most field references one declaration may carry.
 pub const MAX_FIELD_REFS: usize = 256;

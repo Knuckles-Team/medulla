@@ -274,6 +274,7 @@ medulla-exec = { path = "../medulla-exec" }
 # never depend on medulla-plan's own `geo` feature — only the REAL medulla-geo executor (dep:medulla-geo
 # below, gated by medulla-plan's `geo`) does.
 medulla-types = { path = "../medulla-types", features = ["query", "geo"] }
+medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 # Search-task record types (MEDULLA-FEDERATED-QUERY-R702.2 reuses the
 # MEDULLA-FEDERATED-QUERY-R702.1 model of medulla-work-types instead of a

@@ -8,10 +8,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_ingestion_types::ingest_rules::{check_access_target, check_group_size, IngestRefusal};
+use medulla_ingestion_types::source_governance::{AccessSnapshot, SourceGroup};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::{check_access_target, check_group_size, IngestRefusal};
-use medulla_types::source_governance::{AccessSnapshot, SourceGroup};
 
 /// Node property: the version of the last applied access sync.
 pub const ACL_VERSION_PROPERTY: &str = "source_acl_version";
@@ -175,7 +175,7 @@ pub fn admit_groups(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::ingest_rules::MAX_GROUP_MEMBERS;
+    use medulla_ingestion_types::ingest_rules::MAX_GROUP_MEMBERS;
     use serde_json::{json, Map, Value};
 
     fn snapshot(record_ref: &str, public: bool) -> AccessSnapshot {

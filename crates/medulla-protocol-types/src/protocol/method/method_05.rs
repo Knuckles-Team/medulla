@@ -82,7 +82,7 @@ $($variants)*
     /// This is the sole native result contract and returns bounded Arrow IPC.
     #[cfg(feature = "knowledge-batch")]
     KnowledgeStream {
-        request: medulla_types::knowledge_stream::KnowledgeStreamRequest,
+        request: medulla_ingestion_types::knowledge_stream::KnowledgeStreamRequest,
     },
 
 

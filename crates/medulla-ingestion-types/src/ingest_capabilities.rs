@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Wire version of every record in this module.
 pub const INGEST_CAPABILITIES_SCHEMA_VERSION: u32 = 1;

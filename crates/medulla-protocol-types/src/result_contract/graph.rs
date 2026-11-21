@@ -19,7 +19,7 @@ method_results! {
     HasNode(HasNode) => Bool<bool>;
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
-    WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
+    WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_finance_types::finance_wallet_trust::WalletKeyTrust>;
     SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
     SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
     // MEDULLA-CQ-ORCH-R705.6: the architecture exchange import and export answers.

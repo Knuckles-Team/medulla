@@ -1,0 +1,31 @@
+[package]
+name = "medulla-finance-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Finance wire types: orders and finance records, the finance alert envelope, strategy research records and wallet key trust"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_finance_types"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rmp-serde = "1.3"
+hex = "0.4"
+schemars = { version = "1.2.3", optional = true }
+
+[features]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
+# `finance` / `datascience` gate the finance wire DTOs, forwarded from
+# `medulla-protocol-types` (MEDULLA-SDLC-R021.6).
+finance = ["medulla-types/finance"]
+datascience = ["medulla-types/datascience"]
+test-support = ["medulla-types/test-support"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

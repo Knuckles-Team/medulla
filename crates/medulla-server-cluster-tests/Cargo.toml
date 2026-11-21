@@ -26,6 +26,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-store = { path = "../medulla-store" }
 medulla-types = { path = "../medulla-types" }
+medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"

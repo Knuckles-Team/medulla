@@ -337,7 +337,7 @@ $($variants)*
         #[serde(with = "serde_bytes")]
         files_msgpack: Vec<u8>,
         #[serde(default)]
-        scope: Option<Box<medulla_types::ingestion_wire::IndexRepositoryScope>>,
+        scope: Option<Box<medulla_ingestion_types::ingestion_wire::IndexRepositoryScope>>,
     },
 
 
@@ -397,7 +397,7 @@ $($variants)*
         query_text: Option<String>,
         /// `standard` (one weighted blend) or `deep` (expansion arms fused by rank).
         #[serde(default)]
-        mode: medulla_types::ingestion_wire::DiscoverMode,
+        mode: medulla_ingestion_types::ingestion_wire::DiscoverMode,
         /// Unix seconds the recency decay is measured against; absent means now.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         as_of: Option<i64>,

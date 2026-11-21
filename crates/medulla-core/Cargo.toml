@@ -71,6 +71,7 @@ cold-tier = ["medulla-graph-core/cold-tier"]
 contract = ["medulla-graph-core/contract", "medulla-ann/contract"]
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
@@ -136,6 +137,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

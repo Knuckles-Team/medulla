@@ -1160,7 +1160,11 @@ mod tests {
         for (value, accepted) in [(0, false), (1, true), (1_000, true), (1_001, false)] {
             let mut bounded = base.clone();
             bounded.orchestration_limits.projection_batch = value;
-            assert_eq!(bounded.validate().is_ok(), accepted, "projection_batch {value}");
+            assert_eq!(
+                bounded.validate().is_ok(),
+                accepted,
+                "projection_batch {value}"
+            );
         }
         let decoded: SchedulerConfig = serde_json::from_value(json!({
             "total_workers": 4,

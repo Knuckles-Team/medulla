@@ -4,7 +4,7 @@
 //! Every identifier is validated at construction, and deserialization goes
 //! through the same constructors, so an invalid value is never representable.
 
-use crate::ingest_throughput::IngestStage;
+use medulla_types::ingest_throughput::IngestStage;
 use serde::{Deserialize, Serialize};
 
 /// Most bytes a page cursor may hold.

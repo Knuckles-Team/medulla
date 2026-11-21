@@ -8,7 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::ingestion_wire::{
+use medulla_ingestion_types::ingestion_wire::{
     IndexFileVersion, IndexRefStatus, IndexRepositoryScope, IndexTombstone,
 };
 use sha2::{Digest, Sha256};

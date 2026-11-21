@@ -8,10 +8,10 @@
 use std::collections::BTreeMap;
 
 use medulla_core::source_hierarchy::{self, ContainerError, CONTAINED_IN};
+use medulla_ingestion_types::source_governance::SourceContainer;
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::SourceJson;
 use medulla_types::contract::ServerErrorCode;
-use medulla_types::source_governance::SourceContainer;
 use serde_json::{json, Value};
 
 /// The edge from a record to the container it sits in.

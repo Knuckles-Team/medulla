@@ -3,8 +3,8 @@ use medulla_h_ingest::repository_index::repository_envelope;
 
 use std::collections::HashMap;
 
+use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use medulla_protocol_types::change_envelope::MaterialClass;
-use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
 use medulla_h_ingest::repository_index::{lower, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY};
 use medulla_protocol_types::protocol::Method;
@@ -247,9 +247,9 @@ fn a_batch_over_the_byte_ceiling_is_refused_and_a_halved_resend_succeeds() {
 // spec: MEDULLA-REPO-INGEST-R006.5
 #[test]
 fn one_parse_per_unique_blob_across_branches() {
+    use medulla_ingestion_types::ingestion_wire::fixtures::{file_version, live_ref};
+    use medulla_ingestion_types::ingestion_wire::IndexRepositoryScope;
     use medulla_types::contract::BoundedVec;
-    use medulla_types::ingestion_wire::IndexRepositoryScope;
-    use medulla_types::test_support::repository_index::{file_version, live_ref};
     use sha2::{Digest, Sha256};
 
     let digest = |body: &str| format!("sha256:{}", hex::encode(Sha256::digest(body.as_bytes())));

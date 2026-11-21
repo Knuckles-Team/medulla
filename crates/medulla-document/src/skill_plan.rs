@@ -10,8 +10,10 @@
 use medulla_decision_types::decision::task_plan::{
     plan_explicit_tasks, TaskPlanProposal, TaskPlanTask, MAX_CONCURRENCY,
 };
+use medulla_ingestion_types::skill_plan::{
+    SkillCompilation, SkillStepBinding, SKILL_GRAMMAR_REVISION,
+};
 use medulla_types::contract::{BoundedVec, Digest256, ServerErrorCode};
-use medulla_types::skill_plan::{SkillCompilation, SkillStepBinding, SKILL_GRAMMAR_REVISION};
 
 const STEPS_HEADING: &str = "## Steps";
 

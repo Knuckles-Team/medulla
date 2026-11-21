@@ -35,12 +35,12 @@ pub use consumer::plan_held_underfunded_park;
 ))]
 pub use enrichment::intent_for_snapshot as enrichment_intent_for_snapshot;
 
-type IndexScope = Box<medulla_types::ingestion_wire::IndexRepositoryScope>;
+type IndexScope = Box<medulla_ingestion_types::ingestion_wire::IndexRepositoryScope>;
 
 /// Every scope path obeys the same portable logical-path rule as a source name.
 #[cfg(feature = "ast")]
 fn validate_scope_paths(
-    scope: &medulla_types::ingestion_wire::IndexRepositoryScope,
+    scope: &medulla_ingestion_types::ingestion_wire::IndexRepositoryScope,
 ) -> Result<(), String> {
     use super::super::request_boundary::preflight::validate_ast_logical_path;
     let versions = scope.file_versions.iter().map(|item| item.path.as_str());
@@ -59,7 +59,7 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<medulla_types::ingestion_wire::IndexResult, Response> {
+) -> Result<medulla_ingestion_types::ingestion_wire::IndexResult, Response> {
     use super::super::request_boundary::preflight::{ast_input_limits, decode_ast_sources};
     let req_id = ctx.req_id;
     // Entries are content-keyed: one path may name several blobs (EH-280).
@@ -102,7 +102,7 @@ async fn index_scoped(
 
 #[cfg(feature = "ast")]
 fn attach_content_refs(
-    result: &mut medulla_types::ingestion_wire::IndexResult,
+    result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
     refs: &std::collections::BTreeMap<String, (String, u64)>,
 ) {
     for node in &mut result.nodes {
@@ -124,7 +124,7 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<medulla_types::ingestion_wire::IndexResult, Response> {
+) -> Result<medulla_ingestion_types::ingestion_wire::IndexResult, Response> {
     let req_id = ctx.req_id;
     let _ = (files_msgpack, scope);
     Err(Response::err(req_id, "AST feature not enabled".to_string()))
@@ -317,12 +317,12 @@ mod tests {
     #[cfg(feature = "ast")]
     #[test]
     fn only_cas_admitted_blob_rows_receive_source_refs() {
-        let blob = |digest: &str| medulla_types::ingestion_wire::ExtractedNode {
+        let blob = |digest: &str| medulla_ingestion_types::ingestion_wire::ExtractedNode {
             node_id: format!("blob:{digest}"),
             node_type: "Blob".into(),
             properties: std::collections::HashMap::from([("content_digest".into(), digest.into())]),
         };
-        let mut result = medulla_types::ingestion_wire::IndexResult {
+        let mut result = medulla_ingestion_types::ingestion_wire::IndexResult {
             nodes: vec![blob("sha256:admitted"), blob("sha256:prior-tombstone")],
             ..Default::default()
         };
@@ -354,8 +354,8 @@ mod tests {
     /// envelope method to reach the repository-content screening rule.
     #[test]
     fn callers_cannot_submit_repository_snapshot_material() {
-        let result = medulla_types::ingestion_wire::IndexResult {
-            nodes: vec![medulla_types::ingestion_wire::ExtractedNode {
+        let result = medulla_ingestion_types::ingestion_wire::IndexResult {
+            nodes: vec![medulla_ingestion_types::ingestion_wire::ExtractedNode {
                 node_id: "blob:x".to_string(),
                 node_type: "Blob".to_string(),
                 properties: std::collections::HashMap::new(),

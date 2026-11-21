@@ -69,7 +69,7 @@ pub struct IngestJobEnvelope {
     /// The drain page this job fetches, when it is one page of a source drain
     /// (MEDULLA-INGEST-WORKER-R605.1).
     #[serde(default)]
-    pub page: Option<medulla_types::ingest_drain::PageCheckpoint>,
+    pub page: Option<medulla_ingestion_types::ingest_drain::PageCheckpoint>,
 }
 
 /// Why an ingest job envelope or retry policy is refused.

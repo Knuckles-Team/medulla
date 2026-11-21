@@ -40,9 +40,9 @@ arbora (admission, auth, principal) --> medulla dispatch
 
 ```text
 crates/medulla-core/ontology/finance-v1.ttl, finance-v1.shapes.ttl   existing: classes and shapes, extended
-crates/medulla-types/src/wire_finance.rs                              existing: record kinds, policy, version gate
+crates/medulla-finance-types/src/wire_finance.rs                              existing: record kinds, policy, version gate
 crates/medulla-types/src/numeric_kernel.rs                            new: NumericEvaluateOp, output, refusal
-crates/medulla-types/src/finance_event_envelope.rs                    existing: alert envelope
+crates/medulla-finance-types/src/finance_event_envelope.rs                    existing: alert envelope
 crates/medulla-numeric/src/evaluation/, series/, calibration/         existing and new: shared kernels
 crates/medulla-finance/src/                                           existing: lot accounting, import, golden fixtures
 crates/medulla-finance-market/src/market/                             existing: BacktestRun, AnalysisSnapshot, digest

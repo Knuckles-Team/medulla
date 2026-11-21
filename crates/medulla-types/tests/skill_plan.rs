@@ -1,7 +1,9 @@
 //! Skill compilation record round trip (MEDULLA-REPO-INGEST-R002.1.1).
 
+use medulla_ingestion_types::skill_plan::{
+    SkillCompilation, SkillStepBinding, SKILL_GRAMMAR_REVISION,
+};
 use medulla_types::contract::Digest256;
-use medulla_types::skill_plan::{SkillCompilation, SkillStepBinding, SKILL_GRAMMAR_REVISION};
 
 fn compilation() -> SkillCompilation {
     SkillCompilation {

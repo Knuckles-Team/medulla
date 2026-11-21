@@ -5,5 +5,4 @@
 //! (the same precedent as medulla-query's `dev-scope-grant`). Production builds never
 //! enable it.
 
-pub mod repository_index;
 pub mod wave;

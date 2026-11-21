@@ -208,8 +208,9 @@ fn preflight_feature_surface_msgpack(method: &Method) -> Option<Result<(), &'sta
         } => Some(preflight_nested_msgpack(pattern_msgpack)),
         #[cfg(feature = "knowledge-batch")]
         Method::KnowledgeStream { request } => Some(match &request.query {
-            medulla_types::knowledge_stream::KnowledgeStreamQuery::Sql {
-                params_msgpack, ..
+            medulla_ingestion_types::knowledge_stream::KnowledgeStreamQuery::Sql {
+                params_msgpack,
+                ..
             } => preflight_optional_nested_msgpack(params_msgpack),
             _ => Ok(()),
         }),

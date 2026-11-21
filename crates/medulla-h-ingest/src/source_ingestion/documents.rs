@@ -15,13 +15,11 @@ use std::sync::{Arc, Mutex};
 use medulla_document::atoms::decompose;
 use medulla_document::processing::{chunk_text, ChunkingConfig};
 use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_ingestion_types::ingest_rules::check_atom_provenance;
+use medulla_ingestion_types::knowledge_atom::KnowledgeAtom;
 use medulla_source_types::source_document::{NormalizedDocument, MAX_DOCUMENT_REFS};
-use medulla_source_types::source_ingestion::{
-    SourceEntityRef, SourceIngestionBatch, SourceRecord,
-};
+use medulla_source_types::source_ingestion::{SourceEntityRef, SourceIngestionBatch, SourceRecord};
 use medulla_types::contract::Digest256;
-use medulla_types::ingest_rules::check_atom_provenance;
-use medulla_types::knowledge_atom::KnowledgeAtom;
 
 use super::ResolvedIngestionMappings;
 
@@ -121,9 +119,12 @@ pub(super) fn normalize_documents(
 ) -> Result<Vec<DocumentOutput>, String> {
     let mut outputs = Vec::new();
     for record in &batch.records {
-        let mapping = resolved.entities.get(&record.mapping_reference).ok_or_else(|| {
-            "UNKNOWN_MAPPING_REFERENCE: record mapping was not resolved".to_string()
-        })?;
+        let mapping = resolved
+            .entities
+            .get(&record.mapping_reference)
+            .ok_or_else(|| {
+                "UNKNOWN_MAPPING_REFERENCE: record mapping was not resolved".to_string()
+            })?;
         if !classes.contains(&class_iri(&mapping.schema_mapping.ontology_class)) {
             continue;
         }
@@ -285,7 +286,10 @@ mod tests {
         let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200)
             .unwrap()
             .unwrap();
-        assert_ne!(first.document.document_id, other_tenant.document.document_id);
+        assert_ne!(
+            first.document.document_id,
+            other_tenant.document.document_id
+        );
         let changed = record(serde_json::json!({"text": "A different body."}));
         let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200)
             .unwrap()
@@ -297,9 +301,12 @@ mod tests {
             serde_json::json!({"text": "   "}),
             serde_json::json!({"other": "x"}),
         ] {
-            let error = normalize_record("t1", "demo", &record(payload), &fields(), 4, 200)
-                .unwrap_err();
-            assert!(error.starts_with("DOCUMENT_NORMALIZATION_FAILED:"), "{error}");
+            let error =
+                normalize_record("t1", "demo", &record(payload), &fields(), 4, 200).unwrap_err();
+            assert!(
+                error.starts_with("DOCUMENT_NORMALIZATION_FAILED:"),
+                "{error}"
+            );
         }
         // A blob-backed document is left to the readers.
         let blob_fields = BTreeMap::from([("blob".to_string(), "content_ref".to_string())]);

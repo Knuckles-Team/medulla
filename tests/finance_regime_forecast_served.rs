@@ -17,12 +17,14 @@ mod test_support;
 
 use std::collections::BTreeMap;
 
+use medulla_finance_types::wire_finance::{
+    FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION,
+};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_types::regime_forecast::{
     HeldoutSample, HorizonThresholds, RegimeCalibrationInput, RegimeCalibrationPolicy,
     RegimeForecastRequest, RegimeSizingPolicy,
 };
-use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
 const SECRET: &str = "medulla-fin-regime-forecast-secret";
