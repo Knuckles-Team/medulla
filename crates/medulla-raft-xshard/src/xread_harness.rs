@@ -27,7 +27,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::xread::{
     CompletionPolicy, CrossGraphReadErrorCode, CrossGraphReadRequest, CrossShardReader,
-    ReadLegStatus, ReadPageErrorCode,
+    ReadLegOutcome, ReadPageErrorCode,
 };
 use medulla_direct_state::direct_state::GroupId;
 use medulla_raft::raft::RaftRequest;
@@ -290,7 +290,7 @@ async fn read_cross_shard_errors_loudly_on_a_leg_whose_group_is_not_running_here
     assert!(partial.partial);
     assert!(!partial.complete);
     assert!(matches!(
-        partial.legs[1].status,
-        ReadLegStatus::Failed(ReadPageErrorCode::GroupUnavailable)
+        partial.legs[1].outcome,
+        ReadLegOutcome::Failed(ReadPageErrorCode::GroupUnavailable)
     ));
 }

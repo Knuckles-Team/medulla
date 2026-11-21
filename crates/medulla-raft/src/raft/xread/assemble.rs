@@ -13,7 +13,7 @@ use tokio::time::Instant;
 
 use super::{
     fetch_leg, CrossGraphLegCursor, CrossGraphReadError, CrossGraphReadErrorCode,
-    CrossGraphReadRequest, MultiRaft, ReadLeg, ReadLegStatus, ReadPageError, ReadPageErrorCode,
+    CrossGraphReadRequest, MultiRaft, ReadLeg, ReadLegOutcome, ReadPageError, ReadPageErrorCode,
     ReadPageReply, RouteToken,
 };
 
@@ -191,7 +191,7 @@ fn complete_leg(previous: &CrossGraphLegCursor) -> (ReadLeg, CrossGraphLegCursor
         raft_barrier_index: None,
         snapshot_version: previous.snapshot_version,
         rows_consumed: 0,
-        status: ReadLegStatus::Complete,
+        outcome: ReadLegOutcome::Complete,
     };
     (leg, previous.clone())
 }
@@ -210,7 +210,7 @@ fn failed_leg(
         raft_barrier_index: None,
         snapshot_version: retained.snapshot_version,
         rows_consumed: 0,
-        status: ReadLegStatus::Failed(error.code),
+        outcome: ReadLegOutcome::Failed(error.code),
     };
     (leg, retained)
 }
@@ -239,10 +239,10 @@ fn replied_leg(
         raft_barrier_index: Some(reply.raft_barrier_index),
         snapshot_version: Some(reply.snapshot_version),
         rows_consumed: used as u32,
-        status: if complete {
-            ReadLegStatus::Complete
+        outcome: if complete {
+            ReadLegOutcome::Complete
         } else {
-            ReadLegStatus::More
+            ReadLegOutcome::More
         },
     };
     (leg, next)

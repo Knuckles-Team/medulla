@@ -242,7 +242,7 @@ impl ReadPageReply {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ReadLegStatus {
+pub enum ReadLegOutcome {
     Complete,
     More,
     Failed(ReadPageErrorCode),
@@ -256,7 +256,8 @@ pub struct ReadLeg {
     pub raft_barrier_index: Option<u64>,
     pub snapshot_version: Option<u64>,
     pub rows_consumed: u32,
-    pub status: ReadLegStatus,
+    #[serde(rename = "status")]
+    pub outcome: ReadLegOutcome,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -577,6 +578,32 @@ mod tests {
             snapshot_version: 7,
             raft_barrier_index: 9,
         }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R784.3
+    #[test]
+    fn outcome_field_keeps_the_status_wire_name() {
+        let leg = |outcome| ReadLeg {
+            graph_name: "g".into(),
+            route: RouteToken { group: 1, epoch: 2 },
+            raft_barrier_index: Some(3),
+            snapshot_version: Some(4),
+            rows_consumed: 5,
+            outcome,
+        };
+        let complete = serde_json::to_value(leg(ReadLegOutcome::Complete)).unwrap();
+        assert_eq!(complete["status"], "complete");
+        assert!(complete.get("outcome").is_none());
+        let more = serde_json::to_value(leg(ReadLegOutcome::More)).unwrap();
+        assert_eq!(more["status"], "more");
+        let failed = serde_json::to_value(leg(ReadLegOutcome::Failed(
+            ReadPageErrorCode::InvalidResponse,
+        )))
+        .unwrap();
+        assert!(failed["status"].get("failed").is_some());
+        let failed_leg = leg(ReadLegOutcome::Failed(ReadPageErrorCode::InvalidResponse));
+        let bytes = rmp_serde::to_vec_named(&failed_leg).unwrap();
+        assert_eq!(rmp_serde::from_slice::<ReadLeg>(&bytes).unwrap(), failed_leg);
     }
 
     #[test]

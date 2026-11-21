@@ -119,10 +119,6 @@ const INVENTORY: &[MachineRow] = &[
 
 /// Enums whose name ends in a lifecycle word but that carry no lifecycle.
 const NOT_A_LIFECYCLE: &[(&str, &str)] = &[
-    (
-        "ReadLegStatus",
-        "the one-shot outcome of a read page, set at construction",
-    ),
     ("LockMode", "a lock kind (shared or exclusive), not a phase"),
 ];
 
