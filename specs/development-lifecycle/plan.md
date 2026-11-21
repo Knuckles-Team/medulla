@@ -117,7 +117,7 @@ flowchart LR
 ```
 
 The ontology terms live in `crates/medulla-core/ontology/sdd-v1.ttl`. The SHACL shapes live beside
-them. Existing classes keep their owners. `:Requirement` comes from MEDULLA-ORCH-VOCAB-R012.9.
+them. Existing classes keep their owners. `:Requirement` comes from MEDULLA-SDLC-R012.2.
 `:Changeset` and `:GateVerdict` come from MEDULLA-SCM. `:CodeSymbol` and `:TestCase` map to the
 MEDULLA-REPO-INGEST-R600 entities.
 

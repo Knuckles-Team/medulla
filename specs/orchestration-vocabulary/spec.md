@@ -74,7 +74,7 @@ The user is a repository owner. The outcome is that spec files, requirement rows
 
 1. **Given** a scoped `IndexRepository` carries a fixture spec folder, **When** the repository route classifies the files, **Then** one task, goal, document, memory and policy node appear, each naming its rule, and an unknown file becomes a plain document.
 
-Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R012.3`, `MEDULLA-ORCH-VOCAB-R012.6`, `MEDULLA-ORCH-VOCAB-R012.7.3` run this story through a production entry point.
+Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R012.4`, `MEDULLA-ORCH-VOCAB-R012.6`, `MEDULLA-ORCH-VOCAB-R012.7.3` run this story through a production entry point.
 
 ### User Story 7 - Run an organization, teams and definitions (Priority: P2)
 

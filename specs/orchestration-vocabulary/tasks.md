@@ -68,7 +68,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T072 [US5] MEDULLA-ORCH-VOCAB-R011.11 Prove the loop closes through `HarnessConfig`
 - [ ] T073 [P] [US6] MEDULLA-ORCH-VOCAB-R012.1 Model: spec node kinds
 - [ ] T074 [US6] MEDULLA-ORCH-VOCAB-R012.2 Behaviour: classify a spec file by named rule
-- [ ] T076 [US6] MEDULLA-ORCH-VOCAB-R012.4 Refusal: an unknown file is not guessed
+- [ ] T076 [US6] MEDULLA-ORCH-VOCAB-R012.4 Classification step of the spec projection, and the refusal for an unknown file
 - [ ] T077 [US6] MEDULLA-ORCH-VOCAB-R012.5 Evidence: each node records its deciding rule
 - [ ] T078 [US6] MEDULLA-ORCH-VOCAB-R012.6 Hot-path proof: spec folder yields five kinds
 - [ ] T079 [P] [US4] MEDULLA-ORCH-VOCAB-R013.1 Model: step record
@@ -81,7 +81,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T086 [US2] MEDULLA-ORCH-VOCAB-R004.6.2 Behaviour and wiring: governed write with deduplication
 - [ ] T087 [US2] MEDULLA-ORCH-VOCAB-R004.6.3 Query by task class with exact or descendant match
 - [ ] T088 [US6] MEDULLA-ORCH-VOCAB-R012.8 Bind active policy to reviewed repository files
-- [ ] T089 [US6] MEDULLA-ORCH-VOCAB-R012.9 Requirement rows become typed nodes
 - [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
 - [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
 - [x] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join an evolution proposal to its measured source traces as a read view
