@@ -892,14 +892,31 @@ pub fn parse_row_links(files: &[(String, Vec<u8>)]) -> Vec<SpecRowLinks> {
     links
 }
 
-/// The test binding markers of a repository tree: in a file whose path names a test, a
-/// `spec: <ROW-ID>` comment or a `spec("<ROW-ID>")` marker binds that row to the file.
+/// Whether the pipelines spec-status gate scans `path` for test bindings: every file but
+/// the spec and docs trees, markdown and JSON.
+fn is_binding_source(path: &str) -> bool {
+    !(path.starts_with("specs/")
+        || path.starts_with("docs/")
+        || path.ends_with(".md")
+        || path.ends_with(".json"))
+}
+
+/// The row ids named in `body`: tokens of identifier characters, dots and hyphens that are row ids.
+fn row_ids_in(body: &str) -> impl Iterator<Item = &str> {
+    body.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '.'))
+        .map(|token| token.trim_end_matches('.'))
+        .filter(|token| is_row_id(token))
+}
+
+/// The test binding markers of a repository tree, in the two forms the spec standard's
+/// status gate reads (`pipelines_hooks/specs/bindings.py`): a `// spec: ID[, ID...]` or
+/// `# spec: ID[, ID...]` comment, and a `mark.spec(...)` marker naming ids.
 pub fn parse_test_bindings(
     files: &[(String, Vec<u8>)],
 ) -> Vec<medulla_core::lifecycle::derive::TestBinding> {
     let mut bound: BTreeSet<(String, String)> = BTreeSet::new();
     for (path, bytes) in files {
-        if is_spec_artifact(path) || !path.to_ascii_lowercase().contains("test") {
+        if !is_binding_source(path) {
             continue;
         }
         let Ok(text) = std::str::from_utf8(bytes) else {
@@ -907,17 +924,34 @@ pub fn parse_test_bindings(
         };
         for line in text.lines() {
             let mut ids: Vec<&str> = Vec::new();
-            if let Some(at) = line.find("spec:") {
-                if let Some(token) = line[at + "spec:".len()..].split_whitespace().next() {
-                    ids.push(token.trim_matches(|c: char| matches!(c, '`' | '.' | ',' | '"')));
+            for (at, _) in line.match_indices("spec:") {
+                let before = line[..at].trim_end();
+                if !(before.ends_with("//") || before.ends_with('#')) {
+                    continue;
                 }
-            }
-            if let Some(at) = line.find("spec(\"") {
-                if let Some(token) = line[at + "spec(\"".len()..].split('"').next() {
+                // The comma-separated id list that follows the marker; it stops at the first
+                // token that is not a row id.
+                let mut rest = line[at + "spec:".len()..].trim_start();
+                loop {
+                    let end = rest
+                        .find(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '.'))
+                        .unwrap_or(rest.len());
+                    let token = rest[..end].trim_end_matches('.');
+                    if !is_row_id(token) {
+                        break;
+                    }
                     ids.push(token);
+                    match rest[end..].trim_start().strip_prefix(',') {
+                        Some(next) => rest = next.trim_start(),
+                        None => break,
+                    }
                 }
             }
-            for id in ids.into_iter().filter(|id| is_row_id(id)) {
+            for (at, _) in line.match_indices("mark.spec(") {
+                let body = &line[at + "mark.spec(".len()..];
+                ids.extend(row_ids_in(body.split(')').next().unwrap_or_default()));
+            }
+            for id in ids {
                 bound.insert((id.to_string(), path.clone()));
             }
         }
@@ -1540,7 +1574,7 @@ pub fn project_spec_artifacts(
     let existing_test_paths: BTreeSet<String> = files
         .iter()
         .map(|(path, _)| path)
-        .filter(|path| !is_spec_artifact(path) && path.to_ascii_lowercase().contains("test"))
+        .filter(|path| is_binding_source(path))
         .cloned()
         .collect();
     let history = link_history_to_rows(&SpecHistoryInput {
@@ -2205,6 +2239,36 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .unwrap()
             .split(',')
             .any(|id| id == section));
+    }
+
+    /// MEDULLA-SDLC-R014.12: binding markers are exactly the forms of the spec-status gate.
+    #[test]
+    fn test_bindings_use_the_gate_forms() {
+        let files: Vec<(String, Vec<u8>)> = vec![
+            ("src/a.rs".into(), b"// spec: DEMO-R001, DEMO-R002\n".to_vec()),
+            ("tests/b.py".into(), b"#spec: DEMO-R003\n".to_vec()),
+            ("tests/c.py".into(), b"@pytest.mark.spec(\"DEMO-R004\", \"DEMO-R005\")\n".to_vec()),
+            // Not forms of the gate: a bare `spec:` word, the `spec(\"..\")` call, markdown, JSON.
+            ("tests/d.py".into(), b"x = \"spec: DEMO-R006\"\nspec(\"DEMO-R007\")\n".to_vec()),
+            ("specs/a/e.rs".into(), b"// spec: DEMO-R008\n".to_vec()),
+            ("notes.md".into(), b"// spec: DEMO-R009\n".to_vec()),
+            ("data.json".into(), b"// spec: DEMO-R010\n".to_vec()),
+        ];
+        let pairs: Vec<(String, String)> = parse_test_bindings(&files)
+            .into_iter()
+            .map(|b| (b.requirement, b.test))
+            .collect();
+        let expect = |id: &str, path: &str| (id.to_string(), path.to_string());
+        assert_eq!(
+            pairs,
+            vec![
+                expect("DEMO-R001", "src/a.rs"),
+                expect("DEMO-R002", "src/a.rs"),
+                expect("DEMO-R003", "tests/b.py"),
+                expect("DEMO-R004", "tests/c.py"),
+                expect("DEMO-R005", "tests/c.py"),
+            ]
+        );
     }
 
     fn changeset(id: &str, created_at: u64, spec_ids: &[&str]) -> Changeset {
