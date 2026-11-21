@@ -204,7 +204,6 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.8 Frequent users and usage suggestions
 - [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: type the probe word as `ProbeState` and add the five wire vectors
 - [ ] T211 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
-- [ ] T212 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
 - [x] T210 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job
 - [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply

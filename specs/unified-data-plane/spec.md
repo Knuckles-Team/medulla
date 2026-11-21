@@ -133,7 +133,7 @@ Independent test: the bound tests of `MEDULLA-UNIFIED-DATA-PLANE-R651.6` and `ME
 - **FR-015**: Serve the Iceberg REST catalog only through the verified carrier gate and emit partition metadata. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R039`, `MEDULLA-UNIFIED-DATA-PLANE-R039.3`, `MEDULLA-UNIFIED-DATA-PLANE-R039.4`, `MEDULLA-UNIFIED-DATA-PLANE-R039.5`.
 - **FR-016**: Derive health anomalies and incidents and share the compiled ontology cache with attached-schema graphs. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R035`, `MEDULLA-UNIFIED-DATA-PLANE-R036`, `MEDULLA-UNIFIED-DATA-PLANE-R760`.
 - **FR-017**: Profile datasets, score data quality, derive column lineage and rank catalog search with usage. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R761`, `MEDULLA-UNIFIED-DATA-PLANE-R762`, `MEDULLA-UNIFIED-DATA-PLANE-R763`, `MEDULLA-UNIFIED-DATA-PLANE-R764`, `MEDULLA-UNIFIED-DATA-PLANE-R701`, `MEDULLA-UNIFIED-DATA-PLANE-R702`.
-- **FR-018**: Serve the foreign source catalog and the tenant context view; accept web research work items. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R765`, `MEDULLA-UNIFIED-DATA-PLANE-R766`, `MEDULLA-UNIFIED-DATA-PLANE-R767`.
+- **FR-018**: Serve the foreign source catalog; accept web research work items. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R765`, `MEDULLA-UNIFIED-DATA-PLANE-R766`.
 - **FR-019**: Cascade document deletes, govern actions, store scoped history and gate embedding promotion per modality. Rows: `MEDULLA-UNIFIED-DATA-PLANE-R651`, `MEDULLA-UNIFIED-DATA-PLANE-R700`, `MEDULLA-UNIFIED-DATA-PLANE-R750`, `MEDULLA-UNIFIED-DATA-PLANE-R040`.
 
 ## Success Criteria
