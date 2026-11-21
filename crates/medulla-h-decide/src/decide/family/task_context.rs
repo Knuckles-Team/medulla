@@ -25,10 +25,9 @@ use crate::decide::SharedState;
 pub const ROW_PARAM: &str = "task_context_row";
 /// The text param holding the repository.
 pub const REPO_PARAM: &str = "task_context_repo";
-/// The optional text param naming the graph that holds the records.
+/// The text param naming the graph that holds the records. It is required: a question
+/// that names a row without it is refused, and no graph is assumed.
 pub const GRAPH_PARAM: &str = "graph";
-/// The graph read when the question names none.
-const DEFAULT_GRAPH: &str = "__commons__";
 /// The text param the engine fills with the digest of the assembled context.
 pub const DIGEST_PARAM: &str = "task_context_digest";
 
@@ -115,128 +114,148 @@ pub(in crate::decide) async fn assemble_task_context(
     };
     let (repo, row_id) = (repo.to_string(), row_id.to_string());
     tokio::task::spawn_blocking(move || {
-        let visible = |id: &str| -> Option<Props> {
-            let blob = core.get_node_properties(id)?;
-            if !authority.can_see_node(&blob, core.is_schema_node(id)) {
-                return None;
-            }
-            medulla_types::msgpack::decode_property_object(&blob).ok()
-        };
-        let requirement = format!("requirement:{repo}:{row_id}");
-        let row = visible(&requirement)
-            .ok_or_else(|| format!("{ROW_UNKNOWN}: {row_id} is no requirement of {repo}"))?;
-        let relation = |source: &str, target: &str, name: &str| {
-            core.typed_edges_between(source, target)
-                .iter()
-                .any(|(relation, _)| relation == name)
-        };
-        let line_of = |props: &Props| {
-            text_of(props, "start_line")
-                .parse::<u64>()
-                .unwrap_or(u64::MAX)
-        };
-        let section_of = |id: String, props: &Props| ContextSection {
-            title: text_of(props, "title"),
-            text: text_of(props, "text"),
-            node_id: id,
-        };
-        // The plan sections that cover the row, in start-line order.
-        let mut plans: Vec<(u64, String, Props)> = core
-            .get_predecessors(&requirement)
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|id| relation(id, &requirement, "covers"))
-            .filter_map(|id| Some((id.clone(), visible(&id)?)))
-            .filter(|(_, props)| props.get("type").and_then(|t| t.as_str()) == Some("PlanSection"))
-            .map(|(id, props)| (line_of(&props), id, props))
-            .collect();
-        if plans.is_empty() {
-            return Err(format!(
-                "{PLAN_MISSING}: no plan section covers {row_id} in {repo}"
-            ));
-        }
-        plans.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
-        // The contract sections that name the row and the data model section.
-        let mut contracts: Vec<(String, String, Props)> = Vec::new();
-        let mut data_model: Option<(u64, String, Props)> = None;
-        for (id, blob) in core.get_nodes_by_label("SpecSection", MAX_NODES) {
-            if !authority.can_see_node(&blob, core.is_schema_node(&id)) {
-                continue;
-            }
-            let Ok(props) = medulla_types::msgpack::decode_property_object(&blob) else {
-                continue;
-            };
-            if text_of(&props, "repo") != repo {
-                continue;
-            }
-            let file = text_of(&props, "file");
-            if (file.contains("/contracts/") || file.starts_with("contracts/"))
-                && text_of(&props, "text").contains(row_id.as_str())
-            {
-                contracts.push((file.clone(), id.clone(), props.clone()));
-            }
-            if text_of(&props, "title") == "data-model" || file.ends_with("data-model.md") {
-                let key = line_of(&props);
-                if data_model
-                    .as_ref()
-                    .is_none_or(|(held, held_id, _)| (key, &id) < (*held, held_id))
-                {
-                    data_model = Some((key, id.clone(), props.clone()));
-                }
-            }
-        }
-        contracts.sort_by(|a, b| {
-            (&a.0, line_of(&a.2), &a.1).cmp(&(&b.0, line_of(&b.2), &b.1))
-        });
-        // The code neighbourhood: the symbols the row is implemented by and one hop around.
-        let mut neighbourhood: BTreeSet<String> = BTreeSet::new();
-        for symbol in core.get_successors(&requirement).unwrap_or_default() {
-            if !relation(&requirement, &symbol, "implementedBy") || visible(&symbol).is_none() {
-                continue;
-            }
-            neighbourhood.insert(symbol.clone());
-            for near in core.get_neighbors(&symbol).unwrap_or_default() {
-                if !near.starts_with("requirement:") && visible(&near).is_some() {
-                    neighbourhood.insert(near);
-                }
-            }
-        }
-        let mut room = max_bytes;
-        let mut truncated = false;
-        let row_text = {
-            let text = text_of(&row, "text");
-            if text.len() > room {
-                truncated = true;
-                let kept = cut(&text, room).to_string();
-                room = 0;
-                kept
-            } else {
-                room -= text.len();
-                text
-            }
-        };
-        let plan_sections = plans
-            .into_iter()
-            .filter_map(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated))
-            .collect();
-        let contracts = contracts
-            .into_iter()
-            .filter_map(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated))
-            .collect();
-        let data_model =
-            data_model.and_then(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated));
-        Ok(TaskContext {
-            row_id,
-            row_text,
-            plan_sections,
-            contracts,
-            data_model,
-            neighbourhood: neighbourhood.into_iter().collect(),
-            truncated,
-        })
+        read_task_context(
+            &core,
+            &|blob, is_schema| authority.can_see_node(blob, is_schema),
+            &repo,
+            &row_id,
+            max_bytes,
+        )
     })
     .await
     .map_err(|error| format!("task context read task failed: {error}"))?
+}
+
+/// Read the run context of `row_id` in `repo` from `core`. `can_see` is the read ACL of the
+/// caller over a node's property blob and whether the node is a schema node: a node it
+/// refuses is absent and never counted.
+pub fn read_task_context(
+    core: &medulla_graph_core::graph::GraphCore,
+    can_see: &dyn Fn(&[u8], bool) -> bool,
+    repo: &str,
+    row_id: &str,
+    max_bytes: usize,
+) -> Result<TaskContext, String> {
+    let (repo, row_id) = (repo.to_string(), row_id.to_string());
+    let visible = |id: &str| -> Option<Props> {
+        let blob = core.get_node_properties(id)?;
+        if !can_see(&blob, core.is_schema_node(id)) {
+            return None;
+        }
+        medulla_types::msgpack::decode_property_object(&blob).ok()
+    };
+    let requirement = format!("requirement:{repo}:{row_id}");
+    let row = visible(&requirement)
+        .ok_or_else(|| format!("{ROW_UNKNOWN}: {row_id} is no requirement of {repo}"))?;
+    let relation = |source: &str, target: &str, name: &str| {
+        core.typed_edges_between(source, target)
+            .iter()
+            .any(|(relation, _)| relation == name)
+    };
+    let line_of = |props: &Props| {
+        text_of(props, "start_line")
+            .parse::<u64>()
+            .unwrap_or(u64::MAX)
+    };
+    let section_of = |id: String, props: &Props| ContextSection {
+        title: text_of(props, "title"),
+        text: text_of(props, "text"),
+        node_id: id,
+    };
+    // The plan sections that cover the row, in start-line order.
+    let mut plans: Vec<(u64, String, Props)> = core
+        .get_predecessors(&requirement)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|id| relation(id, &requirement, "covers"))
+        .filter_map(|id| Some((id.clone(), visible(&id)?)))
+        .filter(|(_, props)| props.get("type").and_then(|t| t.as_str()) == Some("PlanSection"))
+        .map(|(id, props)| (line_of(&props), id, props))
+        .collect();
+    if plans.is_empty() {
+        return Err(format!(
+            "{PLAN_MISSING}: no plan section covers {row_id} in {repo}"
+        ));
+    }
+    plans.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
+    // The contract sections that name the row and the data model section.
+    let mut contracts: Vec<(String, String, Props)> = Vec::new();
+    let mut data_model: Option<(u64, String, Props)> = None;
+    for (id, blob) in core.get_nodes_by_label("SpecSection", MAX_NODES) {
+        if !can_see(&blob, core.is_schema_node(&id)) {
+            continue;
+        }
+        let Ok(props) = medulla_types::msgpack::decode_property_object(&blob) else {
+            continue;
+        };
+        if text_of(&props, "repo") != repo {
+            continue;
+        }
+        let file = text_of(&props, "file");
+        if (file.contains("/contracts/") || file.starts_with("contracts/"))
+            && text_of(&props, "text").contains(row_id.as_str())
+        {
+            contracts.push((file.clone(), id.clone(), props.clone()));
+        }
+        if text_of(&props, "title") == "data-model" || file.ends_with("data-model.md") {
+            let key = line_of(&props);
+            if data_model
+                .as_ref()
+                .is_none_or(|(held, held_id, _)| (key, &id) < (*held, held_id))
+            {
+                data_model = Some((key, id.clone(), props.clone()));
+            }
+        }
+    }
+    contracts.sort_by(|a, b| {
+        (&a.0, line_of(&a.2), &a.1).cmp(&(&b.0, line_of(&b.2), &b.1))
+    });
+    // The code neighbourhood: the symbols the row is implemented by and one hop around.
+    let mut neighbourhood: BTreeSet<String> = BTreeSet::new();
+    for symbol in core.get_successors(&requirement).unwrap_or_default() {
+        if !relation(&requirement, &symbol, "implementedBy") || visible(&symbol).is_none() {
+            continue;
+        }
+        neighbourhood.insert(symbol.clone());
+        for near in core.get_neighbors(&symbol).unwrap_or_default() {
+            if !near.starts_with("requirement:") && visible(&near).is_some() {
+                neighbourhood.insert(near);
+            }
+        }
+    }
+    let mut room = max_bytes;
+    let mut truncated = false;
+    let row_text = {
+        let text = text_of(&row, "text");
+        if text.len() > room {
+            truncated = true;
+            let kept = cut(&text, room).to_string();
+            room = 0;
+            kept
+        } else {
+            room -= text.len();
+            text
+        }
+    };
+    let plan_sections = plans
+        .into_iter()
+        .filter_map(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated))
+        .collect();
+    let contracts = contracts
+        .into_iter()
+        .filter_map(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated))
+        .collect();
+    let data_model =
+        data_model.and_then(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated));
+    Ok(TaskContext {
+        row_id,
+        row_text,
+        plan_sections,
+        contracts,
+        data_model,
+        neighbourhood: neighbourhood.into_iter().collect(),
+        truncated,
+    })
 }
 
 fn text_param<'a>(request: &'a DecideRequest, name: &str) -> Option<&'a str> {
@@ -277,8 +296,10 @@ pub(in crate::decide) async fn with_task_context(
     let max_bytes = usize::try_from(medulla_server_api::knob_config::knobs().sdlc_task_context_max_bytes)
         .unwrap_or(usize::MAX);
     let graph = text_param(&request, GRAPH_PARAM)
-        .unwrap_or(DEFAULT_GRAPH)
-        .to_string();
+        .map(str::to_string)
+        .ok_or_else(|| {
+            invalid_parameter(format!("{ROW_PARAM} needs the text param {GRAPH_PARAM}"))
+        })?;
     let context =
         assemble_task_context(state, &graph, verified, &repo, &row, max_bytes).await?;
     let mut params = request.params.as_slice().to_vec();

@@ -44,6 +44,8 @@ pub mod drift_registry;
 #[cfg(feature = "decide")]
 mod family;
 #[cfg(feature = "decide")]
+pub use family::task_context::{read_task_context, ContextSection, TaskContext};
+#[cfg(feature = "decide")]
 mod stat_adapter;
 #[cfg(feature = "decide")]
 mod stat_belief;

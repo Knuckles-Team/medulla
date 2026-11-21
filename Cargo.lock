@@ -5915,6 +5915,7 @@ name = "medulla-h-decide"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "criterion",
  "hex",
  "medulla-agent-types",
  "medulla-ann",

@@ -10,6 +10,7 @@ from __future__ import annotations
 import sys
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import msgpack
 import pytest
@@ -17,18 +18,79 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "decide"))
 
 from _decision_resident_fixture import publish, schema_body  # noqa: E402
-from conftest import TEST_TENANT  # noqa: E402
+from conftest import (  # noqa: E402
+    TEST_AGENT_ID,
+    TEST_SIGNER_KEY,
+    TEST_TENANT,
+    bootstrap_context,
+    request_context,
+    strict_server_env,
+)
 from test_task_plan_served import (  # noqa: E402,F401
+    TEST_AUTH_FIXTURE_VALUE,
     _proposal,
     authenticated_plan_client,
 )
 
-from medulla.client import EngineResponseError  # noqa: E402
+from medulla.client import EngineResponseError, SyncMedullaClient  # noqa: E402
 from medulla.decision_client import param, task_plan_request  # noqa: E402
 
 pytestmark = pytest.mark.no_engine  # The test owns its authenticated engine.
 
 GRAPH = "__commons__"
+READER = "service:worker-2"
+
+
+@pytest.fixture
+def plan_writer_and_reader(tmp_path):
+    """One authenticated engine, a system writer and a registered non-System reader."""
+    from test_native_no_auth_served import server
+
+    secret = TEST_AUTH_FIXTURE_VALUE
+    env = strict_server_env(
+        str(tmp_path / "security"),
+        auth_secret=secret,
+        persist_dir=str(tmp_path / "data"),
+    )
+    env["MEDULLA_ENCRYPTION_KEY"] = "test-medulla-encryption-key"
+    with server(tmp_path, mode="authenticated", extra_env=env) as address:
+        tcp = f"{address[0]}:{address[1]}"
+
+        def connect(agent_id: str | None = None, context: dict | None = None):
+            return SyncMedullaClient.connect(
+                tcp_addr=tcp,
+                auth_secret=secret,
+                graph_name=GRAPH,
+                verified_context=context or request_context(agent_id=agent_id),
+            )
+
+        bootstrap = connect(context=bootstrap_context())
+        try:
+            bootstrap.consensus.bootstrap_system_identity(
+                agent_id=TEST_AGENT_ID,
+                signer_id=TEST_AGENT_ID,
+                signer_key=TEST_SIGNER_KEY,
+            )
+        finally:
+            bootstrap.close()
+        writer = connect(TEST_AGENT_ID)
+        writer.rbac.add_role("commons-access")
+        writer.rbac.add_grant("commons-access", {"Graph": GRAPH}, "Read")
+        writer.rbac.add_grant("commons-access", {"Graph": GRAPH}, "Write")
+        writer.consensus.register_identity(
+            READER,
+            "Agent",
+            ["team:test"],
+            ["commons-access"],
+            signer_id=TEST_AGENT_ID,
+            signer_key=TEST_SIGNER_KEY,
+        )
+        reader = connect(READER)
+        try:
+            yield SimpleNamespace(writer=writer, reader=reader)
+        finally:
+            reader.close()
+            writer.close()
 
 
 def _node(client, node_id: str, properties: dict) -> None:
@@ -56,12 +118,13 @@ def _edge(client, source: str, target: str, relationship: str) -> None:
     )
 
 
-def _decide(client, pin, repo: str, row: str) -> dict:
+def _decide(client, pin, repo: str, row: str, graph: str | None = GRAPH) -> dict:
     asked = task_plan_request(TEST_TENANT, "context-" + uuid.uuid4().hex[:8], _proposal(), pin)
     asked["params"] = [
         *asked["params"],
         param("task_context_row", "text", row),
         param("task_context_repo", "text", repo),
+        *([param("graph", "text", graph)] if graph is not None else []),
     ]
     return client._send("Decide", {"request": asked})["records"][0]
 
@@ -121,5 +184,47 @@ def test_context_holds_row_plan_contracts_and_neighbourhood(
             _decide(client, pin, repo, "DEMO-R002")
         with pytest.raises(EngineResponseError, match="TASK_CONTEXT_ROW_UNKNOWN"):
             _decide(client, pin, repo, "DEMO-R404")
+        # The graph is required: a question without it refuses and assumes no graph.
+        with pytest.raises(EngineResponseError, match="PARAMETER_INVALID"):
+            _decide(client, pin, repo, row, graph=None)
     finally:
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R015.2")
+def test_hidden_section_changes_neither_digest_nor_bound(plan_writer_and_reader) -> None:
+    writer, reader = plan_writer_and_reader.writer, plan_writer_and_reader.reader
+    suffix = uuid.uuid4().hex[:8]
+    repo, row = f"repo-{suffix}", "DEMO-R001"
+    requirement = f"requirement:{repo}:{row}"
+    shared = {"_owner": TEST_AGENT_ID, "_visibility": "public"}
+    _node(writer, requirement, {"type": "Requirement", "text": "Serve the row.", **shared})
+    plan = f"plansection:{repo}:specs/a/plan.md#L3"
+    _node(
+        writer,
+        plan,
+        {"type": "PlanSection", "title": "Plan", "start_line": "3", "text": "Plan the row.", **shared},
+    )
+    _edge(writer, plan, requirement, "covers")
+    pin = publish(writer, "task-context-hidden-" + suffix, "feature_schema", schema_body())
+    before = _digest(_decide(reader, pin, repo, row))
+
+    # A contract section the reader may not see: private, owned by another principal.
+    hidden = f"specsection:{repo}:specs/a/contracts/secret.md#L1"
+    _node(
+        writer,
+        hidden,
+        {
+            "type": "SpecSection",
+            "repo": repo,
+            "file": "specs/a/contracts/secret.md",
+            "title": "Secret",
+            "start_line": "1",
+            "text": f"Provider: hidden {row} " + "x" * 4096,
+            "_owner": "service:worker-1",
+            "_visibility": "private",
+        },
+    )
+    assert _digest(_decide(reader, pin, repo, row)) == before
+    # The system identity sees the section, so its digest differs.
+    assert _digest(_decide(writer, pin, repo, row)) != before
