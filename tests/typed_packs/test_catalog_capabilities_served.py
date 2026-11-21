@@ -447,15 +447,14 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     xsd = "http://www.w3.org/2001/XMLSchema#"
     asset = "urn:medulla:asset:resource:orders"
     note = "urn:annotation:orders:1"
-    admin.rdf.add_triples(
-        turtle=(
-            f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"orders ledger\" ;"
-            " cat:hasOwner <urn:principal:data-team> ;"
-            " <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ;"
-            " <https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Order> ;"
-            f' <https://knuckles-team.github.io/ontology/connector-pack#digest> "{"ab" * 32}" .\n'
-        )
+    asset_turtle = (
+        f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"orders ledger\" ;"
+        " cat:hasOwner <urn:principal:data-team> ;"
+        " <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ;"
+        " <https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Order> ;"
+        f' <https://knuckles-team.github.io/ontology/connector-pack#digest> "{"ab" * 32}" .\n'
     )
+    admin.rdf.add_triples(turtle=asset_turtle)
 
     def annotation(iri: str, kind: str, extra: str) -> str:
         return (
@@ -498,3 +497,14 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     )
     after = dict(_ranked(admin, "orders"))
     assert after[next(k for k in after if k.strip("<>") == asset)] < before[key]
+
+    # A thread on a deleted asset stays readable by revision: the annotation nodes are
+    # independent nodes, so deleting the asset leaves every comment, tag and rating
+    # readable with its author and revision.
+    admin.rdf.remove_triples(turtle=asset_turtle)
+    thread = admin.rdf.sparql(
+        f"PREFIX cat: <{CATALOG}> "
+        "SELECT ?a ?revision WHERE { ?a a cat:Annotation ; cat:annotationRevision ?revision }"
+    )
+    assert len(thread) == 4
+    assert all(str(row["revision"]).strip('"').startswith("1") for row in thread)
