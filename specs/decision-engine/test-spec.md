@@ -1071,9 +1071,9 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Model | `MEDULLA-DECISION-ENGINE-R810.1` | `crates/medulla-program/tests/native_program.rs::program_contracts_round_trip_and_optimizer_catalog_is_closed`; `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
-| Behavior | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
-| Wiring | `MEDULLA-DECISION-ENGINE-R810.3` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| Model | `MEDULLA-DECISION-ENGINE-R810.1` | `crates/medulla-program/tests/native_program.rs::program_contracts_round_trip_and_optimizer_catalog_is_closed`; `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
+| Wiring | `MEDULLA-DECISION-ENGINE-R810.3` | `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
 | Refusal | `MEDULLA-DECISION-ENGINE-R810.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_job_refusals` |
 | Evidence | `MEDULLA-DECISION-ENGINE-R810.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::rerun_with_one_seed_gives_one_revision_digest` |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R810.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_program_job_journey` |
@@ -2026,7 +2026,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R801.6` | `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R801.7` | `crates/medulla-h-decide/src/usage/tests.rs::read_is_tenant_scoped`; `tests/usage/test_usage_ledger_served.py::test_usage_read_is_tenant_scoped` |
 | `MEDULLA-DECISION-ENGINE-R801.8` | `crates/medulla-h-decide/src/usage/tests.rs::service_append_succeeds_and_human_is_refused`; `crates/medulla-h-decide/src/usage/tests.rs::two_tenant_appends_stay_in_their_own_tenant`; `crates/medulla-protocol-types/src/error_registry.rs::tests::usage_ledger_refusals_reach_the_wire_with_their_code`; `tests/usage/test_usage_ledger_served.py::test_service_append_and_price_put` |
-| `MEDULLA-DECISION-ENGINE-R810.7` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::evaluated_revision_carries_held_out_evidence` |
+| `MEDULLA-DECISION-ENGINE-R810.7` | `tests/program_held_out_evidence_served.rs::evaluated_revision_carries_held_out_evidence` |
 | `MEDULLA-DECISION-ENGINE-R811.7` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::knob_set_evaluation_names_its_policy_revision` |
 | `MEDULLA-DECISION-ENGINE-R811.8` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::policy_evaluation_maps_to_held_out_evidence`; `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
 | `MEDULLA-DECISION-ENGINE-R036.103` | `crates/medulla-isolation/src/rbac_persist.rs::tests::reservation_blocks_writes_and_survives_reopen`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::cross_owner_admission_journey` |
@@ -2076,7 +2076,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R827` | `crates/medulla-h-decide/src/decide/stat_tests/revert_family_tests.rs::dependents_forbid_revert` |
 | `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::winner_by_margin_tie_and_abstain_codes` |
 | `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips` |
-| `MEDULLA-DECISION-ENGINE-R810` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R810` | `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-program/tests/native_program.rs::compile_reads_train_for_candidates_and_validation_only_for_scoring` |
 | `MEDULLA-DECISION-ENGINE-R810.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_job_refusals` |
 | `MEDULLA-DECISION-ENGINE-R810.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::rerun_with_one_seed_gives_one_revision_digest` |
