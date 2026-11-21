@@ -154,8 +154,8 @@ pub use self_served_catalog::{
     McpSelfServedCatalogAttestRequest, SelfServedAttester,
 };
 pub use skill_graph::{
-    ConformanceReport, SkillCandidate, SkillCandidateState, SkillGraphEntry, SkillGraphManifest,
-    SkillGraphTypeError,
+    ConformanceReport, SkillCandidate, SkillCandidateState, SkillGraphEntry, SkillGraphLayer,
+    SkillGraphManifest, SkillGraphTypeError, SKILL_GRAPH_LAYER_MAX_CLASSES, SKILL_GRAPH_LAYER_NS,
 };
 
 /// The declared surface links of one pack member, as the projection read them

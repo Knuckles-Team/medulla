@@ -18,6 +18,12 @@ pub enum SkillGraphTypeError {
     /// `sources.json` had no `files` array or an entry without `path` or `sha256`.
     #[error("sources.json files[] entry is malformed: {0}")]
     MalformedSources(String),
+    /// A layer IRI was not the skill graph layer IRI of its graph.
+    #[error("layer IRI {0} is not the layer IRI of its graph")]
+    ForeignLayerIri(String),
+    /// A layer declared more classes than a layer may.
+    #[error("a layer declares at most 100000 classes, got {0}")]
+    TooManyClasses(u32),
 }
 
 /// A SHA-256 as 64 lowercase hex characters, without any `sha256:` prefix.
@@ -154,4 +160,62 @@ pub struct SkillCandidate {
     pub source_process: String,
     /// Always `proposed`.
     pub state: SkillCandidateState,
+}
+
+/// Namespace every skill graph layer IRI lives under (MEDULLA-TYPED-PACKS-R701.1).
+pub const SKILL_GRAPH_LAYER_NS: &str = medulla_types::ontology_iri!("skillgraph/");
+
+/// Most classes one skill graph layer may declare.
+pub const SKILL_GRAPH_LAYER_MAX_CLASSES: u32 = 100_000;
+
+/// The concept layer one skill graph adds on the core: the pack ontology entry for the
+/// graph, its layer IRI and how many classes it declares.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, try_from = "RawSkillGraphLayer")]
+pub struct SkillGraphLayer {
+    /// The graph name.
+    pub graph: String,
+    /// The layer IRI: `SKILL_GRAPH_LAYER_NS` followed by the graph name.
+    pub ontology_iri: String,
+    /// Classes the layer declares, at most `SKILL_GRAPH_LAYER_MAX_CLASSES`.
+    pub class_count: u32,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawSkillGraphLayer {
+    graph: String,
+    ontology_iri: String,
+    class_count: u32,
+}
+
+impl SkillGraphLayer {
+    /// Builds a layer, refusing an empty graph name, an IRI outside the layer namespace or
+    /// for another graph, and a class count over the limit.
+    pub fn new(
+        graph: impl Into<String>,
+        ontology_iri: impl Into<String>,
+        class_count: u32,
+    ) -> Result<Self, SkillGraphTypeError> {
+        let graph = graph.into();
+        let ontology_iri = ontology_iri.into();
+        if graph.is_empty() || ontology_iri != format!("{SKILL_GRAPH_LAYER_NS}{graph}") {
+            return Err(SkillGraphTypeError::ForeignLayerIri(ontology_iri));
+        }
+        if class_count > SKILL_GRAPH_LAYER_MAX_CLASSES {
+            return Err(SkillGraphTypeError::TooManyClasses(class_count));
+        }
+        Ok(Self {
+            graph,
+            ontology_iri,
+            class_count,
+        })
+    }
+}
+
+impl TryFrom<RawSkillGraphLayer> for SkillGraphLayer {
+    type Error = SkillGraphTypeError;
+    fn try_from(raw: RawSkillGraphLayer) -> Result<Self, Self::Error> {
+        Self::new(raw.graph, raw.ontology_iri, raw.class_count)
+    }
 }

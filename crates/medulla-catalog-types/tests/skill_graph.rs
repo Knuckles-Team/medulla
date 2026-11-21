@@ -1,7 +1,7 @@
 //! Skill graph bundle types (MEDULLA-TYPED-PACKS-R700.1).
 
 use medulla_catalog_types::connector_pack::{
-    ConformanceReport, SkillCandidate, SkillCandidateState, SkillGraphManifest,
+    ConformanceReport, SkillCandidate, SkillCandidateState, SkillGraphLayer, SkillGraphManifest,
 };
 use serde_json::json;
 
@@ -70,4 +70,32 @@ fn manifest_report_candidate_round_trip_and_reject_bad_digest() {
     let mut promoted = wire;
     promoted["state"] = json!("published");
     assert!(serde_json::from_value::<SkillCandidate>(promoted).is_err());
+}
+
+// spec: MEDULLA-TYPED-PACKS-R701.1
+#[test]
+fn layer_round_trip_and_reject_foreign_iri() {
+    let iri = "https://knuckles-team.github.io/ontology/skillgraph/billing";
+    let layer = SkillGraphLayer::new("billing", iri, 12).unwrap();
+    let wire = serde_json::to_value(&layer).unwrap();
+    assert_eq!(wire["ontology_iri"], json!(iri));
+    let back: SkillGraphLayer = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(back, layer);
+
+    // An IRI outside the layer namespace, or for another graph, is refused on every path.
+    for bad in [
+        "https://example.test/skillgraph/billing",
+        "https://knuckles-team.github.io/ontology/skillgraph/other",
+    ] {
+        assert!(SkillGraphLayer::new("billing", bad, 1).is_err());
+        let mut value = wire.clone();
+        value["ontology_iri"] = json!(bad);
+        assert!(serde_json::from_value::<SkillGraphLayer>(value).is_err());
+    }
+    // The class count is bounded and unknown fields are refused.
+    assert!(SkillGraphLayer::new("billing", iri, 100_000).is_ok());
+    assert!(SkillGraphLayer::new("billing", iri, 100_001).is_err());
+    let mut extra = wire;
+    extra["surprise"] = json!(1);
+    assert!(serde_json::from_value::<SkillGraphLayer>(extra).is_err());
 }
