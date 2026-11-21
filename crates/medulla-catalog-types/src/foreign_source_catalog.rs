@@ -36,6 +36,8 @@ pub struct ForeignSourceView {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ForeignSourceProbe {
+    /// The probed source's name.
     pub name: String,
+    /// The catalog probe state after the probe, in snake case.
     pub probe_state: String,
 }
