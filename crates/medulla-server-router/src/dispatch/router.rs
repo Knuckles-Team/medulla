@@ -53,6 +53,8 @@ mod resource_cost;
 mod sdlc;
 mod service_control;
 mod source_ingest;
+mod git_export_pack;
+mod import_git_history;
 mod read_blame;
 mod read_path_history;
 mod read_tree;

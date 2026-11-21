@@ -605,6 +605,8 @@ METHOD_IDS = frozenset(
         "StoredQueryCall",
         "StoredQueryPut",
         "SubmitChangeset",
+        "ImportGitHistory",
+        "GitExportPack",
         "TraceCritique",
         "TsDefineStateSpace",
         "ViewportQuery",

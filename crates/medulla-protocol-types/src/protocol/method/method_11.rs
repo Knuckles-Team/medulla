@@ -447,6 +447,19 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
+    /// Import the first-parent line of a git history into a branch
+    /// (MEDULLA-SCM-R010). The version-2 pack was uploaded first through the
+    /// blob methods; the request names it by digest and names the commit
+    /// `head`. One changeset is appended per commit, against its first parent;
+    /// a merge commit is one changeset that stores its full parent list and a
+    /// side pack of the objects its other parents bring in. A repeat of the same
+    /// `head` writes nothing. Refusals: `GIT_GRAPH_MALFORMED`,
+    /// `GIT_MODE_UNSUPPORTED`, `CHANGESET_INVALID`, `BLOB_NOT_FOUND`, plus the
+    /// branch refusals of `BranchWrite`; commits appended before a refusal stay.
+    ImportGitHistory {
+        request: Box<medulla_source_types::source_changeset::ImportGitHistoryRequest>,
+    },
+
     /// Enqueue one validated ingest job on its reserved `jobs.redb` task queue
     /// under the deterministic task id (MEDULLA-INGEST-WORKER-R001.4.1). Scope
     /// `task:enqueue`. A repeat returns the first receipt. Refusals:

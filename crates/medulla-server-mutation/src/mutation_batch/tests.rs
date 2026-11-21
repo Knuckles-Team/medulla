@@ -431,6 +431,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("CreateBranch", "ControlPlane"),
     ("BranchWrite", "ControlPlane"),
     ("SubmitChangeset", "ControlPlane"),
+    ("ImportGitHistory", "ControlPlane"),
     ("SetPathGrant", "ControlPlane"),
     ("MultiGraphBatchUpdate", "MultiGraph"),
     ("Commit", "CrossModal"),

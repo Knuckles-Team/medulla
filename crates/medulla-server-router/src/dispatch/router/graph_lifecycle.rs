@@ -119,6 +119,26 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R010: the first-parent line of a git history on a branch.
+        Method::ImportGitHistory { request } => {
+            dispatch_boxed(super::import_git_history::handle_import_git_history(
+                state,
+                req,
+                verified_context,
+                super::import_git_history::ImportGitHistoryFields { request },
+            ))
+            .await
+        }
+        // MEDULLA-SCM-R014: the changeset chain of a branch as a git pack.
+        Method::GitExportPack { request } => {
+            dispatch_boxed(super::git_export_pack::handle_git_export_pack(
+                state,
+                req,
+                verified_context,
+                super::git_export_pack::GitExportPackFields { request },
+            ))
+            .await
+        }
         // MEDULLA-SCM-R004: the tree of a repository at one changeset revision.
         Method::ReadTree { request } => {
             dispatch_boxed(super::read_tree::handle_read_tree(

@@ -801,6 +801,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // A source changeset is the payload of a branch commit in the same owner
     // file (MEDULLA-SCM-R002).
     "SubmitChangeset",
+    // Each imported git commit is one such payload (MEDULLA-SCM-R010).
+    "ImportGitHistory",
     // A path grant is one row in the same owner file (MEDULLA-SCM-R007).
     "SetPathGrant",
 ];
@@ -883,6 +885,7 @@ fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
         Method::CreateBranch { .. } => Some("CreateBranch"),
         Method::BranchWrite { .. } => Some("BranchWrite"),
         Method::SubmitChangeset { .. } => Some("SubmitChangeset"),
+        Method::ImportGitHistory { .. } => Some("ImportGitHistory"),
         Method::SetPathGrant { .. } => Some("SetPathGrant"),
         _ => None,
     }

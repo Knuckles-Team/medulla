@@ -35,7 +35,8 @@ mod served {
     use medulla_server_auth::access::path_grant;
     use medulla_source_types::source_path_grant::PathAccess;
     use medulla_server_blob::blob::BlobStateExt;
-    use medulla_source_types::source_changeset::{Changeset, SubmitChangesetReceipt};
+    use medulla_server_blob::blob::store::ChunkStore;
+    use medulla_source_types::source_changeset::{Changeset, GitOrigin, SubmitChangesetReceipt};
 
     /// The chain as the registry transaction reads it.
     struct RegistryChain<'a> {
@@ -124,6 +125,91 @@ mod served {
             isolation: guard.isolation.clone(),
             caller: verified.agent_id().to_string(),
         }))
+    }
+
+    /// What `append_changeset` needs besides the target and the batch id.
+    pub struct ChangesetAppend {
+        pub request: Arc<medulla_source_types::source_changeset::SubmitChangesetRequest>,
+        /// The chunk store the merge and the blame rows read blobs through.
+        pub store: Arc<dyn ChunkStore>,
+        /// The blob owner scope a merged blob lands under.
+        pub merge_owner: String,
+        pub author: String,
+        pub agent_identity: Option<String>,
+        pub created_at_ms: u64,
+        /// The git commit an imported changeset records (MEDULLA-SCM-R010);
+        /// `None` for `SubmitChangeset`.
+        pub git_origin: Option<GitOrigin>,
+    }
+
+    /// Stage two of `SubmitChangeset` and of `ImportGitHistory`: extend the chain
+    /// inside the registry transaction through the one `accept`, with the
+    /// checkpoint and the history rows of the changeset (MEDULLA-SCM-R002,
+    /// MEDULLA-SCM-R004, MEDULLA-SCM-R005.1, MEDULLA-SCM-R010).
+    pub async fn append_changeset(
+        target: &ops::BranchTarget,
+        tenant: &str,
+        batch_id: &str,
+        input: ChangesetAppend,
+    ) -> Result<medulla_persistence::branch_registry_store::AppendedCommit, AppendError> {
+        let ChangesetAppend {
+            request,
+            store,
+            merge_owner,
+            author,
+            agent_identity,
+            created_at_ms,
+            git_origin,
+        } = input;
+        let branch_ref = target.reference.clone();
+        let build_batch = batch_id.to_string();
+        target
+            .append_with(tenant, batch_id, move |head, read, history| {
+                let chain = RegistryChain { head, read };
+                let blobs = ChunkStoreBlobs(store.as_ref(), &merge_owner);
+                let ctx = AcceptContext {
+                    author_principal: &author,
+                    created_at_ms,
+                    blobs: &blobs,
+                    // MEDULLA-BRANCH-MERGE-R010: an overlapping path merges by line.
+                    merge: ops::line_merge::FILE_MERGER,
+                    agent_identity: agent_identity.as_deref(),
+                    git_origin,
+                };
+                let changeset = match accept(&chain, &request, &ctx) {
+                    Ok(changeset) => changeset,
+                    Err(AcceptError::Refused(refusal)) => return Err(refusal.message()),
+                    Err(AcceptError::Store(error)) => return Err(error),
+                };
+                let payload =
+                    rmp_serde::to_vec_named(&changeset).map_err(|error| error.to_string())?;
+                // MEDULLA-SCM-R004: every `tree_checkpoint_interval`th changeset
+                // commits a full tree snapshot with it.
+                let checkpoint = checkpoint_after(
+                    &chain,
+                    &changeset,
+                    medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
+                )?;
+                // MEDULLA-SCM-R005.1: the history rows commit with the changeset,
+                // keyed by the id the registry gives the carrying commit.
+                let commit_id = medulla_mutation_types::branch::branch_commit_id(
+                    &branch_ref,
+                    head,
+                    &build_batch,
+                    &changeset.id,
+                );
+                let history_rows = index_rows(history, &chain, &changeset, &commit_id, &blobs)?;
+                Ok(CommitPlan {
+                    engine_version: 0,
+                    manifest_digest: changeset.id.clone(),
+                    actor: author.clone(),
+                    created_at_ms,
+                    payload: Some(payload),
+                    checkpoint,
+                    history_rows,
+                })
+            })
+            .await
     }
 
     fn receipt_response(req_id: u64, receipt: SubmitChangesetReceipt) -> Response {
@@ -249,7 +335,6 @@ mod served {
                 }
             }
         };
-        let merge_store = Arc::clone(&store);
         // A merged blob lands under the submitter's blob owner scope, the scope its
         // own fetch of the landed bytes reads (MEDULLA-BRANCH-MERGE-R010).
         let merge_owner =
@@ -259,6 +344,7 @@ mod served {
             };
         let checked = {
             let request = Arc::clone(&request);
+            let store = Arc::clone(&store);
             tokio::task::spawn_blocking(move || {
                 verify_submission(
                     store.as_ref(),
@@ -280,55 +366,21 @@ mod served {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|elapsed| elapsed.as_millis() as u64)
             .unwrap_or(0);
-        let build_request = Arc::clone(&request);
-        let branch_ref = target.reference.clone();
-        let build_batch = batch_id.clone();
-        let appended = target
-            .append_with(verified.tenant(), &batch_id, move |head, read, history| {
-                let chain = RegistryChain { head, read };
-                let blobs = ChunkStoreBlobs(merge_store.as_ref(), &merge_owner);
-                let ctx = AcceptContext {
-                    author_principal: &author,
-                    created_at_ms,
-                    blobs: &blobs,
-                    // MEDULLA-BRANCH-MERGE-R010: an overlapping path merges by line.
-                    merge: ops::line_merge::FILE_MERGER,
-                    agent_identity: agent_identity.as_deref(),
-                };
-                let changeset = match accept(&chain, &build_request, &ctx) {
-                    Ok(changeset) => changeset,
-                    Err(AcceptError::Refused(refusal)) => return Err(refusal.message()),
-                    Err(AcceptError::Store(error)) => return Err(error),
-                };
-                let payload =
-                    rmp_serde::to_vec_named(&changeset).map_err(|error| error.to_string())?;
-                // MEDULLA-SCM-R004: every `tree_checkpoint_interval`th changeset
-                // commits a full tree snapshot with it.
-                let checkpoint = checkpoint_after(
-                    &chain,
-                    &changeset,
-                    medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
-                )?;
-                // MEDULLA-SCM-R005.1: the history rows commit with the changeset,
-                // keyed by the id the registry gives the carrying commit.
-                let commit_id = medulla_mutation_types::branch::branch_commit_id(
-                    &branch_ref,
-                    head,
-                    &build_batch,
-                    &changeset.id,
-                );
-                let history_rows = index_rows(history, &chain, &changeset, &commit_id, &blobs)?;
-                Ok(CommitPlan {
-                    engine_version: 0,
-                    manifest_digest: changeset.id.clone(),
-                    actor: author.clone(),
-                    created_at_ms,
-                    payload: Some(payload),
-                    checkpoint,
-                    history_rows,
-                })
-            })
-            .await;
+        let appended = append_changeset(
+            &target,
+            verified.tenant(),
+            &batch_id,
+            ChangesetAppend {
+                request: Arc::clone(&request),
+                store: Arc::clone(&store),
+                merge_owner,
+                author,
+                agent_identity,
+                created_at_ms,
+                git_origin: None,
+            },
+        )
+        .await;
         match appended {
             Ok(done) => match target.payload(&done.commit.id).await {
                 Ok(Some(bytes)) => match decode_changeset(&bytes) {
@@ -353,6 +405,8 @@ mod served {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub use served::handle_submit_changeset;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(in crate::dispatch::router) use served::{append_changeset, ChangesetAppend};
 
 /// `SubmitChangeset` needs the `redb` registry owner file and the blob store.
 #[cfg(not(all(feature = "redb", feature = "blob")))]

@@ -977,6 +977,33 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SOURCE_CONFLICT",
         ],
     ),
+    // MEDULLA-SCM-R010: the git import refusals, each before the refused commit is written.
+    (
+        "ImportGitHistory",
+        &[
+            "BLOB_NOT_FOUND",
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "CHANGESET_INVALID",
+            "GIT_GRAPH_MALFORMED",
+            "GIT_MODE_UNSUPPORTED",
+            "PATH_WRITE_DENIED",
+        ],
+    ),
+    // MEDULLA-SCM-R014: the git export refusals.
+    (
+        "GitExportPack",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "GIT_EXPORT_TREE_READ_FAILED",
+            "GIT_GRAPH_MALFORMED",
+            "PATH_READ_DENIED",
+            "REVISION_NOT_ON_CHAIN",
+        ],
+    ),
     // MEDULLA-SCM-R007: a path grant that is out of bounds.
     ("SetPathGrant", &["PATH_GRANT_INVALID"]),
     // MEDULLA-SCM-R004: the tree read refusals.

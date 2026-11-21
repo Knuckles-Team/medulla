@@ -621,6 +621,8 @@ SEND_BY_METHOD = {
     "ReadBlame": cluster.send_read_blame,
     "ReadPathHistory": cluster.send_read_path_history,
     "SubmitChangeset": cluster.send_submit_changeset,
+    "ImportGitHistory": cluster.send_import_git_history,
+    "GitExportPack": cluster.send_git_export_pack,
     "SubmitWorkItem": coordination.send_submit_work_item,
     "SubmitWorkItems": coordination.send_submit_work_items,
     "SummariesAtLevel": graph.send_summaries_at_level,

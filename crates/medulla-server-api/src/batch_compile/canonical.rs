@@ -58,7 +58,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         Method::CreateBranch { .. }
         | Method::SetPathGrant { .. }
         | Method::BranchWrite { .. }
-        | Method::SubmitChangeset { .. } => DurabilityDomain::ControlPlane,
+        | Method::SubmitChangeset { .. }
+        | Method::ImportGitHistory { .. } => DurabilityDomain::ControlPlane,
         Method::MultiGraphBatchUpdate { .. } => DurabilityDomain::MultiGraph,
         Method::Commit { .. } => DurabilityDomain::CrossModal,
         // Wire-unconditional, same reason as the `datascience`/`finance`/etc.
@@ -624,6 +625,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ReadTree { .. }
         | Method::ReadPathHistory { .. }
         | Method::ReadBlame { .. }
+        | Method::GitExportPack { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }
@@ -888,6 +890,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::SetPathGrant { .. }
         | Method::BranchWrite { .. }
         | Method::SubmitChangeset { .. }
+        | Method::ImportGitHistory { .. }
         | Method::DeleteGraph { .. }
         | Method::MultiGraphBatchUpdate { .. }
         | Method::Commit { .. }

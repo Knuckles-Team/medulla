@@ -15043,6 +15043,20 @@ class MethodSubmitChangeset(BaseModel):
     params: MethodSubmitChangesetParams
 
 
+class MethodImportGitHistory(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ImportGitHistory"]
+    params: MethodImportGitHistoryParams
+
+
+class MethodGitExportPack(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GitExportPack"]
+    params: MethodGitExportPackParams
+
+
 class MethodSetPathGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15730,6 +15744,8 @@ Method = Annotated[
         MethodBranchDiff,
         MethodBranchReadAt,
         MethodSubmitChangeset,
+        MethodImportGitHistory,
+        MethodGitExportPack,
         MethodSetPathGrant,
         MethodReadPathHistory,
         MethodReadBlame,
@@ -34255,6 +34271,18 @@ class MethodSubmitChangesetParams(BaseModel):
     request: SubmitChangesetRequest
 
 
+class MethodImportGitHistoryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ImportGitHistoryRequest
+
+
+class MethodGitExportPackParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: GitExportPackRequest
+
+
 class MethodTraceCritiqueParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -34496,6 +34524,45 @@ class PathOp(str, Enum):
     MODIFY = "modify"
     DELETE = "delete"
     RENAME = "rename"
+
+
+class GitObjectFormat(str, Enum):
+    SHA1 = "sha1"
+    SHA256 = "sha256"
+
+
+class GitExportPackReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    object_format: GitObjectFormat
+    pack_hex: str
+
+
+class GitExportPackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str
+    haves: list[str] = Field(default_factory=list)
+    repo: str
+    wants: list[str]
+
+
+class ImportGitHistoryReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch_head: str
+    imported: Annotated[int, Field(ge=0)]
+    skipped: Annotated[int, Field(ge=0)]
+
+
+class ImportGitHistoryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str
+    head: str
+    object_format: GitObjectFormat
+    pack_digest: str
+    repo: str
 
 
 class PerspectiveQuery(BaseModel):
@@ -39916,6 +39983,15 @@ __all__ = [
     "MethodReadPathHistoryParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
+    "MethodImportGitHistory",
+    "MethodImportGitHistoryParams",
+    "MethodGitExportPack",
+    "MethodGitExportPackParams",
+    "GitObjectFormat",
+    "GitExportPackReceipt",
+    "GitExportPackRequest",
+    "ImportGitHistoryReceipt",
+    "ImportGitHistoryRequest",
     "PathGrant",
     "SetPathGrantRequest",
     "BlameRun",

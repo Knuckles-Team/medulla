@@ -300,6 +300,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "BusHeartbeat",
         "BranchWrite",
         "SubmitChangeset",
+        "ImportGitHistory",
         "SetPathGrant",
         "BusRegister",
         "CreateBranch",

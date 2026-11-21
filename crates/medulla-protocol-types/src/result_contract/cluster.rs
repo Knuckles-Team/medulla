@@ -25,6 +25,8 @@ method_results! {
     SetPathGrant(SetPathGrant) => Json<medulla_source_types::source_path_grant::PathGrant>;
     ReadBlame(ReadBlame) => Json<medulla_source_types::source_changeset::ReadBlameReceipt>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
+    ImportGitHistory(ImportGitHistory) => Json<medulla_source_types::source_changeset::ImportGitHistoryReceipt>;
+    GitExportPack(GitExportPack) => Json<medulla_source_types::source_changeset::GitExportPackReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;
     CatalogAssign(CatalogAssign) => Bool<bool>;

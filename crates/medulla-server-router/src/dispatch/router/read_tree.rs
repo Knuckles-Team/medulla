@@ -25,9 +25,9 @@ mod served {
     use medulla_source_types::source_changeset::{Changeset, ReadTreeReceipt};
 
     /// The branch chain as a tree read sees it.
-    struct RegistryTree<'a> {
-        registry: &'a BranchRegistry,
-        branch: &'a BranchRef,
+    pub(in crate::dispatch::router) struct RegistryTree<'a> {
+        pub(in crate::dispatch::router) registry: &'a BranchRegistry,
+        pub(in crate::dispatch::router) branch: &'a BranchRef,
     }
 
     impl TreeChain for RegistryTree<'_> {
@@ -102,6 +102,8 @@ mod served {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub use served::handle_read_tree;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(in crate::dispatch::router) use served::RegistryTree;
 
 /// `ReadTree` needs the `redb` branch registry and the `blob` ingest handlers.
 #[cfg(not(all(feature = "redb", feature = "blob")))]

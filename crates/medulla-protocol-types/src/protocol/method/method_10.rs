@@ -342,6 +342,19 @@ $($variants)*
         #[serde(default)]
         needs_current_state: bool,
     },
+
+    /// Export the changeset chain of a branch as a version-2 git pack
+    /// (MEDULLA-SCM-R014): every changeset from each want back along first
+    /// parents to, excluding, a have or the root, with the commit and tree ids
+    /// of the import and the side pack objects of every merge. Wants and haves
+    /// are git commit ids or branch commit ids. The caller needs read access on
+    /// every path of the exported trees. Refusals: `PATH_READ_DENIED`,
+    /// `REVISION_NOT_ON_CHAIN`, `GIT_GRAPH_MALFORMED`,
+    /// `GIT_EXPORT_TREE_READ_FAILED`, plus the branch refusals of `ReadTree`.
+    /// Reads only.
+    GitExportPack {
+        request: Box<medulla_source_types::source_changeset::GitExportPackRequest>,
+    },
         ]);
     };
 }

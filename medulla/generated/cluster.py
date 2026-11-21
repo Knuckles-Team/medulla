@@ -1505,6 +1505,10 @@ send_read_path_history = contract_sender(
 send_submit_changeset = contract_sender(
     "SubmitChangeset", "MethodSubmitChangesetParams"
 )
+send_import_git_history = contract_sender(
+    "ImportGitHistory", "MethodImportGitHistoryParams"
+)
+send_git_export_pack = contract_sender("GitExportPack", "MethodGitExportPackParams")
 send_list_foreign_sources = contract_sender("ListForeignSources", "MethodListForeignSourcesParams")
 send_get_foreign_source = contract_sender("GetForeignSource", "MethodGetForeignSourceParams")
 send_probe_foreign_source = contract_sender("ProbeForeignSource", "MethodProbeForeignSourceParams")
