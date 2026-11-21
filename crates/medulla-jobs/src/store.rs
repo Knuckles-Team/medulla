@@ -120,7 +120,8 @@ const UNCONSTRAINED_CAPABILITY_ANCHOR: &str = "0";
 const MAX_STORED_JOB_BYTES: usize = 64 * 1024 * 1024;
 const MAX_STORED_JOB_ITEMS: usize = 1_000_000;
 const MAX_JOB_ID_BYTES: usize = 256;
-const MAX_JOB_STRING_BYTES: usize = 4 * 1024;
+/// Largest job identifier-like string, and the largest checkpoint label (MEDULLA-CQ-ORCH-R811.6).
+pub const MAX_JOB_STRING_BYTES: usize = 4 * 1024;
 const MAX_JOB_REASON_BYTES: usize = 64 * 1024;
 const MAX_JOB_OPAQUE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_JOB_RESULT_BYTES: usize = 64 * 1024 * 1024;
@@ -249,7 +250,8 @@ fn valid_identifier(value: &str) -> bool {
 fn validate_checkpoint(checkpoint: &Checkpoint) -> Result<()> {
     if !checkpoint.progress.is_finite()
         || !(0.0..=1.0).contains(&checkpoint.progress)
-        || checkpoint.stage.len() > MAX_JOB_STRING_BYTES
+        || checkpoint.label.len() > MAX_JOB_STRING_BYTES
+        || checkpoint.label.chars().any(char::is_control)
         || checkpoint
             .state_blob
             .as_ref()
@@ -963,7 +965,7 @@ impl JobStore {
             lease: lease.clone(),
             checkpoint: resumed.unwrap_or_else(|| Checkpoint {
                 progress: 0.0,
-                stage: "leased".to_string(),
+                label: String::new(),
                 state_blob: None,
                 updated_at_ms: now_ms,
             }),
@@ -1104,7 +1106,6 @@ impl JobStore {
             result_ref,
             checkpoint: Checkpoint {
                 progress: 1.0,
-                stage: "publishing".to_string(),
                 updated_at_ms: now_ms,
                 ..checkpoint
             },
@@ -1149,7 +1150,6 @@ impl JobStore {
                 })
             }
         };
-        checkpoint.stage = "published".to_string();
         checkpoint.updated_at_ms = now_ms;
         // J04: the claims committed; the lease leaves with the state.
         let facts = JobFacts {
@@ -1198,7 +1198,6 @@ impl JobStore {
                 ..
             } if result_ref == expected_result_ref => {
                 let mut checkpoint = checkpoint.clone();
-                checkpoint.stage = "published".to_string();
                 checkpoint.updated_at_ms = committed_at_ms;
                 let succeeded = JobState::Succeeded {
                     result_ref: result_ref.clone(),
@@ -3297,7 +3296,7 @@ mod tests {
                 claim.lease.epoch,
                 Checkpoint {
                     progress: 0.5,
-                    stage: "half-way".to_string(),
+                    label: "half-way".to_string(),
                     state_blob: Some(vec![1, 2, 3]),
                     updated_at_ms: now_ms(),
                 },
@@ -3307,7 +3306,7 @@ mod tests {
         match &job.state {
             JobState::Running { checkpoint, .. } => {
                 assert_eq!(checkpoint.progress, 0.5);
-                assert_eq!(checkpoint.stage, "half-way");
+                assert_eq!(checkpoint.label, "half-way");
                 assert_eq!(checkpoint.state_blob, Some(vec![1, 2, 3]));
             }
             other => panic!("expected Running, got {other:?}"),
@@ -3444,7 +3443,7 @@ mod tests {
                 claim.lease.epoch,
                 Checkpoint {
                     progress: 0.3,
-                    stage: "chunk-1".to_string(),
+                    label: "chunk-1".to_string(),
                     state_blob: None,
                     updated_at_ms: now,
                 },
@@ -3628,7 +3627,7 @@ mod tests {
                     claim.lease.epoch,
                     Checkpoint {
                         progress: 0.4,
-                        stage: "chunk-2".to_string(),
+                        label: "chunk-2".to_string(),
                         state_blob: Some(vec![9, 9]),
                         updated_at_ms: started_at,
                     },
@@ -3647,7 +3646,7 @@ mod tests {
         match &job.state {
             JobState::Running { checkpoint, .. } => {
                 assert_eq!(checkpoint.progress, 0.4);
-                assert_eq!(checkpoint.stage, "chunk-2");
+                assert_eq!(checkpoint.label, "chunk-2");
             }
             other => panic!("expected orphaned Running, got {other:?}"),
         }

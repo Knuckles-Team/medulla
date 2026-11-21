@@ -501,7 +501,7 @@ mod tests {
                 result_ref,
                 checkpoint: crate::model::Checkpoint {
                     progress: 1.0,
-                    stage: "done".into(),
+                    label: "done".into(),
                     state_blob: None,
                     updated_at_ms: 0,
                 },

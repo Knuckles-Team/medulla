@@ -744,7 +744,7 @@ pub(super) async fn execute_profile_claim(
             epoch,
             Checkpoint {
                 progress: 0.1,
-                stage: "profiling".to_string(),
+                label: "profiling".to_string(),
                 state_blob: None,
                 updated_at_ms: unix_ms(),
             },
@@ -802,7 +802,7 @@ pub(super) async fn execute_profile_claim(
             epoch,
             Checkpoint {
                 progress: 0.9,
-                stage: "profiled".to_string(),
+                label: "profiled".to_string(),
                 state_blob: None,
                 updated_at_ms: now,
             },

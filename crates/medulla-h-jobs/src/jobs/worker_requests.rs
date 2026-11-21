@@ -172,7 +172,7 @@ pub(super) fn handle_worker_checkpoint(
     job_id: &str,
     lease_epoch: u64,
     progress: f64,
-    stage: String,
+    label: String,
     state_ref: Option<String>,
 ) -> Response {
     let WorkerRequestCtx {
@@ -185,14 +185,12 @@ pub(super) fn handle_worker_checkpoint(
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
-    let valid_stage = matches!(
-        stage.as_str(),
-        "leased" | "mining" | "optimizing" | "computed" | "publishing" | "published"
-    );
+    let valid_label =
+        label.len() <= medulla_jobs::store::MAX_JOB_STRING_BYTES && !label.chars().any(char::is_control);
     let valid_state = state_ref
         .as_ref()
         .is_none_or(|value| is_opaque_result_ref(value));
-    if !progress.is_finite() || !valid_stage || !valid_state {
+    if !progress.is_finite() || !valid_label || !valid_state {
         return Response::err(req_id, "analytics worker checkpoint is invalid");
     }
     let now = unix_ms();
@@ -202,7 +200,7 @@ pub(super) fn handle_worker_checkpoint(
         lease_epoch,
         Checkpoint {
             progress: progress.clamp(0.0, 1.0),
-            stage,
+            label,
             state_blob: state_ref.map(String::into_bytes),
             updated_at_ms: now,
         },
@@ -212,5 +210,90 @@ pub(super) fn handle_worker_checkpoint(
             medulla_protocol_types::result_contract::coordination::JobWorkerCheckpoint,
         >(req_id, &job),
         Err(error) => Response::err(req_id, job_refusal(&error)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_jobs::dev_scope_grant::open_dev_store_in_dir;
+    use medulla_jobs::model::JobState;
+
+    /// A store holding one job claimed by the worker `("principal", "instance")`.
+    fn claimed() -> (tempfile::TempDir, JobStore, String, u64) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        store
+            .submit(SubmitSpec {
+                input_snapshot: medulla_jobs::model::InputSnapshotHandle::new("eg:graph:r811-6", 1)
+                    .with_dataset(
+                        "eg:job_input:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                        "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                    ),
+                policy: JobPolicy {
+                    tenant: "tenant-r811-6".into(),
+                    actor: "actor".into(),
+                    purpose: "label".into(),
+                    ..JobPolicy::default()
+                },
+                algo: AlgoVersion {
+                    family: "mining.association".into(),
+                    algorithm: "fpgrowth".into(),
+                    params_digest: "params".into(),
+                    code_version: "test".into(),
+                    env_version: "test".into(),
+                },
+                input_payload: None,
+                max_attempts: 3,
+                backoff_ms: 10,
+            })
+            .unwrap();
+        let worker = worker_ref(Some("principal"), true, "instance").unwrap();
+        let claim = store
+            .claim_next(&worker, &[], unix_ms(), 60_000, TenantJobQuota::default())
+            .unwrap()
+            .unwrap();
+        (dir, store, claim.job.job_id, claim.lease.epoch)
+    }
+
+    fn checkpoint(store: &JobStore, job_id: &str, epoch: u64, label: &str) -> Response {
+        handle_worker_checkpoint(
+            store,
+            WorkerRequestCtx {
+                req_id: 1,
+                caller: Some("principal"),
+                verified_worker_context: true,
+                worker_instance: "instance",
+            },
+            job_id,
+            epoch,
+            0.5,
+            label.to_string(),
+            None,
+        )
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R811.6
+    #[test]
+    fn worker_label_is_kept_verbatim() {
+        let (_dir, store, job_id, epoch) = claimed();
+        let response = checkpoint(&store, &job_id, epoch, "chunk-2");
+        assert!(response.error.is_none(), "{:?}", response.error);
+        match store.get(&job_id).unwrap().state {
+            JobState::Running { checkpoint, .. } => assert_eq!(checkpoint.label, "chunk-2"),
+            other => panic!("expected Running, got {other:?}"),
+        }
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R811.6
+    #[test]
+    fn control_character_label_is_refused() {
+        let (_dir, store, job_id, epoch) = claimed();
+        let response = checkpoint(&store, &job_id, epoch, "chunk\n2");
+        assert!(response.error.is_some());
+        match store.get(&job_id).unwrap().state {
+            JobState::Running { checkpoint, .. } => assert_eq!(checkpoint.label, ""),
+            other => panic!("expected Running, got {other:?}"),
+        }
     }
 }

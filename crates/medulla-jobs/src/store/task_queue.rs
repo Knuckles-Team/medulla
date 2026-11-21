@@ -367,7 +367,7 @@ impl JobStore {
                 let succeeded = JobState::Succeeded {
                     result_ref,
                     checkpoint: Checkpoint {
-                        stage: "acked".to_string(),
+                        label: "acked".to_string(),
                         updated_at_ms: now_ms,
                         ..checkpoint
                     },

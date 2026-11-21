@@ -326,7 +326,7 @@ fn run_claimed_job(
         epoch,
         Checkpoint {
             progress: 0.25,
-            stage: "planning".to_string(),
+            label: "planning".to_string(),
             state_blob: None,
             updated_at_ms: now_ms,
         },
@@ -348,7 +348,7 @@ fn run_claimed_job(
         epoch,
         Checkpoint {
             progress: 0.5,
-            stage: format!("executing on {}", decision.chosen),
+            label: format!("executing on {}", decision.chosen),
             state_blob: None,
             updated_at_ms: now_ms,
         },

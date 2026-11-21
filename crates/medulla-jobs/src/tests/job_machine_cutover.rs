@@ -119,3 +119,17 @@ fn failed_job_never_revives() {
         JobState::Failed { .. }
     ));
 }
+
+// spec: MEDULLA-CQ-ORCH-R811.6
+
+#[test]
+fn store_writes_no_checkpoint_label() {
+    // The label is progress text a worker or an executor sets; the store never writes one.
+    let writer = writer_source(include_str!("../store.rs"));
+    for needle in ["label: \"", "label = \"", "label: format!", ".label = "] {
+        assert!(
+            !writer.contains(needle),
+            "store.rs assigns a checkpoint label with `{needle}`"
+        );
+    }
+}

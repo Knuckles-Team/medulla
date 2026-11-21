@@ -103,7 +103,8 @@ pub(crate) fn convert_job_rows(write: &WriteTransaction) -> Result<(), String> {
 /// with `not_before_ms > 0`, attempted or never attempted, becomes
 /// `Backoff { not_before_ms, checkpoint: None }`, else `Submitted { checkpoint: None }`. `Succeeded`, `Failed` and
 /// `Cancelled` keep their payload. The fields `cancel_requested`, `lease` and `not_before_ms` are
-/// dropped. Any other shape fails with `JOBS_RECORD_UNMAPPABLE: <job id>`.
+/// dropped. Every checkpoint's `stage` is renamed `label` with its value kept (MEDULLA-CQ-ORCH-R811.6).
+/// Any other shape fails with `JOBS_RECORD_UNMAPPABLE: <job id>`.
 pub fn convert_job_record(old: &Value) -> Result<Value, String> {
     let job_id = old
         .get("job_id")
@@ -126,13 +127,31 @@ pub fn convert_job_record(old: &Value) -> Result<Value, String> {
         Some(value) => value.as_i64().ok_or_else(refuse)?,
     };
     let state = record.get("state").ok_or_else(refuse)?;
-    let state = convert_state(state, cancel_requested, lease, not_before_ms).ok_or_else(refuse)?;
+    let mut state =
+        convert_state(state, cancel_requested, lease, not_before_ms).ok_or_else(refuse)?;
+    relabel_checkpoints(&mut state);
     let mut converted: Map<String, Value> = record.clone();
     for dropped in ["cancel_requested", "lease", "not_before_ms"] {
         converted.remove(dropped);
     }
     converted.insert("state".to_string(), state);
     Ok(Value::Object(converted))
+}
+
+/// Rename the `stage` of every checkpoint of `state` to `label`, keeping its value
+/// (MEDULLA-CQ-ORCH-R811.6): the label is opaque progress text, not a lifecycle stage.
+fn relabel_checkpoints(state: &mut Value) {
+    let Some(bodies) = state.as_object_mut() else {
+        return;
+    };
+    for body in bodies.values_mut() {
+        let Some(checkpoint) = body.get_mut("checkpoint").and_then(Value::as_object_mut) else {
+            continue;
+        };
+        if let Some(stage) = checkpoint.remove("stage") {
+            checkpoint.insert("label".to_string(), stage);
+        }
+    }
 }
 
 /// The machine-shape state of an old `state`, or `None` when the old shape maps to nothing.
@@ -190,6 +209,10 @@ mod tests {
         json!({ "progress": 0.5, "stage": "half", "state_blob": null, "updated_at_ms": 15 })
     }
 
+    fn labeled() -> Value {
+        json!({ "progress": 0.5, "label": "half", "state_blob": null, "updated_at_ms": 15 })
+    }
+
     fn record(state: Value, cancel_requested: bool, lease: Option<Value>, not_before: i64, attempts: u64) -> Value {
         json!({
             "job_id": "job-0000000000000001",
@@ -226,21 +249,21 @@ mod tests {
         // A live job keeps its variant and carries its lease in the payload.
         assert_eq!(
             converted_state(record(running.clone(), false, Some(lease()), 0, 1)),
-            json!({ "Running": { "lease": lease(), "checkpoint": checkpoint() } })
+            json!({ "Running": { "lease": lease(), "checkpoint": labeled() } })
         );
         assert_eq!(
             converted_state(record(publishing.clone(), false, Some(lease()), 0, 1)),
-            json!({ "Publishing": { "lease": lease(), "result_ref": "r", "checkpoint": checkpoint() } })
+            json!({ "Publishing": { "lease": lease(), "result_ref": "r", "checkpoint": labeled() } })
         );
         // A cancel request with a lease waits for its holder; without one it is cancelled.
         for state in [running.clone(), publishing.clone()] {
             assert_eq!(
                 converted_state(record(state.clone(), true, Some(lease()), 0, 1)),
-                json!({ "CancelRequested": { "lease": lease(), "checkpoint": checkpoint() } })
+                json!({ "CancelRequested": { "lease": lease(), "checkpoint": labeled() } })
             );
             assert_eq!(
                 converted_state(record(state, true, None, 0, 1)),
-                json!({ "Cancelled": { "checkpoint": checkpoint() } })
+                json!({ "Cancelled": { "checkpoint": labeled() } })
             );
         }
         // A running or publishing job with no lease and no cancel request is reclaimable: it
@@ -248,7 +271,7 @@ mod tests {
         for state in [running.clone(), publishing.clone()] {
             assert_eq!(
                 converted_state(record(state, false, None, 0, 1)),
-                json!({ "Submitted": { "checkpoint": checkpoint() } })
+                json!({ "Submitted": { "checkpoint": labeled() } })
             );
         }
         // A submitted job with a delay waits in Backoff, attempted or never attempted.
@@ -265,14 +288,23 @@ mod tests {
             json!({ "Submitted": { "checkpoint": null } })
         );
         // Terminal states keep their payload.
-        for state in [
-            json!({ "Succeeded": { "result_ref": "r", "checkpoint": checkpoint() } }),
-            json!({ "Failed": { "reason": "boom", "checkpoint": null } }),
-            json!({ "Cancelled": { "checkpoint": checkpoint() } }),
+        for (state, expected) in [
+            (
+                json!({ "Succeeded": { "result_ref": "r", "checkpoint": checkpoint() } }),
+                json!({ "Succeeded": { "result_ref": "r", "checkpoint": labeled() } }),
+            ),
+            (
+                json!({ "Failed": { "reason": "boom", "checkpoint": null } }),
+                json!({ "Failed": { "reason": "boom", "checkpoint": null } }),
+            ),
+            (
+                json!({ "Cancelled": { "checkpoint": checkpoint() } }),
+                json!({ "Cancelled": { "checkpoint": labeled() } }),
+            ),
         ] {
             assert_eq!(
-                converted_state(record(state.clone(), true, None, 0, 1)),
-                state
+                converted_state(record(state, true, None, 0, 1)),
+                expected
             );
         }
     }
@@ -345,7 +377,7 @@ mod tests {
             let decoded: Value = rmp_serde::from_slice(stored.value()).unwrap();
             assert_eq!(
                 decoded["state"],
-                json!({ "Running": { "lease": lease(), "checkpoint": checkpoint() } })
+                json!({ "Running": { "lease": lease(), "checkpoint": labeled() } })
             );
         }
         let remaining: Vec<String> = write

@@ -15885,7 +15885,7 @@ class JobsClient:
         lease_epoch: int,
         *,
         progress: float,
-        stage: str,
+        label: str,
         state_ref: str | None = None,
     ) -> dict[str, Any]:
         """Persist a bounded, opaque checkpoint under the current lease epoch."""
@@ -15899,7 +15899,7 @@ class JobsClient:
                             "worker_instance": worker_instance,
                             "lease_epoch": lease_epoch,
                             "progress": progress,
-                            "stage": stage,
+                            "label": label,
                             "state_ref": state_ref,
                         }
                     }

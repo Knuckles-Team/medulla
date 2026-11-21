@@ -9360,8 +9360,8 @@ class JobAlgoVersion(BaseModel):
 class JobCheckpoint(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    label: str
     progress: float
-    stage: str
     state_blob: _EgOctets | None = None
     updated_at_ms: int
 
@@ -9626,9 +9626,9 @@ class JobOpWorkerCheckpointBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     job_id: str
+    label: str
     lease_epoch: Annotated[int, Field(ge=0)]
     progress: float
-    stage: str
     state_ref: str | None = None
     worker_instance: str
 

@@ -35,7 +35,7 @@ pub(super) async fn execute_usage_cluster_claim(
             epoch,
             Checkpoint {
                 progress: 0.1,
-                stage: "reading".to_string(),
+                label: "reading".to_string(),
                 state_blob: None,
                 updated_at_ms: unix_ms(),
             },
@@ -66,7 +66,7 @@ pub(super) async fn execute_usage_cluster_claim(
             epoch,
             Checkpoint {
                 progress: 0.9,
-                stage: "computed".to_string(),
+                label: "computed".to_string(),
                 state_blob: None,
                 updated_at_ms: now,
             },

@@ -42,7 +42,7 @@ pub(super) async fn execute_analytical_claim(
             epoch,
             Checkpoint {
                 progress: 0.1,
-                stage: "running".to_string(),
+                label: "running".to_string(),
                 state_blob: None,
                 updated_at_ms: unix_ms(),
             },
@@ -79,7 +79,7 @@ pub(super) async fn execute_analytical_claim(
             epoch,
             Checkpoint {
                 progress: 0.9,
-                stage: "computed".to_string(),
+                label: "computed".to_string(),
                 state_blob: None,
                 updated_at_ms: now,
             },

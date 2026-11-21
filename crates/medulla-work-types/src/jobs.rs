@@ -60,7 +60,7 @@ pub enum JobOp {
         worker_instance: String,
         lease_epoch: u64,
         progress: f64,
-        stage: String,
+        label: String,
         #[serde(default)]
         state_ref: Option<String>,
     },

@@ -575,7 +575,7 @@ pub(super) async fn execute_quality_claim(
             epoch,
             Checkpoint {
                 progress: 0.1,
-                stage: "evaluating".to_string(),
+                label: "evaluating".to_string(),
                 state_blob: None,
                 updated_at_ms: unix_ms(),
             },
@@ -647,7 +647,7 @@ pub(super) async fn execute_quality_claim(
             epoch,
             Checkpoint {
                 progress: 0.9,
-                stage: "scored".to_string(),
+                label: "scored".to_string(),
                 state_blob: None,
                 updated_at_ms: now,
             },

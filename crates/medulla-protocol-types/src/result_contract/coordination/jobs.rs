@@ -87,7 +87,7 @@ pub struct JobRetryPolicy {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct JobCheckpoint {
     pub progress: f64,
-    pub stage: String,
+    pub label: String,
     /// An opaque external state reference, as bytes.
     pub state_blob: Option<Vec<u8>>,
     pub updated_at_ms: i64,

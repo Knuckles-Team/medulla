@@ -286,7 +286,7 @@ fn run_steps(
                             epoch,
                             Checkpoint {
                                 progress: 0.5,
-                                stage: "half".to_string(),
+                                label: "half".to_string(),
                                 state_blob: Some(vec![slot as u8]),
                                 updated_at_ms: now,
                             },

@@ -434,7 +434,7 @@ pub async fn handle(
             worker_instance,
             lease_epoch,
             progress,
-            stage,
+            label,
             state_ref,
         } => handle_worker_checkpoint(
             &store,
@@ -447,7 +447,7 @@ pub async fn handle(
             &job_id,
             lease_epoch,
             progress,
-            stage,
+            label,
             state_ref,
         ),
         JobOp::WorkerStage {

@@ -21,11 +21,11 @@
     rdfs:label "AnalyticsJob" ;
     rdfs:comment """CONCEPT:AU-ORCH.scheduling.analytics-job-mirror — mirrors one
     `medulla-jobs::AnalyticsJob`: a durable async job with fenced-lease checkpointing
-    (`Checkpoint{progress,stage,state_blob}`), cron/interval/manual triggers
+    (`Checkpoint{progress,label,state_blob}`), cron/interval/manual triggers
     (`JobIntent::Trigger`), and a `JobState` lifecycle (`Submitted` ->
     `Running`/`Publishing` -> `Succeeded`|`Failed`|`Cancelled`). :backendRef is the
     `JobId`; :durableStatus mirrors `JobState::label()`; :leaseEpoch mirrors
-    `lease_epoch`; :checkpointRef mirrors the active `Checkpoint`'s stage/progress.""" ;
+    `lease_epoch`; :checkpointRef mirrors the active `Checkpoint`'s label/progress.""" ;
     rdfs:subClassOf :DurableExecutionUnit .
 
 :BusTopicCursor a owl:Class ;

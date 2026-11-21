@@ -37,7 +37,7 @@ Remote workers use `Method::AnalyticsJob` with the following `JobOp` variants:
 |---|---|---|
 | `WorkerClaim` | `worker_instance`, capabilities, lease duration | `null`, or `{job, lease}` including the pseudonymized compute payload |
 | `WorkerRenew` | job id, worker instance, lease epoch, lease duration | renewed lease |
-| `WorkerCheckpoint` | job id, worker instance, epoch, progress, enumerated stage, optional opaque state ref | redacted job status |
+| `WorkerCheckpoint` | job id, worker instance, epoch, progress, opaque progress label, optional opaque state ref | redacted job status |
 | `WorkerStage` | job id, worker instance, epoch, complete typed result | `Publishing` job status |
 | `WorkerPublish` | job id, worker instance, epoch | terminal job status after transactional claim publication |
 | `WorkerFail` | job id, worker instance, epoch, enumerated reason code | retry/backoff or terminal failure status |

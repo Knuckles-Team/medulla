@@ -206,7 +206,7 @@ pub(super) async fn execute_claim(
                 epoch,
                 Checkpoint {
                     progress: 0.1,
-                    stage: "mining".to_string(),
+                    label: "mining".to_string(),
                     state_blob: Some(payload),
                     updated_at_ms: unix_ms(),
                 },
@@ -318,7 +318,7 @@ pub(super) async fn execute_claim(
                 epoch,
                 Checkpoint {
                     progress: 0.9,
-                    stage: "computed".to_string(),
+                    label: "computed".to_string(),
                     state_blob: None,
                     updated_at_ms: now,
                 },

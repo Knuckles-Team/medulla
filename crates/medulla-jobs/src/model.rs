@@ -145,14 +145,14 @@ impl RetryPolicy {
     }
 }
 
-/// Resumable progress marker (CONCEPT:INT-P2-1): a monotonic `[0,1]` fraction, a
-/// free-form stage label, and an OPAQUE resumable-state blob the job kind defines
+/// Resumable progress marker (CONCEPT:INT-P2-1): a monotonic `[0,1]` fraction, an
+/// opaque progress label (not a lifecycle: nothing reads it to decide anything, MEDULLA-CQ-ORCH-R811.6), and an OPAQUE resumable-state blob the job kind defines
 /// the shape of (this crate never interprets it). Persisted with the job record, so
 /// a restart reads back exactly the last checkpoint a running job wrote.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Checkpoint {
     pub progress: f64,
-    pub stage: String,
+    pub label: String,
     #[serde(default)]
     pub state_blob: Option<Vec<u8>>,
     pub updated_at_ms: i64,
