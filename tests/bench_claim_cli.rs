@@ -337,3 +337,71 @@ fn shape_receipt_requires_both_variants() {
     assert_eq!(receipt["adopt_memoized"], true);
     assert!(!case(vec![0.9; 10], vec![1.0; 10]).adopt_memoized());
 }
+
+/// Write one receipt of `case` under `<root>/<release>/`.
+fn receipt(root: &Path, release: &str, case: &str, digest: &str, p50: f64, p99: f64) {
+    let dir = root.join(release);
+    std::fs::create_dir_all(&dir).unwrap();
+    let body = serde_json::json!({
+        "configuration_digest": digest,
+        "p50_ms": p50,
+        "p99_ms": p99,
+    });
+    std::fs::write(dir.join(format!("{case}.json")), body.to_string()).unwrap();
+}
+
+/// Run `compare`; returns (exit success, stdout).
+fn compare(root: &Path, release: &str) -> (bool, String) {
+    let out = Command::new(bin())
+        .arg("bench-claim")
+        .arg("compare")
+        .arg(root)
+        .arg(release)
+        .output()
+        .expect("spawn bench-claim compare");
+    (
+        out.status.success(),
+        String::from_utf8_lossy(&out.stdout).trim().to_string(),
+    )
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R042.6
+#[test]
+fn regression_over_ten_percent_fails_and_missing_baseline_is_created() {
+    let root = tempfile::tempdir().unwrap();
+    let digest = sha256_hex(b"configuration");
+
+    // The first release has no previous receipt: it passes and logs the baseline.
+    receipt(root.path(), "3.2.0", "ycsb-a", &digest, 100.0, 200.0);
+    let (ok, out) = compare(root.path(), "3.2.0");
+    assert!(ok, "a missing baseline must pass once: {out}");
+    assert!(out.contains("BENCH_BASELINE_CREATED ycsb-a"), "{out}");
+
+    // Exactly 10 percent slower still passes; both values are within the limit.
+    receipt(root.path(), "3.3.0", "ycsb-a", &digest, 110.0, 220.0);
+    let (ok, out) = compare(root.path(), "3.3.0");
+    assert!(ok, "a 10 percent change is not a regression: {out}");
+    assert!(!out.contains("BENCH_REGRESSION"), "{out}");
+
+    // More than 10 percent slower on either percentile fails, naming the case.
+    receipt(root.path(), "3.4.0", "ycsb-a", &digest, 110.0, 245.0);
+    let (ok, out) = compare(root.path(), "3.4.0");
+    assert!(!ok, "a 22.5 percent p99 regression must fail: {out}");
+    assert!(out.contains("BENCH_REGRESSION ycsb-a p99_ms"), "{out}");
+
+    // A case measured under another configuration has no comparable baseline.
+    receipt(
+        root.path(),
+        "3.5.0",
+        "ycsb-a",
+        &sha256_hex(b"another"),
+        900.0,
+        900.0,
+    );
+    let (ok, out) = compare(root.path(), "3.5.0");
+    assert!(
+        ok,
+        "another configuration is incomparable, not a regression: {out}"
+    );
+    assert!(out.contains("BENCH_BASELINE_CREATED ycsb-a"), "{out}");
+}
