@@ -15,6 +15,7 @@ float on the wire.
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -306,6 +307,40 @@ def tool_assignment_request(
         feature_schema,
         policy=policy,
         params=[param("tool_assignment", "tool_assignment", body)],
+    )
+
+
+def process_plan_request(
+    tenant_id: str,
+    question_id: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    graph: str,
+    workflow_id: str,
+    version: int,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a ``ProcessPlan`` question over one stored canonical workflow
+    (MEDULLA-CQ-ORCH-R704.5).
+
+    ``graph`` names the graph that holds the workflow; ``workflow_id`` and
+    ``version`` name the stored version (the ``workflow_id`` the import was
+    given, not the node id it answered). The engine binds each step from the
+    graph, then by tool relevance, and answers the sealed task plan in
+    ``answer.value`` with one ``binding:`` premise per step. Nothing is written.
+    """
+    body = json.dumps(
+        {"workflow_id": workflow_id, "version": version},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return decide_request(
+        tenant_id,
+        (question_id, "process_plan", "ordinary"),
+        declared([DeclaredOption("process_plan")]),
+        feature_schema,
+        policy=policy,
+        params=[param("graph", "text", graph), param("process_plan", "text", body)],
     )
 
 
