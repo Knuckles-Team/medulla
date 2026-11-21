@@ -12,7 +12,7 @@ use medulla_types::contract::Digest256;
 
 /// Abstention code: fewer runs than `width.min_runs`.
 pub const INSUFFICIENT_SAMPLES: &str = "INSUFFICIENT_SAMPLES";
-/// Refusal code: the window's partition has no child or operation.
+/// Refusal code: the question names no run.
 pub const ERRORS_UNPARTITIONED: &str = "ERRORS_UNPARTITIONED";
 /// Refusal code: `width.error_lo` exceeds `width.error_hi`.
 pub const ADJUSTMENT_POLICY_UNDEFINED: &str = "ADJUSTMENT_POLICY_UNDEFINED";
@@ -25,6 +25,12 @@ pub const CURRENT_MODEL_NOT_CANDIDATE: &str = "CURRENT_MODEL_NOT_CANDIDATE";
 pub const LATENCY_UNKNOWN: &str = "LATENCY_UNKNOWN";
 /// Refusal code: a request made while a run is in flight would widen it.
 pub const WIDEN_MID_RUN: &str = "WIDEN_MID_RUN";
+/// Abstention code: every window of the run is older than `width.window_max_age_s`
+/// (MEDULLA-ORCH-VOCAB-R009.18.3). Not zero evidence.
+pub const WINDOW_STALE: &str = "WINDOW_STALE";
+/// Abstention code: the newest window's error rate is `Unknown`, so no rate exists
+/// (MEDULLA-ORCH-VOCAB-R009.18.3). Not zero evidence.
+pub const RATE_UNKNOWN: &str = "RATE_UNKNOWN";
 
 /// The refusal and abstention codes the `run_adjustment` family declares.
 pub const REFUSALS: &[RefusalCode] = &[
@@ -35,6 +41,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(CURRENT_MODEL_NOT_CANDIDATE),
     RefusalCode::new(LATENCY_UNKNOWN),
     RefusalCode::new(WIDEN_MID_RUN),
+    RefusalCode::new(WINDOW_STALE),
+    RefusalCode::new(RATE_UNKNOWN),
 ];
 
 /// Error rate at or above which the model moves up and the width down.
@@ -236,11 +244,8 @@ pub fn decide_adjustment(
         code,
         detail: detail.to_string(),
     };
-    if window.child_id.is_empty() || window.operation.is_empty() {
-        return Err(invalid(
-            ERRORS_UNPARTITIONED,
-            "child_id and operation must be set",
-        ));
+    if window.run_id.is_empty() {
+        return Err(invalid(ERRORS_UNPARTITIONED, "run_id must be set"));
     }
     if knobs.error_lo_micros > knobs.error_hi_micros {
         return Err(invalid(
@@ -362,14 +367,16 @@ pub fn decide_adjustment(
     })
 }
 
-/// The partition of runs one error rate is computed over, with its counts.
+/// The run whose observation windows one error rate is computed over, with its
+/// counts; `window_id` and `window_revision` name the newest window read.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ErrorWindow {
     pub tenant: String,
-    pub child_id: String,
-    pub operation: String,
+    pub run_id: String,
+    pub window_id: String,
+    pub window_revision: u64,
     pub runs: u32,
     pub errored_runs: u32,
 }
@@ -423,8 +430,9 @@ mod tests {
     fn adjustment_types_round_trip() {
         let window = ErrorWindow {
             tenant: "t".into(),
-            child_id: "child:1".into(),
-            operation: "search".into(),
+            run_id: "run:1".into(),
+            window_id: "window:1".into(),
+            window_revision: 1,
             runs: 20,
             errored_runs: 7,
         }
@@ -475,8 +483,9 @@ mod tests {
     fn window(runs: u32, errored: u32) -> ErrorWindow {
         ErrorWindow {
             tenant: "t".into(),
-            child_id: "child:1".into(),
-            operation: "search".into(),
+            run_id: "run:1".into(),
+            window_id: "window:1".into(),
+            window_revision: 1,
             runs,
             errored_runs: errored,
         }
@@ -631,7 +640,7 @@ mod tests {
         .unwrap_err();
         assert_eq!(few.code(), INSUFFICIENT_SAMPLES);
         let mut unpartitioned = window(20, 1);
-        unpartitioned.operation.clear();
+        unpartitioned.run_id.clear();
         let refused = decide_adjustment(
             &unpartitioned,
             &observed(),

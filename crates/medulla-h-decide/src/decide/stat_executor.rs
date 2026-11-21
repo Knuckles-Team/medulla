@@ -64,6 +64,11 @@ pub(super) struct ExecutionContext<'a> {
     /// (MEDULLA-DECISION-ENGINE-R128.16).
     pub(super) assistant_profile:
         Option<&'a medulla_identity_types::assistant_profile::AssistantProfile>,
+    /// The observation windows of the run a `run_adjustment` question names,
+    /// read by the serving path (`windows_read::read_windows`); `None` for every
+    /// other kind (MEDULLA-ORCH-VOCAB-R009.18.3).
+    pub(super) observation_windows:
+        Option<&'a [medulla_work_types::run_observation::RunObservationWindow]>,
 }
 
 /// The pinned inputs of one decision.

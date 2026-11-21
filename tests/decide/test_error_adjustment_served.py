@@ -1,9 +1,9 @@
 """MEDULLA-DECISION-ENGINE-R158.6 served proof of run adjustment.
 
-The entry point is the wire client: a service caller appends the observed
-runs through the served ``Usage`` method (scope ``usage:write``), then the
+The entry point is the wire client: the run loop writes one
+``RunObservationWindow`` node per window through ``add_node``, then the
 tenant's caller sends ``Decide`` with the ``run_adjustment`` question kind.
-The engine counts the errored runs of the partition in the usage ledger and
+The engine reads the run's windows from the graph, counts each as one run and
 answers the model tier, width and token budget of the next runs: a high error
 rate moves the model up a tier and narrows the width; a low one widens the
 width up to the host ceiling and keeps the model.
@@ -20,6 +20,7 @@ from typing import Any
 
 import pytest
 from _decision_resident_fixture import publication, publish, schema_body
+from _harness_envelope import graph_name as _graph_name
 from conftest import TEST_TENANT, request_context
 
 from medulla import decision_client as dc
@@ -30,7 +31,6 @@ Q32 = 1 << 32
 RUNS = 20
 CEILING = 8
 BUDGET = 1_000
-OPERATION = "decide"
 
 
 def _policy_body(error_hi_micros: int, error_lo_micros: int) -> dict[str, Any]:
@@ -83,34 +83,53 @@ async def _connect(scopes: list[str] | None = None) -> MedullaClient:
     )
 
 
-async def _append_runs(child: str, runs: int, errored: int) -> None:
-    """``runs`` runs of ``child``, the first ``errored`` of them errored, all
-    inside the observation window the engine reads."""
-    base = int(time.time() * 1000) - 10_000
-    records = [
-        dc.usage_record(
-            TEST_TENANT,
-            child,
-            OPERATION,
-            f"{child}-run-{i}",
-            base + i,
-            errored=i < errored,
+UNKNOWN = {"state": "unknown", "value": "not reported"}
+
+
+def _measured(value: Any) -> dict[str, Any]:
+    return {"state": "measured", "value": value}
+
+
+def _append_runs(client: Any, run: str, runs: int, errored: int) -> None:
+    """``runs`` windows of ``run``, the first ``errored`` of them with an error,
+    all inside the observation window the engine reads."""
+    now = int(time.time() * 1000)
+    for i in range(runs):
+        end_ms = now - 10_000 - i
+        client.nodes.add(
+            f"{run}-w{i}",
+            {
+                "node_type": "RunObservationWindow",
+                "run_id": run,
+                "run_revision": 1,
+                "window_id": f"{run}-w{i}",
+                "window_revision": 1,
+                "start_ms": end_ms - 100,
+                "end_ms": end_ms,
+                "latency_samples_ms": _measured([20] * 5),
+                "error_count": _measured(1 if i < errored else 0),
+                "eligible_attempts": _measured(4),
+                "usage": {
+                    "input_tokens": UNKNOWN,
+                    "output_tokens": UNKNOWN,
+                    "cache_read_tokens": UNKNOWN,
+                    "cache_write_tokens": UNKNOWN,
+                },
+                "cost": UNKNOWN,
+                "model_ref": UNKNOWN,
+                "profile_revision": UNKNOWN,
+                "width": UNKNOWN,
+                "budget_consumed": UNKNOWN,
+                "budget_remaining": UNKNOWN,
+                "capacity_receipt_ref": UNKNOWN,
+            },
         )
-        for i in range(runs)
-    ]
-    client = await _connect(["usage:write"])
-    try:
-        appended = await dc.DecisionClient(client=client).usage(
-            dc.usage_append_op(records)
-        )
-    finally:
-        await client.close()
-    assert appended["appended"] == runs
 
 
 def _adjustment_request(
     schema: dict[str, Any],
-    child: str,
+    graph: str,
+    run: str,
     current_model: str,
     current_width: int,
     policy: dict[str, Any] | None = None,
@@ -121,13 +140,13 @@ def _adjustment_request(
     ]
     return dc.decide_request(
         TEST_TENANT,
-        (f"q:r158-6:{child}", "run_adjustment", "ordinary"),
+        (f"q:r158-6:{run}", "run_adjustment", "ordinary"),
         dc.declared(models),
         schema,
         policy=policy,
         params=[
-            dc.param("child_id", "text", child),
-            dc.param("operation", "text", OPERATION),
+            dc.param("run_id", "text", run),
+            dc.param("graph", "text", graph),
             dc.param("current_model", "iri", current_model),
             dc.param("current_width", "int", current_width),
             dc.param("host_width_ceiling", "int", CEILING),
@@ -158,13 +177,14 @@ def test_per_run_adjustment(clean_graph):
     )
 
     # 5 of 20 runs errored: the next tier up and one less width.
-    asyncio.run(_append_runs(noisy, RUNS, 5))
-    high = asyncio.run(_adjust(_adjustment_request(schema, noisy, "m1", 4)))
+    graph = _graph_name(clean_graph)
+    _append_runs(clean_graph, noisy, RUNS, 5)
+    high = asyncio.run(_adjust(_adjustment_request(schema, graph, noisy, "m1", 4)))
     assert high == [f"budget_tokens:{BUDGET}", "model:m2", "width:3"]
 
     # One errored run of 20 is 5%: a policy that tolerates up to 6% widens the
     # width one step and keeps the model, and stops at the host ceiling.
-    asyncio.run(_append_runs(quiet, RUNS, 1))
+    _append_runs(clean_graph, quiet, RUNS, 1)
     tolerant = {
         "policy": "pinned",
         "component": _publish_policy(
@@ -174,10 +194,12 @@ def test_per_run_adjustment(clean_graph):
         ),
     }
     wider = asyncio.run(
-        _adjust(_adjustment_request(schema, quiet, "m2", 4, policy=tolerant))
+        _adjust(_adjustment_request(schema, graph, quiet, "m2", 4, policy=tolerant))
     )
     assert wider == [f"budget_tokens:{BUDGET}", "model:m2", "width:5"]
     capped = asyncio.run(
-        _adjust(_adjustment_request(schema, quiet, "m2", CEILING, policy=tolerant))
+        _adjust(
+            _adjustment_request(schema, graph, quiet, "m2", CEILING, policy=tolerant)
+        )
     )
     assert capped == [f"budget_tokens:{BUDGET}", "model:m2", f"width:{CEILING}"]

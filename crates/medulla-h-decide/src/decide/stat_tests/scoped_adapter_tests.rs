@@ -660,6 +660,7 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     let endpoint = EndpointCalls(AtomicUsize::new(0));
     let run = CycleRun {

@@ -46,6 +46,60 @@ pub struct WindowCost {
     pub price_table_revision: String,
 }
 
+/// Currencies whose ISO 4217 minor-unit exponent is 0.
+const EXPONENT_0: &[&str] = &[
+    "BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV",
+    "XAF", "XOF", "XPF",
+];
+/// Currencies whose ISO 4217 minor-unit exponent is 3.
+const EXPONENT_3: &[&str] = &["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"];
+/// Currencies whose ISO 4217 minor-unit exponent is 4.
+const EXPONENT_4: &[&str] = &["CLF", "UYW"];
+/// Currencies whose ISO 4217 minor-unit exponent is 2.
+const EXPONENT_2: &[&str] = &[
+    "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN", "BAM", "BBD", "BDT",
+    "BGN", "BMD", "BND", "BOB", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHF",
+    "CNY", "COP", "CRC", "CUP", "CVE", "CZK", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "EUR",
+    "FJD", "FKP", "GBP", "GEL", "GHS", "GIP", "GMD", "GTQ", "GYD", "HKD", "HNL", "HTG", "HUF",
+    "IDR", "ILS", "INR", "IRR", "JMD", "KES", "KGS", "KHR", "KPW", "KYD", "KZT", "LAK", "LBP",
+    "LKR", "LRD", "LSL", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR",
+    "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "NZD", "PAB", "PEN", "PGK",
+    "PHP", "PKR", "PLN", "QAR", "RON", "RSD", "RUB", "SAR", "SBD", "SCR", "SDG", "SEK", "SGD",
+    "SHP", "SLE", "SOS", "SRD", "SSP", "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT", "TOP",
+    "TRY", "TTD", "TWD", "TZS", "UAH", "USD", "UYU", "UZS", "VES", "WST", "XCD", "YER", "ZAR",
+    "ZMW", "ZWL",
+];
+
+/// The ISO 4217 minor-unit exponent of `currency` (JPY 0, USD 2, KWD 3,
+/// CLF 4); `None` for a code that is not an ISO 4217 currency. There is no
+/// two-decimal assumption (MEDULLA-ORCH-VOCAB-R009.18.3).
+pub fn currency_exponent(currency: &str) -> Option<u32> {
+    let listed = |set: &[&str]| set.contains(&currency);
+    if listed(EXPONENT_2) {
+        Some(2)
+    } else if listed(EXPONENT_0) {
+        Some(0)
+    } else if listed(EXPONENT_3) {
+        Some(3)
+    } else if listed(EXPONENT_4) {
+        Some(4)
+    } else {
+        None
+    }
+}
+
+impl WindowCost {
+    /// The cost in micro-units of the major currency unit: `amount_minor`
+    /// times 10^(6 - exponent), where the exponent is the ISO 4217 minor-unit
+    /// exponent of `currency`. `None` for a negative amount, an unknown
+    /// currency or an overflow; the cost is then unknown, never zero.
+    pub fn micro_units(&self) -> Option<u64> {
+        let exponent = currency_exponent(&self.currency)?;
+        let amount = u64::try_from(self.amount_minor).ok()?;
+        amount.checked_mul(10u64.pow(6 - exponent))
+    }
+}
+
 /// One observation window of a run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -154,5 +208,22 @@ mod tests {
         over.latency_samples_ms = Measured::Measured(vec![1; 11]);
         assert!(over.validate(10).is_err());
         assert!(back.validate(5).is_err());
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R009.18.3
+    #[test]
+    fn micro_units_use_the_iso_4217_exponent() {
+        let cost = |amount_minor: i64, currency: &str| WindowCost {
+            amount_minor,
+            currency: currency.into(),
+            price_table_revision: "r1".into(),
+        };
+        assert_eq!(cost(7, "USD").micro_units(), Some(70_000));
+        assert_eq!(cost(7, "JPY").micro_units(), Some(7_000_000));
+        assert_eq!(cost(7, "KWD").micro_units(), Some(7_000));
+        assert_eq!(cost(7, "CLF").micro_units(), Some(700));
+        assert_eq!(cost(7, "XXX").micro_units(), None);
+        assert_eq!(cost(-1, "USD").micro_units(), None);
+        assert_eq!(currency_exponent("usd"), None);
     }
 }

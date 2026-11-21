@@ -286,6 +286,7 @@ fn decide_contrast_in(
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     let batch = super::super::stat_decide::decide_blocking(
         &ctx,

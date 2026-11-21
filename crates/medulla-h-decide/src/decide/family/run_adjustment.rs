@@ -1,37 +1,43 @@
-//! The `run_adjustment` question family (MEDULLA-DECISION-ENGINE-R158.3).
+//! The `run_adjustment` question family (MEDULLA-DECISION-ENGINE-R158.3,
+//! MEDULLA-ORCH-VOCAB-R009.18.3).
 //!
 //! The declared options are the legal models, each carrying a whole-number
-//! `tier` encoded as Q32. The caller names the partition (`child_id`,
-//! `operation`) and what runs now (`current_model`, `current_width`,
-//! `host_width_ceiling`, `budget_tokens`, and `mid_run` when a run is in
-//! flight). The family reads the newest `width.window` runs of the tenant's
-//! usage ledger for that partition that are no older than
-//! `width.window_max_age_s` (`recent_windows`, one ledger query, no second
-//! ledger read), counts the errored ones, takes the p95 of the per-run latency
-//! and the mean per-run cost, and calls `decide_adjustment`. The answer is an advisory naming
-//! `model:<id>`, `width:<n>` and `budget_tokens:<n>`; `Decide` writes nothing.
-//! Fewer runs than `width.min_runs` abstains `INSUFFICIENT_SAMPLES`; every
-//! other refusal is a `PARAMETER_INVALID` request refusal naming its code.
+//! `tier` encoded as Q32. The caller names the run (`run_id`) and what runs now
+//! (`current_model`, `current_width`, `host_width_ceiling`, `budget_tokens`, and
+//! `mid_run` when a run is in flight). The serving path reads the run's
+//! `RunObservationWindow` nodes from the graph and hands them in the execution
+//! context; the family never reads the graph. It keeps the newest
+//! `width.window` windows no older than `width.window_max_age_s`
+//! (`select_windows`), counts each window as one run, takes the p95 of the
+//! per-window latency and the mean per-window cost, and calls
+//! `decide_adjustment`. The answer is an advisory naming `model:<id>`,
+//! `width:<n>` and `budget_tokens:<n>`; `Decide` writes nothing, and the sealed
+//! `DecisionRecord` is the adjustment record, whose premises name the window it
+//! read. Fewer runs than `width.min_runs` abstains `INSUFFICIENT_SAMPLES`; a
+//! run whose every window is stale abstains `WINDOW_STALE` and a newest window
+//! with an unknown error rate abstains `RATE_UNKNOWN`; every other refusal is a
+//! `PARAMETER_INVALID` request refusal naming its code.
 
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::run_adjustment::{
     decide_adjustment, error_rate_q32, latency_p95, AdjustmentRefusal, Current, ErrorWindow,
-    ModelTier, Observed, WidthKnobs, INSUFFICIENT_SAMPLES, LATENCY_UNKNOWN,
+    ModelTier, Observed, WidthKnobs, INSUFFICIENT_SAMPLES, LATENCY_UNKNOWN, RATE_UNKNOWN,
+    WINDOW_STALE,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
-use medulla_decision_types::usage::PriceCatalog;
 use medulla_graph_core::graph::GraphView;
-use medulla_persistence_records::usage_ledger::RunWindow;
 use medulla_types::contract::BoundedVec;
+use medulla_work_types::run_observation::{Measured, RunObservationWindow};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
+use crate::decide::windows_read::select_windows;
 use super::support::{advisory, int_param, invalid, param, text_param};
 use super::DecisionFamily;
 
@@ -81,49 +87,60 @@ fn tiers(options: &[DeclaredOption]) -> Result<Vec<ModelTier>, String> {
         .collect()
 }
 
-/// The newest runs of the partition inside the age bound, read from the
-/// tenant's usage ledger and priced against the tenant's price entries.
-fn recent_windows(
-    ctx: &ExecutionContext,
-    child_id: &str,
-    operation: &str,
-    knobs: &WidthKnobs,
-) -> Result<Vec<RunWindow>, String> {
-    if child_id.is_empty() || operation.is_empty() {
-        return Ok(Vec::new());
+/// The 95th percentile of one window's latency samples; `None` when the
+/// samples are unknown or empty.
+fn window_latency_ms(window: &RunObservationWindow) -> Option<u64> {
+    match &window.latency_samples_ms {
+        Measured::Measured(samples) => latency_p95(samples.clone()),
+        Measured::Unknown(_) => None,
     }
-    let refused = |error: medulla_persistence_records::usage_ledger::UsageRefusal| {
-        invalid(format!("the usage ledger refused the read: {error:?}"))
-    };
-    let catalog = PriceCatalog {
-        aliases: std::collections::BTreeMap::new(),
-        entries: ctx.store.price_entries(ctx.tenant_id).map_err(refused)?,
-    };
-    let since_ms = ctx
-        .now_ms
-        .saturating_sub(knobs.window_max_age_s.saturating_mul(1_000));
-    ctx.store
-        .recent_run_windows(
-            ctx.tenant_id,
-            child_id,
-            operation,
-            knobs.window as usize,
-            since_ms,
-            &catalog,
-        )
-        .map_err(refused)
 }
 
-/// The latency and cost the windows observed.
-fn observed(runs: &[RunWindow]) -> Observed {
-    let costs: Option<Vec<u64>> = runs.iter().map(|run| run.cost_micro).collect();
-    let predicted_cost_micro = costs
-        .filter(|costs| !costs.is_empty())
-        .map(|costs| costs.iter().sum::<u64>() / costs.len() as u64);
+/// A window is one run; it is errored when its `error_count` is measured and
+/// above zero.
+fn errored(window: &RunObservationWindow) -> bool {
+    matches!(window.error_count, Measured::Measured(count) if count > 0)
+}
+
+/// The latency and cost the windows observed. The cost is the mean, in
+/// micro-units of the major unit (ISO 4217 minor-unit exponent of each
+/// window's currency), over the windows whose cost is measured in the newest
+/// measured window's currency; no such window leaves it unknown.
+fn observed(windows: &[RunObservationWindow]) -> Observed {
+    let currency = windows.iter().find_map(|window| match &window.cost {
+        Measured::Measured(cost) => Some(cost.currency.as_str()),
+        Measured::Unknown(_) => None,
+    });
+    let costs: Vec<u64> = windows
+        .iter()
+        .filter_map(|window| match &window.cost {
+            Measured::Measured(cost) if Some(cost.currency.as_str()) == currency => {
+                cost.micro_units()
+            }
+            _ => None,
+        })
+        .collect();
+    let predicted_cost_micro = (!costs.is_empty()).then(|| {
+        let total: u128 = costs.iter().map(|cost| u128::from(*cost)).sum();
+        u64::try_from(total / costs.len() as u128).unwrap_or(u64::MAX)
+    });
     Observed {
-        latency_p95_ms: latency_p95(runs.iter().map(|run| run.latency_ms).collect()),
+        latency_p95_ms: latency_p95(windows.iter().filter_map(window_latency_ms).collect()),
         predicted_cost_micro,
     }
+}
+
+/// An abstention of this family with no advisory lines.
+fn abstain(code: &'static str, detail: String) -> Result<Executed, String> {
+    let mut executed = advisory(Vec::new())?;
+    executed.ladder.outcome = StatisticalOutcome::Abstained {
+        reasons: BoundedVec::new(vec![AbstainReason::Family {
+            family: QuestionKind::RunAdjustment,
+            code: RefusalCode::new(code),
+            detail,
+        }])?,
+    };
+    Ok(executed)
 }
 
 fn conclude_adjustment(
@@ -134,8 +151,7 @@ fn conclude_adjustment(
     let CandidateSource::Declared { options } = &request.candidates else {
         return Err(invalid("a run_adjustment question declares its models"));
     };
-    let child_id = text_param(request, "child_id")?.unwrap_or_default();
-    let operation = text_param(request, "operation")?.unwrap_or_default();
+    let run_id = text_param(request, "run_id")?.unwrap_or_default();
     let current = Current {
         model: iri_param(request, "current_model")?.to_string(),
         width: u32::try_from(count_param(request, "current_width")?)
@@ -150,13 +166,33 @@ fn conclude_adjustment(
         },
     };
     let knobs = WidthKnobs::from_policy(policy);
-    let runs = recent_windows(ctx, child_id, operation, &knobs)?;
+    let read = ctx.observation_windows.unwrap_or_default();
+    let runs = select_windows(read.to_vec(), ctx.now_ms, &knobs);
+    if !run_id.is_empty() {
+        if !read.is_empty() && runs.is_empty() {
+            return abstain(
+                WINDOW_STALE,
+                format!(
+                    "every window of run {run_id} is older than width.window_max_age_s {}",
+                    knobs.window_max_age_s
+                ),
+            );
+        }
+        if let Some(Measured::Unknown(reason)) = runs.first().map(|newest| newest.error_rate()) {
+            return abstain(
+                RATE_UNKNOWN,
+                format!("the newest window of run {run_id} has no error rate: {reason}"),
+            );
+        }
+    }
+    let newest = runs.first();
     let window = ErrorWindow {
         tenant: ctx.tenant_id.to_string(),
-        child_id: child_id.to_string(),
-        operation: operation.to_string(),
+        run_id: run_id.to_string(),
+        window_id: newest.map(|w| w.window_id.clone()).unwrap_or_default(),
+        window_revision: newest.map_or(0, |w| w.window_revision),
         runs: u32::try_from(runs.len()).unwrap_or(u32::MAX),
-        errored_runs: u32::try_from(runs.iter().filter(|run| run.errored).count())
+        errored_runs: u32::try_from(runs.iter().filter(|run| errored(run)).count())
             .unwrap_or(u32::MAX),
     };
     let observed = observed(&runs);
@@ -173,13 +209,9 @@ fn conclude_adjustment(
                 format!("width:{}", adjustment.after_width),
                 format!("budget_tokens:{}", adjustment.after_budget_tokens),
             ])?;
-            // The counts come from the usage ledger; the newest run is the
-            // node that holds them.
-            let newest = runs
-                .iter()
-                .max_by_key(|run| run.newest_at_ms)
-                .map(|run| run.run_id.clone())
-                .unwrap_or_default();
+            // The counts come from the observation windows; the newest window
+            // is the node that holds them.
+            let newest = window.window_id.clone();
             let counted = |subject: &'static str, fact: String| FamilyPremise {
                 subject: subject.into(),
                 fact,
@@ -209,15 +241,18 @@ fn conclude_adjustment(
                     "run_adjustment_error_rate",
                     format!("run_adjustment.error_rate_q32={}", error_rate_q32(&window)),
                 ),
-                stated(
-                    "run_adjustment_child_id",
-                    format!("run_adjustment.child_id={child_id}"),
-                    "params.child_id",
+                counted(
+                    "run_adjustment_window_id",
+                    format!("run_adjustment.window_id={}", window.window_id),
+                ),
+                counted(
+                    "run_adjustment_window_revision",
+                    format!("run_adjustment.window_revision={}", window.window_revision),
                 ),
                 stated(
-                    "run_adjustment_operation",
-                    format!("run_adjustment.operation={operation}"),
-                    "params.operation",
+                    "run_adjustment_run_id",
+                    format!("run_adjustment.run_id={run_id}"),
+                    "params.run_id",
                 ),
                 stated(
                     "run_adjustment_current_model",
@@ -253,34 +288,17 @@ fn conclude_adjustment(
             ];
             Ok(executed)
         }
-        Err(AdjustmentRefusal::InsufficientSamples { .. }) => {
-            let mut executed = advisory(Vec::new())?;
-            executed.ladder.outcome = StatisticalOutcome::Abstained {
-                reasons: BoundedVec::new(vec![AbstainReason::Family {
-                    family: QuestionKind::RunAdjustment,
-                    code: RefusalCode::new(INSUFFICIENT_SAMPLES),
-                    detail: format!(
-                        "{} runs are below width.min_runs {}",
-                        window.runs, knobs.min_runs
-                    ),
-                }])?,
-            };
-            Ok(executed)
-        }
+        Err(AdjustmentRefusal::InsufficientSamples { .. }) => abstain(
+            INSUFFICIENT_SAMPLES,
+            format!(
+                "{} runs are below width.min_runs {}",
+                window.runs, knobs.min_runs
+            ),
+        ),
         Err(AdjustmentRefusal::Invalid {
             code: LATENCY_UNKNOWN,
             detail,
-        }) => {
-            let mut executed = advisory(Vec::new())?;
-            executed.ladder.outcome = StatisticalOutcome::Abstained {
-                reasons: BoundedVec::new(vec![AbstainReason::Family {
-                    family: QuestionKind::RunAdjustment,
-                    code: RefusalCode::new(LATENCY_UNKNOWN),
-                    detail,
-                }])?,
-            };
-            Ok(executed)
-        }
+        }) => abstain(LATENCY_UNKNOWN, detail),
         Err(AdjustmentRefusal::Invalid { code, detail }) => {
             Err(invalid(format!("{code}: {detail}")))
         }

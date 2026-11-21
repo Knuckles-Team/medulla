@@ -746,6 +746,7 @@ mod topology_question {
             designation: None,
             reader: None,
             assistant_profile: None,
+            observation_windows: None,
         };
         crate::decide::stat_decide::decide_blocking(
             &ctx,

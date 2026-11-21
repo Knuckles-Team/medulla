@@ -1,16 +1,16 @@
-//! Run adjustment, served through `Decide` (MEDULLA-DECISION-ENGINE-R158.3):
-//! the family counts the errored runs of one partition in the usage ledger
-//! and answers the model, width and budget of the next runs. Another tenant's
-//! runs are never counted.
+//! Run adjustment, served through `Decide` (MEDULLA-DECISION-ENGINE-R158.3,
+//! MEDULLA-ORCH-VOCAB-R009.18.3): the serving path reads the run's observation
+//! windows from the graph, the family counts each window as one run and answers
+//! the model, width and budget of the next runs. Another run's windows are never
+//! counted.
 
 use super::*;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
-use medulla_decision_types::usage::{
-    PriceCatalog, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
-};
+use medulla_work_types::run_observation::{Measured, RunObservationWindow, WindowUsage};
 
-const OTHER: &str = "tenant-other";
+const GRAPH: &str = "run-windows";
+const OTHER_RUN: &str = "run-other";
 
 fn model(id: &str, tier: i64) -> DeclaredOption {
     DeclaredOption {
@@ -25,67 +25,109 @@ fn model(id: &str, tier: i64) -> DeclaredOption {
     }
 }
 
-/// `runs` runs of `child` in `tenant`, the first `errored` of them errored.
-fn seed(h: &Harness, tenant: &str, child: &str, runs: u64, errored: u64) {
-    seed_at(h, tenant, child, runs, errored, 20, 0);
+fn unknown<T>() -> Measured<T> {
+    Measured::Unknown("not reported".into())
 }
 
-/// As `seed`, each call taking `latency_ms`, the newest run recorded
-/// `age_ms` before now.
-fn seed_at(
-    h: &Harness,
-    tenant: &str,
-    child: &str,
-    runs: u64,
-    errored: u64,
+/// A harness whose `run-windows` graph exists and is readable by the caller.
+async fn harness() -> Harness {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    h.state
+        .write()
+        .await
+        .registry
+        .create_graph(
+            GRAPH,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
+        .unwrap();
+    h
+}
+
+/// One window of `run`: `eligible` attempts, `errors` of them failed, every
+/// latency sample `latency_ms`, ending `age_ms` before now.
+fn window_of(
+    run: &str,
+    id: &str,
+    revision: u64,
+    eligible: u64,
+    errors: u64,
     latency_ms: u64,
     age_ms: u64,
-) {
-    let base = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
+) -> RunObservationWindow {
+    let end_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
         .saturating_sub(age_ms + 1_000);
-    let records: Vec<UsageRecord> = (0..runs)
-        .map(|i| UsageRecord {
-            schema_version: USAGE_SCHEMA_VERSION,
-            recorded_at_ms: base + i,
-            child_id: child.to_string(),
-            operation: "decide".to_string(),
-            tenant: tenant.to_string(),
-            principal: "p1".to_string(),
-            run_id: format!("{child}-run-{i}"),
-            model_key: "m1".to_string(),
-            tokens_in: 10,
-            tokens_out: 10,
-            tokens_cached: 0,
+    RunObservationWindow {
+        run_id: run.to_string(),
+        run_revision: 1,
+        window_id: id.to_string(),
+        window_revision: revision,
+        start_ms: end_ms.saturating_sub(100),
+        end_ms,
+        latency_samples_ms: Measured::Measured(vec![latency_ms; 5]),
+        error_count: Measured::Measured(errors),
+        eligible_attempts: Measured::Measured(eligible),
+        usage: WindowUsage {
+            input_tokens: unknown(),
+            output_tokens: unknown(),
+            cache_read_tokens: unknown(),
+            cache_write_tokens: unknown(),
+        },
+        cost: unknown(),
+        model_ref: unknown(),
+        profile_revision: unknown(),
+        width: unknown(),
+        budget_consumed: unknown(),
+        budget_remaining: unknown(),
+        capacity_receipt_ref: unknown(),
+    }
+}
+
+/// Store `window` as the admission leaves it: the record plus the engine
+/// stamps `node_type`, `run_trace_ref` and `error_rate`.
+async fn put_window(h: &Harness, window: &RunObservationWindow) {
+    let mut props = serde_json::to_value(window).unwrap();
+    props["node_type"] = "RunObservationWindow".into();
+    props["run_trace_ref"] = window.run_id.clone().into();
+    props["error_rate"] = serde_json::to_value(window.error_rate()).unwrap();
+    props["tx_from"] = 1.into();
+    h.seed_node(GRAPH, &window.window_id, props).await;
+}
+
+/// `runs` windows of `run`, the first `errored` of them with one error.
+async fn seed(h: &Harness, run: &str, runs: u64, errored: u64) {
+    seed_at(h, run, runs, errored, 20, 0).await;
+}
+
+/// As `seed`, each window sampling `latency_ms`, ending `age_ms` before now.
+async fn seed_at(h: &Harness, run: &str, runs: u64, errored: u64, latency_ms: u64, age_ms: u64) {
+    for i in 0..runs {
+        let window = window_of(
+            run,
+            &format!("{run}-w{i}"),
+            1,
+            4,
+            u64::from(i < errored),
             latency_ms,
-            outcome: if i < errored {
-                UsageOutcome::Error
-            } else {
-                UsageOutcome::Ok
-            },
-            content_digest: "a".repeat(64),
-        })
-        .collect();
-    let catalog = PriceCatalog {
-        aliases: std::collections::BTreeMap::new(),
-        entries: Vec::new(),
-    };
-    h.store
-        .append_usage(tenant, "p1", &catalog, &records, base + 2_000)
-        .unwrap();
+            age_ms + i,
+        );
+        put_window(h, &window).await;
+    }
 }
 
 fn adjustment(
     pin: &ComponentDependency,
-    child: &str,
+    run: &str,
     current_model: &str,
     width: i64,
 ) -> DecideRequest {
-    adjustment_in(pin, child, current_model, width, false)
+    adjustment_in(pin, run, current_model, width, false)
 }
 
 fn adjustment_in(
     pin: &ComponentDependency,
-    child: &str,
+    run: &str,
     current_model: &str,
     width: i64,
     mid_run: bool,
@@ -98,12 +140,12 @@ fn adjustment_in(
         DecisionPolicyRef::Default,
         vec![
             TypedParam {
-                name: "child_id".to_string(),
-                value: TypedValue::Text(child.to_string()),
+                name: "run_id".to_string(),
+                value: TypedValue::Text(run.to_string()),
             },
             TypedParam {
-                name: "operation".to_string(),
-                value: TypedValue::Text("decide".to_string()),
+                name: "graph".to_string(),
+                value: TypedValue::Text(GRAPH.to_string()),
             },
             TypedParam {
                 name: "current_model".to_string(),
@@ -148,11 +190,11 @@ fn options(batch: &DecisionBatch) -> Vec<String> {
 // spec: MEDULLA-DECISION-ENGINE-R158.3
 #[tokio::test]
 async fn per_run_adjustment_routes() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
-    seed(&h, TENANT, "noisy", 20, 5);
-    seed(&h, TENANT, "quiet", 20, 0);
-    seed(&h, TENANT, "few", 3, 3);
+    seed(&h, "noisy", 20, 5).await;
+    seed(&h, "quiet", 20, 0).await;
+    seed(&h, "few", 3, 3).await;
 
     // 5 of 20 runs errored: the next tier up and one less width.
     let high = decide(&h, adjustment(&pin, "noisy", "m1", 4))
@@ -192,12 +234,12 @@ async fn per_run_adjustment_routes() {
 
 // spec: MEDULLA-DECISION-ENGINE-R158.3
 #[tokio::test]
-async fn other_tenant_runs_are_not_counted() {
-    let h = Harness::new().await;
+async fn other_runs_windows_are_not_counted() {
+    let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
-    seed(&h, TENANT, "shared", 10, 0);
-    // The other tenant's runs of the same child and operation all errored.
-    seed(&h, OTHER, "shared", 10, 10);
+    seed(&h, "shared", 10, 0).await;
+    // Another run's windows in the same graph all errored.
+    seed(&h, OTHER_RUN, 10, 10).await;
     let batch = decide(&h, adjustment(&pin, "shared", "m1", 4))
         .await
         .unwrap();
@@ -206,9 +248,8 @@ async fn other_tenant_runs_are_not_counted() {
         options(&batch),
         ["budget_tokens:1000", "model:m1", "width:5"]
     );
-    // A child only the other tenant ran has no runs here: it abstains.
-    seed(&h, OTHER, "foreign-only", 20, 20);
-    let none = decide(&h, adjustment(&pin, "foreign-only", "m1", 4))
+    // A run that has no window abstains for lack of samples.
+    let none = decide(&h, adjustment(&pin, "no-windows", "m1", 4))
         .await
         .unwrap();
     assert!(matches!(
@@ -230,17 +271,17 @@ fn abstention_text(batch: &DecisionBatch) -> String {
 // spec: MEDULLA-DECISION-ENGINE-R158.7
 #[tokio::test]
 async fn windows_drive_model_and_width_and_refuse_mid_run_widening() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
     // Quiet and fast: the width grows. Quiet and slow (p95 above the 2000 ms
     // cap): the width drops instead. Noisy: the model moves up.
-    seed_at(&h, TENANT, "fast", 20, 0, 100, 0);
-    seed_at(&h, TENANT, "slow", 20, 0, 3_000, 0);
-    seed_at(&h, TENANT, "noisy", 20, 5, 100, 0);
+    seed_at(&h, "fast", 20, 0, 100, 0).await;
+    seed_at(&h, "slow", 20, 0, 3_000, 0).await;
+    seed_at(&h, "noisy", 20, 5, 100, 0).await;
     // Runs older than width.window_max_age_s (600 s) are not observed.
-    seed_at(&h, TENANT, "stale", 20, 20, 100, 3_600_000);
-    // A foreign tenant's slow runs of the same child are not counted.
-    seed_at(&h, OTHER, "fast", 20, 0, 9_000, 0);
+    seed_at(&h, "stale", 20, 20, 100, 3_600_000).await;
+    // Another run's slow windows are not counted.
+    seed_at(&h, OTHER_RUN, 20, 0, 9_000, 0).await;
 
     let fast = decide(&h, adjustment(&pin, "fast", "m2", 4)).await.unwrap();
     assert_eq!(
@@ -259,12 +300,17 @@ async fn windows_drive_model_and_width_and_refuse_mid_run_widening() {
         options(&noisy),
         ["budget_tokens:1000", "model:m2", "width:3"]
     );
-    // Only stale runs: nothing is observed, so it abstains for lack of samples.
+    // Only stale windows: the run abstains WINDOW_STALE, not for lack of samples.
     let stale = decide(&h, adjustment(&pin, "stale", "m1", 4))
         .await
         .unwrap();
-    assert!(abstention_text(&stale).contains("INSUFFICIENT_SAMPLES"));
-
+    assert!(abstention_text(&stale).contains("WINDOW_STALE"));
+    // The newest window has no error rate (zero eligible attempts): RATE_UNKNOWN.
+    put_window(&h, &window_of("blind", "blind-w0", 1, 0, 0, 100, 0)).await;
+    let blind = decide(&h, adjustment(&pin, "blind", "m1", 4))
+        .await
+        .unwrap();
+    assert!(abstention_text(&blind).contains("RATE_UNKNOWN"));
     // A request made mid-run may narrow or hold, never widen.
     let widen = decide(&h, adjustment_in(&pin, "fast", "m2", 4, true)).await;
     let refusal = widen.expect_err("a mid-run request may not widen");
@@ -311,26 +357,14 @@ async fn invalid_policy_refuses() {
         ADJUSTMENT_POLICY_UNDEFINED, CURRENT_MODEL_NOT_CANDIDATE, ERRORS_UNPARTITIONED,
         HOST_CEILING_EXCEEDED, INSUFFICIENT_SAMPLES,
     };
-    let h = Harness::new().await;
+    let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
-    seed(&h, TENANT, "noisy", 20, 5);
-    seed(&h, TENANT, "few", 3, 3);
+    seed(&h, "noisy", 20, 5).await;
+    seed(&h, "few", 3, 3).await;
 
-    // An empty partition refuses before any run is read.
+    // A question that names no run refuses before any window is read.
     refused_with(
         decide(&h, adjustment(&pin, "", "m1", 4)).await,
-        ERRORS_UNPARTITIONED,
-    );
-    refused_with(
-        decide(
-            &h,
-            with_param(
-                adjustment(&pin, "noisy", "m1", 4),
-                "operation",
-                TypedValue::Text(String::new()),
-            ),
-        )
-        .await,
         ERRORS_UNPARTITIONED,
     );
     // The current width above the host ceiling, and a zero ceiling.
@@ -378,9 +412,9 @@ async fn invalid_policy_refuses() {
 // spec: MEDULLA-DECISION-ENGINE-R158.5
 #[tokio::test]
 async fn adjustment_evidence_binds() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
-    seed(&h, TENANT, "noisy", 20, 5);
+    seed(&h, "noisy", 20, 5).await;
     let batch = decide(&h, adjustment(&pin, "noisy", "m1", 4))
         .await
         .unwrap();
@@ -397,7 +431,7 @@ async fn adjustment_evidence_binds() {
         assert_eq!(found.len(), 1, "one {prefix} premise, got {found:?}");
         found[0]
     };
-    // The counts are Observation premises read from the ledger.
+    // The counts are Observation premises read from the windows.
     for (prefix, value) in [
         ("run_adjustment.runs=", "20".to_string()),
         ("run_adjustment.errored_runs=", "5".to_string()),
@@ -412,10 +446,16 @@ async fn adjustment_evidence_binds() {
             PremiseProvenance::Observation { .. }
         ));
     }
-    // The request's partition and current values are Request premises.
+    // The window it read is named, sealed as an Observation premise.
+    assert_eq!(one("run_adjustment.window_revision=").fact, "run_adjustment.window_revision=1");
+    assert!(matches!(
+        one("run_adjustment.window_id=").provenance,
+        PremiseProvenance::Observation { .. }
+    ));
+    assert!(one("run_adjustment.window_id=").fact.starts_with("run_adjustment.window_id=noisy-w"));
+    // The request's run and current values are Request premises.
     for (prefix, value) in [
-        ("run_adjustment.child_id=", "noisy"),
-        ("run_adjustment.operation=", "decide"),
+        ("run_adjustment.run_id=", "noisy"),
         ("run_adjustment.current_model=", "m1"),
         ("run_adjustment.current_width=", "4"),
         ("run_adjustment.host_width_ceiling=", "8"),

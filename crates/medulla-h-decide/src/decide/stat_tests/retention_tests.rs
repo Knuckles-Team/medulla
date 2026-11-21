@@ -58,6 +58,7 @@ async fn compact_at(
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     super::super::stat_retention::compact(
         &ctx,

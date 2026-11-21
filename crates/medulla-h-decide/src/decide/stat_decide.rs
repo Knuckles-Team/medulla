@@ -430,6 +430,41 @@ async fn serve(
         },
     )
     .await?;
+    // A `run_adjustment` question reads the observation windows of the run it
+    // names, in the graph named by its `graph` param, under the ordinary read
+    // ACL (MEDULLA-ORCH-VOCAB-R009.18.3).
+    let observation_windows = telemetry::stage_async(
+        telemetry::Stage::Visibility,
+        &family,
+        verified.tenant(),
+        async {
+            if request.question.kind != QuestionKind::RunAdjustment {
+                return Ok(None);
+            }
+            let run_id = match request.params.iter().find(|p| p.name == "run_id") {
+                Some(medulla_decision_types::decision::statistical::TypedParam {
+                    value: medulla_decision_types::decision::statistical::TypedValue::Text(run_id),
+                    ..
+                }) if !run_id.is_empty() => run_id.as_str(),
+                _ => return Ok(None),
+            };
+            let graph = match request.params.iter().find(|p| p.name == "graph") {
+                Some(medulla_decision_types::decision::statistical::TypedParam {
+                    value: medulla_decision_types::decision::statistical::TypedValue::Text(graph),
+                    ..
+                }) if !graph.is_empty() => graph.as_str(),
+                _ => {
+                    return Err(super::stat_support::invalid_parameter(
+                        "a run_adjustment question needs the graph param naming the graph that holds the run's windows",
+                    ));
+                }
+            };
+            super::windows_read::read_windows(state, graph, verified, run_id)
+                .await
+                .map(Some)
+        },
+    )
+    .await?;
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
@@ -455,6 +490,7 @@ async fn serve(
                     designation: designation.as_ref(),
                     reader: Some(&reader),
                     assistant_profile: assistant_profile.as_ref(),
+                    observation_windows: observation_windows.as_deref(),
                 };
                 decide_blocking(
                     &ctx,

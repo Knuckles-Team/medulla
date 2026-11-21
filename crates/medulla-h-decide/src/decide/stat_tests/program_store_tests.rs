@@ -284,6 +284,7 @@ fn lookup_in(
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

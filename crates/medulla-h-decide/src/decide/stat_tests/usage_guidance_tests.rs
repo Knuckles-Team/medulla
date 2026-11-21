@@ -214,6 +214,7 @@ fn decide_with_read(
         designation: Some(&runtime),
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

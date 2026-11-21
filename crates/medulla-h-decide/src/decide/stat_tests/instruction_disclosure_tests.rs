@@ -125,6 +125,7 @@ fn decide_view(
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
@@ -397,6 +398,7 @@ fn decide_event(
         designation: None,
         reader: None,
         assistant_profile: None,
+        observation_windows: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
