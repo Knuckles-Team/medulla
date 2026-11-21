@@ -382,6 +382,16 @@ cat:Service a owl:Class ;
     rdfs:subClassOf cat:Asset ,
         [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Service ] .
 
+cat:DashboardAsset a owl:Class ;
+    rdfs:label "Dashboard Asset" ;
+    rdfs:comment "A saved dashboard catalogued as an asset (MEDULLA-TYPED-PACKS-R109.1): its panels, queries, layout and parameters are stored; the data it shows is not. Panels link their data source, query, terms and concepts." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:revision a owl:DatatypeProperty ;
+    rdfs:label "revision" ;
+    rdfs:comment "The revision of a stored asset body; it only increases." ;
+    rdfs:range xsd:nonNegativeInteger .
+
 cat:WorkflowDefinition a owl:Class ;
     rdfs:label "Workflow Definition" ;
     rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;

@@ -40,6 +40,7 @@ pub mod ingest_materialize;
 pub mod ingest_rules;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
+pub mod dashboard;
 pub mod corpus_retrieval;
 // MEDULLA-FEDERATED-QUERY-R654.1 — served CodeContext and Diagnose wire records.
 pub mod code_context;

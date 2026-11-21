@@ -360,6 +360,19 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
     }
 }
 
+// spec: MEDULLA-TYPED-PACKS-R109.1
+#[test]
+fn dashboard_asset_needs_one_revision_and_an_owner_or_flag() {
+    let owned = "<urn:d:1> a cat:DashboardAsset ; cat:hasOwner <urn:g:x> ; \
+                 cat:revision \"1\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> .";
+    assert!(conforms(owned));
+    assert!(!conforms("<urn:d:1> a cat:DashboardAsset ; cat:hasOwner <urn:g:x> ."));
+    assert!(!conforms(
+        "<urn:d:1> a cat:DashboardAsset ; \
+         cat:revision \"1\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> ."
+    ));
+}
+
 // spec: MEDULLA-TYPED-PACKS-R108.1
 #[test]
 fn six_families_validate_and_share_one_parent_asset_class() {

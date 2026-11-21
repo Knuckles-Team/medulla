@@ -105,7 +105,7 @@ cat:FamilyAssetOwnerShape a sh:NodeShape ;
     sh:targetClass cat:AgentTemplateAsset, cat:A2AAgentAsset, cat:AgentVersion, cat:OrgUnit,
         cat:Team, cat:Person, cat:Role, cat:BusinessDomain, cat:Product, cat:Service,
         cat:WorkflowDefinition, cat:WorkflowRun, cat:WorkflowStep, cat:KnowledgeGraph,
-        cat:SpecialistPackage, cat:ProviderAsset ;
+        cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset ;
     sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ],
     [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:or ( [ sh:path cat:hasOwner ; sh:minCount 1 ]
@@ -116,3 +116,9 @@ cat:DigestedAssetShape a sh:NodeShape ;
     sh:targetClass cat:SpecialistPackage, cat:ProviderAsset ;
     sh:property [ sh:path cp:digest ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
                   sh:pattern "^[0-9a-f]{64}$" ] .
+
+# A dashboard asset carries one revision number (MEDULLA-TYPED-PACKS-R109.1).
+cat:DashboardAssetShape a sh:NodeShape ;
+    sh:targetClass cat:DashboardAsset ;
+    sh:property [ sh:path cat:revision ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:datatype xsd:nonNegativeInteger ] .
