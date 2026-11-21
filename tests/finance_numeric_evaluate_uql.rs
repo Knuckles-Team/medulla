@@ -475,3 +475,63 @@ async fn information_coefficient_uql_matches_vectors() {
     close(last, want);
     close(last, 1.0);
 }
+
+/// Ingest the SKILL fixture: channel `v0` is 1..=8 and `v1` is ten times it, so every rolling
+/// rank IC is exactly 1.0. The two report rows carry the same `n_eff` and `ir`.
+async fn skill_rows(s: &mut Served, names: &str) -> Vec<UqlRow> {
+    let feature: Vec<f64> = (1..=8).map(f64::from).collect();
+    let outcome: Vec<f64> = feature.iter().map(|v| v * 10.0).collect();
+    s.append("s", &[feature, outcome]).await;
+    let text = format!("{SCAN} |> SKILL v0 AGAINST v1 HORIZONS [1, 2] WINDOW 3 |> RETURN {names}");
+    let rows = s.uql(&text).await.unwrap_or_else(|e| panic!("{text}: {e}"));
+    assert_eq!(rows.len(), 2, "one report row per horizon: {rows:?}");
+    rows
+}
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.4
+#[tokio::test(flavor = "multi_thread")]
+async fn information_ratio_uql_matches_vectors() {
+    let mut s = Served::open();
+    let rows = skill_rows(&mut s, "ir, n_eff, mean_ic").await;
+    let want = s
+        .scalar(Op::InformationRatio { ic: 1.0, n_independent: 2.0 })
+        .await;
+    for row in &rows {
+        let ir = row.channels[0].expect("the ir channel");
+        assert_eq!(ir.to_bits(), want.to_bits(), "{ir} != {want}");
+        close(row.channels[1].expect("the n_eff channel"), 2.0);
+        close(row.channels[2].expect("the mean_ic channel"), 1.0);
+    }
+    close(want, 2f64.sqrt());
+    // A non-positive independent count is refused by the kernel with its code.
+    let response = s
+        .numeric(Op::InformationRatio { ic: 0.05, n_independent: -1.0 })
+        .await;
+    assert!(response.error.is_some());
+    let detail = response.error_detail.unwrap_or_default();
+    assert!(detail.contains("KERNEL_PARAM_INVALID"), "{detail}");
+}
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.5
+#[tokio::test(flavor = "multi_thread")]
+async fn effective_sample_size_uql_matches_vectors() {
+    let mut s = Served::open();
+    let rows = skill_rows(&mut s, "n_eff").await;
+    let want = s
+        .scalar(Op::EffectiveIndependentN {
+            returns_matrix: vec![vec![1.0; 4], vec![1.0; 4]],
+        })
+        .await;
+    close(want, 2.0);
+    for row in &rows {
+        let n_eff = row.channels[0].expect("the n_eff channel");
+        assert_eq!(n_eff.to_bits(), want.to_bits(), "{n_eff} != {want}");
+    }
+    // An empty matrix is refused by the kernel with its code.
+    let response = s
+        .numeric(Op::EffectiveIndependentN { returns_matrix: Vec::new() })
+        .await;
+    assert!(response.error.is_some());
+    let detail = response.error_detail.unwrap_or_default();
+    assert!(detail.contains("KERNEL_INPUT_SHORT"), "{detail}");
+}
