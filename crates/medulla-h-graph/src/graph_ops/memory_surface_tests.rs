@@ -45,11 +45,19 @@ fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest 
 }
 
 fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
-    let Admitted::Write(write, answer) = admit_remember(core, tenant, request).unwrap() else {
+    let Admitted::Write(write, embed, answer) = admit_remember(core, tenant, request).unwrap()
+    else {
         panic!("a first remember writes");
     };
     assert!(answer.stored);
     apply_coalescable_write(core, &write).unwrap();
+    // The vector lands beside the node through the same write the AddEmbedding route runs.
+    if let Some(embed) = embed {
+        let Method::AddEmbedding { node_id, embedding } = *embed else {
+            panic!("the vector write is an AddEmbedding");
+        };
+        core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+    }
 }
 
 fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> MemoryRecallRequest {

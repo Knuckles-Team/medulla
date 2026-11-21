@@ -9,12 +9,15 @@
 //!
 //! A record is one node of its tier's node type (`WorkingMemory`,
 //! `EpisodicMemory`, `ProceduralMemory`, `SemanticMemory`). Its properties are
-//! `MemoryRecord::to_props` plus the tenant scope and the embedding, so the
-//! `Reinforce` and `DecayMemories` routes keep maintaining the same
-//! `importance`, `access_count`, `last_access_ms`, `last_decay_ms` and
-//! `forgotten` properties. Relevance is cosine on the stored embeddings blended
-//! with keyword overlap over the text, the topics and the derivation text of
-//! each attachment; the ranking, the budget and the consolidation plan are
+//! `MemoryRecord::to_props` plus the tenant scope, so the `Reinforce` and
+//! `DecayMemories` routes keep maintaining the same `importance`,
+//! `access_count`, `last_access_ms`, `last_decay_ms` and `forgotten`
+//! properties. Its embedding is written to the graph's vector index by the
+//! existing `AddEmbedding` commit, right after the node. Recall finds
+//! candidates by cosine on that index, restricted to the tenant's memory
+//! nodes, and blends the cosine with keyword overlap over the text, the topics
+//! and the derivation text of each attachment. The consolidation plan takes
+//! each record's neighbours from the same index. Ranking, budget and plan are
 //! deterministic.
 
 use std::collections::BTreeMap;
@@ -37,7 +40,6 @@ use medulla_work_types::memory::{
 use sha2::{Digest, Sha256};
 
 const TENANT_KEY: &str = "tenant_scope";
-const EMBEDDING_KEY: &str = "embedding";
 const DERIVATION_TEXT_KEY: &str = "derivationText";
 
 /// The tiers in export and scan order.
@@ -55,6 +57,8 @@ const SCAN_CAP_PER_TIER: usize = 50_000;
 const PLAN_RECORD_CAP: usize = 2_048;
 /// Most neighbours kept per record for the plan.
 const NEIGHBOURS_PER_RECORD: usize = 8;
+/// Most candidates one embedding search returns from the vector index.
+const SEARCH_FANOUT: usize = 256;
 /// Blend weights when both an embedding and keywords are given.
 const SEMANTIC_WEIGHT: f64 = 0.7;
 const KEYWORD_WEIGHT: f64 = 0.3;
@@ -91,10 +95,14 @@ fn node_id(tenant: &str, memory_id: &str) -> String {
     format!("memory:{tenant}:{memory_id}")
 }
 
-/// One stored record and the embedding it is recalled by.
+/// One stored record.
 struct Stored {
     record: MemoryRecord,
-    embedding: Vec<f32>,
+}
+
+/// The id prefix of every memory node of `tenant`.
+fn tenant_prefix(tenant: &str) -> String {
+    format!("memory:{tenant}:")
 }
 
 /// Decode one node of `tenant`; anything else reads as absent.
@@ -103,12 +111,8 @@ fn decode(blob: &[u8], tenant: &str) -> Option<Stored> {
     if props.remove(TENANT_KEY)?.as_str()? != tenant {
         return None;
     }
-    let embedding = props
-        .remove(EMBEDDING_KEY)
-        .and_then(|value| serde_json::from_value::<Vec<f32>>(value).ok())
-        .unwrap_or_default();
     let record = MemoryRecord::from_props(&props).ok()?;
-    (record.tenant.as_str() == tenant).then_some(Stored { record, embedding })
+    (record.tenant.as_str() == tenant).then_some(Stored { record })
 }
 
 fn read_stored(core: &GraphCore, tenant: &str, memory_id: &str) -> Option<Stored> {
@@ -134,12 +138,6 @@ fn load(core: &GraphCore, tenant: &str, tiers: &[MemoryTier]) -> Vec<Stored> {
 fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
     let mut props = request.record.to_props();
     props.insert(TENANT_KEY.into(), tenant.into());
-    props.insert(
-        EMBEDDING_KEY.into(),
-        serde_json::to_value(&request.embedding).map_err(|error| {
-            refuse("PARAMETER_INVALID", format!("embedding encoding failed: {error}"))
-        })?,
-    );
     rmp_serde::to_vec_named(&serde_json::Value::Object(props)).map_err(|error| {
         refuse("PARAMETER_INVALID", format!("record encoding failed: {error}"))
     })
@@ -160,6 +158,18 @@ fn same_identity(a: &MemoryRecord, b: &MemoryRecord) -> bool {
     strip(a) == strip(b)
 }
 
+/// Whether the indexed vector is the one a repeat remember carries. The index
+/// may store a normalized copy, so agreement is cosine, not equality.
+fn vectors_agree(stored: &[f32], given: &[f32]) -> bool {
+    if stored.len() != given.len() || stored.is_empty() {
+        return false;
+    }
+    let dot: f64 = stored.iter().zip(given).map(|(a, b)| f64::from(*a) * f64::from(*b)).sum();
+    let norm = |v: &[f32]| v.iter().map(|x| f64::from(*x) * f64::from(*x)).sum::<f64>().sqrt();
+    let (a, b) = (norm(stored), norm(given));
+    a > 0.0 && b > 0.0 && dot / (a * b) >= 0.999_999
+}
+
 fn check_embedding(embedding: &[f32], what: &str) -> Result<(), String> {
     if embedding.iter().any(|value| !value.is_finite()) {
         return Err(refuse(
@@ -177,13 +187,15 @@ fn is_sha256_hex(digest: &str) -> bool {
 
 /// What an admitted remember does.
 pub(super) enum Admitted {
-    /// The upsert to commit and the answer it yields.
-    Write(Box<Method>, MemoryRememberResult),
-    /// The very same record is already stored: nothing to commit.
+    /// The node upsert to commit, then the vector write beside it, and the answer.
+    Write(Box<Method>, Option<Box<Method>>, MemoryRememberResult),
+    /// The node is already stored but its vector is not indexed: write the vector only.
+    Embed(Box<Method>, MemoryRememberResult),
+    /// The very same record and vector are already stored: nothing to commit.
     Same(MemoryRememberResult),
 }
 
-/// Admit one remember against the stored node, writing nothing.
+/// Admit one remember against the stored node and the vector index, writing nothing.
 pub(super) fn admit_remember(
     core: &GraphCore,
     tenant: &str,
@@ -222,35 +234,75 @@ pub(super) fn admit_remember(
             ),
         ));
     }
+    let id = node_id(tenant, record.memory_id.as_str());
     let answer = |stored| MemoryRememberResult {
         memory_id: record.memory_id.clone(),
         stored,
     };
-    match read_stored(core, tenant, record.memory_id.as_str()) {
-        Some(existing)
-            if same_identity(&existing.record, record) && existing.embedding == request.embedding =>
-        {
-            Ok(Admitted::Same(answer(false)))
-        }
-        Some(_) => Err(refuse(
+    let embed = |embedding: &[f32]| {
+        (!embedding.is_empty()).then(|| {
+            Box::new(Method::AddEmbedding {
+                node_id: id.clone(),
+                embedding: embedding.to_vec(),
+            })
+        })
+    };
+    let Some(existing) = read_stored(core, tenant, record.memory_id.as_str()) else {
+        let write = Method::AddNode {
+            node_id: id.clone(),
+            properties_msgpack: node_blob(tenant, request)?,
+        };
+        return Ok(Admitted::Write(Box::new(write), embed(&request.embedding), answer(true)));
+    };
+    let indexed = core.semantic_store.read().get_embedding(&id);
+    let conflict = || {
+        refuse(
             "PARAMETER_INVALID",
             format!(
                 "memory record {} is already stored with a different body",
                 record.memory_id.as_str()
             ),
+        )
+    };
+    if !same_identity(&existing.record, record) {
+        return Err(conflict());
+    }
+    match (indexed, request.embedding.is_empty()) {
+        (_, true) => Ok(Admitted::Same(answer(false))),
+        (Some(stored), false) if vectors_agree(&stored, &request.embedding) => Ok(Admitted::Same(answer(false))),
+        (Some(_), false) => Err(conflict()),
+        (None, false) => Ok(Admitted::Embed(
+            embed(&request.embedding).expect("a non-empty embedding"),
+            answer(true),
         )),
-        None => {
-            let write = Method::AddNode {
-                node_id: node_id(tenant, record.memory_id.as_str()),
-                properties_msgpack: node_blob(tenant, request)?,
-            };
-            Ok(Admitted::Write(Box::new(write), answer(true)))
-        }
     }
 }
 
-/// The `Route::MemorySurface` entry: admit the remember, then commit the node
-/// upsert through the coalescable gateway.
+/// Commit the vector write of a remembered record through the existing
+/// `AddEmbedding` gateway path.
+async fn commit_embedding(ctx: &MutationCtx<'_>, write: &Method) -> Option<Response> {
+    let Method::AddEmbedding { node_id, embedding } = write else {
+        return None;
+    };
+    let (node_id, embedding) = (node_id.clone(), embedding.clone());
+    let scope = super::gateway_graph::EmbeddingWriteScope {
+        tenant: ctx.tenant_scope.to_string(),
+        graph: ctx.graph_name.to_string(),
+        shard: ctx.persistence.map_or(0, |p| {
+            p.shard_of(&medulla_kernel::persist::sanitize(ctx.graph_name))
+        }) as u32,
+    };
+    let plan = MutationPlan::for_method(write);
+    Some(
+        medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, write, move |core| {
+            super::gateway_graph::apply_add_embedding(core, node_id, embedding, &scope)
+        })
+        .await,
+    )
+}
+
+/// The `Route::MemorySurface` entry: admit the remember, commit the node upsert
+/// through the coalescable gateway, then the vector beside it.
 pub(super) async fn handle_remember(
     ctx: &MutationCtx<'_>,
     _tenant_id: &str,
@@ -259,41 +311,36 @@ pub(super) async fn handle_remember(
     let Method::MemoryRemember { request } = method else {
         return None;
     };
+    let ok = |answer| ResultPayload::of::<MemoryRememberResultKind>(answer);
     match admit_remember(ctx.core, ctx.tenant_scope, request) {
         Err(error) => Some(Response::err(ctx.req_id, error)),
-        Ok(Admitted::Same(answer)) => Some(Response::ok(
-            ctx.req_id,
-            ResultPayload::of::<MemoryRememberResultKind>(answer),
-        )),
-        Ok(Admitted::Write(write, answer)) => {
+        Ok(Admitted::Same(answer)) => Some(Response::ok(ctx.req_id, ok(answer))),
+        Ok(Admitted::Embed(embed, answer)) => {
+            let response = commit_embedding(ctx, &embed).await?;
+            Some(if response.error.is_some() {
+                response
+            } else {
+                Response::ok(ctx.req_id, ok(answer))
+            })
+        }
+        Ok(Admitted::Write(write, embed, answer)) => {
             let plan = MutationPlan::for_method(&write);
             let owned = write.as_ref().clone();
-            Some(
-                super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
-                    medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;
-                    ResultPayload::of::<MemoryRememberResultKind>(answer)
-                })
-                .await,
-            )
+            let node = super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
+                medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;
+                ResultPayload::of::<MemoryRememberResultKind>(answer)
+            })
+            .await;
+            let Some(embed) = embed else {
+                return Some(node);
+            };
+            if node.error.is_some() {
+                return Some(node);
+            }
+            let vector = commit_embedding(ctx, &embed).await?;
+            Some(if vector.error.is_some() { vector } else { node })
         }
     }
-}
-
-fn cosine(a: &[f32], b: &[f32]) -> f64 {
-    if a.is_empty() || a.len() != b.len() {
-        return 0.0;
-    }
-    let (mut dot, mut norm_a, mut norm_b) = (0.0f64, 0.0f64, 0.0f64);
-    for (x, y) in a.iter().zip(b) {
-        let (x, y) = (f64::from(*x), f64::from(*y));
-        dot += x * y;
-        norm_a += x * x;
-        norm_b += y * y;
-    }
-    if norm_a == 0.0 || norm_b == 0.0 {
-        return 0.0;
-    }
-    dot / (norm_a.sqrt() * norm_b.sqrt())
 }
 
 /// The derivation text of every attachment of `record`, lower case.
@@ -377,36 +424,60 @@ pub(super) fn recall(
             && record.timestamp_ms <= as_of
             && record.expires_at_ms.is_none_or(|expires| expires > as_of)
     };
-    let searched: Vec<Stored> = load(core, tenant, tiers)
-        .into_iter()
-        .filter(visible)
-        .filter(|stored| {
-            request
+    let searched_by_request = |stored: &Stored| {
+        visible(stored)
+            && tiers.contains(&stored.record.tier)
+            && request
                 .scope
                 .as_ref()
                 .is_none_or(|scope| stored.record.session_id.as_ref() == Some(scope))
-        })
-        .collect();
+    };
 
-    let mut ranked: Vec<(f64, &Stored)> = Vec::new();
-    if has_embedding || has_keywords {
-        for stored in &searched {
-            let semantic = cosine(&request.query_embedding, &stored.embedding).clamp(0.0, 1.0);
+    // Candidates: cosine on the vector index when the query carries an
+    // embedding, otherwise a bounded scan of the tiers for the keywords.
+    let mut candidates: Vec<(f64, Stored)> = Vec::new();
+    if has_embedding {
+        let prefix = tenant_prefix(tenant);
+        let found = core.semantic_store.read().semantic_search_filtered(
+            &request.query_embedding,
+            SEARCH_FANOUT,
+            |id| id.starts_with(&prefix),
+        );
+        for (id, similarity) in found {
+            let Some(stored) = core
+                .get_node_properties(&id)
+                .and_then(|blob| decode(&blob, tenant))
+            else {
+                continue;
+            };
+            if searched_by_request(&stored) {
+                candidates.push((f64::from(similarity).clamp(0.0, 1.0), stored));
+            }
+        }
+    } else if has_keywords {
+        candidates = load(core, tenant, tiers)
+            .into_iter()
+            .filter(|stored| searched_by_request(stored))
+            .map(|stored| (0.0, stored))
+            .collect();
+    }
+    let mut ranked: Vec<(f64, Stored)> = candidates
+        .into_iter()
+        .map(|(semantic, stored)| {
             let lexical = keyword_overlap(core, &stored.record, &keywords);
             let score = match (has_embedding, has_keywords) {
                 (true, true) => SEMANTIC_WEIGHT * semantic + KEYWORD_WEIGHT * lexical,
                 (true, false) => semantic,
                 _ => lexical,
             };
-            if score > 0.0 {
-                ranked.push((score, stored));
-            }
-        }
-        ranked.sort_by(|a, b| {
-            b.0.total_cmp(&a.0)
-                .then_with(|| a.1.record.memory_id.as_str().cmp(b.1.record.memory_id.as_str()))
-        });
-    }
+            (score, stored)
+        })
+        .filter(|(score, _)| *score > 0.0)
+        .collect();
+    ranked.sort_by(|a, b| {
+        b.0.total_cmp(&a.0)
+            .then_with(|| a.1.record.memory_id.as_str().cmp(b.1.record.memory_id.as_str()))
+    });
     let mut hits = Vec::new();
     let mut tokens_used: u32 = 0;
     for (score, stored) in ranked {
@@ -416,7 +487,7 @@ pub(super) fn recall(
         }
         tokens_used += cost;
         hits.push(MemoryHit {
-            record: stored.record.clone(),
+            record: stored.record,
             score_q16: to_q16(score),
         });
     }
@@ -435,7 +506,14 @@ pub(super) fn recall(
         }
     };
 
-    let plan = request.include_plan.then(|| plan_over(&searched));
+    let plan = request.include_plan.then(|| {
+        let searched: Vec<MemoryRecord> = load(core, tenant, tiers)
+            .into_iter()
+            .filter(|stored| searched_by_request(stored))
+            .map(|stored| stored.record)
+            .collect();
+        plan_over(core, tenant, &searched)
+    });
     Ok(MemoryRecallResult {
         hits,
         tokens_used,
@@ -444,39 +522,48 @@ pub(super) fn recall(
     })
 }
 
-/// The consolidation plan over the searched records. The nearest neighbours of
-/// each record come from the stored embeddings; the kernel only reads them.
-fn plan_over(searched: &[Stored]) -> medulla_work_types::memory::ConsolidationPlan {
+/// The consolidation plan over the searched records. Each record's nearest
+/// neighbours come from the vector index, restricted to the tenant's memory
+/// nodes; the kernel only reads them.
+fn plan_over(
+    core: &GraphCore,
+    tenant: &str,
+    searched: &[MemoryRecord],
+) -> medulla_work_types::memory::ConsolidationPlan {
     let covered = &searched[..searched.len().min(PLAN_RECORD_CAP)];
     let merge_cosine = knob_decimal(&kernel::MERGE_COSINE);
+    let prefix = tenant_prefix(tenant);
+    let by_id: BTreeMap<&str, &MemoryRecord> = covered
+        .iter()
+        .map(|record| (record.memory_id.as_str(), record))
+        .collect();
     let mut neighbours: BTreeMap<ResourceId, Vec<(ResourceId, f64)>> = BTreeMap::new();
-    for (index, stored) in covered.iter().enumerate() {
-        if stored.embedding.is_empty() {
+    for record in covered {
+        let id = node_id(tenant, record.memory_id.as_str());
+        let Some(embedding) = core.semantic_store.read().get_embedding(&id) else {
             continue;
-        }
-        let mut near: Vec<(ResourceId, f64)> = covered
-            .iter()
-            .enumerate()
-            .filter(|(other, candidate)| {
-                *other != index && candidate.record.tier == stored.record.tier
+        };
+        let found = core.semantic_store.read().semantic_search_filtered(
+            &embedding,
+            NEIGHBOURS_PER_RECORD + 1,
+            |candidate| candidate.starts_with(&prefix),
+        );
+        let near: Vec<(ResourceId, f64)> = found
+            .into_iter()
+            .filter_map(|(candidate, similarity)| {
+                let memory_id = candidate.strip_prefix(&prefix)?;
+                let other = by_id.get(memory_id)?;
+                (other.memory_id != record.memory_id && other.tier == record.tier)
+                    .then(|| (other.memory_id.clone(), f64::from(similarity)))
             })
-            .map(|(_, candidate)| {
-                (
-                    candidate.record.memory_id.clone(),
-                    cosine(&stored.embedding, &candidate.embedding),
-                )
-            })
-            .filter(|(_, score)| *score >= merge_cosine)
+            .filter(|(_, similarity)| *similarity >= merge_cosine)
             .collect();
-        near.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.as_str().cmp(b.0.as_str())));
-        near.truncate(NEIGHBOURS_PER_RECORD);
         if !near.is_empty() {
-            neighbours.insert(stored.record.memory_id.clone(), near);
+            neighbours.insert(record.memory_id.clone(), near);
         }
     }
-    let records: Vec<MemoryRecord> = covered.iter().map(|stored| stored.record.clone()).collect();
     kernel::plan_consolidation(
-        &records,
+        covered,
         &neighbours,
         merge_cosine,
         knob_decimal(&kernel::IMPORTANCE_FLOOR),
