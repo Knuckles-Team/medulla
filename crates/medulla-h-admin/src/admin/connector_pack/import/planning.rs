@@ -759,6 +759,7 @@ fn projection_for(entries: &[PackEntryRecord]) -> PackProjectionState {
                 | PackEntryKind::Shapes
                 | PackEntryKind::Crosswalk
                 | PackEntryKind::SeedPart
+                | PackEntryKind::ExternalSchema
         ) && entry.disposition != PackDisposition::Withdrawn
     });
     if projects {
