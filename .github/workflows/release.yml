@@ -225,6 +225,43 @@ jobs:
           path: dist-server-bin/medulla-server*
           if-no-files-found: error
 
+      - name: Package the debug symbols named by build-id (${{ matrix.name }})
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(ls dist-server-bin/medulla-server* | grep -v '\.sha256$' | head -n 1)"
+          bash scripts/package_release_symbols.sh "${{ matrix.name }}" "$binary" dist-server-symbols dist-symbols
+
+      - name: Upload the symbol artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: symbols-${{ matrix.name }}
+          path: dist-symbols/*
+          if-no-files-found: error
+
+  # A release whose upload set lacks a required symbol artifact fails here, before
+  # publication. Required legs are the non-optional legs of server-binary.
+  symbols-gate:
+    timeout-minutes: 5
+    name: Every required platform uploaded its symbols
+    needs: server-binary
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download every symbol artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: symbols-*
+          path: dist-symbols
+          merge-multiple: true
+
+      - name: Check the symbol upload set
+        run: python scripts/check_symbol_upload_set.py dist-symbols linux-aarch64 windows-x86_64
+
   # ── Release wheel matrix: the expensive cross-platform reproducible build.
   # The product tests and installed-wheel smoke already ran in ci.yml.
   build:
@@ -728,12 +765,19 @@ jobs:
   github-release:
     timeout-minutes: 5
     name: GitHub release with PyPI links
-    needs: [verify-pypi, method-codec, release-fixed-point]
+    needs: [verify-pypi, method-codec, release-fixed-point, symbols-gate]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     permissions:
       contents: write
     steps:
+      - name: Download the symbol artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: symbols-*
+          path: dist-symbols
+          merge-multiple: true
+
       - name: Create or update the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -764,3 +808,4 @@ jobs:
           else
             gh release create "$TAG" -R "$REPO" --verify-tag --title "Release $TAG" --notes-file "$notes" --latest
           fi
+          gh release upload "$TAG" -R "$REPO" --clobber dist-symbols/symbols-*

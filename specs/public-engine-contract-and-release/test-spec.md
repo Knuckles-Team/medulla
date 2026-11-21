@@ -164,7 +164,7 @@ Keep unexecuted cases explicit.
 | MEDULLA-CONTRACT-R059.1 | `tests/test_client_call.py::test_call_routes_to_the_sender_and_refuses_unknown_ids` (planned) | `call` awaits `SEND_BY_METHOD[method]` with its arguments and refuses an unknown id with `ValueError` before any transport use. |
 | MEDULLA-CONTRACT-R060 | `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes` (planned) | Release binaries ship split symbols and one-command symbolization. |
 | MEDULLA-CONTRACT-R060.1 | `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes` (planned) | Debug info splits from the shipped binary and the build-id stays in both. |
-| MEDULLA-CONTRACT-R060.2 | `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`, `tests/release/test_read_build_id.py::test_reads_the_id_of_an_elf_a_macho_and_a_pe_fixture` (planned) | Each release uploads a symbol artifact per platform, named by build-id. |
+| MEDULLA-CONTRACT-R060.2 | `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`, `tests/release/test_read_build_id.py::test_reads_the_id_of_an_elf_a_macho_and_a_pe_fixture` | Each release uploads a symbol artifact per platform, named by build-id. |
 | MEDULLA-CONTRACT-R060.3 | `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact` (planned) | One command symbolizes a stack. |
 | MEDULLA-CONTRACT-R060.4 | `tests/test_release_symbols_workflow.py::test_linux_x86_64_symbol_artifact_is_uploaded_and_required` (planned) | The linux-x86_64 server uploads its symbol artifact like every other leg |
 
