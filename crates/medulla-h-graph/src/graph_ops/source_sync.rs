@@ -134,7 +134,8 @@ async fn plan_and_batch(
     use medulla_server_ops::api::query_txn::ForeignStateExt;
     use medulla_virtual_graph::source_selection::sync_authorities;
     use medulla_virtual_graph::source_sync::{
-        plan_sync, sync_plan_digest, ConflictRule, GraphNodes, RecordRole, SyncAdapter,
+        plan_sync, sync_plan_digest, ConflictRule, GraphEdge, GraphEdges, GraphNodes, RecordRole,
+        SyncAdapter,
     };
 
     let sources = ctx.core.schema_sources();
@@ -211,6 +212,29 @@ async fn plan_and_batch(
             },
         )
         .collect();
+    let mut edges: GraphEdges = visible
+        .get_edges()
+        .into_iter()
+        .filter_map(|(source, target, bytes)| {
+            let properties = medulla_types::msgpack::decode_property_object(&bytes).ok()?;
+            Some(GraphEdge {
+                source,
+                target,
+                properties,
+            })
+        })
+        .collect();
+    edges.sort_by_key(|edge| {
+        (
+            edge.source.clone(),
+            edge.target.clone(),
+            edge.properties
+                .get("relationship")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+        )
+    });
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let adapter_ref: &dyn SyncAdapter = adapter.as_ref();
     let mut plan = plan_sync(
@@ -221,6 +245,7 @@ async fn plan_and_batch(
         rule_literal,
         &records,
         &nodes,
+        &edges,
         now_ms,
     )?;
     // A direction the authority row does not allow is refused whole: nothing
@@ -237,7 +262,7 @@ async fn plan_and_batch(
             format!("{connection_iri} is inbound-only for {class_iri}, yet the graph changed"),
         ));
     }
-    let operations: Vec<serde_json::Value> = std::mem::take(&mut plan.batch)
+    let mut operations: Vec<serde_json::Value> = std::mem::take(&mut plan.batch)
         .into_iter()
         .map(|mutation| {
             serde_json::json!({
@@ -247,6 +272,14 @@ async fn plan_and_batch(
             })
         })
         .collect();
+    operations.extend(std::mem::take(&mut plan.edges).into_iter().map(|edge| {
+        serde_json::json!({
+            "op": "upsert_edge",
+            "source": edge.source,
+            "target": edge.target,
+            "properties": {"relationship": edge.relationship},
+        })
+    }));
     let operations_msgpack = if operations.is_empty() {
         Vec::new()
     } else {
@@ -272,7 +305,7 @@ type AdapterBuild =
 /// add theirs beside it. The first entry whose build answers `Some` serves the
 /// class.
 #[cfg(all(feature = "rdf", feature = "federation"))]
-const ADAPTERS: &[AdapterBuild] = &[architecture_adapter, open_metadata_adapter];
+const ADAPTERS: &[AdapterBuild] = &[architecture_adapter, process_adapter, open_metadata_adapter];
 
 #[cfg(all(feature = "rdf", feature = "federation"))]
 fn resolve_adapter(
@@ -309,6 +342,29 @@ fn architecture_adapter(
     Ok(Some(Box::new(
         medulla_virtual_graph::architecture_sync::ArchitectureSyncAdapter {
             model_id: model_id.to_string(),
+        },
+    )))
+}
+
+/// The process adapter serves `:ProcessModel` and `:DecisionLogic`; the scope names the
+/// process engine connection's models (MEDULLA-CQ-ORCH-R703.2).
+#[cfg(all(feature = "rdf", feature = "federation"))]
+fn process_adapter(
+    class_iri: &str,
+    scope: Option<&str>,
+) -> Result<Option<Box<dyn medulla_virtual_graph::source_sync::SyncAdapter>>, String> {
+    let Some(label) = class_iri.strip_prefix(CORE_CLASS_BASE) else {
+        return Ok(None);
+    };
+    if !matches!(label, "ProcessModel" | "DecisionLogic") {
+        return Ok(None);
+    }
+    let model_iri = scope.filter(|model| !model.is_empty()).ok_or_else(|| {
+        "INVALID_ARGUMENT: a process sync names its model scope in scope".to_string()
+    })?;
+    Ok(Some(Box::new(
+        medulla_virtual_graph::process_sync::ProcessSyncAdapter {
+            model_iri: model_iri.to_string(),
         },
     )))
 }

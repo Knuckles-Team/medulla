@@ -19,7 +19,7 @@ use serde_json::{Map, Value};
 /// before the adapter reads the graph side, so it never enters a graph digest.
 pub const SYNCED_FROM_PROPERTY: &str = "syncedFrom";
 
-pub use plan::{base_digests, plan_sync, GraphNodes, SyncPlan};
+pub use plan::{base_digests, plan_sync, GraphEdge, GraphEdges, GraphNodes, SyncPlan};
 pub use state::{
     sync_conflict_mutations, sync_state_mutations, SyncOutcome, SYNC_CONFLICT_CLASS,
     SYNC_STATE_CLASS,
@@ -167,6 +167,17 @@ pub struct SyncMutation {
     pub properties: Map<String, Value>,
 }
 
+/// A direct edge an inbound change writes (the relationship is its `relationship` property).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyncEdge {
+    /// The id of the source node.
+    pub source: String,
+    /// The id of the target node.
+    pub target: String,
+    /// The relationship the edge states.
+    pub relationship: String,
+}
+
 /// What an adapter says about one source record before it is reconciled
 /// (MEDULLA-TYPED-PACKS-R110.6).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -199,12 +210,22 @@ pub trait SyncAdapter: Send + Sync {
     fn record_digest(&self, record: &Value) -> String;
     /// The graph writes that apply a source record inbound.
     fn inbound_mutations(&self, key: &str, record: &Value) -> Vec<SyncMutation>;
+    /// The edges that apply a source record inbound, written in the same batch as its
+    /// nodes. A record whose structure is nodes alone has none.
+    fn inbound_edges(&self, _key: &str, _record: &Value) -> Vec<SyncEdge> {
+        Vec::new()
+    }
     /// The payload proposed to the source for a graph record.
     fn outbound_payload(&self, key: &str, record: &Value) -> Value;
     /// The graph side of the sync: every visible record of the class, keyed
     /// like `record_key` and shaped like a source record, rebuilt from the
-    /// visible nodes.
-    fn graph_records(&self, nodes: &plan::GraphNodes) -> std::collections::BTreeMap<String, Value>;
+    /// visible nodes and edges (a record whose structure is held by edges, such as a process
+    /// model, needs them).
+    fn graph_records(
+        &self,
+        nodes: &plan::GraphNodes,
+        edges: &plan::GraphEdges,
+    ) -> std::collections::BTreeMap<String, Value>;
     /// Whether a source record belongs to the synced class, and which of its types
     /// no catalog class carries. `plan_sync` is the one place that applies it.
     fn screen(&self, _record: &Value) -> RecordScreen {

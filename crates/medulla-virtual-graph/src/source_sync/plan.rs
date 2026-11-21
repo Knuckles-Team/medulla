@@ -13,11 +13,27 @@ use serde_json::{Map, Value};
 
 use super::{
     reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule, SyncAction,
-    RecordScreen, SyncAdapter, SyncMutation, SyncOutcome, SYNCED_FROM_PROPERTY, SYNC_STATE_CLASS,
+    RecordScreen, SyncAdapter, SyncEdge, SyncMutation, SyncOutcome, SYNCED_FROM_PROPERTY, SYNC_STATE_CLASS,
 };
 
 /// Every visible graph node: id to its decoded property map.
 pub type GraphNodes = BTreeMap<String, Map<String, Value>>;
+
+/// One visible graph edge: its endpoints and its decoded property map (its
+/// `relationship` among them).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GraphEdge {
+    /// The id of the source node.
+    pub source: String,
+    /// The id of the target node.
+    pub target: String,
+    /// The decoded property map of the edge.
+    pub properties: Map<String, Value>,
+}
+
+/// Every visible graph edge, sorted by source, target and relationship so equal graphs give
+/// equal lists.
+pub type GraphEdges = Vec<GraphEdge>;
 
 /// The result of planning one sync.
 #[derive(Debug, Clone, PartialEq)]
@@ -26,6 +42,8 @@ pub struct SyncPlan {
     pub outcomes: Vec<SyncOutcome>,
     /// The inbound changes and the sync state, as the one list a batch commits.
     pub batch: Vec<SyncMutation>,
+    /// The edges the inbound changes write, committed in the same batch.
+    pub edges: Vec<SyncEdge>,
     /// The counts, the conflicts and the outbound drafts.
     pub report: SyncReport,
 }
@@ -51,7 +69,7 @@ pub fn base_digests(nodes: &GraphNodes, connection: &str, class: &str) -> BTreeM
 ///
 /// `source_records` are the records the host read from the pack source; the
 /// adapter keys and digests them. The graph side comes from the adapter's
-/// `graph_records` over `nodes`. A source record with no key, or two records
+/// `graph_records` over `nodes` and `edges`. A source record with no key, or two records
 /// with one key, refuse the whole sync.
 #[allow(clippy::too_many_arguments)]
 pub fn plan_sync(
@@ -62,6 +80,7 @@ pub fn plan_sync(
     rule_literal: &str,
     source_records: &[Value],
     nodes: &GraphNodes,
+    edges: &GraphEdges,
     now_ms: u64,
 ) -> Result<SyncPlan, String> {
     // Every record is keyed and screened once. The adapter's screen leaves out
@@ -112,7 +131,7 @@ pub fn plan_sync(
             (id.clone(), props)
         })
         .collect();
-    let graph = adapter.graph_records(&unstamped);
+    let graph = adapter.graph_records(&unstamped, edges);
     let graph_digests: BTreeMap<&String, String> = graph
         .iter()
         .map(|(key, record)| (key, adapter.record_digest(record)))
@@ -122,6 +141,7 @@ pub fn plan_sync(
     let keys: BTreeSet<&String> = source.keys().chain(graph.keys()).collect();
     let mut outcomes = Vec::new();
     let mut inbound = Vec::new();
+    let mut inbound_edges: Vec<SyncEdge> = Vec::new();
     let mut report = SyncReport {
         connection_iri: connection.to_string(),
         class_iri: class.to_string(),
@@ -145,6 +165,7 @@ pub fn plan_sync(
             SyncAction::ApplyInbound => {
                 report.applied += 1;
                 if let Some((record, _)) = source.get(key) {
+                    inbound_edges.extend(adapter.inbound_edges(key, record));
                     for mut mutation in adapter.inbound_mutations(key, record) {
                         mutation.properties.insert(
                             SYNCED_FROM_PROPERTY.to_string(),
@@ -214,6 +235,7 @@ pub fn plan_sync(
     Ok(SyncPlan {
         outcomes,
         batch: sync_batch(inbound, state),
+        edges: inbound_edges,
         report,
     })
 }

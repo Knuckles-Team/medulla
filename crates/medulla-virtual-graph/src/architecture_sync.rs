@@ -15,7 +15,7 @@ use medulla_core::architecture_exchange::graph::node_id;
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
-use crate::source_sync::{GraphNodes, SyncAdapter, SyncMutation};
+use crate::source_sync::{GraphEdges, GraphNodes, SyncAdapter, SyncMutation};
 
 /// Syncs the elements of one imported ArchiMate model.
 #[derive(Clone, Debug)]
@@ -115,7 +115,7 @@ impl SyncAdapter for ArchitectureSyncAdapter {
         })
     }
 
-    fn graph_records(&self, nodes: &GraphNodes) -> BTreeMap<String, Value> {
+    fn graph_records(&self, nodes: &GraphNodes, _edges: &GraphEdges) -> BTreeMap<String, Value> {
         let prefix = node_id(&self.model_id, "");
         let identifier_of = |id: &str| {
             nodes

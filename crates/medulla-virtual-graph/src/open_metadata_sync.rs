@@ -25,7 +25,7 @@ use medulla_catalog_types::open_metadata::{
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
-use crate::source_sync::{GraphNodes, RecordScreen, SyncAdapter, SyncMutation};
+use crate::source_sync::{GraphEdges, GraphNodes, RecordScreen, SyncAdapter, SyncMutation};
 
 /// Syncs the records of one catalog class annotated with an open metadata type.
 #[derive(Clone, Debug)]
@@ -250,7 +250,7 @@ impl SyncAdapter for OpenMetadataSyncAdapter {
         version(source) > version(graph)
     }
 
-    fn graph_records(&self, nodes: &GraphNodes) -> BTreeMap<String, Value> {
+    fn graph_records(&self, nodes: &GraphNodes, _edges: &GraphEdges) -> BTreeMap<String, Value> {
         let class_label = label_of(&self.class_iri);
         let base = self
             .class_iri

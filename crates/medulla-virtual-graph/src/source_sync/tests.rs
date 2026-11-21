@@ -81,6 +81,7 @@ impl SyncAdapter for Tickets {
     fn graph_records(
         &self,
         nodes: &super::GraphNodes,
+        _edges: &super::GraphEdges,
     ) -> std::collections::BTreeMap<String, Value> {
         nodes
             .iter()
@@ -202,6 +203,7 @@ fn plan_sync_applies_proposes_and_holds_in_one_batch() {
         "system_of_record_wins",
         &source,
         &nodes,
+        &super::GraphEdges::new(),
         2,
     )
     .unwrap();
@@ -234,6 +236,7 @@ fn plan_sync_refuses_duplicate_and_keyless_source_records() {
             "hold_for_review",
             records,
             &nodes,
+            &super::GraphEdges::new(),
             0,
         )
     };

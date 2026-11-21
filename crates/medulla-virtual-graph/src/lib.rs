@@ -17,6 +17,7 @@ pub mod architecture_sync;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod obda;
 pub mod open_metadata_sync;
+pub mod process_sync;
 /// MEDULLA-FEDERATED-QUERY-R072.1 — the typed, read-only model of ontology-driven
 /// cross-source coverage: a [`source_selection::CoverageResult`] names, per
 /// queried class, the approved virtual mapping that serves it (directly or via an
