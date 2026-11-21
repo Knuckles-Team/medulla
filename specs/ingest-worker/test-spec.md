@@ -82,7 +82,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R606.6` | `benches/ingest_materialize.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R700.1` | `crates/medulla-document/src/fragment.rs::tests::golden_fragment_round_trips_and_rejects_bad_spans` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R700.2` | `crates/medulla-document/tests/readers_scale.rs::time_and_memory_scale_linearly` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R700.3` | `tests/ingest/test_readers_served.py::test_text_formats_yield_document_atoms` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R700.3` | `tests/ingest/test_readers_served.py::test_text_formats_yield_document_atoms` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R700.4` | `tests/ingest/test_readers_served.py::test_reader_refusals_quarantine_without_projection` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R700.5` | `crates/medulla-document/tests/readers_scale.rs::spans_reextract_to_fragment_text` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R700.6` | `tests/ingest/test_readers_served.py::test_each_format_yields_spanned_fragments` | L4 | planned |
