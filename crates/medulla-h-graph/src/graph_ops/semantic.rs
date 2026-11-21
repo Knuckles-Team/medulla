@@ -481,7 +481,7 @@ fn discover_pass(
 async fn discover_served(
     ctx: &GraphOpsContext<'_>,
     capability: Option<&str>,
-) -> (Option<String>, Option<String>) {
+) -> (Option<String>, Option<ServedAdapterRef>) {
     use medulla_server_ops::api::admin::served_adapter::{carrier_tenant, resolve_served};
     let tenant = carrier_tenant(Some(ctx.read_authority)).map(str::to_string);
     let adapter = resolve_served(
@@ -492,15 +492,44 @@ async fn discover_served(
         capability,
     )
     .await;
-    (tenant, adapter.map(|a| a.digest().to_string()))
+    (tenant, adapter)
 }
 
 #[cfg(all(feature = "query", not(feature = "decide")))]
 async fn discover_served(
     _ctx: &GraphOpsContext<'_>,
     _capability: Option<&str>,
-) -> (Option<String>, Option<String>) {
+) -> (Option<String>, Option<ServedAdapterRef>) {
     (None, None)
+}
+
+/// The scoped adapter a `Discover` read resolved (MEDULLA-FEDERATED-QUERY-R090.7).
+#[cfg(all(feature = "query", feature = "decide"))]
+type ServedAdapterRef = Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>;
+/// Without the decide seam no adapter exists.
+#[cfg(all(feature = "query", not(feature = "decide")))]
+type ServedAdapterRef = Arc<std::convert::Infallible>;
+
+/// Re-aim the deep expansion vectors with the scoped adapter, one application per expansion.
+#[cfg(all(feature = "query", feature = "decide"))]
+fn adapt_expansions(deep: &mut super::discover_plan::DeepArms, adapter: Option<&ServedAdapterRef>) {
+    if let Some(adapter) = adapter {
+        super::discover_plan::adapt_deep_arms(deep, adapter.digest(), |v| adapter.adapt(v));
+    }
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+fn adapt_expansions(_deep: &mut super::discover_plan::DeepArms, _adapter: Option<&ServedAdapterRef>) {}
+
+/// The digest of the resolved adapter, `None` for the base space.
+#[cfg(all(feature = "query", feature = "decide"))]
+fn adapter_digest_of(adapter: Option<&ServedAdapterRef>) -> Option<&str> {
+    adapter.map(|a| a.digest())
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+fn adapter_digest_of(_adapter: Option<&ServedAdapterRef>) -> Option<&str> {
+    None
 }
 
 /// Serve `Discover`: plan off the reactor (the provider and embedder are blocking network
@@ -520,11 +549,11 @@ async fn handle_discover(
     mode: medulla_ingestion_types::ingestion_wire::DiscoverMode,
     as_of: Option<i64>,
     perspectives: Option<u32>,
-    served: (Option<String>, Option<String>),
+    served: (Option<String>, Option<ServedAdapterRef>),
     quality_policy_ref: Option<String>,
     implicit_feedback: Vec<medulla_result_types::feedback_event::RetrievalFeedback>,
 ) -> Response {
-    let (tenant, adapter_digest) = served;
+    let (tenant, adapter) = served;
     let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
         query_text,
         mode,
@@ -549,10 +578,13 @@ async fn handle_discover(
         Ok(planned) => planned,
         Err(response) => return response,
     };
-    let deep = match planned {
+    let mut deep = match planned {
         Ok(deep) => deep,
         Err(refusal) => return Response::err(req_id, refusal.message()),
     };
+    // The request's own vector was adapted once before dispatch; the planned expansion
+    // vectors get the same scoped adapter here (MEDULLA-FEDERATED-QUERY-R090.7).
+    adapt_expansions(&mut deep, adapter.as_ref());
     discover(
         core,
         &DiscoverCall {
@@ -563,7 +595,7 @@ async fn handle_discover(
             as_of,
             graph_name,
             tenant: tenant.as_deref(),
-            adapter_digest: adapter_digest.as_deref(),
+            adapter_digest: adapter_digest_of(adapter.as_ref()),
             quality_policy_ref: quality_policy_ref.as_deref(),
             implicit_feedback: &implicit_feedback,
         },

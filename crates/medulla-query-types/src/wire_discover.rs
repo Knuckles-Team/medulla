@@ -75,6 +75,7 @@ mod discover_plan_tests {
                     kind: "sub_query".into(),
                     provider_id: "m".into(),
                     provider_revision: "r".into(),
+                    adapter_digest: None,
                 }],
                 degraded: Some(DiscoverDegraded::ProviderFailed {
                     message: "down".into(),

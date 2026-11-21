@@ -75,6 +75,25 @@ pub(crate) struct DeepArms {
     pub analysis: Option<medulla_ingestion_types::ingestion_wire::DiscoverAnalysis>,
 }
 
+/// Re-aim every expansion vector of `deep` with the scoped adapter `adapt`, in order, and
+/// name the adapter `digest` on each expansion's evidence (MEDULLA-FEDERATED-QUERY-R090.7). A
+/// vector of another width stays as planned, as the request's own query vector does.
+#[cfg(any(test, feature = "decide"))]
+pub(crate) fn adapt_deep_arms(
+    deep: &mut DeepArms,
+    digest: &str,
+    adapt: impl Fn(&[f32]) -> Option<Vec<f32>>,
+) {
+    for vector in &mut deep.vectors {
+        if let Some(adapted) = adapt(vector) {
+            *vector = adapted;
+        }
+    }
+    for evidence in &mut deep.evidence {
+        evidence.adapter_digest = Some(digest.to_string());
+    }
+}
+
 /// Plan one `Discover` request. Blocking (the provider and the embedder are network
 /// clients): the caller runs it off the reactor.
 #[cfg(feature = "query")]
@@ -222,6 +241,7 @@ pub(crate) fn plan_discover(
                     .to_string(),
                     provider_id: provider_id.clone(),
                     provider_revision: provider_revision.clone(),
+                    adapter_digest: None,
                 });
             }
             Err(message) => {
@@ -298,6 +318,36 @@ pub(crate) fn recency_boost(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R090.7
+    #[test]
+    fn expansion_vectors_are_adapted_in_order() {
+        let evidence = |digest: &str| ExpansionEvidence {
+            digest: digest.into(),
+            kind: "sub_query".into(),
+            provider_id: "p".into(),
+            provider_revision: "1".into(),
+            adapter_digest: None,
+        };
+        let mut deep = DeepArms {
+            vectors: vec![vec![1.0, 2.0], vec![3.0, 4.0], vec![5.0]],
+            evidence: vec![evidence("a"), evidence("b"), evidence("c")],
+            ..DeepArms::default()
+        };
+        // The adapter doubles a two-wide vector and refuses any other width.
+        adapt_deep_arms(&mut deep, "adapter-1", |v| {
+            (v.len() == 2).then(|| v.iter().map(|x| x * 2.0).collect())
+        });
+        assert_eq!(deep.vectors, vec![vec![2.0, 4.0], vec![6.0, 8.0], vec![5.0]]);
+        assert!(deep
+            .evidence
+            .iter()
+            .all(|e| e.adapter_digest.as_deref() == Some("adapter-1")));
+        assert_eq!(
+            deep.evidence.iter().map(|e| e.digest.as_str()).collect::<Vec<_>>(),
+            ["a", "b", "c"]
+        );
+    }
 
     fn list(arm: DiscoverArm, ids: &[&str]) -> ArmList {
         ArmList {

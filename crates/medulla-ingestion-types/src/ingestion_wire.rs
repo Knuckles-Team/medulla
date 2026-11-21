@@ -421,6 +421,10 @@ pub struct ExpansionEvidence {
     pub kind: String,
     pub provider_id: String,
     pub provider_revision: String,
+    /// Digest of the scoped adapter that re-aimed this expansion's vector
+    /// (MEDULLA-FEDERATED-QUERY-R090.7); `None` when no adapter is active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_digest: Option<String>,
 }
 
 /// Why a `deep` plan answered as `standard`.
