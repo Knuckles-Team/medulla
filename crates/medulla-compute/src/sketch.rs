@@ -418,18 +418,33 @@ impl std::error::Error for LshConfigError {}
 /// The band layout of a locality-sensitive index over [`MinHashSketch`] signatures: a
 /// signature of `bands * rows` minima is cut into `bands` bands of `rows` values, and two
 /// sets are candidates when any band agrees (MEDULLA-INGEST-WORKER-R702.1).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LshIndex {
     bands: usize,
     rows: usize,
+    /// One bucket map per band: band hash to the document ids that hash there. Built lazily
+    /// on the first insert; never serialized (the cache is rebuilt from stored signatures).
+    #[serde(skip)]
+    buckets: Vec<std::collections::HashMap<u64, Vec<String>>>,
+    /// The signature of each indexed document, kept to confirm candidates by Jaccard.
+    #[serde(skip)]
+    signatures: std::collections::HashMap<String, Vec<u64>>,
 }
+
+/// The stable refusal code of a signature whose length is not `bands * rows`.
+pub const LSH_SIGNATURE_MISMATCH: &str = "LSH_SIGNATURE_MISMATCH";
 
 impl LshIndex {
     /// A layout of `bands` bands of `rows` rows, or `LSH_CONFIG_INVALID` for a zero
     /// dimension or a product above [`LSH_MAX_SIGNATURE`].
     pub fn new(bands: usize, rows: usize) -> Result<Self, LshConfigError> {
         match bands.checked_mul(rows) {
-            Some(n) if bands > 0 && rows > 0 && n <= LSH_MAX_SIGNATURE => Ok(Self { bands, rows }),
+            Some(n) if bands > 0 && rows > 0 && n <= LSH_MAX_SIGNATURE => Ok(Self {
+                bands,
+                rows,
+                buckets: Vec::new(),
+                signatures: std::collections::HashMap::new(),
+            }),
             _ => Err(LshConfigError { bands, rows }),
         }
     }
@@ -452,6 +467,105 @@ impl LshIndex {
     /// An empty sketch of the signature length this layout needs.
     pub fn new_sketch(&self) -> MinHashSketch {
         MinHashSketch::new(self.signature_len())
+    }
+
+    /// The number of indexed documents.
+    pub fn len(&self) -> usize {
+        self.signatures.len()
+    }
+
+    /// Whether no document is indexed.
+    pub fn is_empty(&self) -> bool {
+        self.signatures.is_empty()
+    }
+
+    /// Band entries held: `len() * bands`, the memory of the index.
+    pub fn bucket_entries(&self) -> usize {
+        self.buckets
+            .iter()
+            .map(|band| band.values().map(Vec::len).sum::<usize>())
+            .sum()
+    }
+
+    /// The bucket key of each band: the stable hash of `MinHashSketch::insert` over the
+    /// band index and its `rows` values.
+    fn band_keys(&self, signature: &[u64]) -> Vec<u64> {
+        signature
+            .chunks(self.rows)
+            .enumerate()
+            .map(|(band, values)| double_hash(&(band, values)).0)
+            .collect()
+    }
+
+    fn check_len(&self, sketch: &MinHashSketch) -> Result<(), String> {
+        if sketch.signature().len() == self.signature_len() {
+            return Ok(());
+        }
+        Err(format!(
+            "{LSH_SIGNATURE_MISMATCH}: signature length {} must be bands {} x rows {}",
+            sketch.signature().len(),
+            self.bands,
+            self.rows
+        ))
+    }
+
+    /// Index `doc_id` under each band of `sketch`: O(bands). Inserting an id again replaces
+    /// its earlier signature.
+    pub fn insert(&mut self, doc_id: &str, sketch: &MinHashSketch) -> Result<(), String> {
+        self.check_len(sketch)?;
+        if self.buckets.len() != self.bands {
+            self.buckets.resize_with(self.bands, Default::default);
+        }
+        if let Some(previous) = self.signatures.remove(doc_id) {
+            for (band, key) in self.band_keys(&previous).into_iter().enumerate() {
+                if let Some(ids) = self.buckets[band].get_mut(&key) {
+                    ids.retain(|id| id != doc_id);
+                    if ids.is_empty() {
+                        self.buckets[band].remove(&key);
+                    }
+                }
+            }
+        }
+        let signature = sketch.signature().to_vec();
+        for (band, key) in self.band_keys(&signature).into_iter().enumerate() {
+            self.buckets[band]
+                .entry(key)
+                .or_default()
+                .push(doc_id.to_string());
+        }
+        self.signatures.insert(doc_id.to_string(), signature);
+        Ok(())
+    }
+
+    /// The indexed documents that share a band bucket with `sketch` and whose Jaccard
+    /// estimate is at least `min_jaccard` (`knob ingest.lsh_jaccard_threshold`), sorted by
+    /// id: O(bands) bucket reads plus one comparison per candidate. A sketch of the wrong
+    /// length matches nothing.
+    pub fn query(&self, sketch: &MinHashSketch, min_jaccard: f64) -> Vec<String> {
+        if self.check_len(sketch).is_err() || self.buckets.is_empty() {
+            return Vec::new();
+        }
+        let mut candidates = std::collections::BTreeSet::new();
+        for (band, key) in self.band_keys(sketch.signature()).into_iter().enumerate() {
+            if let Some(ids) = self.buckets[band].get(&key) {
+                candidates.extend(ids.iter().cloned());
+            }
+        }
+        candidates
+            .into_iter()
+            .filter(|id| {
+                self.signatures.get(id).is_some_and(|signature| {
+                    MinHashSketch::from_signature(signature.clone()).jaccard(sketch)
+                        >= min_jaccard
+                })
+            })
+            .collect()
+    }
+
+    /// The probability that two sets of Jaccard similarity `s` share no band:
+    /// `1 - (1 - s^rows)^bands`, as the task spec defines the rate.
+    pub fn false_negative_rate(&self, s: f64) -> f64 {
+        1.0 - (1.0 - s.powi(self.rows as i32)).powi(self.bands as i32)
     }
 }
 
@@ -806,5 +920,72 @@ mod tests {
         );
         assert_eq!(shingles("Two WORDS"), vec!["two", "words"]);
         assert!(shingles("   ").is_empty());
+    }
+
+    /// A deterministic pseudo-random signature for document `seed`.
+    fn lsh_signature(seed: u64, len: usize) -> Vec<u64> {
+        let mut state = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+        (0..len)
+            .map(|_| {
+                state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+                let mut z = state;
+                z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+                z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+                z ^ (z >> 31)
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R702.2
+    #[test]
+    fn lsh_scaling_and_fn_rate() {
+        let layout = LshIndex::new(20, 5).unwrap();
+        for n in [10usize, 1_000, 100_000] {
+            let mut index = layout.clone();
+            for doc in 0..n {
+                let sketch = MinHashSketch::from_signature(lsh_signature(doc as u64, 100));
+                index.insert(&format!("doc-{doc}"), &sketch).unwrap();
+            }
+            // Memory is O(documents * bands): exactly one entry per band per document.
+            assert_eq!(index.len(), n);
+            assert_eq!(index.bucket_entries(), n * 20);
+            // An indexed document finds itself; an unseen one finds nothing.
+            let probe = MinHashSketch::from_signature(lsh_signature((n / 2) as u64, 100));
+            assert_eq!(index.query(&probe, 0.8), vec![format!("doc-{}", n / 2)]);
+            let stranger = MinHashSketch::from_signature(lsh_signature(u64::MAX - 7, 100));
+            assert!(index.query(&stranger, 0.8).is_empty());
+        }
+
+        // A near duplicate (about 85 of 100 positions agree) is a candidate above the
+        // threshold; a threshold above its similarity drops it.
+        let mut index = layout.clone();
+        let base = lsh_signature(1, 100);
+        index
+            .insert("base", &MinHashSketch::from_signature(base.clone()))
+            .unwrap();
+        let mut near = base.clone();
+        for slot in near.iter_mut().skip(85) {
+            *slot ^= 1;
+        }
+        let near = MinHashSketch::from_signature(near);
+        assert_eq!(index.query(&near, 0.8), vec!["base".to_string()]);
+        assert!(index.query(&near, 0.9).is_empty());
+
+        // Re-inserting an id replaces its signature; a wrong length is refused.
+        index
+            .insert("base", &MinHashSketch::from_signature(lsh_signature(2, 100)))
+            .unwrap();
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.bucket_entries(), 20);
+        assert!(index.query(&near, 0.8).is_empty());
+        let err = index.insert("short", &MinHashSketch::new(10)).unwrap_err();
+        assert!(err.starts_with("LSH_SIGNATURE_MISMATCH"));
+
+        // 1 - (1 - s^rows)^bands at the defaults.
+        let rate = layout.false_negative_rate(0.8);
+        assert!((rate - (1.0 - (1.0 - 0.8f64.powi(5)).powi(20))).abs() < 1e-12);
+        assert!(rate < 0.001, "{rate}");
+        assert_eq!(layout.false_negative_rate(1.0), 0.0);
+        assert_eq!(layout.false_negative_rate(0.0), 1.0);
     }
 }

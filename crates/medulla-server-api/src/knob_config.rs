@@ -592,6 +592,8 @@ knobs! {
     ingest_lsh_bands: u64 = "ingest.lsh_bands", U64(20), [4, 64], "count", Tunable;
     /// Rows per band of the locality-sensitive duplicate index (MEDULLA-INGEST-WORKER-R702.1).
     ingest_lsh_rows: u64 = "ingest.lsh_rows", U64(5), [2, 16], "count", Tunable;
+    /// Least Jaccard estimate at which an indexed document is a near duplicate (MEDULLA-INGEST-WORKER-R702.2).
+    ingest_lsh_jaccard_threshold: f64 = "ingest.lsh_jaccard_threshold", F64(0.8), [0.5, 1.0], "ratio", Tunable;
     /// Most words an atom holds before its chunk splits at sentence ends (MEDULLA-INGEST-WORKER-R003.2).
     ingest_atom_max_tokens: u64 = "ingest.atom_max_tokens", U64(200), [20, 2_000], "words", Tunable;
     /// Words of atoms an atom context read returns (MEDULLA-INGEST-WORKER-R003.2).
