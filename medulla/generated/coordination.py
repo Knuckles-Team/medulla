@@ -3024,6 +3024,7 @@ send_usage = contract_sender("Usage", "MethodUsageParams")
 send_feature_ledger = contract_sender("FeatureLedger", "MethodFeatureLedgerParams")
 decode_feature_ledger = contract_decoder("FeatureLedger", "FeatureLedgerView")
 send_loops = contract_sender("Loops", "MethodLoopsParams")
+send_harness_edit = contract_sender("HarnessEdit", "MethodHarnessEditParams")
 send_observation_state = contract_sender(
     "ObservationState", "MethodObservationStateParams"
 )

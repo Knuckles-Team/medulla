@@ -7387,3 +7387,75 @@
     :fromState :ParentTransactionMachine_DecidedAbort ;
     :toState :ParentTransactionMachine_FinalizedAbort ;
     :firedBy :ParentTransactionMachine_Event_Finalize .
+
+# spec: MEDULLA-DECISION-ENGINE-R173.7
+# The Edit machine. The Rust edge table EDIT_MACHINE is the same table; the ontology test asserts equal edge sets.
+
+:EditState a owl:Class ;
+    rdfs:label "Edit State" ;
+    rdfs:comment "A state of the Edit machine." ;
+    rdfs:subClassOf :State .
+
+:EditTerminalState a owl:Class ;
+    rdfs:label "Edit Terminal State" ;
+    rdfs:comment "A terminal state of the Edit machine." ;
+    rdfs:subClassOf :TerminalState, :EditState .
+
+:EditTransition a owl:Class ;
+    rdfs:label "Edit Transition" ;
+    rdfs:comment "A transition of the Edit machine." ;
+    rdfs:subClassOf :Transition .
+
+:EditEvent a owl:Class ;
+    rdfs:label "Edit Event" ;
+    rdfs:comment "An event of the Edit machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:EditGuard a owl:Class ;
+    rdfs:label "Edit Guard" ;
+    rdfs:comment "A guard of the Edit machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:EditMachine a :StateMachine ;
+    rdfs:label "Edit machine" ;
+    :initialState :EditMachine_Proposed ;
+    :hasState :EditMachine_Proposed, :EditMachine_Shipped, :EditMachine_Reverted .
+
+:EditMachine_Proposed a :EditState ;
+    rdfs:label "Edit Proposed" ;
+    :storedForm "proposed" .
+
+:EditMachine_Shipped a :EditState ;
+    rdfs:label "Edit Shipped" ;
+    :storedForm "shipped" .
+
+:EditMachine_Reverted a :EditTerminalState ;
+    rdfs:label "Edit Reverted" ;
+    :storedForm "reverted" .
+
+:EditMachine_Event_Ship a :EditEvent ;
+    rdfs:label "Edit Ship" .
+
+:EditMachine_Event_Revert a :EditEvent ;
+    rdfs:label "Edit Revert" .
+
+:EditMachine_E01 a :EditTransition ;
+    rdfs:label "Edit E01" ;
+    :edgeId "E01" ;
+    :fromState :EditMachine_Proposed ;
+    :toState :EditMachine_Shipped ;
+    :firedBy :EditMachine_Event_Ship .
+
+:EditMachine_E02 a :EditTransition ;
+    rdfs:label "Edit E02" ;
+    :edgeId "E02" ;
+    :fromState :EditMachine_Proposed ;
+    :toState :EditMachine_Reverted ;
+    :firedBy :EditMachine_Event_Revert .
+
+:EditMachine_E03 a :EditTransition ;
+    rdfs:label "Edit E03" ;
+    :edgeId "E03" ;
+    :fromState :EditMachine_Shipped ;
+    :toState :EditMachine_Reverted ;
+    :firedBy :EditMachine_Event_Revert .

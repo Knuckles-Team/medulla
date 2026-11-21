@@ -1217,6 +1217,20 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def harness_edit(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``HarnessEdit``: ``{"op": "transition", "edit_id": "...", "event":
+        "ship" | "revert"}`` applies one event of the edit machine to a stored harness
+        edit, ``{"op": "get", "edit_id": "..."}`` reads its recorded status."""
+        result = await self.client._send(
+            "HarnessEdit",
+            {"op": dict(op)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
     async def observation_state(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:

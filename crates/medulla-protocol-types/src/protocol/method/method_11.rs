@@ -15,6 +15,11 @@ $($variants)*
     ObservationState {
         op: Box<medulla_work_types::observation_state::ObservationStateOp>,
     },
+    /// The harness edit lifecycle: apply one event of `EditMachine` to a stored harness
+    /// edit, or read its recorded status (MEDULLA-DECISION-ENGINE-R173.7).
+    HarnessEdit {
+        op: Box<medulla_work_types::harness_edit::HarnessEditOp>,
+    },
     PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 

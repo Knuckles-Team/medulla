@@ -1077,6 +1077,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-DECISION-ENGINE-R817: the revision proposal list's refusal.
     ("RevisionProposalList", &["PROPOSAL_CURSOR_INVALID"]),
+    // MEDULLA-DECISION-ENGINE-R173.7: the harness edit lifecycle's refusals (the machine's
+    // own `TRANSITION_REFUSED` is added through `MACHINE_METHODS`).
+    (
+        "HarnessEdit",
+        &[
+            "HARNESS_EDIT_STATUS_INVALID",
+            "HARNESS_EDIT_UNKNOWN",
+            "PARAMETER_INVALID",
+            "REVISION_CONFLICT",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R816: the observation state store's refusals.
     (
         "ObservationState",
@@ -1733,6 +1744,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "BrokerAckTag",
     "BrokerNackTag",
     "Decide",
+    // MEDULLA-DECISION-ENGINE-R173.7: the edit lifecycle machine.
+    "HarnessEdit",
     // MEDULLA-DECISION-ENGINE-R830.6: the loop statechart and `GapMachine` refusals.
     "Loops",
 ];

@@ -123,6 +123,7 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::WorkflowRegistry { op } => Some(op.is_mutation()),
         Method::AssistantProfile { op } => Some(op.is_mutation()),
         Method::ObservationState { op } => Some(op.is_mutation()),
+        Method::HarnessEdit { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R651.3: a remember writes one node; recall and export read.
         Method::MemoryRemember { .. } => Some(true),
         Method::MemoryRecall { .. } | Method::MemoryExport { .. } => Some(false),

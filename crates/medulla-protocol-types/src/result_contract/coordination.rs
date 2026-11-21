@@ -254,6 +254,8 @@ method_results! {
     LoopsGet(Loops / "get") => Raw<medulla_decision_types::loops::LoopView>;
     WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
+    HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
+    HarnessEditGet(HarnessEdit / "get") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     ObservationStatePut(ObservationState / "put") => Raw<medulla_work_types::observation_state::ObservationRecord>;
     ObservationStateGet(ObservationState / "get") => Raw<medulla_work_types::observation_state::ObservationRecord>;
     AssistantProfilePutProfile(AssistantProfile / "put_profile") => Raw<medulla_identity_types::assistant_profile::AssistantProfile>;

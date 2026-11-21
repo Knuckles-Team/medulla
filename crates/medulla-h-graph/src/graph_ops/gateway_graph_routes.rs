@@ -24,6 +24,7 @@ enum Route {
     ArgumentMap,
     AssistantProfile,
     NlCorrection,
+    HarnessEdit,
     ObservationState,
     MemorySurface,
     ArchitectureExchange,
@@ -172,6 +173,10 @@ fn is_architecture_exchange(method: &Method) -> bool {
     matches!(method, Method::ArchitectureModelImport { .. })
 }
 
+fn is_harness_edit(method: &Method) -> bool {
+    matches!(method, Method::HarnessEdit { op } if op.is_mutation())
+}
+
 fn is_observation_state(method: &Method) -> bool {
     matches!(method, Method::ObservationState { op } if op.is_mutation())
 }
@@ -213,6 +218,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_argument_map, Route::ArgumentMap),
     (is_assistant_profile, Route::AssistantProfile),
     (is_nl_correction, Route::NlCorrection),
+    (is_harness_edit, Route::HarnessEdit),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
     (is_architecture_exchange, Route::ArchitectureExchange),
@@ -240,6 +246,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::ArgumentMap
         | Route::AssistantProfile
         | Route::NlCorrection
+        | Route::HarnessEdit
         | Route::ObservationState
         | Route::MemorySurface
         | Route::ArchitectureExchange
@@ -324,6 +331,9 @@ async fn try_handle_admin(
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
         }
         Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
+        Route::HarnessEdit => {
+            super::super::harness_edit::handle_transition(ctx, tenant_id, method).await
+        }
         Route::ObservationState => {
             super::super::observation_state::handle_put(ctx, tenant_id, method).await
         }

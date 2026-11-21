@@ -97,6 +97,9 @@ pub mod downtime;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod scheduler_config;
+// MEDULLA-DECISION-ENGINE-R173.7 — the harness edit lifecycle.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod harness_edit;
 // MEDULLA-DECISION-ENGINE-R816 — run-bound observation state.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod observation_state;

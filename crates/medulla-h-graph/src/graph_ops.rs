@@ -29,6 +29,9 @@ mod algorithms;
 pub(crate) mod architecture_exchange;
 mod argument_map;
 pub mod assistant_profile;
+mod harness_edit;
+#[cfg(test)]
+mod harness_edit_tests;
 mod observation_state;
 #[cfg(test)]
 mod memory_surface_tests;

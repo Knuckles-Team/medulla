@@ -477,6 +477,7 @@ SEND_BY_METHOD = {
     "NodeCount": graph.send_node_count,
     "NodeIds": graph.send_node_ids,
     "NumericEvaluate": compute.send_numeric_evaluate,
+    "HarnessEdit": coordination.send_harness_edit,
     "ObservationState": coordination.send_observation_state,
     "ObserveDevelopmentLane": coordination.send_observe_development_lane,
     "ObserveScreen": ingestion.send_observe_screen,

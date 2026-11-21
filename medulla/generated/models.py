@@ -14531,6 +14531,13 @@ class MethodObservationState(BaseModel):
     params: MethodObservationStateParams
 
 
+class MethodHarnessEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["HarnessEdit"]
+    params: MethodHarnessEditParams
+
+
 class MethodTraceCritique(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15244,6 +15251,7 @@ Method = Annotated[
         MethodRecordDeployment,
         MethodSourceCoverage,
         MethodObservationState,
+        MethodHarnessEdit,
         MethodMemoryRemember,
         MethodMemoryRecall,
         MethodMemoryExport,
@@ -33098,6 +33106,12 @@ class MethodObservationStateParams(BaseModel):
     op: ObservationStateOp
 
 
+class MethodHarnessEditParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: HarnessEditOp
+
+
 class MethodReadGraphChangesParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33430,6 +33444,26 @@ class ObservationStateOpPut(BaseModel):
 
     op: Literal["put"]
     record: ObservationInput
+
+
+class EditEvent(str, Enum):
+    SHIP = "ship"
+    REVERT = "revert"
+
+
+class HarnessEditOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edit_id: str
+    op: Literal["get"]
+
+
+class HarnessEditOpTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edit_id: str
+    event: EditEvent
+    op: Literal["transition"]
 
 
 class PathOp(str, Enum):
@@ -34052,6 +34086,12 @@ NumericEvaluateOp = Annotated[
 
 ObservationStateOp = Annotated[
     ObservationStateOpPut | ObservationStateOpGet,
+    Field(discriminator="op"),
+]
+
+
+HarnessEditOp = Annotated[
+    HarnessEditOpTransition | HarnessEditOpGet,
     Field(discriminator="op"),
 ]
 
@@ -35722,6 +35762,7 @@ __all__ = [
     "GuardrailRule",
     "GuardrailEntailmentRequest",
     "GuardrailEntailmentResult",
+    "EditEvent",
     "HarnessConfigAnswer",
     "HarnessConfigEvaluationEvidence",
     "HarnessConfigRequestBody",
@@ -35731,6 +35772,9 @@ __all__ = [
     "HarnessContrast",
     "HarnessContrastAbstainReason",
     "HarnessContrastDecision",
+    "HarnessEditOp",
+    "HarnessEditOpGet",
+    "HarnessEditOpTransition",
     "HarnessLesson",
     "HarnessLessonQuery",
     "HarnessLessonsFound",
@@ -38706,6 +38750,8 @@ __all__ = [
     "MethodLoopsParams",
     "MethodNumericEvaluate",
     "MethodNumericEvaluateParams",
+    "MethodHarnessEdit",
+    "MethodHarnessEditParams",
     "MethodObservationState",
     "MethodObservationStateParams",
     "MethodOpenGraphSnapshot",

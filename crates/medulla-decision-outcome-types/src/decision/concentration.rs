@@ -30,14 +30,9 @@ pub struct ConcentrationPolicy {
     pub revision: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum EditStatus {
-    Proposed,
-    Shipped,
-    Reverted,
-}
+/// The recorded status of a harness edit: the closed state of `EditMachine`
+/// (MEDULLA-DECISION-ENGINE-R173.7).
+pub use medulla_types::edit_machine::EditStatus;
 
 /// One recorded harness edit. `policy_revision` names the policy revision the
 /// edit was judged under.

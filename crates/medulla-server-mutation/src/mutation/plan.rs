@@ -135,6 +135,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-DECISION-ENGINE-R816: an observation put commits one node through
     // this gateway; the get is a graph read.
     "ObservationState",
+    // MEDULLA-DECISION-ENGINE-R173.7: a harness edit transition commits one node through
+    // this gateway; the get is a graph read.
+    "HarnessEdit",
     // MEDULLA-DECISION-ENGINE-R651.3: a remember commits one memory node through
     // this gateway; recall and export are graph reads.
     "MemoryRemember",
@@ -646,6 +649,9 @@ pub fn is_gateway_routed(m: &Method) -> bool {
     if let Method::ObservationState { op } = m {
         return op.is_mutation();
     }
+    if let Method::HarnessEdit { op } = m {
+        return op.is_mutation();
+    }
     // MEDULLA-TYPED-PACKS-R097.700: a `DomainPack` preview is a read.
     if let Method::DomainPack { op } = m {
         return op.is_mutation();
@@ -772,6 +778,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "AssistantProfile",
     // Nor does the observation record upsert (MEDULLA-DECISION-ENGINE-R816).
     "ObservationState",
+    // Nor does the harness edit transition upsert (MEDULLA-DECISION-ENGINE-R173.7).
+    "HarnessEdit",
     // Nor does the memory record upsert (MEDULLA-DECISION-ENGINE-R651.3).
     "MemoryRemember",
     // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
@@ -853,6 +861,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         Method::AssistantProfile { .. } => Some("AssistantProfile"),
         Method::ObservationState { .. } => Some("ObservationState"),
+        Method::HarnessEdit { .. } => Some("HarnessEdit"),
         Method::MemoryRemember { .. } => Some("MemoryRemember"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),
         Method::DomainPack { .. } => Some("DomainPack"),

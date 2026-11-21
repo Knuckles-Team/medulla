@@ -19,6 +19,7 @@ pub mod profile_grant_machine;
 pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
+pub mod edit_machine;
 pub mod gap_machine;
 pub mod transition_refused;
 // MEDULLA-FEDERATED-QUERY-R005.700 — graph integrity shapes and their report.

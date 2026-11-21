@@ -1352,3 +1352,15 @@ fn participant_transaction_machine_matches_edge_table() {
     );
     sm::assert_extends_core("ParticipantTransaction");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R173.7
+#[test]
+fn edit_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::edit_machine::EDIT_MACHINE);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R173.7
+#[test]
+fn edit_machine_classes_extend_core() {
+    sm::assert_extends_core("Edit");
+}

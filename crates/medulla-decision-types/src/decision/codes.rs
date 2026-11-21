@@ -648,6 +648,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("context_facts", context_facts::REFUSALS.to_vec()),
         ("meeting_transcript", codes(meeting_transcript::REFUSALS)),
         ("participant", participant::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R173.7: the harness edit lifecycle.
+        (
+            "harness_edit",
+            medulla_work_types::harness_edit::REFUSALS.to_vec(),
+        ),
         // MEDULLA-DECISION-ENGINE-R160.4: skill package publication.
         (
             "package_publication",
