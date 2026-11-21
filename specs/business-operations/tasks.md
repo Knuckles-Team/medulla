@@ -17,7 +17,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [ ] T011 [US2] MEDULLA-BUSINESS-OPS-R002 Deterministic rule evaluation through the query path (rollup)
 - [x] T012 [US2] MEDULLA-BUSINESS-OPS-R002.1 Rule records
 - [x] T013 [US2] MEDULLA-BUSINESS-OPS-R002.2 Recurrence and compliance calendar
-- [ ] T014 [US2] MEDULLA-BUSINESS-OPS-R002.3 Threshold applicability
+- [x] T014 [US2] MEDULLA-BUSINESS-OPS-R002.3 Threshold applicability
 - [ ] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
 - [ ] T016 [US2] MEDULLA-BUSINESS-OPS-R002.5 Reorder point and quantity
 - [ ] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
