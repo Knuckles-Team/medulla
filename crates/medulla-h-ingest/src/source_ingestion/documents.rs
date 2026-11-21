@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 
 use medulla_compute::sketch::{shingles, LshIndex, MinHashSketch, LSH_MAX_BUCKET_MEMBERS};
 use medulla_document::atoms::decompose;
+use medulla_document::fragment::{normalize_media_type, ReaderRegistry};
 use medulla_document::processing::{chunk_text, ChunkingConfig};
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::ingest_rules::check_atom_provenance;
@@ -151,6 +152,8 @@ pub(super) fn normalize_documents(
     classes: &BTreeSet<String>,
     atom_max_tokens: usize,
     layout: &LshIndex,
+    readers: &ReaderRegistry,
+    read_blob: &dyn Fn(&str) -> Result<Vec<u8>, String>,
 ) -> Result<Vec<DocumentOutput>, DocumentIngestError> {
     let mut outputs = Vec::new();
     for record in &batch.records {
@@ -173,6 +176,8 @@ pub(super) fn normalize_documents(
             mapping.entry_revision,
             atom_max_tokens,
             layout,
+            readers,
+            read_blob,
         )? {
             outputs.push(output);
         }
@@ -190,6 +195,8 @@ pub(super) fn normalize_record(
     mapping_revision: u64,
     atom_max_tokens: usize,
     layout: &LshIndex,
+    readers: &ReaderRegistry,
+    read_blob: &dyn Fn(&str) -> Result<Vec<u8>, String>,
 ) -> Result<Option<DocumentOutput>, DocumentIngestError> {
     let payload = record.payload.value().map_err(normalization_failed)?;
     let source = payload
@@ -201,10 +208,37 @@ pub(super) fn normalize_record(
             .find(|(_, mapped)| mapped.as_str() == target)
             .and_then(|(field, _)| source.get(field))
     };
+    // A mapped `body` is the text. With no body, a mapped `content_ref` names a blob the
+    // engine reads with the reader of the mapped `media_type`; the text is the fragments'
+    // text joined in source order (MEDULLA-INGEST-WORKER-R700.3).
+    let extracted: String;
     let text = match value_of("body") {
         Some(serde_json::Value::String(text)) => text.as_str(),
-        _ if value_of("content_ref").is_some_and(|value| !value.is_null()) => return Ok(None),
-        _ => "",
+        _ => match value_of("content_ref") {
+            Some(serde_json::Value::String(content_ref)) => {
+                let media_type = match value_of("media_type") {
+                    Some(serde_json::Value::String(media)) if !media.trim().is_empty() => media,
+                    _ => {
+                        return Err(normalization_failed(format!(
+                            "record {} has content_ref without media_type",
+                            record.record_id
+                        )))
+                    }
+                };
+                let bytes = read_blob(content_ref).map_err(normalization_failed)?;
+                let fragments = readers
+                    .read(&normalize_media_type(media_type), &bytes)
+                    .map_err(|error| normalization_failed(format!("{}: {}", error.code, error.detail)))?;
+                extracted = fragments
+                    .iter()
+                    .map(|fragment| fragment.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                extracted.as_str()
+            }
+            Some(value) if !value.is_null() => return Ok(None),
+            _ => "",
+        },
     };
     // complete_document: the text is non-empty, at least one atom is emitted
     // and every atom has a provenance key.
@@ -572,6 +606,17 @@ mod tests {
         LshIndex::new(20, 5).unwrap()
     }
 
+    fn readers() -> ReaderRegistry {
+        medulla_document::readers::text_registry(
+            medulla_document::readers::ReaderLimits::new(1 << 20, 2).unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn no_blob(_: &str) -> Result<Vec<u8>, String> {
+        Err("BODY_MISSING: no blob is held".to_string())
+    }
+
     fn fields() -> BTreeMap<String, String> {
         BTreeMap::from([("text".to_string(), "body".to_string())])
     }
@@ -582,10 +627,10 @@ mod tests {
         let rec = record(serde_json::json!({
             "text": "The engine stores facts in one graph. Always use short reports."
         }));
-        let first = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
+        let first = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
             .unwrap()
             .unwrap();
-        let second = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
+        let second = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
             .unwrap()
             .unwrap();
         // A retry yields the same document identity, atoms and receipt.
@@ -598,7 +643,7 @@ mod tests {
             .iter()
             .all(|atom| atom.provenance_key.starts_with(&first.document.document_id)));
         // Identity moves with tenant, connector and content.
-        let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200, &layout())
+        let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
             .unwrap()
             .unwrap();
         assert_ne!(
@@ -606,7 +651,7 @@ mod tests {
             other_tenant.document.document_id
         );
         let changed = record(serde_json::json!({"text": "A different body."}));
-        let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200, &layout())
+        let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200, &layout(), &readers(), &no_blob)
             .unwrap()
             .unwrap();
         assert_ne!(first.document.document_id, other.document.document_id);
@@ -624,6 +669,8 @@ mod tests {
                 4,
                 200,
                 &layout(),
+                &readers(),
+                &no_blob,
             )
             .unwrap_err();
             let error = error.to_string();
@@ -632,12 +679,44 @@ mod tests {
                 "{error}"
             );
         }
-        // A blob-backed document is left to the readers.
+        // A blob-backed document with no media type fails.
         let blob_fields = BTreeMap::from([("blob".to_string(), "content_ref".to_string())]);
-        let blob = record(serde_json::json!({"blob": "sha256:ab"}));
-        assert!(normalize_record("t1", "demo", &blob, &blob_fields, 4, 200, &layout())
+        let blob = record(serde_json::json!({"blob": "cas:sha256:ab"}));
+        let error = normalize_record("t1", "demo", &blob, &blob_fields, 4, 200, &layout(), &readers(), &no_blob)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("has content_ref without media_type"), "{error}");
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R700.3
+    #[test]
+    fn a_content_ref_record_reads_through_its_media_type_reader() {
+        let blob_fields = BTreeMap::from([
+            ("blob".to_string(), "content_ref".to_string()),
+            ("type".to_string(), "media_type".to_string()),
+        ]);
+        let csv = b"name,role\nAda,engineer\nGrace,admiral\n".to_vec();
+        let read_csv = |content_ref: &str| -> Result<Vec<u8>, String> {
+            assert_eq!(content_ref, "cas:sha256:aa");
+            Ok(csv.clone())
+        };
+        let rec = record(serde_json::json!({"blob": "cas:sha256:aa", "type": "text/csv; charset=utf-8"}));
+        let output = normalize_record("t1", "demo", &rec, &blob_fields, 4, 200, &layout(), &readers(), &read_csv)
             .unwrap()
-            .is_none());
+            .expect("the reader yields a document");
+        assert!(!output.atoms.is_empty(), "at least one atom per document");
+        assert_eq!(output.document.atom_ids.len(), output.atoms.len());
+        // An unreadable blob and an unknown media type fail the record.
+        let missing = |_: &str| -> Result<Vec<u8>, String> { Err("BODY_MISSING: absent".into()) };
+        let error = normalize_record("t1", "demo", &rec, &blob_fields, 4, 200, &layout(), &readers(), &missing)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("BODY_MISSING"), "{error}");
+        let odd = record(serde_json::json!({"blob": "cas:sha256:aa", "type": "application/x-unknown"}));
+        let error = normalize_record("t1", "demo", &odd, &blob_fields, 4, 200, &layout(), &readers(), &read_csv)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("READER_UNSUPPORTED_MEDIA_TYPE"), "{error}");
     }
 
     // spec: MEDULLA-INGEST-WORKER-R003.10
@@ -675,6 +754,8 @@ mod tests {
             4,
             200,
             &layout(),
+            &readers(),
+            &no_blob,
         )
         .unwrap_err();
         assert_eq!(error.quarantine_reason(), QuarantineReason::NormalizationFailed);
@@ -700,7 +781,7 @@ mod tests {
     fn document(id: &str, text: &str) -> DocumentOutput {
         let mut rec = record(serde_json::json!({ "text": text }));
         rec.record_id = id.into();
-        normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
+        normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
             .unwrap()
             .unwrap()
     }

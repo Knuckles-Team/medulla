@@ -300,6 +300,26 @@ pub async fn prepare(
     // reconciliation or admission (MEDULLA-INGEST-WORKER-R003.9).
     let layout = documents::lsh_layout()?;
     let classes = documents::document_classes(&ctx.schema_sources)?;
+    // The readers run in the engine: the registry is built once per batch, over the knobs,
+    // and a blob reads only for the verified owner (MEDULLA-INGEST-WORKER-R700.3).
+    let knobs = medulla_server_api::knob_config::knobs();
+    let reader_limits = medulla_document::readers::ReaderLimits::new(
+        knobs.ingest_reader_max_bytes as usize,
+        knobs.ingest_reader_parallelism as usize,
+    )
+    .map_err(|error| error.to_string())?;
+    let readers = medulla_document::readers::text_registry(reader_limits)
+        .map_err(|error| error.to_string())?;
+    let blob_store = std::sync::Arc::clone(&resources.blob.store);
+    let owner_scope = authority.owner_scope().to_string();
+    let read_blob = |content_ref: &str| {
+        medulla_server_blob::blob::engine_bodies::read_owned_blob(
+            blob_store.as_ref(),
+            &owner_scope,
+            content_ref,
+            reader_limits.max_bytes(),
+        )
+    };
     let normalized = documents::normalize_documents(
         ctx.tenant_scope,
         batch,
@@ -307,6 +327,8 @@ pub async fn prepare(
         &classes,
         medulla_server_api::knob_config::knobs().ingest_atom_max_tokens as usize,
         &layout,
+        &readers,
+        &read_blob,
     )
     .map_err(|error| error.to_string())?;
     // Near duplicates are decided here, before any record is admitted and before atom storage

@@ -303,6 +303,34 @@ pub fn read_repository_content_ref(
     )
 }
 
+/// Read the engine blob `content_ref` (`cas:sha256:<manifest digest>`) held by `owner_scope`
+/// into memory (MEDULLA-INGEST-WORKER-R700.3). A malformed ref, an absent manifest or another
+/// owner's blob reads as `BODY_MISSING`, so another owner's blob is indistinguishable from an
+/// absent one; a blob longer than `max_bytes` refuses `READER_TOO_LARGE`.
+pub fn read_owned_blob(
+    store: &dyn super::store::ChunkStore,
+    owner_scope: &str,
+    content_ref: &str,
+    max_bytes: usize,
+) -> Result<Vec<u8>, String> {
+    let manifest_digest = content_ref
+        .strip_prefix("cas:sha256:")
+        .ok_or_else(|| "BODY_MISSING: content_ref is invalid".to_string())?;
+    let manifest = store
+        .get_manifest(manifest_digest)?
+        .filter(|manifest| manifest.owner_scope == owner_scope)
+        .ok_or_else(|| "BODY_MISSING: the blob is absent".to_string())?;
+    if manifest.len > max_bytes as u64 {
+        return Err(format!(
+            "READER_TOO_LARGE: {} bytes exceed the reader limit of {max_bytes}",
+            manifest.len
+        ));
+    }
+    let mut body = Vec::with_capacity(manifest.len as usize);
+    super::stream::stream_blob_get(store, manifest_digest, &mut body)?;
+    Ok(body)
+}
+
 fn read_body_for_owner(
     store: &dyn super::store::ChunkStore,
     owner_scope: &str,
