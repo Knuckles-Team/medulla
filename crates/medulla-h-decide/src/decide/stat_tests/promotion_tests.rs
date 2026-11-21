@@ -9,9 +9,15 @@ use super::path_preference_tests::{pins, OTHER};
 use super::retrieval_tests::learn;
 use super::*;
 use medulla_decision_outcome_types::decision::promotion::{
-    ReceiptKind, RevisionSubject, PROMOTION_UNEVALUATED,
+    DefinitionKind, GraderKind, ReceiptKind, RevisionSubject, PROMOTION_UNEVALUATED,
 };
-use medulla_decision_stats::decision::promotion::rollout_set_digest;
+use medulla_decision_outcome_types::policy_evolution::{
+    EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionRecord, SafetyOutcome,
+    StoredPolicyRecord,
+};
+use medulla_graph_core::graph::GraphView;
+use medulla_types::contract::{Digest256, OpaqueId};
+use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
 use medulla_decision_types::decision::skill_evolution::{
     Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
 };
@@ -152,7 +158,61 @@ pub(super) async fn commit(h: &Harness, record: &StatisticalDecisionRecord) -> D
     .unwrap()
 }
 
+/// A graph view holding `nodes`, each a JSON object stored as the node's property blob.
+fn view_of(nodes: Vec<(String, serde_json::Value)>) -> GraphView {
+    let mut view = GraphView::default();
+    for (id, properties) in nodes {
+        view.overlay_add_node(id, rmp_serde::to_vec_named(&properties).unwrap());
+    }
+    view
+}
+
+/// A policy evaluation of `subject` that passed its safety policy, stored as the one row shape
+/// the kernel writes: `(record id, row)`.
+fn policy_row(subject: &RevisionSubject, tenant: &str) -> (String, serde_json::Value) {
+    let record = PolicyEvolutionRecord::PolicyEvaluation {
+        record: PolicyEvaluation {
+            subject: subject.clone(),
+            revision_ref: OpaqueId::new("polver:policy-v2").unwrap(),
+            champion_revision_ref: Some(OpaqueId::new("polver:base").unwrap()),
+            evaluation_set_digest: Digest256::from_bytes([16; 32]),
+            evaluator_digest: Digest256::from_bytes([17; 32]),
+            evaluator_kind: GraderKind::Annotation,
+            held_out_trajectory_ids: medulla_types::contract::BoundedVec::new(vec![
+                OpaqueId::new("poltraj:held-1").unwrap(),
+                OpaqueId::new("poltraj:held-2").unwrap(),
+            ])
+            .unwrap(),
+            metrics: EvaluationMetrics {
+                task_success_ppm: 900_000,
+                baseline_task_success_ppm: 850_000,
+                cost_micros: 12,
+                latency_p50_ms: 4,
+                latency_p95_ms: 9,
+                gpu_seconds: 2,
+                trace_completeness_ppm: 1_000_000,
+                unsupported_replay_mass_ppm: 0,
+            },
+            safety: SafetyOutcome::Passed,
+            verdict: EvaluationVerdict::Accepted,
+            report: None,
+        },
+    };
+    let stored = StoredPolicyRecord {
+        record_id: record.record_id(tenant).unwrap(),
+        tenant_id: tenant.to_owned(),
+        recorded_by: "actor:policy".to_owned(),
+        recorded_at_ms: 42,
+        record,
+    };
+    (
+        stored.record_id.clone(),
+        serde_json::Value::Object(stored.row().unwrap()),
+    )
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R805.9
+// spec: MEDULLA-DECISION-ENGINE-R805.3
 #[tokio::test]
 async fn every_receipt_kind_resolves_to_held_out_evidence() {
     let h = Harness::new().await;
@@ -161,6 +221,12 @@ async fn every_receipt_kind_resolves_to_held_out_evidence() {
         store: &h.store,
         tenant,
         graph: None,
+        policy: &policy,
+    };
+    let graph_sources = |tenant: &'static str, view: &'static GraphView| EvidenceSources {
+        store: &h.store,
+        tenant,
+        graph: Some(view),
         policy: &policy,
     };
     let head = RevisionSubject::DecisionHead {
@@ -191,6 +257,61 @@ async fn every_receipt_kind_resolves_to_held_out_evidence() {
     let rollouts = held_out_evidence(&sources(TENANT), &subject(), &digest).unwrap();
     assert_eq!(rollouts.receipt_kind, ReceiptKind::RolloutSet);
     assert_eq!((rollouts.case_count, rollouts.delta_ppm), (60, 150_000));
+
+    // A program revision's receipt is its graph node's `held_out` evidence.
+    let program_evidence = paired_rollout_evidence(&rollout_set(150_000), &policy);
+    let knobs = RevisionSubject::KnobSet {
+        policy_id: "policy-a".to_owned(),
+    };
+    let (policy_id, policy_node) = policy_row(&knobs, TENANT);
+    let view: &'static GraphView = Box::leak(Box::new(view_of(vec![
+        (
+            "revision:two".to_owned(),
+            serde_json::json!({
+                "type": "ProgramRevision",
+                "program_ref": PROGRAM,
+                "held_out": program_evidence,
+            }),
+        ),
+        (policy_id.clone(), policy_node),
+    ])));
+    let program =
+        held_out_evidence(&graph_sources(TENANT, view), &subject(), "revision:two").unwrap();
+    assert_eq!(program, program_evidence);
+    // The revision belongs to its own program only.
+    assert_eq!(
+        held_out_evidence(
+            &graph_sources(TENANT, view),
+            &RevisionSubject::Program {
+                program_ref: "program-b".to_owned()
+            },
+            "revision:two"
+        ),
+        Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
+    );
+    // A policy evaluation node resolves for the subject it evaluates, as policy evidence.
+    let knob_set = held_out_evidence(&graph_sources(TENANT, view), &knobs, &policy_id).unwrap();
+    assert_eq!(knob_set.receipt_kind, ReceiptKind::PolicyEvaluation);
+    assert_eq!(
+        (knob_set.challenger_score_ppm, knob_set.champion_score_ppm, knob_set.case_count),
+        (900_000, Some(850_000), 2)
+    );
+    assert_eq!(knob_set.subject, knobs);
+    // Another subject's, another tenant's, or an unknown record never resolves.
+    assert_eq!(
+        held_out_evidence(
+            &graph_sources(TENANT, view),
+            &RevisionSubject::KnobSet {
+                policy_id: "policy-b".to_owned()
+            },
+            &policy_id
+        ),
+        Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
+    );
+    assert_eq!(
+        held_out_evidence(&graph_sources(OTHER, view), &knobs, &policy_id),
+        Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
+    );
 
     // Program and policy receipts live in graph nodes; with none visible they are unevaluated.
     for absent in [
@@ -393,4 +514,101 @@ async fn promotion_refusals() {
         .await
         .unwrap();
     assert_eq!(unchanged, moved);
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.3: every subject kind whose receipt is a rollout set
+/// promotes through `Decide` kind `Promotion` and a committed record, rolls back to its previous
+/// champion, and another tenant's pointer never honours the record.
+// spec: MEDULLA-DECISION-ENGINE-R805.3
+#[tokio::test]
+async fn promote_then_roll_back_every_subject_kind() {
+    use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let subjects = [
+        subject(),
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::Agent,
+            definition_ref: "agent-a".to_owned(),
+        },
+        RevisionSubject::RetrievalStrategy {
+            strategy_ref: "strategy-a".to_owned(),
+        },
+    ];
+    for (index, subject) in subjects.iter().enumerate() {
+        let champion = PointerRef::Champion {
+            subject: subject.clone(),
+        };
+        let mut promoted = Vec::new();
+        for generation in ["one", "two"] {
+            let target = format!("revision:{generation}-{index}");
+            let set = RolloutSet {
+                challenger_ref: target.clone(),
+                ..rollout_set(150_000)
+            };
+            let digest = rollout_set_digest(&set);
+            learn(
+                &h,
+                "decider",
+                LearningWrite::RecordRollouts {
+                    set: Box::new(set),
+                },
+            )
+            .await
+            .unwrap();
+            let record = decide(
+                &h,
+                promotion_request(&pins.0, subject, &digest, &target),
+            )
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+                .clone();
+            let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+            assert!(
+                facts.contains(&"promotion.verdict=promote"),
+                "{subject:?}: {facts:?}"
+            );
+            commit(&h, &record).await;
+            let state = pointer_state(
+                &h,
+                champion.clone(),
+                activate(&target, &record.record_id),
+            )
+            .await
+            .unwrap();
+            assert_eq!(state.target(), Some(target.as_str()), "{subject:?}");
+            promoted.push((target, record.record_id));
+        }
+
+        // Another tenant holds neither the record nor the pointer: it refuses the move and
+        // its seat stays empty.
+        let other = context("decider", OTHER);
+        let theirs: Result<LearningRecorded, String> = decode(
+            super::super::log::handle_decision_log(
+                &h.state,
+                9,
+                &other,
+                DecisionLogOp::Learn {
+                    tenant_id: OTHER.to_owned(),
+                    write: LearningWrite::MovePointer {
+                        pointer: champion.clone(),
+                        movement: activate(&promoted[0].0, &promoted[0].1),
+                    },
+                },
+            )
+            .await,
+        );
+        assert!(
+            theirs.unwrap_err().starts_with("PROMOTION_RECEIPT_MISMATCH"),
+            "{subject:?}"
+        );
+
+        // Rolling back restores the previous champion.
+        let back = pointer_state(&h, champion, PointerMovement::Rollback)
+            .await
+            .unwrap();
+        assert_eq!(back.target(), Some(promoted[0].0.as_str()), "{subject:?}");
+    }
 }
