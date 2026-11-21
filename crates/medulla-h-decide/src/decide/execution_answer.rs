@@ -12,6 +12,10 @@ use medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAn
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
+/// The three refusal codes of an abstained part (MEDULLA-CQ-ORCH-R008.3), registered with the
+/// decision codes in `medulla-decision-types` so an abstention round-trips.
+pub use medulla_decision_types::decision::execution_part::REFUSALS;
+
 /// The steps of the task, each with its successor and the source that states it.
 #[cfg(feature = "decide")]
 const STEPS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
@@ -66,12 +70,9 @@ async fn answer_for(
     request: AgentExecutionAnswerRequest,
 ) -> Result<medulla_decision_outcome_types::decision::execution_answer::ExecutionAnswer, String> {
     use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
-    use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
     use medulla_decision_outcome_types::decision::execution_answer::{
         ExecutionAnswer, ExecutionAnswerParts, EXECUTION_ANSWER_SCHEMA_VERSION,
     };
-    use medulla_decision_types::decision::record::AbstainReason;
-    use medulla_decision_types::decision::DecisionOutcome;
 
     // (1) Admit: both checks run before any read.
     let guardrail_request = GuardrailEntailmentRequest {
@@ -88,9 +89,132 @@ async fn answer_for(
         );
     }
 
-    // (2) One assembly.
+    // From here every part is computed on its own: a part that cannot be answered becomes a
+    // typed abstention and never fails the response or drops a field (R008.3).
+    let task_iri = request.task_iri.as_str();
+
+    // (2) One assembly. Its failure or abstention is shared by the three parts that read it.
     let assembly = super::assemble::assemble_for(state, graph, verified, request.assembly.clone())
-        .await?;
+        .await;
+    let (staffing_part, bindings_part, dag_part, certificate_digest) = match &assembly {
+        Err(error) => {
+            let fault = || PartFault::AssemblyAbstained(error.clone());
+            (
+                part_or_abstain("staffing", task_iri, Err(fault())),
+                part_or_abstain("bindings", task_iri, Err(fault())),
+                part_or_abstain("dag", task_iri, Err(fault())),
+                String::new(),
+            )
+        }
+        Ok(assembly) => solved_parts(assembly, task_iri)?,
+    };
+
+    // (3) Coverage over the same requirements, candidates and tenant.
+    let coverage_part = part_or_abstain(
+        "coverage",
+        task_iri,
+        coverage_answer(state, verified, &request, assembly.as_ref().ok()).await,
+    );
+
+    // (4) Guardrails.
+    let guardrails_part = part_or_abstain(
+        "guardrails",
+        task_iri,
+        guardrails_answer(state, verified, &guardrail_request).await,
+    );
+
+    // (5) Steps and workflow, read as the caller.
+    let rows = steps_and_workflow(state, graph, verified, task_iri).await;
+    let (steps_part, workflow_part) = match rows {
+        Ok((steps, workflow)) => (
+            part_or_abstain("steps", task_iri, steps),
+            part_or_abstain("workflow", task_iri, workflow),
+        ),
+        Err(error) => (
+            part_or_abstain("steps", task_iri, Err(PartFault::NoSource(error.clone()))),
+            part_or_abstain("workflow", task_iri, Err(PartFault::NoSource(error))),
+        ),
+    };
+
+    Ok(ExecutionAnswer {
+        schema_version: EXECUTION_ANSWER_SCHEMA_VERSION,
+        task_iri: request.task_iri,
+        parts: ExecutionAnswerParts {
+            steps: steps_part,
+            staffing: staffing_part,
+            coverage: coverage_part,
+            guardrails: guardrails_part,
+            bindings: bindings_part,
+            workflow: workflow_part,
+            dag: dag_part,
+        },
+        assembled_by: ASSEMBLED_BY.to_string(),
+        certificate_digest,
+    })
+}
+
+/// Why one part has no answer (MEDULLA-CQ-ORCH-R008.3).
+#[cfg(feature = "decide")]
+enum PartFault {
+    /// The part's source could not be read: the concept has no connected authority.
+    NoSource(String),
+    /// The part's query returned no row.
+    Empty,
+    /// The assembly the part reads abstained; the reason is copied into the detail.
+    AssemblyAbstained(String),
+    /// The part is already a typed abstention of its own (a coverage gap).
+    Own(ExecutionAnswerPart),
+}
+
+/// The part's answer, or its typed abstention: `AbstainReason::Family` with one of the three
+/// `ORCH_PART_*` codes, evidence class `Claim` and the premise `orch:part=<name>/<code>`.
+#[cfg(feature = "decide")]
+fn part_or_abstain(
+    name: &str,
+    task_iri: &str,
+    outcome: Result<ExecutionAnswerPart, PartFault>,
+) -> ExecutionAnswerPart {
+    use medulla_decision_types::decision::execution_part::{
+        ORCH_PART_ASSEMBLY_ABSTAINED, ORCH_PART_EMPTY, ORCH_PART_NO_SOURCE,
+    };
+    use medulla_decision_types::decision::record::{
+        AbstainReason, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
+    };
+
+    let (code, detail) = match outcome {
+        Ok(part) | Err(PartFault::Own(part)) => return part,
+        Err(PartFault::NoSource(detail)) => (ORCH_PART_NO_SOURCE, detail),
+        Err(PartFault::Empty) => (ORCH_PART_EMPTY, format!("no row for {task_iri}")),
+        Err(PartFault::AssemblyAbstained(detail)) => (ORCH_PART_ASSEMBLY_ABSTAINED, detail),
+    };
+    let premise = PremiseRef {
+        subject: task_iri.to_string(),
+        fact: format!("orch:part={name}/{}", code.as_str()),
+        class: PremiseClass::Claim,
+        provenance: PremiseProvenance::Request {
+            field: "task_iri".to_string(),
+        },
+    };
+    ExecutionAnswerPart::Abstain {
+        reason: AbstainReason::Family {
+            family: medulla_decision_types::decision::statistical::QuestionKind::TaskPlan,
+            code,
+            detail,
+        },
+        provenance: medulla_types::contract::BoundedVec::new(vec![premise])
+            .unwrap_or_default(),
+        evidence_class: EvidenceClass::Claim,
+    }
+}
+
+/// The staffing, bindings and DAG parts of one assembly, and the certificate digest.
+#[cfg(feature = "decide")]
+fn solved_parts(
+    assembly: &medulla_decision_types::decision::AssemblyResult,
+    task_iri: &str,
+) -> Result<(ExecutionAnswerPart, ExecutionAnswerPart, ExecutionAnswerPart, String), String> {
+    use medulla_decision_types::decision::DecisionOutcome;
+
     let record = &assembly.record;
     let evidence_class = record.evidence_class;
     let premises = || -> Result<_, String> {
@@ -98,86 +222,21 @@ async fn answer_for(
             record.premises.iter().take(PART_PREMISES).cloned().collect(),
         )
     };
-    let abstain = |reasons: &[AbstainReason]| -> ExecutionAnswerPart {
-        ExecutionAnswerPart::Abstain {
-            reason: reasons
+    match &record.outcome {
+        DecisionOutcome::Abstained { reasons } => {
+            let copied = reasons
                 .first()
-                .cloned()
-                .unwrap_or(AbstainReason::InsufficientConfidence),
-            provenance: Default::default(),
-            evidence_class,
+                .map(|reason| reason.code().as_str().to_string())
+                .unwrap_or_else(|| "INSUFFICIENT_CONFIDENCE".to_string());
+            let part = |name: &str| {
+                part_or_abstain(
+                    name,
+                    task_iri,
+                    Err(PartFault::AssemblyAbstained(copied.clone())),
+                )
+            };
+            Ok((part("staffing"), part("bindings"), part("dag"), String::new()))
         }
-    };
-
-    // (3) Coverage over the same requirements, candidates and tenant.
-    let coverage = super::coverage::coverage_for(
-        state,
-        verified,
-        &CapabilityCoverageRequest {
-            tenant_id: request.assembly.tenant_id.clone(),
-            requirements: request.assembly.requirements.clone(),
-            candidates: request.assembly.candidates.clone(),
-        },
-    )
-    .await?;
-    let coverage_part = match &coverage.coverage {
-        medulla_decision_outcome_types::decision::coverage::CapabilityCoverageOutcome::Covered {
-            capabilities,
-        } => ExecutionAnswerPart::Answer {
-            value: serde_json::to_value(&coverage).map_err(|error| error.to_string())?,
-            provenance: medulla_types::contract::BoundedVec::new(
-                capabilities
-                    .iter()
-                    .take(PART_PREMISES)
-                    .map(|capability| capability.because.clone())
-                    .collect(),
-            )?,
-            evidence_class,
-        },
-        medulla_decision_outcome_types::decision::coverage::CapabilityCoverageOutcome::Abstained {
-            reasons,
-        } => abstain(reasons),
-    };
-
-    // (4) Guardrails.
-    let guardrails =
-        super::guardrail::entailment_for(state, verified, &guardrail_request).await?;
-    let guardrails_part = ExecutionAnswerPart::Answer {
-        value: serde_json::to_value(&guardrails).map_err(|error| error.to_string())?,
-        provenance: Default::default(),
-        evidence_class,
-    };
-
-    // (5) Steps and workflow, read as the caller.
-    let (view, graph_version) =
-        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
-    let max_rows = usize::try_from(
-        medulla_server_api::knob_config::knobs().execution_answer_max_rows_per_part,
-    )
-    .unwrap_or(usize::MAX);
-    let steps_part = query_part(
-        &view,
-        STEPS_QUERY,
-        &request.task_iri,
-        (graph, graph_version),
-        max_rows,
-    )?;
-    let workflow_part = query_part(
-        &view,
-        WORKFLOW_QUERY,
-        &request.task_iri,
-        (graph, graph_version),
-        max_rows,
-    )?;
-
-    // (6) Staffing, bindings and DAG come from the solved assembly.
-    let (staffing_part, bindings_part, dag_part, certificate_digest) = match &record.outcome {
-        DecisionOutcome::Abstained { reasons } => (
-            abstain(reasons.as_slice()),
-            abstain(reasons.as_slice()),
-            abstain(reasons.as_slice()),
-            String::new(),
-        ),
         DecisionOutcome::Solved {
             slots, certificate, ..
         } => {
@@ -220,30 +279,111 @@ async fn answer_for(
                     evidence_class,
                 })
             };
-            (
+            Ok((
                 answer(serde_json::Value::Array(staffing))?,
                 answer(serde_json::Value::Array(bindings))?,
                 answer(shape)?,
                 String::from(certificate.digest()),
-            )
+            ))
         }
+    }
+}
+
+/// The coverage part: the coverage answer, a coverage gap as its own typed abstention, or no
+/// source when the coverage read fails.
+#[cfg(feature = "decide")]
+async fn coverage_answer(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    request: &AgentExecutionAnswerRequest,
+    assembly: Option<&medulla_decision_types::decision::AssemblyResult>,
+) -> Result<ExecutionAnswerPart, PartFault> {
+    use medulla_decision_outcome_types::decision::coverage::{
+        CapabilityCoverageOutcome, CapabilityCoverageRequest,
     };
 
-    Ok(ExecutionAnswer {
-        schema_version: EXECUTION_ANSWER_SCHEMA_VERSION,
-        task_iri: request.task_iri,
-        parts: ExecutionAnswerParts {
-            steps: steps_part,
-            staffing: staffing_part,
-            coverage: coverage_part,
-            guardrails: guardrails_part,
-            bindings: bindings_part,
-            workflow: workflow_part,
-            dag: dag_part,
+    let evidence_class = assembly
+        .map(|assembly| assembly.record.evidence_class)
+        .unwrap_or(medulla_decision_types::decision::record::EvidenceClass::Claim);
+    let coverage = super::coverage::coverage_for(
+        state,
+        verified,
+        &CapabilityCoverageRequest {
+            tenant_id: request.assembly.tenant_id.clone(),
+            requirements: request.assembly.requirements.clone(),
+            candidates: request.assembly.candidates.clone(),
         },
-        assembled_by: ASSEMBLED_BY.to_string(),
-        certificate_digest,
+    )
+    .await
+    .map_err(PartFault::NoSource)?;
+    match &coverage.coverage {
+        CapabilityCoverageOutcome::Covered { capabilities } => Ok(ExecutionAnswerPart::Answer {
+            value: serde_json::to_value(&coverage)
+                .map_err(|error| PartFault::NoSource(error.to_string()))?,
+            provenance: medulla_types::contract::BoundedVec::new(
+                capabilities
+                    .iter()
+                    .take(PART_PREMISES)
+                    .map(|capability| capability.because.clone())
+                    .collect(),
+            )
+            .map_err(PartFault::NoSource)?,
+            evidence_class,
+        }),
+        CapabilityCoverageOutcome::Abstained { reasons } => {
+            Err(PartFault::Own(ExecutionAnswerPart::Abstain {
+                reason: reasons
+                    .first()
+                    .cloned()
+                    .unwrap_or(medulla_decision_types::decision::record::AbstainReason::InsufficientConfidence),
+                provenance: Default::default(),
+                evidence_class,
+            }))
+        }
+    }
+}
+
+/// The guardrails part: the entailment answer, or no source when the read fails.
+#[cfg(feature = "decide")]
+async fn guardrails_answer(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    request: &medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest,
+) -> Result<ExecutionAnswerPart, PartFault> {
+    let guardrails = super::guardrail::entailment_for(state, verified, request)
+        .await
+        .map_err(PartFault::NoSource)?;
+    Ok(ExecutionAnswerPart::Answer {
+        value: serde_json::to_value(&guardrails)
+            .map_err(|error| PartFault::NoSource(error.to_string()))?,
+        provenance: Default::default(),
+        evidence_class: medulla_decision_types::decision::record::EvidenceClass::Claim,
     })
+}
+
+/// The steps and workflow parts, each read from the caller's filtered view. The outer error is a
+/// view that could not be read at all.
+#[cfg(feature = "decide")]
+async fn steps_and_workflow(
+    state: &SharedState,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    task_iri: &str,
+) -> Result<
+    (
+        Result<ExecutionAnswerPart, PartFault>,
+        Result<ExecutionAnswerPart, PartFault>,
+    ),
+    String,
+> {
+    let (view, graph_version) =
+        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
+    let max_rows = usize::try_from(
+        medulla_server_api::knob_config::knobs().execution_answer_max_rows_per_part,
+    )
+    .unwrap_or(usize::MAX);
+    let read = |query: &str| query_part(&view, query, task_iri, (graph, graph_version), max_rows);
+    Ok((read(STEPS_QUERY), read(WORKFLOW_QUERY)))
 }
 
 #[cfg(feature = "decide")]
@@ -251,7 +391,7 @@ use medulla_decision_outcome_types::decision::execution_answer::ExecutionAnswerP
 
 /// Run one of the two SELECTs for `task_iri` and shape its rows as a part: the
 /// rows (first `max_rows`, with `truncated`) and one `Claim` premise per
-/// distinct source; no row is the typed abstention `UnmappedTask`.
+/// distinct source; no row is `PartFault::Empty`.
 #[cfg(feature = "decide")]
 fn query_part(
     view: &medulla_graph_core::graph::GraphView,
@@ -259,9 +399,9 @@ fn query_part(
     task_iri: &str,
     (graph, graph_version): (&str, u64),
     max_rows: usize,
-) -> Result<ExecutionAnswerPart, String> {
+) -> Result<ExecutionAnswerPart, PartFault> {
     use medulla_decision_types::decision::record::{
-        AbstainReason, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
+        EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
     };
     use medulla_rdf::sparql::{Dataset, Projection, QueryOutcome};
 
@@ -271,23 +411,19 @@ fn query_part(
         &text,
         &Projection::default(),
         None,
-    )?;
+    )
+    .map_err(PartFault::NoSource)?;
     let QueryOutcome::Solutions(result) = outcome else {
-        return Err("INTERNAL: the execution answer query did not answer a table".to_string());
+        return Err(PartFault::NoSource(
+            "INTERNAL: the execution answer query did not answer a table".to_string(),
+        ));
     };
     let (vars, mut rows) = result.to_rows();
     // The evaluator gives no order the caller can rely on: sort so the same
     // graph answers the same bytes.
     rows.sort();
     if rows.is_empty() {
-        use sha2::{Digest, Sha256};
-        return Ok(ExecutionAnswerPart::Abstain {
-            reason: AbstainReason::UnmappedTask {
-                text_digest: hex::encode(Sha256::digest(task_iri.as_bytes())),
-            },
-            provenance: Default::default(),
-            evidence_class: EvidenceClass::Claim,
-        });
+        return Err(PartFault::Empty);
     }
     let source_column = vars.iter().position(|var| var == "source");
     let subject_column = 0;
@@ -317,7 +453,8 @@ fn query_part(
     rows.truncate(max_rows);
     Ok(ExecutionAnswerPart::Answer {
         value: serde_json::json!({ "vars": vars, "rows": rows, "truncated": truncated }),
-        provenance: medulla_types::contract::BoundedVec::new(provenance)?,
+        provenance: medulla_types::contract::BoundedVec::new(provenance)
+            .map_err(PartFault::NoSource)?,
         evidence_class: EvidenceClass::Claim,
     })
 }

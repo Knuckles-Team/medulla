@@ -166,3 +166,84 @@ async fn other_tenant_assembly_is_access_denied() {
     .expect_err("refuses");
     assert!(error.starts_with("INVALID_ARGUMENT"), "{error}");
 }
+
+/// The `Family` abstention an abstained part carries: its code, and the premise the part cites.
+fn family_abstention(part: &ExecutionAnswerPart, name: &str) -> String {
+    use medulla_decision_types::decision::record::{AbstainReason, EvidenceClass};
+    let ExecutionAnswerPart::Abstain {
+        reason: AbstainReason::Family { code, .. },
+        provenance,
+        evidence_class,
+    } = part
+    else {
+        panic!("{name} abstains with a family reason: {part:?}");
+    };
+    assert_eq!(*evidence_class, EvidenceClass::Claim, "{name}");
+    assert_eq!(provenance.len(), 1, "{name}");
+    assert_eq!(
+        provenance.as_slice()[0].fact,
+        format!("orch:part={name}/{}", code.as_str())
+    );
+    code.as_str().to_string()
+}
+
+// spec: MEDULLA-CQ-ORCH-R008.3
+#[tokio::test]
+async fn task_without_rows_abstains_steps_and_workflow_by_part() {
+    let h = harness().await;
+    seed(&h.store, None);
+    prepare_request_graph(&h).await;
+    let answer = ask(
+        &h,
+        AgentExecutionAnswerRequest {
+            task_iri: "urn:task:nobody".to_string(),
+            assembly: request(Vec::new()),
+        },
+    )
+    .await
+    .expect("a part without data never fails the response");
+    assert_eq!(
+        family_abstention(&answer.parts.steps, "steps"),
+        "ORCH_PART_EMPTY"
+    );
+    assert_eq!(
+        family_abstention(&answer.parts.workflow, "workflow"),
+        "ORCH_PART_EMPTY"
+    );
+    // The parts with data still answer.
+    for (name, part) in [
+        ("staffing", &answer.parts.staffing),
+        ("bindings", &answer.parts.bindings),
+        ("dag", &answer.parts.dag),
+    ] {
+        assert!(
+            matches!(part, ExecutionAnswerPart::Answer { .. }),
+            "{name} is answered: {part:?}"
+        );
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R008.3
+#[tokio::test]
+async fn abstained_assembly_abstains_its_three_parts_and_keeps_the_others() {
+    let h = harness().await;
+    // No library is seeded, so the assembly cannot staff the task.
+    prepare_request_graph(&h).await;
+    let answer = ask(
+        &h,
+        AgentExecutionAnswerRequest {
+            task_iri: TASK.to_string(),
+            assembly: request(Vec::new()),
+        },
+    )
+    .await
+    .expect("an abstained assembly never fails the response");
+    for (name, part) in [
+        ("staffing", &answer.parts.staffing),
+        ("bindings", &answer.parts.bindings),
+        ("dag", &answer.parts.dag),
+    ] {
+        assert_eq!(family_abstention(part, name), "ORCH_PART_ASSEMBLY_ABSTAINED");
+    }
+    assert!(answer.certificate_digest.is_empty());
+}

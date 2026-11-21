@@ -46,6 +46,7 @@ pub mod entity_resolution;
 pub mod errors;
 pub mod entry_types;
 pub mod evidence_stream;
+pub mod execution_part;
 pub mod feature_match;
 pub mod field_shielding;
 pub mod graph_intake;
