@@ -11,8 +11,13 @@
 //! ([`SourceDirtyBasis::Recorded`]), because the wakeup is part of the batch's payload digest.
 //!
 //! A row writes a source node when it carries a bound type and the bound property. A removal
-//! row names no type, so it wakes every source bound in the graph; a wakeup is a hint and the
-//! reconcile reads the source, so an extra one costs a read and never changes an answer.
+//! row names no type, and a field update that sets a node's `type` has no before image to say
+//! which type the node left, so both wake every source bound in the graph; a wakeup is a hint
+//! and the reconcile reads the source, so an extra one costs a read and never changes an answer.
+//!
+//! A bound type or property matches a node's by its exact canonical IRI, never by a suffix: a
+//! bare name or a `:`-prefixed name expands into the core namespace, a full IRI stands for
+//! itself, and the two sides are compared after that expansion.
 
 use medulla_graph_algos::algorithms::{decode_batch_operations, BatchOperation};
 use medulla_index_types::semantic_index::{
@@ -63,14 +68,28 @@ pub(super) fn graph_source_dirty_input(
     Some(SemanticDigest::from_bytes(Sha256::digest(&encoded).into()))
 }
 
-/// Whether `actual` is the bound name: the name itself, or an IRI that ends in it, because a
-/// node loaded from RDF carries its type and property keys as full IRIs.
-fn names(actual: &str, bound: &str) -> bool {
-    actual == bound
-        || actual
-            .strip_suffix(bound)
-            .is_some_and(|prefix| prefix.ends_with('#') || prefix.ends_with('/'))
+/// The canonical IRI of a type or property name: a full IRI is itself, a bare or `:`-prefixed
+/// name lives in the core namespace.
+fn canonical_iri(name: &str) -> String {
+    let name = name.trim();
+    if name.contains("://") {
+        name.to_string()
+    } else {
+        format!(
+            "{}{}",
+            medulla_types::ontology_base::CORE_NAMESPACE,
+            name.trim_start_matches(':')
+        )
+    }
 }
+
+/// Whether `actual` names the same type or property as `bound`, by exact canonical IRI.
+fn names(actual: &str, bound: &str) -> bool {
+    actual == bound || canonical_iri(actual) == canonical_iri(bound)
+}
+
+/// The key of a node's type property.
+const TYPE_KEY: &str = "type";
 
 /// Whether `properties_msgpack` is a node of a bound type that carries the bound property.
 fn is_source_node(bound: &[(String, String)], properties_msgpack: &[u8]) -> bool {
@@ -84,12 +103,14 @@ fn is_source_node(bound: &[(String, String)], properties_msgpack: &[u8]) -> bool
     })
 }
 
-/// Whether `updates_msgpack` sets a bound property.
+/// Whether `updates_msgpack` sets a bound property, or sets a node's type: the update names the
+/// type the node moves to and not the one it leaves, so any source of the graph may have lost it.
 fn updates_bound_property(bound: &[(String, String)], updates_msgpack: &[u8]) -> bool {
     medulla_types::msgpack::decode_property_object(updates_msgpack).is_ok_and(|updates| {
-        bound.iter().any(|(_, property_id)| {
-            updates.keys().any(|key| names(key, property_id))
-        })
+        updates.contains_key(TYPE_KEY)
+            || bound.iter().any(|(_, property_id)| {
+                updates.keys().any(|key| names(key, property_id))
+            })
     })
 }
 
@@ -167,6 +188,64 @@ mod tests {
     }
 
     #[test]
+    fn a_type_or_property_matches_by_its_exact_canonical_iri_never_by_a_suffix() {
+        bind("dirty-t6", "dirty-g6");
+        let wake = |properties: &[(&str, &str)]| {
+            graph_source_dirty_input(
+                "dirty-t6",
+                "dirty-g6",
+                &[add("bookmark:1", properties)],
+                &SourceDirtyBasis::Methods,
+            )
+        };
+        let core = medulla_types::ontology_base::CORE_NAMESPACE;
+        let core_type = format!("{core}Bookmark");
+        let core_text = format!("{core}text");
+        // The bare name, the prefixed name and the core IRI are one canonical type and property.
+        assert!(wake(&[("type", "Bookmark"), ("text", "x")]).is_some());
+        assert!(wake(&[("type", ":Bookmark"), ("text", "x")]).is_some());
+        assert!(wake(&[("type", core_type.as_str()), ("text", "x")]).is_some());
+        assert!(wake(&[("type", "Bookmark"), (core_text.as_str(), "x")]).is_some());
+        // A different namespace ending in the same name is a different type and property.
+        assert!(wake(&[("type", "https://other.test/vocab#Bookmark"), ("text", "x")]).is_none());
+        assert!(wake(&[("type", "https://other.test/vocab/Bookmark"), ("text", "x")]).is_none());
+        assert!(wake(&[("type", "Bookmark"), ("https://other.test/vocab#text", "x")]).is_none());
+        assert!(wake(&[("type", "MyBookmark"), ("text", "x")]).is_none());
+    }
+
+    #[test]
+    fn a_removal_and_a_type_change_wake_every_bound_source_of_the_graph() {
+        bind("dirty-t7", "dirty-g7");
+        let wake = |graph: &str, methods: &[Method]| {
+            graph_source_dirty_input("dirty-t7", graph, methods, &SourceDirtyBasis::Methods)
+        };
+        let removal = Method::RemoveNode { node_id: "doc:anything".into() };
+        assert!(wake("dirty-g7", &[removal.clone()]).is_some());
+        // A removal in a graph with no bound source wakes nothing.
+        assert!(wake("unbound-graph", &[removal]).is_none());
+        // A field update that sets `type` wakes the sources of the graph, whatever type it sets
+        // and whether or not it names the bound property.
+        let retype = |to: &str| Method::CompareAndSetNodeFields {
+            node_id: "bookmark:1".into(),
+            conditions_msgpack: node(&[]),
+            updates_msgpack: node(&[("type", to)]),
+        };
+        assert!(wake("dirty-g7", &[retype("Document")]).is_some());
+        assert!(wake("dirty-g7", &[retype("Bookmark")]).is_some());
+        assert!(wake("unbound-graph", &[retype("Document")]).is_none());
+        // An update of a field that is neither the type nor the bound property wakes nothing.
+        let other = Method::CompareAndSetNodeFields {
+            node_id: "bookmark:1".into(),
+            conditions_msgpack: node(&[]),
+            updates_msgpack: node(&[("title", "edited")]),
+        };
+        assert!(wake("dirty-g7", &[other]).is_none());
+        // The same holds through a staged row delta.
+        let delta = [Method::RemoveNode { node_id: "bookmark:1".into() }];
+        assert!(row_delta_wake("dirty-t7", "dirty-g7", &delta).is_some());
+    }
+
+    #[test]
     fn a_commit_elsewhere_wakes_nothing() {
         bind("dirty-t2", "dirty-g2");
         let wake = |tenant: &str, graph: &str, methods: Vec<Method>| {
@@ -211,16 +290,16 @@ mod tests {
             }])
         };
         let bookmark = load(
-            "<urn:bookmark:1> a <https://example.test/vocab#Bookmark> ; \
-             <https://example.test/vocab#text> \"hello\" .",
+            "<urn:bookmark:1> a <https://knuckles-team.github.io/ontology/core#Bookmark> ; \
+             <https://knuckles-team.github.io/ontology/core#text> \"hello\" .",
         );
         assert!(row_delta_wake("dirty-t3", "dirty-g3", &bookmark).is_some());
         let other = load(
-            "<urn:doc:1> a <https://example.test/vocab#Document> ; \
-             <https://example.test/vocab#text> \"hello\" .",
+            "<urn:doc:1> a <https://knuckles-team.github.io/ontology/core#Document> ; \
+             <https://knuckles-team.github.io/ontology/core#text> \"hello\" .",
         );
         assert!(row_delta_wake("dirty-t3", "dirty-g3", &other).is_none());
-        let untexted = load("<urn:bookmark:2> a <https://example.test/vocab#Bookmark> .");
+        let untexted = load("<urn:bookmark:2> a <https://knuckles-team.github.io/ontology/core#Bookmark> .");
         assert!(row_delta_wake("dirty-t3", "dirty-g3", &untexted).is_none());
     }
 
