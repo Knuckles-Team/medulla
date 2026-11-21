@@ -204,6 +204,10 @@ pub enum StewardshipOp {
     Apply { request_id: String },
     /// A steward or owner certifies an asset at `level`.
     Certify { asset: String, level: String },
+    /// A steward or owner marks a glossary term or column critical
+    /// (MEDULLA-TYPED-PACKS-R802.8). The element then needs an owner, a steward and one
+    /// active quality rule; a repeat refreshes what it misses.
+    MarkCritical { element: String },
 }
 
 impl StewardshipOp {

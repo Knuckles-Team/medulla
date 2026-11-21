@@ -72,3 +72,4 @@ pub mod meeting_transcript;
 pub mod stored_query;
 // MEDULLA-BUSINESS-OPS-R003.1: the owner digest as stored queries.
 pub mod business_digest;
+pub mod catalog_queries;

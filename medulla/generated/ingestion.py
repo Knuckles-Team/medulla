@@ -845,6 +845,9 @@ decode_stewardship_open_change_request = contract_decoder("Stewardship", "Stewar
 decode_stewardship_review = contract_decoder("Stewardship", "StewardshipReceipt", "review")
 decode_stewardship_apply = contract_decoder("Stewardship", "StewardshipReceipt", "apply")
 decode_stewardship_certify = contract_decoder("Stewardship", "StewardshipReceipt", "certify")
+decode_stewardship_mark_critical = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "mark_critical"
+)
 send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
 decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
 send_measure_ingest_throughput = contract_sender(

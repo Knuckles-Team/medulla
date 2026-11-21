@@ -174,6 +174,12 @@ fn stewardship_ops() -> Vec<(
                 level: "gold".to_string(),
             },
         ),
+        (
+            "Stewardship.mark_critical",
+            StewardshipOp::MarkCritical {
+                element: "col:orders.total".to_string(),
+            },
+        ),
     ]
 }
 

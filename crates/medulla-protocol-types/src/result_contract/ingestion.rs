@@ -107,6 +107,7 @@ method_results! {
     StewardshipReview(Stewardship / "review") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     StewardshipApply(Stewardship / "apply") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     StewardshipCertify(Stewardship / "certify") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipMarkCritical(Stewardship / "mark_critical") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;

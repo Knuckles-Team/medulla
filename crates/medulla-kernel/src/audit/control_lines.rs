@@ -174,6 +174,9 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 }
                 StewardshipOp::Apply { request_id } => format!("STEWARDSHIP|apply|{request_id}"),
                 StewardshipOp::Certify { asset, .. } => format!("STEWARDSHIP|certify|{asset}"),
+                StewardshipOp::MarkCritical { element } => {
+                    format!("STEWARDSHIP|mark_critical|{element}")
+                }
             })
         }
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.

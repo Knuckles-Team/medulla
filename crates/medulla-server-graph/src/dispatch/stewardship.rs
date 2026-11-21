@@ -31,7 +31,7 @@ use medulla_core::stewardship::{
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
     StewardshipApply, StewardshipAssign, StewardshipCertify, StewardshipOpenChangeRequest,
-    StewardshipReview, StewardshipRevoke,
+    StewardshipMarkCritical, StewardshipReview, StewardshipRevoke,
 };
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::ServerErrorCode;
@@ -67,6 +67,9 @@ pub async fn dispatch_stewardship(
         StewardshipOp::Review { .. } => typed_response::<StewardshipReview>(req_id, result),
         StewardshipOp::Apply { .. } => typed_response::<StewardshipApply>(req_id, result),
         StewardshipOp::Certify { .. } => typed_response::<StewardshipCertify>(req_id, result),
+        StewardshipOp::MarkCritical { .. } => {
+            typed_response::<StewardshipMarkCritical>(req_id, result)
+        }
     }
 }
 
@@ -276,6 +279,7 @@ async fn serve(
         } => review(state, target, request_id, *approve).await,
         StewardshipOp::Apply { request_id } => apply(state, target, request_id).await,
         StewardshipOp::Certify { asset, level } => certify_asset(state, target, asset, level).await,
+        StewardshipOp::MarkCritical { element } => mark_critical(state, target, element).await,
     }
 }
 
@@ -683,4 +687,108 @@ async fn certify_asset(
     )
     .await?;
     receipt(state, target, id, &scopes, None, Some(certification)).await
+}
+
+/// Whether the tenant holds an approved quality rule declared on `element`.
+async fn has_active_quality_rule(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    element: &str,
+) -> Result<bool, String> {
+    use medulla_h_jobs::quality_rule::{QUALITY_RULE_LABEL, RULE_BODY_PROPERTY, RULE_STATE_PROPERTY};
+    let tenant = target.verified.tenant();
+    let mut after: Option<String> = None;
+    loop {
+        let response = super::graph_pipeline::dispatch_graph_op(
+            state,
+            target.graph,
+            target.req_id,
+            target.caller,
+            target.verified,
+            Method::GetNodesByLabel {
+                label: QUALITY_RULE_LABEL.to_string(),
+                after: after.clone(),
+                limit: PAGE,
+            },
+        )
+        .await;
+        if let Some(refusal) = response.refusal_text() {
+            return Err(refusal);
+        }
+        let Some(ResultPayload::NodeList(nodes)) = response.result else {
+            return Ok(false);
+        };
+        let count = nodes.len();
+        after = nodes.last().map(|(id, _)| id.clone());
+        for (_, properties) in nodes {
+            let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+            let declared_on = text(RULE_BODY_PROPERTY)
+                .and_then(|body| serde_json::from_str::<serde_json::Value>(body).ok())
+                .and_then(|rule| rule.get("target").and_then(serde_json::Value::as_str).map(str::to_string));
+            let approved = properties
+                .get(RULE_STATE_PROPERTY)
+                .and_then(|state| state.get("state").and_then(serde_json::Value::as_str))
+                .or_else(|| text(RULE_STATE_PROPERTY))
+                == Some("approved");
+            if text(TENANT_PROPERTY) == Some(tenant) && approved && declared_on.as_deref() == Some(element) {
+                return Ok(true);
+            }
+        }
+        if count < PAGE {
+            return Ok(false);
+        }
+    }
+}
+
+/// Mark `element` critical and record what it misses (MEDULLA-TYPED-PACKS-R802.8). The marker
+/// must be an owner or steward of the element; the stored query `catalog.critical_gaps` lists
+/// every element whose `gaps` is not empty.
+async fn mark_critical(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    element: &str,
+) -> Result<StewardshipReceipt, String> {
+    use medulla_source_types::catalog_queries::CRITICAL_ELEMENT_LABEL;
+    if element.trim().is_empty() {
+        return Err(invalid("a critical element names its term or column"));
+    }
+    let scopes = TargetScopes {
+        asset: Some(element.to_string()),
+        concept_scheme: None,
+        domain: None,
+    };
+    let assignments = load_assignments(state, target).await?;
+    let principal = target.verified.agent_id();
+    if !reviewers(&assignments, &scopes).iter().any(|r| r == principal) {
+        return Err(role_missing("marking critical needs the steward or owner role of the element"));
+    }
+    let (owners, stewards) = governing(&assignments, &scopes);
+    let mut gaps = Vec::new();
+    if owners.is_empty() {
+        gaps.push("owner");
+    }
+    if stewards.is_empty() {
+        gaps.push("steward");
+    }
+    if !has_active_quality_rule(state, target, element).await? {
+        gaps.push("quality_rule");
+    }
+    let tenant = target.verified.tenant();
+    let id = format!("critical_element:{tenant}:{element}");
+    let mut properties = Properties::new();
+    properties.insert("type".into(), CRITICAL_ELEMENT_LABEL.into());
+    properties.insert("element".into(), element.into());
+    properties.insert("marked_by".into(), principal.into());
+    properties.insert("gaps".into(), gaps.join(",").into());
+    properties.insert(TENANT_PROPERTY.into(), tenant.into());
+    write(
+        state,
+        target,
+        Method::AddNode {
+            node_id: id.clone(),
+            properties_msgpack: encode(&properties)?,
+        },
+    )
+    .await?;
+    receipt(state, target, id, &scopes, None, None).await
 }

@@ -213,3 +213,42 @@ def test_change_request_journey_is_tenant_scoped(served) -> None:
             )
     finally:
         foreign.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.8")
+def test_critical_element_gaps_reported(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R802.8: a critical element lists what it misses."""
+    graph, client = served
+    # A principal that governs nothing cannot mark an element critical.
+    with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
+        _op(client, graph, {"op": "mark_critical", "element": ASSET})
+    support.assign_stewards(client, graph, ASSET, support.principal())
+    marked = _op(client, graph, {"op": "mark_critical", "element": ASSET})
+    node = _decode(client._send("GetNodeProperties", {"node_id": marked["id"]}, graph))
+    # A steward is assigned; no owner and no active quality rule exist yet.
+    assert node["gaps"] == "owner,quality_rule"
+    assert node["element"] == ASSET
+    rule = {
+        "id": "total-present",
+        "target": ASSET,
+        "dimension": "completeness",
+        "expression": "total IS NOT NULL",
+        "threshold": 0.9,
+        "severity": "warning",
+    }
+    _decode(client._send("QualityRulePut", {"rule": rule}, graph))
+    _op(
+        client,
+        graph,
+        {
+            "op": "assign",
+            "assignment": {
+                "scope": {"kind": "asset", "id": ASSET},
+                "role": "owner",
+                "principal": support.principal(),
+            },
+        },
+    )
+    _op(client, graph, {"op": "mark_critical", "element": ASSET})
+    node = _decode(client._send("GetNodeProperties", {"node_id": marked["id"]}, graph))
+    assert node["gaps"] == ""

@@ -33116,13 +33116,21 @@ class StewardshipOpCertify(BaseModel):
     level: str
 
 
+class StewardshipOpMarkCritical(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["mark_critical"]
+    element: str
+
+
 StewardshipOp = Annotated[
     StewardshipOpAssign
     | StewardshipOpRevoke
     | StewardshipOpOpenChangeRequest
     | StewardshipOpReview
     | StewardshipOpApply
-    | StewardshipOpCertify,
+    | StewardshipOpCertify
+    | StewardshipOpMarkCritical,
     Field(discriminator="op"),
 ]
 
@@ -39816,6 +39824,7 @@ __all__ = [
     "StewardshipOpReview",
     "StewardshipOpApply",
     "StewardshipOpCertify",
+    "StewardshipOpMarkCritical",
     "ClaimKind",
     "ClaimState",
     "ClaimProvenance",
