@@ -1,3 +1,4 @@
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix fibo-fi: <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/> .
 @prefix fibo-org: <https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/Organizations/> .
 @prefix bibo: <http://purl.org/ontology/bibo/> .
@@ -473,3 +474,60 @@ organizes under one worldview instead of floating per-document tags.""" .
 :WorldViewScheme a skos:ConceptScheme ;
     rdfs:label "WorldView Subject-Domain Scheme" ;
     skos:prefLabel "WorldView" .
+
+:District a owl:Class ;
+    rdfs:label "District" ;
+    rdfs:comment "One served district of a tenant's world layout. Buildings sit in it through :locatedIn. A :Place of the core ontology (MEDULLA-WORLD-VIEW-R001)." ;
+    rdfs:subClassOf :Place .
+
+:Building a owl:Class ;
+    rdfs:label "Building" ;
+    rdfs:comment "One connector's building in a district. It carries a :position and an extent, is :locatedIn its district, and points at the connector pack facts (MEDULLA-WORLD-VIEW-R001)." ;
+    rdfs:subClassOf :Place .
+
+:Room a owl:Class ;
+    rdfs:label "Room" ;
+    rdfs:comment "One interior unit of a building, reached by :hasInterior from its building. It points at agent, memory or tool-call facts (MEDULLA-WORLD-VIEW-R001)." ;
+    rdfs:subClassOf :Place .
+
+:Street a owl:Class ;
+    rdfs:label "Street" ;
+    rdfs:comment "One walkable route in a district. Its :position is an ordered list of vertices (MEDULLA-WORLD-VIEW-R001)." ;
+    rdfs:subClassOf :Place .
+
+:hasInterior a owl:ObjectProperty ;
+    rdfs:label "has interior" ;
+    rdfs:comment "Links a :Building to a :Room inside it." ;
+    rdfs:domain :Building ;
+    rdfs:range :Room .
+
+:position a owl:DatatypeProperty ;
+    rdfs:label "position" ;
+    rdfs:comment "Coordinates of a spatial entity. A building carries x and z plus its extent (width, depth); a street carries ordered vertices. Derived placement is never stored; only manual overrides are." ;
+    rdfs:domain :Place .
+
+:positionX a owl:DatatypeProperty ;
+    rdfs:label "position x" ;
+    rdfs:comment "The x coordinate of a spatial entity." ;
+    rdfs:subPropertyOf :position ;
+    rdfs:domain :Place ;
+    rdfs:range xsd:decimal .
+
+:positionZ a owl:DatatypeProperty ;
+    rdfs:label "position z" ;
+    rdfs:comment "The z coordinate of a spatial entity." ;
+    rdfs:subPropertyOf :position ;
+    rdfs:domain :Place ;
+    rdfs:range xsd:decimal .
+
+:extentWidth a owl:DatatypeProperty ;
+    rdfs:label "extent width" ;
+    rdfs:comment "The width of a building's footprint." ;
+    rdfs:domain :Building ;
+    rdfs:range xsd:decimal .
+
+:extentDepth a owl:DatatypeProperty ;
+    rdfs:label "extent depth" ;
+    rdfs:comment "The depth of a building's footprint." ;
+    rdfs:domain :Building ;
+    rdfs:range xsd:decimal .
