@@ -1,0 +1,62 @@
+name: Nightly work-item budgets
+
+# MEDULLA-DURABLE-KERNEL-R028.4.2, R028.5.4 and R039.4.2: run the three work-item
+# groups of `benches/redb_write_latency_bench.rs` (owner-bound recovery,
+# current-plan publication and paired pending consumption) at 04:00 UTC on main.
+# The bench exits non-zero when any group misses its budget, which fails the run;
+# its receipts under `benches/receipts/` are uploaded as a build artifact. The
+# workflow never runs on a pull request.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Exit 143 (SIGTERM) mid-compile on the 4-vCPU/16 GiB hosted runner is memory pressure from
+  # many parallel rustc/LTO jobs over the `full` tree; two jobs fit, as in medulla-release-x86.yml.
+  CARGO_BUILD_JOBS: "2"
+
+jobs:
+  work-item-budgets:
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 180
+    # A full medulla build exhausts a hosted runner (shutdown signal mid-compile); use the warm build runners.
+    runs-on:
+      group: medulla-warm
+      labels: [self-hosted, medulla-warm]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # actions/setup-python downloads a prebuilt CPython that requires AVX2,
+      # which the self-hosted runners lack; uv manages its own Python builds.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.11.7'
+          python-version: '3.14'
+          activate-environment: true
+
+      - id: rust-toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      # Graph sizes 0 skips the graph-size groups; only the three work-item groups run.
+      - name: Run the work-item budget groups
+        env:
+          MEDULLA_WRITE_LATENCY_SIZES: "0"
+          MEDULLA_BENCH_RELEASE: ${{ github.sha }}
+        run: cargo bench --features full --bench redb_write_latency_bench
+
+      - name: Upload the receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: work-item-budgets
+          path: benches/receipts/
+          if-no-files-found: warn
