@@ -204,8 +204,9 @@ async fn publish_policy(
         ),
         component: draft,
         evaluation_receipt_digest: None,
+        prompt_blueprint: None,
     };
-    let committed = store.publish_component(request).expect("publish policy");
+    let committed = store.publish_component(request, None).expect("publish policy");
     ComponentDependency {
         component_id: id.to_string(),
         kind: AgentComponentKind::DecisionPolicy,

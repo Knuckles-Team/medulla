@@ -26,6 +26,8 @@ from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.agent_component import (
     AgentComponentBlueprintExportRequest,
+    AgentComponentContentRequest,
+    AgentComponentOpCurrent,
     AgentComponentOpRecordSourceEffect,
 )
 from medulla.generated.connector_pack import (
@@ -33,6 +35,9 @@ from medulla.generated.connector_pack import (
     PackEntryKind,
 )
 from medulla.generated.storage import (
+    send_agent_component,
+    send_agent_component_content,
+    send_agent_component_current,
     send_agent_component_export_blueprint,
     send_agent_component_record_source_effect,
 )
@@ -242,5 +247,126 @@ async def test_approved_source_effect_dependency() -> None:
         )
         assert recorded.recorded is True
         assert recorded.revision == 1
+    finally:
+        await client.close()
+
+
+def _publish_context(expected_revision: int) -> dict[str, Any]:
+    principal = "principal:sha256:" + "a" * 64
+    return {
+        "request_id": 0,
+        "principal": principal,
+        "caller_principal": principal,
+        "attempt_nonce": uuid.uuid4().hex * 2,
+        "tenant_id": TEST_TENANT,
+        "actor_scope": "placeholder",
+        "purpose_id": "placeholder",
+        "policy_revision": "placeholder",
+        "policy_digest": "sha256:" + "0" * 64,
+        "policy_decision_id": "placeholder",
+        "idempotency_key": uuid.uuid4().hex,
+        "expected_revision": expected_revision,
+        "trace_id": None,
+        "created_at_ms": 0,
+    }
+
+
+def _prompt_draft(component_id: str, pin: str) -> dict[str, Any]:
+    return {
+        "component_id": component_id,
+        "kind": "system_prompt",
+        "version": "1.0.0",
+        "content_digest": "sha256:" + pin,
+        "content_ref": None,
+        "facts": {
+            "facts": "system_prompt",
+            "prompt_mode": "static",
+            "token_estimate": 16,
+            "variables": [],
+            "body_sha256": pin,
+            "schema_revision": 1,
+        },
+        "provenance": {"origin": "native"},
+        "summary": "natively published prompt",
+        "attributes": {},
+        "tenant_id": TEST_TENANT,
+        "actor_scope": "placeholder",
+        "purpose_id": "placeholder",
+        "policy_digest": "sha256:" + "0" * 64,
+        "source_revision": "rev-1",
+        "source_revision_digest": "sha256:" + "8" * 64,
+    }
+
+
+async def _publish_prompt(
+    client: MedullaClient,
+    component_id: str,
+    blueprint: str,
+    pin: str,
+    expected_revision: int,
+) -> Any:
+    request = {
+        "context": _publish_context(expected_revision),
+        "component": _prompt_draft(component_id, pin),
+        "evaluation_receipt_digest": None,
+        "prompt_blueprint": blueprint,
+    }
+    return await send_agent_component(
+        client,
+        {"op": {"op": "publish", "request": request}},
+        idempotency_key=f"prompt-publish-{uuid.uuid4().hex}",
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.7")
+@pytest.mark.asyncio
+async def test_prompt_owner_commit() -> None:
+    client = await connect()
+    component_id = f"prompt:native-{uuid.uuid4().hex[:12]}"
+    blueprint = json.dumps(
+        {"task": "summarise the ticket", "schema_revision": 1},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    pin = hashlib.sha256(blueprint.encode()).hexdigest()
+    try:
+        await _publish_prompt(client, component_id, blueprint, pin, 0)
+        current = await send_agent_component_current(
+            client,
+            AgentComponentOpCurrent(
+                op="current", tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert current is not None and current.entry_revision == 1
+        content = await send_agent_component_content(
+            client,
+            AgentComponentContentRequest(
+                tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert content.body == blueprint.encode()
+        assert content.content_digest == "sha256:" + pin
+
+        # A second publish at the old expected revision is stale; the head stays at 1.
+        with pytest.raises(EngineResponseError, match="STALE_AGENT_LIBRARY_REVISION"):
+            await _publish_prompt(client, component_id, blueprint, pin, 0)
+        current = await send_agent_component_current(
+            client,
+            AgentComponentOpCurrent(
+                op="current", tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert current is not None and current.entry_revision == 1
+
+        # A body whose hash differs from the pin is refused.
+        other_id = f"prompt:native-{uuid.uuid4().hex[:12]}"
+        with pytest.raises(EngineResponseError, match="BODY_DIGEST_MISMATCH"):
+            await _publish_prompt(client, other_id, blueprint, "f" * 64, 0)
+
+        # A blueprint with no task is refused by name.
+        no_task = json.dumps({"schema_revision": 1}, separators=(",", ":"))
+        no_task_pin = hashlib.sha256(no_task.encode()).hexdigest()
+        with pytest.raises(EngineResponseError, match="PROMPT_SCHEMA_INVALID"):
+            await _publish_prompt(client, other_id, no_task, no_task_pin, 0)
     finally:
         await client.close()

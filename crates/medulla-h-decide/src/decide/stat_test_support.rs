@@ -155,8 +155,9 @@ impl Harness {
             ),
             component: draft,
             evaluation_receipt_digest: receipt,
+            prompt_blueprint: None,
         };
-        let committed = self.store.publish_component(request)?;
+        let committed = self.store.publish_component(request, None)?;
         Ok(ComponentDependency {
             component_id: id,
             kind,
@@ -257,8 +258,9 @@ impl Harness {
             ),
             component: draft,
             evaluation_receipt_digest: None,
+            prompt_blueprint: None,
         };
-        let committed = self.store.publish_component(request)?;
+        let committed = self.store.publish_component(request, None)?;
         Ok(ComponentDependency {
             component_id: id.to_string(),
             kind,

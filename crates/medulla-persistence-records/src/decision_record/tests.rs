@@ -37,7 +37,8 @@ fn publish(
             context: mutation_context(store, TENANT, &key, nonce, 0, "agent-component:publish"),
             evaluation_receipt_digest: None,
             component: draft,
-        })
+            prompt_blueprint: None,
+        }, None)
         .expect("publishes")
         .result
         .component
@@ -408,7 +409,8 @@ fn a_policy_component_whose_body_does_not_match_its_digest_is_refused() {
             ),
             evaluation_receipt_digest: None,
             component: policy_draft(&policy, wrong),
-        })
+            prompt_blueprint: None,
+        }, None)
         .expect_err("refused");
     assert!(error.starts_with("POLICY_BODY_UNAVAILABLE: "), "{error}");
 }

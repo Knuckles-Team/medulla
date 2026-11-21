@@ -41,7 +41,8 @@ fn publish(
             context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
             evaluation_receipt_digest: None,
             component: draft,
-        })
+            prompt_blueprint: None,
+        }, None)
         .map(|_| ())
 }
 

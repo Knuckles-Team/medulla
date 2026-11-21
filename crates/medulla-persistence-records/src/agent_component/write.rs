@@ -10,9 +10,62 @@ use redb::ReadableTable;
 
 use super::super::agent_library::validate_context;
 use super::super::agent_revision::{
-    require_context_tenant, retire_revision, revision_scope, write_revision, RevisionWrite,
+    require_context_tenant, retire_revision, revision_scope, write_revision_with_rows,
+    RevisionWrite,
 };
 use super::*;
+use crate::connector_pack::commit::{apply_holders, ConnectorPackHolderCommit};
+
+/// The refusal a publish returns when its staged body does not match its pin
+/// (MEDULLA-TYPED-PACKS-R002.7).
+fn staged_body_invalid(why: &str) -> String {
+    format!(
+        "{}: {why}",
+        medulla_agent_types::agent_component::facts::PROMPT_SCHEMA_INVALID
+    )
+}
+
+/// A pinned system prompt publishes with exactly the holder its pin names; every
+/// other draft publishes with none.
+fn check_staged_body(
+    request: &AgentComponentPublishRequest,
+    expected_revision: u64,
+    staged_body: Option<&ConnectorPackHolderCommit>,
+) -> Result<(), String> {
+    use medulla_agent_types::agent_component::AgentComponentFacts;
+    let pin = match &request.component.facts {
+        AgentComponentFacts::SystemPrompt {
+            body_sha256: Some(hex),
+            ..
+        } => Some(hex.as_str()),
+        _ => None,
+    };
+    match (pin, staged_body) {
+        (None, None) => Ok(()),
+        (Some(_), None) => Err(staged_body_invalid(
+            "a pinned system prompt publish carries its staged body",
+        )),
+        (None, Some(_)) => Err(staged_body_invalid(
+            "only a pinned system prompt carries a staged body",
+        )),
+        (Some(hex), Some(holder)) => {
+            if holder.body_sha256.to_hex() != hex {
+                return Err(staged_body_invalid("the staged body is not the pinned body"));
+            }
+            if holder.component_id != request.component.component_id {
+                return Err(staged_body_invalid(
+                    "the staged body names another component",
+                ));
+            }
+            if holder.entry_revision != expected_revision + 1 {
+                return Err(staged_body_invalid(
+                    "the staged body names another revision",
+                ));
+            }
+            Ok(())
+        }
+    }
+}
 
 fn prepare_component_entry(
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
@@ -37,10 +90,14 @@ fn prepare_component_entry(
 }
 
 impl AgentLibraryStore {
-    /// Publish the next component revision.
+    /// Publish the next component revision. `staged_body` is the engine body holder
+    /// of a pinned system prompt (MEDULLA-TYPED-PACKS-R002.7): it commits in the same
+    /// owner write as the revision and head, or not at all. Every other publish
+    /// passes `None`.
     pub fn publish_component(
         &self,
         request: AgentComponentPublishRequest,
+        staged_body: Option<ConnectorPackHolderCommit>,
     ) -> Result<AgentComponentWriteResult, String> {
         validate_context(self, &request.context)?;
         request.component.validate()?;
@@ -48,22 +105,27 @@ impl AgentLibraryStore {
         super::super::decision_jobs::require_head_receipt(self, &request)?;
         let (expected_revision, owner) =
             revision_scope(self, &request.context, ComponentLayer::NOUN)?;
+        check_staged_body(&request, expected_revision, staged_body.as_ref())?;
         let txn = self.mutations.open_write(&owner)?;
-        write_revision::<ComponentLayer>(
+        let tenant = request.context.tenant_id.clone();
+        write_revision_with_rows::<ComponentLayer>(
             self,
             txn,
             &owner,
-            component_tables(),
-            RevisionWrite {
-                context: &request.context,
-                kind: AgentComponentMutationKind::Publish,
-                record_id: &request.component.component_id,
-                expected_revision,
-                definition_digest: Some(&request.component.content_digest),
-            },
+            (
+                component_tables(),
+                RevisionWrite {
+                    context: &request.context,
+                    kind: AgentComponentMutationKind::Publish,
+                    record_id: &request.component.component_id,
+                    expected_revision,
+                    definition_digest: Some(&request.component.content_digest),
+                },
+            ),
             |txn, next_revision, replay_context| {
                 prepare_component_entry(txn, &request, next_revision, replay_context)
             },
+            |rows| apply_holders(rows, &tenant, staged_body.as_slice()),
         )
     }
 

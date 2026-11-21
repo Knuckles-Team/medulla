@@ -1325,6 +1325,11 @@ pub struct AgentComponentPublishRequest {
     /// is the one case where "we can evaluate it later" is not recoverable.
     #[serde(default)]
     pub evaluation_receipt_digest: Option<String>,
+    /// The blueprint of a pinned system prompt as canonical JSON text: the exact
+    /// bytes `body_sha256` pins (MEDULLA-TYPED-PACKS-R002.7). Present only with a
+    /// pinned system prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_blueprint: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1862,6 +1867,7 @@ mod tests {
                     context: mutation_context(),
                     component: draft(&format!("shape-{kind:?}"), kind),
                     evaluation_receipt_digest: None,
+                    prompt_blueprint: None,
                 }),
             };
             let wire = serde_json::to_value(&op).unwrap();
@@ -3235,6 +3241,7 @@ mod tests {
                 AgentComponentKind::DecisionRecord,
             ),
             evaluation_receipt_digest: None,
+            prompt_blueprint: None,
         };
         let error = validate_publish(&request).expect_err("must be refused");
         assert!(error.contains("FORBIDDEN_COMPONENT_KIND"), "got: {error}");
@@ -3259,6 +3266,7 @@ mod tests {
             context: mutation_context(),
             component: draft("decision-head-a", AgentComponentKind::DecisionHead),
             evaluation_receipt_digest: None,
+            prompt_blueprint: None,
         };
         let error = validate_publish(&request).expect_err("must be refused");
         assert!(

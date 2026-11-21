@@ -34,7 +34,8 @@ fn publish_invariant(h: &Harness, tenant: &str, nonce: u8, invariant: &RuleInvar
             ),
             evaluation_receipt_digest: None,
             component: draft,
-        })
+            prompt_blueprint: None,
+        }, None)
         .expect("invariant publishes");
 }
 

@@ -224,7 +224,8 @@ pub(super) fn promote(
         context,
         evaluation_receipt_digest: None,
         component: draft,
-    })?;
+        prompt_blueprint: None,
+    }, None)?;
     Ok(RulePromotionResult {
         rule_id: rule.rule_id,
         verdict,

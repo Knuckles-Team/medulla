@@ -75,7 +75,8 @@ fn publish(
             ),
             evaluation_receipt_digest: None,
             component: draft,
-        })
+            prompt_blueprint: None,
+        }, None)
         .expect("publishes");
 }
 

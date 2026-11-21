@@ -111,7 +111,7 @@ pub async fn handle_agent_component(
     };
     match op {
         AgentComponentOp::Publish { request } => {
-            component_publish(&store, req_id, verified, request)
+            component_publish(state, &store, req_id, verified, request).await
         }
         AgentComponentOp::Retire { request } => component_retire(&store, req_id, verified, request),
         AgentComponentOp::Current {
@@ -167,8 +167,12 @@ fn component_record_source_effect(
     }
 }
 
+/// `AgentComponent.publish`: a pinned system prompt stages its blueprint in the engine
+/// body store, then the owner write commits revision, head, body holder and receipt
+/// together (MEDULLA-TYPED-PACKS-R002.7).
 #[cfg(feature = "redb")]
-fn component_publish(
+async fn component_publish(
+    state: &Arc<RwLock<ServerState>>,
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
@@ -190,7 +194,11 @@ fn component_publish(
     request.component.purpose_id = context.purpose_id.clone();
     request.component.policy_digest = context.policy_digest.clone();
     request.context = context;
-    match store.publish_component(*request) {
+    let staged = match stage_prompt_blueprint(state, &mut request).await {
+        Ok(staged) => staged,
+        Err(error) => return Response::err(req_id, error),
+    };
+    match store.publish_component(*request, staged) {
         Ok(result) => Response::ok(
             req_id,
             ResultPayload::of_ref::<
@@ -199,6 +207,136 @@ fn component_publish(
         ),
         Err(error) => Response::err(req_id, error),
     }
+}
+
+/// Check the blueprint of a pinned system prompt against its pins and the bounded
+/// profile, then stage its bytes in the engine body store. Returns the holder the
+/// owner write commits with the revision, or `None` for a publish that carries no
+/// blueprint. No refusal before the staging call stages a body.
+#[cfg(feature = "redb")]
+async fn stage_prompt_blueprint(
+    state: &Arc<RwLock<ServerState>>,
+    request: &mut medulla_agent_types::agent_component::AgentComponentPublishRequest,
+) -> Result<Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>, String>
+{
+    use medulla_agent_types::agent_component::facts::{
+        validate_prompt_blueprint, PromptLimits, PROMPT_SCHEMA_INVALID,
+    };
+    use medulla_agent_types::agent_component::{AgentComponentFacts, PromptBlueprintIdentity};
+
+    let pin = match &request.component.facts {
+        AgentComponentFacts::SystemPrompt {
+            body_sha256: Some(hex),
+            ..
+        } => Some(hex.clone()),
+        _ => None,
+    };
+    let (pin, blueprint) = match (pin, request.prompt_blueprint.clone()) {
+        (None, None) => return Ok(None),
+        (Some(_), None) => {
+            return Err(format!(
+                "{PROMPT_SCHEMA_INVALID}: a pinned system prompt publish carries its blueprint"
+            ))
+        }
+        (None, Some(_)) => {
+            return Err(format!(
+                "{PROMPT_SCHEMA_INVALID}: only a pinned system prompt carries a blueprint"
+            ))
+        }
+        (Some(pin), Some(blueprint)) => (pin, blueprint),
+    };
+    let sha256 = medulla_types::contract::Digest256::sha256(blueprint.as_bytes());
+    let hex = sha256.to_hex();
+    if hex != pin || request.component.content_digest != format!("sha256:{hex}") {
+        return Err(
+            "BODY_DIGEST_MISMATCH: the prompt blueprint bytes differ from the pinned digest"
+                .to_string(),
+        );
+    }
+    request.component.content_ref = Some(format!("eg-body:sha256:{hex}"));
+    let value: serde_json::Value = serde_json::from_str(&blueprint)
+        .map_err(|error| format!("{PROMPT_SCHEMA_INVALID}: blueprint is not JSON: {error}"))?;
+    let expected_revision = request
+        .context
+        .expected_revision
+        .ok_or_else(|| "agent component writes require an explicit expected_revision".to_string())?;
+    let entry_revision = expected_revision + 1;
+    let identity = PromptBlueprintIdentity::derive(
+        &request.context.tenant_id,
+        &request.component.component_id,
+        entry_revision,
+        &request.component.facts,
+        &request.component.provenance,
+    )?;
+    validate_prompt_blueprint(&value, &identity, &PromptLimits::default())
+        .map_err(|code| format!("{code}: the prompt blueprint is not admitted"))?;
+    stage_engine_body(
+        state,
+        &request.context.tenant_id,
+        &request.component.component_id,
+        entry_revision,
+        sha256,
+        blueprint.into_bytes(),
+        request.context.created_at_ms,
+    )
+    .await
+    .map(Some)
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn stage_engine_body(
+    state: &Arc<RwLock<ServerState>>,
+    tenant_id: &str,
+    component_id: &str,
+    entry_revision: u64,
+    sha256: medulla_types::contract::Digest256,
+    body: Vec<u8>,
+    created_at_ms: u64,
+) -> Result<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit, String>
+{
+    use medulla_server_blob::blob::BlobStateExt;
+
+    let blob = state.read().await.blob_cursors().cloned().ok_or_else(|| {
+        "COMPONENT_BODY_UNAVAILABLE: the engine body store is disabled".to_string()
+    })?;
+    let tenant = tenant_id.to_string();
+    let staged = tokio::task::spawn_blocking(move || {
+        blob.store.put_engine_bodies(
+            &tenant,
+            &[medulla_server_blob::blob::engine_bodies::EngineBody { sha256, body }],
+            created_at_ms,
+        )
+    })
+    .await
+    .map_err(|error| format!("component body staging task failed: {error}"))??;
+    let stored = staged.into_iter().next().ok_or_else(|| {
+        "COMPONENT_BODY_UNAVAILABLE: the engine body store staged no body".to_string()
+    })?;
+    Ok(
+        medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit {
+            body_sha256: sha256,
+            component_id: component_id.to_string(),
+            entry_revision,
+            row: medulla_persistence_records::connector_pack::ConnectorPackBodyHolderRow {
+                engine_manifest_digest: stored.manifest_digest,
+                length: stored.length,
+            },
+        },
+    )
+}
+
+#[cfg(all(feature = "redb", not(feature = "blob")))]
+async fn stage_engine_body(
+    _state: &Arc<RwLock<ServerState>>,
+    _tenant_id: &str,
+    _component_id: &str,
+    _entry_revision: u64,
+    _sha256: medulla_types::contract::Digest256,
+    _body: Vec<u8>,
+    _created_at_ms: u64,
+) -> Result<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit, String>
+{
+    Err("COMPONENT_BODY_UNAVAILABLE: the engine body store is disabled".to_string())
 }
 
 #[cfg(feature = "redb")]

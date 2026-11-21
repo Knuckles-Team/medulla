@@ -45,7 +45,8 @@ fn publish(store: &AgentLibraryStore, tenant: &str, id: &str, class: &str, nonce
             context: mutation_context(store, tenant, id, nonce, 0, "agent-component:publish"),
             component,
             evaluation_receipt_digest: None,
-        })
+            prompt_blueprint: None,
+        }, None)
         .unwrap();
 }
 

@@ -284,6 +284,7 @@ class AgentComponentPublishRequest(BaseModel):
     component: AgentComponentDraft
     context: AgentLibraryMutationContext
     evaluation_receipt_digest: str | None = None
+    prompt_blueprint: str | None = None
 
 
 class AgentComponentRetireRequest(BaseModel):

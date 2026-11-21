@@ -87,7 +87,8 @@ fn publish_policy(
             ),
             evaluation_receipt_digest: None,
             component: draft,
-        })
+            prompt_blueprint: None,
+        }, None)
         .expect("the policy publishes");
     ComponentDependency {
         component_id: id.to_string(),

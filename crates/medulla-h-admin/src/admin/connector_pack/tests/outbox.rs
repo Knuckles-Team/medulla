@@ -893,6 +893,7 @@ async fn publish_native(
                             context: publish_context,
                             component: draft,
                             evaluation_receipt_digest: None,
+                            prompt_blueprint: None,
                         },
                     ),
                 },

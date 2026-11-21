@@ -352,7 +352,7 @@ pub(super) fn apply_catalog_rows(
     apply_holders(write, tenant, rows.holders)
 }
 
-fn apply_holders(
+pub(crate) fn apply_holders(
     write: &PackOwnerWrite<'_>,
     tenant: &str,
     holders_to_write: &[ConnectorPackHolderCommit],

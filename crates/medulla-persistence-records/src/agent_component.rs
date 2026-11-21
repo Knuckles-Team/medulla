@@ -632,7 +632,7 @@ pub(crate) fn seed_component_for_test(
                         source_revision: "component-seed:1".to_string(),
                         ..test_component_draft(tenant_id, component_id)
                     },
-                })
+                }, None)
                 .expect("the fixture's component publishes")
                 .result
                 .component
@@ -691,8 +691,9 @@ pub mod tests {
     use super::*;
     use medulla_agent_types::{
         agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
-        agent_component::AgentComponentSearchRequest, agent_component::ComponentDependency,
-        agent_component::ComponentProvenance, agent_component::ToolEffect,
+        agent_component::AgentComponentFacts, agent_component::AgentComponentSearchRequest,
+        agent_component::ComponentDependency, agent_component::ComponentProvenance,
+        agent_component::ToolEffect,
     };
 
     fn digest(byte: char) -> String {
@@ -745,7 +746,8 @@ pub mod tests {
                 ),
                 evaluation_receipt_digest: None,
                 component: mcp_server_draft(tenant_id),
-            })
+                prompt_blueprint: None,
+            }, None)
             .expect("the fixture mcp server seeds");
     }
 
@@ -803,7 +805,8 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         assert!(!published.replayed);
         assert_eq!(published.result.component.entry_revision, 1);
@@ -813,6 +816,96 @@ pub mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(current, published.result.component);
+    }
+
+    fn pinned_prompt_draft(component_id: &str, hex: &str) -> AgentComponentDraft {
+        AgentComponentDraft {
+            kind: AgentComponentKind::SystemPrompt,
+            content_digest: format!("sha256:{hex}"),
+            content_ref: Some(format!("eg-body:sha256:{hex}")),
+            facts: AgentComponentFacts::SystemPrompt {
+                prompt_mode: medulla_agent_types::agent_component::PromptMode::Static,
+                token_estimate: 16,
+                variables: Vec::new(),
+                body_sha256: Some(hex.to_string()),
+                schema_revision: Some(1),
+            },
+            ..super::test_component_draft("tenant-a", component_id)
+        }
+    }
+
+    fn staged_holder(
+        hex: &str,
+        component_id: &str,
+        entry_revision: u64,
+    ) -> crate::connector_pack::commit::ConnectorPackHolderCommit {
+        crate::connector_pack::commit::ConnectorPackHolderCommit {
+            body_sha256: medulla_types::contract::Digest256::parse(hex).unwrap(),
+            component_id: component_id.to_string(),
+            entry_revision,
+            row: crate::connector_pack::ConnectorPackBodyHolderRow {
+                engine_manifest_digest: format!("sha256:{}", "2".repeat(64)),
+                length: 12,
+            },
+        }
+    }
+
+    fn holder_rows(store: &AgentLibraryStore) -> usize {
+        use redb::ReadableTable;
+        let read = store.read().unwrap();
+        let table = read
+            .open_owner_table(medulla_storage::CONNECTOR_PACK_BODY_HOLDERS)
+            .unwrap();
+        let count = table.iter().unwrap().count();
+        count
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R002.7
+    #[test]
+    fn prompt_publish_commits_one_holder_with_its_revision() {
+        let (_dir, store) = open_store();
+        let hex = "3".repeat(64);
+        let id = "prompt:native";
+        let request = |key: &str, nonce: u8, expected: u64| AgentComponentPublishRequest {
+            context: context(&store, key, nonce, expected, "agent-component:publish"),
+            evaluation_receipt_digest: None,
+            component: pinned_prompt_draft(id, &hex),
+            prompt_blueprint: None,
+        };
+
+        // A pinned draft with no holder, and a holder for another revision, refuse.
+        let missing = store.publish_component(request("key-a", 1, 0), None);
+        assert!(missing.unwrap_err().contains("PROMPT_SCHEMA_INVALID"));
+        let wrong = store.publish_component(request("key-b", 2, 0), Some(staged_holder(&hex, id, 2)));
+        assert!(wrong.unwrap_err().contains("PROMPT_SCHEMA_INVALID"));
+        assert_eq!(holder_rows(&store), 0);
+        assert!(store.current_component("tenant-a", id).unwrap().is_none());
+
+        // The publish commits revision 1 and exactly one holder row.
+        let published = store
+            .publish_component(request("key-c", 3, 0), Some(staged_holder(&hex, id, 1)))
+            .unwrap();
+        assert_eq!(published.result.component.entry_revision, 1);
+        assert_eq!(holder_rows(&store), 1);
+        let pointer = store
+            .connector_pack_content_pointer("tenant-a", id, None)
+            .unwrap();
+        assert_eq!(pointer.entry_revision, 1);
+        assert_eq!(pointer.length, 12);
+        assert_eq!(pointer.body_sha256.to_hex(), hex);
+
+        // A stale expected revision refuses and leaves one row and the head at 1.
+        let stale = store.publish_component(request("key-d", 4, 0), Some(staged_holder(&hex, id, 1)));
+        assert!(stale.unwrap_err().contains("STALE_AGENT_LIBRARY_REVISION"));
+        assert_eq!(holder_rows(&store), 1);
+        assert_eq!(
+            store
+                .current_component("tenant-a", id)
+                .unwrap()
+                .unwrap()
+                .entry_revision,
+            1
+        );
     }
 
     #[test]
@@ -827,7 +920,8 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         let mut retry = context(&store, "key-1", 2, 0, "agent-component:publish");
         retry.created_at_ms = 99;
@@ -840,7 +934,8 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         assert!(replayed.replayed);
         assert_eq!(replayed.result, first.result);
@@ -866,7 +961,8 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: component.clone(),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
 
         let replayed = store
@@ -874,7 +970,8 @@ pub mod tests {
                 context: context(&store, "key-1", 2, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: component.clone(),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         assert!(replayed.replayed);
 
@@ -883,7 +980,8 @@ pub mod tests {
                 context: context(&store, "key-1", 2, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component,
-            })
+                prompt_blueprint: None,
+            }, None)
             .expect_err("a replay nonce must be consumed before the replay returns");
         assert!(error.contains("REPLAY_NONCE_CONSUMED"), "got: {error}");
         assert_eq!(
@@ -909,7 +1007,8 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         assert_eq!(
             super::super::agent_fixtures::layers_holding(&store, "tenant-a", "same-id"),
@@ -934,7 +1033,8 @@ pub mod tests {
                         "eg:capability/retrieval/web-search",
                         ToolEffect::Read,
                     ),
-                })
+                    prompt_blueprint: None,
+                }, None)
                 .unwrap();
         }
         let reopened = AgentLibraryStore::open(path).expect("owner reopens");
@@ -967,7 +1067,8 @@ pub mod tests {
                     context: context(&store, "model-media", 1, 0, "agent-component:publish"),
                     evaluation_receipt_digest: None,
                     component,
-                })
+                    prompt_blueprint: None,
+                }, None)
                 .unwrap();
             expected_digest = store
                 .current_component("tenant-a", "model:media")
@@ -1014,7 +1115,8 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: orphan,
-            })
+                prompt_blueprint: None,
+            }, None)
             .expect_err("an unresolvable provenance pin must be refused");
         assert!(
             error.contains("which does not exist in this tenant"),
@@ -1049,7 +1151,8 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: stale,
-            })
+                prompt_blueprint: None,
+            }, None)
             .expect_err("a digest no server revision carries must be refused");
         assert!(error.contains("that was never published"), "got: {error}");
     }
@@ -1087,7 +1190,8 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: mislabelled,
-            })
+                prompt_blueprint: None,
+            }, None)
             .expect_err("a provenance naming a non-server must be refused");
         assert!(error.contains("but it is a toolset"), "got: {error}");
     }
@@ -1130,7 +1234,8 @@ pub mod tests {
                     ),
                     evaluation_receipt_digest: None,
                     component: tool(id, capability, *effect),
-                })
+                    prompt_blueprint: None,
+                }, None)
                 .unwrap();
         }
     }
@@ -1151,7 +1256,8 @@ pub mod tests {
                     ),
                     evaluation_receipt_digest: None,
                     component: tool_for("tenant-b", id, capability, ToolEffect::Read),
-                })
+                    prompt_blueprint: None,
+                }, None)
                 .unwrap();
         }
     }
@@ -1284,7 +1390,8 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-            })
+                prompt_blueprint: None,
+            }, None)
             .unwrap();
         assert_eq!(
             store
