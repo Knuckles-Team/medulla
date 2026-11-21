@@ -41,6 +41,8 @@ pub enum MemoryError {
     EpisodeWindowInvalid(String),
     #[error("MEMORY_EPISODE_DIGEST_MISMATCH: {0}")]
     EpisodeDigestMismatch(String),
+    #[error("MEMORY_RECORD_MALFORMED: {0}")]
+    RecordMalformed(String),
 }
 
 fn identifier<T: Into<String>>(value: T, field: &str) -> Result<ResourceId, MemoryError> {
@@ -315,6 +317,212 @@ pub enum MemoryKind {
     Rule,
     SearchState,
     SessionNote,
+}
+
+/// The memory tier of a [`MemoryRecord`] (MEDULLA-DECISION-ENGINE-R651.1). The
+/// tier names the graph node `type` the record is stored under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum MemoryTier {
+    Working,
+    Episodic,
+    Procedural,
+    Semantic,
+}
+
+impl MemoryTier {
+    /// The node `type` this tier is stored under.
+    pub fn node_type(self) -> &'static str {
+        match self {
+            Self::Working => "WorkingMemory",
+            Self::Episodic => "EpisodicMemory",
+            Self::Procedural => "ProceduralMemory",
+            Self::Semantic => "SemanticMemory",
+        }
+    }
+
+    /// The tier a node `type` names, or `None` for any other type.
+    pub fn from_node_type(node_type: &str) -> Option<Self> {
+        match node_type {
+            "WorkingMemory" => Some(Self::Working),
+            "EpisodicMemory" => Some(Self::Episodic),
+            "ProceduralMemory" => Some(Self::Procedural),
+            "SemanticMemory" => Some(Self::Semantic),
+            _ => None,
+        }
+    }
+}
+
+/// A media blob attached to a memory record by digest
+/// (MEDULLA-MEDIA-VOCAB-R650.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MediaAttachment {
+    /// SHA-256 of the blob, 64 lowercase hex characters.
+    pub blob_digest: String,
+    pub mime: String,
+    pub byte_len: u64,
+    #[serde(default)]
+    pub derivation_ids: Vec<ResourceId>,
+}
+
+fn default_memory_schema_version() -> u16 {
+    1
+}
+
+/// The schema version a [`MemoryRecord`] is written under.
+pub const MEMORY_RECORD_SCHEMA_VERSION: u16 = 1;
+
+/// One engine-held memory record (MEDULLA-DECISION-ENGINE-R651.1). The
+/// importance, access, decay and forgotten fields are the node properties the
+/// `Reinforce` and `DecayMemories` routes already maintain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryRecord {
+    pub memory_id: ResourceId,
+    pub tenant: TenantId,
+    pub kind: MemoryKind,
+    pub tier: MemoryTier,
+    pub text: String,
+    #[serde(default)]
+    pub provenance_key: Option<ResourceId>,
+    #[serde(default)]
+    pub session_id: Option<ResourceId>,
+    #[serde(default)]
+    pub timestamp_ms: i64,
+    #[serde(default)]
+    pub topics: Vec<String>,
+    #[serde(default)]
+    pub pattern_key: Option<String>,
+    #[serde(default)]
+    pub importance: f64,
+    #[serde(default)]
+    pub access_count: u64,
+    #[serde(default)]
+    pub last_access_ms: i64,
+    #[serde(default)]
+    pub last_decay_ms: i64,
+    #[serde(default)]
+    pub forgotten: bool,
+    #[serde(default)]
+    pub legal_hold: bool,
+    #[serde(default)]
+    pub expires_at_ms: Option<i64>,
+    #[serde(default)]
+    pub support_count: u32,
+    #[serde(default)]
+    pub token_estimate: u32,
+    #[serde(default)]
+    pub attachments: Vec<MediaAttachment>,
+    #[serde(default = "default_memory_schema_version")]
+    pub schema_version: u16,
+}
+
+impl MemoryRecord {
+    /// The node properties this record is stored as. The node `type` is the
+    /// tier's node type; the tier itself is not a separate property.
+    pub fn to_props(&self) -> serde_json::Map<String, serde_json::Value> {
+        let serde_json::Value::Object(mut props) =
+            serde_json::to_value(self).expect("a MemoryRecord always serializes")
+        else {
+            unreachable!("a MemoryRecord serializes as an object")
+        };
+        props.remove("tier");
+        props.insert("type".into(), self.tier.node_type().into());
+        props
+    }
+
+    /// Read a record back from node properties written by [`Self::to_props`]
+    /// or by the existing memory routes (which add only the maintenance
+    /// properties). An unknown property or an unknown node `type` is refused.
+    pub fn from_props(
+        props: &serde_json::Map<String, serde_json::Value>,
+    ) -> Result<Self, MemoryError> {
+        let mut body = props.clone();
+        let node_type = body
+            .remove("type")
+            .and_then(|value| value.as_str().map(str::to_owned))
+            .ok_or_else(|| MemoryError::RecordMalformed("type: missing".into()))?;
+        let tier = MemoryTier::from_node_type(&node_type).ok_or_else(|| {
+            MemoryError::RecordMalformed(format!("type: {node_type} is not a memory tier"))
+        })?;
+        body.insert("tier".into(), serde_json::to_value(tier).expect("tier"));
+        serde_json::from_value(serde_json::Value::Object(body))
+            .map_err(|error| MemoryError::RecordMalformed(error.to_string()))
+    }
+}
+
+/// A run of one session's records joined under the token cap
+/// (MEDULLA-DECISION-ENGINE-R651.2.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct Memento {
+    pub source_ids: Vec<ResourceId>,
+    pub token_count: u32,
+    /// SHA-256 over the joined text, 64 lowercase hex characters.
+    pub digest: String,
+}
+
+/// Embedding drift between two snapshots of the same ids
+/// (MEDULLA-DECISION-ENGINE-R651.2.2). Values are Q16 fixed point.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryDriftReport {
+    pub cka_q16: i64,
+    pub psi_q16: i64,
+    /// True when CKA fell below `knob memory.drift_cka_min`.
+    pub drifted: bool,
+}
+
+/// Near-duplicate records of one tier; `keep` is the one retained
+/// (MEDULLA-DECISION-ENGINE-R651.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MergeGroup {
+    pub keep: ResourceId,
+    pub merged: Vec<ResourceId>,
+}
+
+/// Episodic records sharing a `pattern_key`, proposed for promotion
+/// (MEDULLA-DECISION-ENGINE-R651.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromotionGroup {
+    pub pattern_key: String,
+    pub support_count: u32,
+    pub record_ids: Vec<ResourceId>,
+}
+
+/// A consolidation proposal. It changes nothing; its owner applies it
+/// through the existing routes (MEDULLA-DECISION-ENGINE-R651.2).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ConsolidationPlan {
+    pub merges: Vec<MergeGroup>,
+    pub promotions: Vec<PromotionGroup>,
+    pub prune_candidates: Vec<ResourceId>,
+    /// Records under legal hold or referenced by a live node; never touched.
+    pub held: Vec<ResourceId>,
+}
+
+/// One entry of a trajectory memory (MEDULLA-DECISION-ENGINE-R651.2.3).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TrajectoryEntry {
+    pub entry_id: ResourceId,
+    pub importance: f64,
+    /// Earlier entries this entry references.
+    #[serde(default)]
+    pub references: Vec<ResourceId>,
 }
 
 /// A search run's state, saved so it survives context eviction
@@ -627,6 +835,60 @@ mod tests {
             provenance_key: ResourceId::new(format!("prov:{id}")).unwrap(),
             timestamp_ms: 1_700_000_000_000,
             text: "hello".into(),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.1
+    #[test]
+    fn memory_record_round_trips_through_node_props() {
+        for tier in [
+            MemoryTier::Working,
+            MemoryTier::Episodic,
+            MemoryTier::Procedural,
+            MemoryTier::Semantic,
+        ] {
+            let record = MemoryRecord {
+                memory_id: ResourceId::new("mem:1").unwrap(),
+                tenant: TenantId::new("tenant-a").unwrap(),
+                kind: MemoryKind::Fact,
+                tier,
+                text: "the sky is blue".into(),
+                provenance_key: Some(ResourceId::new("prov:1").unwrap()),
+                session_id: Some(ResourceId::new("sess:1").unwrap()),
+                timestamp_ms: 10,
+                topics: vec!["sky".into()],
+                pattern_key: Some("p".into()),
+                importance: 2.5,
+                access_count: 3,
+                last_access_ms: 20,
+                last_decay_ms: 30,
+                forgotten: false,
+                legal_hold: true,
+                expires_at_ms: Some(99),
+                support_count: 2,
+                token_estimate: 5,
+                attachments: vec![MediaAttachment {
+                    blob_digest: "a".repeat(64),
+                    mime: "image/png".into(),
+                    byte_len: 4,
+                    derivation_ids: vec![ResourceId::new("d1").unwrap()],
+                }],
+                schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+            };
+            let props = record.to_props();
+            assert_eq!(props["type"], tier.node_type());
+            assert!(!props.contains_key("tier"));
+            assert_eq!(props["importance"], serde_json::json!(2.5));
+            assert_eq!(MemoryRecord::from_props(&props).unwrap(), record);
+            let wire = serde_json::to_string(&record).unwrap();
+            assert_eq!(serde_json::from_str::<MemoryRecord>(&wire).unwrap(), record);
+
+            let mut extra = props.clone();
+            extra.insert("surprise".into(), serde_json::json!(1));
+            assert!(MemoryRecord::from_props(&extra).is_err());
+            let mut foreign = props;
+            foreign.insert("type".into(), "Episode".into());
+            assert!(MemoryRecord::from_props(&foreign).is_err());
         }
     }
 
