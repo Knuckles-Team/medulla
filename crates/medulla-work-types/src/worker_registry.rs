@@ -21,12 +21,19 @@ pub struct ShardWriterWidth {
     pub shard_writers: u32,
 }
 
+/// The longest host IRI a registration may carry, in bytes.
+pub const MAX_HOST_IRI_BYTES: usize = 2_048;
+
 /// Worker-supplied capability facts. These do not grant scheduler capacity.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct WorkerRegistration {
     pub worker_id: String,
+    /// The host the worker runs on: the IRI of its `placement:Host` node. The heavy
+    /// capabilities of a claim come from that node, never from the worker
+    /// (MEDULLA-PLACEMENT-R004.3).
+    pub host_iri: String,
     pub cores: u32,
     pub memory_bytes: u64,
     /// Opaque engine-configured lane IDs; membership is checked by served admission.
@@ -37,6 +44,9 @@ impl WorkerRegistration {
     pub fn validate(&self) -> Result<(), WorkerRegistryError> {
         if self.worker_id.trim().is_empty() {
             return Err(WorkerRegistryError::EmptyWorkerId);
+        }
+        if self.host_iri.trim().is_empty() || self.host_iri.len() > MAX_HOST_IRI_BYTES {
+            return Err(WorkerRegistryError::InvalidHostIri);
         }
         if self.cores == 0 {
             return Err(WorkerRegistryError::ZeroCores);
@@ -64,6 +74,8 @@ impl WorkerRegistration {
 #[serde(deny_unknown_fields)]
 pub struct WorkerRecord {
     pub worker_id: String,
+    /// The host the worker registered on (MEDULLA-PLACEMENT-R004.3).
+    pub host_iri: String,
     pub cores: u32,
     pub memory_bytes: u64,
     /// Opaque engine-configured lane IDs; membership is checked by served admission.
@@ -84,6 +96,7 @@ impl WorkerRecord {
 #[serde(rename_all = "snake_case")]
 pub enum WorkerRegistryError {
     EmptyWorkerId,
+    InvalidHostIri,
     ZeroCores,
     ZeroMemory,
     NoSupportedLanes,
@@ -130,6 +143,7 @@ impl WorkerRegistry {
         }
         let record = WorkerRecord {
             worker_id: registration.worker_id,
+            host_iri: registration.host_iri,
             cores: registration.cores,
             memory_bytes: registration.memory_bytes,
             lanes_supported: registration.lanes_supported,
@@ -268,6 +282,7 @@ mod tests {
     fn registration() -> WorkerRegistration {
         WorkerRegistration {
             worker_id: "worker-a".into(),
+            host_iri: "host:alpha".into(),
             cores: 16,
             memory_bytes: 64 * 1024 * 1024 * 1024,
             lanes_supported: BTreeSet::from([
@@ -276,6 +291,22 @@ mod tests {
                 "custom-engine-lane".into(),
             ]),
         }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R004.3
+    #[test]
+    fn registration_requires_host_iri() {
+        let mut registry = WorkerRegistry::default();
+        for bad in [String::new(), "  ".to_string(), "h".repeat(MAX_HOST_IRI_BYTES + 1)] {
+            let mut registration = registration();
+            registration.host_iri = bad;
+            assert_eq!(
+                registry.register(registration, 0, 10),
+                Err(WorkerRegistryError::InvalidHostIri)
+            );
+        }
+        let record = registry.register(registration(), 0, 10).unwrap();
+        assert_eq!(record.host_iri, "host:alpha");
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R074.1

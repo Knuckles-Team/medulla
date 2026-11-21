@@ -165,6 +165,7 @@ mod scheduler_settings {
         // Admission over the stored policy follows the floors.
         let record = WorkerRecord {
             worker_id: "worker-1".into(),
+            host_iri: "host:alpha".into(),
             cores: 16,
             memory_bytes: 8 * 1024 * 1024 * 1024,
             lanes_supported: ["general".into()].into(),

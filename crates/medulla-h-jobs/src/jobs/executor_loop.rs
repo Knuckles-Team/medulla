@@ -99,9 +99,25 @@ pub(super) async fn worker_loop(
     .collect();
     let quota = tenant_worker_quota();
     loop {
+        // The heavy capabilities of this host come from its declaration in the commons graph,
+        // read before every claim; a read error skips the poll rather than claiming without it
+        // (MEDULLA-PLACEMENT-R004.3).
+        let declared = match super::host_capabilities::declared_for(
+            &state,
+            medulla_server_auth::auth::node_identity(),
+        )
+        .await
+        {
+            Ok(declared) => super::host_capabilities::heavy_capability_strings(&declared),
+            Err(_) => {
+                tokio::time::sleep(Duration::from_millis(timing.poll_ms)).await;
+                continue;
+            }
+        };
+        let claimable: Vec<String> = capabilities.iter().cloned().chain(declared).collect();
         match store.claim_next(
             &worker_ref,
-            &capabilities,
+            &claimable,
             unix_ms(),
             timing.lease_ms,
             quota,

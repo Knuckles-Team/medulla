@@ -99,12 +99,22 @@ pub(super) fn handle_worker_claim(
     verified_worker_context: bool,
     worker_instance: &str,
     capabilities: Vec<String>,
+    declared: Vec<String>,
     lease_ms: u64,
 ) -> Response {
     let worker_ref = match worker_ref(caller, verified_worker_context, worker_instance) {
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
+    // A worker cannot assert a heavy capability: it comes from its host's declaration.
+    if capabilities.iter().any(|value| {
+        super::host_capabilities::HEAVY_CAPABILITY_NAMES.contains(&value.as_str())
+    }) {
+        return Response::err(
+            req_id,
+            "INVALID_ARGUMENT: heavy capabilities come from the host declaration",
+        );
+    }
     if capabilities.len() > MAX_WORKER_CAPABILITIES
         || capabilities.iter().any(|value| {
             value.is_empty() || value.len() > 128 || value.chars().any(char::is_control)
@@ -115,6 +125,7 @@ pub(super) fn handle_worker_claim(
     let capabilities: Vec<String> = capabilities
         .iter()
         .map(|value| opaque_worker_capability(value))
+        .chain(declared)
         .collect();
     match store.claim_next(
         &worker_ref,

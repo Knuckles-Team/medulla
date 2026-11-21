@@ -65,6 +65,7 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
 fn non_reserved_task_is_refused_when_only_reserved_capacity_remains() {
     let record = WorkerRecord {
         worker_id: "worker-1".into(),
+        host_iri: "host:alpha".into(),
         cores: 16,
         memory_bytes: 8 * 1024 * 1024 * 1024,
         lanes_supported: ["general".into()].into(),
@@ -185,6 +186,7 @@ fn unknown_expired_and_cross_owner_requests_refuse() {
     let registry = Mutex::new(OwnedWorkerRegistry::default());
     let registration = || WorkerRegistration {
         worker_id: "worker-1".into(),
+        host_iri: "host:alpha".into(),
         cores: 8,
         memory_bytes: 8 * 1024 * 1024 * 1024,
         lanes_supported: ["general".to_string()].into(),
@@ -347,6 +349,7 @@ mod admit_served {
             Method::WorkerRegister {
                 registration: WorkerRegistration {
                     worker_id: "worker-1".into(),
+                    host_iri: "host:alpha".into(),
                     cores: 16,
                     memory_bytes: 8 * 1024 * 1024 * 1024,
                     lanes_supported: ["general".to_string()].into(),

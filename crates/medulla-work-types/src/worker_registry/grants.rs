@@ -249,6 +249,7 @@ mod tests {
     fn one_worker_pool_is_granted_the_general_lane_and_a_non_reserved_task_is_held() {
         let record = WorkerRecord {
             worker_id: "worker".into(),
+            host_iri: "host:alpha".into(),
             cores: 16,
             memory_bytes: 8 * 1024 * 1024 * 1024,
             lanes_supported: ["general".into()].into(),
@@ -359,6 +360,7 @@ mod tests {
     fn fixture() -> (WorkerRecord, SchedulerConfig, WorkerSizingInput) {
         let record = WorkerRecord {
             worker_id: "worker".into(),
+            host_iri: "host:alpha".into(),
             cores: 16,
             memory_bytes: 64 * 1024 * 1024 * 1024,
             lanes_supported: ["general".into()].into(),

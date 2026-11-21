@@ -57,6 +57,7 @@ pub fn refusal_code(error: &OwnedWorkerError) -> &'static str {
                 ServerErrorCode::WorkerTtlInvalid.as_str()
             }
             WorkerRegistryError::EmptyWorkerId
+            | WorkerRegistryError::InvalidHostIri
             | WorkerRegistryError::ZeroCores
             | WorkerRegistryError::ZeroMemory
             | WorkerRegistryError::NoSupportedLanes

@@ -255,7 +255,9 @@ fn node_identity_ambient() -> &'static str {
     "node-a"
 }
 
-fn node_identity() -> &'static str {
+/// This node's identity, which is also the IRI of its `placement:Host` declaration
+/// (MEDULLA-PLACEMENT-R004.3).
+pub fn node_identity() -> &'static str {
     #[cfg(any(test, feature = "test-ambient-auth"))]
     if ambient_test_posture() {
         return node_identity_ambient();

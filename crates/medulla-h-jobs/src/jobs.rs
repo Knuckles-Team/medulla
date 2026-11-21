@@ -91,6 +91,7 @@ mod downtime_complete;
 mod downtime_worker;
 mod executor_claim;
 mod executor_loop;
+mod host_capabilities;
 mod executor_usage_cluster;
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
@@ -394,15 +395,30 @@ pub async fn handle(
             worker_instance,
             capabilities,
             lease_ms,
-        } => handle_worker_claim(
-            &store,
-            req_id,
-            caller,
-            verified_worker_context,
-            &worker_instance,
-            capabilities,
-            lease_ms,
-        ),
+        } => {
+            // The heavy capabilities of a remote claim come from the host its worker
+            // registered on, never from the worker (MEDULLA-PLACEMENT-R004.3).
+            let declared = match host_capabilities::registered_host_declaration(
+                state,
+                verified_context.principal(),
+                &worker_instance,
+            )
+            .await
+            {
+                Ok(declared) => declared,
+                Err(error) => return Response::err(req_id, error),
+            };
+            handle_worker_claim(
+                &store,
+                req_id,
+                caller,
+                verified_worker_context,
+                &worker_instance,
+                capabilities,
+                declared,
+                lease_ms,
+            )
+        }
         JobOp::WorkerRenew {
             job_id,
             worker_instance,
