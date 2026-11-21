@@ -68,7 +68,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T072 [US5] MEDULLA-ORCH-VOCAB-R011.11 Prove the loop closes through `HarnessConfig`
 - [ ] T073 [P] [US6] MEDULLA-ORCH-VOCAB-R012.1 Model: spec node kinds
 - [ ] T074 [US6] MEDULLA-ORCH-VOCAB-R012.2 Behaviour: classify a spec file by named rule
-- [ ] T075 [US6] MEDULLA-ORCH-VOCAB-R012.3 Wiring: index spec folders on the durable repository route
 - [ ] T076 [US6] MEDULLA-ORCH-VOCAB-R012.4 Refusal: an unknown file is not guessed
 - [ ] T077 [US6] MEDULLA-ORCH-VOCAB-R012.5 Evidence: each node records its deciding rule
 - [ ] T078 [US6] MEDULLA-ORCH-VOCAB-R012.6 Hot-path proof: spec folder yields five kinds
