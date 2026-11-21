@@ -151,6 +151,10 @@ closed_error_codes! {
         /// with no catalog row on a shard with a publisher attached; it has no identity to
         /// publish under, so the write refuses.
         ObjectGraphIdentityMissing => "OBJECT_GRAPH_IDENTITY_MISSING",
+        /// MEDULLA-OBJECT-STORAGE-BACKEND-R003: a restore from the object root met a graph
+        /// whose values are sealed under an encryption key this store does not hold; it
+        /// refuses before anything is registered or written.
+        ObjectSealKeyMissing => "OBJECT_SEAL_KEY_MISSING",
         ConversationConflict => "CONVERSATION_CONFLICT",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
         ClaimPaced => "CLAIM_PACED",
@@ -376,8 +380,6 @@ closed_error_codes! {
         DecisionLogTooLarge => "DECISION_LOG_TOO_LARGE",
         DescribeCursorInvalid => "DESCRIBE_CURSOR_INVALID",
         DescribeLimitInvalid => "DESCRIBE_LIMIT_INVALID",
-        /// MEDULLA-OBSERVE-R006.1: `Introspect` named a section the engine does not serve.
-        IntrospectSectionInvalid => "INTROSPECT_SECTION_INVALID",
         /// MEDULLA-OBSERVE-R006.1: `Introspect` limit is 0 or over 500.
         IntrospectLimitInvalid => "INTROSPECT_LIMIT_INVALID",
         /// MEDULLA-OBSERVE-R006.1: `Introspect` cursor is not a key of the section.

@@ -55,6 +55,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
     "OBJECT_PUBLISH_STALE",
     // So can a write over a graph with no catalog row to publish under.
     "OBJECT_GRAPH_IDENTITY_MISSING",
+    // A restore from the object root refuses a graph sealed under a key this store lacks.
+    "OBJECT_SEAL_KEY_MISSING",
 ];
 
 /// A method-specific family wins over the wider domain family.
@@ -215,7 +217,6 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "Introspect",
         &[
-            "INTROSPECT_SECTION_INVALID",
             "INTROSPECT_LIMIT_INVALID",
             "INTROSPECT_CURSOR_INVALID",
         ],

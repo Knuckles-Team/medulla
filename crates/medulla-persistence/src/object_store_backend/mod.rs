@@ -360,7 +360,7 @@ impl ObjectStoreBackend {
             if let Some(sealed_under) = version.seal_key_id.as_deref() {
                 if redb.seal_key_id()?.as_deref() != Some(sealed_under) {
                     return Err(format!(
-                        "refusing to restore graph {graph_fname} from the object root: its \
+                        "OBJECT_SEAL_KEY_MISSING: refusing to restore graph {graph_fname} from the object root: its \
                          values are sealed under encryption key {sealed_under}, which this \
                          store does not hold; configure that key before restoring"
                     ));

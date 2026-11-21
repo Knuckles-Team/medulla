@@ -757,8 +757,8 @@ $($variants)*
     /// tasks, runtime, locks, readiness, startup, build or events. Scope `observe:read`
     /// (admin class). Pages are ascending by the section's key; `limit` is 1 to 500,
     /// defaulting to 100, and `cursor` is the key of the last row of the previous page.
-    /// Refuses `INTROSPECT_SECTION_INVALID`, `INTROSPECT_LIMIT_INVALID` and
-    /// `INTROSPECT_CURSOR_INVALID`.
+    /// Refuses `INTROSPECT_LIMIT_INVALID` and `INTROSPECT_CURSOR_INVALID`; an unknown
+    /// section is refused at decode.
     Introspect {
         section: medulla_types::introspect::IntrospectSection,
         #[serde(default)]

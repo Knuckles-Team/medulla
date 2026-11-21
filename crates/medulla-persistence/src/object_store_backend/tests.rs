@@ -613,6 +613,7 @@ async fn restore_refuses_a_root_sealed_under_a_key_the_store_lacks() {
     let redb = crate::redb_backend::RedbBackend::open(dir.path().to_string_lossy().to_string(), 64)
         .unwrap();
     let error = backend.restore_into(&redb).await.unwrap_err();
+    assert!(error.starts_with("OBJECT_SEAL_KEY_MISSING"), "{error}");
     assert!(error.contains("key-a"), "{error}");
     assert!(error.contains("does not hold"), "{error}");
 }
