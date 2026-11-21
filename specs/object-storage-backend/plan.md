@@ -84,7 +84,8 @@ none
 ## Production caller chain
 
 - `Shard::open` (`crates/medulla-store/src/redb_store/shard.rs:226`) to `admit_backend_setting` (`shard.rs:1062`) to `StorageBackendSpec::admit` (`crates/medulla-storage/src/backend_spec.rs:117`).
-- `open_persistence` (`crates/medulla-server/src/server_startup.rs:419`) to `ObjectStoreBackend::open` to `ObjectFetcher::materialize`.
+- `open_persistence` (`crates/medulla-server/src/server_startup.rs:474`) to `resolve_object_store_client` (`crates/medulla-persistence/src/object_store_backend/client.rs`, R002.2) to `ObjectStoreBackend::open` to `ObjectFetcher::materialize`.
+- Served Python proofs (R002.1, R004.1) start engines through `spawn_object_store_engine` of the loopback object-store fixture `tests/_loopback_object_store.py` (R002.3); `OperatorCommand::run` (`src/operator_command.rs`) to `StoreUpgradeVerb::Layouts` prints the pinned layout digests the fixture's spec names.
 - `commit_mutation_body` (`crates/medulla-server-mutation/src/mutation/commit_entry.rs:327`) to `PersistenceBackend::commit_mutation_batch` (`crates/medulla-server-api/src/api/persistence.rs:275`) to `ObjectStoreBackend::commit_mutation_batch`.
 - `OperatorCommand::run` (`src/operator_command.rs:64`) to `copy_graph`.
 - Obsolete paths to delete: the `Unsupported` arm of `StorageBackendSpec::admit` for `object_store`, once R002 lands.

@@ -14,16 +14,21 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   only after the manifest publish. An interrupted publish reopens the graph at the prior whole
   version. A concurrent CAS loss yields exactly one head.
   *(MEDULLA-OBJECT-STORAGE-BACKEND-R003)*
-- `tests/test_object_storage_shared_root.py::test_multi_node_cold_open_and_rejoin`. Two nodes open the
-  same root. They serve identical state. A node that drops local state rejoins within the
-  bounded re-fetch. *(MEDULLA-OBJECT-STORAGE-BACKEND-R004)*
+- `crates/medulla-persistence/src/object_store_backend/tests.rs::two_nodes_read_identical_state`. Two
+  backends over one root read identical state, and a commit by either is read by the other.
+  *(MEDULLA-OBJECT-STORAGE-BACKEND-R004)*
+- `tests/test_object_storage_shared_root.py::test_multi_node_cold_open_and_rejoin`. Two engines open the
+  same root and serve identical state. An engine that drops its local state rejoins and serves
+  the newer state. *(MEDULLA-OBJECT-STORAGE-BACKEND-R004.1)*
 - `tests/test_comparative_cost_gate.py::test_regression_guard_and_claim_eligibility`. The stamped
   JSONL records all four dimensions for a clean run. An injected fixed-cost regression fails the
   release guard. *(MEDULLA-OBJECT-STORAGE-BACKEND-R005)*
 
 - `crates/medulla-storage/tests/object_archive.rs::overlap_and_digest_refuse`. An overlapping range refuses with `ARCHIVE_RANGE_OVERLAP`. A digest mismatch refuses with `ARCHIVE_DIGEST_MISMATCH`. *(MEDULLA-OBJECT-STORAGE-BACKEND-R006)*
 - `tests/test_graph_copy_served.py::test_digest_mismatch_leaves_destination_empty`. A corrupted batch refuses and leaves the destination empty; a clean copy reads from the root. *(MEDULLA-OBJECT-STORAGE-BACKEND-R003.2)*
-- `tests/test_object_storage_reads.py::test_cold_open_from_root`. A second engine on the same root reads all 100 nodes. *(MEDULLA-OBJECT-STORAGE-BACKEND-R002.1)*
+- `tests/test_object_storage_reads.py::test_cold_open_from_root`. A second engine with an empty local directory on the same root reads all 100 nodes. `::test_corrupt_segment_refuses_open`: a corrupted segment stops the open with `OBJECT_SEGMENT_DIGEST_MISMATCH`. *(MEDULLA-OBJECT-STORAGE-BACKEND-R002.1)*
+- `crates/medulla-persistence/src/object_store_backend/tests.rs::client_resolves_secret_refs_from_the_environment`. Secret references resolve from named environment variables; an unset variable, a plain-http non-loopback endpoint and an outside-database scheme each refuse by name before any request. *(MEDULLA-OBJECT-STORAGE-BACKEND-R002.2)*
+- `tests/test_loopback_object_store.py::test_conditional_puts_and_listing` and `src/operator_command.rs::tests::layouts_verb_prints_every_pinned_digest`. The loopback store honours create-only and ETag-matched puts and prefix listing; the layouts verb prints every pinned digest. *(MEDULLA-OBJECT-STORAGE-BACKEND-R002.3)*
 - `tests/test_object_storage_commits.py::test_ack_follows_head_update`. A kill between segment upload and `HEAD` update keeps acked writes and drops the unacked write. *(MEDULLA-OBJECT-STORAGE-BACKEND-R003.1)*
 
 ## Negative
@@ -59,10 +64,13 @@ Each row's acceptance test binds its ID where the test lands. The lines below re
 
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R001` — `crates/medulla-storage/src/backend_spec.rs::tests::both_variants_round_trip_over_the_wire` and `::refusals_are_typed_and_pure` (existing, L1); `tests/test_object_storage_backend_spec.py::test_backend_spec_roundtrip_and_refusals` (planned, L4)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002` — `crates/medulla-storage/tests/object_reads.rs::versioned_reads_and_corruption_refusal` (planned, L2)
-- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.1` — `tests/test_object_storage_reads.py::test_cold_open_from_root` (planned, L4)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.1` — `tests/test_object_storage_reads.py::test_cold_open_from_root` and `::test_corrupt_segment_refuses_open` (planned, L4)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.2` — `crates/medulla-persistence/src/object_store_backend/tests.rs::client_resolves_secret_refs_from_the_environment` (planned, L1)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.3` — `tests/test_loopback_object_store.py::test_conditional_puts_and_listing` (planned, L1); `src/operator_command.rs::tests::layouts_verb_prints_every_pinned_digest` (planned, L1)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003` — `crates/medulla-persistence/src/object_store_backend/tests.rs::commit_before_ack_and_partial_publish` (planned, L3)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.1` — `tests/test_object_storage_commits.py::test_ack_follows_head_update` (planned, L4)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.2` — `tests/test_graph_copy_served.py::test_digest_mismatch_leaves_destination_empty` (planned, L4); `benches/graph_copy.rs` (planned, L6)
-- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R004` — `crates/medulla-persistence/src/object_store_backend/tests.rs::two_nodes_read_identical_state` (planned, L3); `tests/test_object_storage_shared_root.py::test_multi_node_cold_open_and_rejoin` (planned, L4)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R004` — `crates/medulla-persistence/src/object_store_backend/tests.rs::two_nodes_read_identical_state` (L3)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R004.1` — `tests/test_object_storage_shared_root.py::test_multi_node_cold_open_and_rejoin` (planned, L4)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R005` — `tests/test_comparative_cost_gate.py::test_regression_guard_and_claim_eligibility` (planned, L4)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R006` — `crates/medulla-storage/tests/object_archive.rs::overlap_and_digest_refuse` (planned, L2)
