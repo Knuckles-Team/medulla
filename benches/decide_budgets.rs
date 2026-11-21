@@ -1041,6 +1041,8 @@ fn bench_program_lookup(
         &widest_trace(),
         &ProgramKnobs {
             max_steps: MAX_PROGRAM_STEPS,
+            match_threshold_micros: 850_000,
+            match_candidates: 8,
         },
     )
     .expect("the widest trace compiles");
@@ -1221,7 +1223,7 @@ fn bench_concentration_kernel(c: &mut Criterion, report: &mut BTreeMap<String, s
         edit_id: format!("edit:{n}"),
         dimension_iri: dimension.to_string(),
         round: n % 50 + 1,
-        status,
+        standing: status,
         policy_revision: 1,
     };
     let facts: Vec<EditFact> = (0..CONCENTRATION_FACTS)
@@ -1231,7 +1233,7 @@ fn bench_concentration_kernel(c: &mut Criterion, report: &mut BTreeMap<String, s
         edit_id: "edit:candidate".to_string(),
         dimension_iri: dimension.to_string(),
         round: 50,
-        status: EditStatus::Proposed,
+        standing: EditStatus::Proposed,
         policy_revision: 1,
     };
     let policy = ConcentrationPolicy {

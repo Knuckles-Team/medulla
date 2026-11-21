@@ -741,11 +741,11 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
     updated.snapshot.items = vec![
         PlanItem {
             text: "ordered first".into(),
-            status: PlanStatus::Done,
+            progress: PlanStatus::Done,
         },
         PlanItem {
             text: "ordered second".into(),
-            status: PlanStatus::InProgress,
+            progress: PlanStatus::InProgress,
         },
     ];
     let first: CurrentPlanPublished = decode_raw(
