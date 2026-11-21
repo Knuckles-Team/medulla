@@ -51,6 +51,7 @@ fn contract_with(field: &str) -> RecordContract {
         )]
         .into_iter()
         .collect(),
+        source_authority: false,
     }
 }
 
@@ -124,9 +125,15 @@ impl Served {
     /// Issue an approval lease whose grant names `candidate`, and approve it
     /// (`active -> consumed`) unless `approve` is false.
     async fn approval(&self, lease_id: &str, candidate: &str, approve: bool) {
+        self.approval_of(lease_id, SCHEMA_APPROVAL_ACTION, candidate, approve)
+            .await;
+    }
+
+    /// `approval` for a grant naming `action`.
+    async fn approval_of(&self, lease_id: &str, action: &str, candidate: &str, approve: bool) {
         let now = medulla_server_api::txn::now_ms();
         let Value::Object(grant) = json!({
-            "kind": SCHEMA_APPROVAL_ACTION,
+            "kind": action,
             "target": SOURCE,
             "candidate_digest": candidate,
         }) else {
@@ -181,9 +188,20 @@ impl Served {
         lease_id: &str,
         expected_digest: Option<String>,
     ) -> Response {
+        self.attach_contract(key, lease_id, contract(), expected_digest)
+            .await
+    }
+
+    async fn attach_contract(
+        &self,
+        key: &str,
+        lease_id: &str,
+        contract: RecordContract,
+        expected_digest: Option<String>,
+    ) -> Response {
         let op = GraphSchemaOp::AttachApproved {
             source_id: SOURCE.to_string(),
-            contract: contract(),
+            contract,
             approval_lease_id: lease_id.to_string(),
             expected_digest,
             if_composed_digest: None,
@@ -461,4 +479,41 @@ async fn expected_digest_is_checked_before_the_attach_and_reads_back() {
         .find(|source| source.source_id == SOURCE)
         .expect("the selected candidate is attached");
     assert_eq!(stored.shapes_sha256.as_deref(), Some(digest.as_str()));
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn authority_candidate_needs_matching_action_and_digest() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    assert_ne!(digest, candidate(), "the typed flag changes the digest");
+
+    // An ordinary schema-approval grant does not approve an authority candidate.
+    served
+        .approval("action_approval:ordinary", &digest, true)
+        .await;
+    let wrong_action = served
+        .attach_contract("attach:ordinary", "action_approval:ordinary", authority.clone(), None)
+        .await;
+    assert!(refusal(&wrong_action).starts_with("SCHEMA_APPROVAL_MISMATCH"));
+
+    // A source-authority grant does not approve an ordinary candidate.
+    served
+        .approval_of("action_approval:authority", SOURCE_AUTHORITY_KIND, &digest, true)
+        .await;
+    let ordinary = served
+        .attach_contract("attach:plain", "action_approval:authority", contract(), None)
+        .await;
+    assert!(refusal(&ordinary).starts_with("SCHEMA_APPROVAL_MISMATCH"));
+
+    // The matching action, source and digest admit it.
+    let committed: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:authority", "action_approval:authority", authority, None)
+            .await,
+    );
+    assert!(committed.changed);
 }

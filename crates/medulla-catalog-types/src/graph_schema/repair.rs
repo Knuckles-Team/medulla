@@ -62,6 +62,16 @@ pub struct FieldContract {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RecordContract {
     pub fields: BTreeMap<String, FieldContract>,
+    /// The candidate is a source-authority document: its approval grant must
+    /// name `governed.source-authority` (`SOURCE_AUTHORITY_KIND`), not the
+    /// ordinary schema-approval action. Omitted from the canonical JSON when
+    /// false, so an ordinary candidate keeps its digest.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub source_authority: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl RecordContract {
@@ -178,7 +188,10 @@ mod tests {
                 types: vec![JsonType::Null, JsonType::Integer],
             },
         );
-        RecordContract { fields }
+        RecordContract {
+            fields,
+            source_authority: false,
+        }
     }
 
     #[test]
@@ -217,7 +230,8 @@ mod tests {
     fn empty_unsorted_or_unprintable_contracts_are_refused() {
         contract().validate().unwrap();
         assert!(RecordContract {
-            fields: BTreeMap::new()
+            fields: BTreeMap::new(),
+            source_authority: false,
         }
         .validate()
         .is_err());

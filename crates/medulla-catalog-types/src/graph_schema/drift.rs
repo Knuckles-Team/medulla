@@ -248,6 +248,7 @@ impl InferredRecordShape {
                     )
                 })
                 .collect(),
+            source_authority: false,
         }
     }
 }
@@ -622,6 +623,7 @@ mod tests {
                     )
                 })
                 .collect(),
+            source_authority: false,
         }
     }
 

@@ -229,6 +229,7 @@ class RecordContract(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     fields_: dict[str, FieldContract] = Field(..., alias="fields")
+    source_authority: bool = False
 
 
 class SchemaSourceOriginViewCore(BaseModel):

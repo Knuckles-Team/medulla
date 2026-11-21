@@ -171,18 +171,6 @@ fn absorb(
     fixture
 }
 
-/// Parse the authority rows of one Turtle document read under `origin`.
-pub fn authority_rows_from_turtle(
-    document: &str,
-    origin: AuthorityOrigin,
-) -> Result<Vec<AuthorityRow>, String> {
-    let triples = medulla_rdf::mapping::parse_turtle(document)?;
-    Ok(absorb(CoverageFixture::new(), &triples, origin, 0)
-        .rows()
-        .cloned()
-        .collect())
-}
-
 fn origin_of(origin: &SchemaSourceOrigin) -> AuthorityOrigin {
     match origin {
         SchemaSourceOrigin::Core { .. } => AuthorityOrigin::Core,

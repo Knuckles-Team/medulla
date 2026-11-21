@@ -71,6 +71,7 @@ fn repair_contract() -> crate::graph_schema::repair::RecordContract {
         )]
         .into_iter()
         .collect(),
+        source_authority: false,
     }
 }
 

@@ -9,7 +9,7 @@ use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_virtual_graph::source_selection::{
-    audit_from, authority_rows_from_turtle, fixture_from_schema_sources, select_sources,
+    audit_from, fixture_from_schema_sources, select_sources,
     AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
 };
 
@@ -40,17 +40,15 @@ fn incident_verdict(fixture: &CoverageFixture) -> CoverageResult {
 }
 
 fn attached(document: &str) -> GraphSchemaSources {
+    attached_under(document, SchemaSourceOrigin::Operator)
+}
+
+fn attached_under(document: &str, origin: SchemaSourceOrigin) -> GraphSchemaSources {
     let mut sources = GraphSchemaSources::default();
-    let source = GraphSchemaSource::new(
-        SchemaSourceOrigin::Operator,
-        None,
-        Some(Arc::from(document)),
-        0,
-    )
-    .unwrap();
+    let source = GraphSchemaSource::new(origin, None, Some(Arc::from(document)), 0).unwrap();
     sources
         .attach_dynamic("operator".to_string(), source)
-        .expect("the operator source attaches");
+        .expect("the source attaches");
     sources
 }
 
@@ -60,11 +58,8 @@ fn the_incident_fixture_parses_passes_the_shapes_and_selects_rank_one() {
     let doc = document(1, 2);
     let report = medulla_shacl::validate_turtle(SHAPES, &doc).expect("validates");
     assert!(report.conforms, "{:?}", report.results);
-    let rows = authority_rows_from_turtle(&doc, AuthorityOrigin::Operator).unwrap();
-    assert_eq!(rows.len(), 2);
-    let fixture = rows
-        .into_iter()
-        .fold(CoverageFixture::new(), CoverageFixture::with_row);
+    let fixture = fixture_from_schema_sources(&attached(&doc)).unwrap();
+    assert_eq!(fixture.rows().count(), 2);
     match incident_verdict(&fixture) {
         CoverageResult::Covered {
             source, alternates, ..
@@ -129,10 +124,12 @@ fn the_live_read_returns_the_same_verdict_as_the_fixture() {
     };
     assert_eq!(strip_subclass(live_verdict), strip_subclass(hand_verdict));
     // A pack-origin read of the same text proposes only.
-    let proposed = authority_rows_from_turtle(&document(1, 2), AuthorityOrigin::Pack).unwrap();
-    let fixture = proposed
-        .into_iter()
-        .fold(CoverageFixture::new(), CoverageFixture::with_row);
+    let pack = SchemaSourceOrigin::Pack {
+        connector: "incident-pack".to_string(),
+        record_id: "pack-1".to_string(),
+        tenant: None,
+    };
+    let fixture = fixture_from_schema_sources(&attached_under(&document(1, 2), pack)).unwrap();
     assert!(matches!(
         incident_verdict(&fixture),
         CoverageResult::Uncovered { .. }

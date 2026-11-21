@@ -88,10 +88,11 @@ fn mismatch(field: &str) -> String {
     )
 }
 
-/// Whether `lease` approves attaching `candidate_digest` under `source_id` at
+/// Whether `lease` approves `expected_action` for `candidate_digest` under `source_id` at
 /// `now_ms`. `None` (no lease of the caller's tenant with that id) is refused.
 pub fn verify_schema_approval(
     lease: Option<&ControlLeaseView>,
+    expected_action: &str,
     source_id: &str,
     candidate_digest: &str,
     now_ms: u64,
@@ -103,7 +104,7 @@ pub fn verify_schema_approval(
     verify_approved_state(lease, now_ms)?;
     let grant_text = |key: &str| lease.grant.get(key).and_then(Value::as_str);
     let bindings = [
-        ("kind", SCHEMA_APPROVAL_ACTION),
+        ("kind", expected_action),
         ("target", source_id),
         ("candidate_digest", candidate_digest),
     ];

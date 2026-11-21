@@ -19,7 +19,9 @@ use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_catalog_types::{
     graph_schema::approval::approved_candidate_digest,
     graph_schema::approval::verify_schema_approval,
+    graph_schema::approval::SCHEMA_APPROVAL_ACTION, graph_schema::repair::RecordContract,
 };
+use medulla_mutation_types::governed_change::SOURCE_AUTHORITY_KIND;
 use medulla_graph_core::graph::{GraphCore, GraphSchemaSource, GraphSchemaSources};
 use serde::{Deserialize, Serialize};
 
@@ -70,10 +72,22 @@ async fn admit(tenant_id: &str, ctx: &MutationCtx<'_>, op: &GraphSchemaOp) -> Re
     }
     verify_schema_approval(
         lease.as_ref(),
+        approval_action(contract),
         source_id,
         &candidate,
         medulla_server_api::txn::now_ms(),
     )
+}
+
+/// The action the approval grant must name: a source-authority candidate (the
+/// typed `RecordContract::source_authority`) is governed as
+/// `SOURCE_AUTHORITY_KIND`, every other candidate as `SCHEMA_APPROVAL_ACTION`.
+fn approval_action(contract: &RecordContract) -> &'static str {
+    if contract.source_authority {
+        SOURCE_AUTHORITY_KIND
+    } else {
+        SCHEMA_APPROVAL_ACTION
+    }
 }
 
 /// `ValidateRepair`: render the candidate and run the entering-schema

@@ -18,7 +18,10 @@ fn contract_with(field: &str) -> RecordContract {
             types: vec![JsonType::String],
         },
     );
-    RecordContract { fields }
+    RecordContract {
+        fields,
+        source_authority: false,
+    }
 }
 
 fn contract() -> RecordContract {
@@ -55,13 +58,13 @@ fn approving_grant() -> Value {
 }
 
 fn refusal(lease: Option<&ControlLeaseView>) -> String {
-    verify_schema_approval(lease, SOURCE, &candidate(), NOW).unwrap_err()
+    verify_schema_approval(lease, SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW).unwrap_err()
 }
 
 #[test]
 fn an_approved_unexpired_lease_naming_the_candidate_admits_it() {
     let approved = lease(ControlLeaseStatus::Consumed, approving_grant());
-    verify_schema_approval(Some(&approved), SOURCE, &candidate(), NOW).unwrap();
+    verify_schema_approval(Some(&approved), SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW).unwrap();
 }
 
 #[test]
@@ -154,6 +157,7 @@ fn attach_approved_requires_its_namespace_a_lease_id_and_a_contract() {
         source_id: SOURCE.to_string(),
         contract: RecordContract {
             fields: BTreeMap::new(),
+            source_authority: false,
         },
         if_composed_digest: None,
     };
