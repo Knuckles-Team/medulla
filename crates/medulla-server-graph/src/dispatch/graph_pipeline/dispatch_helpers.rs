@@ -460,10 +460,12 @@ async fn commit_served_modality(
         .as_ref()
         .expect("ServedModality must be registered in the mutation gateway");
     let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
+    let principal = verified_context.principal_persistence_id();
     let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
         anonymous: !verified_context.is_authenticated(),
         req_id,
         caller,
+        principal: Some(principal.as_str()),
         attempt_nonce: verified_context.attempt_nonce(),
         idempotency_key: verified_context.idempotency_key(),
         tenant_scope,

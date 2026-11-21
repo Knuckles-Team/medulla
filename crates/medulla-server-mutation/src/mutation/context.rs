@@ -19,6 +19,12 @@ pub struct MutationCtx<'a> {
     pub anonymous: bool,
     pub req_id: u64,
     pub caller: Option<&'a str>,
+    /// The verified request principal (the delegating subject) in its hashed
+    /// persistence form (`principal:sha256:<hex>`), filled from the
+    /// `VerifiedRequestContext`; distinct from `caller`, the agent that carries
+    /// the request. `None` where no verified request context is in hand.
+    /// Ownership bindings key on it (MEDULLA-TYPED-PACKS-R103.3).
+    pub principal: Option<&'a str>,
     /// Authenticated transport nonce; consumed by the mutation envelope's
     /// kernel replay ledger when this context commits a durable write.
     pub attempt_nonce: Option<medulla_types::contract::Nonce>,
@@ -541,6 +547,7 @@ mod response_dedup_scope_tests {
             anonymous: false,
             req_id,
             caller: Some(caller),
+            principal: None,
             attempt_nonce: None,
             idempotency_key: "same-client-key",
             tenant_scope,

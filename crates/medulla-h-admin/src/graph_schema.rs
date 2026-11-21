@@ -223,10 +223,12 @@ where
         ),
     };
     let plan = MutationPlan::for_method(&method);
+    let principal = verified.principal_persistence_id();
     let ctx = MutationCtx {
         anonymous: state.read().await.local_anonymous,
         req_id,
         caller: Some(verified.agent_id()),
+        principal: Some(principal.as_str()),
         attempt_nonce: verified.attempt_nonce(),
         idempotency_key,
         tenant_scope: authority.tenant_scope(),
@@ -348,7 +350,7 @@ async fn handle_diff_gateway(
 }
 
 /// R103.3: route `ImportOntology` / `WithdrawOntology` through the gateway with
-/// the authenticated request principal as the importer.
+/// the authenticated request principal (`MutationCtx::principal`) as the importer.
 async fn handle_ontology_gateway(
     tenant_id: &str,
     ctx: &MutationCtx<'_>,
@@ -358,8 +360,16 @@ async fn handle_ontology_gateway(
 ) -> Response {
     use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
+    // R103.2/R103.3: the importer is the verified request principal (hashed for
+    // persistence), never the carrying agent and never a body field.
+    let Some(importer) = ctx.principal.filter(|principal| !principal.is_empty()) else {
+        return Response::err(
+            ctx.req_id,
+            "ACCESS_DENIED: a runtime ontology import requires a verified request principal",
+        );
+    };
     let authority = ontology_import::OntologyAuthority {
-        importer: ctx.caller.unwrap_or_default().to_string(),
+        importer: importer.to_string(),
         tenant: tenant_id.to_string(),
         at_ms: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

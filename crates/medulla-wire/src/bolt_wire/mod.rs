@@ -583,10 +583,12 @@ async fn commit_writes(
     let (carrier, _) = authorize_cypher(&verified, &graph, &graph_context, true)?;
     let method = receipt_method(&writes);
     let plan = MutationPlan::for_method(&method);
+    let principal = verified.principal_persistence_id();
     let ctx = MutationCtx {
         anonymous: false,
         req_id: request_id,
         caller: Some(verified.agent_id()),
+        principal: Some(principal.as_str()),
         attempt_nonce: verified.attempt_nonce(),
         idempotency_key: verified.idempotency_key(),
         tenant_scope: carrier.tenant_scope(),

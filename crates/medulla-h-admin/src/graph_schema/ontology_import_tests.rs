@@ -348,7 +348,13 @@ mod served {
                 revision, importer, ..
             }) => {
                 assert_eq!(revision, 1);
-                assert_eq!(importer, AGENT, "the importer is the request principal");
+                assert_eq!(
+                    importer,
+                    medulla_server_api::mutation_batch::identity_metadata::principal_persistence_id(
+                        AGENT
+                    ),
+                    "the importer is the hashed request principal"
+                );
             }
             other => panic!("expected an ontology origin, got {other:?}"),
         }
@@ -401,7 +407,11 @@ mod served {
         );
         assert!(history
             .iter()
-            .all(|entry| entry.importer == AGENT && entry.at > 0));
+            .all(|entry| entry.importer
+                == medulla_server_api::mutation_batch::identity_metadata::principal_persistence_id(
+                    AGENT
+                )
+                && entry.at > 0));
         assert_eq!(
             history
                 .iter()

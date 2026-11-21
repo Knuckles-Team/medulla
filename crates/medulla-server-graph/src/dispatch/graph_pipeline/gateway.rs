@@ -41,6 +41,7 @@ async fn gateway_mutation_context<'a>(
         anonymous: ctx.state.read().await.local_anonymous,
         req_id: ctx.req_id,
         caller: ctx.caller,
+        principal: None,
         attempt_nonce: ctx.attempt_nonce,
         idempotency_key: ctx.idempotency_key,
         tenant_scope: ctx.tenant_scope,

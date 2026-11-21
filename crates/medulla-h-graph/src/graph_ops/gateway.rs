@@ -143,10 +143,18 @@ pub async fn try_handle_gateway(
     };
 
     let plan = MutationPlan::for_method(&method);
+    // The verified request principal, hashed for persistence: ownership
+    // bindings (the runtime ontology importer, R103.3) key on it, not on the agent.
+    let principal = read_authority.map(|authority| {
+        medulla_server_api::mutation_batch::identity_metadata::principal_persistence_id(
+            authority.verified_principal(),
+        )
+    });
     let ctx = MutationCtx {
         anonymous: state.read().await.local_anonymous,
         req_id,
         caller,
+        principal: principal.as_deref(),
         attempt_nonce,
         idempotency_key,
         tenant_scope,
@@ -181,6 +189,7 @@ pub async fn try_handle_gateway(
     if matches!(method, Method::RetentionCleanupRun { .. }) {
         let ctx = MutationCtx {
             caller: Some(super::retention_cleanup::RETENTION_ACTOR),
+            principal: None,
             ..ctx
         };
         return Ok(super::retention_cleanup::handle_retention_cleanup_run(&ctx, &method).await);

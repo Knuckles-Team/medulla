@@ -271,6 +271,7 @@ mod tests {
             anonymous: false,
             req_id: 3,
             caller: Some("intruder"),
+            principal: None,
             attempt_nonce: None,
             idempotency_key: "test-idempotency",
             tenant_scope: "opaque-test-tenant",
