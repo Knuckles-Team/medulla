@@ -616,6 +616,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BranchReadAt { .. }
         | Method::ReadTree { .. }
         | Method::ReadPathHistory { .. }
+        | Method::ReadBlame { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }

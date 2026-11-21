@@ -139,6 +139,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R005.2: the origin changeset of every line of one path.
+        Method::ReadBlame { request } => {
+            dispatch_boxed(super::read_blame::handle_read_blame(
+                state,
+                req,
+                verified_context,
+                super::read_blame::ReadBlameFields { request },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

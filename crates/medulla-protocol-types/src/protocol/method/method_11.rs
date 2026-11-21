@@ -447,6 +447,14 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::ReadPathHistoryRequest>,
     },
 
+    /// Blame one path (MEDULLA-SCM-R005.2): the runs of consecutive lines of
+    /// `path` at `rev` on `branch`, each with the changeset that introduced
+    /// it. Refusals: `BLAME_BINARY`, `BLAME_FILE_TOO_LARGE`,
+    /// `BLAME_PATH_ABSENT`, plus the refusals of `ReadPathHistory`. Reads only.
+    ReadBlame {
+        request: Box<medulla_source_types::source_changeset::ReadBlameRequest>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as

@@ -197,7 +197,7 @@ mod served {
                     &build_batch,
                     &changeset.id,
                 );
-                let history_rows = index_rows(history, &chain, &changeset, &commit_id)?;
+                let history_rows = index_rows(history, &chain, &changeset, &commit_id, &blobs)?;
                 Ok(CommitPlan {
                     engine_version: 0,
                     manifest_digest: changeset.id.clone(),

@@ -53,6 +53,7 @@ mod resource_cost;
 mod sdlc;
 mod service_control;
 mod source_ingest;
+mod read_blame;
 mod read_path_history;
 mod read_tree;
 mod submit_changeset;

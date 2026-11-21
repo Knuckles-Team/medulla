@@ -69,6 +69,14 @@ pub enum ChangesetRefusal {
     /// The history index row of the branch head is absent, of another
     /// version, or names another commit (MEDULLA-SCM-R005).
     HistoryIndexStale,
+    /// The blamed file is binary (MEDULLA-SCM-R005.2).
+    BlameBinary,
+    /// The blamed file has more lines than the blame index holds
+    /// (MEDULLA-SCM-R005.2).
+    BlameFileTooLarge,
+    /// The blamed path is deleted or has no blame row at the revision
+    /// (MEDULLA-SCM-R005.2).
+    BlamePathAbsent,
 }
 
 impl ChangesetRefusal {
@@ -85,6 +93,9 @@ impl ChangesetRefusal {
             Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
             Self::RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
             Self::HistoryIndexStale => "HISTORY_INDEX_STALE",
+            Self::BlameBinary => "BLAME_BINARY",
+            Self::BlameFileTooLarge => "BLAME_FILE_TOO_LARGE",
+            Self::BlamePathAbsent => "BLAME_PATH_ABSENT",
         }
     }
 }
@@ -367,6 +378,50 @@ impl ReadPathHistoryRequest {
             self.limit
         };
         Ok(limit as usize)
+    }
+}
+
+/// The closed request of `Method::ReadBlame` (MEDULLA-SCM-R005.2): the origin
+/// changeset of every line of `path` at the changeset commit `rev` of `branch`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadBlameRequest {
+    pub repo: String,
+    pub branch: String,
+    pub rev: String,
+    pub path: String,
+}
+
+/// A run of consecutive lines with one origin (MEDULLA-SCM-R005.2): 0-based
+/// `start_line`, `commit` the branch commit and `changeset_id` the changeset
+/// that introduced the lines.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct BlameRun {
+    pub start_line: u32,
+    pub line_count: u32,
+    pub commit: String,
+    pub changeset_id: String,
+}
+
+/// The served answer of `ReadBlame`: runs in line order.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadBlameReceipt {
+    pub runs: Vec<BlameRun>,
+}
+
+impl ReadBlameRequest {
+    /// Check every bound of the request; the first failure names its field.
+    /// No store is read.
+    pub fn validate(&self) -> Result<(), SubmitRefusal> {
+        validate_coordinates(&self.repo, &self.branch, &self.rev)?;
+        if !valid_path(&self.path) {
+            return Err(invalid("path"));
+        }
+        Ok(())
     }
 }
 

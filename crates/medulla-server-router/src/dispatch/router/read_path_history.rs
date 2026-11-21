@@ -23,9 +23,9 @@ mod served {
     use medulla_source_types::source_changeset::{Changeset, ReadPathHistoryReceipt};
 
     /// The history index rows of one branch as a read sees them.
-    struct RegistryHistory<'a> {
-        registry: &'a BranchRegistry,
-        branch: &'a BranchRef,
+    pub(in crate::dispatch::router) struct RegistryHistory<'a> {
+        pub(in crate::dispatch::router) registry: &'a BranchRegistry,
+        pub(in crate::dispatch::router) branch: &'a BranchRef,
     }
 
     impl HistoryIndex for RegistryHistory<'_> {
@@ -96,6 +96,8 @@ mod served {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub use served::handle_read_path_history;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(in crate::dispatch::router) use served::RegistryHistory;
 
 /// `ReadPathHistory` needs the `redb` branch registry and the `blob` ingest handlers.
 #[cfg(not(all(feature = "redb", feature = "blob")))]

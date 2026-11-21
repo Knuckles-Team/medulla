@@ -35,13 +35,13 @@ pub enum LineMerge {
 }
 
 /// MEDULLA-BRANCH-MERGE-R008 — a NUL byte means binary content.
-fn is_binary(blob: &[u8]) -> bool {
+pub(crate) fn is_binary(blob: &[u8]) -> bool {
     blob.contains(&0)
 }
 
 /// Split a blob into lines plus the trailing-newline flag; an interior
 /// (non-trailing) newline never adds an empty invisible line.
-fn split(blob: &[u8]) -> (Vec<String>, bool) {
+pub(crate) fn split(blob: &[u8]) -> (Vec<String>, bool) {
     if blob.is_empty() {
         return (Vec::new(), false);
     }
@@ -63,7 +63,7 @@ fn join(lines: &[String], trailing: bool) -> Vec<u8> {
 }
 
 /// LCS diff of one side against `base`, as ordered edit chunks.
-fn diff_chunks(base: &[String], side: &[String]) -> Vec<Chunk> {
+pub(crate) fn diff_chunks(base: &[String], side: &[String]) -> Vec<Chunk> {
     let (n, m) = (base.len(), side.len());
     let mut table = vec![vec![0usize; m + 1]; n + 1];
     for i in (0..n).rev() {

@@ -14567,6 +14567,13 @@ class MethodSubmitChangeset(BaseModel):
     params: MethodSubmitChangesetParams
 
 
+class MethodReadBlame(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ReadBlame"]
+    params: MethodReadBlameParams
+
+
 class MethodReadPathHistory(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15227,6 +15234,7 @@ Method = Annotated[
         MethodBranchReadAt,
         MethodSubmitChangeset,
         MethodReadPathHistory,
+        MethodReadBlame,
         MethodReadSpan,
         MethodOpenGraphSnapshot,
         MethodReadGraphChanges,
@@ -33163,6 +33171,12 @@ class MethodStoredQueryPutParams(BaseModel):
     query: StoredQuery
 
 
+class MethodReadBlameParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ReadBlameRequest
+
+
 class MethodReadPathHistoryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33765,6 +33779,15 @@ class StoredQueryLanguage(str, Enum):
     SPARQL = "sparql"
 
 
+class BlameRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    changeset_id: str
+    commit: str
+    line_count: Annotated[int, Field(ge=0)]
+    start_line: Annotated[int, Field(ge=0)]
+
+
 class PathHistoryEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33774,6 +33797,21 @@ class PathHistoryEntry(BaseModel):
     created_at: Annotated[int, Field(ge=0)]
     message: str
     op: PathOp
+
+
+class ReadBlameReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    runs: list[BlameRun]
+
+
+class ReadBlameRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str
+    path: str
+    repo: str
+    rev: str
 
 
 class ReadPathHistoryReceipt(BaseModel):
@@ -38648,11 +38686,16 @@ __all__ = [
     "MethodStoredQueryCallParams",
     "MethodStoredQueryPut",
     "MethodStoredQueryPutParams",
+    "MethodReadBlame",
+    "MethodReadBlameParams",
     "MethodReadPathHistory",
     "MethodReadPathHistoryParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
+    "BlameRun",
     "PathHistoryEntry",
+    "ReadBlameReceipt",
+    "ReadBlameRequest",
     "ReadPathHistoryReceipt",
     "ReadPathHistoryRequest",
     "MethodTraceCritique",
