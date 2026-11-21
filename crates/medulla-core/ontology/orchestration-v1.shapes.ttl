@@ -359,3 +359,21 @@
     [ sh:path :runRevision ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :startMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :endMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+# MEDULLA-ORCH-VOCAB-R004.6.1: a gap or enhancement names one capability, one
+# task class and one domain, and carries a closed disposition.
+:CapabilityGapShape a sh:NodeShape ;
+    sh:targetClass :CapabilityGap ;
+    sh:property [ sh:path :forCapability ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :forTaskClass ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :inDomain ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :disposition ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+      sh:in ( "open" "accepted" "resolved" "rejected" ) ] .
+
+:DesiredEnhancementShape a sh:NodeShape ;
+    sh:targetClass :DesiredEnhancement ;
+    sh:property [ sh:path :forCapability ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :forTaskClass ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :inDomain ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :disposition ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+      sh:in ( "open" "accepted" "resolved" "rejected" ) ] .

@@ -1178,3 +1178,26 @@
     rdfs:label "model id" ;
     rdfs:domain :SubCallSignature ;
     rdfs:range xsd:string .
+
+# Capability gap and desired enhancement nodes (MEDULLA-ORCH-VOCAB-R004.6.1).
+:CapabilityGap a owl:Class ;
+    rdfs:label "CapabilityGap" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "A capability the library lacks for a task class (MEDULLA-ORCH-VOCAB-R004.6.1)." .
+
+:DesiredEnhancement a owl:Class ;
+    rdfs:label "DesiredEnhancement" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "An improvement wanted on an existing capability (MEDULLA-ORCH-VOCAB-R004.6.1)." .
+
+:forCapability a owl:ObjectProperty ;
+    rdfs:label "for capability" ;
+    rdfs:comment "The capability a gap or enhancement is for." .
+
+:forTaskClass a owl:ObjectProperty ;
+    rdfs:label "for task class" ;
+    rdfs:comment "The task class a gap or enhancement is for." .
+
+:inDomain a owl:ObjectProperty ;
+    rdfs:label "in domain" ;
+    rdfs:comment "The domain a gap or enhancement is in." .
