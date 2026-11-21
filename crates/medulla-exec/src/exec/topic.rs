@@ -12,6 +12,8 @@ use medulla_graph_core::graph::GraphView;
 use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_types::contract::ServerErrorCode;
 
+use crate::exec::PlanCtx;
+
 /// The label stored centroid nodes carry.
 pub const TOPIC_CENTROID_LABEL: &str = "TopicCentroid";
 /// The node property holding the topic id (the node id when absent).
@@ -55,6 +57,63 @@ impl TopicRankingPolicy {
         self.weight = Some(weight);
         Ok(self)
     }
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.3: the topic evidence a served ranking step fuses in.
+/// `backend` answers the topics of the query vector; `current_corpus_revision` is the graph
+/// revision the query reads, which the topic result's corpus revision must equal, else the
+/// fusion refuses `TOPIC_CORPUS_STALE` (`None`: the query binds no revision to compare with,
+/// which refuses `TOPIC_BACKEND_UNAVAILABLE`).
+#[derive(Clone)]
+pub struct TopicFusion<'a> {
+    pub backend: std::sync::Arc<dyn TopicBackend + 'a>,
+    pub current_corpus_revision: Option<u64>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.3: the one fusion step every ranking leg takes after it
+/// has scored its whole candidate set and before the result is truncated. With no topic
+/// policy bound the dense ranking passes through unchanged. With one bound, the bound
+/// backend weighs the topics against `query`, and [`fuse_topic_dense`] re-scores `dense`
+/// against the store's declared space (the retriever). A policy with no backend, no
+/// weight, or a store with no declared space refuses; the topic contribution is never
+/// dropped silently.
+pub(crate) fn fuse_ranked(
+    ctx: &PlanCtx,
+    query: &[f32],
+    dense: Vec<(String, f32)>,
+) -> Result<Vec<(String, f32)>, String> {
+    let Some(policy) = ctx.topic_policy else {
+        return Ok(dense);
+    };
+    let fusion = ctx.topic_fusion.as_ref().ok_or_else(|| {
+        TopicRefusal::BackendUnavailable("no topic backend is bound on this query".to_string())
+            .to_string()
+    })?;
+    let weight = policy.weight.unwrap_or(f32::NAN);
+    let retriever = ctx.semantic.space().ok_or_else(|| {
+        TopicRefusal::SpaceMismatch(
+            "the store declares no embedding space to compare the topic centroids with".to_string(),
+        )
+        .to_string()
+    })?;
+    let current = fusion.current_corpus_revision.ok_or_else(|| {
+        TopicRefusal::BackendUnavailable(
+            "the query binds no graph revision to compare the topic corpus revision with"
+                .to_string(),
+        )
+        .to_string()
+    })?;
+    let topics = fusion.backend.topics(query, &policy)?;
+    let vector_of = |id: &str| ctx.semantic.get_embedding(id);
+    fuse_topic_dense(
+        &dense,
+        &vector_of,
+        &topics,
+        weight,
+        retriever,
+        current,
+    )
+    .map_err(String::from)
 }
 
 /// `TOPIC_WEIGHT_INVALID` for a non-finite or out-of-range fusion weight.

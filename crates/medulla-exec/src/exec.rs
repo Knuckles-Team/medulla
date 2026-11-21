@@ -262,6 +262,9 @@ pub struct PlanCtx<'a> {
     /// MEDULLA-FEDERATED-QUERY-R040.2.1 — how a topic backend's answer is cut
     /// before fusion (`None`: no topic fusion is bound).
     pub topic_policy: Option<topic::TopicRankingPolicy>,
+    /// MEDULLA-FEDERATED-QUERY-R040.2.3 — the topic backend and the corpus revision it
+    /// must carry, bound with the policy by the served planner (`None`: no backend).
+    pub topic_fusion: Option<topic::TopicFusion<'a>>,
     /// MEDULLA-FEDERATED-QUERY-R040.1.2 — the ids that satisfy the request's hard
     /// retrieval constraints (`None`: nothing is constrained). A ranking step takes
     /// it as an id filter, so an excluded candidate never reaches a ranked result.
@@ -509,6 +512,7 @@ impl<'a> PlanCtx<'a> {
             policies: None,
             principal: None,
             topic_policy: None,
+            topic_fusion: None,
             constraints: None,
             modality_pair: None,
             replenish: vector_rank::ReplenishPolicy::default(),
@@ -592,6 +596,13 @@ impl<'a> PlanCtx<'a> {
     /// (MEDULLA-FEDERATED-QUERY-R040.2.1).
     pub fn with_topic_policy(mut self, policy: topic::TopicRankingPolicy) -> Self {
         self.topic_policy = Some(policy);
+        self
+    }
+
+    /// Bind the topic backend a ranking step fuses in
+    /// (MEDULLA-FEDERATED-QUERY-R040.2.3).
+    pub fn with_topic_fusion(mut self, fusion: topic::TopicFusion<'a>) -> Self {
+        self.topic_fusion = Some(fusion);
         self
     }
 
@@ -1157,9 +1168,29 @@ fn fuse_rrf(ctx: &PlanCtx, input: &RowSet, branches: &[Vec<Op>], k: f32) -> Resu
     let refs: Vec<&[String]> = ranked.iter().map(|v| v.as_slice()).collect();
     // MEDULLA-FEDERATED-QUERY-R040.1.3: a branch that ranks without a vector or text leg
     // (a distance rank) is still held to the hard constraints.
-    let fused = medulla_text::rrf_fuse(&refs, k)
+    let fused: Vec<(String, f32)> = medulla_text::rrf_fuse(&refs, k)
         .into_iter()
-        .filter(|(id, _)| ctx.constraints.as_ref().is_none_or(|set| set.contains(id)));
+        .filter(|(id, _)| ctx.constraints.as_ref().is_none_or(|set| set.contains(id)))
+        .collect();
+    // MEDULLA-FEDERATED-QUERY-R040.2.3: topic fusion follows the rank fusion; the topics are
+    // weighed against the query vector of the first vector branch.
+    if ctx.topic_policy.is_some() {
+        let query = branches
+            .iter()
+            .flatten()
+            .find_map(|op| match op {
+                Op::Rank { query } => Some(query.as_slice()),
+                _ => None,
+            })
+            .ok_or_else(|| {
+                topic::TopicRefusal::BackendUnavailable(
+                    "topic fusion over a fused rank needs a vector branch to weigh the topics against"
+                        .to_string(),
+                )
+                .to_string()
+            })?;
+        return Ok(RowSet::from_scored(topic::fuse_ranked(ctx, query, fused)?));
+    }
     Ok(RowSet::from_scored(fused))
 }
 

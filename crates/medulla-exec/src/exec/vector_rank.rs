@@ -134,6 +134,11 @@ fn rank_top(
         })));
     }
     check_width(ctx.semantic, query)?;
+    // MEDULLA-FEDERATED-QUERY-R040.2.3: with topic fusion bound, the whole eligible set is
+    // scored densely, fused with the topic evidence, and only then cut to `k`.
+    if ctx.topic_policy.is_some() {
+        return rank_topic_fused(ctx, query, &candidates, limit);
+    }
     let Some(k) = limit else {
         let scored = ctx
             .semantic
@@ -160,6 +165,48 @@ fn rank_top(
         found.shortfall
     };
     Ok(RowSet::from_scored(found.scored).with_shortfall(shortfall))
+}
+
+/// The topic-fused path of [`rank_top`] (MEDULLA-FEDERATED-QUERY-R040.2.3): exact dense
+/// scores over every eligible candidate that holds an embedding, re-scored by
+/// [`super::topic::fuse_ranked`], then truncated to `limit` (capped to the plan's
+/// result-row budget, reported like the plain path).
+fn rank_topic_fused(
+    ctx: &PlanCtx,
+    query: &[f32],
+    candidates: &HashSet<&str>,
+    limit: Option<usize>,
+) -> Result<RowSet, String> {
+    let dense = ctx
+        .semantic
+        .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
+    let embedded = dense.len();
+    let mut fused = super::topic::fuse_ranked(ctx, query, dense)?;
+    let Some(k) = limit else {
+        return Ok(RowSet::from_scored(fused));
+    };
+    let cap = ctx.budget.max_result_rows;
+    fused.truncate(k.min(cap));
+    let shortfall = if k > cap {
+        Some(Shortfall {
+            requested: k as u64,
+            found: fused.len() as u64,
+            reason: ShortfallReason::BudgetExhausted,
+        })
+    } else if fused.len() < k {
+        Some(Shortfall {
+            requested: k as u64,
+            found: fused.len() as u64,
+            reason: if embedded < candidates.len() {
+                ShortfallReason::MissingEmbedding
+            } else {
+                ShortfallReason::EligibleExhausted
+            },
+        })
+    } else {
+        None
+    };
+    Ok(RowSet::from_scored(fused).with_shortfall(shortfall))
 }
 
 /// The identity tuple one modality binds: `(space id, dimensions, model revision)`.
@@ -407,5 +454,53 @@ mod tests {
         );
         let rows = rank_limit(&ctx, &[1.0, 0.0], input(), 5).unwrap();
         assert!(rows.shortfall().is_none() && rows.len() == 5);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.3
+    #[test]
+    fn topic_fusion_reorders_before_the_cut_and_refuses_without_a_backend() {
+        use crate::exec::topic::{InMemoryTopicBackend, TopicFusion, TopicRankingPolicy};
+        let space = EmbeddingSpaceRef::pinned("topic-model", "1", "h", "p", 2, true).unwrap();
+        let mut semantic = SemanticStore::new_in_space(space.clone()).unwrap();
+        // `a` is nearest the query; `c` sits on the heavier topic's centroid.
+        for (id, vector) in [("a", [1.0, 0.1]), ("b", [0.9, 0.5]), ("c", [0.2, 1.0])] {
+            semantic.add_embedding(id.to_string(), vec![vector[0], vector[1]]).unwrap();
+        }
+        let view = GraphCore::new().analysis_snapshot();
+        let input = || RowSet::from_ids(["a", "b", "c"].map(String::from));
+        let backend = InMemoryTopicBackend {
+            centroids: vec![("t".to_string(), vec![0.0, 1.0])],
+            corpus_revision: 7,
+            space: space.clone(),
+        };
+        let bound = |weight: f32, current: Option<u64>| {
+            PlanCtx::new(&view, &semantic)
+                .with_topic_policy(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(weight).unwrap())
+                .with_topic_fusion(TopicFusion {
+                    backend: std::sync::Arc::new(InMemoryTopicBackend {
+                        centroids: backend.centroids.clone(),
+                        corpus_revision: backend.corpus_revision,
+                        space: backend.space.clone(),
+                    }),
+                    current_corpus_revision: current,
+                })
+        };
+        let order = |ctx: &PlanCtx, k: usize| rank_limit(ctx, &[1.0, 0.0], input(), k).map(|rows| rows.ids());
+        // w = 0 is the dense order; w = 1 is the topic order, applied before the cut to k = 1.
+        assert_eq!(order(&bound(0.0, Some(7)), 3).unwrap(), ["a", "b", "c"]);
+        assert_eq!(order(&bound(1.0, Some(7)), 3).unwrap()[0], "c");
+        assert_eq!(order(&bound(1.0, Some(7)), 1).unwrap(), ["c"]);
+        // A stale corpus, an unbound revision and a missing backend all refuse.
+        let stale = order(&bound(0.3, Some(8)), 3).unwrap_err();
+        assert!(stale.starts_with("TOPIC_CORPUS_STALE"), "{stale}");
+        let unbound = order(&bound(0.3, None), 3).unwrap_err();
+        assert!(unbound.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{unbound}");
+        let mut no_backend = bound(0.3, Some(7));
+        no_backend.topic_fusion = None;
+        let missing = order(&no_backend, 3).unwrap_err();
+        assert!(missing.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{missing}");
+        // With no topic policy bound, the rank is the plain dense rank.
+        let plain = PlanCtx::new(&view, &semantic);
+        assert_eq!(order(&plain, 3).unwrap(), ["a", "b", "c"]);
     }
 }

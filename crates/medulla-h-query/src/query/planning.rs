@@ -651,7 +651,7 @@ pub(crate) fn bind_modality_encoders<'a>(
 #[cfg(feature = "query")]
 pub(crate) fn run_unified_bind_retrieval<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
-    view: &medulla_graph_core::graph::GraphView,
+    view: &'a medulla_graph_core::graph::GraphView,
     graph_revision: Option<u64>,
     request: &medulla_index_types::retrieval_request::RetrievalRequest,
 ) -> Result<medulla_exec::exec::PlanCtx<'a>, String> {
@@ -673,6 +673,20 @@ pub(crate) fn run_unified_bind_retrieval<'a>(
             medulla_exec::exec::topic::TopicRankingPolicy::new(top_topics, topic.min_weight)?
                 .with_weight(medulla_server_api::knob_config::knobs().retrieval_topic_weight as f32)?;
         ctx = ctx.with_topic_policy(policy);
+        // MEDULLA-FEDERATED-QUERY-R040.2.3: the one served backend reads the centroid nodes of
+        // the read snapshot; no request field selects another. The centroids carry the
+        // corpus revision the request names, and the graph revision the query reads is
+        // what that revision must equal.
+        ctx = ctx.with_topic_fusion(medulla_exec::exec::topic::TopicFusion {
+            backend: std::sync::Arc::new(
+                medulla_exec::exec::topic::StoredCentroidTopicBackend::new(
+                    view,
+                    topic.corpus_revision,
+                    topic.space.clone(),
+                ),
+            ),
+            current_corpus_revision: graph_revision,
+        });
     }
     if let Some(pair) = &request.modality {
         ctx = ctx.with_modality_pair(pair.clone());
