@@ -56,6 +56,16 @@ fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
             Some(txn) => txn.reload_matviews(&state).await,
             None => Err("INTERNAL: transaction seam is not installed".to_string()),
         };
+        // The shadow checks of incremental plan views run on their own tick from here on
+        // (MEDULLA-INCREMENTAL-VIEWS-R008.3).
+        #[cfg(feature = "matview")]
+        {
+            if let Some(txn) = medulla_server_ops::api::query_txn::txn_seam(&state).await {
+                if let Err(error) = txn.spawn_shadow_checks(state.clone()) {
+                    tracing::warn!("matview shadow checks not started: {error}");
+                }
+            }
+        }
         match reloaded {
             Ok(0) => {
                 tracing::info!(

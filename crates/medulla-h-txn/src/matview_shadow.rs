@@ -6,11 +6,22 @@
 //! result is never served again.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use medulla_server_api::state::ServerState;
 use medulla_server_cdc::matview::{self, PlanMatView};
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
+
+/// The environment variable of the tick period; the value is the knob `view.shadow_tick_ms`
+/// (MEDULLA-INCREMENTAL-VIEWS-R008.3).
+pub const TICK_ENV: &str = "MEDULLA_VIEW_SHADOW_TICK_MS";
+
+/// The most due views one tick checks.
+const CHECKS_PER_TICK: usize = 4;
+
+/// The longest one check may run before it counts as skipped.
+pub const CHECK_DEADLINE: Duration = Duration::from_secs(30);
 
 /// The most rows of each side one mismatch log line carries.
 const LOGGED_ROWS: usize = 5;
@@ -43,10 +54,7 @@ fn comparable(rows: &[(String, Option<f32>)]) -> Vec<(String, Option<u32>)> {
 /// reads the version again. A version that moved answers `Skipped` and re-arms the
 /// view's check. Otherwise a difference demotes the view with `SHADOW_MISMATCH`.
 pub async fn check_view(state: &Arc<RwLock<ServerState>>, def: &PlanMatView) -> ShadowOutcome {
-    let core = {
-        let current = state.read().await;
-        current.registry.get(&def.graph).map(|entry| entry.core.clone())
-    };
+    let core = crate::dist_compute::resolve_core(state, &def.graph).await;
     let Some(core) = core else {
         return ShadowOutcome::Skipped;
     };
@@ -90,6 +98,52 @@ pub async fn check_view(state: &Arc<RwLock<ServerState>>, def: &PlanMatView) -> 
     medulla_kernel::metrics::process().view_demoted("plan", code);
     manager.demote_view(&def.name, code);
     ShadowOutcome::Mismatch
+}
+
+/// Run the due checks of one tick: at most [`CHECKS_PER_TICK`] incremental views whose
+/// shadow check is due, each under `deadline`. A check that overruns counts as
+/// [`ShadowOutcome::Skipped`] and its view is re-armed, so it is checked again on a
+/// later tick. No lock is held across a recompute. Answers each view's name and outcome.
+pub async fn run_tick(
+    state: &Arc<RwLock<ServerState>>,
+    deadline: Duration,
+) -> Vec<(String, ShadowOutcome)> {
+    let mut outcomes = Vec::new();
+    for def in matview::manager().take_due_checks(CHECKS_PER_TICK) {
+        let outcome = match tokio::time::timeout(deadline, check_view(state, &def)).await {
+            Ok(outcome) => outcome,
+            Err(_elapsed) => {
+                matview::manager().rearm_check(&def.name);
+                tracing::warn!(
+                    target: "medulla::matview",
+                    view = %def.name,
+                    "shadow check overran its deadline; it counts as skipped",
+                );
+                ShadowOutcome::Skipped
+            }
+        };
+        outcomes.push((def.name.clone(), outcome));
+    }
+    outcomes
+}
+
+/// Spawn the task that runs [`run_tick`] every `view.shadow_tick_ms` milliseconds
+/// (`MEDULLA_VIEW_SHADOW_TICK_MS`) for the life of the process. Called by the post-bind
+/// matview maintenance (MEDULLA-INCREMENTAL-VIEWS-R008.3). Must run inside a tokio runtime.
+pub fn spawn_shadow_checks(state: Arc<RwLock<ServerState>>) -> tokio::task::JoinHandle<()> {
+    let period = Duration::from_millis(
+        medulla_server_api::knob_config::knobs()
+            .view_shadow_tick_ms
+            .max(1),
+    );
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(period);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            run_tick(&state, CHECK_DEADLINE).await;
+        }
+    })
 }
 
 #[cfg(test)]
@@ -198,5 +252,63 @@ mod tests {
         );
         // A demoted view is no longer incremental, so a second check compares nothing.
         assert_eq!(check_view(&state, &stale_def).await, ShadowOutcome::Skipped);
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R008.3
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tick_runs_due_checks_with_deadline() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        let state = Arc::new(RwLock::new(server));
+        let created = call(
+            &state,
+            1,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+
+        let manager = matview::manager();
+        // A view over a label no node carries is empty on both sides: a check matches.
+        let (def, circuit) = view("tick-empty-view", "TickNothing");
+        manager.install_incremental(def, circuit, 0);
+
+        // Nothing is due, so the tick checks nothing.
+        assert!(run_tick(&state, CHECK_DEADLINE).await.is_empty());
+
+        // A check that overruns its deadline counts as skipped and is re-armed.
+        manager.rearm_check("tick-empty-view");
+        let outcomes = run_tick(&state, Duration::ZERO).await;
+        assert_eq!(
+            outcomes,
+            vec![("tick-empty-view".to_string(), ShadowOutcome::Skipped)]
+        );
+        assert_eq!(manager.mode("tick-empty-view"), Some(Mode::Incremental));
+
+        // The overrun view is due again, and a check within its deadline compares.
+        let outcomes = run_tick(&state, CHECK_DEADLINE).await;
+        assert_eq!(
+            outcomes,
+            vec![("tick-empty-view".to_string(), ShadowOutcome::Match)]
+        );
+        assert!(run_tick(&state, CHECK_DEADLINE).await.is_empty());
+
+        // The tick period is the `view.shadow_tick_ms` knob.
+        let knob = medulla_server_api::knob_config::KNOB_TABLE
+            .iter()
+            .find(|spec| spec.name == "view.shadow_tick_ms")
+            .expect("the tick period is a registry knob");
+        assert_eq!(knob.env_name(), TICK_ENV);
     }
 }
