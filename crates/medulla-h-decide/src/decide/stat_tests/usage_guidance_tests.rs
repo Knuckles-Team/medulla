@@ -286,6 +286,56 @@ async fn served_decide_reaches_guidance() {
     );
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R177.3
+#[tokio::test(flavor = "multi_thread")]
+async fn other_tenant_outcomes_never_order_steps() {
+    use super::path_preference_tests::{pins, seed, OTHER};
+    use crate::decide::stat_usage_guidance::with_usage_guidance_runtime;
+
+    let h = Harness::new().await;
+    // The other tenant measures `find` as always failing and `read` as always
+    // succeeding: counted here, they would put `read` before `find`.
+    let theirs = pins(&h, OTHER);
+    seed(&h, OTHER, &theirs, &tool_id("find"), &[false; 10]).await;
+    seed(&h, OTHER, &theirs, &tool_id("read"), &[true; 10]).await;
+
+    let pin = schema_pin(&h);
+    let request = guidance_request(&pin, CONNECTOR, JOB);
+
+    // The other tenant's own read sees its outcomes: the seed is real.
+    let stranger = VerifiedRequestContext::verified_for_test_in_tenant("decider", OTHER);
+    let seen = with_usage_guidance_runtime(&h.state, &h.store, &stranger, &request)
+        .await
+        .unwrap()
+        .usage_guidance
+        .expect("a usage guidance read")
+        .rates;
+    assert_eq!(seen.get(&tool_id("read")).map(|rate| rate.trials), Some(10));
+
+    // The asking tenant's read holds none of them, and its steps stay in tool id order.
+    let mine = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+    let rates = with_usage_guidance_runtime(&h.state, &h.store, &mine, &request)
+        .await
+        .unwrap()
+        .usage_guidance
+        .expect("a usage guidance read")
+        .rates;
+    assert!(rates.is_empty(), "{rates:?}");
+    let mut read = read_of(pack(vec![]), &[]);
+    read.rates = rates;
+    let sealed = decide_with_read(&h, &request, read).unwrap();
+    assert_eq!(sealed.resolution_kind, ResolutionKind::Constraint);
+    let tools: Vec<&str> = guidance_of(&sealed)
+        .steps
+        .iter()
+        .map(|s| s.tool.as_str())
+        .collect();
+    assert_eq!(
+        tools,
+        vec![tool_id("find"), tool_id("read"), tool_id("label")]
+    );
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R177.4
 #[tokio::test(flavor = "multi_thread")]
 async fn guidance_refusals() {
