@@ -12,6 +12,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T005 [US1] MEDULLA-INGEST-WORKER-R001.7 Typed retry policy with validation
 - [ ] T006 [US1] MEDULLA-INGEST-WORKER-R001.8 Retry delay function with jitter
 - [ ] T007 [US1] MEDULLA-INGEST-WORKER-R001.9 Failure routing: retry with backoff, then dead letter
+- [ ] T007a [US1] MEDULLA-INGEST-WORKER-R001.9 Register `analytics_job_task_dead_letters` in the Jobs owner layout (registry, table_api, contract, owner tests, predecessor and digest)
 - [ ] T008 [US1] MEDULLA-INGEST-WORKER-R001.10 Hydration kinds run on the hydration queue
 - [ ] T009 [US1] MEDULLA-INGEST-WORKER-R001.11 Backpressure read and producer refusal
 - [ ] T010 [US1] MEDULLA-INGEST-WORKER-R001.12 A missed lease renewal redelivers the job and counts as an attempt
