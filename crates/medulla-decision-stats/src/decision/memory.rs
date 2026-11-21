@@ -12,6 +12,7 @@ use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
     ConsolidationPlan, MemoryRecord, MemoryTier, MergeGroup, Memento, PromotionGroup,
+    TrajectoryEntry,
 };
 use sha2::{Digest, Sha256};
 
@@ -55,12 +56,23 @@ pub const IMPORTANCE_FLOOR: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
+/// CKA below this similarity flags an embedding drift (R651.2.2).
+pub const DRIFT_CKA_MIN: KnobSpec = KnobSpec {
+    name: "memory.drift_cka_min",
+    unit: "similarity",
+    default: KnobValue::DecimalMicros(900_000),
+    min: KnobValue::DecimalMicros(500_000),
+    max: KnobValue::DecimalMicros(1_000_000),
+    safety: KnobSafety::Tunable,
+};
+
 /// Every knob of the memory surface this module owns.
 pub const KNOBS: &[KnobSpec] = &[
     MERGE_COSINE,
     MEMENTO_TOKEN_CAP,
     EXPORT_MAX_RECORDS,
     IMPORTANCE_FLOOR,
+    DRIFT_CKA_MIN,
 ];
 
 /// The token count of one record: its estimate, or one token per four bytes
@@ -248,6 +260,81 @@ fn seal_memento(mementos: &mut Vec<Memento>, ids: &mut Vec<ResourceId>, texts: &
     });
 }
 
+/// Linear CKA of two embedding snapshots of the same ids: row `i` of `first`
+/// and of `second` embed the same id. The columns are centred and the result is
+/// `||Yᵀ X||² / (||Xᵀ X|| ||Yᵀ Y||)` in `[0, 1]`: 1 for snapshots that differ
+/// by a rotation, scale or shift, and lower as the geometry changes. `None`
+/// when the snapshots differ in row count, are empty or ragged, or a snapshot
+/// has no variance, so there is nothing to compare.
+pub fn linear_cka(first: &[Vec<f64>], second: &[Vec<f64>]) -> Option<f64> {
+    fn centred(rows: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
+        let width = rows.first()?.len();
+        if width == 0 || rows.iter().any(|row| row.len() != width) {
+            return None;
+        }
+        let count = rows.len() as f64;
+        let means: Vec<f64> = (0..width)
+            .map(|column| rows.iter().map(|row| row[column]).sum::<f64>() / count)
+            .collect();
+        Some(
+            rows.iter()
+                .map(|row| row.iter().zip(&means).map(|(v, m)| v - m).collect())
+                .collect(),
+        )
+    }
+    fn cross_norm_squared(left: &[Vec<f64>], right: &[Vec<f64>]) -> f64 {
+        let (lw, rw) = (left[0].len(), right[0].len());
+        let mut total = 0.0;
+        for i in 0..lw {
+            for j in 0..rw {
+                let entry: f64 = left
+                    .iter()
+                    .zip(right)
+                    .map(|(l, r)| l[i] * r[j])
+                    .sum();
+                total += entry * entry;
+            }
+        }
+        total
+    }
+    if first.len() != second.len() {
+        return None;
+    }
+    let (x, y) = (centred(first)?, centred(second)?);
+    let denominator = (cross_norm_squared(&x, &x) * cross_norm_squared(&y, &y)).sqrt();
+    if denominator == 0.0 {
+        return None;
+    }
+    Some((cross_norm_squared(&x, &y) / denominator).clamp(0.0, 1.0))
+}
+
+/// CKA on the Q16 scale (`1.0` is 65536).
+pub fn cka_q16(cka: f64) -> i64 {
+    (cka * 65536.0).round() as i64
+}
+
+/// Whether `cka` fell below `knob memory.drift_cka_min`.
+pub fn drifted(cka: f64, cka_min: f64) -> bool {
+    cka < cka_min
+}
+
+/// The prune candidates of a trajectory, in trajectory order: an entry whose
+/// `importance` is below `importance_floor` and that no later entry
+/// references. The plan removes nothing.
+pub fn prune_trajectory(entries: &[TrajectoryEntry], importance_floor: f64) -> Vec<ResourceId> {
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(position, entry)| {
+            entry.importance < importance_floor
+                && !entries[position + 1..]
+                    .iter()
+                    .any(|later| later.references.contains(&entry.entry_id))
+        })
+        .map(|(_, entry)| entry.entry_id.clone())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -385,5 +472,56 @@ mod tests {
         let mut huge = record("m:huge", MemoryTier::Working, 1.0, "x");
         huge.token_estimate = 500;
         assert_eq!(compress_to_mementos(&[huge], 64).len(), 1);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.2.2
+    #[test]
+    fn cka_is_one_for_identical_snapshots_and_drops_for_shuffled() {
+        let rows: Vec<Vec<f64>> = (0..6u32)
+            .map(|i| vec![f64::from(i), f64::from((i * i) % 7), f64::from((3 * i) % 5)])
+            .collect();
+        let same = linear_cka(&rows, &rows).unwrap();
+        assert!((same - 1.0).abs() < 1e-12, "{same}");
+        let scaled: Vec<Vec<f64>> = rows
+            .iter()
+            .map(|row| row.iter().map(|v| 2.0 * v + 1.0).collect())
+            .collect();
+        assert!((linear_cka(&rows, &scaled).unwrap() - 1.0).abs() < 1e-12);
+        let mut shuffled = rows.clone();
+        shuffled.rotate_left(1);
+        let low = linear_cka(&rows, &shuffled).unwrap();
+        assert!(low < 0.5, "{low}");
+        assert!(drifted(low, 0.9));
+        assert!(!drifted(same, 0.9));
+        assert_eq!(cka_q16(1.0), 65536);
+        assert_eq!(linear_cka(&rows, &rows[1..]), None);
+        assert_eq!(linear_cka(&[], &[]), None);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.2.3
+    #[test]
+    fn referenced_entries_are_never_trajectory_candidates() {
+        let id = |value: &str| ResourceId::new(value).unwrap();
+        let entry = |name: &str, importance: f64, references: &[&str]| TrajectoryEntry {
+            entry_id: id(name),
+            importance,
+            references: references.iter().map(|r| id(r)).collect(),
+        };
+        let entries = vec![
+            entry("e1", 0.01, &[]),
+            entry("e2", 0.9, &["e1"]),
+            entry("e3", 0.02, &[]),
+            entry("e4", 0.5, &[]),
+            entry("e5", 0.03, &["e4"]),
+        ];
+        // e1 is referenced by the later e2; e4 is not low; e3 and e5 are
+        // unreferenced and below the floor, listed in trajectory order.
+        assert_eq!(
+            prune_trajectory(&entries, 0.05),
+            vec![id("e3"), id("e5")]
+        );
+        // An earlier entry's reference does not protect a later one.
+        let early = vec![entry("a", 0.9, &["b"]), entry("b", 0.01, &[])];
+        assert_eq!(prune_trajectory(&early, 0.05), vec![id("b")]);
     }
 }
