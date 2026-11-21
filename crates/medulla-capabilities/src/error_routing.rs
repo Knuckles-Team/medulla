@@ -959,6 +959,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FinanceAccountProject",
         &["FIGURE_PROVENANCE_MISSING", "BASIS_POLICY_UNSUPPORTED"],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R005.3.4: the served performance method.
+    (
+        "FinancePerformance",
+        &[
+            "FIGURE_PROVENANCE_MISSING",
+            "RANGE_UNSUPPORTED",
+            "BENCHMARK_UNKNOWN",
+            "ACCOUNT_BINDING_UNVERIFIED",
+        ],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R002.11: regime forecast, calibration gate and sizing input.
     (
         "RegimeForecast",

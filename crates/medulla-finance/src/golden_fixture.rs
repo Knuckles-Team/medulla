@@ -47,6 +47,19 @@ impl fmt::Display for FigureProvenanceRefusal {
 
 impl std::error::Error for FigureProvenanceRefusal {}
 
+/// The decimal string of `ticks` at [`SCALE`], the wire form of money: eight fraction digits and
+/// a leading `-` for a negative value (MEDULLA-FINANCE-PRIMITIVES-R005.3.4).
+pub fn ticks_to_decimal(ticks: i64) -> String {
+    let magnitude = ticks.unsigned_abs();
+    let scale = SCALE as u64;
+    format!(
+        "{}{}.{:08}",
+        if ticks < 0 { "-" } else { "" },
+        magnitude / scale,
+        magnitude % scale
+    )
+}
+
 /// Admit `figure` only when every provenance field is present
 /// (MEDULLA-FINANCE-PRIMITIVES-R013): a figure missing its source, as-of time, or
 /// session is refused rather than displayed with a silent gap.
@@ -104,6 +117,40 @@ pub fn compare_broker_statement_figure(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.4
+    #[test]
+    fn performance_card_is_verbatim_and_unavailable_is_never_zero() {
+        use crate::returns::{twr_ticks, ReturnError, ReturnFlow, ValuationPoint};
+        let at = |ns, whole: i64| ValuationPoint {
+            ns,
+            value_ticks: whole * SCALE / 10,
+        };
+        // 100, 110 then 121.1 with a 10 deposit in the second period: TWR 0.111.
+        let valuations = [at(0, 1000), at(10, 1100), at(20, 1211)];
+        let flows = [ReturnFlow {
+            ns: 20,
+            amount_ticks: 10 * SCALE,
+        }];
+        let ticks = twr_ticks(&valuations, &flows).expect("the two-period return");
+        assert_eq!(ticks_to_decimal(ticks), "0.11100000");
+        let admitted = GoldenFixtureFigure {
+            value_ticks: ticks,
+            source: "broker-statement:2026-09".to_string(),
+            as_of: "2026-09-30T00:00:00Z".to_string(),
+            session: "regular".to_string(),
+        };
+        assert!(check_figure_provenance(&admitted).is_ok());
+        assert!(check_figure_provenance(&GoldenFixtureFigure {
+            session: String::new(),
+            ..admitted
+        })
+        .is_err());
+        assert_eq!(ticks_to_decimal(-250_000_000), "-2.50000000");
+        // No valuation at all is an error, never a zero return.
+        assert_eq!(twr_ticks(&[], &[]), Err(ReturnError::NoPeriod));
+        assert_eq!(ticks_to_decimal(0), "0.00000000");
+    }
 
     fn figure() -> GoldenFixtureFigure {
         GoldenFixtureFigure {

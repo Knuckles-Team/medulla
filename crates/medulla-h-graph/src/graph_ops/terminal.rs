@@ -60,6 +60,7 @@ pub(super) async fn try_handle_graph_domains(
     #[cfg(feature = "finance")]
     {
         method = super::finance_accounting::handle_project(ctx, method).await?;
+        method = super::finance_performance::handle_performance(ctx, method).await?;
         method = super::finance_regime::handle_regime(ctx, method).await?;
         method = super::finance_order_limit_check::handle_check(ctx, method).await?;
     }

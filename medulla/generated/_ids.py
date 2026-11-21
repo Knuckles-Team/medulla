@@ -609,6 +609,7 @@ METHOD_IDS = frozenset(
         "EncodeDocument",
         "EncodedDocumentSearch",
         "FinanceAccountProject",
+        "FinancePerformance",
         "HarnessEdit",
         "Loops",
         "NumericEvaluate",

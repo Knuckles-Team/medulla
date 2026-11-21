@@ -61,6 +61,8 @@ pub mod domain_pack;
 mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;
+#[cfg(feature = "finance")]
+mod finance_performance;
 mod finance_alerts;
 mod finance_factors;
 #[cfg(feature = "finance")]

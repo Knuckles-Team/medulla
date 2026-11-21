@@ -43,11 +43,11 @@ const ACTIVITY_LABEL: &str = "Activity";
 const PAGE: usize = 1024;
 const NS_PER_SECOND: i64 = 1_000_000_000;
 
-fn refuse(req_id: u64, code: &str, detail: impl std::fmt::Display) -> Response {
+pub(super) fn refuse(req_id: u64, code: &str, detail: impl std::fmt::Display) -> Response {
     Response::err(req_id, format!("{code}: {detail}"))
 }
 
-fn invalid(req_id: u64, detail: impl std::fmt::Display) -> Response {
+pub(super) fn invalid(req_id: u64, detail: impl std::fmt::Display) -> Response {
     refuse(req_id, "INVALID_ARGUMENT", detail)
 }
 
@@ -142,22 +142,22 @@ pub(super) fn datetime_ns(text: &str) -> Option<i64> {
 }
 
 /// One stored `Activity` record, decoded.
-struct Event {
-    node_id: String,
-    record_id: String,
-    fields: BTreeMap<String, String>,
-    position: String,
-    kind: String,
-    ns: i64,
-    known_ns: i64,
+pub(super) struct Event {
+    pub(super) node_id: String,
+    pub(super) record_id: String,
+    pub(super) fields: BTreeMap<String, String>,
+    pub(super) position: String,
+    pub(super) kind: String,
+    pub(super) ns: i64,
+    pub(super) known_ns: i64,
 }
 
 impl Event {
-    fn text(&self, name: &str) -> Option<String> {
+    pub(super) fn text(&self, name: &str) -> Option<String> {
         self.fields.get(name).and_then(|term| literal(term))
     }
 
-    fn ticks(&self, name: &str) -> Option<i64> {
+    pub(super) fn ticks(&self, name: &str) -> Option<i64> {
         self.text(name).and_then(|text| decimal_ticks(&text))
     }
 
@@ -170,7 +170,7 @@ impl Event {
     }
 }
 
-fn decode(node_id: &str, blob: &[u8], scope: &str) -> Option<Event> {
+pub(super) fn decode(node_id: &str, blob: &[u8], scope: &str) -> Option<Event> {
     let props = medulla_types::msgpack::decode_property_object(blob).ok()?;
     if props.get(TENANT_SCOPE_KEY).and_then(|v| v.as_str()) != Some(scope) {
         return None;
@@ -195,7 +195,7 @@ fn decode(node_id: &str, blob: &[u8], scope: &str) -> Option<Event> {
     Some(event)
 }
 
-fn account_of(event: &Event) -> Option<String> {
+pub(super) fn account_of(event: &Event) -> Option<String> {
     event
         .fields
         .get("activityAccount")
@@ -204,15 +204,20 @@ fn account_of(event: &Event) -> Option<String> {
 
 /// Every `Activity` of the verified tenant belonging to `account`, by record id.
 fn activities(core: &GraphCore, scope: &str, account: &str) -> Vec<Event> {
+    let mut out = tenant_events(core, scope);
+    out.retain(|e| account_of(e).as_deref() == Some(account));
+    out
+}
+
+/// Every `Activity` of the verified tenant, ascending by `(ns, record_id)`.
+pub(super) fn tenant_events(core: &GraphCore, scope: &str) -> Vec<Event> {
     let mut out = Vec::new();
     let mut after: Option<String> = None;
     loop {
         let page = core.get_nodes_by_label_page(ACTIVITY_LABEL, after.as_deref(), PAGE);
         let full = page.len() == PAGE;
         after = page.last().map(|(id, _)| id.clone());
-        out.extend(page.iter().filter_map(|(id, blob)| {
-            decode(id, blob, scope).filter(|e| account_of(e).as_deref() == Some(account))
-        }));
+        out.extend(page.iter().filter_map(|(id, blob)| decode(id, blob, scope)));
         if !full || after.is_none() {
             break;
         }
@@ -592,6 +597,11 @@ fn project(
     ));
     for event in &events {
         if event.ns > as_ns || event.known_ns > known_ns {
+            continue;
+        }
+        // The return engine's records (MEDULLA-FINANCE-PRIMITIVES-R005.3.2) are no position
+        // activity: the position projection is unchanged by them.
+        if super::finance_performance::is_performance_kind(&event.kind) {
             continue;
         }
         digest.update(event.node_id.as_bytes());

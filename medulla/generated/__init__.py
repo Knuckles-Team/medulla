@@ -272,6 +272,7 @@ SEND_BY_METHOD = {
     "FinanceAccountProject": compute.send_finance_account_project,
     "FinanceAlertRaise": graph.send_finance_alert_raise,
     "FinanceAlphaCombinationEngine": compute.send_finance_alpha_combination_engine,
+    "FinancePerformance": compute.send_finance_performance,
     "FinanceAmlScreen": compute.send_finance_aml_screen,
     "FinanceAvellanedaStoikov": compute.send_finance_avellaneda_stoikov,
     "FinanceBayesianKelly": compute.send_finance_bayesian_kelly,

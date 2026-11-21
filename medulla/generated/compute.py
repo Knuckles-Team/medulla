@@ -5831,6 +5831,9 @@ decode_wallet_key_trust_get = contract_decoder("WalletKeyTrustGet", "WalletKeyTr
 send_finance_account_project = contract_sender(
     "FinanceAccountProject", "MethodFinanceAccountProjectParams"
 )
+send_finance_performance = contract_sender(
+    "FinancePerformance", "MethodFinancePerformanceParams"
+)
 send_numeric_evaluate = contract_sender(
     "NumericEvaluate", "MethodNumericEvaluateParams"
 )

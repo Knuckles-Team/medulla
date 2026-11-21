@@ -10622,6 +10622,33 @@ class FinanceClient:
             self._client, {"kind": kind, "record_id": record_id}
         )
 
+    # ── Served performance (MEDULLA-FINANCE-PRIMITIVES-R005.3.4) ──
+    async def finance_performance(
+        self,
+        account: str,
+        as_of: str,
+        known_at: str,
+        base_currency: str,
+        method: str,
+        range: str,
+        benchmark: str | None = None,
+    ) -> Any:
+        """One account's return over ``range`` by ``method`` (``twr``, ``mwr`` or
+        ``xirr``), with an optional benchmark over the same window. A missing figure
+        is null with a reason, never zero."""
+        return await _gen.compute.send_finance_performance(
+            self._client,
+            {
+                "account": account,
+                "as_of": as_of,
+                "known_at": known_at,
+                "base_currency": base_currency,
+                "method": method,
+                "range": range,
+                "benchmark": benchmark,
+            },
+        )
+
     # ── Served order proposals (MEDULLA-FINANCE-PRIMITIVES-R015.1, R010.2) ──
     async def order_limit_check(self, proposal: dict[str, Any]) -> Any:
         """Verify one order proposal against the pinned trading policy limits.

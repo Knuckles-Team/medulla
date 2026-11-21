@@ -94,6 +94,10 @@ closed_error_codes! {
         BranchVersionNotOnChain => "BRANCH_VERSION_NOT_ON_CHAIN",
         BranchWriteInvalid => "BRANCH_WRITE_INVALID",
         BasisPolicyUnsupported => "BASIS_POLICY_UNSUPPORTED",
+        // MEDULLA-FINANCE-PRIMITIVES-R005.3.4: the served performance method.
+        AccountBindingUnverified => "ACCOUNT_BINDING_UNVERIFIED",
+        BenchmarkUnknown => "BENCHMARK_UNKNOWN",
+        RangeUnsupported => "RANGE_UNSUPPORTED",
         BlobDigestMismatch => "BLOB_DIGEST_MISMATCH",
         BlobNotFound => "BLOB_NOT_FOUND",
         BlobTooLarge => "BLOB_TOO_LARGE",

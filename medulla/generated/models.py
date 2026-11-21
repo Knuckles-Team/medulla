@@ -15654,6 +15654,13 @@ class MethodFinanceAccountProject(BaseModel):
     params: MethodFinanceAccountProjectParams
 
 
+class MethodFinancePerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinancePerformance"]
+    params: MethodFinancePerformanceParams
+
+
 class MethodRegimeForecast(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16818,6 +16825,7 @@ Method = Annotated[
         MethodWorkflowRegistry,
         MethodBatch,
         MethodFinanceAccountProject,
+        MethodFinancePerformance,
         MethodRegimeForecast,
         MethodRegimeSizingInput,
         MethodStoredQueryPut,
@@ -36355,6 +36363,18 @@ class MethodFinanceAccountProjectParams(BaseModel):
     known_at: str
 
 
+class MethodFinancePerformanceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    account: str
+    as_of: str
+    base_currency: str
+    benchmark: str | None = None
+    known_at: str
+    method: str
+    range: str
+
+
 class MethodLoopsParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -44454,6 +44474,8 @@ __all__ = [
     "MethodEncodedDocumentSearchParams",
     "MethodFinanceAccountProject",
     "MethodFinanceAccountProjectParams",
+    "MethodFinancePerformance",
+    "MethodFinancePerformanceParams",
     "MethodLoops",
     "MethodLoopsParams",
     "MethodNumericEvaluate",

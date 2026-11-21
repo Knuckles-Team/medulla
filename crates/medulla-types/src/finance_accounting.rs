@@ -54,3 +54,64 @@ pub struct FinanceAccountProjection {
     pub input_digest: String,
     pub figures: Vec<ProjectedFigure>,
 }
+
+/// The refusal code of a range the performance method does not know.
+pub const RANGE_UNSUPPORTED: &str = "RANGE_UNSUPPORTED";
+/// The refusal code of an account whose binding to the verified principal is not recorded.
+pub const ACCOUNT_BINDING_UNVERIFIED: &str = "ACCOUNT_BINDING_UNVERIFIED";
+/// The refusal code of a benchmark with no recorded level.
+pub const BENCHMARK_UNKNOWN: &str = "BENCHMARK_UNKNOWN";
+
+/// The benchmark's figure over the same window as the account's
+/// (MEDULLA-FINANCE-PRIMITIVES-R005.3.4). `value_ticks` and `value` are null together, then
+/// `reason` says why.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct BenchmarkFigure {
+    /// The benchmark name.
+    pub name: String,
+    /// The return in ticks at [`FINANCE_SCALE`]; null when unavailable.
+    pub value_ticks: Option<i64>,
+    /// The decimal string of `value_ticks`.
+    pub value: Option<String>,
+    /// Why the figure is unavailable.
+    pub reason: Option<String>,
+}
+
+/// One account's return over a range (MEDULLA-FINANCE-PRIMITIVES-R005.3.4). A missing figure is
+/// null with a `reason`, never zero.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FinancePerformanceCard {
+    /// The account.
+    pub account: String,
+    /// `twr`, `mwr` or `xirr`.
+    pub method: String,
+    /// The base currency of every value.
+    pub currency: String,
+    /// The requested range.
+    pub range: String,
+    /// The request's as-of instant.
+    pub as_of: String,
+    /// The request's known-at instant.
+    pub known_at: String,
+    /// The return in ticks at `scale`; null when unavailable.
+    pub value_ticks: Option<i64>,
+    /// The decimal string of `value_ticks`, the wire form of money.
+    pub value: Option<String>,
+    /// Why the figure is unavailable: `NO_VALUATION`, `NO_VALUATION_AT_START`,
+    /// `NON_POSITIVE_START_VALUE` or `NO_SOLUTION`.
+    pub reason: Option<String>,
+    /// The benchmark over the same window, when one was asked for.
+    pub benchmark: Option<BenchmarkFigure>,
+    /// The `recordSource` of the end valuation record.
+    pub source: String,
+    /// The `activitySession` of the end valuation record.
+    pub session: String,
+    /// True when the end valuation is more than five days before `as_of`.
+    pub stale: bool,
+    /// One whole unit is this many ticks.
+    pub scale: i64,
+    /// SHA-256 over the request and the ordered records used.
+    pub input_digest: String,
+}

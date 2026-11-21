@@ -94,6 +94,9 @@ method_results! {
     FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
     #[cfg(feature = "finance")]
     FinanceAccountProject(FinanceAccountProject) => Json<medulla_types::finance_accounting::FinanceAccountProjection>;
+    // MEDULLA-FINANCE-PRIMITIVES-R005.3.4: the return figure of one account over a range.
+    #[cfg(feature = "finance")]
+    FinancePerformance(FinancePerformance) => Json<medulla_types::finance_accounting::FinancePerformanceCard>;
     // The pinned-model regime forecast and its calibration gate.
     #[cfg(feature = "finance")]
     RegimeForecast(RegimeForecast) => Json<medulla_types::regime_forecast::RegimeForecastResult>;

@@ -635,6 +635,22 @@ $($variants)*
         base_currency: String,
     },
 
+    // ── Served performance (MEDULLA-FINANCE-PRIMITIVES-R005.3.4) ─────────────
+    /// One account's return over `range` (`1D`, `1M`, `YTD`, `1Y`, `5Y` or `ALL`) by `method`
+    /// (`twr`, `mwr` or `xirr`) at `(as_of, known_at)`, with an optional benchmark over the same
+    /// window. Every figure carries source, as-of and session; a missing figure is null with a
+    /// reason, never zero. Reads only.
+    #[cfg(feature = "finance")]
+    FinancePerformance {
+        account: String,
+        as_of: String,
+        known_at: String,
+        base_currency: String,
+        method: String,
+        range: String,
+        benchmark: Option<String>,
+    },
+
     // ── Served regime forecast and sizing input (MEDULLA-FINANCE-PRIMITIVES-R002.11) ──
     /// Forecast `p_h = p0 * T^h` of a pinned regime model node at every requested
     /// horizon, and gate each horizon by its held-out categorical Brier score when
