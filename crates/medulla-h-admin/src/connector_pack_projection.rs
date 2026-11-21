@@ -415,7 +415,7 @@ pub mod worker {
     /// Project the connector's CURRENT head, unless it is already visible.
     /// Returns whether the projection's graph commit ran (a dark head that
     /// projects for the first time commits; an already-visible head does not).
-    async fn project(
+    pub(crate) async fn project(
         state: &Arc<RwLock<ServerState>>,
         store: &Arc<AgentLibraryStore>,
         tenant: &str,

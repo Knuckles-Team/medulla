@@ -204,3 +204,40 @@ async fn surface_nodes_carry_pack_digest() {
         assert!(revision[0].parse::<u64>().unwrap() >= 1, "{name}");
     }
 }
+
+// spec: MEDULLA-TYPED-PACKS-R002.8
+#[tokio::test]
+async fn a_stale_event_projects_the_current_head_and_commits_nothing() {
+    let connector = "r002-8-stale";
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    bind(&served, connector, ADMIN).await;
+    let first = imported(&served, &pack(connector, &["a", "b"]), None).await;
+    imported(&served, &pack(connector, &["a"]), Some(head_of(&first))).await;
+    project(&served).await;
+    let before = pack_triples(&served, connector).await;
+    let withdrawn = tool_node(connector, "b");
+    assert_eq!(values(&before, &withdrawn, &cp("lifecycle")), ["withdrawn"]);
+
+    // The first import's event arrives after the head is already visible:
+    // `project` answers the current head, finds it visible and commits nothing.
+    let store = medulla_persistence_records::agent_library::shared_agent_library(&served.state)
+        .await
+        .unwrap();
+    let projected = crate::connector_pack_projection::worker::project(
+        &served.state,
+        &store,
+        TENANT,
+        &ResourceId::new(connector).unwrap(),
+    )
+    .await
+    .unwrap();
+    assert!(!projected, "a visible head is not projected again");
+    let after = pack_triples(&served, connector).await;
+    assert_eq!(after.len(), before.len());
+    assert_eq!(values(&after, &withdrawn, &cp("lifecycle")), ["withdrawn"]);
+    assert_eq!(
+        values(&after, &tool_node(connector, "a"), &cp("lifecycle")),
+        ["active"]
+    );
+}
