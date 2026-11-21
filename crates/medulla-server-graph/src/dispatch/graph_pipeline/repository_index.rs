@@ -66,6 +66,11 @@ async fn index_scoped(
     let files = decode_ast_sources(&files_msgpack, ast_input_limits())
         .and_then(|files| validate_scope_paths(&scope).map(|()| files))
         .map_err(|error| Response::err(req_id, error))?;
+    // MEDULLA-SDLC-R014.2: the spec artifact digests this repository already holds.
+    let stored_specs = medulla_h_ingest::source_ingestion::spec_projection::stored_artifacts(
+        ctx.core,
+        &scope.repository_id,
+    );
     // Validate the complete scope and parse before acquiring CAS holders. A
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
@@ -78,6 +83,14 @@ async fn index_scoped(
             // MEDULLA-REPO-INGEST-R601.3 / R602.3: commits, routes, IaC resources
             // and service prefixes lower beside them for the enrichment hooks.
             medulla_h_ingest::repository_index::scope_facts::project(&files, &scope, &mut result)?;
+            // MEDULLA-SDLC-R014.2: changed spec artifact files lower beside them as
+            // requirement records, so they commit in the same envelope.
+            medulla_h_ingest::source_ingestion::spec_projection::project_spec_artifacts(
+                &scope.repository_id,
+                &files,
+                &stored_specs,
+                &mut result,
+            )?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?

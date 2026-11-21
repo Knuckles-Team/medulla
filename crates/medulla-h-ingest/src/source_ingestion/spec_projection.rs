@@ -151,6 +151,27 @@ pub fn project_requirements(
     states: &BTreeMap<String, String>,
     external: &BTreeMap<String, String>,
 ) -> Result<RequirementProjection, String> {
+    project_requirements_in(repo, triples, states, external, Unresolved::Refuse)
+}
+
+/// What to do with a `Depends:` ID that resolves to no row of the projected tree.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Unresolved {
+    /// Refuse with `REQUIREMENT_UNRESOLVED` and write nothing.
+    Refuse,
+    /// Write no `dependsOn` edge for it. The repository index sees one repository's files,
+    /// so a row of another repository cannot resolve there.
+    Skip,
+}
+
+/// [`project_requirements`] with the choice of what an unresolved ID does.
+pub fn project_requirements_in(
+    repo: &str,
+    triples: &[RdfTriple],
+    states: &BTreeMap<String, String>,
+    external: &BTreeMap<String, String>,
+    unresolved: Unresolved,
+) -> Result<RequirementProjection, String> {
     let requirement_class = format!("{SDD_NS}Requirement");
     let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     let subjects: BTreeSet<&str> = triples
@@ -187,6 +208,8 @@ pub fn project_requirements(
                 requirement_node_id(repo, &dependency)
             } else if let Some(target) = external.get(&dependency) {
                 target.clone()
+            } else if unresolved == Unresolved::Skip {
+                continue;
             } else {
                 return Err(format!(
                     "{}: {dependency} (cited by {id}) resolves to no row",
@@ -569,6 +592,17 @@ pub fn reingest_changed_artifacts(
     states: &BTreeMap<String, String>,
     external: &BTreeMap<String, String>,
 ) -> Result<ReingestPlan, String> {
+    reingest_in(repo, files, stored, states, external, Unresolved::Refuse)
+}
+
+fn reingest_in(
+    repo: &str,
+    files: &[(&str, &str)],
+    stored: &BTreeMap<String, StoredArtifact>,
+    states: &BTreeMap<String, String>,
+    external: &BTreeMap<String, String>,
+    unresolved: Unresolved,
+) -> Result<ReingestPlan, String> {
     let mut removals: Vec<serde_json::Value> = Vec::new();
     let mut writes: Vec<serde_json::Value> = Vec::new();
     let mut links: Vec<serde_json::Value> = Vec::new();
@@ -594,7 +628,7 @@ pub fn reingest_changed_artifacts(
             continue;
         }
         let triples = parse_spec_file(name, text).map_err(|refusal| refusal.to_string())?;
-        let projection = project_requirements(repo, &triples, states, external)?;
+        let projection = project_requirements_in(repo, &triples, states, external, unresolved)?;
         let mut records = Vec::new();
         for op in projection.operations {
             if op["op"] == "upsert_node" {
@@ -635,6 +669,119 @@ pub fn reingest_changed_artifacts(
         removed,
         unchanged,
     })
+}
+
+/// A spec artifact file of a repository tree: Markdown under a `specs/` directory.
+fn is_spec_artifact(path: &str) -> bool {
+    path.ends_with(".md") && (path.starts_with("specs/") || path.contains("/specs/"))
+}
+
+/// The artifact files the engine already holds for `repo`, read off the `SpecArtifactFile`
+/// nodes that [`reingest_changed_artifacts`] wrote.
+pub fn stored_artifacts(
+    core: &medulla_graph_core::graph::GraphCore,
+    repo: &str,
+) -> BTreeMap<String, StoredArtifact> {
+    const MAX_ARTIFACT_FILES: usize = 1_000_000;
+    core.get_nodes_by_label("SpecArtifactFile", MAX_ARTIFACT_FILES)
+        .into_iter()
+        .filter_map(|(_, properties)| {
+            let node = medulla_types::msgpack::decode_property_value(&properties).ok()?;
+            let text = |key: &str| node.get(key).and_then(|v| v.as_str()).map(str::to_owned);
+            (text("repo")? == repo).then(|| {
+                (
+                    text("file").unwrap_or_default(),
+                    StoredArtifact {
+                        digest: text("digest").unwrap_or_default(),
+                        records: text("records")
+                            .unwrap_or_default()
+                            .split(',')
+                            .filter(|id| !id.is_empty())
+                            .map(str::to_owned)
+                            .collect(),
+                    },
+                )
+            })
+        })
+        .collect()
+}
+
+/// The `SourceIngest` and `IndexRepository` worker loop's entry for spec artifacts
+/// (MEDULLA-SDLC-R014.2): called with the files of one scoped repository batch, it
+/// re-ingests only the spec artifact files whose digest differs from `stored` and lowers
+/// the records into `result`, so they commit in the same change envelope as the rest of
+/// the index. A path that repeats in `files` is read once, at its first occurrence. A
+/// stored file that is absent from this batch is not removed here; the batch need not
+/// carry every file, and the returned plan names `removed` for a caller that holds the
+/// full tree.
+pub fn project_spec_artifacts(
+    repo: &str,
+    files: &[(String, Vec<u8>)],
+    stored: &BTreeMap<String, StoredArtifact>,
+    result: &mut medulla_types::ingestion_wire::IndexResult,
+) -> Result<ReingestPlan, String> {
+    let mut seen = BTreeSet::new();
+    let texts: Vec<(&str, &str)> = files
+        .iter()
+        .filter(|(path, _)| is_spec_artifact(path) && seen.insert(path.as_str()))
+        .filter_map(|(path, bytes)| Some((path.as_str(), std::str::from_utf8(bytes).ok()?)))
+        .collect();
+    if texts.is_empty() {
+        return Ok(ReingestPlan {
+            operations: Vec::new(),
+            reingested: Vec::new(),
+            removed: Vec::new(),
+            unchanged: 0,
+        });
+    }
+    // Only the batch's files are compared: a stored file the batch does not carry stays.
+    let carried: BTreeMap<String, StoredArtifact> = stored
+        .iter()
+        .filter(|(name, _)| seen.contains(name.as_str()))
+        .map(|(name, old)| (name.clone(), old.clone()))
+        .collect();
+    let plan = reingest_in(
+        repo,
+        &texts,
+        &carried,
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+        Unresolved::Skip,
+    )?;
+    for op in &plan.operations {
+        match op["op"].as_str() {
+            Some("upsert_node") => result.nodes.push(index_node(op)),
+            Some("upsert_edge") => result.edges.push(index_edge(op)),
+            _ => {}
+        }
+    }
+    Ok(plan)
+}
+
+fn index_node(op: &serde_json::Value) -> medulla_types::ingestion_wire::ExtractedNode {
+    let properties: std::collections::HashMap<String, String> = op["properties"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter_map(|(key, value)| Some((key.clone(), value.as_str()?.to_owned())))
+        .collect();
+    medulla_types::ingestion_wire::ExtractedNode {
+        node_id: op["id"].as_str().unwrap_or_default().to_owned(),
+        node_type: properties.get("type").cloned().unwrap_or_default(),
+        properties,
+    }
+}
+
+fn index_edge(op: &serde_json::Value) -> medulla_types::ingestion_wire::ExtractedEdge {
+    medulla_types::ingestion_wire::ExtractedEdge {
+        source: op["source"].as_str().unwrap_or_default().to_owned(),
+        target: op["target"].as_str().unwrap_or_default().to_owned(),
+        edge_type: op["properties"]["relationship"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned(),
+        properties: std::collections::HashMap::new(),
+    }
 }
 
 /// Write one projection as the single `BatchUpdate` through the mutation gateway.
@@ -992,5 +1139,40 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         assert!(removed_ids.contains("specfile:demo:more/requirements.md"));
         assert!(removed_ids.contains("requirement:demo:MORE-R002"));
         assert!(gone.reingested.is_empty());
+    }
+
+    // spec: MEDULLA-SDLC-R014.2
+    #[test]
+    fn index_batch_lowers_only_changed_spec_files_into_the_result() {
+        use medulla_types::ingestion_wire::IndexResult;
+
+        let files = vec![
+            (
+                "specs/a/requirements.md".to_string(),
+                REQUIREMENTS.as_bytes().to_vec(),
+            ),
+            ("src/lib.rs".to_string(), b"fn main() {}".to_vec()),
+        ];
+        let mut first = IndexResult::default();
+        let plan = project_spec_artifacts("demo", &files, &BTreeMap::new(), &mut first)
+            .expect("first batch");
+        assert_eq!(plan.reingested, ["specs/a/requirements.md"]);
+        // The DEMO-R002 `Depends: OTHER-R009` names another repository; it is skipped.
+        assert!(first
+            .nodes
+            .iter()
+            .any(|n| n.node_id == "requirement:demo:DEMO-R002"));
+        assert!(first.edges.iter().any(|e| e.edge_type == "dependsOn"
+            && e.source == "requirement:demo:DEMO-R003"
+            && e.target == "requirement:demo:DEMO-R002"));
+        assert!(!first.edges.iter().any(|e| e.target.contains("OTHER-R009")));
+        println!("INDEX_NODES\t{}", first.nodes.len());
+
+        let mut stored = BTreeMap::new();
+        stored_after(&plan, &mut stored);
+        let mut again = IndexResult::default();
+        let idle = project_spec_artifacts("demo", &files, &stored, &mut again).expect("idle");
+        assert!(idle.reingested.is_empty());
+        assert!(again.nodes.is_empty() && again.edges.is_empty());
     }
 }
