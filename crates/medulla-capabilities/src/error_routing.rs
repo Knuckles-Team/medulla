@@ -719,6 +719,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // `analytics_pool_config` refuses an invalid scheduler policy
     // (MEDULLA-DURABLE-KERNEL-R082.9).
     ("AnalyticsJob", &["SCHEDULER_CONFIG_INVALID"]),
+    // MEDULLA-FEDERATED-QUERY-R091.4: the plan-evolution refusals a downtime job's result carries.
+    ("AnalyticsJob", &["PLAN_RESULT_MISMATCH", "PLAN_AUTHORITY_EXPIRED"]),
     // MEDULLA-DECISION-ENGINE-R144.4: the refusals of an indexless retrieval. A denied
     // document answers as an absent one; budget exhaustion reports the counts.
     (

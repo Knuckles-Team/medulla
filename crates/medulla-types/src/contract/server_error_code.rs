@@ -39,6 +39,12 @@ closed_error_codes! {
         /// version commit log (or the log was reset), so its commit instant is unknown and a
         /// time-bounded read refuses instead of using the wall clock.
         SnapshotTimeUnknown => "SNAPSHOT_TIME_UNKNOWN",
+        /// MEDULLA-FEDERATED-QUERY-R091.4: a plan-evolution candidate returned a different
+        /// result than the baseline; it reverts and the baseline stays in force.
+        PlanResultMismatch => "PLAN_RESULT_MISMATCH",
+        /// MEDULLA-FEDERATED-QUERY-R091.4: the authority a plan shape was captured under
+        /// no longer resolves; the shape is skipped and its kept plan dropped.
+        PlanAuthorityExpired => "PLAN_AUTHORITY_EXPIRED",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
         /// A catalog node is typed with a class that is not under `cat:Asset` (MEDULLA-TYPED-PACKS-R108.4).
         AssetClassOrphan => "ASSET_CLASS_ORPHAN",

@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_federation::federation_opt::plan_evolution::{
-    self, Decision, EvolutionPolicy, EvolutionWork, KeptPlan, PlanObservation, ReplayMeasure,
-    RevertReason,
+    self, Decision, EvolutionPolicy, EvolutionWork, KeptPlan, PlanEvolutionRefusal,
+    PlanObservation, ReplayMeasure, RevertReason,
 };
 use medulla_server_api::downtime::{DowntimeBody, DowntimeStep, DowntimeStepInput};
 use medulla_server_api::state::ServerState;
@@ -37,6 +37,9 @@ pub struct PlanEvolutionReceipt {
     pub outcome: String,
     /// The downtime job that ran the evolution.
     pub job_id: String,
+    /// The registered refusal code when the run was refused (`PLAN_RESULT_MISMATCH` or
+    /// `PLAN_AUTHORITY_EXPIRED`); the baseline stays in force.
+    pub refusal: Option<String>,
 }
 
 /// The evolution policy the registered `federation.*` knobs resolve to.
@@ -126,13 +129,14 @@ fn evolve_one(
     job_id: &str,
 ) -> PlanEvolutionReceipt {
     let shape = &work.candidate.shape_digest;
-    let receipt = |outcome: &str| PlanEvolutionReceipt {
+    let receipt = |outcome: &str, refusal: Option<PlanEvolutionRefusal>| PlanEvolutionReceipt {
         tenant: tenant.to_string(),
         shape_digest: shape.clone(),
         baseline_digest: work.candidate.baseline_digest.clone(),
         candidate_digest: work.candidate.plan_digest.clone(),
         outcome: outcome.to_string(),
         job_id: job_id.to_string(),
+        refusal: refusal.map(|refusal| refusal.code().to_string()),
     };
     // Both plans replay the same recorded input, so their results are comparable.
     let input = &work.observed.replay;
@@ -140,7 +144,7 @@ fn evolve_one(
         registry.and_then(|registry| plan_evolution::resolve_replay(&input.source, registry))
     else {
         plan_evolution::clear(tenant, shape);
-        return receipt("authority_expired");
+        return receipt("authority_expired", Some(PlanEvolutionRefusal::AuthorityExpired));
     };
     let replays = |observation: &PlanObservation| -> Vec<ReplayMeasure> {
         let plan = forced(observation, job_id);
@@ -153,15 +157,18 @@ fn evolve_one(
     match plan_evolution::evaluate_shape(policy, &baseline, &candidate) {
         Decision::Keep => {
             plan_evolution::keep(tenant, shape, forced(&work.observed, job_id));
-            receipt("kept")
+            receipt("kept", None)
         }
         Decision::Revert(reason) => {
             plan_evolution::clear(tenant, shape);
-            receipt(match reason {
-                RevertReason::TooFewReplays => "too_few_replays",
-                RevertReason::ResultsDiffer => "results_differ",
-                RevertReason::NoMeasuredGain => "no_measured_gain",
-            })
+            receipt(
+                match reason {
+                    RevertReason::TooFewReplays => "too_few_replays",
+                    RevertReason::ResultsDiffer => "results_differ",
+                    RevertReason::NoMeasuredGain => "no_measured_gain",
+                },
+                reason.refusal(),
+            )
         }
     }
 }
@@ -219,6 +226,7 @@ mod tests {
         };
         let receipt = evolve_one(tenant, None, &work, &policy, "job-7");
         assert_eq!(receipt.outcome, "authority_expired");
+        assert_eq!(receipt.refusal.as_deref(), Some("PLAN_AUTHORITY_EXPIRED"));
         assert_eq!(receipt.job_id, "job-7");
         assert!(plan_evolution::kept_plan(tenant, shape).is_none());
     }

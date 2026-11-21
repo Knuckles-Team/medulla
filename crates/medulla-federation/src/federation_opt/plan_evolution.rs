@@ -312,6 +312,39 @@ pub enum RevertReason {
     NoMeasuredGain,
 }
 
+impl RevertReason {
+    /// The typed refusal this revert reports on the job result, when it is one: a result
+    /// that differs from the baseline's is `PLAN_RESULT_MISMATCH`. Too few replays and no
+    /// measured gain are ordinary reverts, not refusals.
+    pub fn refusal(self) -> Option<PlanEvolutionRefusal> {
+        match self {
+            Self::ResultsDiffer => Some(PlanEvolutionRefusal::ResultMismatch),
+            Self::TooFewReplays | Self::NoMeasuredGain => None,
+        }
+    }
+}
+
+/// MEDULLA-FEDERATED-QUERY-R091.4: why the evolution of one shape was refused. Each refusal
+/// leaves the baseline plan in force.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanEvolutionRefusal {
+    /// A candidate returned a different result than the baseline (`PLAN_RESULT_MISMATCH`).
+    ResultMismatch,
+    /// The `authority_ref` the shape was captured under no longer resolves
+    /// (`PLAN_AUTHORITY_EXPIRED`); the shape is skipped.
+    AuthorityExpired,
+}
+
+impl PlanEvolutionRefusal {
+    /// The registered refusal code.
+    pub fn code(self) -> medulla_types::contract::ServerErrorCode {
+        match self {
+            Self::ResultMismatch => medulla_types::contract::ServerErrorCode::PlanResultMismatch,
+            Self::AuthorityExpired => medulla_types::contract::ServerErrorCode::PlanAuthorityExpired,
+        }
+    }
+}
+
 /// The outcome of evaluating one candidate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision {
@@ -805,6 +838,21 @@ pub fn recorded_count(tenant: &str, source_label: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.4
+    #[test]
+    fn only_a_result_mismatch_reverts_with_a_registered_refusal() {
+        assert_eq!(
+            RevertReason::ResultsDiffer.refusal().map(|refusal| refusal.code().to_string()),
+            Some("PLAN_RESULT_MISMATCH".to_string())
+        );
+        assert_eq!(RevertReason::TooFewReplays.refusal(), None);
+        assert_eq!(RevertReason::NoMeasuredGain.refusal(), None);
+        assert_eq!(
+            PlanEvolutionRefusal::AuthorityExpired.code().to_string(),
+            "PLAN_AUTHORITY_EXPIRED"
+        );
+    }
 
     const LIMITS: StoreLimits = StoreLimits {
         observations_per_shape: 3,
