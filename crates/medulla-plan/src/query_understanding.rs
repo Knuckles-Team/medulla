@@ -53,14 +53,26 @@ pub struct QueryAnalysis {
     pub intent: Option<RelationalIntent>,
 }
 
-/// The relationship vocabulary of one graph snapshot: every relationship name its edges
-/// carry (`SchemaContext::relationships`), in name order. The ontology label is not read
-/// here, so a relationship is matched by its stored name.
+/// The relationship vocabulary of one graph snapshot: every non-empty `relationship`
+/// property its edges carry (the set `SchemaContext::relationships` holds), in name
+/// order. The ontology label is not read here, so a relationship is matched by its
+/// stored name. Read straight off the edge properties, so it needs no `nl-query`.
 pub fn relationship_names(view: &medulla_graph_core::graph::GraphView) -> Vec<RelationshipName> {
-    medulla_nlq::nl::context::SchemaContext::from_view(view)
-        .relationships()
-        .iter()
-        .map(|name| RelationshipName::new(name.clone(), None))
+    let mut names = std::collections::BTreeSet::new();
+    for blob in view.edge_properties.values().flatten() {
+        if let Ok(serde_json::Value::Object(props)) =
+            medulla_types::msgpack::decode_property_value(blob.as_slice())
+        {
+            if let Some(name) = props.get("relationship").and_then(|v| v.as_str()) {
+                if !name.is_empty() {
+                    names.insert(name.to_string());
+                }
+            }
+        }
+    }
+    names
+        .into_iter()
+        .map(|name| RelationshipName::new(name, None))
         .collect()
 }
 
