@@ -833,5 +833,12 @@ closed_error_codes! {
         WritebackProposalUnknown => "WRITEBACK_PROPOSAL_UNKNOWN",
         WritebackBelowQueueTier => "WRITEBACK_BELOW_QUEUE_TIER",
         WritebackQueueTooLarge => "WRITEBACK_QUEUE_TOO_LARGE",
+        // MEDULLA-ORCH-VOCAB-R013.7.2: walkthrough manifest refusals.
+        WalkthroughRevisionStale => "WALKTHROUGH_REVISION_STALE",
+        WalkthroughRefOutsideSnapshot => "WALKTHROUGH_REF_OUTSIDE_SNAPSHOT",
+        WalkthroughSectionUncited => "WALKTHROUGH_SECTION_UNCITED",
+        WalkthroughArtifactUnresolved => "WALKTHROUGH_ARTIFACT_UNRESOLVED",
+        WalkthroughNoteOrderInvalid => "WALKTHROUGH_NOTE_ORDER_INVALID",
+        WalkthroughSpanOutsideRun => "WALKTHROUGH_SPAN_OUTSIDE_RUN",
     }
 }

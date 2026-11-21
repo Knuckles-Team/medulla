@@ -128,3 +128,6 @@ pub mod viz_provenance;
 #[cfg(feature = "shacl")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod schema_compose;
+
+/// Repository-index and blob reader seams for walkthrough validation (MEDULLA-ORCH-VOCAB-R013.7.4).
+pub mod walkthrough_readers;
