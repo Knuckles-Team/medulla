@@ -140,6 +140,17 @@ pub trait JobsApi: Send + Sync {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 
+    /// The dead-letter count of one tenant task queue (MEDULLA-INGEST-WORKER-R001.9).
+    #[allow(unused_variables)]
+    fn task_queue_dead_letters(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        queue: &str,
+    ) -> Result<u64, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// The queued count, running count and oldest enqueue time of one tenant
     /// task queue (MEDULLA-INGEST-WORKER-R001.4.1).
     #[allow(unused_variables)]

@@ -86,11 +86,18 @@ async fn ingest_queue_depth(ctx: DispatchCtx<'_>, queue: Option<String>) -> Resp
     let mut loads = Vec::with_capacity(queues.len());
     for name in queues {
         let load = match jobs.as_ref() {
-            Some(jobs) => match jobs.task_queue_load(&persist_dir, tenant, name) {
-                Ok(load) => load,
-                Err(error) => return Response::err(req_id, error),
-            },
-            None => (0, 0, None),
+            Some(jobs) => {
+                let (queued, running, oldest) =
+                    match jobs.task_queue_load(&persist_dir, tenant, name) {
+                        Ok(load) => load,
+                        Err(error) => return Response::err(req_id, error),
+                    };
+                match jobs.task_queue_dead_letters(&persist_dir, tenant, name) {
+                    Ok(dead) => (queued, running, oldest, dead),
+                    Err(error) => return Response::err(req_id, error),
+                }
+            }
+            None => (0, 0, None, 0),
         };
         loads.push((name, load));
     }

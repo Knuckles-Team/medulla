@@ -34877,6 +34877,7 @@ class MethodIngestQueueDepthParams(BaseModel):
 class IngestQueueDepthRow(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    dead_letters: Annotated[int, Field(ge=0)]
     depth: Annotated[int, Field(ge=0)]
     oldest_age_ms: Annotated[int, Field(ge=0)]
     queue: str

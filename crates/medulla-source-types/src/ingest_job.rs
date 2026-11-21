@@ -295,6 +295,8 @@ pub struct IngestQueueDepthRow {
     pub depth: u64,
     /// Milliseconds since the oldest pending task was enqueued; 0 for an empty queue.
     pub oldest_age_ms: u64,
+    /// Tasks of the verified tenant's queue parked as dead letters (MEDULLA-INGEST-WORKER-R001.9).
+    pub dead_letters: u64,
 }
 
 /// The reply of `IngestQueueDepth`, `ingest` before `ingest-hydration`.

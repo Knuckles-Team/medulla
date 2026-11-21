@@ -174,23 +174,25 @@ fn enqueue_unrecorded(
 }
 
 /// The depth report of the reserved ingest queues (MEDULLA-INGEST-WORKER-R001.11). Each load is
-/// `(queue, (queued, running, oldest_enqueued_at_ms))` as `JobsApi::task_queue_load` answers it,
-/// the one depth count the enqueue refusal reads too. Rows keep the order of `loads`. `depth` is
+/// `(queue, (queued, running, oldest_enqueued_at_ms, dead_letters))`: the first three as
+/// `JobsApi::task_queue_load` answers them, the one depth count the enqueue refusal reads too,
+/// and the dead-letter count of `JobsApi::task_queue_dead_letters`. Rows keep the order of `loads`. `depth` is
 /// queued plus running; `oldest_age_ms` is `now_ms - oldest_enqueued_at_ms` saturated at 0, and 0
 /// for a queue with no pending task.
 pub fn queue_depth_report(
-    loads: &[(&'static str, (u64, u64, Option<i64>))],
+    loads: &[(&'static str, (u64, u64, Option<i64>, u64))],
     now_ms: i64,
 ) -> IngestQueueDepthReport {
     IngestQueueDepthReport {
         queues: loads
             .iter()
-            .map(|(queue, (queued, running, oldest))| IngestQueueDepthRow {
+            .map(|(queue, (queued, running, oldest, dead))| IngestQueueDepthRow {
                 queue: (*queue).to_string(),
                 depth: queued.saturating_add(*running),
                 oldest_age_ms: oldest
                     .map(|enqueued| u64::try_from(now_ms.saturating_sub(enqueued)).unwrap_or(0))
                     .unwrap_or(0),
+                dead_letters: *dead,
             })
             .collect(),
     }
@@ -206,8 +208,8 @@ mod tests {
     fn depth_report_orders_queues_and_saturates_age() {
         let report = queue_depth_report(
             &[
-                ("ingest", (3, 2, Some(1_000))),
-                ("ingest-hydration", (0, 0, None)),
+                ("ingest", (3, 2, Some(1_000), 4)),
+                ("ingest-hydration", (0, 0, None, 0)),
             ],
             4_500,
         );
@@ -217,17 +219,19 @@ mod tests {
                 IngestQueueDepthRow {
                     queue: "ingest".into(),
                     depth: 5,
-                    oldest_age_ms: 3_500
+                    oldest_age_ms: 3_500,
+                    dead_letters: 4,
                 },
                 IngestQueueDepthRow {
                     queue: "ingest-hydration".into(),
                     depth: 0,
-                    oldest_age_ms: 0
+                    oldest_age_ms: 0,
+                    dead_letters: 0,
                 },
             ]
         );
         // An enqueue time after now (clock skew) saturates at zero, never wraps.
-        let skewed = queue_depth_report(&[("ingest", (1, 0, Some(9_000)))], 4_500);
+        let skewed = queue_depth_report(&[("ingest", (1, 0, Some(9_000), 0))], 4_500);
         assert_eq!(skewed.queues[0].oldest_age_ms, 0);
     }
 

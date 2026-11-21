@@ -147,6 +147,7 @@ async def test_failed_job_retries_then_dead_letters() -> None:
         }
         await client._send("SetSchedulerConfig", {"config": fast})
         try:
+            parked_before = (await _ingest_depth(client, "ingest"))["ingest"]["dead_letters"]
             receipt = await client._send(
                 "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
             )
@@ -164,10 +165,10 @@ async def test_failed_job_retries_then_dead_letters() -> None:
                     },
                 )
                 assert acked["task_id"] == task_id
-            # Five deliveries exhausted the policy: the task is failed for good with the
-            # dead-letter reason, and no sixth delivery follows.
-            record = await client.jobs.status(task_id)
-            assert record["state"]["Failed"]["reason"] == "INGEST_RETRIES_EXHAUSTED"
+            # Five deliveries exhausted the policy: the task is parked as a dead letter, which
+            # the served depth report counts, and no sixth delivery follows.
+            parked_after = (await _ingest_depth(client, "ingest"))["ingest"]["dead_letters"]
+            assert parked_after == parked_before + 1
             await asyncio.sleep(0.5)
             while (extra := await _claim(client, "ingest-worker-1")) is not None:
                 assert extra["task_id"] != task_id

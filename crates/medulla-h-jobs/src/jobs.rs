@@ -187,6 +187,18 @@ impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
         }
     }
 
+    fn task_queue_dead_letters(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        queue: &str,
+    ) -> Result<u64, String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        store
+            .task_queue_dead_letters(tenant, queue)
+            .map_err(|error| job_refusal(&error))
+    }
+
     fn task_queue_load(
         &self,
         persist_dir: &Option<String>,

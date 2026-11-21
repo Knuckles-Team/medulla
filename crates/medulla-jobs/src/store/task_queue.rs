@@ -277,6 +277,34 @@ impl JobStore {
         })
     }
 
+    /// The number of tasks of `tenant`'s `queue` parked as dead letters
+    /// (MEDULLA-INGEST-WORKER-R001.9). A read of the dead-letter table, kept apart from
+    /// [`task_queue_load`](Self::task_queue_load) so the hot enqueue and claim paths never pay
+    /// for it. The parked item keeps no tenant, so the failed task's own row names it.
+    pub fn task_queue_dead_letters(&self, tenant: &str, queue: &str) -> Result<u64> {
+        let read = self.scoped_read()?;
+        let mut parked = Vec::new();
+        {
+            let table = read.open_owner_table(TASK_DEAD_LETTERS).map_err(redb_err)?;
+            for row in table.iter().map_err(redb_err)? {
+                let (_, bytes) = row.map_err(redb_err)?;
+                let item: medulla_ingestion_types::ingest_capabilities::DeadLetterItem =
+                    serde_json::from_slice(bytes.value()).map_err(codec_err)?;
+                if item.queue == queue {
+                    parked.push(item.item_id);
+                }
+            }
+        }
+        drop(read);
+        let mut count = 0u64;
+        for item_id in parked {
+            if self.get_raw(&item_id)?.policy.tenant == tenant {
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
+
     /// Lease the next ready task that requires `tenant_capability`, through the
     /// one worker-claim path. An analytics job is never leased here.
     pub fn claim_task(
