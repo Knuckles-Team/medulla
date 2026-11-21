@@ -58,7 +58,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T050 [US5] MEDULLA-SDLC-R010 Landing gate runs the complete test suite.
 - [ ] T051 [US5] MEDULLA-SDLC-R011 RETIRED: nextest in the R010 gate already runs one process per test
 - [ ] T052 [US1] MEDULLA-SDLC-R012 Graph-native development: the ecosystem is developed inside the engine .
-- [ ] T053 [US1] MEDULLA-SDLC-R012.1 Every ecosystem repository is ingested.
+- [x] T053 [US1] MEDULLA-SDLC-R012.1 Every ecosystem repository is ingested.
 - [ ] T054 [US1] MEDULLA-SDLC-R012.2 Spec rows are requirement records with caller and proof edges.
 - [ ] T055 [US1] MEDULLA-SDLC-R012.3 Changes are changesets bound to requirement rows.
 - [ ] T056 [US1] MEDULLA-SDLC-R012.4 RETIRED: covered by R014.6 and R014.3
