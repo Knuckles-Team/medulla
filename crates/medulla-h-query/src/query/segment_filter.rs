@@ -103,7 +103,9 @@ impl ReadScope {
             op: format!("SegmentReadAudit.hidden-{}", line.hidden_count),
             surface: "read".to_owned(),
             params_sha256: digest,
-            status: "ok".to_owned(),
+            status: medulla_store::redb_store::audit_status::AuditStatus::settled(
+                medulla_store::redb_store::audit_machine::AuditEvent::Succeed,
+            ),
             request_id: format!("read-{req_id}-{nanos}"),
             audit_class: "event".to_owned(),
             subject_iri: None,
@@ -121,7 +123,7 @@ impl ReadScope {
         // admission, before the read runs; `close` queues the outcome that
         // links to it. One drain task appends in queue order.
         let reservation = medulla_store::redb_store::OperationAuditEvent {
-            status: "reserved".to_owned(),
+            status: medulla_store::redb_store::audit_machine::AUDIT_MACHINE.initial,
             ..outcome.clone()
         };
         enqueue_append(Arc::clone(&persistence), chain.clone(), reservation)?;
@@ -156,7 +158,9 @@ impl ReadScope {
             return Ok(());
         };
         if !answered {
-            outcome.status = "error".to_owned();
+            outcome.status = medulla_store::redb_store::audit_status::AuditStatus::settled(
+                medulla_store::redb_store::audit_machine::AuditEvent::Fail,
+            );
         }
         enqueue_append(persistence, chain, outcome)
     }

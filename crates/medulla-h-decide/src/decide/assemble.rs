@@ -392,7 +392,9 @@ async fn audit_scope_refusal(
                 op: "AgentAssemble".to_string(),
                 surface: "engine".to_string(),
                 params_sha256: hex::encode(sha2::Sha256::digest(line.as_bytes())),
-                status: "denied".to_string(),
+                status: medulla_store::redb_store::audit_status::AuditStatus::settled(
+                    medulla_store::redb_store::audit_machine::AuditEvent::Deny,
+                ),
                 request_id: hex::encode(sha2::Sha256::digest(
                     verified.idempotency_key().as_bytes(),
                 )),

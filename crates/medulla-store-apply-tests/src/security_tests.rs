@@ -425,7 +425,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
         op: "graph.nodes.write".into(),
         surface: "http".into(),
         params_sha256: "a".repeat(64),
-        status: "reserved".into(),
+        status: medulla_store::redb_store::audit_status::AuditStatus::Reserved,
         request_id: "request-a".into(),
         audit_class: "event".into(),
         subject_iri: None,
@@ -439,7 +439,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
             .seq,
         reserved.seq
     );
-    event.status = "ok".into();
+    event.status = medulla_store::redb_store::audit_status::AuditStatus::Ok;
     let outcome = operation_audit_append(&db, &mut tail, "g", &event).unwrap();
     assert!(!outcome.replayed);
     assert_eq!(
@@ -448,7 +448,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
             .seq,
         outcome.seq
     );
-    event.status = "error".into();
+    event.status = medulla_store::redb_store::audit_status::AuditStatus::Error;
     assert!(operation_audit_append(&db, &mut tail, "g", &event)
         .unwrap_err()
         .contains("AUDIT_IDEMPOTENCY_CONFLICT"));
@@ -461,7 +461,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
     drop(db);
     let reopened = open_db(&dir);
     let mut cold_tail = AuditTailCache::new();
-    event.status = "ok".into();
+    event.status = medulla_store::redb_store::audit_status::AuditStatus::Ok;
     assert!(
         operation_audit_append(&reopened, &mut cold_tail, "g", &event)
             .unwrap()

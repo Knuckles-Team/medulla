@@ -124,6 +124,8 @@ pub mod enrichment_budget;
 pub mod shard;
 
 pub mod audit;
+pub mod audit_machine;
+pub mod audit_status;
 #[cfg(feature = "security")]
 pub mod operation_audit;
 

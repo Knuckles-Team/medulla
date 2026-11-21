@@ -8,6 +8,7 @@ use crate::redb_store::store_control::commit_ops;
 use medulla_protocol_types::protocol::AuditAppendReceipt;
 #[cfg(test)]
 use medulla_protocol_types::protocol::Method;
+use medulla_store::redb_store::audit_status::AuditStatus;
 use medulla_store::redb_store::operation_audit::*;
 #[cfg(test)]
 use medulla_store::redb_store::DurableCrypto;
@@ -51,7 +52,7 @@ pub fn event(request_id: &str, status: &str) -> OperationAuditEvent {
         op: "graph.nodes.write".into(),
         surface: "http".into(),
         params_sha256: "a".repeat(64),
-        status: status.into(),
+        status: AuditStatus::parse(status).expect("a stored audit status"),
         request_id: request_id.into(),
         audit_class: "event".into(),
         subject_iri: None,
@@ -410,7 +411,7 @@ fn refusal_iris_are_part_of_the_reservation_outcome_equality() {
     reserved.policy_iri = Some("urn:policy:run-scope:worker-1".into());
     store.append(&reserved).unwrap();
     let mut same = reserved.clone();
-    same.status = "ok".into();
+    same.status = AuditStatus::Ok;
     let closed = store.append(&same).unwrap();
     assert_eq!(closed.outcome_seq, Some(closed.seq));
     let line = store.line(closed.seq);
@@ -426,7 +427,7 @@ fn refusal_iris_are_part_of_the_reservation_outcome_equality() {
     // subject IRI does not close the reservation: the IRIs are inside the
     // equality check, and nothing is appended by it.
     let mut other = reserved.clone();
-    other.status = "ok".into();
+    other.status = AuditStatus::Ok;
     other.subject_iri = Some("urn:ex.org/tools/write".into());
     assert!(store.append(&other).is_err());
     assert_eq!(

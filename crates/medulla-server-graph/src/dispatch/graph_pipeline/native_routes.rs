@@ -795,6 +795,11 @@ async fn route_graph_audit_and_modality(
                 Ok(authority) => authority,
                 Err(error) => return Ok(Response::err(ctx.req_id, error)),
             };
+            let status = match medulla_store::redb_store::audit_status::AuditStatus::parse(&status)
+            {
+                Ok(status) => status,
+                Err(error) => return Ok(Response::err(ctx.req_id, error)),
+            };
             let event = medulla_store::redb_store::OperationAuditEvent {
                 tenant: authority.tenant_scope().to_string(),
                 principal: authority.actor_scope().to_string(),

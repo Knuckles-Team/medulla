@@ -6467,3 +6467,84 @@
     :fromState :GeoTaskMachine_InProgress ;
     :toState :GeoTaskMachine_Cancelled ;
     :firedBy :GeoTaskMachine_Event_Cancel .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.12
+# The Audit machine: an operation-audit event is reserved before its effect and settled once
+# into ok, error or denied. The Rust edge table AUDIT_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:AuditState a owl:Class ;
+    rdfs:label "Audit State" ;
+    rdfs:comment "A state of the Audit machine." ;
+    rdfs:subClassOf :State .
+
+:AuditTerminalState a owl:Class ;
+    rdfs:label "Audit Terminal State" ;
+    rdfs:comment "A terminal state of the Audit machine." ;
+    rdfs:subClassOf :TerminalState, :AuditState .
+
+:AuditTransition a owl:Class ;
+    rdfs:label "Audit Transition" ;
+    rdfs:comment "A transition of the Audit machine." ;
+    rdfs:subClassOf :Transition .
+
+:AuditEvent a owl:Class ;
+    rdfs:label "Audit Event" ;
+    rdfs:comment "An event of the Audit machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AuditGuard a owl:Class ;
+    rdfs:label "Audit Guard" ;
+    rdfs:comment "A guard of the Audit machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AuditMachine a :StateMachine ;
+    rdfs:label "Audit machine" ;
+    :initialState :AuditMachine_Reserved ;
+    :hasState :AuditMachine_Reserved, :AuditMachine_Ok, :AuditMachine_Error, :AuditMachine_Denied .
+
+:AuditMachine_Reserved a :AuditState ;
+    rdfs:label "Audit Reserved" ;
+    :storedForm "reserved" .
+
+:AuditMachine_Ok a :AuditTerminalState ;
+    rdfs:label "Audit Ok" ;
+    :storedForm "ok" .
+
+:AuditMachine_Error a :AuditTerminalState ;
+    rdfs:label "Audit Error" ;
+    :storedForm "error" .
+
+:AuditMachine_Denied a :AuditTerminalState ;
+    rdfs:label "Audit Denied" ;
+    :storedForm "denied" .
+
+:AuditMachine_Event_Succeed a :AuditEvent ;
+    rdfs:label "Audit Succeed" .
+
+:AuditMachine_Event_Fail a :AuditEvent ;
+    rdfs:label "Audit Fail" .
+
+:AuditMachine_Event_Deny a :AuditEvent ;
+    rdfs:label "Audit Deny" .
+
+:AuditMachine_A01 a :AuditTransition ;
+    rdfs:label "Audit A01" ;
+    :edgeId "A01" ;
+    :fromState :AuditMachine_Reserved ;
+    :toState :AuditMachine_Ok ;
+    :firedBy :AuditMachine_Event_Succeed .
+
+:AuditMachine_A02 a :AuditTransition ;
+    rdfs:label "Audit A02" ;
+    :edgeId "A02" ;
+    :fromState :AuditMachine_Reserved ;
+    :toState :AuditMachine_Error ;
+    :firedBy :AuditMachine_Event_Fail .
+
+:AuditMachine_A03 a :AuditTransition ;
+    rdfs:label "Audit A03" ;
+    :edgeId "A03" ;
+    :fromState :AuditMachine_Reserved ;
+    :toState :AuditMachine_Denied ;
+    :firedBy :AuditMachine_Event_Deny .

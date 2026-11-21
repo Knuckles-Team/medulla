@@ -1174,3 +1174,10 @@ fn task_machine_matches_edge_table() {
 fn task_machine_classes_extend_core() {
     sm::assert_extends_core("GeoTask");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.12
+#[test]
+fn audit_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_store::redb_store::audit_machine::AUDIT_MACHINE);
+    sm::assert_extends_core("Audit");
+}

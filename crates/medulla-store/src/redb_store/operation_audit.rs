@@ -20,6 +20,7 @@
 //!
 //! [`AuditAppendReceipt::outcome_seq`]: crate::protocol::AuditAppendReceipt
 
+use super::audit_status::{AuditStatus, AUDIT_FIELDS_INVALID};
 use super::audit::{append_audit_entry_with_line, fresh_attempt_id, verify_audit, AuditTailCache};
 use super::shard::{Shard, ShardWrite};
 use super::{AUDIT, AUDIT_REQUESTS};
@@ -69,7 +70,6 @@ const AUDIT_CLASSES: [&str; 3] = ["event", "identity_chain", "scope_exceeds_poli
 /// How a caller spells "this operation declares no audit class".
 const NO_AUDIT_CLASS: &str = "none";
 
-const RESERVED: &str = "reserved";
 const RESERVE_PHASE: &str = "reserve";
 const OUTCOME_PHASE: &str = "outcome";
 
@@ -85,7 +85,7 @@ pub struct OperationAuditEvent {
     pub op: String,
     pub surface: String,
     pub params_sha256: String,
-    pub status: String,
+    pub status: AuditStatus,
     pub request_id: String,
     pub audit_class: String,
     /// IRI of the first plan tool outside the bound, on the audit event of a
@@ -129,11 +129,10 @@ impl OperationAuditEvent {
             || !token(&self.request_id, 128)
             || !bounded_iri(&self.subject_iri)
             || !bounded_iri(&self.policy_iri)
-            || !matches!(self.status.as_str(), RESERVED | "ok" | "error" | "denied")
             || self.params_sha256.len() != 64
             || !self.params_sha256.bytes().all(|b| b.is_ascii_hexdigit())
         {
-            return Err("invalid privacy-safe audit event fields".to_string());
+            return Err(AUDIT_FIELDS_INVALID.to_string());
         }
         Ok(())
     }
@@ -149,7 +148,7 @@ impl OperationAuditEvent {
     }
 
     fn is_reservation(&self) -> bool {
-        self.status == RESERVED
+        self.status.is_reservation()
     }
 
     fn phase(&self) -> &'static str {
@@ -204,7 +203,7 @@ impl OperationAuditEvent {
             self.op,
             self.surface,
             self.params_sha256,
-            self.status,
+            self.status.as_str(),
             self.request_id,
             self.audit_class,
         )

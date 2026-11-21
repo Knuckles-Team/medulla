@@ -59,7 +59,9 @@ fn effect_audit_event(entry: &EffectAudit<'_>) -> medulla_store::redb_store::Ope
         op: entry.op.to_string(),
         surface: "engine".to_string(),
         params_sha256: hex::encode(sha2::Sha256::digest(bound.as_bytes())),
-        status: "ok".to_string(),
+        status: medulla_store::redb_store::audit_status::AuditStatus::settled(
+            medulla_store::redb_store::audit_machine::AuditEvent::Succeed,
+        ),
         request_id: request_id(result),
         audit_class: "event".to_string(),
         subject_iri: None,
@@ -84,7 +86,7 @@ impl RedbBackend {
         {
             let outcome = effect_audit_event(&entry);
             let reservation = medulla_store::redb_store::OperationAuditEvent {
-                status: "reserved".to_string(),
+                status: medulla_store::redb_store::audit_machine::AUDIT_MACHINE.initial,
                 ..outcome.clone()
             };
             self.audit_append(graph_fname, reservation).await?;
