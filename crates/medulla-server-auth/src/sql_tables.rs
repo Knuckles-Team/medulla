@@ -210,6 +210,9 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
     store.install_deferred_fk_pending_max(
         medulla_server_api::knob_config::knobs().tables_deferred_fk_pending_max as usize,
     );
+    store
+        .column_usage()
+        .configure(column_advice_settings(medulla_server_api::knob_config::knobs()));
     medulla_table_store::tables::install_trigger_depth_max(
         medulla_server_api::knob_config::knobs().tables_trigger_depth_max,
     );
@@ -221,6 +224,28 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
     }
     stores.insert(key, store.clone());
     Ok(store)
+}
+
+/// The resolved `sql_advice.*` knobs as the settings one tenant's usage counters
+/// read (MEDULLA-FEDERATED-QUERY-R077.6.3).
+fn column_advice_settings(
+    knobs: &medulla_server_api::knob_config::KnobConfig,
+) -> medulla_table_store::tables::AdviceSettings {
+    medulla_table_store::tables::AdviceSettings {
+        policy: medulla_table_store::tables::AdvicePolicy {
+            min_samples: knobs.sql_advice_min_samples,
+            w_demand: knobs.sql_advice_w_demand,
+            w_length: knobs.sql_advice_w_length,
+            w_distinct: knobs.sql_advice_w_distinct,
+            length_norm: knobs.sql_advice_length_norm as f64,
+            max_rows: knobs.sql_advice_max_rows as usize,
+        },
+        window_ms: i64::try_from(knobs.sql_advice_window_hours)
+            .unwrap_or(i64::MAX)
+            .saturating_mul(3_600_000),
+        max_columns: knobs.sql_advice_max_columns as usize,
+        stats_sample_rows: knobs.sql_advice_stats_sample_rows as usize,
+    }
 }
 
 /// Resolve the one durable SQL catalog owned by `authority`.

@@ -639,6 +639,10 @@ pub struct TableStore {
     /// The pending bound and the metric of the deferred foreign-key pass
     /// (MEDULLA-ENGINE-PARITY-R011.1), shared by every clone.
     deferred_fk: Arc<deferred_fk::DeferredFkState>,
+    /// Text-search usage of this tenant's columns (MEDULLA-FEDERATED-QUERY-R077.6.3);
+    /// created when the tenant's handle is first opened and shared by every
+    /// clone, including a per-read projection that adopts it.
+    column_usage: Arc<super::column_advice::ColumnUsageCounters>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -744,6 +748,7 @@ impl TableStore {
             occ: Arc::default(),
             row_sink: Arc::default(),
             deferred_fk: Arc::default(),
+            column_usage: Arc::default(),
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -775,6 +780,22 @@ impl TableStore {
             dev_scope_grant::DEV_PROOF,
         )?;
         Ok((store, path))
+    }
+
+    /// The text-search usage counters this store (and every clone) records into.
+    pub fn column_usage(&self) -> &Arc<super::column_advice::ColumnUsageCounters> {
+        &self.column_usage
+    }
+
+    /// This store, recording text-search usage into `counters` instead of its own.
+    /// A per-read projection adopts its tenant's counters this way.
+    #[must_use]
+    pub fn with_column_usage(
+        mut self,
+        counters: Arc<super::column_advice::ColumnUsageCounters>,
+    ) -> Self {
+        self.column_usage = counters;
+        self
     }
 
     /// The authenticated owner namespace used by secondary-index DDL. This is

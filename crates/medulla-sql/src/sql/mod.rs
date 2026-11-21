@@ -88,6 +88,8 @@ mod spill;
 mod store_catalog;
 // `information_schema.medulla_index_status` (EH-352), synthesized like the other catalogs.
 mod index_status;
+// `information_schema.vector_advice` (MEDULLA-FEDERATED-QUERY-R077.6.3), synthesized per statement.
+mod vector_advice;
 // EH-387: the read-only gate of the graph-free SQL path.
 #[cfg(test)]
 mod pgfamily_tests;

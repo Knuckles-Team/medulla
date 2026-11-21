@@ -28,6 +28,7 @@ use super::catalog::{register_system_catalogs, SystemCatalogInputs};
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, reads_view_status, StoreCatalog};
+use super::vector_advice::{reads_vector_advice, record_text_search_usage};
 use medulla_sql_lang::{
     sql::typed_result::PgColType, sql::typed_result::TypedColumn,
     sql::typed_result::TypedQueryResult,
@@ -390,6 +391,9 @@ pub fn exec_sql_typed_with_tables_in_graph_hive(
     // managed-index status rows (EH-352).
     let mut catalog = StoreCatalog::read(store, store.index_scope())?;
     catalog.statement_graph = graph.map(str::to_string);
+    if reads_vector_advice(sql) {
+        catalog.vector_advice = Some(super::vector_advice::read_advice(store)?);
+    }
     // CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body: a bare top-level `SELECT plfn(args)` / `CALL plproc(args)` naming a
     // `LANGUAGE plpgsql` function runs the procedural interpreter instead of DataFusion.
     // Its embedded SQL (expression eval, `SELECT … INTO`) runs back through THIS read path
@@ -810,6 +814,7 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
     if ann_pushdown_may_apply(sql, &ann_indexes)
         || reads_index_status(sql)
         || reads_view_status(sql)
+        || reads_vector_advice(sql)
     {
         return exec_sql_typed_with_tables_in_graph(view, store, Some(graph), sql, cancel);
     }
@@ -840,6 +845,7 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
                 .sql(&sql_text)
                 .await
                 .map_err(|e| format!("sql: {e}"))?;
+            record_text_search_usage(store, df.logical_plan());
             let batches = super::spill::collect_default(df, cancel).await?;
             batches_to_typed(&batches)
         })
@@ -1134,7 +1140,13 @@ fn collect_sql_batches_with(
         )
         .await?;
         super::index_status::register(&ctx, &catalog.index_status)?;
+        if let Some(rows) = &catalog.vector_advice {
+            super::vector_advice::register(&ctx, rows)?;
+        }
         let df = ctx.sql(&sql).await.map_err(|e| format!("sql: {e}"))?;
+        if let Some(store) = &catalog.source_store {
+            record_text_search_usage(store, df.logical_plan());
+        }
         super::spill::collect_default(df, cancel).await
     })
 }

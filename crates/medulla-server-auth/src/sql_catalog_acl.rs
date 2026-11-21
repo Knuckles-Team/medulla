@@ -2110,12 +2110,14 @@ fn project_read_store(
 ) -> Result<AuthorizedReadStore, String> {
     let names = selectable_tables(authority, persist_dir)?;
     let property_graphs = authorized_property_graph_records(authority, persist_dir)?;
+    let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
     let (store, path) = medulla_kernel::store_authority::open_ephemeral_sql_store()?;
+    // The projection records text-search usage into its tenant's counters
+    // (MEDULLA-FEDERATED-QUERY-R077.6.3); counters are per tenant, never shared.
     let projection = AuthorizedReadStore {
-        store: Some(store),
+        store: Some(store.with_column_usage(std::sync::Arc::clone(tenant.column_usage()))),
         path,
     };
-    let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
     for name in names {
         let authorized =
             open_authorized_table(authority, persist_dir, &name, SqlPrivilege::Select)?;

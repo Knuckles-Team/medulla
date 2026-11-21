@@ -6,6 +6,7 @@
 use medulla_graph_core::index::ManagedIndexStatus;
 
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+use medulla_table_store::tables::embedding_binding::ColumnVectorAdvice;
 use medulla_table_store::tables::PropertyGraphCatalogRecord;
 use medulla_table_store::tables::TableStore;
 use medulla_tables::index::SecondaryIndexSpec;
@@ -33,6 +34,12 @@ pub(crate) struct StoreCatalog {
     /// The durable source `nextval`, `currval` and `setval` draw from; none when the
     /// statement runs without a table store.
     pub(crate) sequences: Option<Arc<dyn SequenceSource>>,
+    /// The store the statement reads: the one whose usage counters record its
+    /// text-search uses (MEDULLA-FEDERATED-QUERY-R077.6.3).
+    pub(crate) source_store: Option<TableStore>,
+    /// The rows of `information_schema.vector_advice`, read once for a
+    /// statement that names the relation.
+    pub(crate) vector_advice: Option<Vec<ColumnVectorAdvice>>,
 }
 
 impl StoreCatalog {
@@ -54,6 +61,8 @@ impl StoreCatalog {
             tables,
             secondary_indexes: store.list_secondary_indexes(None)?,
             sequences: Some(Arc::new(store.clone())),
+            source_store: Some(store.clone()),
+            vector_advice: None,
         })
     }
 }

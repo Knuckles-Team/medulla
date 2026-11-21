@@ -755,6 +755,12 @@ knobs! {
     sql_advice_length_norm: u64 = "sql_advice.length_norm", U64(512), [1, 65_536], "bytes", Tunable;
     /// Most rows one advice listing returns (MEDULLA-FEDERATED-QUERY-R077.6.2).
     sql_advice_max_rows: u64 = "sql_advice.max_rows", U64(1000), [1, 10_000], "rows", Tunable;
+    /// Hours of text-search usage the column advice window covers (MEDULLA-FEDERATED-QUERY-R077.6.3).
+    sql_advice_window_hours: u64 = "sql_advice.window_hours", U64(24), [1, 720], "hours", Tunable;
+    /// Most `(table, column)` usage entries one tenant keeps (MEDULLA-FEDERATED-QUERY-R077.6.3).
+    sql_advice_max_columns: u64 = "sql_advice.max_columns", U64(100_000), [1, 1_000_000], "columns", Tunable;
+    /// Most rows one advice read samples per table for length and distinct ratio (MEDULLA-FEDERATED-QUERY-R077.6.3).
+    sql_advice_stats_sample_rows: u64 = "sql_advice.stats_sample_rows", U64(10_000), [1, 1_000_000], "rows", Tunable;
     /// Largest hop bound of one column lineage impact walk (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
     lineage_impact_max_depth: u64 = "lineage.impact_max_depth", U64(8), [1, 32], "hops", Tunable;
     /// Most columns one column lineage impact walk may reach (MEDULLA-UNIFIED-DATA-PLANE-R763.3).

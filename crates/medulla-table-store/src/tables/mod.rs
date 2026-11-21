@@ -39,7 +39,10 @@ pub use ann_authority::{
     AnnServeReceipt, AnnServingPath, AnnTopK, AnnTopKRequest, UserAnnAuthority,
 };
 pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
-pub use column_advice::{rank_columns, AdviceColumn, AdviceInput, AdvicePolicy, ColumnAdviceError};
+pub use column_advice::{
+    catalog_schema_revision, rank_columns, AdviceColumn, AdviceInput, AdvicePolicy,
+    AdviceSettings, ColumnAdviceError, ColumnUsageCounters, UsageObservation,
+};
 pub use embedding_binding::{
     catalog_key as embedding_binding_catalog_key, decode_binding, default_target_column,
     encode_binding, is_embeddable, model_digest, prepare_catalog_write,

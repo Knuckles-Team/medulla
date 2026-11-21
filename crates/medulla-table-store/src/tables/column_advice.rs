@@ -4,7 +4,11 @@
 //! [`rank_columns`] is a pure function over resolved inputs: it holds no store
 //! handle, reads no counters and never creates a binding.
 
-use medulla_tables::schema::ColumnType;
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+use medulla_tables::schema::{ColumnType, TableSchema};
+use sha2::{Digest, Sha256};
 
 use crate::tables::embedding_binding::{is_embeddable, AdviceEligibility, ColumnVectorAdvice};
 
@@ -146,6 +150,154 @@ pub fn rank_columns(
     Ok(rows)
 }
 
+/// The resolved settings one tenant's advice reads. The table-store crate
+/// cannot read the knob registry, so the serving crate installs these through
+/// [`ColumnUsageCounters::configure`]; `Default` carries the knob defaults for
+/// stores that are never served (MEDULLA-FEDERATED-QUERY-R077.6.3).
+#[derive(Debug, Clone, PartialEq)]
+pub struct AdviceSettings {
+    pub policy: AdvicePolicy,
+    /// `sql_advice.window_hours`, in milliseconds.
+    pub window_ms: i64,
+    /// `sql_advice.max_columns`.
+    pub max_columns: usize,
+    /// `sql_advice.stats_sample_rows`.
+    pub stats_sample_rows: usize,
+}
+
+impl Default for AdviceSettings {
+    fn default() -> Self {
+        Self {
+            policy: AdvicePolicy {
+                min_samples: 50,
+                w_demand: 0.6,
+                w_length: 0.25,
+                w_distinct: 0.15,
+                length_norm: 512.0,
+                max_rows: 1000,
+            },
+            window_ms: 24 * 3_600_000,
+            max_columns: 100_000,
+            stats_sample_rows: 10_000,
+        }
+    }
+}
+
+/// One `(table, column)` entry of the usage counters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UsageObservation {
+    pub table: String,
+    pub column: String,
+    pub observed_schema_revision: u64,
+    pub text_search_uses: u64,
+    pub first_seen_ms: i64,
+    pub last_seen_ms: i64,
+}
+
+#[derive(Debug, Default)]
+struct UsageState {
+    settings: AdviceSettings,
+    entries: HashMap<(String, String), UsageObservation>,
+}
+
+/// Process-local text-search usage statistics of one tenant's tables
+/// (MEDULLA-FEDERATED-QUERY-R077.6.3). They are not facts: a restart opens a
+/// new window. One instance is created with the tenant's cached `TableStore`
+/// and shared by every clone of it.
+#[derive(Debug, Default)]
+pub struct ColumnUsageCounters {
+    state: Mutex<UsageState>,
+}
+
+impl ColumnUsageCounters {
+    fn locked(&self) -> std::sync::MutexGuard<'_, UsageState> {
+        self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// Install the resolved knob values.
+    pub fn configure(&self, settings: AdviceSettings) {
+        self.locked().settings = settings;
+    }
+
+    /// The installed settings.
+    pub fn settings(&self) -> AdviceSettings {
+        self.locked().settings.clone()
+    }
+
+    /// Count one text-search use of each `(table, column)` pair. An entry that
+    /// was observed under another schema revision restarts. The map is bounded
+    /// by `max_columns` and evicts the least recently seen entry.
+    pub fn observe(&self, pairs: &[(String, String)], schema_revision: u64, now_ms: i64) {
+        let mut state = self.locked();
+        for (table, column) in pairs {
+            let key = (table.clone(), column.clone());
+            let max_columns = state.settings.max_columns;
+            if !state.entries.contains_key(&key) && state.entries.len() >= max_columns {
+                let oldest = state
+                    .entries
+                    .iter()
+                    .min_by(|a, b| {
+                        a.1.last_seen_ms
+                            .cmp(&b.1.last_seen_ms)
+                            .then_with(|| a.0.cmp(b.0))
+                    })
+                    .map(|(key, _)| key.clone());
+                if let Some(oldest) = oldest {
+                    state.entries.remove(&oldest);
+                }
+            }
+            let entry = state.entries.entry(key).or_insert_with(|| UsageObservation {
+                table: table.clone(),
+                column: column.clone(),
+                observed_schema_revision: schema_revision,
+                text_search_uses: 0,
+                first_seen_ms: now_ms,
+                last_seen_ms: now_ms,
+            });
+            if entry.observed_schema_revision != schema_revision {
+                entry.observed_schema_revision = schema_revision;
+                entry.text_search_uses = 0;
+                entry.first_seen_ms = now_ms;
+            }
+            entry.text_search_uses = entry.text_search_uses.saturating_add(1);
+            entry.last_seen_ms = now_ms;
+        }
+    }
+
+    /// The entries still inside the window ending at `now_ms`; older entries
+    /// are dropped on read.
+    pub fn read(&self, now_ms: i64) -> Vec<UsageObservation> {
+        let mut state = self.locked();
+        let window_start = now_ms.saturating_sub(state.settings.window_ms);
+        state
+            .entries
+            .retain(|_, entry| entry.last_seen_ms >= window_start);
+        let mut out: Vec<UsageObservation> = state.entries.values().cloned().collect();
+        out.sort_by(|a, b| (&a.table, &a.column).cmp(&(&b.table, &b.column)));
+        out
+    }
+}
+
+/// The schema revision of a set of tables: a digest of their schemas, so any
+/// DDL change moves it, in the projection of a read and in the tenant store
+/// alike.
+pub fn catalog_schema_revision(tables: &[TableSchema]) -> Result<u64, String> {
+    let mut digests = tables
+        .iter()
+        .map(TableSchema::schema_digest)
+        .collect::<Result<Vec<_>, _>>()?;
+    digests.sort();
+    let mut hasher = Sha256::new();
+    hasher.update(b"epistemic-graph/column-advice-revision\0");
+    for digest in &digests {
+        hasher.update(digest.as_bytes());
+    }
+    let hash = hasher.finalize();
+    let mut head = [0_u8; 8];
+    head.copy_from_slice(&hash[..8]);
+    Ok(u64::from_be_bytes(head))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,5 +361,29 @@ mod tests {
         // ties break by (table, column)
         let tie = rank_columns(&input(vec![column("z", 10), column("y", 10)]), &policy()).unwrap();
         assert_eq!(tie[0].column, "y");
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R077.6.3
+    #[test]
+    fn counters_are_bounded_restart_on_ddl_and_drop_old_uses() {
+        let counters = ColumnUsageCounters::default();
+        let mut settings = AdviceSettings::default();
+        settings.max_columns = 2;
+        settings.window_ms = 1000;
+        counters.configure(settings);
+        let pair = |c: &str| vec![("docs".to_string(), c.to_string())];
+        counters.observe(&pair("a"), 1, 10);
+        counters.observe(&pair("a"), 1, 20);
+        counters.observe(&pair("b"), 1, 30);
+        counters.observe(&pair("c"), 1, 40);
+        let read = counters.read(50);
+        assert_eq!(
+            read.iter().map(|e| e.column.as_str()).collect::<Vec<_>>(),
+            ["b", "c"]
+        );
+        counters.observe(&pair("b"), 2, 60);
+        let b = counters.read(60).into_iter().find(|e| e.column == "b").unwrap();
+        assert_eq!((b.observed_schema_revision, b.text_search_uses), (2, 1));
+        assert!(counters.read(5000).is_empty());
     }
 }
