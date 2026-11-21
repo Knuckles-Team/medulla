@@ -19,7 +19,7 @@ use medulla_types::{
     contract::MAX_MUTATION_ENVELOPE_BYTES,
     contract::MAX_RECORD_BYTES,
     ingest_materialize::{ClassReport, IngestBatchReport, MAX_CLASS_REPORTS},
-    source_governance::GovernanceReport,
+    source_governance::{AccessReport, GovernanceReport},
 };
 
 pub mod batch_kind;
@@ -489,6 +489,10 @@ pub struct SourceIngestionReceipt {
     /// Governed, refused and marked record counts of this batch
     /// (MEDULLA-INGEST-WORKER-R900.5).
     pub governance: GovernanceReport,
+    /// Updated, refused and stale counts of an `access` batch
+    /// (MEDULLA-INGEST-WORKER-R902.5); absent for every other kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access: Option<AccessReport>,
     /// Written, unchanged and refused counts of this batch
     /// (MEDULLA-INGEST-WORKER-R606.1).
     pub report: IngestBatchReport,

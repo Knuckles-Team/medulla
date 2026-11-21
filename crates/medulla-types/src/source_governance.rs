@@ -118,6 +118,20 @@ pub struct GovernanceReport {
     pub marked: u64,
 }
 
+/// Per-batch count of access updates of an `access` batch
+/// (MEDULLA-INGEST-WORKER-R902.5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AccessReport {
+    /// Records whose access the batch replaced.
+    pub updated: u64,
+    /// Items refused; they wrote nothing.
+    pub refused: u64,
+    /// Records whose previous sync was already older than the bound.
+    pub stale: u64,
+}
+
 /// The access of one held record as last synced from its source.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

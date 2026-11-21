@@ -91,6 +91,8 @@ pub struct PreparedSourceIngestion {
     tombstoned_count: u64,
     relationship_tombstoned_count: u64,
     governance: medulla_types::source_governance::GovernanceReport,
+    /// Counts of an `access` batch (R902.5); `None` for every other kind.
+    access: Option<medulla_types::source_governance::AccessReport>,
     committed_graph_version: u64,
     /// Drift of each approved stream of the batch (R714); empty on a replay.
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
@@ -395,6 +397,7 @@ pub async fn prepare(
         tombstoned_count: admitted.tombstone_count as u64,
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
+        access: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         drift,
         embedding_set,
@@ -430,6 +433,7 @@ async fn prepare_extension_batch(
     let mut methods = Vec::new();
     let mut policies = Vec::new();
     let mut proposal_items = Vec::new();
+    let mut access = None;
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
             let snapshots = decode_permission_items::<
@@ -450,6 +454,11 @@ async fn prepare_extension_batch(
                 permission_clock_ms(),
                 medulla_server_api::knob_config::knobs().ingest_acl_stale_after_s,
             )?;
+            access = Some(medulla_types::source_governance::AccessReport {
+                updated: admission.updates.len() as u64,
+                refused: admission.refused.len() as u64,
+                stale: admission.stale,
+            });
             for update in admission.updates {
                 policies.push(policy(
                     &update.node_id,
@@ -530,7 +539,7 @@ async fn prepare_extension_batch(
         &policy_subject,
         0,
     ));
-    methods.push(permission_receipt_method(batch, &batch_id, applied, &proposal_items)?);
+    methods.push(permission_receipt_method(batch, &batch_id, applied, &proposal_items, access)?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
     let mutation = compile_mutation(&ctx, &batch_id, methods)?;
     let previous_stream_digest = stream_content_digest(
@@ -572,6 +581,7 @@ async fn prepare_extension_batch(
         tombstoned_count: 0,
         relationship_tombstoned_count: 0,
         governance: Default::default(),
+        access,
         drift: Vec::new(),
         committed_graph_version: ctx.graph_version.saturating_add(1),
         embedding_set: Default::default(),
@@ -677,6 +687,7 @@ fn permission_receipt_method(
     batch_id: &str,
     applied: u64,
     proposal_items: &[proposals::ProposalItemReceipt],
+    access: Option<medulla_types::source_governance::AccessReport>,
 ) -> Result<Method, String> {
     let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -700,6 +711,10 @@ fn permission_receipt_method(
         "relationship_tombstoned_count": 0,
         "affected_count": applied,
     });
+    if let Some(access) = access {
+        properties["access"] = serde_json::to_value(access)
+            .map_err(|error| format!("access receipt encoding failed: {error}"))?;
+    }
     if !proposal_items.is_empty() {
         // The per-item judgments of a `proposals` batch (MEDULLA-INGEST-WORKER-R002.3).
         properties["proposals"] = serde_json::to_value(proposal_items)
@@ -2477,6 +2492,7 @@ fn build_terminal_receipt(
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
+        access: prepared.access,
         report: medulla_types::ingest_materialize::IngestBatchReport {
             written: prepared
                 .affected_count
@@ -2570,6 +2586,14 @@ fn prepared_replay(
             "relationship_tombstoned_count",
         )?,
         governance: replay_governance(&receipt)?,
+        access: receipt
+            .get("access")
+            .filter(|value| !value.is_null())
+            .map(|value| {
+                serde_json::from_value(value.clone())
+                    .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: access: {error}"))
+            })
+            .transpose()?,
         committed_graph_version,
         drift: Vec::new(),
         embedding_set: crate::ingestion_admission::EmbeddingSet {

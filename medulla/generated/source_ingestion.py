@@ -134,6 +134,14 @@ class SourceIngestionMode(str, Enum):
     RECONCILE = "reconcile"
 
 
+class AccessReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    refused: Annotated[int, Field(ge=0)]
+    stale: Annotated[int, Field(ge=0)]
+    updated: Annotated[int, Field(ge=0)]
+
+
 class GovernanceReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -238,6 +246,7 @@ class SourceIngestionReceipt(BaseModel):
 
     accepted_checkpoint: SourceCheckpoint
     accepted_checkpoint_digest: Digest256
+    access: AccessReport | None = None
     affected_count: Annotated[int, Field(ge=0)]
     batch_digest: Digest256
     classes: Annotated[list[ClassReport], Field(max_length=1024)]
