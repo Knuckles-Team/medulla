@@ -62,6 +62,7 @@ pub fn policy() -> DecisionPolicy {
         reasoning: std::collections::BTreeMap::new(),
         knobs: Default::default(),
         safety_bounds: Default::default(),
+        limits: Default::default(),
     }
 }
 

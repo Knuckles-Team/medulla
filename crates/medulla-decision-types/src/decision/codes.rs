@@ -626,6 +626,7 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     vec![
         ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),
         ("safety", super::safety::REFUSALS.to_vec()),
+        ("limits", super::limit_types::REFUSALS.to_vec()),
         (
             "delegation_quality",
             super::delegation_quality::REFUSALS.to_vec(),

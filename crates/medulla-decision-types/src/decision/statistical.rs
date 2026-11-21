@@ -464,6 +464,9 @@ pub enum TypedValue {
     SafetyMeasurements(BoundedVec<super::safety::SafetyMeasurement, 32>),
     /// One trajectory decision of a task plan (MEDULLA-DECISION-ENGINE-R140.104).
     Trajectory(Box<super::task_plan::trajectory::TrajectoryQuery>),
+    /// The proposed action to check against the policy's limits, read from the
+    /// param `guarded_action` (MEDULLA-DECISION-ENGINE-R131.3).
+    GuardedAction(Box<super::limit_types::GuardedAction>),
 }
 
 /// One named parameter of a question.

@@ -58,6 +58,7 @@ pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
 pub mod lifecycle;
+pub mod limit_types;
 pub mod load_set;
 pub mod load_set_knobs;
 pub mod memory_benchmark;

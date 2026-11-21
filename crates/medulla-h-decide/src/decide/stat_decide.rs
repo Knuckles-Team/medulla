@@ -513,8 +513,12 @@ pub(super) fn decide_blocking(
     // before it is sealed (MEDULLA-DECISION-ENGINE-R001.100.2).
     let (executed, safety_premises) =
         super::safety_stage::apply(request, &policy.policy, ctx.now_ms, executed)?;
+    // The policy's limits are checked against the proposed action next
+    // (MEDULLA-DECISION-ENGINE-R131.3).
+    let (executed, limit_premises) = super::limit_stage::apply(request, &policy.policy, executed)?;
     let mut trajectory_premises = trajectory_premises;
     trajectory_premises.extend(safety_premises);
+    trajectory_premises.extend(limit_premises);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;
