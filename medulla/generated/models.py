@@ -274,7 +274,6 @@ from ._shared import (
     ToolFactDeclarer,
     ToolsetTransport,
     ToolSideEffects,
-    TrustTier,
     TopologyAdmission,
     TopologyCaps,
     TopologyFacts,
@@ -286,6 +285,7 @@ from ._shared import (
     TraceFidelityFullStep,
     TraceFidelityLevel,
     TraceFidelityTruncated,
+    TrustTier,
     UniquenessProof,
     UniquenessScope,
     UnitRationalWire,
@@ -567,7 +567,6 @@ from .policy_evolution import (
     EvaluationMetrics,
     EvaluationVerdict,
     GraderKind,
-    RevisionSubject,
     HeldBlobRef,
     KlEstimator,
     KlEstimatorBinary,
@@ -600,6 +599,7 @@ from .policy_evolution import (
     PolicyRecordView,
     PolicyWriteDisposition,
     ResourceObservation,
+    RevisionSubject,
     RewardEvidenceSource,
     RewardRecord,
     SafetyOutcome,
@@ -668,10 +668,10 @@ from .source_ingestion import (
     SourceCheckpoint,
     SourceEntityRef,
     SourceFeature,
+    SourceIngestionAccepted,
     SourceIngestionBatch,
     SourceIngestionDisposition,
     SourceIngestionMode,
-    SourceIngestionAccepted,
     SourceIngestionOutcome,
     SourceIngestionQuarantined,
     SourceIngestionReceipt,
@@ -30658,7 +30658,9 @@ class WorkItemView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     effect_phase: EffectPhase = EffectPhase.UNSTARTED
-    effect_receipt: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")] | None = None
+    effect_receipt: (
+        Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")] | None
+    ) = None
     input_ref: str
     kind: str
     metadata: dict[str, Any]
@@ -32564,7 +32566,8 @@ class AppliedPolicy(BaseModel):
 
 
 class KeptPlanReport(BaseModel):
-    """A kept plan an ``EXPLAIN`` statement's foreign source reads, with its measured evidence."""
+    """A kept plan an ``EXPLAIN`` statement's foreign source reads, with its
+    measured evidence."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33472,13 +33475,13 @@ class ClaimKind(str, Enum):
     MANUAL = "manual"
 
 
-class ClaimState(str, Enum):
+class ClassificationClaimState(str, Enum):
     PROPOSED = "proposed"
     PROMOTED = "promoted"
     REJECTED = "rejected"
 
 
-class ClaimProvenance(BaseModel):
+class ClassificationClaimProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     kind: ClaimKind
@@ -33493,12 +33496,12 @@ class ClassificationClaim(BaseModel):
 
     asset: str
     categories: list[Marking]
-    provenance: ClaimProvenance
-    state: ClaimState
+    provenance: ClassificationClaimProvenance
+    state: ClassificationClaimState
     evidence: list[str] = Field(default_factory=list)
 
 
-class ClaimRecord(BaseModel):
+class ClassificationClaimRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     claim_id: str
@@ -33511,8 +33514,8 @@ class ClaimRecord(BaseModel):
 class ClassificationClaimResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    record: ClaimRecord
-    propagated: list[ClaimRecord] = Field(default_factory=list)
+    record: ClassificationClaimRecord
+    propagated: list[ClassificationClaimRecord] = Field(default_factory=list)
 
 
 class ClassificationClaimOpPropose(BaseModel):
@@ -38428,7 +38431,9 @@ class CostReport(BaseModel):
     applied_budget: IndexlessBudget
     authorization_revision: Annotated[int, Field(ge=0)]
     cost_used: Annotated[int, Field(ge=0)]
-    operation_ids: Annotated[list[str], Field(max_length=64)] = Field(default_factory=list)
+    operation_ids: (
+        Annotated[list[str], Field(max_length=64)]
+    ) = Field(default_factory=list)
     premises: list[str] = Field(default_factory=list)
     remaining: IndexlessBudget
     rows_visited: Annotated[int, Field(ge=0)]
@@ -39048,9 +39053,13 @@ class PointerState(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     active: PointerEvent | None = None
-    history: Annotated[list[PointerEvent], Field(max_length=64)] = Field(default_factory=list)
+    history: (
+        Annotated[list[PointerEvent], Field(max_length=64)]
+    ) = Field(default_factory=list)
     key: str
-    stack: Annotated[list[PointerEvent], Field(max_length=64)] = Field(default_factory=list)
+    stack: (
+        Annotated[list[PointerEvent], Field(max_length=64)]
+    ) = Field(default_factory=list)
 
 
 class PrePlanVerdict(BaseModel):
@@ -39343,7 +39352,9 @@ class RunCreditReceipt(BaseModel):
     premises: Annotated[list[str], Field(max_length=4)]
     receipt_digest: str
     run_id: str
-    steps: Annotated[list[StepCredit], Field(max_length=1024)] = Field(default_factory=list)
+    steps: (
+        Annotated[list[StepCredit], Field(max_length=1024)]
+    ) = Field(default_factory=list)
 
 
 class RunMetricsReceipt(BaseModel):
@@ -42386,10 +42397,10 @@ __all__ = [
     "StewardshipOpCertify",
     "StewardshipOpMarkCritical",
     "ClaimKind",
-    "ClaimState",
-    "ClaimProvenance",
+    "ClassificationClaimState",
+    "ClassificationClaimProvenance",
     "ClassificationClaim",
-    "ClaimRecord",
+    "ClassificationClaimRecord",
     "ClassificationClaimResult",
     "ClassificationClaimOp",
     "ClassificationClaimOpPropose",
