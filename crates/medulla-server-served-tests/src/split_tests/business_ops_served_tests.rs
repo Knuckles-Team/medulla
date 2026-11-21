@@ -202,7 +202,11 @@ async fn digest_changed_since_uses_known_at() {
         ("incident:second", "Incident"),
     ] {
         assert_ok(
-            &dispatch_on_heap(&state, send(node(id, serde_json::json!({ "type": label })))).await,
+            &dispatch_on_heap(&state, send(node(
+                id,
+                // An old valid time: the window reads the transaction time, not this.
+                serde_json::json!({ "type": label, "valid_from": 1_u64 }),
+            ))).await,
         );
     }
     let first = tx_from_of(&state, 7600, "order:first").await;
