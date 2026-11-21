@@ -1201,3 +1201,8 @@
 :inDomain a owl:ObjectProperty ;
     rdfs:label "in domain" ;
     rdfs:comment "The domain a gap or enhancement is in." .
+
+:disposition a owl:DatatypeProperty ;
+    rdfs:label "disposition" ;
+    rdfs:comment "Where a capability gap or desired enhancement stands: open, accepted, resolved or rejected (MEDULLA-ORCH-VOCAB-R004.6.1)." ;
+    rdfs:range xsd:string .
