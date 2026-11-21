@@ -78,6 +78,8 @@ pub mod registry;
 pub mod source_hierarchy;
 pub mod spec_folder;
 pub mod stewardship;
+// MEDULLA-TYPED-PACKS-R803.2: column scan for sensitive values.
+pub mod sensitive_scan;
 // MEDULLA-TYPED-PACKS-R801.2: glossary binding, label search and cycle rules.
 pub mod glossary;
 /// MEDULLA-INCREMENTAL-VIEWS-R005.1 — the process-global view status board.

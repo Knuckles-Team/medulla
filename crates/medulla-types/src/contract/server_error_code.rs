@@ -469,6 +469,10 @@ closed_error_codes! {
         ProfileForbidden => "PROFILE_FORBIDDEN",
         QualityMeasureUnavailable => "QUALITY_MEASURE_UNAVAILABLE",
         QualityRuleInvalid => "QUALITY_RULE_INVALID",
+        /// A `Dictionary` or `Model` detector names a resource the scan does not hold (MEDULLA-TYPED-PACKS-R803.2).
+        DetectorResourceMissing => "DETECTOR_RESOURCE_MISSING",
+        /// A sensitive scan limit lies outside its knob range (MEDULLA-TYPED-PACKS-R803.2).
+        ScanLimitsInvalid => "SCAN_LIMITS_INVALID",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
         /// A chunk-encoding position mode the encoder does not serve (MEDULLA-FEDERATED-QUERY-R039.2.2).
         EncodePositionModeUnsupported => "ENCODE_POSITION_MODE_UNSUPPORTED",

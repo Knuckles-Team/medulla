@@ -4979,6 +4979,7 @@ dependencies = [
  "quick-xml 0.41.0",
  "rayon",
  "redb",
+ "regex",
  "rmp-serde",
  "serde",
  "serde_json",
