@@ -7200,6 +7200,11 @@ dependencies = [
 [[package]]
 name = "medulla-sdlc"
 version = "0.1.0"
+dependencies = [
+ "medulla-source-types",
+ "medulla-types",
+ "serde_json",
+]
 
 [[package]]
 name = "medulla-semantic-index"

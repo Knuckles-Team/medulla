@@ -10,11 +10,12 @@ fn record() -> serde_json::Value {
         "mandate": {"schema_version": 1, "strength": "explicit", "basis": "owner",
             "policy_version": "1", "actor": "p1", "scope_rows": ["MEDULLA-SDLC-R019.2"],
             "project_mode": false},
-        "proposals": ["pr-1"], "follows": [],
+        "seq": 3, "proposals": [{"id": "pr-1", "state": "merged"}], "follows": [],
         "assignments": [{"schema_version": 1, "id": "a1", "run_trace_id": "r1",
-            "state": "ended", "report": "ready", "started_at": 1, "ended_at": 2,
+            "state": "ended", "report": {"state": "ready", "summary": "done", "proposal": "pr-1", "evidence": ["v1"], "seq": 2}, "started_at": 1, "ended_at": 2,
             "ended_reason": "merged"}],
-        "inputs": [], "attention": ["review_submitted", "head_pushed"],
+        "inputs": [{"event_id": "e1", "kind": "head_pushed", "source": "person", "seq": 1}],
+        "attention": {"text": "which branch?", "raised_by": "e1", "seq": 3},
         "ended": "merged", "created_at": 0
     })
 }
@@ -30,9 +31,11 @@ fn delivery_records_round_trip_and_refuse_unknown_values() {
     for (pointer, bad) in [
         ("/mandate/strength", json!("implied")),
         ("/assignments/0/state", json!("paused")),
-        ("/assignments/0/report", json!("done")),
+        ("/assignments/0/report/state", json!("done")),
         ("/ended", json!("abandoned")),
-        ("/attention/0", json!("label_added")),
+        ("/inputs/0/kind", json!("label_added")),
+        ("/inputs/0/source", json!("bot")),
+        ("/proposals/0/state", json!("abandoned")),
         ("/schema_version", json!(2)),
     ] {
         let mut value = record();

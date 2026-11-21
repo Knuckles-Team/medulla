@@ -6,6 +6,10 @@
 //! value never decodes; [`decode_delivery`] maps that to the stable refusal
 //! `DELIVERY_RECORD_INVALID`. Every record carries `schema_version`.
 
+use medulla_types::refusal_code::RefusalCode;
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 /// The schema version every delivery record carries.
@@ -13,6 +17,23 @@ pub const DELIVERY_SCHEMA_VERSION: u32 = 1;
 
 /// The refusal code for a delivery record that does not decode.
 pub const DELIVERY_RECORD_INVALID: &str = "DELIVERY_RECORD_INVALID";
+
+/// The refusal code for a report naming an assignment the delivery does not hold (R019.7).
+pub const ASSIGNMENT_UNKNOWN: &str = "ASSIGNMENT_UNKNOWN";
+
+/// The refusal code for a report on an assignment that already ended (R019.7).
+pub const ASSIGNMENT_ENDED: &str = "ASSIGNMENT_ENDED";
+
+/// The refusal code for a `ready` report without evidence a verdict backs (R019.7).
+pub const REPORT_EVIDENCE_MISSING: &str = "REPORT_EVIDENCE_MISSING";
+
+/// Every refusal code of the delivery records.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(DELIVERY_RECORD_INVALID),
+    RefusalCode::new(ASSIGNMENT_UNKNOWN),
+    RefusalCode::new(ASSIGNMENT_ENDED),
+    RefusalCode::new(REPORT_EVIDENCE_MISSING),
+];
 
 /// How strongly the delivery was mandated.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +74,222 @@ pub enum DeliveryReportState {
     Blocked,
     Failed,
     Dropped,
+}
+
+/// The latest report of one assignment (R019.7).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AssignmentReport {
+    pub state: DeliveryReportState,
+    pub summary: String,
+    pub proposal: Option<String>,
+    pub evidence: Vec<String>,
+    pub seq: u64,
+}
+
+/// Who produced a delivery input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InputSource {
+    Person,
+    Automation,
+}
+
+/// One feedback input a delivery received (R019.7).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryInput {
+    pub event_id: String,
+    pub kind: FeedbackKind,
+    pub source: InputSource,
+    pub seq: u64,
+}
+
+/// The one open question of a delivery (R019.7).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryQuestion {
+    pub text: String,
+    /// The `event_id` of the input that raised the question, when one did.
+    pub raised_by: Option<String>,
+    pub seq: u64,
+}
+
+/// The state of one proposal a delivery opened.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalState {
+    Open,
+    Merged,
+    Closed,
+}
+
+/// An event of `DeliveryProposalMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ProposalEvent {
+    Merged,
+    Closed,
+    Reopened,
+}
+
+impl MachineState for ProposalState {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Merged => "merged",
+            Self::Closed => "closed",
+        }
+    }
+}
+
+impl MachineEvent for ProposalEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Merged => "Merged",
+            Self::Closed => "Closed",
+            Self::Reopened => "Reopened",
+        }
+    }
+}
+
+/// `DeliveryProposalMachine`: the closed edge table. Every other pair is refused.
+pub static DELIVERY_PROPOSAL_MACHINE: MachineDef<ProposalState, ProposalEvent, &'static str> =
+    MachineDef {
+        name: "DeliveryProposalMachine",
+        states: &[
+            ProposalState::Open,
+            ProposalState::Merged,
+            ProposalState::Closed,
+        ],
+        initial: ProposalState::Open,
+        terminals: &[ProposalState::Merged],
+        events: &[
+            ProposalEvent::Merged,
+            ProposalEvent::Closed,
+            ProposalEvent::Reopened,
+        ],
+        guards: &[],
+        edges: &[
+            Edge {
+                id: "DP01",
+                from: ProposalState::Open,
+                event: ProposalEvent::Merged,
+                guard: None,
+                to: ProposalState::Merged,
+            },
+            Edge {
+                id: "DP02",
+                from: ProposalState::Open,
+                event: ProposalEvent::Closed,
+                guard: None,
+                to: ProposalState::Closed,
+            },
+            Edge {
+                id: "DP03",
+                from: ProposalState::Closed,
+                event: ProposalEvent::Reopened,
+                guard: None,
+                to: ProposalState::Open,
+            },
+        ],
+    };
+
+impl ProposalState {
+    /// The one transition function of `DeliveryProposalMachine`.
+    pub fn apply(self, event: ProposalEvent) -> Result<Self, TransitionRefused> {
+        transition(&DELIVERY_PROPOSAL_MACHINE, self, event, |_| false).map(|edge| edge.to)
+    }
+}
+
+/// One proposal a delivery opened and its state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryProposal {
+    pub id: String,
+    pub state: ProposalState,
+}
+
+/// The stage of a delivery, derived on each read and never stored (R019.7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DeliveryStage {
+    #[serde(rename = "ended")]
+    Ended,
+    #[serde(rename = "person/answer")]
+    PersonAnswer,
+    #[serde(rename = "person/review")]
+    PersonReview,
+    #[serde(rename = "person/blocked")]
+    PersonBlocked,
+    #[serde(rename = "person/failed")]
+    PersonFailed,
+    #[serde(rename = "working/queued")]
+    WorkingQueued,
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "working")]
+    Working,
+}
+
+impl DeliveryStage {
+    /// The wire name of the stage.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ended => "ended",
+            Self::PersonAnswer => "person/answer",
+            Self::PersonReview => "person/review",
+            Self::PersonBlocked => "person/blocked",
+            Self::PersonFailed => "person/failed",
+            Self::WorkingQueued => "working/queued",
+            Self::Idle => "idle",
+            Self::Working => "working",
+        }
+    }
+}
+
+/// One report an agent writes to a delivery through `DeliveryReport` (R019.7).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryReportWrite {
+    pub delivery_id: String,
+    pub assignment_id: String,
+    pub state: DeliveryReportState,
+    pub summary: String,
+    pub proposal: Option<String>,
+    pub question: Option<String>,
+    pub evidence: Vec<String>,
+}
+
+/// A refused report write.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum DeliveryReportRefusal {
+    /// The assignment ID names no assignment of the delivery.
+    #[error("ASSIGNMENT_UNKNOWN: {0}")]
+    AssignmentUnknown(String),
+    /// The assignment already ended.
+    #[error("ASSIGNMENT_ENDED: {0}")]
+    AssignmentEnded(String),
+    /// A `ready` report without evidence a known verdict backs.
+    #[error("REPORT_EVIDENCE_MISSING: {0}")]
+    EvidenceMissing(String),
+}
+
+impl DeliveryReportRefusal {
+    /// The stable refusal code.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::AssignmentUnknown(_) => ASSIGNMENT_UNKNOWN,
+            Self::AssignmentEnded(_) => ASSIGNMENT_ENDED,
+            Self::EvidenceMissing(_) => REPORT_EVIDENCE_MISSING,
+        }
+    }
+}
+
+impl Delivery {
+    /// Take the next sequence number: add one to `seq` and return the new value.
+    pub fn next_seq(&mut self) -> u64 {
+        self.seq += 1;
+        self.seq
+    }
 }
 
 /// How a delivery ended.
@@ -110,7 +347,7 @@ pub struct DeliveryAssignment {
     pub id: String,
     pub run_trace_id: String,
     pub state: AssignmentState,
-    pub report: Option<DeliveryReportState>,
+    pub report: Option<AssignmentReport>,
     pub started_at: Option<i64>,
     pub ended_at: Option<i64>,
     pub ended_reason: Option<String>,
@@ -127,11 +364,13 @@ pub struct Delivery {
     pub slice_root: String,
     pub scope_rows: Vec<String>,
     pub mandate: DeliveryMandate,
-    pub proposals: Vec<String>,
+    /// The last sequence number the delivery issued.
+    pub seq: u64,
+    pub proposals: Vec<DeliveryProposal>,
     pub follows: Vec<String>,
     pub assignments: Vec<DeliveryAssignment>,
-    pub inputs: Vec<String>,
-    pub attention: Vec<FeedbackKind>,
+    pub inputs: Vec<DeliveryInput>,
+    pub attention: Option<DeliveryQuestion>,
     pub ended: Option<DeliveryOutcome>,
     pub created_at: i64,
 }

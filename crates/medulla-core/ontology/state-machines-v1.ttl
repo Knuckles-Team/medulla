@@ -3068,6 +3068,82 @@
     :toState :CatalogProbeMachine_Probing ;
     :firedBy :CatalogProbeMachine_Event_ProbeStarted .
 
+# spec: MEDULLA-SDLC-R019.7
+# The state of one proposal a delivery opened. The Rust edge table DELIVERY_PROPOSAL_MACHINE is
+# the same table; the ontology test asserts equal edge sets.
+
+:DeliveryProposalState a owl:Class ;
+    rdfs:label "Delivery Proposal State" ;
+    rdfs:comment "A state of the Delivery Proposal machine." ;
+    rdfs:subClassOf :State .
+
+:DeliveryProposalTerminalState a owl:Class ;
+    rdfs:label "Delivery Proposal Terminal State" ;
+    rdfs:comment "A terminal state of the Delivery Proposal machine." ;
+    rdfs:subClassOf :TerminalState, :DeliveryProposalState .
+
+:DeliveryProposalTransition a owl:Class ;
+    rdfs:label "Delivery Proposal Transition" ;
+    rdfs:comment "A transition of the Delivery Proposal machine." ;
+    rdfs:subClassOf :Transition .
+
+:DeliveryProposalEvent a owl:Class ;
+    rdfs:label "Delivery Proposal Event" ;
+    rdfs:comment "A event of the Delivery Proposal machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:DeliveryProposalGuard a owl:Class ;
+    rdfs:label "Delivery Proposal Guard" ;
+    rdfs:comment "A guard of the Delivery Proposal machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:DeliveryProposalMachine a :StateMachine ;
+    rdfs:label "Delivery Proposal machine" ;
+    :initialState :DeliveryProposalMachine_Open ;
+    :hasState :DeliveryProposalMachine_Open, :DeliveryProposalMachine_Merged, :DeliveryProposalMachine_Closed .
+
+:DeliveryProposalMachine_Open a :DeliveryProposalState ;
+    rdfs:label "Delivery Proposal Open" ;
+    :storedForm "open" .
+
+:DeliveryProposalMachine_Merged a :DeliveryProposalTerminalState ;
+    rdfs:label "Delivery Proposal Merged" ;
+    :storedForm "merged" .
+
+:DeliveryProposalMachine_Closed a :DeliveryProposalState ;
+    rdfs:label "Delivery Proposal Closed" ;
+    :storedForm "closed" .
+
+:DeliveryProposalMachine_Event_Merged a :DeliveryProposalEvent ;
+    rdfs:label "Delivery Proposal Merged" .
+
+:DeliveryProposalMachine_Event_Closed a :DeliveryProposalEvent ;
+    rdfs:label "Delivery Proposal Closed" .
+
+:DeliveryProposalMachine_Event_Reopened a :DeliveryProposalEvent ;
+    rdfs:label "Delivery Proposal Reopened" .
+
+:DeliveryProposalMachine_DP01 a :DeliveryProposalTransition ;
+    rdfs:label "Delivery Proposal DP01" ;
+    :edgeId "DP01" ;
+    :fromState :DeliveryProposalMachine_Open ;
+    :toState :DeliveryProposalMachine_Merged ;
+    :firedBy :DeliveryProposalMachine_Event_Merged .
+
+:DeliveryProposalMachine_DP02 a :DeliveryProposalTransition ;
+    rdfs:label "Delivery Proposal DP02" ;
+    :edgeId "DP02" ;
+    :fromState :DeliveryProposalMachine_Open ;
+    :toState :DeliveryProposalMachine_Closed ;
+    :firedBy :DeliveryProposalMachine_Event_Closed .
+
+:DeliveryProposalMachine_DP03 a :DeliveryProposalTransition ;
+    rdfs:label "Delivery Proposal DP03" ;
+    :edgeId "DP03" ;
+    :fromState :DeliveryProposalMachine_Closed ;
+    :toState :DeliveryProposalMachine_Open ;
+    :firedBy :DeliveryProposalMachine_Event_Reopened .
+
 # spec: MEDULLA-DECISION-ENGINE-R805.7
 # The Revision machine. The Rust edge table REVISION_MACHINE is the same table; the ontology
 # test asserts equal edge sets.

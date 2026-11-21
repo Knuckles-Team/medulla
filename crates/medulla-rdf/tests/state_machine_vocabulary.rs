@@ -866,6 +866,17 @@ fn catalog_probe_machine_classes_extend_core() {
     sm::assert_extends_core("CatalogProbe");
 }
 
+// spec: MEDULLA-SDLC-R019.7
+#[test]
+fn delivery_proposal_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::delivery::DELIVERY_PROPOSAL_MACHINE);
+}
+// spec: MEDULLA-SDLC-R019.7
+#[test]
+fn delivery_proposal_machine_classes_extend_core() {
+    sm::assert_extends_core("DeliveryProposal");
+}
+
 // spec: MEDULLA-FEDERATED-QUERY-R739.1
 #[test]
 fn shard_monitor_machine_matches_edge_table() {

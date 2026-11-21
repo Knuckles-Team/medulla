@@ -12,3 +12,13 @@ name = "medulla_sdlc"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-source-types = { path = "../medulla-source-types" }
+medulla-types = { path = "../medulla-types" }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[[bench]]
+name = "delivery_stage"
+path = "benches/delivery_stage.rs"
+harness = false
