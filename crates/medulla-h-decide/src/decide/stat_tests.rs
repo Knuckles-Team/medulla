@@ -1079,6 +1079,9 @@ mod package_run_tests;
 mod feedback_tests;
 // MEDULLA-DECISION-ENGINE-R132.3: retrieved entries admitted by trust tier.
 mod entry_trust_tests;
+// MEDULLA-DECISION-ENGINE-R823, R825: reasoning paradigm and model capacity questions.
+mod reasoning_paradigm_tests;
+mod model_capacity_tests;
 // MEDULLA-DECISION-ENGINE-R163.3, R163.4: graph intake served through Decide.
 mod graph_intake_tests;
 // MEDULLA-DECISION-ENGINE-R701.4, R701.5: failure refusals and gap evidence.

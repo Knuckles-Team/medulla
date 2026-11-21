@@ -67,6 +67,7 @@ pub mod load_set;
 pub mod load_set_knobs;
 pub mod memory_benchmark;
 pub mod memory_rewrite;
+pub mod model_capacity;
 pub mod numeric;
 pub mod package_validation;
 pub mod paper_admission;

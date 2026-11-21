@@ -63,6 +63,7 @@ mod probe_verdict;
 mod process_remediation;
 mod program_store;
 mod rank;
+mod reasoning_paradigm;
 mod recruit;
 mod recursion_mode;
 mod research_voi;
@@ -106,7 +107,7 @@ pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use resolve_entity::with_candidates;
 pub(in crate::decide) use runtime_quota::quota_view;
 pub(in crate::decide) use skill_evolution::with_skill_embeddings;
-pub(in crate::decide) use support::advisory;
+pub(in crate::decide) use support::{advisory, invalid, json_param, single_option, text_param};
 pub(in crate::decide) use tool_action_admission::admission_view;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -256,6 +257,10 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         retrieval_plan::RetrievalPlanFamily;
     static INGESTIONLANEFAMILY: ingestion_lane::IngestionLaneFamily =
         ingestion_lane::IngestionLaneFamily;
+    static REASONINGPARADIGMFAMILY: reasoning_paradigm::ReasoningParadigmFamily =
+        reasoning_paradigm::ReasoningParadigmFamily;
+    static MODELCAPACITYFAMILY: super::stat_model_capacity::ModelCapacityFamily =
+        super::stat_model_capacity::ModelCapacityFamily;
     static ENRICHMENTSCHEDULEFAMILY: enrichment_schedule::EnrichmentScheduleFamily =
         enrichment_schedule::EnrichmentScheduleFamily;
     static PRETOOLRISKFAMILY: pre_tool_risk::PreToolRiskFamily = pre_tool_risk::PreToolRiskFamily;
@@ -468,6 +473,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::DelegationAdmission => &DELEGATIONADMISSIONFAMILY,
         QuestionKind::AnswerRanking => &ANSWERRANKINGFAMILY,
         QuestionKind::ServingTechniqueActivation => &SERVINGTECHNIQUEFAMILY,
+        QuestionKind::ReasoningParadigm => &REASONINGPARADIGMFAMILY,
+        QuestionKind::ModelCapacity => &MODELCAPACITYFAMILY,
         QuestionKind::ProcessRemediation => &PROCESSREMEDIATIONFAMILY,
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
         QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
@@ -566,6 +573,8 @@ mod tests {
             QuestionKind::DelegationAdmission,
             QuestionKind::AnswerRanking,
             QuestionKind::ServingTechniqueActivation,
+            QuestionKind::ReasoningParadigm,
+            QuestionKind::ModelCapacity,
             QuestionKind::ProcessRemediation,
             QuestionKind::IngestShortfall,
             QuestionKind::CapacityProposal,
@@ -655,6 +664,8 @@ mod tests {
             | QuestionKind::DelegationAdmission
             | QuestionKind::AnswerRanking
             | QuestionKind::ServingTechniqueActivation
+            | QuestionKind::ReasoningParadigm
+            | QuestionKind::ModelCapacity
             | QuestionKind::ProcessRemediation
             | QuestionKind::IngestShortfall
             | QuestionKind::CapacityProposal

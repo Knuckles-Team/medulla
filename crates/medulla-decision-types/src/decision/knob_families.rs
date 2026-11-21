@@ -76,6 +76,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::paper_admission::KNOBS,
     super::held_item::KNOBS,
     super::serving_technique::KNOBS,
+    super::model_capacity::KNOBS,
     super::process_remediation::KNOBS,
     super::command_config::KNOBS,
     super::instruction_disclosure::KNOBS,

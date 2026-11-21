@@ -530,6 +530,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::serving_technique::REFUSALS,
     ),
     (
+        QuestionKind::ReasoningParadigm,
+        super::statistical::reasoning_paradigm::REFUSALS,
+    ),
+    (
         QuestionKind::CapacityProposal,
         super::statistical::capacity::REFUSALS,
     ),

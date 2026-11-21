@@ -30,6 +30,7 @@ pub mod outcome;
 pub mod placement;
 pub mod placement_plan;
 pub mod ranking_eval;
+pub mod reasoning_paradigm;
 pub mod retrieval;
 pub mod retrieval_adapter;
 pub mod retrieval_calibration;
@@ -273,6 +274,10 @@ pub enum QuestionKind {
     AnswerRanking,
     /// Whether a serving technique is activated for a model, from benchmark receipts (MEDULLA-DECISION-ENGINE-R819). See `decision::serving_technique`.
     ServingTechniqueActivation,
+    /// Which reasoning paradigm (rules, owl, causal, statistical) a task's capability tags make legal and best (MEDULLA-DECISION-ENGINE-R823). See `statistical::reasoning_paradigm`.
+    ReasoningParadigm,
+    /// The concurrency limit one model endpoint's recorded observations allow (MEDULLA-DECISION-ENGINE-R825). See `decision::model_capacity`.
+    ModelCapacity,
     /// Whether a run-bound process is a zombie, hung or progressing (MEDULLA-DECISION-ENGINE-R820). See `decision::process_remediation`.
     ProcessRemediation,
     /// Which goals the remaining ingest budget funds and which items may be purged (MEDULLA-DECISION-ENGINE-R826). See `decision::ingest_shortfall`.

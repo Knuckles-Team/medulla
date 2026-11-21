@@ -17,7 +17,7 @@ use crate::decide::stat_support::refusal;
 const CHOSEN_SCORE: i64 = 1i64 << 32;
 
 /// A `PARAMETER_INVALID` refusal.
-pub(super) fn invalid(detail: impl std::fmt::Display) -> String {
+pub(in crate::decide) fn invalid(detail: impl std::fmt::Display) -> String {
     refusal(StatisticalErrorCode::ParameterInvalid, detail)
 }
 
@@ -54,7 +54,7 @@ pub(super) fn unsigned_param(request: &DecideRequest, name: &str) -> Result<Opti
 }
 
 /// The required JSON text parameter `name`, decoded into `T`.
-pub(super) fn json_param<T: serde::de::DeserializeOwned>(
+pub(in crate::decide) fn json_param<T: serde::de::DeserializeOwned>(
     request: &DecideRequest,
     name: &str,
 ) -> Result<T, String> {
@@ -68,7 +68,7 @@ pub(super) fn json_param<T: serde::de::DeserializeOwned>(
 }
 
 /// The family declares exactly one option, named `id`.
-pub(super) fn single_option(options: &[DeclaredOption], id: &str) -> Result<(), String> {
+pub(in crate::decide) fn single_option(options: &[DeclaredOption], id: &str) -> Result<(), String> {
     match options {
         [only] if only.option_id == id => Ok(()),
         _ => Err(invalid(format!(
@@ -167,7 +167,7 @@ where
 }
 
 /// The text parameter `name`, if present.
-pub(super) fn text_param<'a>(
+pub(in crate::decide) fn text_param<'a>(
     request: &'a DecideRequest,
     name: &str,
 ) -> Result<Option<&'a str>, String> {

@@ -88,6 +88,7 @@ mod stat_jobs;
 mod stat_learning;
 #[cfg(feature = "decide")]
 mod stat_load_set;
+mod stat_model_capacity;
 #[cfg(feature = "decide")]
 mod stat_log;
 #[cfg(feature = "decide")]
