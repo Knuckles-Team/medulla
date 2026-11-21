@@ -155,6 +155,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
     "CreateBranch",
     // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
@@ -217,6 +219,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
 ];
 
 /// Mirrors `src/server/access.rs::requires_write`'s RUNTIME-CONDITIONAL set: the Mine*/
@@ -428,6 +432,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
@@ -721,6 +727,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     "SchemaProjections",
     "DomainPack",
     // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: committed over the query gateway's
@@ -807,6 +815,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     "LiveArtifactPut",
     "LiveArtifactRefresh",
     "StoredQueryPut",
@@ -881,6 +891,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     "SchemaProjections",
     "DomainPack",
     "RemoveEdge",
@@ -917,6 +929,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
 ];
 
 // ── KNOWN_DIVERGENCE ────────────────────────────────────────────────────────────────

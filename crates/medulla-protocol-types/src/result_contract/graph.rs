@@ -27,6 +27,8 @@ method_results! {
     ArchitectureModelExport(ArchitectureModelExport) => Json<medulla_types::archimate_exchange::ArchitectureModelExported>;
     // MEDULLA-SRC-AUTH-R012.6: the source sync report.
     SourceSync(SourceSync) => Json<medulla_source_types::source_sync::SyncReport>;
+    // MEDULLA-SRC-AUTH-R801: the activation record a reviewed policy source bind wrote.
+    PolicySourceBind(PolicySourceBind) => Json<medulla_types::policy_source::PolicySourceBinding>;
     DomainPackPreviewResult(DomainPack / "preview") => Raw<medulla_catalog_types::domain_pack::DomainPackPreview>;
     DomainPackRunResult(DomainPack / "run") => Raw<medulla_catalog_types::domain_pack::DomainPackRun>;
     // MEDULLA-CQ-ORCH-R010.3: the served architecture view.

@@ -212,6 +212,13 @@ pub async fn try_handle_gateway(
         )
         .await);
     }
+    // MEDULLA-SRC-AUTH-R801: a policy source bind reads the head component of its
+    // tenant and commits the one activation node.
+    if matches!(method, Method::PolicySourceBind { .. }) {
+        return Ok(
+            super::policy_source::handle_policy_source_bind(state, &ctx, tenant_id, &method).await,
+        );
+    }
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes under the engine actor,
     // never under the caller that asked for it.
     if matches!(method, Method::RetentionCleanupRun { .. }) {

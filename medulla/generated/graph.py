@@ -2892,3 +2892,7 @@ send_read_graph_changes = contract_sender(
 send_read_span = contract_sender("ReadSpan", "MethodReadSpanParams")
 send_atom_context = contract_sender("AtomContext", "MethodAtomContextParams")
 send_source_sync = contract_sender("SourceSync", "MethodSourceSyncParams")
+send_policy_source_bind = contract_sender(
+    "PolicySourceBind", "MethodPolicySourceBindParams"
+)
+decode_policy_source_bind = contract_decoder("PolicySourceBind", "PolicySourceBinding")

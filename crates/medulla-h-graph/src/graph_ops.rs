@@ -83,6 +83,8 @@ mod memory_surface;
 pub mod memory_snapshot;
 mod nl_correction;
 mod nodes;
+// MEDULLA-SRC-AUTH-R801: the reviewed policy source binding.
+pub mod policy_source;
 mod read_span;
 #[cfg(test)]
 mod read_span_tests;

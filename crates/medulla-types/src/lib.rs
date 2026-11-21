@@ -105,6 +105,8 @@ pub use modality::{
 pub mod durable_unit;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
 pub mod code_map;
+// MEDULLA-SRC-AUTH-R801: the reviewed policy source binding records.
+pub mod policy_source;
 pub mod ingest_throughput;
 // MEDULLA-INGEST-WORKER-R911.3: the ingest stage machine.
 pub mod ingest_machine;

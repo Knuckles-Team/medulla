@@ -784,6 +784,15 @@ $($variants)*
     RetentionCleanupRun {
         request: medulla_mutation_types::retention_cleanup::RetentionCleanupRunRequest,
     },
+    /// Bind one human-reviewed policy source revision to the head `DecisionPolicy`
+    /// component (MEDULLA-SRC-AUTH-R801). Scope `kg:admin`. The binding is the
+    /// graph node `policy_source:<policy_iri>`, written only when the head
+    /// version, content digest and `content_ref` equal the request; a refusal
+    /// (`POLICY_SOURCE_UNREVIEWED`, `POLICY_SOURCE_STALE`,
+    /// `POLICY_SOURCE_DIGEST_MISMATCH`) leaves the active policy unchanged.
+    PolicySourceBind {
+        request: medulla_types::policy_source::PolicySourceBind,
+    },
     /// Replace the scheduler policy (MEDULLA-DURABLE-KERNEL-R076.2). Scope
     /// `scheduler:admin`. A setting that fails `SchedulerConfig::validate`
     /// refuses `SCHEDULER_CONFIG_INVALID` and changes nothing; an accepted one

@@ -12794,6 +12794,13 @@ class MethodCheckAccess(BaseModel):
     params: MethodCheckAccessParams
 
 
+class MethodCheckResourceAccess(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CheckResourceAccess"]
+    params: MethodCheckResourceAccessParams
+
+
 class MethodRbacAdmin(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14123,6 +14130,13 @@ class MethodPolicyEvolutionStore(BaseModel):
 
     method: Literal["PolicyEvolutionStore"]
     params: MethodPolicyEvolutionStoreParams
+
+
+class MethodPolicySourceBind(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["PolicySourceBind"]
+    params: MethodPolicySourceBindParams
 
 
 class MethodListControlLeases(BaseModel):
@@ -15464,6 +15478,7 @@ Method = Annotated[
         MethodRegisterIdentity,
         MethodGetIdentity,
         MethodCheckAccess,
+        MethodCheckResourceAccess,
         MethodRbacAdmin,
         MethodRbacElevation,
         MethodGovernedChange,
@@ -15655,6 +15670,7 @@ Method = Annotated[
         MethodFreshnessFeed,
         MethodPolicyEvolution,
         MethodPolicyEvolutionStore,
+        MethodPolicySourceBind,
         MethodListControlLeases,
         MethodGapUpsert,
         MethodGapTransition,
@@ -16228,6 +16244,15 @@ class MethodCheckAccessParams(BaseModel):
 
     access: AccessCheck
     agent_id: str
+
+
+class MethodCheckResourceAccessParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    operation: str
+    protocol: ResourceProtocol
+    resource_ref: str
 
 
 class MethodClaimNextParams(BaseModel):
@@ -18325,6 +18350,12 @@ class MethodPolicyEvolutionStoreParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: StoredPolicyRecord
+
+
+class MethodPolicySourceBindParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: PolicySourceBind
 
 
 class MethodPruneByLifecycleParams(BaseModel):
@@ -22981,6 +23012,17 @@ class ResourceGrantSubjectRole(BaseModel):
 class ResourceProtocol(str, Enum):
     MCP = "mcp"
     A2A = "a2a"
+
+
+class ResourceAccessDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    allow: bool
+    expires_at_ms: Annotated[int, Field(ge=0)] | None = None
+    grant_id: str | None = None
+    reason_code: str | None = None
+    revocation_revision: Annotated[int, Field(ge=0)]
+    scope_ceiling: list[str]
 
 
 class ResourceGrant(BaseModel):
@@ -31564,6 +31606,29 @@ class DelegationRecord(BaseModel):
     tool: str
 
 
+class PolicySourceBind(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str
+    component_version: str
+    policy_iri: str
+    source_digest: str
+    source_ref: str
+    source_revision: str
+
+
+class PolicySourceBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str
+    bound_at_ms: Annotated[int, Field(ge=0)]
+    component_version: str
+    policy_iri: str
+    source_digest: str
+    source_ref: str
+    source_revision: str
+
+
 class DelegationStanding(str, Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
@@ -37614,6 +37679,8 @@ __all__ = [
     "MethodCepUnsubscribeParams",
     "MethodCheckAccess",
     "MethodCheckAccessParams",
+    "MethodCheckResourceAccess",
+    "MethodCheckResourceAccessParams",
     "MethodClaimNext",
     "MethodClaimNextParams",
     "MethodClaimWorkItem",
@@ -38251,6 +38318,8 @@ __all__ = [
     "MethodPolicyEvolutionParams",
     "MethodPolicyEvolutionStore",
     "MethodPolicyEvolutionStoreParams",
+    "MethodPolicySourceBind",
+    "MethodPolicySourceBindParams",
     "MethodPruneByLifecycle",
     "MethodPruneByLifecycleParams",
     "MethodPublish",
@@ -38899,6 +38968,8 @@ __all__ = [
     "PolicyRecordReceipt",
     "PolicyRecordStored",
     "PolicyRecordView",
+    "PolicySourceBind",
+    "PolicySourceBinding",
     "PolicyUpdate",
     "PolicyWriteDisposition",
     "PooledRate",
@@ -39114,6 +39185,7 @@ __all__ = [
     "ResolveConflictResult",
     "ResolvedArtifactWire",
     "ResolvedEffect",
+    "ResourceAccessDecision",
     "ResourceCapacity",
     "ResourceCapacitySnapshot",
     "ResourceHostUpdateCapacitySnapshot",

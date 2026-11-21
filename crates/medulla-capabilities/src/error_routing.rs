@@ -685,6 +685,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RetentionCleanupRun",
         &["RETENTION_HOLD_CHECK_REQUIRED", "RETENTION_POLICY_INVALID"],
     ),
+    // MEDULLA-SRC-AUTH-R801: a policy source bind the review no longer matches.
+    (
+        "PolicySourceBind",
+        &[
+            "POLICY_SOURCE_DIGEST_MISMATCH",
+            "POLICY_SOURCE_STALE",
+            "POLICY_SOURCE_UNREVIEWED",
+        ],
+    ),
     // `analytics_pool_config` refuses an invalid scheduler policy
     // (MEDULLA-DURABLE-KERNEL-R082.9).
     ("AnalyticsJob", &["SCHEDULER_CONFIG_INVALID"]),

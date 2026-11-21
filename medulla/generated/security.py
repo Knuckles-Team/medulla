@@ -590,6 +590,12 @@ send_get_delegation_record = contract_sender(
 decode_get_delegation_record = contract_decoder(
     "GetDelegationRecord", "DelegationState"
 )
+send_check_resource_access = contract_sender(
+    "CheckResourceAccess", "MethodCheckResourceAccessParams"
+)
+decode_check_resource_access = contract_decoder(
+    "CheckResourceAccess", "ResourceAccessDecision"
+)
 
 
 send_describe_contract = contract_sender(

@@ -127,6 +127,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
     // through this gateway; `Read` is answered by the catalog admin route before
     // the graph path and never reaches it.
@@ -777,6 +779,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
     "RetentionCleanupRun",
+    // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+    "PolicySourceBind",
     // The registration upsert has no replicated command either
     // (MEDULLA-DECISION-ENGINE-R166.3).
     "WorkflowRegistry",
@@ -869,6 +873,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::RetentionCleanupRun { .. } => Some("RetentionCleanupRun"),
+        Method::PolicySourceBind { .. } => Some("PolicySourceBind"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         Method::AssistantProfile { .. } => Some("AssistantProfile"),
         Method::ObservationState { .. } => Some("ObservationState"),

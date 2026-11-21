@@ -522,6 +522,8 @@ METHOD_IDS = frozenset(
         "FinanceRecordPut",
         "GetAdmittedRequest",
         "GetDelegationRecord",
+        "CheckResourceAccess",
+        "PolicySourceBind",
         "GetEffectReceipt",
         "GetMatView",
         "GetShardWriterWidth",

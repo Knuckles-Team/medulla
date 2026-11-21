@@ -525,6 +525,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::SourceSync { .. }
                 // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes graph nodes.
                 | Method::RetentionCleanupRun { .. }
+                // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
+                | Method::PolicySourceBind { .. }
                 // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert
                 // commits graph nodes through the gateway.
                 | Method::ArgumentMapPut { .. }

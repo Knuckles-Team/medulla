@@ -206,6 +206,10 @@ closed_error_codes! {
         SyncNoSystemOfRecord => "SYNC_NO_SYSTEM_OF_RECORD",
         SyncAdapterMissing => "SYNC_ADAPTER_MISSING",
         SyncDirectionRefused => "SYNC_DIRECTION_REFUSED",
+        // MEDULLA-SRC-AUTH-R801: the policy source binding refusals.
+        PolicySourceDigestMismatch => "POLICY_SOURCE_DIGEST_MISMATCH",
+        PolicySourceStale => "POLICY_SOURCE_STALE",
+        PolicySourceUnreviewed => "POLICY_SOURCE_UNREVIEWED",
         // MEDULLA-CQ-ORCH-R010.3: the ArchitectureView refusals.
         ViewNoSupportingSource => "VIEW_NO_SUPPORTING_SOURCE",
         ViewUnknownRepository => "VIEW_UNKNOWN_REPOSITORY",
