@@ -270,7 +270,7 @@ pub(super) async fn execute_claim(
                         .cpu_ms
                         .or(current.policy.quota_cpu_ms)
                         .is_some_and(|limit| began.elapsed().as_millis() as u64 >= limit);
-                    stop_reason = if current.cancel_requested {
+                    stop_reason = if current.state.cancel_requested() {
                         Some("cancelled")
                     } else if current.deadline_exceeded(now) {
                         Some("deadline_exceeded")

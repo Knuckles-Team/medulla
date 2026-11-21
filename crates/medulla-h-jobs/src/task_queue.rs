@@ -259,7 +259,11 @@ pub fn renew(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskRenew) -> 
             req_id,
             ResultPayload::of::<contract::TaskQueueRenew>(TaskRenewed {
                 task_id: job.job_id,
-                lease_expires_at_ms: job.lease.map(|lease| lease.expires_at_ms).unwrap_or_default(),
+                lease_expires_at_ms: job
+                    .state
+                    .lease()
+                    .map(|lease| lease.expires_at_ms)
+                    .unwrap_or_default(),
             }),
         ),
         Err(error) => lease_refusal(req_id, error, "renewal"),

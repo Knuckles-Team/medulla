@@ -7,6 +7,7 @@
 //! versions), how it is governed (policy/quota/priority/deadline/retry), and where
 //! it is in its lifecycle (state + checkpoint/progress).
 
+use crate::job_machine::{JobFacts, JobStage};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -157,23 +158,38 @@ pub struct Checkpoint {
     pub updated_at_ms: i64,
 }
 
-/// The job lifecycle (CONCEPT:INT-P2-1):
-/// `Submitted -> Running(checkpoint) -> Publishing(typed result) -> Succeeded`,
-/// with `Running -> Failed | Cancelled`, durable retry backoff returning a failed
-/// attempt to `Submitted`, and expired leases reclaiming `Running`/`Publishing`
-/// work under a higher fencing epoch. `Succeeded` is impossible until both the
-/// typed result and its evidence-bearing claim batch are durable.
+/// The job lifecycle (CONCEPT:INT-P2-1) as the payload of `AnalyticsJobMachine`
+/// (MEDULLA-CQ-ORCH-R811.1): exactly one variant per [`JobStage`], and the data its stage owns.
+/// The lease belongs to `Running`, `Publishing` and `CancelRequested`; `not_before_ms` belongs
+/// to `Backoff`; no flag beside the state decides an edge.
+/// `Submitted -> Running -> Publishing(typed result) -> Succeeded`, with a failed attempt
+/// waiting in `Backoff` before it is claimed again, `CancelRequested` asking the lease holder
+/// to stop, and expired leases returning `Running`/`Publishing` work to `Submitted` under a
+/// higher fencing epoch. `Succeeded` is impossible until both the typed result and its
+/// evidence-bearing claim batch are durable. A `Failed` job never revives.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum JobState {
     Submitted,
     Running {
+        lease: WorkerLease,
         checkpoint: Checkpoint,
     },
     /// Compute finished and its typed result is durable, but the evidence-bearing
     /// claims have not yet committed. This is deliberately non-terminal.
     Publishing {
+        lease: WorkerLease,
         result_ref: String,
         checkpoint: Checkpoint,
+    },
+    /// The lease holder is asked to stop and confirms with `ConfirmCancel`.
+    CancelRequested {
+        lease: WorkerLease,
+        checkpoint: Checkpoint,
+    },
+    /// A failed attempt waits until `not_before_ms` before a worker claims it again.
+    Backoff {
+        not_before_ms: i64,
+        checkpoint: Option<Checkpoint>,
     },
     Succeeded {
         result_ref: String,
@@ -196,27 +212,85 @@ impl JobState {
         )
     }
 
-    pub fn label(&self) -> &'static str {
+    /// The machine state of this payload: one exhaustive match, one stage per variant.
+    pub fn stage(&self) -> JobStage {
         match self {
-            JobState::Submitted => "submitted",
-            JobState::Running { .. } => "running",
-            JobState::Publishing { .. } => "publishing",
-            JobState::Succeeded { .. } => "succeeded",
-            JobState::Failed { .. } => "failed",
-            JobState::Cancelled { .. } => "cancelled",
+            JobState::Submitted => JobStage::Submitted,
+            JobState::Running { .. } => JobStage::Running,
+            JobState::Publishing { .. } => JobStage::Publishing,
+            JobState::CancelRequested { .. } => JobStage::CancelRequested,
+            JobState::Backoff { .. } => JobStage::Backoff,
+            JobState::Succeeded { .. } => JobStage::Succeeded,
+            JobState::Failed { .. } => JobStage::Failed,
+            JobState::Cancelled { .. } => JobStage::Cancelled,
+        }
+    }
+
+    /// The worker lease this state carries: only `Running`, `Publishing` and `CancelRequested` hold one.
+    pub fn lease(&self) -> Option<&WorkerLease> {
+        match self {
+            JobState::Running { lease, .. }
+            | JobState::Publishing { lease, .. }
+            | JobState::CancelRequested { lease, .. } => Some(lease),
+            _ => None,
+        }
+    }
+
+    /// The lease of a leased state, for a renewal. A renewal is a data update of the state,
+    /// never an event.
+    pub fn lease_mut(&mut self) -> Option<&mut WorkerLease> {
+        match self {
+            JobState::Running { lease, .. }
+            | JobState::Publishing { lease, .. }
+            | JobState::CancelRequested { lease, .. } => Some(lease),
+            _ => None,
         }
     }
 
     /// The most recent checkpoint, if this state carries one.
     pub fn checkpoint(&self) -> Option<&Checkpoint> {
         match self {
-            JobState::Running { checkpoint } => Some(checkpoint),
-            JobState::Publishing { checkpoint, .. } | JobState::Succeeded { checkpoint, .. } => {
-                Some(checkpoint)
-            }
-            JobState::Failed { checkpoint, .. } => checkpoint.as_ref(),
-            JobState::Cancelled { checkpoint } => checkpoint.as_ref(),
+            JobState::Running { checkpoint, .. }
+            | JobState::Publishing { checkpoint, .. }
+            | JobState::CancelRequested { checkpoint, .. }
+            | JobState::Succeeded { checkpoint, .. } => Some(checkpoint),
+            JobState::Backoff { checkpoint, .. }
+            | JobState::Failed { checkpoint, .. }
+            | JobState::Cancelled { checkpoint } => checkpoint.as_ref(),
             JobState::Submitted => None,
+        }
+    }
+
+    /// The checkpoint of this state for an in-place data update; a checkpoint write is not an
+    /// event and never assigns the state.
+    pub fn checkpoint_mut(&mut self) -> Option<&mut Checkpoint> {
+        match self {
+            JobState::Running { checkpoint, .. }
+            | JobState::Publishing { checkpoint, .. }
+            | JobState::CancelRequested { checkpoint, .. }
+            | JobState::Succeeded { checkpoint, .. } => Some(checkpoint),
+            JobState::Backoff { checkpoint, .. }
+            | JobState::Failed { checkpoint, .. }
+            | JobState::Cancelled { checkpoint } => checkpoint.as_mut(),
+            JobState::Submitted => None,
+        }
+    }
+
+    /// Whether a cancellation was requested of the lease holder.
+    pub fn cancel_requested(&self) -> bool {
+        matches!(self, JobState::CancelRequested { .. })
+    }
+
+    /// The guard facts this state carries: its lease expiry and, in `Backoff`, `not_before_ms`.
+    /// The caller adds who is acting and the retry budget.
+    pub fn facts(&self) -> JobFacts {
+        JobFacts {
+            lease_expires_at_ms: self.lease().map(|lease| lease.expires_at_ms),
+            not_before_ms: match self {
+                JobState::Backoff { not_before_ms, .. } => *not_before_ms,
+                _ => 0,
+            },
+            ..JobFacts::default()
         }
     }
 }
@@ -233,25 +307,16 @@ pub struct AnalyticsJob {
     #[serde(default)]
     pub input_payload: Option<Vec<u8>>,
     pub retry: RetryPolicy,
+    /// The one stored state of the job. Its only writer is [`AnalyticsJob::transition`]; the
+    /// lease, the cancel request and the backoff time are part of the state, not fields beside it.
     pub state: JobState,
-    /// Cooperative cancellation flag: set by `request_cancel`, observed by the
-    /// executor loop, cleared only by a fresh `submit`. Distinct from `state` so a
-    /// `Running` job can be flagged for cancellation before the executor has had a
-    /// chance to observe it and transition to `Cancelled`.
-    pub cancel_requested: bool,
     /// Monotonic source for lease fencing; never decreases on reassignment.
     #[serde(default)]
     pub lease_epoch: u64,
-    #[serde(default)]
-    pub lease: Option<WorkerLease>,
     /// Most recent authenticated worker reference. Retained after lease release so
     /// a lost terminal RPC response can be retried idempotently by the same slot.
     #[serde(default)]
     pub last_worker_ref: String,
-    /// Earliest time a retry may be leased.  This makes backoff durable across
-    /// worker/process restarts instead of sleeping in an owning process.
-    #[serde(default)]
-    pub not_before_ms: i64,
     /// Durable typed result dataset. Populated before entering ``Publishing`` and
     /// retained after success so analytics output is never discarded.
     #[serde(default)]

@@ -1321,14 +1321,11 @@ class AnalyticsJobRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     algo: JobAlgoVersion
-    cancel_requested: bool
     created_at_ms: int
     input_snapshot: JobInputSnapshot
     job_id: str
     last_worker_ref: str
-    lease: JobWorkerLease | None = None
     lease_epoch: Annotated[int, Field(ge=0)]
-    not_before_ms: int
     output: JobResult | None = None
     policy: JobPolicy
     retry: JobRetryPolicy
@@ -2878,15 +2875,12 @@ class ClaimedAnalyticsJob(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     algo: JobAlgoVersion
-    cancel_requested: bool
     created_at_ms: int
     input_payload: _EgOctets | None = None
     input_snapshot: JobInputSnapshot
     job_id: str
     last_worker_ref: str
-    lease: JobWorkerLease | None = None
     lease_epoch: Annotated[int, Field(ge=0)]
-    not_before_ms: int
     output: JobResult | None = None
     policy: JobPolicy
     retry: JobRetryPolicy
@@ -9636,6 +9630,32 @@ class JobRetryPolicy(BaseModel):
     max_attempts: Annotated[int, Field(ge=0)]
 
 
+class JobStateBackoff(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Backoff: JobStateBackoffBody
+
+
+class JobStateBackoffBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    checkpoint: JobCheckpoint | None = None
+    not_before_ms: int
+
+
+class JobStateCancelRequested(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    CancelRequested: JobStateCancelRequestedBody
+
+
+class JobStateCancelRequestedBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    checkpoint: JobCheckpoint
+    lease: JobWorkerLease
+
+
 class JobStateCancelled(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9671,6 +9691,7 @@ class JobStatePublishingBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     checkpoint: JobCheckpoint
+    lease: JobWorkerLease
     result_ref: str
 
 
@@ -9684,6 +9705,7 @@ class JobStateRunningBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     checkpoint: JobCheckpoint
+    lease: JobWorkerLease
 
 
 class JobStateSucceeded(BaseModel):
@@ -30027,6 +30049,8 @@ JobState = (
     str
     | JobStateRunning
     | JobStatePublishing
+    | JobStateCancelRequested
+    | JobStateBackoff
     | JobStateSucceeded
     | JobStateFailed
     | JobStateCancelled
@@ -36692,6 +36716,10 @@ __all__ = [
     "JobUsage",
     "JobRetryPolicy",
     "JobState",
+    "JobStateBackoff",
+    "JobStateBackoffBody",
+    "JobStateCancelRequested",
+    "JobStateCancelRequestedBody",
     "JobStateCancelled",
     "JobStateCancelledBody",
     "JobStateFailed",

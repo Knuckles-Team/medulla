@@ -10,6 +10,7 @@ pub(crate) mod grant;
 pub(crate) mod graph_shard;
 pub(crate) mod handle;
 pub(crate) mod identity;
+pub(crate) mod jobs_upgrade;
 pub(crate) mod layout;
 pub(crate) mod lineage;
 pub(crate) mod manifest_io;

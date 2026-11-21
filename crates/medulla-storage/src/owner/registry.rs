@@ -16,7 +16,7 @@ const RBAC: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("rbac")
 pub const RBAC_PROFILE_USE_GRANT: TableDefinition<'static, &str, &[u8]> =
     TableDefinition::new("rbac_profile_use_grant");
 const JOB_TABLES_BYTES: [TableDefinition<'static, &str, &[u8]>; 3] = [
-    TableDefinition::new("analytics_jobs"),
+    TableDefinition::new("analytics_job_records"),
     TableDefinition::new("job_intents"),
     TableDefinition::new("analytics_job_knowledge_batches"),
 ];
@@ -25,6 +25,15 @@ const JOB_TABLES_STR: [TableDefinition<'static, &str, &str>; 3] = [
     TableDefinition::new("job_idempotency_ledger"),
     TableDefinition::new("analytics_job_lease_by_worker"),
 ];
+/// The retired analytics-job record table. Its records carried `cancel_requested`, `lease` and
+/// `not_before_ms` beside a six-variant `state`; the records of the current layout are one
+/// state with its data (`analytics_job_records`). The definition stays only so the offline
+/// upgrade can hash, convert and delete the table of a `JOBS_BEFORE_JOB_MACHINE` file.
+pub(crate) const ANALYTICS_JOBS_BEFORE_JOB_MACHINE: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("analytics_jobs");
+/// The current analytics-job record table.
+pub(crate) const ANALYTICS_JOB_RECORDS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("analytics_job_records");
 const JOB_META: TableDefinition<'static, &str, u64> =
     TableDefinition::new("analytics_job_scheduler_meta");
 const READY_PRIORITY: TableDefinition<'static, (u32, i64, &str), ()> =
@@ -824,6 +833,9 @@ pub(crate) fn predecessor_evidence(
     if layout == OwnerLayout::Kv {
         hash_predecessor!(KV_COLD);
     }
+    if layout == OwnerLayout::Jobs {
+        hash_predecessor!(ANALYTICS_JOBS_BEFORE_JOB_MACHINE);
+    }
     Ok(StrictRecoveryEvidence {
         ledger_rows,
         owner_rows: rows - ledger_rows,
@@ -850,6 +862,19 @@ pub(crate) fn retired_owner_table_names(layout: OwnerLayout) -> &'static [&'stat
     }
 }
 
+/// The owner tables a layout renamed in place, as `(retired name, current name)`. A
+/// predecessor's contract list keeps the retired table in the position of the table that
+/// replaced it, because the layout digest hashes the contracts in order and a predecessor's
+/// frozen digest has to be reproduced exactly.
+pub(crate) fn renamed_owner_table_names(
+    layout: OwnerLayout,
+) -> &'static [(&'static str, &'static str)] {
+    match layout {
+        OwnerLayout::Jobs => &[("analytics_jobs", "analytics_job_records")],
+        _ => &[],
+    }
+}
+
 /// Exact sorted physical table names for a closed owner layout.
 ///
 /// Snapshot providers use this projection to bind their static section
@@ -871,7 +896,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
         OwnerLayout::LedgerOnly => &[],
         OwnerLayout::Rbac => &["rbac", "rbac_profile_use_grant"],
         OwnerLayout::Jobs => &[
-            "analytics_jobs",
+            "analytics_job_records",
             "analytics_job_committed_results",
             "job_intents",
             "job_idempotency_ledger",

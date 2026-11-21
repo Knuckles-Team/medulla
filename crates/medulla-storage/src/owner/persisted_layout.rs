@@ -20,7 +20,10 @@ use crate::owner::identity::PhysicalStoreIdentity;
 use crate::owner::layout::{layout_digest_over, OwnerLayout};
 use crate::owner::manifest_io::{read_manifest_slot, write_new_manifest};
 use crate::owner::offline_upgrade::{registered_offline_upgrade, OFFLINE_UPGRADE_APPLY_COMMAND};
-use crate::owner::registry::{owner_table_names, retired_owner_table_names, KV_COLD};
+use crate::owner::registry::{
+    owner_table_names, renamed_owner_table_names, retired_owner_table_names,
+    ANALYTICS_JOBS_BEFORE_JOB_MACHINE, KV_COLD,
+};
 use crate::physical::manifest::{OwnerManifest, TableOwnership};
 use crate::physical::read_only::open_read_only;
 use crate::tables::OWNER_MANIFEST;
@@ -173,6 +176,18 @@ pub fn create_predecessor_owner_file(
             .map_err(|error| error.to_string())?;
         read_manifest_slot(&table)?
     };
+    // A table the current layout renamed in place keeps its position under the retired name.
+    for (retired, current) in renamed_owner_table_names(predecessor.layout) {
+        if predecessor.owner_tables.contains(retired) {
+            if let Some(slot) = manifest
+                .tables
+                .iter_mut()
+                .find(|table| table.table_id == *current)
+            {
+                *slot = table_contract(retired, Some(predecessor.layout));
+            }
+        }
+    }
     manifest.tables.retain(|table| {
         table.ownership == TableOwnership::Ledger
             || predecessor.owner_tables.contains(&table.table_id.as_str())
@@ -192,6 +207,11 @@ pub fn create_predecessor_owner_file(
     if retired_tables.contains(&"eg_kvcache_cold") {
         write
             .open_table(KV_COLD)
+            .map_err(|error| error.to_string())?;
+    }
+    if predecessor.owner_tables.contains(&"analytics_jobs") {
+        write
+            .open_table(ANALYTICS_JOBS_BEFORE_JOB_MACHINE)
             .map_err(|error| error.to_string())?;
     }
     manifest.layout_digest = layout_digest_over(manifest.layout, &manifest.tables);

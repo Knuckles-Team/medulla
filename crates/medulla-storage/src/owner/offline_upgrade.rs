@@ -27,9 +27,10 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
-    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
+    JOBS_BEFORE_JOB_MACHINE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
+use super::jobs_upgrade::{inspect_jobs_job_machine_upgrade, upgrade_jobs_job_machine};
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
     inspect_sql_ann_generation_upgrade, inspect_sql_named_sequence_upgrade,
@@ -263,6 +264,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         KV_BEFORE_NAMESPACE_COLD,
         inspect_kv_cold_tier_upgrade,
         upgrade_kv_cold_tier
+    ),
+    offline_upgrade!(
+        JOBS_BEFORE_JOB_MACHINE,
+        inspect_jobs_job_machine_upgrade,
+        upgrade_jobs_job_machine
     ),
     offline_upgrade!(
         GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,

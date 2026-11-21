@@ -7,7 +7,7 @@
 //! [`JobStore`] owns the authoritative tables below plus transactionally maintained
 //! scheduler secondary indexes (priority-ready, worker lease, expiry, deadline,
 //! cancellation, opaque tenant totals and monotonic sequence metadata):
-//!   * `JOBS`             — `job_id -> msgpack(AnalyticsJob)`, the durable record.
+//!   * `JOBS`             — `job_id -> msgpack(AnalyticsJob)`, the durable record (table `analytics_job_records`).
 //!   * `COMMITTED_RESULTS` — `result_ref -> job_id` (the FIRST job that committed
 //!     it), a store-level idempotency ledger independent of any live graph — see
 //!     [`JobStore::mark_result_committed`]. The `claim.rs` writeback additionally
@@ -65,10 +65,13 @@ pub use task_queue::{
 };
 
 use crate::intent::JobIntent;
+use crate::job_machine::{JobEvent, JobFacts};
 use crate::model::{AnalyticsJob, Checkpoint, JobId, JobPolicy, JobState, WorkerLease};
 use crate::result::TypedJobResult;
+use medulla_types::transition_refused::{MachineState, TransitionRefused};
 
-const JOBS: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("analytics_jobs");
+const JOBS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("analytics_job_records");
 const COMMITTED_RESULTS: TableDefinition<'static, &str, &str> =
     TableDefinition::new("analytics_job_committed_results");
 const JOB_INTENTS: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("job_intents");
@@ -187,6 +190,14 @@ pub enum JobError {
     ClaimPaced,
     /// A job priority above 100 or below 0 (`PRIORITY_OUT_OF_RANGE`).
     PriorityOutOfRange(i32),
+    /// The analytics-job machine refused an event (`TRANSITION_REFUSED`): the job is unchanged.
+    TransitionRefused(TransitionRefused),
+}
+
+impl From<TransitionRefused> for JobError {
+    fn from(refused: TransitionRefused) -> Self {
+        JobError::TransitionRefused(refused)
+    }
 }
 
 impl std::fmt::Display for JobError {
@@ -207,6 +218,7 @@ impl std::fmt::Display for JobError {
             JobError::PriorityOutOfRange(value) => {
                 write!(f, "job priority {value} is outside 0 to {MAX_JOB_PRIORITY}")
             }
+            JobError::TransitionRefused(refused) => write!(f, "{refused}"),
         }
     }
 }
@@ -281,8 +293,8 @@ fn job_algo_and_runtime_fields_exceed_limits(job: &AnalyticsJob) -> bool {
             .is_some_and(|payload| payload.len() > MAX_JOB_OPAQUE_BYTES)
         || job.last_worker_ref.len() > MAX_JOB_STRING_BYTES
         || job
-            .lease
-            .as_ref()
+            .state
+            .lease()
             .is_some_and(|lease| !valid_identifier(&lease.worker_ref))
 }
 
@@ -323,26 +335,19 @@ fn decode_job(bytes: &[u8]) -> Result<AnalyticsJob> {
     Ok(job)
 }
 
-/// Whether `job` should count as ready in `metric_counts`. Split out of that
-/// function (extract-method, cx/wD8) — same terms, same order as before,
-/// including the cancellation-reconcile carve-out (an expired,
-/// cancellation-requested lease still needs one worker poll to drive the
-/// durable record to its terminal Cancelled state).
+/// Whether `job` should count as ready in `metric_counts`. A job is ready when a worker can take
+/// it: `Submitted`, or `Backoff` once `not_before_ms` has passed; a leased job whose lease has
+/// lapsed is also ready, because the reconcile pass returns it to `Submitted` first, and a
+/// cancel-requested job whose lease lapsed needs one worker poll to reach `Cancelled`.
 fn job_is_ready_for_scheduling(job: &AnalyticsJob, live_lease: bool, now_ms: i64) -> bool {
-    let cancellation_reconcile = job.cancel_requested
-        && matches!(
-            &job.state,
-            JobState::Running { .. } | JobState::Publishing { .. }
-        )
-        && !live_lease;
-    cancellation_reconcile
-        || (!job.cancel_requested
-            && job.not_before_ms <= now_ms
-            && (matches!(&job.state, JobState::Submitted)
-                || matches!(
-                    &job.state,
-                    JobState::Running { .. } | JobState::Publishing { .. }
-                ) && !live_lease))
+    match &job.state {
+        JobState::Submitted => true,
+        JobState::Backoff { not_before_ms, .. } => *not_before_ms <= now_ms,
+        JobState::Running { .. }
+        | JobState::Publishing { .. }
+        | JobState::CancelRequested { .. } => !live_lease,
+        JobState::Succeeded { .. } | JobState::Failed { .. } | JobState::Cancelled { .. } => false,
+    }
 }
 
 /// Whether `claim_next`'s arguments fail its opaque-reference/limit guard.
@@ -678,11 +683,8 @@ impl JobStore {
                 attempts_made: 0,
             },
             state: JobState::Submitted,
-            cancel_requested: false,
             lease_epoch: 0,
-            lease: None,
             last_worker_ref: String::new(),
-            not_before_ms: 0,
             output: None,
             created_at_ms: now,
             updated_at_ms: now,
@@ -725,11 +727,8 @@ impl JobStore {
                         attempts_made: 0,
                     },
                     state: JobState::Submitted,
-                    cancel_requested: false,
                     lease_epoch: 0,
-                    lease: None,
                     last_worker_ref: String::new(),
-                    not_before_ms: 0,
                     output: None,
                     created_at_ms: now,
                     updated_at_ms: now,
@@ -801,8 +800,8 @@ impl JobStore {
             let (_, value) = entry.map_err(redb_err)?;
             let job = decode_job(value.value())?;
             let live_lease = job
-                .lease
-                .as_ref()
+                .state
+                .lease()
                 .is_some_and(|lease| lease.expires_at_ms > now_ms);
             if live_lease {
                 active = active.saturating_add(1);
@@ -940,30 +939,30 @@ impl JobStore {
             }
             return Err(JobError::ClaimPaced);
         }
-        let starts_attempt = !matches!(&job.state, JobState::Publishing { .. });
         job.lease_epoch = job.lease_epoch.saturating_add(1);
-        if starts_attempt {
-            job.retry.attempts_made = job.retry.attempts_made.saturating_add(1);
-        }
+        job.retry.attempts_made = job.retry.attempts_made.saturating_add(1);
         let lease = WorkerLease {
             worker_ref: worker_ref.to_string(),
             epoch: job.lease_epoch,
             acquired_at_ms: now_ms,
             expires_at_ms: now_ms.saturating_add(lease_ms as i64),
         };
-        job.lease = Some(lease.clone());
         job.last_worker_ref = worker_ref.to_string();
-        job.not_before_ms = 0;
-        if matches!(&job.state, JobState::Submitted) {
-            job.state = JobState::Running {
-                checkpoint: Checkpoint {
-                    progress: 0.0,
-                    stage: "leased".to_string(),
-                    state_blob: None,
-                    updated_at_ms: now_ms,
-                },
-            };
-        }
+        // J01 (from Submitted) or J02 (from Backoff, once `not_before_ms` has passed).
+        let facts = JobFacts {
+            worker_takes_lease: true,
+            ..job.state.facts()
+        };
+        let running = JobState::Running {
+            lease: lease.clone(),
+            checkpoint: Checkpoint {
+                progress: 0.0,
+                stage: "leased".to_string(),
+                state_blob: None,
+                updated_at_ms: now_ms,
+            },
+        };
+        job.transition(JobEvent::Claim, &facts, now_ms, running)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -983,7 +982,10 @@ impl JobStore {
         let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
         let mut job = read_job_in_wtx(&write, job_id)?;
         require_lease(&job, worker_ref, epoch, now_ms)?;
-        let lease = job.lease.as_mut().expect("require_lease checked presence");
+        let lease = job
+            .state
+            .lease_mut()
+            .expect("require_lease checked presence");
         lease.expires_at_ms = now_ms.saturating_add(lease_ms as i64);
         let renewed = lease.clone();
         job.updated_at_ms = now_ms;
@@ -1024,7 +1026,12 @@ impl JobStore {
                 "fenced checkpoint requires Running",
             ));
         }
-        job.state = JobState::Running { checkpoint };
+        // A checkpoint is a data update of Running, not an event: the state is not assigned.
+        let slot = job
+            .state
+            .checkpoint_mut()
+            .expect("a Running state carries a checkpoint");
+        *slot = checkpoint;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1065,12 +1072,12 @@ impl JobStore {
                 "a different result is already staged for this job",
             ));
         }
-        let checkpoint = match &job.state {
-            JobState::Running { checkpoint } => checkpoint.clone(),
+        let (lease, checkpoint) = match &job.state {
+            JobState::Running { lease, checkpoint } => (lease.clone(), checkpoint.clone()),
             other => {
                 return Err(JobError::InvalidTransition {
                     job_id: job_id.to_string(),
-                    state: other.label(),
+                    state: other.stage().stored(),
                     reason: "staging a result requires Running",
                 })
             }
@@ -1081,8 +1088,13 @@ impl JobStore {
             }
         }
         let result_ref = job.result_ref();
-        job.output = Some(result.clone());
-        job.state = JobState::Publishing {
+        // J03: the lease holder stages the typed result.
+        let facts = JobFacts {
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
+        let publishing = JobState::Publishing {
+            lease,
             result_ref,
             checkpoint: Checkpoint {
                 progress: 1.0,
@@ -1091,6 +1103,8 @@ impl JobStore {
                 ..checkpoint
             },
         };
+        job.transition(JobEvent::Publish, &facts, now_ms, publishing)?;
+        job.output = Some(result.clone());
         job.updated_at_ms = now_ms;
         let (batch, _next_version) = write_job_transition(
             self,
@@ -1119,22 +1133,28 @@ impl JobStore {
             JobState::Publishing {
                 result_ref,
                 checkpoint,
+                ..
             } => (result_ref.clone(), checkpoint.clone()),
             other => {
                 return Err(JobError::InvalidTransition {
                     job_id: job_id.to_string(),
-                    state: other.label(),
+                    state: other.stage().stored(),
                     reason: "publication completion requires Publishing",
                 })
             }
         };
         checkpoint.stage = "published".to_string();
         checkpoint.updated_at_ms = now_ms;
-        job.state = JobState::Succeeded {
+        // J04: the claims committed; the lease leaves with the state.
+        let facts = JobFacts {
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
+        let succeeded = JobState::Succeeded {
             result_ref,
             checkpoint,
         };
-        job.lease = None;
+        job.transition(JobEvent::Complete, &facts, now_ms, succeeded)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1169,14 +1189,23 @@ impl JobStore {
             JobState::Publishing {
                 result_ref,
                 checkpoint,
+                ..
             } if result_ref == expected_result_ref => {
                 let mut checkpoint = checkpoint.clone();
                 checkpoint.stage = "published".to_string();
                 checkpoint.updated_at_ms = committed_at_ms;
-                job.state = JobState::Succeeded {
+                let succeeded = JobState::Succeeded {
                     result_ref: result_ref.clone(),
                     checkpoint,
                 };
+                // J04 (prepared path): the target commit may outlast the lease, so the receipt is
+                // fenced by the exact worker epoch and not by the wall clock.
+                let facts = JobFacts {
+                    lease_owner_matches: true,
+                    lease_expires_at_ms: Some(i64::MAX),
+                    ..job.state.facts()
+                };
+                job.transition(JobEvent::Complete, &facts, committed_at_ms, succeeded)?;
             }
             JobState::Publishing { .. } => {
                 return Err(invalid_transition(
@@ -1191,7 +1220,6 @@ impl JobStore {
                 ));
             }
         }
-        job.lease = None;
         job.updated_at_ms = committed_at_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1199,9 +1227,10 @@ impl JobStore {
         Ok(job)
     }
 
-    /// Release a publication lease without changing the durable result or state.
-    /// Another worker can immediately replay the idempotent claim batch under a
-    /// higher epoch instead of waiting for the failed publisher's lease timeout.
+    /// Release a publication lease without changing the durable result. The release is a lapse
+    /// of the lease (`Reclaim`, J14): the job returns to `Submitted` with its typed result kept,
+    /// so another worker can immediately claim it under a higher epoch and replay the idempotent
+    /// claim batch instead of waiting for the failed publisher's lease timeout.
     pub fn release_publication_lease_fenced(
         &self,
         job_id: &str,
@@ -1219,7 +1248,12 @@ impl JobStore {
                 "publication lease release requires Publishing",
             ));
         }
-        job.lease = None;
+        let facts = JobFacts {
+            lease_expires_at_ms: Some(now_ms),
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
+        job.transition(JobEvent::Reclaim, &facts, now_ms, JobState::Submitted)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1227,8 +1261,8 @@ impl JobStore {
         Ok(job)
     }
 
-    /// Release a failed fenced attempt.  Retryable work returns to ``Submitted``
-    /// with a durable backoff timestamp; an exhausted job becomes terminal.
+    /// Release a failed fenced attempt.  Retryable work waits in ``Backoff`` with a durable
+    /// `not_before_ms` (J05, J07); an exhausted job becomes terminal ``Failed`` (J06, J08).
     pub fn fail_attempt_fenced(
         &self,
         job_id: &str,
@@ -1242,31 +1276,30 @@ impl JobStore {
         let mut job = read_job_in_wtx(&write, job_id)?;
         require_lease(&job, worker_ref, epoch, now_ms)?;
         let checkpoint = match &job.state {
-            JobState::Running { checkpoint } => checkpoint.clone(),
-            other => {
-                return Err(invalid_transition(
-                    &job,
-                    match other {
-                        JobState::Publishing { .. } => {
-                            "publication failures must retain Publishing for replay"
-                        }
-                        _ => "failed attempts require Running",
-                    },
-                ))
+            JobState::Running { checkpoint, .. } | JobState::Publishing { checkpoint, .. } => {
+                checkpoint.clone()
             }
+            _ => return Err(invalid_transition(&job, "failed attempts require Running")),
         };
-        if job.retry.retries_remaining() {
-            job.state = JobState::Submitted;
-            job.not_before_ms = now_ms.saturating_add(job.retry.backoff_ms as i64);
-            // Retain the resumable checkpoint in the opaque input payload; the
-            // executor refreshes it on the next fenced claim.
+        let facts = JobFacts {
+            lease_owner_matches: true,
+            attempts_below_max: job.retry.retries_remaining(),
+            ..job.state.facts()
+        };
+        let next = if facts.attempts_below_max {
+            // Retain the resumable checkpoint in the backoff state; the executor refreshes it on
+            // the next fenced claim.
+            JobState::Backoff {
+                not_before_ms: now_ms.saturating_add(job.retry.backoff_ms as i64),
+                checkpoint: Some(checkpoint),
+            }
         } else {
-            job.state = JobState::Failed {
+            JobState::Failed {
                 reason: reason.into(),
                 checkpoint: Some(checkpoint),
-            };
-        }
-        job.lease = None;
+            }
+        };
+        job.transition(JobEvent::Fail, &facts, now_ms, next)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1286,12 +1319,12 @@ impl JobStore {
         let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
         let mut job = read_job_in_wtx(&write, job_id)?;
         // Cancellation acknowledgement is the one fenced worker mutation that
-        // must remain legal after `cancel_requested` is set. It still requires
+        // must remain legal in `CancelRequested`. It still requires
         // exact live ownership/epoch; only the generic cancellation rejection is
         // skipped here.
         require_lease_ownership(&job, worker_ref, epoch, now_ms)?;
         let checkpoint = match &job.state {
-            JobState::Running { checkpoint } if job.cancel_requested => checkpoint.clone(),
+            JobState::CancelRequested { checkpoint, .. } => checkpoint.clone(),
             JobState::Running { .. } => {
                 return Err(invalid_transition(&job, "cancellation was not requested"))
             }
@@ -1302,10 +1335,15 @@ impl JobStore {
                 ))
             }
         };
-        job.state = JobState::Cancelled {
+        // J12: the lease holder confirms it stopped.
+        let facts = JobFacts {
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
+        let cancelled = JobState::Cancelled {
             checkpoint: Some(checkpoint),
         };
-        job.lease = None;
+        job.transition(JobEvent::ConfirmCancel, &facts, now_ms, cancelled)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1326,11 +1364,10 @@ impl JobStore {
         decode_result(row.value())
     }
 
-    /// Cooperative cancel (CONCEPT:INT-P2-1): sets `cancel_requested`, and for a job
-    /// that has not started yet (`Submitted`) transitions straight to `Cancelled`
-    /// (nothing is running to observe the flag). A `Running` job stays `Running`
-    /// until the executor observes `cancel_requested` and calls
-    /// [`Self::mark_cancelled_fenced`] — cancellation of in-flight work is
+    /// Cooperative cancel (CONCEPT:INT-P2-1): a job nobody holds (`Submitted`, `Backoff`)
+    /// goes straight to `Cancelled` (J09, J10), and a `Running` job with a live lease moves to
+    /// `CancelRequested` (J11) and stays there until the executor observes it and calls
+    /// [`Self::mark_cancelled_fenced`] (J12) — cancellation of in-flight work is
     /// cooperative, not preemptive.
     pub fn request_cancel_batch(
         &self,
@@ -1342,7 +1379,7 @@ impl JobStore {
             if job.state.is_terminal() {
                 return Err(JobError::InvalidTransition {
                     job_id: job_id.to_string(),
-                    state: job.state.label(),
+                    state: job.state.stage().stored(),
                     reason: "cannot cancel a job already in a terminal state",
                 });
             }
@@ -1353,11 +1390,45 @@ impl JobStore {
                     reason: "a durable result publication cannot be cancelled",
                 });
             }
-            job.cancel_requested = true;
-            if matches!(&job.state, JobState::Submitted) {
-                job.state = JobState::Cancelled { checkpoint: None };
+            let committed = committed_at_ms as i64;
+            let facts = job.state.facts();
+            match job.state.clone() {
+                // J09: nothing holds it, so it is cancelled at once.
+                JobState::Submitted => {
+                    let cancelled = JobState::Cancelled { checkpoint: None };
+                    job.transition(JobEvent::Cancel, &facts, committed, cancelled)?;
+                }
+                // J10: the waiting retry is cancelled at once and keeps its checkpoint.
+                JobState::Backoff { checkpoint, .. } => {
+                    let cancelled = JobState::Cancelled { checkpoint };
+                    job.transition(JobEvent::Cancel, &facts, committed, cancelled)?;
+                }
+                // J11: the lease holder is asked to stop.
+                JobState::Running { lease, checkpoint } if facts.lease_live(committed) => {
+                    let requested = JobState::CancelRequested { lease, checkpoint };
+                    job.transition(JobEvent::RequestCancel, &facts, committed, requested)?;
+                }
+                // The holder's lease lapsed before the scheduler detached it: nothing is
+                // running, so the job returns to `Submitted` (J13) and is cancelled (J09).
+                JobState::Running { checkpoint, .. } => {
+                    job.transition(JobEvent::Reclaim, &facts, committed, JobState::Submitted)?;
+                    let cancelled = JobState::Cancelled {
+                        checkpoint: Some(checkpoint),
+                    };
+                    let facts = job.state.facts();
+                    job.transition(JobEvent::Cancel, &facts, committed, cancelled)?;
+                }
+                // A repeated request is idempotent: the cancel is already asked for.
+                JobState::CancelRequested { .. } => {}
+                other => {
+                    return Err(JobError::InvalidTransition {
+                        job_id: job_id.to_string(),
+                        state: other.stage().stored(),
+                        reason: "cannot cancel a job in this state",
+                    });
+                }
             }
-            job.updated_at_ms = committed_at_ms as i64;
+            job.updated_at_ms = committed;
             Ok(())
         })
     }
@@ -1395,14 +1466,12 @@ impl JobStore {
         }
     }
 
-    /// Resume a job from its last checkpoint (CONCEPT:INT-P2-1): valid from
-    /// `Failed` (a deliberate retry — requires retries remaining) or from `Running`
-    /// (an ORPHANED job — the record says "running" but the process that was running
-    /// it crashed/restarted with no live task; resuming re-enters `Running` from the
-    /// SAME checkpoint so the caller's executor can pick the work back up). A
-    /// `Cancelled` job is a terminal, deliberate stop — NOT resumable; resubmit
-    /// instead. A `Succeeded` job is already done — resuming it is also rejected
-    /// (fetch the existing `result_ref` instead).
+    /// Resume a job (CONCEPT:INT-P2-1). The machine decides: an ORPHANED job (`Running` or
+    /// `Publishing` whose lease lapsed, the process that ran it having crashed or restarted) is
+    /// reclaimed to `Submitted` (J13, J14) and is claimed again under a higher epoch; every other
+    /// state is refused with `TRANSITION_REFUSED` because no worker takes a lease from a batch
+    /// (`Claim`). A `Failed` job never revives, a `Cancelled` job is a deliberate stop, and a
+    /// `Succeeded` job is already done (fetch the existing `result_ref` instead).
     pub fn resume_batch(
         &self,
         job_id: &str,
@@ -1410,35 +1479,27 @@ impl JobStore {
         committed_at_ms: u64,
     ) -> Result<(AnalyticsJob, bool)> {
         self.mutate_job_batch(job_id, batch, committed_at_ms, |job| {
+            let committed = committed_at_ms as i64;
+            let facts = job.state.facts();
             match &job.state {
-                JobState::Running { checkpoint } => {
-                    job.state = JobState::Running {
-                        checkpoint: checkpoint.clone(),
-                    };
+                JobState::Running { .. } | JobState::Publishing { .. } => {
+                    job.transition(JobEvent::Reclaim, &facts, committed, JobState::Submitted)?;
                 }
-                JobState::Failed { checkpoint, .. } => {
-                    if !job.retry.retries_remaining() {
-                        return Err(JobError::InvalidTransition {
-                            job_id: job_id.to_string(),
-                            state: "failed",
-                            reason: "no retries remaining (retry.attempts_made >= max_attempts)",
-                        });
-                    }
-                    job.cancel_requested = false;
-                    job.state = JobState::Running {
-                        checkpoint: checkpoint.clone().unwrap_or_default(),
-                    };
-                }
+                // The batch is no worker: `Claim` is refused from every other state.
                 other => {
-                    return Err(JobError::InvalidTransition {
-                        job_id: job_id.to_string(),
-                        state: other.label(),
-                        reason:
-                            "resume requires Failed (with retries remaining) or an orphaned Running job",
-                    });
+                    let none = JobFacts {
+                        worker_takes_lease: false,
+                        ..facts
+                    };
+                    let placeholder = other.clone();
+                    job.transition(JobEvent::Claim, &none, committed, placeholder)?;
+                    return Err(invalid_transition(
+                        job,
+                        "resume requires an orphaned Running or Publishing job",
+                    ));
                 }
             }
-            job.updated_at_ms = committed_at_ms as i64;
+            job.updated_at_ms = committed;
             Ok(())
         })
     }
@@ -1821,8 +1882,8 @@ fn task_queue_of(job: &AnalyticsJob) -> Option<&str> {
 }
 
 /// Add (`add`) or remove one task from the queue load indexes: `Submitted`
-/// counts as queued, `Running` as running, and a terminal state counts as
-/// neither (MEDULLA-INGEST-WORKER-R001.4.1).
+/// and `Backoff` count as queued, `Running` and `CancelRequested` as running, and a
+/// terminal state counts as neither (MEDULLA-INGEST-WORKER-R001.4.1).
 fn adjust_task_queue_load(
     wtx: &AdmittedOwnerWrite<'_, JobsOwner>,
     job: &AnalyticsJob,
@@ -1832,8 +1893,8 @@ fn adjust_task_queue_load(
         return Ok(());
     };
     let (queued, running) = match &job.state {
-        JobState::Submitted => (1u64, 0u64),
-        JobState::Running { .. } => (0, 1),
+        JobState::Submitted | JobState::Backoff { .. } => (1u64, 0u64),
+        JobState::Running { .. } | JobState::CancelRequested { .. } => (0, 1),
         _ => return Ok(()),
     };
     let tenant = job.policy.tenant.as_str();
@@ -1926,7 +1987,7 @@ fn add_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJob) 
             )
             .map_err(redb_err)?;
     }
-    if let Some(lease) = &job.lease {
+    if let Some(lease) = job.state.lease() {
         wtx.open_table(JOB_LEASE_BY_WORKER)
             .map_err(redb_err)?
             .insert(lease.worker_ref.as_str(), job.job_id.as_str())
@@ -1975,7 +2036,7 @@ fn remove_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJo
             ))
             .map_err(redb_err)?;
     }
-    if let Some(lease) = &job.lease {
+    if let Some(lease) = job.state.lease() {
         {
             let mut workers = wtx.open_table(JOB_LEASE_BY_WORKER).map_err(redb_err)?;
             let points_to_job = workers
@@ -2012,23 +2073,23 @@ fn remove_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJo
     Ok(())
 }
 
+/// A job is in the ready indexes while a worker can claim it: `Submitted`, or `Backoff`.
 fn ready_indexed(job: &AnalyticsJob) -> bool {
-    !job.cancel_requested
-        && job.lease.is_none()
-        && matches!(
-            &job.state,
-            JobState::Submitted | JobState::Running { .. } | JobState::Publishing { .. }
-        )
+    matches!(
+        &job.state,
+        JobState::Submitted | JobState::Backoff { .. }
+    )
 }
 
 fn deadline_indexed(job: &AnalyticsJob) -> bool {
     job.policy.deadline_unix_ms.is_some()
-        && job.lease.is_none()
-        && matches!(&job.state, JobState::Submitted | JobState::Running { .. })
+        && matches!(&job.state, JobState::Submitted | JobState::Backoff { .. })
 }
 
+/// A cancel-requested job is in the cancellation index until its holder confirms the stop or
+/// its lease lapses; the reconcile pass then ends it in `Cancelled`.
 fn cancellation_indexed(job: &AnalyticsJob) -> bool {
-    job.cancel_requested && job.lease.is_none() && matches!(&job.state, JobState::Running { .. })
+    matches!(&job.state, JobState::CancelRequested { .. })
 }
 
 fn reserved_cpu(job: &AnalyticsJob) -> u64 {
@@ -2146,7 +2207,7 @@ fn live_worker_claim_in_wtx(
         return Ok(None);
     };
     let job = read_job_in_wtx(wtx, &job_id)?;
-    let Some(lease) = job.lease.as_ref() else {
+    let Some(lease) = job.state.lease() else {
         return Ok(None);
     };
     if lease.worker_ref != worker_ref || lease.expires_at_ms <= now_ms {
@@ -2302,7 +2363,7 @@ fn job_ready_for_claim(
     if !family.admits(job)
         || !ready_indexed(job)
         || placement_anchor(job) != anchor
-        || job.not_before_ms > now_ms
+        || matches!(&job.state, JobState::Backoff { not_before_ms, .. } if *not_before_ms > now_ms)
         || job
             .policy
             .deadline_unix_ms
@@ -2373,15 +2434,24 @@ fn reconcile_cancellation_job(
 ) -> Result<Option<(MutationBatch, u64)>> {
     let mut job = read_job_in_wtx(write, job_id)?;
     let lease_expired = job
-        .lease
-        .as_ref()
+        .state
+        .lease()
         .is_none_or(|lease| lease.expires_at_ms <= now_ms);
     if !lease_expired || !cancellation_indexed(&job) {
         return Ok(None);
     }
     let checkpoint = job.state.checkpoint().cloned();
-    job.state = JobState::Cancelled { checkpoint };
-    job.lease = None;
+    // J12: the holder's lease lapsed, so the scheduler confirms the stop on its behalf.
+    let facts = JobFacts {
+        lease_owner_matches: true,
+        ..job.state.facts()
+    };
+    job.transition(
+        JobEvent::ConfirmCancel,
+        &facts,
+        now_ms,
+        JobState::Cancelled { checkpoint },
+    )?;
     job.updated_at_ms = now_ms;
     let outcome = write_job_transition(store, write, &job, expected_version, None)?;
     Ok(Some(outcome))
@@ -2433,38 +2503,57 @@ fn reconcile_expired_lease_job(
 ) -> Result<Option<(MutationBatch, u64)>> {
     let mut job = read_job_in_wtx(write, job_id)?;
     if job
-        .lease
-        .as_ref()
+        .state
+        .lease()
         .is_none_or(|lease| lease.expires_at_ms > now_ms)
     {
         return Ok(None);
     }
-    if job.cancel_requested && matches!(&job.state, JobState::Running { .. }) {
-        let checkpoint = job.state.checkpoint().cloned();
-        job.state = JobState::Cancelled { checkpoint };
-    } else if job
+    let checkpoint = job.state.checkpoint().cloned();
+    let lapsed = job.state.facts();
+    let exhausted = JobFacts {
+        attempts_below_max: false,
+        ..lapsed
+    };
+    let deadline_passed = job
         .policy
         .deadline_unix_ms
-        .is_some_and(|deadline| now_ms >= deadline)
-        && matches!(&job.state, JobState::Submitted | JobState::Running { .. })
-    {
-        let checkpoint = job.state.checkpoint().cloned();
-        job.state = JobState::Failed {
-            reason: "deadline_exceeded".to_string(),
-            checkpoint,
-        };
-    } else if matches!(&job.state, JobState::Running { .. })
-        && job.retry.attempts_made >= job.retry.max_attempts.max(1)
-    {
-        let checkpoint = job.state.checkpoint().cloned();
-        job.state = JobState::Failed {
-            reason: "lease_expired".to_string(),
-            checkpoint,
-        };
+        .is_some_and(|deadline| now_ms >= deadline);
+    let attempts_spent = job.retry.attempts_made >= job.retry.max_attempts.max(1);
+    match &job.state {
+        // J15: a cancel was requested and the holder's lease lapsed.
+        JobState::CancelRequested { .. } => {
+            job.transition(
+                JobEvent::Reclaim,
+                &lapsed,
+                now_ms,
+                JobState::Cancelled { checkpoint },
+            )?;
+        }
+        // J06: the deadline passed or the attempts are spent while the lease lapsed.
+        JobState::Running { .. } if deadline_passed || attempts_spent => {
+            let reason = if deadline_passed {
+                "deadline_exceeded"
+            } else {
+                "lease_expired"
+            };
+            job.transition(
+                JobEvent::Fail,
+                &exhausted,
+                now_ms,
+                JobState::Failed {
+                    reason: reason.to_string(),
+                    checkpoint,
+                },
+            )?;
+        }
+        // J13 and J14: a non-terminal expired owner is durably detached before it enters the
+        // ready queue; a published result stays durable for the next claim. Fencing still
+        // advances only when the next worker leases it.
+        _ => {
+            job.transition(JobEvent::Reclaim, &lapsed, now_ms, JobState::Submitted)?;
+        }
     }
-    // A non-terminal expired owner is durably detached before it enters the
-    // ready queue. Fencing still advances only when the next worker leases it.
-    job.lease = None;
     job.updated_at_ms = now_ms;
     let outcome = write_job_transition(store, write, &job, expected_version, None)?;
     Ok(Some(outcome))
@@ -2489,12 +2578,7 @@ fn reconcile_deadline_job(
     expected_version: u64,
 ) -> Result<Option<(MutationBatch, u64)>> {
     let mut job = read_job_in_wtx(write, job_id)?;
-    let lease_live = job
-        .lease
-        .as_ref()
-        .is_some_and(|lease| lease.expires_at_ms > now_ms);
-    if lease_live
-        || !deadline_indexed(&job)
+    if !deadline_indexed(&job)
         || job
             .policy
             .deadline_unix_ms
@@ -2502,12 +2586,40 @@ fn reconcile_deadline_job(
     {
         return Ok(None);
     }
+    // A waiting job past its deadline is taken by the scheduler (J01 or J02) and failed with
+    // its attempts spent (J06); only the final state is persisted. The machine has no edge from
+    // a waiting state to `Failed`, so the scheduler passes through `Running` inside the one
+    // transaction.
     let checkpoint = job.state.checkpoint().cloned();
-    job.state = JobState::Failed {
-        reason: "deadline_exceeded".to_string(),
-        checkpoint,
+    let take = JobFacts {
+        worker_takes_lease: true,
+        not_before_ms: now_ms,
+        ..job.state.facts()
     };
-    job.lease = None;
+    let scheduler_lease = WorkerLease {
+        worker_ref: DEADLINE_SCHEDULER_REF.to_string(),
+        epoch: job.lease_epoch,
+        acquired_at_ms: now_ms,
+        expires_at_ms: now_ms,
+    };
+    let running = JobState::Running {
+        lease: scheduler_lease,
+        checkpoint: Checkpoint::default(),
+    };
+    job.transition(JobEvent::Claim, &take, now_ms, running)?;
+    let exhausted = JobFacts {
+        attempts_below_max: false,
+        ..job.state.facts()
+    };
+    job.transition(
+        JobEvent::Fail,
+        &exhausted,
+        now_ms,
+        JobState::Failed {
+            reason: "deadline_exceeded".to_string(),
+            checkpoint,
+        },
+    )?;
     job.updated_at_ms = now_ms;
     let outcome = write_job_transition(store, write, &job, expected_version, None)?;
     Ok(Some(outcome))
@@ -2590,17 +2702,20 @@ fn lineage_matches_job(
         && lineage.policy_fingerprint == job.policy.policy_fingerprint
 }
 
+/// The owner the scheduler names when it takes a waiting job past its deadline to fail it.
+const DEADLINE_SCHEDULER_REF: &str = "scheduler:deadline";
+
 fn invalid_transition(job: &AnalyticsJob, reason: &'static str) -> JobError {
     JobError::InvalidTransition {
         job_id: job.job_id.clone(),
-        state: job.state.label(),
+        state: job.state.stage().stored(),
         reason,
     }
 }
 
 fn require_lease(job: &AnalyticsJob, worker_ref: &str, epoch: u64, now_ms: i64) -> Result<()> {
     require_lease_ownership(job, worker_ref, epoch, now_ms)?;
-    if job.cancel_requested {
+    if job.state.cancel_requested() {
         return Err(invalid_transition(job, "job cancellation was requested"));
     }
     Ok(())
@@ -2613,13 +2728,15 @@ fn require_lease_ownership(
     now_ms: i64,
 ) -> Result<()> {
     let lease = job
-        .lease
-        .as_ref()
+        .state
+        .lease()
         .ok_or_else(|| invalid_transition(job, "worker mutation requires a lease"))?;
     if lease.worker_ref != worker_ref || lease.epoch != epoch {
         return Err(invalid_transition(job, "stale worker fencing token"));
     }
-    if lease.expires_at_ms < now_ms {
+    // The lease is live while it expires after `now_ms`: the same rule the machine's lease
+    // guards and the reconcile pass apply.
+    if lease.expires_at_ms <= now_ms {
         return Err(invalid_transition(job, "worker lease expired"));
     }
     Ok(())
@@ -2860,12 +2977,12 @@ fn internal_job_batch(
     // one bound scope and one principal, and the mutation kernel refuses any
     // batch naming another. Executor-side attribution is not lost: the
     // server-hashed worker slot that owns (or most recently owned) the fencing
-    // epoch travels on the outbox row below, and `lease`/`last_worker_ref` are
-    // fields of the persisted job image itself. Caller identity is already
+    // epoch travels on the outbox row below, and the lease (in the state) and `last_worker_ref` are
+    // part of the persisted job image itself. Caller identity is already
     // pseudonymized; never fall back to a raw worker label.
     let transition_actor = job
-        .lease
-        .as_ref()
+        .state
+        .lease()
         .map(|lease| lease.worker_ref.as_str())
         .filter(|value| !value.is_empty())
         .or_else(|| (!job.last_worker_ref.is_empty()).then_some(job.last_worker_ref.as_str()))
@@ -2940,6 +3057,12 @@ fn recover_pacing<G>(locked: std::sync::LockResult<G>) -> G {
     })
 }
 
+// MEDULLA-CQ-ORCH-R811.3: the cutover proofs live beside the other crate tests and read the
+// store's private writers, so they are a child module of the store.
+#[cfg(test)]
+#[path = "../tests/job_machine_cutover.rs"]
+mod job_machine_cutover;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2991,7 +3114,7 @@ mod tests {
         .unwrap()
     }
 
-    fn spec(graph: &str, version: u64) -> SubmitSpec {
+    pub(super) fn spec(graph: &str, version: u64) -> SubmitSpec {
         SubmitSpec {
             input_snapshot: InputSnapshotHandle::new(graph, version).with_dataset(
                 "eg:job_input:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -3026,7 +3149,7 @@ mod tests {
     /// `JobStore::mutation_version`) -- NOT necessarily the version of
     /// whichever store `job` happened to come from, since a batch built once
     /// (e.g. by a Raft leader) is applied identically to every replica.
-    fn request_batch(job: &AnalyticsJob, action: &str, expected_version: u64) -> MutationBatch {
+    pub(super) fn request_batch(job: &AnalyticsJob, action: &str, expected_version: u64) -> MutationBatch {
         static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1);
         let sequence = NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
         let identity = analytics_job_scope_identity().unwrap();
@@ -3163,7 +3286,7 @@ mod tests {
             )
             .unwrap();
         match &job.state {
-            JobState::Running { checkpoint } => {
+            JobState::Running { checkpoint, .. } => {
                 assert_eq!(checkpoint.progress, 0.5);
                 assert_eq!(checkpoint.stage, "half-way");
                 assert_eq!(checkpoint.state_blob, Some(vec![1, 2, 3]));
@@ -3320,8 +3443,8 @@ mod tests {
             )
             .unwrap();
         assert!(!replayed);
-        assert!(job.cancel_requested);
-        assert!(matches!(job.state, JobState::Running { .. }));
+        assert!(job.state.cancel_requested());
+        assert!(matches!(job.state, JobState::CancelRequested { .. }));
 
         let job = store
             .mark_cancelled_fenced(
@@ -3503,7 +3626,7 @@ mod tests {
         let store = open_dev_store_in_dir(dir.path()).unwrap();
         let job = store.get(&job_id).unwrap();
         match &job.state {
-            JobState::Running { checkpoint } => {
+            JobState::Running { checkpoint, .. } => {
                 assert_eq!(checkpoint.progress, 0.4);
                 assert_eq!(checkpoint.stage, "chunk-2");
             }
@@ -3520,10 +3643,13 @@ mod tests {
             )
             .unwrap()
             .unwrap();
+        // The lapsed lease returned the orphan to Submitted (J13), so the new claim starts a fresh
+        // attempt under a higher epoch.
         match &claim.job.state {
-            JobState::Running { checkpoint } => assert_eq!(checkpoint.progress, 0.4),
+            JobState::Running { lease, .. } => assert_eq!(lease.worker_ref, "worker:resume"),
             other => panic!("expected reassigned Running job, got {other:?}"),
         }
+        assert_eq!(claim.job.lease_epoch, 2);
         let _job = store
             .stage_result_fenced(
                 &job_id,

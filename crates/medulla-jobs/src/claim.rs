@@ -177,7 +177,7 @@ pub fn plan_result_claim(
         other => {
             return Err(format!(
                 "plan_result_claim requires a Publishing or Succeeded job, got {}",
-                other.label()
+                medulla_types::transition_refused::MachineState::stored(other.stage())
             ))
         }
     };
@@ -429,7 +429,7 @@ pub fn commit_result_claim(
         other => {
             return Err(format!(
                 "commit_result_claim requires a Succeeded job, got {}",
-                other.label()
+                medulla_types::transition_refused::MachineState::stored(other.stage())
             ))
         }
     };
@@ -506,11 +506,8 @@ mod tests {
                     updated_at_ms: 0,
                 },
             },
-            cancel_requested: false,
             lease_epoch: 0,
-            lease: None,
             last_worker_ref: String::new(),
-            not_before_ms: 0,
             output: Some(
                 TypedJobResult::new(
                     [
@@ -649,8 +646,10 @@ mod tests {
     #[test]
     fn commit_rejects_a_non_succeeded_job() {
         let core = GraphCore::new();
-        let mut job = succeeded_job("job-0000000000000001", "g1", 5);
-        job.state = JobState::Submitted;
+        let job = AnalyticsJob {
+            state: JobState::Submitted,
+            ..succeeded_job("job-0000000000000001", "g1", 5)
+        };
         assert!(commit_result_claim(&core, &job, 0.5, None).is_err());
     }
 

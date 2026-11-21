@@ -15578,10 +15578,10 @@ class JobsClient:
     rows contain opaque references and fixed labels, never prompt or response bodies.
 
     Every method returns the durable ``AnalyticsJob`` record as a dict (``job_id``,
-    ``input_snapshot``, ``algo``, ``policy``, ``cancel_requested``, ``state``, …).
+    ``input_snapshot``, ``algo``, ``policy``, ``state``, …).
     ``state`` mirrors the Rust ``JobState`` enum's own externally-tagged shape:
     the bare string ``"Submitted"`` for that one unit variant, or
-    ``{"Running": {"checkpoint": ...}}`` / ``{"Succeeded": {"result_ref",
+    ``{"Running": {"lease": ..., "checkpoint": ...}}`` / ``{"Succeeded": {"result_ref",
     "checkpoint"}}``
     / ``{"Failed": {"reason", "checkpoint"}}`` / ``{"Cancelled": {"checkpoint"}}`` for
     the rest — check ``isinstance(state, str)`` first, else take the dict's one key
@@ -15685,8 +15685,8 @@ class JobsClient:
 
     async def cancel(self, job_id: str) -> dict[str, Any]:
         """Cooperatively cancel ``job_id`` — immediate (transitions straight to
-        ``Cancelled``) if it is still ``Submitted``; otherwise sets
-        ``cancel_requested`` and the running executor observes it at its next
+        ``Cancelled``) if it is still ``Submitted`` or waiting in ``Backoff``; otherwise
+        the job moves to ``CancelRequested`` and the running executor observes it at its next
         checkpoint and stops. Raises ``RuntimeError`` if ``job_id`` is already in a
         TERMINAL state (``Succeeded``/``Failed``/``Cancelled``) — cancelling a
         finished job is an explicit invalid-transition error, not a silent no-op (an

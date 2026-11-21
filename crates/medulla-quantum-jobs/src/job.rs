@@ -574,7 +574,7 @@ pub fn join_quantum_result_rows(
     if !matches!(&job.state, JobState::Succeeded { .. }) {
         return Err(QuantumJobError::Job(JobError::InvalidTransition {
             job_id: job_id.to_string(),
-            state: job.state.label(),
+            state: medulla_types::transition_refused::MachineState::stored(job.state.stage()),
             reason: "join requires a Succeeded job",
         }));
     };

@@ -226,7 +226,7 @@ fn program_stop_reason(
         .cpu_ms
         .or(current.policy.quota_cpu_ms)
         .is_some_and(|limit| began.elapsed().as_millis() as u64 >= limit);
-    if current.cancel_requested {
+    if current.state.cancel_requested() {
         Some("cancelled")
     } else if current.deadline_exceeded(now) {
         Some("deadline_exceeded")

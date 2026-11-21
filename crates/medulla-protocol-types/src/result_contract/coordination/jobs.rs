@@ -93,19 +93,32 @@ pub struct JobCheckpoint {
     pub updated_at_ms: i64,
 }
 
-/// A job's lifecycle state.
+/// A job's lifecycle state: one variant per stage of the analytics-job machine, carrying the
+/// data its stage owns (the lease, the backoff time, the checkpoint).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum JobState {
     Submitted,
     Running {
+        lease: JobWorkerLease,
         checkpoint: JobCheckpoint,
     },
     /// The typed result is durable; its evidence-bearing claims are not yet.
     Publishing {
+        lease: JobWorkerLease,
         result_ref: String,
         checkpoint: JobCheckpoint,
+    },
+    /// The lease holder is asked to stop.
+    CancelRequested {
+        lease: JobWorkerLease,
+        checkpoint: JobCheckpoint,
+    },
+    /// A failed attempt waits until `not_before_ms` before it is claimed again.
+    Backoff {
+        not_before_ms: i64,
+        checkpoint: Option<JobCheckpoint>,
     },
     Succeeded {
         result_ref: String,
@@ -131,7 +144,8 @@ pub struct JobWorkerLease {
     pub expires_at_ms: i64,
 }
 
-/// The durable analytics-job record, as a caller sees it.
+/// The durable analytics-job record, as a caller sees it. The lease, the cancel request and the
+/// backoff time are part of `state`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -142,11 +156,8 @@ pub struct AnalyticsJobRecord {
     pub algo: JobAlgoVersion,
     pub retry: JobRetryPolicy,
     pub state: JobState,
-    pub cancel_requested: bool,
     pub lease_epoch: u64,
-    pub lease: Option<JobWorkerLease>,
     pub last_worker_ref: String,
-    pub not_before_ms: i64,
     pub output: Option<JobResult>,
     pub created_at_ms: i64,
     pub updated_at_ms: i64,

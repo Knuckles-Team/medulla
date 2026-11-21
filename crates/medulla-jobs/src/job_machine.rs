@@ -7,8 +7,10 @@
 //! Publishing and CancelRequested and `not_before` belongs to Backoff: the guards read them as
 //! [`JobFacts`], so no flag beside the state decides an edge.
 
+use crate::model::{AnalyticsJob, JobState};
 use medulla_types::transition_refused::{
-    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefusalReason,
+    TransitionRefused,
 };
 use serde::{Deserialize, Serialize};
 
@@ -322,6 +324,33 @@ impl JobFacts {
     }
 }
 
+impl AnalyticsJob {
+    /// The one writer of `AnalyticsJob.state` (MEDULLA-CQ-ORCH-R811.1). It computes the edge
+    /// target with [`JobStage::step`]; when `next` is a payload of another stage the event is
+    /// refused with `IllegalTransition` and nothing changes, otherwise `next` becomes the state.
+    /// A checkpoint write is a data update of `Running`, not an event: it goes through
+    /// [`JobState::checkpoint_mut`] and never assigns `state`.
+    pub fn transition(
+        &mut self,
+        event: JobEvent,
+        facts: &JobFacts,
+        now_ms: i64,
+        next: JobState,
+    ) -> Result<(), TransitionRefused> {
+        let to = self.state.stage().step(event, facts.guard(now_ms))?;
+        if next.stage() != to {
+            return Err(TransitionRefused {
+                machine: ANALYTICS_JOB_MACHINE.name.to_string(),
+                from: self.state.stage().stored().to_string(),
+                event: event.name().to_string(),
+                reason: TransitionRefusalReason::IllegalTransition,
+            });
+        }
+        self.state = next;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{JobEvent, JobFacts, JobStage, ANALYTICS_JOB_MACHINE, JOB_GUARD_LEASE_LAPSED};
@@ -630,5 +659,114 @@ mod tests {
             JobStage::Backoff.step(JobEvent::Claim, claim.guard(50)),
             Ok(JobStage::Running)
         );
+    }
+
+    fn sample_job(state: crate::model::JobState) -> crate::model::AnalyticsJob {
+        use crate::model::{AlgoVersion, AnalyticsJob, InputSnapshotHandle, JobPolicy, RetryPolicy};
+        AnalyticsJob {
+            job_id: "job-0000000000000001".to_string(),
+            input_snapshot: InputSnapshotHandle::new("g", 1),
+            policy: JobPolicy::default(),
+            algo: AlgoVersion {
+                family: "f".to_string(),
+                algorithm: "a".to_string(),
+                params_digest: "d".to_string(),
+                code_version: "c".to_string(),
+                env_version: "e".to_string(),
+            },
+            input_payload: None,
+            retry: RetryPolicy::default(),
+            state,
+            lease_epoch: 0,
+            last_worker_ref: String::new(),
+            output: None,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        }
+    }
+
+    fn sample_lease() -> crate::model::WorkerLease {
+        crate::model::WorkerLease {
+            worker_ref: "worker".to_string(),
+            epoch: 1,
+            acquired_at_ms: 0,
+            expires_at_ms: 100,
+        }
+    }
+
+    fn sample_checkpoint() -> crate::model::Checkpoint {
+        crate::model::Checkpoint::default()
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R811.1
+
+    #[test]
+    fn transition_refuses_a_payload_of_another_stage() {
+        use crate::model::JobState;
+        let running = JobState::Running {
+            lease: sample_lease(),
+            checkpoint: sample_checkpoint(),
+        };
+        let mut job = sample_job(JobState::Submitted);
+        let facts = JobFacts {
+            worker_takes_lease: true,
+            ..JobFacts::default()
+        };
+        // Claim from Submitted targets Running; a Publishing payload is another stage.
+        let wrong = JobState::Publishing {
+            lease: sample_lease(),
+            result_ref: "r".to_string(),
+            checkpoint: sample_checkpoint(),
+        };
+        let refused = job
+            .transition(JobEvent::Claim, &facts, 10, wrong)
+            .unwrap_err();
+        assert_eq!(refused.machine, "AnalyticsJobMachine");
+        assert_eq!(refused.from, "submitted");
+        assert_eq!(refused.event, "Claim");
+        assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
+        assert_eq!(job.state, JobState::Submitted, "the job is unchanged");
+        // The matching payload is applied.
+        job.transition(JobEvent::Claim, &facts, 10, running.clone())
+            .unwrap();
+        assert_eq!(job.state, running);
+        // A guard that fails refuses too and changes nothing.
+        let mut idle = sample_job(JobState::Submitted);
+        let none = JobFacts::default();
+        assert!(idle
+            .transition(JobEvent::Claim, &none, 10, running)
+            .is_err());
+        assert_eq!(idle.state, JobState::Submitted);
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R811.1
+    // spec: MEDULLA-CQ-ORCH-R811.3
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let sources = [
+            ("job_machine.rs", include_str!("job_machine.rs")),
+            ("model.rs", include_str!("model.rs")),
+            ("store.rs", include_str!("store.rs")),
+            ("store/task_queue.rs", include_str!("store/task_queue.rs")),
+            ("claim.rs", include_str!("claim.rs")),
+            ("intent.rs", include_str!("intent.rs")),
+        ];
+        for (name, text) in sources {
+            let writer = text.split("#[cfg(test)]").next().unwrap_or(text);
+            let assignments = writer.matches(".state =").count();
+            if name == "job_machine.rs" {
+                assert_eq!(
+                    assignments, 1,
+                    "{name}: only AnalyticsJob::transition assigns the state"
+                );
+                assert!(writer.contains("self.state = next;"));
+            } else {
+                assert_eq!(
+                    assignments, 0,
+                    "{name} assigns `.state =` outside AnalyticsJob::transition"
+                );
+            }
+        }
     }
 }

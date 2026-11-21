@@ -245,7 +245,7 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
     )
     .unwrap();
     let expected = [
-        ("analytics_jobs", "&str", "&[u8]"),
+        ("analytics_job_records", "&str", "&[u8]"),
         ("analytics_job_committed_results", "&str", "&str"),
         ("job_intents", "&str", "&[u8]"),
         ("job_idempotency_ledger", "&str", "&str"),
@@ -278,7 +278,7 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
     }
 
     for (name, capabilities, projection) in [
-        ("analytics_jobs", CAP_READ | CAP_INSERT | CAP_UPDATE, false),
+        ("analytics_job_records", CAP_READ | CAP_INSERT | CAP_UPDATE, false),
         (
             "analytics_job_committed_results",
             CAP_READ | CAP_INSERT,

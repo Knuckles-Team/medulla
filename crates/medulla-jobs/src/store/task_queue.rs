@@ -132,27 +132,23 @@ fn require_task_lease(
     worker_ref: &str,
     now_ms: i64,
 ) -> std::result::Result<Checkpoint, TaskAckError> {
-    let checkpoint = match &job.state {
-        JobState::Running { checkpoint } => checkpoint.clone(),
-        _ => return Err(TaskAckError::NotClaimed),
-    };
     if job.policy.tenant != tenant || !job.algo.family.starts_with(TASK_FAMILY_PREFIX) {
         return Err(TaskAckError::NotClaimed);
     }
-    match job.lease.as_ref() {
-        Some(lease) if lease.worker_ref == worker_ref => {
+    match &job.state {
+        JobState::Running { lease, checkpoint } if lease.worker_ref == worker_ref => {
             if lease.expires_at_ms <= now_ms {
                 return Err(TaskAckError::LeaseExpired);
             }
+            Ok(checkpoint.clone())
         }
-        // A lapsed lease the scheduler already detached still names its last
-        // holder, so that holder reads as expired rather than never claimed.
-        None if job.last_worker_ref == worker_ref => {
-            return Err(TaskAckError::LeaseExpired);
+        // A lapsed lease the scheduler already detached returned the task to `Submitted`; it
+        // still names its last holder, so that holder reads as expired rather than never claimed.
+        JobState::Submitted if job.last_worker_ref == worker_ref => {
+            Err(TaskAckError::LeaseExpired)
         }
-        _ => return Err(TaskAckError::NotClaimed),
+        _ => Err(TaskAckError::NotClaimed),
     }
-    Ok(checkpoint)
 }
 
 impl JobStore {
@@ -203,12 +199,17 @@ impl JobStore {
                 backoff_ms: 0,
                 attempts_made: 0,
             },
-            state: JobState::Submitted,
-            cancel_requested: false,
+            // A task enqueued for a later time waits in `Backoff` until it is due.
+            state: if spec.not_before_ms > 0 {
+                JobState::Backoff {
+                    not_before_ms: spec.not_before_ms,
+                    checkpoint: None,
+                }
+            } else {
+                JobState::Submitted
+            },
             lease_epoch: 0,
-            lease: None,
             last_worker_ref: String::new(),
-            not_before_ms: spec.not_before_ms,
             output: None,
             created_at_ms: now_ms,
             updated_at_ms: now_ms,
@@ -302,8 +303,8 @@ impl JobStore {
                 continue;
             }
             let live_lease = job
-                .lease
-                .as_ref()
+                .state
+                .lease()
                 .is_some_and(|lease| lease.expires_at_ms > now_ms);
             let entry = counts.entry(queue.to_string()).or_insert((0, 0));
             if live_lease {
@@ -343,35 +344,78 @@ impl JobStore {
                 detail.to_string()
             }
         };
+        let owner = JobFacts {
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
         match outcome {
             TaskAckOutcome::Succeeded => {
-                job.state = JobState::Succeeded {
-                    result_ref: job.result_ref(),
+                // Running reaches Succeeded through Publishing (J03, J04) inside the one transaction.
+                let result_ref = job.result_ref();
+                let lease = job
+                    .state
+                    .lease()
+                    .cloned()
+                    .ok_or(TaskAckError::NotClaimed)?;
+                let publishing = JobState::Publishing {
+                    lease,
+                    result_ref: result_ref.clone(),
+                    checkpoint: checkpoint.clone(),
+                };
+                job.transition(JobEvent::Publish, &owner, now_ms, publishing)
+                    .map_err(JobError::from)?;
+                let succeeded = JobState::Succeeded {
+                    result_ref,
                     checkpoint: Checkpoint {
                         stage: "acked".to_string(),
                         updated_at_ms: now_ms,
                         ..checkpoint
                     },
                 };
+                let owner = JobFacts {
+                    lease_owner_matches: true,
+                    ..job.state.facts()
+                };
+                job.transition(JobEvent::Complete, &owner, now_ms, succeeded)
+                    .map_err(JobError::from)?;
             }
             TaskAckOutcome::Failed => {
-                job.state = JobState::Failed {
+                let facts = JobFacts {
+                    attempts_below_max: false,
+                    ..owner
+                };
+                let failed = JobState::Failed {
                     reason: reason("task_failed"),
                     checkpoint: Some(checkpoint),
                 };
+                job.transition(JobEvent::Fail, &facts, now_ms, failed)
+                    .map_err(JobError::from)?;
             }
             TaskAckOutcome::Retry if job.retry.retries_remaining() => {
-                job.state = JobState::Submitted;
-                job.not_before_ms = now_ms.saturating_add(job.retry.backoff_ms as i64);
+                let facts = JobFacts {
+                    attempts_below_max: true,
+                    ..owner
+                };
+                let backoff = JobState::Backoff {
+                    not_before_ms: now_ms.saturating_add(job.retry.backoff_ms as i64),
+                    checkpoint: Some(checkpoint),
+                };
+                job.transition(JobEvent::Fail, &facts, now_ms, backoff)
+                    .map_err(JobError::from)?;
             }
             TaskAckOutcome::Retry => {
-                job.state = JobState::Failed {
+                let facts = JobFacts {
+                    attempts_below_max: false,
+                    ..owner
+                };
+                let failed = JobState::Failed {
                     reason: "retries_exhausted".to_string(),
                     checkpoint: Some(checkpoint),
                 };
+                job.transition(JobEvent::Fail, &facts, now_ms, failed)
+                    .map_err(JobError::from)?;
             }
         }
-        job.lease = None;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -398,7 +442,10 @@ impl JobStore {
             Err(error) => return Err(error.into()),
         };
         require_task_lease(&job, tenant, worker_ref, now_ms)?;
-        let lease = job.lease.as_mut().ok_or(TaskAckError::NotClaimed)?;
+        let lease = job
+            .state
+            .lease_mut()
+            .ok_or(TaskAckError::NotClaimed)?;
         lease.expires_at_ms = now_ms.saturating_add(i64::try_from(lease_ms).unwrap_or(i64::MAX));
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =

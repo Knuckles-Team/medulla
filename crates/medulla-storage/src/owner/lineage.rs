@@ -633,6 +633,42 @@ pub const KV_BEFORE_NAMESPACE_COLD: LayoutPredecessor = LayoutPredecessor {
     file_name: "kv.redb",
 };
 
+/// The Jobs owner tables before the analytics-job machine (MEDULLA-CQ-ORCH-R811.4): the frozen
+/// 13-table census, whose record table is `analytics_jobs`.
+const JOBS_TABLES_BEFORE_JOB_MACHINE: &[&str] = &[
+    "analytics_jobs",
+    "analytics_job_committed_results",
+    "job_intents",
+    "job_idempotency_ledger",
+    "analytics_job_knowledge_batches",
+    "analytics_job_scheduler_meta",
+    "analytics_job_ready_by_priority",
+    "analytics_job_ready_by_capability",
+    "analytics_job_lease_by_worker",
+    "analytics_job_lease_by_expiry",
+    "analytics_job_active_totals_by_tenant",
+    "analytics_job_by_deadline",
+    "analytics_job_cancellation_reconcile",
+];
+
+/// The frozen layout digest of [`JOBS_BEFORE_JOB_MACHINE`]: the Jobs pin while the job record
+/// table was `analytics_jobs` and a record carried `cancel_requested`, `lease` and
+/// `not_before_ms` beside a six-variant state.
+pub const JOBS_PRE_JOB_MACHINE_DIGEST: [u8; 32] = [
+    0x64, 0xeb, 0x7f, 0xfd, 0x32, 0x79, 0x80, 0xa8, 0x26, 0x9b, 0xc8, 0xcf, 0x61, 0x14, 0x7b, 0xc2,
+    0x69, 0xb4, 0xee, 0x8e, 0xab, 0x1a, 0xe0, 0xf5, 0xde, 0x3a, 0x24, 0x4b, 0xbe, 0xc9, 0xda, 0xd4,
+];
+
+/// A Jobs owner file from before the analytics-job machine. The upgrade converts every record
+/// of `analytics_jobs` to the machine shape and stores it in `analytics_job_records`.
+pub const JOBS_BEFORE_JOB_MACHINE: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Jobs,
+    label: "jobs before the analytics job machine",
+    owner_tables: JOBS_TABLES_BEFORE_JOB_MACHINE,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "jobs.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -656,8 +692,8 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],
+        OwnerLayout::Jobs => &[JOBS_BEFORE_JOB_MACHINE],
         OwnerLayout::LedgerOnly
-        | OwnerLayout::Jobs
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
         | OwnerLayout::PathIndex

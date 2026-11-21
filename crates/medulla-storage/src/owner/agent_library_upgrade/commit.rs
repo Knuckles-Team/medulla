@@ -76,6 +76,11 @@ fn retire_predecessor_tables(
             .delete_table(KV_COLD)
             .map_err(|error| error.to_string())?;
     }
+    // The jobs successor stores every record in its machine shape under the new table name, so
+    // the retired table is converted and then deleted (MEDULLA-CQ-ORCH-R811.4).
+    if target == UpgradeTarget::Jobs {
+        crate::owner::jobs_upgrade::convert_job_rows(write)?;
+    }
     Ok(())
 }
 
@@ -91,6 +96,8 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
         }
         // The Kv successor adds no table: the retired table is deleted above.
         UpgradeTarget::Kv => {}
+        // The Jobs successor's record table is created by the conversion above.
+        UpgradeTarget::Jobs => {}
     }
     Ok(())
 }

@@ -323,6 +323,11 @@ use worker_validation::*;
 /// Classify a job-store refusal: a lifecycle transition the job's state forbids
 /// is a conflict, an unknown job is invalid input, and a store fault is internal.
 pub(super) fn job_refusal(error: &medulla_jobs::JobError) -> String {
+    // A machine refusal already names its own code: `TRANSITION_REFUSED: ...` (the response
+    // envelope carries its four fields).
+    if let medulla_jobs::JobError::TransitionRefused(refused) = error {
+        return refused.to_string();
+    }
     let code = match error {
         medulla_jobs::JobError::InvalidTransition { .. } => "CONFLICT",
         medulla_jobs::JobError::NotFound(_) => "INVALID_ARGUMENT",
@@ -335,6 +340,7 @@ pub(super) fn job_refusal(error: &medulla_jobs::JobError) -> String {
         // A lost optimistic-concurrency race is a retryable conflict, not a fault.
         medulla_jobs::JobError::Redb(message) if message.contains("WRITE_CONFLICT") => "CONFLICT",
         medulla_jobs::JobError::Redb(_) | medulla_jobs::JobError::Codec(_) => "INTERNAL",
+        medulla_jobs::JobError::TransitionRefused(_) => unreachable!("handled above"),
     };
     format!("{code}: {error}")
 }

@@ -33,6 +33,15 @@ pub(crate) fn expected_table_contracts(layout: OwnerLayout) -> Vec<TableContract
 /// predecessor's frozen digest is reproduced exactly.
 pub(crate) fn predecessor_table_contracts(layout: OwnerLayout) -> Vec<TableContract> {
     let mut contracts = expected_table_contracts(layout);
+    // A table renamed in place keeps its position under its retired name.
+    for (retired, current) in super::registry::renamed_owner_table_names(layout) {
+        if let Some(slot) = contracts
+            .iter_mut()
+            .find(|contract| contract.table_id == *current)
+        {
+            *slot = table_contract(retired, Some(layout));
+        }
+    }
     contracts.extend(
         super::registry::retired_owner_table_names(layout)
             .iter()
@@ -179,7 +188,9 @@ fn jobs_key_type(name: &str) -> Option<&'static str> {
         "analytics_job_ready_by_capability" => Some("(&str,u32,i64,&str)"),
         "analytics_job_ready_by_priority" => Some("(u32,i64,&str)"),
         "analytics_job_lease_by_expiry" | "analytics_job_by_deadline" => Some("(i64,&str)"),
-        "analytics_jobs"
+        "analytics_job_records"
+        | "analytics_job_records"
+        | "analytics_jobs"
         | "analytics_job_committed_results"
         | "job_intents"
         | "job_idempotency_ledger"
@@ -345,6 +356,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "mutation_classes"
         | "rbac"
         | "rbac_profile_use_grant"
+        | "analytics_job_records"
         | "analytics_jobs"
         | "job_intents"
         | "analytics_job_knowledge_batches"
@@ -567,6 +579,7 @@ fn mutation_family_codec(name: &str) -> Option<&'static str> {
             "mutation_outbox_fairness",
             "mutation_replay_operations",
             "mutation_classes",
+            "analytics_job_records",
             "analytics_jobs",
             "job_intents",
             "analytics_job_knowledge_batches",
@@ -612,6 +625,7 @@ fn ledger_and_job_capabilities(name: &str) -> Option<u16> {
         "cas_chunks" | "cas_blobs" => CAP_READ | CAP_INSERT | CAP_DELETE,
         "rbac"
         | "rbac_profile_use_grant"
+        | "analytics_job_records"
         | "analytics_jobs"
         | "job_intents"
         | "analytics_job_scheduler_meta"
