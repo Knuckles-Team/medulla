@@ -35,9 +35,9 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T029 [P] [US1] MEDULLA-ORCH-VOCAB-R006.2 Add property `swarm:feeds`
 - [ ] T030 [P] [US1] MEDULLA-ORCH-VOCAB-R006.3 Add property `swarm:loopsBackTo`
 - [ ] T031 [P] [US1] MEDULLA-ORCH-VOCAB-R006.4 Add DAG acyclicity shape
-- [ ] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:feeds`
+- [ ] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:` facts
 - [ ] T033 [P] [US1] MEDULLA-ORCH-VOCAB-R006.6 Add Q6 and Q7 query tests
-- [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly tasks by step
+- [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly steps by `:hasStep`
 - [ ] T035 [US2] MEDULLA-ORCH-VOCAB-R007.2 Project the committed assembly back into the graph
 - [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
 - [ ] T037 [P] [US3] MEDULLA-ORCH-VOCAB-R008.1 Register `orchestration-v1.shapes.ttl` with the shape loader
@@ -70,7 +70,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T065 [P] [US5] MEDULLA-ORCH-VOCAB-R011.4 Add property `:evidencedByRun`
 - [ ] T066 [P] [US5] MEDULLA-ORCH-VOCAB-R011.5 Add property `:measuredSupersedes`
 - [ ] T067 [P] [US5] MEDULLA-ORCH-VOCAB-R011.6 Add measured-fact shape
-- [ ] T068 [P] [US5] MEDULLA-ORCH-VOCAB-R011.7 Build the measured-fact change envelope
+- [ ] T068 [P] [US5] MEDULLA-ORCH-VOCAB-R011.7 Build the measured-fact change envelope draft
 - [ ] T069 [US5] MEDULLA-ORCH-VOCAB-R011.8 Refuse a measured fact without run evidence
 - [ ] T070 [US5] MEDULLA-ORCH-VOCAB-R011.9 Replace a measured fact through the champion pointer
 - [ ] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the governed path
@@ -144,7 +144,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T138 [P] [US8] MEDULLA-ORCH-VOCAB-R802.4 Supersession
 - [ ] T139 [P] [US8] MEDULLA-ORCH-VOCAB-R802.5 Refusal
 - [ ] T140 [P] [US8] MEDULLA-ORCH-VOCAB-R802.6 Hot-path proof
-- [ ] T141 [US5] MEDULLA-ORCH-VOCAB-R803 Serve the five run trace queries as one method
 - [ ] T142 [P] [US5] MEDULLA-ORCH-VOCAB-R804 Tenant telemetry snapshot read method
 - [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 Committed-turn receipt feeds the session timing writer
 - [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
@@ -168,7 +167,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T161 [US9] MEDULLA-ORCH-VOCAB-R811.2 Add the core state-machine properties
 - [ ] T162 [US9] MEDULLA-ORCH-VOCAB-R811.3 Add state-machine shapes
 - [ ] T163 [US9] MEDULLA-ORCH-VOCAB-R811.4 Add the typed transition refusal
-- [ ] T176 [US9] MEDULLA-ORCH-VOCAB-R811.9 Served error mapper returns TransitionRefused fields
+- [ ] T176 [US9] MEDULLA-ORCH-VOCAB-R811.9 Served error mapper returns the four TransitionRefused fields
 - [ ] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
 - [ ] T171 [US9] MEDULLA-ORCH-VOCAB-R811.6 Pack extension rule and conformance
 - [ ] T172 [US9] MEDULLA-ORCH-VOCAB-R811.7 Competency question: what can happen next to X
@@ -182,15 +181,12 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T174 [US9] MEDULLA-ORCH-VOCAB-R811.8 Every served machine method returns TransitionRefused through the error mapper. Size: M, 2 PRs, 5 hours.
 - [ ] T191 [US9] MEDULLA-ORCH-VOCAB-R811.10 The core names the typed transition refusal as a class
 - [ ] T178 [US9] MEDULLA-ORCH-VOCAB-R815 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T179 [US9] MEDULLA-ORCH-VOCAB-R815.1 ActionRun/ActionStatus state machine: route 1 census findings through ActionStatus::apply
-- [ ] T180 [US9] MEDULLA-ORCH-VOCAB-R815.2 AgentInstance/AgentLifecycleState state machine: route 1 census findings through AgentLifecycleState::apply
-- [ ] T181 [US9] MEDULLA-ORCH-VOCAB-R815.3 ChildInputRecord/ChildInputState state machine: route 2 census findings through ChildInputState::apply
-- [ ] T182 [US9] MEDULLA-ORCH-VOCAB-R815.4 GapView/GapStatus state machine: route 4 census findings through GapStatus::apply
-- [ ] T183 [US9] MEDULLA-ORCH-VOCAB-R815.5 Incident/IncidentStatus state machine: route 1 census findings through IncidentStatus::apply
-- [ ] T184 [US9] MEDULLA-ORCH-VOCAB-R815.6 IncidentRecord/IncidentStatus state machine: route 1 census findings through IncidentStatus::apply
+- [ ] T180 [US9] MEDULLA-ORCH-VOCAB-R815.2 AgentLifecycleMachine edge table builds the agent-instance statechart
+- [ ] T181 [US9] MEDULLA-ORCH-VOCAB-R815.3 ChildInputMachine with an engine-owned initial state
+- [ ] T182 [US9] MEDULLA-ORCH-VOCAB-R815.4 GapViewMachine: route merge, transition and settle through GapStatus::apply
+- [ ] T183 [US9] MEDULLA-ORCH-VOCAB-R815.5 IncidentMachine: route the health incident writers through IncidentStatus::apply
+- [ ] T184 [US9] MEDULLA-ORCH-VOCAB-R815.6 IncidentRecordMachine: route IncidentSetStatus through IncidentStatus::apply
 - [ ] T185 [US9] MEDULLA-ORCH-VOCAB-R812.6 WorkItem/WorkItemStatus state machine: route 8 census findings through WorkItemStatus::apply
-- [ ] T186 [US9] MEDULLA-ORCH-VOCAB-R815.7 WorkItemDeferral/WorkItemDeferStatus state machine: route 1 census findings through WorkItemDeferStatus::apply
-- [ ] T187 [US9] MEDULLA-ORCH-VOCAB-R815.8 WorkOfferView/OfferStage state machine: route 1 census findings through OfferStage::apply
-- [ ] T188 [US9] MEDULLA-ORCH-VOCAB-R815.9 WorkflowRegistrationEntry/WorkflowLifecycle state machine: route 1 census findings through WorkflowLifecycle::apply
+- [ ] T188 [US9] MEDULLA-ORCH-VOCAB-R815.9 WorkflowMachine: route the register upsert through WorkflowLifecycle::apply
 - [ ] T189 [US9] MEDULLA-ORCH-VOCAB-R816 Census debt of the incident wire mirror is closed (rollup)
 - [ ] T190 [US9] MEDULLA-ORCH-VOCAB-R816.1 Incident status wire parameters follow `IncidentStatus`: Python mirror follows the Rust machine

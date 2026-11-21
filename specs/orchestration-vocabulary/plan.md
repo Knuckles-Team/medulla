@@ -63,7 +63,7 @@ The rules below bind every row.
 2. **Terms are data.** Agent kinds, termination reasons and measured properties are closed sets in the ontology and the shapes. No solver or handler carries a term list.
 3. **One writer per term.** A term has exactly one writer: typed-pack projection, the Agent Library outbox worker, the topology projection or the assemble commit. Each term has a named reader.
 4. **Writes pass the admission path.** A node write enters `try_handle_gateway` and reaches `harness_admission`; an envelope write enters `dispatch_change_envelopes` and reaches the envelope boundary. A refusal writes nothing.
-5. **Reads are UQL statements.** Metric, usage, session and gap reads are statements of `HARNESS_QUERIES`, served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R803 to R807).
+5. **Reads are UQL statements.** Metric, usage, session and gap reads are statements of `HARNESS_QUERIES`, served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R804 to R807).
 6. **Revisions use the pointer path.** A definition, a harness component, a measured fact and a policy set become current only by a champion-pointer move of MEDULLA-DECISION-ENGINE-R805. A newer version never overwrites an older one.
 7. **Unknown stays unknown.** A missing measurement is `Unknown(reason)` or an abstention, never zero.
 8. **Assembly decides.** Synthesis proposes a draft; `AgentAssemble` decides (MEDULLA-DECISION-ENGINE-R036).
@@ -103,7 +103,7 @@ The seven design answers that bind every row:
 - **Owner.** Medulla: the orchestration ontology files and shapes, `crates/medulla-work-types/src/orchestration/` and the served admission path. Each term has one writer and a named reader.
 - **Cohesion.** Step order reuses the one core `:precedes`. A definition, a harness component, a measured fact and a policy set each have one writer and become current only by a champion-pointer move.
 - **Dependency direction.** Handlers return the record and the mapper adds the code to the method set. Nothing imports a handler. The knowledge-scope check runs in the served handler because `medulla-persistence-records` cannot depend on `medulla-retrieval`.
-- **Interface depth.** Reads are UQL statements of `HARNESS_QUERIES` served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R803 to R807).
+- **Interface depth.** Reads are UQL statements of `HARNESS_QUERIES` served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R804 to R807).
 - **Special cases.** One: unknown stays unknown. A missing measurement is `Unknown(reason)` or an abstention, never zero.
 - **State.** Definitions and measured facts are versioned graph records. A newer version never overwrites an older one.
 - **Environment.** Terms are data in the ontology and the shapes; no solver or handler carries a term list. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
@@ -169,3 +169,24 @@ Order: after R811.5 and the three machine rows named in the dependency list.
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R813` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+## Amendments
+
+### 2026-11-20: build-lane gaps resolved
+
+Withdrawn rows, each with its reason:
+
+- `MEDULLA-ORCH-VOCAB-R803`: the five run-trace queries are already served by `Method::Uql` through `HARNESS_QUERIES` (R010.1 to R010.5); a second method is a parallel read path with no paging or write of its own, against plan principle 5.
+- `MEDULLA-ORCH-VOCAB-R815.1`: `ActionStatus` is a classification, not a lifecycle; an `ActionRun` is created in its final outcome, `Applied` or `Refused`, and never moves.
+- `MEDULLA-ORCH-VOCAB-R815.7`: `WorkItemDeferStatus` is the outcome classification of one `DeferWorkItem` answer, not a stored lifecycle; the work item lifecycle is `WorkItemMachine` (R812).
+- `MEDULLA-ORCH-VOCAB-R815.8`: `WorkOfferView.stage` is the version stamp of the pricing function (`WORK_OFFER_UTILITY_RATE_STAGE`), not a lifecycle state.
+
+Resolved rows:
+
+- `MEDULLA-ORCH-VOCAB-R007.1`: steps are recorded as `DecisionInputs.steps`; only the requirement derivation reads them; `STEP_ORDER_CYCLE` joins `DecisionErrorCode`.
+- `MEDULLA-ORCH-VOCAB-R811.9`: `Response.transition_refused` carries the four fields; `Response::err` fills it from the canonical detail; `IncidentSetStatus` is the proof path.
+- `MEDULLA-ORCH-VOCAB-R006.5`: the R003.6 projection is the one writer of template `swarm:` facts; `AgentGraphEdge.kind` marks a loop back; the publish rules refuse a feeds cycle.
+- `MEDULLA-ORCH-VOCAB-R011.7`: the builder returns a `ChangeEnvelopeDraft` of three operations; the engine mints the `MutationBatch`.
+- `MEDULLA-ORCH-VOCAB-R014.3`: the exact triples are in `data-model.md`; the `dmn` core source is registered; each pin moves by a stated delta.
+- `MEDULLA-ORCH-VOCAB-R815.2` to `R815.6` and `R815.9`: each names its initial state, events, edge table, writers and refusal.
+- `MEDULLA-ORCH-VOCAB-R815.3` keeps one open clarification: the served writer of event `Apply`.
