@@ -89,8 +89,8 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [x] T081 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
 - [ ] T082 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
   Depends: none
-- [ ] T083 [US6] MEDULLA-IDENTITY-R727 Tenants stay separated in one store, and sharing between tenants (rollup)
+- [ ] T083 [US6] MEDULLA-IDENTITY-R727 Tenants stay separated in one store (rollup)
 - [ ] T084 [US6] MEDULLA-IDENTITY-R727.1 No cross-tenant read, count, search or inference (served test `tenant_separation_tests.rs`; the door admits one tenant)
-- [ ] T085 [US6] MEDULLA-IDENTITY-R727.2 Cross-tenant share grant
-- [ ] T086 [US6] MEDULLA-IDENTITY-R727.3 Every cross-tenant read is audited
-- [ ] T087 [US6] MEDULLA-IDENTITY-R727.4 Granted units never feed the recipient's inference
+- [ ] T085 [US6] MEDULLA-IDENTITY-R727.2 RETIRED: one tenant per engine; sharing goes through arbora federation
+- [ ] T086 [US6] MEDULLA-IDENTITY-R727.3 RETIRED: one tenant per engine; sharing goes through arbora federation
+- [ ] T087 [US6] MEDULLA-IDENTITY-R727.4 RETIRED: one tenant per engine; sharing goes through arbora federation
