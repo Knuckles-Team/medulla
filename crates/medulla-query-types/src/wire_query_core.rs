@@ -1513,17 +1513,19 @@ mod retrieval_constraints_tests {
     fn sample_constraints() -> RetrievalConstraints {
         RetrievalConstraints {
             graph_revision: 17,
-            entity_predicates: vec![
+            entity_predicates: BoundedVec::new(vec![
                 EntityPredicate::Eq {
                     property: "kind".to_string(),
                     value: PredLiteral::Str("Document".to_string()),
                 },
                 EntityPredicate::In {
                     property: "priority".to_string(),
-                    values: vec![PredLiteral::Num(1.0), PredLiteral::Num(2.0)],
+                    values: BoundedVec::new(vec![PredLiteral::Num(1.0), PredLiteral::Num(2.0)])
+                        .expect("two values are inside the bound"),
                 },
-            ],
-            relationship_predicates: vec![
+            ])
+            .expect("two predicates are inside the bound"),
+            relationship_predicates: BoundedVec::new(vec![
                 RelationshipPredicate {
                     edge_kind: "supports".to_string(),
                     direction: EdgeDir::Out,
@@ -1542,7 +1544,8 @@ mod retrieval_constraints_tests {
                     },
                     quantifier: RelationshipQuantifier::NotExists,
                 },
-            ],
+            ])
+            .expect("two predicates are inside the bound"),
         }
     }
 
@@ -1562,10 +1565,12 @@ mod retrieval_constraints_tests {
     #[test]
     fn malformed_constraint_shapes_fail_before_planner_binding() {
         let mut constraints = sample_constraints();
-        constraints.entity_predicates[0] = EntityPredicate::In {
+        let mut entity = constraints.entity_predicates.as_slice().to_vec();
+        entity[0] = EntityPredicate::In {
             property: "priority".to_string(),
-            values: Vec::new(),
+            values: BoundedVec::default(),
         };
+        constraints.entity_predicates = BoundedVec::new(entity).expect("inside the bound");
         assert_eq!(
             constraints.validate(),
             Err(
@@ -1575,7 +1580,10 @@ mod retrieval_constraints_tests {
         );
 
         constraints = sample_constraints();
-        constraints.relationship_predicates[0].edge_kind.clear();
+        let mut relationship = constraints.relationship_predicates.as_slice().to_vec();
+        relationship[0].edge_kind.clear();
+        constraints.relationship_predicates =
+            BoundedVec::new(relationship).expect("inside the bound");
         assert_eq!(
             constraints.validate(),
             Err(
