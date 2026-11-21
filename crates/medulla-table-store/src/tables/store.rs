@@ -2430,6 +2430,7 @@ impl TableStore {
                     writes: accum.writes.clone(),
                 })?;
             }
+            mark_matviews_stale_in(wtx, txn)?;
             recorded = self.occ.record(accum.writes);
             row_changes = std::mem::take(&mut accum.changes);
             Ok(affected)
@@ -3995,6 +3996,28 @@ fn put_matview_in(
     wtx.open_table(MATVIEWS)?
         .insert(name, bytes.as_slice())
         .map_err(map_err)?;
+    Ok(())
+}
+
+/// Set `stale` on every materialized view that reads a table `txn` writes, in
+/// the same write transaction (MEDULLA-ENGINE-PARITY-R014.2).
+fn mark_matviews_stale_in(wtx: &SqlWrite<'_>, txn: &TableTxn) -> Result<(), String> {
+    let written = super::matview::written_tables(txn);
+    if written.is_empty() {
+        return Ok(());
+    }
+    let mut matviews = wtx.open_table(MATVIEWS)?;
+    let mut specs: Vec<super::matview::MatViewSpec> = Vec::new();
+    for row in matviews.iter().map_err(map_err)? {
+        let (_, value) = row.map_err(map_err)?;
+        specs.push(decode_stored(value.value(), "matview")?);
+    }
+    for spec in super::matview::mark_matviews_stale(specs, &written) {
+        let bytes = rmp_serde::to_vec_named(&spec).map_err(|e| format!("encode matview: {e}"))?;
+        matviews
+            .insert(spec.name.as_str(), bytes.as_slice())
+            .map_err(map_err)?;
+    }
     Ok(())
 }
 

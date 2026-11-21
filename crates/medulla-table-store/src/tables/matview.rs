@@ -1,4 +1,4 @@
-//! Materialized views (MEDULLA-ENGINE-PARITY-R014.1).
+//! Materialized views (MEDULLA-ENGINE-PARITY-R014.1, R014.2).
 //!
 //! A materialized view is a user table of stored result rows plus one
 //! [`MatViewSpec`] in the redb catalog table `__sql_matviews__`. The spec is
@@ -94,4 +94,45 @@ pub fn drop_matview_txn(name: &str) -> TableTxn {
         if_exists: false,
     });
     txn
+}
+
+/// The user tables a transaction writes: the tables of its row ops and of the
+/// DDL that rewrites a table's rows or shape (MEDULLA-ENGINE-PARITY-R014.2).
+pub fn written_tables(txn: &TableTxn) -> Vec<&str> {
+    let mut tables: Vec<&str> = Vec::new();
+    for op in &txn.ops {
+        match op {
+            TxnOp::Insert { table, .. }
+            | TxnOp::Update { table, .. }
+            | TxnOp::Delete { table, .. }
+            | TxnOp::AddColumn { table, .. }
+            | TxnOp::DropColumn { table, .. }
+            | TxnOp::RenameColumn { table, .. }
+            | TxnOp::AlterColumnType { table, .. }
+            | TxnOp::DropConstraint { table, .. }
+            | TxnOp::AddConstraint { table, .. } => tables.push(table.as_str()),
+            TxnOp::DropTable { name, .. } => tables.push(name.as_str()),
+            TxnOp::RenameTable { table, new_name } => {
+                tables.push(table.as_str());
+                tables.push(new_name.as_str());
+            }
+            _ => {}
+        }
+    }
+    tables
+}
+
+/// `mark_matviews_stale` (MEDULLA-ENGINE-PARITY-R014.2): of `specs`, the ones
+/// that read any of the `written` tables and are not yet stale, each with
+/// `stale = true`. The commit stores them in the same transaction that wrote the
+/// tables, so a materialized view is never fresh over a changed input.
+pub fn mark_matviews_stale(specs: Vec<MatViewSpec>, written: &[&str]) -> Vec<MatViewSpec> {
+    specs
+        .into_iter()
+        .filter(|spec| !spec.stale && spec.inputs.iter().any(|input| written.contains(&input.as_str())))
+        .map(|mut spec| {
+            spec.stale = true;
+            spec
+        })
+        .collect()
 }
