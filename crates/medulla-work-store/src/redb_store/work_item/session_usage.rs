@@ -25,6 +25,7 @@ pub fn read_session_usage(
     let nodes = snapshot.scoped_owner_table(NODES)?;
     let mut expected = Vec::new();
     let mut records = Vec::new();
+    let mut timings = Vec::new();
     let mut complete = true;
     let mut bytes = 0usize;
     for (examined, item) in nodes.scope_rows_from((graph, ""))?.enumerate() {
@@ -55,6 +56,11 @@ pub fn read_session_usage(
         else {
             continue;
         };
+        timings.push((
+            completion.commit_sequence,
+            run.clone(),
+            completion.payload.completion.timings.clone(),
+        ));
         let Some(usage) = completion.payload.completion.usage else {
             continue;
         };
@@ -69,7 +75,7 @@ pub fn read_session_usage(
             });
         }
     }
-    let mut result = aggregate_session_usage(tenant, principal, context_id, &expected, &records)?;
+    let mut result = aggregate_session_usage(tenant, principal, context_id, &expected, &records, &timings)?;
     result.inventory_complete = complete;
     Ok(result)
 }

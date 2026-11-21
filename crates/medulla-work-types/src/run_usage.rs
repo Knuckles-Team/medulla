@@ -1,5 +1,6 @@
 //! Bounded aggregation of native immutable run-completion measurements (R801.7).
 //! No prices, inferred counts or client-side authority live in this contract.
+use crate::run_completion::{PhaseTiming, TimingPhase};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -36,6 +37,54 @@ pub struct SessionUsage {
     pub missing_runs: usize,
     /// Counts are partial when not every expected run measured that counter.
     pub count_coverage: BTreeMap<String, usize>,
+    /// Per-turn phase durations stored in the committed run completions, in turn order
+    /// (MEDULLA-ORCH-VOCAB-R805). Empty, and omitted from the wire, when no run reported any.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub turn_timings: Vec<SessionTimingRecord>,
+}
+
+/// One phase duration of one turn of the session (MEDULLA-ORCH-VOCAB-R805). The turn index is
+/// the position of the run among the session's committed completions, ordered by
+/// `(commit_sequence, run_id)`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SessionTimingRecord {
+    pub turn_index: u32,
+    pub run_id: String,
+    pub phase: TimingPhase,
+    pub duration_ms: u64,
+}
+
+/// The declaration order of [`TimingPhase`], the order the records of one turn are emitted in.
+const PHASE_ORDER: [TimingPhase; 4] = [
+    TimingPhase::Request,
+    TimingPhase::Run,
+    TimingPhase::Queue,
+    TimingPhase::Tool,
+];
+
+/// The turn timing records of the committed completions `(commit_sequence, run_id, timings)`:
+/// runs ordered by `(commit_sequence, run_id)`, turn indexes `0..` in that order, one record per
+/// stored phase in [`TimingPhase`] declaration order. A run without timings has no record and
+/// still takes its turn index.
+fn turn_timing_records(timings: &[(u64, String, Vec<PhaseTiming>)]) -> Vec<SessionTimingRecord> {
+    let mut runs: Vec<&(u64, String, Vec<PhaseTiming>)> = timings.iter().collect();
+    runs.sort_by(|left, right| (left.0, &left.1).cmp(&(right.0, &right.1)));
+    let mut records = Vec::new();
+    for (turn, (_, run_id, phases)) in runs.into_iter().enumerate() {
+        for phase in PHASE_ORDER {
+            if let Some(timing) = phases.iter().find(|timing| timing.phase == phase) {
+                records.push(SessionTimingRecord {
+                    turn_index: u32::try_from(turn).unwrap_or(u32::MAX),
+                    run_id: run_id.clone(),
+                    phase,
+                    duration_ms: timing.duration_ms,
+                });
+            }
+        }
+    }
+    records
 }
 
 impl SessionUsageRecord {
@@ -72,6 +121,7 @@ pub fn aggregate_session_usage(
     context_id: &str,
     expected_run_ids: &[String],
     records: &[SessionUsageRecord],
+    timings: &[(u64, String, Vec<PhaseTiming>)],
 ) -> Result<SessionUsage, String> {
     if tenant.is_empty()
         || principal.is_empty()
@@ -109,6 +159,7 @@ pub fn aggregate_session_usage(
         recorded_runs: unique.len(),
         missing_runs: expected.len() - unique.len(),
         count_coverage,
+        turn_timings: turn_timing_records(timings),
     })
 }
 
@@ -159,8 +210,7 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "two".into()],
-            &[one.clone(), one],
-        )
+            &[one.clone(), one], &[])
         .unwrap();
         assert_eq!(result.recorded_runs, 1);
         assert_eq!(result.missing_runs, 1);
@@ -177,8 +227,7 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "missing".into()],
-            &[zero],
-        )
+            &[zero], &[])
         .unwrap();
         assert_eq!(result.counts.get("requests"), Some(&0));
         assert!(!result.counts.contains_key("input_tokens"));
@@ -199,8 +248,7 @@ mod tests {
                 "owner",
                 "context",
                 &["one".into()],
-                &[other]
-            )
+                &[other], &[])
             .is_err());
         }
         let mut other = original.clone();
@@ -210,8 +258,7 @@ mod tests {
             "owner",
             "context",
             &["one".into()],
-            &[original, other]
-        )
+            &[original, other], &[])
         .is_err());
         let mut high = record("one");
         high.counts.insert("input_tokens".into(), MAX_USAGE_COUNT);
@@ -220,8 +267,7 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "two".into()],
-            &[high, record("two")]
-        )
+            &[high, record("two")], &[])
         .is_err());
     }
     #[test]
@@ -231,7 +277,7 @@ mod tests {
             .collect();
         let expected: Vec<_> = records.iter().map(|r| r.run_id.clone()).collect();
         assert_eq!(
-            aggregate_session_usage("tenant", "owner", "context", &expected, &records)
+            aggregate_session_usage("tenant", "owner", "context", &expected, &records, &[])
                 .unwrap()
                 .recorded_runs,
             MAX_SESSION_USAGE_RUNS
@@ -242,5 +288,46 @@ mod tests {
         bad.counts = BTreeMap::from([("input_tokens".into(), MAX_USAGE_COUNT + 1)]);
         assert!(bad.validate().is_err());
         assert!(serde_json::from_str::<SessionUsageRecord>(r#"{"run_id":"x","context_id":"c","tenant":"t","principal":"p","counts":{"input_tokens":-1}}"#).is_err());
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R805
+    #[test]
+    fn turn_timings_follow_commit_order_and_phase_order() {
+        let phase = |phase, duration_ms| PhaseTiming { phase, duration_ms };
+        let timings = vec![
+            (9, "b".to_string(), vec![phase(TimingPhase::Tool, 4)]),
+            (
+                3,
+                "a".to_string(),
+                vec![phase(TimingPhase::Run, 20), phase(TimingPhase::Request, 5)],
+            ),
+            (5, "untimed".to_string(), Vec::new()),
+        ];
+        let result = aggregate_session_usage(
+            "tenant",
+            "owner",
+            "context",
+            &["a".into(), "b".into(), "untimed".into()],
+            &[],
+            &timings,
+        )
+        .unwrap();
+        let rows: Vec<(u32, &str, TimingPhase, u64)> = result
+            .turn_timings
+            .iter()
+            .map(|r| (r.turn_index, r.run_id.as_str(), r.phase, r.duration_ms))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                (0, "a", TimingPhase::Request, 5),
+                (0, "a", TimingPhase::Run, 20),
+                (2, "b", TimingPhase::Tool, 4),
+            ],
+            "the untimed run has no record and keeps turn 1"
+        );
+        let none = aggregate_session_usage("tenant", "owner", "context", &[], &[], &[]).unwrap();
+        assert!(none.turn_timings.is_empty());
+        assert!(!serde_json::to_string(&none).unwrap().contains("turn_timings"));
     }
 }

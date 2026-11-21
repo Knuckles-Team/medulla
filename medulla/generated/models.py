@@ -26364,6 +26364,15 @@ class SessionTouch(BaseModel):
     session_token: Secret
 
 
+class SessionTimingRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    duration_ms: Annotated[int, Field(ge=0)]
+    phase: TimingPhase
+    run_id: str
+    turn_index: Annotated[int, Field(ge=0)]
+
+
 class SessionUsage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -26374,6 +26383,7 @@ class SessionUsage(BaseModel):
     inventory_complete: bool
     missing_runs: Annotated[int, Field(ge=0)]
     recorded_runs: Annotated[int, Field(ge=0)]
+    turn_timings: list[SessionTimingRecord] | None = None
 
 
 class SessionView(BaseModel):
@@ -41028,6 +41038,7 @@ __all__ = [
     "ServerDesiredState",
     "ServerTransport",
     "SessionRecordProjection",
+    "SessionTimingRecord",
     "SessionTouch",
     "ServiceSpec",
     "SessionUsage",

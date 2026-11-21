@@ -3811,7 +3811,7 @@ def _session_usage_snapshot(value: Any, context_id: str) -> dict[str, Any]:
     }
     if (
         not isinstance(value, dict)
-        or set(value) != fields
+        or not fields <= set(value) <= fields | {"turn_timings"}
         or value["context_id"] != context_id
     ):
         raise RuntimeError("Session usage does not match the typed contract")
@@ -3819,7 +3819,26 @@ def _session_usage_snapshot(value: Any, context_id: str) -> dict[str, Any]:
         raise RuntimeError("Session usage inventory coverage is invalid")
     _session_run_coverage(value)
     _session_counter_coverage(value)
+    _session_turn_timings(value.get("turn_timings", []))
     return value
+
+
+def _session_turn_timings(records: Any) -> None:
+    phases = {"request", "run", "queue", "tool"}
+    if not isinstance(records, list):
+        raise RuntimeError("Session usage turn timings are invalid")
+    for record in records:
+        if (
+            not isinstance(record, dict)
+            or set(record) != {"turn_index", "run_id", "phase", "duration_ms"}
+            or type(record["turn_index"]) is not int
+            or record["turn_index"] < 0
+            or not isinstance(record["run_id"], str)
+            or record["phase"] not in phases
+            or type(record["duration_ms"]) is not int
+            or not 0 <= record["duration_ms"] <= 86_400_000
+        ):
+            raise RuntimeError("Session usage turn timings are invalid")
 
 
 def _session_run_coverage(value: dict[str, Any]) -> None:
