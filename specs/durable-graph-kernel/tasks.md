@@ -267,11 +267,11 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T255 MEDULLA-DURABLE-KERNEL-R868 Delete the unwired topic-log and agent-peer record code
 - [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads
 - [x] T258 MEDULLA-DURABLE-KERNEL-R871 Tight agent loops stay inside a round-trip budget
-- [ ] T259 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
+- [ ] T305 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
 - [ ] T260 MEDULLA-DURABLE-KERNEL-R872.1 Upgrade phase transition function
 - [x] T261 MEDULLA-DURABLE-KERNEL-R872.2 Describe the semantic index upgrade machine in the ontology
-- [ ] T262 MEDULLA-DURABLE-KERNEL-R873 Lazy paging proves forward progress
-- [ ] T263 MEDULLA-DURABLE-KERNEL-R873.1 A progress guard in `page_in_remaining`. Files: `crates/medulla-persistence/src/cold_offload.rs`. Test: `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed`.
+- [ ] T303 MEDULLA-DURABLE-KERNEL-R873 Lazy paging proves forward progress
+- [ ] T304 MEDULLA-DURABLE-KERNEL-R873.1 A progress guard in `page_in_remaining`. Files: `crates/medulla-persistence/src/cold_offload.rs`. Test: `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed`.
 - [ ] T264 MEDULLA-DURABLE-KERNEL-R873.2 Paging resumes by seek, not by skip. Files: `crates/medulla-store-apply/src/redb_store/dump.rs`. Test: `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length`.
 - [ ] T265 MEDULLA-DURABLE-KERNEL-R874 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T270 MEDULLA-DURABLE-KERNEL-R874.4 DirectStateInstallMachine: one Publish edge; transition_prepared_to_published derives the Published journal through apply

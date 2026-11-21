@@ -79,10 +79,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
 - [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation (canonical binding id, `search_live`, projection narrowing, per-statement `nearest` UDF)
 - [x] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
-- [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
 - [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
-- [ ] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
-- [ ] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [x] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
 - [x] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
 - [x] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
@@ -408,9 +405,6 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters
 - [ ] T387 [US4] MEDULLA-FEDERATED-QUERY-R722.7 Source approval compare-and-set
 - [x] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
-- [ ] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
-- [ ] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
-- [ ] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
 - [x] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
 - [x] T460 [US4] MEDULLA-FEDERATED-QUERY-R722.9.1 Bound-driver precedence in source resolution (split from R722.9 to break the R722.3/R722.9 cycle)
 - [x] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
@@ -475,7 +469,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
 - [x] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
 - [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply
-- [ ] T453 [US1] MEDULLA-FEDERATED-QUERY-R739 Census debt of federated query is closed (rollup)
+- [ ] T461 [US1] MEDULLA-FEDERATED-QUERY-R739 Census debt of federated query is closed (rollup)
 - [x] T454 [US1] MEDULLA-FEDERATED-QUERY-R739.1 ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply
 - [x] T455 [US1] MEDULLA-FEDERATED-QUERY-R739.2 SourceQueryFailure/SourceQueryStage is a failure position, not a lifecycle: rename, no machine
 - [x] T456 [US1] MEDULLA-FEDERATED-QUERY-R739.3 UqlProofStep discriminator `stage` is a variant tag, not a lifecycle: rename, no machine

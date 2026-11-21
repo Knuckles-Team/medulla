@@ -337,6 +337,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T326 [US8] MEDULLA-TYPED-PACKS-R811 Census debt of the connector pack mirror is closed (rollup)
 - [x] T327 [US8] MEDULLA-TYPED-PACKS-R811.1 Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine
 - [x] T328 [US8] MEDULLA-TYPED-PACKS-R811.2 Fleet catalog `DiscoveryOutcome` tag renamed from `status` to `probe`
-- [ ] T329 [US1] MEDULLA-TYPED-PACKS-R001.10 Generated Python enums equal the Rust enums
+- [ ] T337 [US1] MEDULLA-TYPED-PACKS-R001.10 Generated Python enums equal the Rust enums
 - [ ] T330 [US1] MEDULLA-TYPED-PACKS-R001.11 The enum parity gate fails on drift
 - [ ] T331 [US1] MEDULLA-TYPED-PACKS-R001.12 An unknown violation code never discards a rejection

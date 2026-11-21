@@ -107,8 +107,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T919 [US5] MEDULLA-DECISION-ENGINE-R079.6 Embedding set in SourceIngest prepare
 - [x] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
 - [x] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
-- [ ] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
-- [ ] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
 - [ ] T103 [US5] MEDULLA-DECISION-ENGINE-R080.1 Typed provenance-rung model and overwrite-protection rule
 - [ ] T104 [US5] MEDULLA-DECISION-ENGINE-R080.2 Served producers record their rung and resist overwrite
 - [ ] T105 [US5] MEDULLA-DECISION-ENGINE-R081 Confidence-weighted community detection excluding similarity edges
@@ -352,8 +350,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T341 [US7] MEDULLA-DECISION-ENGINE-R138.101.1 Finding model and impact filter kernel
 - [ ] T342 [US7] MEDULLA-DECISION-ENGINE-R138.101.2 Family wiring, refusals and evidence
 - [x] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
-- [ ] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
-- [ ] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
 - [x] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
 - [x] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
 - [ ] T346 [US4] MEDULLA-DECISION-ENGINE-R147.1 Distilled score model
@@ -853,7 +849,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T833 [US2] MEDULLA-DECISION-ENGINE-R036.103 Durable RBAC read reservation
 - [ ] T834 [US2] MEDULLA-DECISION-ENGINE-R036.104 Agent Library durable admission participant
 - [x] T835 [US2] MEDULLA-DECISION-ENGINE-R036.105 Request-bound coordinator decision certificate
-- [ ] T919 [US2] MEDULLA-DECISION-ENGINE-R036.105.1 Coordinator-decision certificate table, lineage row, offline upgrade and sealed type. Size: M, 2 PRs, 6 hours.
+- [ ] T967 [US2] MEDULLA-DECISION-ENGINE-R036.105.1 Coordinator-decision certificate table, lineage row, offline upgrade and sealed type. Size: M, 2 PRs, 6 hours.
 - [x] T920 [US2] MEDULLA-DECISION-ENGINE-R036.105.2 DecisionCommit writes the durable coordinator decision with the certificate. Size: L, 2 PRs, 8 hours.
 - [ ] T836 [US2] MEDULLA-DECISION-ENGINE-R036.106 Durable profile-use grant records
 - [x] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
@@ -950,7 +946,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T932 [US6] MEDULLA-DECISION-ENGINE-R830.9 StageBeacon.stage_id rename (not a lifecycle)
 - [x] T933 [US6] MEDULLA-DECISION-ENGINE-R830.10 StageInput/StageAllocation stage_id rename (not a lifecycle)
 - [x] T934 [US6] MEDULLA-DECISION-ENGINE-R830.11 TrainingRunOutcome rename (not a lifecycle)
-- [ ] T935 [US6] MEDULLA-DECISION-ENGINE-R831 Census debt of the decision engine is closed (rollup)
+- [ ] T968 [US6] MEDULLA-DECISION-ENGINE-R831 Census debt of the decision engine is closed (rollup)
 - [ ] T936 [US6] MEDULLA-DECISION-ENGINE-R831.1 VerifierCase/VerifierCaseState state machine: new VerifierCaseState::apply, route every writer through it
 - [x] T937 [US6] MEDULLA-DECISION-ENGINE-R831.2 LedgerEntry/LedgerStatus state machine: holder-level transition delegating to LedgerStatus::apply
 - [x] T938 [US6] MEDULLA-DECISION-ENGINE-R831.3 RevisionRow, OptimizationResult/RevisionStage state machine: holder-level transition delegating to RevisionStage::apply
@@ -973,8 +969,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine
 - [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R173.8 The mutation compiler refuses every caller write of editStatus; HarnessEdit gains Create
-- [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R869 Action and decision provenance is queryable (rollup)
-- [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model: `:ActionRecord`, `:FactUse`, `:RuleUse` and their properties in `action-v1.ttl`; new `action-v1.shapes.ttl` wired into the `action` CoreSpec; test `crates/medulla-core/tests/action_provenance.rs::action_record_terms_and_shape`.
+- [ ] T969 [US7] MEDULLA-DECISION-ENGINE-R869 Action and decision provenance is queryable (rollup)
+- [ ] T970 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model: `:ActionRecord`, `:FactUse`, `:RuleUse` and their properties in `action-v1.ttl`; new `action-v1.shapes.ttl` wired into the `action` CoreSpec; test `crates/medulla-core/tests/action_provenance.rs::action_record_terms_and_shape`.
 - [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals: `SourceBatchExtension::ActionRecords`, `source_action_record.rs` types, `source_ingestion/action_record.rs` validator, four `ServerErrorCode` variants; test `medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay`.
 - [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain: stored query `why_action` over `TRAVERSE -[*]->{1,8} WITH PROOF`; test `medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision`.
 - [ ] T961 [US7] MEDULLA-DECISION-ENGINE-R869.4 Hot-path proof: why did we reorder
