@@ -803,6 +803,17 @@ mod admission_tests {
         assert!(!manifest.valid, "the image is never advertised as complete");
         drop(s);
 
+        // The same exit degrades the graph's readiness (MEDULLA-OBSERVE-R007.1), naming the
+        // paging task.
+        let readiness = medulla_observe::readiness().get("frozen:graph").unwrap();
+        assert_eq!(
+            readiness.state,
+            medulla_observe::machine::readiness::ReadinessState::Degraded
+        );
+        let reason = readiness.reason.unwrap();
+        assert_eq!(reason.code, "NO_PROGRESS");
+        assert_eq!(reason.task.as_deref(), Some("lazy-page-in:frozen:graph"));
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 

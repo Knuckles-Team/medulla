@@ -1302,7 +1302,7 @@ impl GraphRegistry {
                 *manifest = MaterializationManifest::catalog_only(entry.incarnation_id);
             }
         }
-        readiness_events::opening(name);
+        readiness_events::evicted(name);
         true
     }
 
@@ -2326,6 +2326,14 @@ mod readiness_events {
                 apply(name, ReadinessEvent::Reopen)
             }
             _ => medulla_observe::readiness().open(name),
+        }
+    }
+
+    /// The graph went back to catalog-only: a `Ready` graph reopens. A `Degraded` graph stays
+    /// degraded until its next open succeeds.
+    pub(super) fn evicted(name: &str) {
+        if state(name) == Some(ReadinessState::Ready) {
+            apply(name, ReadinessEvent::Reopen);
         }
     }
 

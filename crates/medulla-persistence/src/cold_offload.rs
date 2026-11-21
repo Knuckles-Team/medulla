@@ -613,6 +613,11 @@ async fn page_in_remaining(
                         manifest.fail(true);
                     }
                     state.write().await.registry.evict_resident_if_current(&handle);
+                    degrade_readiness(
+                        ticket.name(),
+                        medulla_observe::machine::readiness::NO_PROGRESS,
+                        &stuck.to_string(),
+                    );
                     tracing::warn!(
                         target: "medulla::paging",
                         graph = %ticket.name(),
@@ -646,10 +651,28 @@ async fn page_in_remaining(
     }
 }
 
+/// Degrade a graph's readiness (MEDULLA-OBSERVE-R007.1) with the task that was paging it
+/// (`lazy-page-in:<graph>`, MEDULLA-OBSERVE-R003.3).
+fn degrade_readiness(graph: &str, code: &str, detail: &str) {
+    let reason = medulla_observe::machine::readiness::DegradeReason {
+        code: code.to_string(),
+        task: Some(format!("lazy-page-in:{graph}")),
+        detail: detail.to_string(),
+    };
+    if let Err(refused) = medulla_observe::readiness().degrade(graph, reason) {
+        tracing::debug!(target: "medulla::paging", graph = %graph, %refused, "readiness degrade refused");
+    }
+}
+
 /// A page fetch that failed or was cancelled: the typed failure the registered task finishes
 /// with (`PARTIAL_MATERIALIZATION`, the graph stays partly materialized) and a WARN line that
 /// names the graph.
 fn paging_failed(graph: &str, detail: &str) -> String {
+    degrade_readiness(
+        graph,
+        medulla_observe::machine::readiness::PARTIAL_MATERIALIZATION,
+        detail,
+    );
     tracing::warn!(
         target: "medulla::paging",
         graph = %graph,
