@@ -410,6 +410,7 @@ class AssemblyConstraints(BaseModel):
     modalities_out: BoundedVec_string_16 = Field(default_factory=list)
     require_structured_output: bool | None = None
     require_tools: bool | None = None
+    require_adequacy: bool = False
 
 
 class AssemblyRequest(BaseModel):
@@ -425,6 +426,9 @@ class AssemblyRequest(BaseModel):
     solver: SolverBudget | None = None
     templates: BoundedVec_AgentGraphEntryRef_8 = Field(default_factory=list)
     tenant_id: str
+    evidence_streams: (
+        Annotated[list[EvidenceStreamRef], Field(max_length=16)]
+    ) = Field(default_factory=list)
 
 
 class AssemblyRequirements(BaseModel):
@@ -489,6 +493,9 @@ class CandidateFacts(BaseModel):
     primitive: PrimitiveContract | None = None
     required_capabilities: BoundedVec_string_64
     requires: BoundedVec_ComponentDependency_256
+    size: SourceSize | None = None
+    adequacy: Adequacy | None = None
+    observed_run_cost: ObservedRunCost | None = None
 
 
 class CandidateSourceRecordAgentLibrary(BaseModel):
@@ -847,6 +854,15 @@ class DecisionPolicy(BaseModel):
     statistical: StatisticalPolicy | None = None
     topology: TopologyPolicy | None = None
     unknown_cost: UnknownCostRule
+    safety_bounds: Annotated[list[SafetyBound], Field(max_length=32)] = Field(
+        default_factory=list
+    )
+    limits: Annotated[list[LimitRule], Field(max_length=64)] = Field(
+        default_factory=list
+    )
+    entry_trust: EntryTrustPolicy = Field(
+        default_factory=lambda: EntryTrustPolicy(known_source_digests=[])
+    )
 
 
 class DecisionPolicyRefDefault(BaseModel):
@@ -2251,7 +2267,186 @@ QuestionKind = (
     | Literal["promotion"]
     | Literal["reasoning_paradigm"]
     | Literal["model_capacity"]
+    | Literal["route"]
+    | Literal["rank"]
+    | Literal["classify"]
+    | Literal["resolve_entity"]
+    | Literal["schema_mapping"]
+    | Literal["template_choice"]
+    | Literal["retrieval_plan"]
+    | Literal["ingestion_lane"]
+    | Literal["enrichment_schedule"]
+    | Literal["placement_plan"]
+    | Literal["over_window_plan"]
+    | Literal["instruction_disclosure"]
+    | Literal["changeset_review"]
+    | Literal["temporal_basis"]
+    | Literal["thought_search"]
+    | Literal["comparative_analysis_plan"]
+    | Literal["context_package"]
+    | Literal["topology"]
+    | Literal["program_lookup"]
+    | Literal["skill_workflow_compile"]
+    | Literal["skill_upgrade"]
+    | Literal["team_coordination"]
+    | Literal["capability_designation"]
+    | Literal["context_replacement"]
+    | Literal["recursion_mode"]
+    | Literal["sub_call_admission"]
+    | Literal["command_config"]
+    | Literal["run_adjustment"]
+    | Literal["path_preference"]
+    | Literal["correction_admission"]
+    | Literal["field_shielding"]
+    | Literal["graph_intake"]
+    | Literal["tool_necessity"]
+    | Literal["feedback_loop"]
+    | Literal["planning_admission"]
+    | Literal["tool_action_admission"]
+    | Literal["a2a_route"]
+    | Literal["paper_admission"]
+    | Literal["held_item_admission"]
+    | Literal["criterion_review"]
+    | Literal["generated_code_admission"]
+    | Literal["runtime_quota"]
+    | Literal["insight_selection"]
+    | Literal["tool_relevance"]
+    | Literal["fanout_aggregate"]
+    | Literal["delegation_admission"]
+    | Literal["answer_ranking"]
+    | Literal["serving_technique_activation"]
+    | Literal["process_remediation"]
+    | Literal["ingest_shortfall"]
+    | Literal["capacity_proposal"]
+    | Literal["probe_selection"]
+    | Literal["reward_decomposition"]
+    | Literal["research_next"]
+    | Literal["feature_match"]
+    | Literal["curriculum_promotion"]
+    | Literal["population_drift"]
+    | Literal["fanout_width"]
+    | Literal["autonomy_verdict"]
+    | Literal["trajectory_join"]
+    | Literal["step_verification"]
+    | Literal["adversarial_admission"]
+    | Literal["skill_evolution"]
+    | Literal["playbook_triage"]
+    | Literal["trajectory_ladder"]
+    | Literal["analyst_synthesis"]
 )
+
+
+class EvidenceStreamRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: EvidenceStreamKind
+    stream_id: str
+    revision: Annotated[int, Field(ge=0)]
+    digest: str
+
+
+class SourceSize(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_bytes: Annotated[int, Field(ge=0)]
+    line_count: Annotated[int, Field(ge=0, le=4294967295)]
+    measured_revision: Annotated[int, Field(ge=0)]
+
+
+class Adequacy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adequate: bool
+    evaluation_id: str
+
+
+class SafetyBound(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bound_id: str
+    revision: Annotated[int, Field(ge=0)]
+    digest: str
+    metric_id: str
+    unit: str
+    comparison: BoundComparison
+    limit_q32: int
+
+
+class LimitRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    metric: LimitMetric
+    bound: int
+    scope: str
+
+
+class EntryTrustPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    known_source_digests: list[str]
+
+
+class EvidenceStreamKind(str, Enum):
+    SIMULATION = "simulation"
+    INSPECTION = "inspection"
+    PROCESS_KNOWLEDGE = "process_knowledge"
+
+
+class LimitMetric(str, Enum):
+    POSITION_SIZE = "position_size"
+    DRAWDOWN = "drawdown"
+    SECTOR_CONCENTRATION = "sector_concentration"
+
+
+class BoundComparison(str, Enum):
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+
+
+class CodingAgentPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    agent_revision: str
+    artifact_contract_digest: str
+    discovery_receipt_digest: str
+    skills: Annotated[list[SkillTransformation], Field(max_length=32)]
+
+
+class ObservedRunCost(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    measured_revision: Annotated[int, Field(ge=0)]
+    micros: Annotated[int, Field(ge=0)]
+
+
+class TopologyCommitOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_graph_id: str
+    evidence_revision: Annotated[int, Field(ge=0)]
+    premises: list[str]
+
+
+class EnumerationPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_id: str
+    page: Annotated[int, Field(ge=0, le=4294967295)]
+    last_page: bool
+    complete: bool
+    ids_digest: str | None = None
+    ids: Annotated[list[SourceEntityRef], Field(max_length=16384)]
+
+
+class SourceEntityRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record_id: str
+    stream: str
 
 
 AbstainReasonUncoveredCapability.model_rebuild()
@@ -2915,4 +3110,18 @@ __all__ = [
     "UniquenessProof",
     "UniquenessScope",
     "VerifiedAgentFact",
+    "EvidenceStreamRef",
+    "SourceSize",
+    "Adequacy",
+    "SafetyBound",
+    "LimitRule",
+    "EntryTrustPolicy",
+    "EvidenceStreamKind",
+    "LimitMetric",
+    "BoundComparison",
+    "CodingAgentPlan",
+    "ObservedRunCost",
+    "TopologyCommitOutcome",
+    "EnumerationPage",
+    "SourceEntityRef",
 ]

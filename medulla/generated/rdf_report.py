@@ -204,10 +204,8 @@ class ExternalTerm(BaseModel):
 class OntologyExternalCoverageView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    coverage: ExternalOntologyCoverage
-    graph: str = ""
     source_id: str
-    tenant: str | None = None
+    coverage: ExternalOntologyCoverage
 
 
 class OntologyUnmappedClassView(BaseModel):

@@ -51,6 +51,7 @@ class GraphSchemaCommitted(BaseModel):
     graph_version: Annotated[int, Field(ge=0)]
     revision: Annotated[int, Field(ge=0)] | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    ontology_diff: OntologyDiffReport | None = None
 
 
 class GraphSchemaOpAttach(BaseModel):
@@ -286,6 +287,7 @@ class OntologyRevisionEntry(BaseModel):
     digest: Digest256
     importer: str
     revision: Annotated[int, Field(ge=0)]
+    change_impact: ChangeImpact | None = None
 
 
 class SchemaSourceOriginViewOntology(BaseModel):
@@ -333,6 +335,44 @@ BoundedVec_GraphSchemaTermView_1000 = Annotated[
         max_length=1000,
     ),
 ]
+
+
+class OntologyDiffReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    diff: OntologyDiff
+    impact: ChangeImpact
+    items: ImpactItems
+
+
+class OntologyDiff(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_rev: str
+    to_rev: str
+    added: list[str]
+    removed: list[str]
+    changed: list[str]
+    deprecated: list[str]
+
+
+class ChangeImpact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    instances_invalid: Annotated[int, Field(ge=0)]
+    shapes_broken: Annotated[int, Field(ge=0)]
+    mappings_broken: Annotated[int, Field(ge=0)]
+    queries_broken: Annotated[int, Field(ge=0)]
+
+
+class ImpactItems(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    instances: list[str]
+    shapes: list[str]
+    mappings: list[str]
+    queries: list[str]
+
 
 FieldContract.model_rebuild()
 
@@ -421,4 +461,8 @@ __all__ = [
     "DiffTargetCandidateBody",
     "DiffTargetRevision",
     "GraphSchemaOpDiffOntology",
+    "OntologyDiffReport",
+    "OntologyDiff",
+    "ChangeImpact",
+    "ImpactItems",
 ]

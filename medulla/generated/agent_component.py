@@ -387,7 +387,13 @@ class AgentComponentStatusRequest(BaseModel):
     kind: AgentComponentMutationKind
 
 
-AgentComponentMutationKind = str | Literal["withdraw"] | Literal["republish"]
+AgentComponentMutationKind = (
+    str
+    | Literal["withdraw"]
+    | Literal["republish"]
+    | Literal["publish"]
+    | Literal["retire"]
+)
 
 AgentComponentContentRequest.model_rebuild()
 

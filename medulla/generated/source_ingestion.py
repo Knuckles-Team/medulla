@@ -8,7 +8,6 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 
 from pydantic import (
-    AfterValidator,
     BaseModel,
     BeforeValidator,
     ConfigDict,
@@ -19,7 +18,9 @@ from pydantic import (
 
 from ._shared import (
     Digest256,
+    EnumerationPage,
     McpCatalogSnapshotBinding,
+    SourceEntityRef,
     SqlColumnProfile,
 )
 from .digest import (
@@ -52,13 +53,6 @@ class SourceCheckpoint(BaseModel):
     position: SourceJson
     stream: str
     watermark: str | None = None
-
-
-class SourceEntityRef(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    record_id: str
-    stream: str
 
 
 class SourceIngestStatus(BaseModel):
@@ -113,9 +107,72 @@ def _single_tagged_extension(value: dict[str, list[Any]]) -> dict[str, list[Any]
     return value
 
 
-SourceBatchExtension = Annotated[
-    dict[str, list[Any]], AfterValidator(_single_tagged_extension)
-]
+class SourceBatchExtensionAccess(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    access: Annotated[list[SourceJson], Field(max_length=1024)]
+
+
+class SourceBatchExtensionGroups(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    groups: Annotated[list[SourceJson], Field(max_length=64)]
+
+
+class SourceBatchExtensionEnumeration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    enumeration: EnumerationPage
+
+
+class SourceBatchExtensionContainers(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    containers: Annotated[list[SourceJson], Field(max_length=1024)]
+
+
+class SourceBatchExtensionProposals(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposals: Annotated[list[SourceJson], Field(max_length=64)]
+
+
+class SourceBatchExtensionFacts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    facts: Annotated[list[SourceJson], Field(max_length=1024)]
+
+
+class SourceBatchExtensionTranscripts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    transcripts: Annotated[list[SourceJson], Field(max_length=1024)]
+
+
+class SourceBatchExtensionSkillDocuments(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    skill_documents: Annotated[list[SourceJson], Field(max_length=64)]
+
+
+class SourceBatchExtensionActionRecords(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action_records: Annotated[list[SourceJson], Field(max_length=256)]
+
+
+SourceBatchExtension = (
+    dict
+    | SourceBatchExtensionAccess
+    | SourceBatchExtensionGroups
+    | SourceBatchExtensionEnumeration
+    | SourceBatchExtensionContainers
+    | SourceBatchExtensionProposals
+    | SourceBatchExtensionFacts
+    | SourceBatchExtensionTranscripts
+    | SourceBatchExtensionSkillDocuments
+    | SourceBatchExtensionActionRecords
+)
 
 
 def _feature_octets(value: Any) -> bytes:

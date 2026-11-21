@@ -93,6 +93,7 @@ from ._shared import (
     Certificate,
     ClaimedTaskMapping,
     ClaimProvenance,
+    CodingAgentPlan,
     Coefficient,
     CoefficientKnown,
     ColdStart,
@@ -370,6 +371,9 @@ class AssemblyResult(BaseModel):
     model: SolveModelSpec | None = None
     record: DecisionRecord
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    model_revision: str | None = None
+    model_input: ModelInputCapabilities | None = None
+    coding_agent_plan: CodingAgentPlan | None = None
 
 
 class TemplateInstanceRef(BaseModel):

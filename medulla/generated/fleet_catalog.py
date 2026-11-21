@@ -397,7 +397,7 @@ BoundedVec_Digest256_64 = Annotated[list[Digest256], Field(max_length=64)]
 BoundedVec_FleetCatalogRow_256 = Annotated[list[FleetCatalogRow], Field(max_length=256)]
 
 
-ToolMode = str | Literal["undeclared"]
+ToolMode = str | Literal["undeclared"] | Literal["condensed"] | Literal["verbose"]
 
 DiscoveryCounts.model_rebuild()
 

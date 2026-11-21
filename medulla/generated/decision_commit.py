@@ -219,6 +219,7 @@ from ._shared import (
     ToolSideEffects,
     TopologyAdmission,
     TopologyCaps,
+    TopologyCommitOutcome,
     TopologyFacts,
     TopologyInputs,
     TopologyPlan,
@@ -284,6 +285,7 @@ class DecisionCommitRequest(BaseModel):
     expected_catalog_digest: str
     record: DecisionRecord
     topology: TopologyCommitEvidence | None = None
+    retry_of: str | None = None
 
 
 class DecisionCommitResult(BaseModel):
@@ -293,6 +295,7 @@ class DecisionCommitResult(BaseModel):
     record_id: str
     replayed: bool
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    topology: TopologyCommitOutcome | None = None
 
 
 AgentComponentCommittedResult.model_rebuild()
