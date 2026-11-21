@@ -71,7 +71,13 @@ class Engine:
 
 
 @contextlib.contextmanager
-def restartable_engine(tmp_path: Path, run: str, *, bootstrap: bool):
+def restartable_engine(
+    tmp_path: Path,
+    run: str,
+    *,
+    bootstrap: bool,
+    extra_env: dict[str, str] | None = None,
+):
     """One native engine over ``tmp_path``'s durable store.
 
     A second call with the same ``tmp_path`` reopens the store the first one
@@ -94,6 +100,7 @@ def restartable_engine(tmp_path: Path, run: str, *, bootstrap: bool):
         str(tmp_path / "security"), auth_secret=secret, persist_dir=str(persist)
     )
     env.update(HOME=str(tmp_path), MEDULLA_ENCRYPTION_KEY="designation-test-key")
+    env.update(extra_env or {})
     log = tmp_path / f"{run}.log"
     process = spawn_server(
         [str(Path(binary).resolve()), "--socket-path", socket], env=env, log_path=log

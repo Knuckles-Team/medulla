@@ -48,7 +48,8 @@ use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_decision_stats::decision::drift::DriftThresholds;
 use medulla_decision_types::decision::statistical::retrieval_drift::{
-    shard_generation_node_id, DriftEvaluated, DriftKind, DriftPolicyNode, DriftRefreshed,
+    DRIFT_REFRESH_RECEIPT_NODE_TYPE,
+    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftKind, DriftPolicyNode, DriftRefreshed,
     DriftSignal, FiringShard, RefreshPlan, RefreshPriority, ScheduledRefresh,
     ShardGenerationNode, ShardSwap, RETRIEVAL_DRIFT_SCHEMA_VERSION, SHARD_GENERATION_NODE_TYPE,
 };
@@ -333,13 +334,19 @@ impl Serving<'_> {
     /// planned types are re-embedded, the shards are swapped, and the receipt is stored. The
     /// swapped generations become the durable shard pointer nodes the served write commits.
     fn refresh_drift(&self, logical: &str, plan_digest: &str) -> Result<LearningRecorded, String> {
-        let receipt_key = format!("drift-refresh:{plan_digest}");
         let tenant = self.ctx.tenant_id;
-        if let Some(bytes) = self.ctx.store.decision_artifact(tenant, &receipt_key)? {
-            return Ok(LearningRecorded::DriftRefreshed(Box::new(decode_artifact(
-                &bytes,
-                "drift refresh receipt",
-            )?)));
+        let graph = self.graph(0)?;
+        // The receipt is a graph node committed in the batch of the shard pointers
+        // (MEDULLA-DECISION-ENGINE-R174.8.4), so a recorded receipt is read from the graph.
+        if let Some(blob) = graph.core().get_node_properties(&drift_refresh_receipt_node_id(plan_digest)) {
+            let mut value: serde_json::Value =
+                rmp_serde::from_slice(&blob).map_err(|error| format!("drift refresh receipt: {error}"))?;
+            if let Some(object) = value.as_object_mut() {
+                object.remove("type");
+            }
+            let recorded: DriftRefreshed = serde_json::from_value(value)
+                .map_err(|error| format!("drift refresh receipt: {error}"))?;
+            return Ok(LearningRecorded::DriftRefreshed(Box::new(recorded)));
         }
         self.inputs
             .drift_lease
@@ -354,7 +361,6 @@ impl Serving<'_> {
         if scheduled.plan.logical_graph != logical {
             return Err(invalid_parameter("the plan belongs to another logical graph"));
         }
-        let graph = self.graph(0)?;
         let embedder = self
             .inputs
             .drift_embedder
@@ -444,7 +450,6 @@ impl Serving<'_> {
                 .collect(),
             signals: scheduled.signals.clone(),
         };
-        let receipt = store_once(self.ctx, receipt_key, "drift refresh receipt", receipt, |a, b| a == b)?;
         let mut methods = Vec::new();
         for swap in &receipt.shards {
             let node = ShardGenerationNode {
@@ -460,6 +465,12 @@ impl Serving<'_> {
                 properties_msgpack: rmp_serde::to_vec_named(&props).map_err(|error| error.to_string())?,
             });
         }
+        let mut receipt_props = serde_json::to_value(&receipt).map_err(|error| error.to_string())?;
+        receipt_props["type"] = serde_json::json!(DRIFT_REFRESH_RECEIPT_NODE_TYPE);
+        methods.push(medulla_protocol_types::protocol::Method::AddNode {
+            node_id: drift_refresh_receipt_node_id(plan_digest),
+            properties_msgpack: rmp_serde::to_vec_named(&receipt_props).map_err(|error| error.to_string())?,
+        });
         let apply = {
             let tenant = self.tenant().to_string();
             let logical = logical.to_string();

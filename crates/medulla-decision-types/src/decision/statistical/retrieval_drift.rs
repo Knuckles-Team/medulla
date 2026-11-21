@@ -208,7 +208,8 @@ pub struct ShardSwap {
 }
 
 /// The receipt of an executed refresh plan, stored under
-/// `drift-refresh:<plan_digest>` (MEDULLA-DECISION-ENGINE-R174.8.5).
+/// the graph node `drift-refresh:<plan_digest>`, committed in the batch of the shard pointers
+/// (MEDULLA-DECISION-ENGINE-R174.8.4, R174.8.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -240,6 +241,14 @@ pub const SHARD_GENERATION_NODE_TYPE: &str = "DriftShardGeneration";
 /// The id of the shard generation node of `shard_id` in `logical_graph`.
 pub fn shard_generation_node_id(logical_graph: &str, shard_id: u32) -> String {
     format!("drift-shard:{logical_graph}/{shard_id}")
+}
+
+/// The graph node type of a stored [`DriftRefreshed`] receipt.
+pub const DRIFT_REFRESH_RECEIPT_NODE_TYPE: &str = "DriftRefreshReceipt";
+
+/// The id of the receipt node of the refresh of `plan_digest`.
+pub fn drift_refresh_receipt_node_id(plan_digest: &str) -> String {
+    format!("drift-refresh:{plan_digest}")
 }
 
 /// What one drift evaluation of a logical graph found.

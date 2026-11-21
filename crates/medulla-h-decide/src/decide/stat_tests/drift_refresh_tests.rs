@@ -13,7 +13,7 @@ use super::retrieval_tests::learn;
 use super::*;
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
 use medulla_decision_types::decision::statistical::retrieval_drift::{
-    shard_generation_node_id, DriftEvaluated, DriftPolicyNode, DriftRefreshed, ScheduledRefresh,
+    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftPolicyNode, DriftRefreshed, ScheduledRefresh,
     ShardSwap,
 };
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
@@ -462,6 +462,15 @@ async fn signal_premises_and_refresh_receipt() {
     )
     .unwrap();
     assert_eq!(pointer["generation"], 2);
+    // The receipt is a graph node written in the same batch as the pointer (R174.8.4).
+    let recorded: serde_json::Value = rmp_serde::from_slice(
+        &core
+            .get_node_properties(&drift_refresh_receipt_node_id(&plan.plan_digest))
+            .expect("the receipt node"),
+    )
+    .unwrap();
+    assert_eq!(recorded["plan_digest"], plan.plan_digest);
+    assert_eq!(recorded["type"], "DriftRefreshReceipt");
     assert!(generations_of(&tenant, RECEIPT_GRAPH).contains(&("1".to_string(), 2)));
 
     // A second refresh answers the stored receipt and embeds nothing.
