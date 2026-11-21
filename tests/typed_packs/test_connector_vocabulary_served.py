@@ -158,6 +158,7 @@ TERMS: list[Term] = [
     _obj("personal", "sharesFile", "FileShare"),
     _data("personal", "isPublicLink", "FileShare", "true"),
     _data("personal", "shareExpiresAt", "FileShare", "2027-02-01"),
+    _obj("personal", "mentionsConcept", "TranscriptSegment"),
     # virtual_graph (R077)
     _cls("virtual_graph", "NamedGraph"),
     _data("virtual_graph", "tripleCount", "NamedGraph", "42"),

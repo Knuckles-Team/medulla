@@ -234,6 +234,11 @@ Google Calendar). BFO:Process via Event. Aligned to schema:Event.""" ;
     rdfs:domain :TranscriptSegment ;
     rdfs:range xsd:decimal .
 
+:mentionsConcept a owl:ObjectProperty ;
+    rdfs:label "mentions concept" ;
+    rdfs:comment "Links a transcript segment to a concept node it mentions. The range is open: a concept reference may name a node of any class." ;
+    rdfs:domain :TranscriptSegment .
+
 :hasTranscript a owl:ObjectProperty ;
     rdfs:label "has transcript" ;
     rdfs:comment "Links a recording or video to its transcript." ;
