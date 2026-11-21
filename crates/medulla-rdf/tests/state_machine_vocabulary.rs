@@ -388,6 +388,7 @@ fn state_name(state: WorkItemStatus) -> &'static str {
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R812.3
+// spec: MEDULLA-ORCH-VOCAB-R812.6
 #[test]
 fn work_item_machine_matches_edge_table() {
     let doc = Doc::of(&[MACHINES]);

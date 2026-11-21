@@ -412,7 +412,9 @@ pub struct EnrichmentBudgetPark {
 pub struct SubmitWorkItemResult {
     pub schema_version: NativeControlSchemaVersion,
     pub work_item_id: String,
-    pub status: String,
+    /// The admitted state: the WorkItem machine's initial state for the open
+    /// dependency count (MEDULLA-ORCH-VOCAB-R812.6).
+    pub status: crate::work_item_read::WorkItemStatus,
     pub created: bool,
     pub replayed: bool,
     pub command_sequence: u64,

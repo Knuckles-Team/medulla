@@ -346,16 +346,17 @@ fn admit_and_identify_submit_work_item(
 
 /// The admitted state: the machine's initial state, with W01 fired at once when no
 /// dependency is open.
-pub fn submit_work_item_status(pending_dependencies: usize) -> &'static str {
+pub fn submit_work_item_status(
+    pending_dependencies: usize,
+) -> medulla_work_types::work_item_machine::WorkItemStatus {
     medulla_work_types::work_item_machine::WorkItemStatus::initial(pending_dependencies as u64)
-        .as_stored()
 }
 
 fn insert_submit_work_item_identity_props(
     props: &mut serde_json::Map<String, serde_json::Value>,
     context_tenant: &str,
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
-    status: &str,
+    status: medulla_work_types::work_item_machine::WorkItemStatus,
 ) {
     props.insert(
         "node_type".into(),
@@ -377,7 +378,10 @@ fn insert_submit_work_item_identity_props(
         "queue".into(),
         serde_json::Value::String(request.kind.clone()),
     );
-    props.insert("status".into(), serde_json::Value::String(status.into()));
+    props.insert(
+        "status".into(),
+        serde_json::Value::String(status.as_stored().into()),
+    );
     props.insert("priority".into(), serde_json::Value::from(request.priority));
     props.insert(
         "prio_bucket".into(),
@@ -526,7 +530,7 @@ pub fn build_submit_work_item_props(
     pending_dependencies: usize,
     command_sequence: u64,
     now_s: f64,
-    status: &str,
+    status: medulla_work_types::work_item_machine::WorkItemStatus,
 ) -> Result<serde_json::Map<String, serde_json::Value>, String> {
     let mut props = serde_json::Map::new();
     insert_submit_work_item_identity_props(&mut props, context_tenant, request, status);
@@ -725,7 +729,7 @@ pub fn build_submit_work_item_result(
     medulla_work_types::native_control::SubmitWorkItemResult {
         schema_version: medulla_work_types::native_control::NativeControlSchemaVersion::V1,
         work_item_id,
-        status: submit_work_item_status(pending_dependencies).to_string(),
+        status: submit_work_item_status(pending_dependencies),
         created: true,
         replayed: false,
         command_sequence,

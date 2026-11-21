@@ -25878,7 +25878,7 @@ class SubmitWorkItemResult(BaseModel):
     provenance_refs: list[str]
     replayed: bool
     schema_version: NativeControlSchemaVersion
-    status: str
+    status: WorkItemStatus
     work_item_id: str
 
 

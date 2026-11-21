@@ -549,7 +549,6 @@ pub(crate) fn validate_submit_result(
     };
     if result.work_item_id.trim().is_empty()
         || result.outbox_id.trim().is_empty()
-        || result.status.trim().is_empty()
         || result.command_sequence == 0
     {
         return Err("native admission returned an incomplete command receipt".to_string());

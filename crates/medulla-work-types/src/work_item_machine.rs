@@ -1121,4 +1121,76 @@ mod tests {
             ["succeeded", "failed", "cancelled", "retries_exhausted"]
         );
     }
+
+    // spec: MEDULLA-ORCH-VOCAB-R812.6
+    #[test]
+    fn every_legal_transition_applies() {
+        for edge in WORK_ITEM_EDGES {
+            let facts = every_facts()
+                .into_iter()
+                .find(|f| {
+                    edge.from
+                        .apply_edge(edge.event, f)
+                        .is_ok_and(|fired| fired.id == edge.id)
+                })
+                .unwrap_or_else(|| panic!("edge {} never applies", edge.id));
+            assert_eq!(edge.from.apply(edge.event, &facts), Ok(edge.to), "{}", edge.id);
+            assert!(!edge.from.is_terminal(), "terminal {:?} has edge {}", edge.from, edge.id);
+        }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R812.6
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let mut refusals = 0usize;
+        for from in WORK_ITEM_STATES {
+            for event in WorkItemEvent::ALL {
+                for facts in every_facts() {
+                    match from.apply(event, &facts) {
+                        Ok(to) => assert_eq!(Some(to), oracle(from, event, &facts)),
+                        Err(refusal) => {
+                            refusals += 1;
+                            assert_eq!(oracle(from, event, &facts), None, "{from:?} {event:?}");
+                            assert_eq!(refusal.machine, WORK_ITEM_MACHINE_NAME);
+                            assert_eq!(refusal.from, from.as_stored());
+                            assert_eq!(refusal.event, event.name());
+                            assert_eq!(refusal.code().as_str(), "TRANSITION_REFUSED");
+                        }
+                    }
+                }
+            }
+        }
+        assert!(refusals > 0);
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R812.6
+    #[test]
+    fn no_writer_sets_status_outside_apply() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let offenders = raw_status_writers(&root.join("medulla-work-store/src/redb_store/work_item"));
+        assert!(offenders.is_empty(), "raw status writes: {offenders:?}");
+        // The census sites hold the typed state, never a status string.
+        let production = |rel: &str| {
+            let text = std::fs::read_to_string(root.join(rel)).expect(rel);
+            text.split("#[cfg(test)]").next().unwrap_or_default().to_string()
+        };
+        let submit = production("medulla-work-store/src/redb_store/work_item/submit.rs");
+        for typed in ["status: &str", "status: &'args str", "status: &'a str"] {
+            assert!(!submit.contains(typed), "submit.rs keeps `{typed}`");
+        }
+        assert!(
+            !submit.contains("submit_work_item_status(pending_dependencies).to_string()"),
+            "the submit result carries a status string"
+        );
+        let native = production("medulla-work-types/src/native_control.rs");
+        let result = native
+            .split("pub struct SubmitWorkItemResult {")
+            .nth(1)
+            .and_then(|rest| rest.split('}').next())
+            .expect("SubmitWorkItemResult is declared");
+        assert!(
+            result.contains("pub status: crate::work_item_read::WorkItemStatus,"),
+            "SubmitWorkItemResult.status is not the WorkItem state"
+        );
+    }
 }

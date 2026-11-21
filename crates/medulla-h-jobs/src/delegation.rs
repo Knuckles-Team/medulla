@@ -436,7 +436,7 @@ mod tests {
         let result = SubmitWorkItemResult {
             schema_version: NativeControlSchemaVersion::V1,
             work_item_id: "workitem:1".into(),
-            status: "ready".into(),
+            status: medulla_work_types::work_item_machine::WorkItemStatus::Ready,
             created: true,
             replayed: false,
             command_sequence: 1,
@@ -467,7 +467,7 @@ mod tests {
         let result = SubmitWorkItemResult {
             schema_version: NativeControlSchemaVersion::V1,
             work_item_id: "workitem:1".into(),
-            status: "ready".into(),
+            status: medulla_work_types::work_item_machine::WorkItemStatus::Ready,
             created: false,
             replayed: true,
             command_sequence: 1,
