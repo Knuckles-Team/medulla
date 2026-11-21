@@ -3045,3 +3045,109 @@ async fn pooler_transaction_mode_isolates_clients() {
         .await
         .expect_err("advisory locks are not served");
 }
+
+/// Single-row inserts into a table with a primary key, a foreign key and a check, from
+/// 16 concurrent sessions: every valid row lands, every violation refuses with its
+/// SQLSTATE, and a primary key raced by every session is won by exactly one.
+// spec: MEDULLA-ENGINE-PARITY-R011.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn constraints_hold_under_concurrent_sessions() {
+    const SESSIONS: i64 = 16;
+    const VALID_PER_SESSION: i64 = 20;
+    const RACED_ID: i64 = 1_000_000;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let admin = connect(&addr).await;
+    let parents = unique_table();
+    let children = unique_table();
+    admin
+        .simple_query(&format!("CREATE TABLE {parents} (id BIGINT PRIMARY KEY)"))
+        .await
+        .expect("CREATE parents");
+    admin
+        .simple_query(&format!(
+            "CREATE TABLE {children} (id BIGINT PRIMARY KEY, parent_id BIGINT, bal BIGINT NOT NULL, \
+             CONSTRAINT {children}_bal_nonneg CHECK (bal >= 0), \
+             CONSTRAINT {children}_parent_fk FOREIGN KEY (parent_id) REFERENCES {parents} (id))"
+        ))
+        .await
+        .expect("CREATE children");
+    admin
+        .simple_query(&format!("INSERT INTO {parents} (id) VALUES (1)"))
+        .await
+        .expect("seed parent");
+
+    let mut sessions = Vec::new();
+    for session in 0..SESSIONS {
+        let addr = addr.clone();
+        let children = children.clone();
+        sessions.push(tokio::spawn(async move {
+            let client = connect(&addr).await;
+            let mut refusals: Vec<String> = Vec::new();
+            let mut raced_won = false;
+            for row in 0..VALID_PER_SESSION {
+                let id = session * 1_000 + row;
+                client
+                    .simple_query(&format!(
+                        "INSERT INTO {children} (id, parent_id, bal) VALUES ({id}, 1, {row})"
+                    ))
+                    .await
+                    .expect("a valid row lands");
+            }
+            let violations = [
+                // A duplicate of this session's first row.
+                format!(
+                    "INSERT INTO {children} (id, parent_id, bal) VALUES ({}, 1, 5)",
+                    session * 1_000
+                ),
+                // A parent that does not exist.
+                format!(
+                    "INSERT INTO {children} (id, parent_id, bal) VALUES ({}, 99, 5)",
+                    session * 1_000 + 500
+                ),
+                // A failing CHECK.
+                format!(
+                    "INSERT INTO {children} (id, parent_id, bal) VALUES ({}, 1, -1)",
+                    session * 1_000 + 501
+                ),
+            ];
+            for statement in violations {
+                let error = client
+                    .simple_query(&statement)
+                    .await
+                    .expect_err("a violation refuses");
+                let db = error.as_db_error().expect("a database error");
+                refusals.push(db.code().code().to_string());
+            }
+            match client
+                .simple_query(&format!(
+                    "INSERT INTO {children} (id, parent_id, bal) VALUES ({RACED_ID}, 1, 0)"
+                ))
+                .await
+            {
+                Ok(_) => raced_won = true,
+                Err(error) => {
+                    let db = error.as_db_error().expect("a database error");
+                    refusals.push(db.code().code().to_string());
+                }
+            }
+            (refusals, raced_won)
+        }));
+    }
+    let mut winners = 0;
+    for session in sessions {
+        let (refusals, raced_won) = session.await.expect("session task");
+        assert_eq!(&refusals[..3], ["23505", "23503", "23514"]);
+        if raced_won {
+            winners += 1;
+        } else {
+            assert_eq!(refusals[3], "23505", "the lost race is a duplicate key");
+        }
+    }
+    assert_eq!(winners, 1, "exactly one session wins the raced key");
+    assert_eq!(
+        count_rows(&admin, &children).await as i64,
+        SESSIONS * VALID_PER_SESSION + 1,
+        "only the valid rows and the one race winner are stored"
+    );
+}
