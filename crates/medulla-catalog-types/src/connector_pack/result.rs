@@ -244,6 +244,10 @@ pub struct PackImportReceipt {
     /// The contract diff the import applied (MEDULLA-TYPED-PACKS-R107.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub release: Option<PackReleaseEvidence>,
+    /// The skill graph conformance the import checked: every rule id and the violation
+    /// list; absent when the pack holds no graph skill (MEDULLA-TYPED-PACKS-R700.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conformance: Option<super::skill_graph::ConformanceReport>,
 }
 
 /// What one import attempt produced.

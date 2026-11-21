@@ -59,6 +59,9 @@ pub struct ConnectorPackCommitPlan {
     pub release: Option<medulla_catalog_types::connector_pack::contract_version::PackRelease>,
     /// The contract diff the receipt reports (MEDULLA-TYPED-PACKS-R107.5).
     pub release_evidence: Option<medulla_catalog_types::connector_pack::PackReleaseEvidence>,
+    /// The skill graph conformance report the receipt carries (MEDULLA-TYPED-PACKS-R700.5).
+    pub conformance:
+        Option<medulla_catalog_types::connector_pack::skill_graph::ConformanceReport>,
 }
 
 impl AgentLibraryStore {
@@ -289,6 +292,7 @@ fn import_receipt(
         object_model_shape_digest: plan.record.object_model_shape_digest,
         seed: plan.record.seed.clone(),
         release: plan.release_evidence.clone(),
+        conformance: plan.conformance.clone(),
     })
 }
 

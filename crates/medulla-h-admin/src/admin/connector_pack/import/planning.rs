@@ -46,6 +46,7 @@ pub(super) struct ReadyPlan {
     members: Vec<ConnectorPackMemberRow>,
     holder_specs: Vec<(Digest256, String, u64)>,
     pub(super) body_inputs: Vec<(Digest256, Vec<u8>)>,
+    conformance: Option<medulla_catalog_types::connector_pack::skill_graph::ConformanceReport>,
 }
 
 impl ReadyPlan {
@@ -105,6 +106,7 @@ impl ReadyPlan {
             evidence_ttl_ms: medulla_server_api::knob_config::knobs().conformance_evidence_ttl_ms,
             release: Some(applied.release),
             release_evidence: Some(applied.evidence),
+            conformance: self.conformance,
         })
     }
 }
@@ -138,7 +140,7 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
-    super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
+    let conformance = super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
     if !violations.is_empty() {
         return rejected(request, violations);
     }
@@ -172,7 +174,7 @@ pub(super) fn prepare(
         return rejected(request, vec![violation]);
     }
     plan.withdraw_absent(prior, &all)?;
-    plan.finish(warnings, shape_digest, seed_receipt)
+    plan.finish(warnings, shape_digest, seed_receipt, conformance)
 }
 
 /// `crosswalk` and `concept_path` entries resolve against the pinned vocabulary
@@ -567,6 +569,7 @@ impl<'a> PlanCollector<'a> {
         mut warnings: Vec<PackWarning>,
         object_model_shape_digest: Option<Digest256>,
         seed: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
+        conformance: Option<medulla_catalog_types::connector_pack::skill_graph::ConformanceReport>,
     ) -> Result<Prepared, String> {
         self.members.sort_by(|a, b| a.uri.cmp(&b.uri));
         self.records.sort_by(|a, b| a.uri.cmp(&b.uri));
@@ -602,6 +605,7 @@ impl<'a> PlanCollector<'a> {
             members: self.members,
             holder_specs: self.holder_specs,
             body_inputs: self.body_inputs,
+            conformance,
         })))
     }
 }

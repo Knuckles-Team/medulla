@@ -52,7 +52,10 @@ pub(super) fn validate_graph_bundles(
     archive: &[u8],
     all: &[&PackEntry],
     violations: &mut Vec<PackViolation>,
-) {
+) -> Option<ConformanceReport> {
+    // The reports of every graph the pack holds, merged: each rule id once, in the order
+    // first checked, and every violation (MEDULLA-TYPED-PACKS-R700.5).
+    let mut merged: Option<ConformanceReport> = None;
     for skill in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Skill)
@@ -97,7 +100,15 @@ pub(super) fn validate_graph_bundles(
                 violation(PackViolationCode::MalformedBody, Some(&skill.uri), message)
             }),
         );
+        let held = merged.get_or_insert_with(ConformanceReport::default);
+        for rule in report.checked_rules {
+            if !held.checked_rules.contains(&rule) {
+                held.checked_rules.push(rule);
+            }
+        }
+        held.violations.extend(report.violations);
     }
+    merged
 }
 
 /// The concept layer of the pack's skill graph (MEDULLA-TYPED-PACKS-R701.2).

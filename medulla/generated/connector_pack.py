@@ -444,6 +444,13 @@ class SeedImportReceipt(BaseModel):
     outcomes: dict[str, SeedPartOutcome]
 
 
+class ConformanceReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    checked_rules: list[str]
+    violations: list[str]
+
+
 class ChangeRequestRef(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -467,6 +474,7 @@ class PackImportReceipt(BaseModel):
     binding_revision: Annotated[int, Field(ge=0)]
     catalog: McpCatalogSnapshotBinding
     committed_version: Annotated[int, Field(ge=0)]
+    conformance: ConformanceReport | None = None
     connector: str
     counts: PackDispositionCounts
     object_model_shape_digest: Digest256 | None = None
@@ -899,6 +907,7 @@ __all__ = [
     "PackEntryKind",
     "PackHeadRef",
     "PackHeadView",
+    "ConformanceReport",
     "ChangeRequestRef",
     "PackReleaseEvidence",
     "PackImportReceipt",

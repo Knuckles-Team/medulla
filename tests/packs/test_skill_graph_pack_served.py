@@ -1,4 +1,4 @@
-"""MEDULLA-TYPED-PACKS-R700.3 and R700.4 served acceptance: skill graph bundles.
+"""MEDULLA-TYPED-PACKS-R700.3 to R700.6 served acceptance: skill graph bundles.
 
 A pack ``Skill`` entry that declares ``skill_type: graph`` names a graph whose
 ``skill_file`` entries (``SKILL.md``, ``index.json``, ``sources.json`` and the
@@ -205,5 +205,72 @@ async def test_hash_index_and_entry_refusals_leave_state_unchanged() -> None:
         after = await _evidence(client, connector)
         assert after == before
         assert after.pack_digest == head["pack_digest"]
+    finally:
+        await client.close()
+
+
+RULES = {
+    "skill_graph.entries_present",
+    "skill_graph.hashes_match",
+    "skill_graph.front_matter",
+    "skill_graph.index_sections",
+}
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R700.5")
+@pytest.mark.asyncio
+async def test_receipt_lists_every_checked_rule() -> None:
+    client = await connect()
+    try:
+        connector = f"graph-receipt-{uuid.uuid4().hex[:8]}"
+        imported = await import_entries(client, connector, _graph_entries("ledger"))
+        assert imported["result"] == "imported", imported
+        # The receipt carries every rule the import checked and no violation.
+        conformance = imported["receipt"]["conformance"]
+        assert set(conformance["checked_rules"]) == RULES
+        assert conformance["violations"] == []
+
+        # A pack with no graph skill carries no conformance report.
+        plain = await import_entries(
+            client, f"plain-{uuid.uuid4().hex[:8]}", [_plain_skill("note")]
+        )
+        assert plain["result"] == "imported", plain
+        assert plain["receipt"].get("conformance") is None
+    finally:
+        await client.close()
+
+
+def _plain_skill(name: str) -> ConnectorPackEntryContent:
+    return ConnectorPackEntryContent(
+        kind=PackEntryKind.SKILL,
+        uri=f"skill://{name}/SKILL.md",
+        name=name,
+        media_type="text/markdown",
+        body=f"---\nname: {name}\ndescription: A plain skill.\n---\n# {name}\n".encode(),
+        annotations=PackAnnotations(),
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R700.6")
+@pytest.mark.asyncio
+async def test_bad_hash_refused_and_conformant_pack_imports() -> None:
+    client = await connect()
+    try:
+        connector = f"graph-journey-{uuid.uuid4().hex[:8]}"
+        graph = "inventory"
+        bad = await import_entries(
+            client, connector, _graph_entries(graph, bad_hash=True)
+        )
+        assert any(
+            d.startswith("SKILL_GRAPH_HASH_MISMATCH: reference/one.md")
+            for d in _details(bad)
+        ), bad
+        with pytest.raises(EngineResponseError, match=ABSENT):
+            await _evidence(client, connector)
+
+        good = await import_entries(client, connector, _graph_entries(graph))
+        assert good["result"] == "imported", good
+        evidence = await _evidence(client, connector)
+        assert evidence.pack_digest == good["receipt"]["pack_digest"]
     finally:
         await client.close()
