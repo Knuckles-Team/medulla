@@ -118,7 +118,6 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
         req_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::cluster::Health>(
             medulla_protocol_types::result_contract::cluster::HealthReport {
-                status: "ok".to_string(),
                 uptime_s,
                 mem_bytes,
                 version: medulla_version::VERSION.to_string(),

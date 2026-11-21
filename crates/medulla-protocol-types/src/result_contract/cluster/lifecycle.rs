@@ -89,7 +89,6 @@ pub struct GraphLifecycleHealth {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct HealthReport {
-    pub status: String,
     pub uptime_s: u64,
     pub mem_bytes: u64,
     pub version: String,
@@ -99,4 +98,32 @@ pub struct HealthReport {
     pub build_profile: String,
     pub graph_lifecycle: GraphLifecycleHealth,
     pub ops: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-CONTRACT-R062.3
+    #[test]
+    fn health_report_has_no_status_field() {
+        let report = HealthReport {
+            uptime_s: 1,
+            mem_bytes: 2,
+            version: "0.0.0".to_string(),
+            build_profile: "debug".to_string(),
+            graph_lifecycle: GraphLifecycleHealth {
+                catalog_graphs: 0,
+                resident_graphs: 0,
+                complete_graphs: 0,
+                partial_graphs: 0,
+                failed_graphs: 0,
+                all_resident_materializations_valid: true,
+            },
+            ops: Vec::new(),
+        };
+        let value = serde_json::to_value(&report).unwrap();
+        assert!(value.get("status").is_none(), "{value}");
+        assert!(value.get("version").is_some());
+    }
 }

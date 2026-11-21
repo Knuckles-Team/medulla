@@ -31,7 +31,7 @@ class MockServer:
                 if req["method"] == "Ping":
                     resp["result"] = "pong"
                 elif req["method"] == "Health":
-                    resp["result"] = {"status": "ok"}
+                    resp["result"] = {"version": "test"}
                 else:
                     resp["error"] = "unknown method"
 
@@ -90,7 +90,7 @@ async def test_frame_handling_and_pool():
         assert ping_res == "pong"
 
         health_res = await client1.health()
-        assert health_res["status"] == "ok"
+        assert health_res["version"] == "test"
 
         # Test exhaustion
         client2 = await pool.acquire()

@@ -7930,7 +7930,6 @@ class HealthReport(BaseModel):
     graph_lifecycle: GraphLifecycleHealth
     mem_bytes: Annotated[int, Field(ge=0)]
     ops: list[str]
-    status: str
     uptime_s: Annotated[int, Field(ge=0)]
     version: str
 
