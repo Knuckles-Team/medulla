@@ -8,7 +8,9 @@ use medulla_decision_types::decision::statistical::placement_plan::{
     PlacementPlanQuestion, PlacementPlanRead, PlacementPlanRequestBody, ServiceSpec,
     PLACEMENT_PLAN_OPTION, PLACEMENT_PLAN_PARAM,
 };
-use medulla_decision_types::decision::{EvidenceClass, PremiseClass, ResolutionKind};
+use medulla_decision_types::decision::{
+    AbstainReason, EvidenceClass, PremiseClass, ResolutionKind,
+};
 
 use super::*;
 
@@ -160,4 +162,72 @@ async fn plan_request_returns_sealed_plan() {
     .await
     .unwrap_err();
     assert!(refused.starts_with("PARAMETER_INVALID"), "{refused}");
+}
+
+/// Add one `placement:Host` node to the graph of [`plan_harness`].
+async fn add_host(h: &Harness, iri: &str, capabilities: &[&str]) {
+    let guard = h.state.read().await;
+    let core = guard.registry.get(GRAPH).unwrap().core.clone();
+    let props = serde_json::json!({
+        "type": super::super::stat_placement_plan::HOST_CLASS,
+        medulla_types::ontology_iri!("placement#cpuMillis"): 4_000,
+        medulla_types::ontology_iri!("placement#memoryBytes"): 8 * GIB,
+        medulla_types::ontology_iri!("placement#storageBytes"): 100 * GIB,
+        medulla_types::ontology_iri!("placement#capabilities"): capabilities,
+    });
+    core.add_node(iri.to_string(), rmp_serde::to_vec_named(&props).unwrap());
+}
+
+// spec: MEDULLA-PLACEMENT-R700.6
+#[tokio::test]
+async fn capability_gap_abstains_and_plan_solves() {
+    // Three hosts, five services. One service needs `Backtest`, which no host declares.
+    let h = plan_harness(&[("host:alpha", &[]), ("host:beta", &[]), ("host:gamma", &[])]).await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+    let services = vec![
+        service("svc:a", 250, None, Some("host:alpha")),
+        service("svc:b", 250, None, Some("host:beta")),
+        service("svc:c", 250, None, Some("host:gamma")),
+        service("svc:d", 250, None, Some("host:alpha")),
+        service("svc:e", 250, Some(HeavyCapability::Backtest), Some("host:alpha")),
+    ];
+
+    // The first request abstains, naming the capability no host declares.
+    let batch = decide(&h, plan_request(&schema_pin, services.clone(), None))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("a capability gap must abstain: {:?}", record.outcome)
+    };
+    let named = reasons.iter().any(|reason| match reason {
+        AbstainReason::Infeasible { constraints } => constraints
+            .iter()
+            .any(|constraint| constraint.contains("Backtest")),
+        _ => false,
+    });
+    assert!(named, "the abstention names Backtest: {reasons:?}");
+    assert!(record.answer.is_none(), "an abstention seals no plan");
+
+    // After one host declares the capability the plan solves with the minimum moves: only
+    // the service that needs it leaves its host.
+    add_host(&h, "host:delta", &["backtest"]).await;
+    let batch = decide(&h, plan_request(&schema_pin, services, None))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert!(
+        matches!(record.outcome, StatisticalOutcome::Advisory { .. }),
+        "{:?}",
+        record.outcome
+    );
+    let Some(FamilyAnswer::PlacementPlan(plan)) = &record.answer else {
+        panic!("a placement plan is sealed: {:?}", record.answer)
+    };
+    assert_eq!(plan.placements.len(), 5);
+    assert_eq!(plan.moves.len(), 1, "{:?}", plan.moves);
+    assert_eq!(plan.moves[0].service_iri, "svc:e");
+    assert_eq!(plan.moves[0].from_host, "host:alpha");
+    assert_eq!(plan.moves[0].to_host, "host:delta");
+    plan.check().unwrap();
 }
