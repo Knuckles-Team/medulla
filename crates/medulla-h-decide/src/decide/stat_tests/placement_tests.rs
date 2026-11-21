@@ -736,3 +736,82 @@ async fn assemble_abstains_on_uncovered_component() {
         "an abstained assembly answers no graph"
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R001.11
+/// Verifies MEDULLA-PLACEMENT-R001.11: the served placement decision names the
+/// cheapest feasible target, a stranger of another tenant is refused, and the
+/// assembly of that target's template answers the deployment steps in order.
+#[tokio::test]
+async fn placement_decide_then_assemble_journey() {
+    let h = placement_harness().await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+
+    // Decide: the typed record, its statistical resolution and the headroom premise.
+    let batch = decide(&h, placement_request(&schema_pin, body(false, 2)))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.question.kind, QuestionKind::Placement);
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let chosen = ranked(&batch).remove(0);
+    assert_eq!(chosen, "placement:compose");
+    assert!(premise_facts(&batch)
+        .contains(&format!("lease:placement:compose:cpu:cpu={CPU_HEADROOM}")));
+
+    // A verified caller of another tenant is refused before any read.
+    let stranger = VerifiedRequestContext::verified_for_test_in_tenant("decider", "tenant-other");
+    let response = super::super::statistical::handle_decide(
+        &h.state,
+        1,
+        &stranger,
+        placement_request(&schema_pin, body(false, 2)),
+    )
+    .await;
+    assert!(
+        response
+            .error
+            .as_deref()
+            .is_some_and(|error| error.starts_with("ACCESS_DENIED")),
+        "{response:?}"
+    );
+
+    // Assemble: the template of the chosen target is solved in slot order.
+    let target = chosen.trim_start_matches("placement:");
+    let library = library::harness().await;
+    library::seed(&library.store, None);
+    for (nonce, tool) in (40u8..).zip(["tool-render-artifact", "tool-apply", "tool-verify"]) {
+        library::publish(
+            &library.store,
+            nonce,
+            (
+                tool,
+                medulla_agent_types::agent_component::AgentComponentKind::Tool,
+            ),
+            None,
+        );
+    }
+    let templates = medulla_persistence_records::agent_graph::tests::publish_deployment_templates(
+        &library.store,
+        library::TENANT,
+        &[target],
+    );
+    assert_eq!(templates[0].graph_id, format!("deployment:{target}"));
+    let mut request = library::request(Vec::new());
+    request.templates = BoundedVec::new(templates).unwrap();
+    let result = library::assemble(&library, request)
+        .await
+        .expect("the chosen target's template assembles");
+    assert!(matches!(
+        result.record.outcome,
+        DecisionOutcome::Solved { .. }
+    ));
+    let graph = result.graph.as_ref().expect("a solved record answers its graph");
+    let steps: Vec<&str> = graph
+        .shape
+        .nodes
+        .iter()
+        .map(|node| node.node_id.as_str())
+        .collect();
+    assert_eq!(steps, ["render-artifact", "apply", "verify", "done"]);
+}
