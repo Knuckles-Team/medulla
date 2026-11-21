@@ -8559,3 +8559,111 @@
     :fromState :innovation_shift_Cooldown ;
     :toState :innovation_shift_Armed ;
     :firedBy :innovation_shift_Event_CooldownElapsed .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.7
+# The ApprovalRequest machine. The Rust edge table APPROVAL_REQUEST_MACHINE in
+# crates/medulla-core/src/approval_machine.rs is the same table; the ontology test
+# asserts equal edge sets.
+
+:ApprovalRequestState a owl:Class ;
+    rdfs:label "ApprovalRequest State" ;
+    rdfs:comment "A state of the ApprovalRequest machine." ;
+    rdfs:subClassOf :State .
+
+:ApprovalRequestTerminalState a owl:Class ;
+    rdfs:label "ApprovalRequest Terminal State" ;
+    rdfs:comment "A terminal state of the ApprovalRequest machine." ;
+    rdfs:subClassOf :TerminalState, :ApprovalRequestState .
+
+:ApprovalRequestTransition a owl:Class ;
+    rdfs:label "ApprovalRequest Transition" ;
+    rdfs:comment "A transition of the ApprovalRequest machine." ;
+    rdfs:subClassOf :Transition .
+
+:ApprovalRequestEvent a owl:Class ;
+    rdfs:label "ApprovalRequest Event" ;
+    rdfs:comment "An event of the ApprovalRequest machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ApprovalRequestGuard a owl:Class ;
+    rdfs:label "ApprovalRequest Guard" ;
+    rdfs:comment "A guard of the ApprovalRequest machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ApprovalRequestMachine a :StateMachine ;
+    rdfs:label "ApprovalRequest machine" ;
+    :initialState :ApprovalRequestMachine_Pending ;
+    :hasState :ApprovalRequestMachine_Pending, :ApprovalRequestMachine_Approved, :ApprovalRequestMachine_Rejected, :ApprovalRequestMachine_Deferred .
+
+:ApprovalRequestMachine_Pending a :ApprovalRequestState ;
+    rdfs:label "ApprovalRequest Pending" ;
+    :storedForm "pending" .
+
+:ApprovalRequestMachine_Approved a :ApprovalRequestTerminalState ;
+    rdfs:label "ApprovalRequest Approved" ;
+    :storedForm "approved" .
+
+:ApprovalRequestMachine_Rejected a :ApprovalRequestTerminalState ;
+    rdfs:label "ApprovalRequest Rejected" ;
+    :storedForm "rejected" .
+
+:ApprovalRequestMachine_Deferred a :ApprovalRequestState ;
+    rdfs:label "ApprovalRequest Deferred" ;
+    :storedForm "deferred" .
+
+:ApprovalRequestMachine_Event_Approve a :ApprovalRequestEvent ;
+    rdfs:label "ApprovalRequest Approve" .
+
+:ApprovalRequestMachine_Event_Reject a :ApprovalRequestEvent ;
+    rdfs:label "ApprovalRequest Reject" .
+
+:ApprovalRequestMachine_Event_Defer a :ApprovalRequestEvent ;
+    rdfs:label "ApprovalRequest Defer" .
+
+:ApprovalRequestMachine_Guard_ApproverHoldsRole a :ApprovalRequestGuard ;
+    rdfs:label "ApprovalRequest ApproverHoldsRole" ;
+    rdfs:comment "Guard: the approver holds the required role." .
+
+:ApprovalRequestMachine_Guard_QuorumMet a :ApprovalRequestGuard ;
+    rdfs:label "ApprovalRequest QuorumMet" ;
+    rdfs:comment "Guard: the approvals reach the quorum." .
+
+:ApprovalRequestMachine_A01 a :ApprovalRequestTransition ;
+    rdfs:label "ApprovalRequest A01" ;
+    :edgeId "A01" ;
+    :fromState :ApprovalRequestMachine_Pending ;
+    :toState :ApprovalRequestMachine_Approved ;
+    :guardedBy :ApprovalRequestMachine_Guard_QuorumMet ;
+    :firedBy :ApprovalRequestMachine_Event_Approve .
+
+:ApprovalRequestMachine_A02 a :ApprovalRequestTransition ;
+    rdfs:label "ApprovalRequest A02" ;
+    :edgeId "A02" ;
+    :fromState :ApprovalRequestMachine_Pending ;
+    :toState :ApprovalRequestMachine_Rejected ;
+    :guardedBy :ApprovalRequestMachine_Guard_ApproverHoldsRole ;
+    :firedBy :ApprovalRequestMachine_Event_Reject .
+
+:ApprovalRequestMachine_A03 a :ApprovalRequestTransition ;
+    rdfs:label "ApprovalRequest A03" ;
+    :edgeId "A03" ;
+    :fromState :ApprovalRequestMachine_Pending ;
+    :toState :ApprovalRequestMachine_Deferred ;
+    :guardedBy :ApprovalRequestMachine_Guard_ApproverHoldsRole ;
+    :firedBy :ApprovalRequestMachine_Event_Defer .
+
+:ApprovalRequestMachine_A04 a :ApprovalRequestTransition ;
+    rdfs:label "ApprovalRequest A04" ;
+    :edgeId "A04" ;
+    :fromState :ApprovalRequestMachine_Deferred ;
+    :toState :ApprovalRequestMachine_Approved ;
+    :guardedBy :ApprovalRequestMachine_Guard_QuorumMet ;
+    :firedBy :ApprovalRequestMachine_Event_Approve .
+
+:ApprovalRequestMachine_A05 a :ApprovalRequestTransition ;
+    rdfs:label "ApprovalRequest A05" ;
+    :edgeId "A05" ;
+    :fromState :ApprovalRequestMachine_Deferred ;
+    :toState :ApprovalRequestMachine_Rejected ;
+    :guardedBy :ApprovalRequestMachine_Guard_ApproverHoldsRole ;
+    :firedBy :ApprovalRequestMachine_Event_Reject .

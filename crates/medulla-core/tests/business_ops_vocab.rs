@@ -420,3 +420,117 @@ fn tax_terms_store_only_hashed_identifiers() {
     let (ok, _) = conforms("ex:ret a :TaxReturn ; :returnTaxDueMinor 725.5 .\n");
     assert!(!ok, "a float tax due is refused");
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.7
+#[test]
+fn approval_gate_deploy_incident_terms_with_shapes() {
+    use medulla_core::approval_machine::{
+        ApprovalEvent, ApprovalFacts, ApprovalRequestMachine, ApprovalStatus,
+        APPROVAL_REQUEST_MACHINE,
+    };
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    let triples = triples();
+    for class in ["ApprovalRequest", "GateDecision", "DeployRecord"] {
+        assert_class(&triples, class);
+    }
+    assert_parent(&triples, "GateDecision", "Decision");
+    // The core :Incident is reused, never redeclared; its new terms are declared here.
+    assert!(!declared_classes(&triples).contains(&format!("{KG}Incident")));
+    for property in ["incidentSeverity", "resolvedBy"] {
+        assert!(
+            triples.iter().any(|t| {
+                subject_str(&t.subject) == Some(&format!("{KG}{property}"))
+                    && t.predicate.as_str() == format!("{RDF}type")
+            }),
+            "{property} is declared"
+        );
+        assert!(
+            has_iri(
+                &triples,
+                &format!("{KG}{property}"),
+                &format!("{RDFS}domain"),
+                &format!("{KG}Incident")
+            ),
+            "{property} applies to :Incident"
+        );
+    }
+
+    let good = "ex:who a :Person .\n\
+                ex:req a :ApprovalRequest ; :requestStatus \"pending\" ; \
+                  :requestActionKind \"refund\" ; :requestAmountMinor 25000 .\n\
+                ex:gate a :GateDecision ; :decisionRequest ex:req ; :gateApprover ex:who ; \
+                  :gateOutcome \"approve\" .\n\
+                ex:dep a :DeployRecord ; :deployDecision ex:gate ; :deployOutcome \"succeeded\" .\n\
+                ex:inc a :Incident ; :incidentSeverity \"high\" .\n";
+    assert_eq!(conforms(good), (true, Vec::new()));
+
+    // A gate decision with no approver or no request is refused.
+    let (ok, paths) = conforms(
+        "ex:req a :ApprovalRequest ; :requestStatus \"pending\" .\n\
+         ex:gate a :GateDecision ; :decisionRequest ex:req ; :gateOutcome \"approve\" .\n",
+    );
+    assert!(!ok, "a gate decision without an approver is refused");
+    assert!(paths.iter().any(|path| path.ends_with("gateApprover>")));
+    let (ok, paths) = conforms(
+        "ex:who a :Person .\n\
+         ex:gate a :GateDecision ; :gateApprover ex:who ; :gateOutcome \"approve\" .\n",
+    );
+    assert!(!ok, "a gate decision without a request is refused");
+    assert!(paths.iter().any(|path| path.ends_with("decisionRequest>")));
+    // An outcome outside approve, reject, defer is refused.
+    let (ok, _) = conforms(
+        "ex:who a :Person .\n\
+         ex:req a :ApprovalRequest ; :requestStatus \"pending\" .\n\
+         ex:gate a :GateDecision ; :decisionRequest ex:req ; :gateApprover ex:who ; \
+           :gateOutcome \"maybe\" .\n",
+    );
+    assert!(!ok);
+    // A request status outside the machine is refused.
+    let (ok, _) = conforms("ex:req a :ApprovalRequest ; :requestStatus \"stale\" .\n");
+    assert!(!ok);
+
+    // The request machine: the edge table is closed and guarded.
+    use ApprovalEvent::{Approve, Defer, Reject};
+    use ApprovalStatus::{Approved, Deferred, Pending, Rejected};
+    let all = ApprovalFacts {
+        approver_holds_role: true,
+        quorum_met: true,
+    };
+    assert_eq!(ApprovalRequestMachine::apply(Pending, Approve, all), Ok(Approved));
+    assert_eq!(ApprovalRequestMachine::apply(Pending, Reject, all), Ok(Rejected));
+    assert_eq!(ApprovalRequestMachine::apply(Pending, Defer, all), Ok(Deferred));
+    assert_eq!(ApprovalRequestMachine::apply(Deferred, Approve, all), Ok(Approved));
+    assert_eq!(ApprovalRequestMachine::apply(Deferred, Reject, all), Ok(Rejected));
+    let none = ApprovalFacts::default();
+    for (from, event) in [(Pending, Approve), (Pending, Reject), (Pending, Defer), (Deferred, Approve)] {
+        let refused = ApprovalRequestMachine::apply(from, event, none).unwrap_err();
+        assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+    }
+    let refused = ApprovalRequestMachine::apply(Deferred, Defer, all).unwrap_err();
+    assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
+    for terminal in [Approved, Rejected] {
+        for event in [Approve, Reject, Defer] {
+            let refused = ApprovalRequestMachine::apply(terminal, event, all).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::TerminalState);
+        }
+    }
+    // The machine is registered in state-machines-v1.ttl with one transition per edge.
+    let machines = parse_turtle(include_str!("../ontology/state-machines-v1.ttl")).unwrap();
+    let registered = machines
+        .iter()
+        .filter(|t| {
+            t.predicate.as_str() == format!("{RDF}type")
+                && object_iri(&t.object) == Some(&format!("{KG}ApprovalRequestTransition"))
+        })
+        .count();
+    assert_eq!(registered, APPROVAL_REQUEST_MACHINE.edges.len());
+    for state in APPROVAL_REQUEST_MACHINE.states {
+        let subject = format!("{KG}{}_{:?}", APPROVAL_REQUEST_MACHINE.name, state);
+        assert!(machines.iter().any(|t| {
+            subject_str(&t.subject) == Some(&subject)
+                && t.predicate.as_str() == format!("{KG}storedForm")
+                && matches!(&t.object, Term::Literal(v) if v.value() == state.stored())
+        }));
+    }
+}

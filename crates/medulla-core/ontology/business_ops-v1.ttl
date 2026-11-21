@@ -569,3 +569,134 @@
     rdfs:comment "The reference the authority gave the filing." ;
     rdfs:domain :TaxReturn ;
     rdfs:range xsd:string .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.7
+# Approvals, gate decisions, deploys and incidents. The status of an approval request
+# follows the one explicit state machine :ApprovalRequestMachine of
+# state-machines-v1.ttl. The core :Incident and the :affects property of the
+# service-operations module are reused.
+:ApprovalRequest a owl:Class ;
+    rdfs:label "Approval Request" ;
+    rdfs:comment "A request that a person holding the required role approve one action on one subject node." ;
+    rdfs:subClassOf :DomainEntity .
+
+:GateDecision a owl:Class ;
+    rdfs:label "Gate Decision" ;
+    rdfs:comment "The signed decision of an approver on an approval request: approve, reject or defer." ;
+    rdfs:subClassOf :Decision .
+
+:DeployRecord a owl:Class ;
+    rdfs:label "Deploy Record" ;
+    rdfs:comment "One deployment of an artifact version to an environment under a gate decision, with its outcome." ;
+    rdfs:subClassOf :DomainEntity .
+
+:requestSubject a owl:ObjectProperty ;
+    rdfs:label "request subject" ;
+    rdfs:comment "The node the approval request is about." ;
+    rdfs:domain :ApprovalRequest .
+
+:requestActionKind a owl:DatatypeProperty ;
+    rdfs:label "request action kind" ;
+    rdfs:comment "The kind of action the request asks to approve, matched against the approval rules of the profile." ;
+    rdfs:domain :ApprovalRequest ;
+    rdfs:range xsd:string .
+
+:requestAmountMinor a owl:DatatypeProperty ;
+    rdfs:label "request amount" ;
+    rdfs:comment "The amount the request concerns, an integer in minor units." ;
+    rdfs:domain :ApprovalRequest ;
+    rdfs:range xsd:integer .
+
+:requestPrincipal a owl:ObjectProperty ;
+    rdfs:label "request principal" ;
+    rdfs:comment "The person or agent that made the approval request." ;
+    rdfs:domain :ApprovalRequest .
+
+:requestRequiredRole a owl:ObjectProperty ;
+    rdfs:label "request required role" ;
+    rdfs:comment "The role whose holder may decide the request." ;
+    rdfs:domain :ApprovalRequest ;
+    rdfs:range :Role .
+
+:requestStatus a owl:DatatypeProperty ;
+    rdfs:label "request status" ;
+    rdfs:comment "pending, approved, rejected or deferred; written only by the ApprovalRequestMachine transition function." ;
+    rdfs:domain :ApprovalRequest ;
+    rdfs:range xsd:string .
+
+:decisionRequest a owl:ObjectProperty ;
+    rdfs:label "decision request" ;
+    rdfs:comment "The approval request a gate decision decides." ;
+    rdfs:domain :GateDecision ;
+    rdfs:range :ApprovalRequest .
+
+:gateOutcome a owl:DatatypeProperty ;
+    rdfs:label "gate outcome" ;
+    rdfs:comment "approve, reject or defer." ;
+    rdfs:domain :GateDecision ;
+    rdfs:range xsd:string .
+
+:gateApprover a owl:ObjectProperty ;
+    rdfs:label "gate approver" ;
+    rdfs:comment "The person who signed the gate decision." ;
+    rdfs:domain :GateDecision ;
+    rdfs:range :Person .
+
+:gateSignedAt a owl:DatatypeProperty ;
+    rdfs:label "gate signed at" ;
+    rdfs:comment "When the approver signed the gate decision." ;
+    rdfs:domain :GateDecision ;
+    rdfs:range xsd:dateTime .
+
+:gateReason a owl:DatatypeProperty ;
+    rdfs:label "gate reason" ;
+    rdfs:comment "The approver's stated reason." ;
+    rdfs:domain :GateDecision ;
+    rdfs:range xsd:string .
+
+:deployArtifact a owl:DatatypeProperty ;
+    rdfs:label "deploy artifact" ;
+    rdfs:comment "The name of the artifact that was deployed." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range xsd:string .
+
+:deployEnvironment a owl:DatatypeProperty ;
+    rdfs:label "deploy environment" ;
+    rdfs:comment "The environment the artifact was deployed to." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range xsd:string .
+
+:deployVersion a owl:DatatypeProperty ;
+    rdfs:label "deploy version" ;
+    rdfs:comment "The artifact version that was deployed." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range xsd:string .
+
+:deployDecision a owl:ObjectProperty ;
+    rdfs:label "deploy decision" ;
+    rdfs:comment "The gate decision that allowed the deployment." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range :GateDecision .
+
+:deployOutcome a owl:DatatypeProperty ;
+    rdfs:label "deploy outcome" ;
+    rdfs:comment "succeeded, failed or rolled_back." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range xsd:string .
+
+:rollbackOf a owl:ObjectProperty ;
+    rdfs:label "rollback of" ;
+    rdfs:comment "Links a deploy record that rolled back to the deploy record it reversed." ;
+    rdfs:domain :DeployRecord ;
+    rdfs:range :DeployRecord .
+
+:incidentSeverity a owl:DatatypeProperty ;
+    rdfs:label "incident severity" ;
+    rdfs:comment "low, medium, high or critical." ;
+    rdfs:domain :Incident ;
+    rdfs:range xsd:string .
+
+:resolvedBy a owl:ObjectProperty ;
+    rdfs:label "resolved by" ;
+    rdfs:comment "Links an incident to the change, deploy or person that resolved it." ;
+    rdfs:domain :Incident .

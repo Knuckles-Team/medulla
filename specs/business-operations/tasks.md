@@ -11,7 +11,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T005 [US1] MEDULLA-BUSINESS-OPS-R001.4 Procurement and stock terms
 - [x] T006 [US1] MEDULLA-BUSINESS-OPS-R001.5 Compliance obligation terms
 - [x] T007 [US1] MEDULLA-BUSINESS-OPS-R001.6 Tax terms
-- [ ] T008 [US1] MEDULLA-BUSINESS-OPS-R001.7 Approval, gate decision, deploy and incident terms
+- [x] T008 [US1] MEDULLA-BUSINESS-OPS-R001.7 Approval, gate decision, deploy and incident terms
 - [ ] T009 [US1] MEDULLA-BUSINESS-OPS-R001.8 Every pack class rolls up to core and carries no product name
 - [ ] T010 [US1] MEDULLA-BUSINESS-OPS-R001.9 Wiring and hot-path proof: three sources join in one query
 - [ ] T011 [US2] MEDULLA-BUSINESS-OPS-R002 Deterministic rule evaluation through the query path (rollup)

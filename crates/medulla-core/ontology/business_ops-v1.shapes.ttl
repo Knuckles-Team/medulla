@@ -153,3 +153,52 @@ kg:TaxReturnShape a sh:NodeShape ;
         sh:message "A taxable amount is an integer in minor units."
     ] ;
     sh:message "A tax return carries only integer amounts." .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.7
+kg:ApprovalRequestShape a sh:NodeShape ;
+    sh:targetClass kg:ApprovalRequest ;
+    sh:property [
+        sh:path kg:requestStatus ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "pending" "approved" "rejected" "deferred" ) ;
+        sh:message "An approval request status is pending, approved, rejected or deferred."
+    ] ;
+    sh:property [
+        sh:path kg:requestAmountMinor ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "A request amount is an integer in minor units."
+    ] ;
+    sh:message "An approval request has a status of the request machine." .
+
+kg:GateDecisionShape a sh:NodeShape ;
+    sh:targetClass kg:GateDecision ;
+    sh:property [
+        sh:path kg:gateApprover ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kg:Person ;
+        sh:message "A GateDecision names exactly one approver node."
+    ] ;
+    sh:property [
+        sh:path kg:decisionRequest ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kg:ApprovalRequest ;
+        sh:message "A GateDecision names exactly one approval request."
+    ] ;
+    sh:property [
+        sh:path kg:gateOutcome ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "approve" "reject" "defer" ) ;
+        sh:message "A gate outcome is approve, reject or defer."
+    ] ;
+    sh:message "A gate decision requires an approver and a request." .
+
+kg:DeployRecordShape a sh:NodeShape ;
+    sh:targetClass kg:DeployRecord ;
+    sh:property [
+        sh:path kg:deployOutcome ; sh:maxCount 1 ;
+        sh:in ( "succeeded" "failed" "rolled_back" ) ;
+        sh:message "A deploy outcome is succeeded, failed or rolled_back."
+    ] ;
+    sh:message "A deploy record has an outcome from the closed set." .
+
+kg:IncidentSeverityShape a sh:NodeShape ;
+    sh:targetSubjectsOf kg:incidentSeverity ;
+    sh:property [
+        sh:path kg:incidentSeverity ; sh:maxCount 1 ;
+        sh:in ( "low" "medium" "high" "critical" ) ;
+        sh:message "An incident severity is low, medium, high or critical."
+    ] ;
+    sh:message "An incident severity is from the closed set." .

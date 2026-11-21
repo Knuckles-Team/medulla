@@ -1531,3 +1531,14 @@ fn innovation_shift_machine_matches_edge_table() {
 fn innovation_shift_machine_classes_extend_core() {
     sm::assert_extends_core("InnovationShift");
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.7
+#[test]
+fn approval_request_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_core::approval_machine::APPROVAL_REQUEST_MACHINE);
+}
+// spec: MEDULLA-BUSINESS-OPS-R001.7
+#[test]
+fn approval_request_machine_classes_extend_core() {
+    sm::assert_extends_core("ApprovalRequest");
+}
