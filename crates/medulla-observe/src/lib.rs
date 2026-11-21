@@ -13,3 +13,20 @@
 #![deny(missing_docs)]
 
 pub mod machine;
+pub mod registry;
+
+use std::sync::OnceLock;
+
+use registry::tasks::TaskRegistry;
+
+/// The process-wide task registry. Tests build isolated instances with [`TaskRegistry::new`].
+pub fn global() -> &'static TaskRegistry {
+    static GLOBAL: OnceLock<TaskRegistry> = OnceLock::new();
+    GLOBAL.get_or_init(|| TaskRegistry::new(registry::tasks::DEFAULT_TASK_REGISTRY_CAPACITY))
+}
+
+/// Jobs the process-wide registry could not list since start: the live table was full or the
+/// name was held by a live job. The job still ran. Exported as `medulla_observe_dropped_total`.
+pub fn dropped_total() -> u64 {
+    global().dropped_total()
+}
