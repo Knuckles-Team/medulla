@@ -30,6 +30,7 @@ pub mod analyst_synthesis;
 pub mod autonomy;
 pub mod bm25;
 pub mod branch_outcomes;
+pub mod branch_select;
 pub mod candidate;
 pub mod changeset_review;
 pub mod cluster_knobs;
