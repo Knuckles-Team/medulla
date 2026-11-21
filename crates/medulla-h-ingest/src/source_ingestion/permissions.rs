@@ -22,6 +22,20 @@ pub const GROUP_ROLE_PREFIX: &str = "group:";
 
 const SUBJECT_DOMAIN: &[u8] = b"eg/source-record-subjects";
 
+/// The source access properties of a node only the holders of the stored policy `action` may
+/// read (MEDULLA-INGEST-WORKER-R003.17.1): not public, readable by the role named exactly
+/// `action`, classified `restricted`. The row-level read gate decides a node carrying them by
+/// these properties alone ([`medulla_graph_core::rls`]), so `kg:read` reaches it through no
+/// generic read (GetNode, a query or a stream), not only through the typed read. A System
+/// caller bypasses the gate as it bypasses every row rule.
+pub(super) fn restricted_read_access(action: &str) -> [(&'static str, serde_json::Value); 3] {
+    [
+        ("source_access_public", serde_json::Value::Bool(false)),
+        ("source_access_read_roles", serde_json::json!([action])),
+        ("source_classification", serde_json::json!("restricted")),
+    ]
+}
+
 /// What the engine holds about one record's access.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HeldRecord {

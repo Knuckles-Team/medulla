@@ -3588,7 +3588,7 @@ fn quarantine_prepared(
     )?;
     let reason = error.quarantine_reason();
     let replay = ReplayDisposition::Replayable;
-    let properties = serde_json::json!({
+    let mut properties = serde_json::json!({
         "type": "SourceQuarantine",
         "reason": reason,
         "rule_id": error.rule_id(),
@@ -3597,6 +3597,13 @@ fn quarantine_prepared(
         "replay": replay,
         "prior_accepted_checkpoint": prior_accepted_checkpoint,
     });
+    if let Some(map) = properties.as_object_mut() {
+        for (key, value) in permissions::restricted_read_access(
+            medulla_source_types::source_document::QUARANTINE_READ_ACTION,
+        ) {
+            map.insert(key.into(), value);
+        }
+    }
     let mutation = scope.compile(
         batch_id,
         vec![Method::AddNode {

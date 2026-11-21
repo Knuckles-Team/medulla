@@ -47,6 +47,9 @@ TEST_SIGNER_ALLOWED_ROLES = [
     "lease-writer",
     # Per-test roles of served tests that register a second principal.
     "suite:*",
+    # Row authority of the restricted source reads (R003.17.1): the action name.
+    "source:quarantine:read",
+    "source:transcript:read",
 ]
 
 

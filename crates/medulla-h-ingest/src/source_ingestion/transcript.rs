@@ -22,7 +22,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{SourceIngestionRequest, SourceJson};
 use medulla_source_types::source_transcript::{
     TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptReadRequest,
-    TranscriptReadView, TranscriptReceipt, TranscriptThread, SEGMENT_CLOCKS,
+    TranscriptReadView, TranscriptReceipt, TranscriptThread, SEGMENT_CLOCKS, TRANSCRIPT_READ_ACTION,
 };
 use medulla_types::contract::Digest256;
 
@@ -169,16 +169,22 @@ pub(super) fn transcript_methods(
 ) -> Result<TranscriptAdmission, String> {
     let thread_node = format!("transcript-thread:{}", validated.thread_id);
     let mut admission = TranscriptAdmission::default();
+    let mut thread_properties = serde_json::json!({
+        "type": "Transcript",
+        "dialect": serde_json::to_value(decoded.dialect).map_err(invalid)?,
+        "connector": decoded.thread.connector.as_str(),
+        "stream": decoded.thread.stream.as_str(),
+        "session_id": decoded.thread.session_id,
+        "message_count": validated.messages.len(),
+    });
+    if let Some(map) = thread_properties.as_object_mut() {
+        for (key, value) in super::permissions::restricted_read_access(TRANSCRIPT_READ_ACTION) {
+            map.insert(key.into(), value);
+        }
+    }
     admission.methods.push(Method::AddNode {
         node_id: thread_node.clone(),
-        properties_msgpack: encode(&serde_json::json!({
-            "type": "Transcript",
-            "dialect": serde_json::to_value(decoded.dialect).map_err(invalid)?,
-            "connector": decoded.thread.connector.as_str(),
-            "stream": decoded.thread.stream.as_str(),
-            "session_id": decoded.thread.session_id,
-            "message_count": validated.messages.len(),
-        }))?,
+        properties_msgpack: encode(&thread_properties)?,
     });
     admission.node_ids.push(thread_node.clone());
     let mut message_nodes = Vec::with_capacity(validated.messages.len());
@@ -192,6 +198,9 @@ pub(super) fn transcript_methods(
             serde_json::to_value(message.role).map_err(invalid)?,
         );
         properties.insert("text".into(), message.text.clone().into());
+        for (key, value) in super::permissions::restricted_read_access(TRANSCRIPT_READ_ACTION) {
+            properties.insert(key.into(), value);
+        }
         properties.insert("sequence".into(), sequence.into());
         properties.insert(
             "source_record_id".into(),
@@ -290,7 +299,7 @@ pub fn read_transcript(
     request: &TranscriptReadRequest,
 ) -> Result<TranscriptReadView, String> {
     use medulla_source_types::source_transcript::{
-        TranscriptReadMessage, TranscriptThreadRead, TRANSCRIPT_READ_ACTION,
+        TranscriptReadMessage, TranscriptThreadRead,
         TRANSCRIPT_READ_DEFAULT_LIMIT, TRANSCRIPT_READ_MAX_LIMIT,
     };
     if !verified.allows_action(TRANSCRIPT_READ_ACTION) {
