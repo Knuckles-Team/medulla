@@ -44,6 +44,7 @@ pub struct ProcessDocument {
     #[serde(default = "schema_version")]
     pub schema_version: u16,
     pub format: ProcessDocumentFormat,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
     #[serde(with = "serde_bytes")]
     pub document: Vec<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
