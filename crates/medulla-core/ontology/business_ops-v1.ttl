@@ -476,3 +476,96 @@
     rdfs:comment "Links an obligation instance to an evidence item that shows it was met." ;
     rdfs:domain :ObligationInstance ;
     rdfs:range :EvidenceItem .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.6
+# Tax. A tax identifier is stored only as its keyed hash; a raw identifier property is
+# refused by `TaxRegistrationShape`.
+:TaxRegistration a owl:Class ;
+    rdfs:label "Tax Registration" ;
+    rdfs:comment "A business registered with a tax authority of one jurisdiction under a scheme, for a valid interval. The identifier is held only as a keyed hash." ;
+    rdfs:subClassOf :DomainEntity .
+
+:TaxRate a owl:Class ;
+    rdfs:label "Tax Rate" ;
+    rdfs:comment "The rate of one tax category in one jurisdiction for a valid interval, in basis points." ;
+    rdfs:subClassOf :DomainEntity .
+
+:TaxReturn a owl:Class ;
+    rdfs:label "Tax Return" ;
+    rdfs:comment "A filing of tax due for one period under one registration. It is an obligation instance, so its status follows the obligation instance machine." ;
+    rdfs:subClassOf :ObligationInstance .
+
+:taxJurisdiction a owl:ObjectProperty ;
+    rdfs:label "tax jurisdiction" ;
+    rdfs:comment "The jurisdiction a tax registration or tax rate belongs to." ;
+    rdfs:range :Jurisdiction .
+
+:taxIdentifierHash a owl:DatatypeProperty ;
+    rdfs:label "tax identifier hash" ;
+    rdfs:comment "The keyed SHA-256 of the tax identifier, 64 lowercase hex characters. The raw identifier is never stored." ;
+    rdfs:domain :TaxRegistration ;
+    rdfs:range xsd:string .
+
+:taxScheme a owl:DatatypeProperty ;
+    rdfs:label "tax scheme" ;
+    rdfs:comment "The tax scheme the registration is under, such as sales tax or value added tax." ;
+    rdfs:domain :TaxRegistration ;
+    rdfs:range xsd:string .
+
+:taxValidFrom a owl:DatatypeProperty ;
+    rdfs:label "tax valid from" ;
+    rdfs:comment "The first day a tax registration or rate holds." ;
+    rdfs:range xsd:date .
+
+:taxValidUntil a owl:DatatypeProperty ;
+    rdfs:label "tax valid until" ;
+    rdfs:comment "The last day a tax registration or rate holds; absent means still current." ;
+    rdfs:range xsd:date .
+
+:taxCategory a owl:DatatypeProperty ;
+    rdfs:label "tax category" ;
+    rdfs:comment "The category of goods or services a tax rate applies to." ;
+    rdfs:domain :TaxRate ;
+    rdfs:range xsd:string .
+
+:rateBasisPoints a owl:DatatypeProperty ;
+    rdfs:label "rate in basis points" ;
+    rdfs:comment "A tax rate as an integer number of basis points (one hundredth of a percent)." ;
+    rdfs:domain :TaxRate ;
+    rdfs:range xsd:integer .
+
+:returnRegistration a owl:ObjectProperty ;
+    rdfs:label "return registration" ;
+    rdfs:comment "The tax registration a tax return is filed under." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range :TaxRegistration .
+
+:returnPeriod a owl:DatatypeProperty ;
+    rdfs:label "return period" ;
+    rdfs:comment "The period a tax return covers, such as 2027-Q1." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range xsd:string .
+
+:returnTaxableMinor a owl:DatatypeProperty ;
+    rdfs:label "return taxable amount" ;
+    rdfs:comment "The taxable amount of a tax return, an integer in minor units." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range xsd:integer .
+
+:returnTaxDueMinor a owl:DatatypeProperty ;
+    rdfs:label "return tax due" ;
+    rdfs:comment "The tax due on a tax return, an integer in minor units." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range xsd:integer .
+
+:returnFiledAt a owl:DatatypeProperty ;
+    rdfs:label "return filed at" ;
+    rdfs:comment "When the tax return was filed." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range xsd:dateTime .
+
+:filingReference a owl:DatatypeProperty ;
+    rdfs:label "filing reference" ;
+    rdfs:comment "The reference the authority gave the filing." ;
+    rdfs:domain :TaxReturn ;
+    rdfs:range xsd:string .

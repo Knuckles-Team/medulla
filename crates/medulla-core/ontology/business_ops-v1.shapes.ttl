@@ -114,3 +114,42 @@ kg:RecurrenceRuleShape a sh:NodeShape ;
         sh:message "A business-day adjustment is none, next_business_day or previous_business_day."
     ] ;
     sh:message "A recurrence rule names its frequency." .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.6
+kg:TaxRegistrationShape a sh:NodeShape ;
+    sh:targetClass kg:TaxRegistration ;
+    sh:property [
+        sh:path kg:taxIdentifierHash ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$" ;
+        sh:message "A TaxRegistration stores exactly one keyed hash of its identifier: 64 lowercase hex characters."
+    ] ;
+    sh:message "A tax registration holds a hashed identifier." .
+
+kg:RawTaxIdentifierShape a sh:NodeShape ;
+    sh:targetSubjectsOf kg:taxIdentifier ;
+    sh:property [
+        sh:path kg:taxIdentifier ; sh:maxCount 0 ;
+        sh:message "A raw tax identifier is refused; store only its keyed hash."
+    ] ;
+    sh:message "A raw tax identifier is never stored." .
+
+kg:TaxRateShape a sh:NodeShape ;
+    sh:targetClass kg:TaxRate ;
+    sh:property [
+        sh:path kg:rateBasisPoints ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "A TaxRate carries one rate, an integer number of basis points."
+    ] ;
+    sh:message "A tax rate is an integer in basis points." .
+
+kg:TaxReturnShape a sh:NodeShape ;
+    sh:targetClass kg:TaxReturn ;
+    sh:property [
+        sh:path kg:returnTaxDueMinor ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "Tax due is an integer in minor units."
+    ] ;
+    sh:property [
+        sh:path kg:returnTaxableMinor ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "A taxable amount is an integer in minor units."
+    ] ;
+    sh:message "A tax return carries only integer amounts." .

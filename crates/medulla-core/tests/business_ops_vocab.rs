@@ -379,3 +379,44 @@ fn obligation_terms_and_instance_state_machine() {
         assert_eq!(stored.as_deref(), Some(state.stored()));
     }
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.6
+#[test]
+fn tax_terms_store_only_hashed_identifiers() {
+    let triples = triples();
+    for class in ["TaxRegistration", "TaxRate", "TaxReturn"] {
+        assert_class(&triples, class);
+    }
+    // A tax return is an obligation instance.
+    assert_parent(&triples, "TaxReturn", "ObligationInstance");
+
+    let hash = "a".repeat(64);
+    let good = format!(
+        "ex:reg a :TaxRegistration ; :taxIdentifierHash \"{hash}\" ; :taxScheme \"sales_tax\" .\n\
+         ex:rate a :TaxRate ; :rateBasisPoints 725 ; :taxCategory \"goods\" .\n\
+         ex:ret a :TaxReturn ; :returnRegistration ex:reg ; :returnPeriod \"2027-Q1\" ; \
+           :instanceDueDate \"2027-04-30\"^^xsd:date ; :obligationStatus \"open\" ; \
+           :returnTaxableMinor 1000000 ; :returnTaxDueMinor 72500 .\n"
+    );
+    assert_eq!(conforms(&good), (true, Vec::new()));
+
+    // A raw identifier property is refused, with or without a hash beside it.
+    let (ok, paths) = conforms(&format!(
+        "ex:reg a :TaxRegistration ; :taxIdentifierHash \"{hash}\" ; \
+         :taxIdentifier \"12-3456789\" .\n"
+    ));
+    assert!(!ok, "a raw tax identifier is refused");
+    assert!(paths.iter().any(|path| path.ends_with("taxIdentifier>")));
+    let (ok, _) = conforms("ex:reg a :TaxRegistration ; :taxIdentifier \"12-3456789\" .\n");
+    assert!(!ok);
+
+    // A registration whose hash is not 64 lowercase hex characters is refused.
+    let (ok, _) = conforms("ex:reg a :TaxRegistration ; :taxIdentifierHash \"123456789\" .\n");
+    assert!(!ok, "a short hash is refused");
+
+    // A fractional rate or a float amount is refused.
+    let (ok, _) = conforms("ex:rate a :TaxRate ; :rateBasisPoints 7.25 .\n");
+    assert!(!ok, "a fractional basis-point rate is refused");
+    let (ok, _) = conforms("ex:ret a :TaxReturn ; :returnTaxDueMinor 725.5 .\n");
+    assert!(!ok, "a float tax due is refused");
+}

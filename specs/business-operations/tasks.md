@@ -10,7 +10,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T004 [US1] MEDULLA-BUSINESS-OPS-R001.3 Order, payment, refund and payout terms
 - [x] T005 [US1] MEDULLA-BUSINESS-OPS-R001.4 Procurement and stock terms
 - [x] T006 [US1] MEDULLA-BUSINESS-OPS-R001.5 Compliance obligation terms
-- [ ] T007 [US1] MEDULLA-BUSINESS-OPS-R001.6 Tax terms
+- [x] T007 [US1] MEDULLA-BUSINESS-OPS-R001.6 Tax terms
 - [ ] T008 [US1] MEDULLA-BUSINESS-OPS-R001.7 Approval, gate decision, deploy and incident terms
 - [ ] T009 [US1] MEDULLA-BUSINESS-OPS-R001.8 Every pack class rolls up to core and carries no product name
 - [ ] T010 [US1] MEDULLA-BUSINESS-OPS-R001.9 Wiring and hot-path proof: three sources join in one query
