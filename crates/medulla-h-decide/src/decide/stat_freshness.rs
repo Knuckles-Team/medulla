@@ -20,8 +20,12 @@ use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use sha2::{Digest, Sha256};
 
+use medulla_protocol_types::protocol::Method;
+
+use super::run_record::StagedLink;
 use super::stat_executor::ExecutionContext;
 use super::stat_support::refusal;
+use super::stat_vectors::GraphVectors;
 
 /// Key family of held rows: `freshness:row:<graph>:<canonical url>`.
 const ROW_PREFIX: &str = "freshness:row:";
@@ -267,12 +271,112 @@ fn admit(
     Ok(spend)
 }
 
-/// Serve one refresh through `port`.
+/// The cache policy revision the refreshed rows' embeddings are cached under.
+const EMBED_POLICY_REVISION: &str = "freshness-refresh/v1";
+
+/// The id of the tenant-graph node a refreshed row is written as: one node per graph and
+/// canonical URL, so a superseding row replaces its predecessor's node.
+pub(super) fn row_node_id(graph: &str, canonical: &str) -> String {
+    format!(
+        "freshness:{}",
+        sha256_hex(&["freshness-node/v1", graph, canonical])
+    )
+}
+
+/// What one served refresh produced: the receipt and, when the logical graph is a
+/// materialized tenant graph, the node writes still to commit through the durable path.
+pub(super) struct Refreshed {
+    pub receipt: FreshnessReceipt,
+    pub link: Option<StagedLink>,
+}
+
+/// The node writes of every stored row: the row as a `Document` node carrying its
+/// provenance (source, fetched_at, receipt), then its embedding. The text embedded is the
+/// row's title and snippet, the content the source returned. Embedding refusals are decided
+/// here, before any artifact is stored, so a refused refresh writes nothing.
+fn node_writes(
+    ctx: &ExecutionContext,
+    view: &GraphVectors,
+    graph: &str,
+    principal: &str,
+    stored: &[(FreshResult, Option<String>, String, String)],
+) -> Result<StagedLink, String> {
+    let embedder = super::program_embedding::SpacedEmbedder::configured()
+        .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+    if !view.admits_space(&embedder.space.digest) {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "PROGRAM_EMBEDDING_SPACE_MISMATCH: the graph declares another embedding space \
+             than the configured one",
+        ));
+    }
+    view.ensure_space(&embedder.space)
+        .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+    let texts: Vec<String> = stored
+        .iter()
+        .map(|(_, _, title, snippet)| format!("{title} {snippet}"))
+        .collect();
+    let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+    let (vectors, _calls) = super::program_embedding::embed_texts(
+        &embedder,
+        ctx.tenant_id,
+        EMBED_POLICY_REVISION,
+        &refs,
+    )
+    .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+    let encode = |value: serde_json::Value| {
+        rmp_serde::to_vec_named(&value).map_err(|error| {
+            refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                format!("freshness row encoding failed: {error}"),
+            )
+        })
+    };
+    let mut methods = Vec::with_capacity(stored.len() * 2);
+    for ((result, supersedes, title, snippet), vector) in stored.iter().zip(vectors) {
+        let node_id = row_node_id(graph, &result.url);
+        methods.push(Method::AddNode {
+            node_id: node_id.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "type": NODE_TYPE,
+                "name": title,
+                "description": snippet,
+                "url": result.url,
+                "content_digest": result.content_digest,
+                "supersedes": supersedes,
+                "provenance": {
+                    "source": result.source_connection_iri,
+                    "fetched_at": result.retrieved_at,
+                    "receipt": result.refresh_id,
+                    "query_digest": result.query_digest,
+                },
+                "source": result.source_connection_iri,
+                "fetched_at": result.retrieved_at,
+                "receipt": result.refresh_id,
+                "_owner": principal,
+            }))?,
+        });
+        methods.push(Method::AddEmbedding {
+            node_id,
+            embedding: vector,
+        });
+    }
+    Ok(StagedLink {
+        graph: graph.to_string(),
+        core: std::sync::Arc::clone(view.core()),
+        methods,
+    })
+}
+
+/// Serve one refresh through `port`. With `view` (the materialized tenant graph named by
+/// the request) the refreshed rows are also staged as graph nodes with an embedding.
 pub(super) fn refresh_with(
     ctx: &ExecutionContext,
     port: &dyn SearchSourcePort,
     request: &FreshnessRefresh,
-) -> Result<FreshnessReceipt, String> {
+    view: Option<&GraphVectors>,
+    principal: &str,
+) -> Result<Refreshed, String> {
     request
         .check()
         .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
@@ -306,6 +410,7 @@ pub(super) fn refresh_with(
         completed_at_ms: ctx.now_ms,
     };
     let mut writes: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut staged_rows: Vec<(FreshResult, Option<String>, String, String)> = Vec::new();
     for query in request.queries.iter() {
         let read = port.read(&binding, query, ctx.now_ms)?;
         for hit in &read.hits {
@@ -355,12 +460,24 @@ pub(super) fn refresh_with(
                     logical_graph: graph.to_string(),
                     canonical_url: canonical,
                     result: result.clone(),
-                    supersedes,
+                    supersedes: supersedes.clone(),
                 })?,
+            ));
+            staged_rows.push((
+                result.clone(),
+                supersedes,
+                hit.title.clone(),
+                hit.snippet.clone(),
             ));
             receipt.stored.push(result);
         }
     }
+    let link = match view {
+        Some(view) if !staged_rows.is_empty() => {
+            Some(node_writes(ctx, view, graph, principal, &staged_rows)?)
+        }
+        _ => None,
+    };
     writes.push((format!("{RECEIPT_PREFIX}{id}"), encode_artifact(&receipt)?));
     // A superseded row and the graph's counters already exist: they are
     // compare-and-set against the bytes read, so a concurrent refresh is
@@ -390,19 +507,48 @@ pub(super) fn refresh_with(
         .lock()
         .map_err(|_| "the refresh spending ledger is poisoned".to_string())?
         .insert((ctx.tenant_id.to_string(), graph.to_string()), spend);
-    Ok(receipt)
+    Ok(Refreshed { receipt, link })
+}
+
+/// Open the materialized tenant graph a refresh writes its rows into, for the verified
+/// caller. `None` when the request's logical graph is virtual only (no tenant graph of that
+/// name is registered): the rows are then held as decision artifacts alone.
+pub(super) async fn open_graph(
+    state: &super::SharedState,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    request: &FreshnessRefresh,
+) -> Result<Option<GraphVectors>, String> {
+    let graph = request.logical_graph.as_str();
+    if state.read().await.registry.catalog_record(graph).is_none() {
+        return Ok(None);
+    }
+    let (core, isolation) = super::stat_support::graph_at_level(
+        state,
+        verified.agent_id(),
+        graph,
+        StatisticalErrorCode::ParameterInvalid,
+        medulla_isolation::isolation::AccessLevel::Write,
+    )
+    .await?;
+    Ok(Some(GraphVectors::from_parts(
+        core,
+        isolation,
+        verified.agent_id().to_string(),
+    )))
 }
 
 /// Serve one refresh through the registered port.
 pub(super) fn refresh(
     ctx: &ExecutionContext,
     request: &FreshnessRefresh,
-) -> Result<FreshnessReceipt, String> {
+    view: Option<&GraphVectors>,
+    principal: &str,
+) -> Result<Refreshed, String> {
     let port = registered_port().ok_or_else(|| {
         refusal(
             StatisticalErrorCode::SearchSourceUnregistered,
             "no search source port is registered",
         )
     })?;
-    refresh_with(ctx, port.as_ref(), request)
+    refresh_with(ctx, port.as_ref(), request, view, principal)
 }

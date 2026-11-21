@@ -174,8 +174,11 @@ async fn refresh_reads_the_virtual_graph_and_marks_one_region() {
         &ctx(&h, "tenant-other"),
         source.as_ref(),
         &refresh(GRAPH, 1, (4, 10)),
+        None,
+        "decider",
     )
-    .unwrap();
+    .unwrap()
+    .receipt;
     assert_eq!(other.new_count, 1);
     assert_eq!(held_rows(&ctx(&h, TENANT), GRAPH).unwrap().len(), 1);
     clear_search_source_port();

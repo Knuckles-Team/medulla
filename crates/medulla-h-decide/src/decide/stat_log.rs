@@ -1090,6 +1090,7 @@ async fn serve(
         _ => None,
     };
     let blocking_graph = run_graph.clone();
+    let refresh_link = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_link));
     let principal = verified.agent_id().to_string();
     let graphs = commit_graphs(state, verified, &op).await?;
     let provenance = match &op {
@@ -1144,7 +1145,18 @@ async fn serve(
     .await
     .map_err(|error| format!("DecisionLog task failed: {error}"))?;
     let result = match result {
-        Ok(Served::Payload(payload)) => Ok(payload),
+        Ok(Served::Payload(payload)) => {
+            let staged = match refresh_link {
+                Some(slot) => slot.lock().ok().and_then(|mut held| held.take()),
+                None => None,
+            };
+            match staged {
+                Some(link) => commit_refresh_link(state, req_id, verified, link)
+                    .await
+                    .map(|()| payload),
+                None => Ok(payload),
+            }
+        }
         Ok(Served::RunRecord(staged)) => commit_run_record(state, req_id, verified, *staged).await,
         Err(error) => Err(error),
     };
@@ -1158,6 +1170,48 @@ enum Served {
     /// A run record whose graph link commits through the durable mutation path
     /// before the answer is returned.
     RunRecord(Box<super::run_record::Staged>),
+}
+
+/// Commit the graph nodes (and their embeddings) a freshness refresh staged, through the
+/// same MutationBatch commit used for every other graph fact. The embedding writes reach the
+/// drift monitors, so the next drift refresh sees the region. With no durable backend the
+/// commit is refused.
+async fn commit_refresh_link(
+    state: &SharedState,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    link: super::run_record::StagedLink,
+) -> Result<(), String> {
+    let persistence = state.read().await.persistence.clone();
+    let batch_id = medulla_server_api::batch_compile::opaque_request_key(
+        "freshness-refresh",
+        &link.graph,
+        req_id,
+        &link.methods[0],
+    );
+    medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+            persistence.as_ref(),
+            &link.core,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: req_id,
+                principal: Some(verified.agent_id()),
+            },
+            &link.graph,
+            &batch_id,
+            link.methods,
+            &ResultPayload::Bool(true),
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|error| {
+        medulla_protocol_types::error_registry::classify_refusal(
+            "ENGINE_UNAVAILABLE",
+            "freshness rows not committed to the graph: ",
+            &error,
+        )
+    })
 }
 
 /// Commit a staged run record's graph link (the program node and its

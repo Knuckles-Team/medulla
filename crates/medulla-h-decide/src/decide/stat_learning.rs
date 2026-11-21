@@ -71,6 +71,12 @@ pub(super) struct LearningInputs {
     cycle: Option<CycleSupport>,
     /// The background analytics lease of a drift evaluation; `None` for every other write.
     drift_lease: Option<String>,
+    /// The materialized tenant graph a freshness refresh writes its rows into; `None` for
+    /// every other write and for a logical graph that is virtual only.
+    refresh_graph: Option<GraphVectors>,
+    /// The graph nodes a refresh staged; the served `DecisionLog` commits them through the
+    /// durable mutation path once the blocking half returned.
+    pub(super) refresh_link: std::sync::Arc<std::sync::Mutex<Option<super::run_record::StagedLink>>>,
 }
 
 /// The background lease and embedder of one generation-cycle submission.
@@ -513,11 +519,19 @@ pub(super) async fn prepare(
         ),
         _ => None,
     };
+    let refresh_graph = match write {
+        LearningWrite::RefreshFreshness { request } => {
+            super::stat_freshness::open_graph(state, verified, request).await?
+        }
+        _ => None,
+    };
     Ok(Some(LearningInputs {
         served_tenant,
         graphs,
         cycle,
         drift_lease,
+        refresh_graph,
+        refresh_link: Default::default(),
     }))
 }
 
@@ -543,9 +557,19 @@ pub(super) fn dispatch(
         LearningWrite::FitCalibration { request } => s.calibrate(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
-        LearningWrite::RefreshFreshness { request } => Ok(LearningRecorded::Refreshed(Box::new(
-            super::stat_freshness::refresh(ctx, &request)?,
-        ))),
+        LearningWrite::RefreshFreshness { request } => {
+            let staged = super::stat_freshness::refresh(
+                ctx,
+                &request,
+                inputs.refresh_graph.as_ref(),
+                &reader.principal,
+            )?;
+            *inputs
+                .refresh_link
+                .lock()
+                .map_err(|_| "the staged refresh slot is poisoned".to_string())? = staged.link;
+            Ok(LearningRecorded::Refreshed(Box::new(staged.receipt)))
+        }
         LearningWrite::RunOutcome { outcome } => Ok(LearningRecorded::Run(Box::new(record_run(
             ctx, reader, *outcome,
         )?))),
