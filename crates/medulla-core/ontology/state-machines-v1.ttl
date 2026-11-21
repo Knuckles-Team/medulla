@@ -9195,3 +9195,146 @@
     :fromState :MoveStageMachine_Aborting ;
     :toState :MoveStageMachine_Aborted ;
     :firedBy :MoveStageMachine_Event_FinishAbort .
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R768.4
+# The SeriesProjection machine: the projection status of one time-series projection row. The Rust
+# edge table SERIES_PROJECTION_MACHINE is the same table.
+
+:SeriesProjectionState a owl:Class ;
+    rdfs:label "SeriesProjection State" ;
+    rdfs:comment "A state of the SeriesProjection machine." ;
+    rdfs:subClassOf :State .
+
+:SeriesProjectionTerminalState a owl:Class ;
+    rdfs:label "SeriesProjection Terminal State" ;
+    rdfs:comment "A terminal state of the SeriesProjection machine." ;
+    rdfs:subClassOf :TerminalState, :SeriesProjectionState .
+
+:SeriesProjectionGuard a owl:Class ;
+    rdfs:label "SeriesProjection Guard" ;
+    rdfs:comment "A guard of the SeriesProjection machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SeriesProjectionTransition a owl:Class ;
+    rdfs:label "SeriesProjection Transition" ;
+    rdfs:comment "A transition of the SeriesProjection machine." ;
+    rdfs:subClassOf :Transition .
+
+:SeriesProjectionEvent a owl:Class ;
+    rdfs:label "SeriesProjection Event" ;
+    rdfs:comment "An event of the SeriesProjection machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SeriesProjectionMachine a :StateMachine ;
+    rdfs:label "Series projection machine" ;
+    :initialState :SeriesProjectionMachine_Missing ;
+    :hasState :SeriesProjectionMachine_Missing, :SeriesProjectionMachine_CatchingUp, :SeriesProjectionMachine_Ready, :SeriesProjectionMachine_Degraded .
+
+:SeriesProjectionMachine_Missing a :SeriesProjectionState ;
+    rdfs:label "Series projection Missing" ;
+    :storedForm "missing" .
+
+:SeriesProjectionMachine_CatchingUp a :SeriesProjectionState ;
+    rdfs:label "Series projection CatchingUp" ;
+    :storedForm "catching_up" .
+
+:SeriesProjectionMachine_Ready a :SeriesProjectionState ;
+    rdfs:label "Series projection Ready" ;
+    :storedForm "ready" .
+
+:SeriesProjectionMachine_Degraded a :SeriesProjectionState ;
+    rdfs:label "Series projection Degraded" ;
+    :storedForm "degraded" .
+
+:SeriesProjectionMachine_Event_Append a :SeriesProjectionEvent ;
+    rdfs:label "Series projection event Append" .
+
+:SeriesProjectionMachine_Event_CatchUp a :SeriesProjectionEvent ;
+    rdfs:label "Series projection event CatchUp" .
+
+:SeriesProjectionMachine_Event_Degrade a :SeriesProjectionEvent ;
+    rdfs:label "Series projection event Degrade" .
+
+:SeriesProjectionMachine_SP01 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP01" ;
+    :edgeId "SP01" ;
+    :fromState :SeriesProjectionMachine_Missing ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_Append .
+
+:SeriesProjectionMachine_SP02 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP02" ;
+    :edgeId "SP02" ;
+    :fromState :SeriesProjectionMachine_CatchingUp ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_Append .
+
+:SeriesProjectionMachine_SP03 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP03" ;
+    :edgeId "SP03" ;
+    :fromState :SeriesProjectionMachine_Ready ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_Append .
+
+:SeriesProjectionMachine_SP04 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP04" ;
+    :edgeId "SP04" ;
+    :fromState :SeriesProjectionMachine_Degraded ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_Append .
+
+:SeriesProjectionMachine_SP05 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP05" ;
+    :edgeId "SP05" ;
+    :fromState :SeriesProjectionMachine_Missing ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_CatchUp .
+
+:SeriesProjectionMachine_SP06 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP06" ;
+    :edgeId "SP06" ;
+    :fromState :SeriesProjectionMachine_CatchingUp ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_CatchUp .
+
+:SeriesProjectionMachine_SP07 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP07" ;
+    :edgeId "SP07" ;
+    :fromState :SeriesProjectionMachine_Ready ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_CatchUp .
+
+:SeriesProjectionMachine_SP08 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP08" ;
+    :edgeId "SP08" ;
+    :fromState :SeriesProjectionMachine_Degraded ;
+    :toState :SeriesProjectionMachine_Ready ;
+    :firedBy :SeriesProjectionMachine_Event_CatchUp .
+
+:SeriesProjectionMachine_SP09 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP09" ;
+    :edgeId "SP09" ;
+    :fromState :SeriesProjectionMachine_Missing ;
+    :toState :SeriesProjectionMachine_Degraded ;
+    :firedBy :SeriesProjectionMachine_Event_Degrade .
+
+:SeriesProjectionMachine_SP10 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP10" ;
+    :edgeId "SP10" ;
+    :fromState :SeriesProjectionMachine_CatchingUp ;
+    :toState :SeriesProjectionMachine_Degraded ;
+    :firedBy :SeriesProjectionMachine_Event_Degrade .
+
+:SeriesProjectionMachine_SP11 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP11" ;
+    :edgeId "SP11" ;
+    :fromState :SeriesProjectionMachine_Ready ;
+    :toState :SeriesProjectionMachine_Degraded ;
+    :firedBy :SeriesProjectionMachine_Event_Degrade .
+
+:SeriesProjectionMachine_SP12 a :SeriesProjectionTransition ;
+    rdfs:label "Series projection SP12" ;
+    :edgeId "SP12" ;
+    :fromState :SeriesProjectionMachine_Degraded ;
+    :toState :SeriesProjectionMachine_Degraded ;
+    :firedBy :SeriesProjectionMachine_Event_Degrade .

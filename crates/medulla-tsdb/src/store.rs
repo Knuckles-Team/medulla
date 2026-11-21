@@ -591,14 +591,8 @@ impl SeriesKey {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProjectionStatus {
-    Missing,
-    CatchingUp,
-    Ready,
-    Degraded,
-}
+pub use crate::projection_machine::ProjectionStatus;
+use crate::projection_machine::ProjectionEvent;
 
 /// Durable high-water mark for the authoritative-to-served projection.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1152,11 +1146,14 @@ impl SeriesStore {
             append_batch_in_wtx(wtx, &storage_key, n_fields, bucket_ns, field_names, points)?;
             let meta = meta_in_wtx(wtx, &storage_key)?
                 .ok_or_else(|| codec_err("scoped append produced no series metadata"))?;
+            let status = projection_status_in_wtx(wtx, &storage_key)?
+                .apply(ProjectionEvent::Append)
+                .map_err(|refused| codec_err(refused.to_string()))?;
             put_projection_in_wtx(
                 wtx,
                 &storage_key,
                 &ProjectionHealth {
-                    status: ProjectionStatus::Ready,
+                    status,
                     cursor: Some(ProjectionCursor::from(&meta)),
                     updated_unix_ms: unix_ms(),
                     last_error: None,
@@ -1302,34 +1299,44 @@ impl SeriesStore {
         }
     }
 
+    /// Record that the served copy reached `source_meta` (`CatchUp`). The status read and the
+    /// row write share one write transaction.
     pub fn mark_projection_ready(&self, storage_key: &str, source_meta: &SeriesMeta) -> Result<()> {
-        self.put_projection(
-            storage_key,
-            ProjectionHealth {
-                status: ProjectionStatus::Ready,
-                cursor: Some(ProjectionCursor::from(source_meta)),
-                updated_unix_ms: unix_ms(),
-                last_error: None,
-            },
-        )
-    }
-
-    pub fn mark_projection_degraded(&self, storage_key: &str, error: &str) -> Result<()> {
-        let previous = self.projection_health_by_storage_key(storage_key)?;
-        self.put_projection(
-            storage_key,
-            ProjectionHealth {
-                status: ProjectionStatus::Degraded,
-                cursor: previous.cursor,
-                updated_unix_ms: unix_ms(),
-                last_error: Some(error.to_string()),
-            },
-        )
-    }
-
-    fn put_projection(&self, storage_key: &str, health: ProjectionHealth) -> Result<()> {
         self.maintain("projection", storage_key, |wtx| {
-            put_projection_in_wtx(wtx, storage_key, &health)
+            let status = projection_status_in_wtx(wtx, storage_key)?
+                .apply(ProjectionEvent::CatchUp)
+                .map_err(|refused| codec_err(refused.to_string()))?;
+            put_projection_in_wtx(
+                wtx,
+                storage_key,
+                &ProjectionHealth {
+                    status,
+                    cursor: Some(ProjectionCursor::from(source_meta)),
+                    updated_unix_ms: unix_ms(),
+                    last_error: None,
+                },
+            )
+        })
+    }
+
+    /// Record a failed projection write (`Degrade`), keeping the cursor the row held. The
+    /// status read and the row write share one write transaction.
+    pub fn mark_projection_degraded(&self, storage_key: &str, error: &str) -> Result<()> {
+        self.maintain("projection", storage_key, |wtx| {
+            let previous = projection_row_in_wtx(wtx, storage_key)?;
+            let status = projection_status_in_wtx(wtx, storage_key)?
+                .apply(ProjectionEvent::Degrade)
+                .map_err(|refused| codec_err(refused.to_string()))?;
+            put_projection_in_wtx(
+                wtx,
+                storage_key,
+                &ProjectionHealth {
+                    status,
+                    cursor: previous.and_then(|health| health.cursor),
+                    updated_unix_ms: unix_ms(),
+                    last_error: Some(error.to_string()),
+                },
+            )
         })
     }
 
@@ -1501,6 +1508,36 @@ fn meta_in_wtx<W: SeriesTableWriter>(wtx: &W, series_id: &str) -> Result<Option<
     value
 }
 
+/// The stored projection row of a series, if it has one.
+fn projection_row_in_wtx<W: SeriesTableWriter>(
+    wtx: &W,
+    storage_key: &str,
+) -> Result<Option<ProjectionHealth>> {
+    validate_storage_key(storage_key)?;
+    let tab = wtx.open_series_table(PROJECTION_STATE)?;
+    let row = match tab.get(storage_key).map_err(redb_err)? {
+        Some(g) => Ok(Some(decode_projection(g.value())?)),
+        None => Ok(None),
+    };
+    row
+}
+
+/// The current status of a series' projection (MEDULLA-UNIFIED-DATA-PLANE-R768.4): the stored
+/// row's status, else `CatchingUp` when the series has meta, else `Missing`.
+fn projection_status_in_wtx<W: SeriesTableWriter>(
+    wtx: &W,
+    storage_key: &str,
+) -> Result<ProjectionStatus> {
+    if let Some(row) = projection_row_in_wtx(wtx, storage_key)? {
+        return Ok(row.status);
+    }
+    Ok(if meta_in_wtx(wtx, storage_key)?.is_some() {
+        ProjectionStatus::CatchingUp
+    } else {
+        ProjectionStatus::Missing
+    })
+}
+
 fn put_projection_in_wtx<W: SeriesTableWriter>(
     wtx: &W,
     storage_key: &str,
@@ -1572,11 +1609,14 @@ fn stage_scoped_append<W: SeriesTableWriter>(
     }
     let meta = meta_in_wtx(wtx, storage_key)?
         .ok_or_else(|| codec_err("scoped append produced no series metadata"))?;
+    let status = projection_status_in_wtx(wtx, storage_key)?
+        .apply(ProjectionEvent::Append)
+        .map_err(|refused| codec_err(refused.to_string()))?;
     put_projection_in_wtx(
         wtx,
         storage_key,
         &ProjectionHealth {
-            status: ProjectionStatus::Ready,
+            status,
             cursor: Some(ProjectionCursor::from(&meta)),
             updated_unix_ms: request.committed_at_ms,
             last_error: None,

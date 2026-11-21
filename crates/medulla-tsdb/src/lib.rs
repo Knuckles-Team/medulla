@@ -67,6 +67,7 @@ pub mod derive;
 #[cfg(feature = "traces")]
 pub mod traces;
 
+pub mod projection_machine;
 #[cfg(feature = "redb-store")]
 pub mod store;
 

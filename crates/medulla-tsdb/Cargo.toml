@@ -22,7 +22,7 @@ default = []
 # the finance kernels (medulla-compute) for the primitive reuse. The native TS
 # primitives (ASOF / gap-fill / time_bucket / OHLC / decay_weighted_mean) need
 # NOTHING but this — no DataFusion (the Pi contract).
-redb-store = ["dep:redb", "dep:medulla-types", "dep:medulla-storage", "dep:medulla-transaction"]
+redb-store = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 # The development/test composition root for the store's scope grants
 # (`dev_scope_grant`). OFF by default and deliberately folded into NO tier
 # aggregate: the benchmark binary and the integration tests need a
@@ -44,7 +44,7 @@ promql = ["derive"]
 # EH-522 / EH-524 — derived series: a wire `SeriesExpr` compiled into a tree of
 # `medulla_numeric::series` kernels, checkpointed (`derive` module). medulla-types' `timeseries`
 # gives the canonical expression printer the provenance digest hashes.
-derive = ["dep:medulla-types", "dep:medulla-query-types", "medulla-types/timeseries", "medulla-query-types/timeseries"]
+derive = ["dep:medulla-query-types", "medulla-types/timeseries", "medulla-query-types/timeseries"]
 # CONCEPT:MEDULLA-163 — distributed traces: the span model + indexed in-memory span store
 # + parent→children trace assembly + service-dependency graph (`traces` module). A
 # hand-rolled store over std collections — NO new deps (the Pi contract holds).
@@ -70,7 +70,7 @@ medulla-compute = { path = "../medulla-compute", features = ["finance"] }
 
 # Same pins as the engine so footprint/throughput findings transfer 1:1.
 redb = { workspace = true, optional = true }
-medulla-types = { path = "../medulla-types", optional = true }
+medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types", optional = true }
 # The series kernels (EH-522): `derive`, the `series_*` helpers and PromQL's moments,
 # and the barrier / time-to-exhaustion law behind the PromQL functions (EH-527).
@@ -105,3 +105,5 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
+# Tests round-trip the closed span outcome and projection status through serde JSON.
+serde_json = "1.0"

@@ -1590,3 +1590,15 @@ fn move_stage_machine_matches_edge_table() {
 fn move_stage_machine_classes_extend_core() {
     sm::assert_extends_core("MoveStage");
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.4
+#[test]
+fn series_projection_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_tsdb::projection_machine::SERIES_PROJECTION_MACHINE);
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.4
+#[test]
+fn series_projection_machine_classes_extend_core() {
+    sm::assert_extends_core("SeriesProjection");
+}
