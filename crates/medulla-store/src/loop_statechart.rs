@@ -354,27 +354,36 @@ pub fn spec_proposal_statechart_def() -> StatechartDef {
 /// final. Any other event from a state is refused by the statechart handler
 /// as `STATECHART_NO_TRANSITION`. Pure and deterministic.
 pub fn agent_instance_statechart_def() -> StatechartDef {
-    use medulla_work_types::orchestration::org::{
-        AGENT_INSTANCE_CHART, AGENT_INSTANCE_EVENTS, AGENT_INSTANCE_FINALS, AGENT_INSTANCE_STATES,
-        AGENT_INSTANCE_TRANSITIONS,
-    };
+    use medulla_types::transition_refused::{MachineEvent, MachineState};
+    use medulla_work_types::orchestration::agent_lifecycle_machine::AGENT_LIFECYCLE_MACHINE as MACHINE;
+    use medulla_work_types::orchestration::org::AGENT_INSTANCE_CHART;
     StatechartDef {
         name: AGENT_INSTANCE_CHART.to_string(),
         schema_version: 1,
-        states: AGENT_INSTANCE_STATES
+        states: MACHINE
+            .states
             .iter()
-            .map(|id| State::new(*id))
+            .map(|state| State::new(state.stored()))
             .collect(),
-        alphabet: AGENT_INSTANCE_EVENTS
+        alphabet: MACHINE
+            .events
             .iter()
-            .map(|e| e.to_string())
+            .map(|event| event.name().to_string())
             .collect(),
-        transitions: AGENT_INSTANCE_TRANSITIONS
+        transitions: MACHINE
+            .edges
             .iter()
-            .map(|(from, event, to)| Transition::new(*from, *event, *to).with_guard(Guard::Always))
+            .map(|edge| {
+                Transition::new(edge.from.stored(), edge.event.name(), edge.to.stored())
+                    .with_guard(Guard::Always)
+            })
             .collect(),
-        initial: AGENT_INSTANCE_STATES[0].to_string(),
-        finals: AGENT_INSTANCE_FINALS.iter().map(|s| s.to_string()).collect(),
+        initial: MACHINE.initial.stored().to_string(),
+        finals: MACHINE
+            .terminals
+            .iter()
+            .map(|state| state.stored().to_string())
+            .collect(),
         meta: Default::default(),
     }
 }
@@ -388,6 +397,37 @@ mod tests {
 
     fn def() -> StatechartDef {
         loop_statechart_def()
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R815.2
+    #[test]
+    fn agent_instance_chart_matches_the_edge_table() {
+        use medulla_types::transition_refused::{MachineEvent, MachineState};
+        use medulla_work_types::orchestration::agent_lifecycle_machine::AGENT_LIFECYCLE_MACHINE;
+        let chart = agent_instance_statechart_def();
+        assert!(validate(&chart).is_ok(), "the chart is well formed");
+        let machine = &AGENT_LIFECYCLE_MACHINE;
+        let edges: Vec<(String, String, String)> = machine
+            .edges
+            .iter()
+            .map(|e| {
+                (
+                    e.from.stored().to_string(),
+                    e.event.name().to_string(),
+                    e.to.stored().to_string(),
+                )
+            })
+            .collect();
+        let chart_edges: Vec<(String, String, String)> = chart
+            .transitions
+            .iter()
+            .map(|t| (t.from.clone(), t.event.clone(), t.to.clone()))
+            .collect();
+        assert_eq!(chart_edges, edges);
+        assert_eq!(chart.initial, machine.initial.stored());
+        assert_eq!(chart.finals.len(), machine.terminals.len());
+        assert_eq!(chart.states.len(), machine.states.len());
+        assert_eq!(chart.alphabet.len(), machine.events.len());
     }
 
     fn payload(fields: &[(&str, serde_json::Value)]) -> serde_json::Value {

@@ -7795,3 +7795,91 @@
     :toState :GapViewMachine_Open ;
     :firedBy :GapViewMachine_Event_reopen .
 
+
+# spec: MEDULLA-ORCH-VOCAB-R815.2
+# The Agent Lifecycle machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:AgentLifecycleState a owl:Class ;
+    rdfs:label "Agent Lifecycle State" ;
+    rdfs:comment "A state of the Agent Lifecycle machine." ;
+    rdfs:subClassOf :State .
+
+:AgentLifecycleTerminalState a owl:Class ;
+    rdfs:label "Agent Lifecycle Terminal State" ;
+    rdfs:comment "A terminal state of the Agent Lifecycle machine." ;
+    rdfs:subClassOf :TerminalState, :AgentLifecycleState .
+
+:AgentLifecycleTransition a owl:Class ;
+    rdfs:label "Agent Lifecycle Transition" ;
+    rdfs:comment "A transition of the Agent Lifecycle machine." ;
+    rdfs:subClassOf :Transition .
+
+:AgentLifecycleEvent a owl:Class ;
+    rdfs:label "Agent Lifecycle Event" ;
+    rdfs:comment "A event of the Agent Lifecycle machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AgentLifecycleGuard a owl:Class ;
+    rdfs:label "Agent Lifecycle Guard" ;
+    rdfs:comment "A guard of the Agent Lifecycle machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AgentLifecycleMachine a :StateMachine ;
+    rdfs:label "Agent Lifecycle machine" ;
+    :initialState :AgentLifecycleMachine_Registered ;
+    :hasState :AgentLifecycleMachine_Registered, :AgentLifecycleMachine_Active, :AgentLifecycleMachine_Draining, :AgentLifecycleMachine_Terminated .
+
+:AgentLifecycleMachine_Registered a :AgentLifecycleState ;
+    rdfs:label "Agent Lifecycle Registered" ;
+    :storedForm "registered" .
+
+:AgentLifecycleMachine_Active a :AgentLifecycleState ;
+    rdfs:label "Agent Lifecycle Active" ;
+    :storedForm "active" .
+
+:AgentLifecycleMachine_Draining a :AgentLifecycleState ;
+    rdfs:label "Agent Lifecycle Draining" ;
+    :storedForm "draining" .
+
+:AgentLifecycleMachine_Terminated a :AgentLifecycleTerminalState ;
+    rdfs:label "Agent Lifecycle Terminated" ;
+    :storedForm "terminated" .
+
+:AgentLifecycleMachine_Event_activate a :AgentLifecycleEvent ;
+    rdfs:label "Agent Lifecycle activate" .
+
+:AgentLifecycleMachine_Event_drain a :AgentLifecycleEvent ;
+    rdfs:label "Agent Lifecycle drain" .
+
+:AgentLifecycleMachine_Event_terminate a :AgentLifecycleEvent ;
+    rdfs:label "Agent Lifecycle terminate" .
+
+:AgentLifecycleMachine_A01 a :AgentLifecycleTransition ;
+    rdfs:label "Agent Lifecycle A01" ;
+    :edgeId "A01" ;
+    :fromState :AgentLifecycleMachine_Registered ;
+    :toState :AgentLifecycleMachine_Active ;
+    :firedBy :AgentLifecycleMachine_Event_activate .
+
+:AgentLifecycleMachine_A02 a :AgentLifecycleTransition ;
+    rdfs:label "Agent Lifecycle A02" ;
+    :edgeId "A02" ;
+    :fromState :AgentLifecycleMachine_Registered ;
+    :toState :AgentLifecycleMachine_Terminated ;
+    :firedBy :AgentLifecycleMachine_Event_terminate .
+
+:AgentLifecycleMachine_A03 a :AgentLifecycleTransition ;
+    rdfs:label "Agent Lifecycle A03" ;
+    :edgeId "A03" ;
+    :fromState :AgentLifecycleMachine_Active ;
+    :toState :AgentLifecycleMachine_Draining ;
+    :firedBy :AgentLifecycleMachine_Event_drain .
+
+:AgentLifecycleMachine_A04 a :AgentLifecycleTransition ;
+    rdfs:label "Agent Lifecycle A04" ;
+    :edgeId "A04" ;
+    :fromState :AgentLifecycleMachine_Draining ;
+    :toState :AgentLifecycleMachine_Terminated ;
+    :firedBy :AgentLifecycleMachine_Event_terminate .
+

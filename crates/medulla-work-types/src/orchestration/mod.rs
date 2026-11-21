@@ -14,6 +14,7 @@
 //! (R078/R081) walk them. The records themselves are plain data: one
 //! vocabulary, one writer.
 
+pub mod agent_lifecycle_machine;
 pub mod capability_gap;
 pub mod definitions;
 pub mod errors;

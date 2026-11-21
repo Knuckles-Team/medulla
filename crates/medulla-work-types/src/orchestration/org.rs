@@ -114,25 +114,8 @@ pub enum AgentLifecycleState {
 /// The name of the statechart an [`AgentInstance`] moves on through
 /// `Method::Statechart` (MEDULLA-ORCH-VOCAB-R750.751).
 pub const AGENT_INSTANCE_CHART: &str = "agent_instance";
-/// The states of [`AGENT_INSTANCE_CHART`], the closed
-/// [`AgentLifecycleState`] set by wire name, initial state first.
-pub const AGENT_INSTANCE_STATES: [&str; 4] = ["registered", "active", "draining", "terminated"];
-/// The events of [`AGENT_INSTANCE_CHART`].
-pub const AGENT_INSTANCE_EVENTS: [&str; 3] = ["activate", "drain", "terminate"];
-/// The final states of [`AGENT_INSTANCE_CHART`].
-pub const AGENT_INSTANCE_FINALS: [&str; 1] = ["terminated"];
-/// Every move of [`AGENT_INSTANCE_CHART`] as `(from, event, to)`. Any other
-/// event from a state is refused by the statechart handler as
-/// `STATECHART_NO_TRANSITION`.
-pub const AGENT_INSTANCE_TRANSITIONS: [(&str, &str, &str); 4] = [
-    ("registered", "activate", "active"),
-    ("registered", "terminate", "terminated"),
-    ("active", "drain", "draining"),
-    ("draining", "terminate", "terminated"),
-];
-
 impl AgentLifecycleState {
-    /// The wire name of the state, one of [`AGENT_INSTANCE_STATES`].
+    /// The wire name of the state.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Registered => "registered",

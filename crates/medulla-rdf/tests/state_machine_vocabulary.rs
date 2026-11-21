@@ -928,6 +928,19 @@ fn incident_record_machine_classes_extend_core() {
     sm::assert_extends_core("IncidentRecord");
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R815.2
+#[test]
+fn agent_lifecycle_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_work_types::orchestration::agent_lifecycle_machine::AGENT_LIFECYCLE_MACHINE,
+    );
+}
+// spec: MEDULLA-ORCH-VOCAB-R815.2
+#[test]
+fn agent_lifecycle_machine_classes_extend_core() {
+    sm::assert_extends_core("AgentLifecycle");
+}
+
 // spec: MEDULLA-ORCH-VOCAB-R815.4
 #[test]
 fn gap_view_machine_matches_edge_table() {
