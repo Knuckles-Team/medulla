@@ -225,10 +225,15 @@ pub(super) fn normalize_record(
                         )))
                     }
                 };
-                let bytes = read_blob(content_ref).map_err(normalization_failed)?;
+                let bytes = read_blob(content_ref).map_err(|refusal| {
+                    match refusal.split_once(": ") {
+                        Some((code, detail)) => DocumentIngestError::from_reader_code(code, detail),
+                        None => normalization_failed(refusal),
+                    }
+                })?;
                 let fragments = readers
                     .read(&normalize_media_type(media_type), &bytes)
-                    .map_err(|error| normalization_failed(format!("{}: {}", error.code, error.detail)))?;
+                    .map_err(|error| DocumentIngestError::from_reader_code(error.code, &error.detail))?;
                 extracted = fragments
                     .iter()
                     .map(|fragment| fragment.text.as_str())
@@ -741,6 +746,11 @@ mod tests {
                 DocumentIngestError::NormalizationFailed("no text".into()),
                 QuarantineReason::NormalizationFailed,
                 "DOCUMENT_NORMALIZATION_FAILED",
+            ),
+            (
+                DocumentIngestError::from_reader_code("READER_TOO_LARGE", "9 bytes exceed 8"),
+                QuarantineReason::NormalizationFailed,
+                "READER_TOO_LARGE",
             ),
             (
                 DocumentIngestError::MissingProvenance("atom a1".into()),

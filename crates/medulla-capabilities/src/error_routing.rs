@@ -923,6 +923,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "FORECAST_SAMPLE_INVALID",
             // MEDULLA-INGEST-WORKER-R002.7.
             "PROPOSAL_NOT_ADMITTED",
+            // MEDULLA-INGEST-WORKER-R700.4: the reader refusals, each the rule id of a
+            // quarantine with reason `NormalizationFailed`.
+            "READER_CORRUPT",
+            "READER_ENCRYPTED",
+            "READER_TOO_LARGE",
+            "READER_UNSUPPORTED_MEDIA_TYPE",
             "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",
             "TRANSCRIPT_FOREIGN_CONCEPT",
             "TRANSCRIPT_INVALID",

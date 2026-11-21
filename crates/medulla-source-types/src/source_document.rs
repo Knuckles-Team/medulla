@@ -133,6 +133,31 @@ pub enum DocumentIngestError {
     /// The mapping a record names is not the revision the batch resolved.
     #[error("MAPPING_REVISION_MISMATCH: {0}")]
     MappingRevisionMismatch(String),
+    /// A reader refused the file (MEDULLA-INGEST-WORKER-R700.4). The text is
+    /// `<code>: <detail>` with `code` one of [`READER_REFUSAL_CODES`]; the code is the rule id.
+    #[error("{0}")]
+    ReaderRefused(String),
+}
+
+/// The closed reader refusal codes of MEDULLA-INGEST-WORKER-R700.4. Each is the rule id of the
+/// quarantine it causes, with reason `NormalizationFailed`.
+pub const READER_REFUSAL_CODES: [&str; 4] = [
+    "READER_TOO_LARGE",
+    "READER_ENCRYPTED",
+    "READER_UNSUPPORTED_MEDIA_TYPE",
+    "READER_CORRUPT",
+];
+
+impl DocumentIngestError {
+    /// A reader refusal for `code`, or a plain normalization failure when `code` is not one of
+    /// [`READER_REFUSAL_CODES`] (a reader's own construction codes stay normalization failures).
+    pub fn from_reader_code(code: &str, detail: &str) -> Self {
+        if READER_REFUSAL_CODES.contains(&code) {
+            Self::ReaderRefused(format!("{code}: {detail}"))
+        } else {
+            Self::NormalizationFailed(format!("{code}: {detail}"))
+        }
+    }
 }
 
 impl DocumentIngestError {
@@ -142,12 +167,17 @@ impl DocumentIngestError {
             Self::NormalizationFailed(_) => QuarantineReason::NormalizationFailed,
             Self::MissingProvenance(_) => QuarantineReason::MissingProvenance,
             Self::MappingRevisionMismatch(_) => QuarantineReason::MappingRevisionMismatch,
+            Self::ReaderRefused(_) => QuarantineReason::NormalizationFailed,
         }
     }
 
     /// The rule id recorded with the quarantine.
     pub fn rule_id(&self) -> &'static str {
         match self {
+            Self::ReaderRefused(text) => READER_REFUSAL_CODES
+                .into_iter()
+                .find(|code| text.starts_with(code))
+                .unwrap_or("DOCUMENT_NORMALIZATION_FAILED"),
             Self::NormalizationFailed(_) => "DOCUMENT_NORMALIZATION_FAILED",
             Self::MissingProvenance(_) => "ATOM_PROVENANCE_MISSING",
             Self::MappingRevisionMismatch(_) => "MAPPING_REVISION_MISMATCH",

@@ -7,6 +7,7 @@ media type, and the extracted text takes the same atom path as a `body` record.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -16,6 +17,7 @@ from typing import Any
 
 import pytest
 from conftest import request_context
+from pydantic import TypeAdapter
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 from ontology_pack_support import connect, import_entries
@@ -23,7 +25,11 @@ from ontology_pack_support import connect, import_entries
 from medulla import ConnectorPackEntryContent
 from medulla.client import MedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
-from medulla.generated.source_ingestion import SourceIngestionDisposition
+from medulla.generated.source_ingestion import (
+    QuarantineReason,
+    SourceIngestionDisposition,
+    SourceIngestionOutcome,
+)
 
 from .test_lsh_dedup_served import SOURCE_RECORD_ID
 from .test_source_stream_versions_served import (
@@ -137,5 +143,40 @@ async def test_text_formats_yield_document_atoms() -> None:
                 if await client.edges.properties(atom, document_node):
                     linked += 1
             assert linked >= 1, f"{kind} yielded no knowledge atom"
+    finally:
+        await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R700.4")
+@pytest.mark.asyncio
+async def test_reader_refusals_quarantine_without_projection() -> None:
+    connector = _connector()
+    client, graph = await _client(connector)
+    try:
+        cases = {
+            "unsupported": ("application/x-unknown", b"opaque bytes", "READER_UNSUPPORTED_MEDIA_TYPE"),
+            "corrupt": ("text/html", b"\xff\xfe\xfd not utf-8", "READER_CORRUPT"),
+        }
+        documents_before = len(await client.nodes.list_by_label("Document", 0))
+        for kind, (media_type, body, rule_id) in cases.items():
+            digest = await client.blob.store(body)
+            batch = _batch(connector, 2, None, "unused")
+            record = batch["records"][0]
+            record["record_id"] = f"refused-{kind}"
+            record["provenance"]["source_uri"] = f"demo://reader/refused-{kind}"
+            record["payload"] = {"id": 1, "blob": f"cas:sha256:{digest}", "media": media_type}
+            batch["records"] = [record]
+            payload = await client._send(
+                "SourceIngest",
+                {"request": copy.deepcopy(batch)},
+                idempotency_key=f"readers-refusal-{kind}:{uuid.uuid4().hex}",
+            )
+            outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
+            # The file is never skipped: the batch is quarantined under the reader's code.
+            assert outcome.outcome == "quarantined", outcome
+            assert outcome.receipt.rule_id == rule_id
+            assert outcome.receipt.reason is QuarantineReason.NORMALIZATION_FAILED
+        # No refusal projected a document.
+        assert len(await client.nodes.list_by_label("Document", 0)) == documents_before
     finally:
         await _close(client, graph)

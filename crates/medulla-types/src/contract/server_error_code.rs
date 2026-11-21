@@ -914,6 +914,14 @@ closed_error_codes! {
         IngestQueueFull => "INGEST_QUEUE_FULL",
         /// MEDULLA-INGEST-WORKER-R001.9: the reason of a dead-lettered ingest task whose attempts ran out.
         IngestRetriesExhausted => "INGEST_RETRIES_EXHAUSTED",
+        /// MEDULLA-INGEST-WORKER-R700.4: a file over `ingest.reader_max_bytes`.
+        ReaderTooLarge => "READER_TOO_LARGE",
+        /// MEDULLA-INGEST-WORKER-R700.4: an encrypted document, never read and never skipped.
+        ReaderEncrypted => "READER_ENCRYPTED",
+        /// MEDULLA-INGEST-WORKER-R700.4: a media type no reader is registered for.
+        ReaderUnsupportedMediaType => "READER_UNSUPPORTED_MEDIA_TYPE",
+        /// MEDULLA-INGEST-WORKER-R700.4: a file the reader cannot parse.
+        ReaderCorrupt => "READER_CORRUPT",
         IngestTenantMismatch => "INGEST_TENANT_MISMATCH",
         DataPrepDeclarationInvalid => "DATA_PREP_DECLARATION_INVALID",
         DataPrepDeclarationTooLarge => "DATA_PREP_DECLARATION_TOO_LARGE",
