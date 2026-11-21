@@ -1305,7 +1305,10 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "bpmn",
             version: 1,
-            shapes: None,
+            // MEDULLA-ORCH-VOCAB-R014.5: the BPMN structural constraints.
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/bpmn-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!("../../../medulla-core/ontology/bpmn-v1.ttl")),
         },
         CoreSpec {

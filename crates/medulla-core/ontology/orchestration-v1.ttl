@@ -346,7 +346,7 @@
     rdfs:range :AgentMessage .
 
 :hasPrompt a owl:ObjectProperty ;
-    rdfs:domain :Agent ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :Agent :ProcessStep ) ] ;
     rdfs:range :Prompt .
 
 :hasRun a owl:ObjectProperty ;
@@ -803,7 +803,7 @@
     rdfs:label "usesTool (orchestration)" ;
     rdfs:comment "The orchestration module's meaning of the shared kg:usesTool: it carries this module's domain and range so that the shared property carries none (a module must not constrain a shared property)." ;
     rdfs:subPropertyOf :usesTool ;
-    rdfs:domain :Agent ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :Agent :ProcessStep ) ] ;
     rdfs:range :Tool .
 
 # MEDULLA-ORCH-VOCAB-R009.1 through R009.8: measured harness run properties.
@@ -935,8 +935,8 @@
 
 :hasAgentKind a owl:ObjectProperty ;
     rdfs:label "hasAgentKind" ;
-    rdfs:comment "The kind an agent fills." ;
-    rdfs:domain :Agent ;
+    rdfs:comment "The kind an agent fills, or the kind of agent a process lane names (MEDULLA-ORCH-VOCAB-R014.4)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :Agent :ProcessLane ) ] ;
     rdfs:range :AgentKind .
 
 :AgentTemplate a owl:Class ;
@@ -1286,4 +1286,111 @@
 :disposition a owl:DatatypeProperty ;
     rdfs:label "disposition" ;
     rdfs:comment "Where a capability gap or desired enhancement stands: open, accepted, resolved or rejected (MEDULLA-ORCH-VOCAB-R004.6.1)." ;
+    rdfs:range xsd:string .
+
+# MEDULLA-ORCH-VOCAB-R014.1: the source-neutral process terms. A process step, a gate and
+# an event node are task steps; a flow and a lane are concepts. BPMN (bpmn-v1.ttl) and
+# ARIS packs extend these.
+:ProcessStep a owl:Class ;
+    rdfs:label "Process Step" ;
+    rdfs:comment "A unit of work in a process model: a task, a sub-process or a call." ;
+    rdfs:subClassOf :TaskStep .
+
+:ProcessGate a owl:Class ;
+    rdfs:label "Process Gate" ;
+    rdfs:comment "A split or join of a process model: the point where flows diverge or converge." ;
+    rdfs:subClassOf :TaskStep .
+
+:ProcessEventNode a owl:Class ;
+    rdfs:label "Process Event Node" ;
+    rdfs:comment "Something that happens in a process model: it starts, ends, waits or interrupts the flow." ;
+    rdfs:subClassOf :TaskStep .
+
+:ProcessSequenceFlow a owl:Class ;
+    rdfs:label "Process Sequence Flow" ;
+    rdfs:comment "A directed flow from one step, gate or event node to another." ;
+    rdfs:subClassOf :Concept .
+
+:ProcessLane a owl:Class ;
+    rdfs:label "Process Lane" ;
+    rdfs:comment "A role or agent kind that performs the elements placed in it." ;
+    rdfs:subClassOf :Concept .
+
+:flowSource a owl:ObjectProperty ;
+    rdfs:label "flowSource" ;
+    rdfs:comment "The step, gate or event node a flow leaves." ;
+    rdfs:domain :ProcessSequenceFlow ;
+    rdfs:range :TaskStep .
+
+:flowTarget a owl:ObjectProperty ;
+    rdfs:label "flowTarget" ;
+    rdfs:comment "The step, gate or event node a flow enters." ;
+    rdfs:domain :ProcessSequenceFlow ;
+    rdfs:range :TaskStep .
+
+:flowCondition a owl:DatatypeProperty ;
+    rdfs:label "flowCondition" ;
+    rdfs:comment "The condition expression that must hold for a flow to be taken." ;
+    rdfs:domain :ProcessSequenceFlow ;
+    rdfs:range xsd:string .
+
+:isDefaultFlow a owl:DatatypeProperty ;
+    rdfs:label "isDefaultFlow" ;
+    rdfs:comment "True on the flow a gate takes when no other condition holds." ;
+    rdfs:domain :ProcessSequenceFlow ;
+    rdfs:range xsd:boolean .
+
+:inLane a owl:ObjectProperty ;
+    rdfs:label "inLane" ;
+    rdfs:comment "The lane that performs a process element." ;
+    rdfs:domain :TaskStep ;
+    rdfs:range :ProcessLane .
+
+:hasProcessElement a owl:ObjectProperty ;
+    rdfs:label "hasProcessElement" ;
+    rdfs:comment "An element (step, gate, event node, flow or lane) of a process model. No range: elements come from several classes." ;
+    rdfs:domain :ProcessModel .
+
+:eventPosition a owl:DatatypeProperty ;
+    rdfs:label "eventPosition" ;
+    rdfs:comment "Where an event node sits in the flow: start, end, intermediate or boundary." ;
+    rdfs:domain :ProcessEventNode ;
+    rdfs:range xsd:string .
+
+# MEDULLA-ORCH-VOCAB-R014.4: what binds a process step to its executor. :usesTool and
+# :hasPrompt widen their domain to :ProcessStep above; :inLane of a lane with
+# :hasAgentKind names the agent kind of a step.
+:evaluatesDecision a owl:ObjectProperty ;
+    rdfs:label "evaluatesDecision" ;
+    rdfs:comment "The decision logic a step evaluates." ;
+    rdfs:domain :ProcessStep ;
+    rdfs:range :DecisionLogic .
+
+:approverRole a owl:DatatypeProperty ;
+    rdfs:label "approverRole" ;
+    rdfs:comment "The role that approves a human step." ;
+    rdfs:domain :ProcessStep ;
+    rdfs:range xsd:string .
+
+:toolArguments a owl:DatatypeProperty ;
+    rdfs:label "toolArguments" ;
+    rdfs:comment "A JSON argument template for the step's tool, in the binding form of MEDULLA-DECISION-ENGINE-R134.111.8." ;
+    rdfs:domain :ProcessStep ;
+    rdfs:range xsd:string .
+
+# MEDULLA-ORCH-VOCAB-R014.9: the canonical kind and gate a stored workflow step holds,
+# and the process source system.
+:stepKind a owl:DatatypeProperty ;
+    rdfs:label "stepKind" ;
+    rdfs:comment "The canonical kind of a stored workflow step: start, end, human, agent, decision, branch, fork, join, wait, call or boundary." ;
+    rdfs:range xsd:string .
+
+:stepGate a owl:DatatypeProperty ;
+    rdfs:label "stepGate" ;
+    rdfs:comment "The canonical gate of a stored workflow step: and, or or xor." ;
+    rdfs:range xsd:string .
+
+:processSourceSystem a owl:DatatypeProperty ;
+    rdfs:label "processSourceSystem" ;
+    rdfs:comment "The notation a process came from: bpmn20 or aris_epc." ;
     rdfs:range xsd:string .

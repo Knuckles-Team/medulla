@@ -1,0 +1,63 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# MEDULLA-ORCH-VOCAB-R014.5: structural constraints of a BPMN 2.0 process in the graph.
+# Each shape names the concrete classes it targets, so it holds on a batch that carries
+# no class hierarchy.
+
+:BpmnSequenceFlowShape a sh:NodeShape ;
+    sh:targetClass :BpmnSequenceFlow ;
+    sh:property [ sh:path :flowSource ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A sequence flow has exactly one flowSource." ],
+    [ sh:path :flowTarget ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A sequence flow has exactly one flowTarget." ] .
+
+:BpmnGatewayDefaultShape a sh:NodeShape ;
+    sh:targetClass :BpmnGateway, :BpmnExclusiveGateway, :BpmnParallelGateway, :BpmnInclusiveGateway, :BpmnEventBasedGateway, :BpmnComplexGateway ;
+    sh:sparql [
+        sh:message "A gateway has at most one outgoing default flow." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                ?first :flowSource $this ; :isDefaultFlow true .
+                ?second :flowSource $this ; :isDefaultFlow true .
+                FILTER (?first != ?second)
+            }""" ] .
+
+:BpmnStartEventShape a sh:NodeShape ;
+    sh:targetClass :BpmnStartEvent ;
+    sh:sparql [
+        sh:message "A start event has no incoming flow." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE { ?flow :flowTarget $this }""" ] .
+
+:BpmnEndEventShape a sh:NodeShape ;
+    sh:targetClass :BpmnEndEvent ;
+    sh:sparql [
+        sh:message "An end event has no outgoing flow." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE { ?flow :flowSource $this }""" ] .
+
+:BpmnElementIdShape a sh:NodeShape ;
+    sh:targetClass :BpmnTask, :BpmnUserTask, :BpmnManualTask, :BpmnServiceTask, :BpmnScriptTask, :BpmnSendTask, :BpmnReceiveTask, :BpmnBusinessRuleTask, :BpmnSubProcess, :BpmnCallActivity, :BpmnExclusiveGateway, :BpmnParallelGateway, :BpmnInclusiveGateway, :BpmnEventBasedGateway, :BpmnComplexGateway, :BpmnStartEvent, :BpmnEndEvent, :BpmnIntermediateCatchEvent, :BpmnIntermediateThrowEvent, :BpmnBoundaryEvent, :BpmnSequenceFlow, :BpmnLane ;
+    sh:property [ sh:path :bpmnElementId ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "An element has exactly one bpmnElementId." ] ;
+    sh:sparql [
+        sh:message "A bpmnElementId is unique within its process model." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                ?model :hasProcessElement $this , ?other .
+                $this :bpmnElementId ?id .
+                ?other :bpmnElementId ?id .
+                FILTER (?other != $this)
+            }""" ] .
+
+:BpmnLaneMembershipShape a sh:NodeShape ;
+    sh:targetSubjectsOf :inLane ;
+    sh:property [ sh:path :inLane ; sh:maxCount 1 ;
+        sh:message "An element is in at most one lane." ] .

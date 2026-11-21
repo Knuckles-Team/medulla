@@ -1,0 +1,324 @@
+@prefix : <https://knuckles-team.github.io/ontology/connector/aris#> .
+@prefix core: <https://knuckles-team.github.io/ontology/core#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ARIS EPC (event-driven process chain) ontology.
+#
+# Every class reaches a core class (kg#) through rdfs:subClassOf; the file never
+# imports the core ontology. The core terms :EpcFunction, :EpcRuleOperator,
+# :ProcessEventType and :flowsTo are owned by the core and only used here as
+# parents and links.
+#
+# The annotations below are the single source of truth of the EPC <-> canonical
+# workflow mapping (aris_mcp/canonical.py reads them from this file):
+#   :arisTypeNum / :arisSymbolNum   the ARIS object type and symbol a class covers,
+#   :dagNodeKind                    the canonical step kind it becomes (the same
+#                                   closed set as the BPMN ontology, plus `state`
+#                                   for an intermediate event that is folded),
+#   :canonicalGateKind              the gate (and / or / xor) of a rule operator,
+#   :epcAttachmentRole              what an attached object contributes to its
+#                                   function (performer, it-support, decision-rule,
+#                                   data, document),
+#   :executedByTool                 the aris-mcp tools that read or convert it.
+#
+# Tool-use contracts, prompt/skill/tool links, data locations and business roles
+# are declared in aris_mcp/connector_contracts.py and served as
+# ontology://aris-mcp/contracts.ttl.
+
+<https://knuckles-team.github.io/ontology/connector/aris> a owl:Ontology ;
+    rdfs:label "ARIS EPC process ontology" ;
+    rdfs:comment "ARIS EPC models, their functions, events, rule operators, attached objects, connections and exports, mapped to the canonical workflow and rolled up to the core ontology by subclassing." .
+
+# ---------------------------------------------------------------------------
+# Annotation vocabulary
+# ---------------------------------------------------------------------------
+
+:dagNodeKind a owl:AnnotationProperty ;
+    rdfs:label "DAG node kind" ;
+    rdfs:comment "What a process construct becomes in the canonical workflow and the agent workflow graph: start, end, human, agent, decision, branch, fork, join, wait, call or boundary; graph for the process itself; state for a source-only intermediate event that is folded away." .
+
+:canonicalGateKind a owl:AnnotationProperty ;
+    rdfs:label "canonical gate kind" ;
+    rdfs:comment "The gate of a split or join in the canonical workflow: and, or or xor." .
+
+:arisTypeNum a owl:AnnotationProperty ;
+    rdfs:label "ARIS type number" ;
+    rdfs:comment "The ARIS object or model type constant (TypeNum, for example OT_FUNC) a class covers." .
+
+:arisSymbolNum a owl:AnnotationProperty ;
+    rdfs:label "ARIS symbol number" ;
+    rdfs:comment "The ARIS symbol constant (SymbolNum, for example ST_PRCS_IF) that narrows a type to this class." .
+
+:epcAttachmentRole a owl:AnnotationProperty ;
+    rdfs:label "EPC attachment role" ;
+    rdfs:comment "What an object attached to a function contributes in the canonical workflow: performer (the step's role), it-support (makes the step automated), decision-rule (makes the step a decision), data or document (kept with the source only)." .
+
+:executedByTool a owl:AnnotationProperty ;
+    rdfs:label "executed by tool" ;
+    rdfs:comment "An aris-mcp tool name that reads, converts or ingests instances of this construct." .
+
+# ---------------------------------------------------------------------------
+# Models and exports
+# ---------------------------------------------------------------------------
+
+:EpcModel a owl:Class ;
+    rdfs:subClassOf core:ProcessModel ;
+    rdfs:label "EPC model" ;
+    :arisTypeNum "MT_EEPC", "MT_EEPC_COLUMN", "MT_EEPC_ROW", "MT_EEPC_TAB" ;
+    :dagNodeKind "graph" ;
+    :executedByTool "aris_list_models", "aris_get_model", "aris_export_canonical_workflow", "aris_import_canonical_workflow", "aris_export_aml", "aris_import_aml" ;
+    rdfs:comment "An ARIS event-driven process chain model. Its control objects and control flow become one canonical workflow." .
+
+:ModelExport a owl:Class ;
+    rdfs:subClassOf core:MediaFile ;
+    rdfs:label "Model export" ;
+    :executedByTool "aris_ingest_model_export", "aris_export_aml" ;
+    rdfs:comment "A raw exported rendering of an ARIS model (AML, XML, SVG or PDF bytes) stored as a content-addressed media asset." .
+
+:AmlDocument a owl:Class ;
+    rdfs:subClassOf core:Document ;
+    rdfs:label "AML document" ;
+    :executedByTool "aris_import_aml", "aris_export_aml" ;
+    rdfs:comment "An ARIS Markup Language export: groups, object and connection definitions, models with their occurrences." .
+
+# ---------------------------------------------------------------------------
+# Functions (leaf classes of the core :EpcFunction)
+# ---------------------------------------------------------------------------
+
+:EpcHumanFunction a owl:Class ;
+    rdfs:subClassOf core:EpcFunction ;
+    rdfs:label "EPC human function" ;
+    :arisTypeNum "OT_FUNC" ;
+    :dagNodeKind "human" ;
+    :executedByTool "aris_list_model_objects", "aris_export_canonical_workflow" ;
+    rdfs:comment "A function carried out by an organizational element and supported by no application system: a person does the work." .
+
+:EpcAutomatedFunction a owl:Class ;
+    rdfs:subClassOf core:EpcFunction ;
+    rdfs:label "EPC automated function" ;
+    :arisTypeNum "OT_FUNC" ;
+    :dagNodeKind "agent" ;
+    :executedByTool "aris_list_model_objects", "aris_export_canonical_workflow" ;
+    rdfs:comment "A function supported by an application system, or with no performer: an agent does the work." .
+
+:EpcDecisionFunction a owl:Class ;
+    rdfs:subClassOf core:EpcFunction ;
+    rdfs:label "EPC decision function" ;
+    :arisTypeNum "OT_FUNC" ;
+    :dagNodeKind "decision" ;
+    :executedByTool "aris_list_model_objects", "aris_export_canonical_workflow" ;
+    rdfs:comment "A function linked to a business rule or decision object: the canonical step evaluates that decision." .
+
+:EpcProcessInterface a owl:Class ;
+    rdfs:subClassOf core:EpcFunction ;
+    rdfs:label "EPC process interface" ;
+    :arisTypeNum "OT_FUNC" ;
+    :arisSymbolNum "ST_PRCS_IF" ;
+    :dagNodeKind "call" ;
+    :executedByTool "aris_list_model_objects", "aris_export_canonical_workflow" ;
+    rdfs:comment "A function symbol that hands over to another process: the canonical step calls that process." .
+
+# ---------------------------------------------------------------------------
+# Events
+# ---------------------------------------------------------------------------
+
+:EpcEvent a owl:Class ;
+    rdfs:subClassOf core:ProcessEventType ;
+    rdfs:label "EPC event" ;
+    :arisTypeNum "OT_EVT" ;
+    rdfs:comment "A business state that triggers or results from a function." .
+
+:EpcStartEvent a owl:Class ;
+    rdfs:subClassOf :EpcEvent ;
+    rdfs:label "EPC start event" ;
+    :arisTypeNum "OT_EVT" ;
+    :dagNodeKind "start" ;
+    :executedByTool "aris_export_canonical_workflow" ;
+    rdfs:comment "An event with no incoming control flow: where the process starts." .
+
+:EpcEndEvent a owl:Class ;
+    rdfs:subClassOf :EpcEvent ;
+    rdfs:label "EPC end event" ;
+    :arisTypeNum "OT_EVT" ;
+    :dagNodeKind "end" ;
+    :executedByTool "aris_export_canonical_workflow" ;
+    rdfs:comment "An event with no outgoing control flow: where a path ends." .
+
+:EpcIntermediateEvent a owl:Class ;
+    rdfs:subClassOf :EpcEvent ;
+    rdfs:label "EPC intermediate event" ;
+    :arisTypeNum "OT_EVT" ;
+    :dagNodeKind "state" ;
+    :executedByTool "aris_export_canonical_workflow", "aris_import_canonical_workflow" ;
+    rdfs:comment "An event between two control objects. It is folded away in the canonical workflow: after a split operator its label becomes the condition of the flow, elsewhere it is kept in the annex and restored on a same-source export." .
+
+# ---------------------------------------------------------------------------
+# Rule operators (leaf classes of the core :EpcRuleOperator)
+# ---------------------------------------------------------------------------
+
+:EpcAndOperator a owl:Class ;
+    rdfs:subClassOf core:EpcRuleOperator ;
+    rdfs:label "EPC AND operator" ;
+    :arisTypeNum "OT_RULE" ;
+    :arisSymbolNum "ST_OPR_AND_1" ;
+    :dagNodeKind "fork" ;
+    :canonicalGateKind "and" ;
+    :executedByTool "aris_export_canonical_workflow" ;
+    rdfs:comment "All paths: a split forks, a merge (in-degree two or more) joins." .
+
+:EpcOrOperator a owl:Class ;
+    rdfs:subClassOf core:EpcRuleOperator ;
+    rdfs:label "EPC OR operator" ;
+    :arisTypeNum "OT_RULE" ;
+    :arisSymbolNum "ST_OPR_OR_1" ;
+    :dagNodeKind "fork" ;
+    :canonicalGateKind "or" ;
+    :executedByTool "aris_export_canonical_workflow" ;
+    rdfs:comment "One or more paths: a split forks on the conditions that hold, a merge joins." .
+
+:EpcXorOperator a owl:Class ;
+    rdfs:subClassOf core:EpcRuleOperator ;
+    rdfs:label "EPC XOR operator" ;
+    :arisTypeNum "OT_RULE" ;
+    :arisSymbolNum "ST_OPR_XOR_1" ;
+    :dagNodeKind "branch" ;
+    :canonicalGateKind "xor" ;
+    :executedByTool "aris_export_canonical_workflow" ;
+    rdfs:comment "Exactly one path: a split branches, a merge joins." .
+
+# ---------------------------------------------------------------------------
+# Attached objects (never control flow)
+# ---------------------------------------------------------------------------
+
+:EpcAttachment a owl:Class ;
+    rdfs:subClassOf core:Concept ;
+    rdfs:label "EPC attached object" ;
+    rdfs:comment "An object connected to a function that is not part of the control flow. An attachment of a type no subclass covers is kept in the canonical annex as epc-attachment." .
+
+:EpcOrganizationalElement a owl:Class ;
+    rdfs:subClassOf :EpcAttachment ;
+    rdfs:label "EPC organizational element" ;
+    :arisTypeNum "OT_ORG_UNIT", "OT_ORG_UNIT_TYPE", "OT_PERS_TYPE", "OT_POS", "OT_PERS", "OT_GRP" ;
+    :epcAttachmentRole "performer" ;
+    rdfs:comment "The organizational unit, role, position, person or group that carries out a function: the canonical step's role." .
+
+:EpcApplicationSystem a owl:Class ;
+    rdfs:subClassOf :EpcAttachment ;
+    rdfs:label "EPC application system" ;
+    :arisTypeNum "OT_APPL_SYS", "OT_APPL_SYS_TYPE", "OT_APPL_SYS_CLS", "OT_DP_FUNC_TYPE", "OT_DP_FUNC" ;
+    :epcAttachmentRole "it-support" ;
+    rdfs:comment "An application system or IT function that supports a function: the canonical step is automated (agent)." .
+
+:EpcBusinessRule a owl:Class ;
+    rdfs:subClassOf :EpcAttachment ;
+    rdfs:label "EPC business rule" ;
+    :arisTypeNum "OT_BUSINESS_RULE", "OT_DMN_DECISION" ;
+    :epcAttachmentRole "decision-rule" ;
+    rdfs:comment "A business rule or decision linked to a function: the canonical step is a decision and the rule name is its reference." .
+
+:EpcDataObject a owl:Class ;
+    rdfs:subClassOf :EpcAttachment ;
+    rdfs:label "EPC data object" ;
+    :arisTypeNum "OT_CLST", "OT_ENT_TYPE", "OT_TECH_TRM", "OT_INFO_CARR_DATA" ;
+    :epcAttachmentRole "data" ;
+    rdfs:comment "A cluster, entity type or technical term a function reads or writes." .
+
+:EpcDocument a owl:Class ;
+    rdfs:subClassOf :EpcAttachment ;
+    rdfs:label "EPC document" ;
+    :arisTypeNum "OT_INFO_CARR" ;
+    :epcAttachmentRole "document" ;
+    rdfs:comment "An information carrier (document, form) a function uses or produces." .
+
+:EpcConnection a owl:Class ;
+    rdfs:subClassOf core:Concept ;
+    rdfs:label "EPC connection" ;
+    :executedByTool "aris_list_model_connections", "aris_ingest_model_graph" ;
+    rdfs:comment "One directed connection of a model, reified: control flow when both ends are control objects, otherwise an attachment." .
+
+# ---------------------------------------------------------------------------
+# Links
+# ---------------------------------------------------------------------------
+
+:hasObject a owl:ObjectProperty ;
+    rdfs:label "has object" ;
+    rdfs:comment "Links an EPC model to an object placed on it." ;
+    rdfs:domain core:ProcessModel .
+
+:hasConnection a owl:ObjectProperty ;
+    rdfs:label "has connection" ;
+    rdfs:comment "Links an EPC model to a connection defined within it." ;
+    rdfs:domain core:ProcessModel ;
+    rdfs:range :EpcConnection .
+
+:connectionSource a owl:ObjectProperty ;
+    rdfs:label "connection source" ;
+    rdfs:comment "The object an EPC connection starts at." ;
+    rdfs:domain :EpcConnection .
+
+:connectionTarget a owl:ObjectProperty ;
+    rdfs:label "connection target" ;
+    rdfs:comment "The object an EPC connection points to." ;
+    rdfs:domain :EpcConnection .
+
+:exportedFrom a owl:ObjectProperty ;
+    rdfs:label "exported from" ;
+    rdfs:comment "Links a model export to the model it was rendered from." ;
+    rdfs:domain :ModelExport ;
+    rdfs:range core:ProcessModel .
+
+# ---------------------------------------------------------------------------
+# Fields
+# ---------------------------------------------------------------------------
+
+:guid a owl:DatatypeProperty ;
+    rdfs:label "guid" ;
+    rdfs:comment "ARIS global identifier of a model, object or connection." ;
+    rdfs:range xsd:string .
+
+:modelType a owl:DatatypeProperty ;
+    rdfs:label "model type" ;
+    rdfs:comment "ARIS model type (TypeNum, for example MT_EEPC)." ;
+    rdfs:domain core:ProcessModel ;
+    rdfs:range xsd:string .
+
+:objectType a owl:DatatypeProperty ;
+    rdfs:label "object type" ;
+    rdfs:comment "ARIS object type (TypeNum) of an object placed on a model." ;
+    rdfs:range xsd:string .
+
+:symbolType a owl:DatatypeProperty ;
+    rdfs:label "symbol type" ;
+    rdfs:comment "ARIS symbol (SymbolNum) of an object placed on a model." ;
+    rdfs:range xsd:string .
+
+:groupPath a owl:DatatypeProperty ;
+    rdfs:label "group path" ;
+    rdfs:comment "Repository group path a model is filed under." ;
+    rdfs:domain core:ProcessModel ;
+    rdfs:range xsd:string .
+
+:connectionType a owl:DatatypeProperty ;
+    rdfs:label "connection type" ;
+    rdfs:comment "ARIS connection type (TypeNum, for example CT_ACTIV_1) of an EPC connection." ;
+    rdfs:domain :EpcConnection ;
+    rdfs:range xsd:string .
+
+:modelId a owl:DatatypeProperty ;
+    rdfs:label "model id" ;
+    rdfs:comment "GUID of the model an object is placed on." ;
+    rdfs:range xsd:string .
+
+:sourceId a owl:DatatypeProperty ;
+    rdfs:label "source id" ;
+    rdfs:comment "GUID of the object an EPC connection starts at." ;
+    rdfs:domain :EpcConnection ;
+    rdfs:range xsd:string .
+
+:targetId a owl:DatatypeProperty ;
+    rdfs:label "target id" ;
+    rdfs:comment "GUID of the object an EPC connection points to." ;
+    rdfs:domain :EpcConnection ;
+    rdfs:range xsd:string .

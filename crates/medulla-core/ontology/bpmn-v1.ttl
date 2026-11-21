@@ -1,6 +1,7 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # BPMN 2.0 flow-node classes (MEDULLA-ORCH-VOCAB-R014.2) and the canonical
 # step kind and gate each one carries (MEDULLA-ORCH-VOCAB-R014.9,
@@ -22,12 +23,12 @@
 :BpmnFlowNode a owl:Class ;
     rdfs:label "BPMN FlowNode" ;
     rdfs:comment "A BPMN 2.0 flow element that sequence flows connect: an activity, an event or a gateway." ;
-    rdfs:subClassOf :BpmnFlowElement .
+    rdfs:subClassOf :BpmnFlowElement, :TaskStep .
 
 :BpmnActivity a owl:Class ;
     rdfs:label "BPMN Activity" ;
     rdfs:comment "A BPMN 2.0 flow node that performs work: a task, a sub-process or a call activity." ;
-    rdfs:subClassOf :BpmnFlowNode .
+    rdfs:subClassOf :BpmnFlowNode, :ProcessStep .
 
 :BpmnTask a owl:Class ;
     rdfs:label "BPMN Task" ;
@@ -81,7 +82,7 @@
 
 :BpmnGateway a owl:Class ;
     rdfs:label "BPMN Gateway" ;
-    rdfs:subClassOf :BpmnFlowNode .
+    rdfs:subClassOf :BpmnFlowNode, :ProcessGate .
 
 :BpmnExclusiveGateway a owl:Class ;
     rdfs:label "BPMN ExclusiveGateway" ;
@@ -113,7 +114,7 @@
 
 :BpmnEvent a owl:Class ;
     rdfs:label "BPMN Event" ;
-    rdfs:subClassOf :BpmnFlowNode .
+    rdfs:subClassOf :BpmnFlowNode, :ProcessEventNode .
 
 :BpmnStartEvent a owl:Class ;
     rdfs:label "BPMN StartEvent" ;
@@ -139,3 +140,78 @@
     rdfs:label "BPMN BoundaryEvent" ;
     rdfs:subClassOf :BpmnEvent ;
     :dagNodeKind "boundary" .
+
+# MEDULLA-ORCH-VOCAB-R014.2: the flow, lane, model and event definition classes, each
+# under one core process term of orchestration-v1.ttl, and the properties that keep
+# the source id and the fragments the graph does not model.
+:BpmnSequenceFlow a owl:Class ;
+    rdfs:label "BPMN SequenceFlow" ;
+    rdfs:comment "A BPMN 2.0 sequence flow between two flow nodes." ;
+    rdfs:subClassOf :ProcessSequenceFlow .
+
+:BpmnLane a owl:Class ;
+    rdfs:label "BPMN Lane" ;
+    rdfs:comment "A BPMN 2.0 lane: the role or agent kind that performs its flow nodes." ;
+    rdfs:subClassOf :ProcessLane .
+
+:BpmnProcess a owl:Class ;
+    rdfs:label "BPMN Process" ;
+    rdfs:comment "A BPMN 2.0 process: its flow nodes, flows and lanes." ;
+    rdfs:subClassOf :ProcessModel .
+
+:BpmnDefinitions a owl:Class ;
+    rdfs:label "BPMN Definitions" ;
+    rdfs:comment "One BPMN 2.0 document: the definitions root that holds processes." ;
+    rdfs:subClassOf :ProcessModel .
+
+:BpmnEventDefinition a owl:Class ;
+    rdfs:label "BPMN EventDefinition" ;
+    rdfs:comment "The trigger or effect of a BPMN 2.0 event, linked by :hasEventDefinition." ;
+    rdfs:subClassOf :Concept .
+:BpmnTimerEventDefinition a owl:Class ;
+    rdfs:label "BPMN TimerEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnMessageEventDefinition a owl:Class ;
+    rdfs:label "BPMN MessageEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnSignalEventDefinition a owl:Class ;
+    rdfs:label "BPMN SignalEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnErrorEventDefinition a owl:Class ;
+    rdfs:label "BPMN ErrorEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnEscalationEventDefinition a owl:Class ;
+    rdfs:label "BPMN EscalationEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnConditionalEventDefinition a owl:Class ;
+    rdfs:label "BPMN ConditionalEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnCompensateEventDefinition a owl:Class ;
+    rdfs:label "BPMN CompensateEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:BpmnTerminateEventDefinition a owl:Class ;
+    rdfs:label "BPMN TerminateEventDefinition" ;
+    rdfs:subClassOf :BpmnEventDefinition .
+
+:hasEventDefinition a owl:ObjectProperty ;
+    rdfs:label "hasEventDefinition" ;
+    rdfs:comment "A BPMN event names its trigger or effect." ;
+    rdfs:domain :BpmnEvent ;
+    rdfs:range :BpmnEventDefinition .
+
+:bpmnElementId a owl:DatatypeProperty ;
+    rdfs:label "bpmnElementId" ;
+    rdfs:comment "The id the source BPMN 2.0 document gave the element. Unique within its :ProcessModel." ;
+    rdfs:range xsd:string .
+
+:bpmnPreservedXml a owl:DatatypeProperty ;
+    rdfs:label "bpmnPreservedXml" ;
+    rdfs:comment "The canonical XML of an extension or diagram fragment the graph does not model, kept on its owner node." ;
+    rdfs:range xsd:string .

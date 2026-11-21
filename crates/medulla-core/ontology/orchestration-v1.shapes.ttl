@@ -384,3 +384,21 @@
     [ sh:path :inDomain ; sh:minCount 1 ; sh:maxCount 1 ],
     [ sh:path :disposition ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
       sh:in ( "open" "accepted" "resolved" "rejected" ) ] .
+
+# MEDULLA-ORCH-VOCAB-R014.1: an event node sits at one of four positions.
+:EventPositionShape a sh:NodeShape ;
+    sh:targetSubjectsOf :eventPosition ;
+    sh:property [ sh:path :eventPosition ;
+        sh:datatype xsd:string ;
+        sh:in ( "start" "end" "intermediate" "boundary" ) ] .
+
+# MEDULLA-ORCH-VOCAB-R014.9: the canonical step kind and gate vocabularies are closed.
+:DagNodeKindShape a sh:NodeShape ;
+    sh:targetSubjectsOf :dagNodeKind ;
+    sh:property [ sh:path :dagNodeKind ;
+        sh:in ( "start" "end" "human" "agent" "decision" "branch" "fork" "join" "wait" "call" "boundary" "graph" "state" ) ] .
+
+:CanonicalGateKindShape a sh:NodeShape ;
+    sh:targetSubjectsOf :canonicalGateKind ;
+    sh:property [ sh:path :canonicalGateKind ;
+        sh:in ( "and" "or" "xor" ) ] .
