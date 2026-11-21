@@ -279,7 +279,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-IDENTITY-R008.4/R008.5: the stored run-scope bound.
     (
         "AgentAssemble",
-        &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
+        &[
+            "SCOPE_EXCEEDS_POLICY",
+            "SCOPE_POLICY_UNREADABLE",
+            // MEDULLA-ORCH-VOCAB-R007.1: a `:precedes` cycle between steps.
+            "STEP_ORDER_CYCLE",
+        ],
     ),
     // MEDULLA-PLACEMENT-R750.753: the job store's typed refusals
     // (`medulla_h_jobs::jobs::job_refusal`).

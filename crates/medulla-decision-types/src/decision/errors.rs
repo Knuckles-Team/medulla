@@ -31,6 +31,9 @@ closed_error_codes! {
         /// out-of-scope candidate list, a digest that does not match what it
         /// digests, or a component kind no agent slot accepts.
         AssemblyInputsInvalid => "ASSEMBLY_INPUTS_INVALID",
+        /// MEDULLA-ORCH-VOCAB-R007.1: the `:precedes` edges between the steps
+        /// of a request's tasks form a cycle, so no step order exists.
+        StepOrderCycle => "STEP_ORDER_CYCLE",
         /// The integer programme built from valid inputs was refused by the
         /// solver's own model validation (a coefficient outside its range).
         AssemblyModelInvalid => "ASSEMBLY_MODEL_INVALID",

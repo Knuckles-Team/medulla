@@ -286,6 +286,19 @@ impl TemplateFacts {
     }
 }
 
+/// One step of a task, read from the request graph by `:hasStep`
+/// (MEDULLA-ORCH-VOCAB-R007.1): the task it belongs to, its place in the one
+/// step order, and the capability IRIs it requires.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AssemblyStep {
+    pub task: String,
+    pub step: String,
+    pub position: u16,
+    pub capabilities: BoundedVec<String, 16>,
+}
+
 /// The complete input set, digested as `inputs_digest`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -316,6 +329,10 @@ pub struct DecisionInputs {
     /// carries a coding-agent question, so a replay reads the same limit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub receipt_age_limit_s: Option<u64>,
+    /// The steps of the request's tasks, read by `:hasStep` and recorded so a
+    /// replay reads the same steps (MEDULLA-ORCH-VOCAB-R007.1).
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub steps: BoundedVec<AssemblyStep, 64>,
 }
 
 /// The scope a uniqueness proof covers: the model the no-good re-solve

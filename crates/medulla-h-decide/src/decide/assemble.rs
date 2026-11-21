@@ -122,9 +122,22 @@ async fn assemble_for(
         ),
     )
     .await?;
+    let steps = telemetry::stage_async(
+        Stage::Entailment,
+        FAMILY,
+        tenant,
+        super::steps_read::read(
+            state,
+            graph,
+            verified,
+            request.requirements.tasks.as_slice(),
+        ),
+    )
+    .await?;
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| assembly_refusal(&error))?;
     inputs.topology = topology;
+    inputs.steps = steps;
     inputs.profile = profile_constraint;
     inputs.receipt_age_limit_s = receipt_age_limit_s;
     let identity = RecordIdentity {

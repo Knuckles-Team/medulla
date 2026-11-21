@@ -305,6 +305,33 @@ pub(super) fn facts_of(connector: &str, job_class: &str, triples: &[Fact]) -> Pa
     out
 }
 
+/// The facts of exported triples: an IRI subject with an IRI or literal
+/// object, each term rendered as text. Blank nodes and other terms are not
+/// facts. Both the usage guidance read and the assembly step read render their
+/// triples here (MEDULLA-ORCH-VOCAB-R007.1).
+pub(super) fn facts_of_triples(triples: &[medulla_rdf::oxrdf::Triple]) -> Vec<Fact> {
+    triples
+        .iter()
+        .filter_map(|triple| {
+            let medulla_rdf::oxrdf::NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
+                return None;
+            };
+            let object = match &triple.object {
+                medulla_rdf::oxrdf::Term::NamedNode(node) => Object::Iri(unkey(node.as_str())),
+                medulla_rdf::oxrdf::Term::Literal(literal) => {
+                    Object::Literal(literal.value().to_string())
+                }
+                _ => return None,
+            };
+            Some(Fact {
+                subject: unkey(subject.as_str()),
+                predicate: unkey(triple.predicate.as_str()),
+                object,
+            })
+        })
+        .collect()
+}
+
 fn unkey(node: &str) -> String {
     node.trim_start_matches('<')
         .trim_end_matches('>')
@@ -399,27 +426,7 @@ pub(super) async fn with_usage_guidance_runtime(
         for (name, pack) in &packs {
             triples.extend(medulla_rdf::mapping::export_triples(pack, name)?);
         }
-        let facts: Vec<Fact> = triples
-            .iter()
-            .filter_map(|triple| {
-                let medulla_rdf::oxrdf::NamedOrBlankNode::NamedNode(subject) = &triple.subject
-                else {
-                    return None;
-                };
-                let object = match &triple.object {
-                    medulla_rdf::oxrdf::Term::NamedNode(node) => Object::Iri(unkey(node.as_str())),
-                    medulla_rdf::oxrdf::Term::Literal(literal) => {
-                        Object::Literal(literal.value().to_string())
-                    }
-                    _ => return None,
-                };
-                Some(Fact {
-                    subject: unkey(subject.as_str()),
-                    predicate: unkey(triple.predicate.as_str()),
-                    object,
-                })
-            })
-            .collect();
+        let facts = facts_of_triples(&triples);
         Ok::<_, String>((facts_of(&connector, &job_class, &facts), graph_revision))
     })
     .await

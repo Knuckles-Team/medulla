@@ -316,6 +316,13 @@ name = "spec_parse"
 path = "benches/spec_parse.rs"
 harness = false
 
+# Assembly step derivation bench (MEDULLA-ORCH-VOCAB-R007.1): 64 steps of 16
+# capabilities. Run: `cargo bench -p medulla-compute --bench assemble_steps`.
+[[bench]]
+name = "assemble_steps"
+path = "benches/assemble_steps.rs"
+harness = false
+
 # Test-only opt-in cfg (not a feature, so `--all-features` never turns it on). See the
 # crate's device/CPU-feature parity tests for when to pass `--cfg medulla_gpu_device_tests`.
 [lints.rust]

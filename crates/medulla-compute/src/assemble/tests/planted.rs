@@ -293,6 +293,7 @@ fn required(
 ) -> Vec<medulla_decision_outcome_types::decision::derivation::RequiredCapability> {
     medulla_decision_outcome_types::decision::derivation::required_capabilities(
         &inputs.request.requirements,
+        inputs.steps.as_slice(),
         &inputs.ontology_digest,
     )
     .expect("resolves")

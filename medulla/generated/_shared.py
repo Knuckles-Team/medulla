@@ -424,6 +424,15 @@ class AssemblyRequirements(BaseModel):
     unmapped_task_digests: BoundedVec_string_32 = Field(default_factory=list)
 
 
+class AssemblyStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capabilities: BoundedVec_string_16 = Field(default_factory=list)
+    position: Annotated[int, Field(ge=0, le=65535)]
+    step: str
+    task: str
+
+
 class BoundProofRoot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -764,6 +773,7 @@ class DecisionInputs(BaseModel):
     receipt_age_limit_s: Annotated[int, Field(ge=0)] | None = None
     request: AssemblyRequest
     solver: SolverIdentity
+    steps: BoundedVec_AssemblyStep_64 = Field(default_factory=list)
     templates: BoundedVec_TemplateFacts_8 = Field(default_factory=list)
     topology: TopologyInputs | None = None
 
@@ -1828,6 +1838,9 @@ BoundProof = BoundProofTree | BoundProofRoot
 BoundedVec_AbstainReason_64 = Annotated[list[AbstainReason], Field(max_length=64)]
 
 
+BoundedVec_AssemblyStep_64 = Annotated[list[AssemblyStep], Field(max_length=64)]
+
+
 BoundedVec_AgentComponentKind_16 = Annotated[
     list[AgentComponentKind],
     Field(
@@ -2256,6 +2269,8 @@ AssemblyRequest.model_rebuild()
 
 AssemblyRequirements.model_rebuild()
 
+AssemblyStep.model_rebuild()
+
 BoundProofRoot.model_rebuild()
 
 BoundProofRootBody.model_rebuild()
@@ -2589,12 +2604,14 @@ __all__ = [
     "AssemblyConstraints",
     "AssemblyRequest",
     "AssemblyRequirements",
+    "AssemblyStep",
     "BoundProof",
     "BoundProofRoot",
     "BoundProofRootBody",
     "BoundProofTree",
     "BoundProofTreeBody",
     "BoundedVec_AbstainReason_64",
+    "BoundedVec_AssemblyStep_64",
     "BoundedVec_AgentComponentKind_16",
     "BoundedVec_AgentGraphEntryRef_8",
     "BoundedVec_CandidateFacts_64",

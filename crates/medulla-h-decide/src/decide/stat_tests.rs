@@ -1047,6 +1047,9 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
 mod assemble_size_tests;
 #[cfg(feature = "redb")]
 mod assemble_tests;
+// MEDULLA-ORCH-VOCAB-R007: the orchestration vocabulary consumed by assembly.
+#[cfg(feature = "redb")]
+mod assemble_vocabulary_tests;
 #[cfg(feature = "security")]
 pub(in crate::decide) mod commit_admission_tests;
 

@@ -25,6 +25,7 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_ontology;
+use medulla_decision_types::decision::record::AssemblyStep;
 use medulla_decision_types::decision::request::AssemblyRequirements;
 use medulla_decision_types::{
     decision::record::AbstainReason, decision::record::CandidateFacts,
@@ -40,6 +41,10 @@ pub const MAX_DERIVATION_EDGES: usize = 16;
 
 /// Where a direct capability requirement is recorded as coming from.
 const DIRECT_CAPABILITY_FIELD: &str = "requirements.capabilities";
+
+/// Where a step capability requirement is recorded as coming from
+/// (MEDULLA-ORCH-VOCAB-R007.1).
+const STEP_CAPABILITY_FIELD: &str = "steps";
 
 /// One capability the assembly must cover, and the premise that requires it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,6 +92,7 @@ impl std::error::Error for DerivationDefect {}
 /// named directly and implied by a claimed mapping does not rest on the claim.
 pub fn required_capabilities(
     requirements: &AssemblyRequirements,
+    steps: &[AssemblyStep],
     ontology_digest: &str,
 ) -> Result<Vec<RequiredCapability>, Vec<AbstainReason>> {
     let mut required: BTreeMap<String, PremiseRef> = BTreeMap::new();
@@ -123,6 +129,28 @@ pub fn required_capabilities(
                 &claimed,
                 PremiseClass::Claim,
             );
+        }
+    }
+    // MEDULLA-ORCH-VOCAB-R007.1: the capabilities of the steps the request
+    // graph states for its tasks, each required by its step.
+    for step in steps {
+        for capability in step.capabilities.iter() {
+            if agent_ontology::is_capability(capability) {
+                offer(
+                    &mut required,
+                    capability,
+                    PremiseRef {
+                        subject: capability.clone(),
+                        fact: format!("required_by_step:{}", step.step),
+                        class: PremiseClass::Definition,
+                        provenance: PremiseProvenance::Request {
+                            field: STEP_CAPABILITY_FIELD.to_string(),
+                        },
+                    },
+                );
+            } else {
+                reasons.push(unresolved(capability));
+            }
         }
     }
     reasons.extend(
@@ -465,7 +493,7 @@ pub fn capability_coverage_query(
     library_candidates: &[CandidateFacts],
     a2a_cards: &[(String, Vec<String>)],
 ) -> Result<Vec<CapabilityCoverage>, Vec<AbstainReason>> {
-    let required = required_capabilities(requirements, ontology_digest)?;
+    let required = required_capabilities(requirements, &[], ontology_digest)?;
     Ok(capability_coverage(
         &required,
         library_candidates,

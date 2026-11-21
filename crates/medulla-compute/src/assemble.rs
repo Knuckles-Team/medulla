@@ -136,6 +136,7 @@ pub fn inputs(
         topology: None,
         profile: None,
         receipt_age_limit_s: None,
+        steps: Default::default(),
     })
 }
 

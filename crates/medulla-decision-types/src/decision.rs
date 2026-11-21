@@ -156,7 +156,7 @@ pub use policy::{
     StatisticalPolicy, TraceFidelityLevel, UnknownCostRule, WeightedLevel,
 };
 pub use record::{
-    AbstainReason, CandidateFacts, CandidateSourceRecord, CoverageDerivation, DecisionInputs,
+    AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation, DecisionInputs,
     DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, DerivationEdge, EdgeSource,
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
     SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope,

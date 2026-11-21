@@ -41,7 +41,7 @@ fn mapping(task: &str) -> ClaimedTaskMapping {
 
 #[test]
 fn a_task_closes_over_its_native_requirements_as_definitions() {
-    let required = required_capabilities(&requirements(&["eg:task/research"], &[]), ONTOLOGY)
+    let required = required_capabilities(&requirements(&["eg:task/research"], &[]), &[], ONTOLOGY)
         .expect("a native task resolves");
     let iris: Vec<&str> = required.iter().map(|r| r.iri.as_str()).collect();
     assert_eq!(
@@ -62,7 +62,7 @@ fn a_task_closes_over_its_native_requirements_as_definitions() {
 fn a_claimed_mapping_is_a_claim_unless_something_stronger_requires_the_same_iri() {
     let mut request = requirements(&[], &["eg:capability/retrieval"]);
     request.task_mappings = bounded(vec![mapping("eg:task/research")]);
-    let required = required_capabilities(&request, ONTOLOGY).expect("mapping resolves");
+    let required = required_capabilities(&request, &[], ONTOLOGY).expect("mapping resolves");
     let class_of = |iri: &str| {
         required
             .iter()
@@ -93,7 +93,7 @@ fn unknown_terms_and_unmapped_text_are_typed_abstentions() {
         &["acme:thing", "eg:task/review"],
     );
     request.unmapped_task_digests = bounded(vec![ONTOLOGY.to_string()]);
-    let reasons = required_capabilities(&request, ONTOLOGY).expect_err("nothing here resolves");
+    let reasons = required_capabilities(&request, &[], ONTOLOGY).expect_err("nothing here resolves");
     assert_eq!(
         reasons,
         vec![
@@ -143,7 +143,7 @@ fn capability_coverage_joins_derived_library_coverage_with_self_declared_a2a_cov
     // MEDULLA-DECISION-ENGINE-R126: reuses required_capabilities/coverage_chain
     // rather than any new derivation rule.
     let required =
-        required_capabilities(&requirements(&[], &["eg:capability/retrieval"]), ONTOLOGY)
+        required_capabilities(&requirements(&[], &["eg:capability/retrieval"]), &[], ONTOLOGY)
             .expect("a direct capability resolves");
     let web = candidate("tool-web", &["eg:capability/retrieval/web-search"]);
     let unrelated = candidate("tool-unrelated", &[]);
@@ -234,5 +234,45 @@ fn the_weakest_premise_classifies_and_a_definition_never_weakens() {
             PremiseClass::Claim
         ]),
         EvidenceClass::Claim
+    );
+}
+
+/// Verifies MEDULLA-ORCH-VOCAB-R007.1: a step capability is required with the
+/// `required_by_step:<step>` premise, a definition requested through `steps`.
+// spec: MEDULLA-ORCH-VOCAB-R007.1
+#[test]
+fn step_capabilities_are_required_with_step_premises() {
+    let steps = vec![AssemblyStep {
+        task: "eg:task/research".to_string(),
+        step: "step:gather".to_string(),
+        position: 0,
+        capabilities: bounded(vec!["eg:capability/retrieval".to_string()]),
+    }];
+    let required = required_capabilities(&requirements(&[], &[]), &steps, ONTOLOGY)
+        .expect("a step capability resolves");
+    assert_eq!(required.len(), 1);
+    let premise = &required[0].because;
+    assert_eq!(required[0].iri, "eg:capability/retrieval");
+    assert_eq!(premise.fact, "required_by_step:step:gather");
+    assert_eq!(premise.class, PremiseClass::Definition);
+    assert_eq!(
+        premise.provenance,
+        PremiseProvenance::Request {
+            field: "steps".to_string()
+        }
+    );
+    let unknown = vec![AssemblyStep {
+        task: "eg:task/research".to_string(),
+        step: "step:x".to_string(),
+        position: 0,
+        capabilities: bounded(vec!["urn:not-a-capability".to_string()]),
+    }];
+    let reasons = required_capabilities(&requirements(&[], &[]), &unknown, ONTOLOGY)
+        .expect_err("a non-capability abstains");
+    assert_eq!(
+        reasons,
+        vec![AbstainReason::UnresolvedCapabilityIri {
+            iri: "urn:not-a-capability".to_string()
+        }]
     );
 }

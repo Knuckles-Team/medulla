@@ -95,7 +95,11 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
         return Ok(abstained(&[], screened.eliminated, reasons));
     }
     let required =
-        match required_capabilities(&inputs.request.requirements, &inputs.ontology_digest) {
+        match required_capabilities(
+            &inputs.request.requirements,
+            inputs.steps.as_slice(),
+            &inputs.ontology_digest,
+        ) {
             Ok(required) => required,
             Err(reasons) => return Ok(abstained(&[], screened.eliminated, reasons)),
         };

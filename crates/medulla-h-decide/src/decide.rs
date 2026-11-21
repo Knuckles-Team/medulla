@@ -182,6 +182,8 @@ mod telemetry;
 #[cfg(feature = "decide")]
 mod capacity_premise;
 #[cfg(feature = "decide")]
+mod steps_read;
+#[cfg(feature = "decide")]
 mod topology_read;
 #[cfg(feature = "decide")]
 mod topology_schema;
