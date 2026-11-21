@@ -722,6 +722,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T707 [US8] MEDULLA-DECISION-ENGINE-R652.7 Perspective arbitration and feed grading
 - [ ] T708 [US8] MEDULLA-DECISION-ENGINE-R652.8 Artifact compile and seal
 - [ ] T709 [US8] MEDULLA-DECISION-ENGINE-R652.9 Claims carry subject and observer
+- [ ] T962 [US8] MEDULLA-DECISION-ENGINE-R652.10 Machine-checked proof evidence kind
+- [ ] T963 [US8] MEDULLA-DECISION-ENGINE-R652.11 Proven standing rule `PROVEN_STANDING`
+- [ ] T964 [US8] MEDULLA-DECISION-ENGINE-R652.12 The `formalizes` edge in the core ontology
+- [ ] T965 [US8] MEDULLA-DECISION-ENGINE-R652.13 Query: which claims are machine-checked, under which axioms
+- [ ] T966 [US8] MEDULLA-DECISION-ENGINE-R652.14 Hot-path proof for machine-checked standing
 - [ ] T710 [US7] MEDULLA-DECISION-ENGINE-R653.1 Model
 - [ ] T711 [US7] MEDULLA-DECISION-ENGINE-R653.2 Behavior: fenced lease and priority order
 - [ ] T712 [US7] MEDULLA-DECISION-ENGINE-R653.3 Wiring
