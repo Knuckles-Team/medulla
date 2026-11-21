@@ -165,7 +165,10 @@ pub(super) fn stamp_trust_mark_if_applicable(
 ) -> Result<Method, String> {
     if !matches!(
         method,
-        Method::AddNode { .. } | Method::CompareAndSetNodeFields { .. }
+        Method::AddNode { .. }
+            | Method::CreateNodeIfAbsent { .. }
+            | Method::CompareAndSetNodeFields { .. }
+            | Method::Batch { .. }
     ) {
         return Ok(method);
     }
@@ -180,6 +183,19 @@ pub(super) fn stamp_trust_mark_if_applicable(
             node_id,
             properties_msgpack,
         } => stamp_add_node_trust_mark(core, node_id, properties_msgpack),
+        Method::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack,
+        } => Ok(Method::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack: stamp_properties_blob(core, properties_msgpack, true)?,
+        }),
+        Method::Batch { operations } => Ok(Method::Batch {
+            operations: operations
+                .into_iter()
+                .map(|operation| stamp_batch_operation_trust_mark(core, operation))
+                .collect::<Result<Vec<_>, String>>()?,
+        }),
         Method::CompareAndSetNodeFields {
             node_id,
             conditions_msgpack,
@@ -216,24 +232,43 @@ fn stamp_add_node_trust_mark(
     node_id: String,
     properties_msgpack: Vec<u8>,
 ) -> Result<Method, String> {
-    use medulla_virtual_graph::source_selection::{DefaultTrustMarkPolicy, StoredTrustMark};
-    let unchanged = |node_id: String, properties_msgpack: Vec<u8>| Method::AddNode {
+    Ok(Method::AddNode {
         node_id,
-        properties_msgpack,
-    };
+        properties_msgpack: stamp_properties_blob(core, properties_msgpack, false)?,
+    })
+}
+
+/// The one stamp of a node-creating property blob. A top-level `AddNode` drops caller-set mark
+/// keys; a batch operation (`refuse_forged`) refuses them with `TRUST_MARK_FIELDS_RESERVED`
+/// (MEDULLA-SRC-AUTH-R011.3). A `content_origin` maps to an origin and the default policy
+/// stamps the three keys; without one nothing is stamped.
+#[cfg(feature = "security")]
+fn stamp_properties_blob(
+    core: &GraphCore,
+    properties_msgpack: Vec<u8>,
+    refuse_forged: bool,
+) -> Result<Vec<u8>, String> {
+    use medulla_virtual_graph::source_selection::{DefaultTrustMarkPolicy, StoredTrustMark};
     let Ok(mut props) = medulla_types::msgpack::decode_property_object(&properties_msgpack) else {
-        return Ok(unchanged(node_id, properties_msgpack));
+        return Ok(properties_msgpack);
     };
     let mut dropped = false;
     for key in [TRUST_MARK_KEY, MARKED_BY_KEY, MARKED_AT_KEY, APPROVAL_KEY] {
-        dropped |= props.remove(key).is_some();
+        if props.remove(key).is_some() {
+            if refuse_forged {
+                return Err(trust_mark_reserved(&format!(
+                    "`{key}` is set by the engine, not by a batch write"
+                )));
+            }
+            dropped = true;
+        }
     }
     let origin = props
         .get(CONTENT_ORIGIN_KEY)
         .map(parse_content_origin)
         .transpose()?;
     if !dropped && origin.is_none() {
-        return Ok(unchanged(node_id, properties_msgpack));
+        return Ok(properties_msgpack);
     }
     if let Some(origin) = origin {
         let stamp = StoredTrustMark::stamp(&DefaultTrustMarkPolicy, &origin, None, core.version());
@@ -244,9 +279,64 @@ fn stamp_add_node_trust_mark(
         props.insert(MARKED_BY_KEY.into(), stamp.marked_by.into());
         props.insert(MARKED_AT_KEY.into(), stamp.marked_at_generation.into());
     }
-    let properties_msgpack = rmp_serde::to_vec_named(&serde_json::Value::Object(props))
-        .map_err(|error| error.to_string())?;
-    Ok(unchanged(node_id, properties_msgpack))
+    rmp_serde::to_vec_named(&serde_json::Value::Object(props)).map_err(|error| error.to_string())
+}
+
+/// A batch operation that writes node fields never carries a caller-set mark key
+/// (MEDULLA-SRC-AUTH-R011.3): node creation is stamped like a top-level `AddNode`, and a
+/// compare-and-set or claim whose updates name a mark key is refused. A mark changes only
+/// through the top-level `CompareAndSetNodeFields` with its approval.
+#[cfg(feature = "security")]
+fn stamp_batch_operation_trust_mark(
+    core: &GraphCore,
+    operation: medulla_query_types::wire::BatchOperation,
+) -> Result<medulla_query_types::wire::BatchOperation, String> {
+    use medulla_query_types::wire::BatchOperation;
+    let reserved = |updates_msgpack: &[u8]| -> Result<(), String> {
+        let Ok(updates) = medulla_types::msgpack::decode_property_object(updates_msgpack) else {
+            return Ok(());
+        };
+        for key in [TRUST_MARK_KEY, MARKED_BY_KEY, MARKED_AT_KEY, APPROVAL_KEY] {
+            if updates.contains_key(key) {
+                return Err(trust_mark_reserved(&format!(
+                    "`{key}` is set by the engine, not by a batch write"
+                )));
+            }
+        }
+        Ok(())
+    };
+    match operation {
+        BatchOperation::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack,
+        } => Ok(BatchOperation::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack: stamp_properties_blob(core, properties_msgpack, true)?,
+        }),
+        BatchOperation::CompareAndSetNodeFields {
+            node_id,
+            conditions_msgpack,
+            updates_msgpack,
+        } => {
+            reserved(&updates_msgpack)?;
+            Ok(BatchOperation::CompareAndSetNodeFields {
+                node_id,
+                conditions_msgpack,
+                updates_msgpack,
+            })
+        }
+        BatchOperation::ClaimNext {
+            label,
+            updates_msgpack,
+        } => {
+            reserved(&updates_msgpack)?;
+            Ok(BatchOperation::ClaimNext {
+                label,
+                updates_msgpack,
+            })
+        }
+        other => Ok(other),
+    }
 }
 
 /// The mark a node stores now; a node with no stored mark counts as `untrusted`, so a caller
@@ -1337,6 +1427,60 @@ mod tests {
             panic!("AddNode came back");
         };
         assert_eq!(properties_msgpack, blob(forged));
+    }
+
+    // spec: MEDULLA-SRC-AUTH-R011.3
+    #[cfg(feature = "security")]
+    #[test]
+    fn batch_writes_refuse_caller_set_trust_mark() {
+        use medulla_query_types::wire::BatchOperation;
+        let core = GraphCore::new();
+        let isolation = medulla_isolation::isolation::IsolationLayer::new();
+        let stamp = |operation| {
+            super::stamp_trust_mark_if_applicable(
+                Method::Batch {
+                    operations: vec![operation],
+                },
+                &core,
+                Some("agent-1"),
+                &isolation,
+            )
+        };
+        let create = |properties| BatchOperation::CreateNodeIfAbsent {
+            node_id: "doc-1".into(),
+            properties_msgpack: blob(properties),
+        };
+
+        // A batch create carrying a mark is refused; one with an origin is stamped.
+        let refusal = stamp(create(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
+        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        let Method::Batch { operations } =
+            stamp(create(serde_json::json!({"content_origin": "upload"}))).unwrap()
+        else {
+            panic!("Batch came back");
+        };
+        let BatchOperation::CreateNodeIfAbsent {
+            properties_msgpack, ..
+        } = &operations[0]
+        else {
+            panic!("CreateNodeIfAbsent came back");
+        };
+        assert_eq!(props(properties_msgpack)["trust_mark"], "untrusted");
+
+        // A batch compare-and-set or claim that names a mark key is refused.
+        let refusal = stamp(BatchOperation::CompareAndSetNodeFields {
+            node_id: "doc-1".into(),
+            conditions_msgpack: blob(serde_json::json!({})),
+            updates_msgpack: blob(serde_json::json!({"trust_mark": "trusted"})),
+        })
+        .unwrap_err();
+        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        let refusal = stamp(BatchOperation::ClaimNext {
+            label: "Task".into(),
+            updates_msgpack: blob(serde_json::json!({"marked_by": "me"})),
+        })
+        .unwrap_err();
+        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
     }
 
     #[cfg(feature = "security")]

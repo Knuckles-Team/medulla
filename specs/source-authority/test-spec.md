@@ -32,7 +32,7 @@ Negative cases that must exist: an origin-approved rank-1 declaration with a con
 
 - `MEDULLA-SRC-AUTH-R011.1`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::trust_mark_round_trips`.
 - `MEDULLA-SRC-AUTH-R011.2`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::derived_content_inherits_untrusted`.
-- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::cas_lowering_needs_approval_and_pins_current_mark` (planned, L2): the tests do not exist yet; the owning change adds them at this exact path. The approval id is the reserved updates-blob key `trust_mark_approval_id`.
+- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::cas_lowering_needs_approval_and_pins_current_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::batch_writes_refuse_caller_set_trust_mark` (L2): the tests do not exist yet; the owning change adds them at this exact path. The approval id is the reserved updates-blob key `trust_mark_approval_id`.
 - `MEDULLA-SRC-AUTH-R011.4`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::downgrade_without_approval_refused`.
 - `MEDULLA-SRC-AUTH-R011.5`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::mark_carries_rule_and_generation`.
 - `MEDULLA-SRC-AUTH-R011.6`: `tests/federated/test_trust_mark_served.py::test_tool_result_is_untrusted_and_sticky` (planned, L3): the file does not exist yet; the owning change adds it at this exact path.
