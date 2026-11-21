@@ -40,6 +40,22 @@ pub struct QualityRule {
     pub severity: QualitySeverity,
 }
 
+/// The `checker` of a score the engine measured itself.
+pub const NATIVE_CHECKER: &str = "native";
+
+/// The evidence one score records (MEDULLA-UNIFIED-DATA-PLANE-R762.5): the compiled
+/// statement or shape it ran, the rows it saw and the checker that measured it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ScoreEvidence {
+    /// SHA-256 over the compiled statement or shape IRI, 64 lowercase hex characters.
+    pub query_digest: String,
+    pub rows_checked: u64,
+    /// At most `rows_checked`.
+    pub rows_failed: u64,
+    /// [`NATIVE_CHECKER`] for engine scores.
+    pub checker: String,
+}
+
 /// One evaluation of a rule.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -48,6 +64,13 @@ pub struct QualityScore {
     pub value: f64,
     pub passed: bool,
     pub at: i64,
+    /// SHA-256 over the compiled statement or shape IRI, 64 lowercase hex characters.
+    pub query_digest: String,
+    pub rows_checked: u64,
+    /// At most `rows_checked`.
+    pub rows_failed: u64,
+    /// [`NATIVE_CHECKER`] for engine scores.
+    pub checker: String,
 }
 
 /// A rule failed validation, with its stable refusal code.
@@ -98,13 +121,17 @@ impl QualityRule {
         Ok(())
     }
 
-    /// Score one measured value against this rule.
-    pub fn score(&self, value: f64, at: i64) -> QualityScore {
+    /// Score one measured value against this rule, recording its evidence.
+    pub fn score(&self, value: f64, at: i64, evidence: ScoreEvidence) -> QualityScore {
         QualityScore {
             rule: self.id.clone(),
             value,
             passed: value >= self.threshold,
             at,
+            query_digest: evidence.query_digest,
+            rows_checked: evidence.rows_checked,
+            rows_failed: evidence.rows_failed.min(evidence.rows_checked),
+            checker: evidence.checker,
         }
     }
 }

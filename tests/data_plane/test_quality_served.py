@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 import uuid
@@ -90,6 +91,46 @@ def test_rule_scores_and_incident(start_medulla_server) -> None:
                 {"rule": {**rule, "expression": "1; DROP TABLE x"}},
                 graph,
             )
+    finally:
+        client.tenants.delete(graph)
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.5")
+def test_score_evidence_reads_back(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.5: digest, row counts and checker."""
+    client = _client()
+    graph = f"quality-{uuid.uuid4().hex[:8]}"
+    table = f"orders_{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        client.query.sql(f"CREATE TABLE {table} (id int primary key, status text)")
+        client.query.sql(
+            f"INSERT INTO {table} VALUES (1, 'open'), (2, 'open'), (3, NULL)"
+        )
+        rule = {
+            "id": "status-evidence",
+            "target": table,
+            "dimension": "completeness",
+            "expression": "status IS NOT NULL",
+            "threshold": 0.5,
+            "severity": "warning",
+        }
+        _decode(client._send("QualityRulePut", {"rule": rule}, graph))
+        [score] = _evaluate(client, graph, table)
+        statement = (
+            "SELECT COUNT(*) AS rows_checked, "
+            f"COUNT(*) FILTER (WHERE {rule['expression']}) AS rows_passed FROM {table}"
+        )
+        digest = hashlib.sha256(statement.encode()).hexdigest()
+        assert score["query_digest"] == digest
+        assert len(score["query_digest"]) == 64
+        assert score["query_digest"] == score["query_digest"].lower()
+        assert (score["rows_checked"], score["rows_failed"]) == (3, 1)
+        assert score["rows_failed"] <= score["rows_checked"]
+        assert score["checker"] == "native"
+        assert score["value"] == pytest.approx(2 / 3)
+        assert score["passed"] is True
     finally:
         client.tenants.delete(graph)
         client.close()

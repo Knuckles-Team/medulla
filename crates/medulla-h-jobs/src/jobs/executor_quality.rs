@@ -45,8 +45,6 @@ use serde_json::{Map, Value};
 pub(super) const QUALITY_SCORE_LABEL: &str = "QualityScore";
 /// Score → rule edge relation.
 pub(super) const SCORE_OF: &str = "scoreOf";
-/// The checker of an engine-measured score.
-pub(super) const NATIVE_CHECKER: &str = "native";
 
 /// The prefix of a graph-shape rule target: `graph:<label>`.
 #[cfg(feature = "shacl")]
@@ -506,10 +504,10 @@ fn quality_outcome(
                 "value": evaluation.score.value,
                 "passed": evaluation.score.passed,
                 "at": evaluation.score.at,
-                "query_digest": evaluation.query_digest,
-                "rows_checked": evaluation.rows_checked,
-                "rows_failed": evaluation.rows_failed,
-                "checker": NATIVE_CHECKER,
+                "query_digest": evaluation.score.query_digest,
+                "rows_checked": evaluation.score.rows_checked,
+                "rows_failed": evaluation.score.rows_failed,
+                "checker": evaluation.score.checker,
                 "tenant_id": target.tenant,
                 "_owner": target.agent,
             }),
@@ -715,9 +713,19 @@ fn typed_quality_result(
                     ("value", serde_json::json!(evaluation.score.value)),
                     ("passed", serde_json::json!(evaluation.score.passed)),
                     ("consecutive_failures", serde_json::json!(failures)),
-                    ("query_digest", serde_json::json!(evaluation.query_digest)),
-                    ("rows_checked", serde_json::json!(evaluation.rows_checked)),
-                    ("rows_failed", serde_json::json!(evaluation.rows_failed)),
+                    (
+                        "query_digest",
+                        serde_json::json!(evaluation.score.query_digest),
+                    ),
+                    (
+                        "rows_checked",
+                        serde_json::json!(evaluation.score.rows_checked),
+                    ),
+                    (
+                        "rows_failed",
+                        serde_json::json!(evaluation.score.rows_failed),
+                    ),
+                    ("checker", serde_json::json!(evaluation.score.checker)),
                     ("code", Value::Null),
                 ],
             )
@@ -733,6 +741,7 @@ fn typed_quality_result(
                 ("query_digest", Value::Null),
                 ("rows_checked", Value::Null),
                 ("rows_failed", Value::Null),
+                ("checker", Value::Null),
                 ("code", serde_json::json!(unscored.code)),
             ],
         )
@@ -747,6 +756,7 @@ fn typed_quality_result(
                 ("query_digest", Value::Null),
                 ("rows_checked", Value::Null),
                 ("rows_failed", Value::Null),
+                ("checker", Value::Null),
                 ("code", Value::Null),
             ],
         ));
@@ -770,6 +780,7 @@ fn typed_quality_result(
             ("query_digest", "string", true),
             ("rows_checked", "int64", true),
             ("rows_failed", "int64", true),
+            ("checker", "string", true),
             ("code", "string", true),
         ]
         .into_iter()

@@ -7,7 +7,7 @@
 //! failures and opens one incident through an [`IncidentSink`].
 
 use medulla_catalog_types::quality::{
-    InvalidQualityRule, QualityDimension, QualityRule, QualityScore,
+    InvalidQualityRule, QualityDimension, QualityRule, QualityScore, ScoreEvidence, NATIVE_CHECKER,
 };
 use medulla_types::contract::Digest256;
 
@@ -34,11 +34,8 @@ pub enum Measurement {
 /// One scored evaluation with its evidence.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Evaluation {
+    /// The score with its evidence: the compiled digest and the row counts.
     pub score: QualityScore,
-    /// SHA-256 over the compiled statement or shape IRI, lowercase hex.
-    pub query_digest: String,
-    pub rows_checked: u64,
-    pub rows_failed: u64,
 }
 
 /// The anomaly handed to the incident authority.
@@ -177,10 +174,16 @@ pub fn evaluate_rule(
 ) -> Evaluation {
     let (value, rows_checked, rows_failed) = measured(compiled, measurement);
     Evaluation {
-        score: rule.score(value, at),
-        query_digest: fingerprint(compiled),
-        rows_checked,
-        rows_failed,
+        score: rule.score(
+            value,
+            at,
+            ScoreEvidence {
+                query_digest: fingerprint(compiled),
+                rows_checked,
+                rows_failed,
+                checker: NATIVE_CHECKER.to_string(),
+            },
+        ),
     }
 }
 
@@ -307,8 +310,12 @@ mod tests {
             let compiled = compile_rule(rule).unwrap();
             let got = evaluate_rule(rule, &compiled, measurement, 7);
             assert_eq!(got.score.value, value);
-            assert_eq!((got.rows_checked, got.rows_failed), (checked, failed));
-            assert_eq!(got.query_digest.len(), 64);
+            assert_eq!(
+                (got.score.rows_checked, got.score.rows_failed),
+                (checked, failed)
+            );
+            assert_eq!(got.score.query_digest.len(), 64);
+            assert_eq!(got.score.checker, "native");
         }
         assert!(matches!(compile_rule(&sql), Ok(CompiledRule::Sql { .. })));
         assert!(matches!(

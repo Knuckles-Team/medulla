@@ -24,8 +24,18 @@ fn rule_round_trips() {
         original
     );
 
-    let score = original.score(0.97, 1_761_000_000_000);
+    let score = original.score(
+        0.97,
+        1_761_000_000_000,
+        medulla_catalog_types::quality::ScoreEvidence {
+            query_digest: "ab".repeat(32),
+            rows_checked: 100,
+            rows_failed: 3,
+            checker: "native".to_string(),
+        },
+    );
     assert!(!score.passed);
+    assert_eq!((score.rows_checked, score.rows_failed), (100, 3));
     let json = serde_json::to_string(&score).unwrap();
     assert_eq!(serde_json::from_str::<QualityScore>(&json).unwrap(), score);
 

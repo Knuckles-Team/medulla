@@ -183,7 +183,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
 - [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
 - [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
-- [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
+- [x] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
 - [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
 - [ ] T178 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
 - [ ] T179 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
@@ -275,7 +275,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
 - [x] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
 - [ ] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
-- [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
+- [x] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
 - [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
 - [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
 - [x] T210 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job

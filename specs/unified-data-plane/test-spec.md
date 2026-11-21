@@ -231,7 +231,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.3` | `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.9` | `tests/data_plane/test_quality_served.py::test_shape_and_freshness_scored` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.4` | `tests/data_plane/test_quality_served.py::test_quality_refusals` (planned) |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.5` | `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.5` | `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.6` | `cargo bench --bench quality_evaluate` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R763` | See each child. |
 | `MEDULLA-UNIFIED-DATA-PLANE-R763.1` | `crates/medulla-types/tests/lineage.rs::column_edge_round_trips` |
@@ -374,7 +374,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.3:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident`. Proves the row: Wiring: `QualityRulePut` and the `QualityEvaluate` job kind.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.9:** `tests/data_plane/test_quality_served.py::test_shape_and_freshness_scored`; `crates/medulla-server-served-tests/src/split_tests/medulla_h_jobs_data_plane_tenant_tests.rs::shape_and_freshness_rules_measure_only_their_tenants_data`. Proves the row: Behavior: shape and freshness rules measured in the served job, each tenant measuring only its own nodes and cursor. The served Rust test file is planned; it does not exist yet in this tree.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.4:** `tests/data_plane/test_quality_served.py::test_quality_refusals` (planned). Proves the row: Refusal: invalid rule, invalid threshold, unapproved rule.
-- **MEDULLA-UNIFIED-DATA-PLANE-R762.5:** `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` (planned). Proves the row: Evidence: each score records the compiled query digest and the row counts.
+- **MEDULLA-UNIFIED-DATA-PLANE-R762.5:** `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back`. Proves the row: Evidence: each score records the compiled query digest and the row counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.6:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned). Proves the row: Hot-path proof: evaluate 100 rules over a native dataset.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.8:** `tests/data_plane/test_quality_served.py::test_outside_scores_open_incident` (planned). Proves the row: Quality results from outside checkers arrive through `SourceIngest`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R763:** `tests/data_plane/test_column_lineage_served.py::test_view_lineage_and_impact` (planned). Proves the row: Column-level lineage from SQL text (rollup).
