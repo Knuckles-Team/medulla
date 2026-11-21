@@ -10,21 +10,13 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_decision_types::decision::statistical::placement::{
-    HeavyCapability, PLACEMENT_FACTS_INVALID,
+    HeavyCapability, NO_CAPABLE_HOST, PLACEMENT_FACTS_INVALID,
 };
 use medulla_identity_types::tenancy::COMMONS_GRAPH;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 use super::helpers::opaque_worker_capability;
-
-/// The refusal of a job whose required heavy capability no host declares
-/// (MEDULLA-PLACEMENT-R004.4): `NO_CAPABLE_HOST: <capability>`.
-pub(crate) const NO_CAPABLE_HOST: &str = "NO_CAPABLE_HOST";
-
-/// The placement refusals the job handler raises. The claim never falls back to another host.
-pub(crate) const REFUSALS: &[medulla_types::refusal_code::RefusalCode] =
-    &[medulla_types::refusal_code::RefusalCode::new(NO_CAPABLE_HOST)];
 
 /// The most `placement:Host` nodes one declaration read scans.
 const MAX_DECLARED_HOSTS: usize = 512;
@@ -218,7 +210,9 @@ mod tests {
             refuse_uncovered(&state, &gpu).await.unwrap_err(),
             "NO_CAPABLE_HOST: gpu"
         );
-        assert!(REFUSALS.iter().any(|code| code.as_str() == NO_CAPABLE_HOST));
+        assert!(medulla_decision_types::decision::statistical::placement::REFUSALS
+            .iter()
+            .any(|code| code.as_str() == NO_CAPABLE_HOST));
     }
 
     // spec: MEDULLA-PLACEMENT-R004.3

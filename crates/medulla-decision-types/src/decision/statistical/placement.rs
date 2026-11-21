@@ -186,12 +186,17 @@ pub const PLACEMENT_FACTS_INVALID: &str = "PLACEMENT_FACTS_INVALID";
 /// The refusal code of a placement whose capacity ledger cannot be read.
 pub const CAPACITY_UNAVAILABLE: &str = "CAPACITY_UNAVAILABLE";
 
+/// The refusal of a job whose required heavy capability no host declares
+/// (MEDULLA-PLACEMENT-R004.4): `NO_CAPABLE_HOST: <capability>`.
+pub const NO_CAPABLE_HOST: &str = "NO_CAPABLE_HOST";
+
 /// The `placement` family's refusal table (MEDULLA-PLACEMENT-R001.10), registered in
 /// `codes::FAMILY_TABLES`. The abstentions (`INFEASIBLE`, `UNKNOWN_FACT`,
 /// `POLICY_LOOSENING`) are the fixed `AbstainReason` codes.
 pub const REFUSALS: &[crate::decision::record::outcome::RefusalCode] = &[
     crate::decision::record::outcome::RefusalCode::new(PLACEMENT_FACTS_INVALID),
     crate::decision::record::outcome::RefusalCode::new(CAPACITY_UNAVAILABLE),
+    crate::decision::record::outcome::RefusalCode::new(NO_CAPABLE_HOST),
 ];
 
 fn eliminate(
