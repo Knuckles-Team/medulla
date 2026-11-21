@@ -54,17 +54,16 @@ The user is a source operator. The outcome is a checkpointed, replayable ingesti
 
 Independent test: the bound test of `MEDULLA-REPO-INGEST-R001` covers reconcile; `MEDULLA-REPO-INGEST-R005` covers replay.
 
-### User Story 4 - Hydrate stores and ingest documents and sessions (Priority: P2)
+### User Story 4 - Ingest documents and sessions (Priority: P2)
 
-The user is an operator. The outcome is an empty store that fills from configured sources, with documents chunked into verified section trees and agent sessions ingested as records.
+The user is an operator. The outcome is documents chunked into verified section trees and agent sessions ingested as records.
 
 **Acceptance scenarios**
 
-1. **Given** an empty store and configured sources, **When** the server boots, **Then** it plans baseline hydration and submits jobs, and a second boot skips unchanged content.
-2. **Given** a document, **When** it is enriched, **Then** the section tree nests, covers the text and is stored with a processed-document record.
-3. **Given** a transcript whose prefix changed, **When** intake runs, **Then** the session restarts at the first differing ordinal.
+1. **Given** a document, **When** it is enriched, **Then** the section tree nests, covers the text and is stored with a processed-document record.
+2. **Given** a `transcripts` batch in any supported dialect, **When** it is ingested, **Then** every message becomes the same turn record.
 
-Independent test: `crates/medulla-document/src/runtime.rs::transcript_prefix_delta_restarts_at_first_changed_or_removed_line`.
+Independent test: `crates/medulla-document/src/transcript.rs::dialects_map_to_one_turn_record`.
 
 ## Edge Cases
 
@@ -109,7 +108,7 @@ The labelled requirements bind the table to rows:
 - FR-003 Edge identity is the triple of source, target and relation type (`MEDULLA-REPO-INGEST-R009.1`).
 - FR-004 Heavy enrichment never blocks the native commit (`MEDULLA-REPO-INGEST-R006`, `MEDULLA-REPO-INGEST-R600.3`).
 - FR-005 Source ingestion applies envelopes idempotently with typed refusals (`MEDULLA-REPO-INGEST-R002.651.1`, `MEDULLA-REPO-INGEST-R002.653`).
-- FR-006 Documents, sessions and baseline hydration reuse the same writer (`MEDULLA-REPO-INGEST-R652.3`, `MEDULLA-REPO-INGEST-R800.3`, `MEDULLA-REPO-INGEST-R650.3`).
+- FR-006 Documents and sessions reuse the same writer (`MEDULLA-REPO-INGEST-R652.3`, `MEDULLA-REPO-INGEST-R800.1`).
 
 ### Success criteria
 

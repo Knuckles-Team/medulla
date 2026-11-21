@@ -51,48 +51,48 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T044 [US2] MEDULLA-REPO-INGEST-R603.5 Evidence
 - [ ] T045 [US2] MEDULLA-REPO-INGEST-R603.6 Hot-path proof
 - [x] T046 [US4] MEDULLA-REPO-INGEST-R800.1 Model
-- [ ] T047 [US4] MEDULLA-REPO-INGEST-R800.2 Behavior
-- [ ] T048 [US4] MEDULLA-REPO-INGEST-R800.3 Wiring
-- [ ] T049 [US4] MEDULLA-REPO-INGEST-R800.4 Refusal
-- [ ] T050 [US4] MEDULLA-REPO-INGEST-R800.5 Evidence
-- [ ] T051 [US4] MEDULLA-REPO-INGEST-R800.6 Hot-path proof
-- [ ] T052 [US4] MEDULLA-REPO-INGEST-R650.1 Model
-- [ ] T053 [US4] MEDULLA-REPO-INGEST-R650.2 Behavior
-- [ ] T054 [US4] MEDULLA-REPO-INGEST-R650.3 Wiring
-- [ ] T055 [US4] MEDULLA-REPO-INGEST-R650.4 Refusal
-- [ ] T056 [US4] MEDULLA-REPO-INGEST-R650.5 Evidence
-- [ ] T057 [US4] MEDULLA-REPO-INGEST-R650.6 Hot-path proof
-- [ ] T058 [US4] MEDULLA-REPO-INGEST-R651.1 Model
-- [ ] T059 [US4] MEDULLA-REPO-INGEST-R651.2 Behavior
-- [ ] T060 [US4] MEDULLA-REPO-INGEST-R651.3 Wiring
-- [ ] T061 [US4] MEDULLA-REPO-INGEST-R651.4 Refusal
-- [ ] T062 [US4] MEDULLA-REPO-INGEST-R651.5 Evidence
-- [ ] T063 [US4] MEDULLA-REPO-INGEST-R651.6 Hot-path proof
+- [ ] T047 [US4] MEDULLA-REPO-INGEST-R800.2 Behavior RETIRED: the engine-side line reader and file checkpoint have no production caller
+- [ ] T048 [US4] MEDULLA-REPO-INGEST-R800.3 Wiring RETIRED: an engine-side scheduled transcript reader is a second ingest route with no consumer
+- [ ] T049 [US4] MEDULLA-REPO-INGEST-R800.4 Refusal RETIRED: depends only on the retired engine-side reader
+- [ ] T050 [US4] MEDULLA-REPO-INGEST-R800.5 Evidence RETIRED: depends only on the retired engine-side reader
+- [ ] T051 [US4] MEDULLA-REPO-INGEST-R800.6 Hot-path proof RETIRED: depends only on the retired engine-side reader
+- [ ] T052 [US4] MEDULLA-REPO-INGEST-R650.1 Model RETIRED: the hydration types have no production consumer
+- [ ] T053 [US4] MEDULLA-REPO-INGEST-R650.2 Behavior RETIRED: the hydration planner has no production consumer
+- [ ] T054 [US4] MEDULLA-REPO-INGEST-R650.3 Wiring RETIRED: engine-side boot hydration would be a second producer of index and pack batches
+- [ ] T055 [US4] MEDULLA-REPO-INGEST-R650.4 Refusal RETIRED: depends only on the retired boot hydration
+- [ ] T056 [US4] MEDULLA-REPO-INGEST-R650.5 Evidence RETIRED: depends only on the retired boot hydration
+- [ ] T057 [US4] MEDULLA-REPO-INGEST-R650.6 Hot-path proof RETIRED: depends only on the retired boot hydration
+- [ ] T058 [US4] MEDULLA-REPO-INGEST-R651.1 Model RETIRED: adapter types with no production consumer
+- [ ] T059 [US4] MEDULLA-REPO-INGEST-R651.2 Behavior RETIRED: depends only on the retired adapter types
+- [ ] T060 [US4] MEDULLA-REPO-INGEST-R651.3 Wiring RETIRED: depends only on the retired adapter types
+- [ ] T061 [US4] MEDULLA-REPO-INGEST-R651.4 Refusal RETIRED: depends only on the retired adapters
+- [ ] T062 [US4] MEDULLA-REPO-INGEST-R651.5 Evidence RETIRED: depends only on the retired adapters
+- [ ] T063 [US4] MEDULLA-REPO-INGEST-R651.6 Hot-path proof RETIRED: depends only on the retired adapters
 - [ ] T064 [US4] MEDULLA-REPO-INGEST-R652.1 Model
 - [ ] T065 [US4] MEDULLA-REPO-INGEST-R652.2 Behavior
-- [ ] T066 [US4] MEDULLA-REPO-INGEST-R652.3 Wiring
+- [ ] T066 [US4] MEDULLA-REPO-INGEST-R652.3 Wiring: section, processed-document and link-target nodes in the EnrichDocument write-set
 - [ ] T067 [US4] MEDULLA-REPO-INGEST-R652.4 Refusal
 - [ ] T068 [US4] MEDULLA-REPO-INGEST-R652.5 Evidence
 - [ ] T069 [US4] MEDULLA-REPO-INGEST-R652.6 Hot-path proof
 - [ ] T070 [US3] MEDULLA-REPO-INGEST-R002.650 Model: ingest capability types
 - [ ] T071 [US3] MEDULLA-REPO-INGEST-R002.651.1 Envelope commit and idempotent replay
-- [ ] T072 [US3] MEDULLA-REPO-INGEST-R002.651.2 Supersession edge
-- [ ] T073 [US3] MEDULLA-REPO-INGEST-R002.651.3 Dead-letter park and redrive
-- [ ] T074 [US3] MEDULLA-REPO-INGEST-R002.651.4 Process conformance
-- [ ] T075 [US3] MEDULLA-REPO-INGEST-R002.652 Wiring: ingest capabilities
-- [ ] T076 [US3] MEDULLA-REPO-INGEST-R002.653 Refusal: ingest capabilities
-- [ ] T077 [US3] MEDULLA-REPO-INGEST-R002.654 Evidence: ingest capabilities
+- [ ] T072 [US3] MEDULLA-REPO-INGEST-R002.651.2 Supersession: supersession_methods and check_supersessions under the envelope write lock
+- [ ] T073 [US3] MEDULLA-REPO-INGEST-R002.651.3 Add `JobStore::list_dead_letters` / `redrive_dead_letters` over `TASK_DEAD_LETTERS` and serve `DeadLetterList` / `DeadLetterRedrive` through `medulla_h_jobs::task_queue::try_handle`
+- [ ] T074 [US3] MEDULLA-REPO-INGEST-R002.651.4 Process conformance: footprint_replay and the ProcessConformance read
+- [ ] T075 [US3] MEDULLA-REPO-INGEST-R002.652 Wiring: every ingest capability is served and catalog-listed (after T072, T073, T074)
+- [ ] T076 [US3] MEDULLA-REPO-INGEST-R002.653 Refusal: ENVELOPE_SOURCE_MISSING prefix and the store-unchanged proof (after T072, T073, T074)
+- [ ] T077 [US3] MEDULLA-REPO-INGEST-R002.654 Evidence: second-principal readback (after T072, T073)
 - [ ] T078 [US3] MEDULLA-REPO-INGEST-R002.655 Hot-path proof: ingest capabilities
 - [ ] T079 [US1] MEDULLA-REPO-INGEST-R006.5 Branch-aware, blob-deduplicated repository indexing
 - [ ] T080 [US3] MEDULLA-REPO-INGEST-R006.6 Schedule the paper intake job every six hours
-- [ ] T081 [US1] MEDULLA-REPO-INGEST-R603.7 Source-binding identity separates cosmetic from structural change
+- [ ] T081 [US1] MEDULLA-REPO-INGEST-R603.7 Source-binding identity separates cosmetic from structural change RETIRED: a second classification route; served by R603.3
 - [ ] T082 [US2] MEDULLA-REPO-INGEST-R700.1 Model
 - [ ] T083 [US2] MEDULLA-REPO-INGEST-R700.2 Behavior
-- [ ] T084 [US2] MEDULLA-REPO-INGEST-R700.3 Wiring
+- [ ] T084 [US2] MEDULLA-REPO-INGEST-R700.3 Wiring: CodeHealthSweep served read beside CodeContext
 - [ ] T085 [US2] MEDULLA-REPO-INGEST-R700.4 Refusal
 - [ ] T086 [US2] MEDULLA-REPO-INGEST-R700.5 Evidence
 - [ ] T087 [US2] MEDULLA-REPO-INGEST-R700.6 Hot-path proof
 - [ ] T088 [US1] MEDULLA-REPO-INGEST-R801 Ecosystem packages and architecture layers become typed nodes
-- [ ] T090 [US1] MEDULLA-REPO-INGEST-R802 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T091 [US1] MEDULLA-REPO-INGEST-R802.1 IndexFileOutcome/IndexFileStatus state machine: route 2 census findings through IndexFileStatus::apply
-- [ ] T092 [US1] MEDULLA-REPO-INGEST-R802.2 IndexRef/IndexRefStatus state machine: route 1 census findings through IndexRefStatus::apply
+- [ ] T090 [US1] MEDULLA-REPO-INGEST-R802 Remaining lifecycles are explicit state machines (rollup) RETIRED: no index status field moves after construction
+- [ ] T091 [US1] MEDULLA-REPO-INGEST-R802.1 IndexFileStatus state machine RETIRED: IndexFileStatus is set once at construction
+- [ ] T092 [US1] MEDULLA-REPO-INGEST-R802.2 IndexRefStatus state machine RETIRED: IndexRefStatus is sender-declared and never reassigned

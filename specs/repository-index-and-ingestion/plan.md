@@ -21,7 +21,7 @@ Medulla indexes a repository snapshot and ingests governed source observations t
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate and the engine store.
-- **R-II. Every wait has a deadline**: pass. Enrichment, hydration and intake run as jobs with budgets and deadlines.
+- **R-II. Every wait has a deadline**: pass. Enrichment runs as jobs with budgets and deadlines; reads such as the code-health sweep run under a step budget.
 - **R-III. Every row sets budgets and names a benchmark**: pass. Each hot-path row names a nightly bench with p50, p99 and memory.
 - **R-IV. Crates are small, layered and cut over hard**: pass. Rows name the post-split crates and no handler crate calls a sibling handler crate.
 - **Organization standards**: pass. Rows follow the spec standard and the wording standard.
@@ -33,12 +33,13 @@ crates/medulla-h-ingest/src/repository_index.rs        existing: lowering, commi
 crates/medulla-h-ingest/src/source_ingestion.rs        existing: SourceIngest prepare and finish
 crates/medulla-h-ingest/src/web_ingest.rs              existing: document chunks
 crates/medulla-h-ingest/src/repository_index/          new: enrich.rs (run_after_commit)
-crates/medulla-h-ingest/src/                           new: ingest_throughput.rs, ingest_readback.rs, dead_letter.rs, transcript_intake.rs, code_health.rs, source_binding.rs
+crates/medulla-h-ingest/src/                           new: ingest_throughput.rs, ingest_readback.rs, dead_letter.rs, source_ingestion/skill_document.rs, repository_index/enrich/fingerprint.rs
 crates/medulla-server-graph/src/dispatch/              existing: change_envelope.rs, graph_pipeline/repository_index.rs
 crates/medulla-enrich/src/                             existing: code, history, links, fingerprint
 crates/medulla-document/src/                           existing: processing.rs, transcript.rs; new: skill_plan.rs, semantic_support.rs
-crates/medulla-durable/src/                            existing: hydration.rs; new: adapters.rs
-crates/medulla-h-mining/src/mining/                    existing: process.rs; new: ocel.rs
+crates/medulla-h-mining/src/mining/                    existing: process.rs (adds handle_conformance)
+crates/medulla-h-graph/src/                            new: supersession_admission.rs
+crates/medulla-h-query/src/query/                      existing: code_context.rs (adds handle_code_health_sweep)
 crates/medulla-types/src/                              existing: code_health.rs; new: skill_plan.rs, ingest_throughput.rs, ingest_readback.rs, code_map.rs, ingest_capabilities.rs
 ```
 
@@ -49,7 +50,7 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 The unknowns below were open when the rows were written. Each is decided in [research.md](research.md):
 
 - How a supersession is composed from existing methods and verified by the engine (R002.651.2).
-- Where a dead-letter redrive requeues its items, given which queue methods are built (R002.651.3).
+- Dead letters live only in the jobs-store table `TASK_DEAD_LETTERS` (MEDULLA-INGEST-WORKER-R001.9 writes, R002.651.3 lists and redrives in one jobs.redb transaction).
 
 ## Phase 1: Design
 
@@ -58,7 +59,7 @@ The unknowns below were open when the rows were written. Each is decided in [res
 - **Dependency direction.** The request boundary and graph ACL sit above the ingest handler, which sits above the parser, document and enrichment crates. No handler crate calls a sibling handler crate (R-IV).
 - **Interface depth.** A provider sends a snapshot or a governed source batch and reads the receipt. The served methods each row names are the whole surface.
 - **Special cases.** A parse that is unsupported or errors is its own outcome and never advances a ref (`IndexFileOutcome`). A refused write commits nothing.
-- **State.** Durable state is the graph store, the blob store for source bytes and the job store; file and ref lifecycles are explicit state machines (R802).
+- **State.** Durable state is the graph store, the blob store for source bytes and the job store; per-file index status and ref status are set once at construction and carry no state machine.
 - **Environment.** Engine knobs and `SchedulerConfig` keys each row names; the unit and contract tests need no live provider, credential or model endpoint.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
@@ -180,7 +181,7 @@ identity under R009.1/R009.2 and `MEDULLA-TYPED-PACKS-R069` semantic projection 
 
 ## Phase 2: Task approach
 
-`tasks.md` holds one task per leaf row. Producer rows come first: the contract and identity rows (`R009.1`, `R009.2`, `R007`, `R008`), then the native commit rows, then the post-commit enrichment rows (`R600` to `R603`), then the intake, hydration and adapter rows (`R650` to `R652`, `R800`). Tasks of independent crates may run in parallel.
+`tasks.md` holds one task per leaf row. Producer rows come first: the contract and identity rows (`R009.1`, `R009.2`, `R007`, `R008`), then the native commit rows, then the post-commit enrichment rows (`R600` to `R603`), then the document and transcript rows (`R652`, `R800.1`). Tasks of independent crates may run in parallel.
 
 ## Complexity Tracking
 
