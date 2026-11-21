@@ -132,10 +132,11 @@ pub struct Response {
     /// clean success and on every failure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warning: Option<String>,
-    /// The two revisions of a stale topic corpus (MEDULLA-FEDERATED-QUERY-R040.2.4).
-    /// Present only when `error` is `TOPIC_CORPUS_STALE`.
+    /// The structured detail of a refusal, tagged by its code (MEDULLA-FEDERATED-QUERY-R040.2.4).
+    /// Present only for a refusal that declares a variant of `ErrorDetail`. The
+    /// human-readable text stays in `error_detail`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topic_corpus_stale: Option<medulla_types::retrieval::TopicCorpusStaleWire>,
+    pub error_data: Option<medulla_types::retrieval::ErrorDetail>,
 }
 
 /// The first declared code inside `text` that a caller's context wraps:
@@ -210,7 +211,7 @@ impl Response {
                 error_detail: None,
                 transition_refused: None,
                 warning: None,
-                topic_corpus_stale: None,
+                error_data: None,
             },
             Err(error) => Response::err(id, error),
         }
@@ -256,10 +257,9 @@ impl Response {
             .flatten()
             .and_then(medulla_types::transition_refused::TransitionRefused::from_detail)
             .map(Into::into);
-        let topic_corpus_stale = (error == "TOPIC_CORPUS_STALE")
-            .then(|| error_detail.as_deref())
-            .flatten()
-            .and_then(medulla_types::retrieval::TopicCorpusStaleWire::from_detail);
+        let error_data = error_detail
+            .as_deref()
+            .and_then(|detail| medulla_types::retrieval::ErrorDetail::from_refusal(&error, detail));
         Response {
             id,
             result: None,
@@ -267,7 +267,7 @@ impl Response {
             error_detail,
             transition_refused,
             warning: None,
-            topic_corpus_stale,
+            error_data,
         }
     }
 
@@ -330,7 +330,7 @@ impl Response {
                 error_detail: None,
                 transition_refused: None,
                 warning: None,
-                topic_corpus_stale: None,
+                error_data: None,
             },
             Err(error) => Response::err(id, error),
         }

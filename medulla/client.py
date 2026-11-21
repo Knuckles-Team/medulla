@@ -12254,10 +12254,14 @@ def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
     # caller can fall back to a bounded query without string-matching.
     if code == "RESULT_TOO_LARGE":
         raise ResultTooLargeError(code, error_detail)
-    stale = resp.get("topic_corpus_stale")
-    if code == "TOPIC_CORPUS_STALE" and isinstance(stale, dict):
-        topics = stale.get("topics")
-        current = stale.get("current")
+    data = resp.get("error_data")
+    if (
+        code == "TOPIC_CORPUS_STALE"
+        and isinstance(data, dict)
+        and data.get("code") == "TOPIC_CORPUS_STALE"
+    ):
+        topics = data.get("topics")
+        current = data.get("current")
         if isinstance(topics, int) and isinstance(current, int):
             raise TopicCorpusStaleError(
                 code, error_detail, topics=topics, current=current
