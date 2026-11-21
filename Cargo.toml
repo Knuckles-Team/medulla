@@ -2075,6 +2075,12 @@ name = "data_prep_declare"
 path = "benches/data_prep_declare.rs"
 harness = false
 
+# Row-version admission at batch size (MEDULLA-INGEST-WORKER-R901.6): nightly budget.
+[[bench]]
+name = "ingest_row_version"
+path = "benches/ingest_row_version.rs"
+harness = false
+
 # Source reconcile at one million identifiers (MEDULLA-INGEST-WORKER-R903.6): nightly budget.
 [[bench]]
 name = "ingest_source_reconcile"
