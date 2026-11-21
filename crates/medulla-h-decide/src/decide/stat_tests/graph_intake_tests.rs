@@ -6,7 +6,7 @@
 
 use super::*;
 use medulla_decision_types::decision::graph_intake::{GraphReference, IntakeSource};
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
+use medulla_decision_types::decision::{EvidenceClass, PremiseClass, PremiseProvenance, ResolutionKind};
 use medulla_types::contract::Digest256;
 
 const GRAPH: &str = "kg-graph-intake";
@@ -200,4 +200,58 @@ async fn missing_graph_data_refuses() {
         "GRAPH_INTAKE_UNKNOWN_AUTHORITY",
     )
     .await;
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R163.5
+#[tokio::test]
+async fn graph_intake_evidence_binds() {
+    let (h, digest) = harness().await;
+    let (schema, _) = publish_route_schema(&h);
+    let file_digest = Digest256::sha256(b"a");
+    let batch = decide(
+        &h,
+        intake_request(
+            &schema,
+            vec![
+                graph_source(AUTHORITY, "paper:1", 12, digest),
+                file_source("docs/a.md", file_digest),
+            ],
+        ),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let graph_fact = format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex());
+    let file_fact = format!("intake:file=docs/a.md#{}", file_digest.to_hex());
+    let premise = |fact: &str| {
+        record
+            .premises
+            .iter()
+            .find(|premise| premise.fact == fact)
+            .unwrap_or_else(|| panic!("no premise {fact}"))
+    };
+    // Both are Claims: resolution proves the stored revision and digest equal the
+    // request's, not that the content is true.
+    for fact in [&graph_fact, &file_fact] {
+        assert_eq!(premise(fact).class, PremiseClass::Claim, "{fact}");
+    }
+    assert_eq!(
+        premise(&graph_fact).provenance,
+        PremiseProvenance::GraphRow {
+            graph: GRAPH.to_string(),
+            graph_version: 12,
+        }
+    );
+    assert_eq!(
+        premise(&file_fact).provenance,
+        PremiseProvenance::Request {
+            field: "intake_sources".to_string(),
+        }
+    );
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    // The node body is never returned.
+    assert!(!record
+        .premises
+        .iter()
+        .any(|premise| premise.fact.contains("body")));
 }
