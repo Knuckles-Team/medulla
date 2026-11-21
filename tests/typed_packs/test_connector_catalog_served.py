@@ -46,13 +46,14 @@ def _batch(
     declare_class: bool = True,
     resource_connector: bool = True,
     pair_edge: bool = True,
+    serves: str = f"{EXAMPLE}Customer",
 ) -> str:
     lines = [
         _triple(CONNECTOR, RDF_TYPE, f"{CONNECTOR_PACK}Connector"),
         _triple(TOOL, RDF_TYPE, f"{CATALOG}ToolAsset"),
         _triple(TOOL, f"{CONNECTOR_PACK}ofConnector", CONNECTOR),
         _triple(RESOURCE, RDF_TYPE, f"{CATALOG}DataResource"),
-        _triple(RESOURCE, f"{CONNECTOR_PACK}servesClass", f"{EXAMPLE}Customer"),
+        _triple(RESOURCE, f"{CONNECTOR_PACK}servesClass", serves),
         _triple(f"{EXAMPLE}edge", RDF_TYPE, f"{CATALOG}LineageEdge"),
         _triple(f"{EXAMPLE}edge", f"{CATALOG}from", TOOL),
         _triple(f"{EXAMPLE}edge", f"{CATALOG}to", RESOURCE),
@@ -142,8 +143,14 @@ def test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refu
         with pytest.raises(Exception, match=code):
             admin.rdf.add_triples(turtle=batch)
         assert _tool_ids(admin) == set(), code
-    # An ownerless pack is not a refusal: it imports flagged.
-    admin.rdf.add_triples(turtle=_batch(with_digest=True))
+    # A class only the composed schema declares resolves: the schema is the one authority.
+    admin.rdf.add_triples(
+        turtle=_batch(
+            with_digest=True,
+            declare_class=False,
+            serves="https://knuckles-team.github.io/ontology/core#WorkItem",
+        )
+    )
     assert _tool_ids(admin) == {TOOL}
 
 

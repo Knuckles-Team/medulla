@@ -122,11 +122,56 @@ impl WriteGuard for CoreIcvGuard<'_> {
                     .to_string(),
             details: serde_json::json!({"reason": "integrity_policy_invalid"}),
         })?;
+        // A class a resource serves resolves against the composed schema, the one schema
+        // authority (MEDULLA-TYPED-PACKS-R106.4), so its typing joins the checked additions.
+        let typings = composed_class_typings(core, additions);
+        let checked: std::borrow::Cow<'_, [Triple]> = if typings.is_empty() {
+            std::borrow::Cow::Borrowed(additions)
+        } else {
+            std::borrow::Cow::Owned(additions.iter().cloned().chain(typings).collect())
+        };
         IcvPolicyRegistry::new()
             .with(graph, policy)
-            .check_graph(graph, base, additions, removals)
+            .check_graph(graph, base, &checked, removals)
             .map_err(object_model_refusal)
     }
+}
+
+/// The predicate naming the class a catalog resource serves.
+const SERVES_CLASS: &str = "https://knuckles-team.github.io/ontology/connector-pack#servesClass";
+const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
+
+/// The `owl:Class` typing of every class `additions` serve (`cp:servesClass`) that the graph's
+/// composed schema declares, so the one schema authority resolves them.
+fn composed_class_typings(core: &GraphCore, additions: &[Triple]) -> Vec<Triple> {
+    use medulla_rdf::oxrdf::{NamedOrBlankNode, Term};
+
+    let referenced: HashSet<&str> = additions
+        .iter()
+        .filter(|triple| triple.predicate.as_str() == SERVES_CLASS)
+        .filter_map(|triple| match &triple.object {
+            Term::NamedNode(node) => Some(node.as_str()),
+            _ => None,
+        })
+        .collect();
+    if referenced.is_empty() {
+        return Vec::new();
+    }
+    let Ok(composed) = crate::schema_compose::validate_and_compose(&core.schema_sources()) else {
+        return Vec::new();
+    };
+    composed
+        .ontology
+        .iter()
+        .filter(|triple| {
+            triple.predicate.as_str() == RDF_TYPE
+                && matches!(&triple.object, Term::NamedNode(object) if object.as_str() == OWL_CLASS)
+                && matches!(&triple.subject, NamedOrBlankNode::NamedNode(subject)
+                    if referenced.contains(subject.as_str()))
+        })
+        .cloned()
+        .collect()
 }
 
 /// The catalog shapes whose violation has a stable wire code (MEDULLA-TYPED-PACKS-R106.4):
