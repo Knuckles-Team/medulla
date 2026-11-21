@@ -35,6 +35,7 @@ learn from.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -57,6 +58,10 @@ SOURCE_IN_PROCESS = "synthetic_construction"
 SOURCE_SERVED = "synthetic_served"
 
 
+#: The sealed record digest a served answer returned: ``sha256:`` plus 64 lowercase hex.
+_SERVED_RECORD_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
+
+
 class UnverifiableGroundTruthError(ValueError):
     """An item claims :data:`SOURCE_SERVED` provenance but its label carries
     no verifiable ground truth. Training on it would silently teach the
@@ -66,8 +71,12 @@ class UnverifiableGroundTruthError(ValueError):
 
 def verify_ground_truth(item: Mapping[str, Any]) -> None:
     """Refuse ``item`` if its label claims :data:`SOURCE_SERVED` provenance
-    without a verifiable acceptability set: one that is non-empty and wholly
-    contained in the item's own ``candidate_ids``. An item sourced
+    without a collected result and a verifiable acceptability set. The collected
+    result is the item's ``served_record_digest``, the sealed record digest the
+    served answer returned (``sha256:`` plus 64 lowercase hex), so a label cannot
+    claim the served path without one (MEDULLA-DECISION-ENGINE-R093.2.2). The
+    acceptability set must be non-empty and wholly contained in the item's own
+    ``candidate_ids``. An item sourced
     ``SOURCE_IN_PROCESS`` (or any other source) is not this function's
     concern and always passes -- only a served-path claim is held to this
     bar, because only it stands in for the engine's served ground truth."""
@@ -75,6 +84,12 @@ def verify_ground_truth(item: Mapping[str, Any]) -> None:
     if label.get("source") != SOURCE_SERVED:
         return
     item_id = item["item_id"]
+    digest = item.get("served_record_digest")
+    if not isinstance(digest, str) or not _SERVED_RECORD_DIGEST.fullmatch(digest):
+        raise UnverifiableGroundTruthError(
+            f"{item_id}: served-path item has no valid served_record_digest "
+            "(sha256: plus 64 lowercase hex characters)"
+        )
     acceptable = label.get("acceptable") or []
     if not acceptable:
         raise UnverifiableGroundTruthError(

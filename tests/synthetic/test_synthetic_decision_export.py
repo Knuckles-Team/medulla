@@ -52,9 +52,13 @@ def test_the_gold_set_loads_each_item_is_labelled_and_class_coverage_is_reported
     assert all(count > 0 for count in class_coverage.values())
 
 
+SERVED_DIGEST = "sha256:" + "ab" * 32
+
+
 def _served_item(acceptable: list[str], candidate_ids: list[str]) -> dict:
     return {
         "item_id": "served-0",
+        "served_record_digest": SERVED_DIGEST,
         "candidate_ids": candidate_ids,
         "label": {"source": export.SOURCE_SERVED, "acceptable": acceptable},
     }
@@ -87,6 +91,44 @@ def test_verify_ground_truth_refuses_a_served_item_whose_acceptable_set_leaks() 
     item = _served_item(["a", "ghost"], ["a", "b"])
     with pytest.raises(export.UnverifiableGroundTruthError, match="not a subset"):
         export.verify_ground_truth(item)
+
+
+# spec: MEDULLA-DECISION-ENGINE-R093.2.2
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R093.2.2")
+def test_served_labels_require_collected_results() -> None:
+    export.verify_ground_truth(_served_item(["a"], ["a", "b"]))
+
+    # Forged provenance: no digest, or one that is not a sealed record digest.
+    for forged in (
+        None,
+        "",
+        "ab" * 32,
+        "sha256:" + "AB" * 32,
+        "sha256:" + "ab" * 31,
+        "sha256:" + "ab" * 33,
+        "sha256:" + "zz" * 32,
+    ):
+        item = _served_item(["a"], ["a", "b"])
+        if forged is None:
+            del item["served_record_digest"]
+        else:
+            item["served_record_digest"] = forged
+        with pytest.raises(
+            export.UnverifiableGroundTruthError, match="served_record_digest"
+        ):
+            export.verify_ground_truth(item)
+
+    # An empty acceptable set and a leaking label are still refused.
+    with pytest.raises(export.UnverifiableGroundTruthError, match="no acceptable set"):
+        export.verify_ground_truth(_served_item([], ["a", "b"]))
+    with pytest.raises(export.UnverifiableGroundTruthError, match="not a subset"):
+        export.verify_ground_truth(_served_item(["a", "ghost"], ["a", "b"]))
+
+    # A label that does not claim the served path needs no digest.
+    in_process = _served_item(["a"], ["a", "b"])
+    del in_process["served_record_digest"]
+    in_process["label"]["source"] = export.SOURCE_IN_PROCESS
+    export.verify_ground_truth(in_process)
 
 
 def _marked(label: dict) -> bool:
