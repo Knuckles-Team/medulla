@@ -592,3 +592,102 @@ pub async fn submit_generation_cycle(
         other => Err(format!("a cycle answers with its job, not {other:?}")),
     }
 }
+
+/// Store the receipts that admit changing `record_id` (stored head `head_revision`)
+/// to content whose digest is `candidate_digest`, in `tenant`'s decision artifacts
+/// (MEDULLA-DURABLE-KERNEL-R863). A rewrite needs an admitting benchmark receipt
+/// and an admitting rewrite receipt; every other kind needs the benchmark receipt
+/// only. Answers the digests to name in `SyncRequest.admit_receipt_digests`.
+/// The receipts are real: the rewrite one is evaluated under the default policy.
+pub fn store_admit_receipts(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    graph: &str,
+    record_id: &str,
+    head_revision: u64,
+    candidate_digest: &str,
+    kind: medulla_decision_types::decision::memory_benchmark::ChangeKind,
+) -> Result<Vec<String>, String> {
+    use medulla_decision_types::decision::memory_benchmark::{
+        BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt, RevisionRef as BenchRevision,
+        RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
+    };
+    use medulla_decision_types::decision::memory_rewrite::{
+        HistoryEntry, MemoryRewriteKnobs, MemoryRewriteProposal, RevisionRef, RewriteHistory,
+        MEMORY_REWRITE_SCHEMA_VERSION,
+    };
+    let resolved = super::stat_support::resolve_policy(store, tenant, &DecisionPolicyRef::Default)?;
+    let metrics = RunMetricsReceipt {
+        recall_ppm_sum: 1_000_000,
+        correct: 1,
+        queries: 1,
+        recall_at_k_ppm: 1_000_000,
+        answer_accuracy_ppm: 1_000_000,
+    };
+    let mut benchmark = MemoryBenchmarkReceipt {
+        schema_version: MEMORY_BENCHMARK_SCHEMA_VERSION,
+        tenant_id: tenant.to_string(),
+        record_id: record_id.to_string(),
+        change_kind: kind,
+        baseline: BenchRevision {
+            revision: head_revision,
+            digest: "sha256:base".to_string(),
+        },
+        candidate: BenchRevision {
+            revision: head_revision + 1,
+            digest: candidate_digest.to_string(),
+        },
+        dataset_id: "dataset".to_string(),
+        dataset_revision: 1,
+        dataset_digest: "sha256:data".to_string(),
+        k: 5,
+        evaluator_revision: "e1".to_string(),
+        policy_digest: resolved.digest.trim_start_matches("sha256:").to_string(),
+        baseline_metrics: metrics.clone(),
+        candidate_metrics: metrics,
+        verdict: BenchmarkVerdictKind::Admit,
+        reason_codes: Vec::new(),
+        premises: Vec::new(),
+        receipt_digest: String::new(),
+    };
+    benchmark.receipt_digest = benchmark.compute_receipt_digest();
+    let mut rows = vec![super::stat_memory_change::benchmark_receipt_row(&benchmark)?];
+    let mut digests = vec![benchmark.receipt_digest.clone()];
+    if kind == ChangeKind::Rewrite {
+        let signals = |count: usize| -> Vec<String> {
+            (0..count).map(|i| format!("signal number {i}")).collect()
+        };
+        let proposal = MemoryRewriteProposal {
+            schema_version: MEMORY_REWRITE_SCHEMA_VERSION,
+            tenant_id: tenant.to_string(),
+            idempotency_key: format!("rewrite-receipt:{record_id}:{candidate_digest}"),
+            graph: graph.to_string(),
+            record_id: record_id.to_string(),
+            active: RevisionRef {
+                revision: head_revision,
+                digest: "a".repeat(64),
+            },
+            candidate: RevisionRef {
+                revision: head_revision + 1,
+                digest: candidate_digest.trim_start_matches("sha256:").to_string(),
+            },
+            active_signals: signals(20),
+            candidate_signals: signals(20),
+            token_count: 40,
+            metric_id: "memory_fidelity_set_overlap".to_string(),
+            policy: resolved.digest.trim_start_matches("sha256:").to_string(),
+            policy_ref: DecisionPolicyRef::Default,
+            history: RewriteHistory::sealed(Vec::<HistoryEntry>::new())?,
+        };
+        let evaluation = medulla_decision_stats::decision::memory_rewrite::evaluate_rewrite(
+            &proposal,
+            &MemoryRewriteKnobs::from_policy(&resolved.policy),
+            head_revision,
+        )
+        .map_err(|code| format!("the rewrite receipt was refused: {code:?}"))?;
+        rows.push(super::stat_memory_change::rewrite_receipt_row(&evaluation)?);
+        digests.push(evaluation.receipt_digest);
+    }
+    store.put_decision_artifacts(tenant, &rows)?;
+    Ok(digests)
+}

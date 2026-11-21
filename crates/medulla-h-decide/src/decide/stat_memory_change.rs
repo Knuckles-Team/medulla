@@ -160,6 +160,16 @@ pub fn benchmark_receipt_row(
     ))
 }
 
+/// The decision-artifact row that stores a rewrite receipt for the gate.
+pub fn rewrite_receipt_row(
+    evaluation: &MemoryRewriteEvaluation,
+) -> Result<(String, Vec<u8>), String> {
+    Ok((
+        memory_receipt_key(&evaluation.receipt_digest),
+        encode_artifact(&StoredMemoryReceipt::Rewrite(evaluation.clone()))?,
+    ))
+}
+
 /// A memory-change receipt as the tenant's decision artifacts hold it, under
 /// [`memory_receipt_key`]: the one row the admission gate reads.
 #[derive(serde::Serialize, serde::Deserialize)]

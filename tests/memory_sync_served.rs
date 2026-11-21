@@ -43,6 +43,37 @@ fn sync(request_id: &str, action: SyncAction) -> Method {
     }
 }
 
+/// Store the real receipts that admit `kind` of `content` over head `head`, and
+/// name them in the request (MEDULLA-DURABLE-KERNEL-R863).
+async fn admitted(
+    state: &test_support::SharedState,
+    mut method: Method,
+    content: &str,
+    head: u64,
+    kind: medulla_decision_types::decision::memory_benchmark::ChangeKind,
+) -> Method {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    let store = state
+        .write()
+        .await
+        .ensure_agent_library()
+        .expect("the agent library store");
+    let digests = medulla_h_decide::decide::stat_test_support::store_admit_receipts(
+        &store,
+        common::TEST_TENANT,
+        GRAPH,
+        DOC,
+        head,
+        &format!("sha256:{}", Digest256::sha256(content.as_bytes()).to_hex()),
+        kind,
+    )
+    .expect("the admitting receipts");
+    if let Method::SyncMemorySnapshot { request, .. } = &mut method {
+        request.admit_receipt_digests = digests;
+    }
+    method
+}
+
 fn submit(request_id: &str, expected: Option<u64>, content: &str) -> Method {
     sync(
         request_id,
@@ -72,7 +103,15 @@ async fn competing_saves_retain_both_and_resolve_once() {
     .await;
     let first: SyncOutcome = json_of(send(&state, 2, submit("r1", None, "one")).await);
     assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
-    let second: SyncOutcome = json_of(send(&state, 3, submit("r2", Some(1), "two")).await);
+    let rewrite = admitted(
+        &state,
+        submit("r2", Some(1), "two"),
+        "two",
+        1,
+        medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+    )
+    .await;
+    let second: SyncOutcome = json_of(send(&state, 3, rewrite).await);
     assert!(matches!(second, SyncOutcome::Accepted { ref head } if head.revision == 2));
 
     let stale: SyncOutcome = json_of(send(&state, 4, submit("r3", Some(1), "stale")).await);
@@ -85,14 +124,21 @@ async fn competing_saves_retain_both_and_resolve_once() {
     };
     assert_eq!(head.revision, 2);
 
-    let resolve = sync(
-        "r4",
-        SyncAction::Resolve {
-            candidate_revision,
-            expected_head_revision: 2,
-            resolution: Resolution::TakeCandidate,
-        },
-    );
+    let resolve = admitted(
+        &state,
+        sync(
+            "r4",
+            SyncAction::Resolve {
+                candidate_revision,
+                expected_head_revision: 2,
+                resolution: Resolution::TakeCandidate,
+            },
+        ),
+        "stale",
+        2,
+        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+    )
+    .await;
     let resolved: SyncOutcome = json_of(send(&state, 5, resolve.clone()).await);
     assert!(matches!(resolved, SyncOutcome::Resolved { ref head } if head.revision == 3));
     let again = send(&state, 6, resolve).await;
