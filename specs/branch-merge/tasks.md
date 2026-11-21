@@ -11,7 +11,7 @@ One task per leaf row of `requirements.md`, producer first: the branch model (US
 - [x] T004 [US3] MEDULLA-BRANCH-MERGE-R003 Merge base and fast-forward
 - [ ] T005 [P] [US3] MEDULLA-BRANCH-MERGE-R008 Line-level three-way merge for file blobs
 - [ ] T006 [US3] MEDULLA-BRANCH-MERGE-R004 Entity-level three-way merge
-- [ ] T007 [US4] MEDULLA-BRANCH-MERGE-R005 Epistemic conflict resolution
+- [x] T007 [US4] MEDULLA-BRANCH-MERGE-R005 Epistemic conflict resolution
 - [ ] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
 - [ ] T009 [US3] MEDULLA-BRANCH-MERGE-R009 Landing policy check at merge publish
 - [ ] T010 [US3] MEDULLA-BRANCH-MERGE-R010 Line-granularity file merge for source changesets

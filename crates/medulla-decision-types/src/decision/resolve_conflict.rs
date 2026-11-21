@@ -21,6 +21,15 @@ pub const CONFLICT_POLICY_MISSING: &str = "CONFLICT_POLICY_MISSING";
 /// A candidate's score is not a finite number.
 pub const CONFLICT_NONFINITE: &str = "CONFLICT_NONFINITE";
 
+/// The one option a conflict question declares.
+pub const CONFLICT_OPTION: &str = "resolve_conflict";
+/// The request parameter carrying the `ConflictCandidates`.
+pub const PARAM_CONFLICT: &str = "conflict";
+/// The answer naming candidate A the winner.
+pub const WINNER_A: &str = "candidate_a";
+/// The answer naming candidate B the winner.
+pub const WINNER_B: &str = "candidate_b";
+
 /// Every refusal code of the family; joins `codes::FAMILY_TABLES` under
 /// `QuestionKind::ResolveConflict`.
 pub const REFUSALS: &[RefusalCode] = &[

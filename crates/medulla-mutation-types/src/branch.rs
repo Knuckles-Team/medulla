@@ -285,6 +285,73 @@ pub struct BranchMergeReceipt {
     pub merged_parent: Option<String>,
 }
 
+/// The property names a conflict candidate's provenance is read from
+/// (MEDULLA-BRANCH-MERGE-R005). `source_reliability` and `confidence` are
+/// decimal text in `[0, 1]`; `valid_from`, `tx_from` and the optional
+/// `valid_until` are decimal `u64` milliseconds; `evidence_refs` is a JSON
+/// array of strings, empty when absent.
+pub struct ConflictProvenanceKeys {
+    pub source_reliability: &'static str,
+    pub confidence: &'static str,
+    pub valid_from: &'static str,
+    pub valid_until: &'static str,
+    pub tx_from: &'static str,
+    pub evidence_refs: &'static str,
+}
+
+/// The names of [`ConflictProvenanceKeys`] on the graph's bitemporal stamps.
+pub const CONFLICT_PROVENANCE_KEYS: ConflictProvenanceKeys = ConflictProvenanceKeys {
+    source_reliability: "source_reliability",
+    confidence: "confidence",
+    valid_from: "valid_from",
+    valid_until: "valid_until",
+    tx_from: "tx_from",
+    evidence_refs: "evidence_refs",
+};
+
+/// Which candidate of a conflict won.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ConflictSide {
+    /// Candidate A: the target's version.
+    A,
+    /// Candidate B: the source's version.
+    B,
+}
+
+/// How one conflict ended. Fixed when the record is built: a later merge
+/// builds a new record and never edits an old one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum ConflictOutcome {
+    /// Unresolved: the entity stays unmerged and the code says why.
+    Open { code: String },
+    /// Resolved from evidence under the pinned policy.
+    Resolved {
+        winner: ConflictSide,
+        decision_id: String,
+    },
+}
+
+/// One entity changed on both sides of a merge (MEDULLA-BRANCH-MERGE-R005).
+/// Both candidates keep their raw property maps, so both evidence sets are
+/// kept; a resolved record keeps the contradiction link to the loser.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ConflictRecord {
+    pub entity: String,
+    /// The target's version of the entity (empty when it is deleted there).
+    pub candidate_a: std::collections::BTreeMap<String, String>,
+    /// The source's version of the entity (empty when it is deleted there).
+    pub candidate_b: std::collections::BTreeMap<String, String>,
+    pub outcome: ConflictOutcome,
+    /// The pinned policy's digest; `None` for the engine default policy.
+    pub policy_digest: Option<String>,
+}
+
 /// MEDULLA-BRANCH-MERGE-R003 — the merge base is the common ancestor on the
 /// commit DAG chosen by the *highest* generation number; ties go to the
 /// lexicographically smallest commit id. Never an implicit base.

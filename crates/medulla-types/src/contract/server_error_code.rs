@@ -66,6 +66,8 @@ closed_error_codes! {
         BranchNoCommonAncestor => "BRANCH_NO_COMMON_ANCESTOR",
         /// MEDULLA-BRANCH-MERGE-R003/R007: the target head is not the head the merge was planned against.
         MergeTargetStale => "MERGE_TARGET_STALE",
+        /// MEDULLA-BRANCH-MERGE-R005: a conflict side has no readable evidence; an open-conflict code, not a merge refusal.
+        ConflictEvidenceMissing => "CONFLICT_EVIDENCE_MISSING",
         BranchTenantDenied => "BRANCH_TENANT_DENIED",
         BranchUnknown => "BRANCH_UNKNOWN",
         BranchVersionNotOnChain => "BRANCH_VERSION_NOT_ON_CHAIN",

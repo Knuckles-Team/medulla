@@ -12,8 +12,8 @@
 //! through the `ConflictDecider` seam, writes the resolution.
 
 use medulla_decision_types::decision::resolve_conflict::{
-    min_margin, recency_tiebreak, ConflictRefusal, CONFLICT_NONFINITE, CONFLICT_POLICY_MISSING,
-    CONFLICT_UNRESOLVED,
+    min_margin, recency_tiebreak, ConflictRefusal, CONFLICT_NONFINITE, CONFLICT_OPTION,
+    CONFLICT_POLICY_MISSING, CONFLICT_UNRESOLVED, PARAM_CONFLICT, WINNER_A, WINNER_B,
 };
 use medulla_decision_types::decision::statistical::declared::{
     ConflictCandidates, DeclaredOption,
@@ -32,15 +32,6 @@ use crate::decide::stat_executor::{
 
 use super::support::{abstained, advisory, invalid, param, single_option};
 use super::DecisionFamily;
-
-/// The one option a conflict question declares.
-pub const CONFLICT_OPTION: &str = "resolve_conflict";
-/// The request parameter carrying the [`ConflictCandidates`].
-pub const PARAM_CONFLICT: &str = "conflict";
-/// The answer naming candidate A the winner.
-pub const WINNER_A: &str = "candidate_a";
-/// The answer naming candidate B the winner.
-pub const WINNER_B: &str = "candidate_b";
 
 /// The family of the `resolve_conflict` question kind.
 pub struct ResolveConflictFamily;

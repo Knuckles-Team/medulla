@@ -7,6 +7,8 @@
 
 // MEDULLA-BRANCH-MERGE-R004 — entity-level three-way merge.
 pub mod merge;
+// MEDULLA-BRANCH-MERGE-R005 — epistemic conflict resolution.
+pub mod conflict;
 // MEDULLA-BRANCH-MERGE-R010 — line-granularity file merge for source changesets.
 pub mod line_merge;
 // MEDULLA-BRANCH-MERGE-R006 — branch diff and time-travel reads.
