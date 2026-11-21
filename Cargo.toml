@@ -2224,6 +2224,13 @@ name = "schema_drift_classify"
 path = "benches/schema_drift_classify.rs"
 harness = false
 
+# Object-model shape compilation (MEDULLA-TYPED-PACKS-R650.6): `compile_shapes` over
+# 1,000 declarations, p99 under 20 ms. Default features; nightly suite.
+[[bench]]
+name = "object_model_compile"
+path = "benches/object_model_compile.rs"
+harness = false
+
 # Ontology edit chain (MEDULLA-TYPED-PACKS-R651.6): append plus revert of 100 of
 # 10,000 edits, p99 under 5 ms. Default features; nightly suite.
 [[bench]]

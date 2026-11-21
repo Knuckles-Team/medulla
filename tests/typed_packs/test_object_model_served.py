@@ -237,3 +237,69 @@ def test_refusal_carries_rule_path_and_value_digest() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.6")
+def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
+    async def exercise() -> None:
+        tag = uuid.uuid4().hex[:8]
+        connector = f"object-model-{tag}"
+        base = f"https://example.org/{connector}"
+        graph = f"object-model-{tag}"
+        other_graph = f"object-model-other-{tag}"
+        client = await _import_and_attach(connector, base, graph)
+        try:
+            ok_asset = (
+                '<https://example.org/data/a1> rdf:type ex:Asset ; ex:sku "ABC-1" .\n'
+            )
+            await _add(client, base, ok_asset)
+
+            # Each violating write refuses; the valid one committed alone.
+            with pytest.raises(EngineResponseError, match="VALUE_CONSTRAINT_VIOLATED"):
+                await _add(
+                    client,
+                    base,
+                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" .\n',
+                )
+            await _add(
+                client,
+                base,
+                '<https://example.org/data/a3> rdf:type ex:Asset ; ex:sku "ABC-3" .\n'
+                '<https://example.org/data/a4> rdf:type ex:Asset ; ex:sku "ABC-4" .\n'
+                '<https://example.org/data/a5> rdf:type ex:Asset ; ex:sku "ABC-5" .\n',
+            )
+            owned = ", ".join(f"<https://example.org/data/a{n}>" for n in (1, 3, 4, 5))
+            with pytest.raises(EngineResponseError, match="LINK_CARDINALITY_EXCEEDED"):
+                await _add(
+                    client,
+                    base,
+                    '<https://example.org/data/p1> rdf:type ex:Person ; ex:name "Ann" ; '
+                    f"ex:owns {owned} .\n",
+                )
+
+            # The served query sees the valid data and none of the refused writes.
+            found = await client.rdf.get_rdf()
+            assert "data/a1" in found and "data/a3" in found
+            assert "data/a2" not in found and "data/p1" not in found
+
+            # A second graph that never attached the pack is unaffected.
+            await client.tenants.create(other_graph)
+            other = await MedullaClient.connect(
+                socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+                verified_context=request_context(),
+                graph_name=other_graph,
+            )
+            try:
+                await _add(
+                    other,
+                    base,
+                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" .\n',
+                )
+            finally:
+                await other.tenants.delete(other_graph)
+                await other.close()
+        finally:
+            await client.tenants.delete(graph)
+            await client.close()
+
+    asyncio.run(exercise())
