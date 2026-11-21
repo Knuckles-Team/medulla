@@ -49,6 +49,7 @@ broker = ["medulla-server-api/broker", "medulla-core/broker", "medulla-graph-cor
 cdc-kafka = ["streaming", "dep:medulla-stream", "medulla-server-api/cdc-kafka", "medulla-stream?/cdc-kafka"]
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
 matview = ["query", "result-cache", "streaming", "medulla-server-api/matview", "medulla-protocol-types/matview", "medulla-types/matview"]
+test-support = ["medulla-exec/test-support"]
 mining = ["medulla-server-api/mining", "medulla-kernel/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-types/mining", "medulla-query-types/mining"]
 modality-serving = ["security", "streaming", "dep:medulla-modality", "medulla-server-api/modality-serving", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-types/modality-serving"]
 owl = ["dep:medulla-rdf", "medulla-server-api/owl", "medulla-exec/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-reasoner/owl", "medulla-types/owl", "medulla-query-types/owl"]

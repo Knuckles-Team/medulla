@@ -159,6 +159,7 @@ medulla-federation = { path = "../medulla-federation", features = ["test-support
 medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-cdc = { path = "../medulla-server-cdc", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"

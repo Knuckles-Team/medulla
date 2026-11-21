@@ -782,3 +782,74 @@ async fn view_delta_feed_matches_result_difference() {
     };
     send_in(&state, DELTA_GRAPH, 10_000, dropped).await;
 }
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R008.4
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn corrupted_state_is_caught_and_demoted() {
+    use medulla_server_api::knob_config;
+    use medulla_server_cdc::matview::{manager, Mode};
+
+    // The knobs are read once per process, so they are installed before the first manager
+    // call; this test runs in its own process.
+    let loaded = knob_config::load_knobs(
+        &[
+            "view.shadow_every=10".to_string(),
+            "view.shadow_tick_ms=100".to_string(),
+        ],
+        |_| None,
+    )
+    .expect("shadow knobs load");
+    knob_config::install(loaded);
+    assert_eq!(knob_config::knobs().view_shadow_every, 10);
+    assert_eq!(knob_config::knobs().view_shadow_tick_ms, 100);
+
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state(&[CREATOR]);
+    if state.read().await.registry.get(COMMONS).is_none() {
+        create_test_graph(&state, COMMONS, 1).await;
+    }
+    let define = Method::PlanMatViewDefine {
+        name: VIEW.into(),
+        graph: COMMONS.into(),
+        plan: doc_plan(),
+    };
+    send(&state, 2, define).await;
+    medulla_server_ops::api::query_txn::txn_seam(&state)
+        .await
+        .expect("the txn seam is installed")
+        .spawn_shadow_checks(state.clone())
+        .expect("the shadow checks start");
+
+    let write = |i: usize| Method::AddNode {
+        node_id: format!("d{i}"),
+        properties_msgpack: doc_props(2015),
+    };
+    for i in 0..10 {
+        send(&state, 10 + i as u64, write(i)).await;
+    }
+    assert!(
+        manager().corrupt_for_test(VIEW),
+        "the incremental circuit had a member to drop"
+    );
+    for i in 10..20 {
+        send(&state, 10 + i as u64, write(i)).await;
+    }
+
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+    while manager().mode(VIEW) != Some(Mode::Recompute) && tokio::time::Instant::now() < deadline
+    {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert_eq!(manager().mode(VIEW), Some(Mode::Recompute));
+    assert_eq!(
+        manager().fallback_reason(VIEW).as_deref(),
+        Some("SHADOW_MISMATCH")
+    );
+    assert_eq!(
+        served_rows(&state, 100).await,
+        recomputed_rows(&state).await,
+        "a demoted view still answers what a recompute answers"
+    );
+    send(&state, 10_000, Method::PlanMatViewDrop { name: VIEW.into() }).await;
+}

@@ -570,6 +570,22 @@ impl PlanMatViewManager {
         taken
     }
 
+    /// Drop one member of the maintained circuit of `name`, so its next shadow check finds
+    /// a mismatch (MEDULLA-INCREMENTAL-VIEWS-R008.4). Answers whether a member was dropped;
+    /// a view that is not resident and incremental has none to drop.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn corrupt_for_test(&self, name: &str) -> bool {
+        match self
+            .views
+            .lock()
+            .get_mut(name)
+            .and_then(|tracked| tracked.circuit.as_mut())
+        {
+            Some(CircuitSlot::Resident(circuit)) => circuit.drop_one_member_for_test(),
+            _ => false,
+        }
+    }
+
     /// Re-arm the shadow check of `name` after a check that could not compare because
     /// the graph moved (MEDULLA-INCREMENTAL-VIEWS-R008.2): the view is due again at the
     /// next [`take_due_checks`](Self::take_due_checks).

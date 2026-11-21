@@ -520,6 +520,24 @@ impl Circuit {
         self.state_bytes
     }
 
+    /// Forget the smallest-id member of the last membership stage, in every stage, so the
+    /// maintained result no longer matches a recompute. Answers whether a member was dropped
+    /// (MEDULLA-INCREMENTAL-VIEWS-R008.4).
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn drop_one_member_for_test(&mut self) -> bool {
+        let Some(id) = self
+            .stages
+            .last()
+            .and_then(|stage| stage.members.keys().min().cloned())
+        else {
+            return false;
+        };
+        for stage in &mut self.stages {
+            stage.members.remove(&id);
+        }
+        true
+    }
+
     /// Rebuild the accounted figure from the state itself, for a circuit decoded from a row
     /// written before the figure existed.
     pub fn recount_state_bytes(&mut self) {
