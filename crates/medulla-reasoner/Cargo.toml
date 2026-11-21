@@ -36,6 +36,11 @@ name = "owl_retract"
 harness = false
 required-features = ["owl"]
 
+[[bench]]
+name = "rule_fixpoint"
+harness = false
+required-features = ["owl"]
+
 [features]
 gpu-cuda = ["dep:cudarc", "reasoning"]
 reasoning = []
@@ -46,6 +51,7 @@ rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
 sparql-star = ["medulla-rdf/sparql-star", "rdf"]
 
 [dev-dependencies]
+criterion = { version = "0.8", default-features = false }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }

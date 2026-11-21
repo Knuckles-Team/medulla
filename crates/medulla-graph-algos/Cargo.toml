@@ -32,6 +32,12 @@ contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/co
 graphlearn = ["medulla-compute/graphlearn", "medulla-types/graphlearn", "medulla-query-types/graphlearn"]
 
 [dev-dependencies]
+criterion = { version = "0.8", default-features = false }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-kvcache = { path = "../medulla-kvcache" }
+
+[[bench]]
+name = "topology"
+path = "benches/topology.rs"
+harness = false

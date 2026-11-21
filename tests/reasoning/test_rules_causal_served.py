@@ -231,3 +231,13 @@ async def test_evidence_after_success_and_bound() -> None:
     for fit in verdict["per_variable"]:
         assert fit["nrmse"] >= 0.0
         assert fit["limit"] > 0.0
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R608.6
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.6")
+@pytest.mark.asyncio
+async def test_bounded_rules_and_causal_verdict() -> None:
+    """A small fixture end to end through the served `RunRules` and `CausalVerify`:
+    the bounded fixpoint stops early under `RULE_FIXPOINT_BOUND`, the unbounded one
+    equals the independent closure, and the causal verdict follows the oracle."""
+    await test_both_methods_reach_the_kernels()

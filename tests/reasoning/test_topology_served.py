@@ -283,3 +283,33 @@ def test_evidence_fields_after_success_and_refusal(capped_engine):
         for line in spectral_spans
     ), spectral_spans
     assert any("nodes=6" in line for line in _span_lines(log_path, "mincut"))
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R607.6
+def test_each_analytic_is_served(clean_graph):
+    """All five analytics answer over the wire on ONE fixture, each naming itself."""
+    gc = clean_graph
+    _seed(gc)
+    candidates = [["tri-a1", "tri-a2"], ["tri-a1", "tri-b3"]]
+    requests = {
+        "spectral": {"k": 2, "seed": 7},
+        "mincut": {},
+        "analogy": {"k": 4},
+        "synergy": {"k": 3, "seed": 1},
+        "hyperedge_score": {"candidates": candidates},
+    }
+    answers = {
+        analytic: gc.graph.mine_topology(analytic, **params)
+        for analytic, params in requests.items()
+    }
+    for analytic, answer in answers.items():
+        assert answer["analytic"] == analytic
+        assert answer["evidence"], analytic
+    assert sorted(sorted(p["members"]) for p in answers["spectral"]["partitions"]) == [
+        _LEFT,
+        _RIGHT,
+    ]
+    assert answers["mincut"]["evidence"]["cut_weight"] == 1.0
+    assert answers["analogy"]["matches"]
+    assert all(len(b["communities"]) >= 2 for b in answers["synergy"]["bridges"])
+    assert [s["members"] for s in answers["hyperedge_score"]["scores"]] == candidates

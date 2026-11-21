@@ -5560,6 +5560,7 @@ dependencies = [
 name = "medulla-graph-algos"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "medulla-compute",
  "medulla-core",
  "medulla-graph-core",
@@ -7173,6 +7174,7 @@ dependencies = [
 name = "medulla-reasoner"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "cudarc",
  "medulla-agent-types",
  "medulla-core",

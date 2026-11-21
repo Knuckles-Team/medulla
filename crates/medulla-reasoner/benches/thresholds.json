@@ -1,0 +1,9 @@
+{
+  "_comment": "MEDULLA-FEDERATED-QUERY-R608.6: committed budgets for the medulla-reasoner rule_fixpoint bench, in the key format of crates/medulla-plan/benches/thresholds.json and enforced by scripts/bench_gate.py. Nanoseconds for latency. Benchmarks never gate a PR.",
+  "latency_p50_ns_max": {
+    "rule_fixpoint_1m": 2000000000
+  },
+  "latency_p99_ns_max": {
+    "rule_fixpoint_1m": 6000000000
+  }
+}

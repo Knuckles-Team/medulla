@@ -1,0 +1,12 @@
+{
+  "_comment": "MEDULLA-FEDERATED-QUERY-R607.6: committed budgets for the medulla-graph-algos topology bench, in the key format of crates/medulla-plan/benches/thresholds.json and enforced by scripts/bench_gate.py. Nanoseconds for latency. Benchmarks never gate a PR.",
+  "latency_p50_ns_max": {
+    "spectral_100k": 4000000000,
+    "mincut_10k": 1000000000
+  },
+  "latency_p99_ns_max": {
+    "spectral_100k": 10000000000,
+    "analogy_10k_edges": 800000000,
+    "mincut_10k": 3000000000
+  }
+}
