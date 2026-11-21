@@ -236,11 +236,14 @@ impl ObjectStoreBackend {
     /// `OBJECT_PUBLISH_STALE`: this node stops publishing, and every later
     /// publish refuses with the same code until the node reopens from the root.
     /// `graph_snapshot` is the graph's row pages, read only when the graph has no
-    /// root yet and already holds data.
+    /// root yet and already holds data. `seal_key_id` is the id of the key that
+    /// seals this store's values (`None` with at-rest encryption off); the root's
+    /// first manifest records it.
     pub async fn publish_commit(
         &self,
         commit: &medulla_store::redb_store::commit_publish::PublishedCommit<'_>,
         graph_snapshot: &dyn Fn() -> Result<Vec<u8>, String>,
+        seal_key_id: Option<String>,
     ) -> Result<ObjectHead, String> {
         if self.stopped.load(Ordering::SeqCst) {
             return Err(format!(
@@ -262,6 +265,7 @@ impl ObjectStoreBackend {
                 graph_name: commit.graph_name.to_string(),
                 graph_type: commit.graph_type,
                 graph_version: commit.prior_graph_version,
+                seal_key_id: seal_key_id.clone(),
                 snapshot,
             })
         };
@@ -351,6 +355,17 @@ impl ObjectStoreBackend {
                 .materialize(OBJECT_ROOT_TENANT, &graph_fname, head.version)
                 .await
                 .map_err(read)?;
+            // Sealed values restore as stored, so the store must hold the key that
+            // sealed them: refuse before anything is registered or written.
+            if let Some(sealed_under) = version.seal_key_id.as_deref() {
+                if redb.seal_key_id()?.as_deref() != Some(sealed_under) {
+                    return Err(format!(
+                        "refusing to restore graph {graph_fname} from the object root: its \
+                         values are sealed under encryption key {sealed_under}, which this \
+                         store does not hold; configure that key before restoring"
+                    ));
+                }
+            }
             redb.register_graph(&graph_fname, &version.graph_name, version.graph_type)
                 .await?;
 

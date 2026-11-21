@@ -129,8 +129,12 @@ impl ShardCommitPublisher {
 impl CommitPublisher for ShardCommitPublisher {
     fn publish(&self, commit: &PublishedCommit<'_>) -> Result<(), String> {
         let snapshot = || self.graph_snapshot(commit.graph_fname);
+        #[cfg(feature = "security")]
+        let seal_key_id = self.cipher.as_ref().map(|cipher| cipher.key_ref().id.clone());
+        #[cfg(not(feature = "security"))]
+        let seal_key_id = None;
         self.runtime
-            .block_on(self.backend.publish_commit(commit, &snapshot))
+            .block_on(self.backend.publish_commit(commit, &snapshot, seal_key_id))
             .map(|_| ())
     }
 }

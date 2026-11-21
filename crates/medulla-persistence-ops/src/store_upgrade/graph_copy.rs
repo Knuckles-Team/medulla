@@ -248,6 +248,9 @@ pub async fn copy_graph(
         .ok_or_else(|| {
             GraphCopyRefusal::Source(format!("graph {graph_fname} has no durable identity row"))
         })?;
+    let seal_key_id = backend
+        .seal_key_id()
+        .map_err(GraphCopyRefusal::Source)?;
     let manifest = |version: u64, parent: Option<u64>, batches: Vec<SegmentHeader>| {
         let mut manifest = VersionManifest {
             schema_version: 3,
@@ -258,6 +261,7 @@ pub async fn copy_graph(
             graph_name: graph_name.clone(),
             graph_type,
             graph_version,
+            seal_key_id: seal_key_id.clone(),
             snapshot: SegmentHeader {
                 key: EMPTY_SHA256.to_string(),
                 sha256: EMPTY_SHA256.to_string(),

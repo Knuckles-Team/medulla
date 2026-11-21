@@ -32,6 +32,28 @@ impl RedbBackend {
         )
     }
 
+    /// The id of the key that seals this store's values; `None` with at-rest
+    /// encryption off. A root written here records it, and a restore into a
+    /// store that lacks the key refuses.
+    pub fn seal_key_id(&self) -> Result<Option<String>, String> {
+        #[cfg(feature = "security")]
+        {
+            let mut ids = self
+                .shards
+                .iter()
+                .map(|writer| writer.cipher.as_ref().map(|cipher| cipher.key_ref().id.clone()));
+            let first = ids.next().flatten();
+            if ids.any(|id| id != first) {
+                return Err(
+                    "encryption key reference differs between durable shards".to_string(),
+                );
+            }
+            Ok(first)
+        }
+        #[cfg(not(feature = "security"))]
+        Ok(None)
+    }
+
     /// A graph's durable name, type and local graph version; `None` when the
     /// graph has no catalog row.
     pub fn graph_identity(

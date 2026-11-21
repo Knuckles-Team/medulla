@@ -91,6 +91,12 @@ pub struct VersionManifest {
     /// The graph's authoritative version at this manifest's version. A local
     /// store whose graph version is past the head's is ahead of the root.
     pub graph_version: u64,
+    /// The id of the key that sealed the stored values of the table pages, when
+    /// at-rest encryption was on where the root was written (node and edge pages
+    /// are stored unsealed). A restore into a store that lacks the key refuses.
+    /// Absent when the values are plaintext.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seal_key_id: Option<String>,
     /// The owner-table snapshot segment of the declared owner tables.
     pub snapshot: SegmentHeader,
     /// The replayed batch segments, in commit order.
@@ -134,6 +140,7 @@ pub struct MaterializedVersion {
     pub graph_name: String,
     pub graph_type: GraphType,
     pub graph_version: u64,
+    pub seal_key_id: Option<String>,
     pub snapshot: SegmentRef,
     pub batches: Vec<SegmentRef>,
 }
@@ -336,6 +343,7 @@ impl ObjectFetcher {
             graph_name: manifest.graph_name,
             graph_type: manifest.graph_type,
             graph_version: manifest.graph_version,
+            seal_key_id: manifest.seal_key_id,
             snapshot,
             batches,
         })

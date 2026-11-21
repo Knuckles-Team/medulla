@@ -31,6 +31,9 @@ pub struct GraphBootstrap {
     pub graph_name: String,
     pub graph_type: GraphType,
     pub graph_version: u64,
+    /// The id of the key that seals the stored values of the graph's table
+    /// pages; `None` when at-rest encryption is off.
+    pub seal_key_id: Option<String>,
     pub snapshot: Vec<u8>,
 }
 
@@ -263,6 +266,7 @@ impl ObjectPublisher {
             graph_name: bootstrap.graph_name.clone(),
             graph_type: bootstrap.graph_type,
             graph_version: bootstrap.graph_version,
+            seal_key_id: bootstrap.seal_key_id.clone(),
             snapshot: SegmentHeader {
                 key: snapshot_key.clone(),
                 sha256: snapshot_key,
@@ -357,6 +361,7 @@ impl ObjectPublisher {
             graph_name: prior.graph_name,
             graph_type: prior.graph_type,
             graph_version: graph_version.unwrap_or(prior.graph_version),
+            seal_key_id: prior.seal_key_id,
             snapshot: prior.snapshot,
             batches: {
                 let mut batches = prior.batches;

@@ -37,6 +37,7 @@ fn bootstrap() -> Result<GraphBootstrap, CommitRefusal> {
         graph_name: GRAPH.to_string(),
         graph_type: GraphType::Global,
         graph_version: 0,
+        seal_key_id: None,
         snapshot: Vec::new(),
     })
 }
@@ -181,6 +182,7 @@ fn manifest_bytes(v: u64, parent: Option<u64>, batches: Vec<SegmentHeader>) -> V
         graph_name: GRAPH.to_string(),
         graph_type: GraphType::Global,
         graph_version: v,
+        seal_key_id: None,
         snapshot: SegmentHeader {
             key: EMPTY_SHA256.to_string(),
             sha256: EMPTY_SHA256.to_string(),
@@ -553,6 +555,7 @@ async fn bootstrap_writes_the_snapshot_the_graph_type_and_the_graph_version() {
             graph_name: "named-graph".to_string(),
             graph_type: GraphType::Commons,
             graph_version: 7,
+            seal_key_id: None,
             snapshot: snapshot.clone(),
         })
     };
@@ -571,4 +574,45 @@ async fn bootstrap_writes_the_snapshot_the_graph_type_and_the_graph_version() {
     assert_eq!(head.snapshot.bytes, snapshot);
     assert_eq!(head.graph_type, GraphType::Commons);
     assert_eq!(head.graph_version, 8);
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002
+#[cfg(feature = "redb")]
+#[tokio::test]
+async fn restore_refuses_a_root_sealed_under_a_key_the_store_lacks() {
+    let store = Arc::new(InMemory::new());
+    let backend = backend(store.clone());
+    let segment = to_vec_named(&["batch-rows"]).unwrap();
+    let sealed = || {
+        Ok(GraphBootstrap {
+            graph_name: "sealed-graph".to_string(),
+            graph_type: GraphType::Global,
+            graph_version: 0,
+            seal_key_id: Some("key-a".to_string()),
+            snapshot: Vec::new(),
+        })
+    };
+    backend
+        .commit_mutation_batch(
+            crate::object_store_backend::OBJECT_ROOT_TENANT,
+            GRAPH,
+            &segment,
+            Some(1),
+            &sealed,
+        )
+        .await
+        .unwrap();
+    let fetcher = medulla_storage::object::fetch::ObjectFetcher::new(store, ROOT);
+    let head = fetcher
+        .materialize(crate::object_store_backend::OBJECT_ROOT_TENANT, GRAPH, 1)
+        .await
+        .unwrap();
+    assert_eq!(head.seal_key_id.as_deref(), Some("key-a"));
+
+    let dir = tempfile::tempdir().unwrap();
+    let redb = crate::redb_backend::RedbBackend::open(dir.path().to_string_lossy().to_string(), 64)
+        .unwrap();
+    let error = backend.restore_into(&redb).await.unwrap_err();
+    assert!(error.contains("key-a"), "{error}");
+    assert!(error.contains("does not hold"), "{error}");
 }

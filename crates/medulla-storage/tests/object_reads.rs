@@ -42,6 +42,7 @@ impl VersionWriteSet {
             graph_name: "g1".to_string(),
             graph_type: medulla_protocol_types::protocol::GraphType::Global,
             graph_version: self.version,
+            seal_key_id: None,
             snapshot: seg(&self.snapshot_bytes),
             batches: self.batches.iter().map(|b| seg(b)).collect(),
             digest: String::new(),
