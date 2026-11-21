@@ -71,6 +71,9 @@ fn records_round_trip() {
             rule: "rule:orders-not-null".into(),
         },
         ContractPromise::Freshness,
+        ContractPromise::Unverifiable {
+            of: "schema".into(),
+        },
     ] {
         let violation = ContractViolation {
             product: "product:orders".into(),

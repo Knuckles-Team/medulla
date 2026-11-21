@@ -485,6 +485,7 @@ fn promise_kind(promise: &ContractPromise) -> &'static str {
         ContractPromise::Schema => "schema",
         ContractPromise::Quality { .. } => "quality",
         ContractPromise::Freshness => "freshness",
+        ContractPromise::Unverifiable { .. } => "unverifiable",
     }
 }
 
@@ -535,9 +536,10 @@ fn latest_score(
         .max_by_key(|score| score.at)
 }
 
-/// Check one product's contract against live state. A promise with no observation is not
-/// evaluated and never recorded: a dataset without an ingested `cat:schemaDigest` has no live
-/// schema, and a source without a time-ordered capture cursor has no watermark age.
+/// Check one product's contract against live state. A promise with no observation fails closed:
+/// a dataset without an ingested `cat:schemaDigest` has no live schema, and a source without a
+/// time-ordered capture cursor has no watermark age, so each records an `Unverifiable`
+/// violation (never a silent skip).
 fn product_violations(
     core: &medulla_graph_core::graph::GraphCore,
     tenant: &str,
@@ -568,15 +570,35 @@ fn product_violations(
         at_ms,
     };
     let dataset = product.datasets.first().cloned().unwrap_or_default();
-    check_contract(product, contract, &live)
+    let mut checked: Vec<ContractViolation> = check_contract(product, contract, &live)
         .into_iter()
-        .filter(|violation| schema_observed || violation.promise != ContractPromise::Schema)
+        .filter(|violation| match violation.promise {
+            ContractPromise::Schema => schema_observed,
+            ContractPromise::Freshness => capture_lag_ms.is_some(),
+            _ => true,
+        })
+        .collect();
+    let unverifiable = |of: &str| ContractViolation {
+        product: product.id.clone(),
+        promise: ContractPromise::Unverifiable { of: of.to_string() },
+        observed: format!("the {of} promise cannot be verified: no live observation"),
+        at_ms,
+    };
+    if !schema_observed {
+        checked.push(unverifiable("schema"));
+    }
+    if capture_lag_ms.is_none() {
+        checked.push(unverifiable("freshness"));
+    }
+    checked
+        .into_iter()
         .map(|violation| {
             let reading = violation.observed.parse::<f64>().unwrap_or(1.0);
             let (observed, baseline) = match violation.promise {
                 ContractPromise::Schema => (1.0, 0.0),
                 ContractPromise::Quality { .. } => (reading, 1.0),
                 ContractPromise::Freshness => (reading, contract.freshness_s as f64),
+                ContractPromise::Unverifiable { .. } => (1.0, 0.0),
             };
             ProductViolation {
                 violation,
@@ -718,6 +740,7 @@ fn quality_outcome(
         let kind = promise_kind(&violation.promise);
         let rule = match &violation.promise {
             ContractPromise::Quality { rule } => rule.as_str(),
+            ContractPromise::Unverifiable { of } => of.as_str(),
             _ => "",
         };
         let at = violation.at_ms.to_string();
@@ -1201,9 +1224,21 @@ mod tests {
             freshness_s: 60,
         };
         let broken = product_violations(&core, "acme", &product, &contract, &[], Some(120_000), 9);
-        assert_eq!(broken.len(), 1, "no schema digest is ingested, so only freshness is observed");
+        assert_eq!(broken.len(), 2, "freshness is broken and the missing schema digest is unverifiable");
         assert_eq!(broken[0].violation.promise, ContractPromise::Freshness);
         assert_eq!(broken[0].violation.observed, "120");
+        assert_eq!(
+            broken[1].violation.promise,
+            ContractPromise::Unverifiable { of: "schema".into() }
+        );
+        let unseen = product_violations(&core, "acme", &product, &contract, &[], None, 9);
+        assert_eq!(
+            unseen.iter().map(|b| b.violation.promise.clone()).collect::<Vec<_>>(),
+            vec![
+                ContractPromise::Unverifiable { of: "schema".into() },
+                ContractPromise::Unverifiable { of: "freshness".into() },
+            ]
+        );
         let outcome = quality_outcome(&core, &target(), &[], Vec::new(), &broken, 9).unwrap();
         assert_eq!(outcome.incident_ids.len(), 1);
         let violation_nodes = outcome
@@ -1215,6 +1250,6 @@ mod tests {
                     .and_then(|node| node.get("type").and_then(Value::as_str).map(str::to_string))
                     == Some(CONTRACT_VIOLATION_LABEL.to_string())))
             .count();
-        assert_eq!(violation_nodes, 1);
+        assert_eq!(violation_nodes, 2);
     }
 }
