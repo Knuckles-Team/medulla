@@ -3627,17 +3627,9 @@ async fn prepared_point_read_plan_cache_hits() {
 
 // ── Catalog views for outside tools (MEDULLA-ENGINE-PARITY-R008.2) ──────────────
 
-/// The grant a principal holds on a user table is the SQL privilege
-/// `SqlPrivilege::Select`; the catalog views list exactly the tables the
-/// principal may select, and the 40 introspection queries of an outside tool
-/// replay without error.
-// spec: MEDULLA-ENGINE-PARITY-R008.2
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn bi_tool_introspection_queries_pass() {
-    use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::carrier::CarrierAuthority;
-    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
-
+/// The statements of the introspection fixture, one per line, checked once:
+/// 40 distinct statements and no blank or comment line.
+fn introspection_statements() -> Vec<&'static str> {
     const QUERIES: &str = include_str!("fixtures/pg_introspection/queries.sql");
     let statements: Vec<&str> = QUERIES.lines().collect();
     assert_eq!(statements.len(), 40, "the fixture holds 40 statements");
@@ -3649,6 +3641,17 @@ async fn bi_tool_introspection_queries_pass() {
     );
     let distinct: std::collections::BTreeSet<&str> = statements.iter().copied().collect();
     assert_eq!(distinct.len(), 40, "the 40 statements are distinct");
+    statements
+}
+
+/// Two principals of one tenant over a loopback listener: `intro-owner` creates
+/// `t_visible` and `t_hidden` and grants `SqlPrivilege::Select` on `t_visible` to
+/// `intro-reader`. Returns the listener address and the grantee's client
+/// (MEDULLA-ENGINE-PARITY-R008.2, R008.3).
+async fn introspection_reader() -> (String, tokio_postgres::Client) {
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::carrier::CarrierAuthority;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
 
     let state = login_state(&["intro-owner", "intro-reader"]);
     let persist_dir = state
@@ -3699,6 +3702,21 @@ async fn bi_tool_introspection_queries_pass() {
     let reader = connect_scram(&addr, "intro-reader-login", LOGIN_PASSWORD, "__commons__")
         .await
         .expect("grantee login");
+    (addr, reader)
+}
+
+/// The grant a principal holds on a user table is the SQL privilege
+/// `SqlPrivilege::Select`; the catalog views list exactly the tables the
+/// principal may select, and the 40 introspection queries of an outside tool
+/// replay without error.
+// spec: MEDULLA-ENGINE-PARITY-R008.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn bi_tool_introspection_queries_pass() {
+    let statements = introspection_statements();
+    let (addr, reader) = introspection_reader().await;
+    let owner = connect_scram(&addr, "intro-owner-login", LOGIN_PASSWORD, "__commons__")
+        .await
+        .expect("owner login");
     for statement in &statements {
         reader
             .simple_query(statement)
@@ -3725,6 +3743,28 @@ async fn bi_tool_introspection_queries_pass() {
             "{query}: the owner lists both tables, got {owned:?}"
         );
     }
+}
+
+/// The whole replay of the 40 introspection statements returns within 2 s on
+/// loopback (the 200 ms budget runs as the nightly bench group
+/// `engine_parity/introspection`).
+// spec: MEDULLA-ENGINE-PARITY-R008.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn introspection_fixture_total_latency() {
+    let statements = introspection_statements();
+    let (_addr, reader) = introspection_reader().await;
+    let started = std::time::Instant::now();
+    for statement in &statements {
+        reader
+            .simple_query(statement)
+            .await
+            .unwrap_or_else(|err| panic!("{statement}: {}", error_chain(&err)));
+    }
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_secs(2),
+        "40 introspection statements took {elapsed:?}, over the 2 s bound"
+    );
 }
 
 // ── SQL dialect compatibility matrix (MEDULLA-ENGINE-PARITY-R009.3) ─────────────

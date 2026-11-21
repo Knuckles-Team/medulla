@@ -26,7 +26,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T019 [US2] MEDULLA-ENGINE-PARITY-R007.4 Wire authentication: `IdentityOp::WireLogin` grant and revoke in the identity store; pgwire reads logins from the identity store through the TTL cache; delete the process registry
 - [x] T020 [US2] MEDULLA-ENGINE-PARITY-R008.1 Catalog views for outside tools: model and behavior
 - [x] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: introspection fixture and the served test proving the catalog lists only selectable tables
-- [ ] T022 [P] [US2] MEDULLA-ENGINE-PARITY-R008.3 Catalog views for outside tools: hot-path proof
+- [x] T022 [P] [US2] MEDULLA-ENGINE-PARITY-R008.3 Catalog views for outside tools: hot-path proof
 - [ ] T023 [US2] MEDULLA-ENGINE-PARITY-R009.1 SQL dialect compatibility matrix: model and behavior
 - [x] T024 [US2] MEDULLA-ENGINE-PARITY-R009.2 SQL dialect compatibility matrix: wiring and refusal
 - [x] T025 [P] [US2] MEDULLA-ENGINE-PARITY-R009.3 SQL dialect compatibility matrix: `statements.json` fixture replayed over pgwire for every matrix entry

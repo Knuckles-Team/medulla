@@ -43,6 +43,7 @@
 // spec: MEDULLA-ENGINE-PARITY-R004.3
 // spec: MEDULLA-ENGINE-PARITY-R006.3
 // spec: MEDULLA-ENGINE-PARITY-R007.3
+// spec: MEDULLA-ENGINE-PARITY-R008.3
 // spec: MEDULLA-ENGINE-PARITY-R010.3
 // spec: MEDULLA-ENGINE-PARITY-R013.3
 // spec: MEDULLA-ENGINE-PARITY-R016.3
@@ -104,6 +105,9 @@ const LOGIN_P99_BUDGET_US: u64 = 5_000;
 const PREPARED_ROWS: i64 = 1_000;
 const PREPARED_EXECUTIONS: i64 = 10_000;
 const PREPARED_P99_BUDGET_US: u64 = 1_000;
+/// R008.3: the 40 introspection statements of the fixture, replayed end to end.
+const INTROSPECTION_TOTAL_BUDGET_US: u64 = 200_000;
+const INTROSPECTION_REPLAYS: usize = 20;
 const INDEX_PROBE_ROWS: usize = 10_000_000;
 const INDEX_PROBE_BATCH: usize = 10_000;
 const INDEX_PROBE_SAMPLES: usize = 2_000;
@@ -650,6 +654,120 @@ fn pgwire_prepared_read(rt: &tokio::runtime::Runtime) -> Record {
     })
 }
 
+/// R008.3: the 40 introspection statements of `tests/fixtures/pg_introspection/queries.sql`
+/// replayed by a grantee over loopback; one replay is the total of the 40 statements, at most
+/// 200 ms. The grantee holds `SqlPrivilege::Select` on one of two tables of another principal.
+fn pgwire_introspection(rt: &tokio::runtime::Runtime) -> Record {
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::carrier::CarrierAuthority;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
+
+    const QUERIES: &str = include_str!("../tests/fixtures/pg_introspection/queries.sql");
+    const PASSWORD: &str = "bench-introspection-pass"; // sanitizer:ignore
+    const SALT: [u8; 16] = [7u8; 16];
+    let statements: Vec<&str> = QUERIES.lines().collect();
+    assert_eq!(statements.len(), 40, "the fixture holds 40 statements");
+    rt.block_on(async {
+        static TEXT_EMBEDDER_ENV: std::sync::Once = std::sync::Once::new();
+        TEXT_EMBEDDER_ENV.call_once(|| std::env::set_var("MEDULLA_UQL_TEXT_EMBEDDER", "hash"));
+        let principals = ["intro-owner", "intro-reader"];
+        let persist_dir = test_support::sql_test_persist_dir("pgwire-introspection-bench");
+        let state = test_support::state_with_registry(
+            "bench-introspection-secret", // sanitizer:ignore
+            test_support::wire_isolation(&principals),
+            medulla_core::registry::GraphRegistry::new(),
+            Some(persist_dir.clone()),
+            None,
+        );
+        for (login, principal) in [
+            ("intro-owner-login", "intro-owner"),
+            ("intro-reader-login", "intro-reader"),
+        ] {
+            let record = WireLoginRecord::new(
+                login,
+                WireLoginKind::Password,
+                &medulla_wire::pgwire::password_verifier(PASSWORD, &SALT),
+                principal,
+                common::TEST_TENANT,
+                1,
+            );
+            state.write().await.isolation.seed_wire_login(record);
+        }
+        let addr = test_support::spawn_pgwire_listener(
+            state,
+            medulla_wire::pgwire::PgWireAuthMode::Scram,
+        )
+        .await;
+        let owner = test_support::connect_pgwire_with_password(
+            &addr,
+            PASSWORD,
+            "intro-owner-login",
+            "__commons__",
+        )
+        .await
+        .expect("owner login");
+        for table in [
+            "CREATE TABLE t_visible (id BIGINT PRIMARY KEY, name TEXT)",
+            "CREATE TABLE t_hidden (id BIGINT PRIMARY KEY)",
+        ] {
+            owner.simple_query(table).await.expect("CREATE TABLE");
+        }
+        let carrier = CarrierAuthority::from_verified(
+            &VerifiedRequestContext::verified_for_test_in_tenant(
+                "intro-owner",
+                common::TEST_TENANT,
+            ),
+        )
+        .expect("owner carrier");
+        medulla_server_auth::sql_catalog_acl::grant(
+            std::path::Path::new(&persist_dir),
+            &carrier,
+            "t_visible",
+            "intro-reader",
+            &[SqlPrivilege::Select],
+            uuid::Uuid::new_v4(),
+        )
+        .expect("grant select");
+        let reader = test_support::connect_pgwire_with_password(
+            &addr,
+            PASSWORD,
+            "intro-reader-login",
+            "__commons__",
+        )
+        .await
+        .expect("grantee login");
+
+        let mut samples = Vec::with_capacity(INTROSPECTION_REPLAYS);
+        let started = Instant::now();
+        for _ in 0..INTROSPECTION_REPLAYS {
+            let begun = Instant::now();
+            for statement in &statements {
+                reader
+                    .simple_query(statement)
+                    .await
+                    .unwrap_or_else(|err| panic!("{statement}: {err}"));
+            }
+            samples.push(begun.elapsed());
+        }
+        let wall = started.elapsed();
+        samples.sort();
+        let record = Record {
+            workload: "pgwire_introspection",
+            parameters: format!("statements=40;replays={INTROSPECTION_REPLAYS}"),
+            p50_us: percentile(&samples, 50),
+            p99_us: percentile(&samples, 99),
+            throughput: INTROSPECTION_REPLAYS as f64 / wall.as_secs_f64(),
+        };
+        assert!(
+            record.p99_us <= INTROSPECTION_TOTAL_BUDGET_US,
+            "pgwire_introspection p99 {} us over the {} us budget",
+            record.p99_us,
+            INTROSPECTION_TOTAL_BUDGET_US
+        );
+        record
+    })
+}
+
 /// R007.3: login plus principal resolution at p99 <= 5 ms with a warm cache.
 /// One login of each kind is resolved repeatedly through `resolve_wire_login`
 /// over the cached lookup the pgwire startup handler uses.
@@ -1056,6 +1174,7 @@ fn emit_workload_records() {
     emit(&disjoint_writers());
     emit(&pgwire_login());
     emit(&pgwire_prepared_read(&rt));
+    emit(&pgwire_introspection(&rt));
     emit(&index_probe());
     emit(&sequence_nextval());
     emit(&matview_refresh());
