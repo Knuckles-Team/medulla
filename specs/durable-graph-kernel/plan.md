@@ -1103,6 +1103,24 @@ outputs as stale placeholders. Only genuine composed-source export may replace
 them. Full hosted qualification remains required before merge.
 This bridge does not implement public history paging or served model continuation.
 
+### 2026-11-20 — R862.1 and R028.4.4
+
+Amendment, 2026-11-20. MEDULLA-DURABLE-KERNEL-R862.1 drops the planned copy graft, `ShardReader`, `ShardRead` and `Shard::open_source`.
+The graft is a move: phase A fences the source and phase C retires it. A read-only bundle can carry neither write.
+A copy mode would skip the marker, the fence and the retirement. It would be a second, unfenced route.
+Restore already adopts the admin store and bundled stores through `inspect_staged_mutation_store` and `adopt_staged_mutation_store`.
+Graph shards now take the same entry point. Restore copies each bundle shard into `<persist_dir>/.restore-staging`.
+It verifies the digest, adopts the copy and runs the unchanged move migration out of staging.
+This also stops restore from consuming the bundle. Today `migrate_shards` runs against the bundle directory and retires its scopes.
+`rebind_copied_store` stays reserved for a copy of a store the process already trusts. Restore never uses it.
+
+Amendment, 2026-11-20. MEDULLA-DURABLE-KERNEL-R028.4.4 states that replay is the ledger's operation replay.
+The ledger tests in `crates/medulla-transaction/src/tests/replay.rs` and `fault_restart.rs` already hold replay, conflict, nonce and tamper refusal.
+The served test `run_admission_binds_verified_owner_and_replays_without_row_changes` already holds replay, foreign-owner conflict and reopen.
+The row corrects `CONFLICT` to `IDEMPOTENCY_CONFLICT`, the code main returns for a changed operation under one key.
+It drops `RUN_ADMISSION_UNAVAILABLE` from replay, because replay never reads the admission record of R028.4.1.
+The older-build store is written at test time by the previous patch binary of R070.2. No store file is committed.
+
 ### North star
 
 One engine, medulla, holds all facts. There is no second database and no sync. External stores are virtual-graph sources reached through connectors.

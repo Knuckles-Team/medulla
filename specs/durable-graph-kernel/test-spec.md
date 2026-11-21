@@ -390,7 +390,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 | Persisted authority records keep their signed protocol id | `MEDULLA-DURABLE-KERNEL-R070.3` | `crates/medulla-identity-types/src/authority/tests.rs::a_record_signed_under_the_pre_rename_protocol_still_validates` |
 | Last production release store migrates and serves | `MEDULLA-DURABLE-KERNEL-R070.4` | `tests/test_store_upgrade_from_production.py::test_a_production_store_migrates_and_serves_with_data_intact` |
 | Copied store or bundle restores onto new files (rollup) | `MEDULLA-DURABLE-KERNEL-R862` | Rollup: satisfied when the test of every child passes. |
-| Restore reads bundle sources by content | `MEDULLA-DURABLE-KERNEL-R862.1` | Copied-bundle restore unit test (not yet written; see #709). |
+| Restore stages and adopts each bundle shard | `MEDULLA-DURABLE-KERNEL-R862.1` | `recovery.rs::copied_bundle_restores_by_content`, `::one_changed_byte_refuses_and_leaves_destination_empty`, `::existing_staging_directory_refuses` (planned). |
 | Explicit rebind of a copied data directory | `MEDULLA-DURABLE-KERNEL-R862.2` | `store-upgrade rebind` command tests (not yet written; see #709). |
 | Copied bundle restores and serves | `MEDULLA-DURABLE-KERNEL-R862.3` | `tests/test_store_copy_restore.py` (not yet written; see #709). |
 - **MEDULLA-DURABLE-KERNEL-R028.5.1:** `current_plan_task_plan_validation_and_legacy_roundtrip` checks JSON and named MessagePack compatibility. `current_plan_task_plan_rejects_unpaired_or_changed_content` refuses unpaired fields, tampered executable fields, policy, digests and ordering. The original proposal must reproduce every TaskPlan field.
@@ -423,14 +423,13 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 
 ## Admission retry replay (MEDULLA-DURABLE-KERNEL-R028.4.4)
 
-Tests live beside `tests/adopt_workitem_authenticated_replay.rs`.
-They drive the served MutationBatch path with authenticated requests.
+Replay is the ledger's operation replay. Its ledger cases already hold in `crates/medulla-transaction/src/tests/replay.rs` and `fault_restart.rs`.
+The served case `run_admission_binds_verified_owner_and_replays_without_row_changes` already holds the id, node-bytes, foreign-owner and reopen checks.
 
-- Repeat an admission with a refreshed request context. Require the original receipt.
-- Require no new outbox event and an unchanged WorkItem version, also after a restart.
-- Refuse a changed policy, input or command.
-- Refuse missing or corrupt retained evidence with `RUN_ADMISSION_UNAVAILABLE`.
-- Open a store written by the server before this change and replay one of its admissions.
+- Repeat an admission with a fresh request context. Require a `SubmitWorkItemResult` equal to the original except `replayed`.
+- Change `kind` under the same key. Require exactly `IDEMPOTENCY_CONFLICT` and unchanged node bytes.
+- Repeat both checks after a reopen.
+- Admit a run with the previous patch engine. Open the directory with this build and replay it.
 
 ## Ordered conversation admission (MEDULLA-DURABLE-KERNEL-R028.4.3)
 
@@ -650,11 +649,12 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R042.3` | `crates/medulla-kvcache/tests/tier_policy.rs::tiering_receipt_has_per_tier_hit_rate` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::copied_bundle_restores_by_content` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::one_changed_byte_refuses_and_leaves_destination_empty` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::existing_staging_directory_refuses` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R870` | `crates/medulla-server-auth/src/access/path_grant.rs::check` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R039.5` | `crates/medulla-server-blob/src/kv/tests.rs::in_memory_tier_rebuilds_from_the_redb_log_after_restart` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R039.5` | `crates/medulla-server-blob/tests/kv_dispatch.rs::atomic_primitives_are_linearizable_under_16_threads` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::admission_binds_owner_and_refuses_duplicate_forged_and_generic_writes` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::replay_returns_original_receipt_and_refuses_changed_or_corrupt_evidence` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_returns_the_original_result_and_conflicts_on_change` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::downtime_refusals` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
@@ -673,11 +673,11 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-work-types/src/work_item_read/tests.rs::effect_records_round_trip_with_golden_digest` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.5.4` | `current_plan.rs::publish` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `current_plan.rs::validate_publication` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.4.2`, `MEDULLA-DURABLE-KERNEL-R028.4.4` | `run_owner.rs::read_admission` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.2` | `run_owner.rs::read_admission` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::cleanup_graph` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.3` | `tests/adopt_workitem_authenticated_replay.rs::conversation_turn_admission_replays_and_conflicts` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `tests/adopt_workitem_authenticated_replay.rs::fenced_cas_ignores_caller_clock` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_after_restart_and_after_upgrade` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/test_store_auto_migrate.py::test_previous_patch_run_admission_replays_after_upgrade` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_through_signed_dispatch` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `tests/adopt_workitem_authenticated_replay.rs::served_publish_with_attached_plan` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.100.2` | `tests/bench_claim_cli.rs::each_missing_or_invalid_field_is_refused_with_its_code` (planned) |

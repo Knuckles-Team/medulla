@@ -233,15 +233,14 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T225 MEDULLA-DURABLE-KERNEL-R861.1 Lifecycle replay compares the stored identity
 - [ ] T226 MEDULLA-DURABLE-KERNEL-R861.2 Graph listing survives a restart and a patch upgrade
 - [ ] T227 MEDULLA-DURABLE-KERNEL-R861.3 Internal lifecycle operations materialize a catalog-only graph
-- [ ] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore reads bundle sources by content, not by physical identity
+- [ ] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore stages each bundle shard, adopts it with `adopt_staged_mutation_store`, and moves graphs out of the staged copy
 - [ ] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: an explicit command re-binds a copied data directory
 - [ ] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves
-- [x] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore reads bundle sources by content, not by physical identity
 - [x] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: an explicit command re-binds a copied data directory
 - [x] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves
 - [ ] T231 MEDULLA-DURABLE-KERNEL-R863 SyncMemorySnapshot calls the memory-change admission gate
 - [ ] T232 [US2] MEDULLA-DURABLE-KERNEL-R028.4.3 Reserve ordered conversation turns with native run admission
-- [ ] T233 [US2] MEDULLA-DURABLE-KERNEL-R028.4.4 Repeated run admission replays the retained owner receipt
+- [ ] T233 [US2] MEDULLA-DURABLE-KERNEL-R028.4.4 Prove full-result replay, exact `IDEMPOTENCY_CONFLICT` and previous-patch replay of run admission through the ledger replay
 - [ ] T234 [US2] MEDULLA-DURABLE-KERNEL-R030.1.1 Typed host-start assertions and client projection
 - [ ] T235 [US2] MEDULLA-DURABLE-KERNEL-R030.1.2 Durable native issuer provenance
 - [ ] T236 [US2] MEDULLA-DURABLE-KERNEL-R030.1.3 Signed dispatch for dedicated host-start issuance
