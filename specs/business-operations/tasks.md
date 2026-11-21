@@ -6,7 +6,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 
 - [ ] T001 [US1] MEDULLA-BUSINESS-OPS-R001 Business operations pack (rollup)
 - [x] T002 [US1] MEDULLA-BUSINESS-OPS-R001.1 Profile, brand and governance terms
-- [ ] T003 [US1] MEDULLA-BUSINESS-OPS-R001.2 Add `:Product`, `:ProductVariant`, `:ProductionBatch`, `:InventoryLot`, `:variantOfProduct`, `:batchOfVariant`, `:lotOfBatch`, `:madeFromLot`, `:lotSupplier`, `:lotQuantity`, `:lotQuantityUnit`, `:lotStatus` to `business_ops-v1.ttl`, range `:lineLot` and the four variant properties, add `kg:InventoryLotShape`, and write `lot_traceability_closure_answers_both_directions`
+- [ ] T003 [US1] MEDULLA-BUSINESS-OPS-R001.2 Add `:Product`, `:ProductVariant`, `:ProductionBatch`, `:InventoryLot`, `:variantOfProduct`, `:batchOfVariant`, `:lotOfBatch`, `:madeFromLot`, `:lotSupplier`, `:lotQuantityUnit`, `:lotStatus` to `business_ops-v1.ttl` (the quantity reuses `:lotQuantity` of `finance-v1.ttl`, not redeclared), range `:lineLot` and the four variant properties, add `kg:InventoryLotShape`, and write `lot_traceability_closure_answers_both_directions`
 - [x] T004 [US1] MEDULLA-BUSINESS-OPS-R001.3 Order, payment, refund and payout terms
 - [x] T005 [US1] MEDULLA-BUSINESS-OPS-R001.4 Procurement and stock terms
 - [x] T006 [US1] MEDULLA-BUSINESS-OPS-R001.5 Compliance obligation terms

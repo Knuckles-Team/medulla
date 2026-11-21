@@ -234,7 +234,7 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R002.5 | A fault before owner commit leaves an orphan reclaimed only after its grace window. | An unexpired orphan or held body survives reconciliation and restart. | `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::orphan_grace_fault` |
 | MEDULLA-TYPED-PACKS-R002.6 | AgentComponent.Content returns the exact body of its pinned component revision. | Corrupt bytes and denied tenants refuse without leaking body data. | `tests/test_connector_pack_storage.py::test_verified_body_read` |
 | MEDULLA-TYPED-PACKS-R002.7 | A native pinned prompt publish commits one revision and one body holder in one owner write, and `Content` returns the exact bytes. | A stale expected revision is `STALE_AGENT_LIBRARY_REVISION`, a body that does not hash to its pin is `BODY_DIGEST_MISMATCH`, an invalid blueprint is `PROMPT_SCHEMA_INVALID`; none writes a row, and a refusal after staging leaves only an unreferenced body under the grace rule. | `crates/medulla-persistence-records/src/agent_component.rs::tests::prompt_publish_commits_one_holder_with_its_revision`, `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit` |
-| MEDULLA-TYPED-PACKS-R002.8 | Independent graph queries read the exact prompt revision and dependency links. | Replaying an old event cannot regress the visible revision. | `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` |
+| MEDULLA-TYPED-PACKS-R002.8 | Independent graph queries read the exact prompt revision and dependency links. | Replaying an old event cannot regress the visible revision. | `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` and `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::a_stale_event_projects_the_current_head_and_commits_nothing` |
 | MEDULLA-TYPED-PACKS-R002.9 | A real generated-client request reaches the renderer and returns the pinned revision and expected bytes. | Invalid requests leave graph, body holders, head and render-result publication unchanged. | `tests/test_prompt_blueprints_served.py::test_prompt_render_route` (planned) |
 | MEDULLA-TYPED-PACKS-R002.10 | A valid served journey renders the pinned version and causes one observed model request. | Each invalid case yields a typed refusal and zero requests at the real model transport boundary. | `tests/test_prompt_blueprints_served.py::test_invalid_prompt_prevents_dispatch` |
 | MEDULLA-TYPED-PACKS-R002.11 | Current and historical revisions, graph links and verified body bytes survive restart. | A refused stale update leaves the previous durable head intact. | `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` |
@@ -426,7 +426,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 |---|---|
 | `MEDULLA-TYPED-PACKS-R801` | See each child. |
 | `MEDULLA-TYPED-PACKS-R801.1` | `crates/medulla-types/tests/glossary.rs::term_round_trips_and_maps_to_skos` |
-| `MEDULLA-TYPED-PACKS-R801.2` | `crates/medulla-core/tests/glossary.rs::alt_label_search_finds_term_and_deprecated_names_replacement` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.2` | `crates/medulla-core/tests/glossary.rs::alt_label_search_finds_term_and_deprecated_names_replacement` |
 | `MEDULLA-TYPED-PACKS-R801.3` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_and_bind_term` (planned) |
 | `MEDULLA-TYPED-PACKS-R801.4` | `tests/typed_packs/test_glossary_served.py::test_glossary_refusals` (planned) |
 | `MEDULLA-TYPED-PACKS-R801.5` | `tests/typed_packs/test_glossary_served.py::test_status_history_reads_back` (planned) |
@@ -556,7 +556,7 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - `MEDULLA-TYPED-PACKS-R105.10.3`: `tests/test_core_ontology_closed.py::test_no_local_name_repeats_across_core_namespaces`; `crates/medulla-h-admin/src/namespace_migration.rs::tests::every_retired_term_maps_to_a_live_term_under_the_one_base`.
 - `MEDULLA-TYPED-PACKS-R105.10.4`: `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::core_sources_cover_every_packaged_module`.
 - `MEDULLA-TYPED-PACKS-R700.7`: `crates/medulla-h-admin/src/admin/connector_pack/import/front_matter.rs::the_skill_type_is_closed`
-- `MEDULLA-TYPED-PACKS-R700.8`: `tests/packs/test_skill_graph_pack_served.py::test_graph_files_import_and_non_graph_file_refuses`
+- `MEDULLA-TYPED-PACKS-R700.8`: `tests/packs/test_skill_graph_pack_served.py::test_graph_files_import_and_limit_refuses`
 - `MEDULLA-TYPED-PACKS-R701.1`: `crates/medulla-catalog-types/tests/skill_graph.rs::layer_round_trip_and_reject_foreign_iri`
 - `MEDULLA-TYPED-PACKS-R701.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/skill_graph.rs::tests::layer_iri_and_rollup_checked_in_one_pass`
 - `MEDULLA-TYPED-PACKS-R701.3`: `tests/packs/test_skill_graph_pack_served.py::test_layer_classes_read_through_core_class`
@@ -566,7 +566,7 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - `MEDULLA-TYPED-PACKS-R700.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/skill_graph.rs::tests::single_pass_rules_and_violation_cap_on_10_1000_100000_entries`
 - `MEDULLA-TYPED-PACKS-R700.3`: `tests/packs/test_skill_graph_pack_served.py::test_bundle_validated_in_import_and_candidate_renders_on_demand`
 - `MEDULLA-TYPED-PACKS-R700.4`: `tests/packs/test_skill_graph_pack_served.py::test_hash_index_and_entry_refusals_leave_state_unchanged`
-- `MEDULLA-TYPED-PACKS-R700.9`: `tests/packs/test_skill_graph_distill_served.py::test_distilled_bundle_validates_and_is_not_published`.
+- `MEDULLA-TYPED-PACKS-R700.9`: Retired; see R700.3 and R700.4.
 
 ## Planned bindings
 
@@ -592,7 +592,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R002.5`: `crates/medulla-h-admin/src/admin/connector_pack/reconcile.rs::serve` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::the_reconciler_releases_an_orphan_body_and_keeps_every_held_one` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::orphan_grace_fault` (planned)
 - `MEDULLA-TYPED-PACKS-R002.6`: `crates/medulla-h-admin/src/admin/component_content.rs::handle_component_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::verified_body_read` (planned)
 - `MEDULLA-TYPED-PACKS-R002.7`: `crates/medulla-persistence-records/src/agent_component.rs::tests::prompt_publish_commits_one_holder_with_its_revision`, `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit`
-- `MEDULLA-TYPED-PACKS-R002.8`: `crates/medulla-h-admin/src/connector_pack_projection.rs::project` (existing); `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` (planned)
+- `MEDULLA-TYPED-PACKS-R002.8`: `crates/medulla-h-admin/src/connector_pack_projection.rs::project` (existing); `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` (planned); `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::a_stale_event_projects_the_current_head_and_commits_nothing` (planned)
 - `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route` (planned)
 - `MEDULLA-TYPED-PACKS-R002.10`: `tests/test_prompt_blueprints_served.py::test_receipt_verdicts` (planned)
 - `MEDULLA-TYPED-PACKS-R002.11`: `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` (planned)
