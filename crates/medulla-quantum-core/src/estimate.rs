@@ -238,12 +238,36 @@ fn estimate_time_ms(n_qubits: u32, depth: u32) -> u64 {
     state_space.saturating_mul(depth.max(1) as u64) / 1_000_000
 }
 
-/// The structural request facts the `preferred` ranking depends on.
-struct RankingFacts {
-    is_clifford: bool,
-    has_non_clifford_noise: bool,
-    noise_requested: bool,
-    requires_density_matrix: bool,
+/// The one closed fact the `preferred` ranking depends on (MEDULLA-CONTRACT-R062.4):
+/// one variant per reachable ranking.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RankingClass {
+    /// A Clifford circuit with no noise request, ranked `[Stabilizer]`.
+    CliffordNoiseless,
+    /// A Clifford circuit with a Clifford-preserving noise request, ranked
+    /// `[Stabilizer]` then the noise families.
+    CliffordUnderCliffordNoise,
+    /// A Clifford circuit with a non-Clifford noise request, ranked by the noise
+    /// families alone.
+    CliffordUnderNonCliffordNoise,
+    /// A non-Clifford circuit with no noise request, ranked by the noiseless
+    /// statevector families.
+    GeneralNoiseless,
+    /// A non-Clifford circuit with any noise request, ranked by the noise families.
+    GeneralNoisy,
+}
+
+impl RankingClass {
+    /// The only place the booleans of a request are read.
+    fn of(is_clifford: bool, noise: Option<&NoiseRequest>) -> RankingClass {
+        match (is_clifford, noise) {
+            (true, None) => RankingClass::CliffordNoiseless,
+            (true, Some(noise)) if noise.non_clifford => RankingClass::CliffordUnderNonCliffordNoise,
+            (true, Some(_)) => RankingClass::CliffordUnderCliffordNoise,
+            (false, None) => RankingClass::GeneralNoiseless,
+            (false, Some(_)) => RankingClass::GeneralNoisy,
+        }
+    }
 }
 
 pub fn estimate(program: &QuantumProgram, opts: &EstimateOptions) -> Estimate {
@@ -259,13 +283,8 @@ pub fn estimate(program: &QuantumProgram, opts: &EstimateOptions) -> Estimate {
     let bound = opts.memory_bound_bytes.unwrap_or(u64::MAX);
     let entangling_connectivity = classify_entangling_connectivity(program);
 
-    let facts = RankingFacts {
-        is_clifford,
-        has_non_clifford_noise,
-        noise_requested: opts.noise.is_some(),
-        requires_density_matrix,
-    };
-    let preferred = preferred_families(&facts, entangling_connectivity);
+    let class = RankingClass::of(is_clifford, opts.noise.as_ref());
+    let preferred = preferred_families(class, requires_density_matrix, entangling_connectivity);
     let forbidden = forbidden_families(mem_bytes_sv, mem_bytes_dm, requires_density_matrix, bound);
 
     Estimate {
@@ -285,27 +304,27 @@ pub fn estimate(program: &QuantumProgram, opts: &EstimateOptions) -> Estimate {
 
 /// The advisory, priority-ordered `preferred` ranking (R1-R4 affinities).
 fn preferred_families(
-    facts: &RankingFacts,
+    class: RankingClass,
+    requires_density_matrix: bool,
     entangling_connectivity: EntanglingConnectivity,
 ) -> Vec<BackendFamily> {
-    let mut preferred = Vec::new();
-
     // R1 affinity: a Clifford circuit with no non-Clifford noise request is always
     // O(n^2)-representable exactly by the stabilizer formalism — surface that first
     // regardless of what else is requested, since paying O(2^n) for it is never
-    // justified.
-    if facts.is_clifford && !facts.has_non_clifford_noise {
-        preferred.push(BackendFamily::Stabilizer);
+    // justified. The noise model_id is informational only at Q0 (no noise-model
+    // catalog yet); only whether noise was requested shapes the ranking.
+    match class {
+        RankingClass::CliffordNoiseless => vec![BackendFamily::Stabilizer],
+        RankingClass::CliffordUnderCliffordNoise => {
+            let mut preferred = vec![BackendFamily::Stabilizer];
+            preferred.extend(noise_families(requires_density_matrix));
+            preferred
+        }
+        RankingClass::CliffordUnderNonCliffordNoise | RankingClass::GeneralNoisy => {
+            noise_families(requires_density_matrix)
+        }
+        RankingClass::GeneralNoiseless => noiseless_statevector_families(entangling_connectivity),
     }
-
-    if facts.noise_requested {
-        // The noise model_id is currently informational only at Q0 (no noise-model
-        // catalog yet); only whether noise was requested shapes the ranking.
-        preferred.extend(noise_families(facts.requires_density_matrix));
-    } else if !facts.is_clifford || facts.has_non_clifford_noise {
-        preferred.extend(noiseless_statevector_families(entangling_connectivity));
-    }
-    preferred
 }
 
 /// R2: a noise request needs a density-matrix-capable family when the caller wants
@@ -543,6 +562,80 @@ mod tests {
                 BackendFamily::DensityMatrixGpu,
                 BackendFamily::QuestFfi,
             ]
+        );
+    }
+
+    // spec: MEDULLA-CONTRACT-R062.4
+    #[test]
+    fn ranking_class_covers_the_five_rankings() {
+        let bell = bell_program();
+        let dense = long_range_program();
+        let sampled = |noise: NoiseRequest| EstimateOptions {
+            noise: Some(noise),
+            shots: Some(100),
+            ..Default::default()
+        };
+        let exact = |noise: NoiseRequest| EstimateOptions {
+            noise: Some(noise),
+            ..Default::default()
+        };
+
+        assert_eq!(RankingClass::of(true, None), RankingClass::CliffordNoiseless);
+        assert_eq!(
+            estimate(&bell, &EstimateOptions::default()).preferred,
+            vec![BackendFamily::Stabilizer]
+        );
+
+        let clifford_noise = NoiseRequest::clifford_preserving("pauli");
+        assert_eq!(
+            RankingClass::of(true, Some(&clifford_noise)),
+            RankingClass::CliffordUnderCliffordNoise
+        );
+        assert_eq!(
+            estimate(&bell, &exact(clifford_noise.clone())).preferred,
+            vec![
+                BackendFamily::Stabilizer,
+                BackendFamily::DensityMatrixCpu,
+                BackendFamily::DensityMatrixGpu,
+                BackendFamily::QuestFfi,
+            ]
+        );
+        assert_eq!(
+            estimate(&bell, &sampled(clifford_noise)).preferred,
+            vec![BackendFamily::Stabilizer, BackendFamily::Trajectory]
+        );
+
+        let general_noise = NoiseRequest::declared("depolarizing");
+        assert_eq!(
+            RankingClass::of(true, Some(&general_noise)),
+            RankingClass::CliffordUnderNonCliffordNoise
+        );
+        assert_eq!(
+            estimate(&bell, &sampled(general_noise.clone())).preferred,
+            vec![BackendFamily::Trajectory]
+        );
+
+        assert_eq!(RankingClass::of(false, None), RankingClass::GeneralNoiseless);
+        assert_eq!(
+            estimate(&dense, &EstimateOptions::default()).preferred,
+            vec![
+                BackendFamily::StatevectorGpu,
+                BackendFamily::StatevectorCpu,
+                BackendFamily::QuestFfi,
+            ]
+        );
+
+        assert_eq!(
+            RankingClass::of(false, Some(&general_noise)),
+            RankingClass::GeneralNoisy
+        );
+        assert_eq!(
+            RankingClass::of(false, Some(&NoiseRequest::clifford_preserving("pauli"))),
+            RankingClass::GeneralNoisy
+        );
+        assert_eq!(
+            estimate(&dense, &sampled(general_noise)).preferred,
+            vec![BackendFamily::Trajectory]
         );
     }
 
