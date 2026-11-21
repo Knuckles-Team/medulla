@@ -21,8 +21,12 @@ use medulla_source_types::{
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_source_types::{
     source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition,
-    source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind,
-    source_ingestion::SourceWithdrawal,
+    source_document::{
+        DocumentIngestError, QuarantineReason, QuarantineReceipt, ReplayDisposition,
+        SourceIngestionOutcome,
+    },
+    source_ingestion::SourceCheckpoint, source_ingestion::SourceIngestionReceipt,
+    source_ingestion::SourceMappingKind, source_ingestion::SourceWithdrawal,
 };
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
@@ -113,6 +117,10 @@ pub struct PreparedSourceIngestion {
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
     reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport>,
     committed_graph_version: u64,
+    /// Set when the batch is quarantined instead of accepted: the envelope then
+    /// stores restricted evidence only (MEDULLA-INGEST-WORKER-R003.10.1) and
+    /// `finish` answers with this receipt (R003.11).
+    quarantine: Option<medulla_source_types::source_document::QuarantineReceipt>,
     /// Drift of each approved stream of the batch (R714); empty on a replay.
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
     /// The column values that entered the embedding set and the columns that
@@ -336,8 +344,26 @@ pub async fn prepare(
         &layout,
         &readers,
         &read_blob,
-    )
-    .map_err(|error| error.to_string())?;
+    );
+    // A document that does not normalize quarantines the whole batch: restricted
+    // evidence commits, no projection and no checkpoint advance
+    // (MEDULLA-INGEST-WORKER-R003.10.1).
+    let normalized = match normalized {
+        Ok(normalized) => normalized,
+        Err(error) => {
+            return prepare_quarantine(
+                &ctx,
+                batch,
+                batch_digest,
+                &batch_id,
+                persistence.as_ref(),
+                &graph_fname,
+                &error,
+                resolved.entry_revision.unwrap_or(0),
+            )
+            .await;
+        }
+    };
     // Near duplicates are decided here, before any record is admitted and before atom storage
     // (MEDULLA-INGEST-WORKER-R702.3).
     let bucket_ids = documents::candidate_bucket_ids(ctx.tenant_scope, &layout, &normalized)?;
@@ -565,6 +591,7 @@ pub async fn prepare(
         access: None,
         reconcile: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
+        quarantine: None,
         drift,
         embedding_set,
     })
@@ -879,6 +906,7 @@ async fn prepare_extension_batch(
         access,
         reconcile,
         drift: Vec::new(),
+        quarantine: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         embedding_set: Default::default(),
     })
@@ -2959,11 +2987,16 @@ pub fn finish(prepared: PreparedSourceIngestion, response: Response) -> Response
     } else {
         SourceIngestionDisposition::Committed
     };
-    match build_terminal_receipt(prepared, disposition) {
-        Ok(receipt) => Response::ok(
+    let outcome = match prepared.quarantine.clone() {
+        Some(receipt) => Ok(SourceIngestionOutcome::Quarantined(Box::new(receipt))),
+        None => build_terminal_receipt(prepared, disposition)
+            .map(|receipt| SourceIngestionOutcome::Accepted(Box::new(receipt))),
+    };
+    match outcome {
+        Ok(outcome) => Response::ok(
             response_id,
             ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::SourceIngest>(
-                receipt,
+                outcome,
             ),
         ),
         Err(error) => Response::err(response_id, error),
@@ -3079,6 +3112,262 @@ fn receipt_bytes(value: &impl serde::Serialize) -> Result<Vec<u8>, String> {
         .map_err(|error| format!("source ingestion receipt encoding failed: {error}"))
 }
 
+/// The id of the quarantine node of one batch (MEDULLA-INGEST-WORKER-R003.10.1).
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(super) fn quarantine_node_id(tenant: &str, connector: &str, stream: &str, batch_id: &str) -> Result<String, String> {
+    Ok(Digest256::framed(
+        b"eg/source-quarantine/v1",
+        &[
+            tenant.as_bytes(),
+            connector.as_bytes(),
+            stream.as_bytes(),
+            batch_id.as_bytes(),
+        ],
+    )?
+    .to_hex())
+}
+
+/// Everything the quarantine envelope of one batch is built from.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct QuarantineInputs<'a> {
+    batch: &'a medulla_source_types::source_ingestion::SourceIngestionBatch,
+    batch_digest: Digest256,
+    batch_id: &'a str,
+    error: &'a DocumentIngestError,
+    mapping_revision: u64,
+    /// The stream's live-set marker id; the content version is keyed by it.
+    stream_object_id: String,
+    previous_stream_digest: Option<String>,
+    /// The stream's accepted checkpoint, unchanged by this batch; `None` for the first batch.
+    prior_accepted_checkpoint: Option<SourceCheckpoint>,
+    committed_graph_version: u64,
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
+impl PreparedSourceIngestion {
+    /// A prepared batch that carries only its quarantine receipt: no records, no
+    /// tombstones and no accepted checkpoint (MEDULLA-INGEST-WORKER-R003.10.1).
+    fn quarantined(
+        envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
+        batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+        batch_digest: Digest256,
+        receipt: QuarantineReceipt,
+    ) -> Self {
+        Self {
+            envelope,
+            batch_digest,
+            mode: batch.mode,
+            mappings: Vec::new(),
+            raw_admissions: Vec::new(),
+            relationship_raw_admissions: Vec::new(),
+            tombstones: Vec::new(),
+            relationship_tombstones: Vec::new(),
+            accepted_checkpoint: batch.provider_checkpoint.clone(),
+            live_set_digest: None,
+            relationship_live_set_digest: None,
+            affected_count: 0,
+            relationship_count: 0,
+            tombstoned_count: 0,
+            relationship_tombstoned_count: 0,
+            governance: Default::default(),
+            row_versions: Default::default(),
+            documents: Default::default(),
+            access: None,
+            reconcile: None,
+            committed_graph_version: receipt.committed_graph_version,
+            quarantine: Some(receipt),
+            drift: Vec::new(),
+            embedding_set: Default::default(),
+        }
+    }
+}
+
+/// The quarantine envelope of one batch (MEDULLA-INGEST-WORKER-R003.10.1): one
+/// `SourceQuarantine` node holding restricted evidence only (reason, rule id,
+/// source digest, mapping revision, replay disposition and the prior accepted
+/// checkpoint). It carries no cursor, no feature, no blob and no lineage, so no
+/// projection, source marker or checkpoint moves. Source text is never stored.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn quarantine_prepared(
+    scope: medulla_server_api::batch_compile::GraphWriteScope<'_>,
+    inputs: QuarantineInputs<'_>,
+) -> Result<PreparedSourceIngestion, String> {
+    let QuarantineInputs {
+        batch,
+        batch_digest,
+        batch_id,
+        error,
+        mapping_revision,
+        stream_object_id,
+        previous_stream_digest,
+        prior_accepted_checkpoint,
+        committed_graph_version,
+    } = inputs;
+    let tenant = scope.tenant_scope;
+    let node_id = quarantine_node_id(
+        tenant,
+        batch.connector.as_str(),
+        batch.provider_checkpoint.stream.as_str(),
+        batch_id,
+    )?;
+    let reason = error.quarantine_reason();
+    let replay = ReplayDisposition::Replayable;
+    let properties = serde_json::json!({
+        "type": "SourceQuarantine",
+        "reason": reason,
+        "rule_id": error.rule_id(),
+        "source_digest": batch_digest.to_hex(),
+        "mapping_revision": mapping_revision.to_string(),
+        "replay": replay,
+        "prior_accepted_checkpoint": prior_accepted_checkpoint,
+    });
+    let mutation = scope.compile(
+        batch_id,
+        vec![Method::AddNode {
+            node_id: node_id.clone(),
+            properties_msgpack: receipt_bytes(&properties)?,
+        }],
+    )?;
+    let subject = policy_subject(tenant)?;
+    let policies = vec![
+        policy(&stream_object_id, tenant, &subject, mapping_revision),
+        policy(&node_id, tenant, &subject, mapping_revision),
+    ];
+    let mut envelope = build_envelope(
+        batch,
+        batch_id,
+        EnvelopeContents {
+            batch_digest,
+            mutation,
+            blobs: BTreeMap::new(),
+            policies,
+            lineage: Vec::new(),
+            mapping_revision,
+            stream_object_id,
+            previous_stream_digest,
+        },
+    )?;
+    envelope.cursor = None;
+    envelope.features.clear();
+    envelope.validate()?;
+    let receipt = QuarantineReceipt {
+        reason,
+        rule_id: error.rule_id().to_string(),
+        source_digest: batch_digest,
+        mapping_revision: mapping_revision.to_string(),
+        restricted_evidence_ref: format!("quarantine:{node_id}"),
+        replay,
+        prior_accepted_checkpoint,
+        committed_graph_version,
+    };
+    Ok(PreparedSourceIngestion::quarantined(
+        envelope,
+        batch,
+        batch_digest,
+        receipt,
+    ))
+}
+
+/// Read the stream's marker and content version, then build the quarantine.
+#[cfg(all(feature = "redb", feature = "blob"))]
+#[allow(clippy::too_many_arguments)]
+async fn prepare_quarantine(
+    ctx: &PrepareContext<'_>,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    batch_digest: Digest256,
+    batch_id: &str,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    error: &DocumentIngestError,
+    mapping_revision: u64,
+) -> Result<PreparedSourceIngestion, String> {
+    let stream_object_id = source_marker_id(ctx.tenant_scope, batch)?;
+    let prior_accepted_checkpoint = persistence
+        .read_node(graph_fname, &stream_object_id)
+        .await?
+        .map(|bytes| {
+            rmp_serde::from_slice::<SourceLiveSetMarker>(&bytes)
+                .map_err(|error| format!("SOURCE_RECONCILIATION_MARKER_INVALID: {error}"))
+        })
+        .transpose()?
+        .map(|marker| marker.checkpoint);
+    let previous_stream_digest = persistence
+        .read_content_version(graph_fname, ctx.tenant_scope, &stream_object_id)
+        .await?
+        .map(|version| version.digest);
+    quarantine_prepared(
+        medulla_server_api::batch_compile::GraphWriteScope {
+            request_id: ctx.request_id,
+            graph_name: ctx.graph_name,
+            tenant_scope: ctx.tenant_scope,
+            verified: ctx.verified,
+            graph_version: ctx.graph_version,
+            placement_epoch: ctx.placement_epoch,
+            fencing_token: ctx.fencing_token,
+        },
+        QuarantineInputs {
+            batch,
+            batch_digest,
+            batch_id,
+            error,
+            mapping_revision,
+            stream_object_id,
+            previous_stream_digest,
+            prior_accepted_checkpoint,
+            committed_graph_version: ctx.graph_version.saturating_add(1),
+        },
+    )
+}
+
+/// The stored quarantine receipt of a replayed batch, or `None` when the stored
+/// envelope is an accepted batch (MEDULLA-INGEST-WORKER-R003.11). The replay
+/// reads the evidence node the first attempt committed and never resets the
+/// source checkpoint.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn replay_quarantine(
+    tenant: &str,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    batch_digest: Digest256,
+    batch_id: &str,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+) -> Result<Option<QuarantineReceipt>, String> {
+    let node_id = quarantine_node_id(
+        tenant,
+        batch.connector.as_str(),
+        batch.provider_checkpoint.stream.as_str(),
+        batch_id,
+    )?;
+    let Some(properties) = envelope
+        .mutation
+        .operations
+        .iter()
+        .find_map(|operation| match &operation.method {
+            Method::AddNode {
+                node_id: id,
+                properties_msgpack,
+            } if *id == node_id => Some(properties_msgpack),
+            _ => None,
+        })
+    else {
+        return Ok(None);
+    };
+    let stored: serde_json::Value = rmp_serde::from_slice(properties)
+        .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: {error}"))?;
+    Ok(Some(QuarantineReceipt {
+        reason: replay_receipt_value::<QuarantineReason>(&stored, "reason")?,
+        rule_id: replay_receipt_text(&stored, "rule_id")?.to_string(),
+        source_digest: batch_digest,
+        mapping_revision: replay_receipt_text(&stored, "mapping_revision")?.to_string(),
+        restricted_evidence_ref: format!("quarantine:{node_id}"),
+        replay: replay_receipt_value::<ReplayDisposition>(&stored, "replay")?,
+        prior_accepted_checkpoint: replay_receipt_value::<Option<SourceCheckpoint>>(
+            &stored,
+            "prior_accepted_checkpoint",
+        )?,
+        committed_graph_version: replay_graph_version(envelope)?,
+    }))
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn prepared_replay(
     ctx: PrepareContext<'_>,
@@ -3096,6 +3385,16 @@ fn prepared_replay(
             .unwrap_or_else(medulla_types::contract::Nonce::minted),
     )?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
+    if let Some(receipt) =
+        replay_quarantine(ctx.tenant_scope, batch, batch_digest, &batch_id, &envelope)?
+    {
+        return Ok(PreparedSourceIngestion::quarantined(
+            envelope,
+            batch,
+            batch_digest,
+            receipt,
+        ));
+    }
     let receipt = replay_receipt(&envelope, &batch_id)?;
     validate_replay_metadata(batch, &receipt)?;
     let mappings = replay_receipt_value::<Vec<SourceMappingReceipt>>(&receipt, "mappings")?;
@@ -3180,6 +3479,7 @@ fn prepared_replay(
             .transpose()?,
         committed_graph_version,
         drift: Vec::new(),
+        quarantine: None,
         embedding_set: crate::ingestion_admission::EmbeddingSet {
             entries: replay_optional_receipt_value(&receipt, "embedding_set")?,
             exclusions: replay_optional_receipt_value(&receipt, "column_exclusions")?,

@@ -24,8 +24,8 @@ use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_query_types::wire::DiscoverResult;
 use medulla_source_types::{
     source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
-    source_ingestion::SourceIngestionReceipt,
 };
+use medulla_source_types::source_document::SourceIngestionOutcome;
 #[cfg(feature = "modality-serving")]
 mod modality;
 mod semantic;
@@ -58,7 +58,7 @@ method_results! {
     IndexRepository(IndexRepository) => Json<IndexResult>;
     ObserveScreen(ObserveScreen) => Json<ScreenObservationResult>;
     AddEmbedding(AddEmbedding) => Text<String>;
-    SourceIngest(SourceIngest) => Raw<SourceIngestionReceipt>;
+    SourceIngest(SourceIngest) => Raw<SourceIngestionOutcome>;
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-REPO-INGEST-R006.1: the daily paper target over :StageReceipt nodes.
     IngestThroughputWindow(MeasureIngestThroughput) => Raw<medulla_types::ingest_throughput::ThroughputWindow>;

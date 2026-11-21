@@ -940,4 +940,174 @@ mod tests {
             "prepare calls authorization, replay, resolution, normalization, reconciliation and admission in order: {order:?}"
         );
     }
+
+    /// A quarantine prepared for the fixture batch, with the stream's prior checkpoint.
+    fn quarantine_fixture() -> (
+        medulla_source_types::source_ingestion::SourceIngestionBatch,
+        Digest256,
+        String,
+        crate::source_ingestion::PreparedSourceIngestion,
+    ) {
+        use medulla_source_types::source_ingestion::SourceIngestionRequest;
+        let batch = medulla_source_types::source_ingestion::fixtures::request()
+            .as_batch()
+            .clone();
+        let digest = SourceIngestionRequest::new(batch.clone())
+            .unwrap()
+            .batch_digest()
+            .unwrap();
+        let batch_id = format!("source-ingest:{}", digest.to_hex());
+        let verified = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+            "agent:ingest",
+            "t",
+        );
+        let scope = medulla_server_api::batch_compile::GraphWriteScope {
+            request_id: 1,
+            graph_name: "g",
+            tenant_scope: "t",
+            verified: &verified,
+            graph_version: 4,
+            placement_epoch: 0,
+            fencing_token: None,
+        };
+        let prepared = crate::source_ingestion::quarantine_prepared(
+            scope,
+            crate::source_ingestion::QuarantineInputs {
+                batch: &batch,
+                batch_digest: digest,
+                batch_id: &batch_id,
+                error: &DocumentIngestError::NormalizationFailed("no text".into()),
+                mapping_revision: 3,
+                stream_object_id: crate::source_ingestion::source_marker_id("t", &batch).unwrap(),
+                previous_stream_digest: Some("prior-digest".into()),
+                prior_accepted_checkpoint: Some(batch.provider_checkpoint.clone()),
+                committed_graph_version: 5,
+            },
+        )
+        .unwrap();
+        (batch, digest, batch_id, prepared)
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.10.1
+    #[test]
+    fn invalid_document_quarantines_without_partial_graph() {
+        let (batch, digest, batch_id, prepared) = quarantine_fixture();
+        let envelope = &prepared.envelope;
+        // One node upsert holds the restricted evidence and nothing else.
+        assert_eq!(envelope.mutation.operations.len(), 1);
+        let Method::AddNode {
+            node_id,
+            properties_msgpack,
+        } = &envelope.mutation.operations[0].method
+        else {
+            panic!("the quarantine writes one node");
+        };
+        assert_eq!(
+            node_id,
+            &crate::source_ingestion::quarantine_node_id(
+                "t",
+                batch.connector.as_str(),
+                batch.provider_checkpoint.stream.as_str(),
+                &batch_id
+            )
+            .unwrap()
+        );
+        let stored: serde_json::Value = rmp_serde::from_slice(properties_msgpack).unwrap();
+        assert_eq!(stored["type"], "SourceQuarantine");
+        assert_eq!(stored["reason"], "normalization_failed");
+        assert_eq!(stored["rule_id"], "DOCUMENT_NORMALIZATION_FAILED");
+        assert_eq!(stored["source_digest"], digest.to_hex());
+        assert_eq!(stored["replay"], "replayable");
+        assert_eq!(stored["mapping_revision"], "3");
+        // No cursor, feature, blob or lineage moves; the marker chains from its
+        // current digest and both governed objects carry a policy.
+        assert!(envelope.cursor.is_none());
+        assert!(envelope.features.is_empty());
+        assert!(envelope.blobs.is_empty());
+        assert!(envelope.lineage.is_empty());
+        assert_eq!(envelope.policies.len(), 2);
+        assert_eq!(
+            envelope.content_version.previous_digest.as_deref(),
+            Some("prior-digest")
+        );
+        // No accepted projection, and the prior accepted checkpoint is kept.
+        assert!(prepared.raw_admissions.is_empty());
+        assert!(prepared.mappings.is_empty());
+        assert_eq!(prepared.affected_count(), 0);
+        let receipt = prepared.quarantine.as_ref().expect("a quarantine receipt");
+        assert_eq!(receipt.restricted_evidence_ref, format!("quarantine:{node_id}"));
+        assert_eq!(
+            receipt.prior_accepted_checkpoint.as_ref(),
+            Some(&batch.provider_checkpoint)
+        );
+        assert!(
+            !stored.to_string().contains("no text"),
+            "the failure detail and source text are never stored"
+        );
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.11
+    #[test]
+    fn quarantine_finish_and_replay_preserve_outcome() {
+        use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
+        use medulla_protocol_types::protocol::{Response, ResultPayload};
+        use medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied;
+        use medulla_source_types::source_document::SourceIngestionOutcome;
+        let (batch, digest, batch_id, prepared) = quarantine_fixture();
+        let first_receipt = prepared.quarantine.clone().expect("a quarantine receipt");
+        let envelope = prepared.envelope.clone();
+        let applied = |replayed: bool| {
+            let commit = ChangeEnvelopeCommit {
+                envelope_id: envelope.envelope_id.clone(),
+                batch_id: batch_id.clone(),
+                content_version: envelope.content_version.clone(),
+                cursor: None,
+                outbox_count: 0,
+                replayed,
+            };
+            let body = ChangeEnvelopeApplied {
+                commit,
+                projection_pending: false,
+                replication: None,
+                write_conflict: None,
+            };
+            Response::ok(
+                1,
+                ResultPayload::Json(serde_json::to_value(body).unwrap()),
+            )
+        };
+        let finished = crate::source_ingestion::finish(prepared, applied(false));
+        let Some(ResultPayload::Raw(bytes)) = finished.result else {
+            panic!("finish answers a raw outcome: {finished:?}");
+        };
+        let outcome: SourceIngestionOutcome = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(
+            outcome,
+            SourceIngestionOutcome::Quarantined(Box::new(first_receipt.clone()))
+        );
+        // The replay reads the stored evidence node and returns the same receipt,
+        // with the prior checkpoint as first stored; it never resets the checkpoint.
+        let replayed = crate::source_ingestion::replay_quarantine(
+            "t",
+            &batch,
+            digest,
+            &batch_id,
+            &envelope,
+        )
+        .unwrap()
+        .expect("the stored envelope is a quarantine");
+        assert_eq!(replayed.reason, first_receipt.reason);
+        assert_eq!(replayed.rule_id, first_receipt.rule_id);
+        assert_eq!(replayed.source_digest, first_receipt.source_digest);
+        assert_eq!(replayed.mapping_revision, first_receipt.mapping_revision);
+        assert_eq!(
+            replayed.restricted_evidence_ref,
+            first_receipt.restricted_evidence_ref
+        );
+        assert_eq!(
+            replayed.prior_accepted_checkpoint,
+            first_receipt.prior_accepted_checkpoint
+        );
+        assert_eq!(replayed.committed_graph_version, first_receipt.committed_graph_version);
+    }
 }

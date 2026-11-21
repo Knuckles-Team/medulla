@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     AfterValidator,
@@ -604,6 +604,50 @@ class SourceIngestionRequest(SourceIngestionBatch):
 
 SourceJson = Any
 
+
+class QuarantineReason(str, Enum):
+    NORMALIZATION_FAILED = "normalization_failed"
+    MISSING_PROVENANCE = "missing_provenance"
+    MAPPING_REVISION_MISMATCH = "mapping_revision_mismatch"
+
+
+class ReplayDisposition(str, Enum):
+    REPLAYABLE = "replayable"
+    TERMINAL = "terminal"
+
+
+class QuarantineReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    committed_graph_version: Annotated[int, Field(ge=0)]
+    mapping_revision: str
+    prior_accepted_checkpoint: SourceCheckpoint | None = None
+    reason: QuarantineReason
+    replay: ReplayDisposition
+    restricted_evidence_ref: str
+    rule_id: str
+    source_digest: Digest256
+
+
+class SourceIngestionAccepted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: Literal["accepted"]
+    receipt: SourceIngestionReceipt
+
+
+class SourceIngestionQuarantined(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: Literal["quarantined"]
+    receipt: QuarantineReceipt
+
+
+SourceIngestionOutcome = Annotated[
+    SourceIngestionAccepted | SourceIngestionQuarantined,
+    Field(discriminator="outcome"),
+]
+
 RawAdmissionReceipt.model_rebuild()
 
 RawRelationshipAdmissionReceipt.model_rebuild()
@@ -622,6 +666,12 @@ RowVersionReport.model_rebuild()
 
 GovernanceReport.model_rebuild()
 SourceIngestionReceipt.model_rebuild()
+
+QuarantineReceipt.model_rebuild()
+
+SourceIngestionAccepted.model_rebuild()
+
+SourceIngestionQuarantined.model_rebuild()
 
 SourceMappingReceipt.model_rebuild()
 
@@ -669,6 +719,12 @@ __all__ = [
     "ColumnExclusion",
     "EmbeddingSetEntry",
     "SourceIngestionReceipt",
+    "QuarantineReason",
+    "QuarantineReceipt",
+    "ReplayDisposition",
+    "SourceIngestionAccepted",
+    "SourceIngestionOutcome",
+    "SourceIngestionQuarantined",
     "SourceIngestionRequest",
     "SourceJson",
     "SourceMappingKind",

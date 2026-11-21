@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import TypeAdapter
 from conftest import request_context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
@@ -34,6 +35,7 @@ from medulla.generated.ingestion import (
 )
 from medulla.generated.source_ingestion import (
     SourceIngestionDisposition,
+    SourceIngestionOutcome,
     SourceIngestionReceipt,
 )
 
@@ -118,7 +120,9 @@ async def _submit(
         {"request": copy.deepcopy(batch)},
         idempotency_key=f"{key}:{uuid.uuid4().hex}",
     )
-    return SourceIngestionReceipt.model_validate(payload)
+    outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
+    assert outcome.outcome == "accepted", outcome
+    return outcome.receipt
 
 
 async def _ingest_client(connector: str) -> tuple[MedullaClient, str]:

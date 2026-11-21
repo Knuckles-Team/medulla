@@ -51,8 +51,8 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R003.7` | `crates/medulla-source-types/src/source_document.rs::tests::document_receipt_round_trips` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.8` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::complete_document_is_idempotent` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R003.9` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::prepare_validates_document_after_resolution` | L3 | exists |
-| `MEDULLA-INGEST-WORKER-R003.10.1` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::invalid_document_quarantines_without_partial_graph` | L3 | planned |
-| `MEDULLA-INGEST-WORKER-R003.11` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::quarantine_finish_and_replay_preserve_outcome` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R003.10.1` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::invalid_document_quarantines_without_partial_graph` | L3 |
+| `MEDULLA-INGEST-WORKER-R003.11` | `crates/medulla-h-ingest/src/source_ingestion/documents.rs::tests::quarantine_finish_and_replay_preserve_outcome` | L3 |
 | `MEDULLA-INGEST-WORKER-R003.12` | `tests/ingest/test_document_normalization_served.py::test_document_batch_is_atomic` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.13` | `crates/medulla-source-types/src/source_transcript.rs::tests::transcript_round_trips` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.14` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::source_sequence_and_identity_are_preserved` | L2 | planned |

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from ._runtime import (
     OpaqueResult,
@@ -22,7 +22,9 @@ from .index_repository import (
 )
 from .models import _EgOctets
 from .source_ingestion import (
-    SourceIngestionReceipt,
+    SourceIngestionAccepted,
+    SourceIngestionOutcome,
+    SourceIngestionQuarantined,
     SourceIngestionRequest,
     SourceIngestStatus,
 )
@@ -66,7 +68,7 @@ async def send_source_ingest(
     graph: str | None = None,
     *,
     idempotency_key: str | None = None,
-) -> SourceIngestionReceipt:
+) -> SourceIngestionAccepted | SourceIngestionQuarantined:
     """Send one engine-contract request.
 
     Method:
@@ -97,7 +99,7 @@ async def send_source_ingest(
         graph,
         idempotency_key=idempotency_key,
     )
-    return SourceIngestionReceipt.model_validate(payload)
+    return TypeAdapter(SourceIngestionOutcome).validate_python(payload)
 
 
 class SourceIngestStatusRequest(BaseModel):

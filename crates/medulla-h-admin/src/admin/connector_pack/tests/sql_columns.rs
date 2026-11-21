@@ -6,6 +6,7 @@ use medulla_source_types::source_ingestion::column_profile::{
     ColumnExclusion, ColumnExclusionReason, EmbeddingSetEntry, SqlColumnProfile, SqlColumnType,
     Q32_ONE,
 };
+use medulla_source_types::source_document::SourceIngestionOutcome;
 use medulla_source_types::source_ingestion::{
     SourceIngestionDisposition, SourceIngestionReceipt, SourceIngestionRequest, SourceJson,
 };
@@ -13,6 +14,13 @@ use medulla_types::contract::{BoundedVec, ResourceId};
 
 use super::ok;
 use super::scale::{first_ingest, ingest, pack_graph};
+
+/// The accepted receipt of a served `SourceIngest` outcome.
+fn accepted(outcome: SourceIngestionOutcome) -> SourceIngestionReceipt {
+    outcome
+        .into_accepted()
+        .expect("the batch is accepted, not quarantined")
+}
 
 fn profile(sql_type: SqlColumnType, fk: bool, ratio: f64, samples: u32) -> SqlColumnProfile {
     SqlColumnProfile {
@@ -73,10 +81,10 @@ fn exclusion(column: &str, reason: ColumnExclusionReason) -> ColumnExclusion {
 async fn sql_column_kinds_and_cardinality_control_embedding() {
     let (served, _guard) = pack_graph("sql-columns").await;
     let request = profiled_request();
-    let receipt: SourceIngestionReceipt = ok(
+    let receipt = accepted(ok(
         "profiled ingest",
         ingest(&served, "sql-columns:first", &request).await,
-    );
+    ));
     assert_eq!(receipt.disposition, SourceIngestionDisposition::Committed);
     let mut expected = vec![
         exclusion("owner_id", ColumnExclusionReason::ForeignKey),
@@ -101,10 +109,10 @@ async fn sql_column_kinds_and_cardinality_control_embedding() {
         "only the free-text column measured over 100 values enters the set"
     );
 
-    let replayed: SourceIngestionReceipt = ok(
+    let replayed = accepted(ok(
         "profiled replay",
         ingest(&served, "sql-columns:again", &request).await,
-    );
+    ));
     assert_eq!(replayed.disposition, SourceIngestionDisposition::Replayed);
     assert_eq!(replayed.column_exclusions, expected);
     assert_eq!(replayed.embedding_set, receipt.embedding_set);

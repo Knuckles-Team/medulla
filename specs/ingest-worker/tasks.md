@@ -39,8 +39,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T032 [US3] MEDULLA-INGEST-WORKER-R003.7 Model
 - [ ] T033 [US3] MEDULLA-INGEST-WORKER-R003.8 Behavior: document normalization and the complete_document check
 - [ ] T034 [US3] MEDULLA-INGEST-WORKER-R003.9 Wiring: the document validator runs inside prepare
-- [ ] T035 [US3] MEDULLA-INGEST-WORKER-R003.10.1 Behavior: the quarantine envelope commits without advancing state
-- [ ] T036 [US3] MEDULLA-INGEST-WORKER-R003.11 Evidence: quarantine receipt, finish and replay
+- [x] T035 [US3] MEDULLA-INGEST-WORKER-R003.10.1 Behavior: the quarantine envelope commits without advancing state
+- [x] T036 [US3] MEDULLA-INGEST-WORKER-R003.11 Evidence: quarantine receipt, finish and replay
 - [ ] T037 [US3] MEDULLA-INGEST-WORKER-R003.12 Hot-path proof: document normalization through the wire method
 - [ ] T038 [US3] MEDULLA-INGEST-WORKER-R003.13 Model
 - [ ] T039 [US3] MEDULLA-INGEST-WORKER-R003.14 Behavior: transcript validation

@@ -24,6 +24,7 @@ import uuid
 from pathlib import Path
 
 import pytest
+from pydantic import TypeAdapter
 from conftest import request_context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
@@ -51,6 +52,7 @@ from medulla.generated.graph_schema import (
 from medulla.generated.source_ingestion import (
     DriftAction,
     DriftClass,
+    SourceIngestionOutcome,
     SourceIngestionReceipt,
 )
 
@@ -290,7 +292,9 @@ async def submit_delivery(
         {"request": batch},
         idempotency_key=f"drift:{uuid.uuid4().hex}",
     )
-    return SourceIngestionReceipt.model_validate(payload)
+    outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
+    assert outcome.outcome == "accepted", outcome
+    return outcome.receipt
 
 
 # spec: MEDULLA-TYPED-PACKS-R710

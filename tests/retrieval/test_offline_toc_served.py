@@ -110,7 +110,8 @@ async def test_read_span_after_ingest() -> None:
             {"request": copy.deepcopy(_batch(connector))},
             idempotency_key=f"toc:{uuid.uuid4().hex}",
         )
-        assert receipt["disposition"] == "committed", receipt
+        assert receipt["outcome"] == "accepted", receipt
+        assert receipt["receipt"]["disposition"] == "committed", receipt
 
         answer = await client.query.uql("MATCH () WHERE type = 'Document'")
         ids = [row["id"] for row in answer["rows"]]

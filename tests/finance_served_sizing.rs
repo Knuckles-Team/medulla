@@ -453,7 +453,7 @@ mod forecast_served {
         });
         let request: SourceIngestionRequest =
             serde_json::from_value(value).expect("a valid source ingestion request");
-        ok(
+        ok::<medulla_source_types::source_document::SourceIngestionOutcome>(
             "SourceIngest",
             call(
                 state,
@@ -465,6 +465,8 @@ mod forecast_served {
             )
             .await,
         )
+        .into_accepted()
+        .expect("the batch is accepted, not quarantined")
     }
 
     pub fn node_id(stream: &str, record_id: &str) -> String {

@@ -357,7 +357,8 @@ async def test_pack_record_of_each_new_term_round_trips(term: Term) -> None:
             {"request": _batch(connector, term, value)},
             idempotency_key=f"vocab:{connector}:{uuid.uuid4().hex}",
         )
-        assert receipt["disposition"] == "committed", receipt
+        assert receipt["outcome"] == "accepted", receipt
+        assert receipt["receipt"]["disposition"] == "committed", receipt
 
         props = await _read_back(client, pack_class)
         # Source, record id and as-of ride on the row.

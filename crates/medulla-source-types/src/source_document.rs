@@ -182,6 +182,17 @@ pub enum SourceIngestionOutcome {
     Quarantined(Box<QuarantineReceipt>),
 }
 
+impl SourceIngestionOutcome {
+    /// The accepted receipt, or the quarantine receipt when the batch was
+    /// quarantined.
+    pub fn into_accepted(self) -> Result<SourceIngestionReceipt, Box<QuarantineReceipt>> {
+        match self {
+            Self::Accepted(receipt) => Ok(*receipt),
+            Self::Quarantined(receipt) => Err(receipt),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
