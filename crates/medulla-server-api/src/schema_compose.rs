@@ -1072,7 +1072,8 @@ ex:parent a owl:AsymmetricProperty .
         // +18: the TransitionRefused class and the core-rooting edges (see the total pin).
         // +162: the three newly catalogued modules less the removed duplicate
         // declarations (MEDULLA-TYPED-PACKS-R105.10.2 to R105.10.4; see the total pin).
-        assert_eq!(semantic_axioms, 24_631);
+        // +52 (MEDULLA-ORCH-VOCAB-R815.6): the IncidentRecord machine's triples.
+        assert_eq!(semantic_axioms, 24_683);
 
         let count_type = |object: &str| {
             composed
@@ -1176,7 +1177,9 @@ ex:parent a owl:AsymmetricProperty .
             // +22 (measured delta on 9f7f19ffeb): +31 the bpmn, content and
             // connector-seed subclass axioms (R105.10.4); -9 the duplicate parents
             // dropped by one home per class and the merges (R105.10.2, R105.10.3).
-            1392
+            // +6 (MEDULLA-ORCH-VOCAB-R815.6): the IncidentRecord machine's State,
+            // TerminalState (two parents), Transition, Event and Guard classes.
+            1398
         );
     }
 
