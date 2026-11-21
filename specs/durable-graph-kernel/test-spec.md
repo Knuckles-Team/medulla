@@ -569,7 +569,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R082.5`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::association_result_has_the_eleven_column_shape_and_recomputed_digest` (L3).
 - `MEDULLA-DURABLE-KERNEL-R082.6`: Planned: `crates/medulla-mining/src/mining/association.rs::tests::six_transaction_rules_match_the_recorded_order` (L1).
 - `MEDULLA-DURABLE-KERNEL-R082.7`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason` (L3).
-- `MEDULLA-DURABLE-KERNEL-R082.8`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.8`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3), and `crates/medulla-h-jobs/src/jobs/worker_publish.rs::tests::kernel_cancelled_is_not_an_accepted_failure_code` (L2).
 - `MEDULLA-DURABLE-KERNEL-R082.9`: Planned: `crates/medulla-work-types/src/scheduler_config.rs::tests::analytics_lease_and_poll_accept_range_ends_and_refuse_beyond_them` (L2) and `crates/medulla-server-api/src/knob_config.rs::tests::analytics_lease_and_poll_knobs_reach_the_scheduler_policy` (L2).
 - `MEDULLA-DURABLE-KERNEL-R082.10`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::remote_worker_drives_the_full_sequence_and_scope_is_enforced` (L3).
 - `MEDULLA-DURABLE-KERNEL-R083`: Planned: `tests/kvcache_http_served.rs::two_consumers_share_one_block_and_a_version_mismatch_refuses` (L3).
@@ -700,6 +700,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R700`, `MEDULLA-DURABLE-KERNEL-R700.6` | `tests/durable/test_retention_cleanup_served.py::test_held_and_referenced_nodes_survive` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.5` | `tests/durable/test_retention_cleanup_served.py::test_record_reproduces_report` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/durable/test_retention_cleanup_served.py::test_refusals_leave_state_unchanged` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/retention_cleanup_scope_served.rs::retention_run_without_the_scope_is_access_denied` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.3` | `tests/durable/test_retention_cleanup_served.py::test_run_method_matches_sweep` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R869` | `tests/durable/test_stream_log_served.py::test_order_cursor_and_restart` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.5` | `tests/durable/test_uncertain_effect_served.py::test_audit_and_metrics_after_uncertain_run` (planned) |

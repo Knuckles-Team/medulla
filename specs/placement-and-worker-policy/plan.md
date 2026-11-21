@@ -215,7 +215,7 @@ Pre-untangled design, one line per answer.
 - State. The explicit machine of R781.1; this row removes the second source of truth.
 - Environment. None.
 
-Order: R781.1, R781.3, R781.4. The served wire type changes with R781.3, so the generated schema and clients rebuild at build.
+Order: R781.1, R781.3, R781.4. R781.4 is the offline GraphShard upgrade (a declared predecessor), not an open-time pass. The served wire type changes with R781.3, so the generated schema and clients rebuild at build.
 
 ## Cross-repo seams
 
