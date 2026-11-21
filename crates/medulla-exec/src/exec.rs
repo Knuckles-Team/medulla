@@ -54,6 +54,7 @@ mod group;
 mod order;
 mod pred_sql;
 pub mod propagate;
+pub mod propagate_history;
 mod string_eq;
 // EH-522 — the `DERIVE` per-series incremental operators.
 #[cfg(feature = "timeseries")]

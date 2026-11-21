@@ -320,6 +320,31 @@ pub enum PropagateModel {
     Cascade { samples: u32, seed: u64 },
 }
 
+/// The failure-history tail of a [`Op::Propagate`] stage (MEDULLA-FEDERATED-QUERY-R032.100):
+/// `RISK HISTORY '<dataset>' WINDOW <from_ms> TO <to_ms> LAYERS ('<layer>' <weight>, ...)`.
+#[cfg(feature = "query")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RiskHistorySpec {
+    /// The `:Observation` dataset id.
+    pub dataset: String,
+    /// Window start, Unix ms, inclusive.
+    pub from_ms: i64,
+    /// Window end, Unix ms, exclusive.
+    pub to_ms: i64,
+    /// The ordered layer taxonomy with one weight each.
+    pub layers: Vec<LayerWeight>,
+}
+
+/// One layer of a [`RiskHistorySpec`] and its weight in `[0, 1]`.
+#[cfg(feature = "query")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LayerWeight {
+    pub layer: String,
+    pub weight: f64,
+}
+
 /// A typed UQL parameter value (UQL-07): what a `$name` in UQL text is bound to. Bound
 /// values are substituted into the parsed plan as typed literals — never spliced into
 /// the text — so a parameter can never change the query's structure.
@@ -502,6 +527,10 @@ pub enum Op {
         edge_preds: Vec<Pred>,
         hops: usize,
         default_transmission: f64,
+        /// MEDULLA-FEDERATED-QUERY-R032.100: the optional layer- and history-weighted
+        /// impact tail (`RISK HISTORY ...`); absent leaves the stage exactly as before.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        risk_history: Option<RiskHistorySpec>,
     },
     /// RANK (vector) — re-order by cosine similarity to `query` (SemanticStore kNN).
     Rank { query: Vec<f32> },
@@ -1293,6 +1322,10 @@ pub enum UqlResult {
         /// omitted on the wire) for a statement that names no foreign source.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         source_coverage: Vec<UqlSourceCoverage>,
+        /// MEDULLA-FEDERATED-QUERY-R032.100: one entry per input seed row of a
+        /// `PROPAGATE ... RISK HISTORY` stage; empty (and omitted) otherwise.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        historical_risk: Vec<crate::impact_risk::HistoricalRisk>,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1490,6 +1523,7 @@ mod tests {
                         reason: Some("unconnected".into()),
                     },
                 ],
+                historical_risk: vec![],
             },
             UqlResult::Profile {
                 columns: vec![],
@@ -1521,6 +1555,7 @@ mod tests {
                 snapshot_revision: 0,
                 knowledge_revision: 0,
                 source_coverage: vec![],
+                historical_risk: vec![],
             }
         );
     }

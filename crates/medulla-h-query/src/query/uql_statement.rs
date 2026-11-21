@@ -208,10 +208,15 @@ pub(crate) async fn handle_uql(
             }
             if let medulla_query_types::wire::UqlResult::Rows {
                 source_coverage: reported_coverage,
+                historical_risk,
                 ..
             } = &mut result
             {
                 *reported_coverage = source_coverage;
+                // MEDULLA-FEDERATED-QUERY-R032.100: the risk is read from this snapshot.
+                for risk in historical_risk.iter_mut() {
+                    risk.graph_revision = version;
+                }
             }
             #[cfg(feature = "federation")]
             if let medulla_query_types::wire::UqlResult::Explain {

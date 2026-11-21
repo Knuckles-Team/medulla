@@ -22,6 +22,10 @@ pub mod document_ops;
 pub mod graphlearn_nary;
 // MEDULLA-FEDERATED-QUERY-R058.2.2.1 — the disclosed NL query result (executed UQL + rows).
 pub mod nl_query;
+// MEDULLA-FEDERATED-QUERY-R032.100 — the layer- and history-weighted impact result of a
+// `PROPAGATE ... RISK HISTORY` stage. Pure serde.
+#[cfg(feature = "query")]
+pub mod impact_risk;
 // MEDULLA-DURABLE-KERNEL-R041 — the SQL plan cache key (statement digest + schema
 // version) and its lookup decision. Pure, no dep beyond `contract::Digest256`.
 pub mod plan_cache_key;

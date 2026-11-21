@@ -60,6 +60,7 @@ fn canonical_op(op: &Op) -> Op {
             edge_preds,
             hops,
             default_transmission,
+            risk_history,
         } => Op::Propagate {
             model: *model,
             rel: rel.clone(),
@@ -67,6 +68,7 @@ fn canonical_op(op: &Op) -> Op {
             edge_preds: edge_preds.iter().map(canonical_pred).collect(),
             hops: *hops,
             default_transmission: *default_transmission,
+            risk_history: risk_history.clone(),
         },
         #[cfg(feature = "text")]
         Op::FuseRrf { branches, k } => Op::FuseRrf {

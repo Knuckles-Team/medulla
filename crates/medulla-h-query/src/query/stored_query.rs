@@ -556,6 +556,7 @@ pub(crate) async fn handle_call_stored_statement(
         snapshot_revision: called.input_generation,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
     };
     match ResultPayload::of::<results::Uql>(body) {
         Ok(payload) => Response::ok(ctx.req_id, payload),

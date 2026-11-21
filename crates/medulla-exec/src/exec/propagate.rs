@@ -158,8 +158,16 @@ pub(crate) fn propagate_op(
     ))
 }
 
-/// Run a `PROPAGATE` op over `ctx` (any other op is a routing defect).
+/// Run a `PROPAGATE` op over `ctx` (any other op is a routing defect). A stage with a
+/// `RISK HISTORY` tail also refuses `HISTORY_DATASET_UNAVAILABLE` when its dataset has no
+/// visible observation in the window (MEDULLA-FEDERATED-QUERY-R032.100).
 pub fn apply(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
+    super::propagate_history::stage_report(op, input, ctx)?;
+    apply_rows(op, input, ctx)
+}
+
+/// The `impact` rows of a `PROPAGATE` op, without the history report.
+pub(crate) fn apply_rows(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
     let Op::Propagate {
         model,
         rel,
@@ -167,6 +175,7 @@ pub fn apply(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         edge_preds,
         hops,
         default_transmission,
+        ..
     } = op
     else {
         return Err("propagate::apply was routed a non-PROPAGATE op".to_string());

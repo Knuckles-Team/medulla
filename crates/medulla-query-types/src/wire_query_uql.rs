@@ -349,11 +349,13 @@ pub fn uql_op(op: &Op) -> Printed {
             edge_preds,
             hops,
             default_transmission,
+            risk_history,
         } => propagate(
             *model,
             &edge_pattern(rel.as_deref(), *dir, edge_preds)?,
             *hops,
             *default_transmission,
+            risk_history.as_ref(),
         ),
         Op::Rank { query } => rank(query),
         Op::RankEmbed { text } => keyword_quoted("RANK BY ~", text),
@@ -619,17 +621,38 @@ fn expand(rel: Option<&str>, dir: EdgeDir, hops: (usize, usize), edge_preds: &[P
 }
 
 /// `PROPAGATE NOISY_OR | CASCADE SAMPLES n SEED s <edge> HOPS h DEFAULT p` (EH-526).
-fn propagate(model: PropagateModel, edge: &str, hops: usize, default: f64) -> Printed {
+fn propagate(
+    model: PropagateModel,
+    edge: &str,
+    hops: usize,
+    default: f64,
+    risk_history: Option<&RiskHistorySpec>,
+) -> Printed {
     let model = match model {
         PropagateModel::NoisyOr => "NOISY_OR".to_string(),
         PropagateModel::Cascade { samples, seed } => {
             format!("CASCADE SAMPLES {samples} SEED {seed}")
         }
     };
-    Ok(format!(
+    let mut text = format!(
         "PROPAGATE {model} {edge} HOPS {hops} DEFAULT {}",
         uql_num(default)?
-    ))
+    );
+    if let Some(history) = risk_history {
+        let layers = history
+            .layers
+            .iter()
+            .map(|layer| Ok(format!("{} {}", uql_quote(&layer.layer), uql_num(layer.weight)?)))
+            .collect::<Result<Vec<_>, UqlPrintError>>()?
+            .join(", ");
+        text.push_str(&format!(
+            " RISK HISTORY {} WINDOW {} TO {} LAYERS ({layers})",
+            uql_quote(&history.dataset),
+            history.from_ms,
+            history.to_ms
+        ));
+    }
+    Ok(text)
 }
 
 fn as_of(ts: f64, axis: TimeAxis) -> Printed {

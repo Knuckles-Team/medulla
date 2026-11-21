@@ -184,6 +184,25 @@ fn row_channels(id: &str, columns: &[String], table: &ChannelTable) -> Vec<Optio
         .collect()
 }
 
+/// Whether a `PROPAGATE` stage carries `RISK HISTORY` (MEDULLA-FEDERATED-QUERY-R032.100).
+fn has_risk_history(ops: &[Op]) -> bool {
+    ops.iter().any(|op| {
+        matches!(
+            op,
+            Op::Propagate {
+                risk_history: Some(_),
+                ..
+            }
+        )
+    })
+}
+
+/// The statement's warnings followed by the ones its stages raised.
+fn merged(mut warnings: Vec<String>, stage_warnings: Vec<String>) -> Vec<String> {
+    warnings.extend(stage_warnings);
+    warnings
+}
+
 /// Whether the plan aggregates with a `GROUP` stage (MEDULLA-FEDERATED-QUERY-R733).
 fn groups(ops: &[Op]) -> bool {
     ops.iter().any(|op| matches!(op, Op::Group { .. }))
@@ -199,13 +218,14 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
         return Ok(UqlResult::Rows {
             rows: rows_of(&traced.rows, &columns, &traced.table),
             columns,
-            warnings,
+            warnings: merged(warnings, traced.warnings),
             snapshot_revision: 0,
             knowledge_revision: 0,
             source_coverage: Vec::new(),
+            historical_risk: traced.risks,
         });
     }
-    if columns.is_empty() {
+    if columns.is_empty() && !has_risk_history(&plan.ops) {
         let rows = medulla_exec::exec::execute(plan, ctx)?;
         return Ok(UqlResult::Rows {
             rows: rows_of(&rows, &columns, &ChannelTable::new()),
@@ -214,16 +234,18 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
             snapshot_revision: 0,
             knowledge_revision: 0,
             source_coverage: Vec::new(),
+            historical_risk: Vec::new(),
         });
     }
     let traced = traced(plan, ctx)?;
     Ok(UqlResult::Rows {
         rows: rows_of(&traced.rows, &columns, &traced.table),
         columns,
-        warnings,
+        warnings: merged(warnings, traced.warnings),
         snapshot_revision: 0,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: traced.risks,
     })
 }
 
@@ -233,6 +255,10 @@ struct Traced {
     table: ChannelTable,
     /// (stage, rows out, micros) per stage.
     stages: Vec<(Op, u64, u64)>,
+    /// The `RISK HISTORY` reports of the plan's `PROPAGATE` stages, one per seed row.
+    risks: Vec<medulla_query_types::impact_risk::HistoricalRisk>,
+    /// The warnings those stages raised (`HISTORY_MALFORMED`).
+    warnings: Vec<String>,
 }
 
 fn traced(plan: &Plan, ctx: &PlanCtx) -> Result<Traced, String> {
@@ -240,8 +266,16 @@ fn traced(plan: &Plan, ctx: &PlanCtx) -> Result<Traced, String> {
     let mut cur = RowSet::new();
     let mut table = ChannelTable::new();
     let mut stages = Vec::with_capacity(optimized.ops.len());
+    let mut risks = Vec::new();
+    let mut warnings = Vec::new();
     for op in &optimized.ops {
         let started = Instant::now();
+        if let Some((stage_risks, stage_warnings)) =
+            medulla_exec::exec::propagate_history::stage_report(op, &cur, ctx)?
+        {
+            risks.extend(stage_risks);
+            warnings.extend(stage_warnings);
+        }
         let (next, extra) = apply_with_channels(op, cur, ctx)?;
         cur = next;
         let micros = micros_since(started);
@@ -253,6 +287,8 @@ fn traced(plan: &Plan, ctx: &PlanCtx) -> Result<Traced, String> {
         rows: cur,
         table,
         stages,
+        risks,
+        warnings,
     })
 }
 
@@ -356,7 +392,7 @@ fn profile(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         rows: rows_of(&traced.rows, &columns, &traced.table),
         columns,
         stages,
-        warnings,
+        warnings: merged(warnings, traced.warnings),
         snapshot_revision: 0,
         knowledge_revision: 0,
         plan_scope_tenant: plan.scope.as_ref().map(|scope| scope.tenant.clone()),

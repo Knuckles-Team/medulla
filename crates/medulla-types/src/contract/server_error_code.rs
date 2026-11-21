@@ -582,6 +582,12 @@ closed_error_codes! {
         SourceQuotaExceeded => "SOURCE_QUOTA_EXCEEDED",
         SourceQuotaInvalid => "SOURCE_QUOTA_INVALID",
         SourceUnavailable => "SOURCE_UNAVAILABLE",
+        /// MEDULLA-FEDERATED-QUERY-R032.100: no visible observation of the `RISK HISTORY`
+        /// dataset in the window; the same code answers a dataset the caller cannot see.
+        HistoryDatasetUnavailable => "HISTORY_DATASET_UNAVAILABLE",
+        /// MEDULLA-FEDERATED-QUERY-R032.100: an observation with an unreadable outcome,
+        /// time or target; it counts nowhere and is reported in `warnings`.
+        HistoryMalformed => "HISTORY_MALFORMED",
         SourceBatchKindMismatch => "SOURCE_BATCH_KIND_MISMATCH",
         SourceBatchKindUnavailable => "SOURCE_BATCH_KIND_UNAVAILABLE",
         SourceBindingInvalid => "SOURCE_BINDING_INVALID",

@@ -17,6 +17,9 @@ closed_error_codes! {
         TrailingTokens => "UQL_TRAILING_TOKENS",
         NestingTooDeep => "UQL_NESTING_TOO_DEEP",
         InvalidRange => "UQL_INVALID_RANGE",
+        /// `PROPAGATE ... RISK HISTORY` (MEDULLA-FEDERATED-QUERY-R032.100): a layer weight
+        /// outside `[0, 1]`, a duplicate layer, more than 16 layers or `to_ms <= from_ms`.
+        RiskHistory => "UQL_E_RISK_HISTORY",
         DecisionClauseInUql => "DECISION_CLAUSE_IN_UQL",
         UnsupportedVersion => "UQL_UNSUPPORTED_VERSION",
         DuplicateBinding => "UQL_DUPLICATE_BINDING",

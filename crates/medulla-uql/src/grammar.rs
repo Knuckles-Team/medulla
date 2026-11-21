@@ -211,9 +211,11 @@ pub const PRODUCTIONS: &[Production] = &[
       "MATCH (:Doc) |> TRAVERSE <-[:CITES WHERE weight >= 0.5]-{1,2}"),
     p("propagate", Stage, &["PROPAGATE"], None,
       "\"PROPAGATE\" ( \"NOISY_OR\" | \"CASCADE\" [ \"SAMPLES\" int ] [ \"SEED\" int ] ) edge \
-       [ \"HOPS\" int ] [ \"DEFAULT\" num ]",
-      "Propagate{model, rel, dir, edge_preds, hops, default_transmission}: P(hit) per node, \
-       channel `impact` (EH-526)",
+       [ \"HOPS\" int ] [ \"DEFAULT\" num ] [ \"RISK\" \"HISTORY\" string \"WINDOW\" int \"TO\" int \
+       \"LAYERS\" \"(\" string num { \",\" string num } \")\" ]",
+      "Propagate{model, rel, dir, edge_preds, hops, default_transmission, risk_history}: P(hit) \
+       per node, channel `impact` (EH-526); the `RISK HISTORY` tail adds channel `history_risk` \
+       and the result's `historical_risk`",
       "MATCH (:Incident) |> WHERE status = 'open' |> PROPAGATE NOISY_OR <-[:dependsOn]- HOPS 4 \
        |> RETURN impact |> LIMIT 50"),
     p("edge", Aux, &[], None,

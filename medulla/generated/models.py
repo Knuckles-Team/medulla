@@ -20019,6 +20019,23 @@ class OpPropagateBody(BaseModel):
     hops: Annotated[int, Field(ge=0)]
     model: PropagateModel
     rel: str | None = None
+    risk_history: RiskHistorySpec | None = None
+
+
+class LayerWeight(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    layer: str
+    weight: float
+
+
+class RiskHistorySpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dataset: str
+    from_ms: int
+    layers: list[LayerWeight]
+    to_ms: int
 
 
 class OpRank(BaseModel):
@@ -35674,6 +35691,7 @@ __all__ = [
     "RevisionProposalPage",
     "RevisionRow",
     "RevisionStage",
+    "RiskHistorySpec",
     "CapacityAcquireRequest",
     "CapacityAcquireResult",
     "CapacityAvailability",
@@ -36947,6 +36965,7 @@ __all__ = [
     "LinkPrediction",
     "LinkPredictorFit",
     "LinkRequest",
+    "LayerWeight",
     "Linkage",
     "LiquidityDirection",
     "LiquidityHeatCell",

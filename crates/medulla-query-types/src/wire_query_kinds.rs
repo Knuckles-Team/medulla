@@ -368,6 +368,9 @@ impl OpKind {
         if self == OpKind::Attribute {
             return ATTRIBUTION_EXTRA_CHANNELS;
         }
+        if self == OpKind::Propagate {
+            return PROPAGATE_EXTRA_CHANNELS;
+        }
         #[cfg(feature = "epistemic")]
         if self == OpKind::SourceReliability {
             return RELIABILITY_EXTRA_CHANNELS;
@@ -390,6 +393,10 @@ impl OpKind {
         names
     }
 }
+
+/// `PROPAGATE`'s secondary channel (MEDULLA-FEDERATED-QUERY-R032.100): a node's historical
+/// path risk, written only when the stage carries `RISK HISTORY`.
+pub const PROPAGATE_EXTRA_CHANNELS: &[&str] = &["history_risk"];
 
 /// `ATTRIBUTE`'s secondary channel: the sampled-Shapley CI half-width.
 pub const ATTRIBUTION_EXTRA_CHANNELS: &[&str] = &["attribution_ci"];

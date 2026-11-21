@@ -241,6 +241,15 @@ pub fn apply_with_channels(
     if let Op::SourceReliability { source_id } = op {
         return reliability_with_channels(ctx, input, source_id);
     }
+    // MEDULLA-FEDERATED-QUERY-R032.100: a `PROPAGATE ... RISK HISTORY` stage adds the
+    // `history_risk` channel; its `impact` rows are exactly those of the plain stage.
+    if let Some((risks, _warnings)) = super::propagate_history::stage_report(op, &input, ctx)? {
+        let channels = vec![(
+            medulla_query_types::wire::PROPAGATE_EXTRA_CHANNELS[0],
+            super::propagate_history::history_channel(&risks),
+        )];
+        return Ok((super::propagate::apply_rows(op, &input, ctx)?, channels));
+    }
     Ok((apply(op, input, ctx)?, Vec::new()))
 }
 

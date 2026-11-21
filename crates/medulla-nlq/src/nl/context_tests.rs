@@ -789,6 +789,7 @@ fn edge_predicates_are_grounded_against_edges_instead_of_nodes() {
                 edge_preds: preds.clone(),
                 hops: 1,
                 default_transmission: 1.0,
+                risk_history: None,
             },
         ] {
             let result = context.ground(&Plan::new(vec![op]));

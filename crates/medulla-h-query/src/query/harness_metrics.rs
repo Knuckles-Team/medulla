@@ -71,6 +71,7 @@ pub(crate) fn handle_harness_metric(
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -168,6 +169,7 @@ fn handle_run_trace_usage(
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -224,6 +226,7 @@ fn handle_evolution_trace_metrics(
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -312,6 +315,7 @@ fn handle_harness_config_evidence(
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
     };
     served_response::<query_results::Uql>(
         ctx.req_id,

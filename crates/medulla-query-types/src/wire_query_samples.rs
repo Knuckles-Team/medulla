@@ -42,6 +42,7 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             edge_preds: vec![uql_sample_pred(PredKind::Cmp)],
             hops: 4,
             default_transmission: 0.25,
+            risk_history: None,
         },
         OpKind::Rank => Op::Rank {
             query: vec![0.1, -0.25, 3.0e-7],
