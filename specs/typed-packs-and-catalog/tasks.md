@@ -325,8 +325,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T311 [US8] MEDULLA-TYPED-PACKS-R110.4 Outbound open metadata payload
 - [x] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
 - [x] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata unmapped types and version conflicts in the sync report
-- [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence on every synced node
-- [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof: a store version raised under a catalog edit
+- [x] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence on every synced node
+- [x] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof: a store version raised under a catalog edit
 - [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 RETIRED: open metadata hot-path proof
 - [ ] T320 [US8] MEDULLA-TYPED-PACKS-R810 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T321 [US8] MEDULLA-TYPED-PACKS-R810.1 AdmissionRow/AdmissionState state machine: route 1 census findings through AdmissionState::apply

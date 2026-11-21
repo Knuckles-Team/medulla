@@ -14,6 +14,11 @@ mod state;
 
 use serde_json::{Map, Value};
 
+/// The property every inbound node carries with the connection IRI it was synced from
+/// (MEDULLA-TYPED-PACKS-R110.7). `plan_sync` adds it at the one chokepoint and removes it
+/// before the adapter reads the graph side, so it never enters a graph digest.
+pub const SYNCED_FROM_PROPERTY: &str = "syncedFrom";
+
 pub use plan::{base_digests, plan_sync, GraphNodes, SyncPlan};
 pub use state::{
     sync_conflict_mutations, sync_state_mutations, SyncOutcome, SYNC_CONFLICT_CLASS,

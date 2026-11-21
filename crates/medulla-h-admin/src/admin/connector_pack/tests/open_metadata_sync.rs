@@ -21,8 +21,8 @@ use medulla_catalog_types::foreign_read::{
 use medulla_catalog_types::open_metadata::{EXTERNAL_GUID_PROPERTY, EXTERNAL_VERSION_PROPERTY};
 use medulla_graph_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_source_types::source_sync::SyncReport;
-use medulla_virtual_graph::source_sync::sync_plan_digest;
+use medulla_source_types::source_sync::{SyncConflictReason, SyncReport};
+use medulla_virtual_graph::source_sync::{sync_plan_digest, SYNCED_FROM_PROPERTY};
 
 use super::{
     approve_source, bind, build_pack, head_of, imported, ok, tool, Content, Served, ADMIN, TENANT,
@@ -79,6 +79,81 @@ fn terms() -> Vec<Value> {
             "relationships": [],
         }),
     ]
+}
+
+// spec: MEDULLA-TYPED-PACKS-R110.7
+#[tokio::test]
+async fn nodes_keep_guid_version_and_source() {
+    let h = Harness::new().await;
+    let records = terms();
+
+    let first = h.sync(&records).await;
+    assert_eq!((first.unchanged, first.applied, first.proposed), (0, 2, 0));
+    assert_eq!(
+        first.by_type,
+        BTreeMap::from([("GlossaryTerm".to_string(), 2)])
+    );
+
+    // Every term node holds the GUID, the version and the connection it came from.
+    let nodes = h.nodes().await;
+    for (guid, version) in [("term-1", 3), ("term-2", 1)] {
+        let term = nodes.get(guid).expect("the term node");
+        assert_eq!(term[EXTERNAL_GUID_PROPERTY], guid);
+        assert_eq!(term[EXTERNAL_VERSION_PROPERTY], version);
+        assert_eq!(term[SYNCED_FROM_PROPERTY], CONNECTION);
+    }
+
+    // The stamp never enters a graph digest: a second sync of the same records is unchanged.
+    let again = h.sync(&records).await;
+    assert_eq!((again.unchanged, again.applied, again.proposed), (2, 0, 0));
+}
+
+// spec: MEDULLA-TYPED-PACKS-R110.8
+#[tokio::test]
+async fn concurrent_term_edit_is_a_conflict_and_catalog_wins() {
+    let h = Harness::new().await;
+    let records = terms();
+    let first = h.sync(&records).await;
+    assert_eq!(first.applied, 2);
+
+    // A catalog edit of term-1 through the served batch.
+    let operations = vec![json!({
+        "op": "upsert_node",
+        "id": "term-1",
+        "properties": {"displayName": "Client"},
+    })];
+    let edited = h
+        .served
+        .call_on(
+            GRAPH,
+            &unique("edit"),
+            Method::BatchUpdate {
+                operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap(),
+            },
+        )
+        .await;
+    assert!(edited.refusal_text().is_none(), "{:?}", edited.refusal_text());
+
+    // The source keeps term-1's properties and raises its version from 3 to 4.
+    let mut raised = records.clone();
+    raised[0]["version"] = json!(4);
+    let report = h.sync(&raised).await;
+
+    assert_eq!(report.conflicts.len(), 1, "{:?}", report.conflicts);
+    let conflict = &report.conflicts[0];
+    assert_eq!(conflict.record_key, "term-1");
+    assert_eq!(conflict.reason, SyncConflictReason::SourceVersionAhead);
+    assert_eq!(conflict.rule, "system_of_record_wins");
+    assert_eq!(report.proposed, 1);
+    assert_eq!(report.outbound.len(), 1);
+    assert_eq!(report.outbound[0].record_key, "term-1");
+
+    // The catalog value stays on the node and the stored version is still the old one,
+    // so the outbound write (expected version 3) is refused by the store until the next
+    // inbound sync.
+    let nodes = h.nodes().await;
+    assert_eq!(nodes["term-1"]["displayName"], "Client");
+    assert_eq!(nodes["term-1"][EXTERNAL_VERSION_PROPERTY], 3);
 }
 
 fn unique(label: &str) -> String {

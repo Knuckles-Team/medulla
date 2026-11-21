@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 
 use super::{
     reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule, SyncAction,
-    RecordScreen, SyncAdapter, SyncMutation, SyncOutcome, SYNC_STATE_CLASS,
+    RecordScreen, SyncAdapter, SyncMutation, SyncOutcome, SYNCED_FROM_PROPERTY, SYNC_STATE_CLASS,
 };
 
 /// Every visible graph node: id to its decoded property map.
@@ -101,7 +101,18 @@ pub fn plan_sync(
         }
         source.insert(key.clone(), (*record, adapter.record_digest(record)));
     }
-    let graph = adapter.graph_records(nodes);
+    // The `syncedFrom` stamp is evidence, not record content: it is removed from every
+    // node before the adapter builds the graph side, so a re-sync digests the same
+    // record (MEDULLA-TYPED-PACKS-R110.7).
+    let unstamped: GraphNodes = nodes
+        .iter()
+        .map(|(id, props)| {
+            let mut props = props.clone();
+            props.remove(SYNCED_FROM_PROPERTY);
+            (id.clone(), props)
+        })
+        .collect();
+    let graph = adapter.graph_records(&unstamped);
     let graph_digests: BTreeMap<&String, String> = graph
         .iter()
         .map(|(key, record)| (key, adapter.record_digest(record)))
@@ -134,7 +145,13 @@ pub fn plan_sync(
             SyncAction::ApplyInbound => {
                 report.applied += 1;
                 if let Some((record, _)) = source.get(key) {
-                    inbound.extend(adapter.inbound_mutations(key, record));
+                    for mut mutation in adapter.inbound_mutations(key, record) {
+                        mutation.properties.insert(
+                            SYNCED_FROM_PROPERTY.to_string(),
+                            Value::String(connection.to_string()),
+                        );
+                        inbound.push(mutation);
+                    }
                 }
             }
             SyncAction::ProposeOutbound | SyncAction::Conflict { .. } => {}
