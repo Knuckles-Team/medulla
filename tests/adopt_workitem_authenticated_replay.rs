@@ -1182,7 +1182,7 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
     .await;
     assert_eq!(
         refused_read.error.as_deref(),
-        Some("CONFLICT"),
+        Some("CHECKPOINT_FENCE_STALE"),
         "{refused_read:?}"
     );
     let before_replay = concrete.read_mutation_graph_version(GRAPH).await.unwrap();
@@ -1224,6 +1224,108 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
     );
     drop(reopened);
     reopened_backend.shutdown();
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R028.1.2.3
+#[tokio::test]
+async fn stale_holder_cannot_read_the_checkpoint_head() {
+    use medulla_work_types::{
+        run_checkpoint::CheckpointClaim, run_checkpoint::CheckpointContent,
+        run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest,
+        run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead,
+    };
+    use sha2::{Digest, Sha256};
+    let dir = temp_dir("medulla-checkpoint-stale-holder");
+    let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());
+    let state = run_state_with(concrete.clone(), dir.clone()).await;
+    let mut submission = run_submit_method();
+    if let Method::SubmitWorkItem { request } = &mut submission {
+        request.conversation = Some(Box::new(
+            medulla_work_types::native_control::ConversationTurnAdmission {
+                schema_version: NativeControlSchemaVersion::V1,
+                context_id: "fence-context".into(),
+                expected_revision: 0,
+                predecessor_run_id: None,
+            },
+        ));
+    }
+    let admitted: SubmitWorkItemResult = decode_raw(
+        &test_support::dispatch(&state, signed_run_request(951, submission, "admit-fence")).await,
+        "admit fence run",
+    );
+    let claimed = claim_admitted_run(&state, &admitted, 952, "claim-fence", "claim fence run").await;
+    let content = r#"{"phase":"step_inflight","next_step":0,"messages":[]}"#.to_string();
+    let request = PublishRunCheckpointRequest {
+        tenant: TENANT.into(),
+        work_item_id: admitted.work_item_id.clone(),
+        run_id: "run-owner-admission".into(),
+        context_id: "fence-context".into(),
+        worker_id: WORKER.into(),
+        lease_epoch: claimed.lease_epoch.unwrap(),
+        fencing_token: claimed.fencing_token.unwrap(),
+        expected_revision: None,
+        idempotency_key: "fence-body-key".into(),
+        snapshot: CheckpointContent {
+            payload_digest: hex::encode(Sha256::digest(content.as_bytes())),
+            content,
+            short_term: vec![],
+            long_term: vec![],
+        },
+    };
+    let _: RunCheckpointPublished = decode_raw(
+        &test_support::dispatch(
+            &state,
+            signed_run_request(
+                953,
+                Method::PublishRunCheckpoint {
+                    request: request.clone(),
+                },
+                "fence-write",
+            ),
+        )
+        .await,
+        "publish fence checkpoint",
+    );
+    let read_as = |id: u64, key: &str, fencing_token: u64| {
+        signed_run_request(
+            id,
+            Method::GetRunCheckpoint {
+                request: GetRunCheckpointRequest {
+                    tenant: TENANT.into(),
+                    work_item_id: admitted.work_item_id.clone(),
+                    run_id: request.run_id.clone(),
+                    context_id: request.context_id.clone(),
+                    current_claim: Some(CheckpointClaim {
+                        worker_id: request.worker_id.clone(),
+                        lease_epoch: request.lease_epoch,
+                        fencing_token,
+                    }),
+                },
+            },
+            key,
+        )
+    };
+    let current: Option<RunCheckpointRead> = decode_raw(
+        &test_support::dispatch(&state, read_as(954, "fence-read-live", request.fencing_token))
+            .await,
+        "live holder read",
+    );
+    assert_eq!(current.expect("live holder reads").snapshot.revision, 1);
+    let stale = test_support::dispatch(
+        &state,
+        read_as(955, "fence-read-stale", request.fencing_token + 1),
+    )
+    .await;
+    assert_eq!(
+        stale.error.as_deref(),
+        Some("CHECKPOINT_FENCE_STALE"),
+        "{stale:?}"
+    );
+    assert!(
+        stale.result.is_none(),
+        "a stale holder receives no head or payload: {stale:?}"
+    );
     let _ = std::fs::remove_dir_all(dir);
 }
 

@@ -2,6 +2,9 @@ use super::super::test_shard::run_fixture::{admission, seed_claim, with_rows};
 use super::super::test_shard::{open, with_nodes, with_write, GRAPH};
 use super::*;
 
+const STALE_FENCE: &str =
+    "CHECKPOINT_FENCE_STALE: checkpoint read requires the live lease epoch and fencing token";
+
 fn request(expected_revision: Option<u64>) -> PublishRunCheckpointRequest {
     let content = serde_json::json!({"phase":"completed","next_step":expected_revision.unwrap_or(0),"history":["private prompt"],"usage":{}}).to_string();
     PublishRunCheckpointRequest {
@@ -160,7 +163,7 @@ fn completed_history_survives_claim_expiry_but_resume_requires_live_fence() {
     apply(shard, "first", &request(None), "owner", 2000).unwrap();
     assert_eq!(
         get(shard, "owner", true, 10000).unwrap_err(),
-        "CONFLICT: checkpoint live claim conflict"
+        STALE_FENCE
     );
     assert!(get(shard, "owner", false, 10000).unwrap().is_some());
     with_nodes(shard, "terminal", |nodes| {
@@ -173,7 +176,7 @@ fn completed_history_survives_claim_expiry_but_resume_requires_live_fence() {
     });
     assert_eq!(
         get(shard, "owner", true, 2000).unwrap_err(),
-        "CONFLICT: checkpoint live claim conflict"
+        STALE_FENCE
     );
     assert!(get(shard, "owner", false, 2000).unwrap().is_some());
     assert_eq!(count(shard), 1);

@@ -353,7 +353,10 @@ pub fn read_current(
             claim.fencing_token,
             now_ms,
         ) {
-            return Err("CONFLICT: checkpoint live claim conflict".into());
+            return Err(format!(
+                "{}: checkpoint read requires the live lease epoch and fencing token",
+                medulla_types::contract::ServerErrorCode::CheckpointFenceStale
+            ));
         }
     }
     let Some((reference, revision, digest)) = head(&row)? else {

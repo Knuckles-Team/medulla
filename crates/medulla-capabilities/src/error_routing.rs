@@ -1084,7 +1084,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),
-    ("GetRunCheckpoint", &["CONFLICT"]),
+    // MEDULLA-DURABLE-KERNEL-R028.1.2.3: a stale holder gets the fence refusal, never the head.
+    ("GetRunCheckpoint", &["CHECKPOINT_FENCE_STALE", "CONFLICT"]),
     // MEDULLA-DURABLE-KERNEL-R820.4 uncertain-effect refusals.
     (
         "MarkWorkItemEffectStarted",
