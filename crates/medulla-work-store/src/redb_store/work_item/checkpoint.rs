@@ -7,8 +7,8 @@ use medulla_work_types::{
     run_checkpoint::RunCheckpointSnapshot,
 };
 use medulla_work_types::{
-    work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_REF,
-    work_item_read::WORK_ITEM_CHECKPOINT_REVISION,
+    work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_HISTORY,
+    work_item_read::WORK_ITEM_CHECKPOINT_REF, work_item_read::WORK_ITEM_CHECKPOINT_REVISION,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -16,6 +16,21 @@ use sha2::{Digest, Sha256};
 pub const RUN_CHECKPOINTS: redb::TableDefinition<(&str, &str), &[u8]> =
     redb::TableDefinition::new("work_item_run_checkpoints");
 type Row = serde_json::Map<String, serde_json::Value>;
+
+/// Most checkpoint revisions one WorkItem run retains. The 65th publish deletes the oldest
+/// revision's `RUN_CHECKPOINTS` row in its own transaction; the head is never pruned
+/// (MEDULLA-DURABLE-KERNEL-R028.1.2.1).
+const SHORT_TERM_MAX_REVISIONS: usize = 64;
+
+/// The retained revision references of a run, oldest first. A row written before the
+/// history existed holds none, so its head is the one retained revision.
+fn history(row: &Row, head_reference: Option<&str>) -> Result<Vec<String>, String> {
+    match row.get(WORK_ITEM_CHECKPOINT_HISTORY) {
+        Some(value) => serde_json::from_value(value.clone())
+            .map_err(|_| "checkpoint history is malformed".to_string()),
+        None => Ok(head_reference.map(str::to_owned).into_iter().collect()),
+    }
+}
 
 fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_id: &str) -> bool {
     let Some(value) = row.get(run_owner::ADMISSION_REQUEST) else {
@@ -247,6 +262,7 @@ pub fn publish(
     if previous.as_ref().map(|(_, revision, _)| *revision) != request.expected_revision {
         return Err("CONFLICT: checkpoint expected revision conflict".into());
     }
+    let previous_reference = previous.as_ref().map(|(reference, _, _)| reference.clone());
     if let Some((reference, revision, digest)) = previous {
         let bytes = tables
             .run_checkpoints
@@ -318,6 +334,24 @@ pub fn publish(
     tables
         .run_checkpoints
         .insert((graph, reference.as_str()), crypto.seal(&bytes).as_ref())?;
+    // The prune shares this transaction, so a refused publish deletes nothing.
+    let mut retained = history(&row, previous_reference.as_deref())?;
+    retained.push(reference.clone());
+    while retained.len() > SHORT_TERM_MAX_REVISIONS {
+        let oldest = retained.remove(0);
+        if tables
+            .run_checkpoints
+            .get((graph, oldest.as_str()))?
+            .is_none()
+        {
+            return Err("checkpoint snapshot is missing".into());
+        }
+        tables.run_checkpoints.remove((graph, oldest.as_str()))?;
+    }
+    row.insert(
+        WORK_ITEM_CHECKPOINT_HISTORY.into(),
+        serde_json::to_value(&retained).map_err(|e| e.to_string())?,
+    );
     row.insert(WORK_ITEM_CHECKPOINT_REF.into(), reference.into());
     row.insert(WORK_ITEM_CHECKPOINT_REVISION.into(), revision.into());
     row.insert(WORK_ITEM_CHECKPOINT_DIGEST.into(), digest.clone().into());

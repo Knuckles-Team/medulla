@@ -154,6 +154,60 @@ fn checkpoint_cas_is_atomic_private_and_owner_bound() {
         2
     );
 }
+// spec: MEDULLA-DURABLE-KERNEL-R028.1.2.1
+#[test]
+fn sixty_fifth_revision_prunes_the_oldest_and_keeps_the_head() {
+    let tmp = open("checkpoint-prune");
+    let shard = &tmp.shard;
+    seed(shard);
+    let mut expected = None;
+    for revision in 1..=(SHORT_TERM_MAX_REVISIONS as u64 + 1) {
+        let published = apply(
+            shard,
+            &format!("prune-{revision}"),
+            &request(expected),
+            "owner",
+            2000,
+        )
+        .unwrap();
+        assert_eq!(published.revision, revision);
+        expected = Some(revision);
+        let retained = count(shard);
+        assert_eq!(retained as u64, revision.min(SHORT_TERM_MAX_REVISIONS as u64));
+    }
+    // 65 revisions published: revision 1 is gone, the head reads back.
+    assert_eq!(count(shard), SHORT_TERM_MAX_REVISIONS);
+    let head = get(shard, "owner", true, 2000).unwrap().unwrap();
+    assert_eq!(head.snapshot.revision, SHORT_TERM_MAX_REVISIONS as u64 + 1);
+    let (_, row) = super::super::read::snapshot_row(
+        shard,
+        GRAPH,
+        &request(None).work_item_id,
+        DurableCrypto::none(),
+    )
+    .unwrap();
+    let row = row.expect("the WorkItem row");
+    let retained: Vec<String> =
+        serde_json::from_value(row.get(WORK_ITEM_CHECKPOINT_HISTORY).unwrap().clone()).unwrap();
+    assert_eq!(retained.len(), SHORT_TERM_MAX_REVISIONS);
+    assert_eq!(
+        retained.last().map(String::as_str),
+        row.get(WORK_ITEM_CHECKPOINT_REF).and_then(|value| value.as_str()),
+        "the head is the last retained reference"
+    );
+    // Completion deletes no revision.
+    with_nodes(shard, "terminal-prune", |nodes| {
+        let id = request(None).work_item_id;
+        let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
+        let mut row: Row = decode_durable(bytes.value())?;
+        drop(bytes);
+        row.insert("status".into(), "succeeded".into());
+        write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+    });
+    assert_eq!(count(shard), SHORT_TERM_MAX_REVISIONS);
+    assert!(get(shard, "owner", false, 2000).unwrap().is_some());
+}
+
 // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
 #[test]
 fn completed_history_survives_claim_expiry_but_resume_requires_live_fence() {

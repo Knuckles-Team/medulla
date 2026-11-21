@@ -53,15 +53,19 @@ pub const RUN_ADMISSION_REQUEST: &str = "run_admission_request";
 pub const WORK_ITEM_CHECKPOINT_REF: &str = "run_checkpoint_ref";
 pub const WORK_ITEM_CHECKPOINT_REVISION: &str = "run_checkpoint_revision";
 pub const WORK_ITEM_CHECKPOINT_DIGEST: &str = "run_checkpoint_digest";
+/// The references of the retained checkpoint revisions, oldest first; the head is the last
+/// entry (MEDULLA-DURABLE-KERNEL-R028.1.2.1).
+pub const WORK_ITEM_CHECKPOINT_HISTORY: &str = "run_checkpoint_history";
 /// The WorkItem-row property that records where the item's external effect
 /// stands (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const WORK_ITEM_EFFECT_PHASE: &str = "effect_phase";
-pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 17] = [
+pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 18] = [
     crate::native_control::WORK_ITEM_LIFECYCLE_REVISION,
     RUN_ADMISSION_REQUEST,
     WORK_ITEM_CHECKPOINT_REF,
     WORK_ITEM_CHECKPOINT_REVISION,
     WORK_ITEM_CHECKPOINT_DIGEST,
+    WORK_ITEM_CHECKPOINT_HISTORY,
     crate::run_completion::RUN_COMPLETION_BATCH,
     crate::run_completion::RUN_COMPLETION_DIGEST,
     "run_owner_binding",
