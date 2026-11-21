@@ -224,7 +224,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T213 [US3] MEDULLA-DECISION-ENGINE-R131.6 Hot-path proof for the limit guard
 - [ ] T214 [US3] MEDULLA-DECISION-ENGINE-R132.1 Model
 - [ ] T215 [US3] MEDULLA-DECISION-ENGINE-R132.2 Behavior
-- [ ] T216 [US3] MEDULLA-DECISION-ENGINE-R132.3 Entry admission wired into Decide
+- [ ] T216 [US3] MEDULLA-DECISION-ENGINE-R132.3 Entry admission wired into Decide: entry_stage::apply, RetrievedEntry premises and provenance
 - [ ] T217 [US3] MEDULLA-DECISION-ENGINE-R132.4 Poisoned-entry abstention
 - [ ] T218 [US3] MEDULLA-DECISION-ENGINE-R132.5 Refused entries and tiers in the sealed record
 - [ ] T219 [US3] MEDULLA-DECISION-ENGINE-R132.6 Hot-path proof for entry trust
@@ -476,10 +476,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T463 [US7] MEDULLA-DECISION-ENGINE-R159.6 Hot-path proof
 - [ ] T464 [US7] MEDULLA-DECISION-ENGINE-R160.1 Package validation model
 - [ ] T465 [US7] MEDULLA-DECISION-ENGINE-R160.2 Package validation behaviour: pure validate_rendered_package returning RenderedPackageValidation, Fixed package knobs, five ordered steps
-- [ ] T466 [US7] MEDULLA-DECISION-ENGINE-R160.3 Serve PublishSkillPackage
+- [ ] T466 [US7] MEDULLA-DECISION-ENGINE-R160.3 Serve PublishSkillPackage: LearningWrite::PackageRun writer, package_run/ and package_publication/ keys, handler, catalog read gate
 - [ ] T467 [US7] MEDULLA-DECISION-ENGINE-R160.4 Package publication refusals: PublicationRefusal with four codes, REFUSALS and the EXACT_METHOD_ERRORS entry
-- [ ] T468 [US7] MEDULLA-DECISION-ENGINE-R160.5 Package validation evidence
-- [ ] T469 [US7] MEDULLA-DECISION-ENGINE-R160.6 Package publication hot-path proof
+- [ ] T468 [US7] MEDULLA-DECISION-ENGINE-R160.5 Package validation evidence: the stored receipt's bound fields and the recomputable run-history digest
+- [ ] T469 [US7] MEDULLA-DECISION-ENGINE-R160.6 Package publication hot-path proof: runs recorded through DecisionLog package_run, then PublishSkillPackage
 - [ ] T470 [US7] MEDULLA-DECISION-ENGINE-R161.1 Correction binding model
 - [ ] T471 [US7] MEDULLA-DECISION-ENGINE-R161.2 Receipt pattern check
 - [ ] T472 [US7] MEDULLA-DECISION-ENGINE-R161.3 Wire correction admission into Decide
@@ -701,7 +701,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T686 [US8] MEDULLA-DECISION-ENGINE-R650.2.1 Persist descriptors and derive reliability
 - [ ] T687 [US8] MEDULLA-DECISION-ENGINE-R650.2.2 Generate the power descriptor
 - [ ] T688 [US8] MEDULLA-DECISION-ENGINE-R650.2.3 Project the request-scoped closure
-- [ ] T689 [US8] MEDULLA-DECISION-ENGINE-R650.3 Descriptor wiring into designation and assembly
+- [ ] T689 [US8] MEDULLA-DECISION-ENGINE-R650.3 Descriptor wiring into designation: one shared codec, pack-graph read, DesignatedCapability.descriptors
 - [ ] T690 [US8] MEDULLA-DECISION-ENGINE-R650.4 Descriptor refusals
 - [ ] T691 [US8] MEDULLA-DECISION-ENGINE-R650.5 Descriptor evidence
 - [ ] T692 [US8] MEDULLA-DECISION-ENGINE-R650.6 Descriptor designation hot path
@@ -897,7 +897,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T880 [US8] MEDULLA-DECISION-ENGINE-R814.1.1 Vocabulary
 - [ ] T881 [US8] MEDULLA-DECISION-ENGINE-R814.1.2 Typed record
 - [ ] T882 [US8] MEDULLA-DECISION-ENGINE-R814.2 System-prompt selection per slot
-- [ ] T883 [US8] MEDULLA-DECISION-ENGINE-R814.3 Read candidates through the Agent Library scope
+- [ ] T883 [US8] MEDULLA-DECISION-ENGINE-R814.3 System-role pack prompts become SystemPrompt components; narrow_system_prompts narrows the one slot
 - [ ] T884 [US8] MEDULLA-DECISION-ENGINE-R814.4 Prompt candidate refusals
 - [ ] T885 [US8] MEDULLA-DECISION-ENGINE-R814.5 Prompt selection evidence
 - [ ] T886 [US8] MEDULLA-DECISION-ENGINE-R814.6 Prompt selection served journey
@@ -916,7 +916,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T899 [US6] MEDULLA-DECISION-ENGINE-R825 Model capacity question
 - [ ] T900 [US6] MEDULLA-DECISION-ENGINE-R826 Ingest shortfall allocation family
 - [ ] T901 [US6] MEDULLA-DECISION-ENGINE-R827 Revert or fix-forward family
-- [ ] T902 [US6] MEDULLA-DECISION-ENGINE-R828 Branch merge conflict winner family (ResolveConflict)
+- [ ] T902 [US6] MEDULLA-DECISION-ENGINE-R828 ResolveConflict family and the ConflictDecider seam that BRANCH-MERGE-R005 calls
 - [ ] T903 [US7] MEDULLA-DECISION-ENGINE-R134.111.14 Branch, join, decision and approval-wait step model
 - [ ] T904 [US7] MEDULLA-DECISION-ENGINE-R134.111.15 Static checks for control steps
 - [ ] T905 [US7] MEDULLA-DECISION-ENGINE-R134.111.16 Control step refusal
@@ -967,3 +967,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T955 [US7] MEDULLA-DECISION-ENGINE-R135.17.2 Demotion at lookup, its refusal and its evidence
 - [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine
+- [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R173.8 The mutation compiler refuses every caller write of editStatus; HarnessEdit gains Create
