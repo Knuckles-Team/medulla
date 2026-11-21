@@ -18555,6 +18555,10 @@ class MedullaClient:
     async def health(self) -> dict[str, Any]:
         return (await _gen.cluster.send_health(self)).payload
 
+    async def engine_capabilities(self) -> dict[str, Any]:
+        """The capability report of this build (MEDULLA-ENGINE-PARITY-R020.2)."""
+        return (await _gen.cluster.send_engine_capabilities(self)).payload
+
     async def record_release(self, release: dict[str, Any]) -> dict[str, Any]:
         """Record one published release (MEDULLA-SDLC-R002.3).
 

@@ -25,6 +25,21 @@ pub async fn dispatch_service_control_methods(
             ),
         ),
 
+        // MEDULLA-ENGINE-PARITY-R020.2: the capability report of this build.
+        Method::EngineCapabilities => Response::ok(
+            req.id,
+            ResultPayload::of::<medulla_protocol_types::result_contract::cluster::EngineCapabilities>(
+                medulla_catalog_types::engine_capabilities::EngineCapabilities::for_build(
+                    cfg!(feature = "pgwire"),
+                    cfg!(feature = "raft"),
+                    Some(
+                        medulla_mutation_types::pg_operational_surface::PgCompatibilityMatrix::with_served_forms()
+                            .digest(),
+                    ),
+                ),
+            ),
+        ),
+
         Method::Health => dispatch_boxed(health_response(state, req.id)).await,
 
         // L36: cooperative cancellation of an in-flight request by its `req_id` (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect).

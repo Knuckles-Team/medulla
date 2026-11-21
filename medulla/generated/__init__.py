@@ -251,6 +251,7 @@ SEND_BY_METHOD = {
     "EdgeSearch": query.send_edge_search,
     "EncodeDocument": query.send_encode_document,
     "EncodedDocumentSearch": query.send_encoded_document_search,
+    "EngineCapabilities": cluster.send_engine_capabilities,
     "EnrichDocument": ingestion.send_enrich_document,
     "EpistemicStatus": query.send_epistemic_status,
     "EvictBelow": graph.send_evict_below,

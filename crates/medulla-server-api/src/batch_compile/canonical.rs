@@ -485,6 +485,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceBayesianKelly { .. }
         | Method::AgentGraph { .. }
         | Method::Ping
+        | Method::EngineCapabilities
         | Method::PageRank { .. }
         | Method::SummaryChildren { .. }
         | Method::FinanceAlphaCombinationEngine { .. }

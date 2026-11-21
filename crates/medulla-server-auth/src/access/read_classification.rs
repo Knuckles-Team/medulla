@@ -534,6 +534,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("SourceIngestStatus", REASON_SOURCE_INGESTION_MARKER),
     // REASON_SERVER_LIFECYCLE
     ("CancelRequest", REASON_SERVER_LIFECYCLE),
+    ("EngineCapabilities", REASON_SERVER_LIFECYCLE),
     ("Health", REASON_SERVER_LIFECYCLE),
     ("Metrics", REASON_SERVER_LIFECYCLE),
     ("Ping", REASON_SERVER_LIFECYCLE),

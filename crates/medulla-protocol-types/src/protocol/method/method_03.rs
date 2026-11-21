@@ -241,6 +241,9 @@ $($variants)*
     // ── Service-Level ────────────────────────────────────────────────
     Ping,
 
+    /// The engine capability report of this build (MEDULLA-ENGINE-PARITY-R020.2).
+    EngineCapabilities,
+
     Health,
 
     Shutdown,

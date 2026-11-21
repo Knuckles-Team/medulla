@@ -2605,3 +2605,27 @@ mod tag_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use medulla_catalog_types::engine_capabilities::{EngineCapabilities, PG_SERVER_VERSION};
+
+    // spec: MEDULLA-ENGINE-PARITY-R020.2
+    #[test]
+    fn startup_parameters_come_from_the_capability_report() {
+        let provider = super::auth::startup_parameters();
+        for (name, value) in EngineCapabilities::for_build(true, false, None).wire_parameters() {
+            let reported = match name {
+                "server_version" => provider.server_version.clone(),
+                "server_encoding" => provider.server_encoding.clone(),
+                "client_encoding" => provider.client_encoding.clone().unwrap_or_default(),
+                "integer_datetimes" => {
+                    if provider.integer_datetimes { "on" } else { "off" }.to_string()
+                }
+                other => panic!("unexpected startup parameter {other}"),
+            };
+            assert_eq!(reported, value, "{name}");
+        }
+        assert_eq!(provider.server_version, PG_SERVER_VERSION);
+    }
+}

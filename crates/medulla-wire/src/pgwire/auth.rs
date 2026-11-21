@@ -231,9 +231,7 @@ impl EngineStartupHandler {
                         .expect("pgwire TLS certificate was validated before listener startup");
                 }
                 let generator: Arc<dyn PidSecretKeyGenerator> = pid_secret_key_generator();
-                let handler = SASLAuthStartupHandler::new(Arc::new(
-                    DefaultServerParameterProvider::default(),
-                ))
+                let handler = SASLAuthStartupHandler::new(Arc::new(startup_parameters()))
                 .with_scram(scram)
                 .with_pid_secret_key_generator(generator)
                 .with_connection_manager(connections.clone());
@@ -259,6 +257,28 @@ impl EngineStartupHandler {
     }
 }
 
+/// The startup parameters every login reports (MEDULLA-ENGINE-PARITY-R020.2). The four the
+/// capability report names (`server_version`, `server_encoding`, `client_encoding`,
+/// `integer_datetimes`) come from `EngineCapabilities::for_build(true, false, None)
+/// .wire_parameters()`, so `server_version` has one source; the rest keep the protocol
+/// library's defaults.
+pub(super) fn startup_parameters() -> DefaultServerParameterProvider {
+    let report = medulla_catalog_types::engine_capabilities::EngineCapabilities::for_build(
+        true, false, None,
+    );
+    let mut provider = DefaultServerParameterProvider::default();
+    for (name, value) in report.wire_parameters() {
+        match name {
+            "server_version" => provider.server_version = value,
+            "server_encoding" => provider.server_encoding = value,
+            "client_encoding" => provider.client_encoding = Some(value),
+            "integer_datetimes" => provider.integer_datetimes = value == "on",
+            _ => {}
+        }
+    }
+    provider
+}
+
 async fn complete_login<C>(client: &mut C, connections: &Arc<ConnectionManager>) -> PgWireResult<()>
 where
     C: ClientInfo + futures::Sink<PgWireBackendMessage> + Unpin + Send + Sync,
@@ -275,7 +295,7 @@ where
         .session_extensions()
         .insert::<Arc<ConnectionHandle>>(handle);
     client.session_extensions().insert::<ConnectionGuard>(guard);
-    finish_authentication(client, &DefaultServerParameterProvider::default()).await
+    finish_authentication(client, &startup_parameters()).await
 }
 
 /// Validate the exact certificate bytes used by native TLS before a listener is

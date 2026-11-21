@@ -48,6 +48,18 @@ pub enum SqlFormKind {
     Type,
 }
 
+impl SqlFormKind {
+    /// The snake_case word of this kind, the form a digest and the wire both carry.
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Statement => "statement",
+            Self::Function => "function",
+            Self::Operator => "operator",
+            Self::Type => "type",
+        }
+    }
+}
+
 /// How far the engine serves one SQL form.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -55,6 +67,17 @@ pub enum SqlFormState {
     Supported,
     Partial,
     Refused,
+}
+
+impl SqlFormState {
+    /// The snake_case word of this state, the form a digest and the wire both carry.
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Supported => "supported",
+            Self::Partial => "partial",
+            Self::Refused => "refused",
+        }
+    }
 }
 
 /// One row of the SQL dialect compatibility matrix
@@ -211,6 +234,24 @@ impl PgCompatibilityMatrix {
             m.declare_supported(*surface);
         }
         m
+    }
+
+    /// The digest of the form table (MEDULLA-ENGINE-PARITY-R020.2): the hex of
+    /// `Digest256::framed(b"eg/pg-compat-matrix/v1", parts)`, with `parts` the entries
+    /// sorted by name, each contributing its name, kind word and state word in that order.
+    /// Two matrices that serve the same forms in the same states have the same digest.
+    pub fn digest(&self) -> String {
+        let mut entries: Vec<&SqlFormEntry> = self.forms.iter().collect();
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        let mut parts: Vec<&[u8]> = Vec::with_capacity(entries.len() * 3);
+        for entry in &entries {
+            parts.push(entry.name.as_bytes());
+            parts.push(entry.kind.word().as_bytes());
+            parts.push(entry.state.word().as_bytes());
+        }
+        medulla_types::contract::Digest256::framed(b"eg/pg-compat-matrix/v1", &parts)
+            .expect("a framed digest over the bounded form table")
+            .to_hex()
     }
 
     /// State of a named form; `None` when the matrix has no entry. Callers

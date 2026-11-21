@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A wire-protocol feature the front end serves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum WireFeature {
     Startup,
@@ -21,6 +22,7 @@ pub enum WireFeature {
 
 /// An index kind user tables may declare.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum IndexKind {
     Secondary,
@@ -31,6 +33,7 @@ pub enum IndexKind {
 
 /// A constraint kind enforced at commit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ConstraintKind {
     Unique,
@@ -42,6 +45,7 @@ pub enum ConstraintKind {
 
 /// The engine capability report.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct EngineCapabilities {
     pub server_version: String,
@@ -53,7 +57,57 @@ pub struct EngineCapabilities {
     pub pitr: bool,
 }
 
+/// The server version the wire front end reports (MEDULLA-ENGINE-PARITY-R020.2): the one
+/// source of `server_version` for the capability report and the startup parameters.
+pub const PG_SERVER_VERSION: &str = "16.0";
+
 impl EngineCapabilities {
+    /// The report of one build. `pgwire` says the build serves the wire front end (all eight
+    /// [`WireFeature`]s, else none), `replication` that it serves replication, and
+    /// `compat_matrix_digest` is `PgCompatibilityMatrix::digest` of its form table. `pitr`
+    /// stays `false` until MEDULLA-ENGINE-PARITY-R016.2 serves restore to a target.
+    pub fn for_build(
+        pgwire: bool,
+        replication: bool,
+        compat_matrix_digest: Option<String>,
+    ) -> Self {
+        let wire_features = if pgwire {
+            vec![
+                WireFeature::Startup,
+                WireFeature::SimpleQuery,
+                WireFeature::ExtendedQuery,
+                WireFeature::PreparedStatements,
+                WireFeature::CopyIn,
+                WireFeature::CopyOut,
+                WireFeature::Cancellation,
+                WireFeature::Tls,
+            ]
+        } else {
+            Vec::new()
+        };
+        Self {
+            server_version: PG_SERVER_VERSION.to_string(),
+            wire_features,
+            index_kinds: vec![
+                IndexKind::Secondary,
+                IndexKind::Partial,
+                IndexKind::Expression,
+                IndexKind::Unique,
+            ],
+            constraint_kinds: vec![
+                ConstraintKind::Unique,
+                ConstraintKind::ForeignKey,
+                ConstraintKind::Check,
+                ConstraintKind::NotNull,
+                ConstraintKind::Shacl,
+            ],
+            compat_matrix_digest,
+            replication,
+            pitr: false,
+        }
+        .canonical()
+    }
+
     /// Sort and deduplicate every list so two reports of one build compare
     /// equal and serialize to the same bytes.
     pub fn canonical(mut self) -> Self {

@@ -33294,6 +33294,44 @@ class FallbackPolicy(str, Enum):
     STRICT = "strict"
 
 
+class WireFeature(str, Enum):
+    STARTUP = "startup"
+    SIMPLE_QUERY = "simple_query"
+    EXTENDED_QUERY = "extended_query"
+    PREPARED_STATEMENTS = "prepared_statements"
+    COPY_IN = "copy_in"
+    COPY_OUT = "copy_out"
+    CANCELLATION = "cancellation"
+    TLS = "tls"
+
+
+class IndexKind(str, Enum):
+    SECONDARY = "secondary"
+    PARTIAL = "partial"
+    EXPRESSION = "expression"
+    UNIQUE = "unique"
+
+
+class ConstraintKind(str, Enum):
+    UNIQUE = "unique"
+    FOREIGN_KEY = "foreign_key"
+    CHECK = "check"
+    NOT_NULL = "not_null"
+    SHACL = "shacl"
+
+
+class EngineCapabilities(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compat_matrix_digest: str | None = None
+    constraint_kinds: list[ConstraintKind]
+    index_kinds: list[IndexKind]
+    pitr: bool
+    replication: bool
+    server_version: str
+    wire_features: list[WireFeature]
+
+
 class FeedbackKind(str, Enum):
     UPVOTE = "upvote"
     DOWNVOTE = "downvote"
@@ -37026,6 +37064,10 @@ __all__ = [
     "HeadCalibration",
     "HeadKind",
     "HealthReport",
+    "EngineCapabilities",
+    "WireFeature",
+    "IndexKind",
+    "ConstraintKind",
     "HeldBlobRef",
     "HeavyCapability",
     "HostBudget",

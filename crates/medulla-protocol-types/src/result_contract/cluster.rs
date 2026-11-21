@@ -51,6 +51,7 @@ method_results! {
     PlacementMove(PlacementAdmin / "move") => Json<PlacementMoveResult>;
     PlacementAbortMove(PlacementAdmin / "abort_move") => Bool<bool>;
     Ping(Ping) => Text<String>;
+    EngineCapabilities(EngineCapabilities) => Raw<medulla_catalog_types::engine_capabilities::EngineCapabilities>;
     Health(Health) => Json<HealthReport>;
     Shutdown(Shutdown) => Text<String>;
     CancelRequest(CancelRequest) => Bool<bool>;

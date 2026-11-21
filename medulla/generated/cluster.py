@@ -1062,6 +1062,62 @@ async def send_ping(
     return expect_string("Ping", payload)
 
 
+class EngineCapabilitiesRequest(BaseModel):
+    """Validate one engine-contract request body.
+
+    Method:
+        EngineCapabilities
+    Request schema:
+        contract/schemas/method.request.json
+        #/methods/EngineCapabilities
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # Method::EngineCapabilities carries no request fields.
+
+
+async def send_engine_capabilities(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        EngineCapabilities
+    Authorization:
+        service:control
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.cluster.json
+        #/methods/EngineCapabilities
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    EngineCapabilitiesRequest.model_validate(params or {})
+    payload = await client._send(
+        "EngineCapabilities",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("EngineCapabilities", payload)
+
+
+def decode_engine_capabilities(result: OpaqueResult) -> _models.EngineCapabilities:
+    """Validate this method's result against its contract model."""
+    return decode_result("EngineCapabilities", models().EngineCapabilities, result)
+
+
 class HealthRequest(BaseModel):
     """Validate one engine-contract request body.
 

@@ -859,7 +859,7 @@ harness = ["medulla-server-cluster-tests/harness", "medulla-raft-xshard/harness"
 # (`WireProtocol`/`WireSession`) — is compiled by every `query` + `server` build, because
 # the native `Method::Sql` catalog path shares its authorization and replay-receipt
 # authority. It has no feature of its own; each SQL adapter names `query` + `server`.
-pgwire = ["medulla-wire/pgwire", "medulla-wire-core/pgwire", "medulla-h-txn/pgwire", "medulla-raft/pgwire",
+pgwire = ["medulla-wire/pgwire", "medulla-server-router/pgwire", "medulla-wire-core/pgwire", "medulla-h-txn/pgwire", "medulla-raft/pgwire",
     "dep:pgwire",
     "dep:futures",
     "dep:rustix",
