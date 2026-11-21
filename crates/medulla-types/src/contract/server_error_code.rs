@@ -532,6 +532,12 @@ closed_error_codes! {
         QualityRuleInvalid => "QUALITY_RULE_INVALID",
         /// A `Dictionary` or `Model` detector names a resource the scan does not hold (MEDULLA-TYPED-PACKS-R803.2).
         DetectorResourceMissing => "DETECTOR_RESOURCE_MISSING",
+        /// A detector threshold that is not finite or lies outside [0, 1] (MEDULLA-TYPED-PACKS-R803.4).
+        DetectorThresholdInvalid => "DETECTOR_THRESHOLD_INVALID",
+        /// A detector whose method differs from its rule variant (MEDULLA-TYPED-PACKS-R803.4).
+        DetectorRuleMismatch => "DETECTOR_RULE_MISMATCH",
+        /// A detector pattern that is empty, fails to compile or exceeds the size limit (MEDULLA-TYPED-PACKS-R803.4).
+        DetectorPatternInvalid => "DETECTOR_PATTERN_INVALID",
         /// A sensitive scan limit lies outside its knob range (MEDULLA-TYPED-PACKS-R803.2).
         ScanLimitsInvalid => "SCAN_LIMITS_INVALID",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
