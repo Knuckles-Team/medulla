@@ -217,6 +217,14 @@ async fn index_scoped(
                 generation.as_ref(),
                 &head,
             );
+            // MEDULLA-SCM-R006: one bucket node per unresolved name, so a changeset
+            // reads exactly the references that wait on a name it defines.
+            let (buckets, references) = medulla_compute::parser::resolve::unresolved_buckets(
+                &scope.repository_id,
+                &result.nodes,
+            );
+            result.nodes.extend(buckets);
+            result.edges.extend(references);
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?

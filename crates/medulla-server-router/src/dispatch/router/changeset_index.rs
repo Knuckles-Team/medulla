@@ -7,7 +7,6 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
 
-use medulla_compute::parser::resolve::{HAS_UNRESOLVED_CALLS, HAS_UNRESOLVED_IMPORTS};
 use medulla_graph_core::graph::GraphCore;
 use medulla_h_ingest::repository_index::changeset::{
     generation_node_id, reindex_changeset, stored_generation, ChangesetFile, StoredEdge,
@@ -123,12 +122,29 @@ impl StoredLookup for CoreLookup<'_> {
         Ok(self.symbols(ids))
     }
 
-    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
-        self.marked(HAS_UNRESOLVED_CALLS)
+    fn referents(&self, bucket: &str) -> Result<Vec<(StoredNode, String)>, String> {
+        let mut referents = Vec::new();
+        for source in self.0.get_predecessors(bucket).unwrap_or_default() {
+            let Some(node) = stored_node(self.0, &source) else {
+                continue;
+            };
+            for edge in stored_edges(self.0, &source, bucket) {
+                referents.push((node.clone(), edge.edge_type));
+            }
+        }
+        Ok(referents)
     }
 
-    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
-        self.marked(HAS_UNRESOLVED_IMPORTS)
+    fn similar_links(&self, ids: &[String]) -> Result<Vec<StoredEdge>, String> {
+        let mut links = Vec::new();
+        for id in ids {
+            links.extend(
+                edges_at(self.0, id)
+                    .into_iter()
+                    .filter(|edge| edge.edge_type == "similar_to" && &edge.source == id),
+            );
+        }
+        Ok(links)
     }
 }
 
@@ -139,15 +155,6 @@ impl CoreLookup<'_> {
             .filter_map(|id| stored_node(self.0, id))
             .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
             .collect()
-    }
-
-    /// The nodes carrying the fixed marker `key`.
-    fn marked(&self, key: &str) -> Result<Vec<StoredNode>, String> {
-        let ids = self
-            .0
-            .nodes_by_property(key, "true")
-            .ok_or("INDEX_FAILED: the property index cannot cover the unresolved markers")?;
-        Ok(ids.iter().filter_map(|id| stored_node(self.0, id)).collect())
     }
 }
 
@@ -280,6 +287,10 @@ fn operations(core: &GraphCore, methods: &[Method]) -> Result<Vec<Value>, String
                 "id": node_id,
                 "properties": decode(properties_msgpack).ok_or("re-index node properties do not decode")?,
             })),
+            Method::RemoveEdge {
+                source_id,
+                target_id,
+            } => operations.push(json!({"op": "remove_edge", "source": source_id, "target": target_id})),
             Method::AddEdge {
                 source_id,
                 target_id,

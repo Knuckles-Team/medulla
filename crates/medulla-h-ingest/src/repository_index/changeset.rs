@@ -10,8 +10,9 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use medulla_compute::parser::resolve::{
-    file_node, resolution_names, resolve, similarity_bands, unresolved_imports,
-    HAS_UNRESOLVED_CALLS, HAS_UNRESOLVED_IMPORTS, UNRESOLVED_CALLS, UNRESOLVED_IMPORTS,
+    file_node, path_names, resolution_names, resolve, similarity_bands, unresolved_bucket_id,
+    unresolved_buckets, unresolved_imports, UNRESOLVED_CALLS, UNRESOLVED_CALL_EDGE,
+    UNRESOLVED_IMPORTS, UNRESOLVED_IMPORT_EDGE,
 };
 use medulla_compute::parser::tree_sitter::{is_parseable_path, parse_file};
 use medulla_enrich::fingerprint::{classify, ChangeLevel, StructuralFingerprint};
@@ -167,10 +168,12 @@ pub trait StoredLookup {
     /// The stored `SYMBOL` nodes that share any of these signature band keys and
     /// hashes: the symbols a changed symbol can be similar to.
     fn similar_candidates(&self, bands: &[(String, String)]) -> Result<Vec<StoredNode>, String>;
-    /// The stored `SYMBOL` nodes that hold call sites bound to no definition.
-    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String>;
-    /// The stored `FILE` nodes that hold import modules bound to no file.
-    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String>;
+    /// The stored nodes that reference the bucket node `bucket` (`unresolved:<repo>:<name>`),
+    /// each with the reference edge type: `unresolved_call` from a symbol,
+    /// `unresolved_import` from a file. Empty when the bucket is not stored.
+    fn referents(&self, bucket: &str) -> Result<Vec<(StoredNode, String)>, String>;
+    /// The stored `similar_to` edges that touch any of `ids`.
+    fn similar_links(&self, ids: &[String]) -> Result<Vec<StoredEdge>, String>;
 }
 
 /// A repository graph that holds no other symbol and no other file.
@@ -189,11 +192,11 @@ impl StoredLookup for NoLookup {
         Ok(Vec::new())
     }
 
-    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
+    fn referents(&self, _bucket: &str) -> Result<Vec<(StoredNode, String)>, String> {
         Ok(Vec::new())
     }
 
-    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
+    fn similar_links(&self, _ids: &[String]) -> Result<Vec<StoredEdge>, String> {
         Ok(Vec::new())
     }
 }
@@ -248,30 +251,16 @@ fn split_list(list: &str) -> Vec<String> {
         .collect()
 }
 
-/// The receiver and callee names of encoded call sites (`receiver:callee:argc`).
-fn site_names(sites: &str) -> Vec<String> {
-    split_list(sites)
-        .iter()
-        .flat_map(|site| {
-            site.splitn(3, ':')
-                .take(2)
-                .filter(|name| !name.is_empty())
-                .map(str::to_string)
-                .collect::<Vec<_>>()
-        })
-        .collect()
-}
-
 /// `node` with the properties named by `keys` taken from `now` (or dropped when `now`
 /// lacks them), or `None` when that changes nothing.
 fn with_unresolved(
     node: &StoredNode,
-    keys: [&str; 2],
+    keys: &[&str],
     now: &std::collections::HashMap<String, String>,
 ) -> Option<ExtractedNode> {
     let before = extracted(node);
     let mut after = extracted(node);
-    for key in keys {
+    for key in keys.iter().copied() {
         match now.get(key) {
             Some(value) => {
                 after.properties.insert(key.to_string(), value.clone());
@@ -479,11 +468,17 @@ pub fn reindex_changeset(
         .chain(inputs.iter().map(|(path, _)| format!("file:{path}")))
         .collect();
     let alive = |id: &str| !removed.contains(id) || fresh_ids.contains(id);
-    // A similarity edge that touches a changed node is recomputed, not carried over.
+    // A similarity edge or an unresolved-reference edge that touches a changed node is
+    // recomputed, not carried over.
     let cross: Vec<&StoredEdge> = stored
         .edges
         .iter()
-        .filter(|edge| edge.edge_type != "similar_to")
+        .filter(|edge| {
+            !matches!(
+                edge.edge_type.as_str(),
+                "similar_to" | UNRESOLVED_CALL_EDGE | UNRESOLVED_IMPORT_EDGE
+            )
+        })
         .filter(|edge| removed.contains(&edge.source) != removed.contains(&edge.target))
         .collect();
     // Stored callers and importers: the node and what is fed to the resolver for it.
@@ -509,7 +504,11 @@ pub fn reindex_changeset(
                 // gone is fed back as that name, so it can bind again or stay unresolved.
                 if !alive(&edge.target) {
                     if let Some(name) = edge.properties.get("name") {
-                        fed.1.insert(format!(":{name}:"));
+                        // The edge keeps the call site it came from, so the feedback is
+                        // the `receiver:callee:argc` text a full index writes.
+                        let receiver = edge.properties.get("receiver").map_or("", String::as_str);
+                        let argc = edge.properties.get("argc").map_or("", String::as_str);
+                        fed.1.insert(format!("{receiver}:{name}:{argc}"));
                     }
                 }
             }
@@ -534,30 +533,30 @@ pub fn reindex_changeset(
         .filter(|node| node.node_type == "SYMBOL")
         .filter_map(|node| node.properties.get("name").cloned())
         .collect();
-    if !defined.is_empty() {
-        for node in lookup.unresolved_calls()? {
-            let names = node
-                .properties
-                .get(UNRESOLVED_CALLS)
-                .map(|sites| site_names(sites))
-                .unwrap_or_default();
-            if !removed.contains(&node.id) && names.iter().any(|name| defined.contains(name)) {
+    // Each name is one bucket node: the references that wait on it are its referents.
+    for name in &defined {
+        for (node, kind) in lookup.referents(&unresolved_bucket_id(&changeset.repo, name))? {
+            if kind == UNRESOLVED_CALL_EDGE && !removed.contains(&node.id) {
                 callers
                     .entry(node.id.clone())
                     .or_insert_with(|| (node, BTreeSet::new()));
             }
         }
     }
-    let new_paths = reparsed.iter().any(|path| {
-        let file_id = format!("file:{path}");
-        !stored
-            .nodes_by_path
-            .get(path)
-            .is_some_and(|ids| ids.contains(&file_id))
-    });
-    if new_paths {
-        for node in lookup.unresolved_imports()? {
-            if !removed.contains(&node.id) {
+    let new_names: BTreeSet<String> = reparsed
+        .iter()
+        .filter(|path| {
+            let file_id = format!("file:{path}");
+            !stored
+                .nodes_by_path
+                .get(*path)
+                .is_some_and(|ids| ids.contains(&file_id))
+        })
+        .flat_map(|path| path_names(path))
+        .collect();
+    for name in &new_names {
+        for (node, kind) in lookup.referents(&unresolved_bucket_id(&changeset.repo, name))? {
+            if kind == UNRESOLVED_IMPORT_EDGE && !removed.contains(&node.id) {
                 importers
                     .entry(node.id.clone())
                     .or_insert_with(|| (node, BTreeSet::new()));
@@ -567,18 +566,43 @@ pub fn reindex_changeset(
     for id in callers.keys().chain(importers.keys()) {
         context.remove(id);
     }
-    // The stored symbols that collide with a changed symbol's signature bands.
-    for node in results.iter().flat_map(|result| result.nodes.iter()) {
-        let Some(bands) = similarity_bands(node) else {
-            continue;
+    // The similarity family: every stored symbol reachable from a changed symbol, or
+    // from the partner of a removed one, through a shared signature band. The cap of
+    // similar edges per node is applied over the whole family, as a full index does,
+    // so a capped clone family comes out the same.
+    let mut family: BTreeMap<String, StoredNode> = BTreeMap::new();
+    let mut frontier: Vec<Vec<(String, String)>> = results
+        .iter()
+        .flat_map(|result| result.nodes.iter())
+        .filter_map(similarity_bands)
+        .collect();
+    for edge in stored.edges.iter().filter(|edge| edge.edge_type == "similar_to") {
+        let far = if removed.contains(&edge.source) {
+            &edge.target
+        } else {
+            &edge.source
         };
-        for candidate in lookup.similar_candidates(&bands)? {
-            if !removed.contains(&candidate.id)
-                && !callers.contains_key(&candidate.id)
-                && !importers.contains_key(&candidate.id)
-            {
-                context.entry(candidate.id.clone()).or_insert(candidate);
+        if removed.contains(far) {
+            continue;
+        }
+        if let Some(node) = stored.neighbours.get(far) {
+            if family.insert(far.clone(), node.clone()).is_none() {
+                frontier.extend(similarity_bands(&extracted(node)));
             }
+        }
+    }
+    while let Some(bands) = frontier.pop() {
+        for candidate in lookup.similar_candidates(&bands)? {
+            if removed.contains(&candidate.id) || family.contains_key(&candidate.id) {
+                continue;
+            }
+            frontier.extend(similarity_bands(&extracted(&candidate)));
+            family.insert(candidate.id.clone(), candidate);
+        }
+    }
+    for (id, node) in &family {
+        if !callers.contains_key(id) && !importers.contains_key(id) {
+            context.entry(id.clone()).or_insert_with(|| node.clone());
         }
     }
     let mut asked: BTreeSet<String> = BTreeSet::new();
@@ -658,26 +682,38 @@ pub fn reindex_changeset(
     });
     let mut resolved = resolve(&all_inputs, &all_results);
     let unresolved = unresolved_imports(&all_inputs, &all_results);
+    let repo = changeset.repo.as_str();
+    let bucket_ids = |node: &ExtractedNode| -> BTreeSet<String> {
+        unresolved_buckets(repo, std::slice::from_ref(node))
+            .1
+            .into_iter()
+            .map(|edge| edge.target)
+            .collect()
+    };
+    // The reference edges of a stored node that no longer waits on a name.
+    let mut stale: BTreeSet<(String, String)> = BTreeSet::new();
     // A stored caller or importer that held an unresolved reference is written again
     // with what is still unresolved.
     let mut rewritten: Vec<ExtractedNode> = Vec::new();
     for (id, (node, _)) in &callers {
         if let Some(now) = resolved.nodes.iter().find(|written| &written.node_id == id) {
-            rewritten.extend(with_unresolved(
-                node,
-                [UNRESOLVED_CALLS, HAS_UNRESOLVED_CALLS],
-                &now.properties,
-            ));
+            if let Some(after) = with_unresolved(node, &[UNRESOLVED_CALLS], &now.properties) {
+                for gone in bucket_ids(&extracted(node)).difference(&bucket_ids(&after)) {
+                    stale.insert((id.clone(), gone.clone()));
+                }
+                rewritten.push(after);
+            }
         }
     }
     for (id, (node, _)) in &importers {
         let path = id.strip_prefix("file:").unwrap_or(id);
         let now = file_node(path, unresolved.get(path));
-        rewritten.extend(with_unresolved(
-            node,
-            [UNRESOLVED_IMPORTS, HAS_UNRESOLVED_IMPORTS],
-            &now.properties,
-        ));
+        if let Some(after) = with_unresolved(node, &[UNRESOLVED_IMPORTS], &now.properties) {
+            for gone in bucket_ids(&extracted(node)).difference(&bucket_ids(&after)) {
+                stale.insert((id.clone(), gone.clone()));
+            }
+            rewritten.push(after);
+        }
     }
     // Only the changed files' nodes are new.
     resolved
@@ -696,7 +732,11 @@ pub fn reindex_changeset(
         .collect();
     // Only an edge that touches a re-indexed node is written, and the resolved edges
     // of a stored caller or importer: the edges among the stored nodes stay as they are.
+    let in_family = |id: &str| fresh_ids.contains(id) || family.contains_key(id);
     resolved.edges.retain(|edge| {
+        if edge.edge_type == "similar_to" {
+            return in_family(&edge.source) && in_family(&edge.target);
+        }
         new_ids.contains(&edge.source)
             || new_ids.contains(&edge.target)
             || (matches!(edge.edge_type.as_str(), "calls" | "depends_on")
@@ -709,6 +749,66 @@ pub fn reindex_changeset(
         .map(|node| node.node_id.clone())
         .collect();
     resolved.nodes.extend(rewritten);
+
+    // A stored similarity edge the family no longer holds is removed.
+    let kept_similar: BTreeSet<(String, String)> = resolved
+        .edges
+        .iter()
+        .filter(|edge| edge.edge_type == "similar_to")
+        .flat_map(|edge| {
+            [
+                (edge.source.clone(), edge.target.clone()),
+                (edge.target.clone(), edge.source.clone()),
+            ]
+        })
+        .collect();
+    let family_ids: Vec<String> = family.keys().cloned().collect();
+    for edge in lookup.similar_links(&family_ids)? {
+        if !removed.contains(&edge.source)
+            && !removed.contains(&edge.target)
+            && !kept_similar.contains(&(edge.source.clone(), edge.target.clone()))
+        {
+            methods.push(Method::RemoveEdge {
+                source_id: edge.source,
+                target_id: edge.target,
+            });
+        }
+    }
+
+    // The bucket of each unresolved name the written nodes hold, with a reference edge
+    // from each. A reference that no longer waits on its name leaves, and a bucket that
+    // nothing references any longer leaves with it.
+    let (bucket_nodes, bucket_edges) = unresolved_buckets(repo, &resolved.nodes);
+    let live: BTreeSet<&str> = bucket_nodes.iter().map(|node| node.node_id.as_str()).collect();
+    let mut emptied: BTreeSet<String> = stale.iter().map(|(_, bucket)| bucket.clone()).collect();
+    emptied.extend(
+        stored
+            .edges
+            .iter()
+            .filter(|edge| {
+                matches!(edge.edge_type.as_str(), UNRESOLVED_CALL_EDGE | UNRESOLVED_IMPORT_EDGE)
+                    && removed.contains(&edge.source)
+            })
+            .map(|edge| edge.target.clone()),
+    );
+    for (source, bucket) in &stale {
+        methods.push(Method::RemoveEdge {
+            source_id: source.clone(),
+            target_id: bucket.clone(),
+        });
+    }
+    for bucket in emptied.iter().filter(|bucket| !live.contains(bucket.as_str())) {
+        let referenced = lookup.referents(bucket)?.iter().any(|(node, _)| {
+            !removed.contains(&node.id) && !stale.contains(&(node.id.clone(), bucket.clone()))
+        });
+        if !referenced {
+            methods.push(Method::RemoveNode {
+                node_id: bucket.clone(),
+            });
+        }
+    }
+    resolved.nodes.extend(bucket_nodes);
+    resolved.edges.extend(bucket_edges);
 
     // A stored edge between a removed node and a node that survives is written again.
     // From a changed caller the resolver's edge is the answer and a stored edge it did
@@ -1044,12 +1144,23 @@ mod tests {
             }))
         }
 
-        fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
-            Ok(self.marked(|node| node.properties.contains_key(HAS_UNRESOLVED_CALLS)))
+        fn referents(&self, bucket: &str) -> Result<Vec<(StoredNode, String)>, String> {
+            Ok(self
+                .nodes
+                .iter()
+                .flat_map(|node| {
+                    let (_, edges) = unresolved_buckets("repo", std::slice::from_ref(&extracted(node)));
+                    edges
+                        .into_iter()
+                        .filter(|edge| edge.target == bucket)
+                        .map(|edge| (node.clone(), edge.edge_type))
+                        .collect::<Vec<_>>()
+                })
+                .collect())
         }
 
-        fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
-            Ok(self.marked(|node| node.properties.contains_key(HAS_UNRESOLVED_IMPORTS)))
+        fn similar_links(&self, _ids: &[String]) -> Result<Vec<StoredEdge>, String> {
+            Ok(Vec::new())
         }
     }
 
@@ -1278,6 +1389,12 @@ mod tests {
                         self.edges
                             .retain(|(source, target, _), _| source != node_id && target != node_id);
                     }
+                    Method::RemoveEdge {
+                        source_id,
+                        target_id,
+                    } => self
+                        .edges
+                        .retain(|(source, target, _), _| !(source == source_id && target == target_id)),
                     other => panic!("a re-index write-set holds no {other:?}"),
                 }
             }
@@ -1425,12 +1542,35 @@ mod tests {
             }))
         }
 
-        fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
-            Ok(self.marked(|properties| properties.contains_key(HAS_UNRESOLVED_CALLS)))
+        fn referents(&self, bucket: &str) -> Result<Vec<(StoredNode, String)>, String> {
+            Ok(self
+                .edges
+                .iter()
+                .filter(|((_, target, relationship), _)| {
+                    target == bucket
+                        && matches!(
+                            relationship.as_str(),
+                            UNRESOLVED_CALL_EDGE | UNRESOLVED_IMPORT_EDGE
+                        )
+                })
+                .map(|((source, _, relationship), _)| (self.node(source), relationship.clone()))
+                .collect())
         }
 
-        fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
-            Ok(self.marked(|properties| properties.contains_key(HAS_UNRESOLVED_IMPORTS)))
+        fn similar_links(&self, ids: &[String]) -> Result<Vec<StoredEdge>, String> {
+            Ok(self
+                .edges
+                .iter()
+                .filter(|((source, target, relationship), _)| {
+                    relationship == "similar_to" && (ids.contains(source) || ids.contains(target))
+                })
+                .map(|((source, target, relationship), properties)| StoredEdge {
+                    source: source.clone(),
+                    target: target.clone(),
+                    edge_type: relationship.clone(),
+                    properties: properties.clone(),
+                })
+                .collect())
         }
     }
 
@@ -1461,6 +1601,28 @@ mod tests {
         let main = "import lib\n\ndef run():\n    helper()\n    later()\n    return external()\n";
         let lib = format!("def later():\n    return 2\n\n{beta}");
         let solo = "def solo():\n    return 4\n";
+        // The last util.py no longer defines `helper`, and nothing defines it again.
+        let util_final = format!("{alpha}\ndef extra():\n    return 3\n");
+        // Thirteen clones of one function: a family past the cap of similar edges per node,
+        // landed in two changesets here and in one batch in the full index.
+        let clone = |index: usize| {
+            format!(
+                "def dup_{index}(x):\n    total = 0\n    for i in x:\n        total = total + i\n    return total\n"
+            )
+        };
+        let clone_names: Vec<String> = (0..13).map(|index| format!("dup_{index}.py")).collect();
+        let clone_files: Vec<String> = (0..13).map(clone).collect();
+        let steps = |range: std::ops::Range<usize>| -> Vec<(&str, PathOp, Option<&str>)> {
+            range
+                .map(|index| {
+                    (
+                        clone_names[index].as_str(),
+                        PathOp::Add,
+                        Some(clone_files[index].as_str()),
+                    )
+                })
+                .collect()
+        };
 
         // The tree grows one changeset at a time, each on the graph the one before left.
         let mut incremental = Graph::default();
@@ -1501,20 +1663,26 @@ mod tests {
             "k4",
             &[("solo.py", PathOp::Delete, None)],
         );
+        // helper() leaves util.py: main.py, which is unchanged, calls a name nothing defines.
+        land(
+            &mut incremental,
+            "c5",
+            Some("k4"),
+            "k5",
+            &[("util.py", PathOp::Modify, Some(util_final.as_str()))],
+        );
+        land(&mut incremental, "c6", Some("k5"), "k6", &steps(0..8));
+        land(&mut incremental, "c7", Some("k6"), "k7", &steps(8..13));
 
         // A full index of the resulting tree.
         let mut full = Graph::default();
-        land(
-            &mut full,
-            "full",
-            None,
-            "k4",
-            &[
-                ("util.py", PathOp::Add, Some(util_extended.as_str())),
-                ("main.py", PathOp::Add, Some(main)),
-                ("lib.py", PathOp::Add, Some(lib.as_str())),
-            ],
-        );
+        let mut everything: Vec<(&str, PathOp, Option<&str>)> = vec![
+            ("util.py", PathOp::Add, Some(util_final.as_str())),
+            ("main.py", PathOp::Add, Some(main)),
+            ("lib.py", PathOp::Add, Some(lib.as_str())),
+        ];
+        everything.extend(steps(0..13));
+        land(&mut full, "full", None, "k7", &everything);
 
         let (inc_nodes, inc_edges) = incremental.code();
         let (full_nodes, full_edges) = full.code();
@@ -1530,6 +1698,37 @@ mod tests {
         assert!(relationships.contains("depends_on"));
         assert!(relationships.contains("similar_to"));
         assert!(!incremental.nodes.contains_key("file:solo.py"));
+        // A call whose callee was removed and not defined again is unresolved with its
+        // argument count, exactly as a full index writes it.
+        let main_run = incremental
+            .nodes
+            .iter()
+            .find(|(_, properties)| properties.get("name").map(String::as_str) == Some("run"))
+            .map(|(_, properties)| properties.clone())
+            .unwrap();
+        assert!(
+            main_run[UNRESOLVED_CALLS].split(';').any(|site| site == ":helper:0"),
+            "{}",
+            main_run[UNRESOLVED_CALLS]
+        );
+        // Each unresolved name is one bucket node with an edge from the node that waits on it.
+        assert!(incremental.nodes.contains_key(&unresolved_bucket_id("repo", "helper")));
+        assert!(!incremental.nodes.contains_key(&unresolved_bucket_id("repo", "later")));
+        assert!(incremental
+            .edges
+            .keys()
+            .any(|(_, target, relationship)| target == &unresolved_bucket_id("repo", "external")
+                && relationship == UNRESOLVED_CALL_EDGE));
+        // No clone has more similar edges than the cap, and the capped family is the same.
+        let mut degree: BTreeMap<&String, usize> = BTreeMap::new();
+        for (source, target, relationship) in incremental.edges.keys() {
+            if relationship == "similar_to" {
+                *degree.entry(source).or_default() += 1;
+                *degree.entry(target).or_default() += 1;
+            }
+        }
+        assert!(degree.values().all(|count| *count <= 10));
+        assert!(degree.values().any(|count| *count == 10), "the family reaches the cap");
         assert_eq!(
             incremental.nodes["file:main.py"].get(UNRESOLVED_IMPORTS),
             None,

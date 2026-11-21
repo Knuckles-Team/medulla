@@ -120,11 +120,12 @@ pub const UNRESOLVED_CALLS: &str = "unresolved_calls";
 /// Property of a file node: the import modules that bound to no file, sorted and
 /// joined by `;`.
 pub const UNRESOLVED_IMPORTS: &str = "unresolved_imports";
-/// Marker of a symbol node that holds [`UNRESOLVED_CALLS`]: a fixed key and value,
-/// so the property index lists the symbols to re-resolve.
-pub const HAS_UNRESOLVED_CALLS: &str = "has_unresolved_calls";
-/// Marker of a file node that holds [`UNRESOLVED_IMPORTS`].
-pub const HAS_UNRESOLVED_IMPORTS: &str = "has_unresolved_imports";
+/// Node type of the bucket of one unresolved name: `unresolved:<repo>:<name>`.
+pub const UNRESOLVED_NAME_TYPE: &str = "UNRESOLVED_NAME";
+/// Edge from a symbol to the bucket of a receiver or callee name it could not bind.
+pub const UNRESOLVED_CALL_EDGE: &str = "unresolved_call";
+/// Edge from a file to the bucket of a segment of an import module it could not bind.
+pub const UNRESOLVED_IMPORT_EDGE: &str = "unresolved_import";
 /// Prefix of the stored similarity band keys: `minhash_band_<n>` holds the hash of
 /// band `n` of the symbol's signature, so the property index finds the stored symbols
 /// that collide with a changed one.
@@ -138,7 +139,6 @@ pub fn file_node(path: &str, unresolved: Option<&BTreeSet<String>>) -> Extracted
             UNRESOLVED_IMPORTS.to_string(),
             modules.iter().cloned().collect::<Vec<_>>().join(";"),
         );
-        properties.insert(HAS_UNRESOLVED_IMPORTS.to_string(), "true".to_string());
     }
     ExtractedNode {
         node_id: format!("file:{path}"),
@@ -205,6 +205,117 @@ fn encode_site(site: &DecodedSite) -> String {
     format!("{}:{}:{}", site.receiver, site.callee, argc)
 }
 
+/// The receiver and callee names of encoded call sites (`receiver:callee:argc`
+/// joined by `;`), the names an unresolved call waits on.
+pub fn site_names(sites: &str) -> Vec<String> {
+    sites
+        .split(';')
+        .filter(|site| !site.is_empty())
+        .flat_map(|site| {
+            site.splitn(3, ':')
+                .take(2)
+                .filter(|name| !name.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// The names an import module waits on: each segment of the module path, and `.`
+/// when the module names no segment but the package it sits in. A path that
+/// resolves the module is named by one of them (trailing item segments of a use
+/// path are dropped when resolving).
+pub fn import_segments(module: &str) -> BTreeSet<String> {
+    let trimmed = module
+        .trim()
+        .trim_matches(|c| c == '"' || c == '\'' || c == '<' || c == '>');
+    let mut names: BTreeSet<String> = trimmed
+        .split(|c| c == '/' || c == '.' || c == ':')
+        .filter(|segment| !segment.is_empty() && !matches!(*segment, "crate" | "self" | "super"))
+        .map(str::to_string)
+        .collect();
+    if names.is_empty() {
+        names.insert(".".to_string());
+    }
+    names
+}
+
+/// The names a new file path answers: its stem, the directory it sits in (an index
+/// file stands for its directory) and `.`, the package anchor.
+pub fn path_names(path: &str) -> BTreeSet<String> {
+    let mut parts = path.rsplit('/');
+    let file = parts.next().unwrap_or(path);
+    let stem = file.split('.').next().unwrap_or(file);
+    let mut names = BTreeSet::from([".".to_string()]);
+    if !stem.is_empty() {
+        names.insert(stem.to_string());
+    }
+    if let Some(dir) = parts.next().filter(|dir| !dir.is_empty()) {
+        names.insert(dir.to_string());
+    }
+    names
+}
+
+/// The id of the bucket node of one unresolved name of repository `repo`.
+pub fn unresolved_bucket_id(repo: &str, name: &str) -> String {
+    format!("unresolved:{repo}:{name}")
+}
+
+/// The bucket nodes and the reference edges of the unresolved calls and imports
+/// the `nodes` hold: one node `unresolved:<repo>:<name>` per name, and an edge
+/// from each referencing node to it, so a later changeset reads exactly the
+/// references that wait on a name it defines (MEDULLA-SCM-R006).
+pub fn unresolved_buckets(
+    repo: &str,
+    nodes: &[ExtractedNode],
+) -> (Vec<ExtractedNode>, Vec<ExtractedEdge>) {
+    let mut buckets: BTreeSet<String> = BTreeSet::new();
+    let mut edges = Vec::new();
+    for node in nodes {
+        let calls = node
+            .properties
+            .get(UNRESOLVED_CALLS)
+            .map(|sites| site_names(sites))
+            .unwrap_or_default();
+        let imports = node
+            .properties
+            .get(UNRESOLVED_IMPORTS)
+            .map(|modules| {
+                modules
+                    .split(';')
+                    .filter(|module| !module.is_empty())
+                    .flat_map(import_segments)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let kinds = [(UNRESOLVED_CALL_EDGE, calls), (UNRESOLVED_IMPORT_EDGE, imports)];
+        for (edge_type, names) in kinds {
+            for name in names.into_iter().collect::<BTreeSet<_>>() {
+                let bucket = unresolved_bucket_id(repo, &name);
+                buckets.insert(name);
+                edges.push(ExtractedEdge {
+                    source: node.node_id.clone(),
+                    target: bucket,
+                    edge_type: edge_type.to_string(),
+                    properties: HashMap::from([(EVIDENCE_RUNG.to_string(), DERIVED.to_string())]),
+                });
+            }
+        }
+    }
+    let nodes = buckets
+        .into_iter()
+        .map(|name| ExtractedNode {
+            node_id: unresolved_bucket_id(repo, &name),
+            node_type: UNRESOLVED_NAME_TYPE.to_string(),
+            properties: HashMap::from([
+                ("unresolved_name".to_string(), name),
+                ("repo".to_string(), repo.to_string()),
+            ]),
+        })
+        .collect();
+    (nodes, edges)
+}
+
 /// Resolve already-parsed results against the file set they came from. Split out
 /// from [`index_repository`] so tests can resolve hand-built `ParseResult`s.
 pub fn resolve(files: &[(String, Vec<u8>)], results: &[ParseResult]) -> IndexResult {
@@ -249,12 +360,9 @@ pub fn resolve(files: &[(String, Vec<u8>)], results: &[ParseResult]) -> IndexRes
     for n in &mut out.nodes {
         n.properties.remove("call_sites");
         n.properties.remove(UNRESOLVED_CALLS);
-        n.properties.remove(HAS_UNRESOLVED_CALLS);
         if let Some(sites) = unresolved_sites.get(&n.node_id) {
             n.properties
                 .insert(UNRESOLVED_CALLS.to_string(), sites.iter().cloned().collect::<Vec<_>>().join(";"));
-            n.properties
-                .insert(HAS_UNRESOLVED_CALLS.to_string(), "true".to_string());
         }
         if n.node_type == "SYMBOL" {
             for (key, value) in similarity_bands(n).into_iter().flatten() {
@@ -571,12 +679,23 @@ fn record_call_resolution(
             source: caller_id.to_string(),
             target,
             edge_type: "calls".to_string(),
-            properties: HashMap::from([
-                ("name".to_string(), site.callee.clone()),
-                ("strategy".to_string(), strategy.to_string()),
-                ("confidence".to_string(), format!("{confidence:.2}")),
-                (EVIDENCE_RUNG.to_string(), INFERRED.to_string()),
-            ]),
+            properties: {
+                let mut properties = HashMap::from([
+                    ("name".to_string(), site.callee.clone()),
+                    ("strategy".to_string(), strategy.to_string()),
+                    ("confidence".to_string(), format!("{confidence:.2}")),
+                    (EVIDENCE_RUNG.to_string(), INFERRED.to_string()),
+                ]);
+                // The site the edge came from, so a callee that goes away is fed back
+                // to the resolver as the very call site the parse saw.
+                if !site.receiver.is_empty() {
+                    properties.insert("receiver".to_string(), site.receiver.clone());
+                }
+                if let Some(argc) = site.argc {
+                    properties.insert("argc".to_string(), argc.to_string());
+                }
+                properties
+            },
         });
     }
     state.counts.resolved += 1;
@@ -803,12 +922,21 @@ fn similarity_scored_pairs(sigs: &[SimilaritySignature<'_>]) -> Vec<(usize, usiz
             (s >= SIMILAR_THRESHOLD).then_some((a, b, s))
         })
         .collect();
-    // Total tie order keeps the greedy per-node cap deterministic across HashSet iteration.
+    // Total tie order, by the endpoint ids and not by the order the nodes arrived in, keeps
+    // the greedy per-node cap deterministic across HashSet iteration and the same for a
+    // full index and for a changeset that sees only the clone family.
+    let ends = |pair: &(usize, usize, f64)| {
+        let (a, b) = (sigs[pair.0].0, sigs[pair.1].0);
+        if a <= b {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    };
     scored.sort_by(|x, y| {
         y.2.partial_cmp(&x.2)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| x.0.cmp(&y.0))
-            .then_with(|| x.1.cmp(&y.1))
+            .then_with(|| ends(x).cmp(&ends(y)))
     });
     scored
 }
@@ -1352,10 +1480,6 @@ mod tests {
             Some(":missing:0"),
             "only the call that bound to no definition is kept"
         );
-        assert_eq!(
-            caller.properties.get(HAS_UNRESOLVED_CALLS).map(String::as_str),
-            Some("true")
-        );
         let helper = r
             .nodes
             .iter()
@@ -1368,7 +1492,7 @@ mod tests {
             Some("os")
         );
         let other = r.nodes.iter().find(|n| n.node_id == "file:n.py").unwrap();
-        assert!(!other.properties.contains_key(HAS_UNRESOLVED_IMPORTS));
+        assert!(!other.properties.contains_key(UNRESOLVED_IMPORTS));
     }
 
     #[test]
