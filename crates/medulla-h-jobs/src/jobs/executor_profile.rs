@@ -16,6 +16,7 @@ use medulla_catalog_types::profile::{ColumnProfile, HistogramBucket, ProfileMeth
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
 
 use super::data_plane_write::{commit_job_methods, edge_method, node_method};
+use super::dataset_profile::{propose_claims, SensitiveScan};
 use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;
@@ -386,6 +387,14 @@ pub(super) const COLUMN_PROFILE_LABEL: &str = "ColumnProfile";
 /// Profile → catalog column edge relation.
 pub(super) const PROFILE_OF: &str = "profileOf";
 
+/// What one profile run produced: the column profiles and the sensitive detections of the
+/// same pass (MEDULLA-TYPED-PACKS-R803.3).
+#[derive(Default)]
+struct Profiled {
+    profiles: Vec<ColumnProfile>,
+    detections: Vec<medulla_query_types::sensitive_detect::Detection>,
+}
+
 /// The verified target of one profile claim.
 pub(super) struct ProfileTarget {
     pub dataset: String,
@@ -473,7 +482,8 @@ fn profile_native(
     persist_dir: &Path,
     target: &ProfileTarget,
     cfg: &ProfileConfig,
-) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    scan: &SensitiveScan,
+) -> Result<Profiled, ProfileRefusal> {
     let store =
         medulla_server_auth::sql_tables::tenant_table_store(&target.tenant_scope, persist_dir)
             .map_err(|_| unsupported("the tenant table store cannot be opened"))?;
@@ -502,16 +512,16 @@ fn profile_native(
         columns: all,
         rows: store.scan(&target.dataset).map_err(unsupported)?,
     };
-    wanted
-        .iter()
-        .map(|column| {
-            let profile = profile_column(&table, column, cfg)?;
-            profile
-                .validate()
-                .map_err(|error| unsupported(error.to_string()))?;
-            Ok(profile)
-        })
-        .collect()
+    let mut out = Profiled::default();
+    for column in &wanted {
+        let profile = profile_column(&table, column, cfg)?;
+        profile
+            .validate()
+            .map_err(|error| unsupported(error.to_string()))?;
+        out.detections.extend(scan.scan(&table, &profile)?);
+        out.profiles.push(profile);
+    }
+    Ok(out)
 }
 
 #[cfg(not(feature = "query"))]
@@ -519,7 +529,8 @@ fn profile_native(
     _persist_dir: &Path,
     _target: &ProfileTarget,
     _cfg: &ProfileConfig,
-) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    _scan: &SensitiveScan,
+) -> Result<Profiled, ProfileRefusal> {
     Err(unsupported("this worker has no native table store"))
 }
 
@@ -602,23 +613,24 @@ fn profile_source(
     source: SqlSourceTable,
     columns: &[String],
     cfg: &ProfileConfig,
-) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    scan: &SensitiveScan,
+) -> Result<Profiled, ProfileRefusal> {
     if columns.is_empty() {
         return Err(unsupported(
             "a dataset of an attached source needs its columns named",
         ));
     }
-    columns
-        .iter()
-        .map(|column| {
-            let mut profile = profile_column(&source, column, cfg)?;
-            profile.dataset = source.dataset.clone();
-            profile
-                .validate()
-                .map_err(|error| unsupported(error.to_string()))?;
-            Ok(profile)
-        })
-        .collect()
+    let mut out = Profiled::default();
+    for column in columns {
+        let mut profile = profile_column(&source, column, cfg)?;
+        profile.dataset = source.dataset.clone();
+        profile
+            .validate()
+            .map_err(|error| unsupported(error.to_string()))?;
+        out.detections.extend(scan.scan(&source, &profile)?);
+        out.profiles.push(profile);
+    }
+    Ok(out)
 }
 
 /// The attached SQL source a `<source>.<table>` dataset names, when the owner has
@@ -771,28 +783,41 @@ pub(super) async fn execute_profile_claim(
         return Ok(());
     };
     let cfg = profile_config(unix_ms());
-    #[cfg(feature = "federation-sql")]
-    let attached = resolve_sql_source(state, &target.owner_scope, &target.dataset).await;
-    let (profiled, target) = tokio::task::spawn_blocking(move || {
-        #[cfg(feature = "federation-sql")]
-        if let Some(source) = attached {
-            let profiled = profile_source(source, &target.columns, &cfg);
-            return (profiled, target);
-        }
-        let profiled = profile_native(&persist_dir, &target, &cfg);
-        (profiled, target)
-    })
-    .await
-    .map_err(|_| "profile kernel failed".to_string())?;
-    let profiles = match profiled {
-        Ok(profiles) => profiles,
+    // Every detector is validated here, before any value is read.
+    let scan = match SensitiveScan::load(&core, &target.tenant, cfg.profiled_at) {
+        Ok(scan) => scan,
         Err(refusal) => {
             let _ =
                 store.fail_attempt_fenced(&job.job_id, worker_ref, epoch, refusal.code, unix_ms());
             return Ok(());
         }
     };
-    let methods = profile_methods(&core, &target, &profiles)?;
+    #[cfg(feature = "federation-sql")]
+    let attached = resolve_sql_source(state, &target.owner_scope, &target.dataset).await;
+    let (profiled, target, scan) = tokio::task::spawn_blocking(move || {
+        #[cfg(feature = "federation-sql")]
+        if let Some(source) = attached {
+            let profiled = profile_source(source, &target.columns, &cfg, &scan);
+            return (profiled, target, scan);
+        }
+        let profiled = profile_native(&persist_dir, &target, &cfg, &scan);
+        (profiled, target, scan)
+    })
+    .await
+    .map_err(|_| "profile kernel failed".to_string())?;
+    let Profiled {
+        profiles,
+        detections,
+    } = match profiled {
+        Ok(profiled) => profiled,
+        Err(refusal) => {
+            let _ =
+                store.fail_attempt_fenced(&job.job_id, worker_ref, epoch, refusal.code, unix_ms());
+            return Ok(());
+        }
+    };
+    let mut methods = profile_methods(&core, &target, &profiles)?;
+    methods.extend(propose_claims(&core, &target, &scan, &detections)?);
     commit_job_methods(state, job, "dataset-profile", methods).await?;
     let now = unix_ms();
     store
