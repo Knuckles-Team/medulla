@@ -1,7 +1,7 @@
 # Seam: stored digest queries and rule results
 
 Provider: medulla MEDULLA-BUSINESS-OPS-R003
-Consumer: arbora (row to file in the arbora spec)
+Consumer: arbora ARBORA-OPS-R855
 
 ## Wire shape
 
