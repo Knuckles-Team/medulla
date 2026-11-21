@@ -61,11 +61,26 @@ pub enum ViewOutput {
     },
 }
 
+/// An equi-join of the program's table with a second table (MEDULLA-INCREMENTAL-VIEWS-R013.1).
+/// The output rows key on the pair of source primary keys.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EquiJoin {
+    /// The joined table.
+    pub right: String,
+    /// The column of the program's table that the join compares.
+    pub left_key: String,
+    /// The column of the right table that the join compares.
+    pub right_key: String,
+}
+
 /// The incremental program of one materialized view.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IncrementalViewProgram {
     pub view: String,
     pub table: String,
+    /// The join with a second table, when the view has one.
+    #[serde(default)]
+    pub join: Option<EquiJoin>,
     pub filter: Option<RowExpr>,
     pub output: ViewOutput,
 }
@@ -381,6 +396,7 @@ mod tests {
         let program = IncrementalViewProgram {
             view: "by_region".into(),
             table: "orders".into(),
+            join: None,
             filter: Some(RowExpr::Gt(column("amount"), literal(json!(0)))),
             output: ViewOutput::Groups {
                 keys: vec![("region".into(), RowExpr::Column("region".into()))],
@@ -399,5 +415,30 @@ mod tests {
         };
         let json = serde_json::to_string(&rows).unwrap();
         assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), rows);
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R013.1
+    #[test]
+    fn join_program_round_trips() {
+        let program = IncrementalViewProgram {
+            view: "order_regions".into(),
+            table: "orders".into(),
+            join: Some(EquiJoin {
+                right: "customers".into(),
+                left_key: "customer_id".into(),
+                right_key: "id".into(),
+            }),
+            filter: None,
+            output: ViewOutput::Rows(vec![("id".into(), RowExpr::Column("id".into()))]),
+        };
+        let bytes = rmp_serde::to_vec_named(&program).unwrap();
+        assert_eq!(rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(), program);
+        let json = serde_json::to_string(&program).unwrap();
+        assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), program);
+        // A program stored before the join field existed reads as a single-table program.
+        let mut value = serde_json::to_value(&program).unwrap();
+        value.as_object_mut().unwrap().remove("join");
+        let old: IncrementalViewProgram = serde_json::from_value(value).unwrap();
+        assert_eq!(old.join, None);
     }
 }
