@@ -43,12 +43,11 @@ use super::graph_client::{
 use super::shared::typed_response;
 
 /// Node label of an assignment.
-pub const ASSIGNMENT_LABEL: &str = "StewardshipAssignment";
+pub const ASSIGNMENT_LABEL: &str = "cat:StewardshipAssignment";
 /// Node label of a change request.
-pub const CHANGE_REQUEST_LABEL: &str = "ChangeRequest";
+pub const CHANGE_REQUEST_LABEL: &str = "cat:ChangeRequest";
 /// Node label of a certification.
-pub const CERTIFICATION_LABEL: &str = "Certification";
-const RECORD: &str = "record";
+pub const CERTIFICATION_LABEL: &str = "cat:Certification";
 const PAGE: usize = 1000;
 
 /// Serve one `Stewardship` op.
@@ -109,6 +108,42 @@ fn scope_key(scope: &StewardshipScope) -> String {
     }
 }
 
+fn scope_parts(scope: &StewardshipScope) -> (&'static str, &str) {
+    match scope {
+        StewardshipScope::Asset(id) => ("asset", id),
+        StewardshipScope::ConceptScheme(id) => ("concept_scheme", id),
+        StewardshipScope::Domain(id) => ("domain", id),
+    }
+}
+
+fn scope_from(kind: &str, id: &str) -> Option<StewardshipScope> {
+    match kind {
+        "asset" => Some(StewardshipScope::Asset(id.to_string())),
+        "concept_scheme" => Some(StewardshipScope::ConceptScheme(id.to_string())),
+        "domain" => Some(StewardshipScope::Domain(id.to_string())),
+        _ => None,
+    }
+}
+
+fn role_from(role: &str) -> Option<StewardRole> {
+    match role {
+        "owner" => Some(StewardRole::Owner),
+        "steward" => Some(StewardRole::Steward),
+        "custodian" => Some(StewardRole::Custodian),
+        _ => None,
+    }
+}
+
+/// An assignment read back from its typed node properties.
+fn assignment_from(properties: &Properties) -> Option<StewardshipAssignment> {
+    let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+    Some(StewardshipAssignment {
+        scope: scope_from(text("scope_kind")?, text("scope_id")?)?,
+        role: role_from(text("role")?)?,
+        principal: text("principal")?.to_string(),
+    })
+}
+
 fn role_key(role: StewardRole) -> &'static str {
     match role {
         StewardRole::Owner => "owner",
@@ -161,10 +196,7 @@ pub async fn load_assignments(
             {
                 continue;
             }
-            let Some(body) = properties.get(RECORD).and_then(serde_json::Value::as_str) else {
-                continue;
-            };
-            if let Ok(assignment) = serde_json::from_str::<StewardshipAssignment>(body) {
+            if let Some(assignment) = assignment_from(&properties) {
                 found.push(assignment);
             }
         }
@@ -255,13 +287,13 @@ async fn assign(
     assignment.validate().map_err(invalid)?;
     let tenant = target.verified.tenant();
     let id = assignment_id(tenant, assignment);
-    let record = serde_json::to_string(assignment).map_err(invalid)?;
+    let (scope_kind, scope_id) = scope_parts(&assignment.scope);
     let mut properties = Properties::new();
     properties.insert("type".into(), ASSIGNMENT_LABEL.into());
-    properties.insert("scope".into(), scope_key(&assignment.scope).into());
+    properties.insert("scope_kind".into(), scope_kind.into());
+    properties.insert("scope_id".into(), scope_id.into());
     properties.insert("role".into(), role_key(assignment.role).into());
     properties.insert("principal".into(), assignment.principal.clone().into());
-    properties.insert(RECORD.into(), record.into());
     properties.insert(TENANT_PROPERTY.into(), tenant.into());
     write(
         state,
@@ -330,7 +362,6 @@ fn request_properties(
     request: &ChangeRequest,
     opened_by: &str,
 ) -> Result<Properties, String> {
-    let record = serde_json::to_string(request).map_err(invalid)?;
     let mut properties = Properties::new();
     properties.insert("type".into(), CHANGE_REQUEST_LABEL.into());
     properties.insert("request_id".into(), id.into());
@@ -338,7 +369,7 @@ fn request_properties(
     properties.insert("state".into(), state_name(request.state).into());
     properties.insert("proposed_digest".into(), request.proposed_digest.clone().into());
     properties.insert("opened_by".into(), opened_by.into());
-    properties.insert(RECORD.into(), record.into());
+    properties.insert("reviewers".into(), serde_json::json!(request.reviewers));
     properties.insert(TENANT_PROPERTY.into(), tenant.into());
     Ok(properties)
 }
@@ -349,6 +380,16 @@ fn state_name(state: ChangeRequestState) -> &'static str {
         ChangeRequestState::Approved => "approved",
         ChangeRequestState::Rejected => "rejected",
         ChangeRequestState::Applied => "applied",
+    }
+}
+
+fn state_from(name: &str) -> Option<ChangeRequestState> {
+    match name {
+        "open" => Some(ChangeRequestState::Open),
+        "approved" => Some(ChangeRequestState::Approved),
+        "rejected" => Some(ChangeRequestState::Rejected),
+        "applied" => Some(ChangeRequestState::Applied),
+        _ => None,
     }
 }
 
@@ -370,11 +411,21 @@ async fn stored_request(
     {
         return Err(invalid(format!("change request '{id}' belongs to another tenant")));
     }
-    let body = properties
-        .get(RECORD)
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| invalid(format!("node '{id}' is not a change request")))?;
-    let request: ChangeRequest = serde_json::from_str(body).map_err(invalid)?;
+    let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+    let not_a_request = || invalid(format!("node '{id}' is not a change request"));
+    let reviewers = properties
+        .get("reviewers")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(not_a_request)?
+        .iter()
+        .filter_map(|reviewer| reviewer.as_str().map(str::to_string))
+        .collect();
+    let request = ChangeRequest {
+        target: text("target").ok_or_else(not_a_request)?.to_string(),
+        proposed_digest: text("proposed_digest").ok_or_else(not_a_request)?.to_string(),
+        state: state_from(text("state").ok_or_else(not_a_request)?).ok_or_else(not_a_request)?,
+        reviewers,
+    };
     let verdicts = properties
         .get("verdicts")
         .and_then(serde_json::Value::as_array)
@@ -401,10 +452,6 @@ async fn move_request(
     conditions.insert(TENANT_PROPERTY.into(), target.verified.tenant().into());
     let mut updates = extra;
     updates.insert("state".into(), state_name(next).into());
-    updates.insert(
-        RECORD.into(),
-        serde_json::to_string(&request).map_err(invalid)?.into(),
-    );
     let committed = write(
         state,
         target,
@@ -515,7 +562,6 @@ async fn certify_asset(
     properties.insert("level".into(), level.into());
     properties.insert("by".into(), certification.by.clone().into());
     properties.insert("expires_at".into(), certification.expires_at.into());
-    properties.insert(RECORD.into(), serde_json::to_string(&certification).map_err(invalid)?.into());
     properties.insert(TENANT_PROPERTY.into(), tenant.into());
     write(
         state,
