@@ -238,7 +238,7 @@ fn promote_request(revision: u64, snapshot_digest: &str, expected: Option<u64>) 
                 evidence_digest: format!("sha256:{gate}"),
             })
             .collect(),
-        approver: "alice".to_string(),
+        approver: Some("alice".to_string()),
         veto_reason: None,
     }
 }
@@ -363,7 +363,7 @@ async fn promote_refuses_each_case_without_writes() {
     let response = served.promote(failing).await;
     served.refused(response, "PROMOTE_GATE_FAILED", &before).await;
     let mut stranger = promote_request(1, &digest_1, None);
-    stranger.approver = "mallory".to_string();
+    stranger.approver = Some("mallory".to_string());
     let response = served.promote(stranger).await;
     served.refused(response, "ORDER_PROMOTION_VETOED", &before).await;
 

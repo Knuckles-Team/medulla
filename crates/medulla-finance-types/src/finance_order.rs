@@ -185,8 +185,10 @@ pub struct OrderPromoteRequest {
     /// Every gate id of the manifest, in manifest order.
     pub manifest_gate_ids: Vec<String>,
     pub gate_receipts: Vec<GateReceipt>,
-    /// The approver acting on the promotion, checked against the tenant policy.
-    pub approver: String,
+    /// The approver acting on the promotion, checked against the tenant policy. A live order
+    /// without one is refused `ORDER_PROMOTION_VETOED`.
+    #[serde(default)]
+    pub approver: Option<String>,
     /// A hook that vetoed the promotion before this call; refuses `ORDER_PROMOTION_VETOED`.
     #[serde(default)]
     pub veto_reason: Option<String>,

@@ -412,11 +412,79 @@ fn check_approver(
     }
 }
 
+/// R019 recheck of the decision a staged snapshot binds: the committed record read before
+/// admission must be the named decision at the named revision and digest, and a stored approval
+/// receipt must name the same record.
+#[cfg(feature = "finance")]
+fn check_decision(
+    snapshot: &OrderProposalSnapshot,
+    decision: Option<&medulla_agent_types::agent_component::AgentComponentEntry>,
+) -> Result<(), Refusal> {
+    use medulla_agent_types::agent_component::AgentComponentKind;
+    let mismatch = |detail: String| (PROMOTE_EVIDENCE_MISMATCH, detail);
+    let Some(entry) = decision else {
+        return Err(mismatch(format!(
+            "decision {} is not a committed record of the tenant",
+            snapshot.decision_id
+        )));
+    };
+    if entry.kind != AgentComponentKind::DecisionRecord
+        || entry.entry_revision != snapshot.decision_revision
+        || entry.content_digest != snapshot.decision_digest
+    {
+        return Err(mismatch(format!(
+            "decision {} is not the committed record at the staged revision and digest",
+            snapshot.decision_id
+        )));
+    }
+    #[cfg(feature = "redb")]
+    if let Some(receipt) = entry
+        .attributes
+        .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
+    {
+        let approval: medulla_decision_types::decision::approval::RecommendationApproval =
+            serde_json::from_str(receipt)
+                .map_err(|_| mismatch("the stored approval receipt is unreadable".to_owned()))?;
+        if approval.record_id != snapshot.decision_id
+            || approval.record_digest != snapshot.decision_digest
+        {
+            return Err(mismatch(
+                "the stored approval receipt names another record or digest".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// The decision component `decision_id` of the tenant, read before admission so the admit
+/// itself stays synchronous.
+#[cfg(feature = "finance")]
+async fn read_decision(
+    state: &Arc<RwLock<ServerState>>,
+    tenant_id: &str,
+    decision_id: &str,
+) -> Result<Option<medulla_agent_types::agent_component::AgentComponentEntry>, String> {
+    #[cfg(feature = "redb")]
+    {
+        use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+        let Some(store) = state.read().await.agent_library() else {
+            return Ok(None);
+        };
+        store.current_component(tenant_id, decision_id)
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, tenant_id, decision_id);
+        Ok(None)
+    }
+}
+
 #[cfg(feature = "finance")]
 fn admit_promote(
     core: &GraphCore,
     scope: &str,
     method: &Method,
+    decision: Option<&medulla_agent_types::agent_component::AgentComponentEntry>,
 ) -> Result<(Method, OrderPromoteResult), String> {
     let Method::FinanceOrderPromote { request } = method else {
         unreachable!("admit_promote is only called for FinanceOrderPromote");
@@ -431,6 +499,7 @@ fn admit_promote(
         return Err(refused((ORDER_PROMOTION_VETOED, reason.clone())));
     }
     let (snapshot, candidate_digest) = staged_candidate(core, scope, request).map_err(refused)?;
+    check_decision(&snapshot, decision).map_err(refused)?;
     let promoted = check_heads(core, scope, request).map_err(refused)?;
     let gate_digests = check_gates(request, &candidate_digest).map_err(refused)?;
     let (order, pinned, breaches) = verify_proposal(core, scope, &snapshot).map_err(refused)?;
@@ -440,7 +509,13 @@ fn admit_promote(
             format!("{} limit(s) breached at promotion", breaches.len()),
         )));
     }
-    check_approver(&pinned, &order.instrument_id, &request.approver).map_err(refused)?;
+    let Some(approver) = request.approver.as_deref() else {
+        return Err(refused((
+            ORDER_PROMOTION_VETOED,
+            "a live order needs a named acting approver".to_owned(),
+        )));
+    };
+    check_approver(&pinned, &order.instrument_id, approver).map_err(refused)?;
     let receipt = OrderAdmissionReceipt {
         proposal_id: snapshot.proposal_id.clone(),
         revision: snapshot.revision,
@@ -562,9 +637,30 @@ async fn stage(ctx: &MutationCtx<'_>, method: &Method) -> Response {
 
 /// `FinanceOrderProposal.Promote` and its admission receipt.
 #[cfg(feature = "finance")]
-async fn promote(ctx: &MutationCtx<'_>, method: &Method) -> Response {
+async fn promote(
+    state: &Arc<RwLock<ServerState>>,
+    ctx: &MutationCtx<'_>,
+    tenant_id: &str,
+    method: &Method,
+) -> Response {
     use medulla_protocol_types::result_contract::graph::FinanceOrderPromote;
-    match admit_promote(ctx.core, ctx.tenant_scope, method) {
+    // Pre-read the bound decision, then run the pure admit. A snapshot that does not
+    // re-stage is left to `admit_promote`, which refuses it with its own reason.
+    let decision = match method {
+        Method::FinanceOrderPromote { request } => {
+            match staged_candidate(ctx.core, ctx.tenant_scope, request) {
+                Ok((snapshot, _)) => {
+                    match read_decision(state, tenant_id, &snapshot.decision_id).await {
+                        Ok(entry) => entry,
+                        Err(error) => return Response::err(ctx.req_id, error),
+                    }
+                }
+                Err(_) => None,
+            }
+        }
+        _ => None,
+    };
+    match admit_promote(ctx.core, ctx.tenant_scope, method, decision.as_ref()) {
         Err(error) => Response::err(ctx.req_id, error),
         Ok((write, result)) => {
             commit_write(
@@ -580,11 +676,13 @@ async fn promote(ctx: &MutationCtx<'_>, method: &Method) -> Response {
 
 /// The `Route::FinanceRecords` entry for the order proposal methods.
 pub(super) async fn record(
+    state: &Arc<RwLock<ServerState>>,
     ctx: &MutationCtx<'_>,
     tenant_id: &str,
     method: &Method,
 ) -> Option<Response> {
-    let _ = tenant_id;
+    #[cfg(not(feature = "finance"))]
+    let _ = (state, tenant_id);
     if !matches!(
         method,
         Method::FinanceOrderStage { .. } | Method::FinanceOrderPromote { .. }
@@ -595,7 +693,7 @@ pub(super) async fn record(
     {
         Some(match method {
             Method::FinanceOrderStage { .. } => stage(ctx, method).await,
-            _ => promote(ctx, method).await,
+            _ => promote(state, ctx, tenant_id, method).await,
         })
     }
     #[cfg(not(feature = "finance"))]

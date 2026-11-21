@@ -360,7 +360,7 @@ async fn try_handle_admin(
         Route::Policy => try_handle_policy(state, tenant_id, ctx, plan, method).await,
         Route::Analytics => try_handle_analytics(ctx, plan, method).await,
         Route::FinanceRecords => {
-            super::super::finance_records::handle_record(ctx, tenant_id, method).await
+            super::super::finance_records::handle_record(state, ctx, tenant_id, method).await
         }
         Route::WorkflowRegistry => {
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await

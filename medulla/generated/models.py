@@ -34139,7 +34139,7 @@ class OrderProposalSnapshot(BaseModel):
 class OrderPromoteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    approver: str
+    approver: str | None = None
     candidate_revision: int = Field(ge=0)
     expected_promoted_revision: int | None = Field(default=None, ge=0)
     gate_receipts: list[GateReceipt]

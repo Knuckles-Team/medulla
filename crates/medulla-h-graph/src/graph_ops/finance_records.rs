@@ -237,6 +237,7 @@ pub fn precheck_replicated_put(
 /// The `Route::FinanceRecords` entry: admit the put, then commit it as the
 /// `AddNode` upsert through the coalescable gateway.
 pub(super) async fn handle_record(
+    state: &Arc<RwLock<ServerState>>,
     ctx: &MutationCtx<'_>,
     tenant_id: &str,
     method: &Method,
@@ -251,7 +252,7 @@ pub(super) async fn handle_record(
         method,
         Method::FinanceOrderStage { .. } | Method::FinanceOrderPromote { .. }
     ) {
-        return super::finance_order_proposal::record(ctx, tenant_id, method).await;
+        return super::finance_order_proposal::record(state, ctx, tenant_id, method).await;
     }
     let Method::FinanceRecordPut { kind, record, .. } = method else {
         return None;
