@@ -2971,3 +2971,77 @@ async fn cancel_request_stops_a_long_query_and_wrong_secret_is_ignored() {
         .expect("one count row");
     assert_eq!(count, "20000000");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R035.6
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pooler_transaction_mode_isolates_clients() {
+    let secret = "dummy-pg-test-secret"; // sanitizer:ignore
+    let state = scram_state(secret);
+    let addr = spawn_listener_mode(state, pgwire::PgWireAuthMode::Scram).await;
+    // One backend connection, as a transaction-mode pooler holds it.
+    let backend = scram_client(secret, &addr, "worker").await;
+    let commons_ids = vec!["n1".to_string(), "n2".to_string(), "n3".to_string()];
+
+    // Client A: a prepared statement and a graph binding of its own.
+    let prepared = backend
+        .prepare("SELECT id FROM nodes WHERE rank > $1 ORDER BY id")
+        .await
+        .expect("client A prepares");
+    let rows = backend
+        .query(&prepared, &[&1i64])
+        .await
+        .expect("client A runs its statement");
+    assert_eq!(rows.len(), 2);
+    backend
+        .simple_query("SET graph = 'agent:worker'")
+        .await
+        .expect("client A binds its own graph");
+    let rows = backend
+        .simple_query("SELECT id FROM nodes ORDER BY id")
+        .await
+        .expect("client A reads its graph");
+    assert!(simple_ids(rows).is_empty(), "agent:worker holds no nodes");
+
+    // DISCARD ALL inside an open transaction refuses with 25001.
+    backend.simple_query("BEGIN").await.expect("BEGIN");
+    let refused = backend
+        .simple_query("DISCARD ALL")
+        .await
+        .expect_err("DISCARD ALL inside a transaction refuses");
+    assert_eq!(
+        refused.code(),
+        Some(&tokio_postgres::error::SqlState::ACTIVE_SQL_TRANSACTION),
+        "{refused:?}"
+    );
+    backend.simple_query("ROLLBACK").await.expect("ROLLBACK");
+
+    // The pooler resets the connection between clients.
+    let started = std::time::Instant::now();
+    backend
+        .simple_query("DISCARD ALL")
+        .await
+        .expect("DISCARD ALL outside a transaction");
+    assert!(started.elapsed() < std::time::Duration::from_secs(1));
+
+    // Client B: client A's statement is gone, and the startup graph is bound again.
+    let leaked = backend
+        .query(&prepared, &[&1i64])
+        .await
+        .expect_err("client A's prepared statement does not survive DISCARD ALL");
+    assert_eq!(
+        leaked.code(),
+        Some(&tokio_postgres::error::SqlState::INVALID_SQL_STATEMENT_NAME),
+        "{leaked:?}"
+    );
+    let rows = backend
+        .simple_query("SELECT id FROM nodes ORDER BY id")
+        .await
+        .expect("client B reads the startup graph");
+    assert_eq!(simple_ids(rows), commons_ids);
+
+    // Advisory lock functions are not served, so they refuse.
+    backend
+        .simple_query("SELECT pg_advisory_lock(1)")
+        .await
+        .expect_err("advisory locks are not served");
+}

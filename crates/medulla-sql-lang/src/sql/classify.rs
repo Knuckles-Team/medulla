@@ -173,6 +173,10 @@ pub enum StatementKind {
     Commit,
     /// `ROLLBACK` — discard the open transaction.
     Rollback,
+    /// `DISCARD ALL` (MEDULLA-DURABLE-KERNEL-R035.6): drop every piece of session state
+    /// a transaction-mode pooler could leak to the next client (prepared statements,
+    /// portals, the graph binding). Refused inside an open transaction.
+    DiscardAll,
     /// `COPY <table> [(cols…)] FROM STDIN [WITH (FORMAT …)]` — bulk ingest; the shim
     /// switches the connection into copy-in mode and streams rows into the user table.
     CopyIn(CopyPlan),
@@ -259,6 +263,7 @@ impl StatementKind {
         "begin",
         "commit",
         "rollback",
+        "discard_all",
         "copy_in",
         "copy_out",
         "create_extension",
@@ -302,6 +307,7 @@ impl StatementKind {
             Self::Begin => "begin",
             Self::Commit => "commit",
             Self::Rollback => "rollback",
+            Self::DiscardAll => "discard_all",
             Self::CopyIn(_) => "copy_in",
             Self::CopyOut(_) => "copy_out",
             Self::CreateExtension { .. } => "create_extension",

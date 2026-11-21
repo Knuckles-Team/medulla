@@ -83,6 +83,7 @@ pub fn sql_is_write(query: &str) -> bool {
             | Ok(StatementKind::Begin)
             | Ok(StatementKind::Commit)
             | Ok(StatementKind::Rollback)
+            | Ok(StatementKind::DiscardAll)
             | Err(_)
     )
 }

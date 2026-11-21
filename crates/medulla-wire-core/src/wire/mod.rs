@@ -1375,6 +1375,10 @@ pub struct WireSession {
     /// wire cancel request stops the read at its next batch boundary. `None` between
     /// statements: a read outside a statement runs with a fresh token.
     statement_cancel: parking_lot::Mutex<Option<medulla_sql::sql::CancellationToken>>,
+    /// The graph this connection was bound to at startup: the wire's default graph,
+    /// or the startup `database` [`WireProtocol::resolve_startup`] adopted.
+    /// [`WireSession::reset_to_startup`] restores it (MEDULLA-DURABLE-KERNEL-R035.6).
+    startup_graph: parking_lot::Mutex<String>,
 }
 
 /// Explicit, self-documenting choice of the version [`WireSession::commit_graph_methods_with_op`]
@@ -1470,7 +1474,8 @@ impl WireSession {
     fn new_unbound(state: Arc<RwLock<ServerState>>, default_graph: String) -> Self {
         Self {
             state,
-            graph: parking_lot::Mutex::new(default_graph),
+            graph: parking_lot::Mutex::new(default_graph.clone()),
+            startup_graph: parking_lot::Mutex::new(default_graph),
             startup_resolved: Default::default(),
             bound_mapping: Default::default(),
             actor: Default::default(),
@@ -1508,6 +1513,36 @@ impl WireSession {
     /// Take the running statement's cancellation token, ending the statement.
     pub fn end_statement(&self) -> Option<medulla_sql::sql::CancellationToken> {
         self.statement_cancel.lock().take()
+    }
+
+    /// Return the session to the state it had right after startup
+    /// (MEDULLA-DURABLE-KERNEL-R035.6): the startup graph binding, no buffered
+    /// statement or `COPY`, and no pending or session isolation setting. The caller
+    /// refuses this inside an open transaction.
+    pub fn reset_to_startup(&self) {
+        *self.graph.lock() = self.startup_graph.lock().clone();
+        let _ = self.take_txn();
+        #[cfg(feature = "query")]
+        let _ = self.take_xmodal();
+        self.serializable_predicate_reads.lock().clear();
+        self.txn_replay_log.lock().clear();
+        *self.copy.lock() = None;
+        *self.pending_isolation.lock() = None;
+        *self.session_isolation_default.lock() = None;
+    }
+
+    /// The `StatementKind::DiscardAll` arm of [`WireProtocol::execute`]
+    /// (MEDULLA-DURABLE-KERNEL-R035.6): refused with SQLSTATE `25001` inside an open
+    /// transaction, else the session returns to its startup state.
+    fn handle_discard_all(&self) -> WireResult<WireOutcome> {
+        if self.in_txn() {
+            return Err(WireError {
+                code: "25001".to_string(),
+                message: "DISCARD ALL cannot run inside a transaction block".to_string(),
+            });
+        }
+        self.reset_to_startup();
+        Ok(WireOutcome::command("DISCARD ALL"))
     }
 
     /// The token a read runs with: the running statement's, else a fresh one.
@@ -2426,6 +2461,9 @@ impl WireSession {
             // `COPY … TO STDOUT` (MEDULLA-ENGINE-PARITY-R006.1): a plain SELECT through
             // the authorized read path, encoded as copy lines.
             StatementKind::CopyOut(plan) => self.run_copy_out(graph, plan).await,
+            // MEDULLA-DURABLE-KERNEL-R035.6 — handled before dispatch by `execute`; the
+            // same session reset when a caller dispatches it directly.
+            StatementKind::DiscardAll => self.handle_discard_all(),
             // SQL/PGQ, plus the transaction-control kinds handled before dispatch.
             StatementKind::Begin
             | StatementKind::Commit
@@ -5608,6 +5646,7 @@ impl WireProtocol for WireSession {
             return;
         }
         *self.graph.lock() = db.clone();
+        *self.startup_graph.lock() = db.clone();
     }
 
     /// The shared SQL execution core for every wire (CONCEPT:MEDULLA-KG.compute.subsystems-reference / KG-2.197).
@@ -5660,6 +5699,7 @@ impl WireProtocol for WireSession {
             StatementKind::Begin => return self.handle_begin(sql, &graph).await,
             StatementKind::Commit => return self.run_commit().await,
             StatementKind::Rollback => return Ok(self.handle_rollback()),
+            StatementKind::DiscardAll => return self.handle_discard_all(),
             _ => {}
         }
 

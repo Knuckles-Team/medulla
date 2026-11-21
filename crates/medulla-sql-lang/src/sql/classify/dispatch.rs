@@ -74,6 +74,11 @@ pub(super) fn classify_tcl_or_copy_stmt(stmt: &Statement) -> Option<Result<State
         Statement::StartTransaction { .. } => Some(Ok(StatementKind::Begin)),
         Statement::Commit { .. } => Some(Ok(StatementKind::Commit)),
         Statement::Rollback { .. } => Some(Ok(StatementKind::Rollback)),
+        // MEDULLA-DURABLE-KERNEL-R035.6: only `DISCARD ALL`; the narrower forms stay
+        // unserved and refuse through the matrix.
+        Statement::Discard {
+            object_type: datafusion::sql::sqlparser::ast::DiscardObject::ALL,
+        } => Some(Ok(StatementKind::DiscardAll)),
         Statement::Copy {
             source,
             to,

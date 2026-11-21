@@ -793,6 +793,19 @@ struct EngineBackend {
     session: Arc<WireSession>,
     /// The SQL parser used for the extended protocol's Parse step. Stateless.
     parser: Arc<EngineQueryParser>,
+    /// Every statement name the extended handler stored in this connection's
+    /// `PortalStore` (MEDULLA-DURABLE-KERNEL-R035.6). `DISCARD ALL` removes each one,
+    /// so a transaction-mode pooler never hands one client's prepared statement to
+    /// the next.
+    prepared_names: parking_lot::Mutex<std::collections::BTreeSet<String>>,
+}
+
+/// Whether `sql` is the served `DISCARD ALL` (MEDULLA-DURABLE-KERNEL-R035.6).
+fn is_discard_all(sql: &str) -> bool {
+    matches!(
+        medulla_sql_lang::sql::classify::classify(sql),
+        Ok(StatementKind::DiscardAll)
+    )
 }
 
 /// Resolve one inferred `$N` param site to its Postgres column type. Split
@@ -821,6 +834,24 @@ impl EngineBackend {
         Self {
             session: Arc::new(WireSession::new(state, default_graph)),
             parser: Arc::new(EngineQueryParser),
+            prepared_names: Default::default(),
+        }
+    }
+
+    /// After a served `DISCARD ALL` (MEDULLA-DURABLE-KERNEL-R035.6): drop every portal
+    /// and every statement this connection stored. `WireSession::execute` already
+    /// refused the statement inside a transaction (`25001`) and reset the session to
+    /// its startup graph binding.
+    fn discard_client_statements<C>(&self, client: &C)
+    where
+        C: pgwire::api::ClientPortalStore,
+        C::PortalStore: pgwire::api::store::PortalStore,
+    {
+        use pgwire::api::store::PortalStore as _;
+        let store = client.portal_store();
+        store.clear_portals();
+        for name in std::mem::take(&mut *self.prepared_names.lock()) {
+            store.rm_statement(&name);
         }
     }
 
@@ -1013,6 +1044,9 @@ impl SimpleQueryHandler for EngineBackend {
         let outcome = self.session.execute(query).await;
         statement.finish();
         let outcome = outcome.map_err(wire_err_to_pg)?;
+        if is_discard_all(query) {
+            self.discard_client_statements(client);
+        }
         Ok(vec![outcome_to_response(outcome, None)])
     }
 }
@@ -1769,6 +1803,37 @@ impl ExtendedQueryHandler for EngineBackend {
         self.parser.clone()
     }
 
+    /// Parse and store a statement exactly as the trait default does, and record
+    /// its name so `DISCARD ALL` can remove it (MEDULLA-DURABLE-KERNEL-R035.6).
+    async fn on_parse<C>(
+        &self,
+        client: &mut C,
+        message: pgwire::messages::extendedquery::Parse,
+    ) -> PgWireResult<()>
+    where
+        C: ClientInfo
+            + pgwire::api::ClientPortalStore
+            + futures::Sink<pgwire::messages::PgWireBackendMessage>
+            + Unpin
+            + Send
+            + Sync,
+        C::PortalStore: pgwire::api::store::PortalStore<Statement = Self::Statement>,
+        C::Error: std::fmt::Debug,
+        PgWireError: From<<C as futures::Sink<pgwire::messages::PgWireBackendMessage>>::Error>,
+    {
+        use futures::SinkExt as _;
+        use pgwire::api::store::PortalStore as _;
+        let stmt = StoredStatement::parse(client, &message, self.query_parser()).await?;
+        self.prepared_names.lock().insert(stmt.id.clone());
+        client.portal_store().put_statement(Arc::new(stmt));
+        client
+            .send(pgwire::messages::PgWireBackendMessage::ParseComplete(
+                pgwire::messages::extendedquery::ParseComplete::new(),
+            ))
+            .await?;
+        Ok(())
+    }
+
     /// Execute a bound portal (CONCEPT:MEDULLA-KG.query.describe). Substitutes the portal's
     /// parameters into the prepared SQL, then runs the SAME [`WireProtocol::execute`]
     /// core the simple-query path uses — so a prepared/parameterized statement from a
@@ -1799,6 +1864,9 @@ impl ExtendedQueryHandler for EngineBackend {
         let outcome = self.session.execute(&sql).await;
         statement.finish();
         let outcome = outcome.map_err(wire_err_to_pg)?;
+        if is_discard_all(&sql) {
+            self.discard_client_statements(client);
+        }
         Ok(outcome_to_response(
             outcome,
             Some(&portal.result_column_format),

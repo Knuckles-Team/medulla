@@ -104,6 +104,7 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("begin", SqlFormState::Supported),
     ("commit", SqlFormState::Supported),
     ("rollback", SqlFormState::Supported),
+    ("discard_all", SqlFormState::Supported),
     ("copy_in", SqlFormState::Supported),
     ("copy_out", SqlFormState::Supported),
     ("create_extension", SqlFormState::Partial),
@@ -145,8 +146,10 @@ pub const SERVED_FUNCTIONS: &[&str] = &[
 /// The operational surfaces the wire listener serves today. Each R035 child that
 /// delivers a surface adds it here, and [`PgCompatibilityMatrix::with_served_forms`]
 /// declares every surface this list names.
-pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] =
-    &[PgOperationalSurface::QueryCancellation];
+pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[
+    PgOperationalSurface::QueryCancellation,
+    PgOperationalSurface::PoolerTransactionMode,
+];
 
 /// A parity check named one or more surfaces that are not declared
 /// supported. Carries every missing surface, not just the first.

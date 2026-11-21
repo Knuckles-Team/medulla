@@ -96,6 +96,7 @@ const STATEMENT_SAMPLES: &[(&str, &str)] = &[
     ("begin", "BEGIN"),
     ("commit", "COMMIT"),
     ("rollback", "ROLLBACK"),
+    ("discard_all", "DISCARD ALL"),
     ("copy_in", "COPY prices FROM STDIN"),
     ("copy_out", "COPY prices TO STDOUT"),
     ("create_extension", "CREATE EXTENSION vector"),
