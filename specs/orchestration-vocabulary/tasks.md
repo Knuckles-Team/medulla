@@ -99,7 +99,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T103 [US7] MEDULLA-ORCH-VOCAB-R751.751 Behaviour: score teams and promote specialists
 - [ ] T104 [US7] MEDULLA-ORCH-VOCAB-R751.752 Refusal: team and social faults
 - [ ] T105 [US7] MEDULLA-ORCH-VOCAB-R751.753 Hot-path proof: team scoring
-- [ ] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
+- [x] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
 - [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering and pattern selection
 - [ ] T108 [US7] MEDULLA-ORCH-VOCAB-R800.3 Wiring: definitions are read by assembly and revised by version
 - [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: four definition faults
@@ -118,7 +118,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T122 [US6] MEDULLA-ORCH-VOCAB-R012.7.3 Activation: invariant guard, review and atomic publish
 - [ ] T123 [US6] MEDULLA-ORCH-VOCAB-R012.7.4 Evidence: decisions record the active policy revision
 - [ ] T124 [US4] MEDULLA-ORCH-VOCAB-R013.7.1 Model: walkthrough manifest
-- [ ] T177 [US4] MEDULLA-ORCH-VOCAB-R013.7.4 Repository-index and blob reader seams
+- [x] T177 [US4] MEDULLA-ORCH-VOCAB-R013.7.4 Repository-index and blob reader seams
 - [ ] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
 - [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
 - [ ] T127 [US7] MEDULLA-ORCH-VOCAB-R616.2.1 Export and import a team as OWL
@@ -159,7 +159,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T162 [US9] MEDULLA-ORCH-VOCAB-R811.3 Add state-machine shapes
 - [ ] T163 [US9] MEDULLA-ORCH-VOCAB-R811.4 Add the typed transition refusal
 - [ ] T176 [US9] MEDULLA-ORCH-VOCAB-R811.9 Served error mapper returns the four TransitionRefused fields
-- [ ] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
+- [x] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
 - [ ] T171 [US9] MEDULLA-ORCH-VOCAB-R811.6 Pack extension rule and conformance
 - [ ] T172 [US9] MEDULLA-ORCH-VOCAB-R811.7 Competency question: what can happen next to X
 - [ ] T165 [US9] MEDULLA-ORCH-VOCAB-R812 WorkItem queue row is one explicit state machine

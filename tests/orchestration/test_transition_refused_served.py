@@ -11,6 +11,7 @@ from conftest import request_context
 GRAPH = "__commons__"
 
 
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R811.5")
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R811.9")
 @pytest.mark.asyncio
 async def test_illegal_transition_returns_all_four_fields(start_medulla_server) -> None:
