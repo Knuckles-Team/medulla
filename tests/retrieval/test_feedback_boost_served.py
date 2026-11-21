@@ -58,3 +58,53 @@ def test_upvote_raises_rank(start_medulla_server) -> None:
             )
     finally:
         cl.tenants.delete(graph)
+
+
+def _stored_events(cl: Any, graph: str) -> int:
+    rows = cl._send(
+        "GetNodesByLabel",
+        {"label": "RetrievalFeedback", "after": None, "limit": 0},
+        graph,
+    )
+    if isinstance(rows, (bytes, bytearray)):
+        rows = msgpack.unpackb(rows, raw=False)
+    return len(rows)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R705.4")
+def test_feedback_refusals(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R705.4: both refusal codes, and zero writes."""
+    graph = f"fb-refuse-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    try:
+        put(cl, graph, "doc-a", {"type": "Doc", "name": "feedback", "description": ""})
+
+        # A document the principal cannot read (here: one that does not exist for it)
+        # is refused with FEEDBACK_TARGET_HIDDEN and nothing is stored.
+        with pytest.raises(Exception, match="FEEDBACK_TARGET_HIDDEN"):
+            cl._send(
+                "RetrievalFeedbackRecord",
+                {"document_ref": "ghost", "kind": "upvote", "weight": 0.2},
+                graph,
+            )
+        assert _stored_events(cl, graph) == 0
+
+        # `feedback.rate_limit_per_hour` is Fixed at 100: the 101st event refuses.
+        for _ in range(100):
+            cl._send(
+                "RetrievalFeedbackRecord",
+                {"document_ref": "doc-a", "kind": "upvote", "weight": 0.01},
+                graph,
+            )
+        assert _stored_events(cl, graph) == 100
+        with pytest.raises(Exception, match="FEEDBACK_RATE_LIMIT"):
+            cl._send(
+                "RetrievalFeedbackRecord",
+                {"document_ref": "doc-a", "kind": "upvote", "weight": 0.01},
+                graph,
+            )
+        assert _stored_events(cl, graph) == 100
+    finally:
+        cl.tenants.delete(graph)
+        cl.close()

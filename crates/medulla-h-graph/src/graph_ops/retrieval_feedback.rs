@@ -55,11 +55,37 @@ pub(super) async fn handle_record(
             "ACCESS_DENIED: retrieval feedback needs a verified principal",
         ));
     };
+    let now_s = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000;
+    // MEDULLA-FEDERATED-QUERY-R705.4: a refusal writes nothing, so both checks precede
+    // the commit. A document the principal cannot read is refused exactly like an absent
+    // one, so the refusal leaks nothing about it.
+    let mut readable = ctx.core.analysis_snapshot();
+    ctx.isolation
+        .filter_view(ctx.caller.unwrap_or(principal), &mut readable);
+    if !readable.node_map.contains_key(document_ref.as_str()) {
+        return Some(Response::err(
+            ctx.req_id,
+            format!(
+                "{}: the document is not readable by this principal",
+                medulla_types::contract::ServerErrorCode::FeedbackTargetHidden
+            ),
+        ));
+    }
+    let limit = medulla_server_api::knob_config::knobs().feedback_rate_limit_per_hour;
+    if recent_events(ctx.core, tenant_id, principal, now_s) >= limit {
+        return Some(Response::err(
+            ctx.req_id,
+            format!(
+                "{}: {limit} feedback events were already recorded in the last hour",
+                medulla_types::contract::ServerErrorCode::FeedbackRateLimit
+            ),
+        ));
+    }
     // A wire stamp is replaced, never trusted.
     let stamp = FeedbackStamp {
         tenant: tenant_id.to_string(),
         principal: principal.to_string(),
-        at: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000,
+        at: now_s,
         idempotency_key: ctx.idempotency_key.to_string(),
     };
     let event = RetrievalFeedback::from_record(document_ref, *kind, *weight, &stamp);
@@ -86,6 +112,26 @@ pub(super) async fn handle_record(
         })
         .await,
     )
+}
+
+/// The principal's `RetrievalFeedback` events in the hour before `now_s`: a query over the
+/// stored nodes by time, with no separate counter (MEDULLA-FEDERATED-QUERY-R705.4).
+fn recent_events(core: &GraphCore, tenant: &str, principal: &str, now_s: u64) -> u64 {
+    const HOUR_S: u64 = 3_600;
+    let count = core
+        .get_nodes_by_label(RETRIEVAL_FEEDBACK_LABEL, 0)
+        .into_iter()
+        .filter_map(|(_, blob)| {
+            let props = medulla_types::msgpack::decode_property_object(&blob).ok()?;
+            RetrievalFeedback::from_node_properties(&props)
+        })
+        .filter(|event| {
+            event.tenant == tenant
+                && event.principal == principal
+                && event.at.saturating_add(HOUR_S) > now_s
+        })
+        .count();
+    u64::try_from(count).unwrap_or(u64::MAX)
 }
 
 /// The knobs of the read side, resolved once per `Discover` call.

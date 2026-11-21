@@ -220,6 +220,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "QUERY_BUDGET_EXCEEDED",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R705.4: feedback on an unreadable document, and the
+    // per-principal hourly event limit.
+    (
+        "RetrievalFeedbackRecord",
+        &["FEEDBACK_TARGET_HIDDEN", "FEEDBACK_RATE_LIMIT"],
+    ),
     // MEDULLA-TYPED-PACKS-R807: the conformance read or revoke finds no current evidence.
     ("ConnectorPack", &["CONFORMANCE_EVIDENCE_ABSENT"]),
     // MEDULLA-DECISION-ENGINE-R160.4: skill package publication refusals.

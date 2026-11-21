@@ -268,6 +268,10 @@ closed_error_codes! {
         ConstraintUnevaluable => "CONSTRAINT_UNEVALUABLE",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a topic bound is out of range (`top_topics` zero, `min_weight` outside `[0, 1]`).
         TopicWeightInvalid => "TOPIC_WEIGHT_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R705.4: feedback names a document the principal cannot read.
+        FeedbackTargetHidden => "FEEDBACK_TARGET_HIDDEN",
+        /// MEDULLA-FEDERATED-QUERY-R705.4: the principal already recorded `feedback.rate_limit_per_hour` events in the last hour.
+        FeedbackRateLimit => "FEEDBACK_RATE_LIMIT",
         /// MEDULLA-FEDERATED-QUERY-R040.2.2: a topic result or a candidate vector is not in the retriever's embedding space.
         TopicSpaceMismatch => "TOPIC_SPACE_MISMATCH",
         /// MEDULLA-FEDERATED-QUERY-R040.2.4: the topic centroids describe another corpus revision than the current one.
