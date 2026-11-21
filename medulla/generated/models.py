@@ -15373,6 +15373,13 @@ class MethodTaskQueueEnqueue(BaseModel):
     params: MethodTaskQueueEnqueueParams
 
 
+class MethodIngestEnqueue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IngestEnqueue"]
+    params: MethodIngestEnqueueParams
+
+
 class MethodIngestQueueDepth(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16061,6 +16068,7 @@ Method = Annotated[
         MethodTaskQueueClaim,
         MethodTaskQueueRenew,
         MethodTaskQueueAck,
+        MethodIngestEnqueue,
         MethodIngestQueueDepth,
     ],
     Field(discriminator="method"),
@@ -34868,6 +34876,48 @@ class MethodTaskQueueEnqueueParams(BaseModel):
     queue: str
 
 
+class IngestJobKind(str, Enum):
+    DOCUMENT = "document"
+    CODEBASE = "codebase"
+    SKILL_WORKFLOWS = "skill_workflows"
+    CAPABILITY_HYDRATION = "capability_hydration"
+
+
+class PageCheckpoint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: Annotated[str, Field(max_length=4096)]
+    drain_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    page_index: Annotated[int, Field(ge=0)]
+
+
+class IngestJobEnvelope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0, le=4294967295)]
+    corpus_key: str
+    job_id: str
+    kind: IngestJobKind
+    page: PageCheckpoint | None = Field(default=None)
+    target: str
+    tenant: str
+
+
+class IngestEnqueueReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    deduplicated: bool
+    partition: str
+    queue: str
+    task_id: str
+
+
+class MethodIngestEnqueueParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    envelope: IngestJobEnvelope
+
+
 class MethodIngestQueueDepthParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -41012,6 +41062,12 @@ __all__ = [
     "MethodTaskQueueRenewParams",
     "MethodTaskQueueAck",
     "MethodTaskQueueAckParams",
+    "MethodIngestEnqueue",
+    "MethodIngestEnqueueParams",
+    "IngestJobKind",
+    "PageCheckpoint",
+    "IngestJobEnvelope",
+    "IngestEnqueueReceipt",
     "MethodIngestQueueDepth",
     "MethodIngestQueueDepthParams",
     "IngestQueueDepthRow",

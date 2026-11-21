@@ -623,6 +623,7 @@ METHOD_IDS = frozenset(
         "TaskQueueClaim",
         "TaskQueueRenew",
         "TaskQueueAck",
+        "IngestEnqueue",
         "IngestQueueDepth",
     }
 )

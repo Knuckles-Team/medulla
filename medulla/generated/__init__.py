@@ -388,6 +388,7 @@ SEND_BY_METHOD = {
     "TaskQueueClaim": coordination.send_task_queue_claim,
     "TaskQueueRenew": coordination.send_task_queue_renew,
     "TaskQueueAck": coordination.send_task_queue_ack,
+    "IngestEnqueue": coordination.send_ingest_enqueue,
     "IngestQueueDepth": coordination.send_ingest_queue_depth,
     "GetShortestPath": compute.send_get_shortest_path,
     "GetSubgraph": graph.send_get_subgraph,
