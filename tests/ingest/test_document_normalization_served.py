@@ -3,13 +3,13 @@
 A document-class batch that fails `complete_document` is quarantined whole: the engine
 commits one restricted `SourceQuarantine` evidence node and nothing of the batch is
 projected. The quarantine keeps the stream's prior accepted checkpoint, a replay returns
-the stored receipt without a second record, a failed quarantine commit never reports a
-durable receipt, and a same-tenant caller the stored policy does not name reads nothing.
+the stored receipt without a second record, and a same-tenant caller the stored policy does
+not name reads nothing. A failed quarantine commit never reporting a durable receipt is
+proven in `documents.rs` over a failable commit substrate.
 """
 
 from __future__ import annotations
 
-import asyncio
 import copy
 import json
 import os
@@ -196,47 +196,6 @@ async def test_quarantine_preserves_prior_checkpoint() -> None:
         assert next_receipt.disposition is SourceIngestionDisposition.COMMITTED
     finally:
         await _close(client, graph)
-
-
-@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.12")
-@pytest.mark.asyncio
-async def test_failed_quarantine_commit_is_not_reported_durable() -> None:
-    """A quarantine races an accepted batch on the same stream. Whichever way the commit
-    fence falls, a returned quarantine receipt names a durable node and a refusal leaves
-    none: no caller is told a quarantine is durable that was never committed."""
-    for round_ in range(4):
-        connector = _connector()
-        client, graph = await _document_client(connector)
-        rival = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-            verified_context=request_context(),
-            graph_name=graph,
-        )
-        try:
-            quarantined = _documents_batch(connector, 2, None, [("bad", "")])
-            accepted = _documents_batch(connector, 3, None, [("good", VALID_TEXT)])
-            results = await asyncio.gather(
-                _outcome(client, quarantined, f"race-q-{round_}"),
-                _outcome(rival, accepted, f"race-a-{round_}"),
-                return_exceptions=True,
-            )
-            nodes = await _quarantine_nodes(client)
-            if isinstance(results[0], EngineResponseError):
-                assert "STALE_CONTENT_VERSION" in str(results[0]), results[0]
-                assert nodes == [], "a refused quarantine left evidence"
-            else:
-                assert not isinstance(results[0], BaseException), results[0]
-                assert results[0].outcome == "quarantined", results[0]
-                node_id = results[0].receipt.restricted_evidence_ref.removeprefix(
-                    "quarantine:"
-                )
-                assert nodes == [node_id], "a reported quarantine is not durable"
-            # The accepted batch is unaffected by a quarantine, and a refusal is typed.
-            if isinstance(results[1], EngineResponseError):
-                assert "STALE_CONTENT_VERSION" in str(results[1]), results[1]
-        finally:
-            await rival.close()
-            await _close(client, graph)
 
 
 async def _hidden(call: Any) -> bool:

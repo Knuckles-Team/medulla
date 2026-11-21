@@ -1139,4 +1139,87 @@ mod tests {
         );
         assert_eq!(replayed.committed_graph_version, first_receipt.committed_graph_version);
     }
+
+    /// A commit substrate for the quarantine tests: a test double that answers the
+    /// envelope commit like the engine, or fails it on demand, and records every commit
+    /// that landed. It is never a production operation.
+    struct FailableCommit {
+        fail: std::cell::Cell<bool>,
+        landed: std::cell::RefCell<Vec<String>>,
+    }
+
+    impl FailableCommit {
+        fn new() -> Self {
+            Self {
+                fail: std::cell::Cell::new(false),
+                landed: std::cell::RefCell::new(Vec::new()),
+            }
+        }
+
+        fn commit(
+            &self,
+            envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+            batch_id: &str,
+        ) -> medulla_protocol_types::protocol::Response {
+            use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
+            use medulla_protocol_types::protocol::{Response, ResultPayload};
+            use medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied;
+            if self.fail.get() {
+                return Response::err(1, "STORAGE_FAILURE: injected quarantine commit failure");
+            }
+            self.landed.borrow_mut().push(envelope.envelope_id.clone());
+            let body = ChangeEnvelopeApplied {
+                commit: ChangeEnvelopeCommit {
+                    envelope_id: envelope.envelope_id.clone(),
+                    batch_id: batch_id.to_string(),
+                    content_version: envelope.content_version.clone(),
+                    cursor: None,
+                    outbox_count: 0,
+                    replayed: false,
+                },
+                projection_pending: false,
+                replication: None,
+                write_conflict: None,
+            };
+            Response::ok(1, ResultPayload::Json(serde_json::to_value(body).unwrap()))
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.12
+    #[test]
+    fn failed_quarantine_commit_is_not_reported_durable() {
+        use medulla_protocol_types::protocol::ResultPayload;
+        use medulla_source_types::source_document::SourceIngestionOutcome;
+        let (_batch, _digest, batch_id, prepared) = quarantine_fixture();
+        let envelope = prepared.envelope.clone();
+        let substrate = FailableCommit::new();
+
+        // The commit fails: the answer is a refusal, it carries no receipt of any kind,
+        // and nothing landed.
+        substrate.fail.set(true);
+        let refused = crate::source_ingestion::finish(
+            prepared,
+            substrate.commit(&envelope, &batch_id),
+        );
+        assert!(refused.refusal_text().is_some(), "a failed commit is refused: {refused:?}");
+        assert!(refused.result.is_none(), "a failed commit reports no receipt");
+        assert!(substrate.landed.borrow().is_empty(), "a failed commit left no evidence");
+
+        // The same batch committed once the substrate recovers reports the receipt, and
+        // the commit that landed is the one the receipt names.
+        substrate.fail.set(false);
+        let (_batch, _digest, batch_id, prepared) = quarantine_fixture();
+        let finished = crate::source_ingestion::finish(prepared, substrate.commit(&envelope, &batch_id));
+        let Some(ResultPayload::Raw(bytes)) = finished.result else {
+            panic!("finish answers a raw outcome: {finished:?}");
+        };
+        let outcome: SourceIngestionOutcome = rmp_serde::from_slice(&bytes).unwrap();
+        let SourceIngestionOutcome::Quarantined(receipt) = outcome else {
+            panic!("the recovered commit reports the quarantine");
+        };
+        assert_eq!(substrate.landed.borrow().len(), 1);
+        assert!(receipt
+            .restricted_evidence_ref
+            .starts_with("quarantine:"));
+    }
 }
