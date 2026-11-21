@@ -384,6 +384,72 @@ fn change_envelope_projection_failure_never_partially_publishes() {
     assert_eq!(existing["value"], 0);
 }
 
+/// MEDULLA-FEDERATED-QUERY-R039.1.7: a ChangeEnvelope carrying `DeclareEmbeddingSpace` is
+/// projectable; the projection declares the space on the live semantic store.
+#[test]
+fn change_envelope_projects_declare_embedding_space() {
+    use medulla_index_types::embedding::EmbeddingSpaceRef;
+    use medulla_protocol_types::change_envelope::{
+        ChangeEnvelope, ContentVersion, ContentVersionPosition, MaterialClass,
+        PrivacyAttestation, CHANGE_ENVELOPE_VERSION,
+    };
+
+    let core = Arc::new(GraphCore::new());
+    let source_version = core.version();
+    let space =
+        EmbeddingSpaceRef::pinned("m", "1", "a".repeat(64), "b".repeat(64), 3, true).unwrap();
+    let mutation = compile_methods(
+        CompileBatch {
+            batch_id: "declare-space",
+            request_id: 10,
+            attempt_nonce: None,
+            principal: Some("test-principal"),
+            tenant: "tenant-a",
+            graph: "graph-a",
+            placement_epoch: 0,
+            idempotency_key: "declare-space",
+            expected_graph_version: Some(source_version),
+            fencing_token: None,
+            created_at_ms: 1,
+            default_surface: MutationSurface::Graph,
+            authoritative_state: None,
+        },
+        vec![Method::DeclareEmbeddingSpace {
+            space: space.clone(),
+        }],
+    )
+    .unwrap();
+    let envelope = ChangeEnvelope {
+        schema_version: CHANGE_ENVELOPE_VERSION,
+        envelope_id: "declare-space-envelope".into(),
+        mutation,
+        content_version: ContentVersion {
+            object_id: "space".into(),
+            digest_algorithm: "sha256".into(),
+            digest: "a".repeat(64),
+            previous_digest: None,
+            source_version: ContentVersionPosition::Sequence(1),
+        },
+        cursor: None,
+        blobs: Vec::new(),
+        features: Vec::new(),
+        evidence: Vec::new(),
+        policies: Vec::new(),
+        lineage: Vec::new(),
+        privacy: PrivacyAttestation {
+            policy_version: "privacy-v1".into(),
+            sanitizer_version: "sanitizer-v1".into(),
+            sanitized_payload_digest: "b".repeat(64),
+        },
+        material_class: MaterialClass::Attested,
+        commit_seq: None,
+        commit_descriptor_ref: None,
+    };
+
+    assert_eq!(publish_change_envelope_projection(&core, &envelope), Ok(()));
+    assert_eq!(core.semantic_store.read().space(), Some(&space));
+}
+
 #[cfg(feature = "rdf")]
 #[test]
 fn rdf_adapter_marks_rdf_surface() {

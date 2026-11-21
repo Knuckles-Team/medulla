@@ -11,6 +11,9 @@ use medulla_protocol_types::protocol::Method;
 struct StagedVectors<'a> {
     added: Vec<(&'a str, &'a [f32])>,
     removed: Vec<&'a str>,
+    /// Embedding-space declarations, published before the vectors so a vector is checked
+    /// against the space it was written under (MEDULLA-FEDERATED-QUERY-R039.1.7).
+    declared: Vec<&'a medulla_index_types::embedding::EmbeddingSpaceRef>,
 }
 
 /// Publish the graph-row projection of a durably committed ChangeEnvelope.
@@ -61,6 +64,7 @@ fn stage_operation<'a>(
             vectors.removed.push(node_id);
         }
         Method::AddEmbedding { node_id, embedding } => stage_vector(node_id, embedding, vectors)?,
+        Method::DeclareEmbeddingSpace { space } => vectors.declared.push(space),
         Method::CompareAndSetNodeFields {
             node_id,
             conditions_msgpack,
@@ -125,10 +129,15 @@ fn stage_cas(
 
 /// Publish staged vectors after the snapshot swap; a removed node loses its vector.
 fn publish_vectors(core: &GraphCore, vectors: StagedVectors<'_>) -> Result<(), String> {
-    if vectors.added.is_empty() && vectors.removed.is_empty() {
+    if vectors.added.is_empty() && vectors.removed.is_empty() && vectors.declared.is_empty() {
         return Ok(());
     }
     let mut semantic = core.semantic_store.write();
+    for space in vectors.declared {
+        semantic
+            .declare_space(space.clone())
+            .map_err(|error| format!("committed embedding space `{}`: {error}", space.digest))?;
+    }
     // The frontier the Discover verdict measures staleness against.
     semantic.record_embedded_through(core.version());
     for node_id in vectors.removed {
