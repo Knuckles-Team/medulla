@@ -130,6 +130,7 @@ fn rank_top(
         return Ok(RowSet::new().with_shortfall(limit.map(|k| Shortfall {
             requested: k as u64,
             found: 0,
+            missing: 0,
             reason: ShortfallReason::EligibleExhausted,
         })));
     }
@@ -159,6 +160,7 @@ fn rank_top(
         Some(Shortfall {
             requested: k as u64,
             found: found.scored.len() as u64,
+            missing: 0,
             reason: ShortfallReason::BudgetExhausted,
         })
     } else {
@@ -191,12 +193,14 @@ fn rank_topic_fused(
         Some(Shortfall {
             requested: k as u64,
             found: fused.len() as u64,
+            missing: 0,
             reason: ShortfallReason::BudgetExhausted,
         })
     } else if fused.len() < k {
         Some(Shortfall {
             requested: k as u64,
             found: fused.len() as u64,
+            missing: (candidates.len() - embedded) as u64,
             reason: if embedded < candidates.len() {
                 ShortfallReason::MissingEmbedding
             } else {
@@ -296,13 +300,15 @@ pub fn replenish_until_k(
         }
         walked.unwrap_or_else(exact)
     };
+    let missing = candidates
+        .iter()
+        .filter(|id| semantic.get_embedding(id).is_none())
+        .count() as u64;
     let shortfall = (scored.len() < k).then(|| Shortfall {
         requested: k as u64,
         found: scored.len() as u64,
-        reason: if candidates
-            .iter()
-            .any(|id| semantic.get_embedding(id).is_none())
-        {
+        missing,
+        reason: if missing > 0 {
             ShortfallReason::MissingEmbedding
         } else {
             ShortfallReason::EligibleExhausted
@@ -425,11 +431,45 @@ mod tests {
             Some(Shortfall {
                 requested: 25,
                 found: 20,
+                missing: 1,
                 reason: ShortfallReason::MissingEmbedding
             })
         );
         let got = replenish_until_k(&semantic, &[1.0, 0.0], &all, 25, EXACT_RANK_MAX, policy);
         assert_eq!(got.shortfall.map(|s| s.reason), Some(ShortfallReason::EligibleExhausted));
+        assert_eq!(got.shortfall.map(|s| s.missing), Some(0));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.4
+    #[test]
+    fn shortfall_counts_missing_embeddings() {
+        let semantic = store(4);
+        let candidates = ["e0", "e1", "ghost-a", "ghost-b"];
+        let all: HashSet<&str> = candidates.into_iter().collect();
+        let got = replenish_until_k(
+            &semantic,
+            &[1.0, 0.0],
+            &all,
+            4,
+            EXACT_RANK_MAX,
+            ReplenishPolicy::default(),
+        );
+        let shortfall = got.shortfall.expect("two candidates hold no embedding");
+        assert_eq!((shortfall.found, shortfall.missing), (2, 2));
+        assert_eq!(shortfall.reason, ShortfallReason::MissingEmbedding);
+        // Fewer eligible items than k, all embedded: nothing is missing.
+        let embedded: HashSet<&str> = ["e0", "e1"].into_iter().collect();
+        let got = replenish_until_k(
+            &semantic,
+            &[1.0, 0.0],
+            &embedded,
+            4,
+            EXACT_RANK_MAX,
+            ReplenishPolicy::default(),
+        );
+        let shortfall = got.shortfall.unwrap();
+        assert_eq!(shortfall.missing, 0);
+        assert_eq!(shortfall.reason, ShortfallReason::EligibleExhausted);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R039

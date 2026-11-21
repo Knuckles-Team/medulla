@@ -31856,6 +31856,7 @@ class Shortfall(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     found: Annotated[int, Field(ge=0)]
+    missing: Annotated[int, Field(ge=0)]
     reason: ShortfallReason
     requested: Annotated[int, Field(ge=0)]
 

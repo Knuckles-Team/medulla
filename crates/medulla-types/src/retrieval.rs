@@ -129,6 +129,9 @@ pub struct Shortfall {
     pub requested: u64,
     /// The rows the answer holds.
     pub found: u64,
+    /// MEDULLA-FEDERATED-QUERY-R039.1.4: the eligible candidates the caller may see that hold
+    /// no embedding. 0 unless the reason is `missing_embedding`.
+    pub missing: u64,
     /// Why the answer is short.
     pub reason: ShortfallReason,
 }
