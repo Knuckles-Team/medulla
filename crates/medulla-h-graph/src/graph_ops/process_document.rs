@@ -26,7 +26,7 @@ use medulla_core::process_exchange::bpmn_write::write_bpmn;
 use medulla_core::process_exchange::dmn_graph::dmn_document;
 use medulla_core::process_exchange::dmn_write::write_dmn;
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
-use medulla_core::process_exchange::ProcessExchangeError;
+use medulla_core::process_exchange::{canonical_model_digest, ProcessExchangeError};
 use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
 use medulla_core::process_exchange::dmn_graph::dmn_mutations;
 use medulla_core::process_exchange::dmn_read::parse_dmn;
@@ -177,6 +177,7 @@ pub(super) fn admit_document_import(
             "importedFrom": digest,
             "sourceDocumentDigest": digest,
             "elementIds": serde_json::to_string(&element_ids).unwrap_or_default(),
+            "canonicalModelDigest": canonical_model_digest(&mutations),
         },
     }));
     let (mut nodes, mut edges) = (0u64, 0u64);
@@ -338,18 +339,20 @@ pub(super) fn export_document(
     source: &ExportSource,
     format: ProcessDocumentFormat,
 ) -> Result<ProcessDocumentExported, String> {
-    let bytes = match (source, format) {
+    let (bytes, canonical) = match (source, format) {
         (ExportSource::Model { model_iri }, ProcessDocumentFormat::Bpmn20) => {
             let stored = stored_model_mutations(core, tenant, model_iri, format)?;
-            bpmn_document(&stored, model_iri)
+            let bytes = bpmn_document(&stored, model_iri)
                 .and_then(|doc| write_bpmn(&doc))
-                .map_err(|error| exchange_refusal(&error))?
+                .map_err(|error| exchange_refusal(&error))?;
+            (bytes, canonical_model_digest(&stored))
         }
         (ExportSource::Model { model_iri }, ProcessDocumentFormat::Dmn13) => {
             let stored = stored_model_mutations(core, tenant, model_iri, format)?;
-            dmn_document(&stored, model_iri)
+            let bytes = dmn_document(&stored, model_iri)
                 .and_then(|doc| write_dmn(&doc))
-                .map_err(|error| exchange_refusal(&error))?
+                .map_err(|error| exchange_refusal(&error))?;
+            (bytes, canonical_model_digest(&stored))
         }
         (
             ExportSource::Workflow {
@@ -359,9 +362,10 @@ pub(super) fn export_document(
             ProcessDocumentFormat::Bpmn20,
         ) => {
             let workflow = stored_workflow(core, tenant, workflow_id, *version)?;
-            workflow_to_bpmn(&workflow)
+            let bytes = workflow_to_bpmn(&workflow)
                 .and_then(|doc| write_bpmn(&doc))
-                .map_err(|error| exchange_refusal(&error))?
+                .map_err(|error| exchange_refusal(&error))?;
+            (bytes, workflow.digest.clone())
         }
         (ExportSource::Workflow { .. }, ProcessDocumentFormat::Dmn13) => {
             return Err(refuse(
@@ -379,6 +383,7 @@ pub(super) fn export_document(
             source_ref: None,
         },
         document_digest,
+        canonical_model_digest: canonical,
     })
 }
 

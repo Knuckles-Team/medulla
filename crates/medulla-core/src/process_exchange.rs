@@ -20,6 +20,38 @@ pub mod xml_tree;
 
 pub use medulla_types::process_exchange::ProcessExchangeError;
 
+/// The canonical model digest of one stored process or decision model (MEDULLA-CQ-ORCH-R702.13):
+/// SHA-256, as 64 lowercase hex characters, of its node and edge writes with nodes ordered by
+/// id and edges by (source, predicate, target), so the digest is the same whether the writes
+/// come from the import mapping or are read back from the graph.
+pub fn canonical_model_digest(mutations: &[crate::architecture_exchange::graph::ExchangeMutation]) -> String {
+    use crate::architecture_exchange::graph::ExchangeMutation;
+    let mut nodes: Vec<(&str, &str, &BTreeMap<String, String>)> = Vec::new();
+    let mut edges: Vec<(&str, &str, &str)> = Vec::new();
+    for mutation in mutations {
+        match mutation {
+            ExchangeMutation::UpsertNode {
+                id,
+                label,
+                properties,
+            } => nodes.push((id.as_str(), label.as_str(), properties)),
+            ExchangeMutation::Link {
+                source,
+                target,
+                predicate,
+            } => edges.push((source.as_str(), predicate.as_str(), target.as_str())),
+        }
+    }
+    nodes.sort_by(|a, b| a.0.cmp(b.0));
+    edges.sort_unstable();
+    edges.dedup();
+    let value = serde_json::json!({"nodes": nodes, "edges": edges});
+    let text = medulla_query_types::solve_scalar::digest_text("process-model", &value);
+    text.strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .unwrap_or(&text)
+        .to_owned()
+}
+
 /// The BPMN 2.0 model namespace; the root element must be in it.
 pub const BPMN_MODEL_NS: &str = "http://www.omg.org/spec/BPMN/20100524/MODEL";
 

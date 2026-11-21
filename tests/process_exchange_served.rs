@@ -361,3 +361,46 @@ async fn document_refusals_leave_state_unchanged() {
         .is_some_and(|e| e.starts_with("PROCESS_EXPORT_NOT_DEPLOYABLE")));
     assert_eq!(core_version(&state), before, "a refusal writes nothing");
 }
+
+// spec: MEDULLA-CQ-ORCH-R702.13
+#[tokio::test(flavor = "multi_thread")]
+async fn model_keeps_document_and_canonical_digests() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "process-exchange-digests",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let imported: ProcessDocumentImported =
+        payload(send(&state, 2, import_method(EVERY_KIND, None)).await);
+    assert_eq!(imported.source_document_digest, sha256_hex(EVERY_KIND));
+
+    // The model node carries both digests, 64 lowercase hex characters each.
+    let (document, canonical) = {
+        let guard = state.try_read().unwrap();
+        let core = &guard.registry.get(GRAPH).unwrap().core;
+        let bytes = core.get_node_properties(&imported.model_node_id).unwrap();
+        let properties = medulla_types::msgpack::decode_property_object(&bytes).unwrap();
+        let text = |key: &str| properties[key].as_str().unwrap().to_string();
+        (text("sourceDocumentDigest"), text("canonicalModelDigest"))
+    };
+    let is_hex = |text: &str| {
+        text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    };
+    assert_eq!(document, imported.source_document_digest);
+    assert!(is_hex(&canonical));
+
+    // The export answers the digest of the document it wrote and the stored canonical digest.
+    let exported: ProcessDocumentExported = payload(
+        send(
+            &state,
+            3,
+            export_method(model(MODEL_IRI), ProcessDocumentFormat::Bpmn20),
+        )
+        .await,
+    );
+    assert_eq!(exported.canonical_model_digest, canonical);
+    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+}

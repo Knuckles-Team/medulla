@@ -89,6 +89,9 @@ pub struct ProcessDocumentExported {
     pub document: ProcessDocument,
     /// The SHA-256 of the written document bytes, 64 lowercase hex characters.
     pub document_digest: String,
+    /// The canonical model digest, 64 lowercase hex characters (MEDULLA-CQ-ORCH-R702.13): the
+    /// digest the model node carries as `canonicalModelDigest`, or the stored workflow's digest.
+    pub canonical_model_digest: String,
 }
 
 /// The refusal codes of the served process document import and export (MEDULLA-CQ-ORCH-R702.12),
