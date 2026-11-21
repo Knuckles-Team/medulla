@@ -20,8 +20,9 @@
 - `tests/test_scm_code_graph.py::test_one_file_change_updates_only_its_symbols`. A one-file changeset
   updates only that file symbols. A structural no-op updates nothing. *(MEDULLA-SCM-R006)*
 - `tests/test_scm_path_access.py::test_prefix_grant_filters_reads_and_refuses_writes`. A prefix grant
-  filters reads to the prefix. A longer denying prefix wins. A write outside the grant refuses
-  `PATH_WRITE_DENIED`. A path with no grant is denied. *(MEDULLA-SCM-R007)*
+  filters reads to the prefix. A longer grant with both bits false is a stored explicit deny and wins, so
+  `src/secret` reads refuse `PATH_READ_DENIED` and writes refuse `PATH_WRITE_DENIED` under an allowed `src`.
+  A path with no grant is denied. *(MEDULLA-SCM-R007)*
 - `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` (planned). Pass and fail
   verdicts read back byte-identically. An overwrite attempt is refused. *(MEDULLA-SCM-R008)*
 - `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision`. A seeded bisect names the
@@ -100,6 +101,7 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R006` | `tests/test_scm_code_graph.py::test_one_file_change_updates_only_its_symbols` | L3 | planned |
 | `MEDULLA-SCM-R007` | `crates/medulla-source-types/src/source_path_grant.rs::tests::longest_segment_prefix_wins_and_no_match_denies` | L2 | planned |
 | `MEDULLA-SCM-R007` | `tests/test_scm_path_access.py::test_prefix_grant_filters_reads_and_refuses_writes` | L3 | planned |
+| `MEDULLA-SCM-R007` | `crates/medulla-persistence/src/branch_registry_store.rs::tests::both_false_grant_is_stored_as_deny` | L2 | planned |
 | `MEDULLA-SCM-R008` | `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` | L3 | planned |
 | `MEDULLA-SCM-R009` | `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision` | L3 | planned |
 | `MEDULLA-SCM-R010` | `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids` | L3 | planned |
