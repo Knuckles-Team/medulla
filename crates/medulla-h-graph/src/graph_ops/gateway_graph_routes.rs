@@ -22,6 +22,7 @@ enum Route {
     SchemaProjections,
     DomainPack,
     ArgumentMap,
+    RetrievalFeedback,
     AssistantProfile,
     NlCorrection,
     HarnessEdit,
@@ -188,6 +189,9 @@ fn is_memory_surface(method: &Method) -> bool {
 fn is_domain_pack(method: &Method) -> bool {
     matches!(method, Method::DomainPack { .. })
 }
+fn is_retrieval_feedback(method: &Method) -> bool {
+    matches!(method, Method::RetrievalFeedbackRecord { .. })
+}
 fn is_argument_map(method: &Method) -> bool {
     matches!(method, Method::ArgumentMapPut { .. })
 }
@@ -216,6 +220,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_schema_projections, Route::SchemaProjections),
     (is_domain_pack, Route::DomainPack),
     (is_argument_map, Route::ArgumentMap),
+    (is_retrieval_feedback, Route::RetrievalFeedback),
     (is_assistant_profile, Route::AssistantProfile),
     (is_nl_correction, Route::NlCorrection),
     (is_harness_edit, Route::HarnessEdit),
@@ -244,6 +249,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Import
         | Route::Analytics
         | Route::ArgumentMap
+        | Route::RetrievalFeedback
         | Route::AssistantProfile
         | Route::NlCorrection
         | Route::HarnessEdit
@@ -331,6 +337,9 @@ async fn try_handle_admin(
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
         }
         Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
+        Route::RetrievalFeedback => {
+            super::super::retrieval_feedback::handle_record(ctx, tenant_id, method).await
+        }
         Route::HarnessEdit => {
             super::super::harness_edit::handle_transition(ctx, tenant_id, method).await
         }

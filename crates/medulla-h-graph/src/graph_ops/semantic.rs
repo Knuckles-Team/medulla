@@ -194,6 +194,9 @@ struct DiscoverCall<'a> {
     adapter_digest: Option<&'a str>,
     /// The `RetrievalQualityPolicy` node the verdict is judged by (R089.3).
     quality_policy_ref: Option<&'a str>,
+    /// Implicit feedback events derived from the tenant's stored retrieval outcomes
+    /// (MEDULLA-FEDERATED-QUERY-R705.3); empty without a tenant or a control store.
+    implicit_feedback: &'a [medulla_result_types::feedback_event::RetrievalFeedback],
 }
 
 #[cfg(feature = "query")]
@@ -317,6 +320,29 @@ fn discover(
             );
             *score *= boost;
             boosts.insert(id.clone(), boost);
+        }
+    }
+    // MEDULLA-FEDERATED-QUERY-R705.3: learned document boosts, added after calibration.
+    if let Some(tenant) = call.tenant {
+        let candidates: Vec<String> = ranked.iter().map(|(id, _)| id.clone()).collect();
+        let now_s = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000;
+        let boosts = super::retrieval_feedback::load_feedback(
+            core,
+            tenant,
+            &candidates,
+            now_s,
+            &super::retrieval_feedback::FeedbackKnobs::from_registry(),
+            call.implicit_feedback,
+        );
+        if !boosts.is_empty() {
+            let calibrated: Vec<(String, f64)> = ranked
+                .iter()
+                .map(|(id, score)| (id.clone(), f64::from(*score)))
+                .collect();
+            ranked = medulla_retrieval::feedback_boost::apply_boosts(&calibrated, &boosts)
+                .into_iter()
+                .map(|(id, score)| (id, score as f32))
+                .collect();
         }
     }
     ranked.sort_by(|a, b| {
@@ -464,6 +490,7 @@ async fn handle_discover(
     perspectives: Option<u32>,
     served: (Option<String>, Option<String>),
     quality_policy_ref: Option<String>,
+    implicit_feedback: Vec<medulla_result_types::feedback_event::RetrievalFeedback>,
 ) -> Response {
     let (tenant, adapter_digest) = served;
     let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
@@ -506,6 +533,7 @@ async fn handle_discover(
             tenant: tenant.as_deref(),
             adapter_digest: adapter_digest.as_deref(),
             quality_policy_ref: quality_policy_ref.as_deref(),
+            implicit_feedback: &implicit_feedback,
         },
         deep,
         req_id,
@@ -665,6 +693,17 @@ pub(super) async fn try_handle_semantic_compute(
             capability,
         } => {
             let served = discover_served(&ctx, capability.as_deref()).await;
+            let implicit_feedback = match served.0.as_deref() {
+                Some(tenant) => {
+                    super::retrieval_feedback::load_implicit_events(
+                        ctx.state,
+                        tenant,
+                        &super::retrieval_feedback::FeedbackKnobs::from_registry(),
+                    )
+                    .await
+                }
+                None => Vec::new(),
+            };
             handle_discover(
                 req_id,
                 core,
@@ -679,6 +718,7 @@ pub(super) async fn try_handle_semantic_compute(
                 perspectives,
                 served,
                 quality_policy_ref,
+                implicit_feedback,
             )
             .await
         }

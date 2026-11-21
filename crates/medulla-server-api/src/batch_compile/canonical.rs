@@ -682,6 +682,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::StoredQueryCall { .. }
         // MEDULLA-FEDERATED-QUERY-R700.3: argument map write; the reads are query-family.
         | Method::ArgumentMapPut { .. }
+        // MEDULLA-FEDERATED-QUERY-R705.3: feedback record write.
+        | Method::RetrievalFeedbackRecord { .. }
         | Method::ArgumentMapGet { .. }
         | Method::ArgumentMapEvaluate { .. }
         | Method::GetEdges

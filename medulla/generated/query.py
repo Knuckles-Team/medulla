@@ -1860,6 +1860,12 @@ send_argument_map_get = contract_sender("ArgumentMapGet", "MethodArgumentMapGetP
 decode_argument_map_get = contract_decoder("ArgumentMapGet", "ArgumentMap")
 send_argument_map_put = contract_sender("ArgumentMapPut", "MethodArgumentMapPutParams")
 decode_argument_map_put = contract_decoder("ArgumentMapPut", "ArgumentMap")
+send_retrieval_feedback_record = contract_sender(
+    "RetrievalFeedbackRecord", "MethodRetrievalFeedbackRecordParams"
+)
+decode_retrieval_feedback_record = contract_decoder(
+    "RetrievalFeedbackRecord", "RetrievalFeedbackEvent"
+)
 send_live_artifact_get = contract_sender(
     "LiveArtifactGet", "MethodLiveArtifactGetParams"
 )

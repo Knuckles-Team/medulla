@@ -126,6 +126,9 @@ pub fn apply(core: &GraphCore, m: &Method) -> Result<(), ReplayDivergence> {
     if apply_argument_map(core, m) {
         return Ok(());
     }
+    if apply_retrieval_feedback(core, m) {
+        return Ok(());
+    }
     if apply_broker_exchange(core, m) {
         return Ok(());
     }
@@ -436,6 +439,44 @@ fn apply_argument_map(core: &GraphCore, m: &Method) -> bool {
             aif_node(&edge.to_id),
             rmp_serde::to_vec_named(&props).unwrap_or_default(),
         );
+    }
+    true
+}
+
+/// Retrieval feedback record (MEDULLA-FEDERATED-QUERY-R705.3): replay rebuilds the one
+/// `RetrievalFeedback` node from the logged, stamped method, with the id and properties
+/// the serving handler wrote (`RetrievalFeedback::node_id`, `node_properties`). An
+/// unstamped method was never committed, so it applies nothing.
+fn apply_retrieval_feedback(core: &GraphCore, m: &Method) -> bool {
+    let Method::RetrievalFeedbackRecord {
+        document_ref,
+        kind,
+        weight,
+        stamp,
+    } = m
+    else {
+        return false;
+    };
+    let Some(stamp) = stamp else {
+        return true;
+    };
+    let event = medulla_result_types::feedback_event::RetrievalFeedback::from_record(
+        document_ref,
+        *kind,
+        *weight,
+        stamp,
+    );
+    match event.node_id() {
+        Ok(id) => {
+            core.remove_node(id.clone());
+            core.add_node(
+                id,
+                rmp_serde::to_vec_named(&event.node_properties()).unwrap_or_default(),
+            );
+        }
+        Err(error) => {
+            tracing::warn!(%error, "RetrievalFeedbackRecord replay: node id failed");
+        }
     }
     true
 }

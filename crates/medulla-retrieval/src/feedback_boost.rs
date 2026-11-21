@@ -13,28 +13,7 @@ pub const MAX_BOOST: f64 = 0.5;
 /// The default half life: 30 days.
 pub const DEFAULT_HALF_LIFE_S: u64 = 30 * 24 * 60 * 60;
 
-/// The kind of a feedback event. Closed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FeedbackKind {
-    Upvote,
-    Downvote,
-    Cited,
-    Ignored,
-}
-
-/// One feedback event (MEDULLA-FEDERATED-QUERY-R705.1).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RetrievalFeedback {
-    pub tenant: String,
-    pub principal: String,
-    pub document_ref: String,
-    pub kind: FeedbackKind,
-    pub weight: f64,
-    /// Unix seconds.
-    pub at: u64,
-}
+pub use medulla_result_types::feedback_event::{FeedbackKind, FeedbackStamp, RetrievalFeedback};
 
 /// A document's current boost (MEDULLA-FEDERATED-QUERY-R705.1).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -80,6 +59,38 @@ pub fn apply_boosts(calibrated: &[(String, f64)], boosts: &[DocumentBoost]) -> V
         .collect();
     out.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
     out
+}
+
+/// The implicit events of one stored retrieval outcome (MEDULLA-FEDERATED-QUERY-R705.3): each
+/// returned row that was cited is a `cited` event of weight `weights.0`; each returned row
+/// that was not is an `ignored` event of weight `weights.1`. Nothing is written for them.
+pub fn implicit_events(
+    cited: &[String],
+    returned: &[String],
+    at: u64,
+    principal: &str,
+    tenant: &str,
+    weights: (f64, f64),
+) -> Vec<RetrievalFeedback> {
+    let event = |document_ref: &String, kind: FeedbackKind, weight: f64| RetrievalFeedback {
+        tenant: tenant.to_string(),
+        principal: principal.to_string(),
+        document_ref: document_ref.clone(),
+        kind,
+        weight,
+        at,
+    };
+    let mut events: Vec<RetrievalFeedback> = cited
+        .iter()
+        .map(|id| event(id, FeedbackKind::Cited, weights.0))
+        .collect();
+    events.extend(
+        returned
+            .iter()
+            .filter(|id| !cited.contains(id))
+            .map(|id| event(id, FeedbackKind::Ignored, weights.1)),
+    );
+    events
 }
 
 #[cfg(test)]
@@ -154,5 +165,26 @@ mod tests {
             .map(|(id, _)| id)
             .collect();
         assert_eq!(ranked, vec!["c", "b", "a"]);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R705.3
+    #[test]
+    fn implicit_events_map_cited_and_uncited_returned_rows() {
+        let returned: Vec<String> = ["a", "b", "c"].iter().map(|s| s.to_string()).collect();
+        let cited = vec!["b".to_string()];
+        let events = implicit_events(&cited, &returned, 9, "producer", "t1", (0.05, -0.02));
+        let kinds: Vec<(&str, FeedbackKind, f64)> = events
+            .iter()
+            .map(|e| (e.document_ref.as_str(), e.kind, e.weight))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec![
+                ("b", FeedbackKind::Cited, 0.05),
+                ("a", FeedbackKind::Ignored, -0.02),
+                ("c", FeedbackKind::Ignored, -0.02),
+            ]
+        );
+        assert!(events.iter().all(|e| e.at == 9 && e.tenant == "t1" && e.principal == "producer"));
     }
 }

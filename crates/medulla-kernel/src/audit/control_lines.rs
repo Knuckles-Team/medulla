@@ -284,6 +284,13 @@ pub(super) fn graph_crud_audit_line(method: &Method) -> Option<String> {
         // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits one
         // atomic batch of graph nodes.
         Method::ArgumentMapPut { map_id, .. } => Some(format!("ARGUMENT_MAP_PUT|{map_id}")),
+        // MEDULLA-FEDERATED-QUERY-R705.3: one explicit retrieval feedback event.
+        Method::RetrievalFeedbackRecord {
+            document_ref, kind, ..
+        } => Some(format!(
+            "RETRIEVAL_FEEDBACK_RECORD|{document_ref}|{}",
+            kind.as_str()
+        )),
         _ => None,
     }
 }

@@ -48,6 +48,7 @@ method_results! {
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
     ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
+    RetrievalFeedbackRecord(RetrievalFeedbackRecord) => Json<medulla_result_types::feedback_event::RetrievalFeedback>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::ExtensionResult>;

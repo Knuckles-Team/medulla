@@ -225,6 +225,14 @@ knobs! {
     discover_recency_weight: f64 = "discover.recency_weight", F64(0.5), [0.0, 2.0], "ratio", Tunable;
     /// Discover recency: default half life when the node type declares none.
     discover_recency_half_life_days: u64 = "discover.recency_half_life_days", U64(30), [1, 3650], "days", Tunable;
+    /// Retrieval feedback: most explicit events read per document.
+    feedback_events_per_doc: u64 = "feedback.events_per_doc", U64(1000), [10, 100_000], "events", Tunable;
+    /// Retrieval feedback: most stored retrieval outcomes read for implicit events.
+    feedback_implicit_outcomes: u64 = "feedback.implicit_outcomes", U64(256), [16, 4096], "outcomes", Tunable;
+    /// Retrieval feedback: weight of an implicit `cited` event.
+    feedback_cited_weight: f64 = "feedback.cited_weight", F64(0.05), [0.0, 0.5], "weight", Tunable;
+    /// Retrieval feedback: weight of an implicit `ignored` event.
+    feedback_ignored_weight: f64 = "feedback.ignored_weight", F64(-0.02), [-0.5, 0.0], "weight", Tunable;
     /// Context bundle: reciprocal-rank-fusion damping constant.
     context_rrf_k: u64 = "context.rrf_k", U64(60), [1, 1000], "rank", Tunable;
     /// Context bundle: fewest items kept by the gap cut.

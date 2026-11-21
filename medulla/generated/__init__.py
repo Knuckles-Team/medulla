@@ -109,6 +109,7 @@ SEND_BY_METHOD = {
     "ArgumentMapEvaluate": query.send_argument_map_evaluate,
     "ArgumentMapGet": query.send_argument_map_get,
     "ArgumentMapPut": query.send_argument_map_put,
+    "RetrievalFeedbackRecord": query.send_retrieval_feedback_record,
     "Asr": ingestion.send_asr,
     "AssistantProfile": coordination.send_assistant_profile,
     "AuditAppend": security.send_audit_append,

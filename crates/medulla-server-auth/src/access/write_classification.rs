@@ -524,6 +524,8 @@ pub fn requires_write(method: &Method) -> bool {
                 // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert
                 // commits graph nodes through the gateway.
                 | Method::ArgumentMapPut { .. }
+                // MEDULLA-FEDERATED-QUERY-R705.3: the feedback record commits one graph node.
+                | Method::RetrievalFeedbackRecord { .. }
         )
     )
 }

@@ -52,6 +52,8 @@ pub mod freshness;
 // MEDULLA-FEDERATED-QUERY-R700 — AIF argument maps and their Dung projection.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod argument_map;
+#[allow(missing_docs)] // docs pending: wire shapes of one feedback event
+pub mod feedback_event;
 // MEDULLA-FEDERATED-QUERY-R081 — retrieval sufficiency, selection, feedback and
 // hierarchy contracts (incl. the R081.9.7.1 section hierarchy policy); the deciding functions live in `medulla_plan::retrieval_verdict`.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

@@ -10654,6 +10654,15 @@ class MethodArgumentMapPutParams(BaseModel):
     map_id: str
 
 
+class MethodRetrievalFeedbackRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    document_ref: str
+    kind: FeedbackKind
+    stamp: FeedbackStamp | None = None
+    weight: float
+
+
 class MethodCreateNodeIfAbsent(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14596,6 +14605,13 @@ class MethodArgumentMapPut(BaseModel):
     params: MethodArgumentMapPutParams
 
 
+class MethodRetrievalFeedbackRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RetrievalFeedbackRecord"]
+    params: MethodRetrievalFeedbackRecordParams
+
+
 class MethodArgumentMapGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15522,6 +15538,7 @@ Method = Annotated[
         MethodEncodedDocumentSearch,
         MethodTsDefineStateSpace,
         MethodArgumentMapPut,
+        MethodRetrievalFeedbackRecord,
         MethodArgumentMapGet,
         MethodArgumentMapEvaluate,
         MethodLoops,
@@ -32996,6 +33013,21 @@ class FallbackPolicy(str, Enum):
     STRICT = "strict"
 
 
+class FeedbackKind(str, Enum):
+    UPVOTE = "upvote"
+    DOWNVOTE = "downvote"
+    CITED = "cited"
+    IGNORED = "ignored"
+
+
+class FeedbackStamp(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at: int
+    principal: str
+    tenant: str
+
+
 class FeedbackLimits(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -34332,6 +34364,17 @@ class RetrievalCritique(BaseModel):
     model_revision: str
     proposed_reformulation: str | None = None
     text: str
+
+
+class RetrievalFeedbackEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at: int
+    document_ref: str
+    kind: FeedbackKind
+    principal: str
+    tenant: str
+    weight: float
 
 
 class RetrievalFeedback(BaseModel):
@@ -37013,6 +37056,7 @@ __all__ = [
     "MethodArgumentMapEvaluateParams",
     "MethodArgumentMapGetParams",
     "MethodArgumentMapPutParams",
+    "MethodRetrievalFeedbackRecordParams",
     "MethodAsr",
     "MethodAsrParams",
     "MethodAssistantProfile",
@@ -39467,7 +39511,10 @@ __all__ = [
     "EwmaSmoothingHalfLife",
     "EwmaSmoothingSpan",
     "FallbackPolicy",
+    "FeedbackKind",
+    "FeedbackStamp",
     "FeedbackLimits",
+    "RetrievalFeedbackEvent",
     "FeedbackTier",
     "HeldoutSample",
     "HierarchyParentLink",
@@ -39503,6 +39550,7 @@ __all__ = [
     "MethodArgumentMapEvaluate",
     "MethodArgumentMapGet",
     "MethodArgumentMapPut",
+    "MethodRetrievalFeedbackRecord",
     "MethodBatch",
     "MethodBatchParams",
     "MethodBeliefRevise",

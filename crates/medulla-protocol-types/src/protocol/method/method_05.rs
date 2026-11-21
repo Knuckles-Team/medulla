@@ -114,6 +114,17 @@ $($variants)*
     },
 
 
+    // ── Retrieval feedback (MEDULLA-FEDERATED-QUERY-R705.3) ──────────────────────
+    /// Record one explicit feedback event on a document. A caller sends only `upvote` or
+    /// `downvote`; the engine replaces `stamp` with the verified tenant and principal.
+    RetrievalFeedbackRecord {
+        document_ref: String,
+        kind: medulla_result_types::feedback_event::FeedbackKind,
+        weight: f64,
+        #[serde(default)]
+        stamp: Option<medulla_result_types::feedback_event::FeedbackStamp>,
+    },
+
     // ── UQL — the one query-TEXT surface (UQL-07/08/09, EH-434) ─────────────────
     // The human/agent-writable counterpart of `UnifiedQuery`: a UQL statement whose
     // pipelines parse (`medulla_uql::parse_statement`) into the SAME `wire::Plan` ops

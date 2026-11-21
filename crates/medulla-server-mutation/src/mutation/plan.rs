@@ -97,6 +97,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "RunTemporalRules",
     // MEDULLA-FEDERATED-QUERY-R700.3: argument map upsert; one atomic batch.
     "ArgumentMapPut",
+    // MEDULLA-FEDERATED-QUERY-R705.3: one RetrievalFeedback node per explicit event.
+    "RetrievalFeedbackRecord",
     // `IcvConfigure` is UNCONDITIONAL in the `Method` enum but its handler (and
     // hence its gateway arm) is behind `feature = "shacl"` — same shape as
     // `RunDatalogReasoning`/`reasoning` above. Its validated policy is graph
@@ -533,6 +535,7 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
         Method::EncodeDocument { .. } => Some("EncodeDocument"),
         Method::StoredQueryCall { .. } => Some("StoredQueryCall"),
         Method::ArgumentMapPut { .. } => Some("ArgumentMapPut"),
+        Method::RetrievalFeedbackRecord { .. } => Some("RetrievalFeedbackRecord"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),
         _ => None,

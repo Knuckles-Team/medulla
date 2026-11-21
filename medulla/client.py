@@ -6821,6 +6821,29 @@ class GraphOperationsClient:
             await _gen.ingestion.send_parse_files(self._client, {"files_msgpack": blob})
         ).payload
 
+    async def record_retrieval_feedback(
+        self, document_ref: str, kind: str, weight: float
+    ) -> dict:
+        """Record one explicit retrieval feedback event on a document.
+
+        ``kind`` is ``upvote`` or ``downvote`` (``cited`` and ``ignored`` are derived by
+        the engine and refused); ``weight`` is finite and in ``[-1.0, 1.0]``. The tenant
+        and principal of the stored event come from the verified request, never from the
+        caller.
+        """
+        if kind not in ("upvote", "downvote"):
+            raise ValueError("kind must be upvote or downvote")
+        return (
+            await _gen.query.send_retrieval_feedback_record(
+                self._client,
+                {
+                    "document_ref": _string("document_ref", document_ref),
+                    "kind": kind,
+                    "weight": _finite_f32("weight", weight, minimum=-1.0, maximum=1.0),
+                },
+            )
+        ).payload
+
     async def index_repository(
         self,
         files: list[tuple[str, bytes]],
