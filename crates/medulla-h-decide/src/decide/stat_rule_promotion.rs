@@ -15,8 +15,8 @@
 //! A rejection and a promotion each store one [`RulePromotionRecord`].
 
 use medulla_agent_types::agent_component::{
-    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest, DraftPublication,
-    DraftSubject,
+    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
+    DraftPublication, DraftSubject,
 };
 use medulla_agent_types::agent_guardrail::{
     check_rule_against_invariants, promote_on_consensus, GuardrailRule, RuleLifecycle,
@@ -216,22 +216,13 @@ fn publish_active(
         },
     );
     draft.attributes = rule.to_attributes();
-    let context = AgentLibraryMutationContext {
-        request_id: 0,
-        principal: ctx.store.owner_principal().to_string(),
-        caller_principal: reader.principal.clone(),
-        attempt_nonce: nonce_of(&content_digest)?,
-        tenant_id: ctx.tenant_id.to_string(),
-        actor_scope: "decision-log:promote-rule".to_string(),
-        purpose_id: "agent-component:publish".to_string(),
-        policy_revision: "policy-v1".to_string(),
+    let context = library_context(
+        ctx,
+        reader,
+        ("agent-component:publish", format!("promote-rule:{}:{content_digest}", rule.rule_id)),
+        (&content_digest, current.as_ref().map_or(0, |entry| entry.entry_revision)),
         policy_digest,
-        policy_decision_id: "agent-component:decision:policy-v1".to_string(),
-        idempotency_key: format!("promote-rule:{}:{content_digest}", rule.rule_id),
-        expected_revision: Some(current.as_ref().map_or(0, |entry| entry.entry_revision)),
-        trace_id: None,
-        created_at_ms: ctx.now_ms,
-    };
+    )?;
     let committed = ctx.store.publish_component(AgentComponentPublishRequest {
         context,
         evaluation_receipt_digest: None,
@@ -239,6 +230,33 @@ fn publish_active(
         prompt_blueprint: None,
     }, None)?;
     Ok(committed.result.component.definition_digest)
+}
+
+/// The mutation context of one agent-library write made on behalf of the decision log:
+/// `(purpose, idempotency key)`, `(nonce digest, expected revision)` and the policy digest.
+fn library_context(
+    ctx: &ExecutionContext,
+    reader: &LogReader,
+    (purpose_id, idempotency_key): (&str, String),
+    (nonce_digest, expected_revision): (&str, u64),
+    policy_digest: String,
+) -> Result<AgentLibraryMutationContext, String> {
+    Ok(AgentLibraryMutationContext {
+        request_id: 0,
+        principal: ctx.store.owner_principal().to_string(),
+        caller_principal: reader.principal.clone(),
+        attempt_nonce: nonce_of(nonce_digest)?,
+        tenant_id: ctx.tenant_id.to_string(),
+        actor_scope: "decision-log:promote-rule".to_string(),
+        purpose_id: purpose_id.to_string(),
+        policy_revision: "policy-v1".to_string(),
+        policy_digest,
+        policy_decision_id: "agent-component:decision:policy-v1".to_string(),
+        idempotency_key,
+        expected_revision: Some(expected_revision),
+        trace_id: None,
+        created_at_ms: ctx.now_ms,
+    })
 }
 
 /// The proposal row of one rule version: the rule it would publish and its version at
@@ -485,6 +503,26 @@ pub(super) fn revoke(
             StatisticalErrorCode::RuleNotActive,
             format!("version {version} of {rule_id} is not active"),
         ));
+    }
+    // The published component is retired first, so a revoke takes effect: a retired revision
+    // is left out of every component lookup and of `GuardrailEntailment`. A retry after the
+    // transition row failed finds the component already retired and only writes the row.
+    if let Some(entry) = ctx.store.current_component(ctx.tenant_id, rule_id)? {
+        if entry.kind == AgentComponentKind::GuardrailRule
+            && entry.lifecycle == AgentLibraryLifecycle::Published
+        {
+            let context = library_context(
+                ctx,
+                reader,
+                ("agent-component:retire", format!("revoke-rule:{rule_id}:{version}")),
+                (&entry.content_digest, entry.entry_revision),
+                current_agent_library_policy_digest()?,
+            )?;
+            ctx.store.retire_component(AgentComponentRetireRequest {
+                context,
+                component_id: rule_id.to_string(),
+            })?;
+        }
     }
     let transition = RuleTransition {
         rule_id: rule_id.to_string(),

@@ -404,6 +404,11 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
     // Revocation names the active version and keeps the history.
     let revoked = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await.unwrap();
     assert_eq!(revoked.state, RuleLifecycle::Revoked);
+    // The revoke takes effect: the component is retired in the same write and the rule is no
+    // longer in the set `GuardrailEntailment` reasons over.
+    assert!(h.store.published_guardrail_rules(TENANT).unwrap().is_empty());
+    let retired = h.store.current_component(TENANT, "rule:tier").unwrap().unwrap();
+    assert_eq!(retired.lifecycle, medulla_agent_types::agent_library::AgentLibraryLifecycle::Retired);
     let again = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await;
     assert!(again.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
     let transitions = h
