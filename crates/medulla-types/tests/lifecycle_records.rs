@@ -416,3 +416,51 @@ fn project_mode_needs_approval_only_for_evolving() {
     let refusal = handle_project_mode_set(blank, ProjectMode::Reference, true).unwrap_err();
     assert_eq!(refusal.code(), "INVALID_ARGUMENT");
 }
+
+// spec: MEDULLA-SDLC-R017.3
+#[test]
+fn proposal_evidence_is_required_resolved_and_matched() {
+    use medulla_source_types::lifecycle::{
+        handle_proposal_put, EvidenceKind, Proposal, ProposalEvidence, ProposalKind,
+        ProposalOrigin, REFUSALS,
+    };
+
+    let cited = |record: &str, digest: &str| ProposalEvidence {
+        kind: EvidenceKind::GateResult,
+        record_id: record.into(),
+        digest: digest.into(),
+    };
+    let proposal = |evidence: Vec<ProposalEvidence>| Proposal {
+        project: "medulla".into(),
+        kind: ProposalKind::RowAdd,
+        target: "MEDULLA-SDLC-R017.3".into(),
+        statement: "Add the row.".into(),
+        marker: None,
+        evidence,
+        origin: ProposalOrigin::default(),
+    };
+    assert_eq!(ProposalOrigin::default(), ProposalOrigin::Requested);
+    for code in [
+        "PROPOSAL_EVIDENCE_REQUIRED",
+        "PROPOSAL_EVIDENCE_UNRESOLVED",
+        "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
+    ] {
+        assert!(REFUSALS.iter().any(|c| c.as_str() == code), "{code}");
+    }
+    let refusal = handle_proposal_put(proposal(vec![]), &[]).unwrap_err();
+    assert_eq!(refusal.code(), "PROPOSAL_EVIDENCE_REQUIRED");
+    let refusal = handle_proposal_put(proposal(vec![cited("a", "d1")]), &[]).unwrap_err();
+    assert_eq!(refusal.code(), "PROPOSAL_EVIDENCE_UNRESOLVED");
+    let held = [("a".to_string(), "other".to_string())];
+    let refusal = handle_proposal_put(proposal(vec![cited("a", "d1")]), &held).unwrap_err();
+    assert_eq!(refusal.code(), "PROPOSAL_EVIDENCE_DIGEST_MISMATCH");
+    let held = [("a".to_string(), "d1".to_string())];
+    let write = handle_proposal_put(proposal(vec![cited("a", "d1")]), &held).unwrap();
+    assert!(write.node_id.starts_with("proposal:"));
+    assert_eq!(write.node_id.len(), "proposal:".len() + 32);
+    let same = handle_proposal_put(proposal(vec![cited("a", "d1")]), &held).unwrap();
+    assert_eq!(same.node_id, write.node_id);
+    let too_many: Vec<_> = (0..65).map(|n| cited(&format!("r{n}"), "d")).collect();
+    let refusal = handle_proposal_put(proposal(too_many), &[]).unwrap_err();
+    assert_eq!(refusal.code(), "INVALID_ARGUMENT");
+}

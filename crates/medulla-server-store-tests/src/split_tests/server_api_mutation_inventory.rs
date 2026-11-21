@@ -69,6 +69,7 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("RecordDeployment");
     covered.insert("GoalPut");
     covered.insert("ProjectModeSet");
+    covered.insert("ProposalPut");
     covered.insert("ActionRegister");
     covered.insert("ActionSubmit");
 

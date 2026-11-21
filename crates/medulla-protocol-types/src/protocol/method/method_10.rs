@@ -390,6 +390,13 @@ $($variants)*
     GoalPut {
         goal: medulla_source_types::lifecycle::Goal,
     },
+    /// Record one proposal of the learning loop (MEDULLA-SDLC-R017.3): a
+    /// `Proposal` node and an `evidences` edge from each cited record. Refuses
+    /// `PROPOSAL_EVIDENCE_REQUIRED`, `PROPOSAL_EVIDENCE_UNRESOLVED` and
+    /// `PROPOSAL_EVIDENCE_DIGEST_MISMATCH`.
+    ProposalPut {
+        proposal: medulla_source_types::lifecycle::Proposal,
+    },
     /// Set the mode of one project (MEDULLA-SDLC-R012.8): `reference`,
     /// `development` or `evolving`. A move to `evolving` needs an operator
     /// approval (`MODE_APPROVAL_REQUIRED`).

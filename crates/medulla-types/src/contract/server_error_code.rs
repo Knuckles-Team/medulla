@@ -483,6 +483,12 @@ closed_error_codes! {
         TaskContextPlanMissing => "TASK_CONTEXT_PLAN_MISSING",
         /// MEDULLA-SDLC-R015.2: the row id of a run context names no requirement node.
         TaskContextRowUnknown => "TASK_CONTEXT_ROW_UNKNOWN",
+        /// MEDULLA-SDLC-R017.3: a proposal cites no evidence.
+        ProposalEvidenceRequired => "PROPOSAL_EVIDENCE_REQUIRED",
+        /// MEDULLA-SDLC-R017.3: a cited record is absent or not visible.
+        ProposalEvidenceUnresolved => "PROPOSAL_EVIDENCE_UNRESOLVED",
+        /// MEDULLA-SDLC-R017.3: a cited record's content digest differs from the cited one.
+        ProposalEvidenceDigestMismatch => "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
         /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
         ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",

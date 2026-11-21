@@ -6,7 +6,8 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    RecordDeployment as RecordDeploymentResult, RecordRelease as RecordReleaseResult,
+    ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
+    RecordRelease as RecordReleaseResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -16,7 +17,8 @@ use medulla_server_graph::dispatch::shared::{
 };
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
-    handle_project_mode_set, project_mode_node_id, release_node_id, Deployment, DeploymentInput,
+    handle_project_mode_set, handle_proposal_put, project_mode_node_id, Proposal, ProposalReceipt,
+    ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
@@ -31,6 +33,8 @@ const DEPLOYMENT_TYPE: &str = "Deployment";
 const GOAL_TYPE: &str = "Goal";
 /// The node type of a project mode record.
 const PROJECT_MODE_TYPE: &str = "ProjectMode";
+/// The node type of a proposal record.
+const PROPOSAL_TYPE: &str = "Proposal";
 /// The property holding the canonical JSON of the release record.
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
 /// The node type of an indexed repository commit.
@@ -66,6 +70,9 @@ pub async fn dispatch_sdlc_methods(
             dispatch_boxed(record_deployment(state, target, deployment)).await
         }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
+        Method::ProposalPut { proposal } => {
+            dispatch_boxed(proposal_put(state, target, proposal)).await
+        }
         Method::ProjectModeSet { request } => {
             dispatch_boxed(project_mode_set(state, target, request)).await
         }
@@ -149,6 +156,98 @@ async fn goal_put(
     }
     .await;
     typed_response::<GoalPutResult>(target.req_id, result)
+}
+
+/// `ProposalPut` (MEDULLA-SDLC-R017.3): resolve each cited record through the caller's
+/// visible store, decide, then write the `Proposal` node and one `evidences` edge from each
+/// cited record in one `BatchUpdate`. A refusal returns before anything is written.
+async fn proposal_put(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    proposal: Proposal,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let resolved = resolve_evidence(state, &target, &proposal).await?;
+        let write = handle_proposal_put(proposal, &resolved).map_err(|e| e.to_string())?;
+        let operations = proposal_operations(&write, &target)?;
+        commit(state, &target, operations).await?;
+        Ok(ProposalReceipt {
+            node_id: write.node_id,
+            evidence: write.proposal.evidence.len() as u64,
+        })
+    }
+    .await;
+    typed_response::<ProposalPutResult>(target.req_id, result)
+}
+
+/// `(record_id, content digest)` of each cited record the caller can see.
+async fn resolve_evidence(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    proposal: &Proposal,
+) -> Result<Vec<(String, String)>, String> {
+    if proposal.evidence.is_empty() {
+        return Ok(Vec::new());
+    }
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    Ok(proposal
+        .evidence
+        .iter()
+        .take(MAX_PROPOSAL_EVIDENCE + 1)
+        .filter_map(|cited| {
+            let blob = core.get_node_properties(&cited.record_id)?;
+            authority
+                .can_see_node(&blob, core.is_schema_node(&cited.record_id))
+                .then(|| {
+                    let (digest, _) = medulla_h_ingest::ingest_readback::observe(&blob);
+                    (cited.record_id.clone(), digest.to_hex())
+                })
+        })
+        .collect())
+}
+
+/// The `Proposal` node, then one `evidences` edge from each distinct cited record to it.
+fn proposal_operations(
+    write: &ProposalWrite,
+    target: &SdlcTarget<'_>,
+) -> Result<Vec<Value>, String> {
+    let proposal = &write.proposal;
+    let kind = serde_json::to_value(proposal.kind).map_err(|e| e.to_string())?;
+    let evidence = serde_json::to_string(&proposal.evidence).map_err(|e| e.to_string())?;
+    let mut properties = Map::new();
+    properties.insert("type".into(), PROPOSAL_TYPE.into());
+    properties.insert("project".into(), proposal.project.clone().into());
+    properties.insert("kind".into(), kind);
+    properties.insert("target".into(), proposal.target.clone().into());
+    properties.insert("statement".into(), proposal.statement.clone().into());
+    properties.insert("origin".into(), proposal.origin.name().into());
+    properties.insert("status".into(), "proposed".into());
+    properties.insert("evidence".into(), evidence.into());
+    if let Some(marker) = &proposal.marker {
+        properties.insert("marker".into(), marker.clone().into());
+    }
+    stamp(&mut properties, target);
+    let mut operations =
+        vec![json!({"op": "upsert_node", "id": write.node_id, "properties": properties})];
+    let mut cited = BTreeSet::new();
+    for entry in &proposal.evidence {
+        if cited.insert(entry.record_id.as_str()) {
+            operations.push(edge(&entry.record_id, "evidences", &write.node_id, target));
+        }
+    }
+    bounded(operations)
 }
 
 /// `ProjectModeSet` (MEDULLA-SDLC-R012.8): read the project's stored mode (none

@@ -126,6 +126,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("GOAL_TARGET_REQUIRED"),
     RefusalCode::new("PROPOSAL_KIND_UNKNOWN"),
     RefusalCode::new("MODE_APPROVAL_REQUIRED"),
+    RefusalCode::new("PROPOSAL_EVIDENCE_REQUIRED"),
+    RefusalCode::new("PROPOSAL_EVIDENCE_UNRESOLVED"),
+    RefusalCode::new("PROPOSAL_EVIDENCE_DIGEST_MISMATCH"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -149,6 +152,12 @@ pub enum LifecycleRefusal {
     GoalTargetRequired(String),
     #[error("PROPOSAL_KIND_UNKNOWN: {0}")]
     ProposalKindUnknown(String),
+    #[error("PROPOSAL_EVIDENCE_REQUIRED: {0}")]
+    ProposalEvidenceRequired(String),
+    #[error("PROPOSAL_EVIDENCE_UNRESOLVED: {0}")]
+    ProposalEvidenceUnresolved(String),
+    #[error("PROPOSAL_EVIDENCE_DIGEST_MISMATCH: {0}")]
+    ProposalEvidenceDigestMismatch(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -168,6 +177,9 @@ impl LifecycleRefusal {
             Self::ReleaseSealed(_) => "RELEASE_SEALED",
             Self::GoalTargetRequired(_) => "GOAL_TARGET_REQUIRED",
             Self::ProposalKindUnknown(_) => "PROPOSAL_KIND_UNKNOWN",
+            Self::ProposalEvidenceRequired(_) => "PROPOSAL_EVIDENCE_REQUIRED",
+            Self::ProposalEvidenceUnresolved(_) => "PROPOSAL_EVIDENCE_UNRESOLVED",
+            Self::ProposalEvidenceDigestMismatch(_) => "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }
@@ -637,6 +649,132 @@ pub struct Proposal {
     /// The marker a `resolve_clarification` proposal resolves.
     #[serde(default)]
     pub marker: Option<String>,
+    /// The code-graph facts, research citations and gate results behind the
+    /// proposal (MEDULLA-SDLC-R017.3), at most [`MAX_PROPOSAL_EVIDENCE`].
+    #[serde(default)]
+    pub evidence: Vec<ProposalEvidence>,
+    /// Whether the proposal was asked for or raised unprompted.
+    #[serde(default)]
+    pub origin: ProposalOrigin,
+}
+
+/// The most evidence entries one proposal carries.
+pub const MAX_PROPOSAL_EVIDENCE: usize = 64;
+
+/// What a piece of proposal evidence is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum EvidenceKind {
+    CodeGraphFact,
+    ResearchCitation,
+    GateResult,
+}
+
+/// One cited record: the id of a graph node and the content digest it had.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProposalEvidence {
+    pub kind: EvidenceKind,
+    pub record_id: String,
+    pub digest: String,
+}
+
+/// Whether a proposal was asked for or raised unprompted.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalOrigin {
+    #[default]
+    Requested,
+    Unprompted,
+}
+
+impl ProposalOrigin {
+    /// The snake case wire name.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Requested => "requested",
+            Self::Unprompted => "unprompted",
+        }
+    }
+}
+
+/// What `ProposalPut` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProposalReceipt {
+    pub node_id: String,
+    pub evidence: u64,
+}
+
+/// What `ProposalPut` writes (not on the wire).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProposalWrite {
+    pub proposal: Proposal,
+    pub node_id: String,
+}
+
+/// The graph node id of a proposal: the first 32 hex digits of the SHA-256 of
+/// `<project>|<kind>|<target>|<statement>`, so a repeat is one node.
+pub fn proposal_node_id(proposal: &Proposal) -> String {
+    let kind = serde_json::to_value(proposal.kind)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    let key = format!(
+        "{}|{}|{}|{}",
+        proposal.project, kind, proposal.target, proposal.statement
+    );
+    format!("proposal:{}", &sha256_hex(key.as_bytes())[..32])
+}
+
+/// `ProposalPut` (MEDULLA-SDLC-R017.3): decide what one proposal writes, or
+/// refuse before anything is written. `resolved` holds `(record_id, content
+/// digest)` for each cited record the router found visible. In order: a blank
+/// project or statement, or more than [`MAX_PROPOSAL_EVIDENCE`] entries, refuses
+/// `INVALID_ARGUMENT`; no evidence refuses `PROPOSAL_EVIDENCE_REQUIRED`; a cited
+/// record that was not found refuses `PROPOSAL_EVIDENCE_UNRESOLVED`; one whose
+/// digest differs refuses `PROPOSAL_EVIDENCE_DIGEST_MISMATCH`.
+pub fn handle_proposal_put(
+    proposal: Proposal,
+    resolved: &[(String, String)],
+) -> Result<ProposalWrite, LifecycleRefusal> {
+    if proposal.project.trim().is_empty() || proposal.statement.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a proposal names its project and a statement".to_owned(),
+        ));
+    }
+    if proposal.evidence.len() > MAX_PROPOSAL_EVIDENCE {
+        return Err(LifecycleRefusal::InvalidArgument(format!(
+            "a proposal cites at most {MAX_PROPOSAL_EVIDENCE} records"
+        )));
+    }
+    if proposal.evidence.is_empty() {
+        return Err(LifecycleRefusal::ProposalEvidenceRequired(
+            proposal.project.clone(),
+        ));
+    }
+    for cited in &proposal.evidence {
+        match resolved.iter().find(|(id, _)| *id == cited.record_id) {
+            None => {
+                return Err(LifecycleRefusal::ProposalEvidenceUnresolved(
+                    cited.record_id.clone(),
+                ))
+            }
+            Some((_, digest)) if *digest != cited.digest => {
+                return Err(LifecycleRefusal::ProposalEvidenceDigestMismatch(
+                    cited.record_id.clone(),
+                ))
+            }
+            Some(_) => {}
+        }
+    }
+    Ok(ProposalWrite {
+        node_id: proposal_node_id(&proposal),
+        proposal,
+    })
 }
 
 /// How a defect reached the engine.

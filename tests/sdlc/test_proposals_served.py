@@ -8,6 +8,7 @@ statement and targets (rows or competency questions); each target gets a
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 
@@ -86,3 +87,59 @@ async def test_goal_needs_a_target(start_medulla_server) -> None:
 async def _goal(client, project: str, statement: str, targets: list[dict]) -> dict:
     goal = {"project": project, "statement": statement, "targets": targets}
     return _body(await client._send("GoalPut", {"goal": goal}, GRAPH))
+
+
+def _content_digest(properties: dict) -> str:
+    from medulla.generated.digest import framed_sha256
+
+    compact = json.dumps(
+        properties, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+    return framed_sha256(b"eg/ingest-readback/node/v1", [compact.encode()])
+
+
+async def _proposal(client, project: str, evidence: list[dict]) -> dict:
+    proposal = {
+        "project": project,
+        "kind": "row_add",
+        "target": "MEDULLA-SDLC-R017.3",
+        "statement": "Add the evidence row.",
+        "evidence": evidence,
+    }
+    return _body(await client._send("ProposalPut", {"proposal": proposal}, GRAPH))
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R017.3")
+@pytest.mark.asyncio
+async def test_proposal_without_evidence_is_refused(start_medulla_server) -> None:
+    client = await _connect()
+    try:
+        suffix = uuid.uuid4().hex[:12]
+        project = f"project-{suffix}"
+        with pytest.raises(Exception, match="PROPOSAL_EVIDENCE_REQUIRED"):
+            await _proposal(client, project, [])
+
+        record_id = f"fact:{suffix}"
+        properties = {"type": "CodeFact", "name": f"fact-{suffix}"}
+        await _add_node(client, record_id, properties)
+        digest = _content_digest(properties)
+
+        absent = {"kind": "code_graph_fact", "record_id": f"fact:absent-{suffix}", "digest": digest}
+        with pytest.raises(Exception, match="PROPOSAL_EVIDENCE_UNRESOLVED"):
+            await _proposal(client, project, [absent])
+        wrong = {"kind": "code_graph_fact", "record_id": record_id, "digest": "0" * 64}
+        with pytest.raises(Exception, match="PROPOSAL_EVIDENCE_DIGEST_MISMATCH"):
+            await _proposal(client, project, [wrong])
+
+        cited = {"kind": "code_graph_fact", "record_id": record_id, "digest": digest}
+        receipt = await _proposal(client, project, [cited])
+        # spec: MEDULLA-SDLC-R017.3
+        assert receipt["evidence"] == 1
+        stored = await _node(client, receipt["node_id"])
+        assert stored["type"] == "Proposal"
+        assert stored["status"] == "proposed"
+        assert stored["origin"] == "requested"
+        again = await _proposal(client, project, [cited])
+        assert again["node_id"] == receipt["node_id"]
+    finally:
+        await client.close()

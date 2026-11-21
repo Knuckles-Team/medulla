@@ -115,6 +115,8 @@ method_results! {
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
+    // MEDULLA-SDLC-R017.3: the proposal record.
+    ProposalPut(ProposalPut) => Raw<medulla_source_types::lifecycle::ProposalReceipt>;
     // MEDULLA-SDLC-R012.8: the project mode record.
     ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.

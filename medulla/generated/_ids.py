@@ -9,6 +9,7 @@ METHOD_IDS = frozenset(
         "RecordDeployment",
         "GoalPut",
         "ProjectModeSet",
+        "ProposalPut",
         "ArgumentMapPut",
         "RetrievalFeedbackRecord",
         "ArgumentMapGet",

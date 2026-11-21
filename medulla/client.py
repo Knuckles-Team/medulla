@@ -18976,6 +18976,23 @@ class MedullaClient:
             raise TypeError("GoalPut returned a non-object result")
         return result
 
+    async def proposal_put(self, proposal: dict[str, Any]) -> dict[str, Any]:
+        """Record one proposal of the learning loop (MEDULLA-SDLC-R017.3).
+
+        ``proposal`` carries ``project``, ``kind``, ``target``, ``statement``,
+        an optional ``marker``, an optional ``origin`` (``requested`` or
+        ``unprompted``) and ``evidence``: entries of ``kind``
+        (``code_graph_fact``, ``research_citation`` or ``gate_result``),
+        ``record_id`` and ``digest``. Without evidence the call refuses
+        ``PROPOSAL_EVIDENCE_REQUIRED``; a record that is absent refuses
+        ``PROPOSAL_EVIDENCE_UNRESOLVED`` and a wrong digest
+        ``PROPOSAL_EVIDENCE_DIGEST_MISMATCH``.
+        """
+        result = await self._send("ProposalPut", {"proposal": proposal}, None)
+        if not isinstance(result, dict):
+            raise TypeError("ProposalPut returned a non-object result")
+        return result
+
     async def project_mode_set(self, request: dict[str, Any]) -> dict[str, Any]:
         """Set the mode of one project (MEDULLA-SDLC-R012.8).
 
