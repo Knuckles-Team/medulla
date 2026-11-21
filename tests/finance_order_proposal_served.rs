@@ -8,6 +8,7 @@
     feature = "server",
     feature = "security",
     feature = "finance",
+    feature = "decide",
     feature = "shacl"
 ))]
 
@@ -26,6 +27,8 @@ use medulla_finance_types::finance_order::{
 use medulla_finance_types::wire_finance::{
     FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION,
 };
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::decision_record::tests as decision_fixture;
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -65,16 +68,29 @@ fn policy_digest() -> String {
     digest::of_json("finance.trading_policy.v1", &policy())
 }
 
-fn snapshot(revision: u64, predecessor: Option<&str>, order: &FinanceOrder) -> OrderProposalSnapshot {
+/// The DecisionRecord committed under the test tenant that every staged snapshot binds.
+#[derive(Clone)]
+struct Decision {
+    id: String,
+    revision: u64,
+    digest: String,
+}
+
+fn snapshot(
+    decision: &Decision,
+    revision: u64,
+    predecessor: Option<&str>,
+    order: &FinanceOrder,
+) -> OrderProposalSnapshot {
     let bytes = serde_json::to_vec(order).unwrap();
     OrderProposalSnapshot {
         tenant_id: TENANT.to_string(),
         proposal_id: "prop1".to_string(),
         revision,
         predecessor_digest: predecessor.map(str::to_string),
-        decision_id: "dec1".to_string(),
-        decision_revision: 1,
-        decision_digest: "sha256:dec".to_string(),
+        decision_id: decision.id.clone(),
+        decision_revision: decision.revision,
+        decision_digest: decision.digest.clone(),
         payload_schema_id: ORDER_PAYLOAD_SCHEMA_ID.to_string(),
         payload_schema_revision: ORDER_PAYLOAD_SCHEMA_REVISION.to_string(),
         payload_sha256: format!("sha256:{}", hex::encode(Sha256::digest(&bytes))),
@@ -103,16 +119,44 @@ fn seal(snapshot: &OrderProposalSnapshot) -> String {
     digest::of_json("finance.order_proposal_snapshot.v1", snapshot)
 }
 
+/// Commit a real DecisionRecord under the test tenant through the agent library's commit path,
+/// so a promote rechecks a decision that exists, at its revision and digest.
+async fn commit_decision(state: &test_support::SharedState) -> Decision {
+    let store = state.write().await.ensure_agent_library().unwrap();
+    decision_fixture::seed_library(&store, TENANT);
+    let record = decision_fixture::decided(&store, TENANT).record;
+    let catalog_digest = record.inputs.catalog_digest.clone();
+    let committed = store
+        .commit_decision_record(
+            decision_fixture::commit_context(&store, TENANT, "order-decision", 1),
+            &record,
+            &catalog_digest,
+            None,
+        )
+        .expect("the decision record commits under the test tenant");
+    Decision {
+        id: record.record_id.clone(),
+        revision: committed.result.component.entry_revision,
+        digest: record.record_digest.clone(),
+    }
+}
+
 struct Served {
     state: test_support::SharedState,
     next_id: u64,
+    decision: Decision,
 }
 
 impl Served {
     async fn new() -> Self {
         common::configure_authority();
         let state = test_support::durable_state(SECRET, common::current_isolation());
-        let mut served = Self { state, next_id: 1 };
+        let decision = commit_decision(&state).await;
+        let mut served = Self {
+            state,
+            next_id: 1,
+            decision,
+        };
         let created = served
             .call(Method::CreateGraph {
                 graph_name: GRAPH.to_string(),
@@ -247,7 +291,7 @@ fn promote_request(revision: u64, snapshot_digest: &str, expected: Option<u64>) 
 #[tokio::test]
 async fn stage_revision_chain_and_refusals() {
     let mut served = Served::new().await;
-    let first = snapshot(1, None, &order(100, 20_000));
+    let first = snapshot(&served.decision, 1, None, &order(100, 20_000));
     let staged = served.stage(first.clone(), None, None).await;
     assert!(staged.error.is_none(), "{:?}", staged.error_detail);
     let result: OrderStageResult = body(&staged);
@@ -261,7 +305,7 @@ async fn stage_revision_chain_and_refusals() {
         .await;
     assert!(read.error.is_none() && !format!("{:?}", read.result).contains("Null"));
 
-    let second = snapshot(2, Some(&seal(&first)), &order(120, 24_000));
+    let second = snapshot(&served.decision, 2, Some(&seal(&first)), &order(120, 24_000));
     let staged = served.stage(second.clone(), Some(1), Some(&seal(&first))).await;
     assert!(staged.error.is_none(), "{:?}", staged.error_detail);
     assert_eq!(body::<OrderStageResult>(&staged).predecessor_digest, Some(seal(&first)));
@@ -271,10 +315,10 @@ async fn stage_revision_chain_and_refusals() {
     assert!(retry.error.is_none(), "{:?}", retry.error_detail);
     assert_eq!(served.nodes().await, count, "an equal retry writes nothing new");
 
-    let other_bytes = snapshot(2, Some(&seal(&first)), &order(121, 24_100));
+    let other_bytes = snapshot(&served.decision, 2, Some(&seal(&first)), &order(121, 24_100));
     let response = served.stage(other_bytes, Some(1), Some(&seal(&first))).await;
     served.refused(response, "PROPOSAL_REVISION_CONFLICT", &count).await;
-    let third = snapshot(3, Some(&seal(&second)), &order(130, 26_000));
+    let third = snapshot(&served.decision, 3, Some(&seal(&second)), &order(130, 26_000));
     let response = served.stage(third.clone(), Some(1), Some(&seal(&first))).await;
     served.refused(response, "PROPOSAL_HEAD_STALE", &count).await;
     let mut tampered = third.clone();
@@ -304,7 +348,7 @@ async fn stage_revision_chain_and_refusals() {
 #[tokio::test]
 async fn breaching_order_abstains_and_stage_writes_nothing() {
     let mut served = Served::new().await;
-    let breaching = snapshot(1, None, &order(-1500, 900_000));
+    let breaching = snapshot(&served.decision, 1, None, &order(-1500, 900_000));
     let checked = served
         .call(Method::FinanceOrderLimitCheck {
             proposal: Box::new(breaching.clone()),
@@ -321,9 +365,10 @@ async fn breaching_order_abstains_and_stage_writes_nothing() {
     let before = served.nodes().await;
     let response = served.stage(breaching, None, None).await;
     served.refused(response, "ORDER_LIMIT_BREACH", &before).await;
+    let probe = snapshot(&served.decision, 1, None, &order(10, 2_000));
     let passing = served
         .call(Method::FinanceOrderLimitCheck {
-            proposal: Box::new(snapshot(1, None, &order(10, 2_000))),
+            proposal: Box::new(probe),
         })
         .await;
     assert_eq!(body::<OrderLimitCheckResult>(&passing).outcome, "Passed");
@@ -333,7 +378,7 @@ async fn breaching_order_abstains_and_stage_writes_nothing() {
 #[tokio::test]
 async fn promote_refuses_each_case_without_writes() {
     let mut served = Served::new().await;
-    let first = snapshot(1, None, &order(100, 20_000));
+    let first = snapshot(&served.decision, 1, None, &order(100, 20_000));
     let digest_1 = seal(&first);
     assert!(served.stage(first, None, None).await.error.is_none());
     let before = served.nodes().await;
@@ -381,7 +426,7 @@ async fn promote_refuses_each_case_without_writes() {
 #[tokio::test]
 async fn admission_receipt_is_atomic_and_effect_free() {
     let mut served = Served::new().await;
-    let first = snapshot(1, None, &order(100, 20_000));
+    let first = snapshot(&served.decision, 1, None, &order(100, 20_000));
     let digest_1 = seal(&first);
     assert!(served.stage(first, None, None).await.error.is_none());
     let before = served.orders().await;
