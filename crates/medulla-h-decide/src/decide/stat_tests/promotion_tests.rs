@@ -40,7 +40,7 @@ fn subject() -> RevisionSubject {
 }
 
 /// Sixty paired rollouts: the challenger beats the champion by `gain_ppm` on each.
-fn rollout_set(gain_ppm: u32) -> RolloutSet {
+pub(super) fn rollout_set(gain_ppm: u32) -> RolloutSet {
     let rollouts = (0..60u64)
         .map(|index| Rollout {
             seed: index % 3,
@@ -108,7 +108,7 @@ fn eval_receipt() -> DecisionEvalReceipt {
     }
 }
 
-fn promotion_request(
+pub(super) fn promotion_request(
     schema: &ComponentDependency,
     subject: &RevisionSubject,
     receipt: &str,
@@ -134,7 +134,7 @@ fn promotion_request(
     request
 }
 
-async fn commit(h: &Harness, record: &StatisticalDecisionRecord) -> DecisionLogCommitted {
+pub(super) async fn commit(h: &Harness, record: &StatisticalDecisionRecord) -> DecisionLogCommitted {
     let decider = context("decider", TENANT);
     decode(
         super::super::log::handle_decision_log(

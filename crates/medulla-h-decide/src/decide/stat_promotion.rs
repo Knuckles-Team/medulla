@@ -85,7 +85,11 @@ pub(super) fn held_out_evidence(
                 other => other,
             }
         }
-        RevisionSubject::Definition { .. } => rollout_evidence(sources, subject, receipt_digest),
+        // A paired run on a pinned set is the receipt of a definition or of a
+        // retrieval strategy (R805.10, R821): the evidence names that subject.
+        RevisionSubject::Definition { .. } | RevisionSubject::RetrievalStrategy { .. } => {
+            rollout_evidence(sources, subject, receipt_digest)
+        }
         RevisionSubject::KnobSet { .. } | RevisionSubject::ModelPolicy { .. } => {
             policy_evidence(sources, subject, receipt_digest)
         }
@@ -180,7 +184,10 @@ fn rollout_evidence(
     };
     let set: RolloutSet = decode_artifact(&bytes, "rollout set")?;
     let mut evidence = paired_rollout_evidence(&set, sources.policy);
-    if let RevisionSubject::Definition { .. } = subject {
+    if matches!(
+        subject,
+        RevisionSubject::Definition { .. } | RevisionSubject::RetrievalStrategy { .. }
+    ) {
         evidence.subject = subject.clone();
     } else if &evidence.subject != subject {
         return Err(unevaluated());

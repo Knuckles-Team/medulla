@@ -96,4 +96,71 @@ async fn paired_run_adopts_and_refuses() {
         subject_gate(&strategy(), &paired(19_999), &policy),
         PromotionGate::Abstain(ADOPTION_NOT_PROVEN)
     );
+
+    // The same adoption through the promotion route (MEDULLA-DECISION-ENGINE-R805.3):
+    // a paired run that clears the margin is adopted by a `MovePointer`, one that does
+    // not is refused with `ADOPTION_NOT_PROVEN`, and another tenant has no such run.
+    use super::learning_tests::{activate, pointer_state};
+    use super::path_preference_tests::{pins, OTHER};
+    use super::promotion_tests::{commit, promotion_request, rollout_set};
+    use medulla_decision_stats::decision::promotion::rollout_set_digest;
+    use medulla_decision_types::decision::skill_evolution::RolloutSet;
+    use medulla_decision_types::decision::statistical::retrieval::{LearningWrite, PointerRef};
+    let pinned = pins(&h, TENANT);
+    let adopted = RolloutSet {
+        challenger_ref: "strategy:hyde".to_string(),
+        ..rollout_set(150_000)
+    };
+    let unproven = RolloutSet {
+        challenger_ref: "strategy:plain".to_string(),
+        ..rollout_set(5_000)
+    };
+    for set in [&adopted, &unproven] {
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts {
+                set: Box::new(set.clone()),
+            },
+        )
+        .await
+        .unwrap();
+    }
+    let record = decide(
+        &h,
+        promotion_request(&pinned.0, &strategy(), &rollout_set_digest(&adopted), "strategy:hyde"),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    commit(&h, &record).await;
+    let state = pointer_state(
+        &h,
+        PointerRef::Champion { subject: strategy() },
+        activate("strategy:hyde", &record.record_id),
+    )
+    .await
+    .unwrap();
+    assert_eq!(state.key, "champion:retrieval_strategy:hyde-rrf");
+    let refused = decide(
+        &h,
+        promotion_request(&pinned.0, &strategy(), &rollout_set_digest(&unproven), "strategy:plain"),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    assert!(
+        format!("{:?}", refused.outcome).contains("ADOPTION_NOT_PROVEN"),
+        "{:?}",
+        refused.outcome
+    );
+    let other = h
+        .store
+        .decision_artifact(OTHER, &super::super::stat_promotion::rollouts_key(&rollout_set_digest(&adopted)))
+        .unwrap();
+    assert!(other.is_none(), "another tenant holds no such paired run");
 }
