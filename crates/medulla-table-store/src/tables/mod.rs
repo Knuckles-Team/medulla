@@ -40,7 +40,7 @@ pub use ann_authority::{
 };
 pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
 pub use column_advice::{
-    catalog_schema_revision, rank_columns, AdviceColumn, AdviceInput, AdvicePolicy,
+    admit_pinned, catalog_schema_revision, rank_columns, AdviceColumn, AdviceInput, AdvicePolicy,
     AdviceSettings, ColumnAdviceError, ColumnUsageCounters, UsageObservation,
 };
 pub use embedding_binding::{

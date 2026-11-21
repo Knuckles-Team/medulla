@@ -18,7 +18,7 @@ use medulla_table_store::tables::embedding_binding::{
     is_embeddable, AdviceEligibility, ColumnVectorAdvice,
 };
 use medulla_table_store::tables::{
-    catalog_schema_revision, rank_columns, AdviceColumn, AdviceInput, TableStore,
+    admit_pinned, catalog_schema_revision, rank_columns, AdviceColumn, AdviceInput, TableStore,
 };
 use medulla_tables::schema::{Cell, TableSchema};
 
@@ -101,8 +101,65 @@ fn cell_text(cell: &Cell) -> Option<String> {
     }
 }
 
-/// The ranked advice over every column of every table `store` holds.
-pub(crate) fn read_advice(store: &TableStore) -> Result<Vec<ColumnVectorAdvice>, String> {
+/// The `(table, column)` a statement pins with `table_name = '..' AND
+/// column_name = '..'` on the advice relation; `None` for a listing.
+pub(crate) fn pinned_column(sql: &str) -> Option<(String, String)> {
+    let lowered = sql.to_ascii_lowercase();
+    if lowered.contains(" or ") {
+        return None;
+    }
+    Some((
+        literal_after(sql, &lowered, "table_name")?,
+        literal_after(sql, &lowered, "column_name")?,
+    ))
+}
+
+/// The single-quoted literal in `key = '<literal>'`, matched on word boundaries.
+fn literal_after(sql: &str, lowered: &str, key: &str) -> Option<String> {
+    let mut from = 0;
+    while let Some(found) = lowered[from..].find(key) {
+        let start = from + found;
+        let end = start + key.len();
+        from = end;
+        let boundary_before = lowered[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'));
+        let rest = sql[end..].trim_start();
+        let Some(rest) = rest.strip_prefix('=') else {
+            continue;
+        };
+        let Some(rest) = rest.trim_start().strip_prefix('\'') else {
+            continue;
+        };
+        if !boundary_before {
+            continue;
+        }
+        let mut literal = String::new();
+        let mut chars = rest.chars().peekable();
+        while let Some(c) = chars.next() {
+            if c == '\'' {
+                if chars.peek() == Some(&'\'') {
+                    chars.next();
+                    literal.push('\'');
+                    continue;
+                }
+                return Some(literal);
+            }
+            literal.push(c);
+        }
+        return None;
+    }
+    None
+}
+
+/// The ranked advice over every column of every table `store` holds. A pinned
+/// read (`pin`) names one column and is admitted for that column alone
+/// (MEDULLA-FEDERATED-QUERY-R077.6.4).
+pub(crate) fn read_advice(
+    store: &TableStore,
+    pin: Option<&(String, String)>,
+) -> Result<Vec<ColumnVectorAdvice>, String> {
     let now = now_ms();
     let counters = store.column_usage();
     let settings = counters.settings();
@@ -129,7 +186,7 @@ pub(crate) fn read_advice(store: &TableStore) -> Result<Vec<ColumnVectorAdvice>,
                 (0.0, 0.0)
             };
             let observed = usage.get(&(schema.name.clone(), column.name.clone()));
-            columns.push(AdviceColumn {
+            let advice_column = AdviceColumn {
                 table: schema.name.clone(),
                 column: column.name.clone(),
                 ty: column.ty,
@@ -138,7 +195,18 @@ pub(crate) fn read_advice(store: &TableStore) -> Result<Vec<ColumnVectorAdvice>,
                 text_search_uses: observed.map_or(0, |entry| entry.text_search_uses),
                 avg_length,
                 distinct_ratio,
-            });
+            };
+            if pin.is_some_and(|(table, name)| *table == schema.name && *name == column.name) {
+                admit_pinned(&advice_column, revision).map_err(|error| {
+                    format!(
+                        "{}: column `{}.{}`",
+                        error.code(),
+                        schema.name,
+                        column.name
+                    )
+                })?;
+            }
+            columns.push(advice_column);
         }
     }
     let input = AdviceInput {

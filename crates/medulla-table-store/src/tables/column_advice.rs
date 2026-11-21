@@ -150,6 +150,21 @@ pub fn rank_columns(
     Ok(rows)
 }
 
+/// Admit a pinned read of one column (MEDULLA-FEDERATED-QUERY-R077.6.4). A column
+/// that fails `is_embeddable` refuses `COLUMN_TYPE_UNSUPPORTED`; counters observed
+/// under another schema revision than `schema_revision` refuse
+/// `SCHEMA_REVISION_STALE`. A listing never calls this: it shows such columns as
+/// rows. Advice checks no embedding model; binding admission owns that.
+pub fn admit_pinned(column: &AdviceColumn, schema_revision: u64) -> Result<(), ColumnAdviceError> {
+    if !is_embeddable(column.ty) {
+        return Err(ColumnAdviceError::ColumnTypeUnsupported);
+    }
+    if column.observed_schema_revision != schema_revision {
+        return Err(ColumnAdviceError::SchemaRevisionStale);
+    }
+    Ok(())
+}
+
 /// The resolved settings one tenant's advice reads. The table-store crate
 /// cannot read the knob registry, so the serving crate installs these through
 /// [`ColumnUsageCounters::configure`]; `Default` carries the knob defaults for
@@ -332,6 +347,27 @@ mod tests {
             window_end: 1000,
             columns,
         }
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R077.6.4
+    #[test]
+    fn pinned_reads_refuse_per_question() {
+        let mut int = column("n", 1);
+        int.ty = ColumnType::BigInt;
+        assert_eq!(
+            admit_pinned(&int, 3),
+            Err(ColumnAdviceError::ColumnTypeUnsupported)
+        );
+        let mut stale = column("a", 1);
+        stale.observed_schema_revision = 2;
+        assert_eq!(
+            admit_pinned(&stale, 3),
+            Err(ColumnAdviceError::SchemaRevisionStale)
+        );
+        assert_eq!(admit_pinned(&column("a", 1), 3), Ok(()));
+        // a listing never refuses on account of another column
+        let listed = rank_columns(&input(vec![int, stale, column("a", 60)]), &policy()).unwrap();
+        assert_eq!(listed.len(), 3);
     }
 
     /// MEDULLA-FEDERATED-QUERY-R077.6.2

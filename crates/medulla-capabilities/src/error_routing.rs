@@ -251,6 +251,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DUCKDB_FILE_DENIED",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R077.6.4: a pinned read of `information_schema.vector_advice`.
+    ("Sql", &["COLUMN_TYPE_UNSUPPORTED", "SCHEMA_REVISION_STALE"]),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
     ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
     // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an

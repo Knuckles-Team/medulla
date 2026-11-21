@@ -392,7 +392,10 @@ pub fn exec_sql_typed_with_tables_in_graph_hive(
     let mut catalog = StoreCatalog::read(store, store.index_scope())?;
     catalog.statement_graph = graph.map(str::to_string);
     if reads_vector_advice(sql) {
-        catalog.vector_advice = Some(super::vector_advice::read_advice(store)?);
+        catalog.vector_advice = Some(super::vector_advice::read_advice(
+            store,
+            super::vector_advice::pinned_column(sql).as_ref(),
+        )?);
     }
     // CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body: a bare top-level `SELECT plfn(args)` / `CALL plproc(args)` naming a
     // `LANGUAGE plpgsql` function runs the procedural interpreter instead of DataFusion.

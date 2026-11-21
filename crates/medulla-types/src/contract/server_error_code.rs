@@ -751,6 +751,10 @@ closed_error_codes! {
         CheckpointDigestMismatch => "CHECKPOINT_DIGEST_MISMATCH",
         WorkItemKindUnknown => "WORK_ITEM_KIND_UNKNOWN",
         MetastoreSpecInvalid => "METASTORE_SPEC_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R077.6.4: a pinned advice read of a column that cannot be embedded.
+        ColumnTypeUnsupported => "COLUMN_TYPE_UNSUPPORTED",
+        /// MEDULLA-FEDERATED-QUERY-R077.6.4: a pinned advice read whose counters belong to another schema revision.
+        SchemaRevisionStale => "SCHEMA_REVISION_STALE",
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",
         SchemaIncompatible => "SCHEMA_INCOMPATIBLE",
         UnsupportedTableLayout => "UNSUPPORTED_TABLE_LAYOUT",
