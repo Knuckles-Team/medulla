@@ -207,7 +207,7 @@ fn part_or_abstain(
     }
 }
 
-/// The staffing, bindings and DAG parts of one assembly, and the certificate digest.
+/// The staffing, bindings and DAG parts of one assembly, and the digest of the sealed assembly record.
 #[cfg(feature = "decide")]
 fn solved_parts(
     assembly: &medulla_decision_types::decision::AssemblyResult,
@@ -237,9 +237,7 @@ fn solved_parts(
             };
             Ok((part("staffing"), part("bindings"), part("dag"), String::new()))
         }
-        DecisionOutcome::Solved {
-            slots, certificate, ..
-        } => {
+        DecisionOutcome::Solved { slots, .. } => {
             let staffing: Vec<serde_json::Value> = slots
                 .iter()
                 .zip(assembly.agents.iter())
@@ -283,7 +281,7 @@ fn solved_parts(
                 answer(serde_json::Value::Array(staffing))?,
                 answer(serde_json::Value::Array(bindings))?,
                 answer(shape)?,
-                String::from(certificate.digest()),
+                record.record_digest.clone(),
             ))
         }
     }

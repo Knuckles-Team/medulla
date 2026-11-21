@@ -121,13 +121,11 @@ async fn served_answer_fills_seven_parts() {
     assert_eq!(provenance.len(), 1);
     assert_eq!(provenance.as_slice()[0].fact, "dc:source <urn:source:spec>");
 
-    // The certificate digest is the digest the verifier recomputes.
+    // The certificate digest is the digest of the sealed record AgentAssemble returns.
     let solved = assemble(&h, assembly).await.expect("assembles");
-    let DecisionOutcome::Solved { certificate, .. } = &solved.record.outcome else {
-        panic!("expected a solved assembly");
-    };
-    assert_eq!(answer.certificate_digest, String::from(certificate.digest()));
-    assert_eq!(answer.certificate_digest.len(), 64);
+    assert!(matches!(solved.record.outcome, DecisionOutcome::Solved { .. }));
+    assert_eq!(answer.certificate_digest, solved.record.record_digest);
+    assert!(!answer.certificate_digest.is_empty());
 
     // Nothing was written.
     assert_eq!(graph_version(&h).await, before);
