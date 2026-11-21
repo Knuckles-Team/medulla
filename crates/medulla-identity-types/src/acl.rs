@@ -477,6 +477,7 @@ pub const MAX_SHARE_GRANTEES: usize = 64;
 /// The unvalidated wire form of a [`ShareGrant`]; deserializing a `ShareGrant`
 /// runs it through [`ShareGrant::checked`].
 #[derive(Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 struct ShareGrantWire {
     node_id: String,
