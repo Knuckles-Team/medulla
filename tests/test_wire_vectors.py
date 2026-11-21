@@ -2,14 +2,14 @@
 # serde types in crates/medulla-types (the source of truth).
 """Gate: the Python models accept and re-emit every Rust wire vector.
 
-The R001.3 Rust builder computes one vector per wire method (request, result
-and a canonical-bytes digest) and materializes it under
-``tests/fixtures/wire_vectors/<domain>.json`` plus a ``MANIFEST.json``. This
-gate validates every vector through the hand-written models in
-``medulla.generated.models``, re-emits it, and compares the canonical bytes
-with the vector: a model that lacks a Rust field, or one that accepts an
-unknown field, fails. It also recomputes ``MANIFEST.schema_digest`` from the
-vector files, so a stale manifest fails the gate.
+The R001.3 Rust builder is the only producer of wire vectors, and nothing writes
+them into the repository (R001.4.1). The session fixture ``rust_vectors`` runs the
+``emit_wire_vectors`` example and parses its one JSON document: the served method
+ids and the rows by domain. This gate validates every row through the
+hand-written models in ``medulla.generated.models``, re-emits it, and compares the
+canonical bytes with the vector: a model that lacks a Rust field, or one that
+accepts an unknown field, fails. It also asserts every served method has exactly
+one row and is a request tag of ``models.Method``.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from __future__ import annotations
 import copy
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -27,23 +29,45 @@ from medulla.generated import _manifest, models
 
 pytestmark = pytest.mark.no_engine
 
-_VECTORS = Path(__file__).resolve().parent / "fixtures" / "wire_vectors"
+_ROOT = Path(__file__).resolve().parents[1]
 
 _METHOD: TypeAdapter[Any] = TypeAdapter(models.Method)
 
+_EMIT = (
+    "run",
+    "--locked",
+    "--quiet",
+    "-p",
+    "medulla-capabilities",
+    "--features",
+    "contract-schema,canonical-ledger",
+    "--example",
+    "emit_wire_vectors",
+)
 
-def _vector_files() -> list[Path]:
-    files = sorted(_VECTORS.glob("*.json"))
-    assert files, f"no wire vector files under {_VECTORS}"
-    return files
+
+@pytest.fixture(scope="session")
+def rust_vectors() -> dict[str, Any]:
+    """The emitter's document: ``{"served": [...], "domains": {domain: [row]}}``."""
+    cargo = shutil.which("cargo")
+    assert cargo is not None, "cargo is required to emit the Rust wire vectors"
+    done = subprocess.run(
+        [cargo, *_EMIT],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, f"emit_wire_vectors failed:\n{done.stderr}"
+    document = json.loads(done.stdout)
+    assert set(document) == {"served", "domains"}, sorted(document)
+    return document
 
 
-def _rows() -> list[dict[str, Any]]:
+def _rows(rust_vectors: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for path in _vector_files():
-        if path.name == "MANIFEST.json":
-            continue
-        rows.extend(json.loads(path.read_text(encoding="utf-8")))
+    for domain in sorted(rust_vectors["domains"]):
+        rows.extend(rust_vectors["domains"][domain])
     return rows
 
 
@@ -203,9 +227,9 @@ def _result_bodies(
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R001.4")
-def test_models_round_trip_every_rust_vector() -> None:
-    rows = _rows()
-    assert rows, "every Rust vector is checked in"
+def test_models_round_trip_every_rust_vector(rust_vectors: dict[str, Any]) -> None:
+    rows = _rows(rust_vectors)
+    assert rows, "the emitter produced no Rust vector"
     # spec: MEDULLA-CONTRACT-R001.4
     result_models = _result_models()
     failures: list[str] = []
@@ -236,17 +260,12 @@ def test_models_round_trip_every_rust_vector() -> None:
                 )
     assert not failures, "\n".join(failures)
     # spec: MEDULLA-CONTRACT-R001.4
-    digest = _manifest.vector_schema_digest(
-        [path for path in _vector_files() if path.name != "MANIFEST.json"]
-    )
-    assert digest == _manifest.MANIFEST["schema_digest"]
-    # spec: MEDULLA-CONTRACT-R001.4
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R001.4")
-def test_unknown_field_is_rejected() -> None:
-    rows = _rows()
-    assert rows, "every Rust vector is checked in"
+def test_unknown_field_is_rejected(rust_vectors: dict[str, Any]) -> None:
+    rows = _rows(rust_vectors)
+    assert rows, "the emitter produced no Rust vector"
     # spec: MEDULLA-CONTRACT-R001.4
     result_models = _result_models()
     row = next((row for row in rows if row["method"] in result_models), rows[0])
@@ -279,3 +298,20 @@ def test_unknown_field_is_rejected() -> None:
             model_class.model_validate(bad_body)
         assert raised.value.errors()[0]["type"] == "extra_forbidden"
         # spec: MEDULLA-CONTRACT-R001.4
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R001.4.1")
+def test_every_served_method_has_a_vector(rust_vectors: dict[str, Any]) -> None:
+    # spec: MEDULLA-CONTRACT-R001.4.1
+    rows_by_method: dict[str, int] = {}
+    for row in _rows(rust_vectors):
+        rows_by_method[row["method"]] = rows_by_method.get(row["method"], 0) + 1
+    request_tags = set(_manifest.exported_type_ids())
+    failures: list[str] = []
+    for method in rust_vectors["served"]:
+        count = rows_by_method.get(method, 0)
+        if count != 1:
+            failures.append(f"{method}: {count} vector rows, expected exactly one")
+        if method not in request_tags:
+            failures.append(f"{method}: not a request tag of models.Method")
+    assert not failures, "\n".join(failures)

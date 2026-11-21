@@ -161,12 +161,13 @@ asr-native = ["medulla-query-types/asr-native", "medulla-protocol-types/asr-nati
 viz = ["medulla-query-types/viz", "medulla-protocol-types/viz"]
 # MEDULLA-DECISION-ENGINE-R054.1: the decision-contract ontology generator
 # (`decision_ontology`) reads the decision types' JSON schemas.
-contract-schema = ["dep:schemars", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema"]
+contract-schema = ["dep:schemars", "dep:regex", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema", "medulla-protocol-types/test-support"]
 
 [dependencies]
 # The served method catalog (MEDULLA-CONTRACT-R057) renders as JSON.
 serde_json = "1.0.154"
 schemars = { version = "1.2.3", optional = true }
+regex = { version = "1", optional = true }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }
@@ -182,4 +183,8 @@ required-features = ["contract-schema"]
 
 [[test]]
 name = "wire_vectors"
+required-features = ["contract-schema", "canonical-ledger"]
+
+[[example]]
+name = "emit_wire_vectors"
 required-features = ["contract-schema", "canonical-ledger"]

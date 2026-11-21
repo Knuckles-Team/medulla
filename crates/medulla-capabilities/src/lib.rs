@@ -38,6 +38,8 @@ pub mod catalog;
 pub use medulla_decision_types::ontology as decision_ontology;
 mod descriptor;
 mod domains;
+#[cfg(feature = "contract-schema")]
+pub mod wire_vectors;
 pub mod error_routing;
 pub mod scopes;
 
