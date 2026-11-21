@@ -14,7 +14,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T009 [US2] MEDULLA-SCM-R007 Path-scoped access control
 - [ ] T010 [US3] MEDULLA-SCM-R008 Gate verdicts are records
 - [ ] T011 [US3] MEDULLA-SCM-R009 Bisect and revert decisions
-- [ ] T012 [US2] MEDULLA-SCM-R010 Git import and export fidelity
+- [ ] T012 [US2] MEDULLA-SCM-R010 Git import and the git object codec (packfile v2; export function served by R014)
 - [ ] T013 [US3] MEDULLA-SCM-R011 Simulation harness
 - [ ] T014 [US4] MEDULLA-SCM-R012 Agent principals and run provenance
 - [ ] T015 [US5] MEDULLA-SCM-R013.1 Model

@@ -27,8 +27,10 @@
   verdicts read back byte-identically. An overwrite attempt is refused. *(MEDULLA-SCM-R008)*
 - `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision`. A seeded bisect names the
   seeded culprit. The recorded decision replays byte-identically. *(MEDULLA-SCM-R009)*
-- `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids` (planned). Export then
-  import preserves every commit id and tree id. *(MEDULLA-SCM-R010)*
+- `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids` (planned).
+  Import of a generated linear history then `export_pack` preserves every commit id and tree id for both object
+  formats; a merge commit refuses. `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors`
+  (planned) pins the object ids and the delta reads. *(MEDULLA-SCM-R010)*
 - `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay`. Concurrent accepts with
   crash and replay hold every chain invariant. *(MEDULLA-SCM-R011)*
 - `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` (planned). A delegated agent changeset reads
@@ -104,7 +106,7 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R007` | `crates/medulla-persistence/src/branch_registry_store.rs::tests::both_false_grant_is_stored_as_deny` | L2 | planned |
 | `MEDULLA-SCM-R008` | `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` | L3 | planned |
 | `MEDULLA-SCM-R009` | `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision` | L3 | planned |
-| `MEDULLA-SCM-R010` | `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids` | L3 | planned |
+| `MEDULLA-SCM-R010` | `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids`; `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors` | L3 | planned |
 | `MEDULLA-SCM-R011` | `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay` | L3 | planned |
 | `MEDULLA-SCM-R012` | `crates/medulla-h-ingest/src/source_changeset/provenance.rs::tests::agent_needs_a_visible_run_trace` | L2 | planned |
 | `MEDULLA-SCM-R012` | `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` | L3 | planned |
