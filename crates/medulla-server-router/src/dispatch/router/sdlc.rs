@@ -8,7 +8,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
     ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
-    RecordRelease as RecordReleaseResult,
+    RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -25,6 +25,10 @@ use medulla_source_types::lifecycle::{
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
+};
+use medulla_source_types::gate_verdict::{
+    gate_verdict_node_id, GateVerdictReceipt, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY,
+    GATE_VERDICT_SEAL_PROPERTY, GATE_VERDICT_TYPE,
 };
 use serde_json::{json, Map, Value};
 use tokio::sync::RwLock;
@@ -68,6 +72,24 @@ pub async fn dispatch_sdlc_methods(
     let response = match method {
         Method::RecordRelease { release } => {
             dispatch_boxed(record_release(state, target, release)).await
+        }
+        Method::RecordGateVerdict {
+            changeset,
+            gate_id,
+            input_digest,
+            verdict,
+            evidence_digest,
+            duration_ms,
+        } => {
+            let record = GateVerdictRecord {
+                changeset,
+                gate_id,
+                input_digest,
+                verdict,
+                evidence_digest,
+                duration_ms,
+            };
+            dispatch_boxed(record_gate_verdict(state, target, record)).await
         }
         Method::RecordDeployment { deployment } => {
             dispatch_boxed(record_deployment(state, target, deployment)).await
@@ -118,6 +140,156 @@ async fn record_release(
     }
     .await;
     typed_response::<RecordReleaseResult>(target.req_id, result)
+}
+
+/// `RecordGateVerdict` (MEDULLA-SCM-R008): decide in `medulla_h_ingest::gate_verdict::record`,
+/// then write the sealed verdict node and its one `judges` edge in ONE gateway-routed batch.
+async fn record_gate_verdict(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: GateVerdictRecord,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        request.validate().map_err(|e| e.to_string())?;
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let read = |id: &str| -> Option<Value> {
+            let blob = core.get_node_properties(id)?;
+            if !authority.can_see_node(&blob, core.is_schema_node(id)) {
+                return None;
+            }
+            medulla_types::msgpack::decode_property_value(&blob).ok()
+        };
+        let changeset_known = read(&commit_node_id(&request.changeset)).is_some_and(|node| {
+            node.get("type").and_then(Value::as_str) == Some(COMMIT_TYPE)
+                && node
+                    .get("tenant_id")
+                    .and_then(Value::as_str)
+                    .is_none_or(|owner| owner == tenant)
+        });
+        let stored: Option<GateVerdictRecord> = read(&gate_verdict_node_id(
+            &request.changeset,
+            &request.gate_id,
+        ))
+        .and_then(|node| {
+            serde_json::from_str(node.get(GATE_VERDICT_RECORD_PROPERTY)?.as_str()?).ok()
+        });
+        let tree_digest = if changeset_known {
+            changeset_tree_digest(state, &target, &request.changeset).await?
+        } else {
+            None
+        };
+        let write = medulla_h_ingest::gate_verdict::record(
+            request,
+            changeset_known,
+            tree_digest.as_deref(),
+            stored.as_ref(),
+        )
+        .map_err(|e| e.to_string())?;
+        let body = serde_json::to_string(&write.record)
+            .map_err(|_| "verdict record encoding failed".to_string())?;
+        let mut properties = Map::new();
+        properties.insert("type".into(), GATE_VERDICT_TYPE.into());
+        properties.insert(GATE_VERDICT_RECORD_PROPERTY.into(), body.into());
+        properties.insert(GATE_VERDICT_SEAL_PROPERTY.into(), write.seal.clone().into());
+        properties.insert("changeset".into(), write.record.changeset.clone().into());
+        properties.insert("gate_id".into(), write.record.gate_id.clone().into());
+        properties.insert("verdict".into(), write.record.verdict.name().into());
+        properties.insert(
+            "recorded_at_ms".into(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms().into(),
+        );
+        stamp(&mut properties, &target);
+        let (from, to) = write.judges();
+        let operations = vec![
+            json!({"op": "upsert_node", "id": write.node_id, "properties": properties}),
+            edge(&from, "judges", &to, &target),
+        ];
+        commit(state, &target, operations).await?;
+        Ok(GateVerdictReceipt {
+            node_id: write.node_id,
+            seal: write.seal,
+            replayed: write.replayed,
+        })
+    }
+    .await;
+    typed_response::<RecordGateVerdictResult>(target.req_id, result)
+}
+
+/// The digest of the canonical tree listing of `changeset` on the repository's default branch;
+/// `None` when the branch or the changeset is not on it.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn changeset_tree_digest(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    changeset: &str,
+) -> Result<Option<String>, String> {
+    use medulla_mutation_types::branch::{BranchRef, RESERVED_BRANCH_NAME};
+    let reference = BranchRef {
+        tenant: target.verified.tenant().to_string(),
+        graph: target.graph.to_string(),
+        name: RESERVED_BRANCH_NAME.to_string(),
+    };
+    let Ok(branch) =
+        medulla_h_graph::graph_ops::branch::resolve_target(state, target.verified, reference).await
+    else {
+        return Ok(None);
+    };
+    let changeset = changeset.to_string();
+    branch
+        .read_blocking(move |registry, reference| {
+            let mut found = None;
+            for commit in registry.chain(reference)? {
+                let Some(bytes) = registry.commit_payload(reference, &commit.id)? else {
+                    continue;
+                };
+                if medulla_source_types::source_changeset::decode_changeset(&bytes)
+                    .is_ok_and(|candidate| candidate.id == changeset)
+                {
+                    found = Some(commit.id.to_string());
+                    break;
+                }
+            }
+            let Some(commit_id) = found else {
+                return Ok(None);
+            };
+            let tree = medulla_compute::source_tree::tree_at(
+                &super::read_tree::RegistryTree {
+                    registry,
+                    branch: reference,
+                },
+                &commit_id,
+                "",
+                0,
+            )
+            .map_err(|error| format!("{error:?}"))?;
+            Ok(Some(medulla_source_types::gate_verdict::tree_listing_digest(
+                tree.iter()
+                    .map(|entry| (entry.path.as_str(), entry.blob_digest.as_str(), entry.mode)),
+            )))
+        })
+        .await?
+}
+
+#[cfg(not(all(feature = "redb", feature = "blob")))]
+async fn changeset_tree_digest(
+    _state: &Arc<RwLock<ServerState>>,
+    _target: &SdlcTarget<'_>,
+    _changeset: &str,
+) -> Result<Option<String>, String> {
+    Err("RecordGateVerdict requires the `redb` and `blob` features".to_string())
 }
 
 async fn record_deployment(

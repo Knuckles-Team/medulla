@@ -513,6 +513,12 @@ closed_error_codes! {
         ChangesetNodeConflict => "CHANGESET_NODE_CONFLICT",
         /// MEDULLA-SDLC-R001.4: a derived edge names an endpoint the graph does not hold.
         LifecycleEndpointUnknown => "LIFECYCLE_ENDPOINT_UNKNOWN",
+        /// MEDULLA-SCM-R008: a gate verdict names a tree that is not the changeset tree.
+        GateInputDigestMismatch => "GATE_INPUT_DIGEST_MISMATCH",
+        /// MEDULLA-SCM-R008: a different verdict for the same gate and changeset is stored.
+        GateVerdictSealed => "GATE_VERDICT_SEALED",
+        /// MEDULLA-SCM-R008: a required gate has no passing verdict, so the landing is blocked.
+        LandingGateBlocked => "LANDING_GATE_BLOCKED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

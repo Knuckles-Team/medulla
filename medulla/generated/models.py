@@ -16318,6 +16318,13 @@ class MethodRecordRelease(BaseModel):
     params: MethodRecordReleaseParams
 
 
+class MethodRecordGateVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RecordGateVerdict"]
+    params: MethodRecordGateVerdictParams
+
+
 class MethodRecordDeployment(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17157,6 +17164,7 @@ Method = Annotated[
         MethodCatalogRead,
         MethodSchemaContext,
         MethodRecordRelease,
+        MethodRecordGateVerdict,
         MethodRecordDeployment,
         MethodSourceCoverage,
         MethodObservationState,
@@ -37538,6 +37546,17 @@ class MethodRecordDeploymentParams(BaseModel):
     deployment: DeploymentInput
 
 
+class MethodRecordGateVerdictParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    changeset: str
+    gate_id: str
+    input_digest: str
+    verdict: Literal["pass", "fail"]
+    evidence_digest: str
+    duration_ms: int
+
+
 class MethodRecordReleaseParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -47392,6 +47411,8 @@ __all__ = [
     "MethodReadSpanParams",
     "MethodRecordDeployment",
     "MethodRecordDeploymentParams",
+    "MethodRecordGateVerdict",
+    "MethodRecordGateVerdictParams",
     "MethodRecordRelease",
     "MethodRecordReleaseParams",
     "MethodRegimeForecast",

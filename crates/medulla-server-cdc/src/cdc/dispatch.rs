@@ -290,6 +290,7 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::DashboardAsset { .. } => Some("__dashboard"),
         // MEDULLA-SDLC-R002.3: like the incident writes.
         Method::RecordRelease { .. }
+        | Method::RecordGateVerdict { .. }
         | Method::RecordDeployment { .. }
         | Method::GoalPut { .. }
         | Method::ProjectModeSet { .. }

@@ -68,6 +68,8 @@ pub mod source_changeset;
 /// changeset (MEDULLA-SCM-R004).
 #[cfg(feature = "blob")]
 pub mod source_tree;
+// MEDULLA-SCM-R008 — gate verdicts are sealed records.
+pub mod gate_verdict;
 
 /// The history index written with an accepted changeset and the path-history
 /// read (MEDULLA-SCM-R005).

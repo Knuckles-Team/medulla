@@ -798,6 +798,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-SDLC-R002.3: release and deployment records self-translate
         // into a request-graph `BatchUpdate`.
         | Method::RecordRelease { .. }
+        // MEDULLA-SCM-R008: the gate verdict record self-translates likewise.
+        | Method::RecordGateVerdict { .. }
         | Method::RecordDeployment { .. }
         // MEDULLA-SDLC-R017.1: the goal record self-translates into a request-graph `BatchUpdate`.
         | Method::GoalPut { .. }

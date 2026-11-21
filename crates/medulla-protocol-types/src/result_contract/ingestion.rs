@@ -119,6 +119,8 @@ method_results! {
     StewardshipSetTrustFlag(Stewardship / "set_trust_flag") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
+    // MEDULLA-SCM-R008: the gate verdict record.
+    RecordGateVerdict(RecordGateVerdict) => Raw<medulla_source_types::gate_verdict::GateVerdictReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;

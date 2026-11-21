@@ -123,6 +123,16 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "RECORD_RELEASE|{}|{}",
             release.repo, release.version
         )),
+        // MEDULLA-SCM-R008: the line names the changeset, the gate and the verdict, never the digests.
+        Method::RecordGateVerdict {
+            changeset,
+            gate_id,
+            verdict,
+            ..
+        } => Some(format!(
+            "RECORD_GATE_VERDICT|{changeset}|{gate_id}|{}",
+            verdict.name()
+        )),
         Method::RecordDeployment { deployment } => Some(format!(
             "RECORD_DEPLOYMENT|{}|{}",
             deployment.environment, deployment.workload

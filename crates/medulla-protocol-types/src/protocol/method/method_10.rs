@@ -387,6 +387,19 @@ $($variants)*
     RecordRelease {
         release: medulla_source_types::lifecycle::Release,
     },
+    /// Record one gate verdict of a changeset (MEDULLA-SCM-R008): a sealed, create-only
+    /// `GateVerdict` node and one `judges` edge to `commit:<changeset>`, in one batch. Refuses
+    /// `GATE_INPUT_DIGEST_MISMATCH` (the digest is not the changeset tree),
+    /// `GATE_VERDICT_SEALED` (a different verdict is stored for the gate) and
+    /// `LIFECYCLE_ENDPOINT_UNKNOWN` (the changeset node is absent). Identical replays succeed.
+    RecordGateVerdict {
+        changeset: String,
+        gate_id: String,
+        input_digest: String,
+        verdict: medulla_work_types::step_verdict::VerificationVerdict,
+        evidence_digest: String,
+        duration_ms: u64,
+    },
     /// Record one rollout of an image: a `Deployment` node linked to the release
     /// whose artifact digests name the image, or `unattributed` with no release.
     RecordDeployment {

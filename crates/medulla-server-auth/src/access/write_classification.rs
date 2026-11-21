@@ -477,6 +477,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DashboardAsset { .. }
                 // MEDULLA-SDLC-R002.3: release and deployment records.
                 | Method::RecordRelease { .. }
+                | Method::RecordGateVerdict { .. }
                 | Method::RecordDeployment { .. }
                 | Method::GoalPut { .. }
                 | Method::ProjectModeSet { .. }

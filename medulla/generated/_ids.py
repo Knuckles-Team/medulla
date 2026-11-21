@@ -6,6 +6,7 @@ METHOD_IDS = frozenset(
     {
         "MeasureIngestThroughput",
         "RecordRelease",
+        "RecordGateVerdict",
         "RecordDeployment",
         "GoalPut",
         "ProjectModeSet",

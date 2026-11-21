@@ -1730,6 +1730,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RELEASE_SEALED",
         ],
     ),
+    // MEDULLA-SCM-R008: the gate verdict record's refusals.
+    (
+        "RecordGateVerdict",
+        &[
+            "GATE_INPUT_DIGEST_MISMATCH",
+            "GATE_VERDICT_SEALED",
+            "LIFECYCLE_ENDPOINT_UNKNOWN",
+        ],
+    ),
     // MEDULLA-SDLC-R017.1: the served goal record's refusal.
     ("GoalPut", &["GOAL_TARGET_REQUIRED"]),
     // MEDULLA-SDLC-R017.3: the proposal record's refusals.

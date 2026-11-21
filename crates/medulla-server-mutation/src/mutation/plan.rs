@@ -1090,6 +1090,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::Stewardship { .. }
             | Method::DashboardAsset { .. }
             | Method::RecordRelease { .. }
+            | Method::RecordGateVerdict { .. }
             | Method::RecordDeployment { .. }
             | Method::GoalPut { .. }
             | Method::ProjectModeSet { .. }

@@ -60,6 +60,8 @@ pub struct SealedClass {
 ///   revision and its host-review admission (finance order proposals).
 /// * `Release` — a recorded software release (MEDULLA-SDLC-R002.5); its node id names
 ///   the repository and version, so an overwrite is a changed release.
+/// * `GateVerdict` — a recorded gate verdict (MEDULLA-SCM-R008); its node id names the
+///   changeset and the gate, so an overwrite is a changed verdict.
 /// * [`SEALED_TOMBSTONE_TYPE`] — what retirement leaves behind.
 pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
     SealedClass {
@@ -92,6 +94,14 @@ pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
         sealed_at_property: "published_at",
         generic_create: true,
         overwrite_code: Some("RELEASE_SEALED"),
+    },
+    // MEDULLA-SCM-R008: a gate verdict, sealed under its digest; one per changeset and gate.
+    SealedClass {
+        name: "GateVerdict",
+        digest_property: "verdict_seal",
+        sealed_at_property: "recorded_at_ms",
+        generic_create: true,
+        overwrite_code: Some("GATE_VERDICT_SEALED"),
     },
     SealedClass {
         name: SEALED_TOMBSTONE_TYPE,

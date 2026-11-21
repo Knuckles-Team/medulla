@@ -925,5 +925,8 @@ decode_meeting_transcript_revision = contract_decoder(
 send_record_deployment = contract_sender(
     "RecordDeployment", "MethodRecordDeploymentParams"
 )
+send_record_gate_verdict = contract_sender(
+    "RecordGateVerdict", "MethodRecordGateVerdictParams"
+)
 send_record_release = contract_sender("RecordRelease", "MethodRecordReleaseParams")
 send_semantic_enrich = contract_sender("SemanticEnrich", "MethodSemanticEnrichParams")

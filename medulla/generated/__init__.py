@@ -571,6 +571,7 @@ SEND_BY_METHOD = {
     "ReconcileCapacity": coordination.send_reconcile_capacity,
     "RecordDeployment": ingestion.send_record_deployment,
     "RecordEffectReceipt": coordination.send_record_effect_receipt,
+    "RecordGateVerdict": ingestion.send_record_gate_verdict,
     "RecordRelease": ingestion.send_record_release,
     "RefreshMatView": cluster.send_refresh_mat_view,
     "RegimeForecast": compute.send_regime_forecast,

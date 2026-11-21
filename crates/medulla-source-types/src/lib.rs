@@ -46,6 +46,8 @@ pub mod source_path_grant;
 // MEDULLA-SDLC — release, deployment, defect, derived status and lifecycle trace records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lifecycle;
+// MEDULLA-SCM-R008 — gate verdict records and the landing policy.
+pub mod gate_verdict;
 // MEDULLA-SDLC-R019.2 — delivery records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delivery;

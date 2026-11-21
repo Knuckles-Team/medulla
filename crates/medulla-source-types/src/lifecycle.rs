@@ -134,6 +134,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("PROPOSAL_NOT_FOUND"),
     RefusalCode::new("PROPOSAL_NOT_OPEN"),
     RefusalCode::new("CHANGESET_NODE_CONFLICT"),
+    RefusalCode::new("GATE_INPUT_DIGEST_MISMATCH"),
+    RefusalCode::new("GATE_VERDICT_SEALED"),
+    RefusalCode::new("LANDING_GATE_BLOCKED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -173,6 +176,12 @@ pub enum LifecycleRefusal {
     ProposalNotOpen(String),
     #[error("CHANGESET_NODE_CONFLICT: {0}")]
     ChangesetNodeConflict(String),
+    #[error("GATE_INPUT_DIGEST_MISMATCH: {0}")]
+    GateInputDigestMismatch(String),
+    #[error("GATE_VERDICT_SEALED: {0}")]
+    GateVerdictSealed(String),
+    #[error("LANDING_GATE_BLOCKED: {0}")]
+    LandingGateBlocked(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -200,6 +209,9 @@ impl LifecycleRefusal {
             Self::ProposalNotFound(_) => "PROPOSAL_NOT_FOUND",
             Self::ProposalNotOpen(_) => "PROPOSAL_NOT_OPEN",
             Self::ChangesetNodeConflict(_) => "CHANGESET_NODE_CONFLICT",
+            Self::GateInputDigestMismatch(_) => "GATE_INPUT_DIGEST_MISMATCH",
+            Self::GateVerdictSealed(_) => "GATE_VERDICT_SEALED",
+            Self::LandingGateBlocked(_) => "LANDING_GATE_BLOCKED",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }

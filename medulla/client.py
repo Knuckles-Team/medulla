@@ -18981,6 +18981,38 @@ class MedullaClient:
             raise TypeError("RecordRelease returned a non-object result")
         return result
 
+    async def record_gate_verdict(
+        self,
+        changeset: str,
+        gate_id: str,
+        input_digest: str,
+        verdict: str,
+        evidence_digest: str,
+        duration_ms: int,
+    ) -> dict[str, Any]:
+        """Record one gate verdict of a changeset (MEDULLA-SCM-R008).
+
+        ``verdict`` is ``"pass"`` or ``"fail"``. ``input_digest`` is the SHA-256 of the
+        canonical tree listing of the changeset (``GATE_INPUT_DIGEST_MISMATCH``); a
+        different verdict for the same gate and changeset is refused
+        (``GATE_VERDICT_SEALED``) and an identical one replays.
+        """
+        result = await self._send(
+            "RecordGateVerdict",
+            {
+                "changeset": changeset,
+                "gate_id": gate_id,
+                "input_digest": input_digest,
+                "verdict": verdict,
+                "evidence_digest": evidence_digest,
+                "duration_ms": duration_ms,
+            },
+            None,
+        )
+        if not isinstance(result, dict):
+            raise TypeError("RecordGateVerdict returned a non-object result")
+        return result
+
     async def record_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
         """Record one rollout of an image (MEDULLA-SDLC-R002.3).
 
