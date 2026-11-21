@@ -59,8 +59,10 @@ See [research.md](research.md) for the questions and the evidence found.
 
 ## Phase 1: Design
 
-- **Owner**: the world-view vocabulary module (planned) beside the existing
-  vocabulary definitions in the engine crate.
+- **Owner**: the existing world-view module
+  `crates/medulla-core/ontology/worldview-v1.ttl` (core spec `worldview`)
+  holds the spatial vocabulary; the layout derivation and served method sit
+  beside the engine's existing vocabulary handling.
 - **Cohesion**: one domain (city spatial facts) in one module: vocabulary,
   layout derivation, override store and the served method together.
 - **Dependency direction**: the world-view module depends on the core

@@ -5,12 +5,12 @@ Governing spec: [spec.md](spec.md).
 ## Positive tests
 
 - `tests/test_world_view_ontology.py::test_spatial_classes_extend_the_core_ontology`
-  (planned) — registers the vocabulary module and asserts: `District`,
-  `Building`, `Room`, `Street` exist as classes; `locatedIn`, `position`,
-  `hasInterior` exist as relations; each is registered under the shared
-  ontology base; no identity, memory or orchestration class is introduced by
-  the module; the module declares one IRI module. Bound:
-  `MEDULLA-WORLD-VIEW-R001`.
+  — loads the packaged world-view module (`worldview-v1.ttl`) and asserts:
+  the module IRI is declared; `District`, `Building`, `Room`, `Street` are
+  classes under the core namespace whose only parent is the core `Place`;
+  `hasInterior` and `position` are declared; `locatedIn` is the core relation
+  and is not redeclared; no identity, memory, orchestration or store class is
+  introduced. Bound: `MEDULLA-WORLD-VIEW-R001`.
 - `tests/test_world_view_layout.py::test_derived_placement_is_never_stored`
   (planned) — derives the layout for a tenant catalog (asserts districts
   grouped by capability and deterministic plot positions); adds one connector
