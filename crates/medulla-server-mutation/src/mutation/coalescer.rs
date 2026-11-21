@@ -65,9 +65,16 @@ impl<'a> TryFrom<&'a Method> for CoalescableWrite<'a> {
                 target_id,
                 properties_msgpack,
             }),
+            // A type-scoped removal keeps its relationship, which a coalesced pair
+            // removal cannot express: it takes the ordinary apply path.
+            Method::RemoveEdge {
+                relationship: Some(_),
+                ..
+            } => Err(()),
             Method::RemoveEdge {
                 source_id,
                 target_id,
+                ..
             } => Ok(Self::RemoveEdge {
                 source_id,
                 target_id,

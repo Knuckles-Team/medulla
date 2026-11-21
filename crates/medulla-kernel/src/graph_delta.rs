@@ -407,6 +407,7 @@ fn push_edge_operations(
             operations.push(Method::RemoveEdge {
                 source_id: source.clone(),
                 target_id: target.clone(),
+                relationship: None,
             });
         }
         let added = edges.after.get(&key).into_iter().flatten();
@@ -532,7 +533,12 @@ fn apply_row_operation(
         Method::RemoveEdge {
             source_id,
             target_id,
-        } => transaction.remove_edge(source_id.clone(), target_id.clone()),
+            relationship,
+        } => transaction.remove_edge_scoped(
+            source_id.clone(),
+            target_id.clone(),
+            relationship.as_deref(),
+        ),
         Method::AddEmbedding { node_id, embedding } => semantic
             .add_embedding(node_id.clone(), embedding.clone())
             .map_err(|error| error.to_string())?,

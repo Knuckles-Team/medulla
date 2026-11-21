@@ -552,6 +552,7 @@ fn supersede_claim(
         admission.methods.push(Method::RemoveEdge {
             source_id: claim_id.to_string(),
             target_id: document.clone(),
+            relationship: None,
         });
     }
     let mut properties = stored.properties.clone();
@@ -562,6 +563,7 @@ fn supersede_claim(
         admission.methods.push(Method::RemoveEdge {
             source_id: claim_id.to_string(),
             target_id: target.clone(),
+            relationship: None,
         });
     }
     admission.methods.push(Method::AddNode {
@@ -1275,7 +1277,7 @@ mod tests {
         assert_eq!(rewritten["documents"], serde_json::json!(["doc:a"]));
         assert!(methods.iter().any(|method| matches!(
             method,
-            Method::RemoveEdge { source_id, target_id }
+            Method::RemoveEdge { source_id, target_id, .. }
                 if *source_id == claim_id && target_id == "doc:b"
         )));
         assert!(!methods.iter().any(|method| matches!(

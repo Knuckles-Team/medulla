@@ -41,6 +41,7 @@ pub(super) fn apply_staged(gtxn: &mut medulla_graph_core::graph::GraphTxn<'_>, m
         Method::RemoveEdge {
             source_id,
             target_id,
+            ..
         } => gtxn.remove_edge(source_id.clone(), target_id.clone()),
         Method::CompareAndSetNodeFields {
             node_id,

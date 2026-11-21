@@ -108,6 +108,7 @@ pub fn admit_containers(
         admission.methods.push(Method::RemoveEdge {
             source_id: child.clone(),
             target_id: old_parent.clone(),
+            relationship: None,
         });
     }
     for (child, parent) in &plan.edges {

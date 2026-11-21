@@ -85,8 +85,16 @@ pub fn apply_method_rows_ref(
         Method::RemoveEdge {
             source_id,
             target_id,
+            relationship,
         } => {
-            remove_durable_edge_pair(graph, source_id, target_id, edges)?;
+            remove_durable_edge_scoped(
+                graph,
+                source_id,
+                target_id,
+                relationship.as_deref(),
+                edges,
+                crypto,
+            )?;
         }
         Method::BatchUpdate { operations_msgpack } => {
             apply_batch_rows(graph, operations_msgpack, nodes, edges, semantic, crypto)?;

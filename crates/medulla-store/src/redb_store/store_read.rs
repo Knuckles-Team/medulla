@@ -434,6 +434,41 @@ pub fn remove_durable_edge_pair(
     Ok(())
 }
 
+/// Remove the edge pair, or with `relationship` only the edge rows of that relationship
+/// type between the pair; a differently typed parallel edge survives
+/// (MEDULLA-INGEST-WORKER-R003.17.1, decided type-scoped removal).
+pub fn remove_durable_edge_scoped(
+    graph: &str,
+    source: &str,
+    target: &str,
+    relationship: Option<&str>,
+    edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    let Some(relationship) = relationship else {
+        return remove_durable_edge_pair(graph, source, target, edges);
+    };
+    let mut ordinals: Vec<u32> = Vec::new();
+    for row in edges.range_inclusive(
+        (graph, source, target, 0u32),
+        (graph, source, target, u32::MAX),
+    )? {
+        let (key, value) = row.map_err(|error| error.to_string())?;
+        let bytes = crypto.unseal(value.value())?;
+        if medulla_types::msgpack::decode_edge_relationship(&bytes).as_deref() == Some(relationship)
+        {
+            ordinals.push(key.value().3);
+        }
+    }
+    for ordinal in ordinals {
+        edges
+            .remove((graph, source, target, ordinal))
+            .map_err(|error| error.to_string())?;
+    }
+    invalidate_edge_ord(graph, source, target);
+    Ok(())
+}
+
 pub fn remove_durable_node(
     graph: &str,
     node_id: &str,

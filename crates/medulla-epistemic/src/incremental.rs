@@ -561,6 +561,7 @@ mod tests {
                 &[Method::RemoveEdge {
                     source_id: "derived".into(),
                     target_id: "model-a".into(),
+                    relationship: None,
                 }],
             )
             .unwrap();

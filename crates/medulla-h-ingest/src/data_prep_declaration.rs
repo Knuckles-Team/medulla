@@ -262,6 +262,7 @@ pub fn declare_data_prep(
         methods.push(Method::RemoveEdge {
             source_id: node_id.clone(),
             target_id: target.clone(),
+            relationship: None,
         });
     }
     for target in wanted.difference(&held) {
@@ -357,7 +358,12 @@ mod tests {
                 Method::RemoveEdge {
                     source_id,
                     target_id,
-                } => core.remove_edge(source_id.clone(), target_id.clone()),
+                    relationship,
+                } => core.remove_edge_scoped(
+                    source_id.clone(),
+                    target_id.clone(),
+                    relationship.as_deref(),
+                ),
                 other => panic!("unexpected method {other:?}"),
             }
         }

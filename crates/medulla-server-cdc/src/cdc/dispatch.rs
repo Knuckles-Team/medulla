@@ -192,6 +192,7 @@ fn emit_edge_change(hub: &CdcHub, graph: &str, method: &Method, before: Option<V
         Method::RemoveEdge {
             source_id,
             target_id,
+            ..
         } => {
             hub.emit(
                 graph,

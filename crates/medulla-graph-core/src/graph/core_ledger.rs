@@ -188,6 +188,9 @@ impl GraphCore {
                 "REMOVE_EDGE" if parts.len() >= 3 => {
                     txn.remove_edge(parts[1].to_string(), parts[2].to_string());
                 }
+                "REMOVE_TYPED_EDGE" if parts.len() >= 4 => {
+                    txn.remove_typed_edge(parts[1], parts[2], parts[3]);
+                }
                 _ => {}
             }
         }

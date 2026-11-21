@@ -290,7 +290,16 @@ fn operations(core: &GraphCore, methods: &[Method]) -> Result<Vec<Value>, String
             Method::RemoveEdge {
                 source_id,
                 target_id,
-            } => operations.push(json!({"op": "remove_edge", "source": source_id, "target": target_id})),
+                relationship,
+            } => operations.push(match relationship {
+                Some(relationship) => json!({
+                    "op": "remove_edge",
+                    "source": source_id,
+                    "target": target_id,
+                    "relationship": relationship,
+                }),
+                None => json!({"op": "remove_edge", "source": source_id, "target": target_id}),
+            }),
             Method::AddEdge {
                 source_id,
                 target_id,

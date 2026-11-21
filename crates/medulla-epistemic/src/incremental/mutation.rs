@@ -98,7 +98,8 @@ fn apply_method(
         Method::RemoveEdge {
             source_id,
             target_id,
-        } => apply_remove_edge(index, source_id, target_id, delta),
+            relationship,
+        } => apply_remove_edge(index, source_id, target_id, relationship.is_some(), delta),
         Method::ApplyMutation { event_type, query } => {
             apply_invalidation(index, event_type, query, delta)
         }
@@ -152,9 +153,12 @@ fn apply_remove_edge(
     index: &mut IncrementalReasoningIndex,
     source_id: &str,
     target_id: &str,
+    typed: bool,
     delta: &mut IncrementalDelta,
 ) -> Result<(), String> {
-    if index.remove_edge(source_id, target_id)? {
+    // The reasoning index keeps one relation per endpoint pair and no edge type, so a
+    // type-scoped removal never drops it: its dependents go stale instead.
+    if !typed && index.remove_edge(source_id, target_id)? {
         delta.edge_changes += 1;
     }
     index.stale_dependents(&format!("{source_id}->{target_id}"), delta)?;

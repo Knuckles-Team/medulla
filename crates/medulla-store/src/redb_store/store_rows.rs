@@ -480,8 +480,19 @@ pub fn apply_batch_rows(
                     crypto,
                 )?;
             }
-            BatchOperation::RemoveEdge { source, target } => {
-                remove_durable_edge_pair(graph, &source, &target, edges)?;
+            BatchOperation::RemoveEdge {
+                source,
+                target,
+                relationship,
+            } => {
+                remove_durable_edge_scoped(
+                    graph,
+                    &source,
+                    &target,
+                    relationship.as_deref(),
+                    edges,
+                    crypto,
+                )?;
             }
             BatchOperation::AddEmbedding { id, embedding } => {
                 apply_batch_add_embedding_row(

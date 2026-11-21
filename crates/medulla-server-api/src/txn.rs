@@ -598,6 +598,7 @@ impl GraphTxnState {
             | Method::RemoveEdge {
                 source_id,
                 target_id,
+                ..
             } => {
                 self.observe(core, source_id);
                 self.observe(core, target_id);

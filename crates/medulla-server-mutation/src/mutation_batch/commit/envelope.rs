@@ -82,7 +82,12 @@ fn stage_operation<'a>(
         Method::RemoveEdge {
             source_id,
             target_id,
-        } => staged.remove_edge(source_id.clone(), target_id.clone()),
+            relationship,
+        } => staged.remove_edge_scoped(
+            source_id.clone(),
+            target_id.clone(),
+            relationship.as_deref(),
+        ),
         Method::ClearGraph => staged.clear(),
         other => {
             return Err(format!(

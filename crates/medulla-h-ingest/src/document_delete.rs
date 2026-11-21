@@ -58,6 +58,7 @@ pub fn lower(plan: &CascadePlan, record: &DocumentDeletion) -> Result<IndexWrite
         methods.push(Method::RemoveEdge {
             source_id: edge.from.id.clone(),
             target_id: edge.to.id.clone(),
+            relationship: None,
         });
     }
     for node in &plan.nodes {

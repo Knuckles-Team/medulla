@@ -71,7 +71,7 @@ fn tombstones_lower_to_membership_removal() {
     let lowered = lower(&result()).expect("lowered");
     assert!(lowered.methods.iter().any(|method| matches!(
         method,
-        Method::RemoveEdge { source_id, target_id }
+        Method::RemoveEdge { source_id, target_id, .. }
             if source_id == "branch:b" && target_id == "fileversion:old"
     )));
 }
@@ -316,4 +316,53 @@ fn one_parse_per_unique_blob_across_branches() {
         "a blob on three branches yields one symbol"
     );
     assert_eq!(named("run"), 2, "two distinct app blobs, not three");
+}
+
+// MEDULLA-INGEST-WORKER-R003.17.1 (decided typed removal): a stale `similar_to` drop
+// names its relationship and never drops the `calls` edge between the same pair.
+#[test]
+fn similar_to_removal_keeps_the_calls_edge_between_the_same_pair() {
+    use medulla_graph_core::graph::GraphCore;
+
+    let props = |kind: &str| {
+        rmp_serde::to_vec_named(&std::collections::BTreeMap::from([("relationship", kind)]))
+            .expect("edge properties")
+    };
+    let core = GraphCore::new();
+    for id in ["symbol:a", "symbol:b"] {
+        core.add_node(id.to_string(), rmp_serde::to_vec_named(&std::collections::BTreeMap::from([("type", "SYMBOL")])).expect("node"));
+    }
+    for kind in ["calls", "similar_to"] {
+        core.add_typed_edge(
+            "symbol:a".to_string(),
+            "symbol:b".to_string(),
+            kind.to_string(),
+            props(kind),
+        )
+        .expect("typed edge");
+    }
+    let method = Method::RemoveEdge {
+        source_id: "symbol:a".to_string(),
+        target_id: "symbol:b".to_string(),
+        relationship: Some("similar_to".to_string()),
+    };
+    let Method::RemoveEdge {
+        source_id,
+        target_id,
+        relationship,
+    } = &method
+    else {
+        unreachable!("constructed above");
+    };
+    core.remove_edge_scoped(source_id.clone(), target_id.clone(), relationship.as_deref());
+    let kinds: Vec<String> = core
+        .typed_edges_between("symbol:a", "symbol:b")
+        .into_iter()
+        .map(|(kind, _)| kind)
+        .collect();
+    assert_eq!(kinds, vec!["calls".to_string()]);
+    assert!(core.has_edge("symbol:a", "symbol:b"));
+    // An untyped removal still takes the whole pair.
+    core.remove_edge_scoped("symbol:a".to_string(), "symbol:b".to_string(), None);
+    assert!(core.typed_edges_between("symbol:a", "symbol:b").is_empty());
 }

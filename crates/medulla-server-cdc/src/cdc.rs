@@ -911,13 +911,19 @@ pub fn capture_before(core: &GraphCore, method: &Method) -> CdcPre {
         Method::RemoveEdge {
             source_id,
             target_id,
+            relationship,
         } => CdcPre::Edge {
             source_id: source_id.clone(),
             target_id: target_id.clone(),
             before: core
                 .get_edge_properties(source_id, target_id)
                 .into_iter()
-                .next(),
+                .find(|blob| {
+                    relationship.as_deref().is_none_or(|wanted| {
+                        medulla_types::msgpack::decode_edge_relationship(blob).as_deref()
+                            == Some(wanted)
+                    })
+                }),
         },
         _ => CdcPre::Skip,
     }

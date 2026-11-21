@@ -429,6 +429,7 @@ fn event_for_method(method: &Method) -> IncrementalReasoningEvent {
         Method::RemoveEdge {
             source_id,
             target_id,
+            ..
         } => IncrementalReasoningEvent::EdgeRemoved {
             source_ref: opaque_identity(source_id),
             target_ref: opaque_identity(target_id),

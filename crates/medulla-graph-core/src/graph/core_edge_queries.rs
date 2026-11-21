@@ -52,6 +52,17 @@ impl GraphCore {
         self.txn().remove_edge(source_id, target_id);
     }
 
+    /// Type-scoped removal: see [`GraphTxn::remove_edge_scoped`].
+    pub fn remove_edge_scoped(
+        &self,
+        source_id: String,
+        target_id: String,
+        relationship: Option<&str>,
+    ) {
+        self.txn()
+            .remove_edge_scoped(source_id, target_id, relationship);
+    }
+
     /// Add (or idempotently overwrite) the edge identified by the
     /// `(source_id, target_id, relation_type)` triple (spec:
     /// MEDULLA-REPO-INGEST-R009.1). One-shot convenience over

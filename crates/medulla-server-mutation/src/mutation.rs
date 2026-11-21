@@ -332,6 +332,7 @@ mod tests {
             Method::RemoveEdge {
                 source_id: "a".into(),
                 target_id: "b".into(),
+                relationship: None,
             },
             Method::CreateSummaryNode {
                 level: 1,

@@ -437,9 +437,14 @@ $($variants)*
         properties_msgpack: Vec<u8>,
     },
 
+    /// Remove the edge pair; with `relationship` set, only the edge(s) of that
+    /// relationship type between the pair, leaving every differently typed edge
+    /// between the same endpoints (MEDULLA-INGEST-WORKER-R003.17.1, decided typed removal).
     RemoveEdge {
         source_id: String,
         target_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        relationship: Option<String>,
     },
 
     /// Non-destructively CLOSE a contradicted edge's temporal windows (KG-2.251):

@@ -122,6 +122,7 @@ fn edge_method(edge: &ExtractedEdge) -> Result<Method, String> {
         return Ok(Method::RemoveEdge {
             source_id: edge.source.clone(),
             target_id: edge.target.clone(),
+            relationship: None,
         });
     }
     Ok(Method::AddEdge {

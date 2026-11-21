@@ -349,7 +349,8 @@ pub fn overlay_write_set(view: &mut medulla_graph_core::graph::GraphView, write_
             Method::RemoveEdge {
                 source_id,
                 target_id,
-            } => view.overlay_remove_edge(source_id, target_id),
+                relationship,
+            } => view.overlay_remove_edge_scoped(source_id, target_id, relationship.as_deref()),
             Method::CompareAndSetNodeFields {
                 node_id,
                 conditions_msgpack,

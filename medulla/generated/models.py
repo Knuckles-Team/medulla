@@ -20141,6 +20141,7 @@ class MethodReleaseWorkItemResourcesParams(BaseModel):
 class MethodRemoveEdgeParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    relationship: str | None = None
     source_id: str
     target_id: str
 

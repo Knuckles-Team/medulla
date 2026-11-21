@@ -197,7 +197,20 @@ impl VersionState {
                     properties_msgpack,
                     ..
                 } => entries.push(self.upsert_edge(&source, &target, &properties_msgpack, image_ref)),
-                BatchOperation::RemoveEdge { source, target } => {
+                // The fold keeps one row per pair, so it cannot replay a type-scoped removal.
+                BatchOperation::RemoveEdge {
+                    relationship: Some(_),
+                    ..
+                } => {
+                    self.unreplayable
+                        .insert("BatchUpdate.remove_edge_typed".to_string());
+                    entries.extend(other("BatchUpdate.remove_edge_typed", image_ref));
+                }
+                BatchOperation::RemoveEdge {
+                    source,
+                    target,
+                    relationship: None,
+                } => {
                     if self.remove_edge_row(&source, &target).is_some() {
                         entries.push(change(
                             DiffEntity::Edge { source, target },
@@ -258,8 +271,16 @@ impl VersionState {
                 ..
             } => vec![self.upsert_edge(source_id, target_id, properties_msgpack, image_ref)],
             Method::RemoveEdge {
+                relationship: Some(_),
+                ..
+            } => {
+                self.unreplayable.insert("RemoveEdge.typed".to_string());
+                other("RemoveEdge.typed", image_ref)
+            }
+            Method::RemoveEdge {
                 source_id,
                 target_id,
+                relationship: None,
             } => match self.remove_edge_row(source_id, target_id) {
                 Some(_) => vec![change(
                     DiffEntity::Edge {

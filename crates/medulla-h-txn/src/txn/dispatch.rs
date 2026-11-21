@@ -291,6 +291,7 @@ async fn dispatch_txn_stage(
             Method::RemoveEdge {
                 source_id,
                 target_id,
+                relationship: None,
             },
         )
         .await),

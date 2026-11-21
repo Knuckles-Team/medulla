@@ -771,6 +771,7 @@ pub fn reindex_changeset(
             methods.push(Method::RemoveEdge {
                 source_id: edge.source,
                 target_id: edge.target,
+                relationship: Some("similar_to".to_string()),
             });
         }
     }
@@ -795,6 +796,7 @@ pub fn reindex_changeset(
         methods.push(Method::RemoveEdge {
             source_id: source.clone(),
             target_id: bucket.clone(),
+            relationship: None,
         });
     }
     for bucket in emptied.iter().filter(|bucket| !live.contains(bucket.as_str())) {
@@ -1392,9 +1394,12 @@ mod tests {
                     Method::RemoveEdge {
                         source_id,
                         target_id,
-                    } => self
-                        .edges
-                        .retain(|(source, target, _), _| !(source == source_id && target == target_id)),
+                        relationship,
+                    } => self.edges.retain(|(source, target, kind), _| {
+                        !(source == source_id
+                            && target == target_id
+                            && relationship.as_ref().is_none_or(|wanted| wanted == kind))
+                    }),
                     other => panic!("a re-index write-set holds no {other:?}"),
                 }
             }

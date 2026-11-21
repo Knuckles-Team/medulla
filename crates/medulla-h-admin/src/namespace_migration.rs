@@ -652,6 +652,7 @@ pub fn plan_graph(
         .map(|(source, target)| Method::RemoveEdge {
             source_id: (*source).to_string(),
             target_id: (*target).to_string(),
+            relationship: None,
         })
         .collect();
     writes.extend(node_writes);

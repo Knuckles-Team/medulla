@@ -981,6 +981,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
             vec![Method::RemoveEdge {
                 source_id: "a".into(),
                 target_id: "b".into(),
+                relationship: None,
             }],
         ),
     ] {

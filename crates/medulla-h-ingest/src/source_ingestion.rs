@@ -2683,6 +2683,7 @@ fn admit_relationship_tombstones(
         admitted.methods.push(Method::RemoveEdge {
             source_id: source_id.clone(),
             target_id: target_id.clone(),
+            relationship: None,
         });
         admitted.methods.push(Method::RemoveNode {
             node_id: marker_id.clone(),

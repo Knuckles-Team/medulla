@@ -646,6 +646,7 @@ mod validation {
             Method::RemoveEdge {
                 source_id,
                 target_id,
+                ..
             } => validate_op_remove_edge(source_id, target_id),
             _ => Ok(()),
         }
@@ -1345,6 +1346,7 @@ mod tests {
         envelope.mutation.operations[0].method = crate::protocol::Method::RemoveEdge {
             source_id: "s@bad".into(),
             target_id: "t1".into(),
+            relationship: None,
         };
         reseal(&mut envelope);
         let err = envelope.validate().unwrap_err();

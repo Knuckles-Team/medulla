@@ -565,8 +565,13 @@ pub(super) fn apply_projectable_method(core: &GraphCore, method: &Method) -> Res
         Method::RemoveEdge {
             source_id,
             target_id,
+            relationship,
         } => {
-            core.remove_edge(source_id.clone(), target_id.clone());
+            core.remove_edge_scoped(
+                source_id.clone(),
+                target_id.clone(),
+                relationship.as_deref(),
+            );
             Ok(())
         }
         Method::CompareAndSetNodeFields {

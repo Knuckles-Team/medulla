@@ -521,6 +521,7 @@ impl EmbeddedEngine {
             Method::RemoveEdge {
                 source_id: source_id.to_string(),
                 target_id: target_id.to_string(),
+                relationship: None,
             },
         )
     }

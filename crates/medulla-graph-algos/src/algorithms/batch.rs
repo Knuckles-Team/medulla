@@ -29,6 +29,8 @@ pub enum BatchOperation {
     RemoveEdge {
         source: String,
         target: String,
+        /// `Some` removes only the edge(s) of this relationship type between the pair.
+        relationship: Option<String>,
     },
     AddEmbedding {
         id: String,
@@ -215,6 +217,20 @@ pub fn decode_batch_operations(operations_msgpack: &[u8]) -> Result<Vec<BatchOpe
             "remove_edge" => BatchOperation::RemoveEdge {
                 source: required_batch_id(operation, index, "source")?,
                 target: required_batch_id(operation, index, "target")?,
+                relationship: match operation.get("relationship") {
+                    None | Some(serde_json::Value::Null) => None,
+                    Some(value) => Some(
+                        value
+                            .as_str()
+                            .filter(|value| !value.trim().is_empty())
+                            .ok_or_else(|| {
+                                format!(
+                                    "BatchUpdate op[{index}] requires a non-empty string 'relationship'"
+                                )
+                            })?
+                            .to_string(),
+                    ),
+                },
             },
             "add_embedding" => decode_batch_embedding_op(operation, index)?,
             "declare_embedding_space" => decode_batch_space_op(operation, index)?,
@@ -504,9 +520,13 @@ fn apply_batch_operation(
             txn.add_edge(source.clone(), target.clone(), properties_msgpack)?;
             change.record_add_edge(source, target);
         }
-        BatchOperation::RemoveEdge { source, target } => {
+        BatchOperation::RemoveEdge {
+            source,
+            target,
+            relationship,
+        } => {
             let rels = txn.edge_rels(&source, &target);
-            txn.remove_edge(source.clone(), target.clone());
+            txn.remove_edge_scoped(source.clone(), target.clone(), relationship.as_deref());
             change.record_remove_edge_captured(source, target, rels);
         }
         BatchOperation::AddEmbedding { id, embedding } => {

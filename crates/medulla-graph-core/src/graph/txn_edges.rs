@@ -99,10 +99,49 @@ impl<'a> GraphTxn<'a> {
             before - entry.value().len()
         };
         if removed > 0 {
+            // The topology holds one edge per stored blob, so drop that many.
+            if let (Some(&src_idx), Some(&tgt_idx)) = (
+                self.topo.node_map.get(source_id),
+                self.topo.node_map.get(target_id),
+            ) {
+                let doomed: Vec<_> = self
+                    .topo
+                    .graph
+                    .edges_connecting(src_idx, tgt_idx)
+                    .map(|edge| edge.id())
+                    .take(removed)
+                    .collect();
+                for edge_idx in doomed {
+                    self.topo.graph.remove_edge(edge_idx);
+                }
+            }
+            if self
+                .edge_properties
+                .get(&key)
+                .is_some_and(|entry| entry.value().is_empty())
+            {
+                self.edge_properties.remove(&key);
+            }
             self.push_ledger(format!(
                 "REMOVE_TYPED_EDGE|{}|{}|{}",
                 source_id, target_id, relation_type
             ));
+        }
+    }
+
+    /// Remove the edge pair (`relationship` `None`: every parallel edge) or only the
+    /// edge(s) of the named relationship type (MEDULLA-INGEST-WORKER-R003.17.1 decided
+    /// type-scoped removal): a typed removal never drops a different-typed edge between
+    /// the same endpoints.
+    pub fn remove_edge_scoped(
+        &mut self,
+        source_id: String,
+        target_id: String,
+        relationship: Option<&str>,
+    ) {
+        match relationship {
+            Some(relationship) => self.remove_typed_edge(&source_id, &target_id, relationship),
+            None => self.remove_edge(source_id, target_id),
         }
     }
 

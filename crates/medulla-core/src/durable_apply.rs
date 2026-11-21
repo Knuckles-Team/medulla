@@ -295,7 +295,12 @@ fn apply_base_edges(core: &GraphCore, m: &Method) -> bool {
         Method::RemoveEdge {
             source_id,
             target_id,
-        } => core.remove_edge(source_id.clone(), target_id.clone()),
+            relationship,
+        } => core.remove_edge_scoped(
+            source_id.clone(),
+            target_id.clone(),
+            relationship.as_deref(),
+        ),
         // Deterministic replay (KG-2.251): re-close the same window / re-supersede.
         // Idempotent — replaying over the already-closed pre-image is a no-op.
         Method::InvalidateEdge {

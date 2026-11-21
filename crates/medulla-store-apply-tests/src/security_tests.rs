@@ -216,6 +216,7 @@ fn edge_ordinals_monotonic_o1_counter_and_reseed_after_restart() {
             commit(Method::RemoveEdge {
                 source_id: "a".into(),
                 target_id: "c".into(),
+                relationship: None,
             });
             assert_eq!(edge_ords(&db, "g", "a", "c"), Vec::<u32>::new());
             commit(add_edge_method("a", "c"));

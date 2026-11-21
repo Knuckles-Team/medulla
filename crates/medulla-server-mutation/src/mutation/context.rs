@@ -249,7 +249,13 @@ pub(super) fn idempotency_key(graph_name: &str, method: &Method, req_id: u64) ->
         Method::RemoveEdge {
             source_id,
             target_id,
-        } => format!("RemoveEdge|{graph_name}|{source_id}|{target_id}"),
+            relationship,
+        } => match relationship {
+            Some(relationship) => {
+                format!("RemoveEdge|{graph_name}|{source_id}|{target_id}|{relationship}")
+            }
+            None => format!("RemoveEdge|{graph_name}|{source_id}|{target_id}"),
+        },
         #[cfg(feature = "modality-serving")]
         Method::ServedModality {
             op:

@@ -97,6 +97,7 @@ async fn ontology_retraction_updates_closure_incrementally() {
     let removal = Method::RemoveEdge {
         source_id: s0.clone(),
         target_id: s1.clone(),
+        relationship: None,
     };
     let reply = medulla_server_router::dispatch::request_boundary::dispatch(
         &state,

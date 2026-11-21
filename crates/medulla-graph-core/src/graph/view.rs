@@ -348,4 +348,40 @@ impl GraphView {
         self.edge_properties
             .remove(&(source_id.to_string(), target_id.to_string()));
     }
+
+    /// Type-scoped overlay removal: `None` removes every parallel edge of the pair,
+    /// `Some(relationship)` only the edges of that relationship type.
+    pub fn overlay_remove_edge_scoped(
+        &mut self,
+        source_id: &str,
+        target_id: &str,
+        relationship: Option<&str>,
+    ) {
+        let Some(relationship) = relationship else {
+            return self.overlay_remove_edge(source_id, target_id);
+        };
+        let key = (source_id.to_string(), target_id.to_string());
+        let Some(blobs) = self.edge_properties.get_mut(&key) else {
+            return;
+        };
+        let before = blobs.len();
+        blobs.retain(|blob| {
+            medulla_types::msgpack::decode_edge_relationship(blob).as_deref() != Some(relationship)
+        });
+        let removed = before - blobs.len();
+        if blobs.is_empty() {
+            self.edge_properties.remove(&key);
+        }
+        if let (Some(&s), Some(&t)) = (self.node_map.get(source_id), self.node_map.get(target_id)) {
+            let doomed: Vec<_> = self
+                .graph
+                .edges_connecting(s, t)
+                .map(|e| e.id())
+                .take(removed)
+                .collect();
+            for e in doomed {
+                self.graph.remove_edge(e);
+            }
+        }
+    }
 }
