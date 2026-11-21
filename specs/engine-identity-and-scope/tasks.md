@@ -43,6 +43,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T036 [US6] MEDULLA-IDENTITY-R023.13.4 Refusal: share operations
 - [ ] T037 [US6] MEDULLA-IDENTITY-R023.13.5 Evidence: share audit event
 - [ ] T038 [US6] MEDULLA-IDENTITY-R023.13.6 Hot-path journey: org share revoke survives restart
+- [ ] T038a [US6] MEDULLA-IDENTITY-R023.13.7 Reconcile: a commons sweep removes an orphan `__commons__` copy
 - [ ] T039 [US5] MEDULLA-IDENTITY-R610.1 Model
 - [ ] T040 [US5] MEDULLA-IDENTITY-R610.2 Behavior
 - [ ] T041 [US5] MEDULLA-IDENTITY-R610.3 Wiring: tenant predicate in the UQL executor
@@ -55,6 +56,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T048 [US6] MEDULLA-IDENTITY-R700.4 Refusal: unsafe ownership plans
 - [ ] T049 [US6] MEDULLA-IDENTITY-R700.5 Evidence: stored plan and rollback record
 - [ ] T050 [US6] MEDULLA-IDENTITY-R700.6 Hot-path journey: apply then rollback
+- [ ] T050a [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
 - [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
 - [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: validate, bind and enforce (`IdentityOp::Policy`, lowered into `idm:policy:` roles and grants by `rbac_projection`)
 - [ ] T053 [US6] MEDULLA-IDENTITY-R703 Epistemic policy predicates

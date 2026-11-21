@@ -36,7 +36,7 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Ownership plan
 
-- Fields: `GraphOwnershipSignals`, `OwnershipDisposition`, `GrantPlanEntry`, `RollbackEntry`, `plan_digest` (`MEDULLA-IDENTITY-R700.1`, `crates/medulla-identity-types/src/identity/ownership.rs`, new).
+- Fields: `GraphOwnershipSignals`, `OwnershipDisposition`, `GrantPlanEntry`, `RollbackEntry`, `plan_digest` (`MEDULLA-IDENTITY-R700.1`), `GraphOwnershipPlanReply`, `OwnershipRecord` stored as `IdentityStore.ownership_records` (`MEDULLA-IDENTITY-R700.3`, `MEDULLA-IDENTITY-R700.5`), and the write ledger tables `WRITE_DAYS` and `GRAPH_CREATOR` (`MEDULLA-IDENTITY-R700.7`) (types in `crates/medulla-identity-types/src/identity/ownership.rs`).
 - Rule: at most 256 writers and 64 roles per entry; rollback restores the exact prior role set.
 
 ### Delegation, policy bundle, resource access and client session

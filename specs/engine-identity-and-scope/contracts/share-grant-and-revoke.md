@@ -5,11 +5,11 @@ Consumer: arbora ARBORA-IDENTITY-R651
 
 ## Wire shape
 
-Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","commons","grantees"}}` or `{"ShareRevoke":{"node_id"}}` (`RbacAdminOp::ShareGrant(ShareGrant)` / `RbacAdminOp::ShareRevoke(ShareRevoke)`); `grantees` is at most 64 principal id strings and must be empty for `private` and when `commons` is true (`commons` defaults to false and requires scope `tenant`). Medulla commits through the mutation gateway, appends one audit event and replies with the committed revision; the scope values are `private` and `tenant` (`placement` is refused); `commons` promotes a copy to the `__commons__` graph.
+Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","commons","grantees"}}` or `{"ShareRevoke":{"node_id"}}` (`RbacAdminOp::ShareGrant(ShareGrant)` / `RbacAdminOp::ShareRevoke(ShareRevoke)`); `grantees` is at most 64 principal id strings and must be empty for `private` and when `commons` is true (`commons` defaults to false and requires scope `tenant`). Medulla commits through the graph gateway, appends a reservation and an outcome `OP_AUDIT` event to the graph's audit chain (R023.13.5) and replies with the acknowledgement text `share_granted` or `share_revoked`; the scope values are `private` and `tenant` (`placement` is refused); `commons` promotes a copy to the `__commons__` graph.
 
 ## Refusal codes
 
-`ACCESS_DENIED` for a caller without owner or `kg:admin` authority, `AUTH_TENANT_MISMATCH` for a node in another tenant, `INVALID_ARGUMENT` for an absent node or an invalid scope; a refusal changes no state.
+`ACCESS_DENIED` for a caller without owner or `kg:admin` authority, `AUTH_TENANT_MISMATCH` for a node in another tenant, `INVALID_ARGUMENT` for an absent node or an invalid scope; a node the caller cannot see answers with the exact text of an absent node (`INVALID_ARGUMENT: node '<id>' does not exist`); a refusal changes no state.
 
 ## Authoritative types
 

@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-IDENTITY-R652
 
 ## Wire shape
 
-Arbora calls the read-only `Method::GraphOwnershipPlan`, then applies the returned plan through `Method::RbacAdmin`. Each plan entry carries the full intended role set; apply stores a rollback record with the plan digest in the same transaction.
+Arbora calls the read-only `Method::GraphOwnershipPlan { graph }`, which answers `GraphOwnershipPlanReply { schema_version, graph, signals, signals_digest, plan, plan_digest, applied }`, then applies the returned plan through `Method::RbacAdmin` with `{"ApplyOwnership":{"graph","plan","plan_digest","signals_digest"}}` (reply `OwnershipApplied { graph, plan_digest, principals }`) and undoes it with `{"RollbackOwnership":{"graph","plan_digest"}}` (reply `ownership_rolled_back`). Each plan entry carries the full intended role set; apply stores a rollback record keyed by graph and plan digest in the identity store in the same image write.
 
 ## Refusal codes
 
@@ -13,7 +13,7 @@ Arbora calls the read-only `Method::GraphOwnershipPlan`, then applies the return
 
 ## Authoritative types
 
-`GrantPlanEntry`, `RollbackEntry` and `GraphOwnershipSignals` in `crates/medulla-identity-types/src/identity/ownership.rs` (new).
+`GrantPlanEntry`, `RollbackEntry`, `GraphOwnershipSignals`, `GraphOwnershipPlanReply` and `OwnershipRecord` in `crates/medulla-identity-types/src/identity/ownership.rs`; `ApplyOwnership` and `RollbackOwnership` in `crates/medulla-identity-types/src/acl.rs`.
 
 ## Test vectors
 
