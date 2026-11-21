@@ -171,6 +171,29 @@ async fn authorized_hub(
     hub_of(state, req_id).await
 }
 
+/// The graph a `view:<name>` feed key reads through: the graph the named plan view is
+/// defined over. `Ok(None)` for a key that is not a view feed; `MATVIEW_UNKNOWN` when no
+/// such view is defined.
+#[cfg(feature = "matview")]
+fn view_feed_graph(feed: &str) -> Result<Option<String>, String> {
+    let Some(name) = feed.strip_prefix("view:") else {
+        return Ok(None);
+    };
+    match medulla_server_cdc::matview::manager().get(name) {
+        Some(def) => Ok(Some(def.graph)),
+        None => Err(format!(
+            "{}: plan view '{name}' is not defined",
+            medulla_types::contract::ServerErrorCode::MatviewUnknown.as_str()
+        )),
+    }
+}
+
+/// Without plan views no key is a view feed.
+#[cfg(not(feature = "matview"))]
+fn view_feed_graph(_feed: &str) -> Result<Option<String>, String> {
+    Ok(None)
+}
+
 struct StreamingRequest<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     req_id: u64,
@@ -180,7 +203,13 @@ struct StreamingRequest<'a> {
 
 impl<'a> StreamingRequest<'a> {
     async fn cdc_read(&self, graph: String, from_seq: u64, limit: u32) -> Response {
-        let hub = match authorized_hub(self.state, self.req_id, self.carrier, &graph).await {
+        // A `view:<name>` feed is read-checked against the graph its view is defined over
+        // (MEDULLA-INCREMENTAL-VIEWS-R010.3); a view that is not defined is refused.
+        let access_graph = match view_feed_graph(&graph) {
+            Ok(access_graph) => access_graph.unwrap_or_else(|| graph.clone()),
+            Err(error) => return Response::err(self.req_id, error),
+        };
+        let hub = match authorized_hub(self.state, self.req_id, self.carrier, &access_graph).await {
             Ok(hub) => hub,
             Err(response) => return response,
         };

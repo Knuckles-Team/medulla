@@ -591,6 +591,8 @@ closed_error_codes! {
         StateBudgetExceeded => "STATE_BUDGET_EXCEEDED",
         /// MEDULLA-INCREMENTAL-VIEWS-R008.2: an incremental view disagreed with a recompute and fell back to recompute.
         ShadowMismatch => "SHADOW_MISMATCH",
+        /// MEDULLA-INCREMENTAL-VIEWS-R010.3: a `view:<name>` feed names a plan view that is not defined.
+        MatviewUnknown => "MATVIEW_UNKNOWN",
         StaleMappingReference => "STALE_MAPPING_REFERENCE",
         StaleRecomputeFence => "STALE_RECOMPUTE_FENCE",
         StaleRoute => "STALE_ROUTE",

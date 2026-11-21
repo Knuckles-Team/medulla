@@ -722,7 +722,7 @@ result-cache = ["medulla-server/result-cache", "medulla-wire/result-cache", "med
 # CDC delta source) — ALL THREE already in the single-node `full` build. It no longer
 # implies `compute-dist`/`raft`, so PLAN-BACKED incremental matviews are native to the
 # single-node main build; only the UNRELATED algo-only Pregel matview stays cluster-gated.
-matview = ["medulla-server-served-tests/matview", "medulla-store-apply/matview", "medulla-server/matview", "medulla-server-graph/matview", "medulla-h-admin/matview", "medulla-h-txn/matview", "medulla-raft/matview", "medulla-persistence/matview", "medulla-server-api/matview", "medulla-store/matview",
+matview = ["medulla-server-served-tests/matview", "medulla-store-apply/matview", "medulla-server/matview", "medulla-server-graph/matview", "medulla-h-admin/matview", "medulla-h-query/matview", "medulla-h-txn/matview", "medulla-raft/matview", "medulla-persistence/matview", "medulla-server-api/matview", "medulla-store/matview",
     "query",
     "result-cache",
     "streaming",

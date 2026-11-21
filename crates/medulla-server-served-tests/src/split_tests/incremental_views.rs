@@ -560,3 +560,120 @@ async fn state_budget_spills_then_demotes_and_answers_stay_correct() {
         send_in(&state, "r007_5_graph_a", 10_000 + n as u64, dropped).await;
     }
 }
+
+/// One served `CdcRead` of `feed` on `graph`, decoded; the reply must be a success.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn read_feed(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    id: u64,
+    feed: &str,
+    from_seq: u64,
+) -> medulla_query_types::wire::CdcReadResult {
+    let reply = send_in(
+        state,
+        graph,
+        id,
+        Method::CdcRead {
+            graph: feed.into(),
+            from_seq,
+            limit: 0,
+        },
+    )
+    .await;
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = reply.result else {
+        panic!("CdcRead returned a non-raw payload");
+    };
+    rmp_serde::from_slice(&bytes).expect("CdcRead result")
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R010.3
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn view_feed_gap_then_snapshot_resume() {
+    const FEED_GRAPH: &str = "r010_3_graph";
+    const FEED_VIEW: &str = "r010_3_view";
+    let feed = format!("view:{FEED_VIEW}");
+
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state(&[CREATOR]);
+    create_test_graph(&state, FEED_GRAPH, 1).await;
+    let define = Method::PlanMatViewDefine {
+        name: FEED_VIEW.into(),
+        graph: FEED_GRAPH.into(),
+        plan: doc_plan(),
+    };
+    send_in(&state, FEED_GRAPH, 2, define).await;
+    for i in 0..3u64 {
+        let write = Method::AddNode {
+            node_id: format!("feed-doc-{i}"),
+            properties_msgpack: doc_props(2010 + i as u32),
+        };
+        send_in(&state, FEED_GRAPH, 10 + i, write).await;
+    }
+
+    // The feed answers the rows the view gained, in order, from the start.
+    let first = read_feed(&state, FEED_GRAPH, 20, &feed, 0).await;
+    assert!(!first.gap);
+    assert_eq!(first.events.len(), 3);
+    let head_seq = first.head_seq;
+    assert_eq!(head_seq, 3);
+
+    // A cursor outside the retained window answers a gap with the current window.
+    let behind = read_feed(&state, FEED_GRAPH, 21, &feed, head_seq + 1_000).await;
+    assert!(behind.gap);
+    assert!(behind.events.is_empty());
+    assert_eq!(behind.head_seq, head_seq);
+
+    // The subscriber re-seeds from the snapshot, then resumes at the head it read before it.
+    let snapshot = send_in(
+        &state,
+        FEED_GRAPH,
+        22,
+        Method::PlanMatViewGet {
+            name: FEED_VIEW.into(),
+        },
+    )
+    .await;
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = snapshot.result else {
+        panic!("PlanMatViewGet returned a non-raw payload");
+    };
+    let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(&bytes).expect("view rows");
+    assert_eq!(rows.len(), 3);
+    let write = Method::AddNode {
+        node_id: "feed-doc-3".into(),
+        properties_msgpack: doc_props(2020),
+    };
+    send_in(&state, FEED_GRAPH, 23, write).await;
+    let resumed = read_feed(&state, FEED_GRAPH, 24, &feed, head_seq).await;
+    assert!(!resumed.gap);
+    assert_eq!(resumed.events.len(), 1);
+    assert_eq!(resumed.events[0].node_id, "feed-doc-3");
+
+    // A feed of a view that is not defined is refused with its code.
+    let unknown = crate::tests::dispatch_on_heap(
+        &state,
+        request(
+            25,
+            FEED_GRAPH,
+            Method::CdcRead {
+                graph: "view:r010_3_missing".into(),
+                from_seq: 0,
+                limit: 0,
+            },
+        ),
+    )
+    .await;
+    assert!(
+        unknown
+            .refusal_text()
+            .is_some_and(|error| error.contains("MATVIEW_UNKNOWN")),
+        "unexpected reply: {:?}",
+        unknown.error
+    );
+
+    let dropped = Method::PlanMatViewDrop {
+        name: FEED_VIEW.into(),
+    };
+    send_in(&state, FEED_GRAPH, 26, dropped).await;
+}
