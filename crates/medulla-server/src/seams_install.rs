@@ -74,6 +74,13 @@ pub fn install_walkthrough_seam(
 pub fn install_state_seams(state: &ServerState) {
     // L1 server helpers: none (moved items need no installation).
 
+    // The plan record store keeps `query.plan_records` records per tenant
+    // (MEDULLA-FEDERATED-QUERY-R732.1); exec cannot read the server knobs, so it is bound here.
+    medulla_exec::learned_cost::PlanRecordStore::global().set_per_tenant_cap(
+        usize::try_from(medulla_server_api::knob_config::knobs().query_plan_records)
+            .unwrap_or(usize::MAX),
+    );
+
     // L2 dispatch re-entry.
     let _ = state.seams.dispatch.set(std::sync::Arc::new(
         medulla_server_router::dispatch::seam::DispatchSeam,

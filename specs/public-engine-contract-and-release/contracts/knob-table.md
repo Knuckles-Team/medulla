@@ -67,6 +67,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `feedback.rate_limit_per_hour` | u64 | 100 | [100, 100] | events per hour | Fixed | `MEDULLA_FEEDBACK_RATE_LIMIT_PER_HOUR` |
 | `federated.raw_scan_cost_per_kib` | f64 | 1 | [1, 100] | cost units per KiB | Tunable | `MEDULLA_FEDERATED_RAW_SCAN_COST_PER_KIB` |
 | `query.interactive_node_budget` | u64 | 100000 | [1000, 10000000] | nodes | Tunable | `MEDULLA_QUERY_INTERACTIVE_NODE_BUDGET` |
+| `query.plan_records` | u64 | 4096 | [256, 65536] | records | Tunable | `MEDULLA_QUERY_PLAN_RECORDS` |
+| `query.planner_shadow_fraction` | f64 | 0.05 | [0.0, 0.2] | fraction | Tunable | `MEDULLA_QUERY_PLANNER_SHADOW_FRACTION` |
+| `query.planner_min_records` | u64 | 64 | [16, 4096] | records | Tunable | `MEDULLA_QUERY_PLANNER_MIN_RECORDS` |
 | `planner.gate.max_p95_ratio` | f64 | 0.7 | [0.7, 0.7] | ratio | Fixed | `MEDULLA_PLANNER_GATE_MAX_P95_RATIO` |
 | `planner.gate.recall_k` | u64 | 50 | [50, 50] | matches | Fixed | `MEDULLA_PLANNER_GATE_RECALL_K` |
 | `planner.gate.claims` | u64 | 10000 | [10000, 10000] | claims | Fixed | `MEDULLA_PLANNER_GATE_CLAIMS` |

@@ -521,6 +521,35 @@ impl RowSet {
         &self.rows
     }
 
+    /// MEDULLA-FEDERATED-QUERY-R732.1: the digest of the rows in order, framed
+    /// `eg/plan-result/v1` over the MessagePack of each row as
+    /// `(id, score bits, confidence bits, valid_time_ms, tx_time_ms)`. Order and every
+    /// float bit matter: two result sets share a digest only when they are identical.
+    pub fn result_digest(&self) -> medulla_types::contract::Digest256 {
+        type Framed<'r> = (&'r str, Option<u32>, Option<u32>, Option<i64>, Option<i64>);
+        let rows: Vec<Framed<'_>> = self
+            .rows
+            .iter()
+            .map(|row| {
+                (
+                    row.id.as_str(),
+                    row.score.map(f32::to_bits),
+                    row.confidence.map(f32::to_bits),
+                    row.valid_time_ms,
+                    row.tx_time_ms,
+                )
+            })
+            .collect();
+        // A vector of tuples of strings and integers always encodes, and the framing
+        // refuses only an empty domain or a field past 4 GiB.
+        #[allow(clippy::disallowed_methods)]
+        let bytes = rmp_serde::to_vec(&rows).expect("row tuples always encode");
+        #[allow(clippy::disallowed_methods)]
+        let digest = medulla_types::contract::Digest256::framed(b"eg/plan-result/v1", &[&bytes])
+            .expect("the plan-result domain is non-empty");
+        digest
+    }
+
     /// The id set (membership), order-independent — used by TRAVERSE/RANK to know
     /// "which nodes are still candidates".
     pub fn id_set(&self) -> HashSet<&str> {
@@ -577,6 +606,25 @@ impl RowSet {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R732.1
+    fn result_digest_is_order_and_bit_exact() {
+        let first = RowSet::from_rows([("a".to_string(), Some(1.0)), ("b".to_string(), Some(2.0))]);
+        let same = RowSet::from_rows([("a".to_string(), Some(1.0)), ("b".to_string(), Some(2.0))]);
+        let reordered =
+            RowSet::from_rows([("b".to_string(), Some(2.0)), ("a".to_string(), Some(1.0))]);
+        let nudged = RowSet::from_rows([
+            ("a".to_string(), Some(f32::from_bits(1.0_f32.to_bits() + 1))),
+            ("b".to_string(), Some(2.0)),
+        ]);
+        let unscored = RowSet::from_rows([("a".to_string(), None), ("b".to_string(), Some(2.0))]);
+        assert_eq!(first.result_digest(), same.result_digest());
+        assert_ne!(first.result_digest(), reordered.result_digest());
+        assert_ne!(first.result_digest(), nudged.result_digest());
+        assert_ne!(first.result_digest(), unscored.result_digest());
+        assert_ne!(first.result_digest(), RowSet::new().result_digest());
+    }
+
     use super::*;
 
     /// MEDULLA-FEDERATED-QUERY-R720.1: the epistemic fields round-trip through

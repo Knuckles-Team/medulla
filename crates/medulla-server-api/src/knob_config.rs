@@ -574,6 +574,12 @@ knobs! {
     federated_raw_scan_cost_per_kib: f64 = "federated.raw_scan_cost_per_kib", F64(1.0), [1.0, 100.0], "cost units per KiB", Tunable;
     /// Interactive query node budget.
     query_interactive_node_budget: u64 = "query.interactive_node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Plan records kept per tenant by the plan record store; the oldest is dropped first (MEDULLA-FEDERATED-QUERY-R732.1).
+    query_plan_records: u64 = "query.plan_records", U64(4_096), [256, 65_536], "records", Tunable;
+    /// Fraction of the digest space of interactive plans that also run under a challenger planner revision in shadow (MEDULLA-FEDERATED-QUERY-R732.3).
+    query_planner_shadow_fraction: f64 = "query.planner_shadow_fraction", F64(0.05), [0.0, 0.2], "fraction", Tunable;
+    /// Plan records or shadow comparisons a planner revision needs before the evolution job acts (MEDULLA-FEDERATED-QUERY-R732.4).
+    query_planner_min_records: u64 = "query.planner_min_records", U64(64), [16, 4_096], "records", Tunable;
     /// Unified planner gate (MEDULLA-FEDERATED-QUERY-R730): arm A passes when its p95 latency is at most this multiple of arm B's.
     planner_gate_max_p95_ratio: f64 = "planner.gate.max_p95_ratio", F64(0.7), [0.7, 0.7], "ratio", Fixed;
     /// Unified planner gate: the number of top vector matches whose recall must be equal in both arms.

@@ -293,6 +293,15 @@ pub struct PlanCtx<'a> {
     /// view reads the latest time-series point at or before it; `None` means the record
     /// does not reach that revision.
     pub snapshot_commit_ms: Option<i64>,
+    /// MEDULLA-FEDERATED-QUERY-R732.1 — the verified tenant of a served read. `execute`
+    /// records the run in the plan record store only when this is set.
+    pub tenant: Option<&'a str>,
+    /// MEDULLA-FEDERATED-QUERY-R732.3 — whether the run answers a live interactive query.
+    /// Downtime, replay and gate runs leave it `false` and are never sampled for a shadow run.
+    pub interactive: bool,
+    /// MEDULLA-FEDERATED-QUERY-R732.1 — collects each executed operator's estimate and
+    /// measured time for the plan record; bound by `execute` when a tenant is set.
+    pub op_costs: Option<std::sync::Arc<crate::learned_cost::OpCostRecorder>>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -581,7 +590,22 @@ impl<'a> PlanCtx<'a> {
             plan_scope: None,
             snapshot_revision: None,
             snapshot_commit_ms: None,
+            tenant: None,
+            interactive: false,
+            op_costs: None,
         }
+    }
+
+    /// Bind the verified tenant of a served read (MEDULLA-FEDERATED-QUERY-R732.1).
+    pub fn with_tenant(mut self, tenant: &'a str) -> Self {
+        self.tenant = Some(tenant);
+        self
+    }
+
+    /// Mark the run as answering a live interactive query (MEDULLA-FEDERATED-QUERY-R732.3).
+    pub fn with_interactive(mut self, interactive: bool) -> Self {
+        self.interactive = interactive;
+        self
     }
 
     /// Bind the revision of the snapshot this read is pinned to (MEDULLA-FEDERATED-QUERY-R078.7).
@@ -593,6 +617,15 @@ impl<'a> PlanCtx<'a> {
     /// Bind the commit instant of the snapshot revision (MEDULLA-FEDERATED-QUERY-R078.7).
     pub fn with_snapshot_commit_ms(mut self, committed_at_ms: Option<i64>) -> Self {
         self.snapshot_commit_ms = committed_at_ms;
+        self
+    }
+
+    /// Bind the per-run operator cost recorder (MEDULLA-FEDERATED-QUERY-R732.1).
+    pub fn with_op_costs(
+        mut self,
+        recorder: std::sync::Arc<crate::learned_cost::OpCostRecorder>,
+    ) -> Self {
+        self.op_costs = Some(recorder);
         self
     }
 
@@ -898,9 +931,73 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     if let Some(foreign) = ctx.federation {
         foreign.prepare(ctx, &optimized.ops);
     }
+    // MEDULLA-FEDERATED-QUERY-R732.1: a served read (one carrying a tenant) is recorded.
+    let recorded;
+    let ctx = match ctx.tenant {
+        Some(_) if ctx.op_costs.is_none() => {
+            recorded = ctx.clone().with_op_costs(Default::default());
+            &recorded
+        }
+        _ => ctx,
+    };
+    let started = std::time::Instant::now();
     let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
+    let measured_us = elapsed_us(started);
     ctx.budget.check_result(rows.len())?;
+    record_plan_run(&optimized.ops, ctx, &rows, measured_us);
     Ok(rows)
+}
+
+/// Keep one served run in the plan record store (MEDULLA-FEDERATED-QUERY-R732.1). A run
+/// with no tenant is not recorded; a digest that cannot be computed is logged, and the
+/// answer is returned either way, because a record never changes an answer.
+fn record_plan_run(ops: &[Op], ctx: &PlanCtx, rows: &RowSet, measured_us: u64) {
+    use crate::learned_cost as lc;
+    let (Some(tenant), Some(recorder)) = (ctx.tenant, ctx.op_costs.as_ref()) else {
+        return;
+    };
+    let store = lc::PlanRecordStore::global();
+    let digests = (|| -> Result<(String, String, String), String> {
+        Ok((
+            lc::plan_digest(ops)?,
+            lc::shape_digest(ops)?,
+            lc::corrections_digest(&lc::LearnedCostStore::global().snapshot())?,
+        ))
+    })();
+    let (plan_digest, shape_digest, cost_head_revision) = match digests {
+        Ok(digests) => digests,
+        Err(error) => {
+            tracing::warn!(error = %error, "plan record skipped: a digest could not be computed");
+            return;
+        }
+    };
+    let op_costs = recorder.costs();
+    store.record(lc::PlanExecutionRecord {
+        tenant: tenant.to_string(),
+        shape_digest,
+        plan_digest,
+        estimated_cost: op_costs.iter().map(|cost| cost.estimated).sum(),
+        op_costs,
+        measured_cost_us: measured_us,
+        result_rows: rows.len() as u64,
+        result_digest: rows.result_digest().to_hex(),
+        knob_revision: String::new(),
+        cost_head_revision,
+        recorded_at_ms: ctx.now_ms.unwrap_or_else(wall_clock_ms),
+    });
+}
+
+/// Microseconds since `started`.
+fn elapsed_us(started: std::time::Instant) -> u64 {
+    u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX)
+}
+
+/// Epoch milliseconds now.
+fn wall_clock_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
+        .unwrap_or(0)
 }
 
 /// The logical-plan OPTIMIZATION seam (CONCEPT:MEDULLA-KG.query.plan-optimize-seam) — the single
@@ -1033,7 +1130,11 @@ where
         // loop below — byte-for-byte the pre-optimizer left fold.
         let mut cur = RowSet::new();
         for (at, op) in ops.iter().enumerate() {
+            let started = std::time::Instant::now();
             cur = step_at(ops, at, op, cur, ctx, &mut step)?;
+            if let Some(recorder) = &ctx.op_costs {
+                recorder.record(op, 0.0, elapsed_us(started));
+            }
         }
         return Ok(cur);
     }
@@ -1052,7 +1153,11 @@ where
     while i < remaining.len() {
         let op = remaining[i].clone();
         let estimated_out = card.rows_out(&op, estimated_in, ctx);
+        let started = std::time::Instant::now();
         cur = step_at(&remaining, i, &op, cur, ctx, &mut step)?;
+        if let Some(recorder) = &ctx.op_costs {
+            recorder.record(&op, estimated_out, elapsed_us(started));
+        }
         let actual_out = cur.len() as f64;
 
         // Learned-cost online training (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization, W4.12

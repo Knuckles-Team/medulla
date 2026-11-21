@@ -123,6 +123,7 @@ pub(crate) async fn handle_uql(
     };
     let policy_digest = medulla_exec::policy_mask::policy_digest(&policies);
     let principal = ctx.caller.to_string();
+    let tenant = ctx.graph_name.to_string();
     #[cfg(not(feature = "result-cache"))]
     let _ = &policy_digest;
     #[cfg(feature = "result-cache")]
@@ -188,6 +189,8 @@ pub(crate) async fn handle_uql(
                 .clone()
                 .with_policies(&policies)
                 .with_principal(&principal)
+                .with_tenant(&tenant)
+                .with_interactive(true)
                 .with_snapshot_revision(version)
                 .with_snapshot_commit_ms(committed_at_ms);
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, &bound)?;

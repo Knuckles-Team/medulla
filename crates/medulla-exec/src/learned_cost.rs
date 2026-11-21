@@ -61,8 +61,9 @@
 
 use medulla_graph_algos::{graphlearn::edge_fn::Basis, graphlearn::edge_fn::KanEdgeFn};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
+use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock, RwLock};
 
 use crate::algebra::Op;
 
@@ -328,9 +329,219 @@ pub fn artifacts() -> Vec<CostCorrectionArtifact> {
     LearnedCostStore::global().snapshot()
 }
 
+/// The estimated and measured cost of one executed operator
+/// (MEDULLA-FEDERATED-QUERY-R732.1). Only an operator with an [`op_kind`] is costed.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct OpCost {
+    /// The learned-cost bucket of the operator ([`op_kind`]).
+    pub op_kind: &'static str,
+    /// The planner's estimate of the operator's output rows.
+    pub estimated: f64,
+    /// The operator's measured wall time in microseconds.
+    pub measured_us: u64,
+}
+
+/// One served plan run, always the champion's (MEDULLA-FEDERATED-QUERY-R732.1).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct PlanExecutionRecord {
+    /// The tenant whose read ran the plan.
+    pub tenant: String,
+    /// Digest of the plan with every literal value replaced by `null`.
+    pub shape_digest: String,
+    /// Digest of the executed plan.
+    pub plan_digest: String,
+    /// The per-operator costs, in execution order.
+    pub op_costs: Vec<OpCost>,
+    /// The sum of the operators' estimates.
+    pub estimated_cost: f64,
+    /// The measured wall time of the run in microseconds.
+    pub measured_cost_us: u64,
+    /// Rows the run returned.
+    pub result_rows: u64,
+    /// `RowSet::result_digest` of the returned rows, hex.
+    pub result_digest: String,
+    /// Digest of the planner knob values in force.
+    pub knob_revision: String,
+    /// Digest of the cost head (the correction table) in force.
+    pub cost_head_revision: String,
+    /// Epoch milliseconds the run was recorded.
+    pub recorded_at_ms: i64,
+}
+
+/// Collects the per-operator costs of one run; bound on the [`crate::exec::PlanCtx`] so
+/// both drivers report through the one adaptive loop.
+#[derive(Debug, Default)]
+pub struct OpCostRecorder {
+    costs: Mutex<Vec<OpCost>>,
+}
+
+impl OpCostRecorder {
+    /// Record one executed operator; an operator with no [`op_kind`] is not costed.
+    pub fn record(&self, op: &Op, estimated: f64, measured_us: u64) {
+        let Some(kind) = op_kind(op) else { return };
+        recover_corrections(self.costs.lock()).push(OpCost {
+            op_kind: kind,
+            estimated,
+            measured_us,
+        });
+    }
+
+    /// The costs recorded so far, in order.
+    pub fn costs(&self) -> Vec<OpCost> {
+        recover_corrections(self.costs.lock()).clone()
+    }
+}
+
+/// Digest of an executed plan (MEDULLA-FEDERATED-QUERY-R732.1): `eg/plan-record/v1` over
+/// the MessagePack of the ops.
+pub fn plan_digest(ops: &[Op]) -> Result<String, String> {
+    let bytes = rmp_serde::to_vec_named(ops).map_err(|error| format!("plan digest: {error}"))?;
+    medulla_types::contract::Digest256::framed(b"eg/plan-record/v1", &[&bytes])
+        .map(|digest| digest.to_hex())
+}
+
+/// Digest of a plan's shape: [`plan_digest`] with every literal value replaced by `null`.
+pub fn shape_digest(ops: &[Op]) -> Result<String, String> {
+    fn blank(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(map) => {
+                let literal = map.len() == 1
+                    && ["Str", "Num", "Bool"]
+                        .iter()
+                        .any(|tag| map.contains_key(*tag));
+                if literal {
+                    *value = serde_json::Value::Null;
+                } else {
+                    map.values_mut().for_each(blank);
+                }
+            }
+            serde_json::Value::Array(items) => items.iter_mut().for_each(blank),
+            _ => {}
+        }
+    }
+    let mut value =
+        serde_json::to_value(ops).map_err(|error| format!("shape digest: {error}"))?;
+    blank(&mut value);
+    let bytes = rmp_serde::to_vec(&value).map_err(|error| format!("shape digest: {error}"))?;
+    medulla_types::contract::Digest256::framed(b"eg/plan-record/v1", &[&bytes])
+        .map(|digest| digest.to_hex())
+}
+
+/// Digest of a correction table: the curves in op-kind order.
+pub fn corrections_digest(corrections: &[CostCorrectionArtifact]) -> Result<String, String> {
+    let mut sorted: Vec<&CostCorrectionArtifact> = corrections.iter().collect();
+    sorted.sort_by(|a, b| a.op_kind.cmp(&b.op_kind));
+    let curves: Vec<(&str, &[f64])> = sorted
+        .iter()
+        .map(|c| (c.op_kind.as_str(), c.coeffs.as_slice()))
+        .collect();
+    let bytes =
+        rmp_serde::to_vec(&curves).map_err(|error| format!("cost head digest: {error}"))?;
+    medulla_types::contract::Digest256::framed(b"eg/cost-head/v1", &[&bytes])
+        .map(|digest| digest.to_hex())
+}
+
+/// The bounded in-memory store of served plan runs (MEDULLA-FEDERATED-QUERY-R732.1): a
+/// planner cache like [`LearnedCostStore`], rebuilt after a restart and never copied to
+/// another store. Each tenant keeps at most the `query.plan_records` knob's records; the
+/// oldest is dropped first, and one tenant never reads another's records.
+pub struct PlanRecordStore {
+    per_tenant_cap: AtomicUsize,
+    records: Mutex<HashMap<String, VecDeque<PlanExecutionRecord>>>,
+}
+
+/// The default of the `query.plan_records` knob.
+pub const DEFAULT_PLAN_RECORDS: usize = 4_096;
+
+impl PlanRecordStore {
+    /// An empty store keeping `per_tenant_cap` records per tenant.
+    pub fn new(per_tenant_cap: usize) -> Self {
+        Self {
+            per_tenant_cap: AtomicUsize::new(per_tenant_cap.max(1)),
+            records: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// The process store.
+    pub fn global() -> &'static PlanRecordStore {
+        static STORE: OnceLock<PlanRecordStore> = OnceLock::new();
+        STORE.get_or_init(|| PlanRecordStore::new(DEFAULT_PLAN_RECORDS))
+    }
+
+    /// Bind the per-tenant bound (the server sets it from `query.plan_records` at startup).
+    pub fn set_per_tenant_cap(&self, cap: usize) {
+        self.per_tenant_cap.store(cap.max(1), Ordering::Relaxed);
+    }
+
+    /// Keep one record under its tenant, dropping that tenant's oldest past the bound.
+    pub fn record(&self, record: PlanExecutionRecord) {
+        let cap = self.per_tenant_cap.load(Ordering::Relaxed);
+        let mut guard = recover_corrections(self.records.lock());
+        let queue = guard.entry(record.tenant.clone()).or_default();
+        queue.push_back(record);
+        while queue.len() > cap {
+            queue.pop_front();
+        }
+    }
+
+    /// The tenant's records, oldest first.
+    pub fn records(&self, tenant: &str) -> Vec<PlanExecutionRecord> {
+        recover_corrections(self.records.lock())
+            .get(tenant)
+            .map(|queue| queue.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// Every tenant that has a record.
+    pub fn tenants(&self) -> Vec<String> {
+        let mut tenants: Vec<String> = recover_corrections(self.records.lock())
+            .keys()
+            .cloned()
+            .collect();
+        tenants.sort();
+        tenants
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn record(tenant: &str, serial: u64) -> PlanExecutionRecord {
+        PlanExecutionRecord {
+            tenant: tenant.into(),
+            shape_digest: "shape".into(),
+            plan_digest: format!("plan-{serial}"),
+            op_costs: Vec::new(),
+            estimated_cost: 1.0,
+            measured_cost_us: serial,
+            result_rows: 0,
+            result_digest: String::new(),
+            knob_revision: String::new(),
+            cost_head_revision: String::new(),
+            recorded_at_ms: serial as i64,
+        }
+    }
+
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R732.1
+    fn plan_record_store_bounds_and_shadow_error() {
+        let store = PlanRecordStore::new(3);
+        for serial in 0..5 {
+            store.record(record("t1", serial));
+        }
+        store.record(record("t2", 100));
+        let kept: Vec<u64> = store.records("t1").iter().map(|r| r.measured_cost_us).collect();
+        assert_eq!(kept, vec![2, 3, 4], "the oldest are evicted first");
+        let other = store.records("t2");
+        assert_eq!(other.len(), 1);
+        assert!(other.iter().all(|r| r.tenant == "t2"));
+        assert!(store.records("t3").is_empty());
+        assert_eq!(store.tenants(), vec!["t1".to_string(), "t2".to_string()]);
+        store.set_per_tenant_cap(1);
+        store.record(record("t1", 9));
+        assert_eq!(store.records("t1").len(), 1);
+    }
 
     /// A freshly-observed op-kind's FIRST correction (before any training) is the
     /// identity: `KanEdgeFn::zeros` means `f ≡ 0`, so `correct` returns (within
