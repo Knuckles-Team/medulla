@@ -5,8 +5,13 @@
 //! move strictly `open -> acknowledged -> resolved -> closed`. Served operations
 //! and durable storage are MEDULLA-DURABLE-KERNEL-R852.3 and later children.
 
+use medulla_types::transition_refused::{
+    MachineState, TransitionRefusalReason, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+use crate::incident_machine::INCIDENT_MACHINE;
 
 /// The default correlation window: 15 minutes.
 pub const DEFAULT_CORRELATION_WINDOW_MS: u64 = 15 * 60 * 1_000;
@@ -38,17 +43,6 @@ pub enum IncidentStatus {
     Closed,
 }
 
-impl IncidentStatus {
-    fn next(self) -> Option<Self> {
-        match self {
-            Self::Open => Some(Self::Acknowledged),
-            Self::Acknowledged => Some(Self::Resolved),
-            Self::Resolved => Some(Self::Closed),
-            Self::Closed => None,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Incident {
@@ -62,11 +56,8 @@ pub struct Incident {
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum IncidentError {
-    #[error("incident status {from:?} cannot move to {to:?}")]
-    StatusOrder {
-        from: IncidentStatus,
-        to: IncidentStatus,
-    },
+    #[error(transparent)]
+    Transition(#[from] TransitionRefused),
     #[error("a health anomaly must name its resource")]
     ResourceRequired,
     #[error("unknown incident {0}")]
@@ -76,7 +67,7 @@ pub enum IncidentError {
 impl IncidentError {
     pub fn code(&self) -> &'static str {
         match self {
-            Self::StatusOrder { .. } => "INCIDENT_STATUS_ORDER",
+            Self::Transition(_) => "TRANSITION_REFUSED",
             Self::ResourceRequired => "ANOMALY_RESOURCE_REQUIRED",
             Self::UnknownIncident(_) => "NOT_FOUND",
         }
@@ -84,16 +75,20 @@ impl IncidentError {
 }
 
 impl Incident {
-    /// Advance exactly one step in the state order; any other change is refused
-    /// and leaves the incident unchanged.
+    /// Fire the event of the target status on `IncidentMachine`; any move the
+    /// machine does not accept is refused and leaves the incident unchanged. A
+    /// target of `Open` names no event, so the machine refuses it as an unknown
+    /// event.
     pub fn set_status(&mut self, to: IncidentStatus) -> Result<(), IncidentError> {
-        if self.status.next() != Some(to) {
-            return Err(IncidentError::StatusOrder {
-                from: self.status,
-                to,
-            });
-        }
-        self.status = to;
+        let Some(event) = IncidentStatus::event_to(to) else {
+            return Err(IncidentError::Transition(TransitionRefused {
+                machine: INCIDENT_MACHINE.name.to_string(),
+                from: self.status.stored().to_string(),
+                event: to.stored().to_string(),
+                reason: TransitionRefusalReason::UnknownEvent,
+            }));
+        };
+        self.status = self.status.apply(event)?;
         Ok(())
     }
 }
@@ -148,7 +143,7 @@ impl IncidentBook {
                 id,
                 resources: vec![anomaly.resource.clone()],
                 anomalies: vec![reference],
-                status: IncidentStatus::Open,
+                status: INCIDENT_MACHINE.initial,
                 opened_at: anomaly.observed_at,
                 route: None,
             },
@@ -266,7 +261,7 @@ mod tests {
             IncidentStatus::Open,
         ] {
             let err = book.set_status(id, to).unwrap_err();
-            assert_eq!(err.code(), "INCIDENT_STATUS_ORDER");
+            assert_eq!(err.code(), "TRANSITION_REFUSED");
             assert_eq!(book.get(id).unwrap(), &before);
         }
 

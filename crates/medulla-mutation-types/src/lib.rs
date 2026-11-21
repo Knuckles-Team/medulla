@@ -96,6 +96,7 @@ pub mod harness_metrics;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod health_incident;
+pub mod incident_machine;
 // MEDULLA-DURABLE-KERNEL-R033 — the hot-store engine evaluation's typed model
 // (redb/fjall/RocksDB candidates, workload profiles, validated benchmark
 // results, winner selection). Pure serde, no dep.

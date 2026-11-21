@@ -7602,3 +7602,84 @@
     :toState :WorkflowMachine_Withdrawn ;
     :firedBy :WorkflowMachine_Event_withdraw .
 
+
+# spec: MEDULLA-ORCH-VOCAB-R815.5
+# The Incident machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:IncidentState a owl:Class ;
+    rdfs:label "Incident State" ;
+    rdfs:comment "A state of the Incident machine." ;
+    rdfs:subClassOf :State .
+
+:IncidentTerminalState a owl:Class ;
+    rdfs:label "Incident Terminal State" ;
+    rdfs:comment "A terminal state of the Incident machine." ;
+    rdfs:subClassOf :TerminalState, :IncidentState .
+
+:IncidentTransition a owl:Class ;
+    rdfs:label "Incident Transition" ;
+    rdfs:comment "A transition of the Incident machine." ;
+    rdfs:subClassOf :Transition .
+
+:IncidentEvent a owl:Class ;
+    rdfs:label "Incident Event" ;
+    rdfs:comment "A event of the Incident machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:IncidentGuard a owl:Class ;
+    rdfs:label "Incident Guard" ;
+    rdfs:comment "A guard of the Incident machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:IncidentMachine a :StateMachine ;
+    rdfs:label "Incident machine" ;
+    :initialState :IncidentMachine_Open ;
+    :hasState :IncidentMachine_Open, :IncidentMachine_Acknowledged, :IncidentMachine_Resolved, :IncidentMachine_Closed .
+
+:IncidentMachine_Open a :IncidentState ;
+    rdfs:label "Incident Open" ;
+    :storedForm "open" .
+
+:IncidentMachine_Acknowledged a :IncidentState ;
+    rdfs:label "Incident Acknowledged" ;
+    :storedForm "acknowledged" .
+
+:IncidentMachine_Resolved a :IncidentState ;
+    rdfs:label "Incident Resolved" ;
+    :storedForm "resolved" .
+
+:IncidentMachine_Closed a :IncidentTerminalState ;
+    rdfs:label "Incident Closed" ;
+    :storedForm "closed" .
+
+:IncidentMachine_Event_acknowledge a :IncidentEvent ;
+    rdfs:label "Incident acknowledge" .
+
+:IncidentMachine_Event_resolve a :IncidentEvent ;
+    rdfs:label "Incident resolve" .
+
+:IncidentMachine_Event_close a :IncidentEvent ;
+    rdfs:label "Incident close" .
+
+:IncidentMachine_H01 a :IncidentTransition ;
+    rdfs:label "Incident H01" ;
+    :edgeId "H01" ;
+    :fromState :IncidentMachine_Open ;
+    :toState :IncidentMachine_Acknowledged ;
+    :firedBy :IncidentMachine_Event_acknowledge .
+
+:IncidentMachine_H02 a :IncidentTransition ;
+    rdfs:label "Incident H02" ;
+    :edgeId "H02" ;
+    :fromState :IncidentMachine_Acknowledged ;
+    :toState :IncidentMachine_Resolved ;
+    :firedBy :IncidentMachine_Event_resolve .
+
+:IncidentMachine_H03 a :IncidentTransition ;
+    rdfs:label "Incident H03" ;
+    :edgeId "H03" ;
+    :fromState :IncidentMachine_Resolved ;
+    :toState :IncidentMachine_Closed ;
+    :firedBy :IncidentMachine_Event_close .
+

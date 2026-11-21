@@ -928,6 +928,17 @@ fn incident_record_machine_classes_extend_core() {
     sm::assert_extends_core("IncidentRecord");
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R815.5
+#[test]
+fn incident_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_mutation_types::incident_machine::INCIDENT_MACHINE);
+}
+// spec: MEDULLA-ORCH-VOCAB-R815.5
+#[test]
+fn incident_machine_classes_extend_core() {
+    sm::assert_extends_core("Incident");
+}
+
 // spec: MEDULLA-ORCH-VOCAB-R815.9
 #[test]
 fn workflow_machine_matches_edge_table() {
