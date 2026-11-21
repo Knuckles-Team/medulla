@@ -196,7 +196,7 @@ fn the_rulings_hold_in_the_registry() {
             "{domain}"
         );
     }
-    for admin in ["kg:admin", "webui:admin", "identity:admin"] {
+    for admin in ["kg:admin", "webui:admin", "identity:admin", "finance:admin"] {
         assert_eq!(
             ScopeRegistry.class_of(admin),
             Some(ScopeClass::Admin),

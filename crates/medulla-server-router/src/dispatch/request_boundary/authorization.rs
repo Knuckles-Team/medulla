@@ -70,6 +70,17 @@ fn required_resource_controller_scope(method: &Method) -> Option<&'static str> {
     }
 }
 
+/// MEDULLA-FINANCE-PRIMITIVES-R015.1.2: the tenant's `TradingPolicy` record is written only
+/// with the admin scope `finance:admin` in addition to `finance:records`.
+fn required_finance_admin_scope(method: &Method) -> Option<&'static str> {
+    match method {
+        Method::FinanceRecordPut { kind, .. } if kind.class_name() == "TradingPolicy" => {
+            Some("finance:admin")
+        }
+        _ => None,
+    }
+}
+
 fn required_capacity_controller_scope(method: &Method) -> Option<&'static str> {
     match method {
         Method::AcquireCapacity { .. }
@@ -220,6 +231,12 @@ fn check_resource_and_capacity_controller_scope(
         verified_context,
         required_capacity_controller_scope(&req.method),
         "capacity",
+    )?;
+    enforce_controller_scope(
+        req,
+        verified_context,
+        required_finance_admin_scope(&req.method),
+        "finance",
     )
 }
 
