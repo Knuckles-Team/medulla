@@ -46,6 +46,7 @@ async fn seed_head(h: &Harness) -> u64 {
                 content: content.into(),
                 content_digest: Digest256::sha256(content.as_bytes()),
             },
+            admit_receipt_digests: Vec::new(),
         };
         let (_, plan) = medulla_h_graph::graph_ops::memory_snapshot::plan_sync(&core, &request, &stamp);
         medulla_graph_core::memory_snapshot::apply_plan(&core, &plan);

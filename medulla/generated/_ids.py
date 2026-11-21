@@ -574,6 +574,7 @@ METHOD_IDS = frozenset(
         "ShexValidate",
         "SubmitAdmittedRequest",
         "SyncMemorySnapshot",
+        "SyncMemorySnapshotStore",
         "WalletKeyTrustGet",
         "WorkflowRegistry",
         "AssistantProfile",

@@ -178,11 +178,8 @@ impl std::error::Error for ReplayDivergence {}
 /// carries the plan the router built from the graph handler's decision, so
 /// replay writes the same rows verbatim and decides nothing.
 fn apply_memory_snapshot(core: &GraphCore, m: &Method) -> bool {
-    let Method::SyncMemorySnapshot {
-        plan: Some(plan), ..
-    } = m
-    else {
-        return matches!(m, Method::SyncMemorySnapshot { .. });
+    let Method::SyncMemorySnapshotStore { plan, .. } = m else {
+        return false;
     };
     medulla_graph_core::memory_snapshot::apply_plan(core, plan);
     true

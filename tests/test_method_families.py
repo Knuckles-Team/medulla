@@ -162,6 +162,7 @@ _DURABLE_AT_BASE = (
         "BusHeartbeat",
         "BusRegister",
         "SyncMemorySnapshot",
+        "SyncMemorySnapshotStore",
         # MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits graph nodes.
         "ArgumentMapPut",
         # MEDULLA-FEDERATED-QUERY-R705.3: the feedback record commits one graph node.
@@ -316,6 +317,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "LiveArtifactPut",
         "LiveArtifactRefresh",
         "SyncMemorySnapshot",
+        "SyncMemorySnapshotStore",
         "FinanceRecordPut",
         "FinanceAlertRaise",
         "FinanceFactorRecord",

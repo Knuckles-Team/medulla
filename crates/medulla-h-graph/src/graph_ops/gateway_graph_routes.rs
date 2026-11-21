@@ -76,7 +76,7 @@ fn is_bus(method: &Method) -> bool {
         method,
         Method::BusRegister { .. }
             | Method::BusHeartbeat { .. }
-            | Method::SyncMemorySnapshot { .. }
+            | Method::SyncMemorySnapshotStore { .. }
     )
 }
 
@@ -535,7 +535,7 @@ async fn try_handle_bus(
             participant,
             principal,
         } => bus::register(ctx, plan, tenant_id, participant, principal).await,
-        Method::SyncMemorySnapshot { .. } => super::memory_snapshot::sync(ctx, plan, method).await,
+        Method::SyncMemorySnapshotStore { .. } => super::memory_snapshot::sync(ctx, plan, method).await,
         Method::BusHeartbeat {
             session_ref,
             now_ms,

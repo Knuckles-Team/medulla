@@ -83,6 +83,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "BusHeartbeat",
     // MEDULLA-DURABLE-KERNEL-R085.4: memory snapshot sync rows on the request graph.
     "SyncMemorySnapshot",
+    "SyncMemorySnapshotStore",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -282,6 +283,7 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::ReadMemorySnapshot { .. } => Some("ReadMemorySnapshot"),
         Method::ListMemorySnapshots { .. } => Some("ListMemorySnapshots"),
         Method::SyncMemorySnapshot { .. } => Some("SyncMemorySnapshot"),
+        Method::SyncMemorySnapshotStore { .. } => Some("SyncMemorySnapshotStore"),
         _ => None,
     }
 }

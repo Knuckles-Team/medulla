@@ -449,6 +449,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ReadMemorySnapshot { .. }
         | Method::ListMemorySnapshots { .. }
         | Method::SyncMemorySnapshot { .. }
+        | Method::SyncMemorySnapshotStore { .. }
         | Method::FinanceMomentum { .. }
         | Method::ObserveScreen { .. }
         | Method::GetEdgePropertiesBatch { .. }

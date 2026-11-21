@@ -43,6 +43,7 @@ fn submit(expected: Option<u64>, content: &str) -> SyncRequest {
             content: content.into(),
             content_digest: Digest256::sha256(content.as_bytes()),
         },
+        admit_receipt_digests: Vec::new(),
     }
 }
 
@@ -71,6 +72,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
             action: SyncAction::ObserveFile {
                 observed_digest: Digest256::sha256(b"one"),
             },
+            admit_receipt_digests: Vec::new(),
         },
         SyncRequest {
             request_id: RequestId::new("req-4").unwrap(),
@@ -83,6 +85,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
                     content_digest: Digest256::sha256(b"merged"),
                 },
             },
+            admit_receipt_digests: Vec::new(),
         },
         SyncRequest {
             request_id: RequestId::new("req-5").unwrap(),
@@ -92,6 +95,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
                 content_digest: Digest256::sha256(b"two"),
                 observation_generation: 7,
             },
+            admit_receipt_digests: Vec::new(),
         },
     ];
     for request in &requests {

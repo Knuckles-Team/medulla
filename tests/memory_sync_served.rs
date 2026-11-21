@@ -37,10 +37,9 @@ fn sync(request_id: &str, action: SyncAction) -> Method {
             request_id: RequestId::new(request_id).expect("request id"),
             doc_id: DocId::new(DOC).expect("doc id"),
             action,
+            admit_receipt_digests: Vec::new(),
         }),
         stamp: None,
-        admit_receipt_digests: Vec::new(),
-        plan: None,
     }
 }
 
@@ -145,10 +144,9 @@ async fn authorized_read_list_and_cursor_isolation() {
                     content: doc.to_string(),
                     content_digest: Digest256::sha256(doc.as_bytes()),
                 },
+                admit_receipt_digests: Vec::new(),
             }),
             stamp: None,
-            admit_receipt_digests: Vec::new(),
-            plan: None,
         };
         let _: SyncOutcome = json_of(send(&state, id, method).await);
     }
@@ -202,8 +200,9 @@ async fn wire_methods_reach_durable_gateway() {
         GRAPH,
     )
     .await;
-    // A client that names its own plan or stamp has both replaced by the engine's.
-    let forged = Method::SyncMemorySnapshot {
+    // A client that names the engine-internal store method with its own plan is
+    // refused by name, and the forged row is never written.
+    let forged = Method::SyncMemorySnapshotStore {
         request: Box::new(SyncRequest {
             request_id: RequestId::new("forged").expect("request id"),
             doc_id: DocId::new(DOC).expect("doc id"),
@@ -212,10 +211,9 @@ async fn wire_methods_reach_durable_gateway() {
                 content: "one".to_string(),
                 content_digest: Digest256::sha256(b"one"),
             },
+            admit_receipt_digests: Vec::new(),
         }),
-        stamp: None,
-        admit_receipt_digests: Vec::new(),
-        plan: Some(medulla_mutation_types::memory_sync::SnapshotPlan {
+        plan: Box::new(medulla_mutation_types::memory_sync::SnapshotPlan {
             base_revision: None,
             base_candidates: 0,
             writes: vec![medulla_mutation_types::memory_sync::SnapshotRowWrite {
@@ -224,15 +222,14 @@ async fn wire_methods_reach_durable_gateway() {
             }],
         }),
     };
-    let outcome: SyncOutcome = json_of(send(&state, 2, forged).await);
-    assert!(matches!(outcome, SyncOutcome::Accepted { ref head } if head.revision == 1));
-    let head: MemorySnapshotRead = json_of(read(&state, 3, None).await);
-    assert_eq!(head.content, "one");
-    let revision: MemorySnapshotRead = json_of(read(&state, 4, Some(1)).await);
-    assert_eq!(revision.head, head.head);
+    let refused = send(&state, 6, forged).await;
+    assert!(
+        error_of(&refused).contains("ENGINE_INTERNAL_METHOD"),
+        "{refused:?}"
+    );
     let forged_doc = send(
         &state,
-        5,
+        7,
         Method::ReadMemorySnapshot {
             doc_id: "forged".to_string(),
             revision: None,
@@ -240,6 +237,13 @@ async fn wire_methods_reach_durable_gateway() {
     )
     .await;
     assert!(forged_doc.error.is_some(), "the forged row was never written");
+    let accepted = submit("wire", None, "one");
+    let outcome: SyncOutcome = json_of(send(&state, 2, accepted).await);
+    assert!(matches!(outcome, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    let head: MemorySnapshotRead = json_of(read(&state, 3, None).await);
+    assert_eq!(head.content, "one");
+    let revision: MemorySnapshotRead = json_of(read(&state, 4, Some(1)).await);
+    assert_eq!(revision.head, head.head);
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R863
@@ -260,12 +264,8 @@ async fn sync_rewrite_requires_a_current_admit_receipt() {
         (4, vec!["sha256:absent".to_string()]),
     ] {
         let mut method = submit(&format!("g{id}"), Some(1), "two");
-        if let Method::SyncMemorySnapshot {
-            admit_receipt_digests,
-            ..
-        } = &mut method
-        {
-            *admit_receipt_digests = digests;
+        if let Method::SyncMemorySnapshot { request, .. } = &mut method {
+            request.admit_receipt_digests = digests;
         }
         let refused = send(&state, id, method).await;
         assert!(

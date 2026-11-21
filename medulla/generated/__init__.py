@@ -658,6 +658,7 @@ SEND_BY_METHOD = {
     "SupersedeEdge": graph.send_supersede_edge,
     "SweepExpired": messaging.send_sweep_expired,
     "SyncMemorySnapshot": graph.send_sync_memory_snapshot,
+    "SyncMemorySnapshotStore": graph.send_sync_memory_snapshot_store,
     "TelemetryDerive": ingestion.send_telemetry_derive,
     "ThrottleCapacityCell": coordination.send_throttle_capacity_cell,
     "ToMsgpack": storage.send_to_msgpack,

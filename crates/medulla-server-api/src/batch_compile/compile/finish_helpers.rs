@@ -97,7 +97,7 @@ pub(super) fn finance_alert_intents(
         .collect()
 }
 
-/// The `memory_snapshot_synced` intent of every planned `SyncMemorySnapshot` in
+/// The `memory_snapshot_synced` intent of every `SyncMemorySnapshotStore` in
 /// `methods` that writes a row (MEDULLA-DURABLE-KERNEL-R085.4). It is built here,
 /// from the very method that commits the head and revision rows, so the rows and
 /// the intent share one batch. The payload is the request; the consumer reads the
@@ -108,11 +108,8 @@ pub(super) fn memory_snapshot_intents(
     methods
         .iter()
         .filter_map(|method| match method {
-            medulla_protocol_types::protocol::Method::SyncMemorySnapshot {
-                request,
-                plan: Some(plan),
-                ..
-            } if !plan.writes.is_empty() => Some(
+            medulla_protocol_types::protocol::Method::SyncMemorySnapshotStore { request, plan }
+                if !plan.writes.is_empty() => Some(
                 rmp_serde::to_vec_named(request.as_ref())
                     .map_err(|error| format!("memory snapshot intent encoding failed: {error}"))
                     .map(|payload| MutationOutboxIntent {

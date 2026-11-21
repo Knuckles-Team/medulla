@@ -15599,6 +15599,13 @@ class MethodSyncMemorySnapshot(BaseModel):
     params: MethodSyncMemorySnapshotParams
 
 
+class MethodSyncMemorySnapshotStore(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SyncMemorySnapshotStore"]
+    params: MethodSyncMemorySnapshotStoreParams
+
+
 class MethodWalletKeyTrustGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16797,6 +16804,7 @@ Method = Annotated[
         MethodSchemaProjections,
         MethodSubmitAdmittedRequest,
         MethodSyncMemorySnapshot,
+        MethodSyncMemorySnapshotStore,
         MethodWalletKeyTrustGet,
         MethodAssistantProfile,
         MethodWorkflowRegistry,
@@ -34345,10 +34353,15 @@ class MethodSubmitAdmittedRequestParams(BaseModel):
 class MethodSyncMemorySnapshotParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    admit_receipt_digests: list[str] | None = None
-    plan: SnapshotPlan | None = None
     request: SyncRequest
     stamp: SyncStamp | None = None
+
+
+class MethodSyncMemorySnapshotStoreParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan: SnapshotPlan
+    request: SyncRequest
 
 
 class MethodWalletKeyTrustGetParams(BaseModel):
@@ -34740,6 +34753,7 @@ class SyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     action: SyncAction
+    admit_receipt_digests: list[str] | None = None
     doc_id: DocId
     request_id: RequestId
 
@@ -42733,6 +42747,8 @@ __all__ = [
     "MethodSweepExpiredParams",
     "MethodSyncMemorySnapshot",
     "MethodSyncMemorySnapshotParams",
+    "MethodSyncMemorySnapshotStore",
+    "MethodSyncMemorySnapshotStoreParams",
     "MethodTelemetryDerive",
     "MethodTelemetryDeriveParams",
     "MethodThrottleCapacityCell",

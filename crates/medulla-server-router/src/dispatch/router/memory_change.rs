@@ -96,15 +96,10 @@ pub async fn dispatch_sync_memory_method(
     ctx: DispatchCtx<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
-    let Method::SyncMemorySnapshot {
-        request,
-        admit_receipt_digests,
-        ..
-    } = method
-    else {
+    let Method::SyncMemorySnapshot { request, .. } = method else {
         return ControlFlow::Continue(method);
     };
-    ControlFlow::Break(handle_sync_memory(ctx, *request, admit_receipt_digests).await)
+    ControlFlow::Break(handle_sync_memory(ctx, *request).await)
 }
 
 /// How many times a plan is made again when the head moved before its commit.
@@ -116,11 +111,10 @@ const SYNC_PLAN_ATTEMPTS: usize = 3;
 /// the `memory_snapshot_synced` outbox intent) over the pre-image it was decided
 /// against. The blob holder of the committed content is taken after the commit
 /// by the server layer, never by a graph-handler dependency on the blob store.
-/// A client-supplied stamp or plan is replaced; a refusal writes nothing.
+/// A client-supplied stamp is replaced; a refusal writes nothing.
 async fn handle_sync_memory(
     ctx: DispatchCtx<'_>,
     request: medulla_mutation_types::memory_sync::SyncRequest,
-    admit_receipt_digests: Vec<String>,
 ) -> Response {
     use medulla_decision_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
@@ -171,7 +165,7 @@ async fn handle_sync_memory(
                     &format!("sha256:{}", digest.to_hex()),
                 )
                 .await?;
-                require_admit_receipts(state, verified_context, kind, &candidate, &admit_receipt_digests)
+                require_admit_receipts(state, verified_context, kind, &candidate, &request.admit_receipt_digests)
                     .await
             }
             .await;
@@ -185,11 +179,9 @@ async fn handle_sync_memory(
             req.id,
             req.agent_id.as_deref(),
             verified_context,
-            Method::SyncMemorySnapshot {
+            Method::SyncMemorySnapshotStore {
                 request: Box::new(request.clone()),
-                stamp: Some(stamp.clone()),
-                admit_receipt_digests: admit_receipt_digests.clone(),
-                plan: Some(snapshot),
+                plan: Box::new(snapshot),
             },
         ))
         .await;

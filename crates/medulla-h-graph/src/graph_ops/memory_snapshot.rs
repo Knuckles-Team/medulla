@@ -396,21 +396,18 @@ pub enum ContentChange {
     Consolidate,
 }
 
-/// Commit a planned sync through the gateway. The router filled `stamp`, `plan`
-/// and the receipt gate before this route; a method without them did not come
-/// through the router and is refused. The plan applies only over the pre-image
-/// it was decided against, so a head that moved between plan and commit
-/// answers `BUSY` and the router plans again.
+/// Commit a planned sync through the gateway. The router planned the rows and
+/// ran the receipt gate before it named `SyncMemorySnapshotStore`. The plan
+/// applies only over the pre-image it was decided against, so a head that moved
+/// between plan and commit answers `BUSY` and the router plans again.
 pub(crate) async fn sync(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
 ) -> Response {
-    let Method::SyncMemorySnapshot {
+    let Method::SyncMemorySnapshotStore {
         request,
-        stamp: Some(_),
-        plan: Some(snapshot),
-        ..
+        plan: snapshot,
     } = method
     else {
         return Response::err(
@@ -419,7 +416,7 @@ pub(crate) async fn sync(
         );
     };
     let doc = request.doc_id.clone();
-    let snapshot = snapshot.clone();
+    let snapshot = (**snapshot).clone();
     commit_gateway(ctx, plan, method, move |core| {
         if !store::plan_is_current(core, &doc, &snapshot) {
             return Err("BUSY: the memory snapshot moved between plan and commit".to_string());

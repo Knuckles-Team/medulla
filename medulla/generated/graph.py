@@ -2879,6 +2879,9 @@ send_sync_memory_snapshot = contract_sender(
     "SyncMemorySnapshot", "MethodSyncMemorySnapshotParams"
 )
 decode_sync_memory_snapshot = contract_decoder("SyncMemorySnapshot", "SyncOutcome")
+send_sync_memory_snapshot_store = contract_sender(
+    "SyncMemorySnapshotStore", "MethodSyncMemorySnapshotStoreParams", expect_bool
+)
 send_world_transform = contract_sender("WorldTransform", "MethodWorldTransformParams")
 decode_world_transform = contract_decoder("WorldTransform", "WorldTransformResult")
 send_architecture_model_export = contract_sender(

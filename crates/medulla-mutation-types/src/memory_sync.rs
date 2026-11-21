@@ -319,6 +319,10 @@ pub struct SyncRequest {
     pub request_id: RequestId,
     pub doc_id: DocId,
     pub action: SyncAction,
+    /// The memory-change receipts that admit a submit over existing content or a
+    /// resolution that writes a revision (MEDULLA-DURABLE-KERNEL-R863).
+    #[serde(default)]
+    pub admit_receipt_digests: Vec<String>,
 }
 
 fn check_content(content: &str, digest: &Digest256) -> Result<(), MemorySyncError> {

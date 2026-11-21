@@ -174,7 +174,9 @@ fn required_memory_scope(method: &Method) -> Option<&'static str> {
         Method::ReadMemorySnapshot { .. } | Method::ListMemorySnapshots { .. } => {
             Some("memory:read")
         }
-        Method::SyncMemorySnapshot { .. } => Some("memory:write"),
+        Method::SyncMemorySnapshot { .. } | Method::SyncMemorySnapshotStore { .. } => {
+            Some("memory:write")
+        }
         _ => None,
     }
 }

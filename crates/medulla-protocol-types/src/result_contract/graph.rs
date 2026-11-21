@@ -52,6 +52,7 @@ method_results! {
     ReadMemorySnapshot(ReadMemorySnapshot) => Json<medulla_mutation_types::memory_sync::MemorySnapshotRead>;
     ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_mutation_types::memory_sync::MemorySnapshotList>;
     SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_mutation_types::memory_sync::SyncOutcome>;
+    SyncMemorySnapshotStore(SyncMemorySnapshotStore) => Bool<bool>;
     DecayMemories(DecayMemories) => Count<u64>;
     MemoryRemember(MemoryRemember) => Json<medulla_work_types::memory::MemoryRememberResult>;
     MemoryRecall(MemoryRecall) => Json<medulla_work_types::memory::MemoryRecallResult>;
