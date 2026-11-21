@@ -18,6 +18,7 @@ pub mod definitions;
 pub mod errors;
 pub mod improvement;
 pub mod org;
+pub mod teams;
 pub mod workflows;
 
 use serde::{Deserialize, Serialize};
