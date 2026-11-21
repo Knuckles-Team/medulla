@@ -1,0 +1,87 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex:  <urn:eg:fixture:supplier:> .
+
+# MEDULLA-CQ-XSRC-R002.5: the source-authority seed of suppliers, purchase items and
+# third-party risk. ERPNext is the transactional procurement system (rank 1 for
+# :Supplier and :SupplyChainItem) and LeanIX the architecture catalogue (rank 2, its
+# Provider fact sheets). :RiskScenario ranks the risk register first and
+# :PrivacyAssessment the privacy assessments source first. Lower rank wins; no row sets
+# vg:allowFallback, so fallback is off.
+
+ex:erpnext a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-erpnext ;
+    vg:foreignSourceName "erpnext-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-erpnext vg:url "https://erpnext.example.invalid/mcp" .
+ex:erpnext-contract a vg:MetadataContract ; vg:contractSource ex:erpnext ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000001" ;
+    vg:discoveredEntity "supplier" ; vg:discoveredField "supplier.name", "supplier.title" .
+
+ex:leanix a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-leanix ;
+    vg:foreignSourceName "leanix-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-leanix vg:url "https://leanix.example.invalid/mcp" .
+ex:leanix-contract a vg:MetadataContract ; vg:contractSource ex:leanix ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000002" ;
+    vg:discoveredEntity "provider" ; vg:discoveredField "provider.id", "provider.title" .
+
+ex:ciso a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-ciso ;
+    vg:foreignSourceName "ciso-assistant-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-ciso vg:url "https://ciso.example.invalid/mcp" .
+ex:ciso-contract a vg:MetadataContract ; vg:contractSource ex:ciso ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000003" ;
+    vg:discoveredEntity "risk_scenario" ; vg:discoveredField "risk_scenario.id", "risk_scenario.title" .
+
+ex:onetrust a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-onetrust ;
+    vg:foreignSourceName "onetrust-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-onetrust vg:url "https://onetrust.example.invalid/mcp" .
+ex:onetrust-contract a vg:MetadataContract ; vg:contractSource ex:onetrust ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000004" ;
+    vg:discoveredEntity "assessment" ; vg:discoveredField "assessment.id", "assessment.title" .
+
+ex:erpnext-supplier a vg:VirtualMapping ; vg:mapsContract ex:erpnext-contract ;
+    vg:mapsOntologyClass kg:Supplier ; vg:mapsEntity "supplier" ; vg:keyField "supplier.name" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:erpnext-supplier-title .
+ex:erpnext-supplier-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "supplier.title" .
+ex:supplier-erpnext a vg:SourceAuthority ; vg:authoritativeSource ex:erpnext ;
+    vg:authorityFor kg:Supplier ; vg:authorityMapping ex:erpnext-supplier ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:erpnext-supplychainitem a vg:VirtualMapping ; vg:mapsContract ex:erpnext-contract ;
+    vg:mapsOntologyClass kg:SupplyChainItem ; vg:mapsEntity "supplier" ; vg:keyField "supplier.name" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:erpnext-supplychainitem-title .
+ex:erpnext-supplychainitem-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "supplier.title" .
+ex:supplychainitem-erpnext a vg:SourceAuthority ; vg:authoritativeSource ex:erpnext ;
+    vg:authorityFor kg:SupplyChainItem ; vg:authorityMapping ex:erpnext-supplychainitem ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:leanix-supplier a vg:VirtualMapping ; vg:mapsContract ex:leanix-contract ;
+    vg:mapsOntologyClass kg:Supplier ; vg:mapsEntity "provider" ; vg:keyField "provider.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:leanix-supplier-title .
+ex:leanix-supplier-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "provider.title" .
+ex:supplier-leanix a vg:SourceAuthority ; vg:authoritativeSource ex:leanix ;
+    vg:authorityFor kg:Supplier ; vg:authorityMapping ex:leanix-supplier ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .
+
+ex:leanix-supplychainitem a vg:VirtualMapping ; vg:mapsContract ex:leanix-contract ;
+    vg:mapsOntologyClass kg:SupplyChainItem ; vg:mapsEntity "provider" ; vg:keyField "provider.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:leanix-supplychainitem-title .
+ex:leanix-supplychainitem-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "provider.title" .
+ex:supplychainitem-leanix a vg:SourceAuthority ; vg:authoritativeSource ex:leanix ;
+    vg:authorityFor kg:SupplyChainItem ; vg:authorityMapping ex:leanix-supplychainitem ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .
+
+ex:ciso-riskscenario a vg:VirtualMapping ; vg:mapsContract ex:ciso-contract ;
+    vg:mapsOntologyClass kg:RiskScenario ; vg:mapsEntity "risk_scenario" ; vg:keyField "risk_scenario.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:ciso-riskscenario-title .
+ex:ciso-riskscenario-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "risk_scenario.title" .
+ex:riskscenario-ciso a vg:SourceAuthority ; vg:authoritativeSource ex:ciso ;
+    vg:authorityFor kg:RiskScenario ; vg:authorityMapping ex:ciso-riskscenario ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:onetrust-privacyassessment a vg:VirtualMapping ; vg:mapsContract ex:onetrust-contract ;
+    vg:mapsOntologyClass kg:PrivacyAssessment ; vg:mapsEntity "assessment" ; vg:keyField "assessment.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:onetrust-privacyassessment-title .
+ex:onetrust-privacyassessment-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "assessment.title" .
+ex:privacyassessment-onetrust a vg:SourceAuthority ; vg:authoritativeSource ex:onetrust ;
+    vg:authorityFor kg:PrivacyAssessment ; vg:authorityMapping ex:onetrust-privacyassessment ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .

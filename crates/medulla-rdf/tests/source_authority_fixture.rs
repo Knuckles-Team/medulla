@@ -14,6 +14,7 @@ use medulla_virtual_graph::source_selection::{
 };
 
 const TEMPLATE: &str = include_str!("fixtures/source_authority_incident.ttl");
+const SUPPLIER_SEED: &str = include_str!("fixtures/xsrc_authority_supplier.ttl");
 const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.shapes.ttl");
 const INCIDENT: &str = "https://knuckles-team.github.io/ontology/core#Incident";
 const SNOW_ROW: &str = "urn:eg:fixture:incident:incident-servicenow";
@@ -136,4 +137,48 @@ fn the_live_read_returns_the_same_verdict_as_the_fixture() {
         incident_verdict(&fixture),
         CoverageResult::Uncovered { .. }
     ));
+}
+
+// spec: MEDULLA-CQ-XSRC-R002.5
+#[test]
+fn supplier_seed_passes_shape() {
+    const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
+    let report = medulla_shacl::validate_turtle(SHAPES, SUPPLIER_SEED).expect("validates");
+    assert!(report.conforms, "{:?}", report.results);
+    let rows = authority_rows_from_turtle(SUPPLIER_SEED, AuthorityOrigin::Operator).unwrap();
+    assert_eq!(rows.len(), 6);
+    let fixture = rows
+        .into_iter()
+        .fold(CoverageFixture::new(), CoverageFixture::with_row);
+    let classes: Vec<String> = ["Supplier", "SupplyChainItem", "RiskScenario", "PrivacyAssessment"]
+        .iter()
+        .map(|name| format!("{CORE}{name}"))
+        .collect();
+    let verdicts = select_sources(&fixture, &classes, 1);
+    let covered = |class: &str| match verdicts
+        .iter()
+        .find(|v| v.class() == format!("{CORE}{class}"))
+        .unwrap_or_else(|| panic!("a {class} verdict"))
+    {
+        CoverageResult::Covered {
+            source, alternates, ..
+        } => (source.clone(), alternates.clone()),
+        other => panic!("expected {class} covered, got {other:?}"),
+    };
+    // ERPNext ranks first for suppliers and items, LeanIX second.
+    assert_eq!(covered("Supplier"), ("erpnext-mcp".to_string(), vec!["leanix-mcp".to_string()]));
+    assert_eq!(
+        covered("SupplyChainItem"),
+        ("erpnext-mcp".to_string(), vec!["leanix-mcp".to_string()])
+    );
+    assert_eq!(covered("RiskScenario"), ("ciso-assistant-mcp".to_string(), Vec::new()));
+    assert_eq!(covered("PrivacyAssessment"), ("onetrust-mcp".to_string(), Vec::new()));
+    // A pack-origin read of the same text proposes only: nothing is covered.
+    let proposed = authority_rows_from_turtle(SUPPLIER_SEED, AuthorityOrigin::Pack).unwrap();
+    let fixture = proposed
+        .into_iter()
+        .fold(CoverageFixture::new(), CoverageFixture::with_row);
+    assert!(select_sources(&fixture, &classes, 1)
+        .iter()
+        .all(|v| matches!(v, CoverageResult::Uncovered { .. })));
 }
