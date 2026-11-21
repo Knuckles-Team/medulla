@@ -215,3 +215,65 @@ def test_record_reproduces_report(tmp_path):
         assert record["cursor_end"] == real["next_cursor"]
         assert len(record["policy_digest"]) == 64
         assert all(c in "0123456789abcdef" for c in record["policy_digest"])
+
+
+def _add_row(rpc, ok, sock, node_id, row):
+    ok(
+        rpc(
+            sock,
+            "AddNode",
+            {"node_id": node_id, "properties_msgpack": msgpack.packb(row)},
+            key=f"add-{node_id}",
+        )
+    )
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R700.6")
+def test_held_and_referenced_nodes_survive(tmp_path):
+    """Verifies MEDULLA-DURABLE-KERNEL-R700.6.
+
+    Aged documents and an aged orphan are removed; a referenced document and a document
+    under a legal hold survive, with the node that references the first.
+    """
+    from test_native_no_auth_served import ok, rpc, server
+
+    env = {"MEDULLA_RETENTION_CLEANUP": json.dumps(POLICY)}
+    with server(tmp_path, extra_env=env) as sock:
+        for node_id in ("doc-aged-1", "doc-aged-2", "doc-referenced"):
+            _add_row(rpc, ok, sock, node_id, {"type": "Document", "updated_at": 1})
+        _add_row(
+            rpc,
+            ok,
+            sock,
+            "doc-held",
+            {"type": "Document", "updated_at": 1, "metadata": {"legal_hold": True}},
+        )
+        _add_row(rpc, ok, sock, "orphan-aged", {"type": "Thing", "created_at": 1})
+        _add_row(rpc, ok, sock, "referrer", {"type": "Thing"})
+        ok(
+            rpc(
+                sock,
+                "AddEdge",
+                {
+                    "source_id": "referrer",
+                    "target_id": "doc-referenced",
+                    "properties_msgpack": msgpack.packb({"type": "cites"}),
+                },
+                key="edge-referrer",
+            )
+        )
+
+        removed = 0
+        cursor = None
+        for step in range(5):
+            report = _run(rpc, ok, sock, f"steps-{step}", dry_run=False, cursor=cursor)
+            removed += report["removed"]
+            cursor = report["next_cursor"]
+            if report["scanned"] == 0 or cursor is None:
+                break
+        assert removed == 3
+
+        gone = ("doc-aged-1", "doc-aged-2", "orphan-aged")
+        kept = ("doc-referenced", "doc-held", "referrer")
+        assert not any(_state(rpc, ok, sock, gone).values())
+        assert all(_state(rpc, ok, sock, kept).values())
