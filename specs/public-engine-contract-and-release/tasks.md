@@ -132,4 +132,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T121 [US1] MEDULLA-CONTRACT-R062.4 Replace `RankingFacts` with the five-variant `RankingClass`
 - [ ] T122 [US1] MEDULLA-CONTRACT-R062.5 Rename `registry::BackendState` to `AdapterCore` and the adapters' field `state` to `core` (no machine)
 - [ ] T123 [US1] MEDULLA-CONTRACT-R063 Clear the state-machine census and switch the hook to blocking
+- [ ] T127 [US1] MEDULLA-CONTRACT-R063.1 Rename the eleven set-once holder fields and enum types out of the census, with serde and Python aliases keeping the wire bytes
 - [ ] T124 [US1] MEDULLA-CONTRACT-R064 No workspace manifest names a date-time crate: `medulla-h-ingest` moves to `jiff`, the root drops `chrono`, the four ignores name their transitive dependents
