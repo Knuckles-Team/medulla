@@ -141,6 +141,12 @@ pub(super) fn prepare(
         return rejected(request, violations);
     }
     let conformance = super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
+    // The concept layer of a graph skill binds after the pack ontologies validated and
+    // before shapes compile (MEDULLA-TYPED-PACKS-R701.3).
+    #[cfg(feature = "rdf")]
+    if let Err(layer_violation) = super::skill_graph::bind_layer(archive, &all) {
+        violations.push(layer_violation);
+    }
     if !violations.is_empty() {
         return rejected(request, violations);
     }

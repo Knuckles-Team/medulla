@@ -22,7 +22,12 @@ import pytest
 from conftest import TEST_TENANT
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
-from ontology_pack_support import connect, import_entries
+from ontology_pack_support import (
+    attach_pack,
+    connect,
+    import_entries,
+    ontology_entry,
+)
 from test_connector_pack_planted import _context, _pack_op
 
 from medulla import ConnectorPackEntryContent
@@ -35,6 +40,7 @@ from medulla.generated.connector_pack import (
     PackHeadRef,
     PackRef,
 )
+from medulla.generated import reasoning
 from medulla.generated.fleet_catalog import (
     DiscoveryCounts,
     DiscoveryOutcomeReachable,
@@ -272,5 +278,42 @@ async def test_bad_hash_refused_and_conformant_pack_imports() -> None:
         assert good["result"] == "imported", good
         evidence = await _evidence(client, connector)
         assert evidence.pack_digest == good["receipt"]["pack_digest"]
+    finally:
+        await client.close()
+
+
+CORE = "https://knuckles-team.github.io/ontology/core#"
+LAYER_NS = "https://knuckles-team.github.io/ontology/skillgraph/"
+
+
+def _layer_turtle(iri: str) -> str:
+    return (
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+        f"<{iri}> a owl:Ontology .\n"
+        f"<{iri}#Concept> a owl:Class ; rdfs:subClassOf <{CORE}CreativeWork> .\n"
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.3")
+@pytest.mark.asyncio
+async def test_layer_classes_read_through_core_class() -> None:
+    client = await connect()
+    try:
+        connector = f"graph-layer-{uuid.uuid4().hex[:8]}"
+        graph = "taxonomy"
+        iri = f"{LAYER_NS}{graph}"
+        entries = _graph_entries(graph) + [
+            ontology_entry(connector, f"skillgraph/{graph}", _layer_turtle(iri))
+        ]
+        imported = await import_entries(client, connector, entries)
+        assert imported["result"] == "imported", imported
+        await attach_pack(client, connector)
+
+        # The layer's class is read through the core class it rolls up to.
+        classes = await reasoning.send_graph_schema_classes(
+            client, {"kind": "class", "cursor": None, "limit": 5000}
+        )
+        assert f"{iri}#Concept" in {term.iri for term in classes.terms}
     finally:
         await client.close()
