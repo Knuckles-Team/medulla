@@ -7,6 +7,7 @@
 //! machine's `ContractHistory::approve` is the activation, and the import commit installs the
 //! full pack (members, ontology, shapes) as the connector's head and clears the held slot.
 
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

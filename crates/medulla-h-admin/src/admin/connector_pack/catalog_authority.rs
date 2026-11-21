@@ -262,7 +262,7 @@ pub(super) struct ObservedRegistration<'a> {
 /// What an admitted catalog-authority write holds until its rows commit.
 #[cfg(feature = "redb")]
 pub(super) type CatalogWriteAdmission = (
-    tokio::sync::OwnedMutexGuard<()>,
+    medulla_server_api::routed_write_coalescer::GraphLockGuard,
     Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
     medulla_agent_types::agent_library::AgentLibraryMutationContext,
 );

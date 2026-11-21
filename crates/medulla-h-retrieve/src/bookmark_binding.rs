@@ -38,6 +38,7 @@ pub struct BookmarkBindingInputs {
     pub space: EmbeddingSpaceRef,
     /// The isolation layer's policy revision at authoring time.
     pub policy_revision: u64,
+    /// The engine clock at authoring time.
     pub now_ms: u64,
 }
 

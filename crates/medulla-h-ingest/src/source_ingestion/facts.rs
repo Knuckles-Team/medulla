@@ -796,7 +796,7 @@ pub fn admit_facts(
             push_grounding_edges(&mut admission.methods, &claim_id, before, chunk)?;
         }
         admission.node_ids.push(claim_id);
-        admission.node_ids.push(atom_id);
+        admission.node_ids.push(atom_id.clone());
         admission.admitted += 1;
         if outcome == FactOutcome::Created {
             if let Some(pair) = entity_pair(fact) {

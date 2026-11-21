@@ -700,6 +700,7 @@ pub(super) fn render_obda_join(
         Ok(match dialect {
             ObdaSqlDialect::Postgres => format!("{alias}.{q}::text"),
             ObdaSqlDialect::MySql => format!("CAST({alias}.{q} AS CHAR)"),
+            ObdaSqlDialect::ColumnarAnalytic => format!("CAST({alias}.{q} AS String)"),
         })
     };
     let items = needed
@@ -730,6 +731,7 @@ fn render_select_item(col: &str, dialect: ObdaSqlDialect) -> Result<String, Stri
     Ok(match dialect {
         ObdaSqlDialect::Postgres => format!("{q}::text AS {q}"),
         ObdaSqlDialect::MySql => format!("CAST({q} AS CHAR) AS {q}"),
+        ObdaSqlDialect::ColumnarAnalytic => format!("CAST({q} AS String) AS {q}"),
     })
 }
 

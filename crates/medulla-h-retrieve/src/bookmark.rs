@@ -28,7 +28,9 @@ const MAX_CANDIDATES: usize = 4096;
 
 /// What the router handler read of the caller's projected graph, once, at the start of the call.
 pub struct BookmarkReadView<'a> {
+    /// The revision of the graph snapshot the call reads.
     pub graph_snapshot_revision: u64,
+    /// The authorization revision the call was admitted under.
     pub authorization_revision: u64,
     /// The verified tenant scope the cursor is bound to.
     pub tenant: &'a str,
@@ -36,7 +38,9 @@ pub struct BookmarkReadView<'a> {
     /// are `semantic-graph-source:<digest>` entity ids, deterministic from the node id; the
     /// router computes this map over the caller's `Bookmark` nodes.
     pub node_of_entity: &'a dyn Fn(&str) -> Option<String>,
+    /// Whether the caller may see a node.
     pub visible: &'a dyn Fn(&str) -> bool,
+    /// A node's string properties, when it exists.
     pub properties: &'a dyn Fn(&str) -> Option<BTreeMap<String, String>>,
 }
 
@@ -78,10 +82,12 @@ pub fn entity_node_map(
         .collect()
 }
 
+/// The refusal text `<CODE>: <reason>`.
 pub fn refusal(code: medulla_types::refusal_code::RefusalCode, reason: &str) -> String {
     format!("{}: {reason}", code.as_str())
 }
 
+/// The SHA-256 of a value's named MessagePack form.
 pub fn digest_of<T: serde::Serialize>(value: &T) -> Result<Digest256, String> {
     rmp_serde::to_vec_named(value)
         .map(|bytes| Digest256::sha256(&bytes))
@@ -96,10 +102,15 @@ pub const RELATIONS_CURSOR_DOMAIN: &[u8] = b"eg/bookmark-relations-cursor/v1";
 /// What a cursor MAC binds besides its offset: the tenant, the query, the index revision and the
 /// graph snapshot revision of the call.
 pub struct CursorBinding<'a> {
+    /// The cursor domain, search or relations.
     pub domain: &'static [u8],
+    /// The verified tenant scope.
     pub tenant: &'a str,
+    /// The digest of the query the cursor pages.
     pub query_digest: &'a Digest256,
+    /// The index revision the page was read at.
     pub index_revision: u64,
+    /// The graph snapshot revision of the call.
     pub graph_snapshot_revision: u64,
 }
 

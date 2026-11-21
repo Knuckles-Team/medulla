@@ -184,7 +184,7 @@ pub fn read_quarantine(
         return absent;
     };
     let stored = medulla_types::msgpack::decode_property_value(&blob)
-        .map_err(|error| format!("INTERNAL: stored quarantine {node_id} does not decode: {error}"))?;
+        .map_err(|_| format!("INTERNAL: stored quarantine {node_id} does not decode"))?;
     if stored.get("type").and_then(serde_json::Value::as_str) != Some("SourceQuarantine") {
         return absent;
     }

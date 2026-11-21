@@ -108,9 +108,8 @@ pub async fn admission_inputs(
             current.worker_registry.clone(),
         )
     };
-    let config = crate::scheduler_config::effective_config(
-        &config_store.map_err(|error| format!("INTERNAL: {error}"))?,
-    )?;
+    let config_store = config_store.map_err(|error| format!("INTERNAL: {error}"))?;
+    let config = crate::scheduler_config::effective_config(&config_store)?;
     let shard_writer_width = shard_writer_width(tenant, &persistence)?.shard_writers;
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mut counts = store

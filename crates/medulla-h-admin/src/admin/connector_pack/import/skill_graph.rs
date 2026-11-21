@@ -56,7 +56,6 @@ pub(super) fn validate_graph_bundles(
     // The reports of every graph the pack holds, merged: each rule id once, in the order
     // first checked, and every violation (MEDULLA-TYPED-PACKS-R700.5).
     let mut merged: Option<ConformanceReport> = None;
-    let mut layers = Vec::new();
     for skill in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Skill)
