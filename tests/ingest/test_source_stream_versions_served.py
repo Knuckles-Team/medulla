@@ -239,3 +239,82 @@ async def test_receipt_names_digest_chain() -> None:
         assert readback.receipt_digest == second.receipt_digest
     finally:
         await _close(client, graph)
+
+
+def _page(
+    connector: str,
+    messages: list[tuple[int, int]],
+    position: dict[str, int],
+    previous: dict[str, int] | None,
+) -> dict[str, Any]:
+    """One page of a partitioned message stream as a `Records` batch: each message is one
+    record whose id is `<partition>:<offset>`, and the checkpoint position maps each
+    partition to the last offset of the page."""
+    batch = _batch(connector, 0, None, "unused")
+    batch["records"] = [
+        {
+            **batch["records"][0],
+            "record_id": f"{partition}:{offset}",
+            "payload": {"id": partition * 1000 + offset, "name": f"message {offset}"},
+        }
+        for partition, offset in messages
+    ]
+    batch["provider_checkpoint"] = {
+        "stream": STREAM,
+        "position": position,
+        "watermark": "2026-09-20T00:00:00Z",
+    }
+    batch["expected_previous_checkpoint"] = (
+        None
+        if previous is None
+        else {
+            "stream": STREAM,
+            "position": previous,
+            "watermark": "2026-09-20T00:00:00Z",
+        }
+    )
+    return batch
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R711")
+@pytest.mark.asyncio
+async def test_partition_offset_page_returns_checkpoint_after_commit_and_replays() -> (
+    None
+):
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    try:
+        first_position = {"0": 1, "1": 0}
+        first = _page(connector, [(0, 0), (0, 1), (1, 0)], first_position, None)
+        committed = await _submit(client, first, "first-page")
+        assert committed.disposition is SourceIngestionDisposition.COMMITTED
+        # The receipt names the accepted checkpoint only after the durable write.
+        digest = committed.accepted_checkpoint_digest
+        assert digest is not None and len(digest) == 64
+
+        # A resubmitted page replays, with the same checkpoint.
+        replayed = await _submit(client, first, "first-page-again")
+        assert replayed.disposition is SourceIngestionDisposition.REPLAYED
+        assert replayed.accepted_checkpoint_digest == digest
+
+        # The next page binds the previous position and moves the checkpoint.
+        second_position = {"0": 3, "1": 1}
+        second = _page(
+            connector, [(0, 2), (0, 3), (1, 1)], second_position, first_position
+        )
+        advanced = await _submit(client, second, "second-page")
+        assert advanced.disposition is SourceIngestionDisposition.COMMITTED
+        assert advanced.accepted_checkpoint_digest != digest
+
+        # A page that binds the position the stream has left is refused and commits nothing,
+        # so the connector keeps its offsets and resubmits.
+        stale = _page(connector, [(0, 4)], {"0": 4, "1": 1}, first_position)
+        with pytest.raises(EngineResponseError) as refused:
+            await _submit(client, stale, "stale-page")
+        assert "STALE_CONTENT_VERSION" in str(refused.value)
+        status = await send_source_ingest_status(
+            client, SourceIngestStatusRequest(connector=connector, stream=STREAM)
+        )
+        assert status.accepted_checkpoint_digest == advanced.accepted_checkpoint_digest
+    finally:
+        await _close(client, graph)
