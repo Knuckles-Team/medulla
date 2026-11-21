@@ -63,7 +63,7 @@ impl ReadyPlan {
         mut self,
         request: ConnectorPackImportRequest,
         stored: Vec<medulla_server_blob::blob::engine_bodies::StoredEngineBody>,
-        release: medulla_catalog_types::connector_pack::contract_version::PackRelease,
+        applied: super::release::AppliedRelease,
     ) -> Result<ConnectorPackCommitPlan, String> {
         let by_digest: BTreeMap<_, _> = stored
             .into_iter()
@@ -103,7 +103,8 @@ impl ReadyPlan {
             members: self.members,
             holders,
             evidence_ttl_ms: medulla_server_api::knob_config::knobs().conformance_evidence_ttl_ms,
-            release: Some(release),
+            release: Some(applied.release),
+            release_evidence: Some(applied.evidence),
         })
     }
 }
@@ -780,6 +781,7 @@ fn rejected(
         pack_digest: Some(request.index.pack_digest),
         violations: BoundedVec::new(violations)?,
         budget_exhausted: exhausted,
+        held: None,
     }))
 }
 

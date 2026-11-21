@@ -728,6 +728,7 @@ pub(in crate::admin) async fn seed_server_only_import(
         }],
         evidence_ttl_ms: 3_600_000,
         release: None,
+        release_evidence: None,
     };
     match store.commit_connector_pack(plan).unwrap() {
         PackImportResult::Imported { receipt } => *receipt,

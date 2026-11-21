@@ -16,7 +16,8 @@ use medulla_catalog_types::connector_pack::contract_version::{
     PackContractVersion, PackRelease, PendingPackRelease, SchemaCompatRecord, SchemaDigest,
 };
 use medulla_catalog_types::connector_pack::{
-    ConnectorPackImportRequest, PackEntryKind, PackImportResult, PackViolation, PackViolationCode,
+    ChangeRequestRef, ConnectorPackImportRequest, PackEntryKind, PackImportResult,
+    PackReleaseEvidence, PackViolation, PackViolationCode,
 };
 use medulla_core::stewardship::TargetScopes;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -233,10 +234,17 @@ impl ClassUsage for GraphClassUsage {
     }
 }
 
+/// The release an import activates and the diff its answer reports
+/// (MEDULLA-TYPED-PACKS-R107.5).
+pub(super) struct AppliedRelease {
+    pub(super) release: PackRelease,
+    pub(super) evidence: PackReleaseEvidence,
+}
+
 /// What the check decided for one import.
 pub(super) enum Verdict {
     /// Commit, recording this release as the head's active summary.
-    Apply(PackRelease),
+    Apply(AppliedRelease),
     /// Answer with this result; nothing else is written for the head's move.
     Refused(PackImportResult),
 }
@@ -502,11 +510,13 @@ fn refusal(
     request: &ConnectorPackImportRequest,
     violations: Vec<PackViolation>,
     budget_exhausted: bool,
+    held: Option<PackReleaseEvidence>,
 ) -> Result<Verdict, String> {
     Ok(Verdict::Refused(PackImportResult::Rejected {
         pack_digest: Some(request.index.pack_digest),
         violations: BoundedVec::new(violations)?,
         budget_exhausted,
+        held,
     }))
 }
 
@@ -532,13 +542,22 @@ pub(super) fn judge(
     let mut next = next_contract(request, archive, ready)?;
     let mut schemas = next_schemas(request, archive)?;
     let Some(active) = store.connector_pack_release(tenant, connector)? else {
-        return Ok(Verdict::Apply(release_of(&next, schemas)));
+        let evidence = PackReleaseEvidence {
+            previous_contract_digest: None,
+            contract_digest: next.version.contract_digest.clone(),
+            break_count: 0,
+            change_request: None,
+        };
+        return Ok(Verdict::Apply(AppliedRelease {
+            release: release_of(&next, schemas),
+            evidence,
+        }));
     };
     let schema_violations = judge_schemas(&active, &mut schemas);
     if !schema_violations.is_empty() {
         let over = schema_violations.len() > MAX_REPORTED;
         let shown = schema_violations.into_iter().take(MAX_REPORTED).collect();
-        return refusal(request, shown, over);
+        return refusal(request, shown, over, None);
     }
     let (ontology_ttl, shapes_ttl) = prior_documents(chunks, tenant, prior_members)?;
     let kept_tools: BTreeSet<&str> = request
@@ -586,7 +605,7 @@ pub(super) fn judge(
                     )
                 })
                 .collect();
-            return refusal(request, violations, in_use.len() > MAX_REPORTED);
+            return refusal(request, violations, in_use.len() > MAX_REPORTED, None);
         }
     }
     let target = format!("pack:{}", connector.as_str());
@@ -606,7 +625,18 @@ pub(super) fn judge(
         .map_err(|error| error.to_string())?;
     next.version.supersedes = Some(active.version.version.clone());
     match disposition {
-        ReleaseDisposition::Applied { .. } => Ok(Verdict::Apply(release_of(&next, schemas))),
+        ReleaseDisposition::Applied { .. } => {
+            let evidence = PackReleaseEvidence {
+                previous_contract_digest: Some(active.version.contract_digest.clone()),
+                contract_digest: next.version.contract_digest.clone(),
+                break_count: 0,
+                change_request: None,
+            };
+            Ok(Verdict::Apply(AppliedRelease {
+                release: release_of(&next, schemas),
+                evidence,
+            }))
+        }
         ReleaseDisposition::Pending {
             breaks,
             total_breaks,
@@ -639,10 +669,20 @@ pub(super) fn judge(
                     )
                 })
                 .collect();
+            let held = PackReleaseEvidence {
+                previous_contract_digest: Some(active.version.contract_digest.clone()),
+                contract_digest: next.version.contract_digest.clone(),
+                break_count: u64::try_from(total_breaks).unwrap_or(u64::MAX),
+                change_request: Some(ChangeRequestRef {
+                    target: change_request.target.clone(),
+                    proposed_digest: change_request.proposed_digest.clone(),
+                }),
+            };
             refusal(
                 request,
                 violations,
                 total_breaks > breaks.len().min(MAX_REPORTED),
+                Some(held),
             )
         }
     }

@@ -57,6 +57,8 @@ pub struct ConnectorPackCommitPlan {
     /// The release summary this import activates (MEDULLA-TYPED-PACKS-R107.3); stored on
     /// the head so the next import diffs against it.
     pub release: Option<medulla_catalog_types::connector_pack::contract_version::PackRelease>,
+    /// The contract diff the receipt reports (MEDULLA-TYPED-PACKS-R107.5).
+    pub release_evidence: Option<medulla_catalog_types::connector_pack::PackReleaseEvidence>,
 }
 
 impl AgentLibraryStore {
@@ -286,6 +288,7 @@ fn import_receipt(
         projection: plan.record.projection.clone(),
         object_model_shape_digest: plan.record.object_model_shape_digest,
         seed: plan.record.seed.clone(),
+        release: plan.release_evidence.clone(),
     })
 }
 

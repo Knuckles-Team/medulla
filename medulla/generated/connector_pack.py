@@ -444,6 +444,22 @@ class SeedImportReceipt(BaseModel):
     outcomes: dict[str, SeedPartOutcome]
 
 
+class ChangeRequestRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposed_digest: str
+    target: str
+
+
+class PackReleaseEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    break_count: Annotated[int, Field(ge=0)]
+    change_request: ChangeRequestRef | None = None
+    contract_digest: str
+    previous_contract_digest: str | None = None
+
+
 class PackImportReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -458,6 +474,7 @@ class PackImportReceipt(BaseModel):
     previous_pack_digest: Digest256 | None = None
     projection: PackProjectionState
     record_id: str
+    release: PackReleaseEvidence | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     seed: SeedImportReceipt | None = None
     tenant_id: str
@@ -483,6 +500,7 @@ class PackImportResultRejected(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     budget_exhausted: bool
+    held: PackReleaseEvidence | None = None
     pack_digest: Digest256 | None = None
     result: Literal["rejected"]
     violations: BoundedVec_PackViolation_256
@@ -881,6 +899,8 @@ __all__ = [
     "PackEntryKind",
     "PackHeadRef",
     "PackHeadView",
+    "ChangeRequestRef",
+    "PackReleaseEvidence",
     "PackImportReceipt",
     "SeedImportReceipt",
     "SeedPartOutcome",

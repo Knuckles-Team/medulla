@@ -102,7 +102,7 @@ fn run_import(
         release::judge(store, chunks, &request, archive, &prepared, &prior, usage)
     })?? {
         Verdict::Refused(result) => return Ok(result),
-        Verdict::Apply(release) => release,
+        Verdict::Apply(applied) => applied,
     };
     let bodies = prepared
         .body_inputs

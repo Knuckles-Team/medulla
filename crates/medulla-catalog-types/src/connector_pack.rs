@@ -145,8 +145,8 @@ pub use record::{
     PackArchiveFacts, PackDisposition, PackEntryRecord, PackImportRecord, PackServerRecord,
 };
 pub use result::{
-    ConnectorPackBindingResult, ConnectorPackSourceApprovalResult, ConnectorPackStatus,
-    PackBodyReconcileReport, PackDispositionCounts, PackHeadView, PackImportReceipt,
+    ChangeRequestRef, ConnectorPackBindingResult, ConnectorPackSourceApprovalResult,
+    ConnectorPackStatus, PackBodyReconcileReport, PackReleaseEvidence, PackDispositionCounts, PackHeadView, PackImportReceipt,
     PackImportResult, PackMemberCounts, PackProjectionState, PackRetireResult, PackViolation,
     PackViolationCode, PackWarning, PackWarningCode, PackWriteErrorCode,
     MAX_PROJECTION_FAILURE_DETAIL_BYTES,

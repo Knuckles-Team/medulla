@@ -246,6 +246,7 @@ fn rejection_for(
             pack_digest: Some(pack_digest),
             violations: medulla_types::contract::BoundedVec::new(vec![violation])?,
             budget_exhausted: false,
+            held: None,
         },
     )
 }

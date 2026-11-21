@@ -185,6 +185,35 @@ pub enum PackProjectionState {
 /// The longest projection failure detail a head records.
 pub const MAX_PROJECTION_FAILURE_DETAIL_BYTES: usize = 1024;
 
+/// The two fields that identify a stewardship change request, which has no id field of its
+/// own (MEDULLA-TYPED-PACKS-R107.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ChangeRequestRef {
+    /// The asset the change request governs.
+    pub target: String,
+    /// `sha256:` plus 64 lowercase hex characters of the proposed content.
+    pub proposed_digest: String,
+}
+
+/// The contract diff of one import, as the answer reports it (MEDULLA-TYPED-PACKS-R107.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PackReleaseEvidence {
+    /// The contract digest of the release the head held; absent on a first release.
+    #[serde(default)]
+    pub previous_contract_digest: Option<String>,
+    /// The contract digest of the release this import carries.
+    pub contract_digest: String,
+    /// The breaking changes found: zero for an additive release.
+    pub break_count: u64,
+    /// The change request a held breaking release waits behind.
+    #[serde(default)]
+    pub change_request: Option<ChangeRequestRef>,
+}
+
 /// The durable receipt of one landed import.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -212,6 +241,9 @@ pub struct PackImportReceipt {
     /// (MEDULLA-TYPED-PACKS-R104.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub seed: Option<super::SeedImportReceipt>,
+    /// The contract diff the import applied (MEDULLA-TYPED-PACKS-R107.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub release: Option<PackReleaseEvidence>,
 }
 
 /// What one import attempt produced.
@@ -234,6 +266,10 @@ pub enum PackImportResult {
         pack_digest: Option<Digest256>,
         violations: BoundedVec<PackViolation, 256>,
         budget_exhausted: bool,
+        /// The diff of a breaking release held behind a change request; set only for
+        /// that refusal (MEDULLA-TYPED-PACKS-R107.5).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        held: Option<PackReleaseEvidence>,
     },
 }
 

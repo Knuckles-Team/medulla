@@ -192,6 +192,65 @@ def test_breaking_and_in_use_refuse() -> None:
     asyncio.run(exercise())
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R107.5")
+def test_receipt_carries_digests_break_count_and_request() -> None:
+    async def exercise() -> None:
+        tag = uuid.uuid4().hex[:8]
+        connector = f"contract-receipt-{tag}"
+        base = f"https://example.org/{connector}"
+        entry = lambda classes: [  # noqa: E731
+            ontology_entry(connector, "vocabulary", _ontology(base, classes))
+        ]
+        admin = await connect()
+        try:
+            # A first release has no previous digest and no breaks.
+            first = await import_entries(
+                admin, connector, entry(["Ticket", "Incident"])
+            )
+            assert first["result"] == "imported", first
+            first_release = first["receipt"]["release"]
+            assert first_release["previous_contract_digest"] is None
+            assert first_release["contract_digest"].startswith("sha256:")
+            assert first_release["break_count"] == 0
+            assert first_release.get("change_request") is None
+
+            # An additive re-import names both contract digests and no breaks.
+            second = await import_entries(
+                admin,
+                connector,
+                entry(["Ticket", "Incident", "Epic"]),
+                expected_head=_head(first["receipt"]),
+            )
+            assert second["result"] == "imported", second
+            second_release = second["receipt"]["release"]
+            assert (
+                second_release["previous_contract_digest"]
+                == first_release["contract_digest"]
+            )
+            assert second_release["contract_digest"] != first_release["contract_digest"]
+            assert second_release["break_count"] == 0
+            assert second_release.get("change_request") is None
+
+            # A breaking re-import is held: its answer carries the diff and the request.
+            breaking = await import_entries(
+                admin,
+                connector,
+                entry(["Ticket", "Epic"]),
+                expected_head=_head(second["receipt"]),
+            )
+            assert breaking["result"] == "rejected", breaking
+            held = breaking["held"]
+            assert held["break_count"] >= 1
+            assert held["previous_contract_digest"] == second_release["contract_digest"]
+            assert held["contract_digest"].startswith("sha256:")
+            assert held["change_request"]["target"] == f"pack:{connector}"
+            assert held["change_request"]["proposed_digest"].startswith("sha256:")
+        finally:
+            await admin.close()
+
+    asyncio.run(exercise())
+
+
 OTHER_TENANT = "tenant:other"
 
 
