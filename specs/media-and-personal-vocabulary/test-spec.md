@@ -21,7 +21,7 @@ Every row below names a test that does not exist yet. The test file and function
 |---|---|---|---|---|
 | T-009 | MEDULLA-MEDIA-VOCAB-R001.100.1 | L2 | `crates/medulla-core/tests/media_vocab_a.rs::media_tag_terms_and_shape` | Tag vocabulary proves its row as stated in requirements.md |
 | T-010 | MEDULLA-MEDIA-VOCAB-R001.100.2 | L3 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_media_tag_tests.rs::tag_ingest_wire_contract` and `tests/ingest/test_media_tag_ingest_served.py::test_tag_ingest_refusals_and_replay` | Tag ingest mapping proves its row as stated in requirements.md |
-| T-011 | MEDULLA-MEDIA-VOCAB-R001.100.3 | L3 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_media_tag_tests.rs::authorized_search_returns_only_visible_tags` | Authorized search and served proof proves its row as stated in requirements.md |
+| T-011 | MEDULLA-MEDIA-VOCAB-R001.100.3 | L4 | `tests/served_semantic_search_discover_rls.rs::served_semantic_search_returns_only_visible_media_tags` | Authorized search and served proof proves its row as stated in requirements.md |
 | T-012 | MEDULLA-MEDIA-VOCAB-R001.101.1 | L1 | `crates/medulla-types/tests/meeting_transcript.rs::records_round_trip` | Model proves its row as stated in requirements.md |
 | T-013 | MEDULLA-MEDIA-VOCAB-R001.101.2 | L2 | `crates/medulla-core/tests/meeting_transcript.rs::append_correct_finalize_and_conflicts` | Revision behavior proves its row as stated in requirements.md |
 | T-014 | MEDULLA-MEDIA-VOCAB-R001.101.3 | L3 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_meeting_transcript_tests.rs::served_append_correct_finalize` | Revision wiring proves its row as stated in requirements.md |
