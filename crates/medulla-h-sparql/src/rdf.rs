@@ -21,7 +21,6 @@
 
 #[cfg(feature = "rdf")]
 mod catalog_guard;
-mod catalog_usage;
 mod dispatch;
 #[cfg(feature = "obda")]
 mod obda;

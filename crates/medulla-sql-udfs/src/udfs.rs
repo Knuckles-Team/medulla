@@ -187,35 +187,74 @@ pub fn epistemic_decay_udf() -> ScalarUDF {
 
 // ── catalog_relevance scalar UDF (MEDULLA-TYPED-PACKS-R108.16) ─────────────────────────
 
-/// `catalog_relevance(props, text) -> Float64`: the ranked catalog score of the asset node whose
-/// property blob is `props` for the search text. It is the SQL face of the one scorer that
-/// SPARQL reaches as `cat:relevance`, so both rank alike. A blank or over-long text fails the
-/// statement with `CATALOG_QUERY_EMPTY` / `CATALOG_QUERY_TOO_LONG`; a null argument or a blob that
-/// is not a property object scores null.
+/// `catalog_relevance(props, text, usage) -> Float64`: the ranked catalog score of the asset node
+/// whose property blob is `props` for the search text. It is the SQL face of the one scorer that
+/// SPARQL reaches as `cat:relevance`, so both rank alike. The third argument is the usage index
+/// of the caller's tenant and graph; the serving handler appends it to every two-argument call
+/// from the one usage store (MEDULLA-TYPED-PACKS-R108.16), so a statement never supplies its own.
+/// A blank or over-long text fails the statement with `CATALOG_QUERY_EMPTY` /
+/// `CATALOG_QUERY_TOO_LONG`, a malformed usage argument with `CATALOG_USAGE_INVALID`; a null
+/// argument or a blob that is not a property object scores null.
 pub fn catalog_relevance_udf() -> ScalarUDF {
-    use medulla_catalog_types::catalog_relevance::{relevance, validate_query, AssetDoc};
+    use medulla_catalog_types::catalog_relevance::{
+        parse_usage_argument, relevance, usage_of, validate_query, AssetDoc, UsageIndex,
+    };
     let fun = Arc::new(|args: &[ColumnarValue]| {
-        let (props, texts) = as_inputs(args)?;
+        let arrays = ColumnarValue::values_to_arrays(args)?;
+        let as_text = |i: usize| -> datafusion::error::Result<StringArray> {
+            arrays[i]
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .cloned()
+                .ok_or_else(|| {
+                    datafusion::error::DataFusionError::Execution(
+                        "catalog_relevance: the text and usage arguments must be Utf8".into(),
+                    )
+                })
+        };
+        let props = arrays[0]
+            .as_any()
+            .downcast_ref::<BinaryArray>()
+            .cloned()
+            .ok_or_else(|| {
+                datafusion::error::DataFusionError::Execution(
+                    "catalog_relevance: the first argument must be Binary (props)".into(),
+                )
+            })?;
+        let texts = as_text(1)?;
+        let usages = as_text(2)?;
+        // The usage argument is one literal for the statement: parse it once per distinct value.
+        let mut parsed: Option<(String, UsageIndex)> = None;
         let out: datafusion::error::Result<Float64Array> = (0..props.len())
             .map(|i| {
-                if props.is_null(i) || texts.is_null(i) {
+                if props.is_null(i) || texts.is_null(i) || usages.is_null(i) {
                     return Ok(None);
                 }
                 let text = validate_query(texts.value(i))
                     .map_err(datafusion::error::DataFusionError::Execution)?;
+                let raw = usages.value(i);
+                if parsed.as_ref().map(|(seen, _)| seen.as_str()) != Some(raw) {
+                    let index = parse_usage_argument(raw)
+                        .map_err(datafusion::error::DataFusionError::Execution)?;
+                    parsed = Some((raw.to_string(), index));
+                }
                 let Ok(Value::Object(obj)) =
                     medulla_types::msgpack::decode_property_value(props.value(i))
                 else {
                     return Ok(None);
                 };
-                Ok(Some(relevance(&AssetDoc::from_props(&obj), text)))
+                let mut doc = AssetDoc::from_props(&obj);
+                if let Some((_, index)) = &parsed {
+                    doc.usage_reads = usage_of(index, &doc.names, "");
+                }
+                Ok(Some(relevance(&doc, text)))
             })
             .collect();
         Ok(ColumnarValue::Array(Arc::new(out?) as ArrayRef))
     });
     create_udf(
         "catalog_relevance",
-        vec![DataType::Binary, DataType::Utf8],
+        vec![DataType::Binary, DataType::Utf8, DataType::Utf8],
         DataType::Float64,
         Volatility::Immutable,
         fun,

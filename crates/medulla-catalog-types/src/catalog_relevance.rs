@@ -267,6 +267,126 @@ pub fn usage_of(index: &UsageIndex, names: &[String], node_key: &str) -> u64 {
         .fold(0u64, |sum, n| sum.saturating_add(*n))
 }
 
+/// Whether `text` (a SPARQL query or a SQL statement) calls one of the catalog ranking
+/// functions, so a served read knows to load the usage counts.
+pub fn ranks_assets(text: &str) -> bool {
+    let lower = text.to_ascii_lowercase();
+    lower.contains("catalog_relevance")
+        || lower.contains("relevance(")
+        || lower.contains("rankcomponents(")
+        || text.contains(CAT_RELEVANCE_IRI)
+        || text.contains(CAT_RANK_COMPONENTS_IRI)
+}
+
+/// The SQL string literal (single-quoted, quotes doubled) that carries `index` into a
+/// statement, with the entries sorted so one usage state is one literal.
+pub fn usage_sql_literal(index: &UsageIndex) -> String {
+    let sorted: std::collections::BTreeMap<&String, &u64> = index.iter().collect();
+    let json = serde_json::to_string(&sorted).unwrap_or_else(|_| "{}".to_string());
+    format!("'{}'", json.replace('\'', "''"))
+}
+
+/// Parse the usage argument `catalog_relevance` receives; an empty or malformed value is an
+/// error, never an empty index.
+pub fn parse_usage_argument(raw: &str) -> Result<UsageIndex, String> {
+    serde_json::from_str::<UsageIndex>(raw)
+        .map_err(|error| format!("CATALOG_USAGE_INVALID: the usage argument is not an index: {error}"))
+}
+
+/// Refusal code: a statement passed its own usage to `catalog_relevance`. Usage comes only
+/// from the server's usage store, never from the caller.
+pub const CATALOG_USAGE_CLAIMED: &str = "CATALOG_USAGE_CLAIMED";
+
+/// Append the usage literal as the third argument of every `catalog_relevance(props, text)`
+/// call in `sql`. A call that already has a third argument is refused. A statement without
+/// the function is returned unchanged.
+pub fn inject_usage_argument(sql: &str, usage_literal: &str) -> Result<String, String> {
+    const NAME: &str = "catalog_relevance";
+    let bytes = sql.as_bytes();
+    let lower = sql.to_ascii_lowercase();
+    let mut out = String::with_capacity(sql.len() + usage_literal.len());
+    let mut copied = 0usize;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            quote @ (b'\'' | b'"') => {
+                i += 1;
+                while i < bytes.len() {
+                    if bytes[i] == quote {
+                        if bytes.get(i + 1) == Some(&quote) {
+                            i += 2;
+                            continue;
+                        }
+                        break;
+                    }
+                    i += 1;
+                }
+                i += 1;
+            }
+            _ if lower.as_bytes()[i..].starts_with(NAME.as_bytes())
+                && (i == 0 || !(bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_')) =>
+            {
+                let mut j = i + NAME.len();
+                while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                    j += 1;
+                }
+                if bytes.get(j) != Some(&b'(') {
+                    i += NAME.len();
+                    continue;
+                }
+                let (close, commas) = call_extent(bytes, j)?;
+                if commas != 1 {
+                    return Err(format!(
+                        "{CATALOG_USAGE_CLAIMED}: catalog_relevance takes the properties and the search text only"
+                    ));
+                }
+                out.push_str(&sql[copied..close]);
+                out.push_str(", ");
+                out.push_str(usage_literal);
+                copied = close;
+                i = close + 1;
+            }
+            _ => i += 1,
+        }
+    }
+    out.push_str(&sql[copied..]);
+    Ok(out)
+}
+
+/// The index of the `)` that closes the call opened at `open`, and the number of commas
+/// at its top level.
+fn call_extent(bytes: &[u8], open: usize) -> Result<(usize, usize), String> {
+    let (mut depth, mut commas, mut i) = (0usize, 0usize, open);
+    while i < bytes.len() {
+        match bytes[i] {
+            quote @ (b'\'' | b'"') => {
+                i += 1;
+                while i < bytes.len() {
+                    if bytes[i] == quote {
+                        if bytes.get(i + 1) == Some(&quote) {
+                            i += 2;
+                            continue;
+                        }
+                        break;
+                    }
+                    i += 1;
+                }
+            }
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok((i, commas));
+                }
+            }
+            b',' if depth == 1 => commas += 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    Err("INVALID_ARGUMENT: unterminated catalog_relevance call".to_string())
+}
+
 /// Check the search text against the knobs: not blank, not over `catalog_search.max_query_chars`.
 pub fn validate_query(text: &str) -> Result<&str, String> {
     let trimmed = text.trim();
@@ -441,6 +561,28 @@ mod tests {
         assert_eq!(usage_of(&index, &["Orders".into(), "orders".into()], "<urn:x:y>"), 10);
         assert_eq!(usage_of(&index, &[], "<urn:medulla:asset:tool:orders>"), 10);
         assert_eq!(usage_of(&index, &["customers".into()], "<urn:x:y>"), 0);
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.16
+    #[test]
+    fn usage_is_injected_as_the_third_argument_and_never_claimed() {
+        let literal = usage_sql_literal(&UsageIndex::from([("orders".to_string(), 7)]));
+        assert_eq!(literal, "'{\"orders\":7}'");
+        let sql = "SELECT id, CATALOG_RELEVANCE(props, 'a,(b') AS s FROM nodes WHERE catalog_relevance (props, lower('x')) > 0";
+        let rewritten = inject_usage_argument(sql, &literal).unwrap();
+        assert_eq!(
+            rewritten,
+            format!("SELECT id, CATALOG_RELEVANCE(props, 'a,(b', {literal}) AS s FROM nodes WHERE catalog_relevance (props, lower('x'), {literal}) > 0")
+        );
+        assert_eq!(inject_usage_argument("SELECT 1", &literal).unwrap(), "SELECT 1");
+        assert!(inject_usage_argument("SELECT catalog_relevance(props, 'x', '{}')", &literal)
+            .unwrap_err()
+            .starts_with(CATALOG_USAGE_CLAIMED));
+        assert_eq!(
+            parse_usage_argument("{\"orders\":7}").unwrap().get("orders"),
+            Some(&7)
+        );
+        assert!(parse_usage_argument("").is_err());
     }
 
     // spec: MEDULLA-TYPED-PACKS-R108.16
