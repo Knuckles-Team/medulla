@@ -998,7 +998,7 @@ pub fn classify_spec_files(repo: &str, files: &[(String, Vec<u8>)]) -> Classifie
         let Ok(text) = std::str::from_utf8(bytes) else {
             continue;
         };
-        let blob_digest = format!("sha256:{}", digest_of(text));
+        let blob_digest = digest_of(text);
         let id = spec_kind_node_id(repo, path);
         match classify_spec_file_by_rule(path, &parse_front_matter(text)) {
             Ok((kind, rule)) => {
@@ -1885,12 +1885,14 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             assert_eq!(properties["type"], class, "{path}");
             assert_eq!(properties["classifiedByRule"], rule, "{path}");
             assert_eq!(properties["repo"], "demo");
-            assert!(properties["blob_digest"].as_str().unwrap().starts_with("sha256:"));
+            let recorded = properties["blob_digest"].as_str().unwrap();
+            assert!(!recorded.starts_with("sha256:"), "{path}: bare hex, one digest format");
+            assert_eq!(recorded.len(), 64, "{path}");
         }
         // The first occurrence of a repeated path wins.
         assert_eq!(
             by_path("specs/x/spec.md")["properties"]["blob_digest"],
-            format!("sha256:{}", digest_of("# Spec\n")).as_str()
+            digest_of("# Spec\n").as_str()
         );
 
         // Through the projection: the unknown file's outcome gains the diagnostic.
