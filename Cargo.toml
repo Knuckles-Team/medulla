@@ -2382,6 +2382,13 @@ name = "media_facts"
 path = "benches/media_facts.rs"
 harness = false
 
+# Source sync core at 10,000 records (MEDULLA-SRC-AUTH-R012.10): nightly budget.
+# Never gates a PR.
+[[bench]]
+name = "source_sync"
+path = "benches/source_sync.rs"
+harness = false
+
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.
 # without a concurrent (deliberately aggressive) anchor-sweep loop contending

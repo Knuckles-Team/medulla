@@ -127,6 +127,11 @@
     "decide/harness_config_replay": {
       "p99_ms": 500.0,
       "peak_mib": 128.0
+    },
+    "source_sync": {
+      "p50_ms": 20.0,
+      "p99_ms": 80.0,
+      "peak_mib": 64.0
     }
   },
   "groups": {}
