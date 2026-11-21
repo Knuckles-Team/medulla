@@ -448,8 +448,8 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R707.1` | `crates/medulla-rdf/tests/sparql_update.rs::update_forms_parse` |
 | `MEDULLA-FEDERATED-QUERY-R707.2` | `crates/medulla-rdf/tests/sparql_update.rs::multi_operation_update_is_atomic` |
 | `MEDULLA-FEDERATED-QUERY-R707.3` | `tests/test_sparql_update_served.py::test_insert_then_select` |
-| `MEDULLA-FEDERATED-QUERY-R707.4` | `tests/test_sparql_update_served.py::test_update_refusals` |
-| `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/test_sparql_update_served.py::test_update_receipt_reads_back` |
+| `MEDULLA-FEDERATED-QUERY-R707.4` | `tests/federated/test_sparql_update_served.py::test_update_refusals` |
+| `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/federated/test_sparql_update_served.py::test_update_receipt_reads_back` |
 | `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-rdf --bench sparql_update` |
 | `MEDULLA-FEDERATED-QUERY-R708` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R708.1` | `crates/medulla-source-types/src/stored_query.rs::tests::stored_query_round_trips` |

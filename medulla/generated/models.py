@@ -25284,10 +25284,12 @@ class SparqlSpatialUse(BaseModel):
 class SparqlUpdateReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    batch_id: str | None = ""
     created_graphs: Annotated[int, Field(ge=0)]
     deleted: Annotated[int, Field(ge=0)]
     inserted: Annotated[int, Field(ge=0)]
     operations: Annotated[int, Field(ge=0)]
+    request_sha256: str | None = ""
     updated_graphs: Annotated[int, Field(ge=0)]
 
 

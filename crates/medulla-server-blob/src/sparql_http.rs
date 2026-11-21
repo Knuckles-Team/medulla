@@ -500,6 +500,36 @@ impl ServiceClient {
     }
 }
 
+/// Refuse an update whose `LOAD` names a private or otherwise forbidden address, through the
+/// shared outbound guard `federation_ssrf` and with that guard's own refusal
+/// (MEDULLA-FEDERATED-QUERY-R707.4). An update with no `LOAD` passes. The text that does not
+/// parse passes too: the planner refuses it with its own typed error.
+#[cfg(feature = "sparql-service")]
+pub fn check_load_sources(query: &str) -> Result<(), String> {
+    use medulla_federation::federation_ssrf::{
+        validate_outbound_http_target, OutboundAllowPolicy, HTTP_JSON_FEDERATION_ALLOW_ENV,
+    };
+    let Ok(update) = medulla_rdf::update::parse_update(query) else {
+        return Ok(());
+    };
+    let allow: Vec<String> = std::env::var(HTTP_JSON_FEDERATION_ALLOW_ENV)
+        .unwrap_or_default()
+        .split(',')
+        .take(1024)
+        .map(str::to_string)
+        .collect();
+    for source in medulla_rdf::update::load_sources(&update) {
+        validate_outbound_http_target(&source, &allow, OutboundAllowPolicy::PublicHttps)?;
+    }
+    Ok(())
+}
+
+/// Without the outbound guard no `LOAD` can run: the engine write path refuses it.
+#[cfg(not(feature = "sparql-service"))]
+pub fn check_load_sources(_query: &str) -> Result<(), String> {
+    Ok(())
+}
+
 #[cfg(feature = "sparql-service")]
 impl medulla_rdf::sparql::RemoteSparql for ServiceClient {
     fn select(&self, endpoint: &str, query: &str) -> Result<SparqlResult, String> {

@@ -130,6 +130,11 @@ struct SparqlRecoveryPlan {
     /// before this field existed decodes with zero counts.
     #[serde(default)]
     counts: medulla_rdf::update::UpdateReport,
+    /// SHA-256 of the request text the plan answers (MEDULLA-FEDERATED-QUERY-R707.5), sealed
+    /// with the plan so a resumed saga reports the same digest. Empty on a plan sealed before
+    /// the field existed and on a compensation marker.
+    #[serde(default)]
+    request_sha256: String,
 }
 
 #[cfg(all(feature = "redb", feature = "security", feature = "sparql-http"))]
@@ -295,7 +300,10 @@ async fn check_sparql_update_graph_access(
             entry.owner.as_deref(),
             AccessLevel::Write,
         ) {
-            return Err(Response::err(coord.req_id, error));
+            return Err(Response::err(
+                coord.req_id,
+                format!("SPARQL_UPDATE_FORBIDDEN: {error}"),
+            ));
         }
     }
     Ok(graphs
@@ -349,6 +357,10 @@ async fn build_sparql_update_plan(
     Response,
 > {
     let graphs = resolve_sparql_update_graphs(coord, query, default_graph).await?;
+    // A `LOAD` from a private address refuses through the shared outbound guard, with its own
+    // code, before anything is planned (MEDULLA-FEDERATED-QUERY-R707.4).
+    medulla_server_blob::sparql_http::check_load_sources(query)
+        .map_err(|error| Response::err(coord.req_id, error))?;
     let missing = check_sparql_update_graph_access(coord, &graphs).await?;
     if !missing.is_empty() && !coord.verified_context.allows_method("graph:admin", true) {
         return Err(Response::err(
@@ -371,6 +383,7 @@ async fn build_sparql_update_plan(
         schema_version: 1,
         graphs: planned,
         counts,
+        request_sha256: sparql_request_sha256(query),
     };
     let saga = begin_sealed_sparql_saga(coord, &plan, coord.parent_id, SPARQL_RECOVERY_EVENT)?;
     Ok((saga, plan))
@@ -490,6 +503,13 @@ fn sparql_rollback_methods(
         .collect::<Vec<_>>()
 }
 
+/// SHA-256 of the update request text, 64 lowercase hex characters (MEDULLA-FEDERATED-QUERY-R707.5).
+#[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
+fn sparql_request_sha256(query: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(query.as_bytes()))
+}
+
 /// Close the parent saga on the roll-forward path and clear its retained
 /// decision.
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
@@ -525,6 +545,8 @@ fn finish_sparql_parent_saga(
             .iter()
             .filter(|graph| !graph.existed_before)
             .count() as u64,
+        request_sha256: plan.request_sha256.clone(),
+        batch_id: saga.batch.batch_id.clone(),
     };
     let result =
         ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
@@ -580,6 +602,7 @@ async fn try_sparql_forward_commit(
         schema_version: 1,
         graphs: Vec::new(),
         counts: medulla_rdf::update::UpdateReport::default(),
+        request_sha256: String::new(),
     };
     match begin_sealed_sparql_saga(
         coord,
@@ -964,6 +987,7 @@ mod coordinator_restart_tests {
                 after_msgpack: vec![0x91, 0x02],
             }],
             counts: medulla_rdf::update::UpdateReport::default(),
+            request_sha256: String::new(),
         };
         let (digest, encrypted) =
             seal_private_coordinator_plan_with_cipher(&cipher, &plan).unwrap();
@@ -1016,6 +1040,7 @@ mod coordinator_restart_tests {
             schema_version: 1,
             graphs: Vec::new(),
             counts: medulla_rdf::update::UpdateReport::default(),
+            request_sha256: String::new(),
         };
         let (parent_digest, parent_encrypted) =
             seal_private_coordinator_plan_with_cipher(&cipher, &parent_plan).unwrap();

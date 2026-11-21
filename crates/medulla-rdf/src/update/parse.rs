@@ -35,6 +35,19 @@ pub fn insert_data_triples(update_str: &str) -> Result<Vec<Triple>, String> {
     Ok(out)
 }
 
+/// The source IRI of every `LOAD` operation of `update`, in statement order
+/// (MEDULLA-FEDERATED-QUERY-R707.4).
+pub fn load_sources(update: &Update) -> Vec<String> {
+    update
+        .operations
+        .iter()
+        .filter_map(|operation| match operation {
+            GraphUpdateOperation::Load { source, .. } => Some(source.as_str().to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The constant named-graph IRIs an UPDATE references (so a caller — e.g. the `/sparql`
 /// endpoint — can pre-create them in its registry before executing). Covers ground data,
 /// CREATE/CLEAR/DROP targets, the LOAD destination, and constant insert/delete pattern

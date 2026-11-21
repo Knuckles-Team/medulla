@@ -17,7 +17,7 @@ use medulla_mutation_types::{
 /// `sparql_http_update_v1` event, which may create and rewrite several graphs). Both
 /// answer with this one body; a per-graph update reports `updated_graphs: 1` and
 /// `created_graphs: 0`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SparqlUpdateReport {
     /// Update operations applied (one per `;`-separated clause).
@@ -30,6 +30,15 @@ pub struct SparqlUpdateReport {
     pub updated_graphs: u64,
     /// Graphs this update created.
     pub created_graphs: u64,
+    /// SHA-256 of the update request text, 64 lowercase hex characters
+    /// (MEDULLA-FEDERATED-QUERY-R707.5). Empty only on a report sealed before the field existed.
+    #[serde(default)]
+    pub request_sha256: String,
+    /// The id of the committed `MutationBatch` this update ran as, the receipt a reader looks
+    /// up in the ledger (MEDULLA-FEDERATED-QUERY-R707.5). Empty for a per-graph update, which
+    /// commits through its graph's own batch.
+    #[serde(default)]
+    pub batch_id: String,
 }
 
 /// The per-kind operation counts of one applied `BatchUpdate`.

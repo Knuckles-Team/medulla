@@ -376,9 +376,10 @@ fn validate_sparql_recovery_outcome(
     let Some(body) = value.as_object() else {
         return Err("SPARQL recovery replay has an invalid typed JSON body".to_string());
     };
-    // All five report fields are required, so a successful decode plus exact
-    // object length also excludes unknown fields.
-    let success = body.len() == 5
+    // The five counting fields are required (a report sealed before the request digest and
+    // batch id existed carries only those), so a successful decode plus exact object length
+    // also excludes unknown fields.
+    let success = (body.len() == 5 || body.len() == 7)
         && serde_json::from_value::<
             medulla_protocol_types::result_contract::transactions::SparqlUpdateReport,
         >(value.clone())

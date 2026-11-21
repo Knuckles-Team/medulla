@@ -124,6 +124,13 @@ fn stamp_batch_operation(
     }
 }
 
+/// SHA-256 of a request text as 64 lowercase hex characters (MEDULLA-FEDERATED-QUERY-R707.5).
+#[cfg(all(feature = "sparql", feature = "shacl"))]
+fn hex_sha256(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(text.as_bytes()))
+}
+
 /// `ApplyMutation` (SPARQL UPDATE): pure extract-method from `try_handle_gateway`'s
 /// closure, byte-identical behaviour, no signature change.
 fn apply_apply_mutation(
@@ -173,6 +180,8 @@ fn apply_apply_mutation(
                     deleted: report.deleted as u64,
                     updated_graphs: 1,
                     created_graphs: 0,
+                    request_sha256: hex_sha256(&query),
+                    batch_id: String::new(),
                 },
             )
         }

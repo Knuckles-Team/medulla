@@ -32,7 +32,7 @@ mod where_ops;
 
 pub use engine::{execute, execute_str, UpdateError};
 pub use medulla_query_types::rdf_report::UpdateReport;
-pub use parse::{insert_data_triples, parse_update, referenced_named_graphs};
+pub use parse::{insert_data_triples, load_sources, parse_update, referenced_named_graphs};
 pub use store::{GraphStore, MapStore};
 pub use triples::{insert_triples, remove_triples};
 

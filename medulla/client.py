@@ -18432,7 +18432,9 @@ class MedullaClient:
 
     async def apply_mutation(self, event_type: str, query: str) -> dict[str, Any]:
         """The SPARQL UPDATE report: ``operations``, ``inserted``, ``deleted``,
-        ``updated_graphs`` and ``created_graphs``. The per-graph gateway and the
+        ``updated_graphs`` and ``created_graphs``, then ``request_sha256`` (the SHA-256 of
+        the update text) and ``batch_id`` (the committed batch; empty for the per-graph
+        gateway). The per-graph gateway and the
         coordinated ``sparql_http_update_v1`` saga answer this same shape."""
         return (
             await _gen.graph.send_apply_mutation(

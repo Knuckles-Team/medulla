@@ -206,6 +206,8 @@ closed_error_codes! {
         ProjectionAccessDenied => "PROJECTION_ACCESS_DENIED",
         /// A write statement on a projected table; projections are read only.
         ProjectionReadOnly => "PROJECTION_READ_ONLY",
+        /// A SPARQL update by a caller without write access to a graph it names (MEDULLA-FEDERATED-QUERY-R707.4).
+        SparqlUpdateForbidden => "SPARQL_UPDATE_FORBIDDEN",
         // MEDULLA-DURABLE-KERNEL-R038.3: a namespace declaration refusal.
         DurabilityClassMismatch => "DURABILITY_CLASS_MISMATCH",
         DurabilityClassUnknown => "DURABILITY_CLASS_UNKNOWN",
