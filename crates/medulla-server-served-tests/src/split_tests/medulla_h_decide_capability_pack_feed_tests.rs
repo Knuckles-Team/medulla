@@ -13,7 +13,7 @@ use std::sync::Arc;
 use medulla_catalog_types::connector_pack::{
     ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp,
     McpCatalogSnapshotBinding, PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind,
-    PackImportReceipt, PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
+    PackHeadRef, PackImportReceipt, PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_h_decide::decide::capability_feed::{shared_capability_index, sweep, Reembedder};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
@@ -201,11 +201,21 @@ impl Served {
 
     /// Upload and import `pack` as the first head of the connector.
     pub(super) async fn import(&self, pack: (ConnectorPackIndex, Vec<u8>)) -> PackImportReceipt {
+        self.import_over(pack, None).await
+    }
+
+    /// Upload and import `pack` over `expected_head`, the head the caller last saw.
+    pub(super) async fn import_over(
+        &self,
+        pack: (ConnectorPackIndex, Vec<u8>),
+        expected_head: Option<PackHeadRef>,
+    ) -> PackImportReceipt {
         let (mut index, archive) = pack;
         index.archive.blob_digest = self.upload(&archive).await;
         let key = format!(
-            "connector-pack:{CONNECTOR}:import:{digest}:0",
-            digest = index.pack_digest
+            "connector-pack:{CONNECTOR}:import:{digest}:{head}",
+            digest = index.pack_digest,
+            head = expected_head.as_ref().map_or(0, |head| head.binding_revision)
         );
         let response = self
             .pack(
@@ -214,8 +224,8 @@ impl Served {
                     request: Box::new(ConnectorPackImportRequest {
                         context: context(&key),
                         index,
-                        expected_head: None,
-                        allow_mass_withdrawal: false,
+                        expected_head,
+                        allow_mass_withdrawal: true,
                     }),
                 },
             )
@@ -480,4 +490,126 @@ async fn projection_commit_upserts_pack_records() {
         .map(|shard| shard.snapshot().live_count())
         .unwrap_or(0);
     assert_eq!(live, 0, "another tenant sees none of the pack's records");
+}
+
+/// The ranked tool ids, the index revision and the catalog digest a served
+/// `ToolRelevance` answer carries.
+async fn tool_ranking(served: &Served, task: &str) -> (Vec<String>, u64, String) {
+    use medulla_decision_types::decision::statistical::{
+        DecideRequest, DecisionBatch, QuestionKind, QuestionSafety, StatisticalOutcome, TypedParam,
+        TypedValue,
+    };
+    use medulla_decision_types::decision::tool_relevance::ToolAssignmentRequest;
+    use medulla_decision_types::decision::DecisionPolicyRef;
+    use medulla_h_decide::decide::stat_test_support::{publish_route_schema_in, request, Harness};
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    use medulla_protocol_types::protocol::Request;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let h = Harness {
+        _dir: tempfile::tempdir().unwrap(),
+        state: served.state.clone(),
+        store,
+        nonce: std::cell::Cell::new(1),
+    };
+    let schema = publish_route_schema_in(&h, TENANT);
+    let mut asked: DecideRequest = request(
+        &schema,
+        None,
+        DecisionPolicyRef::Default,
+        QuestionSafety::Ordinary,
+    );
+    asked.question.kind = QuestionKind::ToolRelevance;
+    asked.params = BoundedVec::new(vec![TypedParam {
+        name: "tool_assignment".to_string(),
+        value: TypedValue::ToolAssignment(Box::new(ToolAssignmentRequest {
+            schema_version: 1,
+            task_text: task.to_string(),
+            task_embedding: None,
+            agent_role_iri: String::new(),
+            top_k: 10,
+            context_budget_tokens: 1000,
+            required_capabilities: BoundedVec::default(),
+        })),
+    }])
+    .unwrap();
+    let method = Method::Decide {
+        request: Box::new(asked),
+    };
+    let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();
+    let response = Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &served.state,
+            Request {
+                id: next_id(),
+                graph: COMMONS.into(),
+                auth_token: String::new(),
+                agent_id: Some(ADMIN.into()),
+                method,
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes(
+                ADMIN,
+                TENANT,
+                &["kg:read", "agent:decision-write"],
+            ),
+        ),
+    )
+    .await;
+    let batch: DecisionBatch =
+        medulla_h_decide::decide::stat_test_support::decode(response).expect("a served decision");
+    let record = batch.records.as_slice()[0].clone();
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        panic!("a tool ranking was expected, got {:?}", record.outcome);
+    };
+    let ids: Vec<String> = scores.iter().map(|s| s.option_id.clone()).collect();
+    let revision = record
+        .premises
+        .iter()
+        .find_map(|premise| premise.fact.split("index_revision=").nth(1))
+        .and_then(|text| text.parse::<u64>().ok())
+        .expect("a ranked tool carries its index revision");
+    let digest = record
+        .premises
+        .iter()
+        .find_map(|premise| premise.fact.strip_prefix("catalog_digest="))
+        .expect("the answer carries the catalog digest")
+        .to_string();
+    (ids, revision, digest)
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.110.7
+#[tokio::test]
+async fn withdrawn_pack_tool_leaves_the_tool_index() {
+    let _env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let served = Served::new();
+    served.declare_generation().await;
+    served.bind().await;
+    let first = served
+        .import(build_pack_with(&[
+            ("a", Some(100)),
+            ("b", Some(100)),
+            ("c", Some(100)),
+        ]))
+        .await;
+    let task = "alpha lookup dispatch shipment";
+    let (before, revision, digest) = tool_ranking(&served, task).await;
+    assert!(before.contains(&format!("mcp:{CONNECTOR}/tool/a")), "{before:?}");
+    assert!(before.contains(&format!("mcp:{CONNECTOR}/tool/b")), "{before:?}");
+
+    // Re-import the pack without tool `a`: the member is withdrawn.
+    served
+        .import_over(
+            build_pack_with(&[("b", Some(100)), ("c", Some(100))]),
+            Some(PackHeadRef {
+                binding_revision: first.binding_revision,
+                pack_digest: first.pack_digest.clone(),
+            }),
+        )
+        .await;
+    let (after, next_revision, next_digest) = tool_ranking(&served, task).await;
+    assert!(!after.contains(&format!("mcp:{CONNECTOR}/tool/a")), "{after:?}");
+    assert!(after.contains(&format!("mcp:{CONNECTOR}/tool/b")), "{after:?}");
+    assert_ne!(digest, next_digest, "the catalog digest left the withdrawn tool");
+    assert!(next_revision > revision, "{next_revision} > {revision}");
 }
