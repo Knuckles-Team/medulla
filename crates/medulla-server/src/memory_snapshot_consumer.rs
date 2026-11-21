@@ -179,7 +179,7 @@ mod worker {
         let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&context)?;
         // The holder is registered under the document owner's scope, the row the
         // router registered, never under the service actor's own scope.
-        let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant());
+        let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant(), doc.as_str());
         let mut held: Vec<(u64, String)> = Vec::new();
         // A document keeps its newest `max_revisions_per_doc` revisions held;
         // older ones release, oldest first (MEDULLA-DURABLE-KERNEL-R085.7).

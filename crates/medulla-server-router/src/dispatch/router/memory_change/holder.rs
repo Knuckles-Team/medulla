@@ -92,7 +92,7 @@ pub(super) async fn hold_staged(
             request.doc_id.as_str(),
             staged.revision
         ))?,
-        &medulla_server_api::carrier::memory_snapshot_owner_scope(verified.tenant()),
+        &medulla_server_api::carrier::memory_snapshot_owner_scope(verified.tenant(), request.doc_id.as_str()),
     )?;
     let method = medulla_protocol_types::protocol::Method::BlobRef {
         digest: staged.digest.clone(),
