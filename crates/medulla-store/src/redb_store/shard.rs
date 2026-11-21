@@ -68,6 +68,9 @@ pub mod batch;
 pub use batch::bind_caller_batch;
 use batch::drain_batch;
 
+use super::commit_publish::{
+    BatchSegmentEntry, CommitPublication, CommitPublisher, PublishedCommit,
+};
 use super::CommitPhaseTimer;
 
 /// Physical store identity of every graph shard file.
@@ -213,6 +216,9 @@ pub struct Shard {
     /// already serialized by the shard writer.
     #[cfg(feature = "server")]
     graft_protocols: RwLock<BTreeMap<String, Arc<Mutex<()>>>>,
+    /// The publisher every commit passes before it is final
+    /// (MEDULLA-OBJECT-STORAGE-BACKEND-R003). Set once, at startup.
+    commit_publisher: std::sync::OnceLock<Arc<dyn CommitPublisher>>,
 }
 
 impl Shard {
@@ -238,7 +244,21 @@ impl Shard {
             graphs: RwLock::new(BTreeMap::new()),
             #[cfg(feature = "server")]
             graft_protocols: RwLock::new(BTreeMap::new()),
+            commit_publisher: std::sync::OnceLock::new(),
         })
+    }
+
+    /// Whether a publisher is attached (a commit then builds its publication).
+    pub fn publishes_commits(&self) -> bool {
+        self.commit_publisher.get().is_some()
+    }
+
+    /// Attach the publisher every commit of this shard passes before it is final.
+    /// A second attach refuses.
+    pub fn attach_commit_publisher(&self, publisher: Arc<dyn CommitPublisher>) -> Result<(), String> {
+        self.commit_publisher
+            .set(publisher)
+            .map_err(|_| "a commit publisher is already attached to this shard".to_string())
     }
 
     /// The physical shard file's current on-disk size, or 0 if it cannot be
@@ -869,6 +889,7 @@ impl Shard {
         batches: &[MutationBatch],
         result_msgpack: Option<Vec<u8>>,
         committed_at_ms: u64,
+        publication: Option<CommitPublication<'_>>,
     ) -> Result<CommittedBatch, String> {
         const MEMBER: usize = 1;
         if batches.len() != 2 {
@@ -890,13 +911,65 @@ impl Shard {
         self.finish_member(&group, batches, 0, None, committed_at_ms)?;
         let record =
             self.finish_member(&group, batches, MEMBER, result_msgpack, committed_at_ms)?;
-        let refs: Vec<&MutationBatch> = batches.iter().collect();
-        self.mutations.commit_group(group, &refs)?;
         let record =
             record.ok_or_else(|| "admitted caller batch produced no receipt".to_string())?;
+        // The ONE publication chokepoint: the receipt is final, the transaction
+        // is not committed. A refused publication (a lost fence) aborts the group,
+        // so the local write rolls back and the caller is never acked.
+        if let (Some(publisher), Some(publication)) = (self.commit_publisher.get(), publication) {
+            if let Err(error) = self.publish_before_commit(publisher.as_ref(), publication, &record)
+            {
+                self.mutations.abort_group(group)?;
+                return Err(error);
+            }
+        }
+        let refs: Vec<&MutationBatch> = batches.iter().collect();
+        self.mutations.commit_group(group, &refs)?;
         Ok(CommittedBatch {
             record,
             replayed: false,
+        })
+    }
+
+    /// Hand one fresh commit to the publisher. The entry is the caller's batch
+    /// (the replay re-commits it, so it must not be the shard-bound copy) with
+    /// the receipt's committed version.
+    fn publish_before_commit(
+        &self,
+        publisher: &dyn CommitPublisher,
+        publication: CommitPublication<'_>,
+        receipt: &MutationBatchRecord,
+    ) -> Result<(), String> {
+        let graph = publication.graph_fname;
+        let (graph_name, graph_type) =
+            crate::redb_store::store_read::read_graph_identity(self, graph)?.ok_or_else(|| {
+                format!("graph {graph} has no durable identity row to publish under")
+            })?;
+        let prior_graph_version =
+            crate::redb_store::store_read::read_mutation_graph_version(self, graph)?;
+        let entry = BatchSegmentEntry {
+            record: MutationBatchRecord {
+                batch: publication.caller_batch.clone(),
+                identity: publication.caller_batch.identity.clone(),
+                status: receipt.status,
+                committed_version: receipt.committed_version,
+                result_msgpack: receipt.result_msgpack.clone(),
+                committed_at_ms: receipt.committed_at_ms,
+            },
+            material: publication.material,
+        };
+        publisher.publish(&PublishedCommit {
+            graph_fname: graph,
+            graph_name: &graph_name,
+            graph_type,
+            graph_version: receipt.committed_version.target().filter(|_| {
+                matches!(
+                    receipt.committed_version,
+                    medulla_mutation_types::mutation_scope::CommittedVersion::Graph { .. }
+                )
+            }),
+            prior_graph_version,
+            entry: &entry,
         })
     }
 

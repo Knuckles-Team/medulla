@@ -122,6 +122,7 @@ pub mod enrichment_budget;
 /// The graph shard as a kernel-owned store (RF-RULING-004 step 8).
 #[cfg(feature = "redb")]
 pub mod shard;
+pub mod commit_publish;
 
 pub mod audit;
 pub mod audit_machine;

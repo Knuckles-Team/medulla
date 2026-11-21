@@ -204,6 +204,23 @@ pub fn read_mutation_graph_version(shard: &Shard, graph_fname: &str) -> Result<u
     medulla_transaction::version(&shard.read(&handle)?)
 }
 
+/// The durable name and type of a graph, from its graph catalog row; `None` when
+/// the graph has no row.
+pub fn read_graph_identity(
+    shard: &Shard,
+    graph: &str,
+) -> Result<Option<(String, GraphType)>, String> {
+    let read = shard.control_read()?;
+    let meta = read
+        .open_owner_table(GRAPH_META)
+        .map_err(|error| error.to_string())?;
+    let Some(row) = meta.get(graph).map_err(|error| error.to_string())? else {
+        return Ok(None);
+    };
+    let record = decode_meta_record(graph, row.value())?;
+    Ok(Some((record.name, record.graph_type)))
+}
+
 /// Durably write/overwrite a graph_meta identity row in its OWN transaction.
 pub fn write_graph_meta(
     shard: &Shard,

@@ -13,6 +13,7 @@
 
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt};
+use medulla_protocol_types::protocol::GraphType;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -82,6 +83,14 @@ pub struct VersionManifest {
     pub graph: String,
     pub version: u64,
     pub parent_version: Option<u64>,
+    /// The graph's durable name, as its catalog row records it.
+    pub graph_name: String,
+    /// The graph's type. Written with the root, never inferred: a restore
+    /// registers the graph under exactly this type.
+    pub graph_type: GraphType,
+    /// The graph's authoritative version at this manifest's version. A local
+    /// store whose graph version is past the head's is ahead of the root.
+    pub graph_version: u64,
     /// The owner-table snapshot segment of the declared owner tables.
     pub snapshot: SegmentHeader,
     /// The replayed batch segments, in commit order.
@@ -122,6 +131,9 @@ pub struct SegmentRef {
 pub struct MaterializedVersion {
     pub version: u64,
     pub parent_version: Option<u64>,
+    pub graph_name: String,
+    pub graph_type: GraphType,
+    pub graph_version: u64,
     pub snapshot: SegmentRef,
     pub batches: Vec<SegmentRef>,
 }
@@ -321,6 +333,9 @@ impl ObjectFetcher {
         Ok(MaterializedVersion {
             version: manifest.version,
             parent_version: manifest.parent_version,
+            graph_name: manifest.graph_name,
+            graph_type: manifest.graph_type,
+            graph_version: manifest.graph_version,
             snapshot,
             batches,
         })

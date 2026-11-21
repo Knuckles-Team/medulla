@@ -87,7 +87,7 @@ Independent test: the bound test of `MEDULLA-OBJECT-STORAGE-BACKEND-R005`.
 
 - An `object_store` spec without a durability class refuses at open.
 - A manifest naming a missing segment refuses with `OBJECT_SEGMENT_MISSING`; earlier versions stay readable.
-- A local store ahead of `HEAD` is discarded and rebuilt; one behind `HEAD` replays the missing batches.
+- A local store ahead of `HEAD` refuses the open with `OBJECT_LOCAL_AHEAD` and is never purged; one behind `HEAD` replays the missing entries.
 - A destination that already holds a graph refuses the copy with `GRAPH_COPY_DESTINATION_NOT_EMPTY`.
 - A cost run with no pinned revision is claim-ineligible.
 

@@ -129,6 +129,12 @@ closed_error_codes! {
         ChangeBatchUnavailableUnderPlacement => "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT",
         ChunkConfigInvalid => "CHUNK_CONFIG_INVALID",
         CommitQueueFull => "COMMIT_QUEUE_FULL",
+        /// MEDULLA-OBJECT-STORAGE-BACKEND-R003: the local copy of a graph is ahead of the
+        /// object-store root's `HEAD`; the open refuses and nothing is purged.
+        ObjectLocalAhead => "OBJECT_LOCAL_AHEAD",
+        /// MEDULLA-OBJECT-STORAGE-BACKEND-R003: a commit lost the root's `HEAD` fence; the
+        /// commit fails before the ack and its local write rolls back.
+        ObjectPublishStale => "OBJECT_PUBLISH_STALE",
         ConversationConflict => "CONVERSATION_CONFLICT",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
         ClaimPaced => "CLAIM_PACED",

@@ -5603,3 +5603,144 @@ fn terminal_extension_rejects_preexisting_receipt_ids_atomically() {
     drop(db);
     let _ = std::fs::remove_file(path);
 }
+
+/// Records every commit the shard's chokepoint hands it, and refuses when armed
+/// (a lost publish fence).
+struct RecordingPublisher {
+    seen: std::sync::Mutex<Vec<(String, String, Option<u64>, u64)>>,
+    refuse: std::sync::atomic::AtomicBool,
+}
+
+impl medulla_store::redb_store::commit_publish::CommitPublisher for RecordingPublisher {
+    fn publish(
+        &self,
+        commit: &medulla_store::redb_store::commit_publish::PublishedCommit<'_>,
+    ) -> Result<(), String> {
+        use medulla_store::redb_store::commit_publish::CommitMaterial;
+        if self.refuse.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err("OBJECT_PUBLISH_STALE: the HEAD fence was lost".to_string());
+        }
+        let kind = match &commit.entry.material {
+            CommitMaterial::Compact => "compact",
+            CommitMaterial::Staged { .. } => "staged",
+            CommitMaterial::CrossModal { .. } => "cross_modal",
+        };
+        self.seen.lock().unwrap().push((
+            kind.to_string(),
+            commit.graph_name.to_string(),
+            commit.graph_version,
+            commit.prior_graph_version,
+        ));
+        Ok(())
+    }
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003
+#[test]
+fn every_commit_path_publishes_at_the_chokepoint_and_a_lost_fence_rolls_back() {
+    let path = temp_path("commit-publication");
+    let db = open(&path);
+    medulla_store::redb_store::store_read::write_graph_meta(
+        &db,
+        "graph-a",
+        "graph-a",
+        medulla_protocol_types::protocol::GraphType::Global,
+    )
+    .unwrap();
+    let publisher = std::sync::Arc::new(RecordingPublisher {
+        seen: std::sync::Mutex::new(Vec::new()),
+        refuse: std::sync::atomic::AtomicBool::new(false),
+    });
+    db.attach_commit_publisher(publisher.clone()).unwrap();
+
+    // Compact.
+    let compact = batch("batch-pub-compact", "idem-pub-compact");
+    commit_with_result(&db, &compact, &[0x81, 0xa2, b'o', b'k']).unwrap();
+
+    // Cross-modal.
+    let cross = batch("batch-pub-cross", "idem-pub-cross");
+    commit_crossmodal_at(&db, &cross, &[], &[], None).unwrap();
+
+    // Staged: the commit whose rows are out of line is published too.
+    let staged_rows = medulla_graph_core::graph::GraphCore::new();
+    staged_rows.add_node(
+        "published".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({"value": 1})).unwrap(),
+    );
+    let state = staged_rows.snapshot().to_msgpack().unwrap();
+    let staged_batch = |id: &str, idem: &str, source: u64| {
+        let mut mutation = batch(id, idem);
+        mutation.operations = vec![MutationOperation {
+            ordinal: 0,
+            surface: MutationSurface::Query,
+            domain: DurabilityDomain::GraphSnapshot,
+            method: Method::ApplyMutation {
+                event_type: "authoritative_state_operation".to_string(),
+                query: "sha256:opaque".to_string(),
+            },
+        }];
+        mutation.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                algorithm: "sha256".to_string(),
+                digest: hex::encode(Sha256::digest(&state)),
+                source_graph_version: source,
+                target_graph_version: source + 1,
+            },
+        );
+        mutation
+            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
+            .unwrap();
+        mutation
+    };
+    let commit_staged = |mutation: &MutationBatch| {
+        #[cfg(feature = "security")]
+        let mut audit = AuditTailCache::new();
+        commit_mutation_batch_state(
+            &db,
+            StateCommitInput {
+                graph_fname: "graph-a",
+                batch: mutation,
+                authoritative_state_msgpack: &state,
+                result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
+                committed_at_ms: 101,
+                audited: true,
+            },
+            DurableCrypto::none(),
+            #[cfg(feature = "security")]
+            &mut audit,
+        )
+    };
+    let version_before = read_mutation_graph_version(&db, "graph-a").unwrap();
+    let staged = staged_batch("batch-pub-staged", "idem-pub-staged", version_before);
+    commit_staged(&staged).unwrap();
+
+    {
+        let seen = publisher.seen.lock().unwrap();
+        let kinds: Vec<&str> = seen.iter().map(|entry| entry.0.as_str()).collect();
+        assert_eq!(kinds, ["compact", "cross_modal", "staged"]);
+        assert!(seen.iter().all(|entry| entry.1 == "graph-a"));
+        let staged_seen = &seen[2];
+        assert_eq!(staged_seen.2, Some(version_before + 1));
+        assert_eq!(staged_seen.3, version_before);
+    }
+
+    // A replay is an answer, not a commit: it publishes nothing.
+    assert!(commit_staged(&staged).unwrap().replayed);
+    assert_eq!(publisher.seen.lock().unwrap().len(), 3);
+
+    // A lost fence fails the commit and rolls the local write back.
+    publisher
+        .refuse
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let version_now = read_mutation_graph_version(&db, "graph-a").unwrap();
+    let refused = staged_batch("batch-pub-refused", "idem-pub-refused", version_now);
+    let error = commit_staged(&refused).unwrap_err();
+    assert!(error.starts_with("OBJECT_PUBLISH_STALE"), "{error}");
+    assert_eq!(
+        read_mutation_graph_version(&db, "graph-a").unwrap(),
+        version_now
+    );
+    drop(db);
+    assert_absent_after_reopen(&path, "batch-pub-refused");
+    let _ = std::fs::remove_file(path);
+}

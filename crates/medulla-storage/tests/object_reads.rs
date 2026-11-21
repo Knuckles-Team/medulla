@@ -34,11 +34,14 @@ impl VersionWriteSet {
             sha256: hex_digest(bytes),
         };
         let mut manifest = VersionManifest {
-            schema_version: 1,
+            schema_version: 3,
             tenant: "tenant-a".to_string(),
             graph: "g1".to_string(),
             version: self.version,
             parent_version: self.parent_version,
+            graph_name: "g1".to_string(),
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
+            graph_version: self.version,
             snapshot: seg(&self.snapshot_bytes),
             batches: self.batches.iter().map(|b| seg(b)).collect(),
             digest: String::new(),

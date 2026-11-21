@@ -17,16 +17,17 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use medulla_protocol_types::mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationBatchStatus,
-};
-use medulla_storage::object::commit::{CommitRefusal, ObjectPublisher};
+use medulla_storage::object::commit::{CommitRefusal, GraphBootstrap, ObjectPublisher};
 use medulla_storage::object::fetch::{ObjectFetcher, ObjectHead, ObjectReadRefusal};
 use medulla_storage::{BackendSpecRefusal, DurabilityClass, StorageBackendSpec};
 use object_store::ObjectStore;
 
 mod client;
 pub use client::resolve_object_store_client;
+#[cfg(feature = "redb")]
+mod shard_publisher;
+#[cfg(feature = "redb")]
+pub(crate) use shard_publisher::attach_shard_publishers;
 
 /// The tenant the served engine files its graph versions under in the root:
 /// `<root>/engine/<graph>/`.
@@ -103,7 +104,7 @@ pub fn attach_from_env(
     let publishing = open_from_env()?.ok_or_else(|| {
         format!("OBJECT_DURABILITY_UNDECLARED: {STORAGE_BACKEND_ENV} changed during startup")
     })?;
-    redb.attach_object_store(Arc::new(publishing));
+    redb.attach_object_store(Arc::new(publishing))?;
     Ok(Some(restored))
 }
 
@@ -149,10 +150,9 @@ impl ObjectStoreOpenRefusal {
 }
 
 /// The object-store arm of the persistence layer. The local redb store is a
-/// cache the root overrides: at open, a local store ahead of `HEAD` is
-/// discarded and rebuilt from the root; a local store behind `HEAD` replays
-/// the missing batches (the fixing of the cache is the open path of R002 and
-/// R003's rebuild-from-root arm).
+/// cache the root overrides: at open, a local store behind `HEAD` replays the
+/// missing batches, and a local store ahead of `HEAD` refuses the open with
+/// `OBJECT_LOCAL_AHEAD` (nothing is purged silently).
 #[derive(Debug, Clone)]
 pub struct ObjectStoreBackend {
     publisher: ObjectPublisher,
@@ -194,42 +194,53 @@ impl ObjectStoreBackend {
         self.durability
     }
 
-    /// Steps 2–4 of the commit-before-ack path over an already-durable local
-    /// commit. The served caller (`PersistenceBackend::commit_mutation_batch`)
-    /// runs step 1 (the local redb commit) first and calls this with the
-    /// encoded `BatchSegment` of that commit; the returned `HEAD` carries the
-    /// version the caller may ack only now (`ObjectStoreConditionalPut`
-    /// means the store confirmed the conditional `HEAD` put). A
-    /// [`CommitRefusal::PublishStale`] refusal must discard the local commit
-    /// and re-fetch `HEAD` — the unacked write stays absent from the root.
+    /// Steps 2–4 of the commit-before-ack path over a commit that is final in
+    /// the open local transaction. The commit chokepoint
+    /// (`Shard::commit_batch`) calls this with the encoded `BatchSegment` of
+    /// that commit; the returned `HEAD` carries the version the caller may ack
+    /// only now (`ObjectStoreConditionalPut` means the store confirmed the
+    /// conditional `HEAD` put). A [`CommitRefusal::PublishStale`] refusal fails
+    /// the commit and the local transaction rolls back: the unacked write
+    /// stays absent from both stores. `graph_version` is the graph version the
+    /// commit leaves (`None` when it moves none). A graph with no `HEAD` is
+    /// bootstrapped first from `bootstrap`, which is only called then.
     pub async fn commit_mutation_batch(
         &self,
         tenant: &str,
         graph: &str,
         batch_segment: &[u8],
+        graph_version: Option<u64>,
+        bootstrap: &dyn Fn() -> Result<GraphBootstrap, CommitRefusal>,
     ) -> Result<ObjectHead, CommitRefusal> {
-        match self.publisher.publish(tenant, graph, batch_segment).await {
+        match self
+            .publisher
+            .publish(tenant, graph, batch_segment, graph_version)
+            .await
+        {
             Err(CommitRefusal::HeadMissing) => {
-                self.publisher.bootstrap(tenant, graph).await?;
-                self.publisher.publish(tenant, graph, batch_segment).await
+                self.publisher
+                    .bootstrap(tenant, graph, &bootstrap()?)
+                    .await?;
+                self.publisher
+                    .publish(tenant, graph, batch_segment, graph_version)
+                    .await
             }
             other => other,
         }
     }
 
-    /// Publish one batch that is already durable locally (steps 2-4) as the
-    /// one-record `BatchSegment` of this commit, and return only after the
-    /// `HEAD` fence. The record carries the caller's batch, which the restore
-    /// re-commits through the local store. A lost fence is
+    /// Publish one commit (steps 2-4) as the one-entry `BatchSegment` of this
+    /// commit, and return only after the `HEAD` fence. The entry carries the
+    /// caller's batch and its material, which the restore re-commits through
+    /// the local store by the path the original took. A lost fence is
     /// `OBJECT_PUBLISH_STALE`: this node stops publishing, and every later
     /// publish refuses with the same code until the node reopens from the root.
-    pub async fn publish_batch(
+    /// `owner_snapshot` is the owner-table dump of the local store, read only
+    /// when the graph has no root yet and already holds data.
+    pub async fn publish_commit(
         &self,
-        graph_fname: &str,
-        batch: &MutationBatch,
-        result_msgpack: Option<&[u8]>,
-        committed_at_ms: u64,
-        commit: &MutationBatchCommit,
+        commit: &medulla_store::redb_store::commit_publish::PublishedCommit<'_>,
+        owner_snapshot: &dyn Fn() -> Result<Vec<u8>, String>,
     ) -> Result<ObjectHead, String> {
         if self.stopped.load(Ordering::SeqCst) {
             return Err(format!(
@@ -237,24 +248,37 @@ impl ObjectStoreBackend {
                 CommitRefusal::PublishStale { version: 0 }.wire_code()
             ));
         }
-        let record = MutationBatchRecord {
-            batch: batch.clone(),
-            identity: batch.identity.clone(),
-            status: MutationBatchStatus::Committed,
-            committed_version: commit.record.committed_version.clone(),
-            result_msgpack: result_msgpack.map(ToOwned::to_owned),
-            committed_at_ms,
-        };
-        let segment = rmp_serde::to_vec_named(&vec![record])
+        let segment = rmp_serde::to_vec_named(&vec![commit.entry])
             .map_err(|error| format!("OBJECT_HEAD_MISSING: batch segment encode: {error}"))?;
-        self.commit_mutation_batch(OBJECT_ROOT_TENANT, graph_fname, &segment)
-            .await
-            .map_err(|refusal| {
-                if matches!(refusal, CommitRefusal::PublishStale { .. }) {
-                    self.stopped.store(true, Ordering::SeqCst);
-                }
-                format!("{}: {refusal:?}", refusal.wire_code())
+        let bootstrap = || {
+            // A graph that already holds data is bootstrapped with the owner-table
+            // snapshot as version zero; a graph with none starts empty.
+            let snapshot = if commit.prior_graph_version > 0 {
+                owner_snapshot().map_err(|detail| CommitRefusal::Remote { detail })?
+            } else {
+                Vec::new()
+            };
+            Ok(GraphBootstrap {
+                graph_name: commit.graph_name.to_string(),
+                graph_type: commit.graph_type,
+                graph_version: commit.prior_graph_version,
+                snapshot,
             })
+        };
+        self.commit_mutation_batch(
+            OBJECT_ROOT_TENANT,
+            commit.graph_fname,
+            &segment,
+            commit.graph_version,
+            &bootstrap,
+        )
+        .await
+        .map_err(|refusal| {
+            if matches!(refusal, CommitRefusal::PublishStale { .. }) {
+                self.stopped.store(true, Ordering::SeqCst);
+            }
+            format!("{}: {refusal:?}", refusal.wire_code())
+        })
     }
 
     /// Restore every graph the root holds into `redb` on a runtime of its own
@@ -280,18 +304,21 @@ impl ObjectStoreBackend {
 
     /// Restore the root into the local store: for each graph with a `HEAD`,
     /// read the head version (`ObjectFetcher::materialize` verifies every
-    /// segment digest) and re-commit its batch records, in order, through the
-    /// local store's mutation kernel. A batch the local store already holds
-    /// replays as a no-op. A read never writes to the root. Returns the number
-    /// of records applied.
+    /// segment digest), register the graph under the name and type its manifest
+    /// records, and re-commit its entries, in order, through the local store's
+    /// mutation kernel by the path each was first committed through. An entry
+    /// the local store already holds replays as a no-op. A read never writes to
+    /// the root. A graph whose local version ends past the head's refuses with
+    /// `OBJECT_LOCAL_AHEAD`; one that ends before it (a snapshot this store
+    /// cannot restore) refuses with `OBJECT_SEGMENT_MISSING`. Returns the number
+    /// of entries applied.
     #[cfg(feature = "redb")]
     pub async fn restore_into(
         &self,
         redb: &crate::redb_backend::RedbBackend,
     ) -> Result<usize, String> {
-        use medulla_mutation_types::mutation_scope::MutationScope;
-        use medulla_protocol_types::protocol::GraphType;
-        use medulla_server_api::api::persistence::PersistenceBackend;
+        use medulla_server_api::api::persistence::{CrossModalCommitArgs, PersistenceBackend};
+        use medulla_store::redb_store::commit_publish::{BatchSegmentEntry, CommitMaterial};
 
         let read = |refusal: ObjectReadRefusal| format!("{}: {refusal:?}", refusal.wire_code());
         let mut applied = 0;
@@ -312,39 +339,80 @@ impl ObjectStoreBackend {
                 .materialize(OBJECT_ROOT_TENANT, &graph_fname, head.version)
                 .await
                 .map_err(read)?;
-            let mut registered = false;
+            redb.register_graph(&graph_fname, &version.graph_name, version.graph_type)
+                .await?;
             for segment in &version.batches {
-                let records: Vec<MutationBatchRecord> = rmp_serde::from_slice(&segment.bytes)
+                let entries: Vec<BatchSegmentEntry> = rmp_serde::from_slice(&segment.bytes)
                     .map_err(|error| {
                         format!(
                             "OBJECT_SEGMENT_MISSING: batch segment {} does not decode: {error}",
                             segment.key
                         )
                     })?;
-                for record in records {
-                    if !registered {
-                        if let MutationScope::Graph { graph } = record.batch.identity.scope() {
-                            let graph_type = if graph.as_str()
-                                == medulla_identity_types::tenancy::COMMONS_GRAPH
-                            {
-                                GraphType::Commons
-                            } else {
-                                GraphType::Global
-                            };
-                            redb.register_graph(&graph_fname, graph.as_str(), graph_type)
-                                .await?;
-                            registered = true;
+                for entry in entries {
+                    let record = &entry.record;
+                    match &entry.material {
+                        CommitMaterial::Compact => {
+                            redb.commit_mutation_batch(
+                                &graph_fname,
+                                &record.batch,
+                                record.result_msgpack.as_deref(),
+                                record.committed_at_ms,
+                            )
+                            .await?;
+                        }
+                        CommitMaterial::Staged {
+                            authoritative_state_msgpack,
+                            audited,
+                        } => {
+                            redb.commit_mutation_batch_state(
+                                &graph_fname,
+                                &record.batch,
+                                authoritative_state_msgpack.clone(),
+                                record.result_msgpack.as_deref(),
+                                record.committed_at_ms,
+                                *audited,
+                            )
+                            .await?;
+                        }
+                        CommitMaterial::CrossModal {
+                            methods,
+                            vectors,
+                            blob_refs,
+                            measurements,
+                        } => {
+                            redb.commit_mutation_batch_crossmodal(CrossModalCommitArgs {
+                                graph_fname: &graph_fname,
+                                batch: &record.batch,
+                                methods,
+                                vectors,
+                                blob_refs,
+                                measurements,
+                                result_msgpack: record.result_msgpack.as_deref(),
+                                committed_at_ms: record.committed_at_ms,
+                            })
+                            .await?;
                         }
                     }
-                    redb.commit_mutation_batch(
-                        &graph_fname,
-                        &record.batch,
-                        record.result_msgpack.as_deref(),
-                        record.committed_at_ms,
-                    )
-                    .await?;
                     applied += 1;
                 }
+            }
+            let local = redb
+                .graph_identity(&graph_fname)?
+                .map(|(_, _, local_version)| local_version)
+                .unwrap_or(0);
+            if local > version.graph_version {
+                return Err(format!(
+                    "{}: graph {graph_fname} is at version {local} locally and at {} in the root; the local copy is ahead and is not purged",
+                    medulla_types::contract::ServerErrorCode::ObjectLocalAhead.as_str(),
+                    version.graph_version
+                ));
+            }
+            if local < version.graph_version {
+                return Err(format!(
+                    "OBJECT_SEGMENT_MISSING: graph {graph_fname} restored to version {local}, the root head is at {}; the root's snapshot cannot be restored into this store",
+                    version.graph_version
+                ));
             }
         }
         Ok(applied)

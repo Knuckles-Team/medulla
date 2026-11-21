@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use medulla_persistence::object_store_backend::ObjectStoreBackend;
+use medulla_storage::object::commit::{CommitRefusal, GraphBootstrap};
 use medulla_storage::object::counting::CountingObjectStore;
 use medulla_storage::object::fetch::{ObjectFetcher, SegmentHeader, VersionManifest};
 use medulla_storage::{DurabilityClass, StorageBackendSpec};
@@ -34,13 +35,25 @@ fn base() -> String {
     format!("{ROOT}/{TENANT}/{GRAPH}")
 }
 
+fn bootstrap() -> Result<GraphBootstrap, CommitRefusal> {
+    Ok(GraphBootstrap {
+        graph_name: GRAPH.into(),
+        graph_type: medulla_protocol_types::protocol::GraphType::Global,
+        graph_version: 0,
+        snapshot: Vec::new(),
+    })
+}
+
 async fn seed(store: &dyn ObjectStore) {
     let mut manifest = VersionManifest {
-        schema_version: 2,
+        schema_version: 3,
         tenant: TENANT.into(),
         graph: GRAPH.into(),
         version: 0,
         parent_version: None,
+        graph_name: GRAPH.into(),
+        graph_type: medulla_protocol_types::protocol::GraphType::Global,
+        graph_version: 0,
         snapshot: SegmentHeader {
             key: EMPTY_SHA256.into(),
             sha256: EMPTY_SHA256.into(),
@@ -106,12 +119,12 @@ async fn lifecycle(store: Arc<dyn ObjectStore>) -> usize {
     .unwrap();
     for n in 0..BATCHES {
         backend
-            .commit_mutation_batch(TENANT, GRAPH, &batch(n, NODES / BATCHES))
+            .commit_mutation_batch(TENANT, GRAPH, &batch(n, NODES / BATCHES), None, &bootstrap)
             .await
             .unwrap();
     }
     backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch(BATCHES, 2))
+        .commit_mutation_batch(TENANT, GRAPH, &batch(BATCHES, 2), None, &bootstrap)
         .await
         .unwrap();
     let fetcher = ObjectFetcher::new(store, ROOT);

@@ -19,7 +19,20 @@
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt, PutMode, PutOptions};
 
+use medulla_protocol_types::protocol::GraphType;
+
 use super::fetch::{ObjectHead, SegmentHeader, VersionManifest};
+
+/// What version zero of a graph is made of: the graph's identity, its
+/// authoritative version at bootstrap and the owner-table snapshot of the
+/// local store when the graph already holds data (empty otherwise).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GraphBootstrap {
+    pub graph_name: String,
+    pub graph_type: GraphType,
+    pub graph_version: u64,
+    pub snapshot: Vec<u8>,
+}
 
 fn hex_digest(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
@@ -30,7 +43,7 @@ fn hex_digest(bytes: &[u8]) -> String {
 }
 
 /// Manifest schema version written by the commit path.
-const SCHEMA_VERSION: u32 = 2;
+const SCHEMA_VERSION: u32 = 3;
 
 /// Sanitize a logical name into a single object-store path segment.
 fn path_segment(name: &str) -> String {
@@ -215,20 +228,44 @@ impl ObjectPublisher {
         Ok(manifest)
     }
 
-    /// Bootstrap version zero of a graph that has no `HEAD`: an empty snapshot,
-    /// the manifest of version zero (create-only) and `HEAD` (create-only). A
-    /// concurrent bootstrap that loses a create-only put is not an error: the
-    /// root already holds a version zero.
-    pub async fn bootstrap(&self, tenant: &str, graph: &str) -> Result<(), CommitRefusal> {
+    /// Bootstrap version zero of a graph that has no `HEAD`: its snapshot (empty
+    /// for a graph with no data, the owner-table dump otherwise), the manifest of
+    /// version zero (create-only) and `HEAD` (create-only). The manifest records
+    /// the graph's name, type and version. A concurrent bootstrap that loses a
+    /// create-only put is not an error: the root already holds a version zero.
+    pub async fn bootstrap(
+        &self,
+        tenant: &str,
+        graph: &str,
+        bootstrap: &GraphBootstrap,
+    ) -> Result<(), CommitRefusal> {
+        let snapshot_key = if bootstrap.snapshot.is_empty() {
+            super::fetch::EMPTY_SEGMENT_SHA256.to_string()
+        } else {
+            let key = hex_digest(&bootstrap.snapshot);
+            self.store
+                .put(
+                    &self.segment_path(tenant, graph, &key),
+                    bootstrap.snapshot.clone().into(),
+                )
+                .await
+                .map_err(|e| CommitRefusal::Remote {
+                    detail: e.to_string(),
+                })?;
+            key
+        };
         let mut manifest = VersionManifest {
             schema_version: self.schema_version,
             tenant: tenant.to_string(),
             graph: graph.to_string(),
             version: 0,
             parent_version: None,
+            graph_name: bootstrap.graph_name.clone(),
+            graph_type: bootstrap.graph_type,
+            graph_version: bootstrap.graph_version,
             snapshot: SegmentHeader {
-                key: super::fetch::EMPTY_SEGMENT_SHA256.to_string(),
-                sha256: super::fetch::EMPTY_SEGMENT_SHA256.to_string(),
+                key: snapshot_key.clone(),
+                sha256: snapshot_key,
             },
             batches: Vec::new(),
             digest: String::new(),
@@ -274,7 +311,9 @@ impl ObjectPublisher {
     /// Steps 2–4: upload this commit's `BatchSegment` as an immutable,
     /// content-addressed segment, put the next manifest create-only, then
     /// conditionally update `HEAD`. Returns the `HEAD` as the fence confirmed
-    /// it, carrying the new version the caller may ack after step 4. The
+    /// it, carrying the new version the caller may ack after step 4. A commit that
+    /// moves the graph version passes it as `graph_version`; any other commit
+    /// carries the prior manifest's. The
     /// `batch_segment` bytes are the encoded segment payload verified in
     /// place; the caller holds the already-durable local copy.
     pub async fn publish(
@@ -282,6 +321,7 @@ impl ObjectPublisher {
         tenant: &str,
         graph: &str,
         batch_segment: &[u8],
+        graph_version: Option<u64>,
     ) -> Result<ObjectHead, CommitRefusal> {
         let (prior_head, fence) = match self.fence_head(tenant, graph).await? {
             Some(pair) => pair,
@@ -314,6 +354,9 @@ impl ObjectPublisher {
             graph: graph.to_string(),
             version: prior_version + 1,
             parent_version: Some(prior_version),
+            graph_name: prior.graph_name,
+            graph_type: prior.graph_type,
+            graph_version: graph_version.unwrap_or(prior.graph_version),
             snapshot: prior.snapshot,
             batches: {
                 let mut batches = prior.batches;

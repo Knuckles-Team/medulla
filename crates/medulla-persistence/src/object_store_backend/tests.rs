@@ -20,7 +20,8 @@ use sha2::{Digest as _, Sha256};
 
 // spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003[.1]
 use crate::object_store_backend::ObjectStoreBackend;
-use medulla_storage::object::commit::CommitRefusal;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_storage::object::commit::{CommitRefusal, GraphBootstrap};
 use medulla_storage::object::fetch::{ObjectHead, SegmentHeader, VersionManifest};
 use medulla_storage::{DurabilityClass, StorageBackendSpec};
 
@@ -29,6 +30,16 @@ const GRAPH: &str = "g";
 /// Digest of an empty snapshot segment (the bootstrapped snapshot of v0).
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const ROOT: &str = "obj-root";
+
+/// Version zero of the test graph: its identity, no data, no snapshot.
+fn bootstrap() -> Result<GraphBootstrap, CommitRefusal> {
+    Ok(GraphBootstrap {
+        graph_name: GRAPH.to_string(),
+        graph_type: GraphType::Global,
+        graph_version: 0,
+        snapshot: Vec::new(),
+    })
+}
 
 fn base() -> String {
     format!("{ROOT}/{TENANT}/{GRAPH}")
@@ -162,11 +173,14 @@ fn hex_digest(bytes: &[u8]) -> String {
 
 fn manifest_bytes(v: u64, parent: Option<u64>, batches: Vec<SegmentHeader>) -> Vec<u8> {
     let mut manifest = VersionManifest {
-        schema_version: 2,
+        schema_version: 3,
         tenant: TENANT.to_string(),
         graph: GRAPH.to_string(),
         version: v,
         parent_version: parent,
+        graph_name: GRAPH.to_string(),
+        graph_type: GraphType::Global,
+        graph_version: v,
         snapshot: SegmentHeader {
             key: EMPTY_SHA256.to_string(),
             sha256: EMPTY_SHA256.to_string(),
@@ -252,7 +266,7 @@ async fn commit_before_ack_and_partial_publish() {
     // One acked commit: steps 2–4 complete; the ack carried the new HEAD.
     let batch_a = to_vec_named(&["batch-a-rows"]).unwrap();
     let ack_a = backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch_a)
+        .commit_mutation_batch(TENANT, GRAPH, &batch_a, None, &bootstrap)
         .await
         .unwrap();
     assert_eq!(ack_a.version, 1);
@@ -265,7 +279,7 @@ async fn commit_before_ack_and_partial_publish() {
     let batch_b = to_vec_named(&["batch-b-rows"]).unwrap();
     crashy.arm();
     let refusal = backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch_b)
+        .commit_mutation_batch(TENANT, GRAPH, &batch_b, None, &bootstrap)
         .await
         .unwrap_err();
     assert_eq!(refusal.wire_code(), "OBJECT_HEAD_MISSING");
@@ -283,7 +297,7 @@ async fn commit_before_ack_and_partial_publish() {
     // acked at exactly the next version of the fence.
     crashy.disarm();
     let ack_b = backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch_b)
+        .commit_mutation_batch(TENANT, GRAPH, &batch_b, None, &bootstrap)
         .await
         .unwrap();
     assert_eq!(ack_b.version, 2);
@@ -311,7 +325,7 @@ async fn crash_after_manifest_before_head_refuses_with_stale() {
     let batch = to_vec_named(&["late-rows"]).unwrap();
     crashy.arm();
     let refusal = backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch)
+        .commit_mutation_batch(TENANT, GRAPH, &batch, None, &bootstrap)
         .await
         .unwrap_err();
     assert_eq!(refusal.wire_code(), "OBJECT_HEAD_MISSING");
@@ -326,7 +340,7 @@ async fn crash_after_manifest_before_head_refuses_with_stale() {
 
     crashy.disarm();
     let refusal = backend
-        .commit_mutation_batch(TENANT, GRAPH, &batch)
+        .commit_mutation_batch(TENANT, GRAPH, &batch, None, &bootstrap)
         .await
         .unwrap_err();
     assert_eq!(refusal, CommitRefusal::PublishStale { version: 0 });
@@ -346,8 +360,8 @@ async fn racy_conditional_puts_fence_one_head() {
 
     let batch = to_vec_named(&["raced-rows"]).unwrap();
     let (ra, rb) = tokio::join!(
-        backend.commit_mutation_batch(TENANT, GRAPH, &batch),
-        backend.commit_mutation_batch(TENANT, GRAPH, &batch)
+        backend.commit_mutation_batch(TENANT, GRAPH, &batch, None, &bootstrap),
+        backend.commit_mutation_batch(TENANT, GRAPH, &batch, None, &bootstrap)
     );
     match (ra, rb) {
         (Ok(_), Err(CommitRefusal::PublishStale { .. }))
@@ -405,7 +419,7 @@ async fn two_nodes_read_identical_state() {
     let batch_two = to_vec_named(&["node-a-more-rows"]).unwrap();
     assert_eq!(
         node_a
-            .commit_mutation_batch(TENANT, GRAPH, &batch_one)
+            .commit_mutation_batch(TENANT, GRAPH, &batch_one, None, &bootstrap)
             .await
             .unwrap()
             .version,
@@ -413,7 +427,7 @@ async fn two_nodes_read_identical_state() {
     );
     assert_eq!(
         node_a
-            .commit_mutation_batch(TENANT, GRAPH, &batch_two)
+            .commit_mutation_batch(TENANT, GRAPH, &batch_two, None, &bootstrap)
             .await
             .unwrap()
             .version,
@@ -436,7 +450,7 @@ async fn two_nodes_read_identical_state() {
     let batch_three = to_vec_named(&["node-b-rows"]).unwrap();
     assert_eq!(
         node_b
-            .commit_mutation_batch(TENANT, GRAPH, &batch_three)
+            .commit_mutation_batch(TENANT, GRAPH, &batch_three, None, &bootstrap)
             .await
             .unwrap()
             .version,
@@ -512,7 +526,7 @@ async fn first_publish_bootstraps_and_the_cold_open_lists_the_graph() {
     let backend = backend(store.clone());
     let segment = to_vec_named(&["batch-a-rows"]).unwrap();
     let ack = backend
-        .commit_mutation_batch(TENANT, GRAPH, &segment)
+        .commit_mutation_batch(TENANT, GRAPH, &segment, None, &bootstrap)
         .await
         .unwrap();
     assert_eq!(ack.version, 1);
@@ -522,4 +536,39 @@ async fn first_publish_bootstraps_and_the_cold_open_lists_the_graph() {
     assert!(version.snapshot.bytes.is_empty());
     assert_eq!(version.batches.len(), 1);
     assert_eq!(version.batches[0].bytes, segment);
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003
+// A graph that already holds data bootstraps version zero from its owner-table
+// snapshot, and the manifest records the graph's name, type and version, which the
+// read path returns as written (no inference).
+#[tokio::test]
+async fn bootstrap_writes_the_snapshot_the_graph_type_and_the_graph_version() {
+    let store = Arc::new(InMemory::new());
+    let backend = backend(store.clone());
+    let segment = to_vec_named(&["batch-b-rows"]).unwrap();
+    let snapshot = b"owner-table-dump".to_vec();
+    let with_data = || {
+        Ok(GraphBootstrap {
+            graph_name: "named-graph".to_string(),
+            graph_type: GraphType::Commons,
+            graph_version: 7,
+            snapshot: snapshot.clone(),
+        })
+    };
+    let ack = backend
+        .commit_mutation_batch(TENANT, GRAPH, &segment, Some(8), &with_data)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 1);
+    let fetcher = medulla_storage::object::fetch::ObjectFetcher::new(store, ROOT);
+    let zero = fetcher.materialize(TENANT, GRAPH, 0).await.unwrap();
+    assert_eq!(zero.snapshot.bytes, snapshot);
+    assert_eq!(zero.graph_name, "named-graph");
+    assert_eq!(zero.graph_type, GraphType::Commons);
+    assert_eq!(zero.graph_version, 7);
+    let head = fetcher.materialize(TENANT, GRAPH, 1).await.unwrap();
+    assert_eq!(head.snapshot.bytes, snapshot);
+    assert_eq!(head.graph_type, GraphType::Commons);
+    assert_eq!(head.graph_version, 8);
 }

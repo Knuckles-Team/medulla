@@ -1,4 +1,5 @@
 use super::*;
+use medulla_store::redb_store::commit_publish::{CommitMaterial, CommitPublication};
 use medulla_store::redb_store::store_prelude::*;
 
 /// Deterministic failure injection points around the authoritative batch commit.
@@ -582,7 +583,25 @@ fn finish_fresh_batch(
     let result = staged
         .generated_result
         .or_else(|| result_msgpack.map(ToOwned::to_owned));
-    let committed = shard.commit_batch(group, &batches, result, rows.committed_at_ms)?;
+    let publication = shard.publishes_commits().then(|| CommitPublication {
+        graph_fname: rows.graph_fname,
+        caller_batch: rows.batch,
+        material: match (&crossmodal, rows.authoritative_state_msgpack) {
+            (Some(cross), _) => CommitMaterial::CrossModal {
+                methods: cross.methods.to_vec(),
+                vectors: cross.vectors.to_vec(),
+                blob_refs: cross.blob_refs.to_vec(),
+                measurements: cross.measurements.to_vec(),
+            },
+            (None, Some(state)) => CommitMaterial::Staged {
+                authoritative_state_msgpack: state.to_vec(),
+                audited: rows.audited,
+            },
+            (None, None) => CommitMaterial::Compact,
+        },
+    });
+    let committed =
+        shard.commit_batch(group, &batches, result, rows.committed_at_ms, publication)?;
 
     #[cfg(feature = "security")]
     {
@@ -710,6 +729,7 @@ fn finish_replayed_batch(
         batches,
         result_msgpack.map(ToOwned::to_owned),
         committed_at_ms,
+        None,
     )?;
     let commit = MutationBatchCommit {
         record: committed.record,

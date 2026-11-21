@@ -51,6 +51,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
     "TIMEOUT",
     "STALE_ROUTE",
     "STALE_OUTBOX_LEASE",
+    // Any durable commit can lose the object-store root's `HEAD` fence (MEDULLA-OBJECT-STORAGE-BACKEND-R003).
+    "OBJECT_PUBLISH_STALE",
 ];
 
 /// A method-specific family wins over the wider domain family.
