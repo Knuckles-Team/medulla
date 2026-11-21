@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 
 use medulla_core::source_hierarchy::{container_node_id, subtree, upsert_containers};
 use medulla_graph_core::graph::GraphCore;
-use medulla_types::source_governance::SourceContainer;
+use medulla_ingestion_types::source_governance::SourceContainer;
 
 const CONTAINERS: usize = 10_000;
 const FIRST_LEVEL: usize = 100;
