@@ -202,6 +202,15 @@ jobs:
     - name: Verify reproduction when requested and stage sole candidate
       shell: bash
       run: python scripts/release_build_metadata.py stage --reproduction "${{ github.event_name == 'workflow_dispatch' }}"
+    - name: Package server symbols (linux-x86_64)
+      shell: bash
+      run: bash scripts/package_release_symbols.sh linux-x86_64 dist-server-bin/medulla-server dist-server-symbols dist-symbols
+    - name: Upload server symbols artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: symbols-linux-x86_64
+        path: dist-symbols/*
+        if-no-files-found: error
     - name: Smoke test (server --help + import medulla.{numeric,engine})
       shell: bash
       run: bash scripts/release_wheel_smoke.sh

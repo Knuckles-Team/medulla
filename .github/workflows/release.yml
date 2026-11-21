@@ -240,11 +240,12 @@ jobs:
           if-no-files-found: error
 
   # A release whose upload set lacks a required symbol artifact fails here, before
-  # publication. Required legs are the non-optional legs of server-binary.
+  # publication. Required legs are the non-optional legs of server-binary plus the
+  # linux-x86_64 leg built inside the folded wheel of build-x86.
   symbols-gate:
     timeout-minutes: 5
     name: Every required platform uploaded its symbols
-    needs: server-binary
+    needs: [server-binary, build-x86]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     steps:
@@ -260,7 +261,7 @@ jobs:
           merge-multiple: true
 
       - name: Check the symbol upload set
-        run: python scripts/check_symbol_upload_set.py dist-symbols linux-aarch64 windows-x86_64
+        run: python scripts/check_symbol_upload_set.py dist-symbols linux-aarch64 linux-x86_64 windows-x86_64
 
   # ── Release wheel matrix: the expensive cross-platform reproducible build.
   # The product tests and installed-wheel smoke already ran in ci.yml.
