@@ -886,6 +886,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R175`: `tests/decide/test_recommend_
 | Refusal | `MEDULLA-DECISION-ENGINE-R173.4` | Each case returns its typed reason and no verdict. |
 | Evidence | `MEDULLA-DECISION-ENGINE-R173.5` | A record readback lists each field. |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R173.6` | The served test passes, and the benchmark receipt meets the budget. |
+| State ownership | `MEDULLA-DECISION-ENGINE-R173.7` | The machine applies each edge and refuses every other pair; `HarnessEdit` moves a stored edit through the gateway and answers another tenant's edit as unknown. |
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R173`: `tests/decide/test_concentration_served.py::test_third_same_dimension_edit_reverts`.
 
@@ -1643,6 +1644,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R173.3` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::other_tenant_edits_are_not_counted` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.5` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::record_lists_counted_edits` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.6` | `tests/decide/test_concentration_served.py::test_third_same_dimension_edit_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.7` | `crates/medulla-types/src/edit_machine.rs::tests::every_legal_transition_applies` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.7` | `crates/medulla-h-graph/src/graph_ops/harness_edit_tests.rs::transitions_move_the_status_and_refuse_illegal_pairs` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-decision-types/src/decision/tool_relevance.rs::tests::assignment_round_trips` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |

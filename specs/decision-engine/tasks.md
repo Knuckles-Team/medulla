@@ -966,3 +966,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T954 [US7] MEDULLA-DECISION-ENGINE-R135.17.1 Replay record model and commit
 - [ ] T955 [US7] MEDULLA-DECISION-ENGINE-R135.17.2 Demotion at lookup, its refusal and its evidence
 - [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program
+- [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine
