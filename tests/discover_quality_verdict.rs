@@ -380,17 +380,17 @@ async fn sparse_index_fails_closed() {
     for n in 1..10 {
         write_unembedded(&sparse, n).await;
     }
-    let verdict = verdict(&sparse, 900).await;
-    assert_eq!(verdict["gate_passed"], false, "{verdict}");
-    assert!(modes(&verdict).contains(&"sparse_index".to_string()), "{verdict}");
-    let ratio = verdict["index_population_ratio_q16"].as_u64().expect("ratio");
+    let sparse_verdict = verdict(&sparse, 900).await;
+    assert_eq!(sparse_verdict["gate_passed"], false, "{sparse_verdict}");
+    assert!(modes(&sparse_verdict).contains(&"sparse_index".to_string()), "{sparse_verdict}");
+    let ratio = sparse_verdict["index_population_ratio_q16"].as_u64().expect("ratio");
     assert!(ratio <= 6_554, "a tenth embedded: {ratio}");
 
     let full = quality_state();
     for n in 0..10 {
         write(&full, n, "known term").await;
     }
-    let verdict = verdict(&full, 900).await;
-    assert!(!modes(&verdict).contains(&"sparse_index".to_string()), "{verdict}");
-    assert_eq!(verdict["index_population_ratio_q16"], 65_535);
+    let full_verdict = verdict(&full, 900).await;
+    assert!(!modes(&full_verdict).contains(&"sparse_index".to_string()), "{full_verdict}");
+    assert_eq!(full_verdict["index_population_ratio_q16"], 65_535);
 }
