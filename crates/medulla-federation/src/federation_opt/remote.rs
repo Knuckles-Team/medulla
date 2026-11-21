@@ -84,6 +84,7 @@ impl Identity {
             ForeignSourceSpec::Sql { .. } => "sql",
             ForeignSourceSpec::SqliteFile { .. } => "sqlite-file",
             ForeignSourceSpec::Warehouse { .. } => "warehouse",
+            ForeignSourceSpec::ClickHouse { .. } => "clickhouse",
             ForeignSourceSpec::Trino { .. }
             | ForeignSourceSpec::Cypher { .. }
             | ForeignSourceSpec::SparkBatch { .. }

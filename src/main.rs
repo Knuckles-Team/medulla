@@ -357,6 +357,8 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "federation")]
     {
         medulla_plan::warehouse_reader::register();
+        // MEDULLA-UNIFIED-DATA-PLANE-R017.2.2: ClickHouse tables are read over HTTP by the engine reader.
+        medulla_plan::clickhouse_connection::register();
         medulla_plan::warehouse_reader::set_duckdb_allowed_roots(
             medulla_server_api::knob_config::allowed_roots(
                 medulla_server_api::knob_config::FOREIGN_DUCKDB_ALLOWED_ROOTS,

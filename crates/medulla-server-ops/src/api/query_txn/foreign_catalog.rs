@@ -1058,6 +1058,47 @@ fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), Strin
         }
         return Ok(());
     }
+    // MEDULLA-UNIFIED-DATA-PLANE-R017.2.2: a ClickHouse destination passes the outbound gate, its
+    // credential must be a secret reference, and a capture request is refused (no change capture).
+    if let ForeignSourceSpec::ClickHouse {
+        host,
+        port,
+        database,
+        tls,
+        auth_ref,
+        table,
+        watermark,
+        ..
+    } = spec
+    {
+        if host.trim().is_empty()
+            || *port == 0
+            || database.trim().is_empty()
+            || table.trim().is_empty()
+        {
+            return Err(
+                "INVALID_ARGUMENT: clickhouse: host, port, database and table must be set"
+                    .to_string(),
+            );
+        }
+        if watermark.is_some() {
+            return Err(medulla_federation::clickhouse_foreign::capture_refusal());
+        }
+        if let Some(reference) = auth_ref {
+            let is_reference = ["env://", "openbao://"].iter().any(|scheme| {
+                reference
+                    .strip_prefix(scheme)
+                    .is_some_and(|rest| !rest.is_empty())
+            });
+            if !is_reference {
+                return Err(
+                    "INVALID_ARGUMENT: clickhouse: auth_ref must be a secret reference, not an inline secret"
+                        .to_string(),
+                );
+            }
+        }
+        return medulla_federation::clickhouse_foreign::check_outbound(host, *port, *tls);
+    }
     #[cfg(feature = "federation-sql")]
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
         return medulla_federation::federation_ssrf::check_sql_dsn(dsn);

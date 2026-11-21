@@ -188,7 +188,9 @@ pub fn category_of(spec: &ForeignSourceSpec) -> SourceCategory {
         ForeignSourceSpec::Metastore { .. } => SourceCategory::HadoopCatalog,
         // The coverage matrix files the warehouse and lake sources (R020.2.2) under OLAP and
         // columnar.
-        ForeignSourceSpec::Warehouse { .. } => SourceCategory::OlapColumnar,
+        ForeignSourceSpec::Warehouse { .. } | ForeignSourceSpec::ClickHouse { .. } => {
+            SourceCategory::OlapColumnar
+        }
         ForeignSourceSpec::RemoteEngine { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => SourceCategory::PropertyGraph,
@@ -429,6 +431,19 @@ fn declared_shape(spec: &ForeignSourceSpec) -> Vec<String> {
                 "snapshot={}",
                 snapshot_id.map(|id| id.to_string()).unwrap_or_default()
             ),
+        ],
+        ForeignSourceSpec::ClickHouse {
+            database,
+            table,
+            columns,
+            id_column,
+            ..
+        } => vec![
+            "clickhouse".into(),
+            format!("database={database}"),
+            format!("table={table}"),
+            format!("columns={}", sorted(columns)),
+            format!("id={id_column}"),
         ],
         ForeignSourceSpec::Metastore {
             database_filter, ..

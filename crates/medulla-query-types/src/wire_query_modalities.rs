@@ -544,6 +544,31 @@ pub enum ForeignSourceSpec {
         #[serde(default)]
         snapshot_id: Option<i64>,
     },
+    /// One table of a live ClickHouse server, read over its HTTP interface
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2). The destination passes the shared outbound gate;
+    /// `auth_ref` is a secret reference (`env://` or `openbao://`), never a secret. ClickHouse has
+    /// no change capture, so a `watermark` is a capture request and registration refuses it
+    /// `CAPABILITY_UNSUPPORTED` (reason `clickhouse_no_cdc`). `columns` is the mapped-column set a
+    /// column read may expose and `id_column` names the column carrying the row id (empty: the
+    /// row ordinal).
+    ClickHouse {
+        host: String,
+        port: u16,
+        database: String,
+        #[serde(default)]
+        tls: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        auth_ref: Option<String>,
+        /// The table to read.
+        table: String,
+        #[serde(default)]
+        columns: Vec<String>,
+        #[serde(default)]
+        id_column: String,
+        /// A declared capture watermark; always refused for ClickHouse.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        watermark: Option<String>,
+    },
     /// A brain-guarded source (MEDULLA-DURABLE-KERNEL-R024.6): an inner query that
     /// MUST pass a named semantic/policy guard check (the "brain") before any
     /// row crosses the federation boundary. `guard_policy` names the guard a

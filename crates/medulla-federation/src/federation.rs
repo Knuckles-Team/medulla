@@ -203,6 +203,26 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
             prefer_flight_sql: *prefer_flight_sql,
             snapshot_id: *snapshot_id,
         }),
+        ForeignSourceSpec::ClickHouse {
+            host,
+            port,
+            database,
+            tls,
+            auth_ref,
+            table,
+            columns,
+            id_column,
+            ..
+        } => Box::new(crate::clickhouse_foreign::ClickHouseSource {
+            host,
+            port: *port,
+            database,
+            tls: *tls,
+            auth_ref: auth_ref.as_deref(),
+            table,
+            columns,
+            id_column,
+        }),
         ForeignSourceSpec::Trino { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::SparkBatch { .. }
@@ -2378,6 +2398,13 @@ impl ForeignSourceRegistry {
             ForeignSourceSpec::SqliteFile { columns, .. } if !columns.is_empty() => {
                 columns.iter().cloned().collect()
             }
+            ForeignSourceSpec::ClickHouse {
+                columns, id_column, ..
+            } if !columns.is_empty() => columns
+                .iter()
+                .chain(std::iter::once(id_column).filter(|id| !id.is_empty()))
+                .cloned()
+                .collect(),
             ForeignSourceSpec::Warehouse {
                 columns, id_column, ..
             } if !columns.is_empty() => columns
@@ -2402,6 +2429,7 @@ impl ForeignSourceRegistry {
                 crate::federation_opt::PushdownSupport::Unsupported
             }),
             ForeignSourceSpec::Warehouse { .. } => (true, crate::warehouse_foreign::filter_support),
+            ForeignSourceSpec::ClickHouse { .. } => (true, crate::warehouse_foreign::filter_support),
             _ => unreachable!("only mapped source kinds reach column planning"),
         };
         let plan = ColumnPlan::new(

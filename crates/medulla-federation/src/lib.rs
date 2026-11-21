@@ -91,6 +91,9 @@ pub mod mirror_target;
 pub mod sqlite_foreign;
 #[cfg(all(any(test, feature = "test-support"), feature = "federation"))]
 pub mod test_guard;
+/// A live ClickHouse table read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2).
+#[cfg(feature = "federation")]
+pub mod clickhouse_foreign;
 /// Warehouse and lake sources read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
 #[cfg(feature = "federation")]
 pub mod warehouse_foreign;

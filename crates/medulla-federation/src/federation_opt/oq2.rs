@@ -86,6 +86,7 @@ pub(crate) fn kind(spec: &ForeignSourceSpec) -> Option<&'static str> {
         | ForeignSourceSpec::Sql { .. }
         | ForeignSourceSpec::SqliteFile { .. }
         | ForeignSourceSpec::Warehouse { .. }
+        | ForeignSourceSpec::ClickHouse { .. }
         | ForeignSourceSpec::Named { .. } => None,
     }
 }

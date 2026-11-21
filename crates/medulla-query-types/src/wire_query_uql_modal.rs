@@ -286,6 +286,7 @@ pub(super) fn foreign_scan(source: &ForeignSourceSpec, join: bool) -> Printed {
         | ForeignSourceSpec::SqliteFile { .. }
         | ForeignSourceSpec::Metastore { .. }
         | ForeignSourceSpec::Warehouse { .. }
+        | ForeignSourceSpec::ClickHouse { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => Err(refuse(
             UqlPrintCode::CredentialBearingSpec,
             "a self-describing foreign spec may contain endpoint or artifact details; register it and use \

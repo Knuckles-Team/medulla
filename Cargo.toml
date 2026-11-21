@@ -2048,6 +2048,13 @@ name = "attached_warehouse_served"
 path = "tests/attached_warehouse_served.rs"
 required-features = ["federation", "source-duckdb", "server", "security"]
 
+# MEDULLA-UNIFIED-DATA-PLANE-R017.2.2: a ClickHouse source read over the HTTP interface through the
+# served `RegisterForeignSource` then `QueryForeignColumns`, compared with the table's own rows.
+[[test]]
+name = "attached_clickhouse_served"
+path = "tests/attached_clickhouse_served.rs"
+required-features = ["federation", "server", "security"]
+
 # MEDULLA-UNIFIED-DATA-PLANE-R014.2.2: live MySQL and MariaDB catalog read and type map against
 # containerised servers; the nightly lane runs it with `--ignored` and the two DSNs set.
 [[test]]

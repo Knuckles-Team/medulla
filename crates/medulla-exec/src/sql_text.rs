@@ -88,6 +88,98 @@ fn render_numeric(value: &str) -> Result<String, String> {
     Ok(value.to_string())
 }
 
+/// The ClickHouse entry of the shared renderer (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2). It is a
+/// separate entry rather than a [`SqlDialect`] variant because ClickHouse is never reached
+/// through a DSN: identifiers quote with backticks and every value binds through an HTTP
+/// `param_<name>` query parameter, so no literal is ever spliced into the statement text.
+pub const CLICKHOUSE_PARAM_PREFIX: &str = "param_";
+
+/// The ClickHouse type a bound value carries in its `{name:Type}` placeholder.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClickHouseParamKind {
+    Text,
+    Int64,
+    Float64,
+}
+
+impl ClickHouseParamKind {
+    fn type_name(self) -> &'static str {
+        match self {
+            Self::Text => "String",
+            Self::Int64 => "Int64",
+            Self::Float64 => "Float64",
+        }
+    }
+}
+
+/// One `column <op> value` filter of a rendered ClickHouse `SELECT`. `op` is one of
+/// `=`, `!=`, `<`, `<=`, `>`, `>=`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClickHouseFilter {
+    pub column: String,
+    pub op: &'static str,
+    pub value: String,
+    pub kind: ClickHouseParamKind,
+}
+
+/// A rendered ClickHouse statement and its bound parameters, each `(param_<name>, value)`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClickHouseStatement {
+    pub sql: String,
+    pub params: Vec<(String, String)>,
+}
+
+/// Validate, then quote an identifier with backticks (the ClickHouse entry of
+/// [`quote_identifier`]).
+pub fn quote_clickhouse_identifier(ident: &str) -> Result<String, String> {
+    validate_identifier(ident)?;
+    Ok(format!("`{ident}`"))
+}
+
+/// Render `SELECT <columns> FROM <table> [WHERE ...]` for ClickHouse. A numeric value is
+/// re-validated as a finite number before it binds; a NUL byte is refused.
+pub fn render_clickhouse_select(
+    table: &str,
+    columns: &[String],
+    filters: &[ClickHouseFilter],
+) -> Result<ClickHouseStatement, String> {
+    if columns.is_empty() {
+        return Err("a ClickHouse select needs at least one column".into());
+    }
+    let projection = columns
+        .iter()
+        .map(|column| quote_clickhouse_identifier(column))
+        .collect::<Result<Vec<_>, String>>()?
+        .join(", ");
+    let mut sql = format!("SELECT {projection} FROM {}", quote_clickhouse_identifier(table)?);
+    let mut params = Vec::new();
+    let mut predicates = Vec::new();
+    for (index, filter) in filters.iter().enumerate() {
+        if !matches!(filter.op, "=" | "!=" | "<" | "<=" | ">" | ">=") {
+            return Err(format!("unsupported ClickHouse comparison {:?}", filter.op));
+        }
+        if filter.value.contains('\0') {
+            return Err("SQL literal contains a NUL byte".into());
+        }
+        if filter.kind != ClickHouseParamKind::Text {
+            render_numeric(&filter.value)?;
+        }
+        let name = format!("p{index}");
+        predicates.push(format!(
+            "{} {} {{{name}:{}}}",
+            quote_clickhouse_identifier(&filter.column)?,
+            filter.op,
+            filter.kind.type_name()
+        ));
+        params.push((format!("{CLICKHOUSE_PARAM_PREFIX}{name}"), filter.value.clone()));
+    }
+    if !predicates.is_empty() {
+        sql.push_str(" WHERE ");
+        sql.push_str(&predicates.join(" AND "));
+    }
+    Ok(ClickHouseStatement { sql, params })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,5 +230,38 @@ mod tests {
         assert!(render_literal("1; DROP", true, SqlDialect::Postgres).is_err());
         assert!(render_literal("inf", true, SqlDialect::Postgres).is_err());
         assert!(render_literal("a\0b", false, SqlDialect::Postgres).is_err());
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R017.2.2
+    #[test]
+    fn clickhouse_select_quotes_with_backticks_and_binds_values() {
+        let statement = render_clickhouse_select(
+            "events",
+            &["id".to_string(), "name".to_string()],
+            &[ClickHouseFilter {
+                column: "id".into(),
+                op: ">=",
+                value: "7".into(),
+                kind: ClickHouseParamKind::Int64,
+            }],
+        )
+        .unwrap();
+        assert_eq!(
+            statement.sql,
+            "SELECT `id`, `name` FROM `events` WHERE `id` >= {p0:Int64}"
+        );
+        assert_eq!(statement.params, vec![("param_p0".to_string(), "7".to_string())]);
+        assert!(render_clickhouse_select("t; DROP", &["id".to_string()], &[]).is_err());
+        assert!(render_clickhouse_select(
+            "t",
+            &["id".to_string()],
+            &[ClickHouseFilter {
+                column: "id".into(),
+                op: "=",
+                value: "1; DROP".into(),
+                kind: ClickHouseParamKind::Int64,
+            }]
+        )
+        .is_err());
     }
 }
