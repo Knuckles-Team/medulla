@@ -9,7 +9,7 @@
 
 use medulla_decision_outcome_types::decision::limit_guard::{check_limits, LimitBreach};
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::limit_types::{GuardedAction, GUARDED_ACTION_PARAM, LIMIT_BREACH};
+use medulla_decision_types::decision::limit_types::{GuardedAction, GUARDED_ACTION_PARAM};
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
 };
@@ -69,30 +69,24 @@ pub(super) fn apply(
         return Ok((executed, Vec::new()));
     }
     let premises: Vec<PremiseRef> = breaches.iter().map(premise).collect();
-    let first = &breaches[0];
-    let detail = format!(
-        "limit {} breached: observed {} above bound {}{}",
-        first.rule_id,
-        first.observed,
-        first.bound,
-        if breaches.len() > 1 {
-            format!(" (and {} more)", breaches.len() - 1)
-        } else {
-            String::new()
-        }
-    );
     // A breaching action answers nothing: the family's answer, route and
     // calibration go with the outcome they described.
     let replaced = Executed {
         matrix: executed.matrix,
         ladder: LadderResult {
             outcome: StatisticalOutcome::Abstained {
-                reasons: BoundedVec::new(vec![AbstainReason::Family {
-                    family: request.question.kind,
-                    code: LIMIT_BREACH,
-                    detail,
-                }])
-                .expect("one reason fits the bound"),
+                reasons: BoundedVec::new(
+                    breaches
+                        .iter()
+                        .map(|breach| AbstainReason::LimitBreach {
+                            rule_id: breach.rule_id.clone(),
+                            observed: breach.observed,
+                            bound: breach.bound,
+                            signal_iri: breach.signal_iri.clone(),
+                        })
+                        .collect(),
+                )
+                .expect("one reason per rule fits the bound"),
             },
             calibration: None,
             explained: None,

@@ -52,6 +52,14 @@ pub enum AbstainReason {
     /// Statistical: below the policy's support, coverage or risk floor. It
     /// names no invisible data, by construction.
     InsufficientConfidence,
+    /// A proposed action breached a pinned limit (MEDULLA-DECISION-ENGINE-R131.4): one
+    /// reason per breach, in rule order.
+    LimitBreach {
+        rule_id: String,
+        observed: i64,
+        bound: i64,
+        signal_iri: String,
+    },
     /// A refusal from one family's registered table, or a shared request code.
     Family {
         family: crate::decision::statistical::QuestionKind,
@@ -145,6 +153,7 @@ impl AbstainReason {
             Self::RecordTooLarge { .. } => 7,
             Self::PolicyLoosening { .. } => 8,
             Self::InsufficientConfidence => 9,
+            Self::LimitBreach { .. } => return crate::decision::limit_types::LIMIT_BREACH,
             Self::Family { code, .. } | Self::Surface { code, .. } => return *code,
         };
         FIXED_CODES[index]

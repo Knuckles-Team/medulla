@@ -46,6 +46,16 @@ class AbstainReasonBudgetExhausted(BaseModel):
     reason: Literal["budget_exhausted"]
 
 
+class AbstainReasonLimitBreach(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bound: int
+    observed: int
+    reason: Literal["limit_breach"]
+    rule_id: str
+    signal_iri: str
+
+
 class AbstainReasonUnknownFact(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -117,6 +127,7 @@ AbstainReason = Annotated[
     | AbstainReasonInfeasible
     | AbstainReasonBudgetExhausted
     | AbstainReasonUnknownFact
+    | AbstainReasonLimitBreach
     | AbstainReasonIneligibleExternalAgent
     | AbstainReasonRecordTooLarge
     | AbstainReasonPolicyLoosening
@@ -2253,6 +2264,7 @@ AbstainReasonInfeasible.model_rebuild()
 AbstainReasonBudgetExhausted.model_rebuild()
 
 AbstainReasonUnknownFact.model_rebuild()
+AbstainReasonLimitBreach.model_rebuild()
 
 AbstainReasonIneligibleExternalAgent.model_rebuild()
 

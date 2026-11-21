@@ -100,8 +100,9 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
     };
     assert!(matches!(
         &reasons.as_slice()[0],
-        AbstainReason::Family { code, .. } if *code == LIMIT_BREACH
+        AbstainReason::LimitBreach { rule_id, observed: 10_001, bound: 10_000, .. } if rule_id == RULE
     ));
+    assert_eq!(reasons.as_slice()[0].code(), LIMIT_BREACH);
     assert!(record.answer.is_none(), "a withheld decision answers nothing");
     let premise = record
         .premises
@@ -142,4 +143,47 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
     )
     .await;
     assert!(refused.starts_with("ACCESS_DENIED"), "{refused}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R131.4
+#[tokio::test]
+async fn breach_abstains_naming_the_first_rule() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let drawdown = LimitRule {
+        id: "max-drawdown".to_string(),
+        metric: LimitMetric::Drawdown,
+        bound: 100,
+        scope: SCOPE.to_string(),
+    };
+    let mut breaching = action(10_001, None);
+    breaching.observations.push(LimitObservation {
+        metric: LimitMetric::Drawdown,
+        scope: SCOPE.to_string(),
+        value: 500,
+    });
+    let batch = decide(
+        &h,
+        limited_join(&h, &schema, vec![rule(), drawdown], Some(breaching)),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("a breach abstains, got {:?}", record.outcome);
+    };
+    // One reason per breach, in rule order, each with the registered code.
+    let ids: Vec<&str> = reasons
+        .iter()
+        .map(|reason| match reason {
+            AbstainReason::LimitBreach { rule_id, signal_iri, .. } => {
+                assert_eq!(signal_iri, "urn:signal:buy");
+                rule_id.as_str()
+            }
+            other => panic!("a limit breach, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(ids, [RULE, "max-drawdown"]);
+    assert!(reasons.iter().all(|reason| reason.code() == LIMIT_BREACH));
+    assert!(record.answer.is_none(), "the outcome carries no option");
 }
