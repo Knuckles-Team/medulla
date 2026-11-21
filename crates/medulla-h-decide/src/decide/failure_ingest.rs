@@ -120,7 +120,7 @@ mod served {
         Ok(PlannedWrite {
             graph,
             operations,
-            reply: ResultPayload::of::<FailureIngestRun>(FailureIngestResult { patterns, filed }),
+            reply: ResultPayload::of::<FailureIngestRun>(FailureIngestResult { patterns, filed })?,
         })
     }
 
@@ -174,7 +174,7 @@ mod served {
                 "id": node_id,
                 "properties": row,
             })],
-            reply: ResultPayload::of::<FailureMarkAddressed>(topic),
+            reply: ResultPayload::of::<FailureMarkAddressed>(topic)?,
         })
     }
 
@@ -183,7 +183,7 @@ mod served {
         Ok(PlannedWrite {
             graph,
             operations: Vec::new(),
-            reply: ResultPayload::of::<FailureGet>(topic_of(topic_id, &row)?),
+            reply: ResultPayload::of::<FailureGet>(topic_of(topic_id, &row)?)?,
         })
     }
 
