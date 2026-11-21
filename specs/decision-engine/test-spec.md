@@ -1869,7 +1869,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R650.3` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_returns_descriptor_and_closure` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.3` | `crates/medulla-persistence-records/src/connector_pack/descriptor.rs::tests::descriptor_round_trips_through_triples` | L1 |
 | `MEDULLA-DECISION-ENGINE-R650.4` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_refusals_and_tenant_isolation` | L3 |
-| `MEDULLA-DECISION-ENGINE-R650.5` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_evidence_reads_back_through_decision_log` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.5` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_evidence_is_sealed_in_the_record` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.6` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::remember_recall_consolidate_and_export_round_trip` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651.1` | `crates/medulla-work-types/src/memory.rs::tests::memory_record_round_trips_through_node_props` | L1 |
