@@ -2218,6 +2218,7 @@ QuestionKind = (
     | Literal["edit_concentration"]
     | Literal["recruit"]
     | Literal["resolve_conflict"]
+    | Literal["council_coordination"]
 )
 
 

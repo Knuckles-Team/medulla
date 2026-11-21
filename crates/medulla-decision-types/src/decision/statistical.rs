@@ -338,6 +338,10 @@ pub enum QuestionKind {
     /// Evaluate-only: `BranchMerge` writes the resolution. See
     /// `decision::resolve_conflict`.
     ResolveConflict,
+    /// Council positions coordinated into one evidence-bound decision: the
+    /// option a quorum selects, or an abstention (MEDULLA-DECISION-ENGINE-R106.1).
+    /// Evaluate-only. See `decision::council`.
+    CouncilCoordination,
 }
 
 /// What is at stake. Exploration is permitted only for

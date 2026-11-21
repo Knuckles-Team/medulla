@@ -101,6 +101,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::safety::KNOBS,
     super::analyst_synthesis::KNOBS,
     super::resolve_conflict::KNOBS,
+    super::council::KNOBS,
     super::statistical::harness_config::HARNESS_KNOBS,
     super::statistical::harness_config::HARNESS_EVIDENCE_KNOBS,
     super::statistical::harness_config::HARNESS_REPLAY_KNOBS,

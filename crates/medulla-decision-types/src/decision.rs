@@ -81,6 +81,7 @@ pub mod process_remediation;
 pub mod program_store;
 pub mod rapid_r015;
 pub mod record;
+pub mod council;
 pub mod recruit;
 pub mod recursive_trace;
 pub mod replay;

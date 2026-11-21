@@ -292,6 +292,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::Recruit => "recruit",
         // Needs a pinned policy and a conflict record, so it has its own fixture.
         QuestionKind::ResolveConflict => "resolve_conflict",
+        // Needs pinned positions and evidence heads, so it has its own fixture.
+        QuestionKind::CouncilCoordination => "council_coordination",
     }
 }
 

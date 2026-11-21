@@ -905,6 +905,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::analyst_synthesis::KNOBS
         }
         QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
+        QuestionKind::CouncilCoordination => medulla_decision_types::decision::council::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }

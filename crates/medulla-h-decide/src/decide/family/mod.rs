@@ -26,6 +26,7 @@ pub(super) mod context_budget;
 pub(super) mod context_package;
 mod context_replacement;
 mod correction_admission;
+mod council;
 mod curriculum_promotion;
 mod delegation_admission;
 mod edit_concentration;
@@ -399,6 +400,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static RECRUITFAMILY: recruit::RecruitFamily = recruit::RecruitFamily;
     static RESOLVECONFLICTFAMILY: resolve_conflict::ResolveConflictFamily =
         resolve_conflict::ResolveConflictFamily;
+    static COUNCILFAMILY: council::CouncilFamily = council::CouncilFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -486,6 +488,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::AnalystSynthesis => &ANALYSTSYNTHESISFAMILY,
         QuestionKind::Recruit => &RECRUITFAMILY,
         QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
+        QuestionKind::CouncilCoordination => &COUNCILFAMILY,
     }
 }
 
@@ -583,6 +586,7 @@ mod tests {
             QuestionKind::AnalystSynthesis,
             QuestionKind::Recruit,
             QuestionKind::ResolveConflict,
+            QuestionKind::CouncilCoordination,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -659,6 +663,7 @@ mod tests {
             | QuestionKind::AnalystSynthesis
             | QuestionKind::Recruit
             | QuestionKind::ResolveConflict
+            | QuestionKind::CouncilCoordination
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion
             | QuestionKind::ResearchNext

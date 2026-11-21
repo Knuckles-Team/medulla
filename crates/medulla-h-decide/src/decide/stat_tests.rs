@@ -1122,6 +1122,8 @@ mod trajectory_ladder_tests;
 mod synthesis_tests;
 // MEDULLA-DECISION-ENGINE-R828: the branch-merge conflict winner, served.
 mod resolve_conflict_tests;
+// MEDULLA-DECISION-ENGINE-R106.1: council coordination, served.
+mod council_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
 mod tool_relevance_tests;
