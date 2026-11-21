@@ -8,8 +8,9 @@
 use medulla_finance_market::{
     market::backtest_run, market::codec, market::confidence, market::decimate, market::indicators,
     market::liquidity, market::rollup, market::scan, market::signal, market::snapshot,
-    market::FinanceMarketOp, market::MarketResult,
+    market::MarketResult,
 };
+use medulla_result_types::compute_result::market::FinanceMarketOp;
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_protocol_types::result_contract::MethodResult;
 

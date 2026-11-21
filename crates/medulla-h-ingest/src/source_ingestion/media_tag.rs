@@ -47,7 +47,8 @@ async fn current_revision(
     let Some(blob) = persistence.read_node(graph_fname, object_id).await? else {
         return Ok(None);
     };
-    let properties = medulla_types::msgpack::decode_property_object(&blob).map_err(|error| error.to_string())?;
+    let properties = medulla_types::msgpack::decode_property_object(&blob)
+        .map_err(|_| format!("object {object_id} stores an undecodable property map"))?;
     Ok(Some(
         properties
             .get("revision")
