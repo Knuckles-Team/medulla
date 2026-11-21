@@ -42,6 +42,7 @@ pub(crate) mod outbox;
 mod pins;
 pub mod projection;
 pub mod projection_retry;
+pub mod release;
 pub mod undecodable;
 pub(crate) mod visibility;
 
@@ -65,6 +66,16 @@ pub(crate) struct ConnectorPackHeadRow {
     /// carry none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub projection_retry: Option<projection_retry::PackProjectionRetry>,
+    /// The active release summary the next import is diffed against
+    /// (MEDULLA-TYPED-PACKS-R107.3), written by the import commit that wrote this head.
+    /// Rows written before it existed carry none and the next import has no baseline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub release: Option<medulla_catalog_types::connector_pack::contract_version::PackRelease>,
+    /// The one breaking release held behind a change request; the head never
+    /// moves for it. Cleared by the next import commit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending_release:
+        Option<medulla_catalog_types::connector_pack::contract_version::PendingPackRelease>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

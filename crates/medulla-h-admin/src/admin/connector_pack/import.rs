@@ -33,6 +33,7 @@ mod json;
 #[cfg(feature = "rdf")]
 mod nutrition;
 mod planning;
+pub(super) mod release;
 mod skill_files;
 mod skill_graph;
 mod validation;
@@ -41,6 +42,7 @@ pub(crate) mod vocabulary;
 #[cfg(test)]
 use json::{json_size, parse_bounded_json, MAX_JSON_DEPTH};
 use planning::{prepare, Prepared};
+use release::{ClassUsage, Verdict};
 #[cfg(test)]
 use validation::section_bytes;
 #[cfg(test)]
@@ -61,12 +63,13 @@ pub(super) async fn validate_and_commit(
     request: ConnectorPackImportRequest,
     archive: Vec<u8>,
     tenant_pack_guard: tokio::sync::OwnedMutexGuard<()>,
+    usage: Arc<dyn ClassUsage>,
 ) -> Result<PackImportResult, String> {
     let cancel = medulla_server_api::request_scope::current();
     let chunks = blob.store.clone();
     tokio::task::spawn_blocking(move || {
         let _held = tenant_pack_guard;
-        run_import(&store, &*chunks, request, &archive, &cancel)
+        run_import(&store, &*chunks, request, &archive, &cancel, &*usage)
     })
     .await
     .map_err(|error| format!("connector pack import task failed: {error}"))?
@@ -78,16 +81,27 @@ fn run_import(
     request: ConnectorPackImportRequest,
     archive: &[u8],
     cancel: &RequestCancel,
+    usage: &dyn ClassUsage,
 ) -> Result<PackImportResult, String> {
     let prior = store.connector_pack_members_with(
         &request.context.tenant_id,
         &request.index.connector,
         medulla_persistence_records::connector_pack::undecodable::UndecodableRows::Replace,
     )?;
-    let prepared = interruptible(cancel, || prepare(store, chunks, &request, archive, prior))??;
+    let prepared = interruptible(cancel, || {
+        prepare(store, chunks, &request, archive, prior.clone())
+    })??;
     let prepared = match prepared {
         Prepared::Rejected(result) => return Ok(result),
         Prepared::Ready(ready) => *ready,
+    };
+    // The release contract check runs before any body is copied or row written
+    // (MEDULLA-TYPED-PACKS-R107.3): a breaking or in-use release stops here.
+    let release = match interruptible(cancel, || {
+        release::judge(store, chunks, &request, archive, &prepared, &prior, usage)
+    })?? {
+        Verdict::Refused(result) => return Ok(result),
+        Verdict::Apply(release) => release,
     };
     let bodies = prepared
         .body_inputs
@@ -103,7 +117,7 @@ fn run_import(
         &bodies,
         request.context.created_at_ms,
     )?;
-    let plan = prepared.finish(request, stored)?;
+    let plan = prepared.finish(request, stored, release)?;
     // The last point an abandoned import can stop: past it the commit is atomic.
     still_wanted(cancel)?;
     store.commit_connector_pack(plan)

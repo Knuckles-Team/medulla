@@ -89,6 +89,8 @@ closed_error_codes! {
         ConversationConflict => "CONVERSATION_CONFLICT",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
         ClaimPaced => "CLAIM_PACED",
+        /// A release withdraws a class that stored data still names (MEDULLA-TYPED-PACKS-R107.4).
+        ClassInUse => "CLASS_IN_USE",
         PriorityOutOfRange => "PRIORITY_OUT_OF_RANGE",
         ClientSessionPrincipalMismatch => "CLIENT_SESSION_PRINCIPAL_MISMATCH",
         ClusterConfigurationInvalid => "CLUSTER_CONFIGURATION_INVALID",
@@ -102,6 +104,8 @@ closed_error_codes! {
         ConceptPathMalformed => "CONCEPT_PATH_MALFORMED",
         ConceptPathParentConflict => "CONCEPT_PATH_PARENT_CONFLICT",
         ConceptPathStaleRevision => "CONCEPT_PATH_STALE_REVISION",
+        /// A release breaks the active contract and waits behind a change request (MEDULLA-TYPED-PACKS-R107.4).
+        ContractBreakPending => "CONTRACT_BREAK_PENDING",
         CopyCapabilityMissing => "COPY_CAPABILITY_MISSING",
         CopyRowCapExceeded => "COPY_ROW_CAP_EXCEEDED",
         CrosswalkCategoryConflict => "CROSSWALK_CATEGORY_CONFLICT",

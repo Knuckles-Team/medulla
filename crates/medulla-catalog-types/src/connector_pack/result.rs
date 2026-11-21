@@ -78,6 +78,12 @@ pub enum PackViolationCode {
     ExternalMappingStale,
     ExternalSourceOutOfScope,
     ExternalReportForged,
+    // A release breaks the active contract and is held behind a change request
+    // (MEDULLA-TYPED-PACKS-R107.4).
+    ContractBreakPending,
+    // A release withdraws a class that stored data still names
+    // (MEDULLA-TYPED-PACKS-R107.4).
+    ClassInUse,
 }
 
 /// Something worth saying that did not stop the import.

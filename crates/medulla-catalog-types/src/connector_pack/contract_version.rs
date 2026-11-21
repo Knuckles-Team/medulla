@@ -1,10 +1,14 @@
 //! A connector pack release as a versioned contract, and the time-boxed grant
 //! that lets an ontology stand alone (MEDULLA-TYPED-PACKS-R107.1).
 //!
-//! Pure data and field validation. The import-time diff, the pending
-//! breaking release and `OrphanReport` are later children of
-//! `MEDULLA-TYPED-PACKS-R107`.
+//! Pure data and field validation, plus the two records the connector's head
+//! row stores for the import-time diff (`MEDULLA-TYPED-PACKS-R107.3`): the
+//! active release summary and the one pending breaking release.
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use medulla_types::contract::Digest256;
+use crate::stewardship::ChangeRequest;
 use serde::{Deserialize, Serialize};
 
 /// Longest connector name, version, IRI, reason or owner a record may carry.
@@ -156,5 +160,63 @@ impl StandaloneGrant {
     /// Whether the grant has lapsed at `now` (unix seconds).
     pub fn expired_at(&self, now: u64) -> bool {
         now >= self.expires_at
+    }
+}
+
+/// The active release of a connector pack as its head row stores it: the
+/// version record plus the tool and prompt fields and the mapping ids the next
+/// release is diffed against. The ontology and shapes documents are read from
+/// the head's own published members, never copied here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PackRelease {
+    pub version: PackContractVersion,
+    /// Declared tool field path (`<tool uri>#/<property>`) to its declared type.
+    pub fields: BTreeMap<String, String>,
+    /// Ids of the pack's mappings, `schema:<id>` or `relationship:<id>`.
+    pub mappings: BTreeSet<String>,
+}
+
+impl PackRelease {
+    pub fn validate(&self) -> Result<(), PackContractError> {
+        self.version.validate()?;
+        for path in self.fields.keys() {
+            text("fields", path)?;
+        }
+        for id in &self.mappings {
+            text("mappings", id)?;
+        }
+        Ok(())
+    }
+}
+
+/// A breaking release held behind a change request. It sits beside the head
+/// row and never moves the head: queries keep resolving through the active
+/// release. Its presence is the `pending` state of `PackReleaseMachine`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PendingPackRelease {
+    pub release: PackRelease,
+    /// The pack the held release came from.
+    pub pack_digest: Digest256,
+    /// The first `catalog.contract_break_report_max` breaks.
+    pub breaks: Vec<ContractBreak>,
+    /// Every break the diff found.
+    pub total_breaks: u64,
+    pub change_request: ChangeRequest,
+}
+
+impl PendingPackRelease {
+    pub fn validate(&self) -> Result<(), PackContractError> {
+        self.release.validate()?;
+        for found in &self.breaks {
+            found.validate()?;
+        }
+        if self.breaks.is_empty() || self.total_breaks < self.breaks.len() as u64 {
+            return Err(invalid("breaks"));
+        }
+        Ok(())
     }
 }

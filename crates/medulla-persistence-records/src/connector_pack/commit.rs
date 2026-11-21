@@ -54,6 +54,9 @@ pub struct ConnectorPackCommitPlan {
     /// How long the conformance evidence this import issues stands, in milliseconds: the
     /// resolved `conformance.evidence_ttl_ms` knob, read by the caller.
     pub evidence_ttl_ms: u64,
+    /// The release summary this import activates (MEDULLA-TYPED-PACKS-R107.3); stored on
+    /// the head so the next import diffs against it.
+    pub release: Option<medulla_catalog_types::connector_pack::contract_version::PackRelease>,
 }
 
 impl AgentLibraryStore {
@@ -438,6 +441,8 @@ fn apply_head(
         receipt: receipt.clone(),
         conformance_evidence: Some(issue_conformance_evidence(plan)),
         projection_retry: None,
+        release: plan.release.clone(),
+        pending_release: None,
     };
     let bytes = medulla_storage::encode_bounded(&head, "connector pack head")?;
     write

@@ -674,6 +674,7 @@ pub mod tests {
                 members: Vec::new(),
                 holders: Vec::new(),
                 evidence_ttl_ms: 3_600_000,
+                release: None,
             })
             .unwrap()
         {

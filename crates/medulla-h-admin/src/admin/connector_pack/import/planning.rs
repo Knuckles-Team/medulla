@@ -49,10 +49,21 @@ pub(super) struct ReadyPlan {
 }
 
 impl ReadyPlan {
+    /// The members this import would leave the head with.
+    pub(super) fn members(&self) -> &[ConnectorPackMemberRow] {
+        &self.members
+    }
+
+    /// The id the import record, and so the release it activates, carries.
+    pub(super) fn record_id(&self) -> &str {
+        &self.record.record_id
+    }
+
     pub(super) fn finish(
         mut self,
         request: ConnectorPackImportRequest,
         stored: Vec<medulla_server_blob::blob::engine_bodies::StoredEngineBody>,
+        release: medulla_catalog_types::connector_pack::contract_version::PackRelease,
     ) -> Result<ConnectorPackCommitPlan, String> {
         let by_digest: BTreeMap<_, _> = stored
             .into_iter()
@@ -92,6 +103,7 @@ impl ReadyPlan {
             members: self.members,
             holders,
             evidence_ttl_ms: medulla_server_api::knob_config::knobs().conformance_evidence_ttl_ms,
+            release: Some(release),
         })
     }
 }

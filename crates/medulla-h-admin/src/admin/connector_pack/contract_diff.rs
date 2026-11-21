@@ -514,6 +514,22 @@ pub struct ContractHistory {
 }
 
 impl ContractHistory {
+    /// A history whose only release is `active`, as the head row stores it:
+    /// the release is made through the machine's `Activate` edge like any other.
+    pub fn with_active(active: ReleaseContract) -> Result<Self, ContractDiffError> {
+        active
+            .version
+            .validate()
+            .map_err(ContractDiffError::Record)?;
+        let mut stored = StoredRelease::new(active, Vec::new(), None);
+        stored
+            .apply(ReleaseEvent::Activate)
+            .map_err(ContractDiffError::Transition)?;
+        Ok(Self {
+            releases: vec![stored],
+        })
+    }
+
     /// The release queries resolve through.
     pub fn active(&self) -> Option<&StoredRelease> {
         self.releases

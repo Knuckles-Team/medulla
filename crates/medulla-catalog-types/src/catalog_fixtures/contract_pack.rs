@@ -386,6 +386,8 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::ExternalMappingStale,
         PackViolationCode::ExternalSourceOutOfScope,
         PackViolationCode::ExternalReportForged,
+        PackViolationCode::ContractBreakPending,
+        PackViolationCode::ClassInUse,
     ]
 }
 

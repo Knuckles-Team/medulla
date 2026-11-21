@@ -200,6 +200,10 @@ async fn serve_import(
                     *request,
                     archive,
                     tenant_pack_guard,
+                    std::sync::Arc::new(import::release::GraphClassUsage {
+                        state: std::sync::Arc::clone(state),
+                        handle: tokio::runtime::Handle::current(),
+                    }),
                 )
                 .await
             }
