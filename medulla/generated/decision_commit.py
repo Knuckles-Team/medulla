@@ -176,6 +176,7 @@ from ._shared import (
     ProofNodeLeafBody,
     QuantisedValue,
     QuantScaleTag,
+    RecommendationApproval,
     ResolutionKind,
     RowId,
     Scalar,
@@ -277,6 +278,7 @@ class AgentComponentCommittedResult(BaseModel):
 class DecisionCommitRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    approval: RecommendationApproval | None = None
     context: AgentLibraryMutationContext
     expected_catalog_digest: str
     record: DecisionRecord

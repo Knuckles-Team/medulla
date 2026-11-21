@@ -197,12 +197,12 @@ from ._shared import (
     PremiseProvenanceClaimedMapping,
     PremiseProvenanceConnectorPack,
     PremiseProvenanceGraphRow,
-    PremiseProvenanceRetrievedEntry,
     PremiseProvenanceNativeOntology,
     PremiseProvenanceObservation,
     PremiseProvenancePolicy,
     PremiseProvenancePublisher,
     PremiseProvenanceRequest,
+    PremiseProvenanceRetrievedEntry,
     PremiseProvenanceSchemaSource,
     PremiseRef,
     PriceSource,
@@ -226,6 +226,7 @@ from ._shared import (
     QuantScaleTag,
     QuestionKind,
     ReasoningStrategy,
+    RecommendationApproval,
     Relation,
     ResolutionKind,
     RowId,
@@ -4000,6 +4001,7 @@ class DecisionLogCompacted(BaseModel):
 class DecisionLogEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    approval: RecommendationApproval | None = None
     committed_at_ms: Annotated[int, Field(ge=0)]
     committed_by: str
     inputs: EntryInputs | None = None
@@ -4011,6 +4013,7 @@ class DecisionLogEntry(BaseModel):
 class DecisionLogOpCommit(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    approval: RecommendationApproval | None = None
     evaluator: NamedEvaluator | None = None
     op: Literal["commit"]
     record: StatisticalDecisionRecord
@@ -40725,6 +40728,7 @@ __all__ = [
     "PrimitiveReplacement",
     "ProfileConstraint",
     "ReasoningStrategy",
+    "RecommendationApproval",
     "ReplayEvent",
     "SideEffectClass",
     "SkillNode",

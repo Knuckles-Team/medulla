@@ -807,11 +807,22 @@ DecisionOutcome = Annotated[
 ]
 
 
+class RecommendationApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approval_revision: Annotated[int, Field(ge=0)]
+    approved_at_ms: Annotated[int, Field(ge=0)]
+    record_digest: str
+    record_id: str
+    reviewer_principal: str
+
+
 class DecisionPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     a2a_requires_observation: bool
     accepted_gap: Scalar
+    approval_required: bool = False
     cold_start: ColdStart
     knobs: dict[str, KnobValue] | None = None
     max_nogood_rounds: Annotated[int, Field(ge=0, le=255)]
@@ -2872,6 +2883,7 @@ __all__ = [
     "PrimitiveReplacement",
     "ProfileConstraint",
     "ReasoningStrategy",
+    "RecommendationApproval",
     "SideEffectClass",
     "SkillTransformation",
     "SqlColumnProfile",
