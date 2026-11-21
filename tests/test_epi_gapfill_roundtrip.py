@@ -205,11 +205,8 @@ def test_explain_belief_disclosure_level_round_trip(gapfill_client):
 
 
 def _job_state_name(state) -> str:
-    """``JobState`` is externally-tagged: the bare string ``"Submitted"`` for that
-    one unit variant, or ``{"VariantName": {...fields...}}`` for the rest — see
+    """``JobState`` is externally-tagged: ``{"VariantName": {...fields...}}`` — see
     :class:`~medulla.client.JobsClient`'s docstring."""
-    if isinstance(state, str):
-        return state
     assert isinstance(state, dict) and len(state) == 1, (
         f"unexpected state shape: {state!r}"
     )

@@ -99,7 +99,11 @@ pub struct JobCheckpoint {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum JobState {
-    Submitted,
+    /// Waiting for a worker. A reclaimed job carries the checkpoint of its lapsed attempt, and
+    /// the next claim resumes from it.
+    Submitted {
+        checkpoint: Option<JobCheckpoint>,
+    },
     Running {
         lease: JobWorkerLease,
         checkpoint: JobCheckpoint,

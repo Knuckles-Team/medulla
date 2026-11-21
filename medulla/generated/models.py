@@ -9710,6 +9710,18 @@ class JobStateRunningBody(BaseModel):
     lease: JobWorkerLease
 
 
+class JobStateSubmitted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Submitted: JobStateSubmittedBody
+
+
+class JobStateSubmittedBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    checkpoint: JobCheckpoint | None = None
+
+
 class JobStateSucceeded(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15835,6 +15847,7 @@ class MethodBrokerAckTagParams(BaseModel):
 
     consumer: str
     delivery_tag: int
+    now_ms: Annotated[int, Field(ge=0)]
 
 
 class MethodBrokerConsumeParams(BaseModel):
@@ -30103,7 +30116,7 @@ JobResultCalibration = Annotated[tuple[float, float], Field(min_length=2, max_le
 
 
 JobState = (
-    str
+    JobStateSubmitted
     | JobStateRunning
     | JobStatePublishing
     | JobStateCancelRequested
@@ -36795,6 +36808,8 @@ __all__ = [
     "JobStatePublishingBody",
     "JobStateRunning",
     "JobStateRunningBody",
+    "JobStateSubmitted",
+    "JobStateSubmittedBody",
     "JobStateSucceeded",
     "JobStateSucceededBody",
     "JobWorkerLease",
