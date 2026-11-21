@@ -41,6 +41,8 @@ pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
 pub mod drift_gate;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod facts;
 pub mod governance;
 pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -233,6 +235,7 @@ fn admit_kind(
         | SourceBatchKind::Groups
         | SourceBatchKind::Containers
         | SourceBatchKind::Proposals
+        | SourceBatchKind::Facts
         | SourceBatchKind::Transcripts => Ok(()),
         #[cfg(all(
             feature = "redb",
@@ -262,6 +265,7 @@ pub async fn prepare(
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Proposals
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Facts
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Transcripts
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Enumeration
     ) {
@@ -672,6 +676,17 @@ async fn prepare_extension_batch(
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }
             proposal_items = admission.items;
+            methods.extend(admission.methods);
+        }
+        Some(SourceBatchExtension::Facts(items)) => {
+            // Prose facts ground against the graph's compiled ontology and commit as
+            // candidate claims and fact atoms (MEDULLA-INGEST-WORKER-R701.3).
+            let decoded = facts::decode_facts(items.as_slice())?;
+            let cache = facts::grounding_cache(&ctx.schema_sources)?;
+            let admission = facts::admit_facts(ctx.tenant_scope, &decoded, &cache)?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
             methods.extend(admission.methods);
         }
         Some(SourceBatchExtension::Containers(items)) => {

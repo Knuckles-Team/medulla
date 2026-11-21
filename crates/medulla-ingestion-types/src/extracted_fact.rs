@@ -100,6 +100,16 @@ pub struct CandidateClaim {
     pub grounding: GroundingResult,
 }
 
+/// The payload of a `facts` source batch (MEDULLA-INGEST-WORKER-R701.3): the
+/// prose facts the SDK extracted. The SDK decides prose or structured routing
+/// and sends only prose facts.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FactBatch {
+    pub facts: Vec<ExtractedFact>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
