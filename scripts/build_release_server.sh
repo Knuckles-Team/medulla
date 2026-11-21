@@ -27,6 +27,12 @@ medulla_build_release_server() {
                 export CARGO_PROFILE_RELEASE_SERVER_CODEGEN_UNITS=16
                 ;;
         esac
+        # The GNU build-id is the identity the symbol file keeps (MEDULLA-CONTRACT-R060.1).
+        case "$target" in
+            *-unknown-linux-*)
+                export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,--build-id=sha1"
+                ;;
+        esac
         cargo build --locked --profile release-server --features full,ast-extended \
             --bin medulla-server --target "$target"
     ) || return 1
@@ -41,6 +47,13 @@ medulla_build_release_server() {
     mkdir -p "$out" || return 1
     cp "$target_dir/$target/release-server/$exe" "$out/$exe" || return 1
     chmod 0755 "$out/$exe" || return 1
+    # Split the debug information into dist-server-symbols/ and strip the shipped
+    # binary; the build-id stays in both (MEDULLA-CONTRACT-R060.1).
+    case "$target" in
+        *-windows-*) cp "$target_dir/$target/release-server/medulla_server.pdb" "$out/medulla-server.pdb" 2>/dev/null || true ;;
+    esac
+    bash "$(dirname "${BASH_SOURCE[0]}")/split_release_symbols.sh" "$out/$exe" dist-server-symbols || return 1
+    rm -f "$out/medulla-server.pdb"
     ls -l "$out/$exe"
 }
 medulla_build_release_server || { return 1 2>/dev/null || exit 1; }

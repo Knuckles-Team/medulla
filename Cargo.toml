@@ -2446,7 +2446,10 @@ opt-level = "s"
 lto = "fat"
 codegen-units = 1
 panic = "unwind"
-strip = true
+# The debug information is split from the shipped binary by
+# `scripts/split_release_symbols.sh`; the build-id stays in both files (MEDULLA-CONTRACT-R060.1).
+debug = "line-tables-only"
+strip = "none"
 
 [profile.release-tiny]
 inherits = "release"
