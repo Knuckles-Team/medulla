@@ -51,6 +51,7 @@ mod open_tests;
 mod receipt;
 mod replay;
 mod reward;
+mod skill_admission;
 mod write;
 
 pub(super) use batch::native_lifecycle_batch;

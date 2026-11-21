@@ -27,6 +27,8 @@ from .agent_component import (
     AgentComponentOpCurrent,
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
+    SkillAdmission,
+    SkillAdmissionRequest,
 )
 from .concept_lineage import (
     ConceptEdgeRecord,
@@ -2417,3 +2419,29 @@ decode_data_product_register = contract_decoder(
 send_ts_define_state_space = contract_sender(
     "TsDefineStateSpace", "MethodTsDefineStateSpaceParams"
 )
+
+
+async def send_agent_component_admit_skill_upgrade(
+    client: Any,
+    request: SkillAdmissionRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> SkillAdmission:
+    """Send typed AgentComponent.admit_skill_upgrade."""
+    request = SkillAdmissionRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "admit_skill_upgrade",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return SkillAdmission.model_validate(payload)

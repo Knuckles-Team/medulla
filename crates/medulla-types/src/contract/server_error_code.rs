@@ -768,6 +768,12 @@ closed_error_codes! {
         EnvelopeSourceMissing => "ENVELOPE_SOURCE_MISSING",
         HydrationBindingMismatch => "HYDRATION_BINDING_MISMATCH",
         SkillCapabilityUnresolved => "SKILL_CAPABILITY_UNRESOLVED",
+        /// A breaking skill upgrade names no declared migration (MEDULLA-TYPED-PACKS-R100.101).
+        SkillBreakingNoMigration => "SKILL_BREAKING_NO_MIGRATION",
+        /// A held skill admission no longer matches the consumer contract or package in force (MEDULLA-TYPED-PACKS-R100.101).
+        SkillConsumerContractChanged => "SKILL_CONSUMER_CONTRACT_CHANGED",
+        /// A skill migration is bound to another change or its receipt did not pass (MEDULLA-TYPED-PACKS-R100.101).
+        SkillMigrationReceiptInvalid => "SKILL_MIGRATION_RECEIPT_INVALID",
         SkillCycle => "SKILL_CYCLE",
         SkillDependencyUnresolved => "SKILL_DEPENDENCY_UNRESOLVED",
         SkillSpanMissing => "SKILL_SPAN_MISSING",

@@ -161,6 +161,60 @@ class AgentComponentOpContent(BaseModel):
     request: AgentComponentContentRequest
 
 
+class SkillContractFieldWire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    required: bool
+    type_name: str
+
+
+class SkillMigrationWire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    consumer_contract_digest: str
+    migration_digest: str
+    migration_id: str
+    new_package_digest: str
+    previous_package_digest: str
+    receipt_passed: bool
+
+
+class SkillAdmissionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cohort: list[str] = Field(default_factory=list)
+    component_id: str
+    held_admission_revision: Annotated[int, Field(ge=0)] | None = None
+    migration: SkillMigrationWire | None = None
+    new_contract: list[SkillContractFieldWire] = Field(default_factory=list)
+    new_package_digest: str
+    previous_contract: list[SkillContractFieldWire] = Field(default_factory=list)
+    previous_package_digest: str
+    tenant_id: str
+
+
+class SkillAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admission_revision: Annotated[int, Field(ge=0)]
+    cohort: list[str]
+    migration_digest: str | None = None
+    migration_id: str | None = None
+    new_contract_digest: str
+    new_package_digest: str
+    previous_contract_digest: str
+    previous_package_digest: str
+    verdict: Literal["compatible", "breaking_with_migration", "breaking_refused"]
+
+
+class AgentComponentOpAdmitSkillUpgrade(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["admit_skill_upgrade"]
+    request: SkillAdmissionRequest
+
+
 AgentComponentOp = Annotated[
     AgentComponentOpPublish
     | AgentComponentOpRetire
@@ -168,7 +222,8 @@ AgentComponentOp = Annotated[
     | AgentComponentOpHistory
     | AgentComponentOpStatus
     | AgentComponentOpSearch
-    | AgentComponentOpContent,
+    | AgentComponentOpContent
+    | AgentComponentOpAdmitSkillUpgrade,
     Field(discriminator="op"),
 ]
 
@@ -237,6 +292,16 @@ AgentComponentOpSearch.model_rebuild()
 
 AgentComponentOpContent.model_rebuild()
 
+AgentComponentOpAdmitSkillUpgrade.model_rebuild()
+
+SkillContractFieldWire.model_rebuild()
+
+SkillMigrationWire.model_rebuild()
+
+SkillAdmissionRequest.model_rebuild()
+
+SkillAdmission.model_rebuild()
+
 AgentComponentPublishRequest.model_rebuild()
 
 AgentComponentRetireRequest.model_rebuild()
@@ -262,6 +327,7 @@ __all__ = [
     "AgentComponentKind",
     "AgentComponentMutationKind",
     "AgentComponentOp",
+    "AgentComponentOpAdmitSkillUpgrade",
     "AgentComponentOpContent",
     "AgentComponentOpCurrent",
     "AgentComponentOpHistory",
@@ -302,4 +368,8 @@ __all__ = [
     "ToolFactDeclarer",
     "ToolSideEffects",
     "ToolsetTransport",
+    "SkillAdmission",
+    "SkillAdmissionRequest",
+    "SkillContractFieldWire",
+    "SkillMigrationWire",
 ]

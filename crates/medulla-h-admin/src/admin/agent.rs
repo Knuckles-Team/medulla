@@ -130,6 +130,9 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        AgentComponentOp::AdmitSkillUpgrade { request } => {
+            super::skill_admission::handle_admit_skill_upgrade(&store, req_id, request)
+        }
     }
 }
 

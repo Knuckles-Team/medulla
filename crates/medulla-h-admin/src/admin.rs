@@ -32,6 +32,7 @@ mod backup;
 mod cluster;
 #[cfg(feature = "redb")]
 mod component_content;
+mod skill_admission;
 #[cfg(feature = "redb")]
 pub mod concept_lineage;
 // Declared in every build -- the dispatch arm that reaches it carries no cfg;

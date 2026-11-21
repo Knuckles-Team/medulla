@@ -22,6 +22,7 @@ use medulla_agent_types::agent_template::AgentTemplateEntry;
 use medulla_agent_types::concept_lineage::{ConceptEdgeRecord, ConceptReadResult, ConceptRecord};
 use medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence;
 use medulla_catalog_types::connector_pack::ConnectorPackStatus as ConnectorPackStatusBody;
+use medulla_catalog_types::skill_admission::SkillAdmission;
 use medulla_catalog_types::{
     connector_pack::ConnectorPackBindingResult, connector_pack::ConnectorPackSourceApprovalResult,
     connector_pack::McpCatalogSnapshotBinding, connector_pack::PackBodyReconcileReport,
@@ -106,6 +107,7 @@ method_results! {
     #[cfg(feature = "query")]
     SqlSourceBatch(SqlSourceBatch) => Raw<SqlSourceBatchResult>;
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
+    AgentComponentAdmitSkillUpgrade(AgentComponent / "admit_skill_upgrade") => Raw<SkillAdmission>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;
     CapabilityCoverage(CapabilityCoverage) => Raw<CapabilityCoverageResult>;
     RevisionProposalList(RevisionProposalList) => Raw<medulla_decision_outcome_types::decision::revision_list::RevisionProposalPage>;

@@ -54,6 +54,7 @@ pub mod facts;
 pub mod input_capabilities;
 pub mod red_team;
 pub mod search;
+pub mod skill_admission;
 
 mod validation;
 
@@ -71,6 +72,10 @@ pub use input_capabilities::{ModelInputCapabilities, ModelInputMediaType};
 pub use search::{
     decode_search_cursor, encode_search_cursor, AgentComponentSearchPage,
     AgentComponentSearchRequest, AgentComponentStatusRequest,
+};
+pub use skill_admission::{
+    SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire, MAX_SKILL_ADMISSION_COHORT,
+    MAX_SKILL_ADMISSION_CONTRACT_FIELDS,
 };
 
 /// Advanced to 2 by the pre-freeze contract review.
@@ -1357,11 +1362,17 @@ pub enum AgentComponentOp {
     Content {
         request: AgentComponentContentRequest,
     },
+    /// Admit one skill upgrade against the contracts its consumers declared, or re-check a
+    /// held admission (MEDULLA-TYPED-PACKS-R100.101).
+    AdmitSkillUpgrade { request: SkillAdmissionRequest },
 }
 
 impl AgentComponentOp {
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Publish { .. } | Self::Retire { .. })
+        matches!(
+            self,
+            Self::Publish { .. } | Self::Retire { .. } | Self::AdmitSkillUpgrade { .. }
+        )
     }
 
     /// The authorization action this operation needs.
@@ -1372,7 +1383,7 @@ impl AgentComponentOp {
     pub fn authz_action(&self) -> &'static str {
         match self {
             Self::Publish { request } => request.component.kind.publish_authz_action(),
-            Self::Retire { .. } => "agent:component-write",
+            Self::Retire { .. } | Self::AdmitSkillUpgrade { .. } => "agent:component-write",
             Self::Current { .. }
             | Self::History { .. }
             | Self::Status { .. }
@@ -1398,6 +1409,7 @@ impl AgentComponentOp {
                 validate_text("component_id", &request.component_id)
             }
             Self::Search { request } => request.validate(),
+            Self::AdmitSkillUpgrade { request } => request.validate(),
             Self::Content { request } => {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)
@@ -1431,6 +1443,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Status { request } => &request.context.tenant_id,
         AgentComponentOp::Search { request } => &request.tenant_id,
         AgentComponentOp::Content { request } => &request.tenant_id,
+        AgentComponentOp::AdmitSkillUpgrade { request } => &request.tenant_id,
         AgentComponentOp::Current { tenant_id, .. }
         | AgentComponentOp::History { tenant_id, .. } => tenant_id,
     }
