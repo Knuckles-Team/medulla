@@ -59,6 +59,8 @@ pub mod participant_transaction_machine;
 // no dep.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pg_operational_surface;
+/// The logical-replication slot row and its reserved namespace (MEDULLA-DURABLE-KERNEL-R035.7.1).
+pub mod pg_replication;
 pub mod sql_form_machine;
 // MEDULLA-DURABLE-KERNEL-R040 — pipelined RESP/pgwire-extended batch admission:
 // one admission maps to exactly one commit with order-preserving replies.

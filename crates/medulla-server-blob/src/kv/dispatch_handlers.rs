@@ -176,12 +176,35 @@ fn names_shared(method: &Method) -> bool {
     )
 }
 
+/// A served write that names a reserved namespace is refused before any effect: the
+/// replication slot rows (MEDULLA-DURABLE-KERNEL-R035.7.1) are written only by the
+/// replication connection, through the dispatch seam.
+pub(super) fn refuse_reserved_namespace(method: &Method) -> Result<(), String> {
+    let namespace = match method {
+        Method::KvPut { namespace, .. }
+        | Method::KvDelete { namespace, .. }
+        | Method::KvCas { namespace, .. }
+        | Method::KvDeclareNamespace { namespace, .. } => namespace,
+        _ => return Ok(()),
+    };
+    if namespace == medulla_mutation_types::pg_replication::REPLICATION_SLOT_NAMESPACE {
+        return Err(format!(
+            "{}: the namespace {namespace} is reserved",
+            medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
+        ));
+    }
+    Ok(())
+}
+
 /// Serve one `Method::Kv*` call. The caller has already checked `is_kv_method`.
 pub fn handle(call: &KvCall<'_>, method: Method) -> Response {
     let call = &KvCall {
         shared: names_shared(&method),
         ..*call
     };
+    if let Err(refusal) = refuse_reserved_namespace(&method) {
+        return Response::err(call.req_id, refusal);
+    }
     let original = method.clone();
     match method {
         Method::KvGet { namespace, key, .. } => kv_get(call, &namespace, &key),

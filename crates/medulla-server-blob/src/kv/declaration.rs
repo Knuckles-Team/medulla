@@ -198,3 +198,58 @@ impl KvStore {
             .cloned())
     }
 }
+
+#[cfg(test)]
+mod reserved_namespace_tests {
+    use super::super::dispatch_handlers::refuse_reserved_namespace;
+    use super::*;
+    use medulla_mutation_types::pg_replication::REPLICATION_SLOT_NAMESPACE;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R035.7.1
+    #[test]
+    fn served_writes_to_the_slot_namespace_refuse() {
+        let namespace = REPLICATION_SLOT_NAMESPACE.to_string();
+        for method in [
+            Method::KvPut {
+                namespace: namespace.clone(),
+                key: "tenant-a/slot".to_string(),
+                value: b"row".to_vec(),
+                shared: false,
+            },
+            Method::KvCas {
+                namespace: namespace.clone(),
+                key: "tenant-a/slot".to_string(),
+                expected_version: 0,
+                new: Some(b"row".to_vec()),
+                shared: true,
+            },
+            Method::KvDelete {
+                namespace: namespace.clone(),
+                key: "tenant-a/slot".to_string(),
+                shared: false,
+            },
+            Method::KvDeclareNamespace {
+                namespace: namespace.clone(),
+                class: "sync".to_string(),
+                shared: false,
+            },
+        ] {
+            let refusal = refuse_reserved_namespace(&method).unwrap_err();
+            assert!(refusal.starts_with("INVALID_ARGUMENT"), "{refusal}");
+        }
+        // Any other namespace is served, and a read of the reserved name is harmless.
+        assert!(refuse_reserved_namespace(&Method::KvPut {
+            namespace: "orders".to_string(),
+            key: "a".to_string(),
+            value: Vec::new(),
+            shared: false,
+        })
+        .is_ok());
+        assert!(refuse_reserved_namespace(&Method::KvGet {
+            namespace,
+            key: "a".to_string(),
+            shared: false,
+        })
+        .is_ok());
+    }
+}

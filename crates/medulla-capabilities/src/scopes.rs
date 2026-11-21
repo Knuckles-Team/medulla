@@ -246,6 +246,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("record:retire", Admin, "engine"),
     entry("registry:read", User, "engine"),
     entry("registry:write", User, "engine"),
+    entry("replication:read", User, "engine"),
     entry("resource:host", ServiceOnly, "engine"),
     entry("resource:read", User, "engine"),
     entry("resource:reserve", ServiceOnly, "engine"),
