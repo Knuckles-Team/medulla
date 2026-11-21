@@ -530,10 +530,9 @@ pub fn admit_canonical_with_limit(
     }
     let elements = (doc.steps.len() + doc.flows.len()) as u64;
     if elements > max_elements {
-        return Err(ImportError::NotCanonical {
-            reason: format!(
-                "{elements} elements exceed process_import_max_elements {max_elements}"
-            ),
+        return Err(ImportError::TooLarge {
+            elements,
+            limit: max_elements,
         });
     }
     let stated = allocated_of(doc);

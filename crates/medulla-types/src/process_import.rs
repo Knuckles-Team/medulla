@@ -244,6 +244,47 @@ pub enum ImportError {
     NotCanonical { reason: String },
     DigestMismatch { stated: String, computed: String },
     UnknownSource { system: String },
+    /// The workflow is invisible to the tenant.
+    UnknownModel { workflow_id: String },
+    /// More elements than `process_import_max_elements`.
+    TooLarge { elements: u64, limit: u64 },
+}
+
+/// The wire code of `ImportError::UnmappedElement`.
+pub const PROCESS_IMPORT_UNMAPPED_ELEMENT: &str = "PROCESS_IMPORT_UNMAPPED_ELEMENT";
+/// The wire code of `ImportError::NotCanonical`.
+pub const PROCESS_IMPORT_NOT_CANONICAL: &str = "PROCESS_IMPORT_NOT_CANONICAL";
+/// The wire code of `ImportError::DigestMismatch`.
+pub const PROCESS_IMPORT_DIGEST_MISMATCH: &str = "PROCESS_IMPORT_DIGEST_MISMATCH";
+/// The wire code of `ImportError::UnknownSource`.
+pub const PROCESS_IMPORT_UNKNOWN_SOURCE: &str = "PROCESS_IMPORT_UNKNOWN_SOURCE";
+/// The wire code of `ImportError::UnknownModel`.
+pub const PROCESS_IMPORT_UNKNOWN_MODEL: &str = "PROCESS_IMPORT_UNKNOWN_MODEL";
+/// The wire code of `ImportError::TooLarge`.
+pub const PROCESS_IMPORT_TOO_LARGE: &str = "PROCESS_IMPORT_TOO_LARGE";
+
+/// Every import refusal code, in the order of the `ImportError` variants.
+pub const REFUSALS: &[&str] = &[
+    PROCESS_IMPORT_UNMAPPED_ELEMENT,
+    PROCESS_IMPORT_NOT_CANONICAL,
+    PROCESS_IMPORT_DIGEST_MISMATCH,
+    PROCESS_IMPORT_UNKNOWN_SOURCE,
+    PROCESS_IMPORT_UNKNOWN_MODEL,
+    PROCESS_IMPORT_TOO_LARGE,
+];
+
+impl ImportError {
+    /// The stable wire code of this refusal.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::UnmappedElement { .. } => PROCESS_IMPORT_UNMAPPED_ELEMENT,
+            Self::NotCanonical { .. } => PROCESS_IMPORT_NOT_CANONICAL,
+            Self::DigestMismatch { .. } => PROCESS_IMPORT_DIGEST_MISMATCH,
+            Self::UnknownSource { .. } => PROCESS_IMPORT_UNKNOWN_SOURCE,
+            Self::UnknownModel { .. } => PROCESS_IMPORT_UNKNOWN_MODEL,
+            Self::TooLarge { .. } => PROCESS_IMPORT_TOO_LARGE,
+        }
+    }
 }
 
 impl std::fmt::Display for ImportError {
@@ -260,6 +301,13 @@ impl std::fmt::Display for ImportError {
                 )
             }
             Self::UnknownSource { system } => write!(f, "unknown process source {system}"),
+            Self::UnknownModel { workflow_id } => {
+                write!(f, "process model {workflow_id} is unknown")
+            }
+            Self::TooLarge { elements, limit } => write!(
+                f,
+                "{elements} elements exceed process_import_max_elements {limit}"
+            ),
         }
     }
 }
@@ -340,6 +388,40 @@ mod tests {
             "annex": [{"construct": "epc-state-event", "element_id": "e9", "after": "s2"}],
             "losses": []
         })
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R701.4
+    #[test]
+    fn codes_are_unique_and_stable() {
+        let errors = [
+            ImportError::UnmappedElement {
+                element_type: "noted".into(),
+            },
+            ImportError::NotCanonical {
+                reason: "schema".into(),
+            },
+            ImportError::DigestMismatch {
+                stated: "a".into(),
+                computed: "b".into(),
+            },
+            ImportError::UnknownSource {
+                system: "other".into(),
+            },
+            ImportError::UnknownModel {
+                workflow_id: "w".into(),
+            },
+            ImportError::TooLarge {
+                elements: 3,
+                limit: 2,
+            },
+        ];
+        let codes: Vec<&str> = errors.iter().map(ImportError::code).collect();
+        assert_eq!(codes, REFUSALS);
+        let mut unique = codes.clone();
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(unique.len(), REFUSALS.len());
+        assert!(codes.iter().all(|code| code.starts_with("PROCESS_IMPORT_")));
     }
 
     // spec: MEDULLA-CQ-ORCH-R701.1
