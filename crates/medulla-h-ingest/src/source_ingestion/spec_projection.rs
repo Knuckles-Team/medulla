@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
-use medulla_compute::parser::spec_artifacts::{is_row_id, SDD_NS};
+use medulla_compute::parser::spec_artifacts::{is_row_id, parse_spec_file, SDD_NS};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_types::contract::EngineErrorCode;
@@ -524,6 +524,119 @@ pub fn project_bundles(
     })
 }
 
+/// What the engine already holds of one artifact file: the digest it was ingested
+/// under and the ids of the requirement records it produced.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StoredArtifact {
+    pub digest: String,
+    pub records: Vec<String>,
+}
+
+/// The graph write of one incremental re-ingest.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReingestPlan {
+    pub operations: Vec<serde_json::Value>,
+    /// Files whose digest changed (or are new), in order.
+    pub reingested: Vec<String>,
+    /// Files that left the tree; their records are removed.
+    pub removed: Vec<String>,
+    /// Files whose digest is unchanged and were not parsed.
+    pub unchanged: u32,
+}
+
+/// The node that holds the digest of one artifact file of one repository.
+pub fn artifact_node_id(repo: &str, file: &str) -> String {
+    format!("specfile:{repo}:{file}")
+}
+
+fn digest_of(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(text.as_bytes()))
+}
+
+/// Incremental ingest by file digest (MEDULLA-SDLC-R014.2).
+///
+/// `files` is `(file name, text)` of the artifact tree now; `stored` is what the engine
+/// holds per file name. Only a file whose digest differs from the stored one is parsed
+/// (`parse_spec_file`) and projected (`project_requirements`); its digest and record ids go
+/// on the file node as properties. A record a changed file no longer produces is removed. A
+/// stored file that left the tree loses its file node and all its records. A parse or
+/// projection refusal produces no operation at all.
+pub fn reingest_changed_artifacts(
+    repo: &str,
+    files: &[(&str, &str)],
+    stored: &BTreeMap<String, StoredArtifact>,
+    states: &BTreeMap<String, String>,
+    external: &BTreeMap<String, String>,
+) -> Result<ReingestPlan, String> {
+    let mut removals: Vec<serde_json::Value> = Vec::new();
+    let mut writes: Vec<serde_json::Value> = Vec::new();
+    let mut links: Vec<serde_json::Value> = Vec::new();
+    let (mut reingested, mut removed, mut unchanged) = (Vec::new(), Vec::new(), 0u32);
+    let present: BTreeSet<&str> = files.iter().map(|(name, _)| *name).collect();
+    for (name, old) in stored {
+        if !present.contains(name.as_str()) {
+            removed.push(name.clone());
+            removals.extend(
+                old.records
+                    .iter()
+                    .map(|id| serde_json::json!({"op": "remove_node", "id": id})),
+            );
+            removals
+                .push(serde_json::json!({"op": "remove_node", "id": artifact_node_id(repo, name)}));
+        }
+    }
+    for (name, text) in files {
+        let digest = digest_of(text);
+        let old = stored.get(*name);
+        if old.is_some_and(|old| old.digest == digest) {
+            unchanged += 1;
+            continue;
+        }
+        let triples = parse_spec_file(name, text).map_err(|refusal| refusal.to_string())?;
+        let projection = project_requirements(repo, &triples, states, external)?;
+        let mut records = Vec::new();
+        for op in projection.operations {
+            if op["op"] == "upsert_node" {
+                if op["properties"]["type"] == "Requirement" {
+                    records.push(op["id"].as_str().unwrap_or_default().to_string());
+                }
+                writes.push(op);
+            } else {
+                links.push(op);
+            }
+        }
+        if let Some(old) = old {
+            removals.extend(
+                old.records
+                    .iter()
+                    .filter(|id| !records.contains(id))
+                    .map(|id| serde_json::json!({"op": "remove_node", "id": id})),
+            );
+        }
+        writes.push(node(
+            &artifact_node_id(repo, name),
+            serde_json::json!({
+                "type": "SpecArtifactFile",
+                "repo": repo,
+                "file": name,
+                "digest": digest,
+                "records": records.join(","),
+            }),
+        ));
+        reingested.push(name.to_string());
+    }
+    let mut operations = removals;
+    operations.extend(writes);
+    operations.extend(links);
+    Ok(ReingestPlan {
+        operations,
+        reingested,
+        removed,
+        unchanged,
+    })
+}
+
 /// Write one projection as the single `BatchUpdate` through the mutation gateway.
 pub async fn commit_requirements(
     ctx: &MutationCtx<'_>,
@@ -769,5 +882,115 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .expect_err("OTHER-R999 resolves to no row");
         assert!(refusal.starts_with(BUNDLE_ROW_UNRESOLVED), "{refusal}");
         assert!(refusal.contains("OTHER-R999"));
+    }
+
+    fn artifact_files() -> Vec<(&'static str, String)> {
+        let second = REQUIREMENTS
+            .replace("DEMO-R", "MORE-R")
+            .replace("Depends: MORE-R001, OTHER-R009.", "")
+            .replace("Depends: R002.", "");
+        vec![
+            ("requirements.md", REQUIREMENTS.to_string()),
+            ("more/requirements.md", second),
+        ]
+    }
+
+    fn as_refs(files: &[(&'static str, String)]) -> Vec<(&'static str, &str)> {
+        files.iter().map(|(n, t)| (*n, t.as_str())).collect()
+    }
+
+    /// The stored state a plan leaves behind, read back off its file nodes.
+    fn stored_after(plan: &ReingestPlan, into: &mut BTreeMap<String, StoredArtifact>) {
+        for op in &plan.operations {
+            if op["op"] == "upsert_node" && op["properties"]["type"] == "SpecArtifactFile" {
+                let props = &op["properties"];
+                into.insert(
+                    props["file"].as_str().unwrap().to_string(),
+                    StoredArtifact {
+                        digest: props["digest"].as_str().unwrap().to_string(),
+                        records: props["records"]
+                            .as_str()
+                            .unwrap()
+                            .split(',')
+                            .filter(|id| !id.is_empty())
+                            .map(str::to_string)
+                            .collect(),
+                    },
+                );
+            }
+        }
+    }
+
+    // spec: MEDULLA-SDLC-R014.2
+    #[test]
+    fn one_file_change_reingests_only_that_file() {
+        let mut files = artifact_files();
+        let mut stored = BTreeMap::new();
+        let external = external();
+        let first = reingest_changed_artifacts(
+            "demo",
+            &as_refs(&files),
+            &stored,
+            &BTreeMap::new(),
+            &external,
+        )
+        .expect("first ingest");
+        assert_eq!(
+            first.reingested,
+            ["more/requirements.md", "requirements.md"]
+        );
+        stored_after(&first, &mut stored);
+
+        // Nothing changed: nothing is parsed and nothing is written.
+        let idle = reingest_changed_artifacts(
+            "demo",
+            &as_refs(&files),
+            &stored,
+            &BTreeMap::new(),
+            &external,
+        )
+        .expect("idle");
+        assert!(idle.operations.is_empty() && idle.reingested.is_empty());
+        assert_eq!(idle.unchanged, 2);
+
+        // One file changes: only it re-ingests, within the budget.
+        files[1].1 = files[1].1.replace("**Second.**", "**Second row.**");
+        let started = std::time::Instant::now();
+        let change = reingest_changed_artifacts(
+            "demo",
+            &as_refs(&files),
+            &stored,
+            &BTreeMap::new(),
+            &external,
+        )
+        .expect("change");
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+        println!("REINGEST\t{}", change.reingested.join(","));
+        println!("UNCHANGED\t{}", change.unchanged);
+        assert_eq!(change.reingested, ["more/requirements.md"]);
+        assert_eq!(change.unchanged, 1);
+        stored_after(&change, &mut stored);
+
+        // A file that leaves the tree loses its file node and its records.
+        files.remove(1);
+        let gone = reingest_changed_artifacts(
+            "demo",
+            &as_refs(&files),
+            &stored,
+            &BTreeMap::new(),
+            &external,
+        )
+        .expect("removal");
+        println!("REMOVED\t{}", gone.removed.join(","));
+        assert_eq!(gone.removed, ["more/requirements.md"]);
+        let removed_ids: BTreeSet<&str> = gone
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "remove_node")
+            .map(|op| op["id"].as_str().unwrap())
+            .collect();
+        assert!(removed_ids.contains("specfile:demo:more/requirements.md"));
+        assert!(removed_ids.contains("requirement:demo:MORE-R002"));
+        assert!(gone.reingested.is_empty());
     }
 }
