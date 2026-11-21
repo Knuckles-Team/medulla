@@ -506,7 +506,7 @@ These acceptance tests require the consumer prerequisites described in the plan.
 - `MEDULLA-DECISION-ENGINE-R128.6`: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::plan_scaffold_rules`.
 - `MEDULLA-DECISION-ENGINE-R128.7`: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::shell_only_needs_both_facts`.
 - `MEDULLA-DECISION-ENGINE-R128.8`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::unknown_profile_is_refused`.
-- `MEDULLA-DECISION-ENGINE-R128.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::tool_set_reuses_covering_subset`.
+- `MEDULLA-DECISION-ENGINE-R128.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::tool_set_reuses_exact_subset`.
 - `MEDULLA-DECISION-ENGINE-R128.10`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::decide_routes_harness_config`.
 - `MEDULLA-DECISION-ENGINE-R128.11`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::premises_and_why_not_cover_each_part`.
 - `MEDULLA-DECISION-ENGINE-R128.12`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::all_parts_abstained_seals_abstention`.
