@@ -60,6 +60,8 @@ pub mod retrieval_verdict;
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retrieval_round;
+// MEDULLA-FEDERATED-QUERY-R736.1 — evidence candidates, the forest selection and its refusals.
+pub mod evidence_forest;
 // MEDULLA-FEDERATED-QUERY-R085.1 — approved, read-only source query records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_query;
