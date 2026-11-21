@@ -264,15 +264,26 @@ impl Pipeline {
     }
 
     pub(super) fn enqueue_s1(&self) -> SemanticStageIntent {
+        self.enqueue_s1_for(&self.identity, 91)
+    }
+
+    /// The S1 intent of `identity`'s entity at the pipeline's revision, with `input_seed`'s input.
+    fn enqueue_s1_for(
+        &self,
+        identity: &SemanticSqlSourceIdentity,
+        input_seed: u8,
+    ) -> SemanticStageIntent {
         let intent = SemanticStageIntent::create(SemanticStageIntentDraft {
             binding_id: self.binding.binding_id.clone(),
             binding_digest: self.binding.binding_digest,
             generation: self.binding.generation,
-            scope: self.entity_scope(),
+            scope: SemanticStageScope::Entity {
+                source_entity_id: identity.source_entity_id(),
+            },
             source_revision: REVISION.to_string(),
             stage: SemanticStage::SourceCommit,
             predecessor: SemanticStagePredecessor::None,
-            input_digest: digest(91),
+            input_digest: digest(input_seed),
         })
         .unwrap();
         self.codes
@@ -285,11 +296,19 @@ impl Pipeline {
         &self,
         intent: &SemanticStageIntent,
     ) -> (SemanticStageTransition, SemanticStageArtifact) {
+        self.s1_completion_for(intent, &self.identity)
+    }
+
+    fn s1_completion_for(
+        &self,
+        intent: &SemanticStageIntent,
+        identity: &SemanticSqlSourceIdentity,
+    ) -> (SemanticStageTransition, SemanticStageArtifact) {
         let completed = transition(intent, receipt(intent, intent.input_digest, 11));
         let artifact = completed_sql_source_artifact(
             &self.binding,
             &completed,
-            &self.identity,
+            identity,
             &completed.receipt.completed_at,
             12,
         );
@@ -306,7 +325,7 @@ impl Pipeline {
                 binding_id: intent.binding_id.clone(),
                 binding_digest: intent.binding_digest,
                 generation: intent.generation,
-                source_entity_id: self.entity(),
+                source_entity_id: intent.scope.source_entity_id().unwrap().to_string(),
                 source_revision: intent.source_revision.clone(),
                 source_manifest_digest: intent.input_digest,
                 projection_entity_digest: digest(14),
@@ -441,6 +460,34 @@ impl Pipeline {
             manifest: Box::new(manifest),
         };
         (completed, artifact, s6)
+    }
+
+    /// Every stage intent the consumer can claim now (at most eight), fenced as an executor
+    /// would and ordered by entity id.
+    fn claim_all(&self) -> Vec<(MutationOutboxLease, SemanticStageIntent)> {
+        let mut budget = OutboxClaimBudget::new(8, 60_000, self.now()).unwrap();
+        let claims = self
+            .codes
+            .claim_stage_leases(CONSUMER, &mut budget)
+            .unwrap()
+            .claims;
+        let mut held: Vec<_> = claims
+            .into_iter()
+            .map(|lease| {
+                let intent = self
+                    .codes
+                    .validate_stage_lease(&lease, CONSUMER, self.now())
+                    .unwrap();
+                (lease, intent)
+            })
+            .collect();
+        held.sort_by(|left, right| {
+            left.1
+                .scope
+                .source_entity_id()
+                .cmp(&right.1.scope.source_entity_id())
+        });
+        held
     }
 
     pub(super) fn run_s1(&self) {
@@ -1080,4 +1127,201 @@ fn producer_classes_isolate_fast_exhaustion_and_replay_after_reopen() {
         .unwrap();
     assert_eq!(status.head.unwrap().attempt, 2);
     assert_eq!(status.dead_lettered, 1);
+}
+
+/// The complete S3 completion of one entity of a multi-entity generation: its lexical manifest
+/// and the compare-and-swap update that advances the generation checkpoint from `previous` to
+/// the one covering `members`, over the entity set `expected`.
+fn lexical_completion_over(
+    pipeline: &Pipeline,
+    intent: &SemanticStageIntent,
+    seed: u8,
+    expected: &[SemanticExpectedEntity],
+    members: &mut Vec<SemanticGenerationMember>,
+    previous: Option<&SemanticGenerationCheckpoint>,
+) -> (SemanticStageTransition, SemanticGenerationArtifact) {
+    let mut completed = transition(intent, receipt(intent, digest(seed), seed));
+    let member = member_of(&completed);
+    let expected_previous_completed_count = members.len() as u64;
+    members.push(member.clone());
+    let aggregate = SemanticGenerationAggregate::create(
+        &intent.binding_id,
+        intent.binding_digest,
+        intent.generation,
+        &intent.source_revision,
+        SemanticStage::LexicalIndex,
+        expected.to_vec(),
+        members.clone(),
+    )
+    .unwrap();
+    let successor = SemanticGenerationCheckpoint::create(SemanticGenerationCheckpointDraft {
+        binding_id: intent.binding_id.clone(),
+        binding_digest: intent.binding_digest,
+        generation: intent.generation,
+        source_revision: intent.source_revision.clone(),
+        stage: SemanticStage::LexicalIndex,
+        artifact_digest: aggregate.aggregate_artifact_digest,
+        aggregate,
+        dependency: SemanticGenerationDependency::None,
+        completed_at: completed.receipt.completed_at.clone(),
+    })
+    .unwrap();
+    let manifest = SemanticLexicalIndexManifest {
+        binding_id: intent.binding_id.clone(),
+        binding_digest: intent.binding_digest,
+        generation: intent.generation,
+        source_revision: intent.source_revision.clone(),
+        identity: pipeline.binding.lexical_index_identity.clone(),
+        artifact_digest: successor.artifact_digest,
+        row_count: successor.aggregate.completed_entity_count as _,
+        completed_receipt_digest: successor.aggregate.aggregate_receipt_digest,
+        completed_at: successor.completed_at.clone(),
+    };
+    completed.generation_checkpoint = Some(Box::new(SemanticGenerationCheckpointUpdate {
+        expected_previous_checkpoint_digest: previous.map(|head| head.checkpoint_digest),
+        expected_previous_completed_count,
+        member,
+        successor,
+    }));
+    let artifact = SemanticGenerationArtifact::LexicalIndexManifest {
+        manifest: Box::new(manifest),
+    };
+    (completed, artifact)
+}
+
+/// A pipeline whose two entities have completed S1 and S2, with both S3 leases held (ordered by
+/// entity id) and the entity set the generation expects.
+fn two_entities_at_s3(
+    tag: &str,
+) -> (
+    Pipeline,
+    Vec<(MutationOutboxLease, SemanticStageIntent)>,
+    Vec<SemanticExpectedEntity>,
+) {
+    let pipeline = Pipeline::start(tag);
+    let second = sql_source_identity(&pipeline.binding, 92);
+    let first_s1 = pipeline.enqueue_s1_for(&pipeline.identity, 91);
+    let second_s1 = pipeline.enqueue_s1_for(&second, 93);
+    let held = pipeline.claim_all();
+    assert_eq!(held.len(), 2, "both entities' S1 intents are claimable");
+    for (lease, intent) in &held {
+        assert!(intent == &first_s1 || intent == &second_s1);
+        let identity = if intent == &first_s1 {
+            &pipeline.identity
+        } else {
+            &second
+        };
+        let (completed, artifact) = pipeline.s1_completion_for(intent, identity);
+        pipeline
+            .complete(lease, &completed, &artifact, None)
+            .unwrap();
+    }
+    for (lease, intent) in pipeline.claim_all() {
+        assert_eq!(intent.stage, SemanticStage::GraphProjection);
+        let (completed, artifact) = pipeline.graph_completion(&intent);
+        pipeline
+            .complete(&lease, &completed, &artifact, None)
+            .unwrap();
+    }
+    let held = pipeline.claim_all();
+    assert_eq!(held.len(), 2, "both entities' S3 intents are claimable");
+    assert!(held
+        .iter()
+        .all(|(_, intent)| intent.stage == SemanticStage::LexicalIndex));
+    let expected = held
+        .iter()
+        .map(|(_, intent)| SemanticExpectedEntity {
+            source_entity_id: intent.scope.source_entity_id().unwrap().to_string(),
+            source_revision: intent.source_revision.clone(),
+        })
+        .collect();
+    (pipeline, held, expected)
+}
+
+#[test]
+fn a_two_entity_generation_fixes_its_set_and_derives_s4_only_on_full_coverage() {
+    let (pipeline, held, expected) = two_entities_at_s3("pipeline-two-entity-coverage");
+    let mut members = Vec::new();
+
+    // The first entity's S3 completion covers one of two: no S4 intent is derived.
+    let (lease, intent) = &held[0];
+    let (completed, artifact) =
+        lexical_completion_over(&pipeline, intent, 15, &expected, &mut members, None);
+    let first = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    assert!(!first.aggregate.is_complete());
+    assert_eq!(first.aggregate.expected_entity_count, 2);
+    pipeline
+        .complete_generation(lease, &completed, &artifact, None)
+        .unwrap();
+    assert!(
+        pipeline.claim_all().is_empty(),
+        "a lexical checkpoint short of the entity set derives no S4"
+    );
+
+    // The second entity's completion covers the set, with the entity set the first fixed.
+    let (lease, intent) = &held[1];
+    let (completed, artifact) =
+        lexical_completion_over(&pipeline, intent, 25, &expected, &mut members, Some(&first));
+    let full = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    assert!(full.aggregate.is_complete());
+    assert_eq!(
+        (
+            full.aggregate.entity_set_digest,
+            full.aggregate.expected_entity_count
+        ),
+        (
+            first.aggregate.entity_set_digest,
+            first.aggregate.expected_entity_count
+        ),
+        "the entity set is fixed at the first checkpoint"
+    );
+    pipeline
+        .complete_generation(lease, &completed, &artifact, None)
+        .unwrap();
+
+    // Full coverage derives S4 for every entity, each naming the one complete checkpoint.
+    let derived = pipeline.claim_all();
+    assert_eq!(derived.len(), 2);
+    for ((_, intent), expected_entity) in derived.iter().zip(&expected) {
+        assert_eq!(intent.stage, SemanticStage::Vector);
+        assert_eq!(
+            intent.scope.source_entity_id(),
+            Some(expected_entity.source_entity_id.as_str())
+        );
+        assert_eq!(
+            intent.predecessor,
+            SemanticStagePredecessor::GenerationCheckpoint {
+                stage: SemanticStage::LexicalIndex,
+                checkpoint_digest: full.checkpoint_digest,
+            }
+        );
+    }
+}
+
+#[test]
+fn a_two_entity_generation_refuses_a_checkpoint_over_a_different_entity_set() {
+    let (pipeline, held, expected) = two_entities_at_s3("pipeline-two-entity-mismatch");
+    let mut members = Vec::new();
+    let (lease, intent) = &held[0];
+    let (completed, artifact) =
+        lexical_completion_over(&pipeline, intent, 15, &expected, &mut members, None);
+    let first = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    pipeline
+        .complete_generation(lease, &completed, &artifact, None)
+        .unwrap();
+
+    // The second entity names a three-entity set that the first checkpoint did not fix.
+    let mut widened = expected.clone();
+    widened.push(SemanticExpectedEntity {
+        source_entity_id: "semantic-sql-source:sha256:unknown-entity".to_string(),
+        source_revision: REVISION.to_string(),
+    });
+    let (lease, intent) = &held[1];
+    let (completed, artifact) =
+        lexical_completion_over(&pipeline, intent, 25, &widened, &mut members, Some(&first));
+    let message = refusal(pipeline.complete_generation(lease, &completed, &artifact, None));
+    assert!(
+        message.contains("entity set changed"),
+        "a mismatched entity set refuses: {message}"
+    );
 }
