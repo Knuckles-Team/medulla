@@ -1370,6 +1370,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &[
             "CYPHER_KEY_INVALID",
             "FENCE_FIELD_MISSING",
+            "ONTOLOGY_REVISION_STALE",
             "PRESET_UNAVAILABLE",
             "SHAPE_FATAL_FINDING",
             "SHAPE_UNKNOWN",

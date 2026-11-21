@@ -470,6 +470,8 @@ closed_error_codes! {
         SkillGraphLayerWithoutGraph => "SKILL_GRAPH_LAYER_WITHOUT_GRAPH",
         OntologyRevisionConflict => "ONTOLOGY_REVISION_CONFLICT",
         OntologyRevisionUnknown => "ONTOLOGY_REVISION_UNKNOWN",
+        /// A pinned ontology revision differs from the composed digest (MEDULLA-FEDERATED-QUERY-R005.1).
+        OntologyRevisionStale => "ONTOLOGY_REVISION_STALE",
         OutboxOwnerUnavailable => "OUTBOX_OWNER_UNAVAILABLE",
         OutboxOwnerUnknown => "OUTBOX_OWNER_UNKNOWN",
         OutboxScopeMismatch => "OUTBOX_SCOPE_MISMATCH",

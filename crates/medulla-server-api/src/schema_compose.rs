@@ -707,7 +707,7 @@ ex:Shape a sh:NodeShape ; sh:targetClass ex:Thing ;
         let unsupported = r#"
 @prefix ex: <http://example/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
-ex:parent a owl:AsymmetricProperty .
+ex:parent a owl:ReflexiveProperty .
 "#;
         sources
             .attach_dynamic(
@@ -717,7 +717,7 @@ ex:parent a owl:AsymmetricProperty .
             .unwrap();
         let error = validate_and_compose(&sources).unwrap_err();
         assert!(error.contains("OWL_UNSUPPORTED_CONSTRUCT"));
-        assert!(error.contains("AsymmetricProperty"));
+        assert!(error.contains("ReflexiveProperty"));
     }
 
     // spec: MEDULLA-SUPPLY-VOCAB-R001.1.2

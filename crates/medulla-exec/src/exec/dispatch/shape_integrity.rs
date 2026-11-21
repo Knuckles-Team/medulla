@@ -17,7 +17,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_graph_core::graph::GraphView;
-use medulla_types::shape_report::{IntegrityShape, ShapeReport};
+use medulla_types::shape_report::{IntegrityShape, ShapeReport, Violation};
 use medulla_query_types::wire::ShapeKeep;
 
 use crate::exec::PlanCtx;
@@ -65,13 +65,33 @@ pub(super) fn run_named_shapes(
     ctx: &PlanCtx,
     input: RowSet,
     shape: &IntegrityShape,
+    projection_base: &str,
     keep: ShapeKeep,
 ) -> Result<RowSet, String> {
+    // MEDULLA-FEDERATED-QUERY-R005.1: a pinned ontology revision is checked before any scan.
+    if let IntegrityShape::Consistency {
+        ontology_revision: Some(pinned),
+    } = shape
+    {
+        let current = super::consistency::ontology_revision(ctx);
+        if *pinned != current {
+            return Err(format!(
+                "ONTOLOGY_REVISION_STALE: pinned {pinned} but the composed ontology is {current}"
+            ));
+        }
+    }
     let budget = ctx.budget.max_shape_nodes;
     if ctx.view.node_map.len() > budget {
         return Ok(gap_rows(input, budget));
     }
-    let (findings, _visits) = scan(ctx.view, shape);
+    let (findings, violations) = match shape {
+        IntegrityShape::Consistency { .. } => {
+            let projection = medulla_rdf::sparql::Projection::from_wire(projection_base, "");
+            let violations = super::consistency::collect(ctx, &projection)?;
+            (consistency_findings(shape, &violations), violations)
+        }
+        _ => (scan(ctx.view, shape).0, BTreeMap::new()),
+    };
     let by_focus = group_by_focus(&findings);
     let violating = keep == ShapeKeep::Violating;
     let kept: std::collections::HashSet<&str> = input
@@ -85,11 +105,40 @@ pub(super) fn run_named_shapes(
     if violating {
         for row in out.rows() {
             if let Some(found) = by_focus.get(row.id.as_str()) {
-                texts.insert(row.id.clone(), columns(found));
+                let mut text = columns(found);
+                if let Some(typed) = violations.get(row.id.as_str()) {
+                    text.insert(
+                        "shape.violations".to_string(),
+                        serde_json::to_string(typed).map_err(|error| error.to_string())?,
+                    );
+                }
+                texts.insert(row.id.clone(), text);
             }
         }
     }
     Ok(out.with_texts(texts))
+}
+
+/// One finding per consistency violation, so the shared row columns and counts apply.
+fn consistency_findings(
+    shape: &IntegrityShape,
+    violations: &BTreeMap<String, Vec<Violation>>,
+) -> BTreeSet<ShapeReport> {
+    let mut findings = BTreeSet::new();
+    for (focus, found) in violations {
+        for violation in found {
+            let detail = serde_json::to_string(&violation.detail).unwrap_or_default();
+            findings.insert(ShapeReport::new(
+                shape,
+                focus.clone(),
+                format!("{} violates {}: {detail}", violation.kind().as_str(), violation.axiom_id),
+            ));
+            if findings.len() > MAX_FINDINGS_PER_SHAPE {
+                findings.pop_last();
+            }
+        }
+    }
+    findings
 }
 
 /// Rows of an unscanned (over-budget) graph: unchanged, each marked as a coverage gap.
@@ -210,6 +259,8 @@ pub(super) fn scan(
                 }
             }
         }
+        // Collected by `consistency::collect` from the composed ontology, not by a scan.
+        IntegrityShape::Consistency { .. } => {}
     }
     (findings, visits)
 }
@@ -284,7 +335,7 @@ mod tests {
         }
         let shape = IntegrityShape::parse(shape).unwrap().unwrap();
         let input = RowSet::from_ids(["a", "b", "c", "d"].map(String::from));
-        run_named_shapes(&ctx, input, &shape, keep).unwrap()
+        run_named_shapes(&ctx, input, &shape, "", keep).unwrap()
     }
 
     fn ids(rows: &RowSet) -> Vec<&str> {

@@ -11,6 +11,9 @@ mod shape;
 // MEDULLA-FEDERATED-QUERY-R005.700 — integrity shapes the stage runs in one pass.
 #[cfg(feature = "owl")]
 mod shape_integrity;
+// MEDULLA-FEDERATED-QUERY-R005.1 — the typed consistency-violation matrix.
+#[cfg(feature = "owl")]
+mod consistency;
 
 /// The one error every op-dispatch tier below (and [`super::apply`]'s own trailing arm)
 /// falls back to when the `Op` variant it was handed exists on the wire

@@ -418,13 +418,18 @@ pub fn validate_supported_profile(triples: &[Triple]) -> Result<(), String> {
         "http://www.w3.org/2002/07/owl#versionIRI",
         "http://www.w3.org/2002/07/owl#versionInfo",
     ];
+    // `AsymmetricProperty` and `IrreflexiveProperty` are admitted for declaration only
+    // (MEDULLA-FEDERATED-QUERY-R005.1): the reasoner draws no entailment from them, they entail
+    // only inconsistency, and the consistency collector finds their violations.
     const SUPPORTED_TYPE_OBJECTS: &[&str] = &[
         OWL_ALL_DISJOINT_CLASSES,
         OWL_CLASS,
         "http://www.w3.org/2002/07/owl#AnnotationProperty",
+        "http://www.w3.org/2002/07/owl#AsymmetricProperty",
         "http://www.w3.org/2002/07/owl#DatatypeProperty",
         OWL_FUNCTIONAL_PROPERTY,
         OWL_INVERSE_FUNCTIONAL_PROPERTY,
+        "http://www.w3.org/2002/07/owl#IrreflexiveProperty",
         "http://www.w3.org/2002/07/owl#NamedIndividual",
         "http://www.w3.org/2002/07/owl#ObjectProperty",
         "http://www.w3.org/2002/07/owl#Ontology",
