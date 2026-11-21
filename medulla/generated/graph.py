@@ -2883,7 +2883,7 @@ send_set_pose = contract_sender("SetPose", "MethodSetPoseParams", expect_bool)
 send_sync_memory_snapshot = contract_sender(
     "SyncMemorySnapshot", "MethodSyncMemorySnapshotParams"
 )
-decode_sync_memory_snapshot = contract_decoder("SyncMemorySnapshot", "SyncOutcome")
+decode_sync_memory_snapshot = contract_decoder("SyncMemorySnapshot", "SyncReceipt")
 send_sync_memory_snapshot_store = contract_sender(
     "SyncMemorySnapshotStore", "MethodSyncMemorySnapshotStoreParams", expect_bool
 )

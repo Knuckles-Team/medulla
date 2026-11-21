@@ -403,6 +403,19 @@ pub enum SyncOutcome {
     },
 }
 
+/// The served answer of one sync request: the outcome plus the declared warnings
+/// of a committed write whose follow-up did not complete, such as
+/// `MEMSYNC_HOLDER_PENDING` (MEDULLA-DURABLE-KERNEL-R085.4). `warnings` is absent
+/// on the wire when empty, so a clean answer is the outcome alone.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SyncReceipt {
+    #[serde(flatten)]
+    pub outcome: SyncOutcome,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
+}
+
 /// The bounded knobs of the memory-sync surface; defaults and bounds are the
 /// rows' (R085.2, R085.3, R085.7).
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

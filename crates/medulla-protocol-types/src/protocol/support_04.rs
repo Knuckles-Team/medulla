@@ -127,11 +127,6 @@ pub struct Response {
     /// (MEDULLA-ORCH-VOCAB-R811.9). Present only when `error` is `TRANSITION_REFUSED`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transition_refused: Option<medulla_types::transition_refused::TransitionRefusedWire>,
-    /// A declared warning on a success: the request committed, and the named
-    /// follow-up did not complete (MEDULLA-DURABLE-KERNEL-R085.4). Absent on a
-    /// clean success and on every failure.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub warning: Option<String>,
     /// The structured detail of a refusal, tagged by its code (MEDULLA-FEDERATED-QUERY-R040.2.4).
     /// Present only for a refusal that declares a variant of `ErrorDetail`. The
     /// human-readable text stays in `error_detail`.
@@ -210,7 +205,6 @@ impl Response {
                 error: None,
                 error_detail: None,
                 transition_refused: None,
-                warning: None,
                 error_data: None,
             },
             Err(error) => Response::err(id, error),
@@ -266,16 +260,8 @@ impl Response {
             error: Some(error),
             error_detail,
             transition_refused,
-            warning: None,
             error_data,
         }
-    }
-
-    /// Attach a declared warning to a success.
-    #[must_use]
-    pub fn with_warning(mut self, warning: impl Into<String>) -> Self {
-        self.warning = Some(warning.into());
-        self
     }
 
     /// The refusal folded back into the `"CODE: detail"` text `Response::err`
@@ -329,26 +315,9 @@ impl Response {
                 error: Some("OPERATION_REDIRECTED".to_string()),
                 error_detail: None,
                 transition_refused: None,
-                warning: None,
                 error_data: None,
             },
             Err(error) => Response::err(id, error),
         }
-    }
-}
-
-#[cfg(test)]
-mod warning_tests {
-    use super::{Response, ResultPayload};
-
-    // spec: MEDULLA-DURABLE-KERNEL-R085.4
-    #[test]
-    fn a_warning_rides_a_success_and_a_failure_carries_none() {
-        let ok = Response::ok(1, ResultPayload::Bool(true)).with_warning("MEMSYNC_HOLDER_PENDING");
-        assert!(ok.error.is_none());
-        assert_eq!(ok.warning.as_deref(), Some("MEMSYNC_HOLDER_PENDING"));
-        let clean = serde_json::to_value(Response::ok(2, ResultPayload::Bool(true))).unwrap();
-        assert!(clean.get("warning").is_none());
-        assert!(Response::err(3, "BUSY").warning.is_none());
     }
 }

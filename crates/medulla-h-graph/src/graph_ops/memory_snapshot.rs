@@ -18,7 +18,7 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
     decide, revision_node_id, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySnapshotList,
     MemorySyncError, MemorySyncRefusal, Resolution, SnapshotPlan, SnapshotProvenance,
-    SnapshotRowWrite, SyncAction, SyncOutcome, SyncRequest, SyncStamp, SyncStanding,
+    SnapshotRowWrite, SyncAction, SyncOutcome, SyncReceipt, SyncRequest, SyncStamp, SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::graph as results;
@@ -146,12 +146,15 @@ fn list_page(
     Ok(MemorySnapshotList { heads, next_cursor })
 }
 
-pub fn outcome_response(req_id: u64, outcome: SyncOutcome) -> Response {
+pub fn outcome_response(req_id: u64, outcome: SyncOutcome, warnings: Vec<String>) -> Response {
     match outcome {
         SyncOutcome::Refused { code } => refuse(req_id, code),
         other => payload(
             req_id,
-            ResultPayload::of::<results::SyncMemorySnapshot>(other),
+            ResultPayload::of::<results::SyncMemorySnapshot>(SyncReceipt {
+                outcome: other,
+                warnings,
+            }),
         ),
     }
 }

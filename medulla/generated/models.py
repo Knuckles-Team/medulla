@@ -1980,6 +1980,8 @@ CapabilityCoverageOutcome = Annotated[
     Field(discriminator="outcome"),
 ]
 
+SyncReceipt = SyncOutcome
+
 
 class CapabilityCoverageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
@@ -35054,6 +35056,7 @@ class SyncOutcomeAccepted(BaseModel):
 
     head: MemorySnapshotHead
     outcome: Literal["accepted"]
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SyncOutcomeAcknowledged(BaseModel):
@@ -35061,6 +35064,7 @@ class SyncOutcomeAcknowledged(BaseModel):
 
     outcome: Literal["acknowledged"]
     standing: SyncStanding
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SyncOutcomeConflictRetained(BaseModel):
@@ -35069,6 +35073,7 @@ class SyncOutcomeConflictRetained(BaseModel):
     candidate_revision: Annotated[int, Field(ge=0)]
     head: MemorySnapshotHead
     outcome: Literal["conflict_retained"]
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SyncOutcomeObserved(BaseModel):
@@ -35078,6 +35083,7 @@ class SyncOutcomeObserved(BaseModel):
     head_revision: Annotated[int, Field(ge=0)]
     outcome: Literal["observed"]
     standing: SyncStanding
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SyncOutcomeRefused(BaseModel):
@@ -35092,6 +35098,7 @@ class SyncOutcomeResolved(BaseModel):
 
     head: MemorySnapshotHead
     outcome: Literal["resolved"]
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SnapshotRowWrite(BaseModel):
@@ -44497,6 +44504,7 @@ __all__ = [
     "SyncOutcomeObserved",
     "SyncOutcomeRefused",
     "SyncOutcomeResolved",
+    "SyncReceipt",
     "SnapshotPlan",
     "SnapshotRowWrite",
     "SyncRequest",

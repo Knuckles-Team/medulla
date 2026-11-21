@@ -160,7 +160,7 @@ async fn handle_sync_memory(
         };
         let (outcome, snapshot) = decide_sync(&core, &request, &stamp, head_content_held);
         if snapshot.writes.is_empty() {
-            return outcome_response(req.id, outcome);
+            return outcome_response(req.id, outcome, Vec::new());
         }
         // A write over the tenant's capacity is refused before any effect.
         if exceeds_capacity(
@@ -226,15 +226,15 @@ async fn handle_sync_memory(
                     }
                     None => Ok(()),
                 };
-                let answer = outcome_response(req.id, outcome);
-                return match held {
-                    Ok(()) => answer,
+                let warnings = match held {
+                    Ok(()) => Vec::new(),
                     Err(error) => {
                         tracing::warn!(code = holder::HOLDER_PENDING, %error,
                             "memory snapshot holder not registered after commit");
-                        answer.with_warning(holder::HOLDER_PENDING)
+                        vec![holder::HOLDER_PENDING.to_string()]
                     }
                 };
+                return outcome_response(req.id, outcome, warnings);
             }
             Some(error) if error.starts_with("BUSY") => last = response,
             Some(_) => return response,

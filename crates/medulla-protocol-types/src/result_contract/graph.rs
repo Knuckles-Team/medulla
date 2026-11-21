@@ -51,7 +51,7 @@ method_results! {
     BusRoster(BusRoster) => Json<medulla_work_types::agent_bus::BusRoster>;
     ReadMemorySnapshot(ReadMemorySnapshot) => Json<medulla_mutation_types::memory_sync::MemorySnapshotRead>;
     ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_mutation_types::memory_sync::MemorySnapshotList>;
-    SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_mutation_types::memory_sync::SyncOutcome>;
+    SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_mutation_types::memory_sync::SyncReceipt>;
     SyncMemorySnapshotStore(SyncMemorySnapshotStore) => Bool<bool>;
     DecayMemories(DecayMemories) => Count<u64>;
     MemoryRemember(MemoryRemember) => Json<medulla_work_types::memory::MemoryRememberResult>;
