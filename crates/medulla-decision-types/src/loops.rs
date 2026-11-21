@@ -1,8 +1,7 @@
 //! Improvement-loop records and the `Loops` op body (MEDULLA-DECISION-ENGINE-R653.1).
 //!
-//! A loop's `state` names a state of `loop_statechart_def()` in
-//! `medulla-store`; that definition keeps the single state list, and the
-//! `Loops` handler refuses any other value. Severities and rates are parts per
+//! A loop's `state` is a [`LoopState`], the one state list that
+//! `loop_statechart_def()` in `medulla-store` builds its chart from. Severities and rates are parts per
 //! million in `[0, 1_000_000]`.
 
 use serde::{Deserialize, Serialize};
@@ -23,6 +22,116 @@ pub struct LoopLease {
     pub expires_at_ms: u64,
 }
 
+/// The lifecycle state of a loop: the 16 states of the durable loop statechart
+/// (`loop_statechart_def()` in `medulla-store`), which is the one machine
+/// (MEDULLA-DECISION-ENGINE-R830.6). The stored and served strings are the snake_case
+/// variant names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum LoopState {
+    /// Accepted, no holder yet; the initial state.
+    Submitted,
+    /// A holder is iterating.
+    Running,
+    /// Waiting on a callee.
+    Pending,
+    /// An evaluator is checking the iteration.
+    Validating,
+    /// Paused for a human.
+    Paused,
+    /// The lease was lost; re-claimable.
+    Orphaned,
+    /// The goal was met.
+    Completed,
+    /// Ended in failure.
+    Failed,
+    /// Cancelled by a human or the callee.
+    Cancelled,
+    /// Refused at intake.
+    Rejected,
+    /// The turn cap was reached.
+    MaxIterationsExceeded,
+    /// The budget was spent.
+    BudgetExceeded,
+    /// The wall clock deadline passed.
+    WallClockExceeded,
+    /// No progress was made.
+    Stalled,
+    /// The error threshold tripped.
+    ErrorThresholdExceeded,
+    /// The awaited external event fired.
+    ExternalEventSatisfied,
+}
+
+impl LoopState {
+    /// Every state: the non-final states, then the ten final states. The loop chart builds
+    /// its state list from this array.
+    pub const ALL: [LoopState; 16] = [
+        Self::Submitted,
+        Self::Running,
+        Self::Pending,
+        Self::Validating,
+        Self::Paused,
+        Self::Orphaned,
+        Self::Completed,
+        Self::Failed,
+        Self::Cancelled,
+        Self::Rejected,
+        Self::MaxIterationsExceeded,
+        Self::BudgetExceeded,
+        Self::WallClockExceeded,
+        Self::Stalled,
+        Self::ErrorThresholdExceeded,
+        Self::ExternalEventSatisfied,
+    ];
+
+    /// The stored text of this state (the chart state id).
+    pub fn stored(self) -> &'static str {
+        match self {
+            Self::Submitted => "submitted",
+            Self::Running => "running",
+            Self::Pending => "pending",
+            Self::Validating => "validating",
+            Self::Paused => "paused",
+            Self::Orphaned => "orphaned",
+            Self::Completed => "completed",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+            Self::Rejected => "rejected",
+            Self::MaxIterationsExceeded => "max_iterations_exceeded",
+            Self::BudgetExceeded => "budget_exceeded",
+            Self::WallClockExceeded => "wall_clock_exceeded",
+            Self::Stalled => "stalled",
+            Self::ErrorThresholdExceeded => "error_threshold_exceeded",
+            Self::ExternalEventSatisfied => "external_event_satisfied",
+        }
+    }
+
+    /// The state whose stored text is `stored`, if any.
+    pub fn from_stored(stored: &str) -> Option<LoopState> {
+        Self::ALL.into_iter().find(|state| state.stored() == stored)
+    }
+
+    /// Whether the state is final: it accepts no event.
+    pub fn is_final(self) -> bool {
+        !matches!(
+            self,
+            Self::Submitted
+                | Self::Running
+                | Self::Pending
+                | Self::Validating
+                | Self::Paused
+                | Self::Orphaned
+        )
+    }
+
+    /// Whether a lease holder acts in this state.
+    pub fn is_active(self) -> bool {
+        matches!(self, Self::Running | Self::Pending | Self::Validating)
+    }
+}
+
 /// One improvement loop.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -34,8 +143,9 @@ pub struct LoopInstance {
     pub loop_id: String,
     /// Digest of the loop's objective.
     pub objective_digest: String,
-    /// A state of `loop_statechart_def()`.
-    pub state: String,
+    /// The loop's state in the durable loop statechart. `LoopStore::view_of` is the one
+    /// writer (MEDULLA-DECISION-ENGINE-R830.6).
+    pub state: LoopState,
     /// Scheduling priority; higher runs first.
     pub priority: u32,
     /// Creation time, milliseconds since the epoch.
@@ -303,7 +413,7 @@ mod tests {
             tenant_id: "tenant-a".into(),
             loop_id: "loop-1".into(),
             objective_digest: "sha256:00".into(),
-            state: "submitted".into(),
+            state: LoopState::Submitted,
             priority: 5,
             created_at_ms: 10,
             lease: Some(LoopLease {
@@ -385,6 +495,25 @@ mod tests {
         )
         .is_err());
         assert!(serde_json::from_value::<LoopOp>(serde_json::json!({"op": "unknown"})).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.6
+    #[test]
+    fn loop_state_round_trips_every_stored_form() {
+        assert_eq!(LoopState::ALL.len(), 16);
+        assert_eq!(LoopState::ALL.iter().filter(|s| s.is_final()).count(), 10);
+        assert_eq!(LoopState::ALL.iter().filter(|s| s.is_active()).count(), 3);
+        for state in LoopState::ALL {
+            let stored = state.stored();
+            assert_eq!(LoopState::from_stored(stored), Some(state));
+            assert_eq!(serde_json::to_value(state).unwrap(), serde_json::json!(stored));
+            assert_eq!(
+                serde_json::from_value::<LoopState>(serde_json::json!(stored)).unwrap(),
+                state
+            );
+        }
+        assert_eq!(LoopState::from_stored("nonsense"), None);
+        assert!(serde_json::from_value::<LoopState>(serde_json::json!("nonsense")).is_err());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R830.9

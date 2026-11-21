@@ -1655,6 +1655,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "BrokerAckTag",
     "BrokerNackTag",
     "Decide",
+    // MEDULLA-DECISION-ENGINE-R830.6: the loop statechart and `GapMachine` refusals.
+    "Loops",
 ];
 
 /// The wire code of a refused machine transition.

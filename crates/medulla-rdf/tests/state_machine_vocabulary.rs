@@ -508,7 +508,7 @@ mod sm {
     use std::collections::BTreeSet;
 
     use super::common::{parse_all, KG, RDFS};
-    use medulla_rdf::oxrdf::{Literal, NamedNode, Term, Triple};
+    use medulla_rdf::oxrdf::{Literal, NamedNode, Subject, Term, Triple};
     use medulla_types::transition_refused::{MachineDef, MachineEvent, MachineState};
 
     const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -644,6 +644,68 @@ mod sm {
             assert!(
                 ty.ends_with("TerminalState"),
                 "{state} is not typed terminal"
+            );
+        }
+    }
+
+    /// The Turtle transitions of `machine` equal the transitions of a statechart in order:
+    /// edge id `L<index>`, source state, event and target state.
+    pub(super) fn assert_matches_chart(machine: &str, chart: &medulla_statechart::StatechartDef) {
+        let triples = triples();
+        let chart_edges: BTreeSet<Row> = chart
+            .transitions
+            .iter()
+            .enumerate()
+            .map(|(index, t)| {
+                (
+                    format!("L{index:02}"),
+                    t.from.clone(),
+                    t.event.clone(),
+                    t.to.clone(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            turtle_edges(&triples, machine),
+            chart_edges,
+            "{machine} Turtle transitions differ from the statechart"
+        );
+        let has_state = kg("hasState");
+        let subject = NamedNode::new(kg(machine)).unwrap();
+        let declared: BTreeSet<String> = triples
+            .iter()
+            .filter(|t| t.subject == subject.clone().into() && t.predicate.as_str() == has_state)
+            .map(|t| {
+                literal(object_of(&triples, iri(&t.object), &kg("storedForm")).unwrap()).to_owned()
+            })
+            .collect();
+        let states: BTreeSet<String> = chart.states.iter().map(|s| s.id.clone()).collect();
+        assert_eq!(declared, states, "{machine} states differ from the chart");
+        let initial = iri(object_of(&triples, &kg(machine), &kg("initialState")).unwrap());
+        let initial_stored = literal(object_of(&triples, initial, &kg("storedForm")).unwrap());
+        assert_eq!(initial_stored, chart.initial);
+        let stored_form = kg("storedForm");
+        let prefix = kg(&format!("{machine}_"));
+        for state in &chart.states {
+            let subject = triples
+                .iter()
+                .find_map(|t| match (&t.subject, &t.object) {
+                    (Subject::NamedNode(node), Term::Literal(value))
+                        if t.predicate.as_str() == stored_form
+                            && node.as_str().starts_with(&prefix)
+                            && Literal::value(value) == state.id =>
+                    {
+                        Some(node.as_str().to_owned())
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("no state with storedForm {}", state.id));
+            let ty = iri(object_of(&triples, &subject, RDF_TYPE).unwrap());
+            assert_eq!(
+                ty.ends_with("TerminalState"),
+                chart.is_final(&state.id),
+                "{} terminal typing",
+                state.id
             );
         }
     }
@@ -1202,4 +1264,19 @@ fn gap_machine_matches_edge_table() {
 #[test]
 fn gap_machine_classes_extend_core() {
     sm::assert_extends_core("Gap");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.6
+#[test]
+fn loop_machine_matches_statechart() {
+    sm::assert_matches_chart(
+        "LoopMachine",
+        &medulla_store::loop_statechart::loop_statechart_def(),
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.6
+#[test]
+fn loop_machine_classes_extend_core() {
+    sm::assert_extends_core("Loop");
 }

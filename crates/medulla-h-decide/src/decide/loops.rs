@@ -51,8 +51,8 @@ pub(super) mod served {
     use std::sync::Arc;
 
     use medulla_decision_types::loops::{
-        Gap, GapState, ImprovementLedger, LoopInstance, LoopOp, LoopTransition, LoopView,
-        OfferEvidence, StageBeacon, PPM_MAX,
+        Gap, GapState, ImprovementLedger, LoopInstance, LoopOp, LoopState, LoopTransition,
+        LoopView, OfferEvidence, StageBeacon, PPM_MAX,
     };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_types::gap_machine::GapEvent;
@@ -69,14 +69,15 @@ pub(super) mod served {
         StatechartStore,
     };
     use medulla_store::loop_statechart::{
-        loop_record_statechart_def, loop_statechart_def, FINAL_STATES, LOOP_RECORD_KEY,
+        loop_record_statechart_def, loop_statechart_def, LOOP_RECORD_KEY,
     };
     use medulla_types::contract::ServerErrorCode;
+    use medulla_types::transition_refused::{TransitionRefusalReason, TransitionRefused};
 
     use crate::decide::claims::served::{invalid, refuse, request_key};
 
-    /// The states a lease holder may act in.
-    const ACTIVE: &[&str] = &["running", "pending", "validating"];
+    /// The machine name a refused loop event carries.
+    const LOOP_MACHINE: &str = "loop";
 
     fn knob_u32(value: u64) -> u32 {
         u32::try_from(value).unwrap_or(u32::MAX)
@@ -343,7 +344,10 @@ pub(super) mod served {
         }
 
         /// Both instances of a loop, or `LOOP_NOT_FOUND`.
-        fn require(&self, loop_id: &str) -> Result<(MachineInstance, MachineInstance), String> {
+        pub(in crate::decide) fn require(
+            &self,
+            loop_id: &str,
+        ) -> Result<(MachineInstance, MachineInstance), String> {
             let state = self.find("loop", loop_id)?;
             let record = self.find("loop_record", loop_id)?;
             match (state, record) {
@@ -376,7 +380,7 @@ pub(super) mod served {
 
         /// Deliver one event under the instance's version; a refused or
         /// conflicting event writes nothing.
-        fn send(
+        pub(in crate::decide) fn send(
             &self,
             instance: &MachineInstance,
             event: EventInput,
@@ -397,30 +401,33 @@ pub(super) mod served {
                     other => other.to_string(),
                 })?;
             if !outcome.outcome.fired {
-                return Err(refuse(
-                    ServerErrorCode::LoopNotClaimable,
-                    format!("event {} did not fire", event.name),
-                ));
+                let from = Self::state_of(instance)?;
+                let reason = if from.is_final() {
+                    TransitionRefusalReason::TerminalState
+                } else {
+                    TransitionRefusalReason::IllegalTransition
+                };
+                let refused = TransitionRefused {
+                    machine: LOOP_MACHINE.to_string(),
+                    from: from.stored().to_string(),
+                    event: event.name.clone(),
+                    reason,
+                };
+                return Err(refused.to_string());
             }
             Ok(outcome.instance)
         }
 
-        /// The state of a loop instance, checked against the chart.
-        fn state_of(instance: &MachineInstance) -> Result<String, String> {
+        /// The state of a loop instance, checked against `LoopState::ALL`.
+        fn state_of(instance: &MachineInstance) -> Result<LoopState, String> {
             let active = instance
                 .configuration
                 .active
                 .iter()
                 .next()
                 .ok_or_else(|| refuse(ServerErrorCode::LoopStateUnknown, "no active state"))?;
-            if !loop_statechart_def()
-                .states
-                .iter()
-                .any(|state| state.id == *active)
-            {
-                return Err(refuse(ServerErrorCode::LoopStateUnknown, active));
-            }
-            Ok(active.to_string())
+            LoopState::from_stored(active)
+                .ok_or_else(|| refuse(ServerErrorCode::LoopStateUnknown, active))
         }
 
         fn view_of(state: &MachineInstance, record: &MachineInstance) -> Result<LoopView, String> {
@@ -431,6 +438,19 @@ pub(super) mod served {
             };
             view.instance.state = Self::state_of(state)?;
             Ok(view)
+        }
+
+        /// `view` with the state, lease and transitions it holds, over a fresh read of the
+        /// two instances after a send: the state comes from `view_of`, the one writer.
+        fn refreshed(
+            view: LoopView,
+            state: &MachineInstance,
+            record: &MachineInstance,
+        ) -> Result<LoopView, String> {
+            let mut fresh = Self::view_of(state, record)?;
+            fresh.instance.lease = view.instance.lease;
+            fresh.transitions = view.transitions;
+            Ok(fresh)
         }
 
         fn write(
@@ -444,15 +464,26 @@ pub(super) mod served {
             self.send(record, event, now_ms).map(|_| ())
         }
 
-        fn transition(&self, view: &mut LoopView, event: &str, from: &str, to: &str, now_ms: u64) {
+        /// Record the change `from` -> the state of the post-send `after` as one
+        /// `LoopTransition`, and answer the new state.
+        fn transition(
+            &self,
+            view: &mut LoopView,
+            event: &str,
+            from: LoopState,
+            after: &MachineInstance,
+            now_ms: u64,
+        ) -> Result<LoopState, String> {
+            let to = Self::state_of(after)?;
             view.transitions.push(LoopTransition {
                 epoch: view.instance.lease.as_ref().map_or(0, |lease| lease.epoch),
                 event: event.to_string(),
-                from: from.to_string(),
-                to: to.to_string(),
+                from: from.stored().to_string(),
+                to: to.stored().to_string(),
                 at_ms: now_ms,
                 actor: self.actor.clone(),
             });
+            Ok(to)
         }
 
         fn claim(
@@ -471,7 +502,7 @@ pub(super) mod served {
                         tenant_id: self.tenant.clone(),
                         loop_id: loop_id.to_string(),
                         objective_digest: objective_digest.to_string(),
-                        state: loop_statechart_def().initial,
+                        state: LoopState::Submitted,
                         priority,
                         created_at_ms: now_ms,
                         lease: None,
@@ -513,9 +544,9 @@ pub(super) mod served {
                 self.knobs.lease_ttl_s,
             )
             .map_err(kernel_refusal)?;
-            let from = view.instance.state.clone();
+            let from = view.instance.state;
             let mut instance = state_instance;
-            if ACTIVE.contains(&from.as_str()) {
+            if from.is_active() {
                 // The lease expired under an in-flight loop: the sweep event
                 // marks it re-claimable before the new holder takes it.
                 instance = self.send(
@@ -523,17 +554,16 @@ pub(super) mod served {
                     EventInput::with_payload("lease_lost", serde_json::json!({})),
                     now_ms,
                 )?;
-                let to = Self::state_of(&instance)?;
-                self.transition(&mut view, "lease_lost", &from, &to, now_ms);
-            } else if !matches!(from.as_str(), "submitted" | "orphaned") {
-                let why = if FINAL_STATES.contains(&from.as_str()) {
+                self.transition(&mut view, "lease_lost", from, &instance, now_ms)?;
+            } else if !matches!(from, LoopState::Submitted | LoopState::Orphaned) {
+                let why = if from.is_final() {
                     "the loop has finished"
                 } else {
                     "the loop is not waiting for a holder"
                 };
                 return Err(refuse(
                     ServerErrorCode::LoopNotClaimable,
-                    format!("{loop_id} is {from}: {why}"),
+                    format!("{loop_id} is {}: {why}", from.stored()),
                 ));
             }
             let before = Self::state_of(&instance)?;
@@ -542,10 +572,9 @@ pub(super) mod served {
                 EventInput::with_payload("claim", serde_json::json!({})),
                 now_ms,
             )?;
-            let after = Self::state_of(&instance)?;
             view.instance.lease = Some(lease);
-            self.transition(&mut view, "claim", &before, &after, now_ms);
-            view.instance.state = after;
+            self.transition(&mut view, "claim", before, &instance, now_ms)?;
+            let view = Self::refreshed(view, &instance, &record_instance)?;
             self.write(&record_instance, &view, now_ms)?;
             Ok(view)
         }
@@ -554,19 +583,18 @@ pub(super) mod served {
             let (state_instance, record_instance) = self.require(loop_id)?;
             let mut view = Self::view_of(&state_instance, &record_instance)?;
             fence(&view, epoch)?;
-            let from = view.instance.state.clone();
+            let from = view.instance.state;
             let instance = self.send(
                 &state_instance,
                 EventInput::with_payload("lease_lost", serde_json::json!({})),
                 now_ms,
             )?;
-            let to = Self::state_of(&instance)?;
             // The lease keeps its epoch so the next claim raises it; it ends now.
             if let Some(lease) = view.instance.lease.as_mut() {
                 lease.expires_at_ms = lease.expires_at_ms.min(now_ms);
             }
-            self.transition(&mut view, "release", &from, &to, now_ms);
-            view.instance.state = to;
+            self.transition(&mut view, "release", from, &instance, now_ms)?;
+            let view = Self::refreshed(view, &instance, &record_instance)?;
             self.write(&record_instance, &view, now_ms)?;
             Ok(view)
         }
@@ -597,10 +625,10 @@ pub(super) mod served {
     /// a state a holder acts in (a released loop has no holder).
     fn fence(view: &LoopView, epoch: u64) -> Result<(), String> {
         check_epoch(view.instance.lease.as_ref(), epoch).map_err(kernel_refusal)?;
-        if !ACTIVE.contains(&view.instance.state.as_str()) {
+        if !view.instance.state.is_active() {
             return Err(refuse(
                 ServerErrorCode::LoopLeaseStale,
-                format!("the loop is {}: no holder", view.instance.state),
+                format!("the loop is {}: no holder", view.instance.state.stored()),
             ));
         }
         Ok(())

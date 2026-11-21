@@ -6688,3 +6688,651 @@
     :fromState :GapMachine_Offered ;
     :toState :GapMachine_Settled ;
     :firedBy :GapMachine_Event_Settle .
+
+# spec: MEDULLA-DECISION-ENGINE-R830.6
+# The Loop machine. The durable loop statechart (`loop_statechart_def()` in medulla-store) is the same
+# table; the ontology test asserts the Turtle transitions equal the chart transitions, in order.
+
+:LoopState a owl:Class ;
+    rdfs:label "Loop State" ;
+    rdfs:comment "A state of the Loop machine." ;
+    rdfs:subClassOf :State .
+
+:LoopTerminalState a owl:Class ;
+    rdfs:label "Loop Terminal State" ;
+    rdfs:comment "A terminal state of the Loop machine." ;
+    rdfs:subClassOf :TerminalState, :LoopState .
+
+:LoopTransition a owl:Class ;
+    rdfs:label "Loop Transition" ;
+    rdfs:comment "A transition of the Loop machine." ;
+    rdfs:subClassOf :Transition .
+
+:LoopEvent a owl:Class ;
+    rdfs:label "Loop Event" ;
+    rdfs:comment "An event of the Loop machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:LoopGuard a owl:Class ;
+    rdfs:label "Loop Guard" ;
+    rdfs:comment "A guard of the Loop machine; the chart evaluates its guards on the event payload." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:LoopMachine a :StateMachine ;
+    rdfs:label "Loop machine" ;
+    :initialState :LoopMachine_Submitted ;
+    :hasState :LoopMachine_Submitted, :LoopMachine_Running, :LoopMachine_Pending, :LoopMachine_Validating, :LoopMachine_Paused, :LoopMachine_Orphaned, :LoopMachine_Completed, :LoopMachine_Failed, :LoopMachine_Cancelled, :LoopMachine_Rejected, :LoopMachine_MaxIterationsExceeded, :LoopMachine_BudgetExceeded, :LoopMachine_WallClockExceeded, :LoopMachine_Stalled, :LoopMachine_ErrorThresholdExceeded, :LoopMachine_ExternalEventSatisfied .
+
+:LoopMachine_Submitted a :LoopState ;
+    rdfs:label "Loop Submitted" ;
+    :storedForm "submitted" .
+
+:LoopMachine_Running a :LoopState ;
+    rdfs:label "Loop Running" ;
+    :storedForm "running" .
+
+:LoopMachine_Pending a :LoopState ;
+    rdfs:label "Loop Pending" ;
+    :storedForm "pending" .
+
+:LoopMachine_Validating a :LoopState ;
+    rdfs:label "Loop Validating" ;
+    :storedForm "validating" .
+
+:LoopMachine_Paused a :LoopState ;
+    rdfs:label "Loop Paused" ;
+    :storedForm "paused" .
+
+:LoopMachine_Orphaned a :LoopState ;
+    rdfs:label "Loop Orphaned" ;
+    :storedForm "orphaned" .
+
+:LoopMachine_Completed a :LoopTerminalState ;
+    rdfs:label "Loop Completed" ;
+    :storedForm "completed" .
+
+:LoopMachine_Failed a :LoopTerminalState ;
+    rdfs:label "Loop Failed" ;
+    :storedForm "failed" .
+
+:LoopMachine_Cancelled a :LoopTerminalState ;
+    rdfs:label "Loop Cancelled" ;
+    :storedForm "cancelled" .
+
+:LoopMachine_Rejected a :LoopTerminalState ;
+    rdfs:label "Loop Rejected" ;
+    :storedForm "rejected" .
+
+:LoopMachine_MaxIterationsExceeded a :LoopTerminalState ;
+    rdfs:label "Loop MaxIterationsExceeded" ;
+    :storedForm "max_iterations_exceeded" .
+
+:LoopMachine_BudgetExceeded a :LoopTerminalState ;
+    rdfs:label "Loop BudgetExceeded" ;
+    :storedForm "budget_exceeded" .
+
+:LoopMachine_WallClockExceeded a :LoopTerminalState ;
+    rdfs:label "Loop WallClockExceeded" ;
+    :storedForm "wall_clock_exceeded" .
+
+:LoopMachine_Stalled a :LoopTerminalState ;
+    rdfs:label "Loop Stalled" ;
+    :storedForm "stalled" .
+
+:LoopMachine_ErrorThresholdExceeded a :LoopTerminalState ;
+    rdfs:label "Loop ErrorThresholdExceeded" ;
+    :storedForm "error_threshold_exceeded" .
+
+:LoopMachine_ExternalEventSatisfied a :LoopTerminalState ;
+    rdfs:label "Loop ExternalEventSatisfied" ;
+    :storedForm "external_event_satisfied" .
+
+:LoopMachine_Event_claim a :LoopEvent ;
+    rdfs:label "Loop claim" .
+
+:LoopMachine_Event_pretick a :LoopEvent ;
+    rdfs:label "Loop pretick" .
+
+:LoopMachine_Event_resume a :LoopEvent ;
+    rdfs:label "Loop resume" .
+
+:LoopMachine_Event_posttick a :LoopEvent ;
+    rdfs:label "Loop posttick" .
+
+:LoopMachine_Event_reject a :LoopEvent ;
+    rdfs:label "Loop reject" .
+
+:LoopMachine_Event_lease_lost a :LoopEvent ;
+    rdfs:label "Loop lease_lost" .
+
+:LoopMachine_L00 a :LoopTransition ;
+    rdfs:label "Loop L00" ;
+    :edgeId "L00" ;
+    :fromState :LoopMachine_Submitted ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_claim .
+
+:LoopMachine_L01 a :LoopTransition ;
+    rdfs:label "Loop L01" ;
+    :edgeId "L01" ;
+    :fromState :LoopMachine_Orphaned ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_claim .
+
+:LoopMachine_L02 a :LoopTransition ;
+    rdfs:label "Loop L02" ;
+    :edgeId "L02" ;
+    :fromState :LoopMachine_Submitted ;
+    :toState :LoopMachine_Rejected ;
+    :firedBy :LoopMachine_Event_reject .
+
+:LoopMachine_L03 a :LoopTransition ;
+    rdfs:label "Loop L03" ;
+    :edgeId "L03" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Paused ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L04 a :LoopTransition ;
+    rdfs:label "Loop L04" ;
+    :edgeId "L04" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Paused ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L05 a :LoopTransition ;
+    rdfs:label "Loop L05" ;
+    :edgeId "L05" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Paused ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L06 a :LoopTransition ;
+    rdfs:label "Loop L06" ;
+    :edgeId "L06" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L07 a :LoopTransition ;
+    rdfs:label "Loop L07" ;
+    :edgeId "L07" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L08 a :LoopTransition ;
+    rdfs:label "Loop L08" ;
+    :edgeId "L08" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L09 a :LoopTransition ;
+    rdfs:label "Loop L09" ;
+    :edgeId "L09" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L10 a :LoopTransition ;
+    rdfs:label "Loop L10" ;
+    :edgeId "L10" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L11 a :LoopTransition ;
+    rdfs:label "Loop L11" ;
+    :edgeId "L11" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L12 a :LoopTransition ;
+    rdfs:label "Loop L12" ;
+    :edgeId "L12" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L13 a :LoopTransition ;
+    rdfs:label "Loop L13" ;
+    :edgeId "L13" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L14 a :LoopTransition ;
+    rdfs:label "Loop L14" ;
+    :edgeId "L14" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_pretick .
+
+:LoopMachine_L15 a :LoopTransition ;
+    rdfs:label "Loop L15" ;
+    :edgeId "L15" ;
+    :fromState :LoopMachine_Paused ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_resume .
+
+:LoopMachine_L16 a :LoopTransition ;
+    rdfs:label "Loop L16" ;
+    :edgeId "L16" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L17 a :LoopTransition ;
+    rdfs:label "Loop L17" ;
+    :edgeId "L17" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L18 a :LoopTransition ;
+    rdfs:label "Loop L18" ;
+    :edgeId "L18" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L19 a :LoopTransition ;
+    rdfs:label "Loop L19" ;
+    :edgeId "L19" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L20 a :LoopTransition ;
+    rdfs:label "Loop L20" ;
+    :edgeId "L20" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L21 a :LoopTransition ;
+    rdfs:label "Loop L21" ;
+    :edgeId "L21" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L22 a :LoopTransition ;
+    rdfs:label "Loop L22" ;
+    :edgeId "L22" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L23 a :LoopTransition ;
+    rdfs:label "Loop L23" ;
+    :edgeId "L23" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L24 a :LoopTransition ;
+    rdfs:label "Loop L24" ;
+    :edgeId "L24" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L25 a :LoopTransition ;
+    rdfs:label "Loop L25" ;
+    :edgeId "L25" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L26 a :LoopTransition ;
+    rdfs:label "Loop L26" ;
+    :edgeId "L26" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Pending ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L27 a :LoopTransition ;
+    rdfs:label "Loop L27" ;
+    :edgeId "L27" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Validating ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L28 a :LoopTransition ;
+    rdfs:label "Loop L28" ;
+    :edgeId "L28" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L29 a :LoopTransition ;
+    rdfs:label "Loop L29" ;
+    :edgeId "L29" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L30 a :LoopTransition ;
+    rdfs:label "Loop L30" ;
+    :edgeId "L30" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Completed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L31 a :LoopTransition ;
+    rdfs:label "Loop L31" ;
+    :edgeId "L31" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Failed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L32 a :LoopTransition ;
+    rdfs:label "Loop L32" ;
+    :edgeId "L32" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L33 a :LoopTransition ;
+    rdfs:label "Loop L33" ;
+    :edgeId "L33" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Rejected ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L34 a :LoopTransition ;
+    rdfs:label "Loop L34" ;
+    :edgeId "L34" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L35 a :LoopTransition ;
+    rdfs:label "Loop L35" ;
+    :edgeId "L35" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L36 a :LoopTransition ;
+    rdfs:label "Loop L36" ;
+    :edgeId "L36" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L37 a :LoopTransition ;
+    rdfs:label "Loop L37" ;
+    :edgeId "L37" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L38 a :LoopTransition ;
+    rdfs:label "Loop L38" ;
+    :edgeId "L38" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L39 a :LoopTransition ;
+    rdfs:label "Loop L39" ;
+    :edgeId "L39" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L40 a :LoopTransition ;
+    rdfs:label "Loop L40" ;
+    :edgeId "L40" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Failed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L41 a :LoopTransition ;
+    rdfs:label "Loop L41" ;
+    :edgeId "L41" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L42 a :LoopTransition ;
+    rdfs:label "Loop L42" ;
+    :edgeId "L42" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Rejected ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L43 a :LoopTransition ;
+    rdfs:label "Loop L43" ;
+    :edgeId "L43" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L44 a :LoopTransition ;
+    rdfs:label "Loop L44" ;
+    :edgeId "L44" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L45 a :LoopTransition ;
+    rdfs:label "Loop L45" ;
+    :edgeId "L45" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L46 a :LoopTransition ;
+    rdfs:label "Loop L46" ;
+    :edgeId "L46" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L47 a :LoopTransition ;
+    rdfs:label "Loop L47" ;
+    :edgeId "L47" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L48 a :LoopTransition ;
+    rdfs:label "Loop L48" ;
+    :edgeId "L48" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L49 a :LoopTransition ;
+    rdfs:label "Loop L49" ;
+    :edgeId "L49" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Failed ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L50 a :LoopTransition ;
+    rdfs:label "Loop L50" ;
+    :edgeId "L50" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Cancelled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L51 a :LoopTransition ;
+    rdfs:label "Loop L51" ;
+    :edgeId "L51" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Rejected ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L52 a :LoopTransition ;
+    rdfs:label "Loop L52" ;
+    :edgeId "L52" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L53 a :LoopTransition ;
+    rdfs:label "Loop L53" ;
+    :edgeId "L53" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_BudgetExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L54 a :LoopTransition ;
+    rdfs:label "Loop L54" ;
+    :edgeId "L54" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L55 a :LoopTransition ;
+    rdfs:label "Loop L55" ;
+    :edgeId "L55" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Stalled ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L56 a :LoopTransition ;
+    rdfs:label "Loop L56" ;
+    :edgeId "L56" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_ErrorThresholdExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L57 a :LoopTransition ;
+    rdfs:label "Loop L57" ;
+    :edgeId "L57" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_ExternalEventSatisfied ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L58 a :LoopTransition ;
+    rdfs:label "Loop L58" ;
+    :edgeId "L58" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L59 a :LoopTransition ;
+    rdfs:label "Loop L59" ;
+    :edgeId "L59" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L60 a :LoopTransition ;
+    rdfs:label "Loop L60" ;
+    :edgeId "L60" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_MaxIterationsExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L61 a :LoopTransition ;
+    rdfs:label "Loop L61" ;
+    :edgeId "L61" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L62 a :LoopTransition ;
+    rdfs:label "Loop L62" ;
+    :edgeId "L62" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L63 a :LoopTransition ;
+    rdfs:label "Loop L63" ;
+    :edgeId "L63" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_WallClockExceeded ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L64 a :LoopTransition ;
+    rdfs:label "Loop L64" ;
+    :edgeId "L64" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L65 a :LoopTransition ;
+    rdfs:label "Loop L65" ;
+    :edgeId "L65" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Pending ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L66 a :LoopTransition ;
+    rdfs:label "Loop L66" ;
+    :edgeId "L66" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Validating ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L67 a :LoopTransition ;
+    rdfs:label "Loop L67" ;
+    :edgeId "L67" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L68 a :LoopTransition ;
+    rdfs:label "Loop L68" ;
+    :edgeId "L68" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Pending ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L69 a :LoopTransition ;
+    rdfs:label "Loop L69" ;
+    :edgeId "L69" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Validating ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L70 a :LoopTransition ;
+    rdfs:label "Loop L70" ;
+    :edgeId "L70" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Running ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L71 a :LoopTransition ;
+    rdfs:label "Loop L71" ;
+    :edgeId "L71" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Pending ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L72 a :LoopTransition ;
+    rdfs:label "Loop L72" ;
+    :edgeId "L72" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Validating ;
+    :firedBy :LoopMachine_Event_posttick .
+
+:LoopMachine_L73 a :LoopTransition ;
+    rdfs:label "Loop L73" ;
+    :edgeId "L73" ;
+    :fromState :LoopMachine_Running ;
+    :toState :LoopMachine_Orphaned ;
+    :firedBy :LoopMachine_Event_lease_lost .
+
+:LoopMachine_L74 a :LoopTransition ;
+    rdfs:label "Loop L74" ;
+    :edgeId "L74" ;
+    :fromState :LoopMachine_Pending ;
+    :toState :LoopMachine_Orphaned ;
+    :firedBy :LoopMachine_Event_lease_lost .
+
+:LoopMachine_L75 a :LoopTransition ;
+    rdfs:label "Loop L75" ;
+    :edgeId "L75" ;
+    :fromState :LoopMachine_Validating ;
+    :toState :LoopMachine_Orphaned ;
+    :firedBy :LoopMachine_Event_lease_lost .

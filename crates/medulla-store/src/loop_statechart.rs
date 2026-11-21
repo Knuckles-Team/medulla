@@ -78,52 +78,27 @@
 //!   already exhaustively cover every terminal `callee_terminal` value ahead of row 14,
 //!   control only reaches row 14 when `callee_terminal` was already absent/non-terminal.
 
+use medulla_decision_types::loops::LoopState;
 use medulla_statechart::{Action, Guard, State, StatechartDef, Transition};
 
-/// The six non-final `LoopStatus` string ids relevant to this chart's states (§1.1).
-/// `paused` is the first-class `awaitingHuman` state (§1.4); `orphaned` is the
-/// re-claimable post-crash state.
-const NON_FINAL_STATES: &[&str] = &[
-    "submitted",
-    "running",
-    "pending",
-    "validating",
-    "paused",
-    "orphaned",
-];
-
-/// The ten final `LoopStatus` string ids (§1.1) — identical to today's
-/// `loops.TERMINAL_STATUS`.
-pub const FINAL_STATES: &[&str] = &[
-    "completed",
-    "failed",
-    "cancelled",
-    "rejected",
-    "max_iterations_exceeded",
-    "budget_exceeded",
-    "wall_clock_exceeded",
-    "stalled",
-    "error_threshold_exceeded",
-    "external_event_satisfied",
-];
-
-/// The active (non-terminal, in-flight) states rows 3-6 and 8-13 apply from — a loop
-/// mid-iteration can be in any of these depending on `kind`/evaluator phase.
-const ACTIVE_STATES: &[&str] = &["running", "pending", "validating"];
+/// The states a lease holder acts in: every active [`LoopState`], in `LoopState::ALL` order.
+fn active_states() -> impl Iterator<Item = LoopState> + Clone {
+    LoopState::ALL.into_iter().filter(|state| state.is_active())
+}
 
 /// Every final state a callee can self-declare through `callee_terminal`, EXCLUDING
 /// `completed` (handled separately by row 12's dedicated guard). Row 13's mirror: one
 /// transition per value, `<from> --posttick[callee_terminal==value]--> <value>`.
-const CALLEE_TERMINAL_MIRRORS: &[&str] = &[
-    "failed",
-    "cancelled",
-    "rejected",
-    "max_iterations_exceeded",
-    "budget_exceeded",
-    "wall_clock_exceeded",
-    "stalled",
-    "error_threshold_exceeded",
-    "external_event_satisfied",
+const CALLEE_TERMINAL_MIRRORS: [LoopState; 9] = [
+    LoopState::Failed,
+    LoopState::Cancelled,
+    LoopState::Rejected,
+    LoopState::MaxIterationsExceeded,
+    LoopState::BudgetExceeded,
+    LoopState::WallClockExceeded,
+    LoopState::Stalled,
+    LoopState::ErrorThresholdExceeded,
+    LoopState::ExternalEventSatisfied,
 ];
 
 fn event_eq(key: &str, value: serde_json::Value) -> Guard {
@@ -133,16 +108,16 @@ fn event_eq(key: &str, value: serde_json::Value) -> Guard {
     }
 }
 
-/// One transition per active `from` state, in `ACTIVE_STATES` order:
+/// One transition per active `from` state, in `LoopState::ALL` order:
 /// `<from> --event[guard]--> target`.
 fn from_each_active<'a>(
     event: &'a str,
     target: &'a str,
     guard: Guard,
 ) -> impl Iterator<Item = Transition> + 'a {
-    ACTIVE_STATES
-        .iter()
-        .map(move |from| Transition::new(*from, event, target).with_guard(guard.clone()))
+    active_states().map(move |from| {
+        Transition::new(from.stored(), event, target).with_guard(guard.clone())
+    })
 }
 
 /// A logged human-interrupt row: `<from> --pretick[guard]--> target`, logging `message`.
@@ -218,11 +193,9 @@ fn posttick_transitions() -> Vec<Transition> {
     // Row 11: a retryable failure that did NOT trip the error threshold (row 9 already
     // claimed that case) keeps the lease alive as a heartbeat (self-loop).
     let retryable = event_eq("retryable_failure", serde_json::json!(true));
-    transitions.extend(
-        ACTIVE_STATES
-            .iter()
-            .map(|from| Transition::new(*from, "posttick", *from).with_guard(retryable.clone())),
-    );
+    transitions.extend(active_states().map(|from| {
+        Transition::new(from.stored(), "posttick", from.stored()).with_guard(retryable.clone())
+    }));
     // Row 12: legacy-trust, callee self-declared `completed`.
     transitions.extend(from_each_active(
         "posttick",
@@ -231,10 +204,12 @@ fn posttick_transitions() -> Vec<Transition> {
     ));
     // Row 13: legacy-trust mirror — every OTHER final `callee_terminal` value maps to
     // that same terminal state (9 values x 3 active `from` states = 27 rows).
-    transitions.extend(ACTIVE_STATES.iter().flat_map(|from| {
-        CALLEE_TERMINAL_MIRRORS.iter().map(move |terminal| {
-            Transition::new(*from, "posttick", *terminal)
-                .with_guard(event_eq("callee_terminal", serde_json::json!(*terminal)))
+    transitions.extend(active_states().flat_map(|from| {
+        CALLEE_TERMINAL_MIRRORS.into_iter().map(move |terminal| {
+            Transition::new(from.stored(), "posttick", terminal.stored()).with_guard(event_eq(
+                "callee_terminal",
+                serde_json::json!(terminal.stored()),
+            ))
         })
     }));
     // Row 14: exit 2 TURN CAP (post-loop fallback, modeled as a same-tick guard). See
@@ -246,10 +221,12 @@ fn posttick_transitions() -> Vec<Transition> {
     // the posttick rows so every terminal guard (8-15) gets first refusal; only fires
     // once nothing terminal did. `heartbeat_target` is whichever of
     // running/pending/validating the caller's `decided`/`heartbeat_status` already is.
-    transitions.extend(ACTIVE_STATES.iter().flat_map(|from| {
-        ACTIVE_STATES.iter().map(move |target| {
-            Transition::new(*from, "posttick", *target)
-                .with_guard(event_eq("heartbeat_target", serde_json::json!(*target)))
+    transitions.extend(active_states().flat_map(|from| {
+        active_states().map(move |target| {
+            Transition::new(from.stored(), "posttick", target.stored()).with_guard(event_eq(
+                "heartbeat_target",
+                serde_json::json!(target.stored()),
+            ))
         })
     }));
     transitions
@@ -259,10 +236,9 @@ fn posttick_transitions() -> Vec<Transition> {
 /// content-addressed via [`StatechartDef::def_id`] — calling this twice yields
 /// byte-identical definitions (`define()` is therefore idempotent to re-register).
 pub fn loop_statechart_def() -> StatechartDef {
-    let states: Vec<State> = NON_FINAL_STATES
+    let states: Vec<State> = LoopState::ALL
         .iter()
-        .chain(FINAL_STATES.iter())
-        .map(|id| State::new(*id))
+        .map(|state| State::new(state.stored()))
         .collect();
 
     let mut transitions: Vec<Transition> = Vec::new();
@@ -298,7 +274,11 @@ pub fn loop_statechart_def() -> StatechartDef {
         ],
         transitions,
         initial: "submitted".to_string(),
-        finals: FINAL_STATES.iter().map(|s| s.to_string()).collect(),
+        finals: LoopState::ALL
+            .iter()
+            .filter(|state| state.is_final())
+            .map(|state| state.stored().to_string())
+            .collect(),
         meta: Default::default(),
     }
 }
@@ -421,6 +401,26 @@ mod tests {
 
     // ── structural validity ──────────────────────────────────────────────────────
 
+    // spec: MEDULLA-DECISION-ENGINE-R830.6
+    #[test]
+    fn chart_states_are_loop_state_variants() {
+        let d = def();
+        let chart: Vec<&str> = d.states.iter().map(|state| state.id.as_str()).collect();
+        let variants: Vec<&str> = LoopState::ALL.iter().map(|state| state.stored()).collect();
+        assert_eq!(chart, variants, "the chart states are LoopState::ALL, in order");
+        let finals: Vec<&str> = d.finals.iter().map(String::as_str).collect();
+        let expected: Vec<&str> = LoopState::ALL
+            .iter()
+            .filter(|state| state.is_final())
+            .map(|state| state.stored())
+            .collect();
+        assert_eq!(finals, expected);
+        for transition in &d.transitions {
+            assert!(LoopState::from_stored(&transition.from).is_some());
+            assert!(LoopState::from_stored(&transition.to).is_some());
+        }
+    }
+
     #[test]
     fn definition_is_structurally_valid_and_content_addressed() {
         let d = def();
@@ -428,7 +428,8 @@ mod tests {
         assert_eq!(d.def_id(), def().def_id(), "def_id must be deterministic");
         assert_eq!(d.initial, "submitted");
         assert_eq!(d.finals.len(), 10);
-        for id in FINAL_STATES {
+        for state in LoopState::ALL.iter().filter(|state| state.is_final()) {
+            let id = state.stored();
             assert!(d.is_final(id), "{id} must be a declared final state");
         }
     }
@@ -498,7 +499,7 @@ mod tests {
     fn exit_1_goal_met_fires_completed_from_every_active_state() {
         let d = def();
         let ctx = Context::new();
-        for from in ACTIVE_STATES {
+        for from in active_states().map(LoopState::stored) {
             let ev = EventInput::with_payload(
                 "posttick",
                 payload(&[("measured_pass", serde_json::json!(true))]),
@@ -666,13 +667,14 @@ mod tests {
         let d = def();
         let ctx = Context::new();
         for terminal in CALLEE_TERMINAL_MIRRORS {
+            let terminal = terminal.stored();
             let ev = EventInput::with_payload(
                 "posttick",
-                payload(&[("callee_terminal", serde_json::json!(*terminal))]),
+                payload(&[("callee_terminal", serde_json::json!(terminal))]),
             );
             let out = transition(&d, "running", &ctx, &ev).unwrap();
             assert!(out.fired, "callee_terminal={terminal} must fire");
-            assert_eq!(&out.next_state, terminal);
+            assert_eq!(out.next_state, terminal);
         }
         assert_eq!(
             CALLEE_TERMINAL_MIRRORS.len(),
@@ -748,7 +750,7 @@ mod tests {
     fn lease_lost_makes_orphaned_reachable_and_re_claimable() {
         let d = def();
         let ctx = Context::new();
-        for from in ACTIVE_STATES {
+        for from in active_states().map(LoopState::stored) {
             let out = transition(&d, from, &ctx, &EventInput::new("lease_lost")).unwrap();
             assert!(out.fired, "lease_lost must fire from {from}");
             assert_eq!(out.next_state, "orphaned");

@@ -167,5 +167,5 @@ medulla-numeric = { path = "../medulla-numeric" }
 # The Schedule machine edge table the state-machine ontology test compares with
 # (MEDULLA-PLACEMENT-R751.756) and the AnalyticsJobMachine edge table (MEDULLA-CQ-ORCH-R811.2).
 medulla-jobs = { path = "../medulla-jobs" }
-medulla-store = { path = "../medulla-store", features = ["redb"] }
+medulla-store = { path = "../medulla-store", features = ["redb", "statechart"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }

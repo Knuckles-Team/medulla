@@ -6,10 +6,10 @@ use super::*;
 use crate::decide::loops::handle_loops;
 use crate::decide::loops::served::LoopStore;
 use medulla_decision_types::loops::{
-    GapState, ImprovementSample, LoopOp, LoopView, RatchetVerdict,
+    GapState, ImprovementSample, LoopOp, LoopState, LoopView, RatchetVerdict,
 };
 use medulla_statechart::loops::LoopKnobs;
-use medulla_statechart::Context;
+use medulla_statechart::{Context, EventInput};
 use medulla_store::loop_statechart::loop_record_statechart_def;
 
 const OTHER_TENANT: &str = "tenant-loops-other";
@@ -90,7 +90,7 @@ async fn loop_journey() {
     let id = "journey-loop";
 
     let claimed = writer(&h, claim(id)).await.unwrap();
-    assert_eq!(claimed.instance.state, "running");
+    assert_eq!(claimed.instance.state, LoopState::Running);
     assert_eq!(claimed.instance.tenant_id, TENANT);
     assert_eq!(claimed.instance.priority, 3);
     assert_eq!(claimed.instance.lease.as_ref().unwrap().epoch, 1);
@@ -225,13 +225,13 @@ async fn loop_journey() {
     )
     .await
     .unwrap();
-    assert_eq!(released.instance.state, "orphaned");
+    assert_eq!(released.instance.state, LoopState::Orphaned);
     is_refusal(
         writer(&h, file_gap(id, 1, "g3", 1)).await,
         "LOOP_LEASE_STALE",
     );
     let again = writer(&h, claim(id)).await.unwrap();
-    assert_eq!(again.instance.state, "running");
+    assert_eq!(again.instance.state, LoopState::Running);
     assert_eq!(again.instance.lease.unwrap().epoch, 2);
     assert_eq!(
         again
@@ -274,7 +274,7 @@ async fn expired_lease_is_reclaimed_with_a_higher_epoch() {
     let second = view(b.serve_at(claim("expiring"), 6_000).unwrap());
     let lease = second.instance.lease.as_ref().unwrap();
     assert_eq!((lease.epoch, lease.holder.as_str()), (2, "holder-b"));
-    assert_eq!(second.instance.state, "running");
+    assert_eq!(second.instance.state, LoopState::Running);
     let events: Vec<&str> = second
         .transitions
         .iter()
@@ -454,5 +454,39 @@ async fn loop_evidence_reads_back_through_a_second_principal() {
     is_refusal(
         call(&h, "loop-reader", OTHER_TENANT, get(id)).await,
         "LOOP_NOT_FOUND",
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.6
+#[test]
+fn no_writer_sets_state_outside_view_of() {
+    let source = include_str!("../loops.rs");
+    let production = source.split("#[cfg(test)]").next().unwrap();
+    let assignments = production.matches("instance.state =").count();
+    assert_eq!(assignments, 1, "view_of is the one writer of the loop state");
+    let view_of = production.split("fn view_of").nth(1).unwrap();
+    let body = view_of.split("fn refreshed").next().unwrap();
+    assert!(body.contains("view.instance.state = Self::state_of(state)?;"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.6
+#[tokio::test]
+async fn unfired_event_refuses_transition_refused() {
+    let h = Harness::new().await;
+    let id = "unfired-loop";
+    writer(&h, claim(id)).await.unwrap();
+    let dir = h._dir.path().to_string_lossy().into_owned();
+    let store = LoopStore::open(Some(&dir), TENANT, "loop-writer").unwrap();
+    let (state, _record) = store.require(id).unwrap();
+    // `reject` is intake-only: it does not fire from `running`.
+    let error = store
+        .send(&state, EventInput::new("reject"), 5)
+        .unwrap_err();
+    assert!(error.starts_with("TRANSITION_REFUSED:"), "{error}");
+    assert!(error.contains("loop refused 'reject' from 'running'"), "{error}");
+    assert!(error.contains("illegal_transition"), "{error}");
+    assert_eq!(
+        writer(&h, get(id)).await.unwrap().instance.state,
+        LoopState::Running
     );
 }
