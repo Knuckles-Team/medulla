@@ -11,7 +11,8 @@ use medulla_persistence_records::agent_library::AGENT_LIBRARY_FILE;
 use medulla_storage::{
     create_predecessor_owner_file, AgentLibraryOwner, GraphShardOwner, LayoutPredecessor,
     OwnerLayout, StorageKernel, AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_REVISIONS,
-    BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
+    BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+    GRAPH_SHARD_BEFORE_ENRICHMENT,
     OFFLINE_STORE_UPGRADES,
 };
 use medulla_store::redb_layout::shard_filename;
@@ -560,5 +561,44 @@ fn a_predecessor_left_by_an_unclean_shutdown_is_still_upgraded() {
             ("tenant-a", "agent-b", 2)
         ),
         b"committed before the kill"
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.1
+#[test]
+fn pre_effect_receipts_shard_upgrades_offline_and_old_layout_refuses_open() {
+    let dir = data_dir();
+    let shard = old_graph_shard_of(dir.path(), 0, &GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS);
+    let directory = dir.path().to_str().unwrap().to_string();
+
+    // The old layout refuses to open, and the refusal names the upgrade command.
+    let refusal = refuse_upgradable_stores(dir.path()).unwrap_err();
+    assert!(
+        refusal.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED: "),
+        "{refusal}"
+    );
+    let opened = medulla_persistence::redb_backend::RedbBackend::open(directory, 16)
+        .err()
+        .expect("a pre-effect-receipts shard must not open");
+    assert!(
+        opened.contains("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED"),
+        "{opened}"
+    );
+    assert!(opened.contains(OFFLINE_UPGRADE_APPLY_COMMAND), "{opened}");
+
+    // The offline command upgrades it, keeps its rows, and the current layout opens.
+    let report = apply(dir.path(), &confirmed());
+    assert_eq!(report.exit_code, EXIT_NOTHING_TO_DO, "{}", report.render());
+    assert_eq!(
+        statuses(&report),
+        [("graph-0.redb", StoreStatus::Upgraded)]
+    );
+    assert!(report.stores[0]
+        .detail
+        .contains(GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label));
+    assert_eq!(get(&shard, NODES, ("graph-a", "node-a")), b"kept node");
+    drop(
+        StorageKernel::open_owner::<GraphShardOwner>(&shard, identity(SHARD_PHYSICAL_STORE), None)
+            .unwrap(),
     );
 }
