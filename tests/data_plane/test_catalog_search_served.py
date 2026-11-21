@@ -514,3 +514,63 @@ def test_hit_components_listed(start_medulla_server) -> None:
         client.close()
         admin.tenants.delete(graph)
         admin.close()
+
+
+_SKOS_LABEL = "http://www.w3.org/2004/02/skos/core#prefLabel"
+
+
+def _relevance_rows(client: Any, text: str) -> list[dict]:
+    return client.rdf.sparql(
+        f"PREFIX cat: <{_CATALOG}>\n"
+        "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+        "SELECT ?asset ?score WHERE {\n"
+        "  ?asset skos:prefLabel ?name .\n"
+        f'  BIND(cat:relevance(?asset, "{text}") AS ?score)\n'
+        "  FILTER(?score > 0)\n"
+        "}"
+    )
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.4")
+def test_search_refusals(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.4: three refusals, and no hit for a hidden asset."""
+    from conftest import register_commons_agents
+    from medulla.client import SyncMedullaClient
+
+    tag = uuid.uuid4().hex[:8]
+    owner_id, reader_id = f"catalog-owner-{tag}", f"catalog-reader-{tag}"
+    register_commons_agents(owner_id, reader_id)
+
+    def connect(agent: str) -> Any:
+        return SyncMedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(agent_id=agent),
+        )
+
+    owner, reader = connect(owner_id), connect(reader_id)
+    try:
+        # Text over the knob and blank text refuse with their own codes.
+        with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):
+            _relevance_rows(reader, "x" * 1001)
+        with pytest.raises(Exception, match="CATALOG_QUERY_EMPTY"):
+            _relevance_rows(reader, "   ")
+        # A limit outside the knob's bounds refuses.
+        for bad_limit in (0, 1_000):
+            with pytest.raises(Exception, match="CATALOG_LIMIT_INVALID"):
+                _decode(
+                    reader._send(
+                        "CatalogUsage",
+                        {"asset": "nodes", "top_n": bad_limit},
+                        "__commons__",
+                    )
+                )
+
+        # An asset the caller cannot read is no hit, and the caller's total does not move.
+        needle = f"hiddenasset{tag}"
+        before = len(_relevance_rows(reader, needle))
+        owner.nodes.add(f"urn:medulla:asset:hidden:{tag}", {_SKOS_LABEL: needle})
+        assert len(_relevance_rows(owner, needle)) == 1
+        assert len(_relevance_rows(reader, needle)) == before == 0
+    finally:
+        owner.close()
+        reader.close()
