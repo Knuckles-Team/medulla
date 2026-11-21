@@ -16,7 +16,7 @@
 
 use super::connector_pack_harness::{next_id, ok, Served, TENANT};
 use medulla_index_types::semantic_index::{
-    SemanticAnnIndexManifest, SemanticBinding, SemanticDigest, SemanticExpectedEntity,
+    SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDigest, SemanticExpectedEntity,
     SemanticGenerationAggregate, SemanticGenerationArtifact, SemanticGenerationCheckpoint,
     SemanticGenerationCheckpointDraft, SemanticGenerationCheckpointUpdate,
     SemanticGenerationDependency, SemanticGenerationMember, SemanticGraphProjectionManifest,
@@ -26,6 +26,7 @@ use medulla_index_types::semantic_index::{
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
     SemanticVector,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::protocol::Method;
 
 /// The consumer the helper claims its leases as.
@@ -285,6 +286,84 @@ fn successor_of(
         input_digest,
     })
     .expect("the successor intent")
+}
+
+/// The admitted binding `binding_id`.
+pub(super) async fn binding_of(served: &Served, binding_id: &str) -> SemanticBinding {
+    Driver { served, binding_id }.binding().await
+}
+
+/// Complete S1 for every entity of a graph-sourced binding: move the binding to building, admit
+/// the source-dirty wakeup `dirty` of its graph (one page: the snapshot of the bound nodes),
+/// claim each admitted S1 and complete it over the source content it names.
+pub(super) async fn complete_graph_source_s1(
+    served: &Served,
+    binding_id: &str,
+    dirty: &MutationOutboxRecord,
+) {
+    let driver = Driver { served, binding_id };
+    let binding = driver.binding().await;
+    let _: serde_json::Value = driver
+        .dispatch(
+            "TransitionBinding",
+            SemanticIndexOp::TransitionBinding {
+                tenant_id: TENANT.to_string(),
+                binding_id: binding_id.to_string(),
+                expected_generation: binding.generation,
+                next_state: SemanticBindingState::Building,
+                idempotency_key: format!("live-generation-build:{binding_id}"),
+            },
+        )
+        .await;
+    let _: serde_json::Value = driver
+        .dispatch(
+            "SubscribeStageConsumer",
+            SemanticIndexOp::SubscribeStageConsumer {
+                tenant_id: TENANT.to_string(),
+                binding_id: binding_id.to_string(),
+                consumer: DRIVER.to_string(),
+            },
+        )
+        .await;
+    let _: serde_json::Value = driver
+        .dispatch(
+            "AdmitSourcePage",
+            SemanticIndexOp::AdmitSourcePage {
+                tenant_id: TENANT.to_string(),
+                binding_id: binding_id.to_string(),
+                record: Box::new(dirty.clone()),
+                cursor: None,
+            },
+        )
+        .await;
+    // The handler samples its clock inside the call, so a completion stamped a minute ahead is
+    // never earlier than the decision it completes.
+    let completed_at = format!(
+        "unix-ms:{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock")
+            .as_millis() as u64
+            + 60_000
+    );
+    for (at, entry) in driver.claim(SemanticStage::SourceCommit).await.iter().enumerate() {
+        let intent = &entry.intent;
+        let mut transition = transition_of(intent, intent.input_digest, at + 1);
+        transition.receipt.completed_at = completed_at.clone();
+        let _: serde_json::Value = driver
+            .dispatch(
+                "CompleteSqlSourceStage",
+                SemanticIndexOp::CompleteSqlSourceStage {
+                    tenant_id: TENANT.to_string(),
+                    binding_id: binding_id.to_string(),
+                    lease: Box::new(entry.lease.clone()),
+                    transition: Box::new(transition),
+                    successor: None,
+                    page_cursor: None,
+                },
+            )
+            .await;
+    }
 }
 
 /// Drive the binding's generation from completed S1 to live and return the live generation.

@@ -11,8 +11,11 @@ use medulla_catalog_types::connector_pack::{
     McpCatalogSnapshotBinding, PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind,
     PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
 };
+use medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_query_types::wire::UqlResult;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
@@ -33,6 +36,8 @@ pub(super) const OTHER_TENANT: &str = "tenant-other";
 /// The System-role agent the harness isolation registers.
 const ADMIN: &str = "connector-pack-admin";
 const COMMONS: &str = "__commons__";
+/// The consumer the harness claims the ingest graph's source-dirty wakeups as.
+const DIRTY_CONSUMER: &str = "connector-pack-source-dirty";
 /// The graph the connector-pack journeys ingest into by default.
 pub(super) const GRAPH: &str = "connector-pack-ingest";
 
@@ -178,11 +183,23 @@ pub(super) struct IngestOptions {
 }
 
 impl Served {
-    /// A fresh state, the ingest graph `graph`, and the pack of `connector` with its `streams`.
+    /// A fresh state, the ingest graph `graph`, and the pack of `connector` with its `streams`,
+    /// imported on the commons graph.
     pub(super) async fn provisioned(
         graph: &str,
         connector: &str,
         streams: &[(&str, &str)],
+    ) -> Self {
+        Self::provisioned_activating(graph, connector, streams, COMMONS).await
+    }
+
+    /// As [`Self::provisioned`], with the pack imported on `activation_graph`: the graph a pack
+    /// activation reads as its own, which a semantic index authored by the import is built from.
+    pub(super) async fn provisioned_activating(
+        graph: &str,
+        connector: &str,
+        streams: &[(&str, &str)],
+        activation_graph: &str,
     ) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
@@ -213,8 +230,58 @@ impl Served {
             connector: connector.to_string(),
             graph: graph.to_string(),
         };
-        served.provision(streams).await;
+        served.provision(streams, activation_graph).await;
         served
+    }
+
+    /// Durably subscribe the harness to the source-dirty wakeups of the ingest graph, so
+    /// [`Self::source_dirty_records`] reads the ones its commits write.
+    pub(super) async fn subscribe_source_dirty(&self) {
+        let persistence = self.persistence().await;
+        persistence
+            .subscribe_mutation_outbox(
+                &medulla_kernel::persist::sanitize(&self.graph),
+                DIRTY_CONSUMER,
+                SEMANTIC_SOURCE_DIRTY_TOPIC,
+            )
+            .await
+            .expect("subscribe to the source-dirty topic");
+    }
+
+    /// The source-dirty wakeups the ingest graph's commits wrote, oldest first.
+    pub(super) async fn source_dirty_records(&self) -> Vec<MutationOutboxRecord> {
+        let persistence = self.persistence().await;
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        let mut budget = medulla_transaction::OutboxClaimBudget::new(64, 60_000, now_ms)
+            .expect("an outbox claim budget");
+        let outcome = persistence
+            .claim_mutation_outbox(
+                &medulla_kernel::persist::sanitize(&self.graph),
+                DIRTY_CONSUMER,
+                &mut budget,
+            )
+            .await
+            .expect("claim the source-dirty wakeups");
+        outcome
+            .claims
+            .into_iter()
+            .map(|lease| lease.record)
+            .filter(|record| record.intent.topic == SEMANTIC_SOURCE_DIRTY_TOPIC)
+            .collect()
+    }
+
+    async fn persistence(&self) -> Arc<dyn PersistenceBackend> {
+        self.state
+            .read()
+            .await
+            .persistence
+            .clone()
+            .expect("the served state has a graph backend")
+    }
+
+    /// The served state the harness dispatches against.
+    pub(super) fn state(&self) -> &Arc<RwLock<ServerState>> {
+        &self.state
     }
 
     /// The graph the pack's records are ingested into.
@@ -307,7 +374,7 @@ impl Served {
         digest
     }
 
-    async fn provision(&self, streams: &[(&str, &str)]) {
+    async fn provision(&self, streams: &[(&str, &str)], activation_graph: &str) {
         let created = self
             .call_on(
                 &self.graph,
@@ -346,7 +413,7 @@ impl Served {
         let key = format!("connector-pack:{connector}:import:{}:0", index.pack_digest);
         let response = self
             .call_on(
-                COMMONS,
+                activation_graph,
                 &key,
                 Method::ConnectorPack {
                     op: Box::new(ConnectorPackOp::Import {
