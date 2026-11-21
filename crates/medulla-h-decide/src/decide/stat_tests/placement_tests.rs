@@ -625,3 +625,64 @@ async fn placement_record_has_one_why_not_per_non_chosen_target() {
         "swarm chosen; three others explained"
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R001.15
+#[tokio::test]
+async fn capacity_proposal_reuses_placement_headroom() {
+    let h = placement_harness().await;
+    let (schema, _) = publish_route_schema(&h);
+    let cell_id = cpu_cell(PlacementTarget::Compose);
+
+    // The headroom the ledger holds for the cell at the proposal's priority.
+    let backend = h.state.read().await.persistence.clone().unwrap();
+    let rows = backend
+        .read_capacity_headroom(GRAPH, std::slice::from_ref(&cell_id), LeasePriority::Orchestration)
+        .await
+        .unwrap();
+    let row = rows.iter().find(|row| row.cell_id == cell_id).unwrap();
+    let (available, epoch) = (row.available, row.epoch);
+    assert_eq!(available, CPU_HEADROOM);
+
+    // A capacity proposal over that cell is decided against the same headroom: its
+    // observation premise carries the ledger's number and epoch, and it allows.
+    let proposal = serde_json::json!({
+        "proposal_id": "p-placement", "tenant_id": TENANT, "resource_class_iri": cell_id,
+        "unit": "cpu", "current_capacity": 2_000, "proposed_capacity": 3_000,
+        "min_capacity": 1_000, "max_capacity": 4_000, "measured_load": 1_500,
+        "available_headroom": 1_000, "window_start_ms": 1, "window_end_ms": 2,
+        "premise_revision": 1, "policy_revision": 1,
+        "proposal_digest": "a".repeat(64),
+    });
+    let request = declared_request(
+        &schema,
+        TENANT,
+        QuestionKind::CapacityProposal,
+        "verdict",
+        DecisionPolicyRef::Default,
+        vec![
+            TypedParam {
+                name: "graph".to_string(),
+                value: TypedValue::Text(GRAPH.to_string()),
+            },
+            TypedParam {
+                name: "proposal".to_string(),
+                value: TypedValue::Text(proposal.to_string()),
+            },
+        ],
+    );
+    let batch = decide(&h, request).await.unwrap();
+    match &batch.records.as_slice()[0].outcome {
+        StatisticalOutcome::Advisory { scores, .. } => {
+            assert_eq!(scores.as_slice()[0].option_id, "allow");
+        }
+        other => panic!("unexpected outcome {other:?}"),
+    }
+    assert!(premise_facts(&batch).contains(&format!("headroom:{cell_id}:{available}:epoch={epoch}")));
+
+    // A placement decision at the same priority reads the same number from the same
+    // ledger: there is one headroom premise, not a second controller.
+    let mut placement = body(false, 2);
+    placement.constraints.priority = LeasePriority::Orchestration;
+    let batch = decide(&h, placement_request(&schema, placement)).await.unwrap();
+    assert!(premise_facts(&batch).contains(&format!("lease:{cell_id}:cpu={available}")));
+}
