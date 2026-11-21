@@ -566,11 +566,11 @@ checkpoint and admission runs do not qualify this new integration.
 Planned test names do not claim passing results. Each path is the post-split location.
 
 - `MEDULLA-DURABLE-KERNEL-R082.2`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::mine_associate_refuses_malformed_transactions_and_accepts_defaults` (L2) submits a non-list-of-lists payload, then a payload with the three defaults.
-- `MEDULLA-DURABLE-KERNEL-R082.5`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::association_result_has_the_eleven_column_shape_and_recomputed_digest` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.5`: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::association_result_has_the_eleven_column_shape_and_recomputed_digest` (L3).
 - `MEDULLA-DURABLE-KERNEL-R082.6`: Planned: `crates/medulla-mining/src/mining/association.rs::tests::six_transaction_rules_match_the_recorded_order` (L1).
-- `MEDULLA-DURABLE-KERNEL-R082.7`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason` (L3).
-- `MEDULLA-DURABLE-KERNEL-R082.8`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3), and `crates/medulla-h-jobs/src/jobs/worker_publish.rs::tests::kernel_cancelled_is_not_an_accepted_failure_code` (L2).
-- `MEDULLA-DURABLE-KERNEL-R082.9`: Planned: `crates/medulla-work-types/src/scheduler_config.rs::tests::analytics_lease_and_poll_accept_range_ends_and_refuse_beyond_them` (L2) and `crates/medulla-server-api/src/knob_config.rs::tests::analytics_lease_and_poll_knobs_reach_the_scheduler_policy` (L2).
+- `MEDULLA-DURABLE-KERNEL-R082.7`: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.8`: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3), and `crates/medulla-h-jobs/src/jobs/worker_publish.rs::tests::kernel_cancelled_is_not_an_accepted_failure_code` (L2).
+- `MEDULLA-DURABLE-KERNEL-R082.9`: `crates/medulla-work-types/src/scheduler_config.rs::tests::analytics_lease_and_poll_accept_range_ends_and_refuse_beyond_them` (L2) and `crates/medulla-server-api/src/knob_config.rs::tests::analytics_lease_and_poll_knobs_reach_the_scheduler_policy` (L2).
 - `MEDULLA-DURABLE-KERNEL-R082.10`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::remote_worker_drives_the_full_sequence_and_scope_is_enforced` (L3).
 - `MEDULLA-DURABLE-KERNEL-R083`: Planned: `tests/kvcache_http_served.rs::two_consumers_share_one_block_and_a_version_mismatch_refuses` (L3).
 - `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_kvcache_connector.py::test_put_from_one_client_is_read_by_another` (L4).

@@ -56,9 +56,9 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T050 MEDULLA-DURABLE-KERNEL-R033.1 HotStoreEngine, WorkloadProfile, and BenchmarkResult are typed. Winner selection refuses rather than silently defaulting
 - [x] T051 [US1] MEDULLA-DURABLE-KERNEL-R034.1 TransactionScope and CommitPath are typed, and a single-store scope structurally can never map to the cross-store commit path
 - [x] T052 MEDULLA-DURABLE-KERNEL-R035.1 PgOperationalSurface and a fail-closed PgCompatibilityMatrix are typed
-- [ ] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
+- [x] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
 - [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 Session and lock catalog views are served read-only (L4 test over .1 and .2)
-- [ ] T299 MEDULLA-DURABLE-KERNEL-R035.3.1 `PgStatActivityRow`, `exec_sql_typed_with_tables_in_graph_sessions`, the three catalog views and `READ_ONLY_CATALOG_VIEW`
+- [x] T299 MEDULLA-DURABLE-KERNEL-R035.3.1 `PgStatActivityRow`, `exec_sql_typed_with_tables_in_graph_sessions`, the three catalog views and `READ_ONLY_CATALOG_VIEW`
 - [ ] T300 MEDULLA-DURABLE-KERNEL-R035.3.2 `WireActivity` registry and guard, filtered rows into `run_read`, `42809` mapping, served-surface entries
 - [ ] T055 MEDULLA-DURABLE-KERNEL-R035.4 EXPLAIN returns the engine plan over the wire
 - [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
@@ -70,7 +70,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T063 [US6] MEDULLA-DURABLE-KERNEL-R039.2 Control-lease consumption checks expiry inside its transaction
 - [ ] T064 [US6] MEDULLA-DURABLE-KERNEL-R039.3 Call-envelope storage and consumption is atomic
 - [ ] T065 [US6] MEDULLA-DURABLE-KERNEL-R039.4.1 Plan-bound call storage works end to end
-- [ ] T066 [US6] MEDULLA-DURABLE-KERNEL-R039.4.2 Add `.github/workflows/nightly-work-item-budgets.yml` running `cargo bench --features full --bench redb_write_latency_bench` (shared with R028.4.2 and R028.5.4)
+- [x] T066 [US6] MEDULLA-DURABLE-KERNEL-R039.4.2 Add `.github/workflows/nightly-work-item-budgets.yml` running `cargo bench --features full --bench redb_write_latency_bench` (shared with R028.4.2 and R028.5.4)
 - [x] T067 [US6] MEDULLA-DURABLE-KERNEL-R041.1 PlanCacheKey/PlanCacheLookup are a typed key and a pure lookup decision, refusing to reuse a plan whose schema version has gone stale
 - [x] T068 [US6] MEDULLA-DURABLE-KERNEL-R041.2 PlanCache::prepare is the one entry point a SQL statement handler calls at prepare time
 - [x] T069 [US6] MEDULLA-DURABLE-KERNEL-R040.1 PipelineBatch and BatchCommitDecision are typed, proving one admission maps to exactly one commit with order-preserving replies
@@ -122,11 +122,11 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T112 MEDULLA-DURABLE-KERNEL-R082.1 A submitted MineAssociate job completes on the colocated executor
 - [ ] T113 MEDULLA-DURABLE-KERNEL-R082.2 MineAssociate submission refuses a payload outside the governed schema
 - [ ] T114 MEDULLA-DURABLE-KERNEL-R082.4 Association-rule identity is byte-identical to the old worker's
-- [ ] T115 MEDULLA-DURABLE-KERNEL-R082.5 The staged result has the 11-column knowledge-batch shape
+- [x] T115 MEDULLA-DURABLE-KERNEL-R082.5 The staged result has the 11-column knowledge-batch shape
 - [ ] T116 MEDULLA-DURABLE-KERNEL-R082.6 Rules are ordered and thresholded exactly as before
-- [ ] T117 MEDULLA-DURABLE-KERNEL-R082.7 A running mining job observes cancellation, deadline and CPU budget
-- [ ] T118 MEDULLA-DURABLE-KERNEL-R082.8 Failure codes are bounded and retry follows the durable retry policy
-- [ ] T119 MEDULLA-DURABLE-KERNEL-R082.9 Add knobs `scheduler.analytics_lease_ms`/`scheduler.analytics_poll_ms` and `SchedulerConfig.analytics_lease_ms`/`analytics_poll_ms` with bounds and validate variants; `ensure_job_workers` takes the policy in force from `analytics_pool_config`; delete the `MEDULLA_ANALYTICS_*` environment reads and the `analytics_workers()` once-cell
+- [x] T117 MEDULLA-DURABLE-KERNEL-R082.7 A running mining job observes cancellation, deadline and CPU budget
+- [x] T118 MEDULLA-DURABLE-KERNEL-R082.8 Failure codes are bounded and retry follows the durable retry policy
+- [x] T119 MEDULLA-DURABLE-KERNEL-R082.9 Add knobs `scheduler.analytics_lease_ms`/`scheduler.analytics_poll_ms` and `SchedulerConfig.analytics_lease_ms`/`analytics_poll_ms` with bounds and validate variants; `ensure_job_workers` takes the policy in force from `analytics_pool_config`; delete the `MEDULLA_ANALYTICS_*` environment reads and the `analytics_workers()` once-cell
 - [ ] T120 MEDULLA-DURABLE-KERNEL-R082.10 Remote workers run through the job coordinator operations
 - [ ] T121 MEDULLA-DURABLE-KERNEL-R083.1 KvBlockKey typed model
 - [ ] T122 MEDULLA-DURABLE-KERNEL-R083.2 Version-mismatch refusal
@@ -204,7 +204,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T193 MEDULLA-DURABLE-KERNEL-R700.2 Behavior
 - [ ] T194 MEDULLA-DURABLE-KERNEL-R700.3 Wiring
 - [ ] T195 MEDULLA-DURABLE-KERNEL-R700.4 Refusal
-- [ ] T196 MEDULLA-DURABLE-KERNEL-R700.5 Evidence
+- [x] T196 MEDULLA-DURABLE-KERNEL-R700.5 Evidence
 - [ ] T197 MEDULLA-DURABLE-KERNEL-R700.6 Hot-path proof
 - [ ] T198 MEDULLA-DURABLE-KERNEL-R800.1 Model
 - [ ] T199 MEDULLA-DURABLE-KERNEL-R800.2 Behavior
@@ -213,7 +213,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T202 MEDULLA-DURABLE-KERNEL-R800.5 Evidence
 - [ ] T203 MEDULLA-DURABLE-KERNEL-R800.6 Hot-path proof
 - [ ] T204 [US2] MEDULLA-DURABLE-KERNEL-R028.4.1 Recover immutable run submission records
-- [ ] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Run the `run_owner_recovery` group in the nightly work-item budget workflow (T066)
+- [x] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Run the `run_owner_recovery` group in the nightly work-item budget workflow (T066)
 - [x] T206 MEDULLA-DURABLE-KERNEL-R083.5 Tier ladder from accelerator memory to durable storage
 - [x] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
 - [ ] T208 MEDULLA-DURABLE-KERNEL-R083.7 Long-context coherence across tiers
@@ -231,7 +231,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T220 [US2] MEDULLA-DURABLE-KERNEL-R028.5.1 Typed executable plan attachment
 - [ ] T221 [US2] MEDULLA-DURABLE-KERNEL-R028.5.2 Attachment is immutable once bound
 - [ ] T222 [US2] MEDULLA-DURABLE-KERNEL-R028.5.3 Attachment replay and recovery
-- [ ] T223 [US2] MEDULLA-DURABLE-KERNEL-R028.5.4 Run the `current_plan_publication_readback` group in the nightly work-item budget workflow (T066)
+- [x] T223 [US2] MEDULLA-DURABLE-KERNEL-R028.5.4 Run the `current_plan_publication_readback` group in the nightly work-item budget workflow (T066)
 - [ ] T224 [US2] MEDULLA-DURABLE-KERNEL-R028.6 Commit ordinary run completion and observed usage atomically
 - [x] T225 MEDULLA-DURABLE-KERNEL-R861.1 Lifecycle replay compares the stored identity
 - [ ] T226 MEDULLA-DURABLE-KERNEL-R861.2 Graph listing survives a restart and a patch upgrade
@@ -247,7 +247,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T236 [US2] MEDULLA-DURABLE-KERNEL-R030.1.3 Signed dispatch for dedicated host-start issuance
 - [ ] T237 [US2] MEDULLA-DURABLE-KERNEL-R030.1.4 Host-start producer is proven through signed dispatch and the installed consumer
 - [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes (L4 test over .1 and .2)
-- [ ] T301 MEDULLA-DURABLE-KERNEL-R035.7.1 Scope `replication:read`, `ReplicationSlotRow` and the reserved slot namespace
+- [x] T301 MEDULLA-DURABLE-KERNEL-R035.7.1 Scope `replication:read`, `ReplicationSlotRow` and the reserved slot namespace
 - [ ] T302 MEDULLA-DURABLE-KERNEL-R035.7.2 `serve_walsender`: slot creation, `pgoutput` mapping over `ReadGraphChanges`, cursor advance
 - [x] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
 - [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic

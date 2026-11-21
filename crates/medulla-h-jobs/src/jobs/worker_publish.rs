@@ -225,14 +225,7 @@ pub(super) fn handle_worker_fail(
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
-    if !matches!(
-        reason_code,
-        "kernel_cancelled"
-            | "kernel_failure"
-            | "deadline_exceeded"
-            | "cpu_budget_exceeded"
-            | "invalid_payload"
-    ) {
+    if !super::executor_claim::FAILURE_CODES.contains(&reason_code) {
         return Response::err(req_id, "analytics worker failure code is invalid");
     }
     if let Ok(job) = store.get(job_id) {
@@ -253,5 +246,34 @@ pub(super) fn handle_worker_fail(
             medulla_protocol_types::result_contract::coordination::JobWorkerFail,
         >(req_id, &job),
         Err(error) => Response::err(req_id, job_refusal(&error)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.8
+    #[test]
+    fn kernel_cancelled_is_not_an_accepted_failure_code() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = super::super::core::open_job_store(dir.path()).expect("job store opens");
+        let fail = |code: &str| {
+            handle_worker_fail(&store, 1, Some("worker"), true, "instance", "job-none", 1, code)
+        };
+        let cancelled = fail("kernel_cancelled");
+        let outside = fail("not_a_code");
+        assert!(cancelled.error.is_some());
+        assert_eq!(cancelled.error, outside.error, "refused like any code outside the set");
+        assert_eq!(cancelled.error_detail, outside.error_detail);
+        // A code of the closed set passes the code check and reaches the store, which
+        // refuses the unknown job with a different reason.
+        for code in super::super::executor_claim::FAILURE_CODES {
+            let reached = fail(code);
+            assert!(
+                reached.error != cancelled.error || reached.error_detail != cancelled.error_detail,
+                "{code} is accepted as a failure code"
+            );
+        }
     }
 }

@@ -203,8 +203,7 @@ fn finish_cancelled_kernel(
             let _ = store.fail_attempt_fenced(job_id, worker_ref, epoch, reason, unix_ms());
         }
         None => {
-            let _ =
-                store.fail_attempt_fenced(job_id, worker_ref, epoch, "kernel_cancelled", unix_ms());
+            let _ = store.fail_attempt_fenced(job_id, worker_ref, epoch, "kernel_failure", unix_ms());
         }
     }
 }

@@ -106,8 +106,8 @@ are string lists. Every column is non-null, reference values are opaque digest
 identifiers, and extra/free-text row fields are rejected. The reproducibility
 manifest must exactly match the leased input dataset/content/version,
 `family:algorithm`, parameters, implementation/environment, and policy
-fingerprint. `WorkerFail` accepts only `kernel_cancelled`, `kernel_failure`,
-`deadline_exceeded`, `cpu_budget_exceeded`, or `invalid_payload`.
+fingerprint. `WorkerFail` accepts only `invalid_payload`, `kernel_failure`,
+`deadline_exceeded`, `cpu_budget_exceeded`, or `worker_execution_failed`.
 
 ## Incremental reasoning
 
