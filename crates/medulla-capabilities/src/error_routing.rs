@@ -250,6 +250,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBEDDING_SPACE_INCOMPATIBLE",
             "CONSTRAINT_INVALID",
             "TOPIC_WEIGHT_INVALID",
+            "TOPIC_SPACE_MISMATCH",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with

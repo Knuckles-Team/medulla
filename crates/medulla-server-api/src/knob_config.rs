@@ -541,6 +541,8 @@ knobs! {
     code_max_nodes: u64 = "code.max_nodes", U64(512), [32, 8192], "nodes", Tunable;
     /// Retrieval lineage depth.
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
+    /// Topic fusion weight `w` of `score = (1 - w) * dense + w * topic` (MEDULLA-FEDERATED-QUERY-R040.2.2).
+    retrieval_topic_weight: f64 = "retrieval.topic_weight", F64(0.3), [0.0, 1.0], "ratio", Tunable;
     /// Schema drift gate: most records of one stream sampled to infer a delivery shape.
     drift_sample_max: u64 = "drift.sample_max", U64(1000), [10, 10_000], "records", Tunable;
     /// Connector conformance evidence: how long one onboarding import's evidence stands.

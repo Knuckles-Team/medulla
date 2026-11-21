@@ -589,8 +589,11 @@ pub(crate) fn run_unified_bind_retrieval<'a>(
     if let Some(topic) = &request.topic {
         let top_topics = usize::try_from(topic.top_topics)
             .map_err(|_| "topic top_topics exceeds the platform word".to_string())?;
+        // The fusion weight is the registry knob `retrieval.topic_weight`; the request
+        // carries only the cut bounds (MEDULLA-FEDERATED-QUERY-R040.2.2).
         let policy =
-            medulla_exec::exec::topic::TopicRankingPolicy::new(top_topics, topic.min_weight)?;
+            medulla_exec::exec::topic::TopicRankingPolicy::new(top_topics, topic.min_weight)?
+                .with_weight(medulla_server_api::knob_config::knobs().retrieval_topic_weight as f32)?;
         ctx = ctx.with_topic_policy(policy);
     }
     if let Some(pair) = &request.modality {
@@ -1638,7 +1641,14 @@ mod tests {
         assert_eq!(constraints, Some(expected));
         assert_eq!(
             topic,
-            Some(medulla_exec::exec::topic::TopicRankingPolicy::new(3, 0.25).unwrap())
+            Some(
+                medulla_exec::exec::topic::TopicRankingPolicy::new(3, 0.25)
+                    .unwrap()
+                    .with_weight(
+                        medulla_server_api::knob_config::knobs().retrieval_topic_weight as f32
+                    )
+                    .unwrap()
+            )
         );
         assert_eq!(pair, request.modality);
 

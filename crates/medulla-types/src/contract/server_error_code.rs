@@ -264,6 +264,8 @@ closed_error_codes! {
         ConstraintInvalid => "CONSTRAINT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a topic bound is out of range (`top_topics` zero, `min_weight` outside `[0, 1]`).
         TopicWeightInvalid => "TOPIC_WEIGHT_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.2: a topic result or a candidate vector is not in the retriever's embedding space.
+        TopicSpaceMismatch => "TOPIC_SPACE_MISMATCH",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",

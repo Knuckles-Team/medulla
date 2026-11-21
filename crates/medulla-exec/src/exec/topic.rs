@@ -10,6 +10,7 @@
 
 use medulla_graph_core::graph::GraphView;
 use medulla_index_types::embedding::EmbeddingSpaceRef;
+use medulla_types::contract::ServerErrorCode;
 
 /// The label stored centroid nodes carry.
 pub const TOPIC_CENTROID_LABEL: &str = "TopicCentroid";
@@ -26,6 +27,10 @@ pub struct TopicRankingPolicy {
     pub top_topics: usize,
     /// Topics lighter than this (a weight in `[0, 1]`) are dropped.
     pub min_weight: f32,
+    /// The fusion weight `w` of `score = (1 - w) * dense + w * topic`, in `[0, 1]`
+    /// (the registry knob `retrieval.topic_weight`, resolved by the served planner;
+    /// `None` until one is bound, and fusion refuses an unbound weight).
+    pub weight: Option<f32>,
 }
 
 impl TopicRankingPolicy {
@@ -40,8 +45,80 @@ impl TopicRankingPolicy {
         Ok(Self {
             top_topics,
             min_weight,
+            weight: None,
         })
     }
+
+    /// Bind the fusion weight `w`; refuses `TOPIC_WEIGHT_INVALID` outside `[0, 1]`.
+    pub fn with_weight(mut self, weight: f32) -> Result<Self, String> {
+        check_weight(weight)?;
+        self.weight = Some(weight);
+        Ok(self)
+    }
+}
+
+/// `TOPIC_WEIGHT_INVALID` for a non-finite or out-of-range fusion weight.
+fn check_weight(weight: f32) -> Result<(), String> {
+    if weight.is_finite() && (0.0..=1.0).contains(&weight) {
+        return Ok(());
+    }
+    Err(format!(
+        "{}: topic fusion weight {weight} must be finite and within [0, 1]",
+        ServerErrorCode::TopicWeightInvalid
+    ))
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.2, policy `weighted_topic_dense`:
+/// `score = (1 - w) * dense + w * topic` for every candidate.
+///
+/// `dense` is each candidate's similarity, min-max normalized over the candidate set
+/// (a set with no spread normalizes to `0`). `topic` is the sum over the backend's
+/// topics of the topic's responsibility times the cosine similarity between the
+/// candidate's vector and the topic's centroid. Ties break by candidate id ascending.
+/// A pure function: hard constraints have already narrowed `dense`, and it reads no
+/// state. A candidate with no vector refuses `TOPIC_SPACE_MISMATCH`: its topic
+/// contribution is never dropped silently.
+pub fn fuse_topic_dense(
+    dense: &[(String, f32)],
+    vector_of: &dyn Fn(&str) -> Option<Vec<f32>>,
+    topics: &TopicResult,
+    weight: f32,
+) -> Result<Vec<(String, f32)>, String> {
+    check_weight(weight)?;
+    let (low, high) = dense
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(low, high), (_, s)| {
+            (low.min(*s), high.max(*s))
+        });
+    let spread = high - low;
+    let mut fused = Vec::with_capacity(dense.len());
+    for (id, score) in dense {
+        let normalized = if spread > 0.0 { (score - low) / spread } else { 0.0 };
+        let vector = vector_of(id).ok_or_else(|| {
+            format!(
+                "{}: candidate `{id}` has no stored embedding to compare with the topic centroids",
+                ServerErrorCode::TopicSpaceMismatch
+            )
+        })?;
+        let vector_norm = norm(&vector);
+        let topic: f32 = topics
+            .topic_weights
+            .iter()
+            .zip(&topics.centroid_vectors)
+            .map(|((_, responsibility), (_, centroid))| {
+                let denominator = vector_norm * norm(centroid);
+                let cosine = if denominator > 0.0 {
+                    dot(&vector, centroid) / denominator
+                } else {
+                    0.0
+                };
+                responsibility * cosine
+            })
+            .sum();
+        fused.push((id.clone(), (1.0 - weight) * normalized + weight * topic));
+    }
+    fused.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    Ok(fused)
 }
 
 /// What any [`TopicBackend`] answers.
@@ -297,5 +374,86 @@ mod tests {
         assert!(backend.topics(&[1.0, 0.0, 0.0], &policy).is_err());
         assert!(TopicRankingPolicy::new(0, 0.0).is_err());
         assert!(TopicRankingPolicy::new(1, 1.5).is_err());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.2
+    #[test]
+    fn order_matches_oracle_w0_w1_mid() {
+        let policy = TopicRankingPolicy::new(3, 0.0).unwrap();
+        let memory = InMemoryTopicBackend {
+            centroids: fixture(),
+            corpus_revision: 7,
+            space: space(),
+        };
+        let topics = memory.topics(&[1.0, 0.5], &policy).unwrap();
+        // (id, dense similarity, candidate vector). `d` ties `c` on dense.
+        let candidates: Vec<(&str, f32, Vec<f32>)> = vec![
+            ("a", 0.9, vec![0.0, 1.0]),
+            ("b", 0.5, vec![1.0, 0.0]),
+            ("c", 0.2, vec![1.0, 1.0]),
+            ("d", 0.2, vec![1.0, 0.2]),
+        ];
+        let dense: Vec<(String, f32)> = candidates
+            .iter()
+            .map(|(id, score, _)| (id.to_string(), *score))
+            .collect();
+        let lookup = |id: &str| {
+            candidates
+                .iter()
+                .find(|(candidate, _, _)| *candidate == id)
+                .map(|(_, _, vector)| vector.clone())
+        };
+
+        // The oracle recomputes every score from the definition in f64.
+        let oracle = |weight: f64| -> Vec<(String, f64)> {
+            let (low, high) = (0.2_f64, 0.9_f64);
+            let mut scores: Vec<(String, f64)> = candidates
+                .iter()
+                .map(|(id, score, vector)| {
+                    let normalized = (f64::from(*score) - low) / (high - low);
+                    let mut topic = 0.0_f64;
+                    for ((_, responsibility), (_, centroid)) in
+                        topics.topic_weights.iter().zip(&topics.centroid_vectors)
+                    {
+                        let dot: f64 = vector
+                            .iter()
+                            .zip(centroid)
+                            .map(|(x, y)| f64::from(*x) * f64::from(*y))
+                            .sum();
+                        let norms = vector.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt()
+                            * centroid.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt();
+                        topic += f64::from(*responsibility) * dot / norms;
+                    }
+                    (id.to_string(), (1.0 - weight) * normalized + weight * topic)
+                })
+                .collect();
+            scores.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            scores
+        };
+
+        for weight in [0.0_f32, 1.0, 0.5] {
+            let fused = fuse_topic_dense(&dense, &lookup, &topics, weight).unwrap();
+            let expected = oracle(f64::from(weight));
+            let got: Vec<&str> = fused.iter().map(|(id, _)| id.as_str()).collect();
+            let want: Vec<&str> = expected.iter().map(|(id, _)| id.as_str()).collect();
+            assert_eq!(got, want, "order at w={weight}");
+            for ((_, score), (_, want)) in fused.iter().zip(&expected) {
+                assert!((f64::from(*score) - want).abs() < 1e-5, "score at w={weight}");
+            }
+        }
+        // w = 0 is the dense order alone, ties by id ascending.
+        let dense_only = fuse_topic_dense(&dense, &lookup, &topics, 0.0).unwrap();
+        let order: Vec<&str> = dense_only.iter().map(|(id, _)| id.as_str()).collect();
+        assert_eq!(order, ["a", "b", "c", "d"]);
+        // A weight outside [0, 1] or non-finite refuses TOPIC_WEIGHT_INVALID.
+        for bad in [-0.1_f32, 1.1, f32::NAN, f32::INFINITY] {
+            let refusal = fuse_topic_dense(&dense, &lookup, &topics, bad).unwrap_err();
+            assert!(refusal.starts_with("TOPIC_WEIGHT_INVALID"), "{refusal}");
+            assert!(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(bad).is_err());
+        }
+        // A candidate with no vector is refused, never silently unweighted.
+        let missing = |_: &str| None;
+        let refusal = fuse_topic_dense(&dense, &missing, &topics, 0.5).unwrap_err();
+        assert!(refusal.starts_with("TOPIC_SPACE_MISMATCH"), "{refusal}");
     }
 }
