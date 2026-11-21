@@ -7,6 +7,8 @@ description = "The single engine release version every crate reports (Health, st
 license = "MIT"
 publish = false
 
+build = "build.rs"
+
 [lib]
 name = "medulla_version"
 path = "src/lib.rs"

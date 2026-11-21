@@ -10,5 +10,9 @@
 //! `env!("CARGO_PKG_VERSION")` itself; `tests/test_engine_release_version.py`
 //! enforces both rules.
 
+pub mod build_info;
+
+pub use build_info::{BuildInfo, BUILD_INFO};
+
 /// The engine release version, for example `3.1.1`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

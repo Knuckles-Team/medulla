@@ -4,7 +4,7 @@
 //! ascending by the section's key. The `tasks` section reads the task registry (key: the task
 //! id) and the `readiness` section reads the readiness registry (key: the graph name); the
 //! sections whose registries land with their own rows (`requests`, `runtime`, `locks`,
-//! `startup`, `build`, `events`) answer an empty page until then. Pure over
+//! `startup`, `events`) answer an empty page until then. Pure over
 //! `medulla_observe`: no durable substrate is read, so the method serves in every build.
 
 use medulla_observe::registry::tasks::{file_line, ProgressCursor, TaskRow};
@@ -74,6 +74,7 @@ fn read_section(
     match section {
         IntrospectSection::Tasks => tasks_page(limit, cursor),
         IntrospectSection::Readiness => Ok(readiness_page(limit, cursor)),
+        IntrospectSection::Build => Ok(build_page(cursor)),
         other => Ok(IntrospectPage {
             section: other,
             rows: Vec::new(),
@@ -177,5 +178,30 @@ fn readiness_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
         rows,
         next_cursor,
         seq,
+    }
+}
+
+/// The `build` section: one row, key `build`, the identity of the running binary
+/// (MEDULLA-OBSERVE-R009.1).
+fn build_page(cursor: Option<&str>) -> IntrospectPage {
+    let info = &*medulla_version::BUILD_INFO;
+    // The only key is `build`: a cursor at or past it leaves nothing to read.
+    let rows = if cursor.is_some_and(|last| last >= "build") {
+        Vec::new()
+    } else {
+        vec![json!({
+            "key": "build",
+            "version": info.version,
+            "git_sha": info.git_sha,
+            "build_id": info.build_id,
+            "profile": info.profile,
+            "features": info.features,
+        })]
+    };
+    IntrospectPage {
+        section: IntrospectSection::Build,
+        rows,
+        next_cursor: None,
+        seq: 0,
     }
 }
