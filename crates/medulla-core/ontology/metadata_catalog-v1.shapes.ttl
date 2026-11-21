@@ -46,6 +46,7 @@ cat:LineageEdgeShape a sh:NodeShape ;
 
 # Each lineage edge node is paired with the direct cat:lineageTo edge between its ends
 # (MEDULLA-TYPED-PACKS-R106.2). The unpaired edge is refused as LINEAGE_EDGE_UNPAIRED (R106.4).
+# The paired edge is looked up with OPTIONAL: the constraint dialect declines EXISTS.
 cat:LineageEdgePairShape a sh:NodeShape ;
     sh:targetClass cat:LineageEdge ;
     sh:sparql [
@@ -55,7 +56,30 @@ cat:LineageEdgePairShape a sh:NodeShape ;
             SELECT $this WHERE {
                 $this <https://knuckles-team.github.io/ontology/catalog#from> ?from ;
                       <https://knuckles-team.github.io/ontology/catalog#to> ?to .
-                FILTER NOT EXISTS { ?from <https://knuckles-team.github.io/ontology/catalog#lineageTo> ?to }
+                OPTIONAL {
+                    ?from <https://knuckles-team.github.io/ontology/catalog#lineageTo> ?to .
+                    ?from <https://knuckles-team.github.io/ontology/catalog#lineageTo> ?paired .
+                }
+                FILTER(!BOUND(?paired))
+            }
+        """ ;
+    ] .
+
+# Each connector-backed asset has a stewardship assignment or carries the owner_missing flag
+# (MEDULLA-TYPED-PACKS-R106.2). A pack with no declared owner imports flagged, never refused.
+cat:ConnectorAssetOwnerShape a sh:NodeShape ;
+    sh:targetClass cat:ToolAsset, cat:PromptAsset, cat:SkillAsset, cat:DataResource, cat:Field ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A connector asset needs a cat:StewardshipAssignment or the owner_missing flag." ;
+        sh:select """
+            SELECT $this WHERE {
+                OPTIONAL { ?assignment <https://knuckles-team.github.io/ontology/catalog#assignedTo> $this . }
+                OPTIONAL {
+                    $this <https://knuckles-team.github.io/ontology/catalog#flag> "owner_missing" .
+                    $this <https://knuckles-team.github.io/ontology/catalog#flag> ?flagged .
+                }
+                FILTER(!BOUND(?assignment) && !BOUND(?flagged))
             }
         """ ;
     ] .

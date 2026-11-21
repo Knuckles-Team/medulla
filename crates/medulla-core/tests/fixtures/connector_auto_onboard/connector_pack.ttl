@@ -39,3 +39,9 @@
 :incident-1 a :ConnectorIncident ;
     cat:fromSource :incidents ;
     :status "open" .
+
+:owner-assignment-prompt a cat:StewardshipAssignment ; cat:assignedTo :system-prompt ; cat:principal :owner ; cat:role cat:owner .
+:owner-assignment-skill a cat:StewardshipAssignment ; cat:assignedTo :incident-skill ; cat:principal :owner ; cat:role cat:owner .
+:owner-assignment-tool a cat:StewardshipAssignment ; cat:assignedTo :search-incidents ; cat:principal :owner ; cat:role cat:owner .
+:owner-assignment-resource a cat:StewardshipAssignment ; cat:assignedTo :incidents ; cat:principal :owner ; cat:role cat:owner .
+:owner-assignment-field a cat:StewardshipAssignment ; cat:assignedTo :incident-id ; cat:principal :owner ; cat:role cat:owner .

@@ -239,10 +239,11 @@ fn catalog_shapes_accept_a_complete_catalog() {
         "<urn:c:sn> a cp:Connector . \
          <urn:a:incidents> a cat:DataResource ; cp:ofConnector <urn:c:sn> ; cp:servesClass :Incident ; \
              cat:hasField <urn:a:incidents#group> . \
-         <urn:a:incidents#group> a cat:Field ; cp:ofConnector <urn:c:sn> ; cp:servesProperty cat:hasSteward . \
-         <urn:a:get_incidents> a cat:ToolAsset ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" . \
+         <urn:a:incidents#group> a cat:Field ; cp:ofConnector <urn:c:sn> ; cp:servesProperty cat:hasSteward ; cat:flag \"owner_missing\" . \
+         <urn:a:get_incidents> a cat:ToolAsset ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" ; \
+             cat:flag \"owner_missing\" . \
          <urn:a:responder> a :PromptCandidate, cat:PromptAsset ; cp:ofConnector <urn:c:sn> ; \
-             :systemPromptFor <urn:task:incident-triage> . \
+             :systemPromptFor <urn:task:incident-triage> ; cat:flag \"owner_missing\" . \
          <urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:incidents> ; \
              cat:principal <urn:g:service-desk> ; cat:role cat:owner . \
          <urn:l:1> a cat:LineageEdge ; cat:from <urn:a:get_incidents> ; cat:to <urn:a:incidents> ; \
@@ -315,6 +316,16 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
     assert!(!conforms(
         "<urn:a:f> a cat:Field ; cp:ofConnector <urn:c:a> ."
     ));
+    // An asset with neither an assignment nor the owner_missing flag is refused; either one
+    // satisfies the shape.
+    let asset = "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> . ";
+    assert!(!conforms(asset));
+    assert!(conforms(&format!(
+        "{asset}<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:t> ; \
+         cat:principal <urn:g:x> ; cat:role cat:owner ."
+    )));
+    assert!(conforms(&format!("{asset}<urn:a:t> cat:flag \"owner_missing\" .")));
+    assert!(!conforms(&format!("{asset}<urn:a:t> cat:flag \"deprecated\" .")));
     // The owner is a stewardship assignment with the owner role, one principal and one asset.
     assert!(conforms(
         "<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:r> ; \

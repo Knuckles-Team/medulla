@@ -82,6 +82,15 @@ cat:Field rdfs:subClassOf cat:Asset .
     cat:role {OWNER_ROLE} .
 cat:owner rdf:type cat:StewardshipRole .
 
+# Every connector asset has an owner assignment or the owner_missing flag (R106.2).
+<{EXAMPLE}tool-write> cat:flag "owner_missing" .
+<{EXAMPLE}skill-search> cat:flag "owner_missing" .
+<{EXAMPLE}prompt-search> cat:flag "owner_missing" .
+<{EXAMPLE}resource-customers> cat:flag "owner_missing" .
+<{EXAMPLE}resource-orders> cat:flag "owner_missing" .
+<{EXAMPLE}field-customer-id> cat:flag "owner_missing" .
+<{EXAMPLE}field-order-id> cat:flag "owner_missing" .
+
 <{EXAMPLE}term-customer-reader> rdf:type cat:GlossaryTerm ;
     cat:definesAsset {TOOL} ;
     cat:definesClass <{EXAMPLE}Customer> ;
