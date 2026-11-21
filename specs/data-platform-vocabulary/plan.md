@@ -7,7 +7,7 @@ Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 The engine holds one typed vocabulary, `core:data-platform@1`, that names a data store as a source and says how its contents map to domain concepts through approved virtual mappings. The module is registered beside `core:virtual-graph@1`; the shapes close the vocabularies and refuse secret values; one fixture per connector maps its operations virtual-first; the alignment tables tie each package-local term to a `dp:` term. This plan adds no discovery, planner or copy path.
 
 ```text
-question -> ontology class (dp:Table, dp:ConsumerGroup, dp:SecretPath ...)
+question -> ontology class (kg:Table, dp:ConsumerGroup, dp:SecretPath ...)
          -> approved dp:StoreMapping -> vg:MetadataContract -> vg:SourceConnection
          -> contract fetch at query time (engine adapter or the MCP operation named by dp:viaOperation)
 ```
@@ -66,7 +66,7 @@ The rules below bind every row.
 ### Architecture
 
 ```
-question -> ontology class (dp:Table, dp:ConsumerGroup, dp:SecretPath ...)
+question -> ontology class (kg:Table, dp:ConsumerGroup, dp:SecretPath ...)
          -> vg:VirtualMapping (approved, dp:StoreMapping) -> vg:MetadataContract
          -> vg:SourceConnection (sourceKind sql | document | mcp)
          -> contract fetch at query time:
@@ -91,23 +91,23 @@ Prefix `dp:` = `https://knuckles-team.github.io/ontology/data-platform#`. All cl
 
 **Shared (6):** `dp:DataStore` (class; one per attached store, `dp:viaConnection` -> `vg:SourceConnection`); `dp:storeFamily` (string; closed: `relational document object vector stream secret analytics ml`); `dp:inStore` (dp container -> `dp:DataStore`); `dp:asOf` (xsd:dateTime, observation time of a measured property); `dp:viaConnection`; `dp:StoreMapping` (subclass of `vg:VirtualMapping`).
 
-**Relational (9):** `dp:Database`, `dp:Schema`, `dp:Table`, `dp:View`, `dp:Column`, `dp:ForeignKey`; `dp:inSchema`, `dp:hasColumn`, `dp:referencesTable` (ForeignKey -> Table), `dp:isPrimaryKey`, `dp:sqlDialect`. Mirrors the typed catalog of unified-data-plane R003.1 (`AttachedCatalogGraph`).
+**Relational (9):** `kg:Database`, `kg:Schema`, `kg:Table`, `dp:View`, `kg:Column`, `dp:ForeignKey`; `dp:inSchema`, `dp:hasColumn`, `dp:referencesTable` (ForeignKey -> Table), `dp:isPrimaryKey`, `dp:sqlDialect`. Mirrors the typed catalog of unified-data-plane R003.1 (`AttachedCatalogGraph`).
 
-**Document (6):** `dp:Collection`, `dp:DocumentField` (a path in the inferred shape of R019.1), `dp:fieldPath`, `dp:fieldType` (closed list = `DocumentFieldType` incl. `Mixed`), `dp:presenceRatio` (0..1), `dp:documentCount`.
+**Document (6):** `kg:DocumentCollection`, `dp:DocumentField` (a path in the inferred shape of R019.1), `dp:fieldPath`, `dp:fieldType` (closed list = `DocumentFieldType` incl. `Mixed`), `dp:presenceRatio` (0..1), `dp:documentCount`.
 
 **Object (5):** `dp:Bucket`, `dp:StoredObject`, `dp:objectKey`, `dp:byteSize`, `dp:lastModified`. No content property exists on `StoredObject` by design.
 
 **Vector (5):** `dp:VectorCollection`, `dp:EmbeddingSpace` (model + dimension + metric), `dp:embeddingModel`, `dp:dimensions`, `dp:distanceMetric`; link `dp:usesEmbeddingSpace`, `dp:vectorCount`. Vectors and chunk text are never properties.
 
-**Stream (8):** `dp:Topic`, `dp:Partition`, `dp:ConsumerGroup`, `dp:PartitionLag` (one group x partition measurement), `dp:partitionOf`, `dp:subscribesTo`, `dp:lag` (xsd:long), `dp:groupState`.
+**Stream (8):** `dp:StreamTopic`, `dp:TopicPartition`, `dp:ConsumerGroup`, `dp:PartitionLag` (one group x partition measurement), `dp:partitionOf`, `dp:subscribesTo`, `dp:lag` (xsd:long), `dp:groupState`.
 
-**Secret metadata:** `dp:SecretEngine`, `dp:SecretPath`, `dp:AccessPolicy`, `dp:RotationState`, `dp:hasRotationState`, `dp:lastRotatedAt`, `dp:currentVersion`, `dp:pathName` (SecretPath -> xsd:string), `dp:PolicyPathGrant` (class), `dp:grantPolicy` (PolicyPathGrant -> AccessPolicy), `dp:grantPath` (PolicyPathGrant -> SecretPath), `dp:grantsCapability` (PolicyPathGrant -> xsd:string; one or more closed values `read list create update delete sudo deny`), `dp:leaseExpiresAt`. There is no value, ciphertext, token, HCL-rule-body or key property in the namespace.
+**Secret metadata:** `dp:SecretEngine`, `dp:SecretPath`, `dp:NamedAccessPolicy`, `dp:RotationState`, `dp:hasRotationState`, `dp:lastRotatedAt`, `dp:currentVersion`, `dp:pathName` (SecretPath -> xsd:string), `dp:PolicyPathGrant` (class), `dp:grantPolicy` (PolicyPathGrant -> AccessPolicy), `dp:grantPath` (PolicyPathGrant -> SecretPath), `dp:grantsCapability` (PolicyPathGrant -> xsd:string; one or more closed values `read list create update delete sudo deny`), `dp:leaseExpiresAt`. There is no value, ciphertext, token, HCL-rule-body or key property in the namespace.
 
 **Analytics (5):** `dp:AnalyticsSite`, `dp:BehaviorMetric`, `dp:metricName`, `dp:metricValue`, `dp:windowDays`; dimension via `dp:dimensionName` / `dp:dimensionValue` (e.g. `URL`). `dp:AnalyticsSession` is declared but only populated if the connector exposes sessions (it does not today; see Decisions).
 
-**ML (8):** `dp:Dataset` (subclass of existing `:Dataset` from core-foundation), `dp:Model` (a general trained-model class), `dp:TrainingRun`, `dp:EvaluationResult`, `dp:trainedOn`, `dp:producedModel`, `dp:evaluatedOn`, `dp:baselineRun`.
+**ML (8):** `kg:Dataset` (the core class; no data-platform subclass), `dp:TrainedModel` (a general trained-model class), `dp:TrainingRun`, `dp:EvaluationResult`, `dp:trainedOn`, `dp:producedModel`, `dp:evaluatedOn`, `dp:baselineRun`.
 
-Core alignment: `dp:Dataset` reuses the existing analysis-dataset meaning through subclassing. The existing `:Model` describes LLM/embedding deployment models; do not equate the broader `dp:Model` to it. Only an explicitly qualified LLM/embedding subtype of `dp:Model` may also subclass `:Model`. Kafka `dp:Topic` is distinct from the existing AgentBus `:Topic`.
+Core alignment: datasets are the core `kg:Dataset`. The existing `:Model` describes LLM/embedding deployment models; do not equate the broader `dp:TrainedModel` to it. Only an explicitly qualified LLM/embedding subtype of `dp:TrainedModel` may also subclass `:Model`. Kafka `dp:StreamTopic` is distinct from the existing AgentBus `:Topic`.
 
 **Mapping (4, on `dp:StoreMapping`):** `dp:contractKind` (closed: `r2rml-sql`, `document-shape`, `mcp-operation`), `dp:viaOperation` (string `tool:action`, required when `contractKind = mcp-operation`), `dp:accelerationMode` (`virtual` | `materialised`), `dp:materialisationReason` (required when `materialised`).
 
@@ -131,11 +131,11 @@ Same style as `virtual_graph-v1.shapes.ttl`: SHACL Core plus aggregate-free `sh:
 
 | Op | Class / property | Contract | Mode |
 |---|---|---|---|
-| `sql_schema` `schemas` | `dp:Schema`, `dp:inSchema` | R2RML via engine catalog (R003); MCP fallback | V |
-| `sql_schema` `tables`, `views`, `materialized_views` | `dp:Table`, `dp:View` | same | V |
-| `sql_schema` `columns` | `dp:Column`, `dp:hasColumn`, `dp:isPrimaryKey` | same | V |
+| `sql_schema` `schemas` | `kg:Schema`, `dp:inSchema` | R2RML via engine catalog (R003); MCP fallback | V |
+| `sql_schema` `tables`, `views`, `materialized_views` | `kg:Table`, `dp:View` | same | V |
+| `sql_schema` `columns` | `kg:Column`, `dp:hasColumn`, `dp:isPrimaryKey` | same | V |
 | `sql_schema` `foreign_keys`, `constraints` | `dp:ForeignKey`, `dp:referencesTable` | same | V |
-| `sql_schema` `indexes`, `ddl`, `catalog` | `dp:Table` metadata only | same | V |
+| `sql_schema` `indexes`, `ddl`, `catalog` | `kg:Table` metadata only | same | V |
 | `sql_query` `execute` / `explain` | rows of a mapped entity (`vg:VirtualMapping`) | R2RML pushdown (R006) | V |
 | `sql_admin` `capabilities`, `dialects`, `version` | `dp:sqlDialect`, `vg:declaredCapability` | MCP | V |
 
@@ -145,8 +145,8 @@ Rows stay in the source; only catalog metadata is held (R038).
 
 | Op | Class / property | Contract | Mode |
 |---|---|---|---|
-| `documentdb_system` `list_databases` | `dp:Database` | MCP | V |
-| `documentdb_collections` `list_collections` | `dp:Collection`, `dp:inStore` | DOC (R019.1) / MCP | V |
+| `documentdb_system` `list_databases` | `kg:Database` | MCP | V |
+| `documentdb_collections` `list_collections` | `kg:DocumentCollection`, `dp:inStore` | DOC (R019.1) / MCP | V |
 | `documentdb_system` `run_command` (`collStats`) | `dp:documentCount` | MCP | V |
 | `documentdb_analysis` `aggregate` (field-presence pipeline) | `dp:DocumentField`, `dp:presenceRatio` | DOC sampling (R004) | V |
 | `documentdb_analysis` `distinct` | value enumeration for a mapped key | MCP | V |
@@ -173,8 +173,8 @@ Rows stay in the source; only catalog metadata is held (R038).
 
 | Op | Class / property | Contract | Mode |
 |---|---|---|---|
-| `kafka_topics` `list`, `describe`, `configs` | `dp:Topic` | MCP | V |
-| `kafka_partitions` `list`, `get` | `dp:Partition`, `dp:partitionOf` | MCP | V |
+| `kafka_topics` `list`, `describe`, `configs` | `dp:StreamTopic` | MCP | V |
+| `kafka_partitions` `list`, `get` | `dp:TopicPartition`, `dp:partitionOf` | MCP | V |
 | `kafka_groups` `list`, `describe`, `consumers` | `dp:ConsumerGroup`, `dp:groupState`, `dp:subscribesTo` | MCP | V |
 | `kafka_groups` `lags`, `lag_summary`; `kafka_cdc_lag` | `dp:PartitionLag`, `dp:lag`, `dp:asOf` | MCP | V for current lag; **M** for "sustained" lag |
 | `kafka_cluster` `list_brokers`, `list_acls` | broker/ACL metadata (reuse package terms; out of the 8 families) | MCP | V |
@@ -187,7 +187,7 @@ Rows stay in the source; only catalog metadata is held (R038).
 | `openbao_mcp_sys` `get_mounts`; `openbao_ingest_mounts` | `dp:SecretEngine` (mount path, engine type, version) | MCP | V |
 | `openbao_mcp_logical` `list` (keys only) | `dp:SecretPath` (path name) | MCP, list only | V |
 | `openbao_mcp_sys` `get_health`, `seal_status`, `leader` | server state on `dp:DataStore` | MCP | V |
-| `kg_ingest.ingest_policies` (policy names) | `dp:AccessPolicy` (name only) | existing whitelist | V |
+| `kg_ingest.ingest_policies` (policy names) | `dp:NamedAccessPolicy` (name only) | existing whitelist | V |
 | `openbao_mcp_kv` `kv2_get`, `openbao_mcp_logical` `read`/`unwrap` | secret values | **REFUSED**: never mapped, see Decisions | n/a |
 | (none) KV v2 metadata (`created_time`, versions) | `dp:RotationState` | missing | BLOCKED |
 | (none) policy-to-path grants | `dp:grantsCapability` | missing | BLOCKED |
@@ -203,11 +203,11 @@ Rows stay in the source; only catalog metadata is held (R038).
 
 | Op | Class / property | Contract | Mode |
 |---|---|---|---|
-| `load_dataset`, `describe_dataset`, `split_dataset` | `dp:Dataset` | MCP | V |
-| `dataset_lineage` | `dp:trainedOn`, `dp:Dataset` provenance | MCP | V |
+| `load_dataset`, `describe_dataset`, `split_dataset` | `kg:Dataset` | MCP | V |
+| `dataset_lineage` | `dp:trainedOn`, `kg:Dataset` provenance | MCP | V |
 | `fit_model`, `train_sft/dpo/grpo/ppo` | `dp:TrainingRun`, `dp:producedModel` | MCP (call-time only) | **M** (see Decisions) |
 | `evaluate_model`, `cross_validate` | `dp:EvaluationResult`, `dp:evaluatedOn`, `dp:metricValue` | MCP | **M** |
-| `rank_models` | `dp:Model` (ranked by test R2) | MCP | V |
+| `rank_models` | `dp:TrainedModel` (ranked by test R2) | MCP | V |
 
 ### Wiring
 
@@ -237,8 +237,8 @@ Rows stay in the source; only catalog metadata is held (R038).
 Question (R058.1): "Which tables have no primary key?" over a PostgreSQL source.
 
 1. `vg:SourceConnection` (kind `sql`, no credential in `vg:endpointRef`) exists; discovery (R038.2) wrote a `vg:MetadataContract` with entities/fields.
-2. An approved `dp:StoreMapping` binds entity `tables` to `dp:Table` and field `is_primary_key` to `dp:isPrimaryKey` (contractKind `r2rml-sql`, mode `virtual`).
-3. Query sketch: `SELECT ?t WHERE { ?t a dp:Table ; dp:inStore ?s . OPTIONAL { ?t dp:hasColumn ?c . ?c dp:isPrimaryKey true } FILTER(!BOUND(?c)) }`, compiled to the source's catalog SQL through R2RML pushdown (R006).
+2. An approved `dp:StoreMapping` binds entity `tables` to `kg:Table` and field `is_primary_key` to `dp:isPrimaryKey` (contractKind `r2rml-sql`, mode `virtual`).
+3. Query sketch: `SELECT ?t WHERE { ?t a kg:Table ; dp:inStore ?s . OPTIONAL { ?t dp:hasColumn ?c . ?c dp:isPrimaryKey true } FILTER(!BOUND(?c)) }`, compiled to the source's catalog SQL through R2RML pushdown (R006).
 4. Answer shape: rows `{table, schema, source, record_id, as_of}`; if the connection is absent, a typed abstention naming `sql`.
 
 ### Out of scope

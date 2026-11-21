@@ -8,7 +8,7 @@ const SHAPES: &str = include_str!("../../medulla-core/ontology/connector_pack-v1
 const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
 
 fn tool(component_id: Option<&str>, domain_link: Option<&str>) -> String {
-    let mut parts = vec!["a cp:Tool".to_string()];
+    let mut parts = vec!["a cp:SurfaceTool".to_string()];
     if let Some(id) = component_id {
         parts.push(format!(r#"cp:componentId "{id}"^^xsd:string"#));
     }
@@ -34,7 +34,7 @@ fn feature(realized_by: Option<&str>) -> String {
         r#"@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
 @prefix ex: <https://knuckles-team.github.io/ontology/test/connector-pack#> .
 
-ex:billingFeature a cp:Feature{} .
+ex:billingFeature a cp:SurfaceFeature{} .
 "#,
         realized_by
             .map(|member| format!(" ; cp:realizedBy ex:{member}"))
@@ -138,7 +138,7 @@ const CONTRACT: &str = r#"@prefix cp: <https://knuckles-team.github.io/ontology/
     cp:hasAccessPolicy c:access ;
     cp:requiresProvenance c:provenance .
 
-c:ticket a cp:SourceObject ;
+c:ticket a cp:SourceObjectMapping ;
     cp:objectName "ticket" ;
     cp:ontologyClass kg:Ticket ;
     cp:hasKeyRule c:ticket%2Fkey ;
@@ -152,7 +152,7 @@ c:ticket%2Ffield%2Ftitle a cp:FieldMapping ;
 
 c:cursor a cp:CursorPolicy ; cp:cursorKind "timestamp" .
 
-c:access a cp:AccessPolicy ;
+c:access a cp:IngestAccessPolicy ;
     cp:defaultAcl "quarantine" ;
     cp:aclField "acl" ;
     cp:tenantField "tenant" ;

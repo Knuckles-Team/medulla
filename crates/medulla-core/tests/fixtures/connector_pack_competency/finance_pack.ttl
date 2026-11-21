@@ -27,5 +27,5 @@ t:PositionSizing a :AnalysisType .
 <tool://{c}/price_option> cp:executes t:BlackScholes ; cp:operatesOn :FinancialInstrument .
 
 <mcp-server://{c}> cp:providesFeature t:feature-risk, t:feature-valuation .
-t:feature-risk a cp:Feature ; cp:realizedBy <tool://{c}/var_historical>, <tool://{c}/stress_portfolio> .
-t:feature-valuation a cp:Feature ; cp:realizedBy <tool://{c}/price_option> .
+t:feature-risk a cp:SurfaceFeature ; cp:realizedBy <tool://{c}/var_historical>, <tool://{c}/stress_portfolio> .
+t:feature-valuation a cp:SurfaceFeature ; cp:realizedBy <tool://{c}/price_option> .

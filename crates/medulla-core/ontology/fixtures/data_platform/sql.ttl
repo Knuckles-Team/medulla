@@ -10,7 +10,7 @@
 @prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/sql/> .
 
-ex:store a dp:Database ;
+ex:store a <https://knuckles-team.github.io/ontology/core#Database> ;
     dp:storeFamily "relational" ;
     dp:sqlDialect "postgresql" .
 
@@ -32,7 +32,7 @@ ex:contract a vg:MetadataContract ;
 
 ex:mapping_tables a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Table ;
+    vg:mapsOntologyClass <https://knuckles-team.github.io/ontology/core#Table> ;
     vg:mapsEntity "tables" ;
     vg:keyField "table_name" ;
     vg:hasPredicateFieldPair [
@@ -48,7 +48,7 @@ ex:mapping_tables a dp:StoreMapping ;
 
 ex:mapping_columns a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Column ;
+    vg:mapsOntologyClass <https://knuckles-team.github.io/ontology/core#Column> ;
     vg:mapsEntity "columns" ;
     vg:keyField "column_name" ;
     vg:hasPredicateFieldPair [

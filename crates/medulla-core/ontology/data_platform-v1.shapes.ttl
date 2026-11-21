@@ -106,7 +106,7 @@ dp:SecretPathShape a sh:NodeShape ;
     sh:message "A secret path carries only its path name and rotation metadata -- no value, data, token, password, rules or ciphertext." .
 
 dp:AccessPolicyShape a sh:NodeShape ;
-    sh:targetClass dp:AccessPolicy ;
+    sh:targetClass dp:NamedAccessPolicy ;
     sh:closed true ;
     sh:ignoredProperties ( rdf:type rdfs:label ) ;
     sh:property [ sh:path dp:leaseExpiresAt ; sh:datatype xsd:dateTime ] ;

@@ -28,7 +28,7 @@ ex:contract a vg:MetadataContract ;
 
 ex:mapping_list_collections a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Collection ;
+    vg:mapsOntologyClass <https://knuckles-team.github.io/ontology/core#DocumentCollection> ;
     vg:mapsEntity "collections" ;
     vg:keyField "collection_name" ;
     vg:hasPredicateFieldPair [

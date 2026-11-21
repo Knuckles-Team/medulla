@@ -212,7 +212,7 @@
     rdfs:label "Workspace Observation" ;
     rdfs:comment "The typed result a WorkspaceAction produced (command output, file content, test result)." .
 
-:File a owl:Class ;
+:File
     rdfs:label "File" ;
     rdfs:comment "A source file as a versioned artifact, carrying churn aggregates (commit_count, churn) for hotspot analysis; the change-coupling endpoint (CONCEPT:KG-2.282 / KG-2.104)." .
 
@@ -234,7 +234,7 @@
     rdfs:label "Workspace Action" ;
     rdfs:comment "A typed action the SWE agent executed in the developer-workspace runtime (shell/file/test)." .
 
-:Code a owl:Class ;
+:Code
     rdfs:label "Code" ;
     rdfs:comment "An application code symbol: function, class, or method." .
 

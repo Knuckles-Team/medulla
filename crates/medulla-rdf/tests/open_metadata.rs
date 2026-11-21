@@ -41,7 +41,7 @@ fn mapping(triples: &[Triple]) -> BTreeMap<String, Vec<String>> {
 fn mapped_types_resolve_one_class() {
     let map = mapping(&documents());
     let expected = [
-        ("GlossaryTerm", "GlossaryTerm"),
+        ("GlossaryTerm", "CatalogGlossaryTerm"),
         ("Glossary", "Catalog"),
         ("DataSet", "DataResource"),
         ("DataFlow", "LineageEdge"),

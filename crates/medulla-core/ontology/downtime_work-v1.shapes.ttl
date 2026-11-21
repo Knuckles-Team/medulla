@@ -8,6 +8,6 @@ dw:JobTypeShape a sh:NodeShape ;
     sh:property [
         sh:path dw:hasBudget ;
         sh:minCount 1 ;
-        sh:class dw:Budget ;
+        sh:class dw:ResourceBudget ;
         sh:message "A downtime job type must have a budget."
     ] .

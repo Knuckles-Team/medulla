@@ -13,12 +13,12 @@
     rdfs:label "Spec-driven development pack" ;
     rdfs:comment "Classes and properties of the spec artifact graph: specs, rows, plan sections, tasks, contracts, checklist items, principles, goals, proposals, phases, release bundles and project modes." .
 
-sddspec:Spec a owl:Class ;
+sddspec:SpecFolder a owl:Class ;
     rdfs:label "Spec" ;
     rdfs:comment "One feature spec directory: its requirements, plan, test spec and tasks." ;
     rdfs:subClassOf :Specification .
 
-sddspec:Requirement a owl:Class ;
+sddspec:RequirementRow a owl:Class ;
     rdfs:label "Spec requirement" ;
     rdfs:comment "One row of a spec requirements table." ;
     rdfs:subClassOf :Requirement .
@@ -28,7 +28,7 @@ sddspec:PlanSection a owl:Class ;
     rdfs:comment "One heading-delimited section of a plan." ;
     rdfs:subClassOf :Specification .
 
-sddspec:Task a owl:Class ;
+sddspec:TaskLine a owl:Class ;
     rdfs:label "Spec task" ;
     rdfs:comment "One task line of a tasks file: T-id, parallel flag, story, row reference and ticked state." ;
     rdfs:subClassOf bfo:0000031 .
@@ -48,7 +48,7 @@ sddspec:ConstitutionPrinciple a owl:Class ;
     rdfs:comment "One article of a repository constitution." ;
     rdfs:subClassOf :Principle .
 
-sddspec:Goal a owl:Class ;
+sddspec:DeliveryGoal a owl:Class ;
     rdfs:label "Spec goal" ;
     rdfs:comment "A goal that rows and bundles target." ;
     rdfs:subClassOf :Goal .
@@ -58,7 +58,7 @@ sddspec:Proposal a owl:Class ;
     rdfs:comment "A proposed change before it becomes rows." ;
     rdfs:subClassOf :Specification .
 
-sddspec:Phase a owl:Class ;
+sddspec:DeliveryPhase a owl:Class ;
     rdfs:label "Spec phase" ;
     rdfs:comment "A delivery phase that rows serve." ;
     rdfs:subClassOf :Phase .
@@ -86,7 +86,7 @@ sddspec:crossesSeam a owl:ObjectProperty ;
 
 sddspec:servesPhase a owl:ObjectProperty ;
     rdfs:label "serves phase" ;
-    rdfs:range sddspec:Phase .
+    rdfs:range sddspec:DeliveryPhase .
 
 sddspec:governedBy a owl:ObjectProperty ;
     rdfs:label "governed by" ;
@@ -98,4 +98,4 @@ sddspec:inBundle a owl:ObjectProperty ;
 
 sddspec:targetsGoal a owl:ObjectProperty ;
     rdfs:label "targets goal" ;
-    rdfs:range sddspec:Goal .
+    rdfs:range sddspec:DeliveryGoal .

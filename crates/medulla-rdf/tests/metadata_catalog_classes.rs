@@ -138,7 +138,7 @@ fn catalog_classes_roll_up_to_eg_core_and_align_to_w3c() {
             &[format!("{BFO}0000031"), format!("{SKOS}ConceptScheme")],
         ),
         (
-            format!("{CAT}GlossaryTerm"),
+            format!("{CAT}CatalogGlossaryTerm"),
             &[format!("{KG}Concept"), format!("{SKOS}Concept")],
         ),
     ];
@@ -249,7 +249,7 @@ fn catalog_shapes_accept_a_complete_catalog() {
          <urn:l:1> a cat:LineageEdge ; cat:from <urn:a:get_incidents> ; cat:to <urn:a:incidents> ; \
              cat:hop \"resource\" . \
          <urn:a:get_incidents> cat:lineageTo <urn:a:incidents> . \
-         <urn:t:incident> a cat:GlossaryTerm ; skos:prefLabel \"Incident\" ; cat:definesClass :Incident ."
+         <urn:t:incident> a cat:CatalogGlossaryTerm ; skos:prefLabel \"Incident\" ; cat:definesClass :Incident ."
     );
     assert!(conforms(&data));
 }
@@ -294,7 +294,7 @@ fn catalog_shapes_refuse_incomplete_or_open_vocabulary_records() {
     ));
     // A glossary term that names no class.
     assert!(!conforms(
-        "<urn:t:x> a cat:GlossaryTerm ; skos:prefLabel \"X\" ."
+        "<urn:t:x> a cat:CatalogGlossaryTerm ; skos:prefLabel \"X\" ."
     ));
     // An unknown asset flag.
     assert!(!conforms(
@@ -324,8 +324,12 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
         "{asset}<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:t> ; \
          cat:principal <urn:g:x> ; cat:role cat:owner ."
     )));
-    assert!(conforms(&format!("{asset}<urn:a:t> cat:flag \"owner_missing\" .")));
-    assert!(!conforms(&format!("{asset}<urn:a:t> cat:flag \"deprecated\" .")));
+    assert!(conforms(&format!(
+        "{asset}<urn:a:t> cat:flag \"owner_missing\" ."
+    )));
+    assert!(!conforms(&format!(
+        "{asset}<urn:a:t> cat:flag \"deprecated\" ."
+    )));
     // The owner is a stewardship assignment with the owner role, one principal and one asset.
     assert!(conforms(
         "<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:r> ; \
@@ -338,7 +342,9 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
     let edge = "<urn:l:1> a cat:LineageEdge ; cat:from <urn:a:x> ; cat:to <urn:a:y> ; \
                 cat:hop \"resource\" . ";
     assert!(!conforms(edge));
-    assert!(conforms(&format!("{edge}<urn:a:x> cat:lineageTo <urn:a:y> .")));
+    assert!(conforms(&format!(
+        "{edge}<urn:a:x> cat:lineageTo <urn:a:y> ."
+    )));
     // The vocabulary the batch uses is declared.
     let triples = documents();
     for (term, kind) in [
@@ -353,7 +359,13 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
             &format!("{OWL}{kind}")
         ));
     }
-    for term in ["declaredOwner", "ofConnector", "packVersion", "servesClass", "servesProperty"] {
+    for term in [
+        "declaredOwner",
+        "ofConnector",
+        "packVersion",
+        "servesClass",
+        "servesProperty",
+    ] {
         assert!(triples
             .iter()
             .any(|t| t.subject.to_string() == format!("<{CP}{term}>")));
@@ -366,7 +378,9 @@ fn dashboard_asset_needs_one_revision_and_an_owner_or_flag() {
     let owned = "<urn:d:1> a cat:DashboardAsset ; cat:hasOwner <urn:g:x> ; \
                  cat:revision \"1\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> .";
     assert!(conforms(owned));
-    assert!(!conforms("<urn:d:1> a cat:DashboardAsset ; cat:hasOwner <urn:g:x> ."));
+    assert!(!conforms(
+        "<urn:d:1> a cat:DashboardAsset ; cat:hasOwner <urn:g:x> ."
+    ));
     assert!(!conforms(
         "<urn:d:1> a cat:DashboardAsset ; \
          cat:revision \"1\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> ."
@@ -376,12 +390,15 @@ fn dashboard_asset_needs_one_revision_and_an_owner_or_flag() {
 // spec: MEDULLA-TYPED-PACKS-R108.14
 #[test]
 fn report_and_template_need_an_owner_and_the_template_a_parameter() {
-    let report = "<urn:r:1> a cat:ReportAsset ; cat:hasOwner <urn:g:x> ; cat:readsAsset <urn:a:t> . ";
+    let report =
+        "<urn:r:1> a cat:ReportAsset ; cat:hasOwner <urn:g:x> ; cat:readsAsset <urn:a:t> . ";
     assert!(conforms(report));
     assert!(!conforms("<urn:r:1> a cat:ReportAsset ."));
     let template = "<urn:r:2> a cat:ReportTemplate ; cat:hasOwner <urn:g:x> . ";
     assert!(!conforms(template));
-    assert!(conforms(&format!("{template}<urn:r:2> cat:parameterName \"region\" .")));
+    assert!(conforms(&format!(
+        "{template}<urn:r:2> cat:parameterName \"region\" ."
+    )));
 }
 
 // spec: MEDULLA-TYPED-PACKS-R108.1
@@ -397,15 +414,15 @@ fn six_families_validate_and_share_one_parent_asset_class() {
         ("A2AAgentAsset", Some("Agent")),
         ("AgentVersion", Some("Agent")),
         ("OrgUnit", Some("Organization")),
-        ("Team", Some("Team")),
-        ("Person", Some("Person")),
-        ("Role", Some("Role")),
+        ("TeamAsset", Some("Team")),
+        ("PersonAsset", Some("Person")),
+        ("RoleAsset", Some("Role")),
         ("BusinessDomain", None),
         ("Product", None),
-        ("Service", Some("Service")),
-        ("WorkflowDefinition", Some("Workflow")),
+        ("ServiceAsset", Some("Service")),
+        ("WorkflowDefinitionAsset", Some("Workflow")),
         ("WorkflowRun", Some("DurableExecutionUnit")),
-        ("WorkflowStep", Some("WorkflowStep")),
+        ("WorkflowStepAsset", Some("WorkflowStep")),
         ("KnowledgeGraph", Some("Dataset")),
         ("SpecialistPackage", None),
         ("ProviderAsset", None),

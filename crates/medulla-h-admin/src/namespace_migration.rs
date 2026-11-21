@@ -1,7 +1,9 @@
 //! One-shot data migration of every retired ontology namespace (medulla rename,
 //! 2026-10-30; single organization ontology base, 2026-11-12): every stored IRI
 //! under a retired namespace in [`NAMESPACE_REWRITES`] is rewritten to its
-//! replacement under the one ontology base.
+//! replacement under the one ontology base, and every retired class IRI in
+//! [`RETIRED_TERMS`] (a renamed or merged class under that base) is rewritten to
+//! the class that replaces it.
 //!
 //! Stored node ids, edge endpoints and every MessagePack string inside node and
 //! edge properties are rewritten. The pass runs after the listeners bind, as
@@ -221,6 +223,142 @@ pub const NAMESPACE_REWRITES: &[(&str, &str)] = &[
     ("http://knuckles.team/kg/", medulla_types::ontology_base!()),
 ];
 
+/// Every retired class IRI under the one ontology base and the IRI that replaces
+/// it (MEDULLA-TYPED-PACKS-R105.10.3: one local name per class across the core
+/// namespaces). A class whose name repeated a core class's name is renamed in its
+/// own namespace, or merged into the core class when it is the same concept. Each
+/// entry is a whole IRI: it matches only when no name character follows it.
+pub const RETIRED_TERMS: &[(&str, &str)] = &[
+    (
+        medulla_types::ontology_iri!("catalog#GlossaryTerm"),
+        medulla_types::ontology_iri!("catalog#CatalogGlossaryTerm"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#Person"),
+        medulla_types::ontology_iri!("catalog#PersonAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#Role"),
+        medulla_types::ontology_iri!("catalog#RoleAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#Service"),
+        medulla_types::ontology_iri!("catalog#ServiceAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#Team"),
+        medulla_types::ontology_iri!("catalog#TeamAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#WorkflowDefinition"),
+        medulla_types::ontology_iri!("catalog#WorkflowDefinitionAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("catalog#WorkflowStep"),
+        medulla_types::ontology_iri!("catalog#WorkflowStepAsset"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#AccessPolicy"),
+        medulla_types::ontology_iri!("connector-pack#IngestAccessPolicy"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#Feature"),
+        medulla_types::ontology_iri!("connector-pack#SurfaceFeature"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#Prompt"),
+        medulla_types::ontology_iri!("connector-pack#SurfacePrompt"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#Skill"),
+        medulla_types::ontology_iri!("connector-pack#SurfaceSkill"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#SourceObject"),
+        medulla_types::ontology_iri!("connector-pack#SourceObjectMapping"),
+    ),
+    (
+        medulla_types::ontology_iri!("connector-pack#Tool"),
+        medulla_types::ontology_iri!("connector-pack#SurfaceTool"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#AccessPolicy"),
+        medulla_types::ontology_iri!("data-platform#NamedAccessPolicy"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Model"),
+        medulla_types::ontology_iri!("data-platform#TrainedModel"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Partition"),
+        medulla_types::ontology_iri!("data-platform#TopicPartition"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Topic"),
+        medulla_types::ontology_iri!("data-platform#StreamTopic"),
+    ),
+    (
+        medulla_types::ontology_iri!("downtime-work#Budget"),
+        medulla_types::ontology_iri!("downtime-work#ResourceBudget"),
+    ),
+    (
+        medulla_types::ontology_iri!("identity-metadata#Preference"),
+        medulla_types::ontology_iri!("identity-metadata#ScopedPreference"),
+    ),
+    (
+        medulla_types::ontology_iri!("infrastructure#Deployment"),
+        medulla_types::ontology_iri!("infrastructure#DeploymentWorkload"),
+    ),
+    (
+        medulla_types::ontology_iri!("sdd-spec#Goal"),
+        medulla_types::ontology_iri!("sdd-spec#DeliveryGoal"),
+    ),
+    (
+        medulla_types::ontology_iri!("sdd-spec#Phase"),
+        medulla_types::ontology_iri!("sdd-spec#DeliveryPhase"),
+    ),
+    (
+        medulla_types::ontology_iri!("sdd-spec#Requirement"),
+        medulla_types::ontology_iri!("sdd-spec#RequirementRow"),
+    ),
+    (
+        medulla_types::ontology_iri!("sdd-spec#Spec"),
+        medulla_types::ontology_iri!("sdd-spec#SpecFolder"),
+    ),
+    (
+        medulla_types::ontology_iri!("sdd-spec#Task"),
+        medulla_types::ontology_iri!("sdd-spec#TaskLine"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Collection"),
+        medulla_types::ontology_iri!("core#DocumentCollection"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Column"),
+        medulla_types::ontology_iri!("core#Column"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Database"),
+        medulla_types::ontology_iri!("core#Database"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Dataset"),
+        medulla_types::ontology_iri!("core#Dataset"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Schema"),
+        medulla_types::ontology_iri!("core#Schema"),
+    ),
+    (
+        medulla_types::ontology_iri!("data-platform#Table"),
+        medulla_types::ontology_iri!("core#Table"),
+    ),
+    (
+        medulla_types::ontology_iri!("infrastructure#Incident"),
+        medulla_types::ontology_iri!("core#Incident"),
+    ),
+];
+
 /// Host fragments every entry of [`NAMESPACE_REWRITES`] contains; a quick filter.
 const RETIRED_MARKERS: [&str; 7] = [
     "knuckles.team/",
@@ -239,16 +377,41 @@ fn name_char(byte: u8) -> bool {
 /// The first rewrite entry matching the start of `tail`, with the byte length of
 /// the old text it covers.
 fn matching_rewrite(tail: &str) -> Option<(usize, &'static str, &'static str)> {
-    NAMESPACE_REWRITES.iter().find_map(|(old, new)| {
-        let rest = tail.strip_prefix(old)?;
-        let prefix = old.ends_with(['#', '/']);
-        let whole = prefix || !rest.as_bytes().first().copied().is_some_and(name_char);
-        whole.then_some((old.len(), *old, *new))
-    })
+    RETIRED_TERMS
+        .iter()
+        .chain(NAMESPACE_REWRITES)
+        .find_map(|(old, new)| {
+            let rest = tail.strip_prefix(old)?;
+            let prefix = old.ends_with(['#', '/']);
+            let whole = prefix || !rest.as_bytes().first().copied().is_some_and(name_char);
+            whole.then_some((old.len(), *old, *new))
+        })
 }
 
+/// Whether `text` may hold a retired IRI: a retired-namespace host fragment or a
+/// retired class IRI (a quick filter; matching decides).
+fn may_hold_retired(text: &[u8]) -> bool {
+    let holds = |needle: &str| {
+        text.windows(needle.len())
+            .any(|window| window == needle.as_bytes())
+    };
+    RETIRED_MARKERS.iter().any(|marker| holds(marker))
+        || RETIRED_TERMS.iter().any(|(old, _)| holds(old))
+}
+
+/// Rewrite `text` until it holds no retired IRI: a retired-namespace IRI whose
+/// replacement is itself a retired class IRI is rewritten twice. Replacements
+/// never hold a retired IRI, so the second pass is the last.
 fn rewrite_traced(text: &str, mut seen: Option<&mut BTreeSet<&'static str>>) -> Option<String> {
-    if !RETIRED_MARKERS.iter().any(|marker| text.contains(marker)) {
+    let mut current = rewrite_pass(text, seen.as_deref_mut())?;
+    while let Some(next) = rewrite_pass(&current, seen.as_deref_mut()) {
+        current = next;
+    }
+    Some(current)
+}
+
+fn rewrite_pass(text: &str, mut seen: Option<&mut BTreeSet<&'static str>>) -> Option<String> {
+    if !may_hold_retired(text.as_bytes()) {
         return None;
     }
     let mut out = String::with_capacity(text.len() + 32);
@@ -283,15 +446,11 @@ pub fn rewrite_text(text: &str) -> Option<String> {
 }
 
 fn holds_retired(bytes: &[u8]) -> bool {
-    RETIRED_MARKERS.iter().any(|marker| {
-        bytes
-            .windows(marker.len())
-            .any(|window| window == marker.as_bytes())
-    })
+    may_hold_retired(bytes)
 }
 
-/// Every retired namespace (as spelled in [`NAMESPACE_REWRITES`]) that `bytes`
-/// still holds.
+/// Every retired namespace or term (as spelled in [`NAMESPACE_REWRITES`] and
+/// [`RETIRED_TERMS`]) that `bytes` still holds.
 fn namespaces_in(bytes: &[u8], seen: &mut BTreeSet<&'static str>) {
     if !holds_retired(bytes) {
         return;
@@ -782,6 +941,45 @@ mod tests {
             assert!(rewritten.starts_with(base), "{old} -> {rewritten}");
             assert_eq!(rewrite_text(&rewritten), None, "{old} is not idempotent");
         }
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R105.10.3
+    #[test]
+    fn every_retired_term_maps_to_a_live_term_under_the_one_base() {
+        let base = medulla_types::ontology_base::ONTOLOGY_BASE;
+        let olds: BTreeSet<&str> = RETIRED_TERMS.iter().map(|(old, _)| *old).collect();
+        assert_eq!(
+            olds.len(),
+            RETIRED_TERMS.len(),
+            "one entry per retired term"
+        );
+        for (old, new) in RETIRED_TERMS {
+            assert!(
+                old.starts_with(base) && new.starts_with(base),
+                "{old} -> {new}"
+            );
+            assert!(!old.ends_with(['#', '/']), "{old} is a whole IRI");
+            assert!(!olds.contains(new), "{new} is itself retired");
+            assert_eq!(rewrite_text(old).as_deref(), Some(*new), "{old}");
+            assert_eq!(rewrite_text(new), None, "{new} is not idempotent");
+            // A longer live name that starts with the retired one is kept.
+            assert_eq!(rewrite_text(&format!("{old}Shape")), None, "{old}Shape");
+        }
+        let tool = medulla_types::ontology_iri!("connector-pack#Tool");
+        let surface = medulla_types::ontology_iri!("connector-pack#SurfaceTool");
+        assert_eq!(
+            rewrite_text(&format!("<{tool}> <{tool}>")).as_deref(),
+            Some(format!("<{surface}> <{surface}>").as_str())
+        );
+        // A retired-namespace IRI whose rewrite is a retired term lands on the
+        // live term in one call.
+        assert_eq!(
+            rewrite_text("http://knuckles.team/kg/connector-pack#Tool").as_deref(),
+            Some(surface)
+        );
+        let mut seen = BTreeSet::new();
+        namespaces_in(tool.as_bytes(), &mut seen);
+        assert_eq!(seen.into_iter().collect::<Vec<_>>(), [tool]);
     }
 
     #[test]

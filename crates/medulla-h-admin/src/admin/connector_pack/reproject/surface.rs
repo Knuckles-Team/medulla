@@ -25,9 +25,9 @@ const XSD_INTEGER: &str = "http://www.w3.org/2001/XMLSchema#integer";
 /// The class the engine types each surface member with.
 fn surface_class(kind: PackEntryKind) -> &'static str {
     match kind {
-        PackEntryKind::Tool => "Tool",
-        PackEntryKind::Prompt => "Prompt",
-        PackEntryKind::Skill => "Skill",
+        PackEntryKind::Tool => "SurfaceTool",
+        PackEntryKind::Prompt => "SurfacePrompt",
+        PackEntryKind::Skill => "SurfaceSkill",
         _ => "Connector",
     }
 }

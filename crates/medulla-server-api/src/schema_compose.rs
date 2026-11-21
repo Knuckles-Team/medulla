@@ -941,7 +941,12 @@ ex:parent a owl:AsymmetricProperty .
         // MEDULLA-TYPED-PACKS-R105.10.1): the :TransitionRefused class (six triples) and the
         // :TransitionGuard "Guard" alias in state-machines-v1.ttl, and eleven core-foundation
         // classes that had no core parent gain one.
-        assert_eq!(composed.ontology.len(), 24_708);
+        // +174 (measured delta on 9f7f19ffeb; MEDULLA-TYPED-PACKS-R105.10.2 to R105.10.4):
+        // +204 the bpmn, content and connector-seed modules join the parent catalog
+        // (their triples, three module headers and three catalog imports); -30 the
+        // duplicate class declarations removed when each class keeps one home and
+        // the repeated local names merge into the core class.
+        assert_eq!(composed.ontology.len(), 24_882);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -981,7 +986,9 @@ ex:parent a owl:AsymmetricProperty .
         // +1: the connector-pack ingest vocabulary header (R101.1).
         // +1: the placement target vocabulary module header (MEDULLA-PLACEMENT-R001.5).
         // +1: the identity metadata module header (MEDULLA-IDENTITY-R023.8).
-        assert_eq!(ontology_subjects.len(), 48);
+        // +3: the bpmn, content and connector-seed module headers
+        // (MEDULLA-TYPED-PACKS-R105.10.4).
+        assert_eq!(ontology_subjects.len(), 51);
         // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
         // `owl:imports <.../core>`; +6: the service-operations module's five
         // imports and its catalog entry; +5: the metadata-catalog module's four
@@ -1002,7 +1009,9 @@ ex:parent a owl:AsymmetricProperty .
         // below the 120 composed imports of that corpus. The composed imports are
         // every `owl:imports` the catalogued modules declare (82 in the shipped
         // files less content's one).
-        assert_eq!(imports, 81);
+        // +4 (MEDULLA-TYPED-PACKS-R105.10.4): content's retrieval import now reaches the
+        // corpus, and the catalog imports bpmn, content and downtime-work.
+        assert_eq!(imports, 85);
         // +20 (EH-408/409/410): infrastructure :BehaviourObservation,
         // :ConformanceViolation, :Deployment, :K8sService and :SwarmService,
         // 4 axioms each; +5: the :scheduledBy property. +24 (EH-410): the six feed
@@ -1058,7 +1067,9 @@ ex:parent a owl:AsymmetricProperty .
         // +508 (measured, 23_943 -> 24_451): the train-landing vocabulary, all semantic
         // axioms (see the total pin; headers stay at 48 subjects and imports at 81).
         // +18: the TransitionRefused class and the core-rooting edges (see the total pin).
-        assert_eq!(semantic_axioms, 24_469);
+        // +162: the three newly catalogued modules less the removed duplicate
+        // declarations (MEDULLA-TYPED-PACKS-R105.10.2 to R105.10.4; see the total pin).
+        assert_eq!(semantic_axioms, 24_631);
 
         let count_type = |object: &str| {
             composed
@@ -1159,7 +1170,10 @@ ex:parent a owl:AsymmetricProperty .
             // Event and Guard classes (see the total pin).
             // +12 (measured, 1358 -> 1370): :TransitionRefused rdfs:subClassOf :RefusalCode
             // and the eleven core-rooting edges of MEDULLA-TYPED-PACKS-R105.10.1.
-            1370
+            // +22 (measured delta on 9f7f19ffeb): +31 the bpmn, content and
+            // connector-seed subclass axioms (R105.10.4); -9 the duplicate parents
+            // dropped by one home per class and the merges (R105.10.2, R105.10.3).
+            1392
         );
     }
 

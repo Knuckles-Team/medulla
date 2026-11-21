@@ -13,10 +13,10 @@
 
 # --- sql (sql-mcp, database.ttl) ---
 
-:DatabaseSchema rdfs:subClassOf dp:Schema .
-:DatabaseTable rdfs:subClassOf dp:Table .
+:DatabaseSchema rdfs:subClassOf :Schema .
+:DatabaseTable rdfs:subClassOf :Table .
 :DatabaseView rdfs:subClassOf dp:View .
-:DatabaseColumn rdfs:subClassOf dp:Column .
+:DatabaseColumn rdfs:subClassOf :Column .
 :hasColumn owl:equivalentProperty dp:hasColumn .
 :isPrimaryKey owl:equivalentProperty dp:isPrimaryKey .
 :referencesTable owl:equivalentProperty dp:referencesTable .
@@ -24,6 +24,6 @@
 
 # --- documentdb (documentdb-mcp, documentdb.ttl) ---
 
-:Database rdfs:subClassOf dp:Database .
-:Collection rdfs:subClassOf dp:Collection .
+:Database rdfs:subClassOf :Database .
+:Collection rdfs:subClassOf :DocumentCollection .
 :documentCount owl:equivalentProperty dp:documentCount .

@@ -69,7 +69,7 @@ cat:AgentAsset a owl:Class ;
     rdfs:comment "An Agent Library entry: an agent card or template describing a :Agent (cat:describesAgent)." ;
     rdfs:subClassOf cat:Asset, :Document .
 
-cp:Connector a owl:Class ;
+cp:Connector
     rdfs:label "Connector" ;
     rdfs:comment "A connected connector (an MCP server) that serves tools, prompts, skills and data resources. A dcat:DataService." ;
     rdfs:subClassOf :Tool, dcat:DataService .
@@ -255,21 +255,21 @@ cat:Glossary a owl:Class ;
     rdfs:label "Business Glossary" ;
     rdfs:subClassOf bfo:0000031, skos:ConceptScheme .
 
-cat:GlossaryTerm a owl:Class ;
+cat:CatalogGlossaryTerm a owl:Class ;
     catn:openMetadataType "GlossaryTerm" ;
-    rdfs:label "Glossary Term" ;
-    rdfs:comment "A business term (skos:prefLabel, skos:altLabel, skos:definition) that names an ontology class and the assets that serve it." ;
-    rdfs:subClassOf :Concept, skos:Concept .
+    rdfs:label "Catalog Glossary Term" ;
+    rdfs:comment "A glossary term the catalog publishes: a core glossary term (skos:prefLabel, skos:altLabel, skos:definition) that names an ontology class and the assets that serve it." ;
+    rdfs:subClassOf :GlossaryTerm, skos:Concept .
 
 cat:definesClass a owl:ObjectProperty ;
     rdfs:label "defines class" ;
-    rdfs:domain cat:GlossaryTerm ;
+    rdfs:domain cat:CatalogGlossaryTerm ;
     rdfs:range owl:Class .
 
 :definesAsset a owl:ObjectProperty ;
     rdfs:label "defines asset" ;
     rdfs:comment "Links a glossary term to an asset that serves the class the term names (MEDULLA-TYPED-PACKS-R801.2)." ;
-    rdfs:domain cat:GlossaryTerm ;
+    rdfs:domain cat:CatalogGlossaryTerm ;
     rdfs:range cat:Asset .
 
 # -- Open metadata type mapping (MEDULLA-TYPED-PACKS-R110.1) -------------------------------
@@ -330,13 +330,13 @@ cat:OrgUnit a owl:Class ;
     rdfs:subClassOf cat:Asset ,
         [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Organization ] .
 
-cat:Team a owl:Class ;
+cat:TeamAsset a owl:Class ;
     rdfs:label "Team Asset" ;
     rdfs:comment "A team catalogued as an asset." ;
     rdfs:subClassOf cat:Asset ,
         [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :Team ] .
 
-cat:Person a owl:Class ;
+cat:PersonAsset a owl:Class ;
     rdfs:label "Person Asset" ;
     rdfs:comment "A person catalogued as an asset (an owner or a steward)." ;
     rdfs:subClassOf cat:Asset ,
@@ -349,18 +349,18 @@ catn:fieldMarking a owl:AnnotationProperty ;
 cat:email a owl:DatatypeProperty ;
     rdfs:label "email" ;
     rdfs:comment "The email address of a person asset." ;
-    rdfs:domain cat:Person ;
+    rdfs:domain cat:PersonAsset ;
     rdfs:range xsd:string ;
     catn:fieldMarking "pii" .
 
 cat:phone a owl:DatatypeProperty ;
     rdfs:label "phone" ;
     rdfs:comment "The phone number of a person asset." ;
-    rdfs:domain cat:Person ;
+    rdfs:domain cat:PersonAsset ;
     rdfs:range xsd:string ;
     catn:fieldMarking "pii" .
 
-cat:Role a owl:Class ;
+cat:RoleAsset a owl:Class ;
     rdfs:label "Role Asset" ;
     rdfs:comment "A business role catalogued as an asset." ;
     rdfs:subClassOf cat:Asset ,
@@ -376,7 +376,7 @@ cat:Product a owl:Class ;
     rdfs:comment "A business product catalogued as an asset." ;
     rdfs:subClassOf cat:Asset .
 
-cat:Service a owl:Class ;
+cat:ServiceAsset a owl:Class ;
     rdfs:label "Service Asset" ;
     rdfs:comment "A business service catalogued as an asset." ;
     rdfs:subClassOf cat:Asset ,
@@ -414,7 +414,7 @@ cat:revision a owl:DatatypeProperty ;
     rdfs:comment "The revision of a stored asset body; it only increases." ;
     rdfs:range xsd:nonNegativeInteger .
 
-cat:WorkflowDefinition a owl:Class ;
+cat:WorkflowDefinitionAsset a owl:Class ;
     rdfs:label "Workflow Definition" ;
     rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;
     rdfs:subClassOf cat:Asset ,
@@ -426,7 +426,7 @@ cat:WorkflowRun a owl:Class ;
     rdfs:subClassOf cat:Asset ,
         [ a owl:Restriction ; owl:onProperty cat:describes ; owl:someValuesFrom :DurableExecutionUnit ] .
 
-cat:WorkflowStep a owl:Class ;
+cat:WorkflowStepAsset a owl:Class ;
     rdfs:label "Workflow Step" ;
     rdfs:comment "One step of a workflow definition." ;
     rdfs:subClassOf cat:Asset ,

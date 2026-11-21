@@ -243,7 +243,7 @@ pub fn emit_asset(
                 let source = format!("org:{}:role:{}", chart.org_id, role.role_id);
                 let role_node = node(
                     &mut out,
-                    "Role",
+                    "RoleAsset",
                     "role",
                     &id,
                     &source,
@@ -258,7 +258,14 @@ pub fn emit_asset(
         AssetRecord::WorkflowDefinition(entry) => {
             let identity = &entry.identity;
             let id = WorkflowRegistrationEntry::node_id(identity);
-            node(&mut out, "WorkflowDefinition", "workflow", &id, &id, links)?;
+            node(
+                &mut out,
+                "WorkflowDefinitionAsset",
+                "workflow",
+                &id,
+                &id,
+                links,
+            )?;
         }
         AssetRecord::WorkflowRun(run) => {
             let run_node = node(
@@ -479,7 +486,7 @@ mod tests {
             &org,
             &role,
             RDF_TYPE,
-            &Object::Iri(format!("{CAT}Role"))
+            &Object::Iri(format!("{CAT}RoleAsset"))
         ));
         assert!(has(&org, &role, DCT_IS_PART_OF, &Object::Iri(unit)));
         assert!(!to_ntriples(&org).contains("SECRET-CAPABILITY"));
@@ -491,7 +498,7 @@ mod tests {
             &flow,
             &asset_node("workflow", &flow_id),
             RDF_TYPE,
-            &Object::Iri(format!("{CAT}WorkflowDefinition"))
+            &Object::Iri(format!("{CAT}WorkflowDefinitionAsset"))
         ));
         let run = emit_asset(
             AssetRecord::WorkflowRun(WorkflowRunRecord {

@@ -34,7 +34,7 @@ const CATALOG: &str = "https://knuckles-team.github.io/ontology/catalog#";
 const CONNECTION: &str = "urn:eg:fixture:sync:glossary-export";
 
 fn term_class() -> String {
-    format!("{CATALOG}GlossaryTerm")
+    format!("{CATALOG}CatalogGlossaryTerm")
 }
 
 fn authority_turtle() -> String {
@@ -44,10 +44,10 @@ fn authority_turtle() -> String {
 @prefix ex: <urn:eg:fixture:sync:> .
 ex:glossary-export a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:declaredCapability "read" .
 ex:term-sor a vg:SourceAuthority ; vg:authoritativeSource vg:NativeGraph ;
- vg:authorityFor cat:GlossaryTerm ; vg:authorityRank 1 ; vg:authorityContract "virtual-graph" ;
+ vg:authorityFor cat:CatalogGlossaryTerm ; vg:authorityRank 1 ; vg:authorityContract "virtual-graph" ;
  vg:recordRole "system_of_record" .
 ex:term-secondary a vg:SourceAuthority ; vg:authoritativeSource ex:glossary-export ;
- vg:authorityFor cat:GlossaryTerm ; vg:authorityRank 2 ; vg:authorityContract "virtual-graph" ;
+ vg:authorityFor cat:CatalogGlossaryTerm ; vg:authorityRank 2 ; vg:authorityContract "virtual-graph" ;
  vg:recordRole "federated_secondary" ; vg:syncDirection "both" ; vg:conflictRule "system_of_record_wins" .
 "#
     )

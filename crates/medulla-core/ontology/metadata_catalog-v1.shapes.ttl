@@ -86,7 +86,7 @@ cat:ConnectorAssetOwnerShape a sh:NodeShape ;
 
 # A glossary term has one preferred label and names at least one class.
 cat:GlossaryTermShape a sh:NodeShape ;
-    sh:targetClass cat:GlossaryTerm ;
+    sh:targetClass cat:CatalogGlossaryTerm ;
     sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ; sh:maxCount 1 ],
     [ sh:path cat:definesClass ; sh:nodeKind sh:IRI ],
     [ sh:path :definesAsset ; sh:nodeKind sh:IRI ],
@@ -103,8 +103,8 @@ cat:AssetFlagShape a sh:NodeShape ;
 # (MEDULLA-TYPED-PACKS-R108.1).
 cat:FamilyAssetOwnerShape a sh:NodeShape ;
     sh:targetClass cat:AgentTemplateAsset, cat:A2AAgentAsset, cat:AgentVersion, cat:OrgUnit,
-        cat:Team, cat:Person, cat:Role, cat:BusinessDomain, cat:Product, cat:Service,
-        cat:WorkflowDefinition, cat:WorkflowRun, cat:WorkflowStep, cat:KnowledgeGraph,
+        cat:TeamAsset, cat:PersonAsset, cat:RoleAsset, cat:BusinessDomain, cat:Product, cat:ServiceAsset,
+        cat:WorkflowDefinitionAsset, cat:WorkflowRun, cat:WorkflowStepAsset, cat:KnowledgeGraph,
         cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset ;
     sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ],
     [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;

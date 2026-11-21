@@ -93,11 +93,11 @@ fn contract_terms_resolve_with_domain_and_range() {
     // virtual-graph classes do so by the exact IRI.
     for class in [
         "IngestContract",
-        "SourceObject",
+        "SourceObjectMapping",
         "FieldMapping",
         "KeyRule",
         "CursorPolicy",
-        "AccessPolicy",
+        "IngestAccessPolicy",
         "PrivacyClass",
         "ProvenanceRequirement",
     ] {
@@ -119,7 +119,7 @@ fn contract_terms_resolve_with_domain_and_range() {
     ));
     assert!(has_iri(
         &triples,
-        &format!("{CP}SourceObject"),
+        &format!("{CP}SourceObjectMapping"),
         &format!("{RDFS}subClassOf"),
         &format!("{VG}VirtualMapping")
     ));
@@ -134,10 +134,10 @@ fn contract_terms_resolve_with_domain_and_range() {
     let range = format!("{RDFS}range");
     let object_properties = [
         ("contractOf", "IngestContract", "Connector"),
-        ("hasSourceObject", "IngestContract", "SourceObject"),
-        ("hasKeyRule", "SourceObject", "KeyRule"),
+        ("hasSourceObject", "IngestContract", "SourceObjectMapping"),
+        ("hasKeyRule", "SourceObjectMapping", "KeyRule"),
         ("hasCursorPolicy", "IngestContract", "CursorPolicy"),
-        ("hasAccessPolicy", "IngestContract", "AccessPolicy"),
+        ("hasAccessPolicy", "IngestContract", "IngestAccessPolicy"),
         (
             "requiresProvenance",
             "IngestContract",
@@ -225,7 +225,13 @@ fn surface_terms_resolve_with_domain_and_range() {
     let triples = parse_turtle(&ontology).expect("the connector-pack ontology parses");
     // The surface classes are declared; the tool, prompt and skill
     // specialise the core classes by IRI.
-    for class in ["Connector", "Feature", "Tool", "Prompt", "Skill"] {
+    for class in [
+        "Connector",
+        "SurfaceFeature",
+        "SurfaceTool",
+        "SurfacePrompt",
+        "SurfaceSkill",
+    ] {
         assert!(
             has_iri(
                 &triples,
@@ -238,19 +244,19 @@ fn surface_terms_resolve_with_domain_and_range() {
     }
     assert!(has_iri(
         &triples,
-        &format!("{CP}Tool"),
+        &format!("{CP}SurfaceTool"),
         &format!("{RDFS}subClassOf"),
         &format!("{KG}Tool")
     ));
     assert!(has_iri(
         &triples,
-        &format!("{CP}Prompt"),
+        &format!("{CP}SurfacePrompt"),
         &format!("{RDFS}subClassOf"),
         &format!("{KG}Prompt")
     ));
     assert!(has_iri(
         &triples,
-        &format!("{CP}Skill"),
+        &format!("{CP}SurfaceSkill"),
         &format!("{RDFS}subClassOf"),
         &format!("{KG}Skill")
     ));
@@ -260,11 +266,11 @@ fn surface_terms_resolve_with_domain_and_range() {
     let object_properties = [
         ("providesFeature", "Connector"),
         ("hasContract", "Connector"),
-        ("realizedBy", "Feature"),
-        ("operatesOn", "Tool"),
-        ("produces", "Tool"),
-        ("executes", "Tool"),
-        ("providesCapability", "Tool"),
+        ("realizedBy", "SurfaceFeature"),
+        ("operatesOn", "SurfaceTool"),
+        ("produces", "SurfaceTool"),
+        ("executes", "SurfaceTool"),
+        ("providesCapability", "SurfaceTool"),
     ];
     for (property, property_domain) in object_properties {
         assert!(
@@ -292,7 +298,7 @@ fn surface_terms_resolve_with_domain_and_range() {
         &triples,
         &format!("{CP}providesFeature"),
         &range,
-        &format!("{CP}Feature")
+        &format!("{CP}SurfaceFeature")
     ));
     assert!(has_iri(
         &triples,

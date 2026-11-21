@@ -11,16 +11,16 @@ use sdd_pack_support::{declared_and_parents, hierarchy, registered};
 const PACK: &str = "core:sdd_spec@1";
 const PACK_NS: &str = "https://knuckles-team.github.io/ontology/sdd-spec#";
 const CLASSES: [&str; 12] = [
-    "Spec",
-    "Requirement",
+    "SpecFolder",
+    "RequirementRow",
     "PlanSection",
-    "Task",
+    "TaskLine",
     "Contract",
     "ChecklistItem",
     "ConstitutionPrinciple",
-    "Goal",
+    "DeliveryGoal",
     "Proposal",
-    "Phase",
+    "DeliveryPhase",
     "ReleaseBundle",
     "ProjectMode",
 ];

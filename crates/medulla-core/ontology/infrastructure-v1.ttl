@@ -95,11 +95,6 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
     rdfs:comment "One distilled aggregate-window reading of a named signal on an entity (min/avg/max + avg control level + sample count) — the layer-agnostic generalization of fan-manager's :ThermalTrend, produced by the meristem harness." ;
     rdfs:subClassOf bfo:0000031 .
 
-:Incident a owl:Class ;
-    rdfs:label "Incident" ;
-    rdfs:comment "One cross-layer correlation event synthesized from simultaneous :HealthAnomaly rows on related entities (thermal + OS load + pod restarts + service latency, all within one window) — the payoff of the unified model (reports/unified-infra-intelligence-plan.md Phase D). BFO:Process — unfolds over a time window." ;
-    rdfs:subClassOf bfo:0000015 .
-
 :OperatingSystem a owl:Class ;
     rdfs:label "Operating System" ;
     rdfs:comment "The OS instance (e.g. Ubuntu) running on a :Host — the OS layer of the unified infrastructure model, producing CPU/mem/disk/load/update/log-error health signals." ;
@@ -116,7 +111,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 (CONCEPT:KG-2.158).""" ;
     rdfs:subClassOf bfo:0000015 .
 
-:Deployment a owl:Class ;
+:DeploymentWorkload a owl:Class ;
     rdfs:label "Deployment" ;
     rdfs:comment "A Kubernetes Deployment: the :Workload controller that keeps a replica set of stateless :Pod replicas at its declared spec (producer: container-manager). EH-410: telemetry carrying its k8s.namespace.name + k8s.deployment.name binds to it as a :Workload." ;
     rdfs:subClassOf :Workload .
@@ -138,7 +133,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :affectsEntity a owl:ObjectProperty ;
     rdfs:label "affects entity" ;
-    rdfs:comment "Links a :HealthTrend, :HealthBaseline, :HealthAnomaly, or :Incident to the entity it concerns — deliberately polymorphic (the entity may be a :Host, :Node, :Pod, :Workload, :Service, :Endpoint, :NetworkPath, :Tunnel, or :OperatingSystem, from any layer)." .
+    rdfs:comment "Links a :HealthTrend, :HealthBaseline, :HealthAnomaly, or kg:Incident to the entity it concerns — deliberately polymorphic (the entity may be a :Host, :Node, :Pod, :Workload, :Service, :Endpoint, :NetworkPath, :Tunnel, or :OperatingSystem, from any layer)." .
 
 :attachedStorage a owl:ObjectProperty ;
     rdfs:label "attached storage" ;
@@ -295,7 +290,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :kind a owl:DatatypeProperty ;
     rdfs:label "kind" ;
-    rdfs:comment "Category of a :HealthAnomaly (above-baseline, saturated, or a caller-defined systemic kind) or an :Incident's synthesized cause." ;
+    rdfs:comment "Category of a :HealthAnomaly (above-baseline, saturated, or a caller-defined systemic kind) or an kg:Incident's synthesized cause." ;
     rdfs:range xsd:string .
 
 :layer a owl:DatatypeProperty ;
@@ -443,7 +438,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :summary a owl:DatatypeProperty ;
     rdfs:label "summary" ;
-    rdfs:comment "Human-readable synthesis of an :Incident's cross-layer cause." ;
+    rdfs:comment "Human-readable synthesis of an kg:Incident's cross-layer cause." ;
     rdfs:range xsd:string .
 
 :targetHost a owl:DatatypeProperty ;

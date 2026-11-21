@@ -49,7 +49,7 @@ source names it the report abstains Uncovered.""" ;
     rdfs:label "affects service" ;
     rdfs:comment """Links an Incident or Change to each Service it affects, mapped
 from a ServiceNow change request and its CI relation. Reuses the shared
-:Incident and :Change classes; the distinct infra:Incident keeps
+:Incident and :Change classes; the distinct :Incident keeps
 infra:affectsEntity, and no commercial :ChangeRequest class is added.""" ;
     rdfs:domain [ a owl:Class ;
         owl:unionOf ( :Incident :Change ) ] ;

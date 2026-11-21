@@ -96,7 +96,7 @@
     rdfs:label "resolves" ;
     rdfs:comment "A passing :Validation resolves the originating :Incident, closing the loop (design §1.2)." ;
     rdfs:domain :Validation ;
-    rdfs:range infra:Incident .
+    rdfs:range :Incident .
 
 :routedTo a owl:ObjectProperty ;
     rdfs:label "routed to" ;
@@ -110,7 +110,7 @@
 :triggers a owl:ObjectProperty ;
     rdfs:label "triggers" ;
     rdfs:comment "An :Incident triggers the :Ticket the router files for it (design §1.2)." ;
-    rdfs:domain infra:Incident ;
+    rdfs:domain :Incident ;
     rdfs:range :Ticket .
 
 :triggersPipeline a owl:ObjectProperty ;

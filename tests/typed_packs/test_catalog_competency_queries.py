@@ -91,7 +91,7 @@ cat:owner rdf:type cat:StewardshipRole .
 <{EXAMPLE}field-customer-id> cat:flag "owner_missing" .
 <{EXAMPLE}field-order-id> cat:flag "owner_missing" .
 
-<{EXAMPLE}term-customer-reader> rdf:type cat:GlossaryTerm ;
+<{EXAMPLE}term-customer-reader> rdf:type cat:CatalogGlossaryTerm ;
     cat:definesAsset {TOOL} ;
     cat:definesClass <{EXAMPLE}Customer> ;
     skos:prefLabel "Read customer records" .
@@ -228,7 +228,7 @@ def test_owner_lineage_term_and_class_queries_answer_from_the_graph(catalog_grap
     assert _uql_ids(
         client,
         "MATCH () WHERE type = "
-        f"'{CATALOG}GlossaryTerm' |> TRAVERSE -[:"
+        f"'{CATALOG}CatalogGlossaryTerm' |> TRAVERSE -[:"
         f"{_uql_relationship(DEFINES_ASSET)}]->",
     ) == {TOOL}
 

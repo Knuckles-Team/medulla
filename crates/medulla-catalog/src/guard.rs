@@ -7,7 +7,7 @@
 //!
 //! * `ASSET_CLASS_ORPHAN`: a catalog node typed with a `cat:` class that is not
 //!   under `cat:Asset`.
-//! * `FIELD_MARKED`: a field of a `cat:Person` node carries a marking the writer
+//! * `FIELD_MARKED`: a field of a `cat:PersonAsset` node carries a marking the writer
 //!   does not hold.
 //!
 //! A node with no owner is not refused here: [`crate::emit`] commits it flagged
@@ -66,7 +66,7 @@ pub struct CatalogGuardContext<'a> {
     pub is_asset_class: &'a dyn Fn(&str) -> bool,
     /// The markings the writer holds.
     pub held: &'a BTreeSet<Marking>,
-    /// The marking of one field of a `cat:Person` node, when it has one.
+    /// The marking of one field of a `cat:PersonAsset` node, when it has one.
     pub field_marking: &'a dyn Fn(&str) -> Option<Marking>,
 }
 
@@ -76,7 +76,7 @@ pub fn check_catalog_write(
     triples: &[Triple],
     context: &CatalogGuardContext<'_>,
 ) -> Result<(), CatalogGuardError> {
-    let person = format!("{CAT}Person");
+    let person = format!("{CAT}PersonAsset");
     let persons: BTreeSet<&str> = triples
         .iter()
         .filter(|t| t.predicate == RDF_TYPE && t.object == Object::Iri(person.clone()))
@@ -181,7 +181,7 @@ mod tests {
         let held: BTreeSet<Marking> = [marking("internal")].into();
         let email = format!("{CAT}email");
         let is_asset =
-            |class: &str| class == format!("{CAT}Product") || class == format!("{CAT}Person");
+            |class: &str| class == format!("{CAT}Product") || class == format!("{CAT}PersonAsset");
         let field_marking = |predicate: &str| (predicate == email).then(|| marking("pii"));
         let context = CatalogGuardContext {
             is_asset_class: &is_asset,
@@ -199,7 +199,7 @@ mod tests {
         assert_eq!(error.code(), ASSET_CLASS_ORPHAN);
 
         let marked = vec![
-            typed(&person, &format!("{CAT}Person")),
+            typed(&person, &format!("{CAT}PersonAsset")),
             field(&person, &email),
         ];
         let error = check_catalog_write(&marked, &context).unwrap_err();
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(check_catalog_write(&marked, &cleared), Ok(()));
 
         let unmarked = vec![
-            typed(&person, &format!("{CAT}Person")),
+            typed(&person, &format!("{CAT}PersonAsset")),
             field(&person, &format!("{CAT}displayName")),
         ];
         assert_eq!(check_catalog_write(&unmarked, &context), Ok(()));

@@ -20,7 +20,7 @@ GOOD: dict[str, Any] = {
     "connector": "alpha",
     "rollup": "MEDULLA-CQ-CONN-R001",
     "vocabulary_module": "data_platform-v1.ttl",
-    "terms": ["dp:Collection"],
+    "terms": ["dp:DataStore"],
     "questions": [
         {
             "id": "alpha.q1",

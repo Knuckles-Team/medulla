@@ -205,19 +205,28 @@ fn assert_typed(triples: &[Triple], local: &str, kind: &str) {
     );
 }
 
+/// A `kg:`-prefixed name is a core class (the module extends it); any other name is
+/// a data-platform term.
+fn term(name: &str) -> String {
+    match name.strip_prefix("kg:") {
+        Some(core) => format!("https://knuckles-team.github.io/ontology/core#{core}"),
+        None => format!("{DP}{name}"),
+    }
+}
+
 fn assert_domain_range(triples: &[Triple], local: &str, domain: &str, range: &str) {
     assert!(
         has_iri(
             triples,
             &format!("{DP}{local}"),
             &format!("{RDFS}domain"),
-            &format!("{DP}{domain}")
+            &term(domain)
         ),
         "{local} domain is {domain}"
     );
     let range_iri = match range.strip_prefix("xsd:") {
         Some(local_name) => format!("{XSD}{local_name}"),
-        None => format!("{DP}{range}"),
+        None => term(range),
     };
     assert!(
         has_iri(
@@ -239,15 +248,21 @@ fn load_data_platform() -> Vec<Triple> {
 #[test]
 fn relational_classes_present() {
     let triples = load_data_platform();
-    for class in [
-        "Database",
-        "Schema",
-        "Table",
-        "View",
-        "Column",
-        "ForeignKey",
-    ] {
+    for class in ["View", "ForeignKey"] {
         assert_typed(&triples, class, "Class");
+    }
+    // MEDULLA-TYPED-PACKS-R105.10.3: database, schema, table and column are the core
+    // classes; the module declares no second class of the same name.
+    for class in ["Database", "Schema", "Table", "Column"] {
+        assert!(
+            !has_iri(
+                &triples,
+                &format!("{DP}{class}"),
+                &format!("{RDF}type"),
+                &format!("{OWL}Class")
+            ),
+            "dp:{class} is retired in favour of the core class"
+        );
     }
 }
 
@@ -255,18 +270,17 @@ fn relational_classes_present() {
 #[test]
 fn relational_properties_domain_range() {
     let triples = load_data_platform();
-    assert_domain_range(&triples, "inSchema", "Table", "Schema");
-    assert_domain_range(&triples, "hasColumn", "Table", "Column");
-    assert_domain_range(&triples, "referencesTable", "ForeignKey", "Table");
-    assert_domain_range(&triples, "isPrimaryKey", "Column", "xsd:boolean");
-    assert_domain_range(&triples, "sqlDialect", "Database", "xsd:string");
+    assert_domain_range(&triples, "inSchema", "kg:Table", "kg:Schema");
+    assert_domain_range(&triples, "hasColumn", "kg:Table", "kg:Column");
+    assert_domain_range(&triples, "referencesTable", "ForeignKey", "kg:Table");
+    assert_domain_range(&triples, "isPrimaryKey", "kg:Column", "xsd:boolean");
+    assert_domain_range(&triples, "sqlDialect", "kg:Database", "xsd:string");
 }
 
 // spec: MEDULLA-DATAPLAT-VOCAB-R002.3
 #[test]
 fn document_terms_present() {
     let triples = load_data_platform();
-    assert_typed(&triples, "Collection", "Class");
     assert_typed(&triples, "DocumentField", "Class");
     assert_typed(&triples, "fieldPath", "DatatypeProperty");
     assert_typed(&triples, "fieldType", "DatatypeProperty");
@@ -317,7 +331,12 @@ fn vector_terms_present() {
 #[test]
 fn stream_terms_present() {
     let triples = load_data_platform();
-    for class in ["Topic", "Partition", "ConsumerGroup", "PartitionLag"] {
+    for class in [
+        "StreamTopic",
+        "TopicPartition",
+        "ConsumerGroup",
+        "PartitionLag",
+    ] {
         assert_typed(&triples, class, "Class");
     }
     assert_typed(&triples, "partitionOf", "ObjectProperty");
@@ -349,19 +368,19 @@ fn ml_terms_present() {
     let triples = load_data_platform();
     assert!(has_iri(
         &triples,
-        &format!("{DP}Dataset"),
+        &format!("https://knuckles-team.github.io/ontology/core#Dataset"),
         &format!("{RDFS}subClassOf"),
         "https://knuckles-team.github.io/ontology/core#Dataset"
     ));
-    assert_typed(&triples, "Model", "Class");
+    assert_typed(&triples, "TrainedModel", "Class");
     assert!(
         !has_iri(
             &triples,
-            &format!("{DP}Model"),
+            &format!("{DP}TrainedModel"),
             &format!("{OWL}equivalentClass"),
             "https://knuckles-team.github.io/ontology/core#Model"
         ),
-        "dp:Model must not be equivalent to the narrower core Model"
+        "dp:TrainedModel must not be equivalent to the narrower core Model"
     );
     assert_typed(&triples, "TrainingRun", "Class");
     assert_typed(&triples, "EvaluationResult", "Class");
@@ -425,7 +444,7 @@ fn secret_metadata_terms_present() {
     for class in [
         "SecretEngine",
         "SecretPath",
-        "AccessPolicy",
+        "NamedAccessPolicy",
         "RotationState",
         "PolicyPathGrant",
     ] {
@@ -490,7 +509,7 @@ fn secret_metadata_terms_present() {
         &triples,
         &format!("{DP}grantPolicy"),
         Some(&format!("{DP}PolicyPathGrant")),
-        &format!("{DP}AccessPolicy"),
+        &format!("{DP}NamedAccessPolicy"),
     );
     has_domain_range(
         &triples,
@@ -1054,7 +1073,7 @@ fn grants_capability_closed_list() {
 
 ex:engine a dp:SecretEngine .
 
-ex:policy a dp:AccessPolicy ;
+ex:policy a dp:NamedAccessPolicy ;
     dp:inStore ex:engine .
 
 ex:pathA a dp:SecretPath ;
@@ -1092,7 +1111,7 @@ ex:grantB a dp:PolicyPathGrant ;
 
 ex:engine a dp:SecretEngine .
 
-ex:policy a dp:AccessPolicy ;
+ex:policy a dp:NamedAccessPolicy ;
     dp:inStore ex:engine .
 
 ex:pathA a dp:SecretPath ;
@@ -1558,7 +1577,7 @@ fn alignment_relational_resolves() {
         &triples,
         "https://knuckles-team.github.io/ontology/core#DatabaseTable",
         &format!("{RDFS}subClassOf"),
-        &format!("{DP}Table")
+        &format!("https://knuckles-team.github.io/ontology/core#Table")
     ));
     assert!(has_iri(
         &triples,
@@ -1570,7 +1589,7 @@ fn alignment_relational_resolves() {
         &triples,
         "https://knuckles-team.github.io/ontology/core#Collection",
         &format!("{RDFS}subClassOf"),
-        &format!("{DP}Collection")
+        &format!("https://knuckles-team.github.io/ontology/core#DocumentCollection")
     ));
     assert!(has_iri(
         &triples,

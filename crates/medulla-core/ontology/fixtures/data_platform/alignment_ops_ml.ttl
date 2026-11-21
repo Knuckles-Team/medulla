@@ -13,8 +13,8 @@
 
 # --- kafka (kafka-mcp, kafka.ttl) ---
 
-:Topic rdfs:subClassOf dp:Topic .
-:Partition rdfs:subClassOf dp:Partition .
+:Topic rdfs:subClassOf dp:StreamTopic .
+:Partition rdfs:subClassOf dp:TopicPartition .
 :ConsumerGroup rdfs:subClassOf dp:ConsumerGroup .
 :partitionOf owl:equivalentProperty dp:partitionOf .
 :subscribesTo owl:equivalentProperty dp:subscribesTo .
@@ -24,7 +24,7 @@
 
 :VaultServer rdfs:subClassOf dp:DataStore .
 :SecretMount rdfs:subClassOf dp:SecretEngine .
-:Policy rdfs:subClassOf dp:AccessPolicy .
+:Policy rdfs:subClassOf dp:NamedAccessPolicy .
 
 # --- clarity (clarity-api, clarity.ttl) ---
 
@@ -37,7 +37,7 @@
 # --- data-science (data-science-mcp, datascience.ttl) ---
 
 :TrainingRun rdfs:subClassOf dp:TrainingRun .
-:ModelArtifact rdfs:subClassOf dp:Model .
+:ModelArtifact rdfs:subClassOf dp:TrainedModel .
 :trainedOn owl:equivalentProperty dp:trainedOn .
 :producedModel owl:equivalentProperty dp:producedModel .
 :metricValue owl:equivalentProperty dp:metricValue .

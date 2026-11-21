@@ -1,7 +1,7 @@
 //! Business glossary term model (MEDULLA-TYPED-PACKS-R801.1).
 //!
 //! Pure data. Each field maps to one SKOS / Dublin Core predicate on a
-//! `cat:GlossaryTerm` node; served wiring is `handle_glossary` (R801.3).
+//! `cat:CatalogGlossaryTerm` node; served wiring is `handle_glossary` (R801.3).
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,7 @@ pub const SKOS_IN_SCHEME: &str = "http://www.w3.org/2004/02/skos/core#inScheme";
 /// `dct:isReplacedBy`, carried by a deprecated term.
 pub const DCT_IS_REPLACED_BY: &str = "http://purl.org/dc/terms/isReplacedBy";
 /// The class every term node carries.
-pub const CAT_GLOSSARY_TERM: &str = medulla_types::ontology_iri!("catalog#GlossaryTerm");
+pub const CAT_GLOSSARY_TERM: &str = medulla_types::ontology_iri!("catalog#CatalogGlossaryTerm");
 
 /// Where a glossary term is in its review lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -59,7 +59,7 @@ pub enum SkosObject {
 }
 
 impl GlossaryTerm {
-    /// The SKOS predicates this term projects onto its `cat:GlossaryTerm` node.
+    /// The SKOS predicates this term projects onto its `cat:CatalogGlossaryTerm` node.
     pub fn skos_pairs(&self) -> Vec<(&'static str, SkosObject)> {
         let mut out = vec![
             (SKOS_IN_SCHEME, SkosObject::Iri(self.scheme.clone())),

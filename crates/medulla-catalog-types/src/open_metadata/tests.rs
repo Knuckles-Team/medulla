@@ -49,7 +49,7 @@ const CAT: &str = "https://knuckles-team.github.io/ontology/catalog#";
 
 fn view() -> OpenMetadataTypeView {
     OpenMetadataTypeView::from_annotations([
-        ("GlossaryTerm", format!("{CAT}GlossaryTerm")),
+        ("GlossaryTerm", format!("{CAT}CatalogGlossaryTerm")),
         ("DataSet", format!("{CAT}DataResource")),
         ("DataFlow", format!("{CAT}LineageEdge")),
         (
@@ -94,7 +94,7 @@ fn inbound_maps_term_asset_and_lineage() {
             properties,
         } => {
             assert_eq!(id, "g-1");
-            assert_eq!(class_iri, &format!("{CAT}GlossaryTerm"));
+            assert_eq!(class_iri, &format!("{CAT}CatalogGlossaryTerm"));
             assert_eq!(properties[EXTERNAL_GUID_PROPERTY], serde_json::json!("g-1"));
             assert_eq!(properties[EXTERNAL_VERSION_PROPERTY], serde_json::json!(7));
             assert_eq!(properties["displayName"], serde_json::json!("Customer"));
@@ -159,7 +159,7 @@ fn inbound_maps_term_asset_and_lineage() {
 fn outbound_carries_expected_version() {
     let view = view();
     let synced = OutboundNode {
-        class_iri: format!("{CAT}GlossaryTerm"),
+        class_iri: format!("{CAT}CatalogGlossaryTerm"),
         properties: BTreeMap::from([
             (EXTERNAL_GUID_PROPERTY.to_string(), serde_json::json!("g-1")),
             (EXTERNAL_VERSION_PROPERTY.to_string(), serde_json::json!(7)),

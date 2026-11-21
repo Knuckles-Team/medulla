@@ -26,11 +26,11 @@ ex:contract a vg:MetadataContract ;
     vg:discoveredField "lag" ;
     vg:discoveredField "as_of" .
 
-# dp:Topic and dp:Partition carry no scalar field of their own; partition
+# dp:StreamTopic and dp:TopicPartition carry no scalar field of their own; partition
 # membership is projected onto the partitionOf link.
 ex:mapping_topics a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Topic ;
+    vg:mapsOntologyClass dp:StreamTopic ;
     vg:mapsEntity "topics" ;
     vg:keyField "topic_name" ;
     vg:hasPredicateFieldPair [
@@ -46,7 +46,7 @@ ex:mapping_topics a dp:StoreMapping ;
 
 ex:mapping_partitions a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Partition ;
+    vg:mapsOntologyClass dp:TopicPartition ;
     vg:mapsEntity "partitions" ;
     vg:keyField "partition_id" ;
     vg:hasPredicateFieldPair [

@@ -7,7 +7,7 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 idm:PreferenceShape a sh:NodeShape ;
-    sh:targetClass idm:Preference ;
+    sh:targetClass idm:ScopedPreference ;
     sh:property [ sh:path idm:key ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 64 ] ;
     sh:property [ sh:path idm:value ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 1024 ] ;
     sh:property [ sh:path idm:share ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "private" "placement" "tenant" ) ] .

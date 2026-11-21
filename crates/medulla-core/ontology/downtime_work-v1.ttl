@@ -21,7 +21,7 @@ dw:Window a owl:Class ;
     rdfs:label "Downtime window" ;
     rdfs:comment "An idle or declared span of time during which downtime job types may run." .
 
-dw:Budget a owl:Class ;
+dw:ResourceBudget a owl:Class ;
     rdfs:label "Downtime budget" ;
     rdfs:comment "The CPU and memory a downtime job type may use in one window." .
 
@@ -61,13 +61,13 @@ dw:windowEndMs a owl:DatatypeProperty ;
 
 dw:cpuMs a owl:DatatypeProperty ;
     rdfs:label "cpu budget" ;
-    rdfs:domain dw:Budget ;
+    rdfs:domain dw:ResourceBudget ;
     rdfs:range xsd:integer ;
     rdfs:comment "CPU milliseconds the type may use in one window." .
 
 dw:memoryBytes a owl:DatatypeProperty ;
     rdfs:label "memory budget" ;
-    rdfs:domain dw:Budget ;
+    rdfs:domain dw:ResourceBudget ;
     rdfs:range xsd:integer ;
     rdfs:comment "Bytes of memory the type may hold in one window." .
 
@@ -80,7 +80,7 @@ dw:query a owl:DatatypeProperty ;
 dw:hasBudget a owl:ObjectProperty ;
     rdfs:label "has budget" ;
     rdfs:domain dw:JobType ;
-    rdfs:range dw:Budget .
+    rdfs:range dw:ResourceBudget .
 
 dw:hasPrecondition a owl:ObjectProperty ;
     rdfs:label "has precondition" ;
@@ -91,5 +91,5 @@ dw:hasPrecondition a owl:ObjectProperty ;
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/downtime-work#JobType> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/downtime-work#Window> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
-<https://knuckles-team.github.io/ontology/downtime-work#Budget> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#ResourceBudget> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/downtime-work#Precondition> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

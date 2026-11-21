@@ -36,7 +36,7 @@ ex:contract a vg:MetadataContract ;
 
 ex:mapping_load_dataset a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Dataset ;
+    vg:mapsOntologyClass <https://knuckles-team.github.io/ontology/core#Dataset> ;
     vg:mapsEntity "datasets" ;
     vg:keyField "dataset_name" ;
     vg:hasPredicateFieldPair [
@@ -68,7 +68,7 @@ ex:mapping_dataset_lineage a dp:StoreMapping ;
 
 ex:mapping_rank_models a dp:StoreMapping ;
     vg:mapsContract ex:contract ;
-    vg:mapsOntologyClass dp:Model ;
+    vg:mapsOntologyClass dp:TrainedModel ;
     vg:mapsEntity "models" ;
     vg:keyField "model_id" ;
     vg:hasPredicateFieldPair [

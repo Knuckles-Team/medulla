@@ -21,7 +21,7 @@
 
 # --- Classes ----------------------------------------------------------------
 
-idm:Preference a owl:Class ;
+idm:ScopedPreference a owl:Class ;
     rdfs:subClassOf kg:DomainEntity ;
     rdfs:comment "One principal-owned preference (key, value) shared at an explicit scope." .
 idm:ClientMetadata a owl:Class ;
@@ -34,13 +34,13 @@ idm:InteractionNetwork a owl:Class ;
 # --- Record facts -----------------------------------------------------------
 
 idm:key a owl:DatatypeProperty ;
-    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:domain idm:ScopedPreference ; rdfs:range xsd:string ;
     rdfs:comment "Preference key, at most 64 characters." .
 idm:value a owl:DatatypeProperty ;
-    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:domain idm:ScopedPreference ; rdfs:range xsd:string ;
     rdfs:comment "Preference value, at most 1,024 characters." .
 idm:share a owl:DatatypeProperty ;
-    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:domain idm:ScopedPreference ; rdfs:range xsd:string ;
     rdfs:comment "Share scope: private, placement or tenant." .
 idm:client_id a owl:DatatypeProperty ;
     rdfs:domain idm:ClientMetadata ; rdfs:range xsd:string ;

@@ -170,7 +170,7 @@ fn derived_facts_project_onto_typed_linked_graph_nodes_deterministically() {
         .unwrap();
     assert_eq!(
         incident.class_iri,
-        "https://knuckles-team.github.io/ontology/infrastructure#Incident"
+        "https://knuckles-team.github.io/ontology/core#Incident"
     );
     assert_eq!(incident.properties["evidence_class"], "derived");
     let observation = &graph.nodes[0];

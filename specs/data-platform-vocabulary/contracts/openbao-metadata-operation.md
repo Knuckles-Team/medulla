@@ -13,7 +13,7 @@ The value operations `openbao_mcp_kv:kv2_get`, `kv1_get`, `openbao_mcp_logical:r
 
 ## Authoritative types
 
-`dp:SecretEngine`, `dp:SecretPath`, `dp:AccessPolicy`, `dp:RotationState`, `dp:PolicyPathGrant` in `crates/medulla-core/ontology/data_platform-v1.ttl`.
+`dp:SecretEngine`, `dp:SecretPath`, `dp:NamedAccessPolicy`, `dp:RotationState`, `dp:PolicyPathGrant` in `crates/medulla-core/ontology/data_platform-v1.ttl`.
 
 ## Test vectors
 

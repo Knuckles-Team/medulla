@@ -970,7 +970,7 @@ cross-domain reasoning about company operations.""" ;
     :id "write content" ;
     :role "Write Content" .
 
-:LegalEntity a owl:Class ;
+:LegalEntity
     rdfs:label "Legal Entity" ;
     rdfs:comment """A legal entity registered with government authorities.
 Its BFO category is owned by the core foundation's :LegalEntity.""" .

@@ -122,7 +122,7 @@ Reuse, not redefinition: `kg:suppliedBy` is **not** redeclared in this work; trm
 | `kg:contractCustomer` | object property | `kg:CustomerContract` to `kg:Customer` | |
 | `kg:coversService` | object property | `kg:CustomerContract` to `infra:Service` | |
 | `kg:contractStatus`, `kg:contractEnd` | datatype | string, date | filter: active contracts only |
-| `kg:affectsService` | object property | `kg:Incident` or `kg:Change` to `infra:Service` | ServiceNow CI relation (`servicenow_api` `get_change_request_ci`, CMDB instance) mapped to it; `infra:Incident` keeps `infra:affectsEntity` |
+| `kg:affectsService` | object property | `kg:Incident` or `kg:Change` to `infra:Service` | ServiceNow CI relation (`servicenow_api` `get_change_request_ci`, CMDB instance) mapped to it; `kg:Incident` keeps `infra:affectsEntity` |
 
 No `:ChangeRequest` class is added (Decision D3).
 

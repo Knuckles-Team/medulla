@@ -27,7 +27,7 @@ cp:IngestContract a owl:Class ;
     rdfs:comment "One connector's ingest contract: the virtual-graph metadata contract specialised for pack admission. It names exactly one connector, one version and one digest (closed by the contract shapes)." ;
     rdfs:subClassOf vg:MetadataContract .
 
-cp:SourceObject a owl:Class ;
+cp:SourceObjectMapping a owl:Class ;
     rdfs:label "Source object" ;
     rdfs:comment "One record object the contract ingests: the virtual-graph mapping specialised to one ontology class under one key rule." ;
     rdfs:subClassOf vg:VirtualMapping .
@@ -45,7 +45,7 @@ cp:CursorPolicy a owl:Class ;
     rdfs:label "Cursor policy" ;
     rdfs:comment "How a connector resumes a long ingest: the cursor kind (opaque, timestamp, commit, offset or page_token) and its handling." .
 
-cp:AccessPolicy a owl:Class ;
+cp:IngestAccessPolicy a owl:Class ;
     rdfs:label "Access policy" ;
     rdfs:comment "The tenant and role policy under which ingested records are readable: the default ACL, the ACL and tenant fields, and the read role." .
 
@@ -86,12 +86,12 @@ cp:hasSourceObject a owl:ObjectProperty ;
     rdfs:label "has source object" ;
     rdfs:comment "One record object an ingest contract ingests." ;
     rdfs:domain cp:IngestContract ;
-    rdfs:range cp:SourceObject .
+    rdfs:range cp:SourceObjectMapping .
 
 cp:hasKeyRule a owl:ObjectProperty ;
     rdfs:label "has key rule" ;
     rdfs:comment "The one key rule that identifies the records of a source object." ;
-    rdfs:domain cp:SourceObject ;
+    rdfs:domain cp:SourceObjectMapping ;
     rdfs:range cp:KeyRule .
 
 cp:hasCursorPolicy a owl:ObjectProperty ;
@@ -110,30 +110,30 @@ cp:hasAccessPolicy a owl:ObjectProperty ;
     rdfs:label "has access policy" ;
     rdfs:comment "The access policy one ingest contract reads under." ;
     rdfs:domain cp:IngestContract ;
-    rdfs:range cp:AccessPolicy .
+    rdfs:range cp:IngestAccessPolicy .
 
 cp:defaultAcl a owl:DatatypeProperty ;
     rdfs:label "default ACL" ;
     rdfs:comment "The default access of ingested records under an access policy: quarantine, inherit or public (closed by the contract shapes)." ;
-    rdfs:domain cp:AccessPolicy ;
+    rdfs:domain cp:IngestAccessPolicy ;
     rdfs:range xsd:string .
 
 cp:aclField a owl:DatatypeProperty ;
     rdfs:label "ACL field" ;
     rdfs:comment "The source field that carries a record's ACL override under an access policy." ;
-    rdfs:domain cp:AccessPolicy ;
+    rdfs:domain cp:IngestAccessPolicy ;
     rdfs:range xsd:string .
 
 cp:tenantField a owl:DatatypeProperty ;
     rdfs:label "tenant field" ;
     rdfs:comment "The source field that names the tenant a record belongs to under an access policy." ;
-    rdfs:domain cp:AccessPolicy ;
+    rdfs:domain cp:IngestAccessPolicy ;
     rdfs:range xsd:string .
 
 cp:readRole a owl:DatatypeProperty ;
     rdfs:label "read role" ;
     rdfs:comment "The role that may read records ingested under an access policy." ;
-    rdfs:domain cp:AccessPolicy ;
+    rdfs:domain cp:IngestAccessPolicy ;
     rdfs:range xsd:string .
 
 cp:privacyClass a owl:DatatypeProperty ;
@@ -151,19 +151,19 @@ cp:requiresProvenance a owl:ObjectProperty ;
 cp:objectName a owl:DatatypeProperty ;
     rdfs:label "object name" ;
     rdfs:comment "The source-side record type name one source object ingests." ;
-    rdfs:domain cp:SourceObject ;
+    rdfs:domain cp:SourceObjectMapping ;
     rdfs:range xsd:string .
 
 cp:ontologyClass a owl:ObjectProperty ;
     rdfs:label "ontology class" ;
     rdfs:comment "The one class of the composed schema one source object ingests into (closed by the contract shapes)." ;
-    rdfs:domain cp:SourceObject ;
+    rdfs:domain cp:SourceObjectMapping ;
     rdfs:range owl:Class .
 
 cp:hasFieldMapping a owl:ObjectProperty ;
     rdfs:label "has field mapping" ;
     rdfs:comment "One source-field-to-predicate binding of a source object." ;
-    rdfs:domain cp:SourceObject ;
+    rdfs:domain cp:SourceObjectMapping ;
     rdfs:range cp:FieldMapping .
 
 cp:sourceField a owl:DatatypeProperty ;
@@ -201,21 +201,21 @@ cp:Connector a owl:Class ;
     rdfs:label "Connector" ;
     rdfs:comment "A connected connector (an MCP server) that serves one pack: its features, tools, prompts, skills and ingest contract. Reused by IRI from the metadata-catalog module, which specialises it under the core :Tool and dcat:DataService." .
 
-cp:Feature a owl:Class ;
+cp:SurfaceFeature a owl:Class ;
     rdfs:label "Feature" ;
     rdfs:comment "One capability area a connector offers: realised by at least one tool, prompt or skill (closed by the surface shapes)." .
 
-cp:Tool a owl:Class ;
+cp:SurfaceTool a owl:Class ;
     rdfs:label "Connector tool" ;
     rdfs:comment "One callable tool of the connector surface: it carries one component id and links to a domain class (closed by the surface shapes)." ;
     rdfs:subClassOf :Tool .
 
-cp:Prompt a owl:Class ;
+cp:SurfacePrompt a owl:Class ;
     rdfs:label "Connector prompt" ;
     rdfs:comment "One prompt of the connector surface, applying to the domain class it frames." ;
     rdfs:subClassOf :Prompt .
 
-cp:Skill a owl:Class ;
+cp:SurfaceSkill a owl:Class ;
     rdfs:label "Connector skill" ;
     rdfs:comment "One skill of the connector surface, applying to the domain class it acts on." ;
     rdfs:subClassOf :Skill .
@@ -224,75 +224,75 @@ cp:providesFeature a owl:ObjectProperty ;
     rdfs:label "provides feature" ;
     rdfs:comment "Links a connector to each feature it provides." ;
     rdfs:domain cp:Connector ;
-    rdfs:range cp:Feature .
+    rdfs:range cp:SurfaceFeature .
 
 cp:realizedBy a owl:ObjectProperty ;
     rdfs:label "realised by" ;
     rdfs:comment "Links a feature to the tool, prompt or skill that realises it: at least one member (closed by the surface shapes)." ;
-    rdfs:domain cp:Feature ;
-    rdfs:range [ a owl:Class ; owl:unionOf (cp:Tool cp:Prompt cp:Skill) ] .
+    rdfs:domain cp:SurfaceFeature ;
+    rdfs:range [ a owl:Class ; owl:unionOf (cp:SurfaceTool cp:SurfacePrompt cp:SurfaceSkill) ] .
 
 cp:operatesOn a owl:ObjectProperty ;
     rdfs:label "operates on" ;
     rdfs:comment "Links a tool to the domain class its calls read or write." ;
-    rdfs:domain cp:Tool ;
+    rdfs:domain cp:SurfaceTool ;
     rdfs:range owl:Class .
 
 cp:produces a owl:ObjectProperty ;
     rdfs:label "produces" ;
     rdfs:comment "Links a tool to the domain class of the records it emits." ;
-    rdfs:domain cp:Tool ;
+    rdfs:domain cp:SurfaceTool ;
     rdfs:range owl:Class .
 
 cp:executes a owl:ObjectProperty ;
     rdfs:label "executes" ;
     rdfs:comment "Links a tool to the domain method class it runs." ;
-    rdfs:domain cp:Tool ;
+    rdfs:domain cp:SurfaceTool ;
     rdfs:range owl:Class .
 
 cp:appliesTo a owl:ObjectProperty ;
     rdfs:label "applies to" ;
     rdfs:comment "Links a skill or prompt to the domain class it applies to." ;
-    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Skill cp:Prompt) ] ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:SurfaceSkill cp:SurfacePrompt) ] ;
     rdfs:range owl:Class .
 
 cp:providesCapability a owl:ObjectProperty ;
     rdfs:label "provides capability" ;
     rdfs:comment "Links a surface tool to the core ServiceCapability it fulfils, beside its operatesOn domain link (closed by the surface shapes)." ;
-    rdfs:domain cp:Tool ;
+    rdfs:domain cp:SurfaceTool ;
     rdfs:range :ServiceCapability .
 
 cp:componentId a owl:DatatypeProperty ;
     rdfs:label "component id" ;
     rdfs:comment "The stable identity the engine stamps on one surface node: a tool, prompt, skill or server member." ;
-    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:SurfaceTool cp:SurfacePrompt cp:SurfaceSkill) ] ;
     rdfs:range xsd:string .
 
 cp:entryRevision a owl:DatatypeProperty ;
     rdfs:label "entry revision" ;
     rdfs:comment "The pack entry revision the engine stamps on one surface node (MEDULLA-TYPED-PACKS-R102.6)." ;
-    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:SurfaceTool cp:SurfacePrompt cp:SurfaceSkill) ] ;
     rdfs:range xsd:integer .
 
 cp:packDigest a owl:DatatypeProperty ;
     rdfs:label "pack digest" ;
     rdfs:comment "The SHA-256 pack digest (64 lowercase hex characters) of the head one surface node was projected from (MEDULLA-TYPED-PACKS-R102.6)." ;
-    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:SurfaceTool cp:SurfacePrompt cp:SurfaceSkill) ] ;
     rdfs:range xsd:string .
 
 cp:lifecycle a owl:DatatypeProperty ;
     rdfs:label "lifecycle" ;
     rdfs:comment "Whether one surface node's member is active, retired or withdrawn in the pack head; a withdrawn member keeps its node (MEDULLA-TYPED-PACKS-R102.2)." ;
-    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:SurfaceTool cp:SurfacePrompt cp:SurfaceSkill) ] ;
     rdfs:range xsd:string .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<https://knuckles-team.github.io/ontology/connector-pack#AccessPolicy> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-pack#IngestAccessPolicy> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-pack#CursorPolicy> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
-<https://knuckles-team.github.io/ontology/connector-pack#Feature> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-pack#SurfaceFeature> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-pack#FieldMapping> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-pack#KeyRule> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-pack#PrivacyClass> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-pack#ProvenanceRequirement> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
-<https://knuckles-team.github.io/ontology/connector-pack#SourceObject> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-pack#SourceObjectMapping> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

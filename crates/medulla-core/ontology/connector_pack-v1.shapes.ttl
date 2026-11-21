@@ -14,7 +14,7 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 cp:ToolShape a sh:NodeShape ;
-    sh:targetClass cp:Tool ;
+    sh:targetClass cp:SurfaceTool ;
     sh:property [
         sh:path cp:componentId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
         sh:message "A tool names exactly one component id."
@@ -28,7 +28,7 @@ cp:ToolShape a sh:NodeShape ;
     sh:message "A tool names one component id and at least one operatesOn or providesCapability domain link." .
 
 cp:FeatureShape a sh:NodeShape ;
-    sh:targetClass cp:Feature ;
+    sh:targetClass cp:SurfaceFeature ;
     sh:property [
         sh:path cp:realizedBy ; sh:minCount 1 ;
         sh:message "A feature is realised by at least one tool, prompt or skill."
@@ -59,7 +59,7 @@ cp:IngestContractShape a sh:NodeShape ;
         sh:message "cp:privacyClass is one of public, internal, personal, secret." ] .
 
 cp:SourceObjectShape a sh:NodeShape ;
-    sh:targetClass cp:SourceObject ;
+    sh:targetClass cp:SourceObjectMapping ;
     sh:property [ sh:path cp:objectName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
         sh:message "A source object names its object." ] ;
     sh:property [ sh:path cp:ontologyClass ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
@@ -86,7 +86,7 @@ cp:CursorPolicyShape a sh:NodeShape ;
         sh:message "cp:cursorKind is one of opaque, timestamp, commit, offset, page_token." ] .
 
 cp:AccessPolicyShape a sh:NodeShape ;
-    sh:targetClass cp:AccessPolicy ;
+    sh:targetClass cp:IngestAccessPolicy ;
     sh:property [ sh:path cp:defaultAcl ; sh:minCount 1 ; sh:maxCount 1 ;
         sh:in ( "quarantine" "inherit" "public" ) ;
         sh:message "cp:defaultAcl is one of quarantine, inherit, public." ] .

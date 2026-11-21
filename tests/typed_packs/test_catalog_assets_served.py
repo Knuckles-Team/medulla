@@ -91,7 +91,7 @@ def test_orphan_class_missing_owner_and_marked_field_are_handled(catalog_graph):
     # A marked person field is refused for a writer that holds no marking, even
     # one holding the wildcard scope, and the person is not written.
     person = "urn:medulla:asset:person:alice"
-    email = f'{PREFIX}<{person}> a cat:Person ; cat:email "alice@example.test" .\n'
+    email = f'{PREFIX}<{person}> a cat:PersonAsset ; cat:email "alice@example.test" .\n'
     with pytest.raises(Exception, match="FIELD_MARKED"):
         admin.rdf.add_triples(turtle=email)
     assert _rows(admin, person, f"{CATALOG}email") == []

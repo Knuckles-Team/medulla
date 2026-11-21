@@ -122,7 +122,7 @@ pub fn contract_graph(connector: &str, declaration: &Value) -> Result<Graph, Pac
     {
         for (object, mapping) in mappings {
             let object_iri = b.node(format!("{base}/{}", segment(object)))?;
-            b.typed(&object_iri, "SourceObject");
+            b.typed(&object_iri, "SourceObjectMapping");
             b.link(&contract, "hasSourceObject", &object_iri);
             b.text(&object_iri, "objectName", object);
             if let Some(class) = mapping
@@ -170,7 +170,7 @@ pub fn contract_graph(connector: &str, declaration: &Value) -> Result<Graph, Pac
     }
     if let Some(access) = body.and_then(|c| c.get("access")) {
         let node = b.node(format!("{base}/access"))?;
-        b.typed(&node, "AccessPolicy");
+        b.typed(&node, "IngestAccessPolicy");
         b.link(&contract, "hasAccessPolicy", &node);
         b.text_opt(&node, "defaultAcl", access.get("default_acl"));
         b.text_opt(&node, "aclField", access.get("acl_field"));

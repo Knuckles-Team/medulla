@@ -8,7 +8,7 @@
 # :canonicalGateKind from here; no class name is mapped in code. A complex
 # gateway carries no :dagNodeKind and is refused as unmapped.
 
-<https://knuckles-team.github.io/ontology/bpmn-v1> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/bpmn> a owl:Ontology ;
     rdfs:label "BPMN 2.0 element classes" .
 
 # spec: MEDULLA-TYPED-PACKS-R105.10.1 — the abstract BPMN 2.0 element classes, so every

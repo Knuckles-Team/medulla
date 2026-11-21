@@ -7,6 +7,6 @@ SELECT ?connector ?feature ?kind ?component ?contract ?record ?source ?asof WHER
   ?feature cp:realizedBy ?capable ; cp:realizedBy ?component .
   ?connector cp:providesFeature ?feature ; cp:hasContract ?contract .
   ?component a ?kind ; cp:componentId ?record ; cp:packDigest ?source ; cp:entryRevision ?asof .
-  FILTER(?kind IN (cp:Tool, cp:Prompt, cp:Skill))
+  FILTER(?kind IN (cp:SurfaceTool, cp:SurfacePrompt, cp:SurfaceSkill))
   FILTER(CONTAINS(STR(?component), "{c}"))
 }

@@ -72,7 +72,7 @@ IT service/ITSM system, regardless of vendor (ServiceNow :Incident, ERPNext
 Application Event. CONCEPT:KG-2.9.""" ;
     rdfs:subClassOf :ApplicationLayer .
 
-:ConfigurationItem a owl:Class ;
+:ConfigurationItem
     rdfs:label "Configuration Item" ;
     rdfs:comment """Crosswalk anchor for a ServiceNow configuration item (CI): the
 canonical application-layer node an :Incident or :Change affects.

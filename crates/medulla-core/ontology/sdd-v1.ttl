@@ -176,7 +176,7 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
     Specifies the boundary between SoftwareComponents.""" ;
     rdfs:subClassOf bfo:0000031 .
 
-:SoftwareComponent a owl:Class ;
+:SoftwareComponent
     rdfs:label "Software Component" ;
     rdfs:comment """A modular, deployable unit of software.
     BFO:GenericallyDependentContinuant. ArchiMate: Application → ApplicationComponent.
@@ -384,7 +384,7 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
 # :Incident in the core foundation — and are referenced, never redeclared.
 # Every class below extends a class that rolls up to the core.
 
-:Release a owl:Class ;
+:Release
     rdfs:label "Release" ;
     rdfs:comment """A published release of one repository: version, ref, changeset head
     and artifact digests. It contains the changesets after the previous release head

@@ -8,22 +8,22 @@ One task per leaf row of `requirements.md`, producers first: shared terms and re
 - [ ] T002 [US1] MEDULLA-DATAPLAT-VOCAB-R001.2 Add `dp:StoreMapping` (subclass of `vg:VirtualMapping`) with `dp:contractKind`, `dp:viaOperation`, `dp:accelerationMode`, `dp:materialisationReason`
 - [ ] T003 [US1] MEDULLA-DATAPLAT-VOCAB-R001.3 Add `document` to the `vg:sourceKind` list comment and `sh:in` of the source-connection shape
 - [ ] T004 [US1] MEDULLA-DATAPLAT-VOCAB-R001.4 Register `core:data-platform@1` as a core schema source next to `core:virtual-graph@1`
-- [ ] T005 [US1] MEDULLA-DATAPLAT-VOCAB-R002.1 Add `dp:Database`, `dp:Schema`, `dp:Table`, `dp:View`, `dp:Column`, `dp:ForeignKey`
+- [ ] T005 [US1] MEDULLA-DATAPLAT-VOCAB-R002.1 Add `dp:View` and `dp:ForeignKey` over the core `kg:Database`, `kg:Schema`, `kg:Table` and `kg:Column`
 - [ ] T006 [US1] MEDULLA-DATAPLAT-VOCAB-R002.2 Add `dp:inSchema`, `dp:hasColumn`, `dp:referencesTable`, `dp:isPrimaryKey`, `dp:sqlDialect` with domain/range
-- [ ] T007 [US1] MEDULLA-DATAPLAT-VOCAB-R002.3 Add `dp:Collection`, `dp:DocumentField`, `dp:fieldPath`, `dp:fieldType`, `dp:presenceRatio`, `dp:documentCount`
+- [ ] T007 [US1] MEDULLA-DATAPLAT-VOCAB-R002.3 Add `dp:DocumentField` over the core `kg:DocumentCollection`, `dp:fieldPath`, `dp:fieldType`, `dp:presenceRatio`, `dp:documentCount`
 - [ ] T008 [US1] MEDULLA-DATAPLAT-VOCAB-R002.4 Add a shape: `dp:fieldType` is in the `DocumentFieldType` list (incl. `Mixed`); `dp:presenceRatio` in [0,1]
 - [ ] T009 [US1] MEDULLA-DATAPLAT-VOCAB-R003.1 Add `dp:Bucket`, `dp:StoredObject`, `dp:objectKey`, `dp:byteSize`, `dp:lastModified`; no content property
 - [ ] T010 [US1] MEDULLA-DATAPLAT-VOCAB-R003.2 Add `dp:VectorCollection`, `dp:EmbeddingSpace`, `dp:embeddingModel`, `dp:dimensions`, `dp:distanceMetric`, `dp:usesEmbeddingSpace`, `dp:vectorCount`
 - [ ] T011 [US1] MEDULLA-DATAPLAT-VOCAB-R003.3 Add a shape: `dp:dimensions` positive integer; exactly one embedding space per vector collection
-- [ ] T012 [US1] MEDULLA-DATAPLAT-VOCAB-R004.1 Add `dp:Topic`, `dp:Partition`, `dp:ConsumerGroup`, `dp:PartitionLag`, `dp:partitionOf`, `dp:subscribesTo`, `dp:lag`, `dp:groupState`
+- [ ] T012 [US1] MEDULLA-DATAPLAT-VOCAB-R004.1 Add `dp:StreamTopic`, `dp:TopicPartition`, `dp:ConsumerGroup`, `dp:PartitionLag`, `dp:partitionOf`, `dp:subscribesTo`, `dp:lag`, `dp:groupState`
 - [ ] T013 [US1] MEDULLA-DATAPLAT-VOCAB-R004.2 Add a shape: `dp:lag` integer >= 0 and `dp:asOf` required on `dp:PartitionLag`
 - [ ] T014 [US1] MEDULLA-DATAPLAT-VOCAB-R004.3 Add `dp:AnalyticsSite`, `dp:BehaviorMetric`, `dp:metricName`, `dp:metricValue`, `dp:windowDays`, `dp:dimensionName`, `dp:dimensionValue`
-- [ ] T015 [US1] MEDULLA-DATAPLAT-VOCAB-R004.4 Add `dp:Dataset` as a subclass of the existing core `:Dataset`, `dp:Model` as a general trained-model class (not equivalent to the narrower LLM/embedding `:Model`), `dp:TrainingRun`, `dp:EvaluationResult`, `dp:trainedOn`, `dp:producedModel`, `dp:evaluatedOn`, `dp:baselineRun`
-- [ ] T016 [US2] MEDULLA-DATAPLAT-VOCAB-R005.1 Add `dp:SecretEngine`, `dp:SecretPath`, `dp:AccessPolicy`, `dp:RotationState`, `dp:hasRotationState`, `dp:lastRotatedAt`, `dp:currentVersion`, `dp:pathName`, `dp:PolicyPathGrant`, `dp:grantPolicy`, `dp:grantPath`, `dp:grantsCapability`, `dp:leaseExpiresAt`
+- [ ] T015 [US1] MEDULLA-DATAPLAT-VOCAB-R004.4 Use the core `kg:Dataset` for datasets; add `dp:TrainedModel` as a general trained-model class (not equivalent to the narrower LLM/embedding `:Model`), `dp:TrainingRun`, `dp:EvaluationResult`, `dp:trainedOn`, `dp:producedModel`, `dp:evaluatedOn`, `dp:baselineRun`
+- [ ] T016 [US2] MEDULLA-DATAPLAT-VOCAB-R005.1 Add `dp:SecretEngine`, `dp:SecretPath`, `dp:NamedAccessPolicy`, `dp:RotationState`, `dp:hasRotationState`, `dp:lastRotatedAt`, `dp:currentVersion`, `dp:pathName`, `dp:PolicyPathGrant`, `dp:grantPolicy`, `dp:grantPath`, `dp:grantsCapability`, `dp:leaseExpiresAt`
 - [ ] T017 [US2] MEDULLA-DATAPLAT-VOCAB-R005.2 Add closed shapes (`sh:closed true`) for the five secret-metadata classes, including `dp:PolicyPathGrant`
 - [ ] T018 [US2] MEDULLA-DATAPLAT-VOCAB-R005.3 Refusal test row: a `dp:SecretPath` carrying a `value` (and one carrying `token`) triple fails validation, and the vocabulary file contains no property named value, secret, token, password, ciphertext or rules
 - [ ] T019 [US2] MEDULLA-DATAPLAT-VOCAB-R005.4 Add a mapping-validator rule that refuses a `dp:StoreMapping` whose `dp:viaOperation` is `openbao_mcp_kv:kv2_get`, `kv1_get`, `openbao_mcp_logical:read` or `unwrap`
-- [ ] T020 [US2] MEDULLA-DATAPLAT-VOCAB-R005.5 Add a shape: each `dp:PolicyPathGrant` has exactly one `dp:grantPolicy` (`dp:AccessPolicy`), exactly one `dp:grantPath` (`dp:SecretPath`), and at least one `dp:grantsCapability` string in `read list create update delete sudo deny`
+- [ ] T020 [US2] MEDULLA-DATAPLAT-VOCAB-R005.5 Add a shape: each `dp:PolicyPathGrant` has exactly one `dp:grantPolicy` (`dp:NamedAccessPolicy`), exactly one `dp:grantPath` (`dp:SecretPath`), and at least one `dp:grantsCapability` string in `read list create update delete sudo deny`
 - [ ] T021 [US3] MEDULLA-DATAPLAT-VOCAB-R006.1 Add the `sql` `dp:StoreMapping` fixture for `sql_schema:tables`, `columns`, `foreign_keys`, `constraints` with `dp:accelerationMode` V (reason recorded where M)
 - [ ] T022 [US3] MEDULLA-DATAPLAT-VOCAB-R006.2 Add the `documentdb` `dp:StoreMapping` fixture for `documentdb_collections:list_collections`, `documentdb_analysis:aggregate` with `dp:accelerationMode` V (reason recorded where M)
 - [ ] T023 [US3] MEDULLA-DATAPLAT-VOCAB-R006.3 Add the `objectstore` `dp:StoreMapping` fixture for `buckets:list`, `objects:list`, `objects:head` with `dp:accelerationMode` V (reason recorded where M)

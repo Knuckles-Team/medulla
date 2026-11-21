@@ -100,7 +100,7 @@ f:public a :DataClassification ;
     rdfs:label "Public" .
 
 # The answer: a glossary term naming an asset classified Confidential.
-f:term-confidential a cat:GlossaryTerm ;
+f:term-confidential a cat:CatalogGlossaryTerm ;
     :definesAsset f:asset-orders ;
     dc:source "egeria" ;
     dc:identifier "egeria:rec:term-confidential" ;
@@ -110,7 +110,7 @@ f:asset-orders a cat:Asset ;
 
 # Adversarial: a term whose asset is classified Public, not Confidential —
 # no row.
-f:term-public a cat:GlossaryTerm ;
+f:term-public a cat:CatalogGlossaryTerm ;
     :definesAsset f:asset-metrics ;
     dc:source "egeria" ;
     dc:identifier "egeria:rec:term-public" ;
@@ -119,7 +119,7 @@ f:asset-metrics a cat:Asset ;
     :classifiedAs f:public .
 
 # Adversarial: a term that names no asset at all — no row.
-f:term-orphan a cat:GlossaryTerm ;
+f:term-orphan a cat:CatalogGlossaryTerm ;
     dc:source "egeria" ;
     dc:identifier "egeria:rec:term-orphan" ;
     dc:date "2026-01-03T00:00:00Z"^^xsd:dateTime .
@@ -143,7 +143,7 @@ PREFIX cat: <https://knuckles-team.github.io/ontology/catalog#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX f: <urn:eg-cq-conn:egeria:fixture/>
 SELECT ?term ?asset ?classification ?source ?record ?asof WHERE {
-  ?term a cat:GlossaryTerm ;
+  ?term a cat:CatalogGlossaryTerm ;
         :definesAsset ?asset .
   ?asset a cat:Asset ;
          :classifiedAs ?classification .

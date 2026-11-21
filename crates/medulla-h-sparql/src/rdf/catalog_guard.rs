@@ -157,7 +157,7 @@ mod tests {
     fn the_embedded_ontology_gives_the_asset_closure_and_the_person_field_markings() {
         let rules = rules();
         assert!(rules.asset_classes.contains(&format!("{CAT}Asset")));
-        assert!(rules.asset_classes.contains(&format!("{CAT}Person")));
+        assert!(rules.asset_classes.contains(&format!("{CAT}PersonAsset")));
         assert!(rules.asset_classes.contains(&format!("{CAT}ToolAsset")));
         assert!(!rules
             .asset_classes
@@ -181,7 +181,7 @@ mod tests {
         assert_eq!(error.code(), "ASSET_CLASS_ORPHAN");
 
         let mut marked = parse(&format!(
-            "{head}<urn:medulla:asset:person:a> a cat:Person ; cat:email \"a@example.test\" .\n"
+            "{head}<urn:medulla:asset:person:a> a cat:PersonAsset ; cat:email \"a@example.test\" .\n"
         ));
         let error = guard_catalog_write(&mut marked, None).unwrap_err();
         assert_eq!(error.code(), "FIELD_MARKED");

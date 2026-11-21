@@ -1264,6 +1264,31 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: None,
         },
+        // MEDULLA-TYPED-PACKS-R105.10.4: every packaged core module is in the parent
+        // catalog, so pack import judges a pack against the class set the wheel ships
+        // (downtime-work is registered below with its shapes, R101.3).
+        CoreSpec {
+            module: "bpmn",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!("../../../medulla-core/ontology/bpmn-v1.ttl")),
+        },
+        CoreSpec {
+            module: "content",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/content-v1.ttl"
+            )),
+        },
+        CoreSpec {
+            module: "connector_seed",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/connector_seed-v1.ttl"
+            )),
+        },
         CoreSpec {
             module: "personal",
             version: 1,
@@ -1660,9 +1685,37 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 65);
+        // 70 (counted entries of `core_specs`): +3 for bpmn, content and connector_seed
+        // (MEDULLA-TYPED-PACKS-R105.10.4), on top of 67 entries; the pin read 65 and had
+        // not moved for the two entries registered before this row.
+        assert_eq!(sources.core.len(), 70);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R105.10.4
+    #[test]
+    fn core_sources_cover_every_packaged_module() {
+        let sources = GraphSchemaSources::default();
+        let loaded: std::collections::BTreeSet<&str> =
+            sources.ontologies().map(|(_, document)| document).collect();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../medulla-core/ontology");
+        let mut missing = Vec::new();
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.ends_with(".ttl") || name.ends_with(".shapes.ttl") {
+                continue;
+            }
+            let text = std::fs::read_to_string(entry.path()).unwrap();
+            if !loaded.contains(text.as_str()) {
+                missing.push(name);
+            }
+        }
+        missing.sort();
+        assert!(
+            missing.is_empty(),
+            "packaged core modules absent from the parent catalog: {missing:?}"
+        );
     }
 
     #[test]

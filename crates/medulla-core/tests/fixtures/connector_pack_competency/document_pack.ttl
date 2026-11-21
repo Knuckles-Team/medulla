@@ -13,7 +13,7 @@ t:DocumentSearch a :ServiceCapability .
 <skill://{c}-doc-skill> cp:appliesTo :Document .
 
 <mcp-server://{c}> cp:providesFeature t:feature-doc-search ; cp:hasContract t:contract .
-t:feature-doc-search a cp:Feature ;
+t:feature-doc-search a cp:SurfaceFeature ;
     cp:realizedBy <tool://{c}/search_documents>, <prompt://{c}-doc-prompt>, <skill://{c}-doc-skill> .
 
 t:contract a cp:IngestContract ;
@@ -24,11 +24,11 @@ t:contract a cp:IngestContract ;
     cp:hasSourceObject t:contract-doc ;
     cp:hasAccessPolicy t:access ;
     cp:requiresProvenance t:provenance .
-t:contract-doc a cp:SourceObject ;
+t:contract-doc a cp:SourceObjectMapping ;
     cp:objectName "doc" ; cp:ontologyClass :Document ;
     cp:hasKeyRule t:key ; cp:hasFieldMapping t:field-id, t:field-title .
 t:key a cp:KeyRule ; cp:keyField "id" .
 t:field-id a cp:FieldMapping ; cp:sourceField "id" ; cp:mapsPredicate "identifier" .
 t:field-title a cp:FieldMapping ; cp:sourceField "title" ; cp:mapsPredicate "label" .
-t:access a cp:AccessPolicy ; cp:defaultAcl "quarantine" .
+t:access a cp:IngestAccessPolicy ; cp:defaultAcl "quarantine" .
 t:provenance a cp:ProvenanceRequirement ; cp:requiredField "source_uri", "record_id" .

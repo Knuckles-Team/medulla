@@ -201,7 +201,7 @@ Linked to source audio via prov:wasDerivedFrom.""" ;
 Distinct from professional :Task (Jira/Plane). BFO:GDC.""" ;
     rdfs:subClassOf :Task .
 
-:CalendarEvent a owl:Class ;
+:CalendarEvent
     rdfs:label "Calendar Event" ;
     rdfs:comment """A scheduled event in a personal or shared calendar (Nextcloud,
 Google Calendar). BFO:Process via Event. Aligned to schema:Event.""" ;
