@@ -217,6 +217,11 @@ impl Served {
         served
     }
 
+    /// The graph the pack's records are ingested into.
+    pub(super) fn graph(&self) -> &str {
+        &self.graph
+    }
+
     /// One request as `ADMIN` of the door tenant, on `graph`, through the signed dispatch.
     pub(super) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
         let id = next_id();

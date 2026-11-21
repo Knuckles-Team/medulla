@@ -14,12 +14,7 @@
 //!
 //! It is shared by the bookmark proofs and every served proof that needs a live semantic index.
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-
-use tokio::sync::RwLock;
-
-use super::medulla_h_query_dispatch_pipeline_tests::{signed, TENANT};
+use super::connector_pack_harness::{next_id, ok, Served, TENANT};
 use medulla_index_types::semantic_index::{
     SemanticAnnIndexManifest, SemanticBinding, SemanticDigest, SemanticExpectedEntity,
     SemanticGenerationAggregate, SemanticGenerationArtifact, SemanticGenerationCheckpoint,
@@ -31,18 +26,13 @@ use medulla_index_types::semantic_index::{
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
     SemanticVector,
 };
-use medulla_server_api::state::ServerState;
-use medulla_server_api::test_support::decode_raw_response as ok;
+use medulla_protocol_types::protocol::Method;
 
 /// The consumer the helper claims its leases as.
 const DRIVER: &str = "live-generation-driver";
 
-/// Request ids are the envelope nonce; one counter keeps them unique across helper calls.
-static REQUEST_ID: AtomicU64 = AtomicU64::new(910_000);
-
 /// The deterministic unit vector the helper embeds for `source_entity_id`, so a proof can build
 /// the query embedding that ranks an entity first.
-#[allow(dead_code)]
 pub(super) fn entity_vector(dimension: usize, source_entity_id: &str) -> Vec<f32> {
     let mut values: Vec<f32> = (0..dimension)
         .map(|axis| {
@@ -152,22 +142,24 @@ impl Cumulative {
     }
 }
 
+/// The helper's dispatches go through the harness's own signing path, `Served::call_on`, the
+/// one the connector-pack proofs sign with; it holds no signer of its own.
 struct Driver<'a> {
-    state: &'a Arc<RwLock<ServerState>>,
+    served: &'a Served,
     binding_id: &'a str,
 }
 
 impl Driver<'_> {
     async fn dispatch<T: serde::de::DeserializeOwned>(&self, label: &str, op: SemanticIndexOp) -> T {
-        let id = REQUEST_ID.fetch_add(1, Ordering::SeqCst);
-        ok(
-            label,
-            medulla_server_router::dispatch::request_boundary::dispatch(
-                self.state,
-                signed(id, op),
+        let response = self
+            .served
+            .call_on(
+                self.served.graph(),
+                &format!("live-generation:{label}:{}", next_id()),
+                Method::SemanticIndex { op: Box::new(op) },
             )
-            .await,
-        )
+            .await;
+        ok(label, response)
     }
 
     async fn binding(&self) -> SemanticBinding {
@@ -296,13 +288,8 @@ fn successor_of(
 }
 
 /// Drive the binding's generation from completed S1 to live and return the live generation.
-// Consumed by the bookmark served proofs (MEDULLA-MEDIA-VOCAB-R001.102.2), which are not built yet.
-#[allow(dead_code)]
-pub(super) async fn drive_generation_to_live(
-    state: &Arc<RwLock<ServerState>>,
-    binding_id: &str,
-) -> u64 {
-    let driver = Driver { state, binding_id };
+pub(super) async fn drive_generation_to_live(served: &Served, binding_id: &str) -> u64 {
+    let driver = Driver { served, binding_id };
     let _: serde_json::Value = driver
         .dispatch(
             "SubscribeStageConsumer",
