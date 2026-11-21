@@ -252,3 +252,72 @@ fn stored_files(dir: &std::path::Path) -> Vec<(String, u64)> {
     out.sort();
     out
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R162.6: step one wrote extra nested paths,
+/// step two declares only what it reads, the production dispatch withholds the
+/// extras and each refusal answers its code.
+// spec: MEDULLA-DECISION-ENGINE-R162.6
+#[tokio::test]
+async fn undeclared_fields_withheld_journey() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+
+    // Step one wrote customer.name, a shielded ssn with a nested last4, a nested
+    // address and a billing subtree; step two declares `customer` one level deep.
+    let mut step_two = shielding();
+    step_two.step.step_id = "step:2".to_string();
+    step_two.object_paths.push(path("customer.ssn.last4"));
+    step_two.object_paths.push(path("billing.card.number"));
+
+    let batch = decide(
+        &h,
+        request(&schema, DecisionPolicyRef::Default, step_two.clone()),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let facts = facts(record);
+    assert!(facts.contains(&"shielding:step=step:2"));
+    assert!(facts.contains(&"shielding:allowed=customer.name"));
+    for extra in [
+        "customer.ssn",
+        "customer.ssn.last4",
+        "customer.address.city",
+        "billing.card",
+        "billing.card.number",
+    ] {
+        assert!(
+            facts.contains(&format!("shielding:withheld={extra}").as_str()),
+            "{extra} is withheld: {facts:?}"
+        );
+    }
+
+    // Each refusal answers its registered code with the path it names.
+    let refused = |mutate: &dyn Fn(&mut FieldShieldingRequest)| {
+        let mut asked = step_two.clone();
+        mutate(&mut asked);
+        request(&schema, DecisionPolicyRef::Default, asked)
+    };
+    for (expected, ask) in [
+        (
+            "FIELD_UNDECLARED",
+            refused(&|r| r.requested_reads = vec![path("billing.card.number")]),
+        ),
+        (
+            "FIELD_SHIELDED",
+            refused(&|r| r.requested_reads = vec![path("customer.ssn.last4")]),
+        ),
+        (
+            "FIELD_REQUIRED_MISSING",
+            refused(&|r| r.step.declared.push(input("order", true, 2))),
+        ),
+    ] {
+        let batch = decide(&h, ask).await.unwrap();
+        assert_eq!(code_of(&batch).0, expected);
+    }
+
+    // Another tenant is refused before any read.
+    foreign_tenant_is_refused(&h, &schema).await;
+}
