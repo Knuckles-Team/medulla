@@ -82,3 +82,16 @@ pub struct BlueprintExport {
     #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
     pub body: Vec<u8>,
 }
+
+/// Import one edited blueprint as the next revision of a native prompt
+/// (MEDULLA-TYPED-PACKS-R094.3). The envelope is the [`BlueprintExport`] of R094.2 with the
+/// editor's changes applied to `entry` and `body`. The base revision is
+/// `context.expected_revision` and the operation id is the wire idempotency key bound into
+/// `context.idempotency_key`; neither is a separate field.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct BlueprintImportRequest {
+    pub context: crate::agent_library::AgentLibraryMutationContext,
+    pub envelope: BlueprintExport,
+}

@@ -194,6 +194,10 @@ closed_error_codes! {
         NutrientIdUnmapped => "NUTRIENT_ID_UNMAPPED",
         /// The tenant has no such revision of the component (MEDULLA-TYPED-PACKS-R094.2).
         ComponentRevisionUnknown => "COMPONENT_REVISION_UNKNOWN",
+        /// A blueprint import envelope is malformed: a digest, a pin, the media type, the tenant or the base revision disagrees with the body or the request (MEDULLA-TYPED-PACKS-R094.3).
+        BlueprintMalformed => "BLUEPRINT_MALFORMED",
+        /// A blueprint import changes the component id, kind, provenance or tenant of its base revision (MEDULLA-TYPED-PACKS-R094.3).
+        BlueprintIdentityChanged => "BLUEPRINT_IDENTITY_CHANGED",
         /// A source-effect digest is not SHA-256 lowercase hex (MEDULLA-TYPED-PACKS-R094.8).
         ReceiptDigestInvalid => "RECEIPT_DIGEST_INVALID",
         /// The receipt digest is already recorded with other bytes (MEDULLA-TYPED-PACKS-R094.8).

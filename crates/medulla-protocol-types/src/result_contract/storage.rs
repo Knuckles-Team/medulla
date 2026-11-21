@@ -113,6 +113,7 @@ method_results! {
     SqlSourceBatch(SqlSourceBatch) => Raw<SqlSourceBatchResult>;
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
     AgentComponentBlueprintExport(AgentComponent / "export_blueprint") => Raw<BlueprintExport>;
+    AgentComponentImportBlueprint(AgentComponent / "import_blueprint") => Raw<AgentComponentCommittedResult>;
     AgentComponentRender(AgentComponent / "render") => Raw<PromptRenderResult>;
     AgentComponentVerifyRender(AgentComponent / "verify_render") => Raw<PromptReceiptVerdict>;
     AgentComponentRecordSourceEffect(AgentComponent / "record_source_effect") => Raw<SourceEffectRecordResult>;

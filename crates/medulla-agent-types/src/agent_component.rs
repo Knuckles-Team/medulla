@@ -60,7 +60,8 @@ pub mod source_effect;
 mod validation;
 
 pub use content::{
-    AgentComponentBlueprintExportRequest, BlueprintExport, BLUEPRINT_EXPORT_SCHEMA_VERSION,
+    AgentComponentBlueprintExportRequest, BlueprintExport, BlueprintImportRequest,
+    BLUEPRINT_EXPORT_SCHEMA_VERSION,
     AgentComponentContentRequest, AgentComponentContentResult, COMPONENT_CONTENT_SCHEMA_VERSION,
     COMPONENT_MEDIA_TYPE_ATTRIBUTE, DEFAULT_COMPONENT_MEDIA_TYPE, MAX_COMPONENT_BODY_BYTES,
 };
@@ -1383,6 +1384,9 @@ pub enum AgentComponentOp {
     ExportBlueprint {
         request: AgentComponentBlueprintExportRequest,
     },
+    /// Import one edited blueprint as the next revision of a native prompt
+    /// (MEDULLA-TYPED-PACKS-R094.3). Boxed: the envelope carries a whole entry and a body.
+    ImportBlueprint { request: Box<BlueprintImportRequest> },
     /// Render one pinned prompt revision with its variables and return the bytes with a
     /// receipt (MEDULLA-TYPED-PACKS-R002.9).
     Render { request: PromptRenderRequest },
@@ -1411,6 +1415,7 @@ impl AgentComponentOp {
                 | Self::Retire { .. }
                 | Self::AdmitSkillUpgrade { .. }
                 | Self::RecordSourceEffect { .. }
+                | Self::ImportBlueprint { .. }
         )
     }
 
@@ -1422,6 +1427,7 @@ impl AgentComponentOp {
     pub fn authz_action(&self) -> &'static str {
         match self {
             Self::Publish { request } => request.component.kind.publish_authz_action(),
+            Self::ImportBlueprint { request } => request.envelope.entry.kind.publish_authz_action(),
             Self::Retire { .. }
             | Self::AdmitSkillUpgrade { .. }
             | Self::RecordSourceEffect { .. } => "agent:component-write",
@@ -1499,6 +1505,19 @@ impl AgentComponentOp {
                 }
                 Ok(())
             }
+            Self::ImportBlueprint { request } => {
+                request.context.validate()?;
+                validate_text("component_id", &request.envelope.entry.component_id)?;
+                refuse_reserved_id(&request.envelope.entry.component_id)?;
+                if request.context.expected_revision.is_none_or(|base| base == 0) {
+                    return Err(
+                        "INVALID_ARGUMENT: a blueprint import names its base revision (\
+                         expected_revision of at least 1)"
+                            .to_string(),
+                    );
+                }
+                Ok(())
+            }
             Self::VerifyRender { receipt } => {
                 validate_text("tenant_id", &receipt.identity.tenant_id)?;
                 validate_text("component_id", &receipt.identity.component_id)
@@ -1544,6 +1563,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Search { request } => &request.tenant_id,
         AgentComponentOp::Content { request } => &request.tenant_id,
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
+        AgentComponentOp::ImportBlueprint { request } => &request.context.tenant_id,
         AgentComponentOp::Render { request } => &request.tenant_id,
         AgentComponentOp::VerifyRender { receipt } => &receipt.identity.tenant_id,
         AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,

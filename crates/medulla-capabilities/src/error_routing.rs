@@ -485,6 +485,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "AgentComponent",
         &[
+            "BLUEPRINT_IDENTITY_CHANGED",
+            "BLUEPRINT_MALFORMED",
             "BODY_DIGEST_MISMATCH",
             "COMPONENT_REVISION_UNKNOWN",
             "COMPONENT_WITHDRAWN",

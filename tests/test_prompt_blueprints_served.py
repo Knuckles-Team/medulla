@@ -33,6 +33,7 @@ from medulla.generated.agent_component import (
     AgentComponentOpCurrent,
     AgentComponentOpRecordSourceEffect,
     AgentComponentOpVerifyRender,
+    BlueprintImportRequest,
     PromptRenderRequest,
 )
 from medulla.generated.connector_pack import (
@@ -44,6 +45,7 @@ from medulla.generated.storage import (
     send_agent_component_content,
     send_agent_component_current,
     send_agent_component_export_blueprint,
+    send_agent_component_import_blueprint,
     send_agent_component_record_source_effect,
     send_agent_component_render,
     send_agent_component_verify_render,
@@ -650,5 +652,144 @@ async def test_receipt_verdicts() -> None:
             await _verify(client, receipt)
         latest = await _render(client, component_id, {}, revision=2)
         assert (await _verify(client, latest.receipt)).ok is True
+    finally:
+        await client.close()
+
+
+# Entry fields the server owns: import ignores them and publish restamps them.
+_SERVER_OWNED = {
+    "schema_version",
+    "lifecycle",
+    "definition_digest",
+    "created_at_ms",
+    "updated_at_ms",
+    "actor_scope",
+    "purpose_id",
+    "policy_digest",
+    "content_ref",
+    "entry_revision",
+}
+
+
+def _edited_envelope(exported: Any, body: bytes, **entry_changes: Any) -> dict[str, Any]:
+    """The export envelope with `body` and the pins that follow it applied."""
+    pin = hashlib.sha256(body).hexdigest()
+    envelope = exported.model_dump(mode="json")
+    envelope["body"] = list(body)
+    envelope["content_digest"] = "sha256:" + pin
+    envelope["entry"]["content_digest"] = "sha256:" + pin
+    envelope["entry"]["facts"]["body_sha256"] = pin
+    envelope["entry"].update(entry_changes)
+    return envelope
+
+
+async def _import_blueprint(
+    client: MedullaClient,
+    envelope: dict[str, Any],
+    expected_revision: int,
+    tenant: str = TEST_TENANT,
+) -> Any:
+    context = _publish_context(expected_revision)
+    context["tenant_id"] = tenant
+    envelope["entry"]["tenant_id"] = tenant
+    return await send_agent_component_import_blueprint(
+        client,
+        BlueprintImportRequest.model_validate({"context": context, "envelope": envelope}),
+        idempotency_key=f"blueprint-import-{uuid.uuid4().hex}",
+    )
+
+
+async def _head(client: MedullaClient, component_id: str) -> int:
+    current = await send_agent_component_current(
+        client,
+        AgentComponentOpCurrent(
+            op="current", tenant_id=TEST_TENANT, component_id=component_id
+        ),
+    )
+    assert current is not None
+    return current.entry_revision
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.3")
+@pytest.mark.asyncio
+async def test_modified_blueprint_import() -> None:
+    client = await connect()
+    component_id = f"prompt:native-{uuid.uuid4().hex[:12]}"
+    original = json.dumps(
+        {"task": "summarise the ticket", "schema_revision": 1},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    edited = original.replace("summarise", "classify").encode()
+    try:
+        await _publish_prompt(
+            client,
+            component_id,
+            original,
+            hashlib.sha256(original.encode()).hexdigest(),
+            0,
+        )
+        first = await _export(client, component_id, 1)
+
+        # The edited envelope imports at the base revision as exactly one new revision.
+        committed = await _import_blueprint(
+            client, _edited_envelope(first, edited), expected_revision=1
+        )
+        assert committed.component.entry_revision == 2
+        second = await _export(client, component_id, 2)
+        assert second.body == edited
+        assert second.content_digest == "sha256:" + hashlib.sha256(edited).hexdigest()
+        before = first.entry.model_dump(mode="json")
+        after = second.entry.model_dump(mode="json")
+        changed = {
+            key
+            for key in before
+            if key not in _SERVER_OWNED and before[key] != after[key]
+        }
+        assert changed == {"content_digest", "facts"}, changed
+        assert {
+            key: value
+            for key, value in before["facts"].items()
+            if key != "body_sha256"
+        } == {
+            key: value
+            for key, value in after["facts"].items()
+            if key != "body_sha256"
+        }
+
+        # Every refusal leaves the head at 2.
+        with pytest.raises(EngineResponseError, match="STALE_AGENT_LIBRARY_REVISION"):
+            await _import_blueprint(
+                client, _edited_envelope(first, edited), expected_revision=1
+            )
+        for change in ({"kind": "tool"}, {"provenance": {"origin": "source_package",
+                "package_id": "other", "package_version": "1"}}):
+            with pytest.raises(EngineResponseError, match="BLUEPRINT_IDENTITY_CHANGED"):
+                await _import_blueprint(
+                    client, _edited_envelope(first, edited, **change), expected_revision=1
+                )
+        disagreeing = _edited_envelope(first, edited)
+        disagreeing["content_digest"] = "sha256:" + "0" * 64
+        with pytest.raises(EngineResponseError, match="BLUEPRINT_MALFORMED"):
+            await _import_blueprint(client, disagreeing, expected_revision=1)
+        with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+            await _import_blueprint(
+                client,
+                _edited_envelope(first, edited),
+                expected_revision=1,
+                tenant="tenant-other",
+            )
+        assert await _head(client, component_id) == 2
+
+        # A pack-imported prompt is pack-owned: it changes only through pack import.
+        connector = f"blueprint-{uuid.uuid4().hex[:10]}"
+        await _import_prompt(client, connector, "owned")
+        owned_id = _component_id(connector, "owned")
+        owned = await _export(client, owned_id, 1)
+        with pytest.raises(EngineResponseError, match="RESERVED_COMPONENT_ID"):
+            packaged = owned.model_dump(mode="json")
+            packaged["body"] = list(owned.body)
+            await _import_blueprint(client, packaged, expected_revision=1)
+        assert await _head(client, owned_id) == 1
     finally:
         await client.close()

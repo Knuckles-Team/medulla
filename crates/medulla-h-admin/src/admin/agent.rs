@@ -139,6 +139,12 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        AgentComponentOp::ImportBlueprint { request } => {
+            super::component_content::serve_blueprint_import(
+                state, &store, req_id, verified, *request,
+            )
+            .await
+        }
         AgentComponentOp::Render { request } => {
             super::component_content::serve_prompt_render(state, &store, req_id, verified, request)
                 .await
@@ -178,7 +184,7 @@ fn component_record_source_effect(
 /// body store, then the owner write commits revision, head, body holder and receipt
 /// together (MEDULLA-TYPED-PACKS-R002.7).
 #[cfg(feature = "redb")]
-async fn component_publish(
+pub(crate) async fn component_publish(
     state: &Arc<RwLock<ServerState>>,
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,

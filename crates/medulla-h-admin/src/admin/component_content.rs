@@ -202,6 +202,146 @@ pub(crate) async fn serve_blueprint_export(
     }
 }
 
+/// The pure envelope checks of `AgentComponent.import_blueprint` (MEDULLA-TYPED-PACKS-R094.3).
+/// Each refusal is `BLUEPRINT_MALFORMED` and names what disagrees.
+pub(crate) fn check_blueprint_envelope(
+    request: &medulla_agent_types::agent_component::BlueprintImportRequest,
+) -> Result<(), String> {
+    use medulla_agent_types::agent_component::{
+        AgentComponentFacts, BLUEPRINT_EXPORT_SCHEMA_VERSION, COMPONENT_MEDIA_TYPE_ATTRIBUTE,
+        DEFAULT_COMPONENT_MEDIA_TYPE, MAX_COMPONENT_BODY_BYTES,
+    };
+    let malformed = |why: &str| Err(format!("BLUEPRINT_MALFORMED: {why}"));
+    let envelope = &request.envelope;
+    let entry = &envelope.entry;
+    if envelope.schema_version != BLUEPRINT_EXPORT_SCHEMA_VERSION {
+        return malformed("schema_version is not the supported blueprint export version");
+    }
+    if envelope.body.len() > MAX_COMPONENT_BODY_BYTES {
+        return malformed("the body is over the component body limit");
+    }
+    if std::str::from_utf8(&envelope.body).is_err() {
+        return malformed("the body is not UTF-8");
+    }
+    let body_hash = medulla_types::contract::Digest256::sha256(&envelope.body).to_hex();
+    if envelope.content_digest != format!("sha256:{body_hash}") {
+        return malformed("content_digest is not the SHA-256 of the body");
+    }
+    if entry.content_digest != envelope.content_digest {
+        return malformed("the entry's content_digest differs from the envelope's");
+    }
+    if entry.tenant_id != request.context.tenant_id {
+        return malformed("the entry's tenant differs from the request's");
+    }
+    if Some(entry.entry_revision) != request.context.expected_revision {
+        return malformed("the entry's revision is not the base revision of the request");
+    }
+    let media_type = entry
+        .attributes
+        .get(COMPONENT_MEDIA_TYPE_ATTRIBUTE)
+        .map_or(DEFAULT_COMPONENT_MEDIA_TYPE, String::as_str);
+    if envelope.media_type != media_type {
+        return malformed("media_type differs from the entry's content media type");
+    }
+    match &entry.facts {
+        AgentComponentFacts::SystemPrompt {
+            body_sha256: Some(pin),
+            ..
+        } if *pin == body_hash => Ok(()),
+        _ => malformed("the entry's facts are not a system prompt pinned to the body"),
+    }
+}
+
+/// An import changes the content of a revision, never who the component is: its id, kind,
+/// provenance and tenant stay those of the base revision (MEDULLA-TYPED-PACKS-R094.3).
+pub(crate) fn check_blueprint_identity(
+    imported: &medulla_agent_types::agent_component::AgentComponentEntry,
+    base: &medulla_agent_types::agent_component::AgentComponentEntry,
+) -> Result<(), String> {
+    if imported.component_id != base.component_id
+        || imported.kind != base.kind
+        || imported.provenance != base.provenance
+        || imported.tenant_id != base.tenant_id
+    {
+        return Err(
+            "BLUEPRINT_IDENTITY_CHANGED: an import keeps the component id, kind, provenance and \
+             tenant of its base revision"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// `AgentComponent.import_blueprint`: the edited envelope becomes the next revision of a
+/// native prompt through the one publish path of R002.7 (MEDULLA-TYPED-PACKS-R094.3). The
+/// server-owned entry fields are ignored and restamped by publish.
+pub(crate) async fn serve_blueprint_import(
+    state: &Arc<RwLock<ServerState>>,
+    store: &AgentLibraryStore,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    request: medulla_agent_types::agent_component::BlueprintImportRequest,
+) -> Response {
+    use medulla_agent_types::agent_component::{AgentComponentDraft, AgentComponentPublishRequest};
+
+    if request.context.tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: blueprint import tenant must match verified request tenant",
+        );
+    }
+    if let Err(error) = check_blueprint_envelope(&request) {
+        return Response::err(req_id, error);
+    }
+    let base = request.context.expected_revision.unwrap_or(0);
+    let pointer = match store.connector_pack_content_pointer(
+        &request.context.tenant_id,
+        &request.envelope.entry.component_id,
+        Some(base),
+    ) {
+        Ok(pointer) => pointer,
+        Err(error) => return Response::err(req_id, error),
+    };
+    if let Err(error) = check_blueprint_identity(&request.envelope.entry, &pointer.entry) {
+        return Response::err(req_id, error);
+    }
+    let medulla_agent_types::agent_component::BlueprintImportRequest { context, envelope } =
+        request;
+    let entry = envelope.entry;
+    let prompt_blueprint = match String::from_utf8(envelope.body) {
+        Ok(text) => text,
+        Err(_) => return Response::err(req_id, "BLUEPRINT_MALFORMED: the body is not UTF-8"),
+    };
+    let publish = AgentComponentPublishRequest {
+        context,
+        component: AgentComponentDraft {
+            component_id: entry.component_id,
+            kind: entry.kind,
+            version: entry.version,
+            content_digest: entry.content_digest,
+            content_ref: None,
+            facts: entry.facts,
+            provenance: entry.provenance,
+            summary: entry.summary,
+            classification: entry.classification,
+            requires: entry.requires,
+            declared_capabilities: entry.declared_capabilities,
+            required_capabilities: entry.required_capabilities,
+            declared_required_capabilities: entry.declared_required_capabilities,
+            attributes: entry.attributes,
+            tenant_id: entry.tenant_id,
+            actor_scope: entry.actor_scope,
+            purpose_id: entry.purpose_id,
+            policy_digest: entry.policy_digest,
+            source_revision: entry.source_revision,
+            source_revision_digest: entry.source_revision_digest,
+        },
+        evaluation_receipt_digest: None,
+        prompt_blueprint: Some(prompt_blueprint),
+    };
+    super::agent::component_publish(state, store, req_id, verified, Box::new(publish)).await
+}
+
 #[cfg(feature = "blob")]
 /// A JSON value parsed with duplicate object keys refused. Non-finite numbers
 /// cannot be written in JSON, so the parser refuses them already.
@@ -506,6 +646,96 @@ mod tests {
             served.call("export:denied", export("tenant-other", 1)).await,
         );
         assert!(denied.starts_with("ACCESS_DENIED"), "{denied}");
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R094.3
+    #[tokio::test]
+    async fn import_envelope_and_identity_checks_name_their_codes() {
+        use super::{check_blueprint_envelope, check_blueprint_identity};
+        use medulla_agent_types::agent_component::{AgentComponentFacts, BlueprintImportRequest};
+        use medulla_types::contract::Nonce;
+
+        let served = Served::new();
+        bind(&served, CONNECTOR, ADMIN).await;
+        let pinned = tool(CONNECTOR, "pinned", "A tool pinned for import.");
+        imported(
+            &served,
+            &build_pack(CONNECTOR, std::slice::from_ref(&pinned)),
+            None,
+        )
+        .await;
+        let exported: BlueprintExport = ok(
+            "ExportBlueprint",
+            served.call("import:export", export(TENANT, 1)).await,
+        );
+        let request = |envelope: BlueprintExport| BlueprintImportRequest {
+            context: medulla_agent_types::agent_library::AgentLibraryMutationContext {
+                request_id: 1,
+                principal: "bound-by-engine".to_string(),
+                caller_principal: "bound-by-engine".to_string(),
+                attempt_nonce: Nonce::from_bytes([0; 32]),
+                tenant_id: TENANT.to_string(),
+                actor_scope: "bound-by-engine".to_string(),
+                purpose_id: "bound-by-engine".to_string(),
+                policy_revision: "bound-by-engine".to_string(),
+                policy_digest: format!("sha256:{}", "0".repeat(64)),
+                policy_decision_id: "bound-by-engine".to_string(),
+                idempotency_key: "import-key".to_string(),
+                expected_revision: Some(1),
+                trace_id: None,
+                created_at_ms: 1,
+            },
+            envelope,
+        };
+        let code = |result: Result<(), String>| result.expect_err("refused");
+
+        // The exported tool is not a system prompt, so the facts clause names it.
+        assert!(code(check_blueprint_envelope(&request(exported.clone())))
+            .starts_with("BLUEPRINT_MALFORMED"));
+        // Each other clause names BLUEPRINT_MALFORMED too.
+        let mut bad_version = exported.clone();
+        bad_version.schema_version += 1;
+        let mut bad_digest = exported.clone();
+        bad_digest.content_digest = format!("sha256:{}", "0".repeat(64));
+        let mut bad_media = exported.clone();
+        bad_media.media_type = "text/plain".to_string();
+        let mut bad_tenant = exported.clone();
+        bad_tenant.entry.tenant_id = "tenant-other".to_string();
+        let mut bad_revision = exported.clone();
+        bad_revision.entry.entry_revision = 2;
+        let mut not_utf8 = exported.clone();
+        not_utf8.body = vec![0xff, 0xfe];
+        for envelope in [
+            bad_version,
+            bad_digest,
+            bad_media,
+            bad_tenant,
+            bad_revision,
+            not_utf8,
+        ] {
+            assert!(code(check_blueprint_envelope(&request(envelope)))
+                .starts_with("BLUEPRINT_MALFORMED"));
+        }
+        let mut opaque = exported.clone();
+        opaque.entry.facts = AgentComponentFacts::Opaque;
+        assert!(code(check_blueprint_envelope(&request(opaque)))
+            .starts_with("BLUEPRINT_MALFORMED"));
+
+        // The identity of the base revision cannot change.
+        assert_eq!(check_blueprint_identity(&exported.entry, &exported.entry), Ok(()));
+        let mut other_id = exported.entry.clone();
+        other_id.component_id = "prompt:other".to_string();
+        let mut other_kind = exported.entry.clone();
+        other_kind.kind = medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt;
+        let mut other_tenant = exported.entry.clone();
+        other_tenant.tenant_id = "tenant-other".to_string();
+        let mut other_provenance = exported.entry.clone();
+        other_provenance.provenance =
+            medulla_agent_types::agent_component::ComponentProvenance::Native;
+        for changed in [other_id, other_kind, other_tenant, other_provenance] {
+            assert!(code(check_blueprint_identity(&changed, &exported.entry))
+                .starts_with("BLUEPRINT_IDENTITY_CHANGED"));
+        }
     }
 
     // spec: MEDULLA-TYPED-PACKS-R002.9

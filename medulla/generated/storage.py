@@ -31,6 +31,7 @@ from .agent_component import (
     AgentComponentSearchRequest,
     AgentComponentOpVerifyRender,
     BlueprintExport,
+    BlueprintImportRequest,
     PromptReceiptVerdict,
     PromptRenderRequest,
     PromptRenderResult,
@@ -59,6 +60,7 @@ from .decision import (
     AssemblyResult,
 )
 from .decision_commit import (
+    AgentComponentCommittedResult,
     DecisionCommitResult,
 )
 from .write_back import (
@@ -603,6 +605,32 @@ async def send_agent_component_export_blueprint(
         idempotency_key=idempotency_key,
     )
     return BlueprintExport.model_validate(payload)
+
+
+async def send_agent_component_import_blueprint(
+    client: Any,
+    request: BlueprintImportRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> AgentComponentCommittedResult:
+    """Send typed AgentComponent.import_blueprint."""
+    request = BlueprintImportRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "import_blueprint",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return AgentComponentCommittedResult.model_validate(payload)
 
 
 async def send_agent_component_render(

@@ -104,6 +104,13 @@ class BlueprintExport(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
+class BlueprintImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    context: AgentLibraryMutationContext
+    envelope: BlueprintExport
+
+
 class PromptRenderRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -284,6 +291,13 @@ class AgentComponentOpExportBlueprint(BaseModel):
     request: AgentComponentBlueprintExportRequest
 
 
+class AgentComponentOpImportBlueprint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["import_blueprint"]
+    request: BlueprintImportRequest
+
+
 class AgentComponentOpRender(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -322,6 +336,7 @@ AgentComponentOp = Annotated[
     | AgentComponentOpContent
     | AgentComponentOpAdmitSkillUpgrade
     | AgentComponentOpExportBlueprint
+    | AgentComponentOpImportBlueprint
     | AgentComponentOpRender
     | AgentComponentOpVerifyRender
     | AgentComponentOpRecordSourceEffect,
@@ -381,6 +396,8 @@ AgentComponentContentResult.model_rebuild()
 AgentComponentBlueprintExportRequest.model_rebuild()
 
 BlueprintExport.model_rebuild()
+
+BlueprintImportRequest.model_rebuild()
 
 AgentComponentDraft.model_rebuild()
 
@@ -442,6 +459,8 @@ __all__ = [
     "SourceEffectRecordResult",
     "AgentComponentBlueprintExportRequest",
     "AgentComponentOpExportBlueprint",
+    "AgentComponentOpImportBlueprint",
+    "BlueprintImportRequest",
     "AgentComponentOpRender",
     "AgentComponentOpVerifyRender",
     "PromptReceiptVerdict",
