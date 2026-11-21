@@ -467,3 +467,62 @@ fn dmn_rule_with_missing_entry_is_refused() {
         })
     );
 }
+
+// spec: MEDULLA-CQ-ORCH-R702.3
+#[test]
+fn bpmn_mapping_is_deterministic() {
+    use medulla_core::architecture_exchange::graph::ExchangeMutation;
+    use medulla_core::process_exchange::bpmn_graph::{bpmn_mutations, element_iri};
+
+    let doc = parse_bpmn(EVERY_KIND, BpmnLimits::default()).unwrap();
+    let model = "model:every";
+    let out = bpmn_mutations(&doc, model);
+    assert_eq!(out, bpmn_mutations(&doc, model), "equal input, equal output");
+
+    let node = |id: &str| {
+        out.iter()
+            .find_map(|m| match m {
+                ExchangeMutation::UpsertNode {
+                    id: node_id,
+                    label,
+                    properties,
+                } if *node_id == element_iri(model, id) => Some((label.clone(), properties.clone())),
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("{id} is a node"))
+    };
+    let has_link = |source: &str, predicate: &str, target: &str| {
+        out.iter().any(|m| {
+            matches!(m, ExchangeMutation::Link { source: s, target: t, predicate: p }
+                if *s == element_iri(model, source)
+                    && *t == element_iri(model, target)
+                    && p == predicate)
+        })
+    };
+    // Each element is one node of its class with its source id.
+    assert_eq!(element_iri(model, "user1"), "process:model:every:user1");
+    let (label, properties) = node("user1");
+    assert_eq!(label, "BpmnUserTask");
+    assert_eq!(properties["bpmnElementId"], "user1");
+    assert_eq!(properties["name"], "User & review");
+    assert_eq!(node("start1").0, "BpmnStartEvent");
+    assert_eq!(node("start1").1["eventPosition"], "start");
+    assert_eq!(node("xor1").0, "BpmnExclusiveGateway");
+    assert_eq!(node("proc1").0, "BpmnProcess");
+    assert_eq!(node("defs1").0, "BpmnDefinitions");
+    assert_eq!(node("lane1").0, "BpmnLane");
+    assert_eq!(node("start1#0").0, "BpmnMessageEventDefinition");
+    assert!(has_link("start1", "hasEventDefinition", "start1#0"));
+    // A flow keeps its endpoints, its condition and its default marker.
+    assert_eq!(node("flow2").0, "BpmnSequenceFlow");
+    assert!(has_link("flow2", "flowSource", "xor1"));
+    assert!(has_link("flow2", "flowTarget", "user1"));
+    assert_eq!(node("flow2").1["flowCondition"], "amount > 1000");
+    assert_eq!(node("flow2").1["isDefaultFlow"], "false");
+    assert_eq!(node("flow3").1["isDefaultFlow"], "true");
+    // Lane membership and process containment are edges.
+    assert!(has_link("user1", "inLane", "lane1"));
+    assert!(has_link("proc1", "hasProcessElement", "user1"));
+    // A kept extension fragment sits on its owner node.
+    assert!(node("user1").1["bpmnPreservedXml"].contains("ext:form"));
+}
