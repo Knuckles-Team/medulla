@@ -26,6 +26,12 @@
 //!
 //! * `sequence_nextval` (R013.3): `nextval` served from a reserved block, p99 <= 2 us.
 //!
+//! * `pitr_restore_drill` (R016.3): 100,000 committed batches in one scope are archived
+//!   and restored to sequence 50,000 through `restore_bundle` and `replay_archive`;
+//!   no sequence is lost, a second replay applies nothing, and the restore stays
+//!   within 15 minutes (the budget of a 10 GiB store). Needs the `object-store-bench`
+//!   feature beside `full`.
+//!
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
@@ -35,13 +41,16 @@
 // spec: MEDULLA-ENGINE-PARITY-R007.3
 // spec: MEDULLA-ENGINE-PARITY-R010.3
 // spec: MEDULLA-ENGINE-PARITY-R013.3
+// spec: MEDULLA-ENGINE-PARITY-R016.3
 //!
-//! Run: cargo bench --features full --bench engine_parity
+//! Run: cargo bench --features full,object-store-bench --bench engine_parity
 
 #[path = "../crates/medulla-sql-tests/tests/common/commit_batch.rs"]
 mod commit_batch;
 #[path = "common/redb_fan_in.rs"]
 mod redb_fan_in;
+#[path = "../crates/medulla-persistence/tests/common/replay_fixture.rs"]
+mod replay_fixture;
 
 use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -92,6 +101,9 @@ const INDEX_PROBE_SEED: u64 = 0x5eed_1d3c;
 const NEXTVAL_SAMPLES: usize = 60_000;
 const NEXTVAL_BLOCK: u64 = 65_536;
 const NEXTVAL_P99_BUDGET_NS: u128 = 2_000;
+const PITR_BATCHES: u64 = 100_000;
+const PITR_TARGET: u64 = 50_000;
+const PITR_RESTORE_BUDGET: Duration = Duration::from_secs(15 * 60);
 const MATVIEW_ROWS: usize = 1_000_000;
 const MATVIEW_READ_SAMPLES: usize = 5_000;
 const MATVIEW_REFRESH_BUDGET: Duration = Duration::from_secs(2);
@@ -825,6 +837,97 @@ fn matview_refresh() -> Record {
     }
 }
 
+/// `pitr_restore_drill` (R016.3): archive `PITR_BATCHES` committed batches of one scope,
+/// restore the bundle to sequence `PITR_TARGET`, and prove no sequence is lost and a
+/// second replay is a no-op. The record's `p50_us` and `p99_us` are the restore time.
+fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
+    use medulla_persistence::backup::restore_bundle;
+    use medulla_persistence::backup_replay::replay_archive;
+    use medulla_storage::{ledger_scope_key, ArchivePolicy, ReplayTarget};
+
+    let dir = temp_dir("pitr");
+    let source_dir = dir.join("source");
+    let bundle = dir.join("bundle");
+    let restored = dir.join("restored");
+    let archive = replay_fixture::archive();
+    let scope = ledger_scope_key(&replay_fixture::identity());
+    let source =
+        RedbBackend::open(source_dir.to_string_lossy().into_owned(), 1024).expect("open source");
+    replay_fixture::bundle_of(&source, &bundle);
+    rt.block_on(replay_fixture::commit_range(&source, 0..PITR_BATCHES));
+    let policy = ArchivePolicy {
+        segment_bytes: 64 * 1024 * 1024,
+        retain_s: 3_600,
+        interval_s: 10,
+    };
+    let pass = rt
+        .block_on(source.archive_pass(&archive, replay_fixture::TENANT, &policy))
+        .expect("archive pass");
+    assert_eq!(pass.records_archived, PITR_BATCHES);
+    drop(source);
+
+    let target = ReplayTarget::Sequence(PITR_TARGET);
+    let started = Instant::now();
+    restore_bundle(&bundle, &restored, 1, None).expect("bundle restores");
+    let report = rt
+        .block_on(replay_archive(
+            &restored,
+            1,
+            &archive,
+            replay_fixture::TENANT,
+            &target,
+        ))
+        .expect("replay to the target");
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed <= PITR_RESTORE_BUDGET,
+        "pitr_restore_drill took {elapsed:?}, over the {PITR_RESTORE_BUDGET:?} budget"
+    );
+    assert_eq!(report.final_sequence.get(&scope), Some(&PITR_TARGET));
+    assert_eq!(report.records_applied, PITR_TARGET);
+
+    let reopened = RedbBackend::open_with_shards(restored.to_string_lossy().into_owned(), 1024, 1)
+        .expect("open restored");
+    for index in 0..PITR_TARGET {
+        let held = rt
+            .block_on(PersistenceBackend::read_mutation_batch(
+                &reopened,
+                replay_fixture::GRAPH,
+                &format!("b{index}"),
+            ))
+            .expect("read the ledger");
+        assert!(held.is_some(), "sequence {} is missing", index + 1);
+    }
+    let past = rt
+        .block_on(PersistenceBackend::read_mutation_batch(
+            &reopened,
+            replay_fixture::GRAPH,
+            &format!("b{PITR_TARGET}"),
+        ))
+        .expect("read the ledger");
+    assert!(past.is_none(), "no sequence past the target is restored");
+    drop(reopened);
+    let again = rt
+        .block_on(replay_archive(
+            &restored,
+            1,
+            &archive,
+            replay_fixture::TENANT,
+            &target,
+        ))
+        .expect("second replay");
+    assert_eq!(again.records_applied, 0, "a repeated restore is a no-op");
+    let _ = std::fs::remove_dir_all(&dir);
+    let micros = elapsed.as_micros() as u64;
+    Record {
+        workload: "pitr_restore_drill",
+        parameters: format!("batches={PITR_BATCHES};target={PITR_TARGET}"),
+        p50_us: micros,
+        p99_us: micros,
+        throughput: PITR_TARGET as f64 / elapsed.as_secs_f64(),
+    }
+}
+
 /// Run W1 to W5 and the OCC and login budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -849,6 +952,7 @@ fn emit_workload_records() {
     emit(&index_probe());
     emit(&sequence_nextval());
     emit(&matview_refresh());
+    emit(&pitr_restore_drill(&rt));
 }
 
 fn main() {

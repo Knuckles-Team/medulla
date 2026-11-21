@@ -2091,7 +2091,7 @@ required-features = ["pgwire", "bolt-wire", "redis-wire", "s3-api"]
 name = "engine_parity"
 path = "benches/engine_parity.rs"
 harness = false
-required-features = ["full"]
+required-features = ["full", "object-store-bench"]
 
 # Marking propagation over 100,000 lineage nodes (MEDULLA-TYPED-PACKS-R652.6): nightly budget.
 [[bench]]
