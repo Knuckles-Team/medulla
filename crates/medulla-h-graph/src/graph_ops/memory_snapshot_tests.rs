@@ -3,6 +3,7 @@
 //! stores, read from the plan alone.
 
 use super::memory_snapshot::{planned_content, decide_sync};
+use medulla_graph_core::memory_snapshot::SnapshotSlot;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::memory_snapshot as store;
 use medulla_mutation_types::memory_sync::{
@@ -45,7 +46,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
     assert!(store::load_head(&core, &doc).is_none());
     assert_eq!(
         planned_content(&plan, &doc, &outcome),
-        Some((1, "one".to_string()))
+        Some((SnapshotSlot::Revision(1), "one".to_string()))
     );
     store::apply_plan(&core, &plan);
 
@@ -60,7 +61,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
     };
     assert_eq!(
         planned_content(&plan, &doc, &outcome),
-        Some((candidate_revision, "two".to_string()))
+        Some((SnapshotSlot::Candidate(candidate_revision), "two".to_string()))
     );
 
     // An outcome that stores no content stages nothing.

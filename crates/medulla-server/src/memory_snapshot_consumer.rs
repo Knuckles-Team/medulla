@@ -237,11 +237,11 @@ mod worker {
         );
         let held = if hold_retained { plan.held } else { Vec::new() };
         let released = plan.released;
-        for (revision, content) in held {
+        for (slot, content) in held {
             let (digest, _was_new) = blob.put_chunk(content.as_bytes())?;
             let holder = HolderChange::acquire(
                 &digest,
-                HolderId::new(&format!("memory_snapshot:{}@{revision}", doc.as_str()))?,
+                HolderId::new(&slot.holder_id(doc))?,
                 &owner_scope,
             )?;
             let method = medulla_protocol_types::protocol::Method::BlobRef {
@@ -249,10 +249,10 @@ mod worker {
             };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;
         }
-        for (revision, digest) in released {
+        for (slot, digest) in released {
             let holder = HolderChange::release(
                 &digest,
-                HolderId::new(&format!("memory_snapshot:{}@{revision}", doc.as_str()))?,
+                HolderId::new(&slot.holder_id(doc))?,
             )?;
             let method = medulla_protocol_types::protocol::Method::BlobRef { digest };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;

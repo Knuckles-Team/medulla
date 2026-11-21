@@ -5,7 +5,7 @@
 //! bodies (`put_chunk`) BEFORE the graph commit: it is content-addressed and
 //! idempotent, so a storage failure refuses `MEMSYNC_STORAGE_UNAVAILABLE` before
 //! anything commits. After the commit one blob-domain batch registers the holder
-//! `memory_snapshot:<doc_id>@<revision>` under the document owner's scope
+//! `memory_snapshot:<doc_id>@<revision>` (`@c<n>` for a candidate) under the document owner's scope
 //! ([`medulla_server_api::carrier::memory_snapshot_owner_scope`]), the same row
 //! the `memory_snapshot_synced` consumer registers. A holder failure after the
 //! commit is never a failure of the write: the sync answers success with a
@@ -23,7 +23,7 @@ pub(super) const HOLDER_PENDING: &str = "MEMSYNC_HOLDER_PENDING";
 /// Content already in the CAS and the holder it will take once the graph commits.
 pub(super) struct StagedContent {
     digest: String,
-    revision: u64,
+    slot: medulla_graph_core::memory_snapshot::SnapshotSlot,
 }
 
 /// Whether the CAS serves the content at `digest`. A build or server without the
@@ -67,7 +67,7 @@ pub(super) async fn stage_content(
     use medulla_mutation_types::memory_sync::MemorySyncRefusal;
     use medulla_server_blob::blob::BlobStateExt;
 
-    let Some((revision, content)) = planned_content(plan, &request.doc_id, outcome) else {
+    let Some((slot, content)) = planned_content(plan, &request.doc_id, outcome) else {
         return Ok(None);
     };
     let store = {
@@ -80,7 +80,7 @@ pub(super) async fn stage_content(
     let (digest, _was_new) = store.put_chunk(content.as_bytes()).map_err(|error| {
         format!("{}: {error}", MemorySyncRefusal::StorageUnavailable.as_str())
     })?;
-    Ok(Some(StagedContent { digest, revision }))
+    Ok(Some(StagedContent { digest, slot }))
 }
 
 #[cfg(not(all(feature = "redb", feature = "blob")))]
@@ -115,11 +115,7 @@ pub(super) async fn hold_staged(
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let holder = HolderChange::acquire(
         &staged.digest,
-        HolderId::new(&format!(
-            "memory_snapshot:{}@{}",
-            request.doc_id.as_str(),
-            staged.revision
-        ))?,
+        HolderId::new(&staged.slot.holder_id(&request.doc_id))?,
         &medulla_server_api::carrier::memory_snapshot_owner_scope(verified.tenant(), request.doc_id.as_str()),
     )?;
     let method = medulla_protocol_types::protocol::Method::BlobRef {

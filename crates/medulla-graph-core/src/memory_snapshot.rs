@@ -131,10 +131,30 @@ pub fn candidates(core: &GraphCore, doc: &DocId) -> Vec<(u64, CandidateRow)> {
 
 /// Which blobs of one document stay held and which release.
 pub struct RetentionPlan {
-    /// `(revision or candidate number, content)` to keep held.
-    pub held: Vec<(u64, String)>,
-    /// `(revision or candidate number, content digest hex)` to release.
-    pub released: Vec<(u64, String)>,
+    /// `(slot, content)` to keep held.
+    pub held: Vec<(SnapshotSlot, String)>,
+    /// `(slot, content digest hex)` to release.
+    pub released: Vec<(SnapshotSlot, String)>,
+}
+
+/// Which stored content of a document a blob holder names: a numbered revision
+/// or a numbered retained candidate (MEDULLA-DURABLE-KERNEL-R085.4). Revision
+/// and candidate numbers are separate sequences, so the holder id says which.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SnapshotSlot {
+    Revision(u64),
+    Candidate(u64),
+}
+
+impl SnapshotSlot {
+    /// The blob holder id: `memory_snapshot:<doc>@<n>` for revision `n`,
+    /// `memory_snapshot:<doc>@c<n>` for candidate `n`.
+    pub fn holder_id(&self, doc: &DocId) -> String {
+        match self {
+            Self::Revision(n) => format!("memory_snapshot:{}@{n}", doc.as_str()),
+            Self::Candidate(n) => format!("memory_snapshot:{}@c{n}", doc.as_str()),
+        }
+    }
 }
 
 /// The retention split of `doc` at `now_ms` (MEDULLA-DURABLE-KERNEL-R085.7). A
@@ -170,9 +190,9 @@ pub fn retention_plan(
             let past_deadline = superseded_at
                 .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
             if revision < first_kept || past_deadline {
-                plan.released.push((revision, row.head.content_digest.to_hex()));
+                plan.released.push((SnapshotSlot::Revision(revision), row.head.content_digest.to_hex()));
             } else {
-                plan.held.push((revision, row.content));
+                plan.held.push((SnapshotSlot::Revision(revision), row.content));
             }
         }
     }
@@ -182,9 +202,9 @@ pub fn retention_plan(
                 .resolved_at_ms
                 .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
         if past_deadline {
-            plan.released.push((number, row.content_digest.to_hex()));
+            plan.released.push((SnapshotSlot::Candidate(number), row.content_digest.to_hex()));
         } else {
-            plan.held.push((number, row.content));
+            plan.held.push((SnapshotSlot::Candidate(number), row.content));
         }
     }
     plan
@@ -263,6 +283,14 @@ mod retention_tests {
         }
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R085.4
+    #[test]
+    fn revision_and_candidate_holders_never_share_an_id() {
+        let doc = DocId::new("notes/a.md").unwrap();
+        assert_eq!(SnapshotSlot::Revision(2).holder_id(&doc), "memory_snapshot:notes/a.md@2");
+        assert_eq!(SnapshotSlot::Candidate(2).holder_id(&doc), "memory_snapshot:notes/a.md@c2");
+    }
+
     // spec: MEDULLA-DURABLE-KERNEL-R085.7
     #[test]
     fn a_superseded_revision_releases_after_the_superseding_commit_plus_retention() {
@@ -277,8 +305,8 @@ mod retention_tests {
         assert_eq!(before.held.len(), 2);
         let after = retention_plan(&core, &doc, 15_000, retention_s, 64);
         assert_eq!(after.released.len(), 1);
-        assert_eq!(after.released[0].0, 1);
+        assert_eq!(after.released[0].0, SnapshotSlot::Revision(1));
         // The head never releases on a deadline.
-        assert_eq!(after.held, vec![(2, "content-2".to_string())]);
+        assert_eq!(after.held, vec![(SnapshotSlot::Revision(2), "content-2".to_string())]);
     }
 }

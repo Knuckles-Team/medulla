@@ -13,7 +13,7 @@
 
 use super::memory_cursor;
 use medulla_graph_core::memory_snapshot as store;
-use medulla_graph_core::memory_snapshot::{AckRow, CandidateRow, RevisionRow};
+use medulla_graph_core::memory_snapshot::{AckRow, CandidateRow, RevisionRow, SnapshotSlot};
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
     decide, revision_node_id, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySnapshotList,
@@ -431,7 +431,7 @@ pub fn content_change(
     }
 }
 
-/// The revision number and bytes a planned sync will store in the graph and that
+/// The slot (revision or candidate) and bytes a planned sync will store in the graph and that
 /// the blob holder must keep (MEDULLA-DURABLE-KERNEL-R085.7): the new head or
 /// retained revision after `Accepted` or `Resolved`, the retained candidate
 /// after `ConflictRetained`. `None` for an outcome that stores no content. It
@@ -440,7 +440,7 @@ pub fn planned_content(
     plan: &SnapshotPlan,
     doc: &DocId,
     outcome: &SyncOutcome,
-) -> Option<(u64, String)> {
+) -> Option<(SnapshotSlot, String)> {
     let written = |node_id: String| {
         plan.writes
             .iter()
@@ -450,7 +450,7 @@ pub fn planned_content(
     match outcome {
         SyncOutcome::Accepted { head } | SyncOutcome::Resolved { head } => {
             let bytes = written(revision_node_id(doc, head.revision))?;
-            store::decode_row::<RevisionRow>(bytes).map(|row| (head.revision, row.content))
+            store::decode_row::<RevisionRow>(bytes).map(|row| (SnapshotSlot::Revision(head.revision), row.content))
         }
         SyncOutcome::ConflictRetained {
             candidate_revision, ..
@@ -459,7 +459,7 @@ pub fn planned_content(
                 "{}{candidate_revision}",
                 store::candidate_prefix(doc)
             ))?;
-            store::decode_row::<CandidateRow>(bytes).map(|row| (*candidate_revision, row.content))
+            store::decode_row::<CandidateRow>(bytes).map(|row| (SnapshotSlot::Candidate(*candidate_revision), row.content))
         }
         _ => None,
     }
