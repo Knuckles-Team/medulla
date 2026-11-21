@@ -597,6 +597,111 @@ async fn sections_and_links_run() {
     }
 }
 
+// spec: MEDULLA-REPO-INGEST-R652.4
+#[test]
+fn oversized_and_invalid_tree_refuse_without_writes() {
+    test_support::on_engine(oversized_and_invalid_tree_run);
+}
+
+async fn oversized_and_invalid_tree_run() {
+    use medulla_document::processing::SectionTreeCheck;
+    let (_dir, _backend, state) = durable_graph().await;
+    // One byte above the default `document_max_bytes` of 64 MiB.
+    let text = "a".repeat(67_108_864 + 1);
+    add_document(
+        &state,
+        2,
+        "doc:huge",
+        &text,
+        "https://example.org/huge",
+        NOW,
+        "sha256:ff",
+    )
+    .await;
+    let version = graph_version(&state);
+    let refused = test_support::dispatch(
+        &state,
+        test_support::request(
+            SECRET,
+            3,
+            GRAPH,
+            Method::EnrichDocument {
+                request: Box::new(EnrichDocumentRequest {
+                    document_id: "doc:huge".into(),
+                    text_property: None,
+                    fetch_backend: None,
+                    max_chunk_bytes: None,
+                    overlap_bytes: None,
+                    alignment: None,
+                }),
+            },
+        ),
+    )
+    .await;
+    assert!(format!("{:?}", refused.error).contains("DOCUMENT_TOO_LARGE"));
+    assert_eq!(graph_version(&state), version, "a refusal writes nothing");
+
+    // Anything but `Valid` refuses before `lower`.
+    assert!(medulla_h_ingest::web_ingest::check_tree(SectionTreeCheck::Valid).is_ok());
+    for check in [
+        SectionTreeCheck::Overlap,
+        SectionTreeCheck::Gap,
+        SectionTreeCheck::OutOfBounds,
+    ] {
+        let error = medulla_h_ingest::web_ingest::check_tree(check).unwrap_err();
+        assert!(error.starts_with("SECTION_TREE_INVALID"), "{error}");
+    }
+}
+
+// spec: MEDULLA-REPO-INGEST-R652.5
+#[test]
+fn processed_document_reads_back() {
+    test_support::on_engine(processed_document_reads_back_run);
+}
+
+async fn processed_document_reads_back_run() {
+    let (_dir, _backend, state) = durable_graph().await;
+    let text = page_text("");
+    add_document(
+        &state,
+        2,
+        "doc:evidence",
+        &text,
+        "https://example.org/evidence",
+        NOW,
+        "sha256:ab",
+    )
+    .await;
+    let receipt = enrich(&state, 3, "doc:evidence", FetchBackend::Webarchiver).await;
+    let digest_hex = receipt.content_digest.trim_start_matches("sha256:").to_string();
+    let node = format!("processed-document:doc:evidence:{}", &digest_hex[..32]);
+    // A principal other than the enriching one reads the record back.
+    let response = test_support::dispatch(
+        &state,
+        common::signed_request_as(
+            SECRET,
+            4,
+            GRAPH,
+            "root",
+            Method::GetNodeProperties {
+                node_id: node.clone(),
+            },
+        ),
+    )
+    .await;
+    let props = match response.result {
+        Some(ResultPayload::Raw(bytes)) => {
+            medulla_types::msgpack::decode_property_value(&bytes).unwrap()
+        }
+        Some(ResultPayload::Json(value)) => value,
+        other => panic!("unexpected payload {other:?} for {node}"),
+    };
+    assert_eq!(props["type"], "ProcessedDocument");
+    assert_eq!(props["chunk_count"], receipt.chunk_count);
+    assert_eq!(props["coverage_milli"], 1000);
+    assert_eq!(props["tree_check"], "valid");
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.4
 #[test]
 fn test_web_document_refusals() {

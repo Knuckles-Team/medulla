@@ -369,6 +369,15 @@ pub const DEFAULT_PROCESS_DOCUMENT_MAX_DEPTH: u32 = 64;
 /// Accepted range of `process_document_max_depth`.
 pub const PROCESS_DOCUMENT_MAX_DEPTH_RANGE: std::ops::RangeInclusive<u32> = 8..=256;
 
+/// Default bound on one document an `EnrichDocument` reads, in bytes (MEDULLA-REPO-INGEST-R652.4).
+pub const DEFAULT_DOCUMENT_MAX_BYTES: u64 = 67_108_864;
+/// Accepted range of `document_max_bytes`.
+pub const DOCUMENT_MAX_BYTES_RANGE: std::ops::RangeInclusive<u64> = 1_048_576..=1_073_741_824;
+
+fn default_document_max_bytes() -> u64 {
+    DEFAULT_DOCUMENT_MAX_BYTES
+}
+
 fn default_process_document_max_bytes() -> u64 {
     DEFAULT_PROCESS_DOCUMENT_MAX_BYTES
 }
@@ -502,6 +511,9 @@ pub struct SchedulerConfig {
     /// Most nodes of one process compiled from the graph (MEDULLA-CQ-ORCH-R700.2).
     #[serde(default = "default_process_compile_max_nodes")]
     pub process_compile_max_nodes: u64,
+    /// Largest document `EnrichDocument` reads, in bytes (MEDULLA-REPO-INGEST-R652.4).
+    #[serde(default = "default_document_max_bytes")]
+    pub document_max_bytes: u64,
     /// Largest process document read, in bytes.
     #[serde(default = "default_process_document_max_bytes")]
     pub process_document_max_bytes: u64,
@@ -758,6 +770,11 @@ impl SchedulerConfig {
         }
         if !PROCESS_COMPILE_MAX_NODES_RANGE.contains(&self.process_compile_max_nodes) {
             return Err(InvalidSchedulerConfig::ProcessCompileMaxNodesOutOfRange);
+        }
+        if !DOCUMENT_MAX_BYTES_RANGE.contains(&self.document_max_bytes) {
+            return Err(InvalidSchedulerConfig::ProcessDocumentBoundOutOfRange(
+                "document_max_bytes",
+            ));
         }
         if !PROCESS_DOCUMENT_MAX_BYTES_RANGE.contains(&self.process_document_max_bytes) {
             return Err(InvalidSchedulerConfig::ProcessDocumentBoundOutOfRange(

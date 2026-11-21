@@ -94,9 +94,12 @@ async fn enrich(
         .iter()
         .map(|class| medulla_h_ingest::ingestion_admission::class_label(*class))
         .collect();
+    let max_bytes = medulla_server_api::knob_config::knobs().scheduler_document_max_bytes;
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
+        web::check_document_size(&document, max_bytes)?;
         let spans = web::chunks(&document, &config)?;
         let (sections, tree_check) = web::sections(&document);
+        web::check_tree(tree_check)?;
         let links = medulla_document::processing::extract_link_anchors(&document.text);
         let known: std::collections::BTreeSet<String> = reusable.keys().cloned().collect();
         let decided = web::decide_spans(&document, spans, &knobs, &known, &demoted);

@@ -44,6 +44,7 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         history_max_files_per_commit: 200,
         process_import_max_elements: 100_000,
         process_compile_max_nodes: 100_000,
+        document_max_bytes: 67_108_864,
         process_document_max_bytes: 16 * 1024 * 1024,
         process_document_max_depth: 64,
         changeset_max_blob_bytes:

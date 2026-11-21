@@ -214,6 +214,10 @@ closed_error_codes! {
         DocumentDeleteUnavailable => "DOCUMENT_DELETE_UNAVAILABLE",
         DocumentHasReferences => "DOCUMENT_HAS_REFERENCES",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
+        /// MEDULLA-REPO-INGEST-R652.4: a document above `SchedulerConfig.document_max_bytes`.
+        DocumentTooLarge => "DOCUMENT_TOO_LARGE",
+        /// MEDULLA-REPO-INGEST-R652.4: a section tree `verify_section_tree` does not call valid.
+        SectionTreeInvalid => "SECTION_TREE_INVALID",
         // MEDULLA-DECISION-ENGINE-R153.4: the ReadSpan refusals.
         // MEDULLA-CQ-ORCH-R705.8: the architecture exchange refusals.
         ArchimateDocMalformed => "ARCHIMATE_DOC_MALFORMED",

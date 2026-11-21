@@ -917,6 +917,31 @@ pub fn kept_vectors(
     Ok(out)
 }
 
+/// Refuse a Document whose text is above `max_bytes` (MEDULLA-REPO-INGEST-R652.4).
+pub fn check_document_size(document: &HeldDocument, max_bytes: u64) -> Result<(), String> {
+    if document.text.len() as u64 > max_bytes {
+        return Err(format!(
+            "DOCUMENT_TOO_LARGE: {} bytes is above the limit of {max_bytes}",
+            document.text.len()
+        ));
+    }
+    Ok(())
+}
+
+/// Refuse a section tree `verify_section_tree` does not call valid (MEDULLA-REPO-INGEST-R652.4).
+pub fn check_tree(check: SectionTreeCheck) -> Result<(), String> {
+    match check {
+        SectionTreeCheck::Valid => Ok(()),
+        other => Err(format!(
+            "SECTION_TREE_INVALID: the section tree is {}",
+            serde_json::to_value(other)
+                .ok()
+                .and_then(|value| value.as_str().map(str::to_string))
+                .unwrap_or_default()
+        )),
+    }
+}
+
 /// Chunk a held Document's text under `config`.
 pub fn chunks(document: &HeldDocument, config: &ChunkingConfig) -> Result<Vec<ChunkSpan>, String> {
     chunk_text(&document.text, config)

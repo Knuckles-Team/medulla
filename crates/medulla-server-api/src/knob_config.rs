@@ -900,6 +900,8 @@ knobs! {
     scheduler_process_import_max_elements: u64 = "scheduler.process_import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Scheduler: Most nodes of one process compiled from the graph. (MEDULLA-CQ-ORCH-R700.2).
     scheduler_process_compile_max_nodes: u64 = "scheduler.process_compile_max_nodes", U64(100_000), [100, 1_000_000], "nodes", Tunable;
+    /// Scheduler: Largest document an `EnrichDocument` reads. (MEDULLA-REPO-INGEST-R652.4).
+    scheduler_document_max_bytes: u64 = "scheduler.document_max_bytes", U64(67_108_864), [1_048_576, 1_073_741_824], "bytes", Tunable;
     /// Scheduler: Largest process document read. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_process_document_max_bytes: u64 = "scheduler.process_document_max_bytes", U64(16_777_216), [65_536, 268_435_456], "bytes", Tunable;
     /// Scheduler: Deepest element nesting of a process document. (MEDULLA-DURABLE-KERNEL-R076.2).
@@ -1156,6 +1158,7 @@ pub fn scheduler_config_from(
         history_max_files_per_commit: knobs.scheduler_history_max_files_per_commit,
         process_import_max_elements: knobs.scheduler_process_import_max_elements,
         process_compile_max_nodes: knobs.scheduler_process_compile_max_nodes,
+        document_max_bytes: knobs.scheduler_document_max_bytes,
         process_document_max_bytes: knobs.scheduler_process_document_max_bytes,
         process_document_max_depth: knobs.scheduler_process_document_max_depth,
         changeset_max_blob_bytes: knobs.scheduler_changeset_max_blob_bytes,
