@@ -420,6 +420,20 @@ async fn dispatch_identity_and_access_methods_arm_2(
         identity_bootstrap,
     } = ctx;
     match method {
+        Method::RbacAdmin {
+            op: op @ (medulla_identity_types::acl::RbacAdminOp::ShareGrant(_)
+            | medulla_identity_types::acl::RbacAdminOp::ShareRevoke(_)),
+        } => {
+            // A share commits through the graph gateway of the request's graph
+            // (MEDULLA-IDENTITY-R023.13.3), not through the RBAC image.
+            dispatch_boxed(super::share::apply_share_op(
+                state,
+                req,
+                verified_context,
+                op,
+            ))
+            .await
+        }
         Method::RbacAdmin { op } => {
             let actor = verified_context.principal();
             dispatch_boxed(apply_rbac_admin(state, req.id, op, actor)).await

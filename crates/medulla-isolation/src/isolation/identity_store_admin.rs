@@ -259,6 +259,9 @@ impl IsolationLayer {
             // A resource grant never touches the RBAC image the store owns.
             RbacAdminOp::GrantResource(grant) => (grant.grant_id.clone(), false),
             RbacAdminOp::RevokeResource { grant_id } => (grant_id.clone(), false),
+            // A share never touches the RBAC image: the share transition commits
+            // it through the graph gateway (MEDULLA-IDENTITY-R023.13.3).
+            RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) => return Ok(false),
             RbacAdminOp::List => return Ok(false),
         };
         if touches_store {
@@ -292,7 +295,9 @@ impl IsolationLayer {
                     }
                     Ok(())
                 }
-                RbacAdminOp::List => Ok(()),
+                RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) | RbacAdminOp::List => {
+                    Ok(())
+                }
             },
         )?;
         Ok(changed)

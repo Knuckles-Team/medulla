@@ -233,6 +233,8 @@ method_results! {
     RbacRemoveGrant(RbacAdmin / "RemoveGrant") => Json<RbacGrantRemoval>;
     RbacGrantResource(RbacAdmin / "GrantResource") => Text<String>;
     RbacRevokeResource(RbacAdmin / "RevokeResource") => Text<String>;
+    RbacShareGrant(RbacAdmin / "ShareGrant") => Text<String>;
+    RbacShareRevoke(RbacAdmin / "ShareRevoke") => Text<String>;
     RbacList(RbacAdmin / "List") => Json<RbacPolicyListing>;
     // EH-404: every write answers the lease as it now stands; `list` answers
     // the caller's visible leases with their status at the engine's clock.

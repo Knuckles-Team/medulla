@@ -22187,6 +22187,18 @@ class RbacAdminOpRevokeResource(BaseModel):
     RevokeResource: RbacAdminOpRevokeResourceBody
 
 
+class RbacAdminOpShareGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ShareGrant: ShareGrant
+
+
+class RbacAdminOpShareRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ShareRevoke: ShareRevoke
+
+
 class RbacAdminOpAddGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30982,6 +30994,8 @@ RbacAdminOp = (
     | RbacAdminOpRemoveGrant
     | RbacAdminOpGrantResource
     | RbacAdminOpRevokeResource
+    | RbacAdminOpShareGrant
+    | RbacAdminOpShareRevoke
     | Literal["List"]
 )
 
@@ -35191,6 +35205,21 @@ class ShareScope(str, Enum):
     TENANT = "tenant"
 
 
+class ShareGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    commons: bool = False
+    grantees: Annotated[list[str], Field(max_length=64)]
+    node_id: str
+    scope: ShareScope
+
+
+class ShareRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+
+
 class StoredQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -39174,6 +39203,8 @@ __all__ = [
     "RbacAdminOpAddRole",
     "RbacAdminOpRemoveGrant",
     "RbacAdminOpRemoveRole",
+    "RbacAdminOpShareGrant",
+    "RbacAdminOpShareRevoke",
     "RbacElevationOp",
     "RbacElevationOpApprove",
     "RbacElevationOpList",
@@ -40371,6 +40402,8 @@ __all__ = [
     "SemanticEnrichOpClassify",
     "SemanticEnrichOpProject",
     "SemanticEnrichOpRankProposals",
+    "ShareGrant",
+    "ShareRevoke",
     "ShareScope",
     "SourceCoverageFacet",
     "StatePart",

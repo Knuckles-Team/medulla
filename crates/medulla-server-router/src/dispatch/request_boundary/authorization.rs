@@ -382,6 +382,25 @@ fn check_batch_inner_scopes(
     Ok(())
 }
 
+/// Whether a method is one of the share operations of `RbacAdmin`.
+fn is_share_op(method: &Method) -> bool {
+    #[cfg(feature = "security")]
+    {
+        use medulla_identity_types::acl::RbacAdminOp;
+        matches!(
+            method,
+            Method::RbacAdmin {
+                op: RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_)
+            }
+        )
+    }
+    #[cfg(not(feature = "security"))]
+    {
+        let _ = method;
+        false
+    }
+}
+
 pub async fn check_scope_and_admin_authority(
     state: &Arc<RwLock<ServerState>>,
     req: &Request,
@@ -396,8 +415,13 @@ pub async fn check_scope_and_admin_authority(
     // backend sees the request.  Only an explicitly privileged aggregate reader
     // (for reconciliation) or `kg:admin` may inspect another tenant's rows.
     check_cross_tenant_scope(req, verified_context, authority)?;
+    // A share is authorized by its owner or a `kg:admin` holder inside the share
+    // transition, so it is exempt from the admin scope that gates the rest of
+    // `RbacAdmin` (MEDULLA-IDENTITY-R023.13.3).
+    let share_op = is_share_op(&req.method);
     if !authority.state_machine_authorized
         && !authority.identity_bootstrap
+        && !share_op
         && !ledger_allows(req, verified_context, action, mutates)
     {
         medulla_kernel::metrics::process().access_denied();
@@ -416,6 +440,7 @@ pub async fn check_scope_and_admin_authority(
     if !authority.state_machine_authorized
         && is_admin_authz_action(action)
         && !authority.identity_bootstrap
+        && !share_op
     {
         let s = timed_read(state).await;
         let result = require_admin_capability(&s.isolation, req.agent_id.as_deref(), action);

@@ -692,6 +692,12 @@ fn rbac_admin_response(
                 .map(drop),
             "resource_revoked",
         ),
+        // Served by `share::apply_share_op` before this function is reached: a
+        // share never touches the RBAC image (MEDULLA-IDENTITY-R023.13.3).
+        RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) => Response::err(
+            req_id,
+            "INVALID_ARGUMENT: a share commits through the graph gateway, not the RBAC image",
+        ),
         RbacAdminOp::RemoveGrant(grant) => {
             match s
                 .isolation

@@ -30,6 +30,7 @@ mod refusal_contract;
 mod resource_access;
 mod resolution_context;
 mod revocation;
+mod share_grant;
 mod stale_verdict;
 mod workstream;
 

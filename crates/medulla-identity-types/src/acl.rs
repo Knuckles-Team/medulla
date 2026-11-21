@@ -273,6 +273,12 @@ pub enum RbacAdminOp {
         /// The `rgrant:` id of the grant to remove.
         grant_id: String,
     },
+    /// Share one node: set its scope and grantees, or promote it to the commons
+    /// (MEDULLA-IDENTITY-R023.13.3). Served by the share transition, never by the
+    /// RBAC image.
+    ShareGrant(ShareGrant),
+    /// Withdraw every share of one node (MEDULLA-IDENTITY-R023.13.3).
+    ShareRevoke(ShareRevoke),
     /// Read-only: list the current roles + grants.
     List,
 }
@@ -482,6 +488,7 @@ struct ShareGrantWire {
 
 /// Share one node with a scope: private, the owner's tenant, or named grantees.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields, try_from = "ShareGrantWire")]
 pub struct ShareGrant {
     pub node_id: String,
@@ -549,6 +556,7 @@ impl ShareGrant {
 
 /// Withdraw every share of one node.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ShareRevoke {
     pub node_id: String,
