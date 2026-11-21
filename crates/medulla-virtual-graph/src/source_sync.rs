@@ -162,6 +162,29 @@ pub struct SyncMutation {
     pub properties: Map<String, Value>,
 }
 
+/// What an adapter says about one source record before it is reconciled
+/// (MEDULLA-TYPED-PACKS-R110.6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordScreen {
+    /// Whether the record belongs to the class being synced.
+    pub accepted: bool,
+    /// The source type of an accepted record.
+    pub type_name: Option<String>,
+    /// The source types in the record that no catalog class carries, sorted and
+    /// without repeats. A refused record lists its own type.
+    pub unmapped_types: Vec<String>,
+}
+
+impl Default for RecordScreen {
+    fn default() -> Self {
+        Self {
+            accepted: true,
+            type_name: None,
+            unmapped_types: Vec::new(),
+        }
+    }
+}
+
 /// What one class of records supplies to a sync. Adapters are shared data
 /// read from async handlers, so they are `Send + Sync`.
 pub trait SyncAdapter: Send + Sync {
@@ -177,6 +200,16 @@ pub trait SyncAdapter: Send + Sync {
     /// like `record_key` and shaped like a source record, rebuilt from the
     /// visible nodes.
     fn graph_records(&self, nodes: &plan::GraphNodes) -> std::collections::BTreeMap<String, Value>;
+    /// Whether a source record belongs to the synced class, and which of its types
+    /// no catalog class carries. `plan_sync` is the one place that applies it.
+    fn screen(&self, _record: &Value) -> RecordScreen {
+        RecordScreen::default()
+    }
+    /// Whether the source store holds a newer version of a record than the graph's
+    /// last synced one.
+    fn version_ahead(&self, _graph: &Value, _source: &Value) -> bool {
+        false
+    }
 }
 
 /// The three-way rule over `base`, `graph` and `source` digests (`None` is

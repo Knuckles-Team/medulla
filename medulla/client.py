@@ -7467,8 +7467,11 @@ class GraphOperationsClient:
         calls the source. Source-only changes and the sync state commit as one batch.
         Graph-side changes are queued as write-back proposals for approval.
         Returns ``{connection_iri, class_iri, unchanged, applied, proposed,
-        conflicts, outbound, queued, queue_id}``; ``queue_id`` names the write-back
-        queue an approver approves and releases. A secondary the authority rows do not
+        conflicts, outbound, queued, queue_id, skipped, by_type}``; ``queue_id`` names
+        the write-back queue an approver approves and releases. Each conflict carries a
+        ``reason`` (``both_changed`` or ``source_version_ahead``); ``skipped`` lists the
+        source types no catalog class carries, each with its first record key and count
+        (MEDULLA-TYPED-PACKS-R110.6), and ``by_type`` counts the accepted records per type. A secondary the authority rows do not
         name, a class without a system of record or an adapter, or a change the
         direction forbids is refused with its ``SYNC_*`` code and writes nothing.
         """

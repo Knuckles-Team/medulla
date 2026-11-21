@@ -2,7 +2,35 @@
 //! records each decision touched, the conflicts with both digests, and the
 //! outbound changes the router queues as write-back proposals.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
+
+/// Why a sync lists a record among its conflicts (MEDULLA-TYPED-PACKS-R110.6). A kind
+/// set at construction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum SyncConflictReason {
+    /// Both sides changed the record since the last sync.
+    BothChanged,
+    /// Only the graph changed, but the source store holds a newer version.
+    SourceVersionAhead,
+}
+
+/// One source type the sync left out, with the first record key that carried it and
+/// how many records carried it (MEDULLA-TYPED-PACKS-R110.6).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SyncSkippedType {
+    /// The source type name no catalog class carries.
+    pub type_name: String,
+    /// The first record key (in key order) that carried the type.
+    pub first_key: String,
+    /// The records that carried the type.
+    pub count: u64,
+}
 
 /// One record both sides changed.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,6 +45,8 @@ pub struct SyncConflictEntry {
     pub source_digest: Option<String>,
     /// The `vg:conflictRule` literal that was applied.
     pub rule: String,
+    /// Why the record is listed.
+    pub reason: SyncConflictReason,
 }
 
 /// One graph change to propose to the source. Sync never writes to a source;
@@ -58,4 +88,10 @@ pub struct SyncReport {
     /// queues, and when nothing is proposed.
     #[serde(default)]
     pub queue_id: Option<String>,
+    /// Source types the sync left out, sorted by type name (MEDULLA-TYPED-PACKS-R110.6).
+    #[serde(default)]
+    pub skipped: Vec<SyncSkippedType>,
+    /// Accepted source records per source type (MEDULLA-TYPED-PACKS-R110.6).
+    #[serde(default)]
+    pub by_type: BTreeMap<String, u64>,
 }

@@ -5,13 +5,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_source_types::source_sync::{OutboundDraft, SyncConflictEntry, SyncReport};
+use medulla_source_types::source_sync::{
+    OutboundDraft, SyncConflictEntry, SyncConflictReason, SyncReport, SyncSkippedType,
+};
 use medulla_types::contract::Digest256;
 use serde_json::{Map, Value};
 
 use super::{
     reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule, SyncAction,
-    SyncAdapter, SyncMutation, SyncOutcome, SYNC_STATE_CLASS,
+    RecordScreen, SyncAdapter, SyncMutation, SyncOutcome, SYNC_STATE_CLASS,
 };
 
 /// Every visible graph node: id to its decoded property map.
@@ -62,17 +64,42 @@ pub fn plan_sync(
     nodes: &GraphNodes,
     now_ms: u64,
 ) -> Result<SyncPlan, String> {
-    let mut source: BTreeMap<String, (&Value, String)> = BTreeMap::new();
+    // Every record is keyed and screened once. The adapter's screen leaves out
+    // records of another class and names each source type no catalog class carries
+    // (MEDULLA-TYPED-PACKS-R110.6).
+    let mut screened: BTreeMap<String, (&Value, RecordScreen)> = BTreeMap::new();
     for record in source_records {
         let key = adapter
             .record_key(record)
             .ok_or_else(|| "INVALID_ARGUMENT: a source record has no key".to_string())?;
-        let digest = adapter.record_digest(record);
-        if source.insert(key.clone(), (record, digest)).is_some() {
+        let screen = adapter.screen(record);
+        if screened.insert(key.clone(), (record, screen)).is_some() {
             return Err(format!(
                 "INVALID_ARGUMENT: the source holds two records with key {key}"
             ));
         }
+    }
+    let mut source: BTreeMap<String, (&Value, String)> = BTreeMap::new();
+    let mut skipped: BTreeMap<String, SyncSkippedType> = BTreeMap::new();
+    let mut by_type: BTreeMap<String, u64> = BTreeMap::new();
+    for (key, (record, screen)) in &screened {
+        for type_name in &screen.unmapped_types {
+            skipped
+                .entry(type_name.clone())
+                .and_modify(|entry| entry.count += 1)
+                .or_insert_with(|| SyncSkippedType {
+                    type_name: type_name.clone(),
+                    first_key: key.clone(),
+                    count: 1,
+                });
+        }
+        if !screen.accepted {
+            continue;
+        }
+        if let Some(type_name) = &screen.type_name {
+            *by_type.entry(type_name.clone()).or_insert(0) += 1;
+        }
+        source.insert(key.clone(), (*record, adapter.record_digest(record)));
     }
     let graph = adapter.graph_records(nodes);
     let graph_digests: BTreeMap<&String, String> = graph
@@ -94,6 +121,8 @@ pub fn plan_sync(
         outbound: Vec::new(),
         queued: Vec::new(),
         queue_id: None,
+        skipped: skipped.into_values().collect(),
+        by_type,
     };
     for key in keys {
         let base = bases.get(key).map(String::as_str);
@@ -110,12 +139,27 @@ pub fn plan_sync(
             }
             SyncAction::ProposeOutbound | SyncAction::Conflict { .. } => {}
         }
-        if let SyncAction::Conflict { .. } = &action {
+        // A graph-only change over a source store that moved on is still proposed;
+        // the report names it so the approver sees the version it would replace.
+        let source_ahead = matches!(action, SyncAction::ProposeOutbound)
+            && match (graph.get(key), source.get(key)) {
+                (Some(graph_record), Some((source_record, _))) => {
+                    adapter.version_ahead(graph_record, source_record)
+                }
+                _ => false,
+            };
+        let conflict_reason = match &action {
+            SyncAction::Conflict { .. } => Some(SyncConflictReason::BothChanged),
+            _ if source_ahead => Some(SyncConflictReason::SourceVersionAhead),
+            _ => None,
+        };
+        if let Some(reason) = conflict_reason {
             report.conflicts.push(SyncConflictEntry {
                 record_key: key.clone(),
                 graph_digest: graph_digest.map(str::to_string),
                 source_digest: source_digest.map(str::to_string),
                 rule: rule_literal.to_string(),
+                reason,
             });
         }
         if action.proposes_outbound() {

@@ -359,3 +359,72 @@ async fn sync_reads_terms_and_writes_catalog_nodes() {
     assert_eq!(nodes["term-2"]["displayName"], "Purchase order");
     assert_eq!(nodes["term-2"][EXTERNAL_VERSION_PROPERTY], 2);
 }
+
+// spec: MEDULLA-TYPED-PACKS-R110.6
+#[tokio::test]
+async fn unmapped_types_are_listed_and_skipped() {
+    let h = Harness::new().await;
+    let mut records = terms();
+    // A third term with the same unmapped classification, and two records of a
+    // type no catalog class carries.
+    records.push(json!({
+        "guid": "term-3",
+        "type_name": "GlossaryTerm",
+        "version": 1,
+        "update_time_ms": 1_700_000_002_000_i64,
+        "properties": {"displayName": "Invoice"},
+        "classifications": [{"type_name": "NotInTheCatalog", "properties": {"x": 2}}],
+        "relationships": [],
+    }));
+    for guid in ["other-1", "other-2"] {
+        records.push(json!({
+            "guid": guid,
+            "type_name": "UnmappedAsset",
+            "version": 1,
+            "update_time_ms": 1_700_000_003_000_i64,
+            "properties": {"displayName": guid},
+            "classifications": [],
+            "relationships": [],
+        }));
+    }
+
+    let report = h.sync(&records).await;
+
+    // The other terms apply; the records of the other type are neither applied
+    // nor counted.
+    assert_eq!(
+        (report.unchanged, report.applied, report.proposed),
+        (0, 3, 0)
+    );
+    assert!(report.conflicts.is_empty());
+    assert_eq!(
+        report.by_type,
+        BTreeMap::from([("GlossaryTerm".to_string(), 3)])
+    );
+
+    // Each unmapped type is listed once, with its first key and its count.
+    let listed: Vec<(&str, &str, u64)> = report
+        .skipped
+        .iter()
+        .map(|skip| {
+            (
+                skip.type_name.as_str(),
+                skip.first_key.as_str(),
+                skip.count,
+            )
+        })
+        .collect();
+    assert_eq!(
+        listed,
+        vec![
+            ("NotInTheCatalog", "term-1", 2),
+            ("UnmappedAsset", "other-1", 2),
+        ]
+    );
+
+    let nodes = h.nodes().await;
+    assert!(nodes.contains_key("term-1"));
+    assert!(nodes.contains_key("term-3"));
+    assert!(!nodes.contains_key("other-1"));
+    assert!(!nodes.contains_key("other-2"));
+}

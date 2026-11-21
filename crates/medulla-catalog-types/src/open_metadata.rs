@@ -88,6 +88,15 @@ pub use inbound::{
 };
 pub use outbound::{outbound_record, OutboundNode};
 
+/// Report code: a source type no catalog class carries (MEDULLA-TYPED-PACKS-R110.6). It is a
+/// code of the sync report, not a request refusal: the other records still sync.
+pub const METADATA_TYPE_UNMAPPED: &str = "METADATA_TYPE_UNMAPPED";
+/// Report code: the source store holds a newer version of a record than the graph's last
+/// synced one (MEDULLA-TYPED-PACKS-R110.6).
+pub const METADATA_VERSION_CONFLICT: &str = "METADATA_VERSION_CONFLICT";
+/// The report codes of the open metadata sync.
+pub const REFUSALS: [&str; 2] = [METADATA_TYPE_UNMAPPED, METADATA_VERSION_CONFLICT];
+
 /// Why an open metadata record could not be mapped.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum OpenMetadataError {
@@ -105,6 +114,15 @@ pub enum OpenMetadataError {
         /// The unmapped catalog class IRI.
         class_iri: String,
     },
+}
+
+impl OpenMetadataError {
+    /// The report code of this error.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::TypeUnmapped { .. } | Self::ClassUnmapped { .. } => METADATA_TYPE_UNMAPPED,
+        }
+    }
 }
 
 #[cfg(test)]

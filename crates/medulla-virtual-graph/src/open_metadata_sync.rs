@@ -25,7 +25,7 @@ use medulla_catalog_types::open_metadata::{
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
-use crate::source_sync::{GraphNodes, SyncAdapter, SyncMutation};
+use crate::source_sync::{GraphNodes, RecordScreen, SyncAdapter, SyncMutation};
 
 /// Syncs the records of one catalog class annotated with an open metadata type.
 #[derive(Clone, Debug)]
@@ -217,6 +217,37 @@ impl SyncAdapter for OpenMetadataSyncAdapter {
         proposed.classifications = mapped.classifications;
         proposed.relationships = mapped.relationships;
         serde_json::to_value(proposed).unwrap_or(Value::Null)
+    }
+
+    fn screen(&self, record: &Value) -> RecordScreen {
+        let type_name = text(record, "type_name");
+        if self.view.type_for(&self.class_iri) != Some(type_name) {
+            return RecordScreen {
+                accepted: false,
+                type_name: None,
+                unmapped_types: Some(type_name)
+                    .filter(|name| !name.is_empty())
+                    .map(str::to_owned)
+                    .into_iter()
+                    .collect(),
+            };
+        }
+        let unmapped: std::collections::BTreeSet<String> = items(record, "classifications")
+            .chain(items(record, "relationships"))
+            .map(|part| text(part, "type_name"))
+            .filter(|name| !name.is_empty() && self.view.class_for(name).is_none())
+            .map(str::to_owned)
+            .collect();
+        RecordScreen {
+            accepted: true,
+            type_name: Some(type_name.to_owned()),
+            unmapped_types: unmapped.into_iter().collect(),
+        }
+    }
+
+    fn version_ahead(&self, graph: &Value, source: &Value) -> bool {
+        let version = |record: &Value| record.get("version").and_then(Value::as_u64).unwrap_or(0);
+        version(source) > version(graph)
     }
 
     fn graph_records(&self, nodes: &GraphNodes) -> BTreeMap<String, Value> {
