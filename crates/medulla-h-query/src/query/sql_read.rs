@@ -383,6 +383,22 @@ where
     }
 }
 
+/// The cache payload of one served `UnifiedQuery`: the plan bytes, then the retrieval
+/// request bytes when one is set, so two requests that differ only in `retrieval`
+/// never share a cached answer (MEDULLA-FEDERATED-QUERY-R040.1.7).
+#[cfg(feature = "query")]
+pub(crate) fn unified_cache_payload(
+    plan: &medulla_exec::algebra::Plan,
+    retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
+) -> Result<Vec<u8>, String> {
+    let mut payload = msgpack_bytes(plan)?;
+    if let Some(request) = retrieval {
+        payload.extend_from_slice(b"\0retrieval\0");
+        payload.extend_from_slice(&msgpack_bytes(request)?);
+    }
+    Ok(payload)
+}
+
 #[cfg(feature = "query")]
 pub(crate) async fn handle_unified_query(
     ctx: &QueryHandlerCtx<'_>,
@@ -393,6 +409,7 @@ pub(crate) async fn handle_unified_query(
         16,
     >,
     latency_class: medulla_query_types::wire::LatencyClass,
+    retrieval: Option<medulla_index_types::retrieval_request::RetrievalRequest>,
 ) -> Result<Response, Method> {
     let state = ctx.state;
     let req_id = ctx.req_id;
@@ -404,6 +421,13 @@ pub(crate) async fn handle_unified_query(
             req_id,
             "INVALID_ARGUMENT: an analytical query is submitted as a job, not run as a read",
         ));
+    }
+    // MEDULLA-FEDERATED-QUERY-R040.1.7: the retrieval request is validated before any
+    // snapshot is taken; a failing part answers its registered code and runs nothing.
+    if let Some(request) = &retrieval {
+        if let Err(error) = request.validate() {
+            return Ok(Response::err(req_id, error.to_string()));
+        }
     }
     if foreign_execution.is_some() && !foreign_executions.is_empty() {
         return Ok(Response::err(
@@ -462,7 +486,7 @@ pub(crate) async fn handle_unified_query(
     let key = match (foreign_execution.is_none()
         && foreign_executions.is_empty()
         && legs.cache_admissible())
-    .then(|| msgpack_bytes(&plan))
+    .then(|| unified_cache_payload(&plan, retrieval.as_ref()))
     .transpose()
     {
         Ok(bytes) => bytes.map(|bytes| {
@@ -501,7 +525,12 @@ pub(crate) async fn handle_unified_query(
         state,
         req_id,
         &core,
-        UnifiedRead { snap, plan, legs },
+        UnifiedRead {
+            snap,
+            plan,
+            legs,
+            retrieval,
+        },
         &scope,
         move |plan, plan_ctx| {
             let bounded = plan_ctx.clone().with_budget(medulla_exec::budget::Budget {
@@ -641,4 +670,46 @@ pub(super) async fn catalog_sql_response(
         task.abort();
     }
     resp
+}
+
+#[cfg(all(test, feature = "query"))]
+mod retrieval_request_tests {
+    use super::unified_cache_payload;
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_index_types::retrieval_request::RetrievalRequest;
+    use medulla_query_types::wire::{EntityPredicate, PredLiteral, RetrievalConstraints};
+    use medulla_types::contract::BoundedVec;
+
+    fn request(kind: &str) -> RetrievalRequest {
+        RetrievalRequest {
+            constraints: Some(RetrievalConstraints {
+                graph_revision: 0,
+                entity_predicates: BoundedVec::new(vec![EntityPredicate::Eq {
+                    property: "kind".into(),
+                    value: PredLiteral::Str(kind.into()),
+                }])
+                .unwrap(),
+                relationship_predicates: Default::default(),
+            }),
+            topic: None,
+            modality: None,
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.7
+    #[test]
+    fn retrieval_request_salts_the_cache_key() {
+        let plan = Plan::new(vec![Op::ScanAll {}]);
+        let bare = unified_cache_payload(&plan, None).unwrap();
+        let person = unified_cache_payload(&plan, Some(&request("person"))).unwrap();
+        let company = unified_cache_payload(&plan, Some(&request("company"))).unwrap();
+        // The served cache hash is a pure function of this payload and the verified legs,
+        // so payloads that differ here never share a cached answer.
+        assert_ne!(bare, person);
+        assert_ne!(person, company);
+        assert_eq!(
+            person,
+            unified_cache_payload(&plan, Some(&request("person"))).unwrap()
+        );
+    }
 }

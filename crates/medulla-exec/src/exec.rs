@@ -259,6 +259,10 @@ pub struct PlanCtx<'a> {
     /// retrieval constraints (`None`: nothing is constrained). A ranking step takes
     /// it as an id filter, so an excluded candidate never reaches a ranked result.
     pub constraints: Option<constraints::ConstraintSet>,
+    /// MEDULLA-FEDERATED-QUERY-R040.1.7 — the query and target modality the served
+    /// request named (`None`: no modality pair is bound). The rank step compares the
+    /// pair's embedding-space bindings (R039.1.2).
+    pub modality_pair: Option<medulla_index_types::retrieval_request::ModalityPair>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -482,6 +486,7 @@ impl<'a> PlanCtx<'a> {
             principal: None,
             topic_policy: None,
             constraints: None,
+            modality_pair: None,
         }
     }
 
@@ -517,6 +522,16 @@ impl<'a> PlanCtx<'a> {
     /// (MEDULLA-FEDERATED-QUERY-R040.1.2).
     pub fn with_constraints(mut self, constraints: constraints::ConstraintSet) -> Self {
         self.constraints = Some(constraints);
+        self
+    }
+
+    /// Bind the served request's modality pair
+    /// (MEDULLA-FEDERATED-QUERY-R040.1.7).
+    pub fn with_modality_pair(
+        mut self,
+        pair: medulla_index_types::retrieval_request::ModalityPair,
+    ) -> Self {
+        self.modality_pair = Some(pair);
         self
     }
 

@@ -115,6 +115,11 @@ $($variants)*
         /// node budget; `analytical` submits a durable job and answers its record.
         #[serde(default, skip_serializing_if = "medulla_query_types::wire::LatencyClass::is_interactive")]
         latency_class: medulla_query_types::wire::LatencyClass,
+        /// MEDULLA-FEDERATED-QUERY-R040.1.7: the one carrier of hard retrieval
+        /// constraints, topic fusion and the modality pair. Validated before any
+        /// snapshot is taken and bound onto the plan context.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        retrieval: Option<Box<medulla_index_types::retrieval_request::RetrievalRequest>>,
     },
 
 

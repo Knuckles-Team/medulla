@@ -569,6 +569,8 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                retrieval: None,
+                latency_class: Default::default(),
             },
         ),
     ))

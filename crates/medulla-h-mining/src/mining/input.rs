@@ -234,6 +234,7 @@ pub(super) fn gather_plan_rows(
                 staged_series: None,
             },
         },
+        None,
         medulla_server_ops::api::query_txn::query_support::execute_rows,
     ) {
         Ok(rows) => rows,
@@ -295,6 +296,7 @@ pub(super) fn gather_plan_rows_snapshot(
             tsdb_graph: None,
             staged_series: None,
         },
+        None,
         medulla_server_ops::api::query_txn::query_support::execute_rows,
     ) {
         Ok(rows) => rows,

@@ -43,6 +43,7 @@ fn run(
             tsdb_graph: None,
             staged_series: None,
         },
+        None,
         execute_rows,
     )
     .map(|rows| {

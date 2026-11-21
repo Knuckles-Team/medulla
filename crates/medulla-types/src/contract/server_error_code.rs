@@ -258,6 +258,12 @@ closed_error_codes! {
         DurableReadUnavailable => "DURABLE_READ_UNAVAILABLE",
         EmbeddingDimensionMismatch => "EMBEDDING_DIMENSION_MISMATCH",
         EmbeddingSpaceInvalid => "EMBEDDING_SPACE_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R039.1.2: a query and target modality do not bind one embedding space.
+        EmbeddingSpaceIncompatible => "EMBEDDING_SPACE_INCOMPATIBLE",
+        /// MEDULLA-FEDERATED-QUERY-R040.1.7: a retrieval constraint predicate is malformed or unsupported.
+        ConstraintInvalid => "CONSTRAINT_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R040.1.7: a topic bound is out of range (`top_topics` zero, `min_weight` outside `[0, 1]`).
+        TopicWeightInvalid => "TOPIC_WEIGHT_INVALID",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",

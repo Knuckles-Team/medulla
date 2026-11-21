@@ -90,6 +90,8 @@ impl Served {
                 foreign_execution: None,
                 foreign_executions: Default::default(),
                 code_map: None,
+                retrieval: None,
+                latency_class: Default::default(),
             })
             .await;
         test_support::raw_rows(&r)

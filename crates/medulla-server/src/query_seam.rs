@@ -71,6 +71,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
             foreign,
             #[cfg(feature = "tsdb")]
             tsdb_ctx,
+            None,
             medulla_server_ops::api::query_txn::query_support::execute_rows,
         )
     }

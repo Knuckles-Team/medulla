@@ -342,6 +342,7 @@ pub fn run_unified_with<T>(
     semantic: &medulla_semantic_index::semantic::SemanticStore,
     served: ServedIndexes<'_>,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
+    retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
     finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     #[cfg(feature = "tsdb")]
@@ -480,6 +481,12 @@ pub fn run_unified_with<T>(
         Some(shapes) => ctx.with_shape_source(shapes),
         None => ctx,
     };
+    // MEDULLA-FEDERATED-QUERY-R040.1.7 — the served retrieval request binds the
+    // compiled constraints, the topic policy and the modality pair onto the context.
+    let ctx = match retrieval {
+        Some(request) => run_unified_bind_retrieval(ctx, view, request)?,
+        None => ctx,
+    };
     let result = finish(&medulla_exec::algebra::Plan::new(ops), &ctx);
     #[cfg(feature = "federation")]
     log_federation_trace(federation.as_ref());
@@ -562,6 +569,34 @@ pub(crate) fn run_unified_bind_embedder(
         Some(embedder) => ctx.with_embedder(embedder),
         None => ctx,
     }
+}
+
+/// The retrieval-request binding of [`run_unified_with`]
+/// (MEDULLA-FEDERATED-QUERY-R040.1.7): compile the request's hard constraints over
+/// the read view, cut topic fusion by the request's bounds and carry the modality
+/// pair. Only the ranking steps R040.1.3, R040.2.3 and R039.1.3 read what this binds.
+#[cfg(feature = "query")]
+pub(crate) fn run_unified_bind_retrieval<'a>(
+    ctx: medulla_exec::exec::PlanCtx<'a>,
+    view: &medulla_graph_core::graph::GraphView,
+    request: &medulla_index_types::retrieval_request::RetrievalRequest,
+) -> Result<medulla_exec::exec::PlanCtx<'a>, String> {
+    let mut ctx = ctx;
+    if let Some(constraints) = &request.constraints {
+        let set = medulla_exec::exec::constraints::compile_constraints(view, constraints)?;
+        ctx = ctx.with_constraints(set);
+    }
+    if let Some(topic) = &request.topic {
+        let top_topics = usize::try_from(topic.top_topics)
+            .map_err(|_| "topic top_topics exceeds the platform word".to_string())?;
+        let policy =
+            medulla_exec::exec::topic::TopicRankingPolicy::new(top_topics, topic.min_weight)?;
+        ctx = ctx.with_topic_policy(policy);
+    }
+    if let Some(pair) = &request.modality {
+        ctx = ctx.with_modality_pair(pair.clone());
+    }
+    Ok(ctx)
 }
 
 /// The `Op::TsScan` leg-binding of [`run_unified_with`] (CONCEPT:MEDULLA-KG.query.native-time-series): attach the committed
@@ -968,7 +1003,12 @@ pub(crate) async fn run_unified_off_lock(
     legs: ServedPlanLegs,
     scope: &ReadScope,
 ) -> UnifiedRunOutcome {
-    let read = UnifiedRead { snap, plan, legs };
+    let read = UnifiedRead {
+        snap,
+        plan,
+        legs,
+        retrieval: None,
+    };
     run_unified_off_lock_with(state, req_id, core, read, scope, execute_rows).await
 }
 
@@ -978,6 +1018,8 @@ pub(crate) struct UnifiedRead {
     pub(crate) snap: Arc<medulla_graph_core::graph::GraphView>,
     pub(crate) plan: medulla_exec::algebra::Plan,
     pub(crate) legs: ServedPlanLegs,
+    /// MEDULLA-FEDERATED-QUERY-R040.1.7: the served retrieval request, already validated.
+    pub(crate) retrieval: Option<medulla_index_types::retrieval_request::RetrievalRequest>,
 }
 
 /// [`run_unified_off_lock`] with a caller-chosen finisher (see [`run_unified_with`]).
@@ -996,7 +1038,12 @@ where
         + Send
         + 'static,
 {
-    let UnifiedRead { snap, plan, legs } = read;
+    let UnifiedRead {
+        snap,
+        plan,
+        legs,
+        retrieval,
+    } = read;
     // MEDULLA-IDENTITY-R023.3 / R610.3: the one read chokepoint narrows the snapshot to
     // the verified caller's tenant and visible knowledge units, after the row-level
     // security view and before any answer is computed or cached.
@@ -1049,6 +1096,7 @@ where
                 // Off-txn: no staged-series overlay (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your).
                 staged_series: None,
             },
+            retrieval.as_ref(),
             finish,
         )
     })
@@ -1175,6 +1223,7 @@ mod tensor_served_round_trip_tests {
                 tsdb_graph: None,
                 staged_series: None,
             },
+            None,
             execute_rows,
         )
         .map(|rows| {
@@ -1331,6 +1380,7 @@ mod tenant_scope_served_tests {
                 snap,
                 plan,
                 legs: ServedPlanLegs::default(),
+                retrieval: None,
             },
             &scope(tenant),
             execute_rows,
@@ -1481,5 +1531,118 @@ mod tenant_scope_served_tests {
             outcome.is_err(),
             "the unscopable plan refuses before anything runs"
         );
+    }
+}
+
+// MEDULLA-FEDERATED-QUERY-R040.1.7 — the served retrieval request binds the compiled
+// constraints, the topic policy and the modality pair onto the `PlanCtx` `finish` sees.
+#[cfg(all(test, feature = "query"))]
+mod tests {
+    use super::*;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_index_types::embedding::{EmbeddingSpaceRef, Modality, ModalityBinding};
+    use medulla_index_types::retrieval_request::{ModalityPair, RetrievalRequest, TopicRequest};
+    use medulla_query_types::wire::{EntityPredicate, PredLiteral, RetrievalConstraints};
+    use medulla_semantic_index::semantic::SemanticStore;
+    use medulla_types::contract::BoundedVec;
+
+    fn request() -> RetrievalRequest {
+        let space = EmbeddingSpaceRef::pinned("model", "1", "hash", "pre", 8, true)
+            .unwrap()
+            .with_modalities(
+                Modality::ALL
+                    .iter()
+                    .map(|modality| ModalityBinding {
+                        modality: *modality,
+                        encoder: format!("encoder-{modality:?}"),
+                    })
+                    .collect(),
+            )
+            .unwrap();
+        RetrievalRequest {
+            constraints: Some(RetrievalConstraints {
+                graph_revision: 0,
+                entity_predicates: BoundedVec::new(vec![EntityPredicate::Eq {
+                    property: "kind".into(),
+                    value: PredLiteral::Str("person".into()),
+                }])
+                .unwrap(),
+                relationship_predicates: Default::default(),
+            }),
+            topic: Some(TopicRequest {
+                top_topics: 3,
+                min_weight: 0.25,
+                corpus_revision: 5,
+                space,
+            }),
+            modality: Some(ModalityPair {
+                query: Modality::Text,
+                target: Modality::Audio,
+            }),
+        }
+    }
+
+    type Bound = (
+        Option<medulla_exec::exec::constraints::ConstraintSet>,
+        Option<medulla_exec::exec::topic::TopicRankingPolicy>,
+        Option<ModalityPair>,
+    );
+
+    fn bound_by(view: &medulla_graph_core::graph::GraphView, retrieval: Option<&RetrievalRequest>) -> Bound {
+        let semantic = SemanticStore::new();
+        run_unified_with(
+            medulla_exec::algebra::Plan::new(Vec::new()),
+            view,
+            &semantic,
+            ServedIndexes::default(),
+            #[cfg(feature = "tsdb")]
+            TsdbLegBind {
+                tsdb: None,
+                tsdb_tenant: None,
+                tsdb_graph: None,
+                staged_series: None,
+            },
+            retrieval,
+            |_plan, ctx| {
+                Ok((
+                    ctx.constraints.clone(),
+                    ctx.topic_policy,
+                    ctx.modality_pair.clone(),
+                ))
+            },
+        )
+        .unwrap()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.7
+    #[test]
+    fn retrieval_request_binds_plan_ctx() {
+        let core = GraphCore::new();
+        core.add_node(
+            "ada".into(),
+            rmp_serde::to_vec_named(&serde_json::json!({ "kind": "person" })).unwrap(),
+        );
+        core.add_node(
+            "acme".into(),
+            rmp_serde::to_vec_named(&serde_json::json!({ "kind": "company" })).unwrap(),
+        );
+        let view = core.analysis_snapshot();
+        let request = request();
+
+        let (constraints, topic, pair) = bound_by(&view, Some(&request));
+        let expected = medulla_exec::exec::constraints::compile_constraints(
+            &view,
+            request.constraints.as_ref().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(constraints, Some(expected));
+        assert_eq!(
+            topic,
+            Some(medulla_exec::exec::topic::TopicRankingPolicy::new(3, 0.25).unwrap())
+        );
+        assert_eq!(pair, request.modality);
+
+        let (constraints, topic, pair) = bound_by(&view, None);
+        assert!(constraints.is_none() && topic.is_none() && pair.is_none());
     }
 }

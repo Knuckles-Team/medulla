@@ -127,6 +127,8 @@ async fn served_tensor_elementwise_writeback_repeatable_across_requests() {
 
                     foreign_executions: Default::default(),
                     code_map: None,
+                    retrieval: None,
+                    latency_class: Default::default(),
                 },
             ),
         ))

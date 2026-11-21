@@ -6287,6 +6287,7 @@ dependencies = [
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
+ "rmp-serde",
  "schemars 1.2.3",
  "serde",
  "serde_json",

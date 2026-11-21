@@ -78,6 +78,8 @@ async fn read(state: &test_support::SharedState, id: u64, name: &str) -> Respons
         foreign_execution: None,
         foreign_executions: Default::default(),
         code_map: None,
+        retrieval: None,
+        latency_class: Default::default(),
     };
     test_support::dispatch(state, test_support::commons_request(SECRET, id, method)).await
 }

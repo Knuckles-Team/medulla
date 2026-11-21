@@ -19333,6 +19333,7 @@ class MethodUnifiedQueryParams(BaseModel):
     foreign_executions: BoundedVec_ForeignReadExecutionRef_16 | None = None
     latency_class: LatencyClass | None = None
     plan: Plan
+    retrieval: RetrievalRequest | None = None
 
 
 class MethodUnionGetNeighborsParams(BaseModel):
@@ -35873,6 +35874,173 @@ class MemoryExportResult(BaseModel):
     records: list[MemoryRecord]
 
 
+class Modality(str, Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    AUDIO = "audio"
+    VIDEO = "video"
+
+
+class ModalityBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    modality: Modality
+    encoder: str
+
+
+class EmbeddingSpaceRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    revision: str
+    model_hash: str
+    preprocessing_hash: str
+    dimensions: Annotated[int, Field(ge=0)]
+    normalize: bool
+    digest: str
+    modalities: list[ModalityBinding] = Field(default_factory=list)
+
+
+BoundedVec_PredLiteral_256 = Annotated[
+    list[PredLiteral],
+    Field(
+        max_length=256,
+    ),
+]
+
+
+class RelationshipQuantifier(str, Enum):
+    EXISTS = "exists"
+    NOT_EXISTS = "not_exists"
+
+
+class EntityPredicateEq(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["eq"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateNe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["ne"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateLt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["lt"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateLe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["le"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateGt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["gt"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateGe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["ge"]
+    property: str
+    value: PredLiteral
+
+
+class EntityPredicateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    operator: Literal["in"]
+    property: str
+    values: BoundedVec_PredLiteral_256
+
+
+EntityPredicate = Annotated[
+    EntityPredicateEq
+    | EntityPredicateNe
+    | EntityPredicateLt
+    | EntityPredicateLe
+    | EntityPredicateGt
+    | EntityPredicateGe
+    | EntityPredicateIn,
+    Field(discriminator="operator"),
+]
+
+
+BoundedVec_EntityPredicate_64 = Annotated[
+    list[EntityPredicate],
+    Field(
+        max_length=64,
+    ),
+]
+
+
+class RelationshipPredicate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edge_kind: str
+    direction: EdgeDir
+    target: EntityPredicate
+    quantifier: RelationshipQuantifier
+
+
+BoundedVec_RelationshipPredicate_64 = Annotated[
+    list[RelationshipPredicate],
+    Field(
+        max_length=64,
+    ),
+]
+
+
+class RetrievalConstraints(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph_revision: Annotated[int, Field(ge=0)]
+    entity_predicates: BoundedVec_EntityPredicate_64 = Field(default_factory=list)
+    relationship_predicates: BoundedVec_RelationshipPredicate_64 = Field(
+        default_factory=list
+    )
+
+
+class TopicRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    top_topics: Annotated[int, Field(ge=0, le=4294967295)]
+    min_weight: float
+    corpus_revision: Annotated[int, Field(ge=0)]
+    space: EmbeddingSpaceRef
+
+
+class ModalityPair(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    query: Modality
+    target: Modality
+
+
+class RetrievalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    constraints: RetrievalConstraints | None = None
+    topic: TopicRequest | None = None
+    modality: ModalityPair | None = None
+
+
 __all__ = [
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
@@ -40768,6 +40936,26 @@ __all__ = [
     "MethodDomainPackParams",
     "MethodProjectionRead",
     "MethodProjectionReadParams",
+    "Modality",
+    "ModalityBinding",
+    "EmbeddingSpaceRef",
+    "BoundedVec_PredLiteral_256",
+    "RelationshipQuantifier",
+    "EntityPredicateEq",
+    "EntityPredicateNe",
+    "EntityPredicateLt",
+    "EntityPredicateLe",
+    "EntityPredicateGt",
+    "EntityPredicateGe",
+    "EntityPredicateIn",
+    "EntityPredicate",
+    "BoundedVec_EntityPredicate_64",
+    "RelationshipPredicate",
+    "BoundedVec_RelationshipPredicate_64",
+    "RetrievalConstraints",
+    "TopicRequest",
+    "ModalityPair",
+    "RetrievalRequest",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

@@ -142,6 +142,7 @@ impl DocumentEncodingPolicy {
 /// twin of that concept for `medulla-core`'s own `SemanticStore`, which cannot
 /// depend on `medulla-query`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct EmbeddingSpaceRef {
     /// Stable model identifier (e.g. a model name/id from the embedding
     /// provider's own catalog).
@@ -173,6 +174,7 @@ pub struct EmbeddingSpaceRef {
 /// MEDULLA-FEDERATED-QUERY-R039.1.1: a modality one multimodal space embeds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum Modality {
     Text,
     Image,
@@ -194,6 +196,7 @@ impl Modality {
 /// space. The encoder is named by the registry id that produces vectors for
 /// this modality in the space.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ModalityBinding {
     pub modality: Modality,
     /// Registry id of the encoder that embeds this modality into the space.

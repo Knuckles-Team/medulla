@@ -18,6 +18,9 @@ pub mod entity_resolution;
 // split.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod embedding;
+// MEDULLA-FEDERATED-QUERY-R040.1.7 — the one served carrier of retrieval constraints, topic
+// fusion and the modality pair on `Method::UnifiedQuery`.
+pub mod retrieval_request;
 /// User-managed indexes and edge-native search on the wire (EH-351 / EH-352).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod managed_index;

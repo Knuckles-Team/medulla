@@ -184,6 +184,7 @@ pub(crate) async fn handle_uql(
             snap,
             plan: binding,
             legs,
+            retrieval: None,
         },
         &scope,
         move |_plan, plan_ctx| {

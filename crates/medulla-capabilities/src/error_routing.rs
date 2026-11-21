@@ -246,6 +246,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // what the remote source's tool declares.
             "UNSUPPORTED_SEARCH_ARGUMENT",
             "EMBEDDING_SPACE_INVALID",
+            // MEDULLA-FEDERATED-QUERY-R040.1.7: the served retrieval request refusals.
+            "EMBEDDING_SPACE_INCOMPATIBLE",
+            "CONSTRAINT_INVALID",
+            "TOPIC_WEIGHT_INVALID",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with

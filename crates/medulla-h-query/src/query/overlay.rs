@@ -242,6 +242,7 @@ where
                 tsdb_graph: tsdb_graph_scope.as_deref(),
                 staged_series: Some(&staged_series),
             },
+            None,
             finish,
         )
     })
@@ -262,6 +263,7 @@ pub fn run_unified_with_staged_finish<T>(
         &medulla_federation::federation::ForeignSourceRegistry,
     >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
+    retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
     finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     let indexes = CoreIndexes::open(core);
@@ -278,6 +280,7 @@ pub fn run_unified_with_staged_finish<T>(
             served,
             #[cfg(feature = "tsdb")]
             tsdb_ctx,
+            retrieval,
             finish,
         );
     }
@@ -290,6 +293,7 @@ pub fn run_unified_with_staged_finish<T>(
         served,
         #[cfg(feature = "tsdb")]
         tsdb_ctx,
+        retrieval,
         finish,
     )
 }

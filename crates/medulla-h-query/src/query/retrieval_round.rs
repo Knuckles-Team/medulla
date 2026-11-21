@@ -147,7 +147,12 @@ pub(crate) async fn handle_retrieval_round(
         usize::try_from(medulla_server_api::knob_config::knobs().retrieval_state_segment_bytes)
             .unwrap_or(usize::MAX),
     );
-    let read = UnifiedRead { snap, plan, legs };
+    let read = UnifiedRead {
+        snap,
+        plan,
+        legs,
+        retrieval: None,
+    };
     let outcome: Result<Result<Result<RoundResult, RoundError>, String>, Response> =
         run_unified_off_lock_with(
             ctx.state,

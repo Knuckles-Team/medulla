@@ -20,6 +20,7 @@
 
 use std::collections::HashSet;
 
+use medulla_index_types::embedding::{EmbeddingSpaceRef, Modality};
 use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::Op;
@@ -68,6 +69,11 @@ fn rank_top(
     input: RowSet,
     limit: Option<usize>,
 ) -> Result<RowSet, String> {
+    // MEDULLA-FEDERATED-QUERY-R039.1.2: a modality pair ranks only inside one space, and
+    // the refusal precedes every other step, so an incompatible pair ranks nothing.
+    if let Some(pair) = &ctx.modality_pair {
+        check_pair(ctx.semantic.space(), pair.query, pair.target)?;
+    }
     let candidates = input.id_set();
     if candidates.is_empty() {
         return Ok(RowSet::new());
@@ -76,6 +82,45 @@ fn rank_top(
     let want = limit.map_or(candidates.len(), |k| k.min(candidates.len()));
     let scored = ranked(ctx.semantic, query, &candidates, want, EXACT_RANK_MAX);
     Ok(RowSet::from_scored(scored))
+}
+
+/// The identity tuple one modality binds: `(space id, dimensions, model revision)`.
+pub(crate) type SpaceTuple<'a> = (&'a str, usize, &'a str);
+
+/// The tuple `modality` binds inside `space`, or `None` when the space does not bind it.
+/// A space with no modality bindings is a single-modality space and binds no pair.
+pub(crate) fn bound_tuple(space: &EmbeddingSpaceRef, modality: Modality) -> Option<SpaceTuple<'_>> {
+    space
+        .modalities
+        .iter()
+        .any(|binding| binding.modality == modality)
+        .then_some((space.id.as_str(), space.dimensions, space.revision.as_str()))
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.2, policy `compatible_space_only`: a query modality
+/// ranks against a target modality if and only if both bind the same
+/// `(space id, dimensions, model revision)` tuple. An unbound side never ranks. A pure
+/// comparison of two identity tuples; it holds no state.
+pub(crate) fn pair_allowed(query: Option<SpaceTuple<'_>>, target: Option<SpaceTuple<'_>>) -> bool {
+    matches!((query, target), (Some(query), Some(target)) if query == target)
+}
+
+/// Refuse `EMBEDDING_SPACE_INCOMPATIBLE` unless the store's declared space binds both
+/// modalities of the pair under one identity tuple.
+fn check_pair(
+    space: Option<&EmbeddingSpaceRef>,
+    query: Modality,
+    target: Modality,
+) -> Result<(), String> {
+    let tuple = |modality| space.and_then(|space| bound_tuple(space, modality));
+    if pair_allowed(tuple(query), tuple(target)) {
+        return Ok(());
+    }
+    Err(format!(
+        "{}: modality pair {query:?} -> {target:?} does not bind one embedding space \
+         (the store's declared space must bind both under the same id, dimensions and revision)",
+        medulla_types::contract::ServerErrorCode::EmbeddingSpaceIncompatible
+    ))
 }
 
 /// F4 (CONCEPT:MEDULLA-KG.compute.rank-dim-mismatch-guard): a query whose width differs
@@ -115,4 +160,86 @@ pub fn ranked(
         fetch = fetch.saturating_mul(OVERSAMPLE);
     }
     semantic.exact_rank_candidates(query, candidates.iter().copied(), want)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::exec::PlanCtx;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_index_types::embedding::ModalityBinding;
+    use medulla_index_types::retrieval_request::ModalityPair;
+
+    fn space(revision: &str, bound: &[Modality]) -> EmbeddingSpaceRef {
+        let base = EmbeddingSpaceRef::pinned("model", revision, "hash", "pre", 4, true).unwrap();
+        if bound.is_empty() {
+            return base;
+        }
+        base.with_modalities(
+            bound
+                .iter()
+                .map(|modality| ModalityBinding {
+                    modality: *modality,
+                    encoder: format!("encoder-{modality:?}"),
+                })
+                .collect(),
+        )
+        .unwrap()
+    }
+
+    fn pair_result(store: &SemanticStore, query: Modality, target: Modality) -> Result<RowSet, String> {
+        let view = GraphCore::new().analysis_snapshot();
+        let ctx = PlanCtx::new(&view, store).with_modality_pair(ModalityPair { query, target });
+        rank_op(&ctx, &[1.0, 0.0, 0.0, 0.0], RowSet::from_ids(["a".to_string()]))
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.2
+    #[test]
+    fn sixteen_pairs_match_oracle() {
+        let multimodal = SemanticStore::new_in_space(space("1", &Modality::ALL)).unwrap();
+        let single = SemanticStore::new_in_space(space("1", &[])).unwrap();
+        let legacy = SemanticStore::new();
+        let mut checked = 0;
+        for query in Modality::ALL {
+            for target in Modality::ALL {
+                // Oracle: every modality of a four-way space binds that space's one
+                // tuple, so all sixteen pairs rank; a space with no modality bindings
+                // and a store with no declared space rank none.
+                assert!(pair_result(&multimodal, query, target).is_ok(), "{query:?}->{target:?}");
+                for store in [&single, &legacy] {
+                    let refusal = pair_result(store, query, target).unwrap_err();
+                    assert!(
+                        refusal.starts_with("EMBEDDING_SPACE_INCOMPATIBLE"),
+                        "{query:?}->{target:?}: {refusal}"
+                    );
+                }
+                checked += 1;
+            }
+        }
+        assert_eq!(checked, 16);
+
+        // The tuple comparison itself: id, dimensions and revision each decide it.
+        let a = space("1", &Modality::ALL);
+        let other_revision = space("2", &Modality::ALL);
+        let other_dim = EmbeddingSpaceRef::pinned("model", "1", "hash", "pre", 8, true)
+            .unwrap()
+            .with_modalities(a.modalities.clone())
+            .unwrap();
+        let other_id = EmbeddingSpaceRef::pinned("other", "1", "hash", "pre", 4, true)
+            .unwrap()
+            .with_modalities(a.modalities.clone())
+            .unwrap();
+        for query in Modality::ALL {
+            for target in Modality::ALL {
+                assert!(pair_allowed(bound_tuple(&a, query), bound_tuple(&a, target)));
+                for other in [&other_revision, &other_dim, &other_id] {
+                    assert!(!pair_allowed(bound_tuple(&a, query), bound_tuple(other, target)));
+                }
+            }
+        }
+        // Without a modality pair, nothing is checked and a bare rank is unchanged.
+        let view = GraphCore::new().analysis_snapshot();
+        let ctx = PlanCtx::new(&view, &legacy);
+        assert!(rank_op(&ctx, &[1.0], RowSet::from_ids(["a".to_string()])).is_ok());
+    }
 }
