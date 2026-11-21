@@ -532,20 +532,24 @@ impl GovernedLedger {
         });
     }
 
-    /// A change as it stands at `now_ms`.
-    pub fn get(&self, change_id: &str, now_ms: u64) -> Option<GovernedChange> {
-        self.changes.get(change_id).map(|change| {
-            let mut view = change.clone();
-            view.status = change.status_at(now_ms);
-            view
-        })
+    /// A change as it stands at `now_ms`, visible only to the tenant that proposed it
+    /// (MEDULLA-SRC-AUTH-R003.3): another tenant's change answers exactly as an unknown id.
+    pub fn get(&self, change_id: &str, tenant: &str, now_ms: u64) -> Option<GovernedChange> {
+        self.changes
+            .get(change_id)
+            .filter(|change| change.proposer_tenant == tenant)
+            .map(|change| {
+                let mut view = change.clone();
+                view.status = change.status_at(now_ms);
+                view
+            })
     }
 
-    /// Every change as it stands at `now_ms`.
-    pub fn list(&self, now_ms: u64) -> Vec<GovernedChange> {
+    /// Every change of `tenant` as it stands at `now_ms`.
+    pub fn list(&self, tenant: &str, now_ms: u64) -> Vec<GovernedChange> {
         self.changes
             .keys()
-            .filter_map(|id| self.get(id, now_ms))
+            .filter_map(|id| self.get(id, tenant, now_ms))
             .collect()
     }
 

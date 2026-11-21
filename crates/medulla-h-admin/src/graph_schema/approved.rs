@@ -107,6 +107,8 @@ async fn admit(
     let candidate = approved_candidate_digest(source_id, contract);
     let now_ms = medulla_server_api::txn::now_ms();
     if contract.source_authority {
+        #[cfg(feature = "security")]
+        let now_ms = ctx.isolation.governed_now_ms(now_ms);
         return verify_governed_change(
             ctx,
             tenant_id,
@@ -224,8 +226,7 @@ fn verify_governed_change(
         .isolation
         .rbac()
         .governed()
-        .get(change_id, now_ms)
-        .filter(|change| change.proposer_tenant == tenant_id)
+        .get(change_id, tenant_id, now_ms)
         .ok_or_else(unknown)?;
     if change.status != GovernedStatus::Approved {
         return Err(format!(

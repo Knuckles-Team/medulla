@@ -24,6 +24,8 @@ impl IsolationLayer {
             denials: Default::default(),
             #[cfg(feature = "security")]
             pending_audit_annotate: None,
+            #[cfg(feature = "security")]
+            governed_clock_skew_ms: Default::default(),
         }
     }
 
@@ -74,6 +76,8 @@ impl IsolationLayer {
             denials: Default::default(),
             #[cfg(feature = "security")]
             pending_audit_annotate: None,
+            #[cfg(feature = "security")]
+            governed_clock_skew_ms: Default::default(),
         })
     }
 

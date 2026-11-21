@@ -811,7 +811,8 @@ async fn a_retry_after_the_approval_window_closed_still_replays() {
     );
     assert!(first.changed);
 
-    tokio::time::sleep(std::time::Duration::from_millis(1_300)).await;
+    // The controlled clock moves past the 1 s window; no wall-clock wait.
+    served.state.read().await.isolation.advance_governed_clock_ms(1_300);
 
     // The window is closed: a new request is refused, the same key replays.
     let late = served
@@ -824,4 +825,102 @@ async fn a_retry_after_the_approval_window_closed_still_replays() {
             .await,
     );
     assert_eq!(replay, first);
+}
+
+/// A governed `Get` or `List` read by `principal` verified in `tenant`.
+async fn governed_read(
+    served: &Served,
+    tenant: &str,
+    key: &str,
+    op: medulla_mutation_types::governed_change::GovernedChangeOp,
+) -> Response {
+    let method = Method::GovernedChange { op, actor: None };
+    served
+        .call_in_tenant(tenant, APPROVER, &["governance:read"], GRAPH, key, method)
+        .await
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn governed_ledger_reads_are_scoped_to_the_proposing_tenant() {
+    use medulla_mutation_types::governed_change::GovernedChangeOp;
+    let served = Served::new().await;
+    served.govern_authority("change-read", "digest-read").await;
+
+    // The proposing tenant reads its change by id and in the list.
+    let own = governed_read(
+        &served,
+        TENANT,
+        "read:own",
+        GovernedChangeOp::Get {
+            change_id: "change-read".to_string(),
+        },
+    )
+    .await;
+    assert!(own.error.is_none(), "{:?}", own.error);
+    assert!(format!("{:?}", own.result).contains("change-read"));
+    let own_list = governed_read(&served, TENANT, "list:own", GovernedChangeOp::List).await;
+    assert!(format!("{:?}", own_list.result).contains("change-read"));
+
+    // Another tenant's Get answers byte-identically to an unknown id.
+    let foreign = governed_read(
+        &served,
+        "tenant-foreign",
+        "read:foreign",
+        GovernedChangeOp::Get {
+            change_id: "change-read".to_string(),
+        },
+    )
+    .await;
+    let unknown = governed_read(
+        &served,
+        "tenant-foreign",
+        "read:unknown",
+        GovernedChangeOp::Get {
+            change_id: "change-never-proposed".to_string(),
+        },
+    )
+    .await;
+    assert_eq!(format!("{:?}", foreign.result), format!("{:?}", unknown.result));
+    assert_eq!(foreign.error, unknown.error);
+    assert_eq!(foreign.error_detail, unknown.error_detail);
+    assert!(!format!("{:?}", foreign.result).contains("change-read"));
+
+    // Another tenant's List holds none of this tenant's changes.
+    let foreign_list =
+        governed_read(&served, "tenant-foreign", "list:foreign", GovernedChangeOp::List).await;
+    assert!(foreign_list.error.is_none(), "{:?}", foreign_list.error);
+    assert!(!format!("{:?}", foreign_list.result).contains("change-read"));
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn a_same_key_retry_with_a_different_body_is_refused() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    served.govern_authority("change-body", &digest).await;
+    let approval_ref = governed_approval_ref("change-body");
+
+    let first: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:body", &approval_ref, authority.clone(), None)
+            .await,
+    );
+    assert!(first.changed);
+
+    // The same key with another candidate is a different operation: the commit
+    // idempotency compares the body digest and refuses, never replays.
+    let mut other = contract_with("other_field");
+    other.source_authority = true;
+    let different = served
+        .attach_contract("attach:body", &approval_ref, other, None)
+        .await;
+    assert!(
+        refusal(&different).contains("IDEMPOTENCY_CONFLICT"),
+        "{:?}",
+        different.error
+    );
 }

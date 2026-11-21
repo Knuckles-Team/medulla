@@ -29,6 +29,22 @@ impl std::fmt::Display for GovernedError {
 }
 
 impl IsolationLayer {
+    /// The clock of every governed-change decision: `base_ms` (the authoritative
+    /// time of the request) plus the controlled skew, which is zero in service.
+    pub fn governed_now_ms(&self, base_ms: u64) -> u64 {
+        base_ms.saturating_add(
+            self.governed_clock_skew_ms
+                .load(std::sync::atomic::Ordering::Relaxed),
+        )
+    }
+
+    /// Move the governed clock forward by `ms`: the controlled clock a test
+    /// drives to close an approval window.
+    pub fn advance_governed_clock_ms(&self, ms: u64) {
+        self.governed_clock_skew_ms
+            .fetch_add(ms, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn try_propose_change(
         &mut self,
         actor: &GovernedActor,

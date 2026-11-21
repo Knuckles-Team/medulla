@@ -77,9 +77,10 @@ pub async fn dispatch_governed_change(
             )
         }
     };
-    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let base_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mut guard = medulla_server_api::state::timed_write(state).await;
     let isolation = &mut guard.isolation;
+    let now_ms = isolation.governed_now_ms(base_ms);
     let outcome = match &op {
         GovernedChangeOp::Propose { request } => isolation
             .try_propose_change(&actor, request, now_ms)
@@ -91,10 +92,10 @@ pub async fn dispatch_governed_change(
             .try_revoke_change(&actor, change_id, now_ms)
             .map(ResultPayload::of::<GovernedRevoke>),
         GovernedChangeOp::Get { change_id } => Ok(ResultPayload::of::<GovernedGet>(
-            isolation.rbac().governed().get(change_id, now_ms),
+            isolation.rbac().governed().get(change_id, &actor.tenant, now_ms),
         )),
         GovernedChangeOp::List => Ok(ResultPayload::of::<GovernedList>(
-            isolation.rbac().governed().list(now_ms),
+            isolation.rbac().governed().list(&actor.tenant, now_ms),
         )),
     };
     drop(guard);

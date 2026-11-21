@@ -57,6 +57,7 @@ async fn status(
         .governed()
         .get(
             "repair-1",
+            "tenant-a",
             medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         )
         .expect("proposed")
