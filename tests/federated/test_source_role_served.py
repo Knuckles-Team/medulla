@@ -1,4 +1,4 @@
-"""Served source roles (MEDULLA-SRC-AUTH-R010.3).
+"""Served source roles (MEDULLA-SRC-AUTH-R010.3, R010.6).
 
 `SourceCoverage` passes each source's declared `vg:sourceRole` into selection, so
 at equal rank the `live_truth` source wins over a `historical_context` one.
@@ -81,9 +81,9 @@ def _attach(document: str) -> None:
         client.close()
 
 
-def _coverage(client: Any) -> dict[str, Any]:
+def _coverage(client: Any, **extra: Any) -> dict[str, Any]:
     result = client._send(
-        "SourceCoverage", {"classes": [INCIDENT], "hop_budget": 0}, GRAPH
+        "SourceCoverage", {"classes": [INCIDENT], "hop_budget": 0, **extra}, GRAPH
     )
     if isinstance(result, (bytes, bytearray)):
         result = msgpack.unpackb(result, raw=False)
@@ -113,3 +113,67 @@ def test_unknown_source_role_is_refused_at_attach() -> None:
     with pytest.raises(EngineResponseError) as refused:
         _attach(CONFLICT.replace('"live_truth"', '"primary"'))
     assert "SOURCE_ROLE_UNKNOWN" in str(refused.value)
+
+
+def _register_pair(owner: Any) -> None:
+    for name in ("live-incidents-mcp", "history-incidents-mcp"):
+        owner._send(
+            "RegisterForeignSource",
+            {"name": name, "source": SOURCE},
+            None,
+            idempotency_key=f"register-{name}-{uuid.uuid4().hex}",
+        )
+
+
+def _incident(reply: dict[str, Any]) -> dict[str, Any]:
+    return next(v for v in reply["verdicts"] if v["class"] == INCIDENT)
+
+
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R010.6")
+def test_role_conflict_audit_names_both_sources_and_roles() -> None:
+    owner = _client()
+    _register_pair(owner)
+    _attach(CONFLICT)
+    reply = _coverage(owner)
+    # The displaced source is not a `not_used` entry: the winner's evidence names it once.
+    [used] = reply["audit"]["used"]
+    assert used["source"] == "live-incidents-mcp"
+    assert used["role"] == "live_truth"
+    verdict = _incident(reply)
+    assert any(
+        "history-incidents-mcp" in premise
+        and "LiveTruth" in premise
+        and "HistoricalContext" in premise
+        for premise in verdict["premises"]
+    ), verdict["premises"]
+    assert "history-incidents-mcp" in verdict["alternates"]
+
+
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R010.6")
+def test_inspiration_only_abstains_role_insufficient() -> None:
+    owner = _client()
+    _register_pair(owner)
+    _attach(
+        CONFLICT.replace('"live_truth"', '"inspiration"').replace(
+            '"historical_context"', '"inspiration"'
+        )
+    )
+    reply = _coverage(owner, needs_current_state=True)
+    verdict = _incident(reply)
+    assert verdict["verdict"] == "abstained", verdict.get("premises")
+    assert verdict["reason"] == "role_insufficient", verdict.get("premises")
+    assert verdict["source"], "the abstention names a source"
+    assert any(
+        entry["reason"] == "role_insufficient" for entry in reply["audit"]["not_used"]
+    ), reply["audit"]
+
+
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R010.6")
+def test_other_principal_sees_no_role_verdict() -> None:
+    owner = _client()
+    other = _client()
+    _register_pair(owner)
+    _attach(CONFLICT)
+    reply = _coverage(other)
+    assert _incident(reply)["verdict"] != "covered"
+    assert not reply["audit"]["used"]
