@@ -217,3 +217,25 @@ kg:RuleSpecShape a sh:NodeShape ;
         sh:message "A RuleSpec carries exactly one canonical digest of 64 lowercase hex characters."
     ] ;
     sh:message "A rule spec is immutable by id and version and carries its canonical digest." .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.2
+kg:InventoryLotShape a sh:NodeShape ;
+    sh:targetClass kg:InventoryLot ;
+    sh:property [
+        sh:path kg:lotOfBatch ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kg:ProductionBatch ;
+        sh:message "An InventoryLot names exactly one production batch."
+    ] ;
+    sh:property [
+        sh:path kg:lotQuantity ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+        sh:message "An InventoryLot carries exactly one quantity, a decimal."
+    ] ;
+    sh:property [
+        sh:path kg:lotQuantityUnit ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "An InventoryLot carries exactly one quantity unit code."
+    ] ;
+    sh:property [
+        sh:path kg:lotStatus ; sh:maxCount 1 ;
+        sh:in ( "open" "released" "quarantined" "recalled" "exhausted" ) ;
+        sh:message "A lot status is open, released, quarantined, recalled or exhausted."
+    ] ;
+    sh:message "An inventory lot names its batch, quantity and unit." .

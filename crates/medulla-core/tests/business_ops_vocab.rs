@@ -664,3 +664,171 @@ fn every_class_rolls_up_and_no_product_names() {
         }
     }
 }
+
+/// Every object of `predicate` on `subject` in `data`.
+fn objects_of(data: &[Triple], subject: &str, predicate: &str) -> BTreeSet<String> {
+    data.iter()
+        .filter(|t| {
+            subject_str(&t.subject) == Some(subject)
+                && t.predicate.as_str() == format!("{KG}{predicate}")
+        })
+        .filter_map(|t| object_iri(&t.object).map(str::to_string))
+        .collect()
+}
+
+/// Every subject whose `predicate` edge reaches `object` in `data`.
+fn subjects_of(data: &[Triple], predicate: &str, object: &str) -> BTreeSet<String> {
+    data.iter()
+        .filter(|t| {
+            t.predicate.as_str() == format!("{KG}{predicate}") && object_iri(&t.object) == Some(object)
+        })
+        .filter_map(|t| subject_str(&t.subject).map(str::to_string))
+        .collect()
+}
+
+/// The lots that fed `batch`: the transitive closure of `madeFromLot` through `lotOfBatch`.
+fn lots_that_fed(data: &[Triple], batch: &str) -> BTreeSet<String> {
+    let mut lots = BTreeSet::new();
+    let mut pending = vec![batch.to_string()];
+    while let Some(current) = pending.pop() {
+        for lot in objects_of(data, &current, "madeFromLot") {
+            if lots.insert(lot.clone()) {
+                pending.extend(objects_of(data, &lot, "lotOfBatch"));
+            }
+        }
+    }
+    lots
+}
+
+/// The orders holding `lot`: order lines whose `lineLot` is the lot or a lot of a batch whose
+/// `madeFromLot` closure reaches it, read back through `lineOfOrder`.
+fn orders_holding(data: &[Triple], lot: &str) -> BTreeSet<String> {
+    let batches: BTreeSet<String> = data
+        .iter()
+        .filter(|t| t.predicate.as_str() == format!("{KG}lotOfBatch"))
+        .filter_map(|t| subject_str(&t.subject).map(str::to_string))
+        .filter_map(|candidate| {
+            let batch = objects_of(data, &candidate, "lotOfBatch").into_iter().next()?;
+            lots_that_fed(data, &batch).contains(lot).then_some(candidate)
+        })
+        .collect();
+    let mut held = BTreeSet::from([lot.to_string()]);
+    held.extend(batches);
+    held.iter()
+        .flat_map(|lot| subjects_of(data, "lineLot", lot))
+        .flat_map(|line| objects_of(data, &line, "lineOfOrder"))
+        .collect()
+}
+
+// spec: MEDULLA-BUSINESS-OPS-R001.2
+#[test]
+fn lot_traceability_closure_answers_both_directions() {
+    let triples = triples();
+    for (class, parent) in [
+        ("Product", "SupplyChainItem"),
+        ("ProductVariant", "Product"),
+        ("ProductionBatch", "SupplyChainItem"),
+        ("InventoryLot", "SupplyChainItem"),
+    ] {
+        assert_class(&triples, class);
+        assert_parent(&triples, class, parent);
+    }
+
+    // Each property's domain and range, including the ranges the earlier rows left open.
+    for (property, domain, range) in [
+        ("variantOfProduct", Some("ProductVariant"), "Product"),
+        ("batchOfVariant", Some("ProductionBatch"), "ProductVariant"),
+        ("lotOfBatch", Some("InventoryLot"), "ProductionBatch"),
+        ("madeFromLot", Some("ProductionBatch"), "InventoryLot"),
+        ("lotSupplier", Some("InventoryLot"), "Supplier"),
+        ("lineLot", None, "InventoryLot"),
+        ("lineVariant", None, "ProductVariant"),
+        ("stockVariant", None, "ProductVariant"),
+        ("purchaseLineVariant", None, "ProductVariant"),
+        ("reorderVariant", None, "ProductVariant"),
+    ] {
+        let subject = format!("{KG}{property}");
+        assert!(
+            has_iri(&triples, &subject, &format!("{RDFS}range"), &format!("{KG}{range}")),
+            "{property} ranges over {range}"
+        );
+        if let Some(domain) = domain {
+            assert!(
+                has_iri(&triples, &subject, &format!("{RDFS}domain"), &format!("{KG}{domain}")),
+                "{property} has domain {domain}"
+            );
+        }
+        for annotation in ["label", "comment"] {
+            assert!(
+                triples.iter().any(|t| subject_str(&t.subject) == Some(&subject)
+                    && t.predicate.as_str() == format!("{RDFS}{annotation}")),
+                "{property} carries rdfs:{annotation}"
+            );
+        }
+    }
+    for property in ["lotQuantityUnit", "lotStatus"] {
+        let subject = format!("{KG}{property}");
+        assert!(
+            has_iri(
+                &triples,
+                &subject,
+                &format!("{RDFS}domain"),
+                &format!("{KG}InventoryLot")
+            ),
+            "{property} has domain InventoryLot"
+        );
+    }
+
+    // Names other packs own are not declared here.
+    for reused in ["Lot", "lotQuantity", "suppliedBy", "variantOf", "soldInLot", "Batch"] {
+        assert!(
+            !triples
+                .iter()
+                .any(|t| subject_str(&t.subject) == Some(&format!("{KG}{reused}"))),
+            "{reused} is not declared by business_ops"
+        );
+    }
+
+    // The lot shape: a lot with no batch, a text quantity or a status outside the set fails.
+    let complete = "ex:b a :ProductionBatch .\n\
+                    ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity 12.5 ; \
+                      :lotQuantityUnit \"kg\" ; :lotStatus \"released\" .\n";
+    assert_eq!(conforms(complete), (true, Vec::new()));
+    let (ok, paths) = conforms(
+        "ex:l a :InventoryLot ; :lotQuantity 1.0 ; :lotQuantityUnit \"kg\" .\n",
+    );
+    assert!(!ok && paths.iter().any(|p| p.ends_with("lotOfBatch")), "{paths:?}");
+    let (ok, paths) = conforms(
+        "ex:b a :ProductionBatch .\n\
+         ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity \"many\" ; :lotQuantityUnit \"kg\" .\n",
+    );
+    assert!(!ok && paths.iter().any(|p| p.ends_with("lotQuantity")), "{paths:?}");
+    let (ok, paths) = conforms(
+        "ex:b a :ProductionBatch .\n\
+         ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity 1.0 ; :lotQuantityUnit \"kg\" ; \
+           :lotStatus \"lost\" .\n",
+    );
+    assert!(!ok && paths.iter().any(|p| p.ends_with("lotStatus")), "{paths:?}");
+
+    // Input lot L1 -> batch B1 via madeFromLot; lot L2 is a lot of B1; order line OL1 draws
+    // L2 and belongs to O1.
+    let data = parse_turtle(&format!(
+        "{PREFIXES}\
+         ex:L1 a :InventoryLot .\n\
+         ex:B1 a :ProductionBatch ; :madeFromLot ex:L1 .\n\
+         ex:L2 a :InventoryLot ; :lotOfBatch ex:B1 .\n\
+         ex:OL1 a :OrderLine ; :lineLot ex:L2 ; :lineOfOrder ex:O1 .\n"
+    ))
+    .expect("the fixture data graph parses");
+    let ex = |local: &str| format!("http://example.org/business/{local}");
+    assert_eq!(
+        lots_that_fed(&data, &ex("B1")),
+        BTreeSet::from([ex("L1")]),
+        "the lots that fed batch B1"
+    );
+    assert_eq!(
+        orders_holding(&data, &ex("L1")),
+        BTreeSet::from([ex("O1")]),
+        "the orders holding lot L1"
+    );
+}

@@ -185,12 +185,14 @@
 :lineVariant a owl:ObjectProperty ;
     rdfs:label "line variant" ;
     rdfs:comment "The product variant an order line sells." ;
-    rdfs:domain :OrderLine .
+    rdfs:domain :OrderLine ;
+    rdfs:range :ProductVariant .
 
 :lineLot a owl:ObjectProperty ;
     rdfs:label "line lot" ;
     rdfs:comment "The lot an order line was drawn from." ;
-    rdfs:domain :OrderLine .
+    rdfs:domain :OrderLine ;
+    rdfs:range :InventoryLot .
 
 :lineQuantity a owl:DatatypeProperty ;
     rdfs:label "line quantity" ;
@@ -276,7 +278,8 @@
 :purchaseLineVariant a owl:ObjectProperty ;
     rdfs:label "purchase line variant" ;
     rdfs:comment "The product variant a purchase order line buys." ;
-    rdfs:domain :PurchaseOrderLine .
+    rdfs:domain :PurchaseOrderLine ;
+    rdfs:range :ProductVariant .
 
 :purchaseLineQuantity a owl:DatatypeProperty ;
     rdfs:label "purchase line quantity" ;
@@ -293,7 +296,8 @@
 :stockVariant a owl:ObjectProperty ;
     rdfs:label "stock variant" ;
     rdfs:comment "The product variant a stock level counts." ;
-    rdfs:domain :StockLevel .
+    rdfs:domain :StockLevel ;
+    rdfs:range :ProductVariant .
 
 :stockLocation a owl:DatatypeProperty ;
     rdfs:label "stock location" ;
@@ -322,7 +326,8 @@
 :reorderVariant a owl:ObjectProperty ;
     rdfs:label "reorder variant" ;
     rdfs:comment "The product variant a reorder policy governs." ;
-    rdfs:domain :ReorderPolicy .
+    rdfs:domain :ReorderPolicy ;
+    rdfs:range :ProductVariant .
 
 :reorderSupplier a owl:ObjectProperty ;
     rdfs:label "reorder supplier" ;
@@ -688,4 +693,67 @@
     rdfs:label "rule digest" ;
     rdfs:comment "The canonical digest of kind, version and parameters: 64 lowercase hex characters." ;
     rdfs:domain :RuleSpec ;
+    rdfs:range xsd:string .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.2
+:Product a owl:Class ;
+    rdfs:label "Product" ;
+    rdfs:comment "A sellable item definition." ;
+    rdfs:subClassOf :SupplyChainItem .
+
+:ProductVariant a owl:Class ;
+    rdfs:label "Product Variant" ;
+    rdfs:comment "One sellable form of a product." ;
+    rdfs:subClassOf :Product .
+
+:ProductionBatch a owl:Class ;
+    rdfs:label "Production Batch" ;
+    rdfs:comment "One production run of a product variant." ;
+    rdfs:subClassOf :SupplyChainItem .
+
+:InventoryLot a owl:Class ;
+    rdfs:label "Inventory Lot" ;
+    rdfs:comment "One traceable quantity of a production batch or of a received input." ;
+    rdfs:subClassOf :SupplyChainItem .
+
+:variantOfProduct a owl:ObjectProperty ;
+    rdfs:label "variant of product" ;
+    rdfs:comment "Links a product variant to the product it is a form of." ;
+    rdfs:domain :ProductVariant ;
+    rdfs:range :Product .
+
+:batchOfVariant a owl:ObjectProperty ;
+    rdfs:label "batch of variant" ;
+    rdfs:comment "Links a production batch to the product variant it produced." ;
+    rdfs:domain :ProductionBatch ;
+    rdfs:range :ProductVariant .
+
+:lotOfBatch a owl:ObjectProperty ;
+    rdfs:label "lot of batch" ;
+    rdfs:comment "Links an inventory lot to the production batch it holds a quantity of." ;
+    rdfs:domain :InventoryLot ;
+    rdfs:range :ProductionBatch .
+
+:madeFromLot a owl:ObjectProperty ;
+    rdfs:label "made from lot" ;
+    rdfs:comment "Links a production batch to an input lot the batch consumed." ;
+    rdfs:domain :ProductionBatch ;
+    rdfs:range :InventoryLot .
+
+:lotSupplier a owl:ObjectProperty ;
+    rdfs:label "lot supplier" ;
+    rdfs:comment "Links an inventory lot to the supplier that delivered it." ;
+    rdfs:domain :InventoryLot ;
+    rdfs:range :Supplier .
+
+:lotQuantityUnit a owl:DatatypeProperty ;
+    rdfs:label "lot quantity unit" ;
+    rdfs:comment "The unit code of an inventory lot quantity." ;
+    rdfs:domain :InventoryLot ;
+    rdfs:range xsd:string .
+
+:lotStatus a owl:DatatypeProperty ;
+    rdfs:label "lot status" ;
+    rdfs:comment "The status the source system reports for an inventory lot: open, released, quarantined, recalled or exhausted. Copied by ingest; the engine has no writer that moves it." ;
+    rdfs:domain :InventoryLot ;
     rdfs:range xsd:string .
