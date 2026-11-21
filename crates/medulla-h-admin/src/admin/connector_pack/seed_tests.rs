@@ -290,6 +290,42 @@ mod served {
         ok::<String>("GetRdf", served.call_on(&graph, key, Method::GetRdf).await)
     }
 
+    /// The pack graph read through a served `Method::Sparql`, one `<s> <p> "<o>"` line per
+    /// solution (the object is quoted whatever its kind, so a line is matched by substring).
+    async fn pack_graph_sparql(served: &Served, key: &str) -> String {
+        let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+            TENANT,
+            &ResourceId::new(CONNECTOR).unwrap(),
+        )
+        .unwrap();
+        let result: medulla_protocol_types::protocol::SparqlResult = ok(
+            "Sparql",
+            served
+                .call_on(
+                    &graph,
+                    key,
+                    Method::Sparql {
+                        query: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }".to_string(),
+                        base_iri: String::new(),
+                        type_convention: String::new(),
+                        explain: false,
+                        requires_packs: Vec::new(),
+                        latency_class: Default::default(),
+                    },
+                )
+                .await,
+        );
+        result
+            .rows
+            .iter()
+            .map(|row| {
+                let cell = |index: usize| row[index].clone().unwrap_or_default();
+                format!("<{}> <{}> \"{}\"", cell(0), cell(1), cell(2))
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     // spec: MEDULLA-TYPED-PACKS-R104.3
     #[tokio::test]
     async fn served_import_projects_seed() {
@@ -364,7 +400,7 @@ mod served {
         // The graph holds the receipt's revision node, and each seed subject links to it.
         let subscribed = AtomicBool::new(false);
         while sweep(&served.state, &subscribed).await.unwrap() {}
-        let projected = pack_graph_rdf(&served, "seed:receipt").await;
+        let projected = pack_graph_sparql(&served, "seed:receipt").await;
         assert!(projected.contains(&reimport.graph_revision), "{projected}");
         assert!(!projected.contains(&seed.graph_revision), "{projected}");
         assert_eq!(
