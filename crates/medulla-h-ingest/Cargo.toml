@@ -27,6 +27,7 @@ medulla-document = { path = "../medulla-document" }
 medulla-enrich = { path = "../medulla-enrich" }
 medulla-image = { path = "../medulla-image", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
+medulla-stream = { path = "../medulla-stream" }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-numeric = { path = "../medulla-numeric", optional = true }

@@ -49,6 +49,8 @@ pub mod permissions;
 mod media_tag;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod quality;
 pub mod row_version;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod skill_document;
@@ -77,6 +79,9 @@ pub struct PrepareContext<'a> {
     /// The graph's schema sources, read by the drift gate (R714) for the
     /// `approved:<stream>` contracts in force.
     pub schema_sources: Arc<medulla_graph_core::graph::GraphSchemaSources>,
+    /// The request graph's core, read for the approved quality rules and open incidents an
+    /// outside quality score is judged against (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
 }
 
 // The fields are read only by the durable terminal-receipt builder (redb + blob).
@@ -455,6 +460,26 @@ pub async fn prepare(
         &mut admitted,
     )
     .await?;
+    // Outside quality scores: scored against the tenant's approved rules, with the failure
+    // streaks and the incidents they open committing in this envelope
+    // (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
+    let (quality_methods, quality_policy_ids) = quality::admit_outside_scores(
+        ctx.core.as_ref(),
+        ctx.verified.tenant(),
+        ctx.verified.agent_id(),
+        batch,
+        &resolved,
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+    )?;
+    admitted.methods.extend(quality_methods);
+    for node_id in &quality_policy_ids {
+        admitted.policies.push(policy(
+            node_id,
+            ctx.tenant_scope,
+            &policy_subject,
+            reconciliation.entry_revision,
+        ));
+    }
     if let Some(marker) = reconciliation.marker.clone() {
         admitted.methods.push(marker);
     }
@@ -4077,6 +4102,7 @@ mod tests {
             placement_epoch: 0,
             fencing_token: None,
             schema_sources: Arc::new(medulla_graph_core::graph::GraphSchemaSources::default()),
+            core: Arc::new(medulla_graph_core::graph::GraphCore::new()),
         };
         let blob_dir = tempfile::tempdir().unwrap();
         let blob =

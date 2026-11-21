@@ -38,6 +38,7 @@ async fn prepared_embedding_set(
             placement_epoch: 0,
             fencing_token: None,
             schema_sources: Default::default(),
+            core: std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new()),
         },
         request,
     )

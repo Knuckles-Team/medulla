@@ -492,6 +492,8 @@ closed_error_codes! {
         /// A sensitive scan limit lies outside its knob range (MEDULLA-TYPED-PACKS-R803.2).
         ScanLimitsInvalid => "SCAN_LIMITS_INVALID",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
+        /// An outside quality score names a rule the tenant has no approved copy of (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
+        QualityRuleUnknown => "QUALITY_RULE_UNKNOWN",
         /// A chunk-encoding position mode the encoder does not serve (MEDULLA-FEDERATED-QUERY-R039.2.2).
         EncodePositionModeUnsupported => "ENCODE_POSITION_MODE_UNSUPPORTED",
         /// A chunk-encoding overlap that is not strictly below the window size (MEDULLA-FEDERATED-QUERY-R039.2.2).

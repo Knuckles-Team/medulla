@@ -576,6 +576,7 @@ async fn route_source_ingestion_request(
             placement_epoch,
             fencing_token,
             schema_sources: ctx.core.schema_sources(),
+            core: Arc::clone(ctx.core),
         },
         request,
     )

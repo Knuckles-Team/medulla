@@ -353,3 +353,146 @@ def test_hundred_rules_over_a_native_dataset(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+def _outside_declaration(connector: str) -> Any:
+    """A `QualityScore` mapping: `checker`, `rule` and `score` name the score's properties."""
+    from medulla import ConnectorPackEntryContent
+    from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
+
+    body = {
+        "connector": connector,
+        "schema_mappings": {
+            "score": {
+                "fields": {
+                    "id": "identifier",
+                    "checker": "checker",
+                    "rule": "rule",
+                    "score": "value",
+                },
+                "ontology_class": "QualityScore",
+            }
+        },
+        "sources": [],
+    }
+    return ConnectorPackEntryContent(
+        kind=PackEntryKind.RESOURCE,
+        uri="connector://resources",
+        output_schema=b'{"type":"object"}',
+        name="connector-resources",
+        media_type="application/json",
+        body=json.dumps(body).encode(),
+        annotations=PackAnnotations(),
+    )
+
+
+def _outside_batch(connector: str, page: int, previous: int | None, payload: dict) -> dict:
+    stream = "scores"
+    checkpoint = lambda n: {  # noqa: E731
+        "stream": stream,
+        "position": {"page": n},
+        "watermark": "2026-09-20T00:00:00Z",
+    }
+    return {
+        "connector": connector,
+        "kind": "records",
+        "mode": "delta",
+        "strict_schema": True,
+        "records": [
+            {
+                "stream": stream,
+                "record_id": f"score-{page}",
+                "mapping_reference": f"connector:{connector}#mappings/score",
+                "payload": payload,
+                "updated_at": "2026-09-20T00:00:00Z",
+                "provenance": {
+                    "connector": connector,
+                    "adapter_kind": "mcp",
+                    "server": "demo-server",
+                    "tool": "list_scores",
+                    "tool_schema_sha256": "07" * 32,
+                    "source_uri": f"demo://scores/{page}",
+                },
+            }
+        ],
+        "relationships": [],
+        "withdrawals": [],
+        "provider_checkpoint": checkpoint(page),
+        "expected_previous_checkpoint": None if previous is None else checkpoint(previous),
+    }
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.8")
+@pytest.mark.asyncio
+async def test_outside_scores_open_incident(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.8: three failing outside scores open one incident."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
+    from ontology_pack_support import connect, import_entries
+
+    from medulla.client import MedullaClient
+
+    connector = f"outside-{uuid.uuid4().hex[:10]}"
+    graph = f"quality-{uuid.uuid4().hex[:8]}"
+    admin = await connect()
+    try:
+        await import_entries(admin, connector, [_outside_declaration(connector)])
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    try:
+        rule = {
+            "id": "email-valid",
+            "target": "contacts",
+            "dimension": "validity",
+            "expression": "email LIKE '%@%'",
+            "threshold": 0.9,
+            "severity": "critical",
+        }
+        _decode(await client._send("QualityRulePut", {"rule": rule}))
+
+        async def submit(page: int, previous: int | None, **payload: Any) -> Any:
+            batch = _outside_batch(
+                connector, page, previous, {"id": page, "checker": "outside-dq", **payload}
+            )
+            return await client._send(
+                "SourceIngest",
+                {"request": batch},
+                idempotency_key=f"outside-{page}-{uuid.uuid4().hex}",
+            )
+
+        # A rule the tenant never approved, and a value outside 0 to 1, refuse.
+        with pytest.raises(Exception, match="QUALITY_RULE_UNKNOWN"):
+            await submit(2, None, rule="no-such-rule", score=0.1)
+        with pytest.raises(Exception, match="QUALITY_THRESHOLD_INVALID"):
+            await submit(2, None, rule="email-valid", score=1.5)
+
+        await submit(2, None, rule="email-valid", score=0.1)
+        await submit(3, 2, rule="email-valid", score=0.2)
+        assert not await client.nodes.list_by_label("Incident", 0)
+        await submit(4, 3, rule="email-valid", score=0.3)
+
+        incidents = await client.nodes.list_by_label("Incident", 0)
+        assert len(incidents) == 1
+        incident_id = incidents[0][0]
+        record = _decode(await client._send("IncidentEvidence", {"incident_id": incident_id}))
+        assert record["tenant"] == TEST_TENANT
+
+        scores = [
+            props
+            for node_id, _ in await client.nodes.list_by_label("QualityScore", 0)
+            if (props := await client.nodes.properties(node_id)) and props.get("rule")
+        ]
+        assert sorted(score["value"] for score in scores) == [0.1, 0.2, 0.3]
+        assert {score["checker"] for score in scores} == {"outside-dq"}
+        assert not any(score["passed"] for score in scores)
+    finally:
+        await client.tenants.delete(graph)
+        await client.close()
