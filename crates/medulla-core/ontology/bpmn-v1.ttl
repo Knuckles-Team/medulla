@@ -11,9 +11,28 @@
 <https://knuckles-team.github.io/ontology/bpmn-v1> a owl:Ontology ;
     rdfs:label "BPMN 2.0 element classes" .
 
+# spec: MEDULLA-TYPED-PACKS-R105.10.1 — the abstract BPMN 2.0 element classes, so every
+# flow-node class reaches the BFO root. They carry no :dagNodeKind, so process
+# compilation maps none of them.
+:BpmnFlowElement a owl:Class ;
+    rdfs:label "BPMN FlowElement" ;
+    rdfs:comment "An element of a BPMN 2.0 process definition: a flow node or a sequence flow." ;
+    rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000031> .
+
+:BpmnFlowNode a owl:Class ;
+    rdfs:label "BPMN FlowNode" ;
+    rdfs:comment "A BPMN 2.0 flow element that sequence flows connect: an activity, an event or a gateway." ;
+    rdfs:subClassOf :BpmnFlowElement .
+
+:BpmnActivity a owl:Class ;
+    rdfs:label "BPMN Activity" ;
+    rdfs:comment "A BPMN 2.0 flow node that performs work: a task, a sub-process or a call activity." ;
+    rdfs:subClassOf :BpmnFlowNode .
+
 :BpmnTask a owl:Class ;
     rdfs:label "BPMN Task" ;
-    :dagNodeKind "agent" .
+    :dagNodeKind "agent" ;
+    rdfs:subClassOf :BpmnActivity .
 
 :BpmnUserTask a owl:Class ;
     rdfs:label "BPMN UserTask" ;
@@ -52,14 +71,17 @@
 
 :BpmnSubProcess a owl:Class ;
     rdfs:label "BPMN SubProcess" ;
-    :dagNodeKind "call" .
+    :dagNodeKind "call" ;
+    rdfs:subClassOf :BpmnActivity .
 
 :BpmnCallActivity a owl:Class ;
     rdfs:label "BPMN CallActivity" ;
-    :dagNodeKind "call" .
+    :dagNodeKind "call" ;
+    rdfs:subClassOf :BpmnActivity .
 
 :BpmnGateway a owl:Class ;
-    rdfs:label "BPMN Gateway" .
+    rdfs:label "BPMN Gateway" ;
+    rdfs:subClassOf :BpmnFlowNode .
 
 :BpmnExclusiveGateway a owl:Class ;
     rdfs:label "BPMN ExclusiveGateway" ;
@@ -90,7 +112,8 @@
     rdfs:subClassOf :BpmnGateway .
 
 :BpmnEvent a owl:Class ;
-    rdfs:label "BPMN Event" .
+    rdfs:label "BPMN Event" ;
+    rdfs:subClassOf :BpmnFlowNode .
 
 :BpmnStartEvent a owl:Class ;
     rdfs:label "BPMN StartEvent" ;

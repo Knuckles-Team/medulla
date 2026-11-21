@@ -32,7 +32,8 @@
 :BeliefInterval a owl:Class ;
     rdfs:label "Belief Interval" ;
     rdfs:comment "The transaction-time window during which the engine BELIEVED a fact (PROV generated→invalidated)." ;
-    rdfs:subClassOf time:Interval .
+    rdfs:subClassOf bfo:0000008,
+        time:Interval .
 
 :BlindSpot a owl:Class ;
     rdfs:label "Blind Spot" ;
@@ -85,7 +86,8 @@
 
 :EvalCase a owl:Class ;
     rdfs:label "Eval Case" ;
-    rdfs:comment "A regression evaluation case, often sourced from a human correction." .
+    rdfs:comment "A regression evaluation case, often sourced from a human correction." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :ExternalGraphReference a owl:Class ;
     rdfs:label "External Graph Reference" ;
@@ -109,7 +111,8 @@
 
 :Framework a owl:Class ;
     rdfs:label "Framework" ;
-    rdfs:comment "A named mental model / repeatable method distilled from a source." .
+    rdfs:comment "A named mental model / repeatable method distilled from a source." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :Goal a owl:Class ;
     rdfs:label "Goal" ;
@@ -137,7 +140,8 @@ Typed as a :Concept so it federates with the SKOS taxonomy; :partOf its
     rdfs:comment "Any entity subject to at least one governance instrument. Membership is inferred." ;
     owl:equivalentClass [ a owl:Restriction ;
             owl:onProperty :governedBy ;
-            owl:someValuesFrom bfo:0000001 ] .
+            owl:someValuesFrom bfo:0000001 ] ;
+    rdfs:subClassOf bfo:0000001 .
 
 :Hypothesis a owl:Class ;
     rdfs:label "Hypothesis" ;
@@ -149,7 +153,8 @@ Typed as a :Concept so it federates with the SKOS taxonomy; :partOf its
 
 :Insight a owl:Class ;
     rdfs:label "Insight" ;
-    rdfs:comment "A distilled, reusable takeaway from a call or document." .
+    rdfs:comment "A distilled, reusable takeaway from a call or document." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :LanguageModel a owl:Class ;
     rdfs:label "Language Model" ;
@@ -202,7 +207,8 @@ Typed as a :Concept so it federates with the SKOS taxonomy; :partOf its
     rdfs:comment "Any entity that is owned by some agent. Membership is inferred." ;
     owl:equivalentClass [ a owl:Restriction ;
             owl:onProperty :ownedBy ;
-            owl:someValuesFrom bfo:0000004 ] .
+            owl:someValuesFrom bfo:0000004 ] ;
+    rdfs:subClassOf bfo:0000001 .
 
 :PeerReview a owl:Class ;
     rdfs:label "Peer Review" ;
@@ -249,7 +255,8 @@ namespace; concepts are :partOf their pillar.""" ;
 
 :Preference a owl:Class ;
     rdfs:label "Preference" ;
-    rdfs:comment "A learned/asserted preference influencing routing or retrieval." .
+    rdfs:comment "A learned/asserted preference influencing routing or retrieval." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :Principle a owl:Class ;
     rdfs:label "Principle" ;
@@ -307,7 +314,8 @@ namespace; concepts are :partOf their pillar.""" ;
     rdfs:comment "An entity with no parent — the root of a lineage chain. Membership is inferred." ;
     owl:equivalentClass [ a owl:Restriction ;
             owl:maxCardinality "0"^^xsd:nonNegativeInteger ;
-            owl:onProperty :hasParent ] .
+            owl:onProperty :hasParent ] ;
+    rdfs:subClassOf bfo:0000001 .
 
 :ScientificEntity a owl:Class ;
     rdfs:label "Scientific Entity" ;
@@ -354,7 +362,8 @@ namespace; concepts are :partOf their pillar.""" ;
 :ValidityInterval a owl:Class ;
     rdfs:label "Validity Interval" ;
     rdfs:comment "The event-time window during which a fact is TRUE in the world. Aligned to OWL-Time time:Interval." ;
-    rdfs:subClassOf time:Interval .
+    rdfs:subClassOf bfo:0000008,
+        time:Interval .
 
 :VoiceRule a owl:Class ;
     rdfs:label "Voice Rule" ;
@@ -686,7 +695,8 @@ owned (see hasBlob). CONCEPT:AU-KG.identity.asset-occurrence.""" ;
 
 :Correction a owl:Class ;
     rdfs:label "Correction" ;
-    rdfs:comment "A human-asserted correction of an agent output, fact, or routing decision." .
+    rdfs:comment "A human-asserted correction of an agent output, fact, or routing decision." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :Decision a owl:Class ;
     rdfs:label "Decision" ;
@@ -861,7 +871,8 @@ Works for versions, phases, events, role transitions, etc.""" ;
 
 :GovernanceRule a owl:Class ;
     rdfs:label "Governance Rule" ;
-    rdfs:comment "A durable rule (forbid/prefer/demote) consulted at retrieval time." .
+    rdfs:comment "A durable rule (forbid/prefer/demote) consulted at retrieval time." ;
+    rdfs:subClassOf bfo:0000031 .
 
 :Tool a owl:Class ;
     rdfs:label "Tool" ;

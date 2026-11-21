@@ -1,6 +1,7 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # The core state-machine vocabulary (MEDULLA-ORCH-VOCAB-R811, organization constitution
@@ -41,7 +42,15 @@
 :TransitionGuard a owl:Class ;
     rdfs:label "Transition Guard" ;
     rdfs:comment "A named condition that must hold for a transition to fire." ;
+    skos:altLabel "Guard" ;
     rdfs:subClassOf :Concept .
+
+# spec: MEDULLA-ORCH-VOCAB-R811.10
+:TransitionRefused a owl:Class ;
+    rdfs:label "Transition Refused" ;
+    rdfs:comment "The typed refusal a state machine returns for an event that no edge from the current state accepts, or whose guard fails (wire code TRANSITION_REFUSED). A pack's per-machine refusal class extends it." ;
+    skos:altLabel "Transition Refusal", "Lifecycle Refusal" ;
+    rdfs:subClassOf :RefusalCode .
 
 # spec: MEDULLA-ORCH-VOCAB-R811.2
 :hasState a owl:ObjectProperty ;

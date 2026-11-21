@@ -936,7 +936,11 @@ ex:parent a owl:AsymmetricProperty .
         // +6 the generated decision module: DecideRequest evidence_streams (49170bd1dd,
         // MEDULLA-DECISION-ENGINE-R019.100.1) and StatisticalDecisionRecord
         // retrieval_binding (f4cf39e513, R029.1), three triples each.
-        assert_eq!(composed.ontology.len(), 24_690);
+        // +18 (measured, 24_690 -> 24_708; MEDULLA-ORCH-VOCAB-R811.10 and
+        // MEDULLA-TYPED-PACKS-R105.10.1): the :TransitionRefused class (six triples) and the
+        // :TransitionGuard "Guard" alias in state-machines-v1.ttl, and eleven core-foundation
+        // classes that had no core parent gain one.
+        assert_eq!(composed.ontology.len(), 24_708);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -1052,7 +1056,8 @@ ex:parent a owl:AsymmetricProperty .
         // +12 (MEDULLA-DECISION-ENGINE-R128.8): the four harness-fact datatype properties.
         // +508 (measured, 23_943 -> 24_451): the train-landing vocabulary, all semantic
         // axioms (see the total pin; headers stay at 48 subjects and imports at 81).
-        assert_eq!(semantic_axioms, 24_451);
+        // +18: the TransitionRefused class and the core-rooting edges (see the total pin).
+        assert_eq!(semantic_axioms, 24_469);
 
         let count_type = |object: &str| {
             composed
@@ -1151,7 +1156,9 @@ ex:parent a owl:AsymmetricProperty .
             // +42 (measured, 1316 -> 1358): six named subclass axioms for each of the
             // seven restored durable-kernel machines' State, TerminalState, Transition,
             // Event and Guard classes (see the total pin).
-            1358
+            // +12 (measured, 1358 -> 1370): :TransitionRefused rdfs:subClassOf :RefusalCode
+            // and the eleven core-rooting edges of MEDULLA-TYPED-PACKS-R105.10.1.
+            1370
         );
     }
 
