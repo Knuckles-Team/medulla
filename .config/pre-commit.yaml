@@ -97,10 +97,11 @@ repos:
   # Constitution Article XXXI: every lifecycle/status state is an explicit state machine with a closed
   # transition table and tests for every legal and illegal transition. Report mode: the whole census prints
   # on every run (verbose) and exits 0, with no baseline. MEDULLA-CONTRACT-R063 clears it and switches to
-  # the blocking state-machine-shape hook.
+  # the blocking state-machine-shape hook. It scans the whole tree and never fails, so it runs on the manual
+  # stage only (`pre-commit run --hook-stage manual state-machine-census`), not on every commit.
   - id: state-machine-census
     verbose: true
-    stages: [pre-commit, manual]
+    stages: [manual]
 - repo: https://github.com/jendrikseipp/vulture
   rev: b0f67ba0044693aa9ec0d38fe460590facc98004 # v2.16
   hooks:
