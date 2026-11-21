@@ -1109,7 +1109,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         ]
     }
 
-    fn as_refs(files: &[(&'static str, String)]) -> Vec<(&'static str, &str)> {
+    fn as_refs<'a>(files: &'a [(&'static str, String)]) -> Vec<(&'static str, &'a str)> {
         files.iter().map(|(n, t)| (*n, t.as_str())).collect()
     }
 

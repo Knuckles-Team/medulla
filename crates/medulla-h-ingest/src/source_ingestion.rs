@@ -3994,6 +3994,7 @@ mod tests {
             policies: Vec::new(),
             tombstone_count: 0,
             governance: Default::default(),
+            row_versions: Default::default(),
         };
         admit_relationships(
             RelationshipAdmissionContext {
