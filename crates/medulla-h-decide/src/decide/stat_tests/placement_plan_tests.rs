@@ -295,4 +295,35 @@ async fn plan_record_replays_from_inputs() {
     plan.check().unwrap();
     assert!(plan.node_count > 0, "the solver certificate counts its nodes");
     assert!(plan.bound.is_some(), "the certificate carries its bound");
+    assert_eq!(plan.certificate_digest.len(), 64);
+    assert!(plan
+        .certificate_digest
+        .bytes()
+        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+
+    // One `Observation` premise per host profile read.
+    let record = &first.records.as_slice()[0];
+    let observed: Vec<&str> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.class == PremiseClass::Observation)
+        .filter(|premise| premise.fact.starts_with("placement:host "))
+        .map(|premise| premise.subject.as_str())
+        .collect();
+    assert_eq!(observed, ["host:alpha", "host:beta"]);
+
+    // A replay of the stored record from its recorded inputs gives the recorded decision.
+    let ctx = super::super::stat_executor::ExecutionContext {
+        store: h.store.as_ref(),
+        tenant_id: TENANT,
+        now_ms: 1_000,
+        server_secret: b"decide-stat-test-secret",
+        matched: &[],
+        designation: None,
+        reader: None,
+        assistant_profile: None,
+    };
+    let replayed = super::super::stat_replay::replay(&ctx, record).unwrap();
+    assert_eq!(replayed.outcome, record.outcome);
+    assert_eq!(replayed.answer, record.answer);
 }
