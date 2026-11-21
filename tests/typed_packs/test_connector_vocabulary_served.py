@@ -336,6 +336,7 @@ def _sample_value(term: Term, connector: str) -> str | None:
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R089")
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.20")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("term", TERMS, ids=[t.name for t in TERMS])
 async def test_pack_record_of_each_new_term_round_trips(term: Term) -> None:
