@@ -27,7 +27,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R001.10` | `tests/ingest/test_ingest_queue_served.py::test_hydration_kinds_use_hydration_queue` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.11` | `tests/ingest/test_ingest_queue_served.py::test_full_queue_refuses_and_depth_is_unchanged`; `crates/medulla-h-ingest/src/ingest_queue.rs::tests::depth_report_orders_queues_and_saturates_age` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.12` | `tests/ingest/test_ingest_queue_served.py::test_lapsed_lease_redelivers_then_exhausts`; `crates/medulla-source-types/src/ingest_job.rs::tests::claim_exhaustion_is_after_max_attempts` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R001.13` | `crates/medulla-kernel/src/metrics/tests.rs::ingest_metrics_after_success_retry_dead_letter` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R001.13` | `crates/medulla-kernel/src/metrics/tests.rs::ingest_metrics_after_success_retry_dead_letter` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R001.14` | `tests/ingest/test_ingest_worker_contract_served.py::test_runner_call_sequence` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.1006` | `crates/medulla-ingestion-types/src/data_prep_declaration.rs::tests::declaration_round_trips_and_rejects_unknown_fields` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R001.1007` | `crates/medulla-h-ingest/src/data_prep_declaration.rs::tests::replace_is_atomic_and_equal_digest_is_unchanged` | L2 | exists |
