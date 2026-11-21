@@ -14612,6 +14612,51 @@ class MethodReadGraphChanges(BaseModel):
 # The PEP 604 `|` chain spelling of this 539-member union overflows vulture's
 # AST recursion depth in the whole-repo pre-push scan; `typing.Union[...]` is a
 # single subscript node, shallow at any member count.
+class MethodMemoryRememberParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryRememberRequest
+
+
+
+class MethodMemoryRemember(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryRemember"]
+    params: MethodMemoryRememberParams
+
+
+
+class MethodMemoryRecallParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryRecallRequest
+
+
+
+class MethodMemoryRecall(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryRecall"]
+    params: MethodMemoryRecallParams
+
+
+
+class MethodMemoryExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryExportRequest
+
+
+
+class MethodMemoryExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryExport"]
+    params: MethodMemoryExportParams
+
+
+
 Method = Annotated[
     Union[  # noqa: UP007
         MethodAddNode,
@@ -34261,45 +34306,6 @@ class MemoryExportResult(BaseModel):
 
     manifest: MemoryExportManifest
     records: list[MemoryRecord]
-
-
-class MethodMemoryRememberParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    request: MemoryRememberRequest
-
-
-class MethodMemoryRemember(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["MemoryRemember"]
-    params: MethodMemoryRememberParams
-
-
-class MethodMemoryRecallParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    request: MemoryRecallRequest
-
-
-class MethodMemoryRecall(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["MemoryRecall"]
-    params: MethodMemoryRecallParams
-
-
-class MethodMemoryExportParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    request: MemoryExportRequest
-
-
-class MethodMemoryExport(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["MemoryExport"]
-    params: MethodMemoryExportParams
 
 
 __all__ = [
