@@ -1320,3 +1320,10 @@ fn mutation_batch_machine_matches_edge_table() {
     sm::assert_matches(&medulla_protocol_types::mutation_batch::MUTATION_BATCH_MACHINE);
     sm::assert_extends_core("MutationBatch");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.6
+#[test]
+fn exact_retirement_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_direct_state::direct_state::EXACT_RETIREMENT_MACHINE);
+    sm::assert_extends_core("ExactRetirement");
+}
