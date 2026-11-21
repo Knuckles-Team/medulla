@@ -1119,3 +1119,58 @@ fn task_machine_matches_edge_table() {
 fn task_machine_classes_extend_core() {
     sm::assert_extends_core("Task");
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.1
+#[test]
+fn capability_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::capability_machine::CAPABILITY_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.1
+#[test]
+fn capability_machine_classes_extend_core() {
+    sm::assert_extends_core("Capability");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.3
+#[test]
+fn claim_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::claim_machine::CLAIM_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.3
+#[test]
+fn claim_machine_classes_extend_core() {
+    sm::assert_extends_core("Claim");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.5
+#[test]
+fn contradiction_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::contradiction_machine::CONTRADICTION_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.5
+#[test]
+fn contradiction_machine_classes_extend_core() {
+    sm::assert_extends_core("Contradiction");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.7
+#[test]
+fn gap_topic_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::gap_topic_machine::GAP_TOPIC_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.7
+#[test]
+fn gap_topic_machine_classes_extend_core() {
+    sm::assert_extends_core("GapTopic");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.8
+#[test]
+fn task_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::task_machine::GEO_TASK_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.8
+#[test]
+fn task_machine_classes_extend_core() {
+    sm::assert_extends_core("GeoTask");
+}

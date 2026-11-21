@@ -19,22 +19,6 @@ pub const ARTIFACT_DIGEST_DOMAIN: &str = "research_artifact";
 /// Ppm denominator.
 const PPM: i64 = 1_000_000;
 
-/// The legal lifecycle edges, `LEGAL_TRANSITIONS[from][to]`, indexed by
-/// [`ClaimState::index`] in the order proposed, supported, contested,
-/// accepted, retired. `retired` is final: its row is all false.
-pub const LEGAL_TRANSITIONS: [[bool; 5]; 5] = [
-    // proposed -> supported, contested, retired
-    [false, true, true, false, true],
-    // supported -> accepted, contested, retired
-    [false, false, true, true, true],
-    // contested -> supported, retired
-    [false, true, false, false, true],
-    // accepted -> contested, retired
-    [false, false, true, false, true],
-    // retired -> (final)
-    [false, false, false, false, false],
-];
-
 /// The claim knobs the kernels read (`claims.*`, loaded by the server knob
 /// table; the kernels never read the environment).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -74,9 +58,10 @@ impl ClaimKnobs {
     }
 }
 
-/// Whether `from -> to` is an edge of the lifecycle table. O(1).
+/// Whether `from -> to` is an edge of `ClaimMachine`
+/// (MEDULLA-FEDERATED-QUERY-R738.3), the one lifecycle table.
 pub fn legal_transition(from: ClaimState, to: ClaimState) -> bool {
-    LEGAL_TRANSITIONS[from.index()][to.index()]
+    from.move_to(to).is_ok()
 }
 
 /// The signed contribution of one piece of evidence, in micro-nats:

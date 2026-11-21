@@ -417,12 +417,14 @@ pub(super) mod served {
                         right: finding.right.clone(),
                         detected_at_ms: now,
                         evidence,
-                        status: ContradictionStatus::Open,
+                        status: ContradictionStatus::initial(),
                     });
             }
             for (contradiction_id, to) in moves {
                 if let Some(record) = ledger.contradictions.get_mut(&contradiction_id) {
-                    record.status = to;
+                    if let Ok(next) = record.status.move_to(to) {
+                        record.status = next;
+                    }
                 }
             }
             for (claim_id, revision) in &output.revisions {

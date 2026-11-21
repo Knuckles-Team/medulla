@@ -6058,3 +6058,412 @@
     :fromState :SemanticMachine_AnnIndex ;
     :toState :SemanticMachine_ReconcileAndActivate ;
     :firedBy :SemanticMachine_Event_ReconcileAndActivate .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.1
+# The Capability machine: the capability matrix entry status (planned until its backend lands, then shipped). The Rust edge table CAPABILITY_MACHINE is the same table.
+
+:CapabilityState a owl:Class ;
+    rdfs:label "Capability State" ;
+    rdfs:comment "A state of the Capability machine." ;
+    rdfs:subClassOf :State .
+
+:CapabilityTerminalState a owl:Class ;
+    rdfs:label "Capability Terminal State" ;
+    rdfs:comment "A terminal state of the Capability machine." ;
+    rdfs:subClassOf :TerminalState, :CapabilityState .
+
+:CapabilityTransition a owl:Class ;
+    rdfs:label "Capability Transition" ;
+    rdfs:comment "A transition of the Capability machine." ;
+    rdfs:subClassOf :Transition .
+
+:CapabilityEvent a owl:Class ;
+    rdfs:label "Capability Event" ;
+    rdfs:comment "An event of the Capability machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:CapabilityGuard a owl:Class ;
+    rdfs:label "Capability Guard" ;
+    rdfs:comment "A guard of the Capability machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:CapabilityMachine a :StateMachine ;
+    rdfs:label "Capability machine" ;
+    :initialState :CapabilityMachine_Planned ;
+    :hasState :CapabilityMachine_Planned, :CapabilityMachine_Shipped .
+
+:CapabilityMachine_Planned a :CapabilityState ;
+    rdfs:label "Capability Planned" ;
+    :storedForm "planned" .
+
+:CapabilityMachine_Shipped a :CapabilityTerminalState ;
+    rdfs:label "Capability Shipped" ;
+    :storedForm "shipped" .
+
+:CapabilityMachine_Event_Ship a :CapabilityEvent ;
+    rdfs:label "Capability Ship" .
+
+:CapabilityMachine_CS01 a :CapabilityTransition ;
+    rdfs:label "Capability CS01" ;
+    :edgeId "CS01" ;
+    :fromState :CapabilityMachine_Planned ;
+    :toState :CapabilityMachine_Shipped ;
+    :firedBy :CapabilityMachine_Event_Ship .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.3
+# The Claim machine: the lifecycle of a research claim. The Rust edge table CLAIM_MACHINE is the same table.
+
+:ClaimState a owl:Class ;
+    rdfs:label "Claim State" ;
+    rdfs:comment "A state of the Claim machine." ;
+    rdfs:subClassOf :State .
+
+:ClaimTerminalState a owl:Class ;
+    rdfs:label "Claim Terminal State" ;
+    rdfs:comment "A terminal state of the Claim machine." ;
+    rdfs:subClassOf :TerminalState, :ClaimState .
+
+:ClaimTransition a owl:Class ;
+    rdfs:label "Claim Transition" ;
+    rdfs:comment "A transition of the Claim machine." ;
+    rdfs:subClassOf :Transition .
+
+:ClaimEvent a owl:Class ;
+    rdfs:label "Claim Event" ;
+    rdfs:comment "An event of the Claim machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ClaimGuard a owl:Class ;
+    rdfs:label "Claim Guard" ;
+    rdfs:comment "A guard of the Claim machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ClaimMachine a :StateMachine ;
+    rdfs:label "Claim machine" ;
+    :initialState :ClaimMachine_Proposed ;
+    :hasState :ClaimMachine_Proposed, :ClaimMachine_Supported, :ClaimMachine_Contested, :ClaimMachine_Accepted, :ClaimMachine_Retired .
+
+:ClaimMachine_Proposed a :ClaimState ;
+    rdfs:label "Claim Proposed" ;
+    :storedForm "proposed" .
+
+:ClaimMachine_Supported a :ClaimState ;
+    rdfs:label "Claim Supported" ;
+    :storedForm "supported" .
+
+:ClaimMachine_Contested a :ClaimState ;
+    rdfs:label "Claim Contested" ;
+    :storedForm "contested" .
+
+:ClaimMachine_Accepted a :ClaimState ;
+    rdfs:label "Claim Accepted" ;
+    :storedForm "accepted" .
+
+:ClaimMachine_Retired a :ClaimTerminalState ;
+    rdfs:label "Claim Retired" ;
+    :storedForm "retired" .
+
+:ClaimMachine_Event_Support a :ClaimEvent ;
+    rdfs:label "Claim Support" .
+
+:ClaimMachine_Event_Contest a :ClaimEvent ;
+    rdfs:label "Claim Contest" .
+
+:ClaimMachine_Event_Accept a :ClaimEvent ;
+    rdfs:label "Claim Accept" .
+
+:ClaimMachine_Event_Retire a :ClaimEvent ;
+    rdfs:label "Claim Retire" .
+
+:ClaimMachine_CL01 a :ClaimTransition ;
+    rdfs:label "Claim CL01" ;
+    :edgeId "CL01" ;
+    :fromState :ClaimMachine_Proposed ;
+    :toState :ClaimMachine_Supported ;
+    :firedBy :ClaimMachine_Event_Support .
+
+:ClaimMachine_CL02 a :ClaimTransition ;
+    rdfs:label "Claim CL02" ;
+    :edgeId "CL02" ;
+    :fromState :ClaimMachine_Proposed ;
+    :toState :ClaimMachine_Contested ;
+    :firedBy :ClaimMachine_Event_Contest .
+
+:ClaimMachine_CL03 a :ClaimTransition ;
+    rdfs:label "Claim CL03" ;
+    :edgeId "CL03" ;
+    :fromState :ClaimMachine_Proposed ;
+    :toState :ClaimMachine_Retired ;
+    :firedBy :ClaimMachine_Event_Retire .
+
+:ClaimMachine_CL04 a :ClaimTransition ;
+    rdfs:label "Claim CL04" ;
+    :edgeId "CL04" ;
+    :fromState :ClaimMachine_Supported ;
+    :toState :ClaimMachine_Accepted ;
+    :firedBy :ClaimMachine_Event_Accept .
+
+:ClaimMachine_CL05 a :ClaimTransition ;
+    rdfs:label "Claim CL05" ;
+    :edgeId "CL05" ;
+    :fromState :ClaimMachine_Supported ;
+    :toState :ClaimMachine_Contested ;
+    :firedBy :ClaimMachine_Event_Contest .
+
+:ClaimMachine_CL06 a :ClaimTransition ;
+    rdfs:label "Claim CL06" ;
+    :edgeId "CL06" ;
+    :fromState :ClaimMachine_Supported ;
+    :toState :ClaimMachine_Retired ;
+    :firedBy :ClaimMachine_Event_Retire .
+
+:ClaimMachine_CL07 a :ClaimTransition ;
+    rdfs:label "Claim CL07" ;
+    :edgeId "CL07" ;
+    :fromState :ClaimMachine_Contested ;
+    :toState :ClaimMachine_Supported ;
+    :firedBy :ClaimMachine_Event_Support .
+
+:ClaimMachine_CL08 a :ClaimTransition ;
+    rdfs:label "Claim CL08" ;
+    :edgeId "CL08" ;
+    :fromState :ClaimMachine_Contested ;
+    :toState :ClaimMachine_Retired ;
+    :firedBy :ClaimMachine_Event_Retire .
+
+:ClaimMachine_CL09 a :ClaimTransition ;
+    rdfs:label "Claim CL09" ;
+    :edgeId "CL09" ;
+    :fromState :ClaimMachine_Accepted ;
+    :toState :ClaimMachine_Contested ;
+    :firedBy :ClaimMachine_Event_Contest .
+
+:ClaimMachine_CL10 a :ClaimTransition ;
+    rdfs:label "Claim CL10" ;
+    :edgeId "CL10" ;
+    :fromState :ClaimMachine_Accepted ;
+    :toState :ClaimMachine_Retired ;
+    :firedBy :ClaimMachine_Event_Retire .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.5
+# The Contradiction machine: the status of a tracked contradiction: open, proposed, resolved in that order only. The Rust edge table CONTRADICTION_MACHINE is the same table.
+
+:ContradictionState a owl:Class ;
+    rdfs:label "Contradiction State" ;
+    rdfs:comment "A state of the Contradiction machine." ;
+    rdfs:subClassOf :State .
+
+:ContradictionTerminalState a owl:Class ;
+    rdfs:label "Contradiction Terminal State" ;
+    rdfs:comment "A terminal state of the Contradiction machine." ;
+    rdfs:subClassOf :TerminalState, :ContradictionState .
+
+:ContradictionTransition a owl:Class ;
+    rdfs:label "Contradiction Transition" ;
+    rdfs:comment "A transition of the Contradiction machine." ;
+    rdfs:subClassOf :Transition .
+
+:ContradictionEvent a owl:Class ;
+    rdfs:label "Contradiction Event" ;
+    rdfs:comment "An event of the Contradiction machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ContradictionGuard a owl:Class ;
+    rdfs:label "Contradiction Guard" ;
+    rdfs:comment "A guard of the Contradiction machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ContradictionMachine a :StateMachine ;
+    rdfs:label "Contradiction machine" ;
+    :initialState :ContradictionMachine_Open ;
+    :hasState :ContradictionMachine_Open, :ContradictionMachine_Proposed, :ContradictionMachine_Resolved .
+
+:ContradictionMachine_Open a :ContradictionState ;
+    rdfs:label "Contradiction Open" ;
+    :storedForm "open" .
+
+:ContradictionMachine_Proposed a :ContradictionState ;
+    rdfs:label "Contradiction Proposed" ;
+    :storedForm "proposed" .
+
+:ContradictionMachine_Resolved a :ContradictionTerminalState ;
+    rdfs:label "Contradiction Resolved" ;
+    :storedForm "resolved" .
+
+:ContradictionMachine_Event_Propose a :ContradictionEvent ;
+    rdfs:label "Contradiction Propose" .
+
+:ContradictionMachine_Event_Resolve a :ContradictionEvent ;
+    rdfs:label "Contradiction Resolve" .
+
+:ContradictionMachine_K01 a :ContradictionTransition ;
+    rdfs:label "Contradiction K01" ;
+    :edgeId "K01" ;
+    :fromState :ContradictionMachine_Open ;
+    :toState :ContradictionMachine_Proposed ;
+    :firedBy :ContradictionMachine_Event_Propose .
+
+:ContradictionMachine_K02 a :ContradictionTransition ;
+    rdfs:label "Contradiction K02" ;
+    :edgeId "K02" ;
+    :fromState :ContradictionMachine_Proposed ;
+    :toState :ContradictionMachine_Resolved ;
+    :firedBy :ContradictionMachine_Event_Resolve .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.7
+# The GapTopic machine: the status of a failure-pattern gap topic. The Rust edge table GAP_TOPIC_MACHINE is the same table.
+
+:GapTopicState a owl:Class ;
+    rdfs:label "GapTopic State" ;
+    rdfs:comment "A state of the GapTopic machine." ;
+    rdfs:subClassOf :State .
+
+:GapTopicTerminalState a owl:Class ;
+    rdfs:label "GapTopic Terminal State" ;
+    rdfs:comment "A terminal state of the GapTopic machine." ;
+    rdfs:subClassOf :TerminalState, :GapTopicState .
+
+:GapTopicTransition a owl:Class ;
+    rdfs:label "GapTopic Transition" ;
+    rdfs:comment "A transition of the GapTopic machine." ;
+    rdfs:subClassOf :Transition .
+
+:GapTopicEvent a owl:Class ;
+    rdfs:label "GapTopic Event" ;
+    rdfs:comment "An event of the GapTopic machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GapTopicGuard a owl:Class ;
+    rdfs:label "GapTopic Guard" ;
+    rdfs:comment "A guard of the GapTopic machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GapTopicMachine a :StateMachine ;
+    rdfs:label "GapTopic machine" ;
+    :initialState :GapTopicMachine_Open ;
+    :hasState :GapTopicMachine_Open, :GapTopicMachine_Addressed .
+
+:GapTopicMachine_Open a :GapTopicState ;
+    rdfs:label "GapTopic Open" ;
+    :storedForm "open" .
+
+:GapTopicMachine_Addressed a :GapTopicTerminalState ;
+    rdfs:label "GapTopic Addressed" ;
+    :storedForm "addressed" .
+
+:GapTopicMachine_Event_Address a :GapTopicEvent ;
+    rdfs:label "GapTopic Address" .
+
+:GapTopicMachine_GT01 a :GapTopicTransition ;
+    rdfs:label "GapTopic GT01" ;
+    :edgeId "GT01" ;
+    :fromState :GapTopicMachine_Open ;
+    :toState :GapTopicMachine_Addressed ;
+    :firedBy :GapTopicMachine_Event_Address .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.8
+# The GeoTask machine: the lifecycle status of a geolocated task. The Rust edge table GEO_TASK_MACHINE is the same table.
+
+:GeoTaskState a owl:Class ;
+    rdfs:label "GeoTask State" ;
+    rdfs:comment "A state of the GeoTask machine." ;
+    rdfs:subClassOf :State .
+
+:GeoTaskTerminalState a owl:Class ;
+    rdfs:label "GeoTask Terminal State" ;
+    rdfs:comment "A terminal state of the GeoTask machine." ;
+    rdfs:subClassOf :TerminalState, :GeoTaskState .
+
+:GeoTaskTransition a owl:Class ;
+    rdfs:label "GeoTask Transition" ;
+    rdfs:comment "A transition of the GeoTask machine." ;
+    rdfs:subClassOf :Transition .
+
+:GeoTaskEvent a owl:Class ;
+    rdfs:label "GeoTask Event" ;
+    rdfs:comment "An event of the GeoTask machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GeoTaskGuard a owl:Class ;
+    rdfs:label "GeoTask Guard" ;
+    rdfs:comment "A guard of the GeoTask machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GeoTaskMachine a :StateMachine ;
+    rdfs:label "GeoTask machine" ;
+    :initialState :GeoTaskMachine_Pending ;
+    :hasState :GeoTaskMachine_Pending, :GeoTaskMachine_Assigned, :GeoTaskMachine_InProgress, :GeoTaskMachine_Done, :GeoTaskMachine_Cancelled .
+
+:GeoTaskMachine_Pending a :GeoTaskState ;
+    rdfs:label "GeoTask Pending" ;
+    :storedForm "pending" .
+
+:GeoTaskMachine_Assigned a :GeoTaskState ;
+    rdfs:label "GeoTask Assigned" ;
+    :storedForm "assigned" .
+
+:GeoTaskMachine_InProgress a :GeoTaskState ;
+    rdfs:label "GeoTask InProgress" ;
+    :storedForm "in_progress" .
+
+:GeoTaskMachine_Done a :GeoTaskTerminalState ;
+    rdfs:label "GeoTask Done" ;
+    :storedForm "done" .
+
+:GeoTaskMachine_Cancelled a :GeoTaskTerminalState ;
+    rdfs:label "GeoTask Cancelled" ;
+    :storedForm "cancelled" .
+
+:GeoTaskMachine_Event_Assign a :GeoTaskEvent ;
+    rdfs:label "GeoTask Assign" .
+
+:GeoTaskMachine_Event_Start a :GeoTaskEvent ;
+    rdfs:label "GeoTask Start" .
+
+:GeoTaskMachine_Event_Complete a :GeoTaskEvent ;
+    rdfs:label "GeoTask Complete" .
+
+:GeoTaskMachine_Event_Cancel a :GeoTaskEvent ;
+    rdfs:label "GeoTask Cancel" .
+
+:GeoTaskMachine_GK01 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK01" ;
+    :edgeId "GK01" ;
+    :fromState :GeoTaskMachine_Pending ;
+    :toState :GeoTaskMachine_Assigned ;
+    :firedBy :GeoTaskMachine_Event_Assign .
+
+:GeoTaskMachine_GK02 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK02" ;
+    :edgeId "GK02" ;
+    :fromState :GeoTaskMachine_Assigned ;
+    :toState :GeoTaskMachine_InProgress ;
+    :firedBy :GeoTaskMachine_Event_Start .
+
+:GeoTaskMachine_GK03 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK03" ;
+    :edgeId "GK03" ;
+    :fromState :GeoTaskMachine_InProgress ;
+    :toState :GeoTaskMachine_Done ;
+    :firedBy :GeoTaskMachine_Event_Complete .
+
+:GeoTaskMachine_GK04 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK04" ;
+    :edgeId "GK04" ;
+    :fromState :GeoTaskMachine_Pending ;
+    :toState :GeoTaskMachine_Cancelled ;
+    :firedBy :GeoTaskMachine_Event_Cancel .
+
+:GeoTaskMachine_GK05 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK05" ;
+    :edgeId "GK05" ;
+    :fromState :GeoTaskMachine_Assigned ;
+    :toState :GeoTaskMachine_Cancelled ;
+    :firedBy :GeoTaskMachine_Event_Cancel .
+
+:GeoTaskMachine_GK06 a :GeoTaskTransition ;
+    rdfs:label "GeoTask GK06" ;
+    :edgeId "GK06" ;
+    :fromState :GeoTaskMachine_InProgress ;
+    :toState :GeoTaskMachine_Cancelled ;
+    :firedBy :GeoTaskMachine_Event_Cancel .

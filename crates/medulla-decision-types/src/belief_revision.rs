@@ -94,6 +94,42 @@ pub enum ContradictionStatus {
 }
 
 impl ContradictionStatus {
+    /// The machine discriminant of this status (MEDULLA-FEDERATED-QUERY-R738.5).
+    pub const fn kind(self) -> medulla_types::contradiction_machine::ContradictionStatusKind {
+        use medulla_types::contradiction_machine::ContradictionStatusKind as K;
+        match self {
+            Self::Open => K::Open,
+            Self::Proposed => K::Proposed,
+            Self::Resolved => K::Resolved,
+        }
+    }
+
+    /// The status of a machine discriminant.
+    pub const fn from_kind(
+        kind: medulla_types::contradiction_machine::ContradictionStatusKind,
+    ) -> Self {
+        use medulla_types::contradiction_machine::ContradictionStatusKind as K;
+        match kind {
+            K::Open => Self::Open,
+            K::Proposed => Self::Proposed,
+            K::Resolved => Self::Resolved,
+        }
+    }
+
+    /// The status a new contradiction takes: the initial state of `ContradictionMachine`.
+    pub const fn initial() -> Self {
+        Self::from_kind(medulla_types::contradiction_machine::ContradictionStatusKind::initial())
+    }
+
+    /// Move to `to` along its edge of `ContradictionMachine`, or refuse with
+    /// `TRANSITION_REFUSED`.
+    pub fn move_to(
+        self,
+        to: Self,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        self.kind().move_to(to.kind()).map(Self::from_kind)
+    }
+
     /// The one status that may follow this one, or `None` at the end.
     pub const fn next(self) -> Option<Self> {
         match self {

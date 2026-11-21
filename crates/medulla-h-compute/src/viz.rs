@@ -217,10 +217,19 @@ fn capability_entry_result(
         mark: enum_wire_name(&entry.mark)?,
         surface: enum_wire_name(&entry.surface)?,
         level: enum_wire_name(&entry.level)?,
-        status: enum_wire_name(&entry.status)?,
+        status: capability_status_text(&entry.status)?,
         target_wave: entry.target_wave.clone(),
         notes: entry.notes.clone(),
     })
+}
+
+/// The wire text of an entry's status, which must be a state of `CapabilityMachine`
+/// (MEDULLA-FEDERATED-QUERY-R738.1): any other literal is refused.
+fn capability_status_text<T: serde::Serialize>(status: &T) -> Result<String, String> {
+    let text = enum_wire_name(status)?;
+    medulla_types::capability_machine::CapabilityStatusKind::from_stored(&text)
+        .map(|kind| medulla_types::transition_refused::MachineState::stored(kind).to_string())
+        .ok_or_else(|| format!("viz capability status '{text}' is not a CapabilityMachine state"))
 }
 
 fn enum_wire_name<T: serde::Serialize>(value: &T) -> Result<String, String> {

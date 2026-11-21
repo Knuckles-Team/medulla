@@ -83,6 +83,40 @@ pub enum GapStatus {
     },
 }
 
+impl GapStatus {
+    /// The machine discriminant of this status (MEDULLA-FEDERATED-QUERY-R738.7). The
+    /// data a state carries, such as `by`, stays on the record.
+    pub const fn kind(&self) -> medulla_types::gap_topic_machine::GapStatusKind {
+        use medulla_types::gap_topic_machine::GapStatusKind as K;
+        match self {
+            Self::Open => K::Open,
+            Self::Addressed { .. } => K::Addressed,
+        }
+    }
+
+    /// The status a new gap takes: the initial state of `GapTopicMachine`.
+    pub fn initial() -> Self {
+        use medulla_types::gap_topic_machine::GapStatusKind as K;
+        match K::initial() {
+            K::Open => Self::Open,
+            K::Addressed => Self::Addressed { by: String::new() },
+        }
+    }
+
+    /// Address the gap by `by` through `GapTopicMachine`: the addressed status, or
+    /// `TRANSITION_REFUSED` when the gap is not open.
+    pub fn address(
+        &self,
+        by: impl Into<String>,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        use medulla_types::gap_topic_machine::{GapStatusKind as K, GapTopicEvent};
+        self.kind().apply(GapTopicEvent::Address).map(|kind| match kind {
+            K::Addressed => Self::Addressed { by: by.into() },
+            K::Open => Self::Open,
+        })
+    }
+}
+
 /// The gap a recurring pattern files.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -101,7 +135,7 @@ impl GapTopic {
         Self {
             id: signature.topic_id(),
             signature,
-            status: GapStatus::Open,
+            status: GapStatus::initial(),
         }
     }
 }

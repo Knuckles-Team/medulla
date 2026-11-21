@@ -59,6 +59,51 @@ pub enum ClaimState {
 }
 
 impl ClaimState {
+    /// The machine discriminant of this state (MEDULLA-FEDERATED-QUERY-R738.3).
+    pub const fn kind(self) -> medulla_types::claim_machine::ClaimStateKind {
+        use medulla_types::claim_machine::ClaimStateKind as K;
+        match self {
+            ClaimState::Proposed => K::Proposed,
+            ClaimState::Supported => K::Supported,
+            ClaimState::Contested => K::Contested,
+            ClaimState::Accepted => K::Accepted,
+            ClaimState::Retired => K::Retired,
+        }
+    }
+
+    /// The state of a machine discriminant.
+    pub const fn from_kind(kind: medulla_types::claim_machine::ClaimStateKind) -> Self {
+        use medulla_types::claim_machine::ClaimStateKind as K;
+        match kind {
+            K::Proposed => ClaimState::Proposed,
+            K::Supported => ClaimState::Supported,
+            K::Contested => ClaimState::Contested,
+            K::Accepted => ClaimState::Accepted,
+            K::Retired => ClaimState::Retired,
+        }
+    }
+
+    /// The state a new claim takes: the initial state of `ClaimMachine`.
+    pub const fn initial() -> Self {
+        Self::from_kind(medulla_types::claim_machine::ClaimStateKind::initial())
+    }
+
+    /// Apply `event` through `ClaimMachine`: the next state, or `TRANSITION_REFUSED`.
+    pub fn apply(
+        self,
+        event: medulla_types::claim_machine::ClaimEvent,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        self.kind().apply(event).map(Self::from_kind)
+    }
+
+    /// Move to `to` along its edge of `ClaimMachine`, or refuse.
+    pub fn move_to(
+        self,
+        to: Self,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        self.kind().move_to(to.kind()).map(Self::from_kind)
+    }
+
     /// Every state, in table order.
     pub const ALL: [ClaimState; 5] = [
         ClaimState::Proposed,

@@ -154,3 +154,13 @@ pub mod process_import;
 pub mod process_exchange;
 // MEDULLA-CQ-ORCH-R705.2: architecture exchange records (ArchiMate Open Exchange Format).
 pub mod archimate_exchange;
+// MEDULLA-FEDERATED-QUERY-R738.1 — the capability matrix entry status (planned until its backend lands, then shipped) as an explicit state machine.
+pub mod capability_machine;
+// MEDULLA-FEDERATED-QUERY-R738.3 — the lifecycle of a research claim as an explicit state machine.
+pub mod claim_machine;
+// MEDULLA-FEDERATED-QUERY-R738.5 — the status of a tracked contradiction: open, proposed, resolved in that order only as an explicit state machine.
+pub mod contradiction_machine;
+// MEDULLA-FEDERATED-QUERY-R738.7 — the status of a failure-pattern gap topic as an explicit state machine.
+pub mod gap_topic_machine;
+// MEDULLA-FEDERATED-QUERY-R738.8 — the lifecycle status of a geolocated task as an explicit state machine.
+pub mod task_machine;
