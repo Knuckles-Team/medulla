@@ -12,6 +12,7 @@ import concurrent.futures
 import contextlib
 import contextvars
 import copy
+import enum
 import functools
 import hashlib
 import hmac
@@ -855,10 +856,21 @@ class ModalityApplyOutcome(TypedDict):
     event_sequence: int
 
 
+class LifecycleState(enum.StrEnum):
+    """The lifecycle of one served modality record: the members of the engine's
+    ``LifecycleState`` contract enum. Python owns no transition; every lifecycle
+    change is a served call, and an illegal one raises the engine's typed
+    :class:`TransitionRefusedError` unchanged."""
+
+    ACTIVE = "active"
+    COLD = "cold"
+    TOMBSTONED = "tombstoned"
+
+
 class ServedModalityRecord(TypedDict):
     occurrence_id: str
     observation_version: int
-    lifecycle: Literal["active", "cold"]
+    lifecycle: LifecycleState
     bundle: dict[str, Any]
     value: dict[str, Any]
 

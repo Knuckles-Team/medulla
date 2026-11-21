@@ -301,7 +301,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply
 - [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Wire status codes named `status`: HTTP, S3, key-value cache, TDS header and Iceberg manifest entry status values; one Python HTTP response status
-- [ ] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
+- [x] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
 - [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 ProjectionHealth/ProjectionStatus state machine: route 1 census findings through ProjectionStatus::apply
 - [ ] T203 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.5 SchemaMigrationRecord/MigrationState state machine: route 1 census findings through MigrationState::apply
 - [x] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
