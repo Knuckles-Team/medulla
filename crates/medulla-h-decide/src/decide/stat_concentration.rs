@@ -139,7 +139,7 @@ fn edit_of(
         edit_id: id.to_string(),
         dimension_iri: dimensions.get(id)?.clone(),
         round: u32::try_from(unsigned(row, "editRound")?).ok()?,
-        status: status_of(row)?,
+        standing: status_of(row)?,
         policy_revision: unsigned(row, "policyRevision").unwrap_or(default_revision),
     })
 }

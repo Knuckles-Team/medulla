@@ -48,7 +48,10 @@ pub struct EditFact {
     pub edit_id: String,
     pub dimension_iri: String,
     pub round: u32,
-    pub status: EditStatus,
+    /// The edit's recorded standing, read from a graph literal; the engine never moves it
+    /// (MEDULLA-DECISION-ENGINE-R830.4). The wire key stays `status`.
+    #[serde(rename = "status")]
+    pub standing: EditStatus,
     pub policy_revision: u64,
 }
 
@@ -151,7 +154,7 @@ pub fn counted_edits<'a>(
         .saturating_sub(policy.window_rounds.saturating_sub(1));
     let mut counted: Vec<&EditFact> = facts
         .iter()
-        .filter(|f| f.status == EditStatus::Shipped && f.dimension_iri == candidate.dimension_iri)
+        .filter(|f| f.standing == EditStatus::Shipped && f.dimension_iri == candidate.dimension_iri)
         .filter(|f| f.edit_id != candidate.edit_id)
         .filter(|f| f.round >= first && f.round <= candidate.round)
         .collect();
@@ -173,7 +176,7 @@ pub fn concentration_verdict(
     check_revisions(facts, candidate)?;
     let mut shipped: Vec<&EditFact> = facts
         .iter()
-        .filter(|f| f.status == EditStatus::Shipped && f.dimension_iri == candidate.dimension_iri)
+        .filter(|f| f.standing == EditStatus::Shipped && f.dimension_iri == candidate.dimension_iri)
         .filter(|f| f.round <= candidate.round && f.edit_id != candidate.edit_id)
         .collect();
     shipped.sort_by_key(|f| f.round);

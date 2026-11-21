@@ -16,7 +16,7 @@ fn edit(id: &str, round: u32, status: EditStatus) -> EditFact {
         edit_id: id.into(),
         dimension_iri: DIMENSION.into(),
         round,
-        status,
+        standing: status,
         policy_revision: 7,
     }
 }
@@ -141,4 +141,24 @@ fn missing_policy_and_mixed_revisions_abstain() {
         serde_json::to_value(ConcentrationAbstention::NoConcentrationPolicy).unwrap()["reason"],
         "no_concentration_policy"
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.4
+#[test]
+fn no_writer_sets_status_outside_apply() {
+    // The census named `EditFact.status`. The engine reads the graph literal and never moves
+    // it, so the Rust field is `standing` and the wire key is unchanged.
+    let fact: EditFact = serde_json::from_value(serde_json::json!({
+        "edit_id": "e1",
+        "dimension_iri": DIMENSION,
+        "round": 2,
+        "status": "shipped",
+        "policy_revision": 7
+    }))
+    .expect("wire key status");
+    assert_eq!(fact.standing, EditStatus::Shipped);
+    assert_eq!(serde_json::to_value(&fact).unwrap()["status"], "shipped");
+    let source = include_str!("../concentration.rs");
+    let production = source.split("#[cfg(test)]").next().unwrap();
+    assert!(!production.contains(".standing ="));
 }
