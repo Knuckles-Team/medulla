@@ -30,6 +30,8 @@ from .agent_component import (
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
     BlueprintExport,
+    PromptRenderRequest,
+    PromptRenderResult,
     SkillAdmission,
     SkillAdmissionRequest,
     SourceEffectRecordResult,
@@ -599,6 +601,32 @@ async def send_agent_component_export_blueprint(
         idempotency_key=idempotency_key,
     )
     return BlueprintExport.model_validate(payload)
+
+
+async def send_agent_component_render(
+    client: Any,
+    request: PromptRenderRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> PromptRenderResult:
+    """Send typed AgentComponent.render."""
+    request = PromptRenderRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "render",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return PromptRenderResult.model_validate(payload)
 
 
 async def send_agent_component_record_source_effect(

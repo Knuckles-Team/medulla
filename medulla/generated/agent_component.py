@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 
@@ -46,6 +46,7 @@ from ._shared import (
     ToolsetTransport,
     ToolSideEffects,
 )
+from .decision_commit import PromptBlueprintIdentity
 
 
 def _eg_octets(value):
@@ -100,6 +101,34 @@ class BlueprintExport(BaseModel):
     content_digest: str
     entry: AgentComponentEntry
     media_type: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class PromptRenderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    revision: Annotated[int, Field(ge=0)]
+    schema_revision: Annotated[int, Field(ge=0)]
+    tenant_id: str
+    variables: dict[str, Any] = Field(default_factory=dict)
+
+
+class PromptRenderReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    identity: PromptBlueprintIdentity
+    receipt_digest: str
+    scope: str
+    variables_digest: str
+
+
+class PromptRenderResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bytes: _EgOctets
+    receipt: PromptRenderReceipt
+    render_digest: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
@@ -249,6 +278,13 @@ class AgentComponentOpExportBlueprint(BaseModel):
     request: AgentComponentBlueprintExportRequest
 
 
+class AgentComponentOpRender(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["render"]
+    request: PromptRenderRequest
+
+
 class AgentComponentOpRecordSourceEffect(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -273,6 +309,7 @@ AgentComponentOp = Annotated[
     | AgentComponentOpContent
     | AgentComponentOpAdmitSkillUpgrade
     | AgentComponentOpExportBlueprint
+    | AgentComponentOpRender
     | AgentComponentOpRecordSourceEffect,
     Field(discriminator="op"),
 ]
@@ -351,7 +388,15 @@ AgentComponentOpAdmitSkillUpgrade.model_rebuild()
 
 AgentComponentOpExportBlueprint.model_rebuild()
 
+AgentComponentOpRender.model_rebuild()
+
 AgentComponentOpRecordSourceEffect.model_rebuild()
+
+PromptRenderRequest.model_rebuild()
+
+PromptRenderReceipt.model_rebuild()
+
+PromptRenderResult.model_rebuild()
 
 SourceEffectRecordResult.model_rebuild()
 
@@ -379,6 +424,10 @@ __all__ = [
     "SourceEffectRecordResult",
     "AgentComponentBlueprintExportRequest",
     "AgentComponentOpExportBlueprint",
+    "AgentComponentOpRender",
+    "PromptRenderReceipt",
+    "PromptRenderRequest",
+    "PromptRenderResult",
     "BlueprintExport",
     "AgentComponentContentRequest",
     "AgentComponentContentResult",

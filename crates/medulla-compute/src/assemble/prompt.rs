@@ -53,8 +53,9 @@ pub enum RefusalCode {
     PromptVariableMissing,
     /// A value names a variable the blueprint does not declare.
     PromptVariableUnknown,
-    /// The pins do not resolve: the blueprint body does not hash to the
-    /// pinned `body_sha256`, or the policy names an unknown rendering version.
+    /// The pins do not resolve: the stored body does not hash to the pinned
+    /// `body_sha256` (checked by the caller), or the policy names an unknown
+    /// rendering version.
     PromptPinUnresolved,
     /// The rendered bytes exceed `max_render_bytes`.
     PromptOutputTooLarge,
@@ -102,7 +103,8 @@ fn canonical(value: &Value, out: &mut Vec<u8>) {
     }
 }
 
-fn canonical_bytes(value: &Value) -> Vec<u8> {
+/// Canonical JSON bytes of one value (keys sorted at every level, no whitespace).
+pub fn canonical_bytes(value: &Value) -> Vec<u8> {
     let mut out = Vec::new();
     canonical(value, &mut out);
     out
@@ -117,11 +119,10 @@ pub fn render_prompt(
     if policy.rendering_version != RENDERING_VERSION {
         return Err(RefusalCode::PromptPinUnresolved);
     }
+    // The pin is the digest of the raw stored body; the caller verified it
+    // against the bytes it parsed (`read_prompt_blueprint`), so it is not
+    // re-derived from the parsed value here.
     let identity = revision.identity();
-    let body = canonical_bytes(revision.blueprint());
-    if Digest256::sha256(&body).to_hex() != identity.body_sha256 {
-        return Err(RefusalCode::PromptPinUnresolved);
-    }
     let declared = revision.declared_variables();
     if vars.keys().any(|name| !declared.contains(name.as_str())) {
         return Err(RefusalCode::PromptVariableUnknown);
@@ -300,19 +301,6 @@ mod tests {
                     ..policy
                 }
             ),
-            Err(RefusalCode::PromptPinUnresolved)
-        );
-
-        let mut unpinned_identity = prompt.identity().clone();
-        unpinned_identity.body_sha256 = "0".repeat(64);
-        let unpinned = validate_prompt_blueprint(
-            prompt.blueprint(),
-            &unpinned_identity,
-            &PromptLimits::default(),
-        )
-        .expect("valid blueprint");
-        assert_eq!(
-            render_prompt(&unpinned, &inputs, &policy),
             Err(RefusalCode::PromptPinUnresolved)
         );
         assert!(MAX_RENDER_BYTES_RANGE.contains(&DEFAULT_MAX_RENDER_BYTES));

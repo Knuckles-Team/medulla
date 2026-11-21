@@ -22,7 +22,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T016 [US1] MEDULLA-TYPED-PACKS-R002.6 Verified body serving
 - [x] T017 [US1] MEDULLA-TYPED-PACKS-R002.7 BUILD native prompt body persistence: add `AgentComponentPublishRequest.prompt_blueprint`, make `component_publish` async and stage the verified blueprint through `put_engine_bodies`, give `publish_component` a `staged_body: Option<ConnectorPackHolderCommit>` committed through `write_revision_with_rows` + `apply_holders`, update every caller with `None`, regenerate the contract, and write `prompt_publish_commits_one_holder_with_its_revision` and `test_prompt_owner_commit`
 - [ ] T018 [US1] MEDULLA-TYPED-PACKS-R002.8 Prompt graph projection
-- [ ] T019 [US1] MEDULLA-TYPED-PACKS-R002.9 Served prompt rendering
+- [x] T019 [US1] MEDULLA-TYPED-PACKS-R002.9 Served prompt rendering
 - [ ] T020 [US1] MEDULLA-TYPED-PACKS-R002.10 Receipt verification before model dispatch
 - [ ] T021 [US1] MEDULLA-TYPED-PACKS-R002.11 Durable prompt restart proof
 - [x] T022 [US1] MEDULLA-TYPED-PACKS-R002.12 Native-component projection

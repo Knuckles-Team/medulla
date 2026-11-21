@@ -32,6 +32,7 @@ from medulla.generated.agent_component import (
     AgentComponentContentRequest,
     AgentComponentOpCurrent,
     AgentComponentOpRecordSourceEffect,
+    PromptRenderRequest,
 )
 from medulla.generated.connector_pack import (
     PackAnnotations,
@@ -43,6 +44,7 @@ from medulla.generated.storage import (
     send_agent_component_current,
     send_agent_component_export_blueprint,
     send_agent_component_record_source_effect,
+    send_agent_component_render,
 )
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "blueprint" / "lossless.json"
@@ -477,5 +479,121 @@ async def test_prompt_graph_projection() -> None:
             ),
         )
         assert current is not None and current.entry_revision == 2
+    finally:
+        await client.close()
+
+
+def _canonical(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _frame_pins(tenant: str, component_id: str, revision: int, pin: str) -> bytes:
+    """Each pin as a big-endian u32 length and its bytes, in the engine's fixed order."""
+    fields = [
+        tenant.encode(),
+        component_id.encode(),
+        struct.pack(">Q", revision),
+        struct.pack(">I", 1),
+        pin.encode(),
+    ]
+    return b"".join(struct.pack(">I", len(field)) + field for field in fields)
+
+
+async def _render(
+    client: MedullaClient,
+    component_id: str,
+    variables: dict[str, Any],
+    *,
+    revision: int = 1,
+    schema_revision: int = 1,
+    tenant: str = TEST_TENANT,
+) -> Any:
+    return await send_agent_component_render(
+        client,
+        PromptRenderRequest(
+            tenant_id=tenant,
+            component_id=component_id,
+            revision=revision,
+            schema_revision=schema_revision,
+            variables=variables,
+        ),
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.9")
+@pytest.mark.asyncio
+async def test_prompt_render_route() -> None:
+    client = await connect()
+    component_id = f"prompt:render-{uuid.uuid4().hex[:12]}"
+    document = {"task": "greet", "schema_revision": 1, "variables": ["audience"]}
+    blueprint = json.dumps(document, sort_keys=True, separators=(",", ":"))
+    pin = hashlib.sha256(blueprint.encode()).hexdigest()
+    variables = {"audience": "ops"}
+    try:
+        await _publish_prompt(client, component_id, blueprint, pin, 0)
+        result = await _render(client, component_id, variables)
+
+        # The result is the pinned revision and the exact rendered bytes.
+        pins = _frame_pins(TEST_TENANT, component_id, 1, pin)
+        expected = _canonical(
+            {
+                "rendering_version": 1,
+                "pins": hashlib.sha256(pins).hexdigest(),
+                "blueprint": document,
+                "variables": variables,
+            }
+        )
+        assert result.schema_version == 1
+        assert result.bytes == expected
+        assert result.render_digest == hashlib.sha256(expected).hexdigest()
+        identity = result.receipt.identity
+        assert identity.tenant_id == TEST_TENANT
+        assert identity.component_id == component_id
+        assert identity.entry_revision == 1
+        assert identity.schema_revision == 1
+        assert identity.body_sha256 == pin
+
+        # The receipt binds the framed pins, the variables digest and the scope.
+        variables_digest = hashlib.sha256(_canonical(variables)).hexdigest()
+        assert result.receipt.variables_digest == variables_digest
+        assert result.receipt.scope == TEST_TENANT
+        framed = pins
+        for field in (variables_digest.encode(), TEST_TENANT.encode()):
+            framed += struct.pack(">I", len(field)) + field
+        assert result.receipt.receipt_digest == hashlib.sha256(framed).hexdigest()
+
+        # A repeat render is byte-identical; a changed variable changes the digest.
+        again = await _render(client, component_id, variables)
+        assert again.bytes == result.bytes
+        other = await _render(client, component_id, {"audience": "dev"})
+        assert other.render_digest != result.render_digest
+
+        # Each invalid request is refused by name.
+        with pytest.raises(EngineResponseError, match="PROMPT_VARIABLE_MISSING"):
+            await _render(client, component_id, {})
+        with pytest.raises(EngineResponseError, match="PROMPT_VARIABLE_UNKNOWN"):
+            await _render(client, component_id, {**variables, "extra": 1})
+        with pytest.raises(EngineResponseError, match="PROMPT_SCHEMA_INVALID"):
+            await _render(client, component_id, variables, schema_revision=2)
+        with pytest.raises(EngineResponseError, match="COMPONENT_REVISION_UNKNOWN"):
+            await _render(client, component_id, variables, revision=99)
+        with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+            await _render(client, component_id, variables, tenant="tenant-other")
+
+        # Rendering writes nothing: the head and the body are unchanged.
+        current = await send_agent_component_current(
+            client,
+            AgentComponentOpCurrent(
+                op="current", tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert current is not None and current.entry_revision == 1
+        content = await send_agent_component_content(
+            client,
+            AgentComponentContentRequest(
+                tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert content.body == blueprint.encode()
     finally:
         await client.close()

@@ -559,6 +559,8 @@ pub const PROMPT_IDENTITY_INVALID: &str = "PROMPT_IDENTITY_INVALID";
 pub const PROMPT_SCHEMA_INVALID: &str = "PROMPT_SCHEMA_INVALID";
 /// Refusal code for a blueprint over the configured byte limit.
 pub const PROMPT_OUTPUT_TOO_LARGE: &str = "PROMPT_OUTPUT_TOO_LARGE";
+/// Refusal code for a render whose body store cannot be read.
+pub const PROMPT_PRODUCER_UNAVAILABLE: &str = "PROMPT_PRODUCER_UNAVAILABLE";
 
 /// The two blueprint pins: both present or both absent, a 64-lowercase-hex
 /// body hash and the one supported schema revision.

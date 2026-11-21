@@ -1383,6 +1383,9 @@ pub enum AgentComponentOp {
     ExportBlueprint {
         request: AgentComponentBlueprintExportRequest,
     },
+    /// Render one pinned prompt revision with its variables and return the bytes with a
+    /// receipt (MEDULLA-TYPED-PACKS-R002.9).
+    Render { request: PromptRenderRequest },
     /// Record the receipt of an approved repository-source effect on the component
     /// revision it exported (MEDULLA-TYPED-PACKS-R094.8).
     RecordSourceEffect {
@@ -1424,6 +1427,7 @@ impl AgentComponentOp {
             | Self::Status { .. }
             | Self::Search { .. }
             | Self::Content { .. }
+            | Self::Render { .. }
             | Self::ExportBlueprint { .. } => "agent:component-read",
         }
     }
@@ -1491,6 +1495,17 @@ impl AgentComponentOp {
                 }
                 Ok(())
             }
+            Self::Render { request } => {
+                validate_text("tenant_id", &request.tenant_id)?;
+                validate_text("component_id", &request.component_id)?;
+                if request.revision == 0 {
+                    return Err(
+                        "INVALID_ARGUMENT: a prompt render is pinned to a revision of at least 1"
+                            .to_string(),
+                    );
+                }
+                Ok(())
+            }
             Self::Current {
                 tenant_id,
                 component_id,
@@ -1521,6 +1536,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Search { request } => &request.tenant_id,
         AgentComponentOp::Content { request } => &request.tenant_id,
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
+        AgentComponentOp::Render { request } => &request.tenant_id,
         AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,
         AgentComponentOp::AdmitSkillUpgrade { request } => &request.tenant_id,
         AgentComponentOp::Current { tenant_id, .. }
@@ -1678,6 +1694,71 @@ pub fn frame_pins(identity: &PromptBlueprintIdentity) -> Vec<u8> {
         framed.extend_from_slice(field);
     }
     framed
+}
+
+/// Format identity (RF-ADR-006) of [`PromptRenderResult`].
+pub const PROMPT_RENDER_SCHEMA_VERSION: u16 = 1;
+
+/// Render one pinned prompt revision (MEDULLA-TYPED-PACKS-R002.9). The request
+/// pins the tenant, the prompt revision, the schema revision and the variables.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptRenderRequest {
+    pub tenant_id: String,
+    pub component_id: String,
+    pub revision: u64,
+    pub schema_revision: u32,
+    #[serde(default)]
+    pub variables: BTreeMap<String, serde_json::Value>,
+}
+
+/// The receipt one render returns: the pins it rendered under, the digest of
+/// the variables, the verified tenant scope, and the digest over all three.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptRenderReceipt {
+    pub identity: PromptBlueprintIdentity,
+    /// 64 lowercase hex characters: SHA-256 of the canonical variables JSON.
+    pub variables_digest: String,
+    pub scope: String,
+    /// 64 lowercase hex characters, from [`receipt_digest`].
+    pub receipt_digest: String,
+}
+
+/// One render: the bytes, their digest and the receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptRenderResult {
+    pub schema_version: u16,
+    #[serde(with = "serde_bytes")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
+    pub bytes: Vec<u8>,
+    /// 64 lowercase hex characters: SHA-256 of `bytes`.
+    pub render_digest: String,
+    pub receipt: PromptRenderReceipt,
+}
+
+/// The digest a render receipt carries: SHA-256 over the framed pins
+/// ([`frame_pins`]), then the variables digest and the scope, each as a
+/// big-endian `u32` length and its bytes. One pure function, so the renderer
+/// that issues a receipt and the check that verifies it agree
+/// (MEDULLA-TYPED-PACKS-R002.9, R002.13).
+pub fn receipt_digest(
+    identity: &PromptBlueprintIdentity,
+    variables_digest: &str,
+    scope: &str,
+) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(frame_pins(identity));
+    for field in [variables_digest.as_bytes(), scope.as_bytes()] {
+        let len = u32::try_from(field.len()).unwrap_or(u32::MAX);
+        hasher.update(len.to_be_bytes());
+        hasher.update(field);
+    }
+    hex::encode(hasher.finalize())
 }
 
 /// What a committed component mutation returns.
