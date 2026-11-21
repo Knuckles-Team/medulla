@@ -37,6 +37,9 @@ pub const TRAJECTORY_DERIVATION_DIGEST_DOMAIN: &str = "eg/trajectory-derivation/
 pub const STEP_TRACE_DIGEST_DOMAIN: &str = "eg/step-trace/v1";
 /// Domain of a decision policy body.
 pub const DECISION_POLICY_DIGEST_DOMAIN: &str = "eg/decision-policy/v1";
+/// Domain of a local-model certification attestation body
+/// (MEDULLA-DECISION-ENGINE-R142.100).
+pub const LOCAL_CERTIFICATION_DIGEST_DOMAIN: &str = "eg/local-certification/v1";
 
 /// One catalog member, as the catalog digest sees it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

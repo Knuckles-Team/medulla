@@ -642,6 +642,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("indexless", super::indexless_retrieval::REFUSALS.to_vec()),
         ("safety", super::safety::REFUSALS.to_vec()),
         ("limits", super::limit_types::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R142.100: the local-model certification refusals.
+        (
+            "local_certification",
+            super::local_certification::REFUSALS.to_vec(),
+        ),
         (
             "delegation_quality",
             super::delegation_quality::REFUSALS.to_vec(),
