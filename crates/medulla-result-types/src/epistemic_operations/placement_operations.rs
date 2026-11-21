@@ -54,7 +54,7 @@ pub enum OperationResultSchemaVersion {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OperationResultStatus {
+pub enum OperationResultOutcome {
     #[serde(rename = "succeeded")]
     Succeeded,
     #[serde(rename = "failed")]
@@ -204,7 +204,8 @@ pub struct EvidenceTimeRange {
 pub struct OperationResult {
     pub schema_version: OperationResultSchemaVersion,
     pub operation_id: String,
-    pub status: OperationResultStatus,
+    #[serde(rename = "status")]
+    pub outcome: OperationResultOutcome,
     #[serde(deserialize_with = "deserialize_required_option")]
     pub result_kind: Option<String>,
     #[serde(deserialize_with = "deserialize_required_option")]
@@ -235,4 +236,39 @@ pub struct OperationRedirect {
     pub fencing_token: u64,
     #[serde(deserialize_with = "deserialize_required_option")]
     pub leader_ref: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-PLACEMENT-R784.2
+    #[test]
+    fn outcome_field_keeps_the_status_wire_name() {
+        let result = OperationResult {
+            schema_version: OperationResultSchemaVersion::V1,
+            operation_id: "op-1".into(),
+            outcome: OperationResultOutcome::Redirected,
+            result_kind: None,
+            result_ref: None,
+            error: None,
+            redirect: Some(OperationRedirect {
+                kind: OperationRedirectKind::Placement,
+                target_ref: "graph-a".into(),
+                group: 3,
+                epoch: 17,
+                fencing_token: 3,
+                leader_ref: Some("node:2".into()),
+            }),
+        };
+        assert_eq!(
+            serde_json::to_string(&result).unwrap(),
+            "{\"schema_version\":\"1\",\"operation_id\":\"op-1\",\"status\":\"redirected\",\
+             \"result_kind\":null,\"result_ref\":null,\"error\":null,\"redirect\":{\
+             \"kind\":\"placement\",\"target_ref\":\"graph-a\",\"group\":3,\"epoch\":17,\
+             \"fencing_token\":3,\"leader_ref\":\"node:2\"}}"
+        );
+        let bytes = rmp_serde::to_vec_named(&result).unwrap();
+        assert_eq!(rmp_serde::from_slice::<OperationResult>(&bytes).unwrap(), result);
+    }
 }

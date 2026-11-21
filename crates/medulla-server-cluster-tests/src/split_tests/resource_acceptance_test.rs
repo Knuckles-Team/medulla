@@ -39,7 +39,7 @@ use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersio
 use medulla_result_types::epistemic_operations::ClaimWorkItemResult;
 use medulla_result_types::epistemic_operations::ClaimWorkItemResultReason;
 use medulla_result_types::epistemic_operations::OperationResult;
-use medulla_result_types::epistemic_operations::OperationResultStatus;
+use medulla_result_types::epistemic_operations::OperationResultOutcome;
 use medulla_result_types::epistemic_operations::ResourceCapacity;
 use medulla_result_types::epistemic_operations::ResourceHostUpdateRequest;
 use medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion;
@@ -1639,7 +1639,7 @@ fn assert_redirect(response: medulla_protocol_types::protocol::Response, expecte
         medulla_types::msgpack::MsgpackLimits::new(64 * 1024, 10_000, 32),
     )
     .expect("decode operation redirect");
-    assert_eq!(detail.status, OperationResultStatus::Redirected);
+    assert_eq!(detail.outcome, OperationResultOutcome::Redirected);
     let redirect = detail.redirect.expect("redirect detail");
     assert_eq!(redirect.group, 0);
     let expected_leader_ref = format!("node:{expected_leader}");

@@ -279,13 +279,13 @@ impl Response {
             epistemic_operations::OperationRedirect, epistemic_operations::OperationRedirectKind,
             epistemic_operations::OperationResult,
             epistemic_operations::OperationResultSchemaVersion,
-            epistemic_operations::OperationResultStatus,
+            epistemic_operations::OperationResultOutcome,
         };
 
         let detail = OperationResult {
             schema_version: OperationResultSchemaVersion::V1,
             operation_id: format!("request:{id}"),
-            status: OperationResultStatus::Redirected,
+            outcome: OperationResultOutcome::Redirected,
             result_kind: None,
             result_ref: None,
             error: None,
