@@ -54,6 +54,11 @@ method_results! {
     CancelRequest(CancelRequest) => Bool<bool>;
     RegisterForeignSource(RegisterForeignSource) => Text<String>;
     RegisterGraphView(RegisterGraphView) => Text<String>;
+    ListForeignSources(ListForeignSources) => Json<Vec<medulla_catalog_types::foreign_source_catalog::ForeignSourceView>>;
+    GetForeignSource(GetForeignSource) => Json<medulla_catalog_types::foreign_source_catalog::ForeignSourceView>;
+    ProbeForeignSource(ProbeForeignSource) => Json<medulla_catalog_types::foreign_source_catalog::ForeignSourceProbe>;
+    ShareForeignSource(ShareForeignSource) => Text<String>;
+    UnshareForeignSource(UnshareForeignSource) => Text<String>;
     RegisterUdf(RegisterUdf) => Text<String>;
     CreateMatView(CreateMatView) => Count<u64>;
     #[cfg(feature = "compute-dist")]

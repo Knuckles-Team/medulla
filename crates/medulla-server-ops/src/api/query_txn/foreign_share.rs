@@ -94,6 +94,77 @@ pub fn provision_share_role(
     Ok(())
 }
 
+/// Share `owner_agent`'s source `name` with each grantee by assigning the source's share
+/// role (MEDULLA-UNIFIED-DATA-PLANE-R765). Idempotent. An unknown grantee refuses the whole
+/// share before any role is assigned.
+#[cfg(feature = "security")]
+pub fn share_source(
+    isolation: &mut IsolationLayer,
+    owner_agent: &str,
+    name: &str,
+    grantees: &[String],
+) -> Result<(), String> {
+    provision_share_role(isolation, owner_agent, name)?;
+    let role = share_role(owner_agent, name);
+    let mut updated = Vec::new();
+    for grantee in grantees {
+        let mut identity = isolation.get_identity(grantee).ok_or_else(|| {
+            format!("INVALID_ARGUMENT: grantee {grantee} is not a registered principal")
+        })?;
+        if !identity.roles.contains(&role) {
+            identity.roles.push(role.clone());
+            updated.push(identity);
+        }
+    }
+    for identity in updated {
+        isolation.try_register_agent(identity)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "security"))]
+pub fn share_source(
+    _isolation: &mut IsolationLayer,
+    _owner_agent: &str,
+    _name: &str,
+    _grantees: &[String],
+) -> Result<(), String> {
+    Ok(())
+}
+
+/// Withdraw the share role of `owner_agent`'s source `name` from each grantee
+/// (MEDULLA-UNIFIED-DATA-PLANE-R765). The next read of the source by that grantee refuses
+/// as an unregistered name.
+#[cfg(feature = "security")]
+pub fn unshare_source(
+    isolation: &mut IsolationLayer,
+    owner_agent: &str,
+    name: &str,
+    grantees: &[String],
+) -> Result<(), String> {
+    let role = share_role(owner_agent, name);
+    for grantee in grantees {
+        let Some(mut identity) = isolation.get_identity(grantee) else {
+            continue;
+        };
+        if identity.roles.contains(&role) {
+            identity.roles.retain(|held| held != &role);
+            isolation.try_register_agent(identity)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "security"))]
+pub fn unshare_source(
+    _isolation: &mut IsolationLayer,
+    _owner_agent: &str,
+    _name: &str,
+    _grantees: &[String],
+) -> Result<(), String> {
+    Ok(())
+}
+
 /// May `caller_agent` use the shared source behind `resource`? Only an exact `Read`
 /// allow grant on `resource`, held through the caller's (expanded) roles, counts, and
 /// the RBAC evaluator must still allow it (a same-specificity deny wins).

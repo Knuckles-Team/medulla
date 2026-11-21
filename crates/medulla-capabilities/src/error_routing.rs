@@ -253,6 +253,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
     ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R765: an invisible source and a non-owner share.
+    ("GetForeignSource", &["SOURCE_NOT_FOUND"]),
+    ("ProbeForeignSource", &["SOURCE_NOT_FOUND"]),
+    ("ShareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
+    ("UnshareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: a DuckDB file outside its allowlist is refused at
     // registration; a warehouse read refuses a kind the engine does not serve, an unreadable
     // source, a drifted schema and a denied file with these typed codes.

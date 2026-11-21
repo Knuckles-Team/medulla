@@ -226,7 +226,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ResolveConflict { .. } => default_mutation_domain(surface),
         // Wire-unconditional, same reason as `datascience` above: `medulla-capabilities`
         // forces `medulla-types/federation` on unconditionally (EH-319).
-        Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } => {
+        Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } | Method::ShareForeignSource { .. } | Method::UnshareForeignSource { .. } => {
             default_mutation_domain(surface)
         }
         // EH-572 is a read-only, owner-scoped source query with no durable
@@ -646,6 +646,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::RetrievalRound { .. }
         | Method::CorpusRetrieve { .. }
         | Method::SourceCoverage { .. }
+        | Method::ListForeignSources { .. }
+        | Method::GetForeignSource { .. }
+        | Method::ProbeForeignSource { .. }
         | Method::CodeContext { .. }
         | Method::Diagnose { .. }
         | Method::EncodedDocumentSearch { .. }

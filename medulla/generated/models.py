@@ -12745,6 +12745,41 @@ class MethodRegisterGraphView(BaseModel):
     params: MethodRegisterGraphViewParams
 
 
+class MethodListForeignSources(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ListForeignSources"]
+    params: MethodListForeignSourcesParams
+
+
+class MethodGetForeignSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetForeignSource"]
+    params: MethodGetForeignSourceParams
+
+
+class MethodProbeForeignSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProbeForeignSource"]
+    params: MethodProbeForeignSourceParams
+
+
+class MethodShareForeignSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ShareForeignSource"]
+    params: MethodShareForeignSourceParams
+
+
+class MethodUnshareForeignSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["UnshareForeignSource"]
+    params: MethodUnshareForeignSourceParams
+
+
 class MethodQueryForeignColumns(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15018,6 +15053,11 @@ Method = Annotated[
         MethodNlQueryPlan,
         MethodRegisterForeignSource,
         MethodRegisterGraphView,
+        MethodListForeignSources,
+        MethodGetForeignSource,
+        MethodProbeForeignSource,
+        MethodShareForeignSource,
+        MethodUnshareForeignSource,
         MethodQueryForeignColumns,
         MethodForeignReadOpen,
         MethodForeignReadChunk,
@@ -18026,6 +18066,38 @@ class MethodRegisterGraphViewParams(BaseModel):
     sources: list[ViewSource] = []
     tables: list[str] = []
     view: GraphView
+
+
+class MethodListForeignSourcesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    pass
+
+
+class MethodGetForeignSourceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+
+
+class MethodProbeForeignSourceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+
+
+class MethodShareForeignSourceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grantees: list[str]
+    name: str
+
+
+class MethodUnshareForeignSourceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grantees: list[str]
+    name: str
 
 
 class MethodRegisterIdentityParams(BaseModel):
@@ -37075,6 +37147,16 @@ __all__ = [
     "SourceQuota",
     "MethodRegisterGraphView",
     "MethodRegisterGraphViewParams",
+    "MethodListForeignSources",
+    "MethodListForeignSourcesParams",
+    "MethodGetForeignSource",
+    "MethodGetForeignSourceParams",
+    "MethodProbeForeignSource",
+    "MethodProbeForeignSourceParams",
+    "MethodShareForeignSource",
+    "MethodShareForeignSourceParams",
+    "MethodUnshareForeignSource",
+    "MethodUnshareForeignSourceParams",
     "GraphView",
     "NodeLabelMapping",
     "RelationshipTypeMapping",

@@ -394,7 +394,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.6:** `tests/data_plane/test_catalog_search_served.py::test_search_over_ten_thousand_assets` (planned). Proves the row: Hot-path proof for catalog search.
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.7:** `tests/data_plane/test_catalog_search_served.py::test_source_query_log_feeds_usage` (planned). Proves the row: Usage from attached-source query logs.
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.8:** `tests/data_plane/test_catalog_search_served.py::test_frequent_users_and_join_suggestions` (planned). Proves the row: Frequent users and usage suggestions.
-- **MEDULLA-UNIFIED-DATA-PLANE-R765:** `tests/federation/test_foreign_source_catalog_served.py::test_visibility_probe_and_revocation` (planned). Proves the row: Serve the foreign source catalog: list, get, probe, share and unshare.
+- **MEDULLA-UNIFIED-DATA-PLANE-R765:** `tests/federation/test_foreign_source_catalog_served.py::test_visibility_probe_and_revocation`. Proves the row: Serve the foreign source catalog: list, get, probe, share and unshare.
 - **MEDULLA-UNIFIED-DATA-PLANE-R766:** `crates/medulla-work-store/src/redb_store/work_item/submit.rs::tests::research_web_kind_submits_and_unknown_kind_refuses`. Proves the row: Engine work item kind for web research.
 - **MEDULLA-UNIFIED-DATA-PLANE-R767:** `tests/served_query_completeness.rs::tenant_context_view_scopes_two_tenants_without_copying` (planned). Proves the row: Tenant context view over approved sources.
 

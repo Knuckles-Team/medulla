@@ -647,6 +647,86 @@ impl ForeignSourceCatalog {
             })
     }
 
+    /// The kind word of a registered source: the variant name of its specification, never
+    /// its contents.
+    fn kind_of(spec: &ForeignSourceSpec) -> String {
+        format!("{spec:?}")
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .next()
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    fn probe_word(state: ProbeState) -> String {
+        match state {
+            ProbeState::Registered => "registered",
+            ProbeState::Probing => "probing",
+            ProbeState::Baselined => "baselined",
+            ProbeState::Drifted => "drifted",
+            ProbeState::ProbeFailed => "probe_failed",
+        }
+        .to_string()
+    }
+
+    /// Every source the caller may see (MEDULLA-UNIFIED-DATA-PLANE-R765): its own, and those
+    /// another owner shared with it by an exact grant. Sorted by the name the caller
+    /// addresses each by. A view carries no credential value.
+    pub fn visible_sources(
+        &self,
+        caller: &CarrierAuthority,
+        isolation: &IsolationLayer,
+    ) -> Vec<medulla_catalog_types::foreign_source_catalog::ForeignSourceView> {
+        use medulla_catalog_types::foreign_source_catalog::ForeignSourceView;
+        let mut views: Vec<ForeignSourceView> = self
+            .entries
+            .iter()
+            .filter_map(|entry| {
+                let owned = entry.key().owner_scope == caller.owner_scope();
+                let value = entry.value();
+                if !owned
+                    && !may_use_shared(
+                        isolation,
+                        caller.agent_id(),
+                        &share_resource(&value.owner_agent, &entry.key().name),
+                    )
+                {
+                    return None;
+                }
+                Some(ForeignSourceView {
+                    name: if owned {
+                        entry.key().name.clone()
+                    } else {
+                        shared_name(&value.owner_agent, &entry.key().name)
+                    },
+                    owner: value.owner_agent.clone(),
+                    kind: Self::kind_of(&value.spec),
+                    owned,
+                    probe_state: Self::probe_word(value.probe.state()),
+                })
+            })
+            .collect();
+        views.sort_by(|a, b| a.name.cmp(&b.name));
+        views
+    }
+
+    /// The one visible source the caller addresses by `name`, or `None` for a source that is
+    /// not registered and a source that is not shared with the caller alike.
+    pub fn visible_source(
+        &self,
+        caller: &CarrierAuthority,
+        isolation: &IsolationLayer,
+        name: &str,
+    ) -> Option<medulla_catalog_types::foreign_source_catalog::ForeignSourceView> {
+        self.visible_sources(caller, isolation)
+            .into_iter()
+            .find(|view| view.name == name)
+    }
+
+    /// The owner of `name`, when `caller` registered it: only the owner shares or unshares.
+    pub fn owns_source(&self, caller: &CarrierAuthority, name: &str) -> bool {
+        self.has_source(caller.owner_scope(), name)
+    }
+
     /// Whether `owner_scope` registered a source of any kind under `name`
     /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
     pub fn has_source(&self, owner_scope: &str, name: &str) -> bool {

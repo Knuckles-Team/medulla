@@ -129,6 +129,47 @@ async fn write_contract(
     .map_err(failed)
 }
 
+/// `SOURCE_NOT_FOUND` for a source the caller cannot see (MEDULLA-UNIFIED-DATA-PLANE-R765):
+/// unregistered and unshared look alike, so a refusal reveals nothing.
+fn source_not_found(req_id: u64, name: &str) -> Response {
+    Response::err(
+        req_id,
+        format!(
+            "{}: no source {name} is visible to the caller",
+            medulla_catalog_types::foreign_source_catalog::SOURCE_NOT_FOUND
+        ),
+    )
+}
+
+/// The checks a share or unshare passes before it changes anything: the source is visible to
+/// the caller (`SOURCE_NOT_FOUND`), the caller owns it (`SOURCE_OWNER_REQUIRED`) and the
+/// grantee list is within bounds.
+fn check_share_request(
+    catalog: &medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceCatalog,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
+    owner: &medulla_server_api::carrier::CarrierAuthority,
+    name: &str,
+    grantees: &[String],
+) -> Result<(), String> {
+    use medulla_catalog_types::foreign_source_catalog::{
+        MAX_SHARE_GRANTEES, SOURCE_NOT_FOUND, SOURCE_OWNER_REQUIRED,
+    };
+    if catalog.owns_source(owner, name) {
+        if grantees.is_empty() || grantees.len() > MAX_SHARE_GRANTEES {
+            return Err(format!(
+                "INVALID_ARGUMENT: a share names 1 to {MAX_SHARE_GRANTEES} principals"
+            ));
+        }
+        return Ok(());
+    }
+    // A source the caller can address only through a share is visible, not owned.
+    Err(if catalog.visible_source(owner, isolation, name).is_some() {
+        format!("{SOURCE_OWNER_REQUIRED}: only the owner of {name} may change its sharing")
+    } else {
+        format!("{SOURCE_NOT_FOUND}: no source {name} is visible to the caller")
+    })
+}
+
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
 pub async fn try_handle(
     call: OwnerScopedCall<'_>,
@@ -214,6 +255,113 @@ pub async fn try_handle(
                 req_id,
                 ResultPayload::scalar::<
                     medulla_protocol_types::result_contract::cluster::RegisterForeignSource,
+                >(name),
+            ))
+        }
+        Method::ListForeignSources {} => {
+            let owner = match call.owner("ListForeignSources") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let s = call.state.read().await;
+            let views = s.foreign_sources().visible_sources(&owner, &s.isolation);
+            Ok(Response::ok(
+                req_id,
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::cluster::ListForeignSources,
+                >(views),
+            ))
+        }
+        Method::GetForeignSource { name } => {
+            let owner = match call.owner("GetForeignSource") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let s = call.state.read().await;
+            match s.foreign_sources().visible_source(&owner, &s.isolation, &name) {
+                Some(view) => Ok(Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::cluster::GetForeignSource,
+                    >(view),
+                )),
+                None => Ok(source_not_found(req_id, &name)),
+            }
+        }
+        // Visibility is re-checked on every probe: a revoked grantee gets `SOURCE_NOT_FOUND`
+        // on its next call, never a stale state.
+        Method::ProbeForeignSource { name } => {
+            let owner = match call.owner("ProbeForeignSource") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let s = call.state.read().await;
+            match s.foreign_sources().visible_source(&owner, &s.isolation, &name) {
+                Some(view) => Ok(Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::cluster::ProbeForeignSource,
+                    >(
+                        medulla_catalog_types::foreign_source_catalog::ForeignSourceProbe {
+                            name: view.name,
+                            probe_state: view.probe_state,
+                        },
+                    ),
+                )),
+                None => Ok(source_not_found(req_id, &name)),
+            }
+        }
+        Method::ShareForeignSource { name, grantees } => {
+            let owner = match call.owner("ShareForeignSource") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let mut s = call.state.write().await;
+            if let Err(error) = check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
+            {
+                return Ok(Response::err(req_id, error));
+            }
+            if let Err(error) =
+                medulla_server_ops::api::query_txn::foreign_share::share_source(
+                    &mut s.isolation,
+                    owner.agent_id(),
+                    &name,
+                    &grantees,
+                )
+            {
+                return Ok(Response::err(req_id, error));
+            }
+            Ok(Response::ok(
+                req_id,
+                ResultPayload::scalar::<
+                    medulla_protocol_types::result_contract::cluster::ShareForeignSource,
+                >(name),
+            ))
+        }
+        Method::UnshareForeignSource { name, grantees } => {
+            let owner = match call.owner("UnshareForeignSource") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let mut s = call.state.write().await;
+            if let Err(error) = check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
+            {
+                return Ok(Response::err(req_id, error));
+            }
+            if let Err(error) =
+                medulla_server_ops::api::query_txn::foreign_share::unshare_source(
+                    &mut s.isolation,
+                    owner.agent_id(),
+                    &name,
+                    &grantees,
+                )
+            {
+                return Ok(Response::err(req_id, error));
+            }
+            Ok(Response::ok(
+                req_id,
+                ResultPayload::scalar::<
+                    medulla_protocol_types::result_contract::cluster::UnshareForeignSource,
                 >(name),
             ))
         }

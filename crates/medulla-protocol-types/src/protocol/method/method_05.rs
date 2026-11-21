@@ -533,6 +533,37 @@ $($variants)*
         sources: Vec<medulla_catalog_types::virtual_graph_view::ViewSource>,
     },
 
+    /// MEDULLA-UNIFIED-DATA-PLANE-R765: the foreign sources the caller may see, its own and
+    /// those shared with it. A read; the views carry no credential value.
+    #[cfg(feature = "federation")]
+    ListForeignSources {},
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R765: one visible foreign source. A source that is not
+    /// registered and one that is not shared with the caller refuse `SOURCE_NOT_FOUND` alike.
+    #[cfg(feature = "federation")]
+    GetForeignSource { name: String },
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R765: the catalog probe state of one visible source,
+    /// re-checking visibility on each call. Refuses `SOURCE_NOT_FOUND`.
+    #[cfg(feature = "federation")]
+    ProbeForeignSource { name: String },
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R765: share one owned source with the named principals.
+    /// Only the owner may; a non-owner refuses `SOURCE_OWNER_REQUIRED`.
+    #[cfg(feature = "federation")]
+    ShareForeignSource {
+        name: String,
+        grantees: Vec<String>,
+    },
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R765: withdraw a share. Only the owner may; the next read
+    /// by a withdrawn grantee refuses `SOURCE_NOT_FOUND`.
+    #[cfg(feature = "federation")]
+    UnshareForeignSource {
+        name: String,
+        grantees: Vec<String>,
+    },
+
     /// Read mapped columns from this caller's registered SQL or HTTP source. The source
     /// may push a safe subset of predicates; the engine evaluates every predicate
     /// locally before returning the requested projection.

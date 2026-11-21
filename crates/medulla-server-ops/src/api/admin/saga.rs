@@ -243,7 +243,7 @@ impl AdminSagaResultContract {
             #[cfg(feature = "wasm-udf")]
             Method::RegisterUdf { .. } => Some(Self::Text),
             #[cfg(feature = "federation")]
-            Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } => {
+            Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } | Method::ShareForeignSource { .. } | Method::UnshareForeignSource { .. } => {
                 Some(Self::Text)
             }
             #[cfg(feature = "compute-dist")]

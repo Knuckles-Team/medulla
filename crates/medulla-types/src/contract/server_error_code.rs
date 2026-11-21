@@ -882,6 +882,10 @@ closed_error_codes! {
         SourceCoverageHopBudgetInvalid => "SOURCE_COVERAGE_HOP_BUDGET_INVALID",
         SourceCoverageNoClasses => "SOURCE_COVERAGE_NO_CLASSES",
         SourceCoverageTooManyClasses => "SOURCE_COVERAGE_TOO_MANY_CLASSES",
+        /// A foreign source the caller cannot see: unregistered and unshared look alike (MEDULLA-UNIFIED-DATA-PLANE-R765).
+        SourceNotFound => "SOURCE_NOT_FOUND",
+        /// Only the owner of a foreign source shares or unshares it (MEDULLA-UNIFIED-DATA-PLANE-R765).
+        SourceOwnerRequired => "SOURCE_OWNER_REQUIRED",
         StaleSourceRevision => "STALE_SOURCE_REVISION",
         ViewportCapExceeded => "VIEWPORT_CAP_EXCEEDED",
         ViewportInvalid => "VIEWPORT_INVALID",

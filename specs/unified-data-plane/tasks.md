@@ -202,7 +202,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T192 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.6 Hot-path proof for catalog search
 - [ ] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.7 Usage from attached-source query logs
 - [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.8 Frequent users and usage suggestions
-- [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
+- [x] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
 - [ ] T196 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
 - [ ] T197 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
 - [ ] T208 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.8 Text columns: a `RowSet` carries typed text columns beside its value channels
@@ -295,7 +295,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T190 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.6 Hot-path proof for catalog search
 - [ ] T191 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.7 Usage from attached-source query logs
 - [ ] T192 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.8 Frequent users and usage suggestions
-- [ ] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
+- [x] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
 - [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
 - [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
 - [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
