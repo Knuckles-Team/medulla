@@ -3,7 +3,7 @@
 
 use super::{
     successor, validate_census, validate_descriptor, validate_predecessor, AgentLibrarySource,
-    GraphShardSource, UpgradeTarget, ValidatedOwnerLayoutUpgrade,
+    GraphShardSource, JobsSource, UpgradeTarget, ValidatedOwnerLayoutUpgrade,
 };
 use crate::owner::graph_shard::{
     ADMITTED_REQUESTS, AUDIT_REQUESTS, CURRENT_PLANS, EFFECT_RECEIPTS,
@@ -15,7 +15,7 @@ use crate::owner::registry::{
     predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
     DECISION_RETRY_ALLOWANCES, KV_COLD, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES,
     RBAC_PROFILE_USE_GRANT, SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS,
-    SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
+    SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS, TASK_QUEUE_OLDEST, TASK_QUEUE_TOTALS,
 };
 use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
@@ -80,7 +80,7 @@ fn retire_predecessor_tables(
     }
     // The jobs successor stores every record in its machine shape under the new table name, so
     // the retired table is converted and then deleted (MEDULLA-CQ-ORCH-R811.4).
-    if target == UpgradeTarget::Jobs {
+    if target == UpgradeTarget::Jobs(JobsSource::BeforeJobMachine) {
         crate::owner::jobs_upgrade::convert_job_rows(write)?;
     }
     // Every graph shard generation stores its reservation rows with the retired `tombstone`
@@ -104,8 +104,17 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
         }
         // The Kv successor adds no table: the retired table is deleted above.
         UpgradeTarget::Kv => {}
-        // The Jobs successor's record table is created by the conversion above.
-        UpgradeTarget::Jobs => {}
+        // Every Jobs generation ends at the current layout, so the two task-queue tables are
+        // created empty for all of them (MEDULLA-INGEST-WORKER-R001.4.1). The record table of
+        // the job-machine generation is created by the conversion above.
+        UpgradeTarget::Jobs(_) => {
+            write
+                .open_table(TASK_QUEUE_TOTALS)
+                .map_err(|error| error.to_string())?;
+            write
+                .open_table(TASK_QUEUE_OLDEST)
+                .map_err(|error| error.to_string())?;
+        }
     }
     Ok(())
 }

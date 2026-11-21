@@ -715,6 +715,43 @@ pub const JOBS_BEFORE_JOB_MACHINE: LayoutPredecessor = LayoutPredecessor {
     file_name: "jobs.redb",
 };
 
+/// The Jobs owner tables before the ingest task queue totals (MEDULLA-INGEST-WORKER-R001.4.1):
+/// the 13-table census whose record table is `analytics_job_records`.
+const JOBS_TABLES_BEFORE_TASK_QUEUE: &[&str] = &[
+    "analytics_job_records",
+    "analytics_job_committed_results",
+    "job_intents",
+    "job_idempotency_ledger",
+    "analytics_job_knowledge_batches",
+    "analytics_job_scheduler_meta",
+    "analytics_job_ready_by_priority",
+    "analytics_job_ready_by_capability",
+    "analytics_job_lease_by_worker",
+    "analytics_job_lease_by_expiry",
+    "analytics_job_active_totals_by_tenant",
+    "analytics_job_by_deadline",
+    "analytics_job_cancellation_reconcile",
+];
+
+/// The frozen layout digest of [`JOBS_BEFORE_TASK_QUEUE`]: the Jobs layout with the
+/// `analytics_job_records` record table and without `analytics_job_task_queue_totals` and
+/// `analytics_job_task_queue_oldest`.
+pub const JOBS_PRE_TASK_QUEUE_DIGEST: [u8; 32] = [
+    0x48, 0x4d, 0x6f, 0xc8, 0x2b, 0xf7, 0xaa, 0x8f, 0x3b, 0xab, 0x2e, 0x74, 0x71, 0x3e, 0xdc, 0x72,
+    0x03, 0x1b, 0xa8, 0x5e, 0x5d, 0x22, 0x19, 0xdc, 0xee, 0x67, 0x19, 0xd2, 0x96, 0x5d, 0x40, 0xd8,
+];
+
+/// A Jobs owner file from before the per-queue task totals and oldest-enqueue index. The
+/// upgrade creates both tables empty; a task enqueued before them does not exist, because the
+/// enqueue path refused without them.
+pub const JOBS_BEFORE_TASK_QUEUE: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Jobs,
+    label: "jobs before the ingest task queue totals",
+    owner_tables: JOBS_TABLES_BEFORE_TASK_QUEUE,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "jobs.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -738,7 +775,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],
-        OwnerLayout::Jobs => &[JOBS_BEFORE_JOB_MACHINE],
+        OwnerLayout::Jobs => &[JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_QUEUE],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
@@ -802,7 +839,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "9faad03bf787a2a893618b7a8b386de30bdd5b4e09f3930448040c3e47c59e3e"
         }
         OwnerLayout::Rbac => "c30f57c11229b629fefb4470bf9b7afb5010c06c24542d25cd20ea613d729dbd",
-        OwnerLayout::Jobs => "64eb7ffd327980a8269bc8cf61147bc269b4ee8eab1ae0f5de3a244bbec9dad4",
+        OwnerLayout::Jobs => "c49b1c73e21ab90c509153a06531f47c298b04bbc4c51ef445db88bccdf533ce",
         OwnerLayout::Statechart => {
             "d8ab661d50af9249a342a101537f0ef92c13df6808b5fd149c037d8587cff8a7"
         }

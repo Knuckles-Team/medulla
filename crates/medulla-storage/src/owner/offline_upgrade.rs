@@ -28,10 +28,11 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
     KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
-    JOBS_BEFORE_JOB_MACHINE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
+    JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
-use super::jobs_upgrade::{inspect_jobs_job_machine_upgrade, upgrade_jobs_job_machine};
+use super::agent_library_upgrade::{upgrade_jobs, JobsSource};
+use super::jobs_upgrade::inspect_jobs_upgrade;
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
     inspect_sql_ann_generation_upgrade, inspect_sql_named_sequence_upgrade,
@@ -268,8 +269,25 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
     ),
     offline_upgrade!(
         JOBS_BEFORE_JOB_MACHINE,
-        inspect_jobs_job_machine_upgrade,
-        upgrade_jobs_job_machine
+        |path, identity, integrity, options| inspect_jobs_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            JobsSource::BeforeJobMachine
+        ),
+        upgrade_jobs
+    ),
+    offline_upgrade!(
+        JOBS_BEFORE_TASK_QUEUE,
+        |path, identity, integrity, options| inspect_jobs_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            JobsSource::BeforeTaskQueue
+        ),
+        upgrade_jobs
     ),
     offline_upgrade!(
         GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,

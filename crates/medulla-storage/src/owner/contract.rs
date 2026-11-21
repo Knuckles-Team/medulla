@@ -139,6 +139,8 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
             | "analytics_job_active_totals_by_tenant"
             | "analytics_job_by_deadline"
             | "analytics_job_cancellation_reconcile"
+            | "analytics_job_task_queue_totals"
+            | "analytics_job_task_queue_oldest"
             | "semantic_binding_heads"
             | "semantic_lexical_manifests"
             | "semantic_ann_manifests"
@@ -253,6 +255,8 @@ fn jobs_key_type(name: &str) -> Option<&'static str> {
         "analytics_job_ready_by_capability" => Some("(&str,u32,i64,&str)"),
         "analytics_job_ready_by_priority" => Some("(u32,i64,&str)"),
         "analytics_job_lease_by_expiry" | "analytics_job_by_deadline" => Some("(i64,&str)"),
+        "analytics_job_task_queue_totals" => Some("(&str,&str)"),
+        "analytics_job_task_queue_oldest" => Some("(&str,&str,i64,&str)"),
         "analytics_job_records"
         | "analytics_job_records"
         | "analytics_jobs"
@@ -393,12 +397,13 @@ fn value_type_id(name: &str) -> &'static str {
         | "agent_component_heads"
         | "agent_template_heads"
         | "write_back_receipt_heads" => "u64",
-        "analytics_job_active_totals_by_tenant" => "(u64,u64)",
+        "analytics_job_active_totals_by_tenant" | "analytics_job_task_queue_totals" => "(u64,u64)",
         "mutation_outbox_topic_index"
         | "analytics_job_ready_by_priority"
         | "analytics_job_ready_by_capability"
         | "analytics_job_lease_by_expiry"
         | "analytics_job_by_deadline"
+        | "analytics_job_task_queue_oldest"
         | "analytics_job_cancellation_reconcile" => "()",
         "ledger_maintenance"
         | "mutation_outbox_consumers"
@@ -578,6 +583,8 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "analytics_job_active_totals_by_tenant"
         | "analytics_job_by_deadline"
         | "analytics_job_cancellation_reconcile"
+        | "analytics_job_task_queue_totals"
+        | "analytics_job_task_queue_oldest"
         | "cas_refcount"
         | "cas_retention"
         | "cas_counters"
@@ -710,6 +717,7 @@ fn index_and_scalar_capabilities(name: &str) -> Option<u16> {
         | "analytics_job_lease_by_expiry"
         | "analytics_job_by_deadline"
         | "analytics_job_cancellation_reconcile"
+        | "analytics_job_task_queue_oldest"
         | "semantic_binding_heads"
         | "semantic_lexical_manifests"
         | "semantic_ann_manifests"
@@ -722,6 +730,7 @@ fn index_and_scalar_capabilities(name: &str) -> Option<u16> {
         | "eg_ann"
         | "eg_kvcache_cold"
         | "analytics_job_active_totals_by_tenant"
+        | "analytics_job_task_queue_totals"
         | "series_chunks"
         | "series_meta"
         | "series_projection_state"

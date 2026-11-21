@@ -262,6 +262,16 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
         ("analytics_job_active_totals_by_tenant", "&str", "(u64,u64)"),
         ("analytics_job_by_deadline", "(i64,&str)", "()"),
         ("analytics_job_cancellation_reconcile", "&str", "()"),
+        (
+            "analytics_job_task_queue_totals",
+            "(&str,&str)",
+            "(u64,u64)",
+        ),
+        (
+            "analytics_job_task_queue_oldest",
+            "(&str,&str,i64,&str)",
+            "()",
+        ),
     ];
     for (name, key, value) in expected {
         let table = manifest
@@ -328,6 +338,16 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
         ),
         (
             "analytics_job_cancellation_reconcile",
+            CAP_READ | CAP_INSERT | CAP_DELETE,
+            true,
+        ),
+        (
+            "analytics_job_task_queue_totals",
+            CAP_READ | CAP_INSERT | CAP_UPDATE | CAP_DELETE,
+            true,
+        ),
+        (
+            "analytics_job_task_queue_oldest",
             CAP_READ | CAP_INSERT | CAP_DELETE,
             true,
         ),

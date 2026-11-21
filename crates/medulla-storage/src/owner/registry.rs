@@ -48,6 +48,12 @@ const BY_DEADLINE: TableDefinition<'static, (i64, &str), ()> =
     TableDefinition::new("analytics_job_by_deadline");
 const CANCELLATION: TableDefinition<'static, &str, ()> =
     TableDefinition::new("analytics_job_cancellation_reconcile");
+/// (tenant, queue) to (queued, running) task counts (MEDULLA-INGEST-WORKER-R001.4.1).
+pub(crate) const TASK_QUEUE_TOTALS: TableDefinition<'static, (&str, &str), (u64, u64)> =
+    TableDefinition::new("analytics_job_task_queue_totals");
+/// (tenant, queue, created_at_ms, job id) of every non-terminal task.
+pub(crate) const TASK_QUEUE_OLDEST: TableDefinition<'static, (&str, &str, i64, &str), ()> =
+    TableDefinition::new("analytics_job_task_queue_oldest");
 const STATECHARTS: [TableDefinition<'static, &str, &[u8]>; 2] = [
     TableDefinition::new("statechart_defs"),
     TableDefinition::new("statechart_instances"),
@@ -433,6 +439,8 @@ macro_rules! visit_owner_tables {
                 $visit!(ACTIVE_TOTALS);
                 $visit!(BY_DEADLINE);
                 $visit!(CANCELLATION);
+                $visit!(TASK_QUEUE_TOTALS);
+                $visit!(TASK_QUEUE_OLDEST);
             }
             OwnerLayout::Statechart => {
                 for table in STATECHARTS {
@@ -909,6 +917,8 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "analytics_job_active_totals_by_tenant",
             "analytics_job_by_deadline",
             "analytics_job_cancellation_reconcile",
+            "analytics_job_task_queue_totals",
+            "analytics_job_task_queue_oldest",
         ],
         OwnerLayout::Statechart => &["statechart_defs", "statechart_instances"],
         OwnerLayout::TimeSeries => &["series_chunks", "series_meta", "series_projection_state"],

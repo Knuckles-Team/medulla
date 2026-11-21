@@ -52,9 +52,33 @@ pub(super) enum UpgradeTarget {
     Rbac,
     /// The kv store while the KV-cache cold rung still had its own table.
     Kv,
-    /// The jobs store before the analytics job machine (MEDULLA-CQ-ORCH-R811.4): every record is
-    /// converted to the machine shape.
-    Jobs,
+    /// A jobs store of one generation; every one ends at the current layout.
+    Jobs(JobsSource),
+}
+
+/// The jobs generation an offline upgrade starts from. Every one ends at the current layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum JobsSource {
+    /// Before the analytics job machine (MEDULLA-CQ-ORCH-R811.4): every record is converted to
+    /// the machine shape.
+    BeforeJobMachine,
+    /// Before the per-queue task totals and oldest-enqueue index (MEDULLA-INGEST-WORKER-R001.4.1).
+    BeforeTaskQueue,
+}
+
+impl JobsSource {
+    fn descriptor(self) -> (&'static LayoutPredecessor, [u8; 32]) {
+        match self {
+            Self::BeforeJobMachine => (
+                &JOBS_BEFORE_JOB_MACHINE,
+                super::lineage::JOBS_PRE_JOB_MACHINE_DIGEST,
+            ),
+            Self::BeforeTaskQueue => (
+                &super::lineage::JOBS_BEFORE_TASK_QUEUE,
+                super::lineage::JOBS_PRE_TASK_QUEUE_DIGEST,
+            ),
+        }
+    }
 }
 
 /// The Agent Library generation an offline upgrade starts from. Every one ends
@@ -165,7 +189,7 @@ impl UpgradeTarget {
             Self::SemanticIndex => OwnerLayout::SemanticIndex,
             Self::Rbac => OwnerLayout::Rbac,
             Self::Kv => OwnerLayout::Kv,
-            Self::Jobs => OwnerLayout::Jobs,
+            Self::Jobs(_) => OwnerLayout::Jobs,
         }
     }
 
@@ -176,7 +200,7 @@ impl UpgradeTarget {
             Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
             Self::Rbac => &RBAC_BEFORE_PROFILE_GRANTS,
             Self::Kv => &KV_BEFORE_NAMESPACE_COLD,
-            Self::Jobs => &JOBS_BEFORE_JOB_MACHINE,
+            Self::Jobs(source) => source.descriptor().0,
         }
     }
 
@@ -187,7 +211,7 @@ impl UpgradeTarget {
             Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
             Self::Rbac => super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
             Self::Kv => super::lineage::KV_PRE_NAMESPACE_COLD_DIGEST,
-            Self::Jobs => super::lineage::JOBS_PRE_JOB_MACHINE_DIGEST,
+            Self::Jobs(source) => source.descriptor().1,
         }
     }
 }
@@ -444,6 +468,20 @@ pub fn upgrade_graph_shard(
     upgrade_layout(token, target)
 }
 
+/// Bring an inspected jobs file to the current layout in one durable commit. A file from before
+/// the analytics job machine has every record converted into `analytics_job_records` and the
+/// retired table deleted; every generation gets the task-queue tables created empty. The token
+/// carries the generation it was inspected as.
+pub(super) fn upgrade_jobs(
+    token: ValidatedOwnerLayoutUpgrade,
+) -> Result<(StorageKernel, OwnerLayoutUpgradeReport), String> {
+    let target = token.target;
+    if target.layout() != OwnerLayout::Jobs {
+        return Err("owner layout upgrade token targets another store".into());
+    }
+    upgrade_layout(token, target)
+}
+
 /// Bring an inspected semantic index file to the current layout in one
 /// durable commit: every existing row is kept and the four promotion-gate
 /// tables are created empty.
@@ -539,7 +577,7 @@ pub(super) fn upgrade_layout(
             token.source.private_integrity,
             options,
         )?,
-        UpgradeTarget::Jobs => StorageKernel::open_owner_with::<JobsOwner>(
+        UpgradeTarget::Jobs(_) => StorageKernel::open_owner_with::<JobsOwner>(
             &token.source.path,
             current.physical_identity,
             token.source.private_integrity,

@@ -534,3 +534,36 @@ fn graph_shard_before_reservation_tombstone_removal_is_a_frozen_predecessor() {
     assert!(error.contains(predecessor.label));
     assert!(error.contains("store-upgrade"), "{error}");
 }
+
+// spec: MEDULLA-INGEST-WORKER-R001.4.1
+#[test]
+fn jobs_before_task_queue_is_a_frozen_predecessor() {
+    let predecessor = &JOBS_BEFORE_TASK_QUEUE;
+    let contracts: Vec<_> = crate::owner::contract::expected_table_contracts(OwnerLayout::Jobs)
+        .into_iter()
+        .filter(|contract| {
+            contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                || predecessor
+                    .owner_tables
+                    .contains(&contract.table_id.as_str())
+        })
+        .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::Jobs, &contracts),
+        JOBS_PRE_TASK_QUEUE_DIGEST
+    );
+    assert_ne!(JOBS_PRE_TASK_QUEUE_DIGEST, OwnerLayout::Jobs.digest());
+    // The predecessor lacks exactly the two task-queue tables and has every other one.
+    let current = owner_table_names(OwnerLayout::Jobs);
+    let mut expected: Vec<&str> = current
+        .iter()
+        .copied()
+        .filter(|table| !table.starts_with("analytics_job_task_queue_"))
+        .collect();
+    expected.sort_unstable();
+    let mut actual = predecessor.owner_tables.to_vec();
+    actual.sort_unstable();
+    assert_eq!(actual, expected);
+    assert!(current.contains(&"analytics_job_task_queue_totals"));
+    assert!(current.contains(&"analytics_job_task_queue_oldest"));
+}

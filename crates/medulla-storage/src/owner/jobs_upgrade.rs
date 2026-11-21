@@ -8,46 +8,36 @@
 //! commit that replaces the manifest, and a record it cannot map refuses the whole upgrade.
 //!
 //! Caller chain: engine open, or the operator `apply` command → `migrate_on_open` →
-//! `upgrade_jobs_job_machine` → `convert_job_rows` → `convert_job_record`.
+//! `upgrade_jobs` → `convert_job_rows` → `convert_job_record`.
 
 use super::agent_library_upgrade::{
-    inspect_layout_upgrade, upgrade_layout, OwnerLayoutUpgradeReport, UpgradeTarget,
-    ValidatedOwnerLayoutUpgrade,
+    inspect_layout_upgrade, JobsSource, UpgradeTarget, ValidatedOwnerLayoutUpgrade,
 };
 use super::identity::PhysicalStoreIdentity;
 use super::registry::{ANALYTICS_JOBS_BEFORE_JOB_MACHINE, ANALYTICS_JOB_RECORDS};
 use super::sql_checkpoint_upgrade::SqlSourceCheckpointInspectionOptions;
 use crate::physical::integrity::PrivatePayloadIntegrity;
-use crate::StorageKernel;
 use redb::{ReadableTable, WriteTransaction};
 use serde_json::{json, Map, Value};
 use std::path::Path;
 use std::sync::Arc;
 
-/// Inspect a jobs owner file from before the analytics job machine, tied to the source
-/// descriptor and bytes.
-pub fn inspect_jobs_job_machine_upgrade(
+/// Inspect a jobs owner file of one declared generation, tied to the source descriptor and
+/// bytes.
+pub(crate) fn inspect_jobs_upgrade(
     path: &Path,
     expected_physical_identity: PhysicalStoreIdentity,
     private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
     options: SqlSourceCheckpointInspectionOptions,
+    source: JobsSource,
 ) -> Result<ValidatedOwnerLayoutUpgrade, String> {
     inspect_layout_upgrade(
         path,
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::Jobs,
+        UpgradeTarget::Jobs(source),
     )
-}
-
-/// Bring an inspected jobs file to the current layout in one durable commit: every record of
-/// `analytics_jobs` is converted to the machine shape into `analytics_job_records` and the retired
-/// table is deleted.
-pub fn upgrade_jobs_job_machine(
-    token: ValidatedOwnerLayoutUpgrade,
-) -> Result<(StorageKernel, OwnerLayoutUpgradeReport), String> {
-    upgrade_layout(token, UpgradeTarget::Jobs)
 }
 
 /// The failure of a record the conversion cannot map: `JOBS_RECORD_UNMAPPABLE: <job id>`.
