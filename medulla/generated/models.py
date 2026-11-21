@@ -15178,6 +15178,9 @@ Method = Annotated[
         MethodRecordDeployment,
         MethodSourceCoverage,
         MethodObservationState,
+        MethodMemoryRemember,
+        MethodMemoryRecall,
+        MethodMemoryExport,
         MethodTraceCritique,
         MethodNumericEvaluate,
         MethodSemanticEnrich,
@@ -33992,6 +33995,183 @@ BoundedVec_SkillNode_32 = Annotated[list[SkillNode], Field(max_length=32)]
 BoundedVec_TaskSkillTree_64 = Annotated[list[TaskSkillTree], Field(max_length=64)]
 
 
+MemoryTier = Literal["working", "episodic", "procedural", "semantic"]
+MemoryKind = Literal[
+    "fact", "episode", "conversation_turn", "rule", "search_state", "session_note"
+]
+
+
+class MediaAttachment(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blob_digest: str
+    byte_len: Annotated[int, Field(ge=0)]
+    derivation_ids: list[str] = Field(default_factory=list)
+    mime: str
+
+
+class MemoryRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    access_count: Annotated[int, Field(ge=0)] = 0
+    attachments: list[MediaAttachment] = Field(default_factory=list)
+    expires_at_ms: int | None = None
+    forgotten: bool = False
+    importance: float = 0.0
+    kind: MemoryKind
+    last_access_ms: int = 0
+    last_decay_ms: int = 0
+    legal_hold: bool = False
+    memory_id: str
+    pattern_key: str | None = None
+    provenance_key: str | None = None
+    schema_version: Annotated[int, Field(ge=0)] = 1
+    session_id: str | None = None
+    support_count: Annotated[int, Field(ge=0)] = 0
+    tenant: str
+    text: str
+    tier: MemoryTier
+    timestamp_ms: int = 0
+    token_estimate: Annotated[int, Field(ge=0)] = 0
+    topics: list[str] = Field(default_factory=list)
+
+
+class MemoryRememberRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    embedding: list[float] = Field(default_factory=list)
+    record: MemoryRecord
+
+
+class MemoryRememberResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    memory_id: str
+    stored: bool
+
+
+class MemoryRecallRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of_ms: int | None = None
+    budget: Annotated[int, Field(ge=0)]
+    include_plan: bool = False
+    keywords: list[str] = Field(default_factory=list)
+    prime_session: str | None = None
+    query_embedding: list[float] = Field(default_factory=list)
+    scope: str | None = None
+    tiers: list[MemoryTier] = Field(default_factory=list)
+
+
+class MemoryHit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: MemoryRecord
+    score_q16: Annotated[int, Field(ge=0)]
+
+
+class Memento(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    source_ids: list[str]
+    token_count: Annotated[int, Field(ge=0)]
+
+
+class MergeGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    keep: str
+    merged: list[str]
+
+
+class PromotionGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    pattern_key: str
+    record_ids: list[str]
+    support_count: Annotated[int, Field(ge=0)]
+
+
+class ConsolidationPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    held: list[str]
+    merges: list[MergeGroup]
+    promotions: list[PromotionGroup]
+    prune_candidates: list[str]
+
+
+class MemoryRecallResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    hits: list[MemoryHit]
+    mementos: list[Memento] = Field(default_factory=list)
+    plan: ConsolidationPlan | None = None
+    tokens_used: Annotated[int, Field(ge=0)]
+
+
+class MemoryExportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MemoryExportManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ids_digest: str
+    record_count: Annotated[int, Field(ge=0)]
+    tiers: list[MemoryTier]
+    truncated: bool
+
+
+class MemoryExportResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    manifest: MemoryExportManifest
+    records: list[MemoryRecord]
+
+
+class MethodMemoryRememberParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryRememberRequest
+
+
+class MethodMemoryRemember(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryRemember"]
+    params: MethodMemoryRememberParams
+
+
+class MethodMemoryRecallParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryRecallRequest
+
+
+class MethodMemoryRecall(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryRecall"]
+    params: MethodMemoryRecallParams
+
+
+class MethodMemoryExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MemoryExportRequest
+
+
+class MethodMemoryExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MemoryExport"]
+    params: MethodMemoryExportParams
+
+
 __all__ = [
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
@@ -34352,6 +34532,28 @@ __all__ = [
     "CapabilityCoverageOutcomeCovered",
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
+    "ConsolidationPlan",
+    "MediaAttachment",
+    "Memento",
+    "MemoryExportManifest",
+    "MemoryExportRequest",
+    "MemoryExportResult",
+    "MemoryHit",
+    "MemoryKind",
+    "MemoryRecallRequest",
+    "MemoryRecallResult",
+    "MemoryRecord",
+    "MemoryRememberRequest",
+    "MemoryRememberResult",
+    "MemoryTier",
+    "MergeGroup",
+    "MethodMemoryExport",
+    "MethodMemoryExportParams",
+    "MethodMemoryRecall",
+    "MethodMemoryRecallParams",
+    "MethodMemoryRemember",
+    "MethodMemoryRememberParams",
+    "PromotionGroup",
     "RevisionProposalListRequest",
     "RevisionProposalPage",
     "RevisionRow",

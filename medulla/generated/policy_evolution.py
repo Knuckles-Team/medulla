@@ -196,18 +196,83 @@ class PolicyControls(BaseModel):
     train: ControlSetting | None = None
 
 
+class RevisionSubjectDecisionHead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["decision_head"]
+    component_id: str
+
+
+class RevisionSubjectProgram(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["program"]
+    program_ref: str
+
+
+class RevisionSubjectKnobSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["knob_set"]
+    policy_id: str
+
+
+class RevisionSubjectModelPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["model_policy"]
+    family_ref: str
+
+
+class RevisionSubjectDefinition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["definition"]
+    definition_kind: str
+    definition_ref: str
+
+
+class RevisionSubjectGovernedSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["governed_set"]
+    scope_ref: str
+
+
+class RevisionSubjectMeasuredFact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["measured_fact"]
+    model_ref: str
+    property: str
+
+
+class RevisionSubjectRerankCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["rerank_calibration"]
+    scorer_version: str
+
+
+RevisionSubject = Annotated[
+    RevisionSubjectDecisionHead | RevisionSubjectProgram | RevisionSubjectKnobSet | RevisionSubjectModelPolicy | RevisionSubjectDefinition | RevisionSubjectGovernedSet | RevisionSubjectMeasuredFact | RevisionSubjectRerankCalibration,
+    Field(discriminator="kind"),
+]
+
+
 class PolicyEvaluation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    baseline_version_id: str | None = None
+    champion_revision_ref: str | None = None
     evaluation_set_digest: Digest256
     evaluator_digest: Digest256
     held_out_trajectory_ids: list[str] = Field(default_factory=list, max_length=4096)
     metrics: EvaluationMetrics
     report: HeldBlobRef | None = None
+    revision_ref: str
     safety: SafetyOutcome
+    subject: RevisionSubject
     verdict: EvaluationVerdict
-    version_id: str
 
 
 class PolicyEvolutionOpPutCapability(BaseModel):
@@ -600,6 +665,15 @@ __all__ = [
     "PolicyRecordView",
     "PolicyWriteDisposition",
     "ResourceObservation",
+    "RevisionSubject",
+    "RevisionSubjectDecisionHead",
+    "RevisionSubjectDefinition",
+    "RevisionSubjectGovernedSet",
+    "RevisionSubjectKnobSet",
+    "RevisionSubjectMeasuredFact",
+    "RevisionSubjectModelPolicy",
+    "RevisionSubjectProgram",
+    "RevisionSubjectRerankCalibration",
     "RewardEvidenceSource",
     "RewardRecord",
     "SafetyOutcome",

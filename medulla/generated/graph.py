@@ -49,6 +49,9 @@ if TYPE_CHECKING:
     ReinforceRequest = _models.MethodReinforceParams
     DecayNodeRequest = _models.MethodDecayNodeParams
     DecayMemoriesRequest = _models.MethodDecayMemoriesParams
+    MemoryRememberRequest = _models.MethodMemoryRememberParams
+    MemoryRecallRequest = _models.MethodMemoryRecallParams
+    MemoryExportRequest = _models.MethodMemoryExportParams
     EvictBelowRequest = _models.MethodEvictBelowParams
     MaintainRequest = _models.MethodMaintainParams
     SummaryChildrenRequest = _models.MethodSummaryChildrenParams
@@ -2747,6 +2750,9 @@ _REQUEST_METHODS = frozenset(
         "Reinforce",
         "DecayNode",
         "DecayMemories",
+        "MemoryRemember",
+        "MemoryRecall",
+        "MemoryExport",
         "EvictBelow",
         "Maintain",
         "SummaryChildren",
@@ -2837,6 +2843,12 @@ send_policy_evolution_store = contract_sender(
 decode_policy_evolution_store = contract_decoder(
     "PolicyEvolutionStore", "PolicyRecordStored"
 )
+send_memory_remember = contract_sender("MemoryRemember", "MethodMemoryRememberParams")
+decode_memory_remember = contract_decoder("MemoryRemember", "MemoryRememberResult")
+send_memory_recall = contract_sender("MemoryRecall", "MethodMemoryRecallParams")
+decode_memory_recall = contract_decoder("MemoryRecall", "MemoryRecallResult")
+send_memory_export = contract_sender("MemoryExport", "MethodMemoryExportParams")
+decode_memory_export = contract_decoder("MemoryExport", "MemoryExportResult")
 send_read_memory_snapshot = contract_sender(
     "ReadMemorySnapshot", "MethodReadMemorySnapshotParams"
 )
