@@ -425,6 +425,12 @@ pub const REGRESSION_WINDOW: usize = 3;
 /// `promotion.regression_margin`: score drop, as a fraction, that rolls a
 /// promotion back (MEDULLA-DECISION-ENGINE-R805.2).
 pub const REGRESSION_MARGIN: usize = 4;
+/// `promotion.bootstrap_resamples`: paired-bootstrap resamples of a rollout
+/// set (MEDULLA-DECISION-ENGINE-R654.2).
+pub const BOOTSTRAP_RESAMPLES: usize = 5;
+/// `promotion.bootstrap_level`: confidence level of the paired-bootstrap
+/// lower bound (MEDULLA-DECISION-ENGINE-R654.2).
+pub const BOOTSTRAP_LEVEL: usize = 6;
 
 /// The promotion knobs. The gate knobs are `Fixed`: a knob-set revision may
 /// not loosen the bar a challenger must clear.
@@ -467,6 +473,22 @@ pub const KNOBS: &[KnobSpec] = &[
         default: KnobValue::DecimalMicros(20_000),
         min: KnobValue::DecimalMicros(5_000),
         max: KnobValue::DecimalMicros(200_000),
+        safety: KnobSafety::Fixed,
+    },
+    KnobSpec {
+        name: "promotion.bootstrap_resamples",
+        unit: "resamples",
+        default: KnobValue::Integer(1_000),
+        min: KnobValue::Integer(200),
+        max: KnobValue::Integer(10_000),
+        safety: KnobSafety::Fixed,
+    },
+    KnobSpec {
+        name: "promotion.bootstrap_level",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(950_000),
+        min: KnobValue::DecimalMicros(800_000),
+        max: KnobValue::DecimalMicros(990_000),
         safety: KnobSafety::Fixed,
     },
 ];

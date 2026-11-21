@@ -25,8 +25,9 @@ use medulla_types::contract::BoundedVec;
 use medulla_decision_outcome_types::decision::promotion::{
     ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
     RollbackDecision, KNOBS as PROMOTION_KNOBS, MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN,
-    REGRESSION_MARGIN, REGRESSION_WINDOW,
+    BOOTSTRAP_LEVEL, BOOTSTRAP_RESAMPLES, REGRESSION_MARGIN, REGRESSION_WINDOW,
 };
+use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::codes::{
     ADOPTION_NOT_PROVEN, EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED, REVIEW_NOT_INDEPENDENT,
@@ -335,6 +336,112 @@ fn wins_by(evidence: &HeldOutEvidence, policy: &DecisionPolicy, margin: i64) -> 
         PromotionGate::Hold {
             reason: "margin_not_met",
         }
+    }
+}
+
+/// The SplitMix64 generator of the paired bootstrap.
+struct SplitMix64(u64);
+
+impl SplitMix64 {
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+}
+
+/// The bare hex digest of a rollout set: the receipt digest its evidence names
+/// and the key suffix of its decision artifact (`rollouts:<digest>`).
+pub fn rollout_set_digest(set: &RolloutSet) -> String {
+    let text = medulla_query_types::solve_scalar::digest_text("eg/rollout-set/v1", set);
+    text.strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .unwrap_or(&text)
+        .to_owned()
+}
+
+/// MEDULLA-DECISION-ENGINE-R654.2: the held-out evidence of a rollout set.
+/// Rollouts pair by `(seed, task_id)`; an unpaired rollout (a side without a
+/// score) is not a pair and does not count. `delta_ppm` is the lower bound of
+/// the paired-bootstrap mean difference at `promotion.bootstrap_level`, over
+/// `promotion.bootstrap_resamples` resamples drawn with SplitMix64 seeded by
+/// the first 8 bytes of the set digest, so the same set always yields the same
+/// bound whatever the thread count. Writes nothing.
+pub fn paired_rollout_evidence(set: &RolloutSet, policy: &DecisionPolicy) -> HeldOutEvidence {
+    let mut pairs: BTreeMap<(u64, &str), (i64, i64)> = BTreeMap::new();
+    for rollout in set.rollouts.iter() {
+        if let (Some(challenger), Some(champion)) =
+            (rollout.challenger_score_ppm, rollout.champion_score_ppm)
+        {
+            pairs.insert(
+                (rollout.seed, rollout.task_id.as_str()),
+                (i64::from(challenger), i64::from(champion)),
+            );
+        }
+    }
+    let cases = pairs.len();
+    let digest = rollout_set_digest(set);
+    let mean = |total: i64| {
+        if cases == 0 {
+            0
+        } else {
+            total.div_euclid(cases as i64)
+        }
+    };
+    let challenger_total: i64 = pairs.values().map(|(c, _)| *c).sum();
+    let champion_total: i64 = pairs.values().map(|(_, h)| *h).sum();
+    let diffs: Vec<i64> = pairs.values().map(|(c, h)| c - h).collect();
+    let resamples = integer_knob(policy, BOOTSTRAP_RESAMPLES).max(1);
+    let level = match policy.knob(&PROMOTION_KNOBS[BOOTSTRAP_LEVEL]) {
+        KnobValue::DecimalMicros(value) => value.clamp(0, 1_000_000),
+        _ => 1_000_000,
+    };
+    let seed = digest
+        .get(..16)
+        .and_then(|head| u64::from_str_radix(head, 16).ok())
+        .unwrap_or(0);
+    let delta_ppm = if diffs.is_empty() {
+        0
+    } else {
+        let mut rng = SplitMix64(seed);
+        let mut means: Vec<i64> = (0..resamples)
+            .map(|_| {
+                let total: i64 = (0..diffs.len())
+                    .map(|_| diffs[(rng.next() % diffs.len() as u64) as usize])
+                    .sum();
+                total.div_euclid(diffs.len() as i64)
+            })
+            .collect();
+        means.sort_unstable();
+        let tail = (1_000_000 - level) as u128 * resamples as u128 / 1_000_000;
+        means[(tail as usize).min(means.len() - 1)]
+    };
+    let set_digest = {
+        let keys: Vec<(&u64, &&str)> = pairs.keys().map(|(seed, task)| (seed, task)).collect();
+        let text = medulla_query_types::solve_scalar::digest_text("eg/rollout-pairs/v1", &keys);
+        text.strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
+            .unwrap_or(&text)
+            .to_owned()
+    };
+    HeldOutEvidence {
+        schema_version: medulla_decision_outcome_types::decision::promotion::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+        subject: RevisionSubject::Program {
+            program_ref: set.program_ref.clone(),
+        },
+        challenger_ref: set.challenger_ref.clone(),
+        champion_ref: set.champion_ref.clone(),
+        receipt_kind: ReceiptKind::RolloutSet,
+        receipt_digest: digest,
+        evaluation_set_digest: set_digest,
+        challenger_score_ppm: mean(challenger_total),
+        champion_score_ppm: set.champion_ref.as_ref().map(|_| mean(champion_total)),
+        delta_ppm,
+        case_count: cases as u64,
+        independent: true,
+        grader_kind: medulla_decision_outcome_types::decision::promotion::GraderKind::TraceMetric,
+        measurement: None,
+        review: None,
     }
 }
 
@@ -874,5 +981,51 @@ mod tests {
             KNOBS[REGRESSION_MARGIN].default,
             KnobValue::DecimalMicros(20_000)
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R654.2
+    #[test]
+    fn paired_bootstrap_is_deterministic_across_thread_counts() {
+        use medulla_decision_types::decision::skill_evolution::{
+            Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
+        };
+        let rollouts: Vec<Rollout> = (0..60u64)
+            .map(|index| Rollout {
+                seed: index % 3,
+                task_id: format!("task-{index}"),
+                challenger_score_ppm: Some(700_000 + (index as u32 % 5) * 10_000),
+                champion_score_ppm: Some(600_000 + (index as u32 % 4) * 10_000),
+                trace_ref: format!("trace-{index}"),
+            })
+            .chain(std::iter::once(Rollout {
+                seed: 9,
+                task_id: "unpaired".to_owned(),
+                challenger_score_ppm: Some(1),
+                champion_score_ppm: None,
+                trace_ref: "trace-x".to_owned(),
+            }))
+            .collect();
+        let set = RolloutSet {
+            schema_version: ROLLOUT_SET_SCHEMA_VERSION,
+            program_ref: "program-a".to_owned(),
+            challenger_ref: "revision-2".to_owned(),
+            champion_ref: Some("revision-1".to_owned()),
+            rollouts: medulla_types::contract::BoundedVec::new(rollouts).expect("bounded"),
+        };
+        let policy = DecisionPolicy::engine_default();
+        let first = super::paired_rollout_evidence(&set, &policy);
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let (set, policy) = (set.clone(), policy.clone());
+                std::thread::spawn(move || super::paired_rollout_evidence(&set, &policy))
+            })
+            .collect();
+        for handle in handles {
+            assert_eq!(handle.join().expect("thread"), first);
+        }
+        assert_eq!(first.case_count, 60);
+        assert_eq!(first.receipt_kind, ReceiptKind::RolloutSet);
+        assert!(first.delta_ppm > 0 && first.delta_ppm < 200_000);
+        assert_eq!(first.receipt_digest, super::rollout_set_digest(&set));
     }
 }
