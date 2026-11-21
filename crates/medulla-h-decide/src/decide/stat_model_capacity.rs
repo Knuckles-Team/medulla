@@ -2,7 +2,7 @@
 //!
 //! Feeds the caller's recorded observations of one model endpoint to the
 //! admission controllers of `medulla-resource` (`ModelCapacityController`,
-//! `CircuitBreaker`, `GpuGroupBudget`) and answers the limits they leave. The
+//! `CircuitBreaker`, `CognitiveScheduler`) and answers the limits they leave. The
 //! handler copies none of their logic and reads no ledger or log. A ceiling
 //! above the declared cell ceiling abstains `PolicyLoosening`. Evaluate-only.
 
@@ -18,7 +18,8 @@ use medulla_decision_types::decision::{
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_resource::admission::{
-    CircuitBreaker, CircuitState, GpuGroupBudget, ModelCapacityController, Outcome,
+    AgentProcess, CircuitBreaker, CircuitState, CognitiveDecision, CognitiveScheduler,
+    InferenceBudget, ModelCapacityController, Outcome, PriorityClass,
     CONCURRENCY_ABOVE_CELL_CEILING,
 };
 use medulla_types::contract::BoundedVec;
@@ -94,18 +95,30 @@ fn decide_capacity(request: &DecideRequest, policy: &DecisionPolicy) -> Result<E
             .map_err(invalid)?;
     }
     breaker.tick(bounds.now_ms);
-    let mut budget = GpuGroupBudget::new(&bounds.group, bounds.group_slots);
-    for _ in 0..controller.effective_limit(&breaker) {
-        if !budget.try_acquire() {
-            break;
+    // The group's slots are the scheduler's budget: each grant is one
+    // one-token process of one class, so the scheduler admits until the slots
+    // are used and refuses the rest.
+    let mut scheduler = CognitiveScheduler::new(InferenceBudget {
+        tokens_per_window: u64::from(bounds.group_slots),
+    });
+    let mut granted: u32 = 0;
+    for slot in 0..controller.effective_limit(&breaker) {
+        let process = AgentProcess {
+            id: format!("{}:{slot}", bounds.group),
+            class: PriorityClass::Normal,
+            used_tokens: 0,
+        };
+        match scheduler.request(process, 1) {
+            CognitiveDecision::Admit => granted += 1,
+            CognitiveDecision::Preempt { .. } | CognitiveDecision::Refuse => break,
         }
     }
     let answer = CapacityAnswer {
         limit: controller.limit(),
         effective_limit: controller.effective_limit(&breaker),
         breaker: kind_of(breaker.state),
-        granted: budget.used(),
-        group_slots_free: bounds.group_slots.saturating_sub(budget.used()),
+        granted,
+        group_slots_free: bounds.group_slots.saturating_sub(granted),
     };
     let text = text_param(request, PARAM_OBSERVATIONS)?.unwrap_or_default();
     let mut executed = advisory(vec![format!(
