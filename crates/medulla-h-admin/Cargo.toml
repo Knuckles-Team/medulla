@@ -140,3 +140,10 @@ name = "ontology_diff"
 path = "benches/ontology_diff.rs"
 harness = false
 required-features = ["shacl"]
+
+# Agent component projection budget (MEDULLA-ORCH-VOCAB-R003.6); never gates a pull request.
+[[bench]]
+name = "agent_library_projection"
+path = "benches/agent_library_projection.rs"
+harness = false
+required-features = ["rdf"]

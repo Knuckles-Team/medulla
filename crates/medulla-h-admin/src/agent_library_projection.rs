@@ -47,13 +47,20 @@ pub mod topology;
 /// or the RDF triple operations has nothing to project.
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
     #[cfg(all(feature = "redb", feature = "rdf"))]
-    tokio::spawn(worker::run(state));
+    {
+        tokio::spawn(worker::run(Arc::clone(&state)));
+        tokio::spawn(worker::run_components(state));
+    }
     #[cfg(not(all(feature = "redb", feature = "rdf")))]
     drop(state);
 }
 
 /// The change-cursor source the consumer offset is stored under.
 pub const CURSOR_SOURCE: &str = "agent-library-projection";
+
+/// The change-cursor source the component stream's consumer offset is stored under
+/// (MEDULLA-ORCH-VOCAB-R003.6).
+pub const COMPONENT_CURSOR_SOURCE: &str = "agent-component-projection";
 
 /// What one claimed row commits.
 #[cfg(feature = "rdf")]
@@ -106,6 +113,35 @@ pub fn plan_step(
     }
 }
 
+/// Decide one component row: the published `entry` at its revision against the stored offset
+/// `stored` and the component revision it names, `previous_entry`. The rules of [`plan_step`]
+/// with [`map::project_component`]: a revision not newer than `stored` skips, the stored
+/// revision's triples are removed and the new revision's added, and a retired or withdrawn
+/// revision adds none.
+#[cfg(feature = "rdf")]
+pub fn plan_component_step(
+    entry: &medulla_agent_types::agent_component::AgentComponentEntry,
+    stored: Option<u64>,
+    previous_entry: Option<&medulla_agent_types::agent_component::AgentComponentEntry>,
+) -> ProjectionStep {
+    if stored.is_some_and(|stored| stored >= entry.entry_revision) {
+        return ProjectionStep::Skip;
+    }
+    let remove = previous_entry
+        .map(|previous| map::ntriples(&map::project_component(previous)))
+        .unwrap_or_default();
+    let add = map::ntriples(&map::project_component(entry));
+    if remove.is_empty() && add.is_empty() {
+        return ProjectionStep::Skip;
+    }
+    ProjectionStep::Commit {
+        revision: entry.entry_revision,
+        previous: stored,
+        remove,
+        add,
+    }
+}
+
 /// The cursor partition of one agent: the hex SHA-256 of its id, so any id
 /// is a safe partition key.
 pub fn cursor_partition(agent_id: &str) -> String {
@@ -118,6 +154,7 @@ pub fn cursor_partition(agent_id: &str) -> String {
 /// offset as the envelope's change cursor. `None` for a skip.
 #[cfg(feature = "rdf")]
 pub fn draft_for_step(
+    source: &str,
     tenant: &str,
     agent_id: &str,
     step: &ProjectionStep,
@@ -165,13 +202,13 @@ pub fn draft_for_step(
         })
         .collect();
     let partition = cursor_partition(agent_id);
-    let envelope_id = format!("{CURSOR_SOURCE}:{partition}:{revision}");
+    let envelope_id = format!("{source}:{partition}:{revision}");
     let mut digest = Sha256::new();
     digest.update(remove.as_bytes());
     digest.update([0]);
     digest.update(add.as_bytes());
     let payload_digest = hex::encode(digest.finalize());
-    let object_id = format!("{CURSOR_SOURCE}:{partition}");
+    let object_id = format!("{source}:{partition}");
     Ok(Some(ChangeEnvelopeDraft {
         schema_version: CHANGE_ENVELOPE_VERSION,
         envelope_id: envelope_id.clone(),
@@ -197,14 +234,14 @@ pub fn draft_for_step(
             source_version: ContentVersionPosition::Sequence(*revision),
         },
         cursor: Some(ChangeCursor {
-            source: CURSOR_SOURCE.to_string(),
+            source: source.to_string(),
             partition,
             position: CursorPosition::Sequence(*revision),
             expected_previous: previous.map(CursorPosition::Sequence),
         }),
         lineage: Vec::new(),
         policies: vec![PolicyRecord {
-            policy_id: format!("{CURSOR_SOURCE}:{tenant}"),
+            policy_id: format!("{source}:{tenant}"),
             operation: MaterialOperation::Upsert,
             object_id,
             tenant: tenant.to_string(),
@@ -242,12 +279,50 @@ pub mod worker {
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
     use medulla_work_types::scheduler_config::{OrchestrationLimits, SchedulerConfig};
 
-    use super::{cursor_partition, draft_for_step, plan_step, ProjectionStep, CURSOR_SOURCE};
+    use super::{
+        cursor_partition, draft_for_step, plan_component_step, plan_step, ProjectionStep,
+        COMPONENT_CURSOR_SOURCE, CURSOR_SOURCE,
+    };
+    use medulla_agent_types::agent_component::{AgentComponentEntry, AgentComponentOutboxEvent};
+    use medulla_persistence_records::agent_component::AGENT_COMPONENT_OUTBOX_TOPIC;
 
     /// The label a failed blocking store task names.
     const BLOCKING_TASK: &str = "agent library projection";
     /// The worker's one durable consumer name on the tenant's outbox.
     pub const CONSUMER: &str = "agent-library-projection";
+    /// The component stream's durable consumer name on the same outbox
+    /// (MEDULLA-ORCH-VOCAB-R003.6).
+    pub const COMPONENT_CONSUMER: &str = "agent-component-projection";
+
+    /// One outbox stream the worker projects: the entry stream or the component stream.
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Stream {
+        Entries,
+        Components,
+    }
+
+    impl Stream {
+        fn consumer(self) -> &'static str {
+            match self {
+                Self::Entries => CONSUMER,
+                Self::Components => COMPONENT_CONSUMER,
+            }
+        }
+
+        fn topic(self) -> &'static str {
+            match self {
+                Self::Entries => AGENT_LIBRARY_OUTBOX_TOPIC,
+                Self::Components => AGENT_COMPONENT_OUTBOX_TOPIC,
+            }
+        }
+
+        fn source(self) -> &'static str {
+            match self {
+                Self::Entries => CURSOR_SOURCE,
+                Self::Components => COMPONENT_CURSOR_SOURCE,
+            }
+        }
+    }
     /// The service the worker signs its graph writes as.
     const PROJECTION_SERVICE: &str = "agent-library-projection";
     /// How long a claimed row stays leased.
@@ -256,9 +331,18 @@ pub mod worker {
     const IDLE: Duration = Duration::from_millis(500);
 
     pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
+        run_stream(state, Stream::Entries).await
+    }
+
+    /// The component stream's loop, the mirror of [`run`].
+    pub(super) async fn run_components(state: Arc<RwLock<ServerState>>) {
+        run_stream(state, Stream::Components).await
+    }
+
+    async fn run_stream(state: Arc<RwLock<ServerState>>, stream: Stream) {
         let subscribed = AtomicBool::new(false);
         loop {
-            match sweep(&state, &subscribed).await {
+            match sweep_stream(&state, &subscribed, stream).await {
                 Ok(true) => {}
                 Ok(false) => tokio::time::sleep(IDLE).await,
                 Err(error) => {
@@ -279,6 +363,22 @@ pub mod worker {
         state: &Arc<RwLock<ServerState>>,
         subscribed: &AtomicBool,
     ) -> Result<bool, String> {
+        sweep_stream(state, subscribed, Stream::Entries).await
+    }
+
+    /// One sweep over the deployment tenant's component stream, in claim order.
+    pub async fn sweep_components(
+        state: &Arc<RwLock<ServerState>>,
+        subscribed: &AtomicBool,
+    ) -> Result<bool, String> {
+        sweep_stream(state, subscribed, Stream::Components).await
+    }
+
+    async fn sweep_stream(
+        state: &Arc<RwLock<ServerState>>,
+        subscribed: &AtomicBool,
+        stream: Stream,
+    ) -> Result<bool, String> {
         let (anonymous, server) = {
             let state = state.read().await;
             (state.local_anonymous, state.context.clone())
@@ -294,17 +394,17 @@ pub mod worker {
         if !subscribed.load(Ordering::Acquire) {
             let (store, tenant) = (Arc::clone(&store), tenant.clone());
             medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                store.outbox_subscribe(&tenant, CONSUMER, AGENT_LIBRARY_OUTBOX_TOPIC)
+                store.outbox_subscribe(&tenant, stream.consumer(), stream.topic())
             })
             .await?;
             subscribed.store(true, Ordering::Release);
         }
         let limit = projection_batch(state).await;
-        let outcome = claim(&store, &tenant, limit).await?;
+        let outcome = claim(&store, &tenant, limit, stream).await?;
         if !outcome.dead_lettered.is_empty() {
             medulla_kernel::metrics::process().outbox_dead_lettered(
-                CONSUMER,
-                AGENT_LIBRARY_OUTBOX_TOPIC,
+                stream.consumer(),
+                stream.topic(),
                 "exhausted",
                 outcome.dead_lettered.len() as u64,
             );
@@ -314,9 +414,9 @@ pub mod worker {
             // One row's failure never ends the sweep. An unresolved lease
             // expires and the row is redelivered under the outbox's bounded
             // attempts; the stored offset keeps the retry idempotent.
-            match project(state, &store, &tenant, &lease).await {
+            match project(state, &store, &tenant, &lease, stream).await {
                 Ok(reason) => {
-                    if let Err(error) = resolve(&store, &tenant, lease, reason).await {
+                    if let Err(error) = resolve(&store, &tenant, lease, reason, stream).await {
                         tracing::warn!(
                             code = "AGENT_LIBRARY_PROJECTION_SETTLE_FAILED",
                             %error,
@@ -355,12 +455,13 @@ pub mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         limit: u32,
+        stream: Stream,
     ) -> Result<OutboxClaimOutcome, String> {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let mut budget = OutboxClaimBudget::new(limit, LEASE_MS, now_ms)?;
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-            store.outbox_claim(&tenant, CONSUMER, &mut budget)
+            store.outbox_claim(&tenant, stream.consumer(), &mut budget)
         })
         .await
     }
@@ -372,17 +473,39 @@ pub mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         lease: &MutationOutboxLease,
+        stream: Stream,
     ) -> Result<Option<OutboxRejectReason>, String> {
-        let Ok(event) = medulla_storage::decode_ledger_record::<AgentLibraryOutboxEvent>(
-            &lease.record.intent.payload,
-        ) else {
-            return Ok(Some(OutboxRejectReason::InvalidEvent));
+        // The row's subject: an agent for the entry stream, a component for the
+        // component stream. A row from another tenant is never read.
+        let (event, component) = match stream {
+            Stream::Entries => {
+                let Ok(event) = medulla_storage::decode_ledger_record::<AgentLibraryOutboxEvent>(
+                    &lease.record.intent.payload,
+                ) else {
+                    return Ok(Some(OutboxRejectReason::InvalidEvent));
+                };
+                if event.validate().is_err() || event.entry.tenant_id != tenant {
+                    return Ok(Some(OutboxRejectReason::InvalidEvent));
+                }
+                (Some(event), None)
+            }
+            Stream::Components => {
+                let Ok(event) = medulla_storage::decode_ledger_record::<AgentComponentOutboxEvent>(
+                    &lease.record.intent.payload,
+                ) else {
+                    return Ok(Some(OutboxRejectReason::InvalidEvent));
+                };
+                if event.validate().is_err() || event.component.tenant_id != tenant {
+                    return Ok(Some(OutboxRejectReason::InvalidEvent));
+                }
+                (None, Some(event.component))
+            }
         };
-        // A row from another tenant is never read.
-        if event.validate().is_err() || event.entry.tenant_id != tenant {
-            return Ok(Some(OutboxRejectReason::InvalidEvent));
-        }
-        let agent_id = event.entry.agent_id.clone();
+        let agent_id = match (&event, &component) {
+            (Some(event), _) => event.entry.agent_id.clone(),
+            (None, Some(component)) => component.component_id.clone(),
+            (None, None) => return Ok(Some(OutboxRejectReason::InvalidEvent)),
+        };
         let (anonymous, server) = {
             let state = state.read().await;
             (state.local_anonymous, state.context.clone())
@@ -391,7 +514,7 @@ pub mod worker {
             &medulla_identity_types::tenancy::TenantId::new(tenant)
                 .map_err(|error| error.to_string())?,
         );
-        let session = format!("{CONSUMER}:{tenant}:{}", cursor_partition(&agent_id));
+        let session = format!("{}:{tenant}:{}", stream.consumer(), cursor_partition(&agent_id));
         let context = service_context(anonymous, &server, session.clone())?;
         // The service holds exactly this tenant graph, which must be resident
         // before its offset can be read.
@@ -408,13 +531,27 @@ pub mod worker {
             state, 0, &context, &graph, &session,
         )
         .await?;
-        let stored = stored_offset(state, &context, &graph, tenant, &agent_id).await?;
-        let previous_entry = match stored {
-            Some(revision) => previous_revision(store, tenant, &agent_id, revision).await?,
-            None => None,
+        let stored = stored_offset(state, &context, &graph, tenant, &agent_id, stream.source()).await?;
+        let step = match (&event, &component) {
+            (Some(event), _) => {
+                let previous_entry = match stored {
+                    Some(revision) => previous_revision(store, tenant, &agent_id, revision).await?,
+                    None => None,
+                };
+                plan_step(event.kind, &event.entry, stored, previous_entry.as_ref())
+            }
+            (None, Some(component)) => {
+                let previous = match stored {
+                    Some(revision) => {
+                        previous_component_revision(store, tenant, &agent_id, revision).await?
+                    }
+                    None => None,
+                };
+                plan_component_step(component, stored, previous.as_ref())
+            }
+            (None, None) => return Ok(Some(OutboxRejectReason::InvalidEvent)),
         };
-        let step = plan_step(event.kind, &event.entry, stored, previous_entry.as_ref());
-        let Some(draft) = draft_for_step(tenant, &agent_id, &step)? else {
+        let Some(draft) = draft_for_step(stream.source(), tenant, &agent_id, &step)? else {
             return Ok(None);
         };
         let ProjectionStep::Commit { revision, .. } = step else {
@@ -462,6 +599,29 @@ pub mod worker {
             .find(|entry| entry.entry_revision == revision))
     }
 
+    /// The stored component revision `revision` of `component_id`, the one whose triples the
+    /// graph holds.
+    async fn previous_component_revision(
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        component_id: &str,
+        revision: u64,
+    ) -> Result<Option<AgentComponentEntry>, String> {
+        let (store, tenant, component_id) = (
+            Arc::clone(store),
+            tenant.to_string(),
+            component_id.to_string(),
+        );
+        let revisions =
+            medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                store.component_revisions(&tenant, &component_id)
+            })
+            .await?;
+        Ok(revisions
+            .into_iter()
+            .find(|entry| entry.entry_revision == revision))
+    }
+
     /// The consumer offset of `agent_id`: the position of the change cursor
     /// the last committed projection envelope carried.
     async fn stored_offset(
@@ -470,6 +630,7 @@ pub mod worker {
         graph: &str,
         tenant: &str,
         agent_id: &str,
+        source: &str,
     ) -> Result<Option<u64>, String> {
         let request = Request {
             id: 0,
@@ -477,7 +638,7 @@ pub mod worker {
             auth_token: String::new(),
             agent_id: Some(context.agent_id().to_string()),
             method: Method::GetChangeCursor {
-                source: CURSOR_SOURCE.to_string(),
+                source: source.to_string(),
                 partition: cursor_partition(agent_id),
                 tenant: tenant.to_string(),
             },
@@ -536,6 +697,7 @@ pub mod worker {
         tenant: &str,
         lease: MutationOutboxLease,
         reason: Option<OutboxRejectReason>,
+        stream: Stream,
     ) -> Result<(), String> {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
@@ -547,8 +709,8 @@ pub mod worker {
             .await;
         };
         medulla_kernel::metrics::process().outbox_dead_lettered(
-            CONSUMER,
-            AGENT_LIBRARY_OUTBOX_TOPIC,
+            stream.consumer(),
+            stream.topic(),
             "invalid_event",
             1,
         );
@@ -567,7 +729,9 @@ pub mod worker {
 #[cfg(all(test, feature = "rdf"))]
 mod tests {
     use super::*;
-    use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
+    use medulla_agent_types::agent_component::{
+        AgentComponentEntry, AgentComponentKind, ComponentDependency,
+    };
     use medulla_agent_types::agent_library::{
         AgentLibraryEntry, AgentLibraryLifecycle, AgentLibraryMutationKind,
     };
@@ -645,7 +809,7 @@ mod tests {
 
         // A newer revision removes the stored revision's triples, then adds its own.
         let step = plan_step(publish, &second, Some(1), Some(&first));
-        let draft = draft_for_step("tenant-a", "agent-a", &step)
+        let draft = draft_for_step(CURSOR_SOURCE, "tenant-a", "agent-a", &step)
             .unwrap()
             .expect("a newer revision commits");
         let methods: Vec<&Method> = draft
@@ -679,8 +843,92 @@ mod tests {
             plan_step(AgentLibraryMutationKind::Retire, &tombstone, None, None),
             ProjectionStep::Skip
         );
-        assert!(draft_for_step("tenant-a", "agent-a", &ProjectionStep::Skip)
+        assert!(draft_for_step(CURSOR_SOURCE, "tenant-a", "agent-a", &ProjectionStep::Skip)
             .unwrap()
             .is_none());
     }
+
+    fn card(revision: u64, lifecycle: AgentLibraryLifecycle) -> AgentComponentEntry {
+        use medulla_agent_types::agent_component::{
+            AgentComponentDraft, AgentComponentKind, DraftPublication, DraftSubject,
+        };
+        let digest = format!("sha256:{}", "1".repeat(64));
+        let mut draft = AgentComponentDraft::bare(
+            DraftSubject {
+                component_id: "card-a",
+                kind: AgentComponentKind::A2aAgentCard,
+                version: "1.0.0",
+                content_digest: &digest,
+                summary: "card",
+            },
+            DraftPublication {
+                tenant_id: "tenant-a",
+                actor_scope: "agent-builder",
+                purpose_id: "agent-construction",
+                policy_digest: &digest,
+                source_revision: "rev-1",
+                source_revision_digest: &digest,
+            },
+        );
+        draft.declared_capabilities = vec!["urn:vendor:summarize".to_string()];
+        let mut entry = AgentComponentEntry::publish(draft, 1, 1).expect("the card publishes");
+        entry.entry_revision = revision;
+        entry.lifecycle = lifecycle;
+        entry
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R003.6
+    #[test]
+    fn component_step_replays_replaces_and_retires() {
+        let first = card(1, AgentLibraryLifecycle::Published);
+        let second = card(2, AgentLibraryLifecycle::Published);
+
+        let ProjectionStep::Commit {
+            revision,
+            previous,
+            remove,
+            add,
+        } = plan_component_step(&first, None, None)
+        else {
+            panic!("a first publish commits");
+        };
+        assert_eq!((revision, previous), (1, None));
+        assert!(remove.is_empty());
+        assert!(add.contains("providesCapability"));
+
+        // A replayed or older row writes nothing.
+        assert_eq!(
+            plan_component_step(&first, Some(1), Some(&first)),
+            ProjectionStep::Skip
+        );
+        assert_eq!(
+            plan_component_step(&first, Some(2), Some(&second)),
+            ProjectionStep::Skip
+        );
+
+        // A newer revision removes the stored triples, then adds its own, under the component source.
+        let step = plan_component_step(&second, Some(1), Some(&first));
+        let draft = draft_for_step(COMPONENT_CURSOR_SOURCE, "tenant-a", "card-a", &step)
+            .unwrap()
+            .expect("a newer revision commits");
+        assert!(draft.envelope_id.starts_with("agent-component-projection:"));
+        let cursor = draft.cursor.expect("the offset rides the same commit");
+        assert_eq!(cursor.source, COMPONENT_CURSOR_SOURCE);
+        assert_eq!(cursor.expected_previous, Some(CursorPosition::Sequence(1)));
+
+        // A retire removes the stored triples and adds none.
+        let retired = card(3, AgentLibraryLifecycle::Retired);
+        let ProjectionStep::Commit { remove, add, .. } =
+            plan_component_step(&retired, Some(2), Some(&second))
+        else {
+            panic!("a retire of a projected card commits");
+        };
+        assert!(remove.contains("providesCapability"));
+        assert!(add.is_empty());
+        assert_eq!(
+            plan_component_step(&retired, None, None),
+            ProjectionStep::Skip
+        );
+    }
+
 }

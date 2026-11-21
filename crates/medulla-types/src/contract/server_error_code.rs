@@ -262,6 +262,7 @@ closed_error_codes! {
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",
         GuardrailScopeTooLarge => "GUARDRAIL_SCOPE_TOO_LARGE",
+        MalformedA2aAgentCard => "MALFORMED_A2A_AGENT_CARD",
         MalformedGuardrailRule => "MALFORMED_GUARDRAIL_RULE",
         ConnectorPackProjectionClusterUnavailable => "CONNECTOR_PACK_PROJECTION_CLUSTER_UNAVAILABLE",
         ConnectorPackProjectionFailed => "CONNECTOR_PACK_PROJECTION_FAILED",

@@ -230,6 +230,9 @@ pub const PLAYBOOK_TRIGGERS: [&str; 4] = [
 ];
 /// The attribute a `Playbook` component carries its trigger in.
 pub const PLAYBOOK_TRIGGER_ATTRIBUTE: &str = "trigger";
+/// The optional attribute an `A2aAgentCard` carries its agent kind in: the IRI of an
+/// `:AgentKind` individual (MEDULLA-ORCH-VOCAB-R003.6).
+pub const A2A_AGENT_KIND_ATTRIBUTE: &str = "agent_kind";
 /// The attribute a `ticket_class` `Playbook` carries its ticket class in.
 pub const PLAYBOOK_TICKET_CLASS_ATTRIBUTE: &str = "ticket_class";
 /// The optional attribute a `Playbook` carries its steps in: a JSON array of

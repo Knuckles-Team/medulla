@@ -44,7 +44,50 @@ fn validate_draft_kind_body(draft: &AgentComponentDraft) -> Result<(), String> {
                 .map(drop)?
         }
         AgentComponentKind::Playbook => validate_playbook_attributes(draft)?,
+        AgentComponentKind::A2aAgentCard => validate_a2a_card_attributes(draft)?,
         _ => {}
+    }
+    Ok(())
+}
+
+/// Whether `value` is an absolute IRI the projection can store: `<scheme>:<rest>` with an ASCII
+/// letter then letters, digits, `+`, `-` or `.` as the scheme, a non-empty rest, no whitespace
+/// and none of `<`, `>`, `"`, `{`, `}`, `\`, `^`, `|` or a backtick.
+fn is_absolute_iri(value: &str) -> bool {
+    let value = value.trim();
+    if value.is_empty()
+        || value
+            .chars()
+            .any(|c| c.is_whitespace() || "<>\"{}\\^|`".contains(c))
+    {
+        return false;
+    }
+    let Some((scheme, rest)) = value.split_once(':') else {
+        return false;
+    };
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+        && !rest.is_empty()
+}
+
+/// An `A2aAgentCard`'s optional `agent_kind` attribute and every declared capability are absolute
+/// IRIs, so the projection can store them as graph terms (MEDULLA-ORCH-VOCAB-R003.6).
+fn validate_a2a_card_attributes(draft: &AgentComponentDraft) -> Result<(), String> {
+    let id = &draft.component_id;
+    if let Some(kind) = draft.attributes.get(super::A2A_AGENT_KIND_ATTRIBUTE) {
+        if !is_absolute_iri(kind) {
+            return Err(format!(
+                "MALFORMED_A2A_AGENT_CARD: a2a agent card '{id}' agent_kind '{kind}' is not an absolute IRI"
+            ));
+        }
+    }
+    for capability in &draft.declared_capabilities {
+        if !is_absolute_iri(capability) {
+            return Err(format!(
+                "MALFORMED_A2A_AGENT_CARD: a2a agent card '{id}' capability '{capability}' is not an absolute IRI"
+            ));
+        }
     }
     Ok(())
 }
@@ -375,5 +418,27 @@ mod tests {
                 &[("category", "c"), ("threshold", bad)],
             ));
         }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R003.6
+    #[test]
+    fn a2a_card_with_non_iri_kind_is_refused() {
+        use AgentComponentKind as K;
+        let kind = "https://knuckles-team.github.io/ontology/core#agentKindVerifier";
+        draft("card-ok", K::A2aAgentCard, &[("agent_kind", kind)])
+            .validate()
+            .unwrap();
+        draft("card-no-kind", K::A2aAgentCard, &[]).validate().unwrap();
+        for bad in ["", " ", "verifier", "has space:x", "a:", "1a:b", "a:b<c", "a:b\"c", "a:b`c"] {
+            let error = draft("card-bad", K::A2aAgentCard, &[("agent_kind", bad)])
+                .validate()
+                .unwrap_err();
+            assert!(error.starts_with("MALFORMED_A2A_AGENT_CARD"), "{bad}: {error}");
+        }
+        let mut capability = draft("card-cap", K::A2aAgentCard, &[]);
+        capability.declared_capabilities = vec!["not an iri".to_string()];
+        let error = capability.validate().unwrap_err();
+        assert!(error.starts_with("MALFORMED_A2A_AGENT_CARD"), "{error}");
+        assert!(error.contains("not an iri"), "{error}");
     }
 }

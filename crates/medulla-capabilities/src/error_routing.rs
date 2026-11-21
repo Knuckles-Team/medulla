@@ -445,6 +445,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "LIFECYCLE_RETIRED_TERMINAL",
             "LIFECYCLE_STATE_MALFORMED",
             "LIFECYCLE_TRANSITION_INVALID",
+            "MALFORMED_A2A_AGENT_CARD",
             "MALFORMED_GUARDRAIL_RULE",
             "RECEIPT_DIGEST_INVALID",
             "RECEIPT_DIGEST_REUSED",
