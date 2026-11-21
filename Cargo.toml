@@ -1706,6 +1706,9 @@ uuid = { version = "1.28", features = ["v4"] }
 thiserror = "2.0"
 anyhow = "1.0"
 tracing = "0.1"
+# The running executable's build identity (`medulla-server --build-id`, MEDULLA-CONTRACT-R060.5):
+# the ELF, Mach-O and PE readers only.
+object = { version = "0.40", default-features = false, features = ["read_core", "std", "elf", "macho", "pe"] }
 
 # Optional Server. Explicit minimal feature set (not "full"): the binary uses an
 # explicitly-built multi-thread runtime + UDS/TCP listeners + sync primitives +

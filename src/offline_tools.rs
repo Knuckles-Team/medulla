@@ -10,6 +10,7 @@ use std::ffi::OsString;
 #[cfg(feature = "redb")]
 mod archive;
 mod bench_claim;
+mod build_id;
 #[cfg(feature = "lake")]
 mod lake_fixture_export;
 #[cfg(feature = "redb")]
@@ -29,6 +30,7 @@ const TOOLS: &[&str] = &[
     "lake-fixture-export",
     "raft-flake-budget",
     "bench-claim",
+    "--build-id",
 ];
 
 #[cfg(not(all(feature = "redb", feature = "ann-redb", feature = "lake")))]
@@ -72,6 +74,7 @@ pub(crate) fn run_if_requested() {
         "lake-fixture-export" => missing_feature("lake-fixture-export", "lake"),
         "raft-flake-budget" => raft_flake_budget::run(argv),
         "bench-claim" => bench_claim::run(argv),
+        "--build-id" => build_id::run(),
         _ => return,
     }
     // Slim builds route every tool to `missing_feature` (diverges), so this is
