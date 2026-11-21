@@ -63,6 +63,8 @@ impl SplitMix64 {
 }
 
 pub mod node_labels;
+// MEDULLA-CQ-ORCH-R704: stored canonical workflows become task plans.
+pub mod process_plan;
 // CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms — standalone graph data-science algorithms (Neo4j GDS parity).
 // Pure-Rust, deterministic, generic over node id; decoupled from the live engine
 // graph so it is unit-testable in isolation. Always-on (no heavy deps).
