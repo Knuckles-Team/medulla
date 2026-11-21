@@ -91,6 +91,8 @@ pub struct PreparedSourceIngestion {
     tombstoned_count: u64,
     relationship_tombstoned_count: u64,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    /// Near-duplicate documents linked by this batch (MEDULLA-INGEST-WORKER-R702.4).
+    documents: medulla_source_types::source_document::DocumentReport,
     /// Counts of an `access` batch (R902.5); `None` for every other kind.
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
@@ -280,12 +282,28 @@ pub async fn prepare(
     let resolved = resolve_mappings(&ctx, batch, &resources)?;
     // Document-class records normalize against the one mapping snapshot, before any
     // reconciliation or admission (MEDULLA-INGEST-WORKER-R003.9).
-    documents::normalize_documents(
+    let layout = documents::lsh_layout()?;
+    let normalized = documents::normalize_documents(
         ctx.tenant_scope,
         batch,
         &resolved,
         &documents::document_classes(&ctx.schema_sources)?,
         medulla_server_api::knob_config::knobs().ingest_atom_max_tokens as usize,
+        &layout,
+    )?;
+    // Near duplicates are decided here, before any record is admitted and before atom storage
+    // (MEDULLA-INGEST-WORKER-R702.3).
+    let bucket_ids = documents::candidate_bucket_ids(ctx.tenant_scope, &layout, &normalized)?;
+    let candidates =
+        read_lsh_candidates(persistence.as_ref(), &graph_fname, &bucket_ids, layout.signature_len())
+            .await?;
+    let dedup = documents::dedup_documents(
+        ctx.tenant_scope,
+        &layout,
+        normalized,
+        &candidates,
+        medulla_server_api::knob_config::knobs().ingest_lsh_jaccard_threshold,
+        ctx.graph_version.saturating_add(1),
     )?;
     let reconciliation = reconcile_batch(
         &ctx,
@@ -305,7 +323,19 @@ pub async fn prepare(
         &resources.blob,
         &resolved,
         &policy_subject,
+        &dedup.documents,
     )?;
+    // The bucket nodes of the originals and the links of the near duplicates commit with the
+    // records (MEDULLA-INGEST-WORKER-R702.3, R702.4).
+    for node_id in &dedup.node_ids {
+        admitted.policies.push(policy(
+            node_id,
+            ctx.tenant_scope,
+            &policy_subject,
+            reconciliation.entry_revision,
+        ));
+    }
+    admitted.methods.extend(dedup.methods);
     admit_relationship_tombstones(
         &ctx,
         batch,
@@ -355,6 +385,9 @@ pub async fn prepare(
             relationships: &admitted.relationship_raw_admissions,
         },
         admitted.governance,
+        medulla_source_types::source_document::DocumentReport {
+            duplicates: dedup.duplicates,
+        },
         &embedding_set,
     )?);
     admitted.policies.push(policy(
@@ -407,6 +440,9 @@ pub async fn prepare(
         tombstoned_count: admitted.tombstone_count as u64,
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
+        documents: medulla_source_types::source_document::DocumentReport {
+            duplicates: dedup.duplicates,
+        },
         access: None,
         reconcile: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
@@ -671,6 +707,7 @@ async fn prepare_extension_batch(
         tombstoned_count: 0,
         relationship_tombstoned_count: 0,
         governance: Default::default(),
+        documents: Default::default(),
         access,
         reconcile,
         drift: Vec::new(),
@@ -718,6 +755,65 @@ async fn read_held_containers(
         held.insert(id.clone(), properties);
     }
     Ok(held)
+}
+
+/// The durable near-duplicate buckets `bucket_ids` name and the signature of each original they
+/// hold (MEDULLA-INGEST-WORKER-R702.3). An absent bucket or member has no entry; a member whose
+/// signature is not `signature_len` long is skipped.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_lsh_candidates(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    bucket_ids: &BTreeSet<String>,
+    signature_len: usize,
+) -> Result<documents::LshCandidates, String> {
+    let mut candidates = documents::LshCandidates::default();
+    let mut member_ids = BTreeSet::new();
+    for bucket_id in bucket_ids {
+        let Some(bytes) = persistence.read_node(graph_fname, bucket_id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("DOCUMENT_NORMALIZATION_FAILED: held bucket: {error}"))?;
+        let members: Vec<String> = properties
+            .get("members")
+            .and_then(serde_json::Value::as_array)
+            .map(|members| {
+                members
+                    .iter()
+                    .filter_map(|member| member.as_str().map(str::to_string))
+                    .collect()
+            })
+            .unwrap_or_default();
+        member_ids.extend(members.iter().cloned());
+        candidates.buckets.insert(bucket_id.clone(), members);
+    }
+    for member_id in member_ids {
+        let Some(bytes) = persistence.read_node(graph_fname, &member_id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("DOCUMENT_NORMALIZATION_FAILED: held member: {error}"))?;
+        let signature: Option<Vec<u64>> = properties
+            .get("minhash_signature")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|values| values.iter().map(serde_json::Value::as_u64).collect());
+        let first_version = properties
+            .get("minhash_first_version")
+            .and_then(serde_json::Value::as_u64);
+        if let (Some(signature), Some(first_version)) = (signature, first_version) {
+            if signature.len() == signature_len {
+                candidates.members.insert(
+                    member_id,
+                    documents::StoredSignature {
+                        signature,
+                        first_version,
+                    },
+                );
+            }
+        }
+    }
+    Ok(candidates)
 }
 
 /// What the engine holds about each record an access batch names.
@@ -1528,7 +1624,12 @@ fn admit_records(
     blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
+    documents: &[documents::DocumentOutput],
 ) -> Result<AdmittedRecords, String> {
+    let documents: BTreeMap<&str, &documents::DocumentOutput> = documents
+        .iter()
+        .map(|document| (document.record_node_id.as_str(), document))
+        .collect();
     let mut admitted = AdmittedRecords {
         raw_admissions: Vec::with_capacity(batch.records.len()),
         relationship_raw_admissions: Vec::with_capacity(batch.relationships.len()),
@@ -1549,6 +1650,7 @@ fn admit_records(
             &target,
             resolved,
             policy_subject,
+            &documents,
             &mut admitted.governance,
         )?
         else {
@@ -2070,6 +2172,7 @@ fn admit_record(
     target: &BlobTarget<'_>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
+    documents: &BTreeMap<&str, &documents::DocumentOutput>,
     report: &mut medulla_ingestion_types::source_governance::GovernanceReport,
 ) -> Result<Option<AdmittedRecord>, String> {
     // Governance parses before anything is written or the node is built
@@ -2113,6 +2216,20 @@ fn admit_record(
         batch.strict_schema,
     )?;
     let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
+    // An original document carries its signature and first-indexed version; a near duplicate
+    // carries neither (MEDULLA-INGEST-WORKER-R702.3).
+    if let Some(document) = documents.get(node_id.as_str()) {
+        if document.dedup == documents::DedupOutcome::Original {
+            properties.insert(
+                "minhash_signature".into(),
+                serde_json::json!(document.signature),
+            );
+            properties.insert(
+                "minhash_first_version".into(),
+                serde_json::json!(document.first_version),
+            );
+        }
+    }
     if let Some(governance) = &governance {
         for (key, value) in &governance.properties {
             properties.insert((*key).into(), value.clone());
@@ -2317,6 +2434,7 @@ fn receipt_method(
     reconciliation: &ReconciliationPlan,
     admissions: &RawAdmissions<'_>,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    documents: medulla_source_types::source_document::DocumentReport,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
     let RawAdmissions {
@@ -2338,6 +2456,7 @@ fn receipt_method(
         "withdrawals": reconciliation.tombstones,
         "relationship_tombstones": relationship_tombstone_receipts(&reconciliation.relationship_tombstones),
         "governance": governance,
+        "documents": documents,
         "column_exclusions": embedding_set.exclusions,
         "embedding_set": embedding_set.entries,
         "record_count": batch.records.len() - governance.refused as usize,
@@ -2590,6 +2709,7 @@ fn build_terminal_receipt(
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
+        documents: prepared.documents,
         access: prepared.access,
         reconcile: prepared.reconcile,
         report: medulla_types::ingest_materialize::IngestBatchReport {
@@ -2685,6 +2805,13 @@ fn prepared_replay(
             "relationship_tombstoned_count",
         )?,
         governance: replay_governance(&receipt)?,
+        documents: receipt
+            .get("documents")
+            .cloned()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: documents: {error}"))?
+            .unwrap_or_default(),
         access: receipt
             .get("access")
             .filter(|value| !value.is_null())

@@ -325,6 +325,11 @@ name = "assemble_steps"
 path = "benches/assemble_steps.rs"
 harness = false
 
+# Near-duplicate index bench (MEDULLA-INGEST-WORKER-R702.6): insert plus query over 100,000
+# documents. Run: `cargo bench -p medulla-compute --bench lsh_index`.
+[[bench]]
+name = "lsh_index"
+path = "benches/lsh_index.rs"
 # Test-only opt-in cfg (not a feature, so `--all-features` never turns it on). See the
 # crate's device/CPU-feature parity tests for when to pass `--cfg medulla_gpu_device_tests`.
 [lints.rust]

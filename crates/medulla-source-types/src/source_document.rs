@@ -31,6 +31,17 @@ pub struct NormalizedDocument {
     pub concept_ids: Vec<String>,
 }
 
+/// Per-batch document counts of a `SourceIngest` receipt.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DocumentReport {
+    /// Documents linked to an earlier near duplicate instead of stored again
+    /// (MEDULLA-INGEST-WORKER-R702.4). A link is not a refusal and has no error code.
+    #[serde(default)]
+    pub duplicates: u64,
+}
+
 /// Why a normalized document does not fit the request it claims to come from.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum NormalizedDocumentShapeError {
@@ -228,6 +239,7 @@ mod tests {
             tombstoned_count: 0,
             relationship_tombstoned_count: 0,
             governance: Default::default(),
+            documents: Default::default(),
             access: None,
             reconcile: None,
             report: Default::default(),

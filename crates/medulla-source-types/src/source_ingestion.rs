@@ -489,6 +489,10 @@ pub struct SourceIngestionReceipt {
     /// Governed, refused and marked record counts of this batch
     /// (MEDULLA-INGEST-WORKER-R900.5).
     pub governance: GovernanceReport,
+    /// Near-duplicate documents linked instead of stored again
+    /// (MEDULLA-INGEST-WORKER-R702.4). Observation evidence: not part of the receipt digest.
+    #[serde(default)]
+    pub documents: crate::source_document::DocumentReport,
     /// Updated, refused and stale counts of an `access` batch
     /// (MEDULLA-INGEST-WORKER-R902.5); absent for every other kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]

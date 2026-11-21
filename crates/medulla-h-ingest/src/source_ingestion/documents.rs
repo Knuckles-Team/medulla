@@ -12,11 +12,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
+use medulla_compute::sketch::{shingles, LshIndex, MinHashSketch, LSH_MAX_BUCKET_MEMBERS};
 use medulla_document::atoms::decompose;
 use medulla_document::processing::{chunk_text, ChunkingConfig};
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::ingest_rules::check_atom_provenance;
 use medulla_ingestion_types::knowledge_atom::KnowledgeAtom;
+use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_document::{NormalizedDocument, MAX_DOCUMENT_REFS};
 use medulla_source_types::source_ingestion::{SourceEntityRef, SourceIngestionBatch, SourceRecord};
 use medulla_types::contract::Digest256;
@@ -29,13 +31,39 @@ const DOCUMENT_IDENTITY_DOMAIN: &[u8] = b"eg/source-document-identity";
 const DOCUMENT_CLASS: &str = medulla_types::ontology_iri!("core#Document");
 const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 
+/// The digest domain of a durable near-duplicate bucket node id.
+const LSH_BUCKET_DOMAIN: &[u8] = b"eg/lsh-bucket/v1";
+
+/// The edge from a near duplicate to the earliest similar document
+/// (MEDULLA-INGEST-WORKER-R702.4).
+pub(super) const NEAR_DUPLICATE_OF: &str = "NEAR_DUPLICATE_OF";
+
+/// Whether a document is stored in full or linked to an earlier near duplicate
+/// (MEDULLA-INGEST-WORKER-R702.3).
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum DedupOutcome {
+    /// No indexed document is at or above the threshold; the document is indexed.
+    Original,
+    /// The document is at or above the threshold of `of`, an original.
+    NearDuplicate { of: String, jaccard: f64 },
+}
+
 /// One normalized document with the atoms it decomposed into.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 // The atoms are stored by the ingest wiring of MEDULLA-INGEST-WORKER-R003.3.
 #[allow(dead_code)]
 pub(super) struct DocumentOutput {
     pub document: NormalizedDocument,
     pub atoms: Vec<KnowledgeAtom>,
+    /// The node id of the document's source record.
+    pub record_node_id: String,
+    /// The MinHash signature of the document text, `bands * rows` minima.
+    pub signature: Vec<u64>,
+    /// Set by [`dedup_documents`]; `Original` until then.
+    pub dedup: DedupOutcome,
+    /// The committed graph version an original was first indexed at; set by
+    /// [`dedup_documents`].
+    pub first_version: u64,
 }
 
 /// The IRIs of `Document` and every class that extends it, read from the
@@ -116,6 +144,7 @@ pub(super) fn normalize_documents(
     resolved: &ResolvedIngestionMappings,
     classes: &BTreeSet<String>,
     atom_max_tokens: usize,
+    layout: &LshIndex,
 ) -> Result<Vec<DocumentOutput>, String> {
     let mut outputs = Vec::new();
     for record in &batch.records {
@@ -135,6 +164,7 @@ pub(super) fn normalize_documents(
             &mapping.schema_mapping.fields,
             mapping.entry_revision,
             atom_max_tokens,
+            layout,
         )? {
             outputs.push(output);
         }
@@ -151,6 +181,7 @@ pub(super) fn normalize_record(
     fields: &BTreeMap<String, String>,
     mapping_revision: u64,
     atom_max_tokens: usize,
+    layout: &LshIndex,
 ) -> Result<Option<DocumentOutput>, String> {
     let payload = record.payload.value()?;
     let source = payload
@@ -193,6 +224,13 @@ pub(super) fn normalize_record(
     for atom in &atoms {
         check_atom_provenance(atom).map_err(|refusal| refusal.to_string())?;
     }
+    let record_node_id = super::source_node_id(
+        tenant,
+        connector,
+        record.stream.as_str(),
+        &record.record_id,
+    )?;
+    let signature = document_signature(text, layout).signature().to_vec();
     Ok(Some(DocumentOutput {
         document: NormalizedDocument {
             document_id,
@@ -206,7 +244,228 @@ pub(super) fn normalize_record(
             concept_ids: Vec::new(),
         },
         atoms,
+        record_node_id,
+        signature,
+        dedup: DedupOutcome::Original,
+        first_version: 0,
     }))
+}
+
+/// `document_signature`: the MinHash of the 3-word shingles of `text`, of the signature length
+/// `layout` needs (MEDULLA-INGEST-WORKER-R702.3).
+pub(super) fn document_signature(text: &str, layout: &LshIndex) -> MinHashSketch {
+    let mut sketch = layout.new_sketch();
+    for shingle in shingles(text) {
+        sketch.insert(&shingle);
+    }
+    sketch
+}
+
+/// The band layout of the knobs `ingest.lsh_bands` and `ingest.lsh_rows`.
+pub(super) fn lsh_layout() -> Result<LshIndex, String> {
+    let knobs = medulla_server_api::knob_config::knobs();
+    LshIndex::new(
+        knobs.ingest_lsh_bands as usize,
+        knobs.ingest_lsh_rows as usize,
+    )
+    .map_err(|error| error.to_string())
+}
+
+/// The node id of the durable bucket of one band key: `lsh-bucket:` plus the hex of the
+/// framed digest of tenant, bands, rows, band index and band key, each in decimal.
+pub(super) fn bucket_node_id(
+    tenant: &str,
+    layout: &LshIndex,
+    band: usize,
+    key: u64,
+) -> Result<String, String> {
+    let parts = [
+        layout.bands().to_string(),
+        layout.rows().to_string(),
+        band.to_string(),
+        key.to_string(),
+    ];
+    Ok(format!(
+        "lsh-bucket:{}",
+        Digest256::framed(
+            LSH_BUCKET_DOMAIN,
+            &[
+                tenant.as_bytes(),
+                parts[0].as_bytes(),
+                parts[1].as_bytes(),
+                parts[2].as_bytes(),
+                parts[3].as_bytes(),
+            ],
+        )?
+        .to_hex()
+    ))
+}
+
+fn signature_bucket_ids(
+    tenant: &str,
+    layout: &LshIndex,
+    signature: &[u64],
+) -> Result<Vec<String>, String> {
+    layout
+        .band_keys(signature)
+        .into_iter()
+        .enumerate()
+        .map(|(band, key)| bucket_node_id(tenant, layout, band, key))
+        .collect()
+}
+
+/// The bucket node ids every document of the batch hashes into: what
+/// `read_lsh_candidates` reads before admission.
+pub(super) fn candidate_bucket_ids(
+    tenant: &str,
+    layout: &LshIndex,
+    documents: &[DocumentOutput],
+) -> Result<BTreeSet<String>, String> {
+    let mut ids = BTreeSet::new();
+    for document in documents {
+        ids.extend(signature_bucket_ids(tenant, layout, &document.signature)?);
+    }
+    Ok(ids)
+}
+
+/// The stored signature of an indexed original.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct StoredSignature {
+    pub signature: Vec<u64>,
+    pub first_version: u64,
+}
+
+/// What the graph holds about the buckets a batch hashes into.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(super) struct LshCandidates {
+    /// Bucket node id to the record node ids it holds, in insertion order.
+    pub buckets: BTreeMap<String, Vec<String>>,
+    /// Record node id to its stored signature.
+    pub members: BTreeMap<String, StoredSignature>,
+}
+
+/// The outcome of [`dedup_documents`].
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct DedupPlan {
+    /// The documents, each with its `dedup` outcome and `first_version`.
+    pub documents: Vec<DocumentOutput>,
+    /// Bucket nodes of the originals, then one `NEAR_DUPLICATE_OF` edge per near duplicate.
+    pub methods: Vec<Method>,
+    /// The bucket nodes written: each takes one policy record.
+    pub node_ids: Vec<String>,
+    /// Near duplicates linked.
+    pub duplicates: u64,
+}
+
+fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(value).map_err(|error| fail(format!("dedup encoding failed: {error}")))
+}
+
+/// `dedup_documents`: decide, in batch order, whether each document is an original or a near
+/// duplicate of an earlier original (MEDULLA-INGEST-WORKER-R702.3). One transient index holds
+/// the stored `candidates` and each earlier original of the batch. `committed_version` is the
+/// graph version the batch commits at.
+///
+/// `of` is the candidate with the smallest first version, then the earliest batch position,
+/// then the smallest node id; a stored candidate sorts before any candidate of the batch. A
+/// near duplicate is never indexed, so every link points at an original, and it writes the
+/// edge `NEAR_DUPLICATE_OF` with its similarity estimate and the band layout (R702.4, R702.5).
+pub(super) fn dedup_documents(
+    tenant: &str,
+    layout: &LshIndex,
+    mut documents: Vec<DocumentOutput>,
+    candidates: &LshCandidates,
+    threshold: f64,
+    committed_version: u64,
+) -> Result<DedupPlan, String> {
+    let mut index = LshIndex::new(layout.bands(), layout.rows()).map_err(|e| e.to_string())?;
+    // Candidate node id to its signature and its ordering rank (first version, position).
+    let mut signatures: BTreeMap<String, Vec<u64>> = BTreeMap::new();
+    let mut rank: BTreeMap<String, (u64, usize)> = BTreeMap::new();
+    for (id, stored) in &candidates.members {
+        if stored.signature.len() != layout.signature_len() {
+            continue;
+        }
+        index.insert(id, &MinHashSketch::from_signature(stored.signature.clone()))?;
+        signatures.insert(id.clone(), stored.signature.clone());
+        rank.insert(id.clone(), (stored.first_version, 0));
+    }
+    let mut buckets: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut edges = Vec::new();
+    let mut duplicates = 0u64;
+    for (position, document) in documents.iter_mut().enumerate() {
+        let own = document.record_node_id.clone();
+        let sketch = MinHashSketch::from_signature(document.signature.clone());
+        let nearest = index
+            .query(&sketch, threshold)
+            .into_iter()
+            .filter(|id| *id != own)
+            .filter_map(|id| rank.get(&id).map(|(version, at)| (*version, *at, id)))
+            .min();
+        match nearest {
+            None => {
+                let first_version = candidates
+                    .members
+                    .get(&own)
+                    .map_or(committed_version, |stored| stored.first_version);
+                index.insert(&own, &sketch)?;
+                signatures.insert(own.clone(), document.signature.clone());
+                rank.insert(own.clone(), (first_version, position + 1));
+                document.dedup = DedupOutcome::Original;
+                document.first_version = first_version;
+                for bucket in signature_bucket_ids(tenant, layout, &document.signature)? {
+                    let members = buckets.entry(bucket.clone()).or_insert_with(|| {
+                        candidates.buckets.get(&bucket).cloned().unwrap_or_default()
+                    });
+                    if members.len() < LSH_MAX_BUCKET_MEMBERS && !members.contains(&own) {
+                        members.push(own.clone());
+                    }
+                }
+            }
+            Some((_, _, of)) => {
+                let other = signatures
+                    .get(&of)
+                    .map(|signature| MinHashSketch::from_signature(signature.clone()))
+                    .ok_or_else(|| fail("a near-duplicate target has no signature"))?;
+                let jaccard = sketch.jaccard(&other);
+                edges.push(Method::AddEdge {
+                    source_id: own,
+                    target_id: of.clone(),
+                    properties_msgpack: encode(&serde_json::json!({
+                        "relationship": NEAR_DUPLICATE_OF,
+                        "similarity_estimate": jaccard,
+                        "lsh_bands": layout.bands(),
+                        "lsh_rows": layout.rows(),
+                    }))?,
+                });
+                document.dedup = DedupOutcome::NearDuplicate { of, jaccard };
+                duplicates += 1;
+            }
+        }
+    }
+    let mut methods = Vec::with_capacity(buckets.len() + edges.len());
+    let mut node_ids = Vec::with_capacity(buckets.len());
+    for (bucket, members) in &buckets {
+        // A bucket that gained no member is not rewritten.
+        if candidates.buckets.get(bucket) == Some(members) {
+            continue;
+        }
+        methods.push(Method::AddNode {
+            node_id: bucket.clone(),
+            properties_msgpack: encode(&serde_json::json!({
+                "type": "LshBucket",
+                "members": members,
+            }))?,
+        });
+        node_ids.push(bucket.clone());
+    }
+    methods.extend(edges);
+    Ok(DedupPlan {
+        documents,
+        methods,
+        node_ids,
+        duplicates,
+    })
 }
 
 /// `content_identity`: the document id is SHA-256 framed under
@@ -257,6 +516,10 @@ mod tests {
         }
     }
 
+    fn layout() -> LshIndex {
+        LshIndex::new(20, 5).unwrap()
+    }
+
     fn fields() -> BTreeMap<String, String> {
         BTreeMap::from([("text".to_string(), "body".to_string())])
     }
@@ -267,10 +530,10 @@ mod tests {
         let rec = record(serde_json::json!({
             "text": "The engine stores facts in one graph. Always use short reports."
         }));
-        let first = normalize_record("t1", "demo", &rec, &fields(), 4, 200)
+        let first = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
             .unwrap()
             .unwrap();
-        let second = normalize_record("t1", "demo", &rec, &fields(), 4, 200)
+        let second = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
             .unwrap()
             .unwrap();
         // A retry yields the same document identity, atoms and receipt.
@@ -283,7 +546,7 @@ mod tests {
             .iter()
             .all(|atom| atom.provenance_key.starts_with(&first.document.document_id)));
         // Identity moves with tenant, connector and content.
-        let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200)
+        let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200, &layout())
             .unwrap()
             .unwrap();
         assert_ne!(
@@ -291,7 +554,7 @@ mod tests {
             other_tenant.document.document_id
         );
         let changed = record(serde_json::json!({"text": "A different body."}));
-        let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200)
+        let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200, &layout())
             .unwrap()
             .unwrap();
         assert_ne!(first.document.document_id, other.document.document_id);
@@ -301,8 +564,16 @@ mod tests {
             serde_json::json!({"text": "   "}),
             serde_json::json!({"other": "x"}),
         ] {
-            let error =
-                normalize_record("t1", "demo", &record(payload), &fields(), 4, 200).unwrap_err();
+            let error = normalize_record(
+                "t1",
+                "demo",
+                &record(payload),
+                &fields(),
+                4,
+                200,
+                &layout(),
+            )
+            .unwrap_err();
             assert!(
                 error.starts_with("DOCUMENT_NORMALIZATION_FAILED:"),
                 "{error}"
@@ -311,7 +582,7 @@ mod tests {
         // A blob-backed document is left to the readers.
         let blob_fields = BTreeMap::from([("blob".to_string(), "content_ref".to_string())]);
         let blob = record(serde_json::json!({"blob": "sha256:ab"}));
-        assert!(normalize_record("t1", "demo", &blob, &blob_fields, 4, 200)
+        assert!(normalize_record("t1", "demo", &blob, &blob_fields, 4, 200, &layout())
             .unwrap()
             .is_none());
     }
@@ -331,5 +602,110 @@ mod tests {
         }
         assert!(!set.contains(&class_iri("Person")));
         assert_eq!(class_iri("https://x.test/o#Doc"), "https://x.test/o#Doc");
+    }
+
+    fn document(id: &str, text: &str) -> DocumentOutput {
+        let mut rec = record(serde_json::json!({ "text": text }));
+        rec.record_id = id.into();
+        normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout())
+            .unwrap()
+            .unwrap()
+    }
+
+    fn words(prefix: &str, last: &str) -> String {
+        let mut words: Vec<String> = (0..59).map(|i| format!("{prefix}{i}")).collect();
+        words.push(last.to_string());
+        format!("{}.", words.join(" "))
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R702.3
+    #[test]
+    fn dedup_runs_before_atom_storage() {
+        let layout = layout();
+        let first = document("doc-a", &words("w", "end"));
+        let near = document("doc-b", &words("w", "fin"));
+        let distinct = document("doc-c", &words("x", "end"));
+        assert_eq!(first.signature.len(), layout.signature_len());
+
+        // Nothing stored: the first and the distinct document are originals, the second is
+        // linked to the first, and every outcome is known before any record is admitted.
+        let plan = dedup_documents(
+            "t1",
+            &layout,
+            vec![first.clone(), near.clone(), distinct.clone()],
+            &LshCandidates::default(),
+            0.8,
+            7,
+        )
+        .unwrap();
+        assert_eq!(plan.documents[0].dedup, DedupOutcome::Original);
+        assert_eq!(plan.documents[0].first_version, 7);
+        match &plan.documents[1].dedup {
+            DedupOutcome::NearDuplicate { of, jaccard } => {
+                assert_eq!(of, &first.record_node_id);
+                assert!(*jaccard >= 0.8, "{jaccard}");
+            }
+            other => panic!("expected a near duplicate, got {other:?}"),
+        }
+        assert_eq!(plan.documents[2].dedup, DedupOutcome::Original);
+        assert_eq!(plan.duplicates, 1);
+        let nodes = plan
+            .methods
+            .iter()
+            .filter(|method| matches!(method, Method::AddNode { .. }))
+            .count();
+        let edges = plan
+            .methods
+            .iter()
+            .filter(|method| matches!(method, Method::AddEdge { .. }))
+            .count();
+        assert_eq!(edges, 1);
+        assert_eq!(nodes, plan.node_ids.len());
+        assert!(nodes > 0 && nodes <= 2 * layout.bands());
+        assert!(plan.node_ids.iter().all(|id| id.starts_with("lsh-bucket:")));
+        // The edge is the last method, after the bucket nodes.
+        match plan.methods.last() {
+            Some(Method::AddEdge {
+                source_id,
+                target_id,
+                properties_msgpack,
+            }) => {
+                assert_eq!(source_id, &near.record_node_id);
+                assert_eq!(target_id, &first.record_node_id);
+                let props: serde_json::Value = rmp_serde::from_slice(properties_msgpack).unwrap();
+                assert_eq!(props["relationship"], NEAR_DUPLICATE_OF);
+                assert_eq!(props["lsh_bands"], 20);
+                assert_eq!(props["lsh_rows"], 5);
+                assert!(props["similarity_estimate"].as_f64().unwrap() >= 0.8);
+            }
+            other => panic!("expected the near-duplicate edge last, got {other:?}"),
+        }
+
+        // A stored original is read from its buckets and wins over the batch: the second
+        // document links to it and writes no bucket node.
+        let mut stored = LshCandidates::default();
+        stored.members.insert(
+            first.record_node_id.clone(),
+            StoredSignature {
+                signature: first.signature.clone(),
+                first_version: 3,
+            },
+        );
+        for id in candidate_bucket_ids("t1", &layout, std::slice::from_ref(&first)).unwrap() {
+            stored.buckets.insert(id, vec![first.record_node_id.clone()]);
+        }
+        let plan = dedup_documents("t1", &layout, vec![near.clone()], &stored, 0.8, 9).unwrap();
+        assert!(matches!(
+            &plan.documents[0].dedup,
+            DedupOutcome::NearDuplicate { of, .. } if *of == first.record_node_id
+        ));
+        assert!(plan.node_ids.is_empty());
+        assert_eq!(plan.methods.len(), 1);
+
+        // A re-ingested stored original is not its own near duplicate and keeps its version.
+        let plan = dedup_documents("t1", &layout, vec![first.clone()], &stored, 0.8, 9).unwrap();
+        assert_eq!(plan.documents[0].dedup, DedupOutcome::Original);
+        assert_eq!(plan.documents[0].first_version, 3);
+        assert!(plan.methods.is_empty());
     }
 }

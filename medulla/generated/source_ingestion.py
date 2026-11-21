@@ -159,6 +159,12 @@ class GovernanceReport(BaseModel):
     refused: Annotated[int, Field(ge=0)]
 
 
+class DocumentReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    duplicates: Annotated[int, Field(ge=0)] = 0
+
+
 class IngestBatchReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -263,6 +269,7 @@ class SourceIngestionReceipt(BaseModel):
     committed_graph_version: Annotated[int, Field(ge=0)]
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
+    documents: DocumentReport = Field(default_factory=DocumentReport)
     drift: list[StreamDrift] = Field(default_factory=list)
     embedding_set: list[EmbeddingSetEntry] = Field(default_factory=list)
     governance: GovernanceReport
@@ -554,6 +561,8 @@ SourceIngestStatus.model_rebuild()
 
 SourceIngestionBatch.model_rebuild()
 
+DocumentReport.model_rebuild()
+
 GovernanceReport.model_rebuild()
 SourceIngestionReceipt.model_rebuild()
 
@@ -592,6 +601,7 @@ __all__ = [
     "SourceIngestionBatch",
     "SourceIngestionDisposition",
     "SourceIngestionMode",
+    "DocumentReport",
     "GovernanceReport",
     "IngestBatchReport",
     "ClassReport",

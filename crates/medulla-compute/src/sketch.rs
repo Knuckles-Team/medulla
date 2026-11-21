@@ -387,6 +387,10 @@ pub const LSH_CONFIG_INVALID: &str = "LSH_CONFIG_INVALID";
 /// Largest signature length (`bands * rows`) an [`LshIndex`] accepts.
 pub const LSH_MAX_SIGNATURE: usize = 1024;
 
+/// Most record node ids one durable bucket node holds; a full bucket takes no new member and
+/// the other bands of that document still index it (MEDULLA-INGEST-WORKER-R702.3).
+pub const LSH_MAX_BUCKET_MEMBERS: usize = 64;
+
 /// A zero or oversized band layout was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LshConfigError {
@@ -488,8 +492,9 @@ impl LshIndex {
     }
 
     /// The bucket key of each band: the stable hash of `MinHashSketch::insert` over the
-    /// band index and its `rows` values.
-    fn band_keys(&self, signature: &[u64]) -> Vec<u64> {
+    /// band index and its `rows` values. The one bucket-key function: the in-memory index and
+    /// the durable bucket nodes of MEDULLA-INGEST-WORKER-R702.3 both key on it.
+    pub fn band_keys(&self, signature: &[u64]) -> Vec<u64> {
         signature
             .chunks(self.rows)
             .enumerate()
