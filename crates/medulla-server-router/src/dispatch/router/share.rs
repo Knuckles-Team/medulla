@@ -202,9 +202,174 @@ async fn share_op_outcome(
     }
     let next = share_transition(&current, &share, &actor).map_err(|refusal| refusal.to_string())?;
 
+    // No share commits unaudited: the reservation is appended before any write, and
+    // a refused reservation refuses the share with the writer's own code.
+    let event = ShareEvent::new(
+        if matches!(share, ShareOp::Grant(_)) {
+            "RbacAdmin.ShareGrant"
+        } else {
+            "RbacAdmin.ShareRevoke"
+        },
+        &node_id,
+        &current.shared_scope,
+        &next.shared_scope,
+        &next.grants,
+    );
+    record_share_event(state, req, verified_context, &event, SharePhase::Reserved).await?;
+    match commit_share(state, req, verified_context, &node_id, &properties, &current, &next).await
+    {
+        Ok(()) => {
+            record_share_event(state, req, verified_context, &event, SharePhase::Ok).await?;
+            Ok(())
+        }
+        Err(refusal) => {
+            // The refusal stands; a failed audit append cannot change it.
+            let _ = record_share_event(state, req, verified_context, &event, SharePhase::Error)
+                .await;
+            Err(refusal)
+        }
+    }
+}
+
+/// The phase of a share's audit event: the reservation before any write, then the
+/// outcome.
+#[derive(Clone, Copy)]
+enum SharePhase {
+    Reserved,
+    Ok,
+    Error,
+}
+
+/// The audit-chain event of one served share (MEDULLA-IDENTITY-R023.13.5).
+pub(crate) struct ShareEvent {
+    pub(crate) op: &'static str,
+    pub(crate) node_id: String,
+    pub(crate) prior: String,
+    pub(crate) next: String,
+    pub(crate) grantee_digest: String,
+    pub(crate) request_id: String,
+}
+
+impl ShareEvent {
+    /// The event of a share that moves `node_id` from `prior` to `next` and leaves
+    /// `grants` as its grantee list; the digest does not depend on their order.
+    pub(crate) fn new(
+        op: &'static str,
+        node_id: &str,
+        prior: &str,
+        next: &str,
+        grants: &[String],
+    ) -> Self {
+        Self {
+            op,
+            node_id: node_id.to_string(),
+            prior: prior.to_string(),
+            next: next.to_string(),
+            grantee_digest: grantee_digest(grants),
+            request_id: uuid::Uuid::new_v4().to_string(),
+        }
+    }
+
+    /// The operation-audit record of one phase of this share.
+    #[cfg(feature = "security")]
+    pub(crate) fn audit_record(
+        &self,
+        tenant: &str,
+        principal: &str,
+        reservation: bool,
+        outcome: medulla_store::redb_store::audit_status::AuditStatus,
+    ) -> medulla_store::redb_store::OperationAuditEvent {
+        use medulla_store::redb_store::audit_status::AuditStatus;
+        medulla_store::redb_store::OperationAuditEvent {
+            tenant: tenant.to_string(),
+            principal: principal.to_string(),
+            op: self.op.to_string(),
+            surface: "rbac_admin".to_string(),
+            params_sha256: self.grantee_digest.clone(),
+            status: if reservation { AuditStatus::Reserved } else { outcome },
+            request_id: self.request_id.clone(),
+            audit_class: "event".to_string(),
+            subject_iri: Some(self.node_id.clone()),
+            policy_iri: Some(format!("{}->{}", self.prior, self.next)),
+        }
+    }
+}
+
+/// Lowercase-hex SHA-256 over the sorted grantee list joined by newlines (the
+/// digest of the empty string when the list is empty).
+fn grantee_digest(grants: &[String]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut sorted = grants.to_vec();
+    sorted.sort();
+    Sha256::digest(sorted.join("\n").as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+/// Append one phase of a share's `OP_AUDIT` event to the request graph's audit
+/// chain. The commit revision of a share is the chain `seq` of its `Ok` entry.
+#[cfg(feature = "security")]
+async fn record_share_event(
+    state: &Arc<RwLock<ServerState>>,
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+    event: &ShareEvent,
+    phase: SharePhase,
+) -> Result<medulla_protocol_types::result_contract::security::AuditAppendReceipt, String> {
+    use medulla_persistence::AsRedb;
+    let backend = medulla_server_graph::dispatch::shared::timed_read(state)
+        .await
+        .persistence
+        .clone();
+    let redb = backend
+        .as_ref()
+        .and_then(|backend| backend.as_redb())
+        .ok_or_else(|| "INVALID_ARGUMENT: share requires the durable audit chain".to_string())?;
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified_context)?;
+    use medulla_store::redb_store::audit_status::AuditStatus;
+    let record = match phase {
+        SharePhase::Reserved => {
+            event.audit_record(authority.tenant_scope(), authority.actor_scope(), true, AuditStatus::Ok)
+        }
+        SharePhase::Ok => {
+            event.audit_record(authority.tenant_scope(), authority.actor_scope(), false, AuditStatus::Ok)
+        }
+        SharePhase::Error => {
+            event.audit_record(authority.tenant_scope(), authority.actor_scope(), false, AuditStatus::Error)
+        }
+    };
+    redb.audit_append(&medulla_kernel::persist::sanitize(&req.graph), record)
+        .await
+}
+
+#[cfg(not(feature = "security"))]
+async fn record_share_event(
+    _state: &Arc<RwLock<ServerState>>,
+    _req: &Request,
+    _verified_context: &VerifiedRequestContext,
+    _event: &ShareEvent,
+    _phase: SharePhase,
+) -> Result<(), String> {
+    Err("INVALID_ARGUMENT: share requires the durable audit chain".to_string())
+}
+
+/// Commit an accepted share: the commons copy first on a promotion, then the
+/// node's keys, then the copy removal on a revoke.
+async fn commit_share(
+    state: &Arc<RwLock<ServerState>>,
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+    node_id: &str,
+    properties: &Properties,
+    current: &ShareState,
+    next: &ShareState,
+) -> Result<(), String> {
+    let node_id = node_id.to_string();
+    let graph = req.graph.as_str();
     // The commons copy goes first on a promotion, so a refused copy leaves the
     // node untouched; a removal follows the node's own commit.
-    let copy_change = commons_copy_change(&current, &next);
+    let copy_change = commons_copy_change(current, next);
     if let CommonsCopyChange::Create(copy_id) = &copy_change {
         let mut copy = properties.clone();
         copy.insert(

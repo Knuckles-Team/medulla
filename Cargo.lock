@@ -8070,6 +8070,7 @@ dependencies = [
  "medulla-server-ops",
  "medulla-source-types",
  "medulla-storage",
+ "medulla-store",
  "medulla-stream",
  "medulla-test-ambient-auth",
  "medulla-text",

@@ -8,6 +8,25 @@ use medulla_identity_types::identity::ShareScope;
 const NODE: &str = "share-node-1";
 const OWNER: &str = "usr:owner";
 
+/// An engine with a durable redb backend: a share is refused without the audit
+/// chain it appends to (R023.13.5).
+async fn durable_state() -> Arc<RwLock<ServerState>> {
+    let state = state();
+    #[cfg(feature = "redb")]
+    {
+        state.write().await.persistence = Some(std::sync::Arc::new(
+            medulla_persistence::redb_backend::RedbBackend::open(
+                medulla_server_api::api::dispatch_support::unique_temp_dir("medulla-share-dispatch")
+                    .to_string_lossy()
+                    .into_owned(),
+                256,
+            )
+            .expect("open share test redb backend"),
+        ));
+    }
+    state
+}
+
 fn owner() -> VerifiedRequestContext {
     context(OWNER, &["*"])
 }
@@ -34,7 +53,7 @@ async fn properties(state: &Arc<RwLock<ServerState>>) -> serde_json::Map<String,
 // spec: MEDULLA-IDENTITY-R023.13.3
 #[tokio::test(flavor = "multi_thread")]
 async fn share_grant_commits_through_gateway() {
-    let state = state();
+    let state = durable_state().await;
     let seeded = serde_json::json!({"type": "Note", "_owner_id": OWNER});
     let created = send_method(
         &state,
@@ -115,7 +134,7 @@ async fn add_node(state: &Arc<RwLock<ServerState>>, node_id: &str, value: serde_
 #[tokio::test(flavor = "multi_thread")]
 async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
     use medulla_server::commons_reconcile::{run_tick_at, RECONCILE_GRACE_MS};
-    let state = state();
+    let state = durable_state().await;
     add_node(&state, "a", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
     let promoted = send_method(
         &state,
@@ -160,4 +179,29 @@ async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
     assert_eq!(run_tick_at(&state, now + RECONCILE_GRACE_MS + 1).await, 1);
     assert!(!has_node(&state, "commons:c").await);
     assert!(has_node(&state, "commons:a").await);
+}
+
+// spec: MEDULLA-IDENTITY-R023.13.5
+#[test]
+fn share_event_fields_validate() {
+    use crate::dispatch::router::share::ShareEvent;
+    use medulla_store::redb_store::audit_status::AuditStatus;
+    let grants = vec!["usr:b".to_string(), "usr:a".to_string()];
+    let event = ShareEvent::new("RbacAdmin.ShareGrant", NODE, "private", "org", &grants);
+    for (reservation, outcome) in [(true, AuditStatus::Ok), (false, AuditStatus::Ok), (false, AuditStatus::Error)] {
+        let record = event.audit_record("tenant-a", OWNER, reservation, outcome);
+        record.validate().expect("the share event passes validate");
+        assert_eq!(record.surface, "rbac_admin");
+        assert_eq!(record.policy_iri.as_deref(), Some("private->org"));
+        assert_eq!(record.subject_iri.as_deref(), Some(NODE));
+    }
+    let reversed = vec!["usr:a".to_string(), "usr:b".to_string()];
+    let other = ShareEvent::new("RbacAdmin.ShareGrant", NODE, "private", "org", &reversed);
+    assert_eq!(event.grantee_digest, other.grantee_digest);
+    assert_ne!(event.request_id, other.request_id);
+    let empty = ShareEvent::new("RbacAdmin.ShareRevoke", NODE, "org", "private", &[]);
+    assert_eq!(
+        empty.grantee_digest,
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
 }

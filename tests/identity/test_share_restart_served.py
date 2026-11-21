@@ -184,3 +184,41 @@ def test_org_share_revocation_persists_across_restart(tmp_path):
         finally:
             other.close()
             owner.close()
+
+
+def _event_fields(line: str) -> dict[str, str]:
+    return dict(part.split("=", 1) for part in line.split("|") if "=" in part)
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R023.13.5")
+def test_share_audit_event_readable(clean_graph):
+    """Each served grant and revoke leaves an `OP_AUDIT` outcome entry on the graph
+    chain, readable by `AuditReadEvent` at the chain's last entry."""
+    register_commons_agents(OWNER)
+    owner = _connect(os.environ["GRAPH_SERVICE_SOCKET"], OWNER)
+    empty_digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    try:
+        owner.nodes.add("share-audit-1", _note(OWNER))
+        steps = (
+            ("RbacAdmin.ShareGrant", "private->org", lambda: owner.rbac.share_grant("share-audit-1", "tenant")),
+            ("RbacAdmin.ShareRevoke", "org->private", lambda: owner.rbac.share_revoke("share-audit-1")),
+        )  # fmt: skip
+        for op, transition, act in steps:
+            act()
+            entries = int(owner.admin.audit_verify()["entries"])
+            proof = owner.admin.audit_read_event(entries - 1, chain="graph")
+            assert proof["chain_verified"] is True
+            line = proof["event_line"]
+            assert line.startswith("OP_AUDIT|v1|")
+            fields = _event_fields(line)
+            assert fields["principal"] == OWNER
+            assert fields["op"] == op
+            assert fields["subject_iri"] == "share-audit-1"
+            assert fields["policy_iri"] == transition
+            assert fields["status"] == "ok"
+            digest = fields["params_sha256"]
+            assert len(digest) == 64 and digest == digest.lower()
+            if op == "RbacAdmin.ShareRevoke":
+                assert digest == empty_digest
+    finally:
+        owner.close()

@@ -54,7 +54,7 @@ mod resource_cost;
 mod sdlc;
 mod service_control;
 #[cfg(feature = "security")]
-mod share;
+pub(crate) mod share;
 mod source_ingest;
 mod git_export_pack;
 mod import_git_history;
