@@ -18,12 +18,11 @@ Governing spec: [spec.md](spec.md).
   only overrides; stores one override and asserts it supersedes the derived
   placement; removes the connector and asserts the override is reported
   stale, never applied. Bound: `MEDULLA-WORLD-VIEW-R002`.
-- `tests/test_world_view_served.py::test_spatial_query_serves_the_layout_and_refuses_unknown_tenants`
-  (planned) — serves a seeded tenant layout through the method and asserts
-  the full envelope (districts, buildings, rooms, streets, `locatedIn`,
-  `position`, `hasInterior`, active overrides); asserts the read performed
-  no write; asserts an unknown tenant and an unknown layout each refuse with
-  a typed reason. Bound: `MEDULLA-WORLD-VIEW-R003`.
+- `tests/test_world_view_layout.py::test_world_envelope_is_derived_overridden_and_read_only`
+  (planned) - reads the layout envelope (districts, buildings in placement
+  order, `overridden` and `reason`, stale overrides) over the in-memory fake
+  client, asserts an empty catalog gives the empty envelope and that the read
+  sent no write. Bound: `MEDULLA-WORLD-VIEW-R003`.
 
 ## Negative and boundary cases
 
@@ -31,7 +30,7 @@ Governing spec: [spec.md](spec.md).
   an error (R002).
 - An override for a connector absent from the catalog is reported stale and
   excluded from the served layout (R002/R003).
-- A second tenant's layout is never visible to the first (R003).
+- A second tenant's layout is never visible to the first: the tenant comes from the connection, so the envelope read carries no tenant parameter (R003).
 
 ## Quality and release proof
 
