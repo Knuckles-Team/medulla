@@ -669,7 +669,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R073.2 | `crates/medulla-federation/src/federation_opt/tests.rs::protocol_matrix_bounds_pushdown` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.1 | `crates/medulla-sql/src/sql/ann.rs::r0771_column_vector_binding_round_trips_and_rejects_zero_dimension` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.2 | `tests/retrieval/test_column_vector_served.py::test_bind_text_refuse_integer` | exists |
-| MEDULLA-FEDERATED-QUERY-R077.5 | `tests/retrieval/test_column_vector_served.py::test_bound_column_nearest_neighbour` | planned |
+| MEDULLA-FEDERATED-QUERY-R077.5 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_column_vector_tests.rs::bound_column_nearest_neighbour` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.1 | `crates/medulla-table-store/src/plan_scope.rs::plan_scope_round_trips_and_rejects_empty_tenant` | exists |
 | MEDULLA-FEDERATED-QUERY-R078.2 | `crates/medulla-table-store/src/plan_scope.rs::three_leaf_plan_all_scoped` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.3 | `tests/plan_scope_tenant.rs::planned_statement_executes_only_with_predicate` | planned |
@@ -1106,9 +1106,12 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Behavior | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R731` | `crates/medulla-exec/src/budget.rs::tests::interactive_meter_refuses_past_bound` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R732` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R732` | `crates/medulla-exec/src/learned_cost.rs::tests::plan_record_store_bounds_and_shadow_error` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R732` | `crates/medulla-exec/src/exec.rs::tests::shadow_challenger_never_serves_its_result` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.1` | `crates/medulla-exec/src/learned_cost.rs::tests::plan_record_store_bounds_and_shadow_error` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.1` | `crates/medulla-exec/src/rowset.rs::tests::result_digest_is_order_and_bit_exact` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.2` | `crates/medulla-exec/src/learned_cost.rs::tests::champion_revision_digest_names_the_corrections_in_use` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.3` | `crates/medulla-exec/src/exec.rs::tests::shadow_challenger_never_serves_its_result` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.4` | `crates/medulla-server/src/downtime_plan_evolution.rs::tests::planner_evolution_refits_corrections_from_records` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722.7` | `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R733` | `crates/medulla-uql/tests/group_stage.rs::group_by_label_counts_rows`, `crates/medulla-uql/tests/group_stage.rs::unknown_field_is_refused` and `tests/query/test_uql_group_served.py::test_node_type_counts_over_the_wire` (L2, L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R734` | `crates/medulla-uql/tests/order_skip_stage.rs::order_is_stable_with_row_id_tiebreak` and `crates/medulla-uql/tests/order_skip_stage.rs::skip_past_the_cap_is_refused` (L2). |

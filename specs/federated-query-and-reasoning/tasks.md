@@ -174,6 +174,11 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate
 - [x] T165 [P] [US1] MEDULLA-FEDERATED-QUERY-R731 Queries declare a latency class: `latency_class` on `UnifiedQuery` and `Sparql`, interactive node meter with `QUERY_BUDGET_EXCEEDED`, analytical answers a job record via `JobKind::AnalyticalQuery`, result read by `AnalyticsJob` `Status`
 - [ ] T166 [P] [US1] MEDULLA-FEDERATED-QUERY-R732 The unified planner improves through the evolution loop: in-memory `PlanRecordStore`, downtime `planner_evolution` job with a shadow challenger run on a sampled fraction of interactive queries (plan cost and result digest compared, never served), promotion by `PolicyEvaluation` and `MovePointer`
+- [ ] T467 [P] [US1] MEDULLA-FEDERATED-QUERY-R732.1 Plan record store
+- [ ] T468 [P] [US1] MEDULLA-FEDERATED-QUERY-R732.2 Cost head revision
+- [ ] T469 [P] [US1] MEDULLA-FEDERATED-QUERY-R732.3 Shadow run
+- [ ] T470 [P] [US1] MEDULLA-FEDERATED-QUERY-R732.4 The planner_evolution downtime job
+- [ ] T471 [P] [US1] MEDULLA-FEDERATED-QUERY-R732.5 Promotion on shadow evidence
 
 ## User Story 2: Bounded retrieval rounds and context
 
