@@ -185,7 +185,7 @@ Lakekeeper-style external catalog interchange is not written here; the engine re
 
 ### Per-modality promotion gate (R040)
 
-Data flow: served row write -> re-embed worker (`MEDULLA-FEDERATED-QUERY-R077.3`) -> `evaluate_promotion` -> `EmbeddingVersionStore::tag_batch` (`crates/medulla-ann/src/version.rs:129`) -> verdict node.
+Data flow: served row write -> `semantic.index.source_dirty/v1` outbox record -> `AdmitSourceRecord` -> S6 activation -> `evaluate_promotion` -> `EmbeddingVersionStore::tag_batch` (`crates/medulla-ann/src/version.rs:129`) -> verdict node.
 
 Types: `ModalityCheck`, `PromotionVerdict`, `PromotionBlocked`. Attach point: before `tag_batch`. Production caller: the Wiring row creates the call site in the re-embed worker. Failure behavior: a block keeps the prior version active and tags nothing.
 

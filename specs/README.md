@@ -88,7 +88,7 @@ The 2026-10-30 review graded every open row in every spec. Each spec's `evidence
 | Bitemporal stamps | `MEDULLA-DURABLE-KERNEL-R078`–`R081` | `R609` keeps the types only |
 | Governed edit ledger | `MEDULLA-DURABLE-KERNEL-R027.1` | `MEDULLA-TYPED-PACKS-R651` references it |
 | Visibility, sharing and markings | `MEDULLA-IDENTITY-R610` (one sharing enum) | `MEDULLA-PLACEMENT-R023`, `MEDULLA-TYPED-PACKS-R652` reference it |
-| Re-embedding | One executor, `semantic_index/worker.rs` (`MEDULLA-FEDERATED-QUERY-R039.2`) | `MEDULLA-REPO-INGEST-R006.2`, `MEDULLA-FEDERATED-QUERY-R040.5`, `R077.3` reference it |
+| Re-embedding | One executor, `semantic_index/worker.rs` (`MEDULLA-FEDERATED-QUERY-R039.2`) | `MEDULLA-REPO-INGEST-R006.2`, `MEDULLA-FEDERATED-QUERY-R040.5` reference it |
 | Query expansion | `MEDULLA-FEDERATED-QUERY-R651` | `R090`, `R058.4` consume it |
 | Retrieval failure verdict | `MEDULLA-FEDERATED-QUERY-R089` | `R655.1`–`R655.3` retire |
 | Dead letter | `MEDULLA-REPO-INGEST-R002.650` | ingest rows reference it |
