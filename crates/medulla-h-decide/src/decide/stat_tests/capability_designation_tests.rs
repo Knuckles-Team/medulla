@@ -1688,3 +1688,53 @@ async fn descriptor_evidence_reads_back_through_decision_log() {
     let got = got.expect("the record is visible to the reader");
     assert_eq!(got.record.premises.as_slice(), sealed.premises.as_slice());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R650.6
+#[tokio::test]
+async fn descriptor_closure_journey() {
+    const CAPABILITIES: usize = 10_000;
+    const CHILDREN: usize = 199;
+
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    // 10,000 capabilities, each provided by one record; the required class
+    // `cap:x` has a closure of 200 (itself and 199 classes below it).
+    let rows: Vec<(CapabilityRecord, Vec<f32>)> = (0..CAPABILITIES)
+        .map(|n| {
+            let capability = format!("cap:sub{:03}", n % CHILDREN);
+            let mut row = record(Some(TENANT), &format!("agent-{n:05}"), &[capability.as_str()]);
+            row.record_revision = 1 + n as u64;
+            let angle = (n % 97) as f32 / 97.0;
+            (row, vec![1.0 - angle, angle, 0.0])
+        })
+        .collect();
+    seed(&h, rows).await;
+    let index = shared_capability_index(&*h.state.read().await);
+
+    let mut asked = question(&[1.0, 0.0, 0.0], 8, weights(Q32_ONE, 0));
+    asked.required_capabilities = ["cap:x".to_string()].into_iter().collect();
+    let request = designation_request(&pin, asked, DecisionPolicyRef::Default);
+    let sealed = decide_with_runtime(&h, &request, wide_runtime(index, CHILDREN)).unwrap();
+
+    let answer = answer_of(&sealed);
+    assert_eq!(answer.closures.len(), 1);
+    assert_eq!(answer.closures[0].capability_id.as_str(), "cap:x");
+    assert_eq!(answer.closures[0].members.len(), CHILDREN + 1);
+    assert_eq!(answer.designations.len(), 8);
+    assert!(
+        answer.candidate_pool_size >= CAPABILITIES as u64,
+        "every record was considered: {}",
+        answer.candidate_pool_size
+    );
+    assert_eq!(answer.capability_filtered, CAPABILITIES as u64);
+    assert!(answer
+        .designations
+        .windows(2)
+        .all(|pair| pair[0].score_q32 >= pair[1].score_q32));
+    let members = sealed
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("closure_member:"))
+        .count();
+    assert_eq!(members, CHILDREN + 1, "one premise per closure member");
+}
