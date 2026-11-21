@@ -261,8 +261,8 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-decision-types/src/decision/task_plan/tests.rs::aggregation_round_trips` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-decision-types/src/decision/task_plan/tests.rs::aggregation_off_the_output_task_refuses` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::relevant_tools_fit_budget` (planned, L1): proves behavior: tool relevance ranking and covering subset. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` (planned, L3): proves behavior: tool relevance ranking and covering subset. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::relevant_tools_fit_budget` (L1): proves behavior: tool relevance ranking and covering subset.
+- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` (L3): proves behavior: tool relevance ranking and covering subset.
 - `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-decision-types/src/decision/task_plan/tests.rs::independent_subtasks_yield_no_edges_and_operator` (planned, L3): proves behavior: task decomposition. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves behavior: task decomposition. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-decision-stats/src/decision/skill_plan.rs::tests::skill_plan_respects_dependencies` (planned, L3): proves behavior: planning over the skill library. The test does not exist yet; the owning change adds it at this exact path.
@@ -630,7 +630,7 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 ### MEDULLA-DECISION-ENGINE-R134 tests
 
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-decision-types/src/decision/task_plan.rs::tests::task_plan_round_trips`.
-- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-types/src/decision/task_plan.rs::tests::relevant_tools_fit_budget`: floor/top-k filtering precedes R045 coverage-per-token selection; include cost/id ties, a lower-relevance coverage winner, and uncovered-capability refusal.
+- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::relevant_tools_fit_budget`: floor/top-k filtering precedes R045 coverage-per-token selection; include cost/id ties, a lower-relevance coverage winner, and uncovered-capability refusal.
 - `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-decision-types/src/decision/task_plan.rs::tests::independent_subtasks_set_flag_and_operator`.
 - `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-decision-types/src/decision/task_plan.rs::tests::plan_respects_dependencies`.
 - `MEDULLA-DECISION-ENGINE-R134.5`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`.
@@ -1657,7 +1657,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R134.110.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.3` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | L3 |
 | `MEDULLA-DECISION-ENGINE-R134.110.4` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::each_refusal_returns_its_code_and_no_tools` | L3 |
-| `MEDULLA-DECISION-ENGINE-R134.110.5` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::record_lists_scores_rank_and_revision` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110.5` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::record_lists_scores_rank_and_revision` | |
 | `MEDULLA-DECISION-ENGINE-R134.110.6` | `tests/decide/test_tool_assignment_served.py::test_role_assignment_uses_one_ranking` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.6` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.7` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::index_follows_library_generation_and_hides_invisible_tools` | (planned) |

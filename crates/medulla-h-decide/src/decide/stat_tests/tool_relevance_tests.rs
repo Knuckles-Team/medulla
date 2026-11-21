@@ -264,6 +264,125 @@ async fn catalog_change_reorders_the_ranking() {
     }));
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R134.2
+#[tokio::test]
+async fn served_ranking_selects_covering_subset() {
+    let h = Harness::new().await;
+    publish_catalog(&h, TENANT);
+    // A revision of the matching tool that declares the capability a request
+    // may require.
+    h.commit_in(
+        TENANT,
+        tool_draft(
+            TENANT,
+            "tool-export",
+            "export report",
+            "export the quarterly sales report to a file",
+            100,
+            &["cap:export"],
+        ),
+        None,
+    )
+    .unwrap();
+    let ask = |h: &Harness, capabilities: &[&str]| {
+        ask_in(
+            h,
+            TENANT,
+            relevance_request(
+                h,
+                TENANT,
+                DecisionPolicyRef::Default,
+                assignment("", 10, 1000, capabilities, None),
+            ),
+        )
+        .unwrap()
+    };
+
+    // The relevant tool that declares the required capability is selected.
+    let covered = ask(&h, &["cap:export"]);
+    assert_eq!(ranked(&covered), vec!["tool-export".to_string()]);
+    assert_eq!(covered.resolution_kind, ResolutionKind::Statistical);
+
+    // No relevant tool declares this capability, so the family abstains with
+    // the stable code and returns no tool.
+    let uncovered = ask(&h, &["cap:absent"]);
+    assert_eq!(
+        abstain_codes(&uncovered),
+        vec!["TOOL_SUBSET_CAPABILITY_UNCOVERABLE".to_string()]
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.110.5
+#[tokio::test]
+async fn record_lists_scores_rank_and_revision() {
+    let h = Harness::new().await;
+    publish_catalog(&h, TENANT);
+    let record = ask_in(
+        &h,
+        TENANT,
+        relevance_request(
+            &h,
+            TENANT,
+            DecisionPolicyRef::Default,
+            assignment("", 10, 1000, &[], None),
+        ),
+    )
+    .unwrap();
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+
+    // The record lists each returned tool with its score.
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        panic!("expected a ranking, got {:?}", record.outcome);
+    };
+    assert_eq!(scores.as_slice().len(), 1);
+    assert_eq!(scores.as_slice()[0].option_id, "tool-export");
+    assert!(scores.as_slice()[0].score.value > 0);
+
+    // One Claim premise per returned tool names its ranks and the index
+    // revision, which is the library generation.
+    let index = ToolIndexCache::of(&h.store)
+        .get(&h.store, TENANT, 10_000)
+        .unwrap();
+    let rank_premises: Vec<_> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("tool_rank:"))
+        .collect();
+    assert_eq!(rank_premises.len(), 1);
+    assert_eq!(rank_premises[0].class, PremiseClass::Claim);
+    let fields: std::collections::BTreeMap<&str, &str> = rank_premises[0]
+        .fact
+        .trim_start_matches("tool_rank:")
+        .split(';')
+        .filter_map(|field| field.split_once('='))
+        .collect();
+    assert_eq!(fields["tool"], "tool-export");
+    assert_eq!(fields["fused_rank"], "1");
+    assert_eq!(fields["embedding"], "none");
+    assert_ne!(fields["lexical"], "none");
+    assert_eq!(fields["index_revision"], index.generation.to_string());
+
+    // The catalog digest is a Definition premise of 64 lowercase hex digits.
+    let digest = record
+        .premises
+        .iter()
+        .find(|premise| premise.fact.starts_with("catalog_digest="))
+        .expect("catalog digest premise");
+    assert_eq!(digest.class, PremiseClass::Definition);
+    let hex = digest.fact.trim_start_matches("catalog_digest=");
+    assert_eq!(hex, index.catalog_digest);
+    assert_eq!(hex.len(), 64);
+    assert!(hex
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+
+    // The sealed record digest recomputes from the record.
+    assert_eq!(
+        record.record_digest,
+        medulla_decision_types::decision::digest::statistical_record_digest(&record)
+    );
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R134.110.4
 #[tokio::test]
 async fn each_refusal_returns_its_code_and_no_tools() {
