@@ -23,12 +23,6 @@ mod consistency;
 pub(super) const UNSUPPORTED_MODALITY_OP: &str =
     "plan operator requires a modality feature not enabled in this build";
 
-/// The refusal for an `EVALUATE` stage while its executor is unlanded
-/// (MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15).
-#[cfg(feature = "timeseries")]
-const EVALUATE_EXECUTOR_UNAVAILABLE: &str =
-    "UQL_E_EVALUATE_KERNEL: the EVALUATE kernel executor is not available in this build";
-
 /// Is `op` one of the 7 `epistemic` ops (`EvidenceFor`/`Contradicts`/`SupportedBy`/
 /// `BeliefAsOf`/`SourceReliability`/`ConfidenceOp`/`ExplainBelief`)? Used by
 /// [`crate::optimizer`]'s reorder-exclusion check, which — unlike [`apply`]'s own
@@ -152,12 +146,13 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Motif { .. }
         | Op::Events { .. } => apply_timeseries(op, input, ctx),
 
-        // `EVALUATE` (MEDULLA-FEDERATED-QUERY-R726) is parsed, printed and planned; its
-        // executor and the kernel registry it calls are MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15
-        // and R002.2.5. Until those land the stage refuses with a typed error rather than
-        // running a partial kernel.
+        // `EVALUATE` (MEDULLA-FEDERATED-QUERY-R726 grammar,
+        // MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15 executor): one numeric kernel over the
+        // named channels of each series, through the registry of R002.2.5.
         #[cfg(feature = "timeseries")]
-        Op::Evaluate { .. } => Err(EVALUATE_EXECUTOR_UNAVAILABLE.into()),
+        Op::Evaluate { spec } => {
+            super::evaluate::evaluate_op(input, spec, ctx.budget.max_series_work)
+        }
 
         // `EVALUATE RULE` (MEDULLA-BUSINESS-OPS-R002.7): one stored rule evaluated over the
         // rows it is given by medulla-numeric's business registry. Parsed and printed in every

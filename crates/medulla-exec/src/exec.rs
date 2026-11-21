@@ -66,6 +66,9 @@ pub use derive::derive_op;
 mod skill;
 #[cfg(feature = "timeseries")]
 pub(crate) use skill::skill_op;
+// MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15 — the `EVALUATE` kernel report stage.
+#[cfg(feature = "timeseries")]
+mod evaluate;
 // EH-529 — the `MOTIF` / `DISCORD` query-by-example and matrix-profile search stage.
 #[cfg(feature = "timeseries")]
 mod motif;

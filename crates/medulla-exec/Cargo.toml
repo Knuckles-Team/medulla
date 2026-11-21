@@ -61,7 +61,7 @@ raft = []
 stream = ["query", "dep:medulla-stream", "medulla-stream/stream", "medulla-types/stream", "medulla-query-types/stream"]
 tensor = ["query", "dep:medulla-tensor", "medulla-types/tensor", "medulla-query-types/tensor"]
 text = ["query", "dep:medulla-text", "medulla-text/tantivy", "medulla-types/text", "medulla-query-types/text"]
-timeseries = ["query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "medulla-query-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif"]
+timeseries = ["query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "medulla-query-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif", "medulla-numeric/evaluate"]
 wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf"]
 
 [dev-dependencies]
