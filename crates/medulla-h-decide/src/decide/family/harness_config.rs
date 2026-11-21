@@ -787,12 +787,6 @@ fn read_only_claims(
     Ok(out)
 }
 
-/// The label of a read-only claim whose declarer is an uncertified MCP hint
-/// (MEDULLA-TYPED-PACKS-R045.7).
-pub const READ_ONLY_UNPROVEN_LABEL: &str = "unproven";
-/// The label of a read-only claim a connector or an evaluation declared.
-pub const READ_ONLY_CERTIFIED_LABEL: &str = "certified";
-
 /// One premise for each read-only claim, labelled `unproven` when the claim is
 /// only an MCP hint and `certified` otherwise.
 fn read_only_claim_premises(claims: &[ReadOnlyClaim]) -> Vec<FamilyPremise> {
