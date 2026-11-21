@@ -14615,6 +14615,13 @@ class MethodReadSpan(BaseModel):
     params: MethodReadSpanParams
 
 
+class MethodAtomContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AtomContext"]
+    params: MethodAtomContextParams
+
+
 class MethodOpenGraphSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15260,6 +15267,7 @@ Method = Annotated[
         MethodReadPathHistory,
         MethodReadBlame,
         MethodReadSpan,
+        MethodAtomContext,
         MethodOpenGraphSnapshot,
         MethodReadGraphChanges,
     ],
@@ -33123,6 +33131,13 @@ class MethodReadSpanParams(BaseModel):
     revision: Annotated[int, Field(ge=0)]
 
 
+class MethodAtomContextParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    query: str
+    token_budget: Annotated[int, Field(ge=0)] | None = None
+
+
 class MethodRecordDeploymentParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38753,6 +38768,8 @@ __all__ = [
     "MethodReadGraphChangesParams",
     "MethodReadSpan",
     "MethodReadSpanParams",
+    "MethodAtomContext",
+    "MethodAtomContextParams",
     "MethodRecordDeployment",
     "MethodRecordDeploymentParams",
     "MethodRecordRelease",

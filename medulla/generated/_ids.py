@@ -582,6 +582,7 @@ METHOD_IDS = frozenset(
         "ReadGraphChanges",
         "ReadPathHistory",
         "ReadSpan",
+        "AtomContext",
         "RegimeForecast",
         "RegimeSizingInput",
         "ResolveViewportSelection",

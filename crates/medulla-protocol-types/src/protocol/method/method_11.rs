@@ -489,6 +489,16 @@ $($variants)*
         line_start: u64,
         line_end: u64,
     },
+    // ── Knowledge atoms (MEDULLA-INGEST-WORKER-R003.3) ──
+    /// The knowledge atoms `SourceIngest` stored that answer `query`, best first, inside
+    /// `token_budget` words (absent: knob `ingest.context_token_budget`). Each atom names its
+    /// provenance key. Reads only, through the caller's graph view, so an atom the caller
+    /// cannot see is never selected. See [`medulla_ingestion_types::knowledge_atom`].
+    AtomContext {
+        query: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token_budget: Option<u64>,
+    },
     // ── Graph change feed (MEDULLA-DURABLE-KERNEL-R043.100) ──
     /// One consistent snapshot digest of the request graph, with the cursor
     /// that continues after it (`high_water_cursor`). Reads only, through the

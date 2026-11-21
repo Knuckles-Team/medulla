@@ -14,6 +14,9 @@ pub mod asr;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
 
+/// The context read over stored knowledge atoms (MEDULLA-INGEST-WORKER-R003.3).
+pub mod atom_context;
+
 /// Served data-prep declarations (MEDULLA-INGEST-WORKER-R001.1007).
 pub mod data_prep_declaration;
 

@@ -34,6 +34,8 @@ method_results! {
     ContextFacts(ContextFacts) => Json<medulla_decision_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_decision_types::source_toc::ReadSpanResult>;
+    // MEDULLA-INGEST-WORKER-R003.3: the atoms one context read selected.
+    AtomContext(AtomContext) => Json<medulla_ingestion_types::knowledge_atom::AtomContextResult>;
     // MEDULLA-DURABLE-KERNEL-R043.100.2 and .3: the change feed's snapshot and page.
     OpenGraphSnapshot(OpenGraphSnapshot) => Json<medulla_mutation_types::graph_change_feed::GraphSnapshot>;
     ReadGraphChanges(ReadGraphChanges) => Json<medulla_mutation_types::graph_change_feed::GraphChangePage>;

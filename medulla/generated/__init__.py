@@ -524,6 +524,7 @@ SEND_BY_METHOD = {
     "MemoryRemember": graph.send_memory_remember,
     "ReadMemorySnapshot": graph.send_read_memory_snapshot,
     "ReadSpan": graph.send_read_span,
+    "AtomContext": graph.send_atom_context,
     "RebalanceExecute": cluster.send_rebalance_execute,
     "RebalancePlan": cluster.send_rebalance_plan,
     "ReclaimExpiredCapacity": coordination.send_reclaim_expired_capacity,

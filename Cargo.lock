@@ -5818,6 +5818,7 @@ dependencies = [
  "medulla-finance-types",
  "medulla-graph-algos",
  "medulla-graph-core",
+ "medulla-h-ingest",
  "medulla-identity-types",
  "medulla-ingestion-types",
  "medulla-isolation",

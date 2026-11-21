@@ -43,7 +43,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R002.7` | `tests/ingest/test_ontology_induction_served.py::test_draft_proposal_takes_no_instances` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.1` | `crates/medulla-ingestion-types/src/knowledge_atom.rs::tests::atom_round_trips_and_rejects_unknown_kind` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.2` | `crates/medulla-document/src/atoms.rs::tests::decompose_kinds_and_split` | L1 | planned |
-| `MEDULLA-INGEST-WORKER-R003.3` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R003.3` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R003.4` | `crates/medulla-types/tests/ingest_rules.rs::an_atom_without_provenance_is_refused_and_no_relevant_atom_gives_an_empty_context` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.5` | `tests/ingest/test_knowledge_atoms_served.py::test_counts_in_receipt_and_context` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.6` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | planned |

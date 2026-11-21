@@ -1026,6 +1026,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "VIEW_TOO_LARGE",
         ],
     ),
+    // MEDULLA-INGEST-WORKER-R003.3: a blank query or an unverified tenant.
+    ("AtomContext", &["ACCESS_DENIED", "PARAMETER_INVALID"]),
     // MEDULLA-DECISION-ENGINE-R153.4: a span the stored table cannot serve.
     (
         "ReadSpan",

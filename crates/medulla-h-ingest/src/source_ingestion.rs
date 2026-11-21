@@ -1841,6 +1841,18 @@ fn admit_records(
         }
         admitted.methods.push(item.method);
         admitted.methods.extend(item.container_edge);
+        // An original document's atoms commit in the same envelope as its record node; each
+        // atom node takes the record's policy (MEDULLA-INGEST-WORKER-R003.3).
+        if let Some(document) = context.documents.get(item.lineage.object_id.as_str()) {
+            let (atom_methods, atom_node_ids) = documents::atom_methods(document)?;
+            admitted.methods.extend(atom_methods);
+            for atom_node_id in atom_node_ids {
+                let mut atom_policy = item.policy.clone();
+                atom_policy.policy_id = format!("policy:{atom_node_id}");
+                atom_policy.object_id = atom_node_id;
+                admitted.policies.push(atom_policy);
+            }
+        }
         admitted.lineage.push(item.lineage);
         admitted.policies.push(item.policy);
     }

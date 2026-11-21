@@ -17,7 +17,9 @@ use medulla_document::atoms::decompose;
 use medulla_document::processing::{chunk_text, ChunkingConfig};
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::ingest_rules::check_atom_provenance;
-use medulla_ingestion_types::knowledge_atom::KnowledgeAtom;
+use medulla_ingestion_types::knowledge_atom::{
+    atom_node_id, KnowledgeAtom, ATOM_NODE_TYPE, ATOM_OF,
+};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_document::{NormalizedDocument, MAX_DOCUMENT_REFS};
 use medulla_source_types::source_ingestion::{SourceEntityRef, SourceIngestionBatch, SourceRecord};
@@ -50,8 +52,6 @@ pub(super) enum DedupOutcome {
 
 /// One normalized document with the atoms it decomposed into.
 #[derive(Debug, Clone, PartialEq)]
-// The atoms are stored by the ingest wiring of MEDULLA-INGEST-WORKER-R003.3.
-#[allow(dead_code)]
 pub(super) struct DocumentOutput {
     pub document: NormalizedDocument,
     pub atoms: Vec<KnowledgeAtom>,
@@ -355,6 +355,39 @@ pub(super) struct DedupPlan {
     pub node_ids: Vec<String>,
     /// Near duplicates linked.
     pub duplicates: u64,
+}
+
+/// The writes that store one original document's atoms (MEDULLA-INGEST-WORKER-R003.3): per
+/// atom one `KnowledgeAtom` node and one `atom_of` edge to the document's record node. A near
+/// duplicate stores none (R702.4). The second element is the written node ids, each of which
+/// takes one policy record.
+pub(super) fn atom_methods(output: &DocumentOutput) -> Result<(Vec<Method>, Vec<String>), String> {
+    if output.dedup != DedupOutcome::Original {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let mut methods = Vec::with_capacity(output.atoms.len() * 2);
+    let mut node_ids = Vec::with_capacity(output.atoms.len());
+    for atom in &output.atoms {
+        let node_id = atom_node_id(&atom.atom_id);
+        methods.push(Method::AddNode {
+            node_id: node_id.clone(),
+            properties_msgpack: encode(&serde_json::json!({
+                "type": ATOM_NODE_TYPE,
+                "atom_id": atom.atom_id,
+                "kind": atom.kind,
+                "text": atom.text,
+                "provenance_key": atom.provenance_key,
+                "tenant": atom.tenant,
+            }))?,
+        });
+        methods.push(Method::AddEdge {
+            source_id: node_id.clone(),
+            target_id: output.record_node_id.clone(),
+            properties_msgpack: encode(&serde_json::json!({ "relationship": ATOM_OF }))?,
+        });
+        node_ids.push(node_id);
+    }
+    Ok((methods, node_ids))
 }
 
 fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {

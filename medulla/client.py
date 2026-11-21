@@ -7039,6 +7039,32 @@ class GraphOperationsClient:
             raise RuntimeError("ReadSpan must answer with an object")
         return result
 
+    async def atom_context(
+        self,
+        query: str,
+        token_budget: int | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Select the stored knowledge atoms that answer a query
+        (MEDULLA-INGEST-WORKER-R003.3).
+
+        Returns ``{atoms: [{atom_id, text, provenance_key}], atoms_selected,
+        tokens_used}``: the atoms the caller can see that share a term with
+        ``query``, best first, inside ``token_budget`` words (default: the engine
+        knob ``ingest.context_token_budget``). Every atom names the provenance key
+        of the document span it was cut from. A blank query is refused
+        ``PARAMETER_INVALID``. Writes nothing.
+        """
+        params: dict[str, Any] = {"query": query}
+        if token_budget is not None:
+            params["token_budget"] = token_budget
+        result = await self._client._send(
+            "AtomContext", params, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("AtomContext must answer with an object")
+        return result
+
     async def open_graph_snapshot(self, graph: str | None = None) -> dict[str, Any]:
         """Open one consistent snapshot of a graph and the cursor after it
         (MEDULLA-DURABLE-KERNEL-R043.100.4).
