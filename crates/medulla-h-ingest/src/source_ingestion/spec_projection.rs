@@ -424,6 +424,13 @@ pub fn project_contracts(
                     "seam": seam,
                     "declaredIn": name,
                     "provider_repos": parts.provider.join_repos(),
+                    "provider_rows": parts
+                        .provider
+                        .rows
+                        .iter()
+                        .map(|(row_repo, row)| format!("{row_repo}:{row}"))
+                        .collect::<Vec<_>>()
+                        .join(","),
                     "consumer_repos": parts.consumer.join_repos(),
                     "wire_shape": parts.wire_shape,
                     "refusal_codes": join(&parts.refusal_codes),
@@ -641,6 +648,106 @@ fn plan_phase(title: &str) -> Result<Option<&'static str>, ()> {
         return Err(());
     };
     Ok(rest[digits.len()..].starts_with(':').then_some(*phase))
+}
+
+/// Whether `file` names a tasks document (`tasks.md` or `<dir>/tasks.md`).
+fn is_tasks_file(file: &str) -> bool {
+    file == "tasks.md" || file.ends_with("/tasks.md")
+}
+
+/// The node id of one task line: `task:{repo}:{file}#{task_id}`.
+pub fn task_node_id(repo: &str, file: &str, task_id: &str) -> String {
+    format!("task:{repo}:{file}#{task_id}")
+}
+
+/// The `N` of a heading `Phase <N>...`, as decimal digits.
+fn heading_phase(heading: &str) -> Option<String> {
+    let title = heading.trim_start_matches('#').trim();
+    let rest = title.strip_prefix("Phase ")?;
+    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    (!digits.is_empty()).then_some(digits)
+}
+
+/// Project one tasks document into task records (MEDULLA-SDLC-R014.6.1). Each checklist line
+/// the parser reads as a task with a T-id becomes one `TaskLine` node with its flags, row,
+/// state, text, file and the `phase` of the nearest preceding `Phase <N>` heading of the same
+/// file (absent when none precedes). A task whose row is in `known_rows` gets one `forRow`
+/// edge to the requirement record; an unresolved row writes no edge. A line with no T-id is
+/// skipped. Nothing about task state beyond the tick is stored. Nodes come before edges.
+pub fn project_tasks(
+    repo: &str,
+    file: &str,
+    text: &str,
+    known_rows: &BTreeSet<String>,
+) -> RequirementProjection {
+    let (mut nodes, mut links) = (Vec::new(), Vec::new());
+    let mut phase: Option<String> = None;
+    let mut fence = false;
+    for line in text.lines() {
+        if line.starts_with("```") {
+            fence = !fence;
+        }
+        if fence {
+            continue;
+        }
+        if line.starts_with('#') {
+            if let Some(found) = heading_phase(line) {
+                phase = Some(found);
+            }
+            continue;
+        }
+        let trimmed = line.trim_start();
+        let (ticked, rest) = if let Some(rest) = trimmed
+            .strip_prefix("- [ ]")
+            .or_else(|| trimmed.strip_prefix("* [ ]"))
+        {
+            (false, rest)
+        } else if let Some(rest) = ["- [x]", "- [X]", "* [x]", "* [X]"]
+            .iter()
+            .find_map(|prefix| trimmed.strip_prefix(prefix))
+        {
+            (true, rest)
+        } else {
+            continue;
+        };
+        let Some(task) = medulla_compute::parser::spec_artifacts::parse_task_line(ticked, rest)
+        else {
+            continue;
+        };
+        let Some(task_id) = task.task_id.as_deref() else {
+            continue;
+        };
+        let id = task_node_id(repo, file, task_id);
+        let row = task.row.clone().unwrap_or_default();
+        let mut properties = serde_json::json!({
+            "type": "TaskLine",
+            "repo": repo,
+            "file": file,
+            "taskId": task_id,
+            "parallel": task.parallel.to_string(),
+            "story": task.story.clone().unwrap_or_default(),
+            "row": row,
+            "ticked": task.ticked.to_string(),
+            "text": task.text,
+        });
+        if let Some(phase) = &phase {
+            properties["phase"] = phase.clone().into();
+        }
+        nodes.push(node(&id, properties));
+        if !row.is_empty() {
+            let target = requirement_node_id(repo, &row);
+            if known_rows.contains(&target) {
+                links.push(edge(&id, &target, "forRow"));
+            }
+        }
+    }
+    let (count_nodes, count_edges) = (nodes.len() as u32, links.len() as u32);
+    nodes.extend(links);
+    RequirementProjection {
+        operations: nodes,
+        nodes: count_nodes,
+        edges: count_edges,
+    }
 }
 
 /// Project one plan document into section records (MEDULLA-SDLC-R014.7): one `PlanSection`
@@ -1235,17 +1342,23 @@ fn reingest_in(
         } else {
             Vec::new()
         };
+        let task_operations = if is_tasks_file(name) {
+            project_tasks(repo, name, text, &known_rows).operations
+        } else {
+            Vec::new()
+        };
         let mut records = Vec::new();
         for op in projection
             .operations
             .into_iter()
             .chain(project(repo, name, text))
             .chain(plan_operations)
+            .chain(task_operations)
         {
             if op["op"] == "upsert_node" {
                 if matches!(
                     op["properties"]["type"].as_str(),
-                    Some("Requirement" | "SpecDocument" | "SpecSection" | "PlanSection")
+                    Some("Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "TaskLine")
                 ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
                 }
@@ -2208,6 +2321,53 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ops,
             "deterministic"
         );
+    }
+
+    // spec: MEDULLA-SDLC-R014.6.1
+    #[test]
+    fn tasks_project_to_nodes_with_phase_and_row_edge() {
+        let tasks = "# Tasks\n\n- [ ] T000 [P] DEMO-R009 before any phase\n\n\
+## Phase 1: Setup\n- [ ] T001 [P] [US1] DEMO-R001 Wire it\n- [x] T002 DEMO-R404 Gone\n\
+- [ ] DEMO-R001 a row-only task has no T-id\n\n## Phase 2: Build\n- [X] T003 plain text\n";
+        let known = BTreeSet::from([requirement_node_id("demo", "DEMO-R001")]);
+        let p = project_tasks("demo", "specs/x/tasks.md", tasks, &known);
+        let nodes: Vec<&serde_json::Value> = p
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .collect();
+        let ids: Vec<&str> = nodes.iter().map(|n| n["id"].as_str().unwrap()).collect();
+        assert_eq!(
+            ids,
+            [
+                "task:demo:specs/x/tasks.md#T000",
+                "task:demo:specs/x/tasks.md#T001",
+                "task:demo:specs/x/tasks.md#T002",
+                "task:demo:specs/x/tasks.md#T003",
+            ]
+        );
+        assert!(nodes[0]["properties"].get("phase").is_none());
+        let t1 = &nodes[1]["properties"];
+        assert_eq!(t1["type"], "TaskLine");
+        assert_eq!(t1["taskId"], "T001");
+        assert_eq!(t1["parallel"], "true");
+        assert_eq!(t1["story"], "US1");
+        assert_eq!(t1["row"], "DEMO-R001");
+        assert_eq!(t1["ticked"], "false");
+        assert_eq!(t1["text"], "Wire it");
+        assert_eq!(t1["file"], "specs/x/tasks.md");
+        assert_eq!(t1["phase"], "1");
+        assert_eq!(nodes[2]["properties"]["ticked"], "true");
+        assert_eq!(nodes[3]["properties"]["phase"], "2");
+        assert_eq!(nodes[3]["properties"]["row"], "");
+        // Only the task whose row resolves gets a `forRow` edge.
+        assert_eq!(
+            edges_of(&p, "task:demo:specs/x/tasks.md#T001", "forRow"),
+            vec![requirement_node_id("demo", "DEMO-R001")]
+        );
+        assert_eq!((p.nodes, p.edges), (4, 1));
+        // A re-projection of the same text is byte-equal, so an unchanged digest rewrites nothing.
+        assert_eq!(project_tasks("demo", "specs/x/tasks.md", tasks, &known).operations, p.operations);
     }
 
     // spec: MEDULLA-SDLC-R014.7

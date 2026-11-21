@@ -100,6 +100,12 @@ sddspec:targetsGoal a owl:ObjectProperty ;
     rdfs:label "targets goal" ;
     rdfs:range sddspec:DeliveryGoal .
 
+sddspec:forRow a owl:ObjectProperty ;
+    rdfs:label "for row" ;
+    rdfs:comment "Links a task line to the requirement row it carries out." ;
+    rdfs:domain sddspec:TaskLine ;
+    rdfs:range sddspec:RequirementRow .
+
 sddspec:covers a owl:ObjectProperty ;
     rdfs:label "covers" ;
     rdfs:comment "Links a plan section to a requirement row its text names." ;
