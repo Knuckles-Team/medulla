@@ -250,7 +250,7 @@ mod retention_tests {
                 provenance: SnapshotProvenance {
                     actor: "a".into(),
                     policy_digest: Digest256::sha256(b"p"),
-                    request_id: RequestId::new(format!("r{revision}")).unwrap(),
+                    request_id: RequestId::new(&format!("r{revision}")).unwrap(),
                 },
                 retain_until_ms: None,
             },
