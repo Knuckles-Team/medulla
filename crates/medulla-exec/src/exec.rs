@@ -43,6 +43,8 @@ mod usage;
 pub use usage::{UsageSeries, UsageSource, UsageWindow};
 // MEDULLA-FEDERATED-QUERY-R078.7 — the `COMPANY CONTEXT` source over the pinned snapshot.
 mod company_context;
+// MEDULLA-FEDERATED-QUERY-R078.6 — the plan scope's allow set at every scan and vector leaf.
+mod scope_allow;
 pub(crate) mod dispatch;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;

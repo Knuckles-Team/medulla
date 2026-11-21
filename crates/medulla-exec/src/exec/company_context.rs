@@ -82,7 +82,7 @@ fn node_category(props: &serde_json::Map<String, serde_json::Value>) -> Option<C
 }
 
 /// The clearance labels a node requires: a string, an array of strings, or none.
-fn node_clearance(props: &serde_json::Map<String, serde_json::Value>) -> Vec<String> {
+pub(super) fn node_clearance(props: &serde_json::Map<String, serde_json::Value>) -> Vec<String> {
     match props.get(CLEARANCE_PROPERTY) {
         Some(serde_json::Value::String(label)) => vec![label.clone()],
         Some(serde_json::Value::Array(labels)) => labels

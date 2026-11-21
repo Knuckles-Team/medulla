@@ -333,10 +333,18 @@ fn apply_graph_navigation(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSe
 /// always-on tier. The lexical `RankText` lives in [`apply_text_and_owl`].
 pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
     match op {
-        Op::Scan { .. } | Op::ScanAll {} => Ok(apply_graph_scan(op, ctx)),
-        Op::Filter { .. } | Op::Traverse { .. } | Op::Expand { .. } => {
-            apply_graph_navigation(op, input, ctx)
-        }
+        // MEDULLA-FEDERATED-QUERY-R078.6: the plan scope's allow set at the scan leaves.
+        Op::Scan { .. } | Op::ScanAll {} => super::scope_allow::scope_leaf(
+            ctx,
+            medulla_query_types::wire::PlanScopeLeaf::Graph,
+            apply_graph_scan(op, ctx),
+        ),
+        Op::Traverse { .. } | Op::Expand { .. } => super::scope_allow::scope_leaf(
+            ctx,
+            medulla_query_types::wire::PlanScopeLeaf::Edge,
+            apply_graph_navigation(op, input, ctx)?,
+        ),
+        Op::Filter { .. } => apply_graph_navigation(op, input, ctx),
         Op::Propagate { .. } => super::propagate::apply(op, &input, ctx),
         // PROJECT narrows the one typed tabular channel to the named columns
         // (MEDULLA-FEDERATED-QUERY-R737); rows pass through, and the encoder selects the

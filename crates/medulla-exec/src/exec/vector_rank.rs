@@ -22,6 +22,7 @@
 use std::collections::HashSet;
 
 use medulla_index_types::embedding::{EmbeddingSpaceRef, Modality};
+use medulla_query_types::wire::PlanScopeLeaf;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::retrieval::{Shortfall, ShortfallReason};
@@ -74,6 +75,8 @@ pub(crate) fn eligible_ids<'r>(ctx: &PlanCtx, input: &'r RowSet) -> HashSet<&'r 
     if let Some(constraints) = &ctx.constraints {
         ids.retain(|id| constraints.contains(id));
     }
+    // MEDULLA-FEDERATED-QUERY-R078.6: the plan scope's allow set at the vector leaf.
+    ids.retain(|id| super::scope_allow::allows(ctx, PlanScopeLeaf::Vector, id));
     ids
 }
 
