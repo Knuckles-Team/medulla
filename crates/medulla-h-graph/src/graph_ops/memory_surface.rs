@@ -35,7 +35,7 @@ use medulla_protocol_types::result_contract::graph::{
 use medulla_modality::media_memory::match_derivation;
 use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
-    MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
+    MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
     MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
 };
@@ -738,11 +738,19 @@ pub(super) fn recall(
             .collect();
         plan_over(core, tenant, &searched)
     });
+    let plan_digest = recall_plan_digest(request, &keywords)?;
+    let drift = request
+        .previous_manifest_digest
+        .as_deref()
+        .map(|previous| manifest_drift(core, tenant, previous))
+        .transpose()?;
     Ok(MemoryRecallResult {
         hits,
         tokens_used,
         mementos,
         plan,
+        plan_digest,
+        drift,
     })
 }
 
@@ -794,6 +802,70 @@ fn plan_over(
     )
 }
 
+/// Domain of the manifest digest (MEDULLA-DECISION-ENGINE-R651.5).
+const MANIFEST_DIGEST_DOMAIN: &str = "eg/memory-manifest/v1";
+/// Domain of the recall plan digest (MEDULLA-DECISION-ENGINE-R651.5).
+const RECALL_PLAN_DIGEST_DOMAIN: &str = "eg/memory-recall-plan/v1";
+
+fn hex_digest(domain: &str, canonical: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(domain.as_bytes());
+    hasher.update([0u8]);
+    hasher.update(canonical);
+    hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// SHA-256 over the canonical JSON of `records` in order, 64 lowercase hex characters.
+fn manifest_digest(records: &[MemoryRecord]) -> Result<String, String> {
+    let canonical = serde_json::to_vec(records)
+        .map_err(|error| refuse("INTERNAL", format!("manifest encoding: {error}")))?;
+    Ok(hex_digest(MANIFEST_DIGEST_DOMAIN, &canonical))
+}
+
+/// SHA-256 over the canonical recall plan: the query, the filters, the scope
+/// and the knob values the recall reads. `previous_manifest_digest` is a
+/// comparison input, not part of the plan.
+fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Result<String, String> {
+    let plan = serde_json::json!({
+        "query_embedding": request.query_embedding,
+        "keywords": keywords,
+        "tiers": request.tiers,
+        "scope": request.scope,
+        "as_of_ms": request.as_of_ms,
+        "budget": request.budget,
+        "prime_session": request.prime_session,
+        "include_plan": request.include_plan,
+        "include_media": request.include_media,
+        "knobs": {
+            "memory.merge_cosine": knob_decimal(&kernel::MERGE_COSINE),
+            "memory.memento_token_cap": knob_integer(&kernel::MEMENTO_TOKEN_CAP),
+            "memory.importance_floor": knob_decimal(&kernel::IMPORTANCE_FLOOR),
+            "memory.export_max_records": knob_integer(&kernel::EXPORT_MAX_RECORDS),
+        },
+    });
+    let canonical = serde_json::to_vec(&plan)
+        .map_err(|error| refuse("INTERNAL", format!("plan encoding: {error}")))?;
+    Ok(hex_digest(RECALL_PLAN_DIGEST_DOMAIN, &canonical))
+}
+
+/// The drift of the caller's current manifest from the one the caller kept.
+fn manifest_drift(
+    core: &GraphCore,
+    tenant: &str,
+    previous: &str,
+) -> Result<MemoryDriftReport, String> {
+    let current = export(core, tenant, &MemoryExportRequest::default())?
+        .manifest
+        .manifest_digest;
+    Ok(MemoryDriftReport {
+        cka_q16: None,
+        psi_q16: None,
+        drifted: current != previous,
+        manifest_digest: current,
+        previous_manifest_digest: previous.to_owned(),
+    })
+}
+
 /// Answer one export for `tenant`.
 pub(super) fn export(
     core: &GraphCore,
@@ -813,21 +885,12 @@ pub(super) fn export(
         .collect();
     let truncated = records.len() > limit;
     records.truncate(limit);
-    let mut hasher = Sha256::new();
-    for record in &records {
-        hasher.update(record.memory_id.as_str().as_bytes());
-        hasher.update(b"\n");
-    }
-    let ids_digest: String = hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
+    let manifest_digest = manifest_digest(&records)?;
     Ok(MemoryExportResult {
         manifest: MemoryExportManifest {
             tiers: EXPORT_TIERS.to_vec(),
             record_count: u32::try_from(records.len()).unwrap_or(u32::MAX),
-            ids_digest,
+            manifest_digest,
             truncated,
         },
         records,

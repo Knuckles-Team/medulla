@@ -71,6 +71,7 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         prime_session: None,
         include_plan: false,
         include_media: false,
+        previous_manifest_digest: None,
     }
 }
 
@@ -184,7 +185,7 @@ fn remember_recall_consolidate_and_export_round_trip() {
     let exported = export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap();
     assert!(exported.records.iter().all(|r| matches!(r.tier, MemoryTier::Procedural | MemoryTier::Semantic)));
     assert_eq!(exported.manifest.record_count as usize, exported.records.len());
-    assert_eq!(exported.manifest.ids_digest.len(), 64);
+    assert_eq!(exported.manifest.manifest_digest.len(), 64);
     assert!(!exported.manifest.truncated);
     let limited = export(&core, "tenant-a", &MemoryExportRequest { limit: Some(1) }).unwrap();
     assert_eq!(limited.records.len(), 100.min(exported.records.len()));
@@ -401,4 +402,56 @@ fn episodes_promote_to_a_linked_semantic_fact() {
     let mut plain = promotion_props();
     plain.remove("pattern_key");
     assert_eq!(promotion_support_refusal(&episode_ids(2), &plain), None);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R651.5
+#[test]
+fn consolidation_and_export_evidence_reads_back() {
+    let core = GraphCore::new();
+    for (id, tier, text) in [
+        ("m:grass", MemoryTier::Procedural, "grass is green"),
+        ("m:sky", MemoryTier::Semantic, "the sky is blue"),
+    ] {
+        store(&core, "tenant-a", &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]));
+    }
+    // The export manifest counts the records, names the tiers and digests the records themselves.
+    let exported = export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap();
+    assert_eq!(exported.manifest.record_count, 2);
+    assert_eq!(exported.manifest.tiers, [MemoryTier::Procedural, MemoryTier::Semantic]);
+    let digest = exported.manifest.manifest_digest.clone();
+    assert_eq!(digest.len(), 64);
+    assert!(digest.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)));
+    assert_eq!(export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap().manifest.manifest_digest, digest);
+
+    // Changing a record's text changes the digest; the ids alone no longer decide it.
+    let other = GraphCore::new();
+    for (id, tier, text) in [
+        ("m:grass", MemoryTier::Procedural, "grass is green"),
+        ("m:sky", MemoryTier::Semantic, "the sky is grey"),
+    ] {
+        store(&other, "tenant-a", &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]));
+    }
+    let changed = export(&other, "tenant-a", &MemoryExportRequest::default()).unwrap();
+    assert_ne!(changed.manifest.manifest_digest, digest);
+
+    // Recall answers the plan digest of its own plan, and a drift report only when asked.
+    let mut asked = recall_request(vec![1.0, 0.0], &[], 100);
+    let plain = recall(&core, "tenant-a", NOW, &asked).unwrap();
+    assert_eq!(plain.plan_digest.len(), 64);
+    assert!(plain.drift.is_none());
+    assert_eq!(recall(&core, "tenant-a", NOW, &asked).unwrap().plan_digest, plain.plan_digest);
+    let mut narrower = asked.clone();
+    narrower.scope = Some(ResourceId::new("sess:1").unwrap());
+    assert_ne!(recall(&core, "tenant-a", NOW, &narrower).unwrap().plan_digest, plain.plan_digest);
+
+    asked.previous_manifest_digest = Some(digest.clone());
+    let same = recall(&core, "tenant-a", NOW, &asked).unwrap();
+    assert_eq!(same.plan_digest, plain.plan_digest, "the comparison input is not part of the plan");
+    let report = same.drift.expect("a previous digest was supplied");
+    assert!(!report.drifted);
+    assert_eq!(report.manifest_digest, digest);
+    asked.previous_manifest_digest = Some(changed.manifest.manifest_digest.clone());
+    let drifted = recall(&core, "tenant-a", NOW, &asked).unwrap().drift.expect("a report");
+    assert!(drifted.drifted);
+    assert_eq!(drifted.previous_manifest_digest, changed.manifest.manifest_digest);
 }

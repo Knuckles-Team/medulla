@@ -491,6 +491,7 @@ mod served {
                     prime_session: None,
                     include_plan: false,
                     include_media,
+                    previous_manifest_digest: None,
                 }),
             };
             let response = if tenant == TENANT {
@@ -659,6 +660,7 @@ mod served {
                         prime_session: None,
                         include_plan: false,
                         include_media: true,
+                        previous_manifest_digest: None,
                     }),
                 },
             )

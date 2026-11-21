@@ -522,10 +522,22 @@ pub struct Memento {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct MemoryDriftReport {
-    pub cka_q16: i64,
-    pub psi_q16: i64,
-    /// True when CKA fell below `knob memory.drift_cka_min`.
+    /// Absent when the report compares manifest digests, which carry no embeddings.
+    #[serde(default)]
+    pub cka_q16: Option<i64>,
+    /// Absent when the report compares manifest digests, which carry no embeddings.
+    #[serde(default)]
+    pub psi_q16: Option<i64>,
+    /// True when CKA fell below `knob memory.drift_cka_min`; for a manifest
+    /// comparison, true when the two manifest digests differ
+    /// (MEDULLA-DECISION-ENGINE-R651.5).
     pub drifted: bool,
+    /// The caller's current manifest digest, as `MemoryExport` computes it.
+    #[serde(default)]
+    pub manifest_digest: String,
+    /// The `previous_manifest_digest` the caller supplied.
+    #[serde(default)]
+    pub previous_manifest_digest: String,
 }
 
 /// Near-duplicate records of one tier; `keep` is the one retained
@@ -630,6 +642,11 @@ pub struct MemoryRecallRequest {
     /// (MEDULLA-MEDIA-VOCAB-R650.3); needs a non-empty `query_embedding`.
     #[serde(default)]
     pub include_media: bool,
+    /// The manifest digest of an earlier `MemoryExport`; when given, the answer
+    /// carries a `MemoryDriftReport` against the current manifest, and absent
+    /// means no report (MEDULLA-DECISION-ENGINE-R651.5).
+    #[serde(default)]
+    pub previous_manifest_digest: Option<String>,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
@@ -653,6 +670,13 @@ pub struct MemoryRecallResult {
     pub mementos: Vec<Memento>,
     #[serde(default)]
     pub plan: Option<ConsolidationPlan>,
+    /// SHA-256 over the canonical recall plan (the query, the filters, the scope
+    /// and the knob values the recall read), 64 lowercase hex characters
+    /// (MEDULLA-DECISION-ENGINE-R651.5).
+    pub plan_digest: String,
+    /// Present only when the request carried `previous_manifest_digest`.
+    #[serde(default)]
+    pub drift: Option<MemoryDriftReport>,
 }
 
 /// `MemoryExport`: the durable tiers of the caller's memory
@@ -674,8 +698,9 @@ pub struct MemoryExportRequest {
 pub struct MemoryExportManifest {
     pub tiers: Vec<MemoryTier>,
     pub record_count: u32,
-    /// SHA-256 over the exported record ids in order, 64 lowercase hex characters.
-    pub ids_digest: String,
+    /// SHA-256 over the canonical records in export order, 64 lowercase hex
+    /// characters (MEDULLA-DECISION-ENGINE-R651.5).
+    pub manifest_digest: String,
     /// True when the limit cut the export short.
     pub truncated: bool,
 }

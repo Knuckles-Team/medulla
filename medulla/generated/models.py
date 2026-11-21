@@ -38202,6 +38202,7 @@ class MemoryRecallRequest(BaseModel):
     include_media: bool = False
     include_plan: bool = False
     keywords: list[str] = Field(default_factory=list)
+    previous_manifest_digest: str | None = None
     prime_session: str | None = None
     query_embedding: list[float] = Field(default_factory=list)
     scope: str | None = None
@@ -38247,12 +38248,24 @@ class ConsolidationPlan(BaseModel):
     prune_candidates: list[str]
 
 
+class MemoryDriftReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cka_q16: int | None = None
+    drifted: bool
+    manifest_digest: str = ""
+    previous_manifest_digest: str = ""
+    psi_q16: int | None = None
+
+
 class MemoryRecallResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    drift: MemoryDriftReport | None = None
     hits: list[MemoryHit]
     mementos: list[Memento] = Field(default_factory=list)
     plan: ConsolidationPlan | None = None
+    plan_digest: str
     tokens_used: Annotated[int, Field(ge=0)]
 
 
@@ -38265,7 +38278,7 @@ class MemoryExportRequest(BaseModel):
 class MemoryExportManifest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    ids_digest: str
+    manifest_digest: str
     record_count: Annotated[int, Field(ge=0)]
     tiers: list[MemoryTier]
     truncated: bool
