@@ -318,7 +318,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T309 [US6] MEDULLA-DECISION-ENGINE-R029.2.1 Context-source partition types and rule
 - [ ] T310 [US6] MEDULLA-DECISION-ENGINE-R029.2.2 Served context-budget family and refusals
 - [ ] T311 [US7] MEDULLA-DECISION-ENGINE-R134.15 Weighted critical chain over a task plan
-- [ ] T312 [US7] MEDULLA-DECISION-ENGINE-R135.8.1 Compile receipts keep source provenance
+- [ ] T312 [US7] MEDULLA-DECISION-ENGINE-R135.8.1 RETIRED: compile receipts of the retired workflow compile; the one route is R156.2.
 - [ ] T313 [US7] MEDULLA-DECISION-ENGINE-R135.10 Insight model
 - [ ] T314 [US7] MEDULLA-DECISION-ENGINE-R135.11 Behavior: consolidate and select insights
 - [ ] T315 [US7] MEDULLA-DECISION-ENGINE-R135.12 Wiring: insight submission and selection
@@ -933,7 +933,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
 - [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours; the answer keeps the best 64 scores and adds `Advisory.ranked_total` (ladder truncation, `calibrated_scores` by id, matrix rows of the retained ids).
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
-- [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first. Size: S, 1 PR, 3 hours.
+- [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first: `tests/decide/fixtures/capability_catalog.py` (1,449 names, seed 829), `decision_client.rank_catalog`, four L4 tests incl. the stopped-embedder engine. Size: S, 1 PR, 3 hours.
 - [ ] T923 [US6] MEDULLA-DECISION-ENGINE-R830 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T924 [US6] MEDULLA-DECISION-ENGINE-R830.1 Rename Certificate.status to outcome (serde key status); naming row, no machine
 - [ ] T925 [US6] MEDULLA-DECISION-ENGINE-R830.2 Rename ComparativeStageBudget.stage to stage_id (serde key stage); naming row, no machine

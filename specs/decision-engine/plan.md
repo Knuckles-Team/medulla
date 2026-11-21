@@ -176,7 +176,7 @@ Pre-untangled design, one line per answer.
 - Cohesion. Index build, slot binding and selection are pure functions in `program_store/semantic.rs`, beside the compiler they read. Replay rows and the demotion verdict sit in `program_store/replay.rs`.
 - Dependency direction. `run_record.rs` and the `program_lookup` family call the pure functions. `program_embedding.rs` adapts the configured embedder to the bounded provider of MEDULLA-FEDERATED-QUERY-R040.5.4. No new crate edge.
 - Interface depth. No new served method. `DecisionLog` `run_record` gains two optional commit fields and the `program_replay` kind. `Decide` `program_lookup` gains the parameters `request_text` and `program_graph`.
-- Special cases. An exact signature answers first and makes no embedding call. A program compiled from a workflow (R135.8) has no index and matches by exact signature only.
+- Special cases. An exact signature answers first and makes no embedding call. A program compiled from a skill workflow (R156.2) has no index and matches by exact signature only.
 - State. Program and phrasing vectors live in the semantic index of the program's graph, beside the R135.5 program node. The match index and the replay rows are decision artifacts. Nothing is held in memory beyond the provider cache.
 - Environment. The configured embedder defines one space. A graph that declares another space refuses the commit and makes the lookup abstain.
 
