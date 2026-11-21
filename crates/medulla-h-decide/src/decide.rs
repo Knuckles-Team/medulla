@@ -105,6 +105,8 @@ mod stat_resolve;
 #[cfg(feature = "decide")]
 mod stat_team;
 #[cfg(feature = "decide")]
+mod stat_feedback;
+#[cfg(feature = "decide")]
 mod stat_package_run;
 #[cfg(feature = "decide")]
 mod stat_usage_guidance;

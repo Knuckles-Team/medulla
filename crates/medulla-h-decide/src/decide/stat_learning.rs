@@ -301,6 +301,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::PackageRun { .. }
+        | LearningWrite::RecordFeedback { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
     }
 }
@@ -532,6 +533,9 @@ pub(super) fn dispatch(
         LearningWrite::UploadDistilledScores { upload } => Ok(LearningRecorded::DistilledScores(
             Box::new(upload_scores(ctx, *upload)?),
         )),
+        LearningWrite::RecordFeedback { event } => Ok(LearningRecorded::Feedback(Box::new(
+            super::stat_feedback::record_feedback(ctx, reader, *event)?,
+        ))),
         LearningWrite::PackageRun { run } => Ok(LearningRecorded::PackageRun(Box::new(
             super::stat_package_run::record_package_run(ctx, *run)?,
         ))),

@@ -60,6 +60,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     verifier::KNOBS,
     super::ingestion_admission::KNOBS,
     super::statistical::run_credit::KNOBS,
+    super::statistical::feedback::KNOBS,
     super::thought_search::KNOBS,
     super::capability_designation::KNOBS,
     super::statistical::distilled::KNOBS,

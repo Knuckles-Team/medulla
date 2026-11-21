@@ -1074,6 +1074,8 @@ mod delegation_quality_tests;
 mod distilled_rank_tests;
 // MEDULLA-DECISION-ENGINE-R160.3: package runs recorded through DecisionLog learn.
 mod package_run_tests;
+// MEDULLA-DECISION-ENGINE-R100.1.1: feedback events recorded through DecisionLog learn.
+mod feedback_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

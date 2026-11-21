@@ -16,6 +16,7 @@ pub mod distilled;
 pub mod enrichment_schedule;
 pub mod errors;
 pub mod execution_routing;
+pub mod feedback;
 pub mod features;
 pub mod graph_rows;
 pub mod grounded_eval;

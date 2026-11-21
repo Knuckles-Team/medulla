@@ -10127,6 +10127,35 @@ class LearningWriteMonitorAdapter(BaseModel):
     write: Literal["monitor_adapter"]
 
 
+class FeedbackOutcome(str, Enum):
+    OK = "ok"
+    ERROR = "error"
+    CORRECTION = "correction"
+
+
+class FeedbackEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor_id: str
+    event_id: Annotated[str, Field(min_length=1, max_length=128)]
+    event_time_ms: Annotated[int, Field(ge=0)]
+    evidence_digests: Annotated[list[str], Field(max_length=64)]
+    evidence_ids: Annotated[list[str], Field(max_length=64)]
+    option_id: str
+    outcome: FeedbackOutcome
+    record_digest: str
+    record_id: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_revision: Annotated[int, Field(ge=1)]
+
+
+class LearningWriteRecordFeedback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    event: FeedbackEvent
+    write: Literal["record_feedback"]
+
+
 class RunHistoryEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -10232,7 +10261,8 @@ LearningWrite = Annotated[
     | LearningWriteRunGenerationCycle
     | LearningWriteRunOutcome
     | LearningWriteUploadDistilledScores
-    | LearningWritePackageRun,
+    | LearningWritePackageRun
+    | LearningWriteRecordFeedback,
     Field(discriminator="write"),
 ]
 
@@ -39137,6 +39167,9 @@ __all__ = [
     "LearningWriteRunOutcome",
     "LearningWriteUploadDistilledScores",
     "LearningWritePackageRun",
+    "LearningWriteRecordFeedback",
+    "FeedbackEvent",
+    "FeedbackOutcome",
     "RunHistoryEntry",
     "RefreshBudget",
     "RefreshTrigger",

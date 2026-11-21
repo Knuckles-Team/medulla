@@ -465,6 +465,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::RetrievalPlan,
         super::statistical::retrieval_plan::REFUSALS,
     ),
+    (
+        QuestionKind::RetrievalPlan,
+        super::statistical::feedback::REFUSALS,
+    ),
     (QuestionKind::ThoughtSearch, super::thought_search::REFUSALS),
     (QuestionKind::CommandConfig, super::command_config::REFUSALS),
     (QuestionKind::RunAdjustment, super::run_adjustment::REFUSALS),
