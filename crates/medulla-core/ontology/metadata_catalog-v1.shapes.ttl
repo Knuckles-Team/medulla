@@ -120,7 +120,7 @@ cat:FamilyAssetOwnerShape a sh:NodeShape ;
     sh:targetClass cat:AgentTemplateAsset, cat:A2AAgentAsset, cat:AgentVersion, cat:OrgUnit,
         cat:TeamAsset, cat:PersonAsset, cat:RoleAsset, cat:BusinessDomain, cat:Product, cat:ServiceAsset,
         cat:WorkflowDefinitionAsset, cat:WorkflowRun, cat:WorkflowStepAsset, cat:KnowledgeGraph,
-        cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset ;
+        cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset, cat:Article ;
     sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ],
     [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:or ( [ sh:path cat:hasOwner ; sh:minCount 1 ]
@@ -142,3 +142,14 @@ cat:DashboardAssetShape a sh:NodeShape ;
 cat:ReportTemplateShape a sh:NodeShape ;
     sh:targetClass cat:ReportTemplate ;
     sh:property [ sh:path cat:parameterName ; sh:minCount 1 ; sh:datatype xsd:string ] .
+
+# An article has one author, one version and one status of the review lifecycle
+# (MEDULLA-TYPED-PACKS-R108.13).
+cat:ArticleShape a sh:NodeShape ;
+    sh:targetClass cat:Article ;
+    sh:property [ sh:path cat:author ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ],
+    [ sh:path cat:articleVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ],
+    [ sh:path cat:articleStatus ; sh:minCount 1 ; sh:maxCount 1 ;
+      sh:in ( "draft" "in_review" "approved" "deprecated" ) ],
+    [ sh:path cat:aboutAsset ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:inBusinessDomain ; sh:nodeKind sh:IRI ] .

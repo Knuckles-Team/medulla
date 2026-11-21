@@ -416,6 +416,22 @@ fn report_and_template_need_an_owner_and_the_template_a_parameter() {
     )));
 }
 
+// spec: MEDULLA-TYPED-PACKS-R108.13
+#[test]
+fn article_needs_author_version_status_and_an_owner_or_flag() {
+    let xsd = "http://www.w3.org/2001/XMLSchema#nonNegativeInteger";
+    let article = format!(
+        "<urn:art:1> a cat:Article ; cat:hasOwner <urn:g:x> ; cat:author \"ada\" ; \
+         cat:articleVersion \"1\"^^<{xsd}> ; cat:articleStatus \"draft\" ; \
+         cat:aboutAsset <urn:a:orders> ; cat:inBusinessDomain <urn:dom:sales> ."
+    );
+    assert!(conforms(&article));
+    // No author, a status outside the lifecycle, or no owner each fail.
+    assert!(!conforms(&article.replace("cat:author \"ada\" ; ", "")));
+    assert!(!conforms(&article.replace("\"draft\"", "\"published\"")));
+    assert!(!conforms(&article.replace("cat:hasOwner <urn:g:x> ; ", "")));
+}
+
 // spec: MEDULLA-TYPED-PACKS-R108.1
 #[test]
 fn six_families_validate_and_share_one_parent_asset_class() {

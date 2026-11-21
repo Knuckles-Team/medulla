@@ -468,6 +468,41 @@ cat:revision a owl:DatatypeProperty ;
     rdfs:comment "The revision of a stored asset body; it only increases." ;
     rdfs:range xsd:nonNegativeInteger .
 
+cat:Article a owl:Class ;
+    rdfs:label "Article" ;
+    rdfs:comment "A curated, versioned article or guide catalogued as an asset (MEDULLA-TYPED-PACKS-R108.13). It has an author, a version and a status on the review lifecycle of a glossary term, attaches to the assets it explains (cat:aboutAsset) and to the business domains it belongs to (cat:inBusinessDomain), and is found by its text and by the asset it describes." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:author a owl:DatatypeProperty ;
+    rdfs:label "author" ;
+    rdfs:comment "The principal that wrote an article." ;
+    rdfs:domain cat:Article ;
+    rdfs:range xsd:string .
+
+cat:articleVersion a owl:DatatypeProperty ;
+    rdfs:label "article version" ;
+    rdfs:comment "The version of an article; it only increases." ;
+    rdfs:domain cat:Article ;
+    rdfs:range xsd:nonNegativeInteger .
+
+cat:articleStatus a owl:DatatypeProperty ;
+    rdfs:label "article status" ;
+    rdfs:comment "Where the article is on the review lifecycle: draft, in_review, approved or deprecated (MEDULLA-TYPED-PACKS-R801.1)." ;
+    rdfs:domain cat:Article ;
+    rdfs:range xsd:string .
+
+cat:aboutAsset a owl:ObjectProperty ;
+    rdfs:label "about asset" ;
+    rdfs:comment "An asset an article explains." ;
+    rdfs:domain cat:Article ;
+    rdfs:range cat:Asset .
+
+cat:inBusinessDomain a owl:ObjectProperty ;
+    rdfs:label "in business domain" ;
+    rdfs:comment "A business domain an article belongs to." ;
+    rdfs:domain cat:Article ;
+    rdfs:range cat:BusinessDomain .
+
 cat:WorkflowDefinitionAsset a owl:Class ;
     rdfs:label "Workflow Definition" ;
     rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;
