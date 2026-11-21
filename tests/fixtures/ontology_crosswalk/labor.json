@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "origin": "hr-v1",
+  "target_vocabulary_revision": "schemaorg-labor-v1",
+  "mappings": [
+    {
+      "name": "employee",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Employee",
+      "target_class_iri": "http://schema.org/Person",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "role",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#PositionRole",
+      "target_class_iri": "http://schema.org/Role",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "credential",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Credential",
+      "target_class_iri": "http://schema.org/EducationalOccupationalCredential",
+      "relation": "skos_exact_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "department",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Department",
+      "target_class_iri": "http://schema.org/Organization",
+      "relation": "see_also",
+      "target_category": "continuant"
+    }
+  ],
+  "expect": {
+    "mapped": [
+      "https://knuckles-team.github.io/ontology/core#Credential",
+      "https://knuckles-team.github.io/ontology/core#Department",
+      "https://knuckles-team.github.io/ontology/core#Employee",
+      "https://knuckles-team.github.io/ontology/core#PositionRole"
+    ],
+    "unmapped_sample": [
+      "https://knuckles-team.github.io/ontology/core#W2Employee",
+      "https://knuckles-team.github.io/ontology/core#Contractor1099",
+      "https://knuckles-team.github.io/ontology/core#CompensationBand",
+      "https://knuckles-team.github.io/ontology/core#PerformanceReview"
+    ]
+  }
+}

@@ -49,6 +49,11 @@ FIXTURE = (
     / "core_metadata.json"
 )
 FIXTURE_SHA256 = "58b059a142a0f55278171e8b51c8d89fad4dbf656a97afa8d13b0d2d65be8bfc"
+DOMAIN_FIXTURE_SHA256 = {
+    "medical": "99691ce58be28a282e4d609532b4adc6380043569e1a46f6e2315e71662a27d8",
+    "technology": "a2100976830c6e90b2f9f9be6fc3f4d545595965a2d19dfb6bf3b4c4b89b2f76",
+    "labor": "ef43ebc5f67555b83d31f8afdb29e0d7e3ee98b81dc8f9beb248f3c42280d2d8",
+}
 # Under the per-test timeout (900 s); a rejected projection still fails at once.
 PROJECTION_WAIT_SECONDS = 600
 
@@ -56,6 +61,13 @@ PROJECTION_WAIT_SECONDS = 600
 def load_fixture() -> dict[str, Any]:
     raw = FIXTURE.read_bytes()
     assert hashlib.sha256(raw).hexdigest() == FIXTURE_SHA256
+    return json.loads(raw)
+
+
+def load_domain_fixture(name: str) -> dict[str, Any]:
+    """One domain crosswalk fixture (``medical``, ``technology``, ``labor``), hash-checked."""
+    raw = (FIXTURE.parent / f"{name}.json").read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == DOMAIN_FIXTURE_SHA256[name]
     return json.loads(raw)
 
 

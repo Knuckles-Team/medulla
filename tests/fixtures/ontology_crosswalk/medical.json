@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "origin": "medical-v1",
+  "target_vocabulary_revision": "schemaorg-medical-v1",
+  "mappings": [
+    {
+      "name": "patient",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Patient",
+      "target_class_iri": "http://schema.org/Patient",
+      "relation": "skos_exact_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "medication",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Medication",
+      "target_class_iri": "http://schema.org/Drug",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "condition",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#ClinicalCondition",
+      "target_class_iri": "http://schema.org/MedicalCondition",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "trial",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#ClinicalTrial",
+      "target_class_iri": "http://schema.org/MedicalTrial",
+      "relation": "skos_close_match",
+      "target_category": "process"
+    }
+  ],
+  "expect": {
+    "mapped": [
+      "https://knuckles-team.github.io/ontology/core#ClinicalCondition",
+      "https://knuckles-team.github.io/ontology/core#ClinicalTrial",
+      "https://knuckles-team.github.io/ontology/core#Medication",
+      "https://knuckles-team.github.io/ontology/core#Patient"
+    ],
+    "unmapped_sample": [
+      "https://knuckles-team.github.io/ontology/core#LabResult",
+      "https://knuckles-team.github.io/ontology/core#CarePathway",
+      "https://knuckles-team.github.io/ontology/core#DiagnosisCode",
+      "https://knuckles-team.github.io/ontology/core#ConsentRecord"
+    ]
+  }
+}

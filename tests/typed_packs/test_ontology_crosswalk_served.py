@@ -9,9 +9,15 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import sys
 import uuid
+from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from _commons_generation import connect as connect_engine, restartable_engine
 from ontology_pack_support import (
     FIXTURE_SHA256,
     attach_pack,
@@ -21,6 +27,7 @@ from ontology_pack_support import (
     crosswalk_record,
     import_entries,
     inspect_committed,
+    load_domain_fixture,
     load_fixture,
     ontology_entry,
     violation_codes,
@@ -414,3 +421,186 @@ def test_coverage_matches_pack_status_and_schema_reads() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+DOMAINS = ("medical", "technology", "labor")
+
+
+def _domain_entries(connector: str, fixture, revision: str, **override):
+    return [
+        crosswalk_entry(
+            connector,
+            mapping["name"],
+            crosswalk_record(mapping, fixture, revision, **override),
+        )
+        for mapping in fixture["mappings"]
+    ]
+
+
+async def _committed_classes(client) -> set[str]:
+    """Every committed class IRI, paged by cursor until exhausted."""
+    found: set[str] = set()
+    cursor = None
+    while True:
+        page = await reasoning.send_graph_schema_classes(
+            client, {"kind": "class", "cursor": cursor, "limit": 500}
+        )
+        found.update(term.iri for term in page.terms)
+        cursor = getattr(page, "next_cursor", None)
+        if not cursor:
+            return found
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.6")
+@pytest.mark.no_engine
+def test_domain_coverage_and_refusals(tmp_path: Path) -> None:
+    fixtures = {name: load_domain_fixture(name) for name in DOMAINS}
+    medical = fixtures["medical"]
+    patient = medical["mappings"][0]
+
+    async def refuse(client, revision, mapping, code, **override) -> None:
+        connector = _connector("xwalk-domain-refuse")
+        before = await _state(client)
+        refused = await import_entries(
+            client,
+            connector,
+            [
+                crosswalk_entry(
+                    connector,
+                    "m",
+                    crosswalk_record(mapping, medical, revision, **override),
+                )
+            ],
+        )
+        assert code in violation_codes(refused), refused
+        assert await _state(client) == before
+
+    async def run_one(engine) -> tuple[str, dict]:
+        client = await connect_engine(engine=engine)
+        try:
+            revision = (await inspect_committed(client)).composed_digest
+            reports: dict[str, object] = {}
+            for name in DOMAINS:
+                fixture = fixtures[name]
+                connector = _connector(f"xwalk-{name}")
+                imported = await import_entries(
+                    client, connector, _domain_entries(connector, fixture, revision)
+                )
+                assert imported["result"] == "imported", imported
+                await attach_pack(client, connector)
+                view = await inspect_committed(client)
+                report = next(
+                    c for c in view.coverage if c.source_id == f"pack:{connector}"
+                )
+                expect = fixture["expect"]
+                assert report.source_revision == revision
+                assert list(report.mapped) == expect["mapped"]
+                unmapped = {u.class_iri: u.reason for u in report.unmapped}
+                for iri in expect["unmapped_sample"]:
+                    assert unmapped[iri] == "no_declared_mapping"
+                assert not set(report.mapped) & set(unmapped)
+                assert [u.class_iri for u in report.unmapped] == sorted(unmapped)
+                assert report.declared == len(report.mapped) + len(report.unmapped)
+                served = {
+                    (c.source_class_iri, c.target_class_iri, c.relation)
+                    for c in view.crosswalks
+                }
+                for mapping in fixture["mappings"]:
+                    assert (
+                        mapping["source_class_iri"],
+                        mapping["target_class_iri"],
+                        mapping["relation"],
+                    ) in served
+                assert set(report.mapped) <= await _committed_classes(client)
+                reports[name] = report
+            assert len({r.declared for r in reports.values()}) == 1
+            assert len({r.source_digest for r in reports.values()}) == 1
+
+            # Each refusal is one change on medical records and moves nothing.
+            unknown = copy.deepcopy(patient)
+            unknown["source_class_iri"] = f"{CORE}NoSuchClass"
+            await refuse(client, revision, unknown, "CROSSWALK_SOURCE_UNKNOWN")
+
+            connector = _connector("xwalk-domain-scope")
+            local = copy.deepcopy(patient)
+            local["source_class_iri"] = "urn:xwalk:Local"
+            before = await _state(client)
+            refused = await import_entries(
+                client,
+                connector,
+                [
+                    ontology_entry(
+                        connector,
+                        "local",
+                        "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+                        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+                        "<urn:xwalk:Local> a owl:Class ;\n"
+                        f"    rdfs:subClassOf <{CORE}Person> .\n",
+                    ),
+                    crosswalk_entry(
+                        connector, "m", crosswalk_record(local, medical, revision)
+                    ),
+                ],
+            )
+            assert "CROSSWALK_SOURCE_OUT_OF_SCOPE" in violation_codes(refused)
+            assert await _state(client) == before
+
+            await refuse(
+                client,
+                revision,
+                patient,
+                "CROSSWALK_REVISION_MISMATCH",
+                source_revision="stale-revision",
+            )
+            await refuse(
+                client,
+                revision,
+                patient,
+                "CROSSWALK_TARGET_UNKNOWN",
+                approved_target_declarations=[],
+            )
+            wrong_category = copy.deepcopy(patient)
+            wrong_category["target_category"] = "process"
+            await refuse(client, revision, wrong_category, "CROSSWALK_CATEGORY_CONFLICT")
+            broad = copy.deepcopy(patient)
+            broad["relation"] = "skos_broad_match"
+            await refuse(client, revision, broad, "CROSSWALK_CONFLICT")
+
+            # An origin edited after the digest was computed is forged evidence.
+            forged = crosswalk_record(patient, medical, revision)
+            forged["origin"] = forged["origin"] + "-edited"
+            connector = _connector("xwalk-domain-forged")
+            before = await _state(client)
+            refused = await import_entries(
+                client, connector, [crosswalk_entry(connector, "m", forged)]
+            )
+            assert "CROSSWALK_EVIDENCE_INVALID" in violation_codes(refused)
+            assert await _state(client) == before
+            return (await _state(client))[0], {
+                name: report.model_dump() for name, report in reports.items()
+            }
+        finally:
+            await client.close()
+
+    async def run_two(engine, digest: str, reports: dict) -> None:
+        client = await connect_engine(engine=engine)
+        try:
+            view = await inspect_committed(client)
+            assert view.composed_digest == digest
+            for name in DOMAINS:
+                served = next(
+                    c
+                    for c in view.coverage
+                    if c.source_id.startswith(f"pack:xwalk-{name}-")
+                )
+                assert served.model_dump() == reports[name]
+            committed = await _committed_classes(client)
+            for name in DOMAINS:
+                assert set(reports[name]["mapped"]) <= committed
+        finally:
+            await client.close()
+
+    with restartable_engine(tmp_path, "run1", bootstrap=True) as engine:
+        digest, reports = asyncio.run(run_one(engine))
+    with restartable_engine(tmp_path, "run2", bootstrap=False) as engine:
+        asyncio.run(run_two(engine, digest, reports))

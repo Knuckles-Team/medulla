@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "origin": "software-v1",
+  "target_vocabulary_revision": "schemaorg-technology-v1",
+  "mappings": [
+    {
+      "name": "repository",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Repository",
+      "target_class_iri": "http://schema.org/SoftwareSourceCode",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "release",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Release",
+      "target_class_iri": "http://schema.org/SoftwareApplication",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    },
+    {
+      "name": "page",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#ConfluencePage",
+      "target_class_iri": "http://schema.org/WebPage",
+      "relation": "skos_close_match",
+      "target_category": "continuant"
+    }
+  ],
+  "expect": {
+    "mapped": [
+      "https://knuckles-team.github.io/ontology/core#ConfluencePage",
+      "https://knuckles-team.github.io/ontology/core#Release",
+      "https://knuckles-team.github.io/ontology/core#Repository"
+    ],
+    "unmapped_sample": [
+      "https://knuckles-team.github.io/ontology/core#Branch",
+      "https://knuckles-team.github.io/ontology/core#Commit",
+      "https://knuckles-team.github.io/ontology/core#Test",
+      "https://knuckles-team.github.io/ontology/core#JiraIssue"
+    ]
+  }
+}
