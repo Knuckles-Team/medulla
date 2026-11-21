@@ -78,7 +78,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
 - [x] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
 - [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation (canonical binding id, `search_live`, projection narrowing, per-statement `nearest` UDF)
-- [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
+- [x] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
 - [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
 - [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
 - [ ] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
@@ -88,7 +88,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [ ] T081 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.6 Multimodal space: hot-path proof
 - [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
-- [ ] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior (L2 compiler test only; served carrier is R040.1.7)
+- [x] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior (L2 compiler test only; served carrier is R040.1.7)
 - [ ] T083a [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
 - [ ] T084 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.3 Constraints: wiring
 - [ ] T085 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.4 Constraints: refusal
@@ -104,11 +104,11 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T095 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.8 Chunk encoding: hot-path proof
 - [ ] T096 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.1 Column advice: model
 - [ ] T097 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.2 Column advice: pure workload-first `rank_columns` over `AdviceInput` and `AdvicePolicy`
-- [ ] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: text-search usage counters on the tenant TableStore and `information_schema.vector_advice`
-- [ ] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: pinned-read refusals `COLUMN_TYPE_UNSUPPORTED` and `SCHEMA_REVISION_STALE`
+- [x] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: text-search usage counters on the tenant TableStore and `information_schema.vector_advice`
+- [x] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: pinned-read refusals `COLUMN_TYPE_UNSUPPORTED` and `SCHEMA_REVISION_STALE`
 - [ ] T100 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.5 Column advice: `ColumnVectorAdvice.receipt` (`AdviceReceipt`) served as five `information_schema.vector_advice` columns
 - [ ] T101 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.6 Column advice: hot-path proof
-- [ ] T102 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.1 Topic fusion: model
+- [x] T102 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.1 Topic fusion: model
 - [ ] T103 [US1] MEDULLA-FEDERATED-QUERY-R040.2.2 Topic fusion: behavior
 - [ ] T104 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.3 Topic fusion: wiring
 - [ ] T105 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.4 Topic fusion: refusal

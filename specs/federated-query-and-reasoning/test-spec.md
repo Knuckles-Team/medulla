@@ -787,7 +787,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R077.6.1` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.2` | `crates/medulla-table-store/src/tables/column_advice.rs::tests::traffic_changes_rank_not_statistics` (planned) | L2 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.2` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` (planned) | L4 |
-| `MEDULLA-FEDERATED-QUERY-R077.6.3` | `tests/retrieval/test_column_advice_served.py::test_advice_relation_reads_production_observations` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R077.6.3` | `tests/retrieval/test_column_advice_served.py::test_advice_relation_reads_production_observations` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.4` | `tests/retrieval/test_column_advice_served.py::test_unembeddable_types_refuse_without_side_effects` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.5` | `tests/retrieval/test_column_advice_served.py::test_receipt_matches_observations_binding_unchanged` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.6` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
