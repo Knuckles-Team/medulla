@@ -916,6 +916,42 @@ fn dispatch(
             rule,
             &resolution_ids,
         )?),
+        DecisionLogOp::ProposeRule {
+            rule,
+            scope,
+            source_output_digest,
+            predecessor,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogProposeRule,
+        >(super::stat_rule_promotion::propose(
+            ctx,
+            rule,
+            scope,
+            source_output_digest,
+            predecessor,
+        )?),
+        DecisionLogOp::ApproveRule {
+            rule_id,
+            version,
+            source_output_digest,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogApproveRule,
+        >(super::stat_rule_promotion::approve(
+            ctx,
+            reader,
+            &rule_id,
+            version,
+            &source_output_digest,
+        )?),
+        DecisionLogOp::RevokeRule {
+            rule_id, version, ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogRevokeRule,
+        >(super::stat_rule_promotion::revoke(
+            ctx, reader, &rule_id, version,
+        )?),
         DecisionLogOp::Learn { write, .. } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogLearn,

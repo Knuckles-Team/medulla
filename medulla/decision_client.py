@@ -700,6 +700,60 @@ def resolve_op(
     }
 
 
+def promote_rule_op(
+    tenant_id: str, rule: Mapping[str, Any], resolution_ids: Sequence[str]
+) -> dict[str, Any]:
+    """Promote a guardrail rule backed by stored abstention resolutions."""
+    return {
+        "op": "promote_rule",
+        "tenant_id": tenant_id,
+        "rule": dict(rule),
+        "resolution_ids": list(resolution_ids),
+    }
+
+
+def propose_rule_op(
+    tenant_id: str,
+    rule: Mapping[str, Any],
+    scope: str,
+    source_output_digest: str,
+    *,
+    predecessor: int | None = None,
+) -> dict[str, Any]:
+    """Propose a new version of a rule, bound to the run output it corrects."""
+    return {
+        "op": "propose_rule",
+        "tenant_id": tenant_id,
+        "rule": dict(rule),
+        "scope": scope,
+        "source_output_digest": source_output_digest,
+        "predecessor": predecessor,
+    }
+
+
+def approve_rule_op(
+    tenant_id: str, rule_id: str, version: int, source_output_digest: str
+) -> dict[str, Any]:
+    """One approval of a proposed version; the second distinct approver activates it."""
+    return {
+        "op": "approve_rule",
+        "tenant_id": tenant_id,
+        "rule_id": rule_id,
+        "version": version,
+        "source_output_digest": source_output_digest,
+    }
+
+
+def revoke_rule_op(tenant_id: str, rule_id: str, version: int) -> dict[str, Any]:
+    """Revoke the active version of a rule, keeping its history."""
+    return {
+        "op": "revoke_rule",
+        "tenant_id": tenant_id,
+        "rule_id": rule_id,
+        "version": version,
+    }
+
+
 def evaluate_op(tenant_id: str, evaluation: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "evaluate", "tenant_id": tenant_id, "evaluation": dict(evaluation)}
 
@@ -1666,6 +1720,10 @@ __all__ = [
     "record_measured_fact",
     "record_outcome_op",
     "resolve_op",
+    "promote_rule_op",
+    "propose_rule_op",
+    "approve_rule_op",
+    "revoke_rule_op",
     "task_plan_request",
     "verify_task_plan_receipt",
     "usage_append_op",

@@ -435,6 +435,32 @@ pub enum DecisionLogOp {
         rule: GuardrailRule,
         resolution_ids: BoundedVec<String, 64>,
     },
+    /// Propose a new version of a rule bound to the run output its correction came from
+    /// (MEDULLA-DECISION-ENGINE-R129.100). The version stays `Proposed` until two distinct
+    /// approvers approved it and the invariant gate passed.
+    ProposeRule {
+        tenant_id: String,
+        rule: GuardrailRule,
+        scope: String,
+        source_output_digest: String,
+        #[serde(default)]
+        predecessor: Option<u64>,
+    },
+    /// One approval of a proposed version (MEDULLA-DECISION-ENGINE-R129.100). The caller is the
+    /// approver; the second distinct approver activates the version.
+    ApproveRule {
+        tenant_id: String,
+        rule_id: String,
+        version: u64,
+        source_output_digest: String,
+    },
+    /// Revoke the named active version of a rule, keeping its history
+    /// (MEDULLA-DECISION-ENGINE-R129.100).
+    RevokeRule {
+        tenant_id: String,
+        rule_id: String,
+        version: u64,
+    },
     /// A write-back operation (MEDULLA-DECISION-ENGINE-R615.2, R615.3).
     /// Preflight and proposals compute only; queue, approve and release store
     /// the approval queue, so the class follows the computation.
@@ -841,7 +867,10 @@ impl DecisionLogOp {
                 }
             }
             Self::Learn { write, .. } => write.class(),
-            Self::PromoteRule { .. } => LogOpClass::Govern,
+            Self::PromoteRule { .. }
+            | Self::ProposeRule { .. }
+            | Self::ApproveRule { .. }
+            | Self::RevokeRule { .. } => LogOpClass::Govern,
             Self::RunRecord { .. } | Self::HarnessAdoption { .. } => LogOpClass::Write,
         }
     }
@@ -867,6 +896,9 @@ impl DecisionLogOp {
             | Self::Resolve { tenant_id, .. }
             | Self::Learn { tenant_id, .. }
             | Self::PromoteRule { tenant_id, .. }
+            | Self::ProposeRule { tenant_id, .. }
+            | Self::ApproveRule { tenant_id, .. }
+            | Self::RevokeRule { tenant_id, .. }
             | Self::Writeback { tenant_id, .. }
             | Self::RunRecord { tenant_id, .. }
             | Self::CapabilityOutcome { tenant_id, .. }

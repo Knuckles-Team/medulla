@@ -345,6 +345,15 @@ closed_error_codes! {
         /// A rule promotion contradicts a published invariant; nothing is
         /// activated (MEDULLA-DECISION-ENGINE-R129.5).
         RuleContradictsInvariant => "RULE_CONTRADICTS_INVARIANT",
+        /// An approval names a source output digest other than the one the
+        /// version was proposed against (MEDULLA-DECISION-ENGINE-R129.100).
+        RuleOutputMismatch => "RULE_OUTPUT_MISMATCH",
+        /// A version names a predecessor that is not the active version of its rule.
+        RulePredecessorStale => "RULE_PREDECESSOR_STALE",
+        /// A revocation names a version that is not active.
+        RuleNotActive => "RULE_NOT_ACTIVE",
+        /// The second approval came from the principal that gave the first.
+        RuleApproverNotDistinct => "RULE_APPROVER_NOT_DISTINCT",
     }
 }
 

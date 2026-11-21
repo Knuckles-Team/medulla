@@ -72,9 +72,6 @@ pub mod pipeline_batch;
 pub mod retention_cleanup;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retention_policy;
-// MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod rule_correction;
 // EH-558 — sealed record classes: content-addressed rows generic writes may not change.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sealed_record;

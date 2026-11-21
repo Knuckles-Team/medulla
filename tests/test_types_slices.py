@@ -204,7 +204,6 @@ DOMAIN_SLICES = {
         "pipeline_batch",
         "retention_cleanup",
         "retention_policy",
-        "rule_correction",
         "versioning",
         "workload_class",
         "write_conflict",

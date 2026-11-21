@@ -4319,6 +4319,56 @@ class DecisionLogOpPromoteRule(BaseModel):
     tenant_id: str
 
 
+class RuleLifecycle(str, Enum):
+    PROPOSED = "proposed"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    REVOKED = "revoked"
+
+
+class RuleVersion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str | None = None
+    approver_second: str | None = None
+    predecessor: Annotated[int, Field(ge=0)] | None = None
+    rule_id: str
+    scope: str
+    source_output_digest: str
+    state: RuleLifecycle
+    version: Annotated[int, Field(ge=0)]
+
+
+class DecisionLogOpProposeRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["propose_rule"]
+    predecessor: Annotated[int, Field(ge=0)] | None = None
+    rule: GuardrailRule
+    scope: str
+    source_output_digest: str
+    tenant_id: str
+
+
+class DecisionLogOpApproveRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["approve_rule"]
+    rule_id: str
+    source_output_digest: str
+    tenant_id: str
+    version: Annotated[int, Field(ge=0)]
+
+
+class DecisionLogOpRevokeRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["revoke_rule"]
+    rule_id: str
+    tenant_id: str
+    version: Annotated[int, Field(ge=0)]
+
+
 class DecisionLogOpLearn(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4948,6 +4998,9 @@ DecisionLogOp = Annotated[
     | DecisionLogOpProvenance
     | DecisionLogOpWhyNot
     | DecisionLogOpPromoteRule
+    | DecisionLogOpProposeRule
+    | DecisionLogOpApproveRule
+    | DecisionLogOpRevokeRule
     | DecisionLogOpCapabilityOutcome
     | DecisionLogOpGenerationSpace
     | DecisionLogOpRunRecord
@@ -43193,6 +43246,11 @@ __all__ = [
     "DecisionLogOpHarnessLessons",
     "DecisionLogOpLearn",
     "DecisionLogOpPromoteRule",
+    "DecisionLogOpProposeRule",
+    "DecisionLogOpApproveRule",
+    "DecisionLogOpRevokeRule",
+    "RuleLifecycle",
+    "RuleVersion",
     "DecisionLogOpResolve",
     "DecisionLogOpVerify",
     "DecisionLogVerification",

@@ -314,3 +314,120 @@ async fn rejected_rule_is_audited_not_active() {
         .iter()
         .all(|rule| rule.rule_id != "rule:skip-review"));
 }
+
+const OUTPUT_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const OUTPUT_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+fn rule_of(rule_id: &str) -> GuardrailRule {
+    GuardrailRule {
+        rule_id: rule_id.to_string(),
+        applies_to_class: "eg:task".to_string(),
+        source_generation: "gen-1".to_string(),
+    }
+}
+
+async fn rule_op(
+    h: &Harness,
+    who: &str,
+    op: DecisionLogOp,
+) -> Result<medulla_agent_types::agent_guardrail::RuleVersion, String> {
+    decode(super::log_tests::log_op(h, who, op).await)
+}
+
+fn propose_op(rule_id: &str, digest: &str, predecessor: Option<u64>) -> DecisionLogOp {
+    DecisionLogOp::ProposeRule {
+        tenant_id: TENANT.to_string(),
+        rule: rule_of(rule_id),
+        scope: "tenant".to_string(),
+        source_output_digest: digest.to_string(),
+        predecessor,
+    }
+}
+
+fn approve_op(rule_id: &str, version: u64, digest: &str) -> DecisionLogOp {
+    DecisionLogOp::ApproveRule {
+        tenant_id: TENANT.to_string(),
+        rule_id: rule_id.to_string(),
+        version,
+        source_output_digest: digest.to_string(),
+    }
+}
+
+fn revoke_op(rule_id: &str, version: u64) -> DecisionLogOp {
+    DecisionLogOp::RevokeRule {
+        tenant_id: TENANT.to_string(),
+        rule_id: rule_id.to_string(),
+        version,
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R129.100
+#[tokio::test]
+async fn rule_versions_move_through_approval_supersession_and_revocation() {
+    use medulla_agent_types::agent_guardrail::RuleLifecycle;
+    let h = Harness::new().await;
+    publish_invariant(&h, TENANT, 1, &invariant("inv:no-skip", "rule:skip"));
+
+    // A proposal stays Proposed, bound to its run output.
+    let v1 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None)).await.unwrap();
+    assert_eq!((v1.version, v1.state), (1, RuleLifecycle::Proposed));
+    assert_eq!(v1.source_output_digest, OUTPUT_A);
+    assert!(h.store.published_guardrail_rules(TENANT).unwrap().is_empty());
+
+    // An approval over another output is refused.
+    let mismatch = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_B)).await;
+    assert!(mismatch.unwrap_err().starts_with("RULE_OUTPUT_MISMATCH"));
+
+    // The first approval records its approver and leaves the version Proposed; the same
+    // approver twice is refused; a second distinct approver activates it.
+    let first = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_A)).await.unwrap();
+    assert_eq!(first.state, RuleLifecycle::Proposed);
+    assert!(first.approver.is_some() && first.approver_second.is_none());
+    let twice = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_A)).await;
+    assert!(twice.unwrap_err().starts_with("RULE_APPROVER_NOT_DISTINCT"));
+    let active = rule_op(&h, "governor-2", approve_op("rule:tier", 1, OUTPUT_A)).await.unwrap();
+    assert_eq!(active.state, RuleLifecycle::Active);
+    assert_ne!(active.approver, active.approver_second);
+    assert_eq!(h.store.published_guardrail_rules(TENANT).unwrap().len(), 1);
+
+    // A predecessor that is not active is refused; the active one is superseded on activation.
+    let stale = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_B, Some(7))).await;
+    assert!(stale.unwrap_err().starts_with("RULE_PREDECESSOR_STALE"));
+    let v2 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_B, Some(1))).await.unwrap();
+    assert_eq!((v2.version, v2.predecessor), (2, Some(1)));
+    rule_op(&h, "governor", approve_op("rule:tier", 2, OUTPUT_B)).await.unwrap();
+    let v2 = rule_op(&h, "governor-2", approve_op("rule:tier", 2, OUTPUT_B)).await.unwrap();
+    assert_eq!(v2.state, RuleLifecycle::Active);
+    let superseded = rule_op(&h, "governor", revoke_op("rule:tier", 1)).await;
+    assert!(superseded.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
+
+    // Revocation names the active version and keeps the history.
+    let revoked = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await.unwrap();
+    assert_eq!(revoked.state, RuleLifecycle::Revoked);
+    let again = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await;
+    assert!(again.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
+    let transitions = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "rule-transition:rule:tier:", 100)
+        .unwrap();
+    assert_eq!(transitions.len(), 6, "every transition keeps its row");
+
+    // The invariant gate is not replaced by approval.
+    rule_op(&h, "governor", propose_op("rule:skip", OUTPUT_A, None)).await.unwrap();
+    rule_op(&h, "governor", approve_op("rule:skip", 1, OUTPUT_A)).await.unwrap();
+    let blocked = rule_op(&h, "governor-2", approve_op("rule:skip", 1, OUTPUT_A)).await;
+    assert!(blocked.unwrap_err().starts_with("RULE_CONTRADICTS_INVARIANT"));
+
+    // A caller of another tenant cannot act on this tenant's versions.
+    let foreign = VerifiedRequestContext::verified_for_test_in_tenant("governor", FOREIGN);
+    let crossed = super::super::log::handle_decision_log(
+        &h.state,
+        9,
+        &foreign,
+        approve_op("rule:tier", 2, OUTPUT_B),
+    )
+    .await;
+    assert!(decode::<medulla_agent_types::agent_guardrail::RuleVersion>(crossed)
+        .unwrap_err()
+        .starts_with("ACCESS_DENIED"));
+}

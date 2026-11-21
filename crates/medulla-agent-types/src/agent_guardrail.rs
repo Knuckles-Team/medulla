@@ -68,6 +68,45 @@ pub struct GuardrailRule {
     pub source_generation: String,
 }
 
+/// Where one version of a rule stands (MEDULLA-DECISION-ENGINE-R129.100).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RuleLifecycle {
+    /// Proposed and not yet approved by two distinct approvers.
+    Proposed,
+    /// Approved twice and past the invariant gate: the version that governs.
+    Active,
+    /// Replaced by a later version that named it as its predecessor.
+    Superseded,
+    /// Withdrawn while active; the history is kept.
+    Revoked,
+}
+
+/// One version of a rule, bound to the run output its correction came from
+/// (MEDULLA-DECISION-ENGINE-R129.100).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RuleVersion {
+    pub rule_id: String,
+    /// One above the highest version of `rule_id` proposed before it; the first is 1.
+    pub version: u64,
+    pub scope: String,
+    /// The digest of the run output this correction was made against.
+    pub source_output_digest: String,
+    /// The active version this one replaces on activation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub predecessor: Option<u64>,
+    pub state: RuleLifecycle,
+    /// The principal of the first approval.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approver: Option<String>,
+    /// The principal of the second approval, distinct from the first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approver_second: Option<String>,
+}
+
 /// Typed promotion outcome (MEDULLA-DECISION-ENGINE-R129.2).
 ///
 /// This wire type does not implement the invariant gate or activate rules.
