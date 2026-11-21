@@ -13,7 +13,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T007 [US1] MEDULLA-TYPED-PACKS-R001.7 Prompt payload validation
 - [ ] T008 [US1] MEDULLA-TYPED-PACKS-R001.8 Deterministic runtime rendering
 - [ ] T009 [US1] MEDULLA-TYPED-PACKS-R001.9 Prompt operation wire types
-- [ ] T010 [US1] MEDULLA-TYPED-PACKS-R001.100 Versioned nested prompt and tool schemas with incremental compatibility
+- [x] T010 [US1] MEDULLA-TYPED-PACKS-R001.100 Versioned nested prompt and tool schemas with incremental compatibility
 - [ ] T011 [US1] MEDULLA-TYPED-PACKS-R002.1 Body staging
 - [ ] T012 [US1] MEDULLA-TYPED-PACKS-R002.2 Unchanged holder transition
 - [ ] T013 [US1] MEDULLA-TYPED-PACKS-R002.3 Revised holder transition
@@ -25,7 +25,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T019 [US1] MEDULLA-TYPED-PACKS-R002.9 Served prompt rendering
 - [ ] T020 [US1] MEDULLA-TYPED-PACKS-R002.10 Receipt verification before model dispatch
 - [ ] T021 [US1] MEDULLA-TYPED-PACKS-R002.11 Durable prompt restart proof
-- [ ] T022 [US1] MEDULLA-TYPED-PACKS-R002.12 Native-component projection
+- [x] T022 [US1] MEDULLA-TYPED-PACKS-R002.12 Native-component projection
 - [ ] T023 [US1] MEDULLA-TYPED-PACKS-R002.13 Render receipt verification operation
 - [ ] T024 [US1] MEDULLA-TYPED-PACKS-R003 Import boundary enforces archive integrity, importer binding and G1-G21
 - [ ] T025 [US1] MEDULLA-TYPED-PACKS-R004 Python ConnectorPackClient with a deterministic import key
@@ -78,9 +78,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T070 [US2] MEDULLA-TYPED-PACKS-R045.4 Admission refuses an unknown side-effect or declarer value
 - [ ] T071 [US2] MEDULLA-TYPED-PACKS-R045.5 Admission records an unproven read-only claim
 - [ ] T072 [US2] MEDULLA-TYPED-PACKS-R045.6 The tool-subset path abstains for a tool with no size
-- [ ] T073 [US2] MEDULLA-TYPED-PACKS-R045.7 A read-only claim is certified only by a trusted declarer
+- [x] T073 [US2] MEDULLA-TYPED-PACKS-R045.7 A read-only claim is certified only by a trusted declarer
 - [ ] T074 [US2] MEDULLA-TYPED-PACKS-R045.8 The Python client carries the new fields
-- [ ] T075 [US2] MEDULLA-TYPED-PACKS-R045.9 End-to-end proof: a two-tool pack yields a budget-respecting subset
+- [x] T075 [US2] MEDULLA-TYPED-PACKS-R045.9 End-to-end proof: a two-tool pack yields a budget-respecting subset
 - [ ] T076 [US2] MEDULLA-TYPED-PACKS-R046 Cost annotation on pack entries
 - [ ] T077 [US2] MEDULLA-TYPED-PACKS-R047 Latency annotation on pack entries
 - [ ] T078 [US2] MEDULLA-TYPED-PACKS-R048.1 Context window is a named model fact
@@ -139,7 +139,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T132 [US3] MEDULLA-TYPED-PACKS-R093.1 Public Turtle parse identity locality
 - [ ] T133 [US3] MEDULLA-TYPED-PACKS-R093.2 Reproject-path blank-node isolation
 - [ ] T134 [US3] MEDULLA-TYPED-PACKS-R094.1 Stable content route returns verified bytes
-- [ ] T135 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export: `ExportBlueprint`, `BlueprintExport`, `COMPONENT_REVISION_UNKNOWN`
+- [x] T135 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export: `ExportBlueprint`, `BlueprintExport`, `COMPONENT_REVISION_UNKNOWN`
 - [ ] T136 [US3] MEDULLA-TYPED-PACKS-R094.3 Modified native blueprint import
 - [ ] T137 [US3] MEDULLA-TYPED-PACKS-R094.4 Blueprint retry identity
 - [ ] T138 [US3] MEDULLA-TYPED-PACKS-R094.5 Served lossless blueprint round trip
@@ -156,7 +156,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
 - [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
 - [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
-- [ ] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
+- [x] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
 - [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals: pinned revisions, activation coverage, `OntologyInspection.external_coverage`
 - [ ] T153 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
 - [ ] T154 [US3] MEDULLA-TYPED-PACKS-R097.700 Domain pack manifest, mapping language, loader and promotion bridge
@@ -164,13 +164,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T156 [US3] MEDULLA-TYPED-PACKS-R098 Ontology inspection and inline data triples for validation
 - [ ] T157 [US3] MEDULLA-TYPED-PACKS-R099 Best-matching prototype by cosine similarity in the numeric kernel
 - [ ] T158 [US4] MEDULLA-TYPED-PACKS-R100.1 Rendered skill package model
-- [ ] T159 [US4] MEDULLA-TYPED-PACKS-R100.2 Render a skill package from graph content
+- [x] T159 [US4] MEDULLA-TYPED-PACKS-R100.2 Render a skill package from graph content
 - [ ] T160 [US4] MEDULLA-TYPED-PACKS-R100.3 Call rendering from the catalog listing
 - [ ] T161 [US4] MEDULLA-TYPED-PACKS-R100.4 Dangling ontology reference refusal
 - [ ] T162 [US4] MEDULLA-TYPED-PACKS-R100.5 Rendered package evidence
-- [ ] T163 [US4] MEDULLA-TYPED-PACKS-R100.6 Rendered package hot-path proof
+- [x] T163 [US4] MEDULLA-TYPED-PACKS-R100.6 Rendered package hot-path proof
 - [ ] T164 [US4] MEDULLA-TYPED-PACKS-R100.100 Lossless SKILL.md frontmatter and step editing
-- [ ] T165 [US4] MEDULLA-TYPED-PACKS-R100.101 Skill consumer compatibility and declared-migration admission
+- [x] T165 [US4] MEDULLA-TYPED-PACKS-R100.101 Skill consumer compatibility and declared-migration admission
 - [ ] T166 [US4] MEDULLA-TYPED-PACKS-R101.1 Model
 - [ ] T167 [US4] MEDULLA-TYPED-PACKS-R101.2 Connector contract shapes
 - [ ] T168 [US4] MEDULLA-TYPED-PACKS-R101.9 One tenant key for pack heads
@@ -191,7 +191,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T183 [US4] MEDULLA-TYPED-PACKS-R103.6 Runtime ontology hot-path proof
 - [ ] T184 [US4] MEDULLA-TYPED-PACKS-R104.1 Model
 - [x] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
-- [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring: `PackEntryKind::SeedPart`, `validate_seed_entries`, `write_projection_triples`
+- [x] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring: `PackEntryKind::SeedPart`, `validate_seed_entries`, `write_projection_triples`
 - [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
 - [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
 - [ ] T189 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
@@ -209,7 +209,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T335 [US4] MEDULLA-TYPED-PACKS-R105.10.3 No local name repeats across the core namespaces
 - [ ] T336 [US4] MEDULLA-TYPED-PACKS-R105.10.4 The engine's parent catalog is the packaged core set
 - [ ] T198 [US4] MEDULLA-TYPED-PACKS-R106.1 Model
-- [ ] T199 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
+- [x] T199 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
 - [ ] T200 [US4] MEDULLA-TYPED-PACKS-R106.3 Wiring
 - [ ] T201 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
 - [ ] T202 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
@@ -217,7 +217,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T204 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
 - [ ] T205 [US4] MEDULLA-TYPED-PACKS-R107.1 Model
 - [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
-- [ ] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
+- [x] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
 - [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
 - [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Evidence
 - [ ] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
@@ -236,8 +236,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T223 [US4] MEDULLA-TYPED-PACKS-R108.13 Curated articles and guides
 - [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates: `cat:SavedQueryAsset`, `cat:usesStoredQuery`, `AssetRecord::StoredQuery`
 - [ ] T225 [US4] MEDULLA-TYPED-PACKS-R108.15 AI and ML model assets
-- [ ] T226 [US4] MEDULLA-TYPED-PACKS-R108.16 One ranked index across all asset families, callable from queries
-- [ ] T227 [US4] MEDULLA-TYPED-PACKS-R109.1 Model
+- [x] T226 [US4] MEDULLA-TYPED-PACKS-R108.16 One ranked index across all asset families, callable from queries
+- [x] T227 [US4] MEDULLA-TYPED-PACKS-R109.1 Model
 - [ ] T228 [US4] MEDULLA-TYPED-PACKS-R109.2 Behavior
 - [ ] T229 [US4] MEDULLA-TYPED-PACKS-R109.3 Wiring
 - [ ] T230 [US4] MEDULLA-TYPED-PACKS-R109.4 Refusal
@@ -248,7 +248,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
 - [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
 - [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
-- [ ] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor: `extract_object_model` in `medulla_rdf::pack`, `OBJECT_MODEL_INVALID`
+- [x] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor: `extract_object_model` in `medulla_rdf::pack`, `OBJECT_MODEL_INVALID`
 - [ ] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
 - [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
 - [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior
@@ -271,7 +271,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T257 [US6] MEDULLA-TYPED-PACKS-R700.7 Declared skill type key
 - [ ] T258 [US6] MEDULLA-TYPED-PACKS-R700.8 Graph reference files import as skill files
 - [ ] T259 [US6] MEDULLA-TYPED-PACKS-R700.9 Distill a source set into a skill-graph bundle
-- [ ] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
+- [x] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
 - [ ] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
 - [ ] T262 [US6] MEDULLA-TYPED-PACKS-R701.3 Wiring
 - [ ] T263 [US6] MEDULLA-TYPED-PACKS-R701.4 Refusal
@@ -305,7 +305,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T291 [US7] MEDULLA-TYPED-PACKS-R804.1 Model
 - [x] T292 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
 - [x] T293 [US7] MEDULLA-TYPED-PACKS-R804.3 Wiring
-- [ ] T294 [US7] MEDULLA-TYPED-PACKS-R804.4 Refusals
+- [x] T294 [US7] MEDULLA-TYPED-PACKS-R804.4 Refusals
 - [x] T295 [US7] MEDULLA-TYPED-PACKS-R804.5 Evidence
 - [x] T296 [US7] MEDULLA-TYPED-PACKS-R804.6 Hot-path proof
 - [ ] T297 [US7] MEDULLA-TYPED-PACKS-R805.1 Model
@@ -314,7 +314,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T300 [US7] MEDULLA-TYPED-PACKS-R805.4 Refusals
 - [ ] T301 [US7] MEDULLA-TYPED-PACKS-R805.5 Evidence
 - [ ] T302 [US7] MEDULLA-TYPED-PACKS-R805.6 Hot-path proof
-- [ ] T303 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
+- [x] T303 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
 - [ ] T304 [US7] MEDULLA-TYPED-PACKS-R806 Serve schema drift records and repair approval as methods
 - [x] T305 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
 - [ ] T306 [US7] MEDULLA-TYPED-PACKS-R808 Operator-selected schema import with digest check and readback

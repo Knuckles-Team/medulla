@@ -95,6 +95,14 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
     base_key = next(k for k in baseline if k.strip("<>") == skill)
     assert after_deprecate[key] < baseline[base_key]
 
+    # An endorsement (cat:flag) raises the rank of the asset it is set on.
+    prompt = "urn:medulla:asset:prompt:orders"
+    admin.rdf.add_triples(turtle=f'{PREFIX}<{prompt}> cat:flag "endorsement" .\n')
+    after_endorse = dict(_ranked(admin, "orders"))
+    endorsed = next(k for k in after_endorse if k.strip("<>") == prompt)
+    unendorsed = next(k for k in baseline if k.strip("<>") == prompt)
+    assert after_endorse[endorsed] > baseline[unendorsed]
+
     # Text over the knob is refused with its code.
     with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):
         _ranked(admin, "x" * 1001)
