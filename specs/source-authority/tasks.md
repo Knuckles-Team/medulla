@@ -69,6 +69,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T061 [US6] MEDULLA-SRC-AUTH-R012.6 Source sync wiring
 - [ ] T062 [US6] MEDULLA-SRC-AUTH-R012.7 Source sync refusal
 - [ ] T063 [US6] MEDULLA-SRC-AUTH-R012.8 Source sync evidence
-- [ ] T064 [US6] MEDULLA-SRC-AUTH-R012.9 Source sync hot-path proof
+- [ ] T064 [US6] MEDULLA-SRC-AUTH-R012.9 Source sync hot-path proof: one L3 journey through the served `SourceSync` and the nightly `source_sync` bench
 - [ ] T067 [US6] MEDULLA-SRC-AUTH-R802 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T068 [US6] MEDULLA-SRC-AUTH-R802.1 MappingNotApproved/MappingApprovalState state machine: route 1 census findings through MappingApprovalState::apply

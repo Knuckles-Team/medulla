@@ -246,6 +246,8 @@ The graph is the one system of record; this is the one-engine rule applied to sy
 
 Sync state lives as `vg:SyncState` graph facts in the same batch as the inbound change, so no second database exists. The engine never writes to a source: arbora approves a proposal (`ARBORA-OPS-R865`) and the connector sink executes the released change set (`SCION-GOVERNED-WRITEBACK-R006`). Format adapters implement `SyncAdapter`: processes (`MEDULLA-CQ-ORCH-R703.2`), architecture models (`MEDULLA-CQ-ORCH-R705.7`) and open metadata (`MEDULLA-TYPED-PACKS-R110.5`). Call path: `Method::SourceSync` → `crates/medulla-h-graph/src/graph_ops/source_sync.rs::handle_source_sync` → `reconcile` (`crates/medulla-virtual-graph/src/source_sync.rs`) → one `MutationBatch` and the queued proposals.
 
+Proof level (R012.9): the served sync needs a host-driven foreign read, which only the in-crate `Harness` of `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs` completes. So the hot-path journey is an L3 test there, and no Python fixture duplicates it.
+
 ## Phase 2: Task approach
 
 `tasks.md` has one task per leaf row. Order: vocabulary and shapes (R001, R002), the approval path (R003), selection and its order (R004 to R006, R008), the audit (R007), roles and trust marks (R010, R011), then the served method and its journeys (R004.6.1, R009.4). Rows on different files run in parallel.
