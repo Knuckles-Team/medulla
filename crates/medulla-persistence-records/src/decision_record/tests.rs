@@ -28,13 +28,14 @@ pub const TENANT: &str = "tenant-a";
 
 fn publish(
     store: &AgentLibraryStore,
+    tenant: &str,
     nonce: u8,
     draft: AgentComponentDraft,
 ) -> AgentComponentEntry {
     let key = format!("seed:{}", draft.component_id);
     store
         .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(store, TENANT, &key, nonce, 0, "agent-component:publish"),
+            context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
             evaluation_receipt_digest: None,
             component: draft,
             prompt_blueprint: None,
@@ -45,6 +46,7 @@ fn publish(
 }
 
 fn draft(
+    tenant: &str,
     id: &str,
     kind: AgentComponentKind,
     facts: AgentComponentFacts,
@@ -54,11 +56,11 @@ fn draft(
         kind,
         facts,
         classification: vec![class.to_string()],
-        ..test_component_draft(TENANT, id)
+        ..test_component_draft(tenant, id)
     }
 }
 
-pub fn seed_library(store: &AgentLibraryStore) {
+pub fn seed_library(store: &AgentLibraryStore, tenant: &str) {
     let model = AgentComponentFacts::ModelProfile {
         provider: "provider".into(),
         model_identity: "model-a".into(),
@@ -84,30 +86,35 @@ pub fn seed_library(store: &AgentLibraryStore) {
     };
     let drafts = [
         draft(
+            tenant,
             "model-a",
             AgentComponentKind::ModelProfile,
             model,
             "eg:capability/generation/text",
         ),
         draft(
+            tenant,
             "prompt-a",
             AgentComponentKind::SystemPrompt,
             prompt,
             "eg:capability/reasoning/plan",
         ),
         draft(
+            tenant,
             "skill-a",
             AgentComponentKind::Skill,
             AgentComponentFacts::Opaque,
             "eg:capability/reasoning/plan",
         ),
         draft(
+            tenant,
             "ontology-a",
             AgentComponentKind::Ontology,
             AgentComponentFacts::Opaque,
             "eg:capability/reasoning/plan",
         ),
         draft(
+            tenant,
             "tool-web",
             AgentComponentKind::Tool,
             test_tool_facts(ToolEffect::Read),
@@ -115,13 +122,13 @@ pub fn seed_library(store: &AgentLibraryStore) {
         ),
     ];
     for (nonce, draft) in drafts.into_iter().enumerate() {
-        publish(store, 100 + nonce as u8, draft);
+        publish(store, tenant, 100 + nonce as u8, draft);
     }
 }
 
-fn request() -> AssemblyRequest {
+fn request(tenant: &str) -> AssemblyRequest {
     AssemblyRequest {
-        tenant_id: TENANT.to_string(),
+        tenant_id: tenant.to_string(),
         requirements: AssemblyRequirements {
             capabilities: BoundedVec::new(vec!["eg:capability/retrieval".to_string()]).unwrap(),
             ..AssemblyRequirements::default()
@@ -148,34 +155,35 @@ fn request() -> AssemblyRequest {
     }
 }
 
-pub fn decided(store: &AgentLibraryStore) -> Assembly {
-    decided_at(store, 20)
+pub fn decided(store: &AgentLibraryStore, tenant: &str) -> Assembly {
+    decided_at(store, tenant, 20)
 }
 
 /// The same solved assembly, decided at `created_at_ms`: a distinct record id per time.
-pub fn decided_at(store: &AgentLibraryStore, created_at_ms: u64) -> Assembly {
-    decided_under(store, created_at_ms, DecisionPolicy::engine_default())
+pub fn decided_at(store: &AgentLibraryStore, tenant: &str, created_at_ms: u64) -> Assembly {
+    decided_under(store, tenant, created_at_ms, DecisionPolicy::engine_default())
 }
 
 /// The same solved assembly, decided at `created_at_ms` under `policy`.
 pub fn decided_under(
     store: &AgentLibraryStore,
+    tenant: &str,
     created_at_ms: u64,
     policy: DecisionPolicy,
 ) -> Assembly {
     let entries = store
-        .assembly_candidates(TENANT, &request().candidates)
+        .assembly_candidates(tenant, &request(tenant).candidates)
         .expect("reads");
     let candidates = candidate_facts(&entries).expect("facts");
     let inputs = inputs(
-        request(),
+        request(tenant),
         candidates,
         Vec::new(),
         policy,
     )
     .expect("inputs");
     let identity = RecordIdentity {
-        tenant_id: TENANT.to_string(),
+        tenant_id: tenant.to_string(),
         caller_principal: "caller-a".to_string(),
         created_at_ms,
     };
@@ -187,10 +195,11 @@ pub fn decided_under(
 
 pub fn commit_context(
     store: &AgentLibraryStore,
+    tenant: &str,
     key: &str,
     nonce: u8,
 ) -> AgentLibraryMutationContext {
-    mutation_context(store, TENANT, key, nonce, 0, "decision:commit")
+    mutation_context(store, tenant, key, nonce, 0, "decision:commit")
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R019
@@ -198,11 +207,11 @@ pub fn commit_context(
 #[test]
 fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let record = decided(&store).record;
+    seed_library(&store, TENANT);
+    let record = decided(&store, TENANT).record;
     let digest = record.inputs.catalog_digest.clone();
     let first = store
-        .commit_decision_record(commit_context(&store, "commit-1", 1), &record, &digest, None)
+        .commit_decision_record(commit_context(&store, TENANT, "commit-1", 1), &record, &digest, None)
         .expect("commits");
     assert!(!first.replayed);
     assert_eq!(
@@ -216,7 +225,7 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let served: DecisionRecord = serde_json::from_slice(&content.body).expect("decodes");
     assert_eq!(served, record);
     let again = store
-        .commit_decision_record(commit_context(&store, "commit-2", 2), &record, &digest, None)
+        .commit_decision_record(commit_context(&store, TENANT, "commit-2", 2), &record, &digest, None)
         .expect("a repeat commit is a replay");
     assert!(again.replayed);
     assert_eq!(again.result.component, first.result.component);
@@ -226,12 +235,14 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
 #[test]
 fn a_catalog_that_moved_since_the_decision_is_a_stale_refusal() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let record = decided(&store).record;
+    seed_library(&store, TENANT);
+    let record = decided(&store, TENANT).record;
     publish(
         &store,
+        TENANT,
         120,
         draft(
+            TENANT,
             "tool-vector",
             AgentComponentKind::Tool,
             test_tool_facts(ToolEffect::Read),
@@ -240,7 +251,7 @@ fn a_catalog_that_moved_since_the_decision_is_a_stale_refusal() {
     );
     let error = store
         .commit_decision_record(
-            commit_context(&store, "commit-stale", 3),
+            commit_context(&store, TENANT, "commit-stale", 3),
             &record,
             &record.inputs.catalog_digest,
             None,
@@ -254,14 +265,14 @@ fn a_catalog_that_moved_since_the_decision_is_a_stale_refusal() {
 #[test]
 fn a_fabricated_record_whose_facts_differ_from_the_published_revision_is_refused() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let mut record = decided(&store).record;
+    seed_library(&store, TENANT);
+    let mut record = decided(&store, TENANT).record;
     let mut candidates = record.inputs.candidates.as_slice().to_vec();
     candidates[0].classification = BoundedVec::new(vec!["eg:capability".to_string()]).unwrap();
     record.inputs.candidates = BoundedVec::new(candidates).unwrap();
     let error = store
         .commit_decision_record(
-            commit_context(&store, "commit-forged", 4),
+            commit_context(&store, TENANT, "commit-forged", 4),
             &record,
             &record.inputs.catalog_digest,
             None,
@@ -274,12 +285,12 @@ fn a_fabricated_record_whose_facts_differ_from_the_published_revision_is_refused
 #[test]
 fn a_record_from_another_tenant_is_refused() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let mut record = decided(&store).record;
+    seed_library(&store, TENANT);
+    let mut record = decided(&store, TENANT).record;
     record.tenant_id = "tenant-b".to_string();
     let error = store
         .commit_decision_record(
-            commit_context(&store, "commit-tenant", 5),
+            commit_context(&store, TENANT, "commit-tenant", 5),
             &record,
             &record.inputs.catalog_digest,
             None,
@@ -295,12 +306,12 @@ fn a_record_from_another_tenant_is_refused() {
 #[test]
 fn a_published_graph_resolves_to_its_decision_record_through_synthesis_evidence() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let assembly = decided(&store);
+    seed_library(&store, TENANT);
+    let assembly = decided(&store, TENANT);
     let record = assembly.record.clone();
     let committed = store
         .commit_decision_record(
-            commit_context(&store, "commit-link", 6),
+            commit_context(&store, TENANT, "commit-link", 6),
             &record,
             &record.inputs.catalog_digest,
             None,
@@ -349,6 +360,7 @@ fn a_published_graph_resolves_to_its_decision_record_through_synthesis_evidence(
 #[cfg(test)]
 fn policy_draft(policy: &DecisionPolicy, content_digest: String) -> AgentComponentDraft {
     let mut draft = draft(
+        TENANT,
         "policy-tight",
         AgentComponentKind::DecisionPolicy,
         AgentComponentFacts::Opaque,
@@ -368,11 +380,11 @@ fn policy_draft(policy: &DecisionPolicy, content_digest: String) -> AgentCompone
 #[test]
 fn a_pinned_policy_component_decides_and_commits() {
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
+    seed_library(&store, TENANT);
     let mut policy = DecisionPolicy::engine_default();
     policy.node_budget = 5_000;
     let digest = medulla_decision_types::decision::digest::policy_digest(&policy);
-    let published = publish(&store, 130, policy_draft(&policy, digest));
+    let published = publish(&store, TENANT, 130, policy_draft(&policy, digest));
     let pin = ComponentDependency {
         component_id: published.component_id.clone(),
         kind: AgentComponentKind::DecisionPolicy,
@@ -382,7 +394,7 @@ fn a_pinned_policy_component_decides_and_commits() {
         .pinned_decision_policy(TENANT, &pin)
         .expect("the pinned body verifies");
     assert_eq!(read, policy);
-    let mut asked = request();
+    let mut asked = request(TENANT);
     asked.policy = DecisionPolicyRef::Pinned { component: pin };
     let entries = store
         .assembly_candidates(TENANT, &asked.candidates)
@@ -390,7 +402,7 @@ fn a_pinned_policy_component_decides_and_commits() {
     let candidates = candidate_facts(&entries).expect("facts");
     let inputs = inputs(asked, candidates, Vec::new(), read).expect("inputs");
     let identity = RecordIdentity {
-        tenant_id: TENANT.to_string(),
+        tenant_id: tenant.to_string(),
         caller_principal: "caller-a".to_string(),
         created_at_ms: 21,
     };
@@ -398,7 +410,7 @@ fn a_pinned_policy_component_decides_and_commits() {
     assert_eq!(record.inputs.solver.node_budget, 5_000);
     store
         .commit_decision_record(
-            commit_context(&store, "commit-pinned", 9),
+            commit_context(&store, TENANT, "commit-pinned", 9),
             &record,
             &record.inputs.catalog_digest,
             None,
@@ -433,6 +445,7 @@ fn a_policy_component_whose_body_does_not_match_its_digest_is_refused() {
 /// published so the graph's references resolve.
 pub fn evidence_request(
     store: &AgentLibraryStore,
+    tenant: &str,
     assembly: &Assembly,
     key: &str,
     nonce: u8,
@@ -445,7 +458,7 @@ pub fn evidence_request(
         .expect("solved answers an agent");
     // An agent a fixture already published (the same definition) is reused, not re-published.
     let published = store
-        .current(TENANT, &agent.agent_id)
+        .current(tenant, &agent.agent_id)
         .expect("reads the agent head")
         .is_some_and(|entry| entry.as_draft() == agent);
     if !published {
@@ -453,7 +466,7 @@ pub fn evidence_request(
             .publish(AgentLibraryPublishRequest {
                 context: mutation_context(
                     store,
-                    TENANT,
+                    tenant,
                     "agent-shared",
                     nonce,
                     0,
@@ -472,7 +485,7 @@ pub fn evidence_request(
     AgentGraphPublishRequest {
         context: mutation_context(
             store,
-            TENANT,
+            tenant,
             key,
             nonce.wrapping_add(1),
             0,
@@ -487,18 +500,18 @@ pub fn evidence_request(
 fn shared_commit_writes_record_and_evidence_in_one_transaction() {
     use super::shared_commit::FAIL_AFTER_RECORD_ROWS;
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let assembly = decided(&store);
+    seed_library(&store, TENANT);
+    let assembly = decided(&store, TENANT);
     let record = assembly.record.clone();
     let digest = record.inputs.catalog_digest.clone();
-    let evidence = evidence_request(&store, &assembly, "shared-graph", 60);
+    let evidence = evidence_request(&store, TENANT, &assembly, "shared-graph", 60);
     let graph_id = evidence.graph.graph_id.clone();
 
     // A failure injected after the first row leaves neither the record nor the evidence.
     FAIL_AFTER_RECORD_ROWS.with(|flag| flag.set(true));
     let error = store
         .commit_topology_decision(
-            commit_context(&store, "shared-1", 62),
+            commit_context(&store, TENANT, "shared-1", 62),
             &record,
             &digest,
             evidence.clone(),
@@ -523,7 +536,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
     // The same commit then lands both together.
     let parts = store
         .commit_topology_decision(
-            commit_context(&store, "shared-2", 64),
+            commit_context(&store, TENANT, "shared-2", 64),
             &record,
             &digest,
             evidence.clone(),
@@ -550,7 +563,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
     // A replay is a no-op: same heads, nothing written twice.
     let again = store
         .commit_topology_decision(
-            commit_context(&store, "shared-3", 66),
+            commit_context(&store, TENANT, "shared-3", 66),
             &record,
             &digest,
             evidence,
@@ -570,15 +583,15 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
 
     // An evidence graph that pins another record is refused before any write.
     let (_dir_b, other) = open_agent_store();
-    seed_library(&other);
-    let assembly_b = decided(&other);
-    let mut wrong = evidence_request(&other, &assembly_b, "shared-wrong", 70);
+    seed_library(&other, TENANT);
+    let assembly_b = decided(&other, TENANT);
+    let mut wrong = evidence_request(&other, TENANT, &assembly_b, "shared-wrong", 70);
     if let Some(pin) = wrong.graph.synthesis_evidence.as_mut() {
         pin.definition_digest = format!("sha256:{}", "c".repeat(64));
     }
     let error = other
         .commit_topology_decision(
-            commit_context(&other, "shared-4", 72),
+            commit_context(&other, TENANT, "shared-4", 72),
             &assembly_b.record,
             &assembly_b.record.inputs.catalog_digest,
             wrong,
@@ -600,11 +613,11 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
         AdmissionIntent, ComponentHead, ADMISSION_WRITE_BLOCKED,
     };
     let (_dir, store) = open_agent_store();
-    seed_library(&store);
-    let assembly = decided(&store);
+    seed_library(&store, TENANT);
+    let assembly = decided(&store, TENANT);
     let record = assembly.record.clone();
     let digest = record.inputs.catalog_digest.clone();
-    let evidence = evidence_request(&store, &assembly, "fenced-graph", 80);
+    let evidence = evidence_request(&store, TENANT, &assembly, "fenced-graph", 80);
     let mut heads: Vec<ComponentHead> = record
         .inputs
         .candidates
@@ -632,7 +645,7 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
 
     let error = store
         .commit_topology_decision(
-            commit_context(&store, "fenced-1", 82),
+            commit_context(&store, TENANT, "fenced-1", 82),
             &record,
             &digest,
             evidence.clone(),
@@ -653,7 +666,7 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
     // The holder of the fence is not blocked by it.
     store
         .commit_topology_decision(
-            commit_context(&store, "fenced-2", 84),
+            commit_context(&store, TENANT, "fenced-2", 84),
             &record,
             &digest,
             evidence,

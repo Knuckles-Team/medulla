@@ -225,11 +225,11 @@ async fn provenance_keeps_used_revision_and_hides_other_tenants() {
 /// served `DecisionCommit` stores it, and return it.
 fn commit_assembly(h: &Harness) -> medulla_decision_types::decision::DecisionRecord {
     use medulla_persistence_records::decision_record::tests as v1;
-    v1::seed_library(&h.store);
-    let record = v1::decided(&h.store).record;
+    v1::seed_library(&h.store, v1::TENANT);
+    let record = v1::decided(&h.store, v1::TENANT).record;
     let digest = record.inputs.catalog_digest.clone();
     h.store
-        .commit_decision_record(v1::commit_context(&h.store, "why-not", 1), &record, &digest, None)
+        .commit_decision_record(v1::commit_context(&h.store, v1::TENANT, "why-not", 1), &record, &digest, None)
         .expect("commits");
     record
 }

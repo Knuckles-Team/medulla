@@ -11,7 +11,7 @@ use crate::decision_record::tests::{decided, seed_library, TENANT};
 use medulla_agent_types::agent_component::AgentComponentRetireRequest;
 
 fn heads(store: &AgentLibraryStore) -> Vec<ComponentHead> {
-    let mut heads: Vec<ComponentHead> = decided(store)
+    let mut heads: Vec<ComponentHead> = decided(store, TENANT)
         .record
         .inputs
         .candidates
@@ -56,7 +56,7 @@ fn retire(store: &AgentLibraryStore, head: &ComponentHead, nonce: u8) -> Result<
 #[test]
 fn admission_participant_fences_and_replays() {
     let (dir, store) = open_agent_store();
-    seed_library(&store);
+    seed_library(&store, TENANT);
     let heads = heads(&store);
     assert!(heads.len() >= 2);
     let first = intent("txn-1", "write-1", heads.clone());

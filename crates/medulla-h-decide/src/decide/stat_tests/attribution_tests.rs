@@ -49,7 +49,7 @@ fn commit_slate(
     let digest = record.inputs.catalog_digest.clone();
     h.store
         .commit_decision_record(
-            v1::commit_context(&h.store, &format!("slate-{graph}"), nonce),
+            v1::commit_context(&h.store, v1::TENANT, &format!("slate-{graph}"), nonce),
             &record,
             &digest,
             None,
@@ -88,8 +88,8 @@ fn value(q: QuantisedValue) -> f64 {
 
 /// Slates {a} (6/10), {b} (2/10), {a, b} (9/10), plus a template to copy.
 async fn slates(h: &Harness) {
-    v1::seed_library(&h.store);
-    let template = v1::decided(&h.store).record;
+    v1::seed_library(&h.store, v1::TENANT);
+    let template = v1::decided(&h.store, v1::TENANT).record;
     commit_slate(h, &template, "g-a", &["comp-a"], 1);
     commit_slate(h, &template, "g-b", &["comp-b"], 2);
     commit_slate(h, &template, "g-ab", &["comp-a", "comp-b"], 3);
@@ -159,8 +159,8 @@ async fn slot_level_crediting_is_consistent_across_questions_sharing_one_templat
 #[tokio::test]
 async fn an_unlogged_sub_slate_is_refused_but_the_declared_additive_split_answers() {
     let h = Harness::new().await;
-    v1::seed_library(&h.store);
-    let template = v1::decided(&h.store).record;
+    v1::seed_library(&h.store, v1::TENANT);
+    let template = v1::decided(&h.store, v1::TENANT).record;
     commit_slate(&h, &template, "g-a", &["comp-a"], 1);
     commit_slate(&h, &template, "g-ab", &["comp-a", "comp-b"], 3);
     evaluate_slate(&h, "g-a", 6).await;

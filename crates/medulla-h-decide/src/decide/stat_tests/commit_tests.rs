@@ -289,7 +289,7 @@ async fn missing_stale_and_mismatched_approval_refuse_without_write() {
     use medulla_decision_types::decision::{DecisionCommitRequest, DecisionCommitResult};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::decision_record::tests::{
-        commit_context, decided_under, seed_library,
+        commit_context, decided_under, seed_library, TENANT,
     };
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().to_str().unwrap().to_string();
@@ -305,10 +305,10 @@ async fn missing_stale_and_mismatched_approval_refuse_without_write() {
     server.persistence = Some(backend);
     let state = Arc::new(tokio::sync::RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
-    seed_library(&store);
+    seed_library(&store, TENANT);
     let mut required = DecisionPolicy::engine_default();
     required.approval_required = true;
-    let assembled = decided_under(&store, 20, required).record;
+    let assembled = decided_under(&store, TENANT, 20, required).record;
     let verified = |key: &str, nonce: u8| {
         let claims = VerifiedRequestContext::verified_for_test_in_tenant("caller-a", TENANT);
         VerifiedRequestContext::from_verified_claims_with_nonce(
@@ -319,7 +319,7 @@ async fn missing_stale_and_mismatched_approval_refuse_without_write() {
     };
     let commit_request = |key: &str, nonce: u8, approval: Option<RecommendationApproval>| {
         DecisionCommitRequest {
-            context: commit_context(&store, key, nonce),
+            context: commit_context(&store, TENANT, key, nonce),
             expected_catalog_digest: assembled.inputs.catalog_digest.clone(),
             record: assembled.clone(),
             topology: None,

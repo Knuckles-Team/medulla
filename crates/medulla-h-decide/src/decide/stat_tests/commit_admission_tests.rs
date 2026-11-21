@@ -62,11 +62,11 @@ async fn cross_owner_admission_journey() {
         IsolationLayer::with_policy_store(rbac.clone() as Arc<dyn RbacPolicyStore>).unwrap();
     let state = Arc::new(RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
-    seed_library(&store);
-    let record = decided(&store).record;
+    seed_library(&store, TENANT);
+    let record = decided(&store, TENANT).record;
     let txn = |key: &str| format!("decision-commit:{}:{key}", record.record_id);
     let request = |key: &str, nonce: u8, catalog: &str| DecisionCommitRequest {
-        context: commit_context(&store, key, nonce),
+        context: commit_context(&store, TENANT, key, nonce),
         expected_catalog_digest: catalog.to_string(),
         record: record.clone(),
         topology: None,
@@ -332,7 +332,7 @@ async fn cross_owner_admission_journey() {
         &store,
         &pending,
         &record,
-        &commit_context(&store, "pending", 5).policy_revision,
+        &commit_context(&store, TENANT, "pending", 5).policy_revision,
         coordinator.txn_id(),
     )
     .await
@@ -432,7 +432,7 @@ pub(in crate::decide) async fn topology_world() -> TopologyWorld {
         .expect("the ledger graph is registered");
     let state = Arc::new(RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
-    seed_library(&store);
+    seed_library(&store, TENANT);
     let assembly = crate::decide::commit::tests::topology_assembly(&store);
     TopologyWorld {
         _dir: dir,
@@ -500,13 +500,14 @@ impl TopologyWorld {
     ) -> DecisionCommitRequest {
         let record = self.assembly.record.clone();
         DecisionCommitRequest {
-            context: commit_context(&self.store, key, nonce),
+            context: commit_context(&self.store, TENANT, key, nonce),
             expected_catalog_digest: record.inputs.catalog_digest.clone(),
             record,
             topology: Some(medulla_decision_types::decision::TopologyCommitEvidence {
                 capacity_graph: LEDGER.into(),
                 evidence: medulla_persistence_records::decision_record::tests::evidence_request(
                     &self.store,
+                    TENANT,
                     &self.assembly,
                     &format!("{key}-graph"),
                     graph_nonce,

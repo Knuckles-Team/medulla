@@ -40,7 +40,7 @@ use medulla_server_api::state::ServerState;
 pub(in crate::decide) fn topology_assembly(
     store: &AgentLibraryStore,
 ) -> medulla_compute::assemble::Assembly {
-    let base = decided(store);
+    let base = decided(store, TENANT);
     let mut topology = facts();
     let base_graph = base.graph.unwrap();
     let shape = base_graph.shape.clone();
@@ -216,10 +216,10 @@ async fn topology_commit_refuses_uncoordinated_owners() {
     server.persistence = None;
     let state = Arc::new(RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
-    seed_library(&store);
+    seed_library(&store, TENANT);
     let record = topology_assembly(&store).record;
     let request = DecisionCommitRequest {
-        context: commit_context(&store, "topology-commit", 1),
+        context: commit_context(&store, TENANT, "topology-commit", 1),
         expected_catalog_digest: record.inputs.catalog_digest.clone(),
         record: record.clone(),
         topology: None,
@@ -276,13 +276,13 @@ async fn topology_commit_refuses_uncoordinated_owners() {
 
     // With the durable backend configured, the same served path accepts an ordinary record.
     state.write().await.persistence = Some(backend.clone());
-    let plain = decided(&store).record;
+    let plain = decided(&store, TENANT).record;
     let response = super::handle_decision_commit(
         &state,
         3,
         &verified,
         DecisionCommitRequest {
-            context: commit_context(&store, "ordinary-commit", 3),
+            context: commit_context(&store, TENANT, "ordinary-commit", 3),
             expected_catalog_digest: plain.inputs.catalog_digest.clone(),
             record: plain.clone(),
             topology: None,
@@ -329,7 +329,7 @@ async fn topology_denial_accepts_one_followup_request() {
     let followup = |record: medulla_decision_types::decision::DecisionRecord,
                     key: &str,
                     nonce: u8| DecisionCommitRequest {
-        context: commit_context(&world.store, key, nonce),
+        context: commit_context(&world.store, TENANT, key, nonce),
         expected_catalog_digest: record.inputs.catalog_digest.clone(),
         record,
         topology: None,
@@ -343,7 +343,7 @@ async fn topology_denial_accepts_one_followup_request() {
         &world.store,
         1,
         &verified("seed-earlier", 40),
-        &commit_context(&world.store, "seed-earlier", 40),
+        &commit_context(&world.store, TENANT, "seed-earlier", 40),
         "issue",
     )
     .unwrap();
@@ -382,9 +382,9 @@ async fn topology_denial_accepts_one_followup_request() {
         .is_none());
 
     // Two follow-ups race for the one allowance: exactly one is accepted.
-    let first = decided_at(&world.store, 21).record;
-    let second = decided_at(&world.store, 22).record;
-    let third = decided_at(&world.store, 23).record;
+    let first = decided_at(&world.store, TENANT, 21).record;
+    let second = decided_at(&world.store, TENANT, 22).record;
+    let third = decided_at(&world.store, TENANT, 23).record;
     let (first_request, second_request) = (
         followup(first.clone(), "retry-1", 51),
         followup(second.clone(), "retry-2", 52),
@@ -490,7 +490,7 @@ async fn topology_denial_allowance_is_applied_by_the_recovered_abort() {
         &world.store,
         &caller,
         &record,
-        &commit_context(&world.store, "crashed", 9).policy_revision,
+        &commit_context(&world.store, TENANT, "crashed", 9).policy_revision,
         coordinator.txn_id(),
     )
     .await

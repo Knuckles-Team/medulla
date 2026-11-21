@@ -34,7 +34,7 @@ fn topology_record(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     policy: DecisionPolicy,
 ) -> (DecisionRecord, AssemblyRequest) {
-    let base = decided(store);
+    let base = decided(store, TENANT);
     let mut topology = facts();
     let shape = base.graph.expect("a base graph").shape;
     let mut slot = topology.slots.as_slice()[0].clone();
@@ -123,7 +123,7 @@ async fn admission_enforces_caps_and_replays() {
     server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let state = Arc::new(RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
-    seed_library(&store);
+    seed_library(&store, TENANT);
 
     // The default cap knobs are the engine bounds (16, 8, 8); per R046.750 they
     // tighten the request caps (8, 2, 4 in the fixture), so the caps the plan is

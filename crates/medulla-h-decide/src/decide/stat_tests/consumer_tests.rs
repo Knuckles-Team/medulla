@@ -537,12 +537,12 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
     use medulla_persistence_records::decision_record::tests as v1;
 
     let h = Harness::new().await;
-    v1::seed_library(&h.store);
-    let record = v1::decided(&h.store).record;
+    v1::seed_library(&h.store, v1::TENANT);
+    let record = v1::decided(&h.store, v1::TENANT).record;
     let digest = record.inputs.catalog_digest.clone();
     h.store
         .commit_decision_record(
-            v1::commit_context(&h.store, "slate-commit", 1),
+            v1::commit_context(&h.store, v1::TENANT, "slate-commit", 1),
             &record,
             &digest,
             None,
