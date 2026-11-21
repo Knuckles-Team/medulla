@@ -10,6 +10,51 @@ use super::Parser;
 use crate::diag::UqlError;
 
 impl Parser<'_> {
+    /// `EVALUATE RULE ...` (MEDULLA-BUSINESS-OPS-R002.7) or `EVALUATE kernel ...`
+    /// (MEDULLA-FEDERATED-QUERY-R726): the word after `EVALUATE` picks the form. `RULE` is
+    /// not a kernel name, so the two never collide.
+    pub(super) fn evaluate_stage(&mut self) -> Result<Op, UqlError> {
+        if self.peek_kw("RULE") {
+            self.bump();
+            return self.evaluate_rule();
+        }
+        self.evaluate()
+    }
+
+    /// `EVALUATE RULE id [ASOF int] [COUNT int] [TEXT string [LOCALE string]]`: the clauses
+    /// come in this order, each at most once; `LOCALE` needs a `TEXT`. A missing `ASOF` is
+    /// not a parse error: the executor refuses it with `ASOF_REQUIRED`, so the same text
+    /// answers the same typed refusal everywhere.
+    pub(super) fn evaluate_rule(&mut self) -> Result<Op, UqlError> {
+        use medulla_query_types::rule_expr::EvaluateRuleOp;
+
+        let rule = self.id("a rule node id")?;
+        let as_of_ms = if self.eat_kw("ASOF") {
+            Some(self.parse_number::<i64>("an ASOF time in epoch milliseconds")?)
+        } else {
+            None
+        };
+        let count = if self.eat_kw("COUNT") {
+            Some(self.parse_number::<u32>("a COUNT")?)
+        } else {
+            None
+        };
+        let (text, locale) = if self.eat_kw("TEXT") {
+            let text = self.string("a TEXT string")?;
+            let locale = if self.eat_kw("LOCALE") {
+                Some(self.string("a LOCALE string")?)
+            } else {
+                None
+            };
+            (Some(text), locale)
+        } else {
+            (None, None)
+        };
+        Ok(Op::EvaluateRule {
+            spec: EvaluateRuleOp { rule, as_of_ms, count, text, locale },
+        })
+    }
+
     gated! { "timeseries",
         /// `EVALUATE kernel [OF c [AGAINST c2]] {KEY number}`: a kernel outside the table
         /// is refused with `UQL_E_EVALUATE_KERNEL` at parse time; a parameter key is one

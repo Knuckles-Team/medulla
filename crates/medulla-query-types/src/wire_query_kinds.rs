@@ -59,6 +59,7 @@ kinds! {
     #[cfg(feature = "timeseries")] Derive,
     #[cfg(feature = "timeseries")] Skill,
     #[cfg(feature = "timeseries")] Evaluate,
+    EvaluateRule,
     #[cfg(feature = "timeseries")] Motif,
     #[cfg(feature = "timeseries")] Events,
     #[cfg(feature = "probabilistic")] Probabilistic,
@@ -148,6 +149,7 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::Skill { .. } => OpKind::Skill,
         #[cfg(feature = "timeseries")]
         Op::Evaluate { .. } => OpKind::Evaluate,
+        Op::EvaluateRule { .. } => OpKind::EvaluateRule,
         #[cfg(feature = "timeseries")]
         Op::Motif { .. } => OpKind::Motif,
         #[cfg(feature = "timeseries")]
@@ -259,6 +261,7 @@ impl OpKind {
             | OpKind::ScanEdges
             | OpKind::Decay
             | OpKind::ClusterByEmbedding
+            | OpKind::EvaluateRule
             | OpKind::Limit
             | OpKind::Project => None,
             #[cfg(feature = "owl-plan")]
@@ -299,6 +302,7 @@ impl OpKind {
             | OpKind::ClusterByEmbedding
             | OpKind::Limit
             | OpKind::Project => ProofRole::Neutral,
+            OpKind::EvaluateRule => ProofRole::Unproved,
             #[cfg(feature = "text")]
             OpKind::RankText => ProofRole::Neutral,
             #[cfg(feature = "epistemic")]

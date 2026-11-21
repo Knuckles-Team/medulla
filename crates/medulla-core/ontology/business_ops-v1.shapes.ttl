@@ -104,16 +104,11 @@ kg:ObligationInstanceShape a sh:NodeShape ;
 kg:RecurrenceRuleShape a sh:NodeShape ;
     sh:targetClass kg:RecurrenceRule ;
     sh:property [
-        sh:path kg:recurrenceFrequency ; sh:minCount 1 ; sh:maxCount 1 ;
-        sh:in ( "daily" "weekly" "monthly" "quarterly" "yearly" ) ;
-        sh:message "A recurrence rule frequency is daily, weekly, monthly, quarterly or yearly."
+        sh:path kg:ruleKind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "recurrence" ) ;
+        sh:message "A recurrence rule has the rule kind recurrence."
     ] ;
-    sh:property [
-        sh:path kg:businessDayAdjustment ; sh:maxCount 1 ;
-        sh:in ( "none" "next_business_day" "previous_business_day" ) ;
-        sh:message "A business-day adjustment is none, next_business_day or previous_business_day."
-    ] ;
-    sh:message "A recurrence rule names its frequency." .
+    sh:message "A recurrence rule is a rule spec of kind recurrence." .
 
 # spec: MEDULLA-BUSINESS-OPS-R001.6
 kg:TaxRegistrationShape a sh:NodeShape ;

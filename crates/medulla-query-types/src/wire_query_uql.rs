@@ -74,6 +74,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "ALIGN",
     "AND",
     "AS",
+    "ASOF",
     "ASOF_HOLD",
     "ASSEMBLE",
     "ASSETS",
@@ -153,6 +154,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "LIKE",
     "LIMIT",
     "LINEAR",
+    "LOCALE",
     "MARGINAL",
     "MATCH",
     "MAX",
@@ -186,6 +188,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "REPROJECT",
     "RERANK",
     "RETURN",
+    "RULE",
     "SAMPLE",
     "SAMPLES",
     "SCAN",
@@ -419,6 +422,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Derive { columns } => super::wire_query_uql_modal::derive(columns),
         #[cfg(feature = "timeseries")]
         Op::Skill { spec } => super::wire_query_uql_modal::skill(spec),
+        Op::EvaluateRule { spec } => super::wire_query_uql_modal::evaluate_rule(spec),
         #[cfg(feature = "timeseries")]
         Op::Evaluate { spec } => super::wire_query_uql_modal::evaluate(spec),
         #[cfg(feature = "timeseries")]

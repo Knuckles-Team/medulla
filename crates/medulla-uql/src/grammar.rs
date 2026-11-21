@@ -266,6 +266,12 @@ pub const PRODUCTIONS: &[Production] = &[
        (MEDULLA-FEDERATED-QUERY-R726)",
       "TSSCAN ['svc.p95'] FROM 0 TO 3600 |> DERIVE ret(v0, 1) AS r \
        |> EVALUATE diebold_mariano OF v0 AGAINST r HORIZON 1"),
+    p("evaluate_rule", Stage, &["EVALUATE"], None,
+      "\"EVALUATE\" \"RULE\" id [ \"ASOF\" int ] [ \"COUNT\" int ] [ \"TEXT\" string [ \"LOCALE\" string ] ]",
+      "EvaluateRule{spec}: evaluate one stored :RuleSpec node over the rows it is given at an \
+       explicit as-of time in epoch milliseconds; one row with kind, rule_digest, inputs, steps \
+       and result; a missing ASOF refuses ASOF_REQUIRED (MEDULLA-BUSINESS-OPS-R002.7)",
+      "MATCH (:HolidayCalendar) WHERE id = 'cal:1' |> EVALUATE RULE 'rule:sales-tax' ASOF 1767225600000 COUNT 2"),
     p("motif", Stage, &["MOTIF"], Some(Timeseries),
       "\"MOTIF\" \"OF\" name \
        ( \"LIKE\" \"[\" num { \",\" num } \"]\" | \"LENGTH\" int ) \"TOP\" int [ \"SEED\" int ]",

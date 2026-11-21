@@ -93,6 +93,7 @@ agg                = "MEAN" | "AVG" | "SUM" | "MIN" | "MAX" | "COUNT" | "FIRST" 
 derive             = "DERIVE" sexpr "AS" name { "," sexpr "AS" name } ;   (* feature `timeseries` *)
 skill              = "SKILL" name "AGAINST" name "HORIZONS" "[" int { "," int } "]" "WINDOW" int [ "BOOTSTRAP" int "SEED" int ] ;   (* feature `timeseries` *)
 evaluate           = "EVALUATE" kernel [ "OF" name [ "AGAINST" name ] ] { key number } ;   (* feature `timeseries` *)
+evaluate_rule      = "EVALUATE" "RULE" id [ "ASOF" int ] [ "COUNT" int ] [ "TEXT" string [ "LOCALE" string ] ] ;
 motif              = "MOTIF" "OF" name ( "LIKE" "[" num { "," num } "]" | "LENGTH" int ) "TOP" int [ "SEED" int ] ;   (* feature `timeseries` *)
 discord            = "DISCORD" "OF" name "LENGTH" int "TOP" int [ "SEED" int ] ;   (* feature `timeseries` *)
 events             = "EVENTS" name { "," name } ;   (* feature `timeseries` *)
@@ -302,6 +303,7 @@ earlier one; a transaction's staged point shadows both.
 | `DERIVE zscore(ewma(v0, 12), 60) AS lat_z` | `Derive{columns}` — per-series incremental operators in timestamp order |
 | `SKILL v0 AGAINST r HORIZONS [1, 5] WINDOW 30` | `Skill{spec}` — rolling rank-IC predictive skill per horizon |
 | `EVALUATE diebold_mariano OF v0 AGAINST r HORIZON 1` | `Evaluate{spec}` — one numeric kernel (`diebold_mariano`, `deflated_sharpe`, `purged_cpcv`, `probability_of_backtest_overfit`, `brier`, `ou_calibrate`, `adf`, `regime_hmm`) over the named channels; an unknown kernel is `UQL_E_EVALUATE_KERNEL` |
+| `EVALUATE RULE 'rule:sales-tax' ASOF 1767225600000 COUNT 2` | `EvaluateRule{spec}` — evaluate one stored `:RuleSpec` node over the rows it is given at an explicit as-of time; one row with `kind`, `rule_digest`, `inputs`, `steps` and `result`; a missing `ASOF` is `ASOF_REQUIRED` |
 
 A `DERIVE` expression calls `lag diff ret logret` (count `k`), `rmean rstd rsum rmin rmax
 rrank zscore` (window `w`), `ewma` (span), `ewma_halflife`, `abs sign neg clip(x, lo, hi)`,

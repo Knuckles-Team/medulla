@@ -156,6 +156,14 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         #[cfg(feature = "timeseries")]
         Op::Evaluate { .. } => Err(EVALUATE_EXECUTOR_UNAVAILABLE.into()),
 
+        // `EVALUATE RULE` (MEDULLA-BUSINESS-OPS-R002.7): one stored rule evaluated over the
+        // rows it is given by medulla-numeric's business registry. Parsed and printed in every
+        // build; a build without `numeric` has no registry and refuses the stage.
+        #[cfg(feature = "numeric")]
+        Op::EvaluateRule { spec } => super::evaluate_rule::apply(spec, input, ctx),
+        #[cfg(not(feature = "numeric"))]
+        Op::EvaluateRule { .. } => Err(UNSUPPORTED_MODALITY_OP.into()),
+
         // `medulla-types/query` (which gates this whole module) surfaces the FULL `Op` wire
         // contract, so modality ops whose executor lives behind an medulla-plan feature the
         // current build did not enable (`geo`/`owl`/`federation`/`wasm-udf`/`stream`/

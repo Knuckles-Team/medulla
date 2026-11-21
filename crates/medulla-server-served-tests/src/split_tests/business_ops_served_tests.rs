@@ -152,3 +152,121 @@ async fn digest_pending_and_overdue_with_supporting_nodes() {
         "got: {refusal}"
     );
 }
+
+/// The canonical `:ruleParameters` of the sales-tax recurrence rule.
+#[cfg(feature = "numeric")]
+const SALES_TAX_PARAMETERS: &str = "adjustment=next_business_day\nanchor=2026-01-20\nday=20\n\
+                                    frequency=monthly\nzone=America/Chicago";
+
+/// A `Method::Uql` statement without parameters.
+#[cfg(feature = "numeric")]
+fn uql(text: &str) -> Method {
+    Method::Uql {
+        text: text.to_string(),
+        params: Default::default(),
+        prepare: false,
+        foreign_executions: Default::default(),
+    }
+}
+
+/// The single row of a successful `Method::Uql` answer: its id and its text cells.
+#[cfg(feature = "numeric")]
+fn single_row(response: &Response) -> (String, std::collections::BTreeMap<String, String>) {
+    use medulla_query_types::wire::UqlResult;
+
+    assert_ok(response);
+    let Some(ResultPayload::Raw(bytes)) = response.result.as_ref() else {
+        panic!("a UQL statement answers with a raw result");
+    };
+    let UqlResult::Rows { mut rows, .. } = rmp_serde::from_slice(bytes).expect("a UQL result")
+    else {
+        panic!("the statement answers rows");
+    };
+    assert_eq!(rows.len(), 1, "one row per evaluation");
+    let row = rows.remove(0);
+    (row.id, row.provenance)
+}
+
+// spec: MEDULLA-BUSINESS-OPS-R002.7
+#[cfg(feature = "numeric")]
+#[tokio::test]
+async fn evaluate_rule_stage_serves_recurrence_with_inputs() {
+    use medulla_numeric::business::rule_spec;
+
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state();
+    let mut next_id = 7500_u64;
+    let mut send = |method: Method| {
+        next_id += 1;
+        request(next_id, GRAPH, None, method)
+    };
+
+    // The rule record and its holiday calendar, written by one batch update.
+    let operations = serde_json::json!([
+        {"op": "upsert_node", "id": "rule:sales-tax", "properties": {
+            "type": "RecurrenceRule",
+            "ruleKind": "recurrence",
+            "ruleVersion": 1,
+            "ruleParameters": SALES_TAX_PARAMETERS,
+        }},
+        {"op": "upsert_node", "id": "cal:1", "properties": {
+            "type": "HolidayCalendar",
+            "holidayDate": ["2026-02-20"],
+        }},
+    ]);
+    assert_ok(
+        &dispatch_on_heap(
+            &state,
+            send(Method::BatchUpdate {
+                operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap(),
+            }),
+        )
+        .await,
+    );
+
+    let stage = "MATCH (:HolidayCalendar) WHERE id = 'cal:1' |> EVALUATE RULE 'rule:sales-tax'";
+    let answered =
+        dispatch_on_heap(&state, send(uql(&format!("{stage} ASOF 1767225600000 COUNT 2")))).await;
+    let (id, cells) = single_row(&answered);
+    assert_eq!(id, "rule:sales-tax");
+    assert_eq!(cells["kind"], "recurrence");
+
+    // The digest is the one `rule_spec::load` computes over the same record.
+    let parameters = rule_spec::parse_parameters(SALES_TAX_PARAMETERS).unwrap();
+    let spec = rule_spec::load("recurrence", 1, parameters).unwrap();
+    assert_eq!(cells["rule_digest"], spec.digest);
+
+    // The input is the calendar node with the revision that was read.
+    let revision = cells["inputs"]
+        .strip_prefix("cal:1@")
+        .expect("the one input is the calendar node");
+    assert!(revision.bytes().all(|byte| byte.is_ascii_digit()), "{revision}");
+
+    // The two due dates after the as-of day; the second falls on a holiday and moves to
+    // the next business day.
+    let result: serde_json::Value = serde_json::from_str(&cells["result"]).unwrap();
+    assert_eq!(
+        result["dates"],
+        serde_json::json!([
+            {"scheduled": "2026-01-20", "due": "2026-01-20"},
+            {"scheduled": "2026-02-20", "due": "2026-02-23"},
+        ])
+    );
+    assert_eq!(result["zone"], "America/Chicago");
+
+    // No ASOF: the stage never reads a clock, so it refuses by code.
+    let no_as_of = dispatch_on_heap(&state, send(uql(&format!("{stage} COUNT 2")))).await;
+    let refusal = no_as_of.refusal_text().unwrap_or_default();
+    assert!(refusal.contains("ASOF_REQUIRED"), "got: {refusal}");
+
+    // An unknown rule id refuses by code.
+    let unknown = dispatch_on_heap(
+        &state,
+        send(uql(
+            "MATCH (:HolidayCalendar) WHERE id = 'cal:1' |> EVALUATE RULE 'rule:none' ASOF 1767225600000",
+        )),
+    )
+    .await;
+    let refusal = unknown.refusal_text().unwrap_or_default();
+    assert!(refusal.contains("RULE_NOT_FOUND"), "got: {refusal}");
+}

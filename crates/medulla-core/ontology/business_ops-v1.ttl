@@ -265,7 +265,7 @@
 :ReorderPolicy a owl:Class ;
     rdfs:label "Reorder Policy" ;
     rdfs:comment "When and how much to reorder one variant from one supplier." ;
-    rdfs:subClassOf :GovernanceRule .
+    rdfs:subClassOf :RuleSpec .
 
 :purchaseLineOfOrder a owl:ObjectProperty ;
     rdfs:label "purchase line of order" ;
@@ -335,24 +335,6 @@
     rdfs:comment "Days from order to receipt: the lead time of a supplier, and the lead time a reorder policy plans with. It has no domain so both uses hold." ;
     rdfs:range xsd:integer .
 
-:safetyStock a owl:DatatypeProperty ;
-    rdfs:label "safety stock" ;
-    rdfs:comment "Units held in reserve against demand variance, an integer." ;
-    rdfs:domain :ReorderPolicy ;
-    rdfs:range xsd:integer .
-
-:minimumOrderQuantity a owl:DatatypeProperty ;
-    rdfs:label "minimum order quantity" ;
-    rdfs:comment "The smallest quantity the supplier sells, an integer count of units." ;
-    rdfs:domain :ReorderPolicy ;
-    rdfs:range xsd:integer .
-
-:reviewWindowDays a owl:DatatypeProperty ;
-    rdfs:label "review window days" ;
-    rdfs:comment "The trailing days of sales a reorder review measures velocity over." ;
-    rdfs:domain :ReorderPolicy ;
-    rdfs:range xsd:integer .
-
 # spec: MEDULLA-BUSINESS-OPS-R001.5
 # Compliance obligations. The status of an obligation instance follows the one explicit
 # state machine :ObligationInstanceMachine of state-machines-v1.ttl; its only writer is
@@ -369,13 +351,20 @@
 
 :RecurrenceRule a owl:Class ;
     rdfs:label "Recurrence Rule" ;
-    rdfs:comment "When an obligation falls due: a frequency, an interval, day selectors and a business-day adjustment against a holiday calendar." ;
-    rdfs:subClassOf :DomainEntity .
+    rdfs:comment "When an obligation falls due: a rule spec of kind recurrence whose parameters hold the frequency, interval, day selector, business-day adjustment, zone and anchor, evaluated against a holiday calendar." ;
+    rdfs:subClassOf :RuleSpec .
 
 :HolidayCalendar a owl:Class ;
     rdfs:label "Holiday Calendar" ;
     rdfs:comment "The non-business days of one jurisdiction, revisioned." ;
     rdfs:subClassOf :DomainEntity .
+
+# spec: MEDULLA-BUSINESS-OPS-R002.7
+:holidayDate a owl:DatatypeProperty ;
+    rdfs:label "holiday date" ;
+    rdfs:comment "One non-business day of a holiday calendar; a calendar holds a list of them." ;
+    rdfs:domain :HolidayCalendar ;
+    rdfs:range xsd:date .
 
 :ObligationInstance a owl:Class ;
     rdfs:label "Obligation Instance" ;
@@ -417,41 +406,11 @@
     rdfs:domain :ComplianceObligation ;
     rdfs:range xsd:string .
 
-:recurrenceFrequency a owl:DatatypeProperty ;
-    rdfs:label "recurrence frequency" ;
-    rdfs:comment "daily, weekly, monthly, quarterly or yearly." ;
-    rdfs:domain :RecurrenceRule ;
-    rdfs:range xsd:string .
-
-:recurrenceInterval a owl:DatatypeProperty ;
-    rdfs:label "recurrence interval" ;
-    rdfs:comment "Every n-th period of the frequency, an integer of at least 1." ;
-    rdfs:domain :RecurrenceRule ;
-    rdfs:range xsd:integer .
-
-:recurrenceDaySelector a owl:DatatypeProperty ;
-    rdfs:label "recurrence day selector" ;
-    rdfs:comment "Which day: a day of month, last, or the nth weekday of the month." ;
-    rdfs:domain :RecurrenceRule ;
-    rdfs:range xsd:string .
-
-:businessDayAdjustment a owl:DatatypeProperty ;
-    rdfs:label "business day adjustment" ;
-    rdfs:comment "none, next_business_day or previous_business_day." ;
-    rdfs:domain :RecurrenceRule ;
-    rdfs:range xsd:string .
-
 :recurrenceCalendar a owl:ObjectProperty ;
     rdfs:label "recurrence calendar" ;
     rdfs:comment "The holiday calendar the business-day adjustment reads." ;
     rdfs:domain :RecurrenceRule ;
     rdfs:range :HolidayCalendar .
-
-:recurrenceZone a owl:DatatypeProperty ;
-    rdfs:label "recurrence zone" ;
-    rdfs:comment "The IANA time zone the rule is stated in." ;
-    rdfs:domain :RecurrenceRule ;
-    rdfs:range xsd:string .
 
 :instanceOfObligation a owl:ObjectProperty ;
     rdfs:label "instance of obligation" ;

@@ -16,6 +16,21 @@ pub const RULE_VERSION_UNKNOWN: &str = "RULE_VERSION_UNKNOWN";
 /// The refusal code for a rule kind this engine does not know.
 pub const RULE_KIND_UNKNOWN: &str = "RULE_KIND_UNKNOWN";
 
+/// The refusal code for an evaluation with no as-of time.
+pub const ASOF_REQUIRED: &str = "ASOF_REQUIRED";
+
+/// The refusal code for a rule node that does not exist, or is not a rule record.
+pub const RULE_NOT_FOUND: &str = "RULE_NOT_FOUND";
+
+/// The refusal code for rule parameters that do not parse for their kind.
+pub const RULE_PARAMETERS_INVALID: &str = "RULE_PARAMETERS_INVALID";
+
+/// The refusal code for a stored digest that differs from the computed one.
+pub const RULE_DIGEST_MISMATCH: &str = "RULE_DIGEST_MISMATCH";
+
+/// The refusal code for an input row the rule kind cannot read.
+pub const RULE_INPUT_INVALID: &str = "RULE_INPUT_INVALID";
+
 /// The rule versions this engine evaluates.
 pub const SUPPORTED_VERSIONS: &[u32] = &[1];
 
@@ -142,6 +157,44 @@ pub fn load(
         parameters,
         digest,
     })
+}
+
+/// Parse the canonical `:ruleParameters` text: one `name=value` per line joined by LF,
+/// names `[a-z0-9_]+` strictly ascending by bytes, values without LF. The empty text is the
+/// empty parameter set. Anything else refuses with [`RULE_PARAMETERS_INVALID`].
+pub fn parse_parameters(text: &str) -> Result<BTreeMap<String, String>, RuleRefusal> {
+    let mut parameters = BTreeMap::new();
+    if text.is_empty() {
+        return Ok(parameters);
+    }
+    let mut previous: Option<&str> = None;
+    for line in text.split('\n') {
+        let Some((name, value)) = line.split_once('=') else {
+            return Err(RuleRefusal::new(
+                RULE_PARAMETERS_INVALID,
+                format!("parameter line `{line}` is not `name=value`"),
+            ));
+        };
+        let well_formed = !name.is_empty()
+            && name
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_');
+        if !well_formed {
+            return Err(RuleRefusal::new(
+                RULE_PARAMETERS_INVALID,
+                format!("parameter name `{name}` is not [a-z0-9_]+"),
+            ));
+        }
+        if previous.is_some_and(|before| before.as_bytes() >= name.as_bytes()) {
+            return Err(RuleRefusal::new(
+                RULE_PARAMETERS_INVALID,
+                format!("parameter `{name}` is not in strictly ascending order"),
+            ));
+        }
+        previous = Some(name);
+        parameters.insert(name.to_string(), value.to_string());
+    }
+    Ok(parameters)
 }
 
 /// One input node of an evaluation, with the revision that was read.

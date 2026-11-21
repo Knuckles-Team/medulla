@@ -289,6 +289,15 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             half_life_secs: 3600.0,
         },
         OpKind::ClusterByEmbedding => Op::ClusterByEmbedding { k: 3 },
+        OpKind::EvaluateRule => Op::EvaluateRule {
+            spec: crate::rule_expr::EvaluateRuleOp {
+                rule: "rule:sales-tax".into(),
+                as_of_ms: Some(1_767_225_600_000),
+                count: Some(2),
+                text: Some("It's fine".into()),
+                locale: Some("en".into()),
+            },
+        },
         OpKind::DecisionScan => Op::DecisionScan {
             preds: vec![uql_sample_pred(PredKind::In)],
         },

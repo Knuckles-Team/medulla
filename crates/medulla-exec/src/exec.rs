@@ -44,6 +44,9 @@ pub use usage::{UsageSeries, UsageSource, UsageWindow};
 pub(crate) mod dispatch;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;
+// MEDULLA-BUSINESS-OPS-R002.7 — the `EVALUATE RULE` executor over medulla-numeric's rule registry.
+#[cfg(feature = "numeric")]
+mod evaluate_rule;
 mod expand;
 #[cfg(feature = "federation")]
 pub mod foreign;

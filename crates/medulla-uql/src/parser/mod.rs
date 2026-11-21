@@ -167,7 +167,7 @@ impl<'a> Parser<'a> {
             ("TSSCAN", Self::tsscan),
             ("DERIVE", Self::derive),
             ("SKILL", Self::skill),
-            ("EVALUATE", Self::evaluate),
+            ("EVALUATE", Self::evaluate_stage),
             ("MOTIF", Self::motif),
             ("DISCORD", Self::discord),
             ("EVENTS", Self::events),
