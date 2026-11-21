@@ -371,9 +371,9 @@ pub mod worker {
         tenant: &str,
         lease: &MutationOutboxLease,
     ) -> Result<Option<OutboxRejectReason>, String> {
-        let Ok(event) =
-            medulla_storage::decode_ledger_record::<AgentLibraryOutboxEvent>(&lease.record.intent.payload)
-        else {
+        let Ok(event) = medulla_storage::decode_ledger_record::<AgentLibraryOutboxEvent>(
+            &lease.record.intent.payload,
+        ) else {
             return Ok(Some(OutboxRejectReason::InvalidEvent));
         };
         // A row from another tenant is never read.
@@ -632,8 +632,14 @@ mod tests {
         assert!(add.contains("memberOfLibrary"));
 
         // A replayed or older row writes nothing.
-        assert_eq!(plan_step(publish, &first, Some(1), Some(&first)), ProjectionStep::Skip);
-        assert_eq!(plan_step(publish, &first, Some(2), Some(&second)), ProjectionStep::Skip);
+        assert_eq!(
+            plan_step(publish, &first, Some(1), Some(&first)),
+            ProjectionStep::Skip
+        );
+        assert_eq!(
+            plan_step(publish, &first, Some(2), Some(&second)),
+            ProjectionStep::Skip
+        );
 
         // A newer revision removes the stored revision's triples, then adds its own.
         let step = plan_step(publish, &second, Some(1), Some(&first));
@@ -655,9 +661,12 @@ mod tests {
 
         // A retire removes the stored triples and adds none.
         let tombstone = entry(3, AgentLibraryLifecycle::Retired);
-        let ProjectionStep::Commit { remove, add, .. } =
-            plan_step(AgentLibraryMutationKind::Retire, &tombstone, Some(2), Some(&second))
-        else {
+        let ProjectionStep::Commit { remove, add, .. } = plan_step(
+            AgentLibraryMutationKind::Retire,
+            &tombstone,
+            Some(2),
+            Some(&second),
+        ) else {
             panic!("a retire of a projected entry commits");
         };
         assert!(remove.contains("memberOfLibrary"));

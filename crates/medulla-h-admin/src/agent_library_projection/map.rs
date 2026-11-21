@@ -38,7 +38,11 @@ pub fn agent_iri(tenant: &str, agent_id: &str) -> String {
 
 /// The IRI of one tenant's agent template.
 pub fn template_iri(tenant: &str, template_id: &str) -> String {
-    format!("{CORE}agentTemplate/{}/{}", segment(tenant), segment(template_id))
+    format!(
+        "{CORE}agentTemplate/{}/{}",
+        segment(tenant),
+        segment(template_id)
+    )
 }
 
 /// The IRI of one tenant's Agent Library.
@@ -79,7 +83,10 @@ pub fn project_entry(entry: &AgentLibraryEntry) -> Vec<Triple> {
 
 /// `triples` as one N-Triples document, one statement per line.
 pub fn ntriples(triples: &[Triple]) -> String {
-    triples.iter().map(|triple| format!("{triple} .\n")).collect()
+    triples
+        .iter()
+        .map(|triple| format!("{triple} .\n"))
+        .collect()
 }
 
 #[cfg(test)]
