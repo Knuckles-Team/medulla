@@ -3343,8 +3343,8 @@ fn validate_persisted_datatype(
         return Ok(());
     };
     let valid = match datatype {
-        "xsd:date" => chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d").is_ok(),
-        "xsd:dateTime" => chrono::DateTime::parse_from_rfc3339(text).is_ok(),
+        "xsd:date" => jiff::civil::Date::strptime("%Y-%m-%d", text).is_ok(),
+        "xsd:dateTime" => text.parse::<jiff::Timestamp>().is_ok(),
         _ => true,
     };
     if valid {

@@ -5196,7 +5196,6 @@ dependencies = [
  "aws-credential-types",
  "aws-sigv4",
  "chacha20poly1305",
- "chrono",
  "clap",
  "criterion",
  "cyclonedds",
@@ -5866,10 +5865,10 @@ name = "medulla-h-ingest"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "chrono",
  "criterion",
  "hex",
  "hmac 0.12.1",
+ "jiff",
  "medulla-agent-types",
  "medulla-asr-whisper",
  "medulla-audio",

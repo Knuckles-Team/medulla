@@ -36,13 +36,14 @@ feature-depth = 1
 # advisories — FAIL-CLOSED (RUSTSEC / OSV advisory database)
 # ─────────────────────────────────────────────────────────────────────────────
 [advisories]
-# Unmaintained notices, not vulnerabilities. Each entry names the spec row that removes the
-# dependency; MEDULLA-CONTRACT-R064 deletes all four when the graph is clean.
+# Unmaintained notices, not vulnerabilities. Each entry names the transitive dependents that keep
+# the crate in Cargo.lock; no workspace manifest names it (MEDULLA-CONTRACT-R064). An ignore is
+# deleted, with its ledger line, when `cargo tree -i <crate> --workspace --all-features` resolves nothing.
 ignore = [
-    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
-    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
-    { id = "RUSTSEC-2026-0559", reason = "chrono-tz-build unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
-    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained; removal tracked by MEDULLA-CONTRACT-R064" },
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; transitive only (arrow, datafusion, iceberg, object_store, openraft, polars); no workspace manifest names it (MEDULLA-CONTRACT-R064)" },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained; transitive only (arrow, datafusion, iceberg, object_store, openraft, polars); no workspace manifest names it (MEDULLA-CONTRACT-R064)" },
+    { id = "RUSTSEC-2026-0559", reason = "chrono-tz-build unmaintained; transitive only (arrow, datafusion, iceberg, object_store, openraft, polars); no workspace manifest names it (MEDULLA-CONTRACT-R064)" },
+    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained; transitive only (arrow, datafusion, iceberg, object_store, openraft, polars); no workspace manifest names it (MEDULLA-CONTRACT-R064)" },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
