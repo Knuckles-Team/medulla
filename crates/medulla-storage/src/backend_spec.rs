@@ -5,10 +5,11 @@
 //! bucket and root are named by secret reference only, never by value.
 //! [`StorageBackendSpec::validate`] is the single admission step: it refuses
 //! atomically with a typed [`BackendSpecRefusal`] before any effect.
-//! Only the `local` variant is opened by this build; an `object_store` spec
-//! that validates is reported as [`BackendSpecRefusal::Unsupported`] by
-//! [`StorageBackendSpec::admit`] until the object-store open path lands
-//! (R002-R004), so nothing silently falls back to redb.
+//! A `local` spec opens redb. An `object_store` spec that validates is
+//! admitted by [`StorageBackendSpec::admit`] and opened by the served open
+//! path (`medulla_persistence::object_store_backend::open_from_env`,
+//! MEDULLA-OBJECT-STORAGE-BACKEND-R002.1); a build without that path refuses
+//! it at startup, so nothing silently falls back to redb.
 
 use crate::owner::lineage::{pinned_layout_digest, ALL_LAYOUTS};
 use serde::{Deserialize, Serialize};
@@ -198,16 +199,24 @@ impl StorageBackendSpec {
         }
     }
 
-    /// Admission for opening: validate, then refuse any variant this build
-    /// cannot open. `Local` is the only openable variant today.
-    pub fn admit(&self) -> Result<(), BackendSpecRefusal> {
-        self.validate()?;
-        match self {
-            Self::Local => Ok(()),
-            Self::ObjectStore { .. } => Err(BackendSpecRefusal::Unsupported {
-                variant: "object_store".to_string(),
+    /// Parse the `MEDULLA_STORAGE_BACKEND` setting: unset, empty or `local` is
+    /// the redb default; anything else is a JSON spec. An unreadable body is
+    /// `UnknownVariant` (`STORAGE_BACKEND_UNKNOWN` at the server boundary).
+    pub fn from_setting(setting: Option<&str>) -> Result<Self, BackendSpecRefusal> {
+        match setting.map(str::trim) {
+            None | Some("") | Some("local") => Ok(Self::default()),
+            Some(json) => serde_json::from_str::<Self>(json).map_err(|e| {
+                BackendSpecRefusal::UnknownVariant {
+                    variant: e.to_string(),
+                }
             }),
         }
+    }
+
+    /// Admission for opening: validate. Both variants have an open path
+    /// (`local` is redb, `object_store` is the served object-store open).
+    pub fn admit(&self) -> Result<(), BackendSpecRefusal> {
+        self.validate()
     }
 }
 
@@ -315,9 +324,14 @@ mod tests {
             StorageBackendSpec::from_wire(&tape),
             Err(BackendSpecRefusal::UnknownVariant { .. })
         ));
+        assert!(good().admit().is_ok());
+        assert_eq!(
+            StorageBackendSpec::from_setting(Some("local")),
+            Ok(StorageBackendSpec::Local)
+        );
         assert!(matches!(
-            good().admit(),
-            Err(BackendSpecRefusal::Unsupported { .. })
+            StorageBackendSpec::from_setting(Some("{")),
+            Err(BackendSpecRefusal::UnknownVariant { .. })
         ));
     }
 }

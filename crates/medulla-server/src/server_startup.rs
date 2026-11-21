@@ -480,6 +480,7 @@ pub fn open_persistence(
     let queue = bounded_env_override("MEDULLA_REDB_WRITER_QUEUE", automatic_writer_queue)
         .unwrap_or(automatic_writer_queue);
     refuse_upgradable_stores(dir);
+    open_configured_object_store();
     info!("Persistence: authoritative redb (queue {})", queue);
     let backend = medulla_persistence::redb_backend::RedbBackend::open(dir.to_string(), queue)
         .unwrap_or_else(|error| {
@@ -489,6 +490,39 @@ pub fn open_persistence(
             )
         });
     Some(Arc::new(backend))
+}
+
+/// Read `MEDULLA_STORAGE_BACKEND` at startup and open an `object_store` spec
+/// through the backend factory (MEDULLA-OBJECT-STORAGE-BACKEND-R002.1). A spec
+/// that does not parse, admit or open refuses startup with its wire code.
+#[cfg(all(feature = "redb", feature = "object-store"))]
+fn open_configured_object_store() {
+    match medulla_persistence::object_store_backend::open_from_env() {
+        Ok(None) => {}
+        Ok(Some(backend)) => info!(
+            "Persistence: object-store backend opened ({:?})",
+            backend.durability()
+        ),
+        Err(error) => exit_with(format_args!("invalid storage backend: {error}"), 1),
+    }
+}
+
+/// Without the `object-store` feature an `object_store` spec refuses startup
+/// rather than silently serving from redb.
+#[cfg(all(feature = "redb", not(feature = "object-store")))]
+fn open_configured_object_store() {
+    let setting = std::env::var("MEDULLA_STORAGE_BACKEND").ok();
+    match medulla_storage::StorageBackendSpec::from_setting(setting.as_deref()) {
+        Ok(medulla_storage::StorageBackendSpec::Local) => {}
+        Ok(_) => exit_with(
+            "invalid storage backend: the object_store backend needs the `object-store` feature",
+            1,
+        ),
+        Err(error) => exit_with(
+            format_args!("invalid storage backend: STORAGE_BACKEND_UNKNOWN: {error:?}"),
+            1,
+        ),
+    }
 }
 
 /// Log whether the configured SPARQL federation endpoint is reachable.

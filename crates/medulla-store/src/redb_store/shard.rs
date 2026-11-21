@@ -1057,16 +1057,13 @@ pub fn bind_scope<D: OwnerDomain>(
 
 /// Parse and admit the `MEDULLA_STORAGE_BACKEND` setting: unset or `local` is the
 /// redb default; anything else is a JSON [`StorageBackendSpec`]. Refusals are
-/// typed and name their reason; `object_store` is `Unsupported` until the
-/// object-store open path lands (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
+/// typed and name their reason; a valid `object_store` spec is admitted here and
+/// opened by the served open path (MEDULLA-OBJECT-STORAGE-BACKEND-R002.1).
 /// An unknown variant refuses as `STORAGE_BACKEND_UNKNOWN` (MEDULLA-ENGINE-PARITY-R019.1).
 pub fn admit_backend_setting(setting: Option<&str>) -> Result<(), String> {
     use medulla_storage::StorageBackendSpec;
-    let spec = match setting.map(str::trim) {
-        None | Some("") | Some("local") => StorageBackendSpec::default(),
-        Some(json) => serde_json::from_str::<StorageBackendSpec>(json)
-            .map_err(|e| format!("STORAGE_BACKEND_UNKNOWN: {e}"))?,
-    };
+    let spec = StorageBackendSpec::from_setting(setting)
+        .map_err(|e| format!("STORAGE_BACKEND_UNKNOWN: {e:?}"))?;
     spec.admit().map_err(|r| match r.wire_code() {
         Some(code) => format!("{code}: {r:?}"),
         None => format!("storage_backend_refused: {r:?}"),

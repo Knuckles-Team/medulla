@@ -49,6 +49,35 @@ pub fn archive_from_env() -> Result<Option<medulla_storage::object::archive::Obj
     )))
 }
 
+/// The environment variable naming the served durable backend: unset or
+/// `local` is redb, otherwise a `StorageBackendSpec` JSON.
+pub const STORAGE_BACKEND_ENV: &str = "MEDULLA_STORAGE_BACKEND";
+
+/// Open the backend named by [`STORAGE_BACKEND_ENV`] at server startup
+/// (MEDULLA-OBJECT-STORAGE-BACKEND-R002.1): `Ok(None)` for the redb default,
+/// `Ok(Some(_))` for an `object_store` spec that is admitted, resolves to a
+/// client through [`resolve_object_store_client`] and opens through
+/// [`ObjectStoreBackend::open`], and `Err("<wire_code>: <detail>")` for a spec
+/// that does not parse, admit or open. Every refusal precedes any effect.
+pub fn open_from_env() -> Result<Option<ObjectStoreBackend>, String> {
+    let setting = std::env::var(STORAGE_BACKEND_ENV).ok();
+    let spec = StorageBackendSpec::from_setting(setting.as_deref())
+        .map_err(|refusal| format!("STORAGE_BACKEND_UNKNOWN: {refusal:?}"))?;
+    spec.admit()
+        .map_err(|refusal| match refusal.wire_code() {
+            Some(code) => format!("{code}: {refusal:?}"),
+            None => format!("storage_backend_refused: {refusal:?}"),
+        })?;
+    if matches!(spec, StorageBackendSpec::Local) {
+        return Ok(None);
+    }
+    let (store, root) = resolve_object_store_client(&spec)
+        .map_err(|refusal| format!("{}: {refusal:?}", refusal.wire_code()))?;
+    ObjectStoreBackend::open(&spec, store, root)
+        .map(Some)
+        .map_err(|refusal| format!("{}: {refusal:?}", refusal.wire_code()))
+}
+
 /// Typed refusal at open. `wire_code` is the literal the wire boundary keeps
 /// stable.
 #[derive(Debug, Clone, PartialEq, Eq)]
