@@ -109,4 +109,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::statistical::harness_config::HARNESS_KNOBS,
     super::statistical::harness_config::HARNESS_EVIDENCE_KNOBS,
     super::statistical::harness_config::HARNESS_REPLAY_KNOBS,
+    crate::correction::KNOBS,
 ];

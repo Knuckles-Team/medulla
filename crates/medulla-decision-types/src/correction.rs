@@ -8,6 +8,19 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+
+/// The knob tables of the correction surface (MEDULLA-DECISION-ENGINE-R702.2):
+/// `correction.nearest_k`, the most prior corrections `Nearest` returns.
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "correction.nearest_k",
+    unit: "results",
+    default: KnobValue::Integer(8),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(16),
+    safety: KnobSafety::Tunable,
+}];
+
 /// Upper bound on `Correction::before` and `Correction::after`, in bytes.
 pub const CORRECTION_VALUE_MAX_BYTES: usize = 8 * 1024;
 
@@ -80,6 +93,32 @@ pub struct CorrectionEffect {
     pub rule_candidate: RuleCandidate,
     pub outcome: CorrectionOutcome,
     pub eval_case: EvalCase,
+}
+
+/// One node a committed correction writes: its id, class and properties.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CorrectionNode {
+    pub id: String,
+    pub class: &'static str,
+    pub properties: serde_json::Map<String, serde_json::Value>,
+}
+
+/// One edge a committed correction writes, from the correction node to an effect.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CorrectionEdge {
+    pub source: String,
+    pub target: String,
+    pub relationship: &'static str,
+}
+
+/// The plan of one correction: the effect and every node and edge that holds it.
+/// `nodes` lists the correction node first, then the rule candidate, the
+/// outcome and the eval case; the handler (R702.3) turns it into one batch.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CorrectionCommit {
+    pub effect: CorrectionEffect,
+    pub nodes: Vec<CorrectionNode>,
+    pub edges: Vec<CorrectionEdge>,
 }
 
 /// Body of `Method::CorrectionRecord`.
