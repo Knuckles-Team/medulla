@@ -48,7 +48,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T038 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.2 Kafka consumer plus real conversion into ChangeEnvelope records
 - [ ] T039 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.3 Replay test feeding a captured Debezium event stream through the bridge
 - [ ] T040 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.1 Model: `DialectConformanceEntry`/`ConformanceReport` are a typed per-engine-version result with a refusal for an auto-suppressed deviation
-- [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Matrix manifest and runner entry per engine version
+- [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Add `conformance/attached_matrix.toml` (five engines, no digest key), `toml_edit` as a root dev-dependency, `MatrixEngine`/`ImagePin`/`pinned_digest` and `manifest_pins_every_image_digest` in `tests/attached_conformance.rs`, reading digests only from the manifest named by `MEDULLA_CONFORMANCE_IMAGE_MANIFEST`
 - [ ] T042 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.1 Model: `compare_replay_to_snapshot` builds a `DialectConformanceEntry` from a replayed row-state map and a source-snapshot row-state map, refusing a blank engine version
 - [ ] T043 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.2 Replay stream versus source snapshot
 - [ ] T044 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.4.1 Residency column
@@ -99,7 +99,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T089 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 Wiring: the search remote joins the shared fusion
 - [ ] T090 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.4 Refusal: vector-space mismatch, page overflow, invented scores
 - [ ] T091 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.5 Evidence: each fragment receipt names the index request
-- [ ] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 Hot-path proof: pushed relevance with k replenished
+- [ ] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 WRITE-TEST: add `tests/federation/search_index_recorded.json` and the `index_search` tool to the `web_gateway` stub, rename the R038.5.1 test, write `test_relevance_pushed_and_k_replenished`
 - [ ] T093 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 openCypher answers over relational and lake sources through the virtual view, without a copy: Model
 - [ ] T094 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.2 Behavior: compile node and relationship patterns to the virtual SPARQL path
 - [x] T095 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 Wiring: a named view routes the read through view compilation
@@ -122,7 +122,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
 - [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
 - [ ] T115 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
-- [ ] T116 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Hot-path proof: a regressed image check blocks a served promotion
+- [ ] T116 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Add served `SemanticIndexOp::InstallModelConfig` and `RecordProbeMeasurement` with their handlers and registrations, the `regressed_image_config` fixture and the L2 and L3 tests
 - [ ] T117 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.1 Projection read binds mapping and graph revisions
 - [ ] T118 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.2 Projected tables refuse every SQL write
 - [ ] T119 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.3 Graph changes reach the projection only through MutationBatch
@@ -147,7 +147,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T142 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.6 Hot-path proof: a failed criterion applies no effect
 - [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.1 Standards conformance: cohorts, drift scores and consolidation recommendations: Model
 - [ ] T144 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.2 Standards conformance: cohorts, drift scores and consolidation recommendations: Behavior
-- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Wiring: `StandardsDrift` reads the graph and stays a proposal across attached applications
+- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Add the `Standard`/`StandardsAsset` node schema, `StandardsDriftResult`, `Method::StandardsDrift { scope, standard }` with its registrations and `handle_standards_drift` in `crates/medulla-h-query/src/query/standards.rs`; register `STANDARDS_NODE_INVALID` and `STANDARD_NOT_FOUND`
 - [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
 - [ ] T147 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
 - [ ] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
@@ -162,6 +162,12 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T158 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
 - [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark: register the policy and resolve the route per fragment
+- [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
+- [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Add `SourceBatchKind::Stream` with `StreamPage` and `StreamPageReceipt`, `admit_stream_page` in `crates/medulla-h-ingest/src/source_ingestion/stream_page.rs`, the `StreamOffsetRegressed` code, the `stream_page.json` fixture and the served tests
+- [ ] T157 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
+- [ ] T158 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
+- [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 Call `AccelerationPolicy::resolve_mode` in `ForeignWatermarks::fragment_sources`, replace `MAX_ROWS_PER_ENTRY` with `copy_admitted` and `acceleration.max_copy_rows`, add `tests/federation/acceleration_fixtures.py` and `test_stale_watermark_reads_live`
 - [ ] T161 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
 - [x] T163 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
@@ -171,14 +177,14 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
 - [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
 - [x] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
-- [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
-- [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
+- [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 WRITE-TEST: `tests/federation/test_profile_method_served.py::test_profile_method_recorded` over `pg_source` and a native table
+- [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 WRITE-TEST: `test_profile_ten_columns_of_a_native_dataset` over a 100,000-row, ten-column native table
 - [ ] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model
 - [ ] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
 - [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
 - [x] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
 - [x] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
-- [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
+- [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 WRITE-TEST: `test_hundred_rules_over_a_native_dataset` with 100 `QualityRulePut` rules and one `QualityEvaluate` job
 - [ ] T178 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
 - [ ] T179 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
 - [ ] T180 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.1 Column-level lineage from SQL text: Model
@@ -208,7 +214,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T111 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
 - [ ] T112 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
 - [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
-- [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Hot-path proof: a regressed image check blocks a served promotion
+- [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Add served `SemanticIndexOp::InstallModelConfig` and `RecordProbeMeasurement` with their handlers and registrations, the `regressed_image_config` fixture and the L2 and L3 tests
 - [ ] T115 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.1 Projection read binds mapping and graph revisions
 - [ ] T116 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.2 Projected tables refuse every SQL write
 - [ ] T117 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.3 Graph changes reach the projection only through MutationBatch
@@ -233,7 +239,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T140 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.6 Hot-path proof: a failed criterion applies no effect
 - [ ] T141 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.1 Standards conformance: cohorts, drift scores and consolidation recommendations: Model
 - [ ] T142 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.2 Standards conformance: cohorts, drift scores and consolidation recommendations: Behavior
-- [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Wiring: `StandardsDrift` reads the graph and stays a proposal across attached applications
+- [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Add the `Standard`/`StandardsAsset` node schema, `StandardsDriftResult`, `Method::StandardsDrift { scope, standard }` with its registrations and `handle_standards_drift` in `crates/medulla-h-query/src/query/standards.rs`; register `STANDARDS_NODE_INVALID` and `STANDARD_NOT_FOUND`
 - [ ] T144 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
 - [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
 - [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
@@ -248,6 +254,12 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
 - [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark: register the policy and resolve the route per fragment
+- [ ] T153 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
+- [ ] T154 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Add `SourceBatchKind::Stream` with `StreamPage` and `StreamPageReceipt`, `admit_stream_page` in `crates/medulla-h-ingest/src/source_ingestion/stream_page.rs`, the `StreamOffsetRegressed` code, the `stream_page.json` fixture and the served tests
+- [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
+- [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
+- [x] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 Call `AccelerationPolicy::resolve_mode` in `ForeignWatermarks::fragment_sources`, replace `MAX_ROWS_PER_ENTRY` with `copy_admitted` and `acceleration.max_copy_rows`, add `tests/federation/acceleration_fixtures.py` and `test_stale_watermark_reads_live`
 - [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
 - [x] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
@@ -257,14 +269,14 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T165 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
 - [x] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
 - [x] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
-- [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
-- [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
+- [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 WRITE-TEST: `tests/federation/test_profile_method_served.py::test_profile_method_recorded` over `pg_source` and a native table
+- [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 WRITE-TEST: `test_profile_ten_columns_of_a_native_dataset` over a 100,000-row, ten-column native table
 - [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model
 - [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
 - [x] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
 - [x] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
 - [x] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
-- [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
+- [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 WRITE-TEST: `test_hundred_rules_over_a_native_dataset` with 100 `QualityRulePut` rules and one `QualityEvaluate` job
 - [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
 - [x] T210 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job
 - [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
@@ -289,11 +301,10 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply
 - [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Wire status codes: closed enums for Iceberg, KV and S3 (built); rename the TDS flag byte and the two upstream HTTP codes
+- [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Iceberg manifest entry, key-value cache reply and object-store reply statuses are closed enums
+- [ ] T200a [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2.1 Make `Span.status` the closed `SpanStatus` enum with its text form unchanged
 - [x] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
-- [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 ProjectionHealth/ProjectionStatus state machine: route 1 census findings through ProjectionStatus::apply
-- [ ] T203 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.5 SchemaMigrationRecord/MigrationState state machine: route 1 census findings through MigrationState::apply
+- [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 Add `SeriesProjectionMachine` (`crates/medulla-tsdb/src/projection_machine.rs`, edges SP01-SP12), move `ProjectionStatus` into it, add `projection_status_in_wtx`, route `append_scoped`, `stage_scoped_append`, `mark_projection_ready` and `mark_projection_degraded` through `apply`, add the Turtle block and the vocabulary tests
 - [x] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
 - [ ] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
 - [x] T205 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.7 SessionRecord/SessionState state machine: route 9 census findings through SessionState::apply
-- [ ] T206 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.8 Span/SpanStatus state machine: route 1 census findings through SpanStatus::apply
-- [ ] T207 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.9 TckPointResult/TckStatus state machine: route 1 census findings through TckStatus::apply
