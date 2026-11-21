@@ -1,0 +1,15 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+:DmnDecisionTableShape a sh:NodeShape ;
+    sh:targetClass :DmnDecisionTable ;
+    sh:property [
+        sh:path :dmnHitPolicy ;
+        sh:maxCount 1 ;
+        sh:in ( "UNIQUE" "FIRST" "PRIORITY" "ANY" "COLLECT" "RULE ORDER" "OUTPUT ORDER" ) ;
+    ] ;
+    sh:property [
+        sh:path :dmnAggregation ;
+        sh:maxCount 1 ;
+        sh:in ( "SUM" "MIN" "MAX" "COUNT" ) ;
+    ] .

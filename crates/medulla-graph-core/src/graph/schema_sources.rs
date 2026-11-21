@@ -1023,6 +1023,14 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
         },
         CoreSpec {
+            module: "dmn",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/dmn-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!("../../../medulla-core/ontology/dmn-v1.ttl")),
+        },
+        CoreSpec {
             module: "enterprise",
             version: 1,
             shapes: None,

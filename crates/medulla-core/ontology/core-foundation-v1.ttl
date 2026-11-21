@@ -1378,3 +1378,13 @@ bfo:0000001 a owl:Class ;
     rdfs:label "Value Type" ;
     rdfs:comment "A named constrained datatype (XSD base plus pattern, range, length and enumeration) that object-type properties use; compiled to SHACL property constraints. MEDULLA-TYPED-PACKS-R650.1." ;
     rdfs:subClassOf bfo:0000031 .
+
+:DecisionLogic a owl:Class ;
+    rdfs:label "Decision Logic" ;
+    rdfs:comment "Governed logic that derives a decision outcome from inputs, such as a decision table." ;
+    rdfs:subClassOf :Policy .
+
+:DecisionRule a owl:Class ;
+    rdfs:label "Decision Rule" ;
+    rdfs:comment "One rule of a decision logic: conditions over inputs and the outcome they select." ;
+    rdfs:subClassOf :Policy .
