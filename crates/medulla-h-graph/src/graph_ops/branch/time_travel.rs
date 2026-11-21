@@ -410,6 +410,25 @@ impl VersionState {
         Ok(operations)
     }
 
+    /// A state holding only the given node rows: the base graph's nodes at one version, or its
+    /// current nodes, read for the ids a branch touched (MEDULLA-BRANCH-MERGE-R007, a merge into
+    /// the base graph).
+    pub fn from_node_rows(nodes: BTreeMap<String, Vec<u8>>) -> Self {
+        Self {
+            nodes,
+            ..Self::default()
+        }
+    }
+
+    /// The node ids the folded commits wrote or removed.
+    pub fn touched_nodes(&self) -> BTreeSet<String> {
+        self.nodes
+            .keys()
+            .chain(self.removed_nodes.iter())
+            .cloned()
+            .collect()
+    }
+
     /// The raw property bytes of the node `id`, if it is present.
     pub fn node_properties(&self, id: &str) -> Option<&[u8]> {
         self.nodes.get(id).map(Vec::as_slice)

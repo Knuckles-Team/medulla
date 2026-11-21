@@ -314,7 +314,13 @@ pub async fn plan_branch_merge(
     // The trunk has no registry row, head or chain: the source's net changes land in the base
     // graph (MEDULLA-BRANCH-MERGE-R007).
     if request.target == RESERVED_BRANCH_NAME {
-        return publish::plan_trunk_merge(state, verified, source, &request.graph)
+        return publish::plan_trunk_merge(
+            state,
+            verified,
+            source,
+            &request.graph,
+            request.policy.clone(),
+        )
             .await
             .map_err(|error| publish_error_response(req_id, error));
     }

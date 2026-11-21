@@ -11,6 +11,7 @@
 //! publishes nothing and never claims a rollback. A target that moved past the
 //! head the merge read refuses `MERGE_TARGET_STALE`, never a silent rebase.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_catalog_types::graph_schema::shadow_branch::SchemaRepairActivation;
@@ -29,7 +30,9 @@ use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
 use super::conflict::merge_conflicts;
-use super::merge::{merge_entities, EntityIdentity, EntityVersion, MergePlan, ValidationGates};
+use super::merge::{
+    merge_entities, EntityIdentity, EntitySnapshot, EntityVersion, MergePlan, ValidationGates,
+};
 use super::time_travel::{fold_chain, fold_to_commit, load_chain, ChainEntry, VersionState};
 use super::{payload_digest, resolve_target, MergeClassification, MergeClassifyError};
 
@@ -280,6 +283,9 @@ pub struct MergeApplyPlan {
     classified: MergeClassification,
     /// The merge record of a two-parent merge; `None` for a fast-forward.
     publication: Option<MergePublication>,
+    /// The conflict records of a merge into `main`, which has no commit payload to carry them;
+    /// empty for every other merge.
+    trunk_conflicts: Vec<ConflictRecord>,
 }
 
 /// What `publish_merge` answers: a receipt that needs no write, or a plan.
@@ -376,14 +382,19 @@ impl MergeApplyPlan {
         appended: Option<AppendedCommit>,
     ) -> Result<BranchMergeReceipt, PublishError> {
         let Some(publication) = self.publication else {
+            let outcome = if self.trunk_conflicts.is_empty() {
+                MergeOutcome::FastForward
+            } else {
+                outcome_of_records(&self.trunk_conflicts)
+            };
             return Ok(BranchMergeReceipt {
-                outcome: MergeOutcome::FastForward,
+                outcome,
                 merge_base: self.classified.merge_base,
                 source_head: self.classified.source_head.clone(),
                 target_head: self.classified.source_head.clone(),
                 merged_parent: Some(self.classified.source_head),
                 commit: None,
-                conflicts: Vec::new(),
+                conflicts: self.trunk_conflicts,
                 replayed: false,
             });
         };
@@ -455,6 +466,7 @@ async fn plan_fast_forward(
         }),
         classified: classified.clone(),
         publication: None,
+        trunk_conflicts: Vec::new(),
     })
 }
 
@@ -593,7 +605,126 @@ pub async fn publish_merge(
         }),
         classified: classified.clone(),
         publication: Some(publication),
+        trunk_conflicts: Vec::new(),
     })))
+}
+
+/// The version a branch was cut at, read from its base pointer `<graph>@<version>`.
+fn base_version_of(merge_base: &str) -> Result<u64, PublishError> {
+    merge_base
+        .rsplit_once('@')
+        .and_then(|(_, version)| version.parse().ok())
+        .ok_or_else(|| {
+            PublishError::Failed(format!("merge base {merge_base} is not a base pointer"))
+        })
+}
+
+/// The node rows of the base graph `graph` for `ids`: as of `base_version` (what the branch was
+/// cut from) and as they stand now (what `main` holds). The graph keeps a version-indexed image
+/// per node, so a node `main` changed after the cut differs between the two.
+async fn trunk_node_rows(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    base_version: u64,
+    ids: &std::collections::BTreeSet<String>,
+) -> Result<(BTreeMap<String, Vec<u8>>, BTreeMap<String, Vec<u8>>), PublishError> {
+    let s = state.read().await;
+    let entry = s
+        .registry
+        .get(graph)
+        .ok_or_else(|| PublishError::Failed(format!("graph {graph} is not loaded")))?;
+    let (mut base, mut current) = (BTreeMap::new(), BTreeMap::new());
+    for id in ids {
+        let at_base = entry
+            .core
+            .node_properties_at(id, base_version)
+            .map_err(|error| PublishError::Failed(error.to_string()))?;
+        if let Some(bytes) = at_base {
+            base.insert(id.clone(), bytes.as_ref().clone());
+        }
+        if let Some(bytes) = entry.core.get_node_properties(id) {
+            current.insert(id.clone(), bytes);
+        }
+    }
+    Ok((base, current))
+}
+
+/// The three-way classification of a branch's node writes against `main`: the base is the base
+/// graph's state at the version the branch was cut at, the target is the base graph now, the
+/// source is the branch's net write. A node changed on both sides is a conflict; a node changed
+/// on one side is adopted or held. Only nodes the branch wrote or removed take part: the base
+/// graph keeps no version-indexed edge images, so an edge the branch wrote is adopted.
+fn trunk_three_way(
+    tenant: &str,
+    source_state: &VersionState,
+    base_rows: BTreeMap<String, Vec<u8>>,
+    target_rows: BTreeMap<String, Vec<u8>>,
+) -> Result<(MergePlan, EntitySnapshot, EntitySnapshot), PublishError> {
+    let nodes_only = |snapshot: EntitySnapshot| -> EntitySnapshot {
+        snapshot
+            .into_iter()
+            .filter(|(identity, _)| matches!(identity, EntityIdentity::Node { .. }))
+            .collect()
+    };
+    let entities = |state: &VersionState| {
+        state
+            .entities(tenant)
+            .map(nodes_only)
+            .map_err(PublishError::Failed)
+    };
+    let base = entities(&VersionState::from_node_rows(base_rows))?;
+    let target = entities(&VersionState::from_node_rows(target_rows))?;
+    let source = entities(source_state)?;
+    let mut gates = ValidationGates::new();
+    for snapshot in [&base, &source, &target] {
+        for (identity, version) in snapshot {
+            gates
+                .entry(identity.clone())
+                .or_insert_with(|| recorded_gate(identity, Some(version)));
+        }
+    }
+    let plan = merge_entities(&base, &source, &target, &gates)
+        .map_err(|refusal| PublishError::AdoptionInvalid(refusal.message()))?;
+    Ok((plan, source, target))
+}
+
+/// The branch's net operations for the base graph, less the node writes the merge did not
+/// adopt: a node `main` changed (held, or a conflict that stayed open or resolved for `main`)
+/// keeps its `main` version.
+fn trunk_batch(
+    operations: Vec<serde_json::Value>,
+    touched: &std::collections::BTreeSet<String>,
+    plan: &MergePlan,
+    conflicts: &[ConflictRecord],
+) -> Vec<serde_json::Value> {
+    let node_key = |identity: &EntityIdentity| match identity {
+        EntityIdentity::Node { key, .. } => Some(key.clone()),
+        EntityIdentity::Edge { .. } => None,
+    };
+    let mut allowed: std::collections::BTreeSet<String> =
+        plan.adopted_from_source.keys().filter_map(node_key).collect();
+    for (identity, record) in plan.conflicts.iter().zip(conflicts) {
+        if matches!(
+            record.outcome,
+            ConflictOutcome::Resolved {
+                winner: ConflictSide::B,
+                ..
+            }
+        ) {
+            allowed.extend(node_key(identity));
+        }
+    }
+    operations
+        .into_iter()
+        .filter(|operation| {
+            let is_node_write = matches!(
+                operation["op"].as_str(),
+                Some("add_node") | Some("remove_node")
+            );
+            let id = operation["id"].as_str().unwrap_or_default();
+            !(is_node_write && touched.contains(id) && !allowed.contains(id))
+        })
+        .collect()
 }
 
 /// Plan the merge of `source` into `main`, the base graph `graph` (MEDULLA-BRANCH-MERGE-R007).
@@ -601,14 +732,17 @@ pub async fn publish_merge(
 /// `main` is not a registry branch: it has no commit chain, head or registry transaction, so the
 /// plan carries only the graph batch. The batch is the net change of the source chain (every
 /// removal it made and every row it leaves, [`VersionState::trunk_operations`]) written over the
-/// base graph, and the receipt names the source head as the merged parent. The base graph keeps
-/// no history to fold, so a change both sides made to one entity is not detected: the branch's
-/// version replaces it.
+/// base graph, less the nodes `main` changed since the branch was cut. Those are found against
+/// the base graph's node image at the branch's base version ([`trunk_three_way`]); a node changed
+/// on both sides goes through the conflict decider exactly like a branch merge, and an open
+/// conflict leaves the `main` version. Silent overwriting never happens. The receipt names the
+/// source head as the merged parent and carries the conflict records.
 pub async fn plan_trunk_merge(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     source: BranchRef,
     graph: &str,
+    policy: Option<DecisionPolicyRef>,
 ) -> Result<MergeStep, PublishError> {
     if verified.principal().trim().is_empty() {
         return Err(PublishError::Refused(ServerErrorCode::MergeActorUnknown));
@@ -637,16 +771,47 @@ pub async fn plan_trunk_merge(
         source_head: head.clone(),
         target_head: head.clone(),
     };
-    let operations = source_state.trunk_operations().map_err(PublishError::Failed)?;
+    let mut operations = source_state.trunk_operations().map_err(PublishError::Failed)?;
+    let touched = source_state.touched_nodes();
+    let mut conflicts = Vec::new();
+    if !touched.is_empty() {
+        let base_version = base_version_of(&classified.merge_base)?;
+        let (base_rows, target_rows) =
+            trunk_node_rows(state, graph, base_version, &touched).await?;
+        let (plan, source_entities, target_entities) =
+            trunk_three_way(&tenant, &source_state, base_rows, target_rows)?;
+        if !plan.conflicts.is_empty() {
+            let schema = conflict_feature_schema(state, verified)
+                .await
+                .map_err(PublishError::Failed)?;
+            conflicts = merge_conflicts(
+                state,
+                verified,
+                &plan.conflicts,
+                &source_entities,
+                &target_entities,
+                policy.unwrap_or(DecisionPolicyRef::Default),
+                &schema,
+            )
+            .await
+            .map_err(PublishError::Failed)?;
+        }
+        operations = trunk_batch(operations, &touched, &plan, &conflicts);
+    }
     if operations.is_empty() {
+        let outcome = if conflicts.is_empty() {
+            MergeOutcome::UpToDate
+        } else {
+            outcome_of_records(&conflicts)
+        };
         return Ok(MergeStep::Done(BranchMergeReceipt {
-            outcome: MergeOutcome::UpToDate,
+            outcome,
             merge_base: classified.merge_base,
             source_head: head.clone(),
             target_head: head,
             merged_parent: None,
             commit: None,
-            conflicts: Vec::new(),
+            conflicts,
             replayed: false,
         }));
     }
@@ -658,6 +823,7 @@ pub async fn plan_trunk_merge(
         registry: None,
         classified,
         publication: None,
+        trunk_conflicts: conflicts,
     })))
 }
 
@@ -671,6 +837,39 @@ mod tests {
     use std::sync::Mutex;
 
     const TENANT: &str = "tenant-a";
+
+    fn row(pairs: &[(&str, &str)]) -> Vec<u8> {
+        let map: BTreeMap<String, String> = pairs
+            .iter()
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect();
+        rmp_serde::to_vec_named(&map).unwrap()
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R007
+    #[test]
+    fn a_trunk_merge_detects_a_node_both_sides_changed_and_keeps_the_main_version() {
+        let nodes: BTreeMap<String, Vec<u8>> = [
+            ("both".to_string(), row(&[("type", "T"), ("v", "branch")])),
+            ("branch-only".to_string(), row(&[("type", "T"), ("v", "branch")])),
+        ]
+        .into();
+        let source = VersionState::from_node_rows(nodes);
+        let base: BTreeMap<String, Vec<u8>> =
+            [("both".to_string(), row(&[("type", "T"), ("v", "base")]))].into();
+        let main: BTreeMap<String, Vec<u8>> = [(
+            "both".to_string(),
+            row(&[("type", "T"), ("v", "main")]),
+        )]
+        .into();
+        let (plan, _, _) = trunk_three_way(TENANT, &source, base, main).unwrap();
+        assert_eq!(plan.conflicts.len(), 1);
+        assert_eq!(plan.adopted_from_source.len(), 1);
+        let operations = source.trunk_operations().unwrap();
+        let kept = trunk_batch(operations, &source.touched_nodes(), &plan, &[]);
+        let ids: Vec<&str> = kept.iter().filter_map(|op| op["id"].as_str()).collect();
+        assert_eq!(ids, vec!["branch-only"]);
+    }
 
     /// A graph that applies the plan's operations as the compile path does (`add_node` replaces
     /// a row, `remove_node` deletes it) and a registry write that fails once.
@@ -807,6 +1006,7 @@ mod tests {
                 target_head: target_head.clone(),
             },
             publication: Some(publication),
+            trunk_conflicts: Vec::new(),
         };
         let effects = FlakyEffects {
             graph: Mutex::new(BTreeMap::new()),
