@@ -54,8 +54,9 @@ pub(crate) fn bound_scope_version<D: OwnerDomain>(
 /// Install the authoritative version of one bound scope inside an already-held
 /// write transaction, for a restore that reproduces a published graph at the
 /// version it was published at. The version only moves forward: a restore never
-/// lowers a scope's monotonic counter.
-pub fn install_scope_version<D: OwnerDomain>(
+/// lowers a scope's monotonic counter. Called only by `commit::finish_installed`,
+/// before the receipt is written.
+pub(crate) fn install_scope_version<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
     version: u64,

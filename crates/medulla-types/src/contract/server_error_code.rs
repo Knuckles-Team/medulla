@@ -147,6 +147,10 @@ closed_error_codes! {
         /// MEDULLA-OBJECT-STORAGE-BACKEND-R003: a commit lost the root's `HEAD` fence; the
         /// commit fails before the ack and its local write rolls back.
         ObjectPublishStale => "OBJECT_PUBLISH_STALE",
+        /// MEDULLA-OBJECT-STORAGE-BACKEND-R003: a drain or maintenance write touched a graph
+        /// with no catalog row on a shard with a publisher attached; it has no identity to
+        /// publish under, so the write refuses.
+        ObjectGraphIdentityMissing => "OBJECT_GRAPH_IDENTITY_MISSING",
         ConversationConflict => "CONVERSATION_CONFLICT",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
         ClaimPaced => "CLAIM_PACED",

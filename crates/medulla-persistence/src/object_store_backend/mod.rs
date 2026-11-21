@@ -395,12 +395,13 @@ impl ObjectStoreBackend {
             }
             let mut local = local_version(&graph_fname)?;
             if base > 0 && local < base {
-                let (mut nodes, mut edges) = (Vec::new(), Vec::new());
+                let (mut nodes, mut edges, mut tables) = (Vec::new(), Vec::new(), Vec::new());
                 for page in pages {
                     nodes.extend(page.nodes);
                     edges.extend(page.edges);
+                    tables.extend(page.tables);
                 }
-                redb.restore_graph_rows(&graph_fname, nodes, edges, base)
+                redb.restore_graph_rows(&graph_fname, nodes, edges, tables, base)
                     .await?;
                 local = local_version(&graph_fname)?;
                 if local != base {

@@ -60,6 +60,7 @@ impl RedbBackend {
         graph_fname: &str,
         nodes: Vec<(String, Vec<u8>)>,
         edges: Vec<(String, String, Vec<u8>)>,
+        tables: Vec<medulla_storage::TableRows>,
         graph_version: u64,
     ) -> Result<(), String> {
         let (done, rx) = oneshot::channel();
@@ -67,6 +68,7 @@ impl RedbBackend {
             graph: graph_fname.to_string(),
             nodes,
             edges,
+            tables,
             graph_version,
             done,
         };

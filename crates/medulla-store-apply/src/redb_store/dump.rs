@@ -603,6 +603,21 @@ pub fn read_graph_dump_page(
     }))
 }
 
+/// One graph's rows in every graph-scoped owner table except `nodes`
+/// and `edges`, read from one committed snapshot (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
+/// The tables are the registry's own enumeration, so a graph copy and a
+/// bootstrap snapshot carry the event ledger, the semantic store, the audit
+/// chain, and the resource, development-lane and capacity rows with the nodes
+/// and edges.
+pub fn read_graph_table_rows(
+    shard: &Shard,
+    graph: &str,
+) -> Result<Vec<medulla_storage::TableRows>, String> {
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    medulla_storage::export_graph_table_rows(&read)
+}
+
 #[cfg(test)]
 mod keyset_page_tests {
     use super::*;

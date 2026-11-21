@@ -586,30 +586,37 @@ impl Shard {
             install_version,
         } = drain;
         let ledger_finish = CommitPhaseTimer::start("ledger_finish");
+        let installed_member = match &install_version {
+            Some((graph, version)) => Some((self.drain_member_index(batches, graph)?, *version)),
+            None => None,
+        };
         let mut receipts: Vec<(usize, MutationBatchRecord)> = Vec::new();
         for (index, batch) in batches.iter().enumerate() {
             let Begin::Apply { source_version } = group.begun(index)? else {
                 continue;
             };
             let source_version = *source_version;
-            let receipt = self.mutations.finish(
-                group.member(index)?,
-                batch,
-                None,
-                committed_at_ms,
-                source_version,
-            )?;
+            // A restore's member installs the published version before its
+            // receipt is written, so the receipt names the installed version.
+            let receipt = match installed_member {
+                Some((member, version)) if member == index => self.mutations.finish_installed(
+                    group.member(index)?,
+                    batch,
+                    None,
+                    committed_at_ms,
+                    version,
+                )?,
+                _ => self.mutations.finish(
+                    group.member(index)?,
+                    batch,
+                    None,
+                    committed_at_ms,
+                    source_version,
+                )?,
+            };
             if index > 0 {
                 receipts.push((index, receipt));
             }
-        }
-        if let Some((graph, version)) = &install_version {
-            let index = self.drain_member_index(batches, graph)?;
-            medulla_transaction::install_scope_version(
-                group.member(index)?,
-                &batches[index].identity,
-                *version,
-            )?;
         }
         if let Some(publisher) = self.commit_publisher.get() {
             for (index, receipt) in &receipts {
@@ -1034,7 +1041,10 @@ impl Shard {
     ) -> Result<(), String> {
         let (graph_name, graph_type) =
             crate::redb_store::store_read::read_graph_identity(self, graph)?.ok_or_else(|| {
-                format!("graph {graph} has no durable identity row to publish under")
+                format!(
+                    "{}: graph {graph} has no durable identity row to publish under",
+                    medulla_types::contract::ServerErrorCode::ObjectGraphIdentityMissing.as_str()
+                )
             })?;
         let prior_graph_version =
             crate::redb_store::store_read::read_mutation_graph_version(self, graph)?;

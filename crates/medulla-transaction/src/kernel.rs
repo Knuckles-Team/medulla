@@ -356,6 +356,21 @@ impl MutationKernel {
         )
     }
 
+    /// Persist terminal metadata for one admitted batch of a restore that
+    /// installs a published graph at `installed`. The scope version is
+    /// installed before the receipt is written, in the same transaction, so the
+    /// receipt names the installed version.
+    pub fn finish_installed<D: OwnerDomain>(
+        &self,
+        write: &AdmittedMutation<'_, D>,
+        batch: &MutationBatch,
+        result_msgpack: Option<Vec<u8>>,
+        committed_at_ms: u64,
+        installed: u64,
+    ) -> Result<MutationBatchRecord, String> {
+        commit::finish_installed(write, batch, result_msgpack, committed_at_ms, installed)
+    }
+
     /// Persist terminal metadata and a typed replay receipt atomically with
     /// the owner rows.
     pub fn finish_with_replay<D: OwnerDomain>(

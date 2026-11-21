@@ -136,6 +136,7 @@ pub enum Cmd {
         graph: String,
         nodes: Vec<(String, Vec<u8>)>,
         edges: Vec<(String, String, Vec<u8>)>,
+        tables: Vec<medulla_storage::TableRows>,
         graph_version: u64,
         done: oneshot::Sender<Result<(), String>>,
     },
@@ -170,6 +171,15 @@ pub enum Cmd {
     ReadGraphDump {
         graph: String,
         reply: std::sync::mpsc::SyncSender<Result<Option<GraphDump>, String>>,
+    },
+    /// Read ONE graph's rows of every graph-scoped table except `nodes` and
+    /// `edges`, as the row pages that follow its node and edge pages in a
+    /// snapshot or a graph copy.
+    ReadGraphTableRows {
+        graph: String,
+        reply: std::sync::mpsc::SyncSender<
+            Result<Vec<medulla_storage::TableRows>, String>,
+        >,
     },
     /// Read ONE BOUNDED page of one graph's durable rows (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38
     /// "paged adjacency") — the memory-bounded sibling of `ReadGraphDump` a paged

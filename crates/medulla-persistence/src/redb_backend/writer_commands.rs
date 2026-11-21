@@ -52,6 +52,7 @@ macro_rules! writer_command_arms {
             graph,
             nodes,
             edges,
+            tables,
             graph_version,
             done,
         } => {
@@ -61,6 +62,7 @@ macro_rules! writer_command_arms {
                 &graph,
                 &nodes,
                 &edges,
+                &tables,
                 graph_version,
                 crypto,
             ));
@@ -107,6 +109,13 @@ macro_rules! writer_command_arms {
             // then range-scan ONE graph's rows (CONCEPT:MEDULLA-KG.storage.100m-tenant).
             flush(pending);
             let _ = reply.send(read_graph_dump(shard, &graph, crypto));
+            false
+        }
+        Cmd::ReadGraphTableRows { graph, reply } => {
+            flush(pending);
+            let _ = reply.send(medulla_store_apply::redb_store::dump::read_graph_table_rows(
+                shard, &graph,
+            ));
             false
         }
         Cmd::ReadGraphDumpPage {

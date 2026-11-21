@@ -57,6 +57,9 @@ pub use owner::domain::{
 };
 pub use owner::grant::{AuthenticatedScopeGrant, ScopeGrantVerifier};
 pub use owner::handle::OwnedStoreHandle;
+pub use owner::graph_rows::{
+    export_graph_table_rows, visit_graph_scoped_tables, GraphTableVisitor, TableRows, PAGED_GRAPH_TABLES,
+};
 pub use owner::identity::PhysicalStoreIdentity;
 pub use owner::layout::OwnerLayout;
 pub use owner::lineage::{

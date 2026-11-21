@@ -8,11 +8,13 @@
 
 use std::sync::{Arc, Weak};
 
-use medulla_storage::object::rows::{append_row_page, RowBatch, BATCH_ROWS};
+use medulla_storage::object::rows::{append_row_page, table_row_pages, RowBatch, BATCH_ROWS};
 use medulla_store::redb_store::commit_publish::{CommitPublisher, PublishedCommit};
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::DurableCrypto;
-use medulla_store_apply::redb_store::dump::{read_graph_dump_page, PageCursorRef};
+use medulla_store_apply::redb_store::dump::{
+    read_graph_dump_page, read_graph_table_rows, PageCursorRef,
+};
 
 use super::ObjectStoreBackend;
 
@@ -63,7 +65,8 @@ struct ShardCommitPublisher {
 
 impl ShardCommitPublisher {
     /// The version-zero snapshot of one graph: its row pages, the paged export
-    /// form of the graph copy, concatenated in key order. Read from the
+    /// form of the graph copy (nodes and edges, then every other graph-scoped table),
+    /// concatenated in key order. Read from the
     /// committed state the open commit builds on.
     fn graph_snapshot(&self, graph: &str) -> Result<Vec<u8>, String> {
         let shard = self
@@ -104,6 +107,7 @@ impl ShardCommitPublisher {
             let batch = RowBatch {
                 nodes: page.nodes,
                 edges: page.edges,
+                tables: Vec::new(),
             };
             if batch.rows() > 0 {
                 append_row_page(&mut segment, &batch)?;
@@ -111,6 +115,12 @@ impl ShardCommitPublisher {
             if done {
                 break;
             }
+        }
+        // Every other graph-scoped table of the graph (event ledger, semantic store,
+        // audit chain, resource, development-lane and capacity rows) follows the node
+        // and edge pages, so the restored graph is complete.
+        for page in table_row_pages(read_graph_table_rows(&shard, graph)?) {
+            append_row_page(&mut segment, &page)?;
         }
         Ok(segment)
     }

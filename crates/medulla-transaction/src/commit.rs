@@ -408,6 +408,30 @@ pub(crate) fn finish<D: OwnerDomain>(
         committed_at_ms,
         source_version,
         None,
+        None,
+    )
+}
+
+/// Finish a batch for a restore that installs a published graph at `installed`:
+/// the scope version is installed BEFORE the receipt is written, in the same
+/// write transaction, so the receipt names the installed version
+/// (`source = installed - 1`, `target = installed`). The version only moves
+/// forward: `installed` must be past the scope's current version.
+pub(crate) fn finish_installed<D: OwnerDomain>(
+    write: &AdmittedMutation<'_, D>,
+    batch: &MutationBatch,
+    result_msgpack: Option<Vec<u8>>,
+    committed_at_ms: u64,
+    installed: u64,
+) -> Result<MutationBatchRecord, String> {
+    finish_inner(
+        write,
+        batch,
+        result_msgpack,
+        committed_at_ms,
+        None,
+        Some(installed),
+        None,
     )
 }
 
@@ -443,6 +467,7 @@ pub(crate) fn finish_with_replay<D: OwnerDomain>(
         result_msgpack,
         committed_at_ms,
         source_version,
+        None,
         Some((operation, nonce, receipt)),
     )
 }
@@ -453,6 +478,7 @@ fn finish_inner<D: OwnerDomain>(
     result_msgpack: Option<Vec<u8>>,
     committed_at_ms: u64,
     source_version: Option<u64>,
+    installed: Option<u64>,
     replay: Option<(
         &medulla_identity_types::authority::OperationReplayIdentity,
         &medulla_identity_types::authority::NonceReplayKey,
@@ -464,7 +490,16 @@ fn finish_inner<D: OwnerDomain>(
     // typed replay row, so a replayed member cannot overwrite its evidence.
     write.validate_finish_admission(batch)?;
     certification_fault(batch, MutationCommitPhase::AfterRowsBeforeMetadata)?;
-    let committed_version = committed_version(batch.version_expectation, source_version)?;
+    let committed_version = match installed {
+        Some(version) => {
+            let source = version
+                .checked_sub(1)
+                .ok_or_else(|| "a restore installs a version of at least one".to_string())?;
+            crate::ledger::install_scope_version(write, &batch.identity, source)?;
+            CommittedVersion::checked_graph(source)?
+        }
+        None => committed_version(batch.version_expectation, source_version)?,
+    };
     let record = MutationBatchRecord {
         batch: batch.clone(),
         identity: batch.identity.clone(),

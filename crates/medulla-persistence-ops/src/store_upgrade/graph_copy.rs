@@ -16,7 +16,7 @@ use std::sync::Arc;
 use futures_util::TryStreamExt;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_storage::object::fetch::{ObjectHead, SegmentHeader, VersionManifest};
-use medulla_storage::object::rows::{RowBatch, BATCH_ROWS};
+use medulla_storage::object::rows::{table_row_pages, RowBatch, BATCH_ROWS};
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt, PutMode, PutOptions};
 use serde::{Deserialize, Serialize};
@@ -142,6 +142,7 @@ pub async fn copy_graph(
     let mut source_chain = Chain::new();
     let mut staged: Vec<(String, String, u64)> = Vec::new();
     let (mut node_after, mut edge_after) = (None, None);
+    let mut pages: Vec<RowBatch> = Vec::new();
     loop {
         let Some(page) = backend
             .export_graph_raw_page(graph_fname, node_after.clone(), edge_after.clone(), BATCH_ROWS)
@@ -152,10 +153,24 @@ pub async fn copy_graph(
         node_after = page.node_after.clone();
         edge_after = page.edge_after.clone();
         let done = page.nodes_exhausted && page.edges_exhausted;
-        let batch = RowBatch {
+        pages.push(RowBatch {
             nodes: page.nodes,
             edges: page.edges,
-        };
+            tables: Vec::new(),
+        });
+        if done {
+            break;
+        }
+    }
+    // The graph's other graph-scoped tables (event ledger, semantic store, audit chain,
+    // resource, development-lane and capacity rows) follow its node and edge pages.
+    if !pages.is_empty() {
+        let tables = backend
+            .export_graph_table_rows(graph_fname)
+            .map_err(GraphCopyRefusal::Source)?;
+        pages.extend(table_row_pages(tables));
+    }
+    for batch in pages {
         if batch.rows() > 0 {
             let bytes = rmp_serde::to_vec_named(&batch)
                 .map_err(|error| GraphCopyRefusal::Source(error.to_string()))?;
@@ -167,9 +182,6 @@ pub async fn copy_graph(
                 .map_err(destination)?;
             source_chain.push(&digest, batch.rows());
             staged.push((key, digest, batch.rows()));
-        }
-        if done {
-            break;
         }
     }
     let source_digest = source_chain.finish();
@@ -493,18 +505,22 @@ mod tests {
         let report = copy_graph(&backend, GRAPH, "t", "g", store.clone(), "root")
             .await
             .unwrap();
-        assert_eq!(report.rows, 2_500);
-        assert_eq!(report.batches, 3);
         assert_eq!(report.version, 1);
         let fetcher = ObjectFetcher::new(store.clone(), "root");
         let head = fetcher.head("t", "g").await.unwrap();
         let state = fetcher.materialize("t", "g", head.version).await.unwrap();
-        let copied: usize = state
+        let pages: Vec<RowBatch> = state
             .batches
             .iter()
-            .map(|segment| rmp_serde::from_slice::<RowBatch>(&segment.bytes).unwrap().nodes.len())
-            .sum();
+            .map(|segment| rmp_serde::from_slice::<RowBatch>(&segment.bytes).unwrap())
+            .collect();
+        let copied: usize = pages.iter().map(|page| page.nodes.len()).sum();
         assert_eq!(copied, 2_500);
+        // The report counts every page and every row the segments hold: the node
+        // pages and the pages of the graph's other graph-scoped tables.
+        assert!(report.batches >= 3);
+        assert_eq!(report.batches as usize, pages.len());
+        assert_eq!(report.rows, pages.iter().map(RowBatch::rows).sum::<u64>());
         // A second copy into the same graph is refused and writes nothing.
         let before: Vec<_> = store.list(None).try_collect::<Vec<_>>().await.unwrap();
         let refused = copy_graph(&backend, GRAPH, "t", "g", store.clone(), "root")

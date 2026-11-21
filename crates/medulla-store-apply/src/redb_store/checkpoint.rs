@@ -364,20 +364,56 @@ pub fn apply_checkpoint(
     }
 }
 
+/// Replaces one graph's rows in a graph-scoped table with the rows a root holds.
+///
+/// Enumerated from the registry through [`medulla_storage::visit_graph_scoped_tables`],
+/// so a graph-scoped table can never be left out of a restore: each one is emptied
+/// of the graph's rows (the root overrides the local store) and then takes the
+/// rows the pages carry for it. `nodes` and `edges` are restored by their own
+/// unsealed path.
+struct RestoreTables<'m, 'g> {
+    member: &'m medulla_store::redb_store::store_prelude::AdmittedOwnerWrite<'g, medulla_storage::GraphShardOwner>,
+    rows: &'m [medulla_storage::TableRows],
+}
+
+impl medulla_storage::GraphTableVisitor for RestoreTables<'_, '_> {
+    fn visit<K, V>(&mut self, definition: redb::TableDefinition<'static, K, V>) -> Result<(), String>
+    where
+        K: redb::Key + 'static,
+        for<'k> K::SelfType<'k>: medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
+        V: redb::Value + 'static,
+    {
+        let name = redb::TableHandle::name(&definition).to_string();
+        if medulla_storage::PAGED_GRAPH_TABLES.contains(&name.as_str()) {
+            return Ok(());
+        }
+        let mut table = self.member.open_scoped_table(definition)?;
+        table.purge_scope_rows()?;
+        for carried in self.rows.iter().filter(|carried| carried.table == name) {
+            for (key, value) in &carried.rows {
+                table.insert(K::from_bytes(key), V::from_bytes(value))?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Restore one graph's rows from the object root, then install the graph version
 /// the root records for them (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
 ///
-/// The rows are the row pages of a snapshot or a graph copy (unsealed, in key
-/// order). They replace every node, edge and ledger row the graph holds locally,
-/// since the root overrides the local store, and land in ONE admitted
-/// maintenance group whose version is then raised to `graph_version`, so the
-/// entries after the snapshot replay onto exactly the version they were
-/// published from.
+/// The rows are the row pages of a snapshot or a graph copy: nodes and edges
+/// (unsealed, in key order) and the rows of every other graph-scoped owner table
+/// (`tables`, as stored). They replace every row the graph holds locally, since
+/// the root overrides the local store, and land in ONE admitted maintenance group
+/// whose version is installed before its receipt is written
+/// (`finish_installed`), so the receipt names `graph_version` and the entries
+/// after the snapshot replay onto exactly the version they were published from.
 pub fn restore_graph_rows(
     shard: &Shard,
     graph: &str,
     nodes: &[(String, Vec<u8>)],
     edges: &[(String, String, Vec<u8>)],
+    tables: &[medulla_storage::TableRows],
     graph_version: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
@@ -388,29 +424,35 @@ pub fn restore_graph_rows(
     let write = ShardWrite::open(shard, &group, &members, &batches)?;
     let applied: Result<(), String> = (|| {
         let member = write.graph(graph)?;
-        let mut tables = GraphRowTables::open(member)?;
-        clear_graph_rows(
-            graph,
-            &mut tables.nodes,
-            &mut tables.edges,
-            &mut tables.ledger,
-        )?;
-        for (id, props) in nodes {
-            let blob = crypto.seal(props);
-            tables
-                .nodes
-                .insert((graph, id.as_str()), blob.as_ref())
-                .map_err(|e| e.to_string())?;
+        {
+            let mut tables = GraphRowTables::open(member)?;
+            clear_graph_rows(
+                graph,
+                &mut tables.nodes,
+                &mut tables.edges,
+                &mut tables.ledger,
+            )?;
+            for (id, props) in nodes {
+                let blob = crypto.seal(props);
+                tables
+                    .nodes
+                    .insert((graph, id.as_str()), blob.as_ref())
+                    .map_err(|e| e.to_string())?;
+            }
+            for (src, tgt, props) in edges {
+                let ordinal = next_edge_ordinal(&tables.edges, graph, src, tgt)?;
+                let blob = crypto.seal(props);
+                tables
+                    .edges
+                    .insert((graph, src.as_str(), tgt.as_str(), ordinal), blob.as_ref())
+                    .map_err(|e| e.to_string())?;
+            }
         }
-        for (src, tgt, props) in edges {
-            let ordinal = next_edge_ordinal(&tables.edges, graph, src, tgt)?;
-            let blob = crypto.seal(props);
-            tables
-                .edges
-                .insert((graph, src.as_str(), tgt.as_str(), ordinal), blob.as_ref())
-                .map_err(|e| e.to_string())?;
-        }
-        Ok(())
+        // The row handles above are dropped: redb opens a table once per transaction.
+        medulla_storage::visit_graph_scoped_tables(&mut RestoreTables {
+            member,
+            rows: tables,
+        })
     })();
     let finished = write.finish();
     match (applied, finished) {

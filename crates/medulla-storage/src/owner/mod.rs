@@ -7,6 +7,7 @@ pub(crate) mod branch_registry;
 pub(crate) mod contract;
 pub(crate) mod domain;
 pub(crate) mod grant;
+pub(crate) mod graph_rows;
 pub(crate) mod graph_shard;
 pub(crate) mod handle;
 pub(crate) mod identity;

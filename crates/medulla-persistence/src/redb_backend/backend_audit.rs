@@ -183,6 +183,24 @@ impl RedbBackend {
         self.read_graph_dump_page_blocking(graph_fname, 0, 0, node_after, edge_after, page_size)
     }
 
+    /// The row pages of one graph's graph-scoped owner tables other than `nodes` and
+    /// `edges` (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2): the pages a graph copy writes
+    /// after the node and edge pages so the copy is complete.
+    pub fn export_graph_table_rows(
+        &self,
+        graph_fname: &str,
+    ) -> Result<Vec<medulla_storage::TableRows>, String> {
+        let (reply, rx) = std::sync::mpsc::sync_channel(1);
+        self.shard_for(graph_fname)
+            .tx
+            .send(Cmd::ReadGraphTableRows {
+                graph: graph_fname.to_string(),
+                reply,
+            })
+            .map_err(|_| "redb writer thread is gone".to_string())?;
+        await_writer_reply(&rx, "read_graph_table_rows")?
+    }
+
     /// Read ONE bounded page of one graph's durable rows (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38 "paged
     /// adjacency") — the memory-bounded sibling of [`Self::read_graph_dump_blocking`]
     /// backing [`PersistenceBackend::read_graph_material_page_blocking`] below.

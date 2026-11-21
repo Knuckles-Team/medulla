@@ -53,6 +53,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
     "STALE_OUTBOX_LEASE",
     // Any durable commit can lose the object-store root's `HEAD` fence (MEDULLA-OBJECT-STORAGE-BACKEND-R003).
     "OBJECT_PUBLISH_STALE",
+    // So can a write over a graph with no catalog row to publish under.
+    "OBJECT_GRAPH_IDENTITY_MISSING",
 ];
 
 /// A method-specific family wins over the wider domain family.
