@@ -2008,6 +2008,12 @@ medulla-server-router = { path = "crates/medulla-server-router" }
 # against the source's own row state).
 # MEDULLA-DECISION-ENGINE-R117.1.1: UQL DERIVE, the SQL window functions and the PromQL
 # series functions agree on the golden reference (the one crate that depends on all three).
+# MEDULLA-SCM-R011: the seeded simulation of `SubmitChangeset` (`SIM_SEEDS` sets the seed count).
+[[test]]
+name = "source_changesets"
+path = "tests/simulation/source_changesets.rs"
+required-features = ["server", "security", "redb", "blob"]
+
 [[test]]
 name = "derive_golden"
 path = "tests/derive_golden.rs"
