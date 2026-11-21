@@ -10,7 +10,9 @@ use super::offer::{
     work_offer_utility_rate, WorkOffer, WorkOfferView, DEFAULT_COST_FLOOR_MICROUNITS,
     WORK_OFFER_UTILITY_RATE_STAGE,
 };
+use super::gap_machine::GapEvent;
 use super::{bounded, evidence_digest, GapStatus, MAX_MARKET_REF_BYTES};
+use medulla_types::transition_refused::TransitionRefused;
 use crate::work_item_read::WorkItemStatus;
 
 /// How an upsert resolved.
@@ -53,15 +55,6 @@ pub enum GapTransitionTarget {
     Deferred,
 }
 
-/// Every legal `(from, to)` edge. Anything absent is a `conflict`.
-const LEGAL_TRANSITIONS: [(GapStatus, GapTransitionTarget); 5] = [
-    (GapStatus::Open, GapTransitionTarget::Specified),
-    (GapStatus::Open, GapTransitionTarget::Resolved),
-    (GapStatus::Open, GapTransitionTarget::Deferred),
-    (GapStatus::Specified, GapTransitionTarget::Resolved),
-    (GapStatus::Specified, GapTransitionTarget::Deferred),
-];
-
 impl GapTransitionTarget {
     pub fn status(self) -> GapStatus {
         match self {
@@ -79,9 +72,13 @@ impl GapTransitionTarget {
         }
     }
 
-    /// Whether a Gap currently in `from` may move to this target.
-    pub fn allowed_from(self, from: GapStatus) -> bool {
-        LEGAL_TRANSITIONS.contains(&(from, self))
+    /// The event of `GapViewMachine` that requests this target.
+    pub fn event(self) -> GapEvent {
+        match self {
+            Self::Specified => GapEvent::Specify,
+            Self::Resolved => GapEvent::Resolve,
+            Self::Deferred => GapEvent::Defer,
+        }
     }
 }
 
@@ -215,26 +212,26 @@ pub struct SettledWorkItem {
 
 /// What a WorkItem's state means for its Gap. A table so the mapping is
 /// read off one list; a status absent from it is not terminal.
-const SETTLEMENTS: [(WorkItemStatus, GapSettleOutcome, GapStatus); 4] = [
+const SETTLEMENTS: [(WorkItemStatus, GapSettleOutcome, GapEvent); 4] = [
     (
         WorkItemStatus::Succeeded,
         GapSettleOutcome::Resolved,
-        GapStatus::Resolved,
+        GapEvent::Resolve,
     ),
     (
         WorkItemStatus::Failed,
         GapSettleOutcome::Deferred,
-        GapStatus::Deferred,
+        GapEvent::Defer,
     ),
     (
         WorkItemStatus::Cancelled,
         GapSettleOutcome::Deferred,
-        GapStatus::Deferred,
+        GapEvent::Defer,
     ),
     (
         WorkItemStatus::DeadLetter,
         GapSettleOutcome::Deferred,
-        GapStatus::Deferred,
+        GapEvent::Defer,
     ),
 ];
 
@@ -277,11 +274,18 @@ pub fn validate_gap_get(tenant: &str, gap_id: &str) -> Result<(), String> {
 }
 
 impl GapView {
-    /// Apply a transition request: `true` when it moved the Gap.
-    pub fn transition(&mut self, request: &GapTransitionRequest, now_ms: u64) -> bool {
-        if !request.to.allowed_from(self.status) || self.revision != request.expected_revision {
-            return false;
+    /// Apply a transition request: `true` when it moved the Gap, `false` when
+    /// the revision moved past the one the caller read. An edge the machine does
+    /// not accept is refused `TRANSITION_REFUSED` and changes nothing.
+    pub fn transition(
+        &mut self,
+        request: &GapTransitionRequest,
+        now_ms: u64,
+    ) -> Result<bool, TransitionRefused> {
+        if self.revision != request.expected_revision {
+            return Ok(false);
         }
+        let next = self.status.apply(request.to.event())?;
         match request.to {
             GapTransitionTarget::Specified => {
                 if !self.spec_refs.contains(&request.reference) {
@@ -302,18 +306,18 @@ impl GapView {
                 });
             }
         }
-        self.status = request.to.status();
+        self.status = next;
         self.updated_at_ms = now_ms;
-        true
+        Ok(true)
     }
 
     /// Record a WorkItem's terminal outcome as evidence and close the Gap on
     /// it when the Gap is still live.
     pub fn settle(&mut self, item: &SettledWorkItem, now_ms: u64) -> GapSettleOutcome {
-        let Some((effect, closed)) = SETTLEMENTS
+        let Some((effect, closing)) = SETTLEMENTS
             .iter()
             .find(|(status, _, _)| *status == item.status)
-            .map(|(_, effect, closed)| (*effect, *closed))
+            .map(|(_, effect, closing)| (*effect, *closing))
         else {
             return GapSettleOutcome::Pending;
         };
@@ -337,7 +341,11 @@ impl GapView {
         if !self.status.is_live() {
             return GapSettleOutcome::Recorded;
         }
-        self.status = closed;
+        // A live Gap accepts both closing events, so the machine never refuses here.
+        let Ok(next) = self.status.apply(closing) else {
+            return GapSettleOutcome::Recorded;
+        };
+        self.status = next;
         effect
     }
 

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use super::offer::WorkOfferView;
+use super::gap_machine::{GapEvent, GAP_VIEW_MACHINE};
 use super::{bounded, bounded_list, bounded_ppm, severity_bucket, GapStatus, GAP_NODE_TYPE};
 use crate::work_item_read::WORK_ITEM_ROW_REVISION;
 
@@ -210,7 +211,7 @@ impl GapUpsertRequest {
             domain: self.domain.clone(),
             severity_ppm: self.severity_ppm,
             priority_bucket: severity_bucket(self.severity_ppm),
-            status: GapStatus::Open,
+            status: GAP_VIEW_MACHINE.initial,
             generation: 1,
             work_item_id,
             work: self.work.clone(),
@@ -283,12 +284,18 @@ impl GapView {
         if !novel {
             return GapMerge::Unchanged;
         }
-        let reopened = !self.status.is_live();
+        // `Reopen` leaves only a closed Gap: a live one has no edge for it.
+        let reopened = match self.status.apply(GapEvent::Reopen) {
+            Ok(next) => {
+                self.status = next;
+                true
+            }
+            Err(_) => false,
+        };
         if reopened {
             self.generation = self.generation.saturating_add(1);
             self.work_item_id = next_work_item_id(self.generation);
             self.work = request.work.clone();
-            self.status = GapStatus::Open;
             self.offer = None;
         }
         self.absorb(request, now_ms);

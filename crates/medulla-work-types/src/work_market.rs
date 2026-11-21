@@ -28,6 +28,7 @@
 //! integers, and every timestamp is the committing batch's authoritative time.
 
 pub mod gap;
+pub mod gap_machine;
 pub mod lifecycle;
 pub mod list;
 pub mod offer;

@@ -1748,6 +1748,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "IncidentSetStatus",
     // MEDULLA-ORCH-VOCAB-R815.9: the workflow registration lifecycle machine.
     "WorkflowRegistry",
+    // MEDULLA-ORCH-VOCAB-R815.4: the work market gap status machine.
+    "GapTransition",
 ];
 
 /// The wire code of a refused machine transition.

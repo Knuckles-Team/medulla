@@ -45,7 +45,10 @@ pub fn apply_gap_lifecycle_rows(
             let answer = rewrite_gap(
                 &mut write,
                 (&request.tenant, &request.gap_id),
-                |gap, _| Ok(gap.transition(request, now_ms)),
+                |gap, _| {
+                    gap.transition(request, now_ms)
+                        .map_err(|refused| refused.to_string())
+                },
                 |applied| *applied,
             )?;
             transitioned(answer).map(Some)

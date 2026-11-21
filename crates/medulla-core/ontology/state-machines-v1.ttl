@@ -7683,3 +7683,115 @@
     :toState :IncidentMachine_Closed ;
     :firedBy :IncidentMachine_Event_close .
 
+
+# spec: MEDULLA-ORCH-VOCAB-R815.4
+# The Gap View machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:GapViewState a owl:Class ;
+    rdfs:label "Gap View State" ;
+    rdfs:comment "A state of the Gap View machine." ;
+    rdfs:subClassOf :State .
+
+:GapViewTerminalState a owl:Class ;
+    rdfs:label "Gap View Terminal State" ;
+    rdfs:comment "A terminal state of the Gap View machine." ;
+    rdfs:subClassOf :TerminalState, :GapViewState .
+
+:GapViewTransition a owl:Class ;
+    rdfs:label "Gap View Transition" ;
+    rdfs:comment "A transition of the Gap View machine." ;
+    rdfs:subClassOf :Transition .
+
+:GapViewEvent a owl:Class ;
+    rdfs:label "Gap View Event" ;
+    rdfs:comment "A event of the Gap View machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GapViewGuard a owl:Class ;
+    rdfs:label "Gap View Guard" ;
+    rdfs:comment "A guard of the Gap View machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GapViewMachine a :StateMachine ;
+    rdfs:label "Gap View machine" ;
+    :initialState :GapViewMachine_Open ;
+    :hasState :GapViewMachine_Open, :GapViewMachine_Specified, :GapViewMachine_Resolved, :GapViewMachine_Deferred .
+
+:GapViewMachine_Open a :GapViewState ;
+    rdfs:label "Gap View Open" ;
+    :storedForm "open" .
+
+:GapViewMachine_Specified a :GapViewState ;
+    rdfs:label "Gap View Specified" ;
+    :storedForm "specified" .
+
+:GapViewMachine_Resolved a :GapViewState ;
+    rdfs:label "Gap View Resolved" ;
+    :storedForm "resolved" .
+
+:GapViewMachine_Deferred a :GapViewState ;
+    rdfs:label "Gap View Deferred" ;
+    :storedForm "deferred" .
+
+:GapViewMachine_Event_specify a :GapViewEvent ;
+    rdfs:label "Gap View specify" .
+
+:GapViewMachine_Event_resolve a :GapViewEvent ;
+    rdfs:label "Gap View resolve" .
+
+:GapViewMachine_Event_defer a :GapViewEvent ;
+    rdfs:label "Gap View defer" .
+
+:GapViewMachine_Event_reopen a :GapViewEvent ;
+    rdfs:label "Gap View reopen" .
+
+:GapViewMachine_G01 a :GapViewTransition ;
+    rdfs:label "Gap View G01" ;
+    :edgeId "G01" ;
+    :fromState :GapViewMachine_Open ;
+    :toState :GapViewMachine_Specified ;
+    :firedBy :GapViewMachine_Event_specify .
+
+:GapViewMachine_G02 a :GapViewTransition ;
+    rdfs:label "Gap View G02" ;
+    :edgeId "G02" ;
+    :fromState :GapViewMachine_Open ;
+    :toState :GapViewMachine_Resolved ;
+    :firedBy :GapViewMachine_Event_resolve .
+
+:GapViewMachine_G03 a :GapViewTransition ;
+    rdfs:label "Gap View G03" ;
+    :edgeId "G03" ;
+    :fromState :GapViewMachine_Open ;
+    :toState :GapViewMachine_Deferred ;
+    :firedBy :GapViewMachine_Event_defer .
+
+:GapViewMachine_G04 a :GapViewTransition ;
+    rdfs:label "Gap View G04" ;
+    :edgeId "G04" ;
+    :fromState :GapViewMachine_Specified ;
+    :toState :GapViewMachine_Resolved ;
+    :firedBy :GapViewMachine_Event_resolve .
+
+:GapViewMachine_G05 a :GapViewTransition ;
+    rdfs:label "Gap View G05" ;
+    :edgeId "G05" ;
+    :fromState :GapViewMachine_Specified ;
+    :toState :GapViewMachine_Deferred ;
+    :firedBy :GapViewMachine_Event_defer .
+
+:GapViewMachine_G06 a :GapViewTransition ;
+    rdfs:label "Gap View G06" ;
+    :edgeId "G06" ;
+    :fromState :GapViewMachine_Resolved ;
+    :toState :GapViewMachine_Open ;
+    :firedBy :GapViewMachine_Event_reopen .
+
+:GapViewMachine_G07 a :GapViewTransition ;
+    rdfs:label "Gap View G07" ;
+    :edgeId "G07" ;
+    :fromState :GapViewMachine_Deferred ;
+    :toState :GapViewMachine_Open ;
+    :firedBy :GapViewMachine_Event_reopen .
+

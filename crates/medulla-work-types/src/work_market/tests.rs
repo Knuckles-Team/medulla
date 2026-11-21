@@ -155,13 +155,27 @@ fn transitions_follow_the_legal_edge_table_under_revision_cas() {
         reference: "spec:1".into(),
         idempotency_key: "t".into(),
     };
-    assert!(!gap.transition(&request(GapTransitionTarget::Specified, 2), 11));
-    assert!(gap.transition(&request(GapTransitionTarget::Specified, 3), 11));
+    assert_eq!(
+        gap.transition(&request(GapTransitionTarget::Specified, 2), 11),
+        Ok(false)
+    );
+    assert_eq!(
+        gap.transition(&request(GapTransitionTarget::Specified, 3), 11),
+        Ok(true)
+    );
     assert_eq!(gap.spec_refs, vec!["spec:1".to_string()]);
-    assert!(gap.transition(&request(GapTransitionTarget::Resolved, 3), 12));
+    assert_eq!(
+        gap.transition(&request(GapTransitionTarget::Resolved, 3), 12),
+        Ok(true)
+    );
     assert_eq!(gap.evidence.last().unwrap().kind, "resolved");
-    assert!(!gap.transition(&request(GapTransitionTarget::Specified, 3), 13));
-    assert!(!gap.transition(&request(GapTransitionTarget::Deferred, 3), 13));
+    // An illegal edge is refused with the typed record and changes nothing.
+    for to in [GapTransitionTarget::Specified, GapTransitionTarget::Deferred] {
+        let refused = gap.transition(&request(to, 3), 13).unwrap_err();
+        assert_eq!(refused.machine, "GapViewMachine");
+        assert_eq!(refused.from, "resolved");
+        assert_eq!(gap.status, GapStatus::Resolved);
+    }
 }
 
 #[test]
