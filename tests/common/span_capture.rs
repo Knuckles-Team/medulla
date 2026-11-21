@@ -111,6 +111,17 @@ pub fn spans(name: &str, digest: &str) -> Vec<Captured> {
         .collect()
 }
 
+/// Closed spans with this name whose `field` equals `value`.
+pub fn spans_with_field(name: &str, field: &str, value: &str) -> Vec<Captured> {
+    SPANS
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|s| s.name == name && s.fields.get(field).map(String::as_str) == Some(value))
+        .cloned()
+        .collect()
+}
+
 /// Events emitted inside a span with this name.
 pub fn events_in(span_name: &str) -> Vec<Captured> {
     EVENTS
