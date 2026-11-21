@@ -307,7 +307,8 @@ fn release_operations(
     bounded(operations)
 }
 
-/// The deployment node and, when a release names its image, the `deploys` edge.
+/// The deployment node and, when a release names its image, the `deploys` edge from the
+/// deployment to the release.
 fn deployment_operations(
     deployment: &Deployment,
     target: &SdlcTarget<'_>,
@@ -330,11 +331,18 @@ fn deployment_operations(
     stamp(&mut properties, target);
     let mut operations = vec![json!({"op": "upsert_node", "id": id, "properties": properties})];
     if let Some(release_ref) = &deployment.release_ref {
-        // `Release::id` is `repo@version`; the node id is `release:repo:version`.
-        let node = release_ref.replacen('@', ":", 1);
-        operations.push(edge(&format!("release:{node}"), "deploys", &id, target));
+        let (source, destination) = deploys_endpoints(&id, release_ref);
+        operations.push(edge(&source, "deploys", &destination, target));
     }
     bounded(operations)
+}
+
+/// The endpoints of a `deploys` edge: the deployment node to the release node it rolls out.
+/// This is the direction of the ontology (`Deployment` to `Release`). `Release::id` is
+/// `repo@version`; the release node id is `release:repo:version`.
+fn deploys_endpoints(deployment_node: &str, release_ref: &str) -> (String, String) {
+    let node = release_ref.replacen('@', ":", 1);
+    (deployment_node.to_owned(), format!("release:{node}"))
 }
 
 fn bounded(operations: Vec<Value>) -> Result<Vec<Value>, String> {
@@ -399,5 +407,24 @@ mod tests {
             release_node_id(&release)
         );
         assert!(deployment(None).release_ref.is_none());
+    }
+
+    // spec: MEDULLA-SDLC-R012.7
+    #[test]
+    fn the_deploys_edge_runs_from_the_deployment_to_the_release() {
+        let release = Release {
+            repo: "medulla".into(),
+            version: "1.0.0".into(),
+            git_ref: "refs/tags/v1.0.0".into(),
+            changeset_head: "c".into(),
+            artifact_digests: vec![],
+            published_at: 1,
+        };
+        let deployment = deployment(Some(&release.id()));
+        let id = deployment_node_id(&deployment);
+        let (source, destination) = deploys_endpoints(&id, &release.id());
+        assert_eq!(source, id);
+        assert!(source.starts_with("deployment:"));
+        assert_eq!(destination, release_node_id(&release));
     }
 }
