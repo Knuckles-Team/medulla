@@ -5647,6 +5647,7 @@ dependencies = [
  "medulla-federation",
  "medulla-graph-core",
  "medulla-h-ingest",
+ "medulla-h-sparql",
  "medulla-identity-types",
  "medulla-isolation",
  "medulla-kernel",

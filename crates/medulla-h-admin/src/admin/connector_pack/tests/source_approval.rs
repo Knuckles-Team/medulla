@@ -1362,11 +1362,46 @@ async fn real_dispatch_issues_and_verifies_approval() {
         )
         .await;
     assert!(denied.error.is_some(), "the issuer scope is required");
-    let handlers = include_str!("../../../../../medulla-h-sparql/src/foreign_source_handlers.rs");
-    assert!(
-        !handlers.contains("Method::ApproveSourceQuery"),
-        "the foreign-source handler never sees ApproveSourceQuery"
-    );
+    // `ApproveSourceQuery` sent to the foreign-source handler directly is not handled
+    // there: `try_handle` hands the method back untouched.
+    let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
+    let verified =
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+            ADMIN,
+            TENANT,
+            &["*"],
+        );
+    let target = medulla_h_sparql::foreign_source_handlers::ContractWriteTarget {
+        core: &core,
+        persistence: None,
+        graph: "__commons__",
+        principal: Some(ADMIN),
+        tenant_scope: TENANT,
+        verified_context: &verified,
+    };
+    let call = medulla_server_auth::access::OwnerScopedCall {
+        state: &served.state,
+        req_id: 1,
+        carrier: None,
+    };
+    let method = medulla_protocol_types::protocol::Method::ApproveSourceQuery {
+        request: Box::new(
+            medulla_work_types::source_query_approval::ApproveSourceQueryRequest {
+                tenant: TENANT.into(),
+                query: source_query(&source, 60_000),
+                admission: None,
+            },
+        ),
+        source_approval: Box::new(source.receipt.clone()),
+    };
+    match medulla_h_sparql::foreign_source_handlers::try_handle(call, method, &target).await {
+        Err(medulla_protocol_types::protocol::Method::ApproveSourceQuery { .. }) => {}
+        Err(other) => panic!("the method came back changed: {other:?}"),
+        Ok(response) => panic!(
+            "the foreign-source handler answered ApproveSourceQuery: {:?}",
+            response.error
+        ),
+    }
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R085.8
@@ -1390,19 +1425,20 @@ async fn approval_to_verification_journey() {
     assert_eq!(validity.query_digest, approved.query_digest);
 
     // Another tenant presenting this tenant's approval is refused.
+    // The call reaches dispatch as the foreign tenant's verified context and misses the
+    // lease, which is keyed by the verified tenant.
     let foreign = served
-        .call_as_tenant(
+        .call_verified_as_tenant(
             "tenant-other",
-            ADMIN,
             &["*"],
-            "r085-journey:other-tenant",
             medulla_protocol_types::protocol::Method::VerifySourceQueryApproval {
                 request: Box::new(source_query_check(&approved)),
                 source_approval: Box::new(source.receipt.clone()),
             },
         )
         .await;
-    assert!(foreign.error.is_some(), "a cross-tenant verification is refused");
+    let error = refused("cross-tenant verification", foreign);
+    assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{error}");
 
     // After revocation verify refuses SOURCE_QUERY_APPROVAL_REVOKED, naming no SQL.
     revoke_source_query(

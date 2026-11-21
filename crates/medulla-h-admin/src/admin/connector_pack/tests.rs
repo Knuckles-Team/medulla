@@ -158,6 +158,33 @@ impl Served {
             .await
     }
 
+    /// Send `method` as `tenant`'s already-verified context through the dispatch chokepoint,
+    /// skipping the door's expected-tenant check (the fixed test policy admits one tenant), so
+    /// a foreign tenant's call reaches the handlers.
+    pub(in crate::admin) async fn call_verified_as_tenant(
+        &self,
+        tenant: &str,
+        scopes: &[&str],
+        method: Method,
+    ) -> Response {
+        let request = medulla_protocol_types::protocol::Request {
+            id: next_id(),
+            graph: "__commons__".to_string(),
+            auth_token: String::new(),
+            agent_id: Some(ADMIN.to_string()),
+            method,
+        };
+        let verified = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+            ADMIN, tenant, scopes,
+        );
+        Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
+            &self.state,
+            request,
+            verified,
+        ))
+        .await
+    }
+
     async fn call_as_tenant_on(
         &self,
         graph: &str,
