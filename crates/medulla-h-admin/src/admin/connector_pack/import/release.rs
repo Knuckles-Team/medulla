@@ -14,6 +14,7 @@ use std::sync::Arc;
 use medulla_catalog_types::connector_pack::contract_version::{
     compat_verdict, CompatVerdict, ContractBreak, ContractBreakKind, NestedSchema,
     PackContractVersion, PackRelease, PendingPackRelease, SchemaCompatRecord, SchemaDigest,
+    StagedPack, StagedPart,
 };
 use medulla_catalog_types::connector_pack::{
     ChangeRequestRef, ConnectorPackImportRequest, PackEntryKind, PackImportResult,
@@ -498,6 +499,81 @@ fn judge_schemas(
     found
 }
 
+/// Stage the held pack: the import request and the archive as one byte stream in the engine
+/// body store, in bodies of at most the component body bound, so activation installs the whole
+/// pack (MEDULLA-TYPED-PACKS-R107.6). The request's own archive blob is caller-owned and is not
+/// relied on.
+fn stage_pack(
+    chunks: &dyn medulla_server_blob::blob::ChunkStore,
+    request: &ConnectorPackImportRequest,
+    archive: &[u8],
+) -> Result<StagedPack, String> {
+    use medulla_server_blob::blob::engine_bodies::EngineBody;
+    use sha2::{Digest, Sha256};
+
+    let json = serde_json::to_vec(request).map_err(|error| error.to_string())?;
+    let mut stream = Vec::with_capacity(8 + json.len() + archive.len());
+    stream.extend_from_slice(&(json.len() as u64).to_be_bytes());
+    stream.extend_from_slice(&json);
+    stream.extend_from_slice(archive);
+    let mut unique: BTreeMap<Digest256, Vec<u8>> = BTreeMap::new();
+    let mut order = Vec::new();
+    for part in stream.chunks(medulla_agent_types::agent_component::MAX_COMPONENT_BODY_BYTES) {
+        let sha256 = Digest256::from_bytes(Sha256::digest(part).into());
+        unique.entry(sha256).or_insert_with(|| part.to_vec());
+        order.push(sha256);
+    }
+    let bodies: Vec<EngineBody> = unique
+        .into_iter()
+        .map(|(sha256, body)| EngineBody { sha256, body })
+        .collect();
+    let stored = chunks.put_engine_bodies(
+        &request.context.tenant_id,
+        &bodies,
+        request.context.created_at_ms,
+    )?;
+    let parts = order
+        .into_iter()
+        .map(|sha256| {
+            stored
+                .iter()
+                .find(|body| body.sha256 == sha256)
+                .map(|body| StagedPart {
+                    sha256,
+                    manifest_digest: body.manifest_digest.clone(),
+                    length: body.length,
+                })
+                .ok_or_else(|| "BODY_MISSING: a staged pack body was not stored".to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(StagedPack { parts })
+}
+
+/// Read a staged pack back: the import request it was staged with and the archive bytes.
+pub(super) fn read_staged(
+    chunks: &dyn medulla_server_blob::blob::ChunkStore,
+    tenant: &str,
+    staged: &StagedPack,
+) -> Result<(ConnectorPackImportRequest, Vec<u8>), String> {
+    let mut stream = Vec::new();
+    for part in &staged.parts {
+        stream.extend(medulla_server_blob::blob::engine_bodies::read_engine_body(
+            chunks,
+            tenant,
+            &part.manifest_digest,
+            part.sha256,
+            part.length,
+        )?);
+    }
+    let corrupt = || "CORRUPT_CONNECTOR_PACK: the staged pack stream is malformed".to_string();
+    let head: [u8; 8] = stream.get(..8).and_then(|b| b.try_into().ok()).ok_or_else(corrupt)?;
+    let length = usize::try_from(u64::from_be_bytes(head)).map_err(|_| corrupt())?;
+    let json = stream.get(8..8usize.saturating_add(length)).ok_or_else(corrupt)?;
+    let request = serde_json::from_slice(json).map_err(|_| corrupt())?;
+    let archive = stream[8 + length..].to_vec();
+    Ok((request, archive))
+}
+
 fn violation(code: PackViolationCode, uri: Option<String>, detail: String) -> PackViolation {
     PackViolation {
         code,
@@ -536,6 +612,7 @@ pub(super) fn judge(
     ready: &ReadyPlan,
     prior_members: &[ConnectorPackMemberRow],
     usage: &dyn ClassUsage,
+    approval: Option<&PendingPackRelease>,
 ) -> Result<Verdict, String> {
     let tenant = request.context.tenant_id.as_str();
     let connector = &request.index.connector;
@@ -608,6 +685,36 @@ pub(super) fn judge(
             return refusal(request, violations, in_use.len() > MAX_REPORTED, None);
         }
     }
+    if let Some(held) = approval {
+        // The held release's change request was applied: the one activation path is
+        // `ContractHistory::approve`, which moves it through the release machine.
+        let mut history = ContractHistory::with_held(
+            prior,
+            next.clone(),
+            held.breaks.clone(),
+            held.change_request.clone(),
+        )
+        .map_err(|error| error.to_string())?;
+        let version = next.version.version.clone();
+        history.approve(&version).map_err(|error| error.to_string())?;
+        next.version = history
+            .by_version(&version)
+            .map(|stored| stored.contract.version.clone())
+            .ok_or_else(|| "PACK_RELEASE_NOT_HELD: the held release is unknown".to_string())?;
+        let evidence = PackReleaseEvidence {
+            previous_contract_digest: Some(active.version.contract_digest.clone()),
+            contract_digest: next.version.contract_digest.clone(),
+            break_count: held.total_breaks,
+            change_request: Some(ChangeRequestRef {
+                target: held.change_request.target.clone(),
+                proposed_digest: held.change_request.proposed_digest.clone(),
+            }),
+        };
+        return Ok(Verdict::Apply(AppliedRelease {
+            release: release_of(&next, schemas),
+            evidence,
+        }));
+    }
     let target = format!("pack:{}", connector.as_str());
     let owner = StewardshipAssignment {
         scope: StewardshipScope::Asset(target.clone()),
@@ -646,7 +753,9 @@ pub(super) fn judge(
                 "PACK_HEAD_CONFLICT: a held release needs the head it was diffed against"
                     .to_string()
             })?;
+            let staged = stage_pack(chunks, request, archive)?;
             let pending = PendingPackRelease {
+                staged: Some(staged),
                 release: release_of(&next, schemas),
                 pack_digest: request.index.pack_digest,
                 breaks: breaks.clone(),

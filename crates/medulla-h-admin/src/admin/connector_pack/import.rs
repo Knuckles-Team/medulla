@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_catalog_types::{
+    connector_pack::contract_version::PendingPackRelease,
     connector_pack::ConnectorPackImportRequest, connector_pack::PackImportResult,
 };
 #[cfg(test)]
@@ -70,7 +71,7 @@ pub(super) async fn validate_and_commit(
     let chunks = blob.store.clone();
     tokio::task::spawn_blocking(move || {
         let _held = tenant_pack_guard;
-        run_import(&store, &*chunks, request, &archive, &cancel, &*usage)
+        run_import(&store, &*chunks, request, &archive, &cancel, &*usage, None)
     })
     .await
     .map_err(|error| format!("connector pack import task failed: {error}"))?
@@ -83,6 +84,7 @@ fn run_import(
     archive: &[u8],
     cancel: &RequestCancel,
     usage: &dyn ClassUsage,
+    approval: Option<&PendingPackRelease>,
 ) -> Result<PackImportResult, String> {
     let prior = store.connector_pack_members_with(
         &request.context.tenant_id,
@@ -99,7 +101,7 @@ fn run_import(
     // The release contract check runs before any body is copied or row written
     // (MEDULLA-TYPED-PACKS-R107.3): a breaking or in-use release stops here.
     let release = match interruptible(cancel, || {
-        release::judge(store, chunks, &request, archive, &prepared, &prior, usage)
+        release::judge(store, chunks, &request, archive, &prepared, &prior, usage, approval)
     })?? {
         Verdict::Refused(result) => return Ok(result),
         Verdict::Apply(applied) => applied,
@@ -122,6 +124,26 @@ fn run_import(
     // The last point an abandoned import can stop: past it the commit is atomic.
     still_wanted(cancel)?;
     store.commit_connector_pack(plan)
+}
+
+/// Install the pack staged behind an applied change request: the staged import runs through the
+/// one import path with the release approved, so the whole pack (members, ontology, shapes)
+/// becomes the connector's head (MEDULLA-TYPED-PACKS-R107.6). `context` is the activation's
+/// bound mutation context.
+pub(super) fn commit_staged(
+    store: &AgentLibraryStore,
+    chunks: &dyn medulla_server_blob::blob::ChunkStore,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
+    held: &PendingPackRelease,
+    cancel: &RequestCancel,
+    usage: &dyn ClassUsage,
+) -> Result<PackImportResult, String> {
+    let staged = held.staged.as_ref().ok_or_else(|| {
+        "PACK_RELEASE_NOT_HELD: the held release staged no pack contents".to_string()
+    })?;
+    let (mut request, archive) = release::read_staged(chunks, &context.tenant_id, staged)?;
+    request.context = context;
+    run_import(store, chunks, request, &archive, cancel, usage, Some(held))
 }
 
 fn still_wanted(cancel: &RequestCancel) -> Result<(), String> {

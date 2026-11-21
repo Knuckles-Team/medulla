@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
+import stewardship_support as support
 from conftest import (
     TEST_AGENT_ID,
     TEST_SIGNER_KEY,
@@ -249,6 +250,94 @@ def test_receipt_carries_digests_break_count_and_request() -> None:
             await admin.close()
 
     asyncio.run(exercise())
+
+
+def _typed_ontology(base: str, range_type: str) -> str:
+    """One class and one datatype property whose declared range is `range_type`."""
+    return (
+        HEADER
+        + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+        + f"<{base}#Ticket> a owl:Class ; rdfs:subClassOf <{WORK_ITEM}> .\n"
+        + f"<{base}#priority> a owl:DatatypeProperty ; rdfs:domain <{base}#Ticket> ;"
+        + f" rdfs:range xsd:{range_type} .\n"
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R107.6")
+def test_breaking_release_waits_for_approval_then_serves() -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R107.6: release 3 retypes a property and waits; the
+    stewardship approval installs the held pack, so release 3 serves."""
+    tag = uuid.uuid4().hex[:8]
+    connector = f"contract-approve-{tag}"
+    base = f"https://example.org/{connector}"
+    entry = lambda range_type: [  # noqa: E731
+        ontology_entry(connector, "vocabulary", _typed_ontology(base, range_type))
+    ]
+    target = f"pack:{connector}"
+
+    async def hold() -> tuple[dict, tuple[int, str]]:
+        admin = await connect()
+        try:
+            first = await import_entries(admin, connector, entry("string"))
+            assert first["result"] == "imported", first
+            second = await import_entries(
+                admin,
+                connector,
+                entry("string") + [ontology_entry(connector, "extra", HEADER)],
+                expected_head=_head(first["receipt"]),
+            )
+            assert second["result"] == "imported", second
+            active = await _status_head(admin, connector)
+            third = await import_entries(
+                admin,
+                connector,
+                entry("integer") + [ontology_entry(connector, "extra", HEADER)],
+                expected_head=_head(second["receipt"]),
+            )
+            assert violation_codes(third) == {"CONTRACT_BREAK_PENDING"}, third
+            # Queries still resolve through release 2.
+            assert await _status_head(admin, connector) == active
+            return third, active
+        finally:
+            await admin.close()
+
+    held, active = asyncio.run(hold())
+    graph = f"pack-approval-{tag}"
+    client = support.connect(None)
+    try:
+        client.tenants.create(graph, graph_type="Global")
+        support.register_agents(graph, support.REVIEWER)
+        reviewer = support.connect(agent_id=support.REVIEWER)
+        try:
+            support.assign_stewards(
+                client, graph, target, support.principal(), support.principal(support.REVIEWER)
+            )
+            request_id = support.open_request(
+                client, graph, target, held["held"]["change_request"]["proposed_digest"]
+            )
+            support.stewardship(
+                reviewer, graph, {"op": "review", "request_id": request_id, "approve": True}
+            )
+        finally:
+            reviewer.close()
+        applied = support.stewardship(client, graph, {"op": "apply", "request_id": request_id})
+        assert applied["change_request"]["state"] == "applied"
+    finally:
+        try:
+            client.tenants.delete(graph)
+        finally:
+            client.close()
+
+    async def serves() -> None:
+        admin = await connect()
+        try:
+            revision, digest = await _status_head(admin, connector)
+            assert revision > active[0]
+            assert digest == str(held["pack_digest"])
+        finally:
+            await admin.close()
+
+    asyncio.run(serves())
 
 
 OTHER_TENANT = "tenant:other"

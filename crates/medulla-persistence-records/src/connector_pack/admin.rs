@@ -231,6 +231,23 @@ impl AgentLibraryStore {
                 "CORRUPT_CONNECTOR_PACK: body holder key is not a digest".to_string()
             })?);
         }
+        drop(holders);
+        // A held release's staged pack stays live until the next import or an approval clears it.
+        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+        for row in heads
+            .range((tenant_id, "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            if key.value().0 != tenant_id {
+                break;
+            }
+            let head: super::ConnectorPackHeadRow =
+                super::undecodable::decode_stored(value.value(), "connector pack head")?;
+            if let Some(staged) = head.pending_release.and_then(|pending| pending.staged) {
+                held.extend(staged.parts.iter().map(|part| part.sha256));
+            }
+        }
         Ok(held)
     }
 }

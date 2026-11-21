@@ -214,11 +214,38 @@ pub struct PendingPackRelease {
     /// Every break the diff found.
     pub total_breaks: u64,
     pub change_request: ChangeRequest,
+    /// The held pack's contents, staged in the engine body store when the release is held,
+    /// so activation installs the whole pack (MEDULLA-TYPED-PACKS-R107.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged: Option<StagedPack>,
+}
+
+/// One engine body of a staged pack stream.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StagedPart {
+    pub sha256: Digest256,
+    pub manifest_digest: String,
+    pub length: u64,
+}
+
+/// The staged import of a held release: the import request and the pack archive, as one byte
+/// stream split into engine bodies in order. The stream is the 8-byte big-endian length of the
+/// request JSON, the request JSON, then the archive bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StagedPack {
+    pub parts: Vec<StagedPart>,
 }
 
 impl PendingPackRelease {
     pub fn validate(&self) -> Result<(), PackContractError> {
         self.release.validate()?;
+        if self.staged.as_ref().is_some_and(|staged| staged.parts.is_empty()) {
+            return Err(invalid("staged"));
+        }
         for found in &self.breaks {
             found.validate()?;
         }
