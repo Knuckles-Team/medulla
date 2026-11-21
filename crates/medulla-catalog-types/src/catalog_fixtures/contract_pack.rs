@@ -107,6 +107,7 @@ pub fn index() -> ConnectorPackIndex {
         PackEntryKind::SkillFile,
         PackEntryKind::Crosswalk,
         PackEntryKind::ConceptPath,
+        PackEntryKind::ExternalSchema,
     ];
     ConnectorPackIndex {
         schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
@@ -379,6 +380,12 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::ContractShaclViolation,
         PackViolationCode::OntologyCoreConflict,
         PackViolationCode::PromptBlueprintInvalid,
+        PackViolationCode::ExternalKindUnsupported,
+        PackViolationCode::ExternalTermDuplicate,
+        PackViolationCode::ExternalKindMismatch,
+        PackViolationCode::ExternalMappingStale,
+        PackViolationCode::ExternalSourceOutOfScope,
+        PackViolationCode::ExternalReportForged,
     ]
 }
 
@@ -389,6 +396,7 @@ pub fn every_warning_code() -> Vec<PackWarningCode> {
         PackWarningCode::UnresolvedCapabilityIri,
         PackWarningCode::DuplicateShapeIri,
         PackWarningCode::UndecodableRecordReplaced,
+        PackWarningCode::ExternalTermUnmapped,
     ]
 }
 

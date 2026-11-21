@@ -118,6 +118,16 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
+    super::external_schema::validate_external_schemas(
+        request,
+        archive,
+        &all,
+        &mut violations,
+        &mut warnings,
+    );
+    if !violations.is_empty() {
+        return rejected(request, violations);
+    }
 
     let prior_by_uri = members_by_uri(&prior);
     let entries_by_uri = entries_by_uri(&all);

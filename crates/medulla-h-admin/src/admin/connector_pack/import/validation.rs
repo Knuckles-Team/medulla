@@ -712,6 +712,7 @@ fn json_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::A2aCard
             | PackEntryKind::Crosswalk
             | PackEntryKind::ConceptPath
+            | PackEntryKind::ExternalSchema
     )
 }
 
@@ -733,6 +734,7 @@ fn text_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::SkillFile
             | PackEntryKind::Crosswalk
             | PackEntryKind::ConceptPath
+            | PackEntryKind::ExternalSchema
     )
 }
 

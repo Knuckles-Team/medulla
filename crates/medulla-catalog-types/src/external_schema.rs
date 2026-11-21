@@ -319,6 +319,160 @@ pub fn compute_external_coverage(
     Ok(coverage)
 }
 
+/// One external term in a pack's external schema body.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExternalSchemaTerm {
+    /// The term's IRI in the external schema.
+    pub external_iri: String,
+    /// Its kind.
+    pub kind: ExternalTermKind,
+}
+
+/// The body of one `external_schema` pack entry (MEDULLA-TYPED-PACKS-R097.2.7.3): the pinned
+/// external schema, its terms and the mappings the connector declares. A report the body
+/// carries must equal the one the importer computes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExternalSchemaBody {
+    /// The record layout version.
+    pub schema_version: u16,
+    /// Digest of the external schema.
+    pub source_schema_digest: Digest256,
+    /// Revision of the external schema.
+    pub source_revision: String,
+    /// Revision of the declared mappings.
+    pub mapping_revision: String,
+    /// Every term of the external schema.
+    pub terms: Vec<ExternalSchemaTerm>,
+    /// The declared mappings.
+    #[serde(default)]
+    pub mappings: Vec<ExternalTermMapping>,
+    /// A coverage report the producer computed; the importer recomputes and compares it.
+    #[serde(default)]
+    pub coverage: Option<ExternalOntologyCoverage>,
+}
+
+/// Why an external schema body was refused. Each variant but `Malformed` is a registered code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExternalSchemaRefusal {
+    /// The body is not an `ExternalSchemaBody`.
+    Malformed,
+    /// A term or mapping names a kind outside the closed set.
+    KindUnsupported,
+    /// An external IRI is listed twice.
+    TermDuplicate,
+    /// A mapping's kinds disagree with the term's or with each other.
+    KindMismatch,
+    /// A mapping names another source schema or revision than the body pins.
+    MappingStale,
+    /// A term's IRI belongs to the platform vocabulary, not to an external schema.
+    SourceOutOfScope,
+    /// The body carries a coverage report that is not the computed one.
+    ReportForged,
+}
+
+const KIND_NAMES: [&str; 5] = [
+    "class",
+    "object_property",
+    "datatype_property",
+    "annotation_property",
+    "named_individual",
+];
+
+fn unsupported_kind(value: &serde_json::Value) -> Option<String> {
+    let mut kinds: Vec<&serde_json::Value> = Vec::new();
+    for term in value.get("terms").and_then(|v| v.as_array()).into_iter().flatten() {
+        kinds.extend(term.get("kind"));
+    }
+    for mapping in value.get("mappings").and_then(|v| v.as_array()).into_iter().flatten() {
+        kinds.extend(mapping.get("external_kind"));
+        kinds.extend(mapping.get("platform_kind"));
+    }
+    kinds
+        .into_iter()
+        .filter_map(|kind| kind.as_str())
+        .find(|kind| !KIND_NAMES.contains(kind))
+        .map(str::to_string)
+}
+
+/// Admit one external schema body: parse it, check every refusal rule and build its coverage.
+/// `pack_revision`, `schema_revision` and `platform_vocabulary_revision` are the importer's
+/// own revisions and are never read from the body.
+pub fn admit_external_schema(
+    value: &serde_json::Value,
+    pack_revision: &str,
+    schema_revision: &str,
+    platform_vocabulary_revision: &str,
+) -> Result<(ExternalSchemaBody, ExternalOntologyCoverage), (ExternalSchemaRefusal, String)> {
+    use ExternalSchemaRefusal as R;
+    if let Some(kind) = unsupported_kind(value) {
+        return Err((R::KindUnsupported, format!("kind {kind:?} is not supported")));
+    }
+    let body: ExternalSchemaBody = serde_json::from_value(value.clone())
+        .map_err(|error| (R::Malformed, format!("external schema body is invalid: {error}")))?;
+    version(body.schema_version).map_err(|error| (R::Malformed, error.to_string()))?;
+    let platform = medulla_types::ontology_base!();
+    let mut seen = std::collections::BTreeSet::new();
+    for term in &body.terms {
+        if !seen.insert(term.external_iri.as_str()) {
+            return Err((R::TermDuplicate, format!("{} is listed twice", term.external_iri)));
+        }
+        if term.external_iri.starts_with(platform) {
+            return Err((
+                R::SourceOutOfScope,
+                format!("{} belongs to the platform vocabulary", term.external_iri),
+            ));
+        }
+    }
+    for mapping in &body.mappings {
+        mapping.validate().map_err(|error| (R::Malformed, error.to_string()))?;
+        if mapping.source_schema_digest != body.source_schema_digest
+            || mapping.source_revision != body.source_revision
+            || mapping.mapping_revision != body.mapping_revision
+        {
+            return Err((
+                R::MappingStale,
+                format!("the mapping of {} is for another schema or revision", mapping.external_iri),
+            ));
+        }
+        let term = body.terms.iter().find(|term| term.external_iri == mapping.external_iri);
+        let mismatched = term.is_some_and(|term| term.kind != mapping.external_kind)
+            || mapping.platform_kind != mapping.external_kind;
+        if mismatched {
+            return Err((
+                R::KindMismatch,
+                format!("the mapping of {} does not match its kinds", mapping.external_iri),
+            ));
+        }
+    }
+    let terms: Vec<(String, ExternalTermKind)> = body
+        .terms
+        .iter()
+        .map(|term| (term.external_iri.clone(), term.kind))
+        .collect();
+    let coverage = compute_external_coverage(&ExternalCoverageInput {
+        source_schema_digest: body.source_schema_digest,
+        source_revision: &body.source_revision,
+        mapping_revision: &body.mapping_revision,
+        pack_revision,
+        schema_revision,
+        platform_vocabulary_revision,
+        terms: &terms,
+        mappings: &body.mappings,
+    })
+    .map_err(|error| (R::Malformed, error.to_string()))?;
+    if let Some(declared) = &body.coverage {
+        if *declared != coverage {
+            return Err((
+                R::ReportForged,
+                "the carried coverage report is not the computed one".to_string(),
+            ));
+        }
+    }
+    Ok((body, coverage))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -494,5 +648,64 @@ mod tests {
             }),
             Err(ExternalSchemaError::DuplicateIri(_))
         ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.2.7.3
+    #[test]
+    fn admission_refuses_each_case_and_builds_the_coverage() {
+        use serde_json::json;
+        let digest = Digest256::sha256(b"external schema");
+        let good = json!({
+            "schema_version": 1,
+            "source_schema_digest": digest,
+            "source_revision": "ext-2026-01",
+            "mapping_revision": "map-1",
+            "terms": [
+                {"external_iri": format!("{EX}Patient"), "kind": "class"},
+                {"external_iri": format!("{EX}status"), "kind": "datatype_property"}
+            ],
+            "mappings": [{
+                "schema_version": 1,
+                "source_schema_digest": digest,
+                "source_revision": "ext-2026-01",
+                "external_iri": format!("{EX}Patient"),
+                "external_kind": "class",
+                "platform_iri": "https://knuckles-team.github.io/ontology/core#Person",
+                "platform_kind": "class",
+                "mapping_revision": "map-1"
+            }]
+        });
+        let admit = |value: &serde_json::Value| {
+            admit_external_schema(value, "pack-3", "schema-9", "kg-2026")
+        };
+        let (_, coverage) = admit(&good).expect("admitted");
+        assert!(matches!(coverage.terms[0].result, ExternalTermResult::Mapped { .. }));
+        assert!(matches!(coverage.terms[1].result, ExternalTermResult::Unmapped { .. }));
+
+        let refused = |edit: &dyn Fn(&mut serde_json::Value)| {
+            let mut value = good.clone();
+            edit(&mut value);
+            admit(&value).unwrap_err().0
+        };
+        use ExternalSchemaRefusal as R;
+        assert_eq!(refused(&|v| v["terms"][0]["kind"] = json!("blank_node")), R::KindUnsupported);
+        assert_eq!(
+            refused(&|v| v["terms"][1]["external_iri"] = json!(format!("{EX}Patient"))),
+            R::TermDuplicate
+        );
+        assert_eq!(refused(&|v| v["terms"][0]["kind"] = json!("object_property")), R::KindMismatch);
+        assert_eq!(refused(&|v| v["mappings"][0]["mapping_revision"] = json!("map-0")), R::MappingStale);
+        assert_eq!(
+            refused(&|v| v["terms"][1]["external_iri"] =
+                json!("https://knuckles-team.github.io/ontology/core#Thing")),
+            R::SourceOutOfScope
+        );
+        let mut forged = coverage;
+        forged.pack_revision = "pack-9".to_string();
+        assert_eq!(
+            refused(&|v| v["coverage"] = serde_json::to_value(&forged).unwrap()),
+            R::ReportForged
+        );
+        assert_eq!(refused(&|v| v["surprise"] = json!(1)), R::Malformed);
     }
 }

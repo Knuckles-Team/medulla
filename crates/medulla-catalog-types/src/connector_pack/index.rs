@@ -42,6 +42,9 @@ pub enum PackEntryKind {
     // One proposed canonical concept path (MEDULLA-TYPED-PACKS-R071.100): the
     // body is a `ConceptPathRecord` JSON record.
     ConceptPath,
+    // One external schema (MEDULLA-TYPED-PACKS-R097.2.7.3): the body is an
+    // `ExternalSchemaBody` JSON record. Plain comment, like its siblings'.
+    ExternalSchema,
 }
 
 /// Exact identity of the served MCP catalog snapshot this pack came from.

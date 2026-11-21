@@ -61,6 +61,7 @@ pub fn entry_kind_token(kind: PackEntryKind) -> &'static str {
         PackEntryKind::SkillFile => "skill_file",
         PackEntryKind::Crosswalk => "crosswalk",
         PackEntryKind::ConceptPath => "concept_path",
+        PackEntryKind::ExternalSchema => "external_schema",
     }
 }
 

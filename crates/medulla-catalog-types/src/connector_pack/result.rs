@@ -71,6 +71,13 @@ pub enum PackViolationCode {
     // A packaged prompt does not match the canonical blueprint
     // (MEDULLA-DECISION-ENGINE-R814.8).
     PromptBlueprintInvalid,
+    // External schema import refusals (MEDULLA-TYPED-PACKS-R097.2.7.3).
+    ExternalKindUnsupported,
+    ExternalTermDuplicate,
+    ExternalKindMismatch,
+    ExternalMappingStale,
+    ExternalSourceOutOfScope,
+    ExternalReportForged,
 }
 
 /// Something worth saying that did not stop the import.
@@ -84,6 +91,9 @@ pub enum PackWarningCode {
     // The import replaced stored head or member rows that no longer decode
     // (MEDULLA-TYPED-PACKS-R041.2).
     UndecodableRecordReplaced,
+    // An external term no declared mapping covers; it is reported and never added as a
+    // platform term (MEDULLA-TYPED-PACKS-R097.2.7.2).
+    ExternalTermUnmapped,
 }
 
 /// One rejection, attributed to the entry that caused it where possible.

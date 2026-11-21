@@ -26,6 +26,7 @@ mod concept_path;
 pub(crate) mod contract_rdf;
 pub(crate) mod crosswalk;
 mod desired;
+mod external_schema;
 mod facts;
 mod front_matter;
 mod json;
