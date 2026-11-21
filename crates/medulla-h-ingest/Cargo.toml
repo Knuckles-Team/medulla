@@ -16,6 +16,7 @@ jiff = { version = "0.2", optional = true, default-features = false, features = 
 hex = "0.4"
 hmac = "0.12"
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-audio = { path = "../medulla-audio", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }

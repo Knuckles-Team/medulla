@@ -17,6 +17,7 @@ pub const MAX_CONTAINERS: usize = 1_024;
 pub const MAX_PROPOSALS: usize = 64;
 pub const MAX_FACTS: usize = 1_024;
 pub const MAX_TRANSCRIPT_MESSAGES: usize = 1_024;
+pub const MAX_SKILL_DOCUMENTS: usize = 64;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -31,6 +32,7 @@ pub enum SourceBatchKind {
     Proposals,
     Facts,
     Transcripts,
+    SkillDocuments,
 }
 
 /// One page of an identifier-only enumeration run (MEDULLA-INGEST-WORKER-R903.2).
@@ -51,6 +53,17 @@ pub struct EnumerationPage {
     pub ids: BoundedVec<SourceEntityRef, MAX_ENUMERATION_IDS>,
 }
 
+/// One skill document of a `skill_documents` batch (MEDULLA-REPO-INGEST-R002.1.6): the
+/// directory it belongs to and its text. A skill document is a typed item of its own
+/// batch kind, never a mapped record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SkillDocumentItem {
+    pub directory_ref: String,
+    pub text: String,
+}
+
 /// One variant per non-record kind. Element payloads stay opaque JSON here;
 /// the row that owns each kind types its elements at admission.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,6 +77,7 @@ pub enum SourceBatchExtension {
     Proposals(BoundedVec<SourceJson, MAX_PROPOSALS>),
     Facts(BoundedVec<SourceJson, MAX_FACTS>),
     Transcripts(BoundedVec<SourceJson, MAX_TRANSCRIPT_MESSAGES>),
+    SkillDocuments(BoundedVec<SourceJson, MAX_SKILL_DOCUMENTS>),
 }
 
 impl SourceBatchExtension {
@@ -76,6 +90,7 @@ impl SourceBatchExtension {
             Self::Proposals(_) => SourceBatchKind::Proposals,
             Self::Facts(_) => SourceBatchKind::Facts,
             Self::Transcripts(_) => SourceBatchKind::Transcripts,
+            Self::SkillDocuments(_) => SourceBatchKind::SkillDocuments,
         }
     }
 }

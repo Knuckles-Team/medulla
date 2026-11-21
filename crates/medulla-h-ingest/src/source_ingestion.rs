@@ -48,6 +48,8 @@ pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
 pub mod row_version;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod skill_document;
 pub mod spec_projection;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod transcript;
@@ -236,6 +238,7 @@ fn admit_kind(
         | SourceBatchKind::Containers
         | SourceBatchKind::Proposals
         | SourceBatchKind::Facts
+        | SourceBatchKind::SkillDocuments
         | SourceBatchKind::Transcripts => Ok(()),
         #[cfg(all(
             feature = "redb",
@@ -266,6 +269,7 @@ pub async fn prepare(
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Proposals
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Facts
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::SkillDocuments
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Transcripts
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Enumeration
     ) {
@@ -677,6 +681,20 @@ async fn prepare_extension_batch(
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }
             proposal_items = admission.items;
+            methods.extend(admission.methods);
+        }
+        Some(SourceBatchExtension::SkillDocuments(items)) => {
+            // Typed skill documents, never mapped records (MEDULLA-REPO-INGEST-R002.1.6): each
+            // compiles once, and a refusal refuses the batch before any write.
+            let documents = skill_document::decode_skill_documents(items.as_slice())?;
+            let lookup = skill_document::CatalogCapabilityLookup {
+                type_digest: ctx.schema_sources.composed_digest(),
+            };
+            let admission =
+                skill_document::admit_skill(ctx.tenant_scope, connector, &documents, &lookup)?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
             methods.extend(admission.methods);
         }
         Some(SourceBatchExtension::Facts(items)) => {
@@ -4221,5 +4239,20 @@ mod tests {
         let (again_digest, again) = stream_envelope(&first, None);
         assert_eq!(again_digest, first_digest);
         assert_eq!(again.envelope_id, first_envelope.envelope_id);
+    }
+}
+
+#[cfg(all(test, feature = "redb", feature = "blob"))]
+mod admit_kind_tests {
+    use super::admit_kind;
+    use medulla_source_types::source_ingestion::batch_kind::SourceBatchKind;
+
+    // spec: MEDULLA-REPO-INGEST-R002.1.6
+    #[test]
+    fn skill_documents_is_admitted_and_facts_stays_refused() {
+        assert!(admit_kind(SourceBatchKind::SkillDocuments).is_ok());
+        // MEDULLA-INGEST-WORKER-R701.3 admits `facts` through `facts::admit_facts`, so the
+        // refusal of the kind that R002.1.6 names no longer applies; see SPEC-GAPS.
+        assert!(admit_kind(SourceBatchKind::Facts).is_ok());
     }
 }

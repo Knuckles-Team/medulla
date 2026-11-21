@@ -77,6 +77,7 @@ class SourceBatchKind(str, Enum):
     PROPOSALS = "proposals"
     FACTS = "facts"
     TRANSCRIPTS = "transcripts"
+    SKILL_DOCUMENTS = "skill_documents"
 
 
 SOURCE_BATCH_EXTENSION_BOUNDS = {
@@ -87,6 +88,7 @@ SOURCE_BATCH_EXTENSION_BOUNDS = {
     "proposals": 64,
     "facts": 1024,
     "transcripts": 1024,
+    "skill_documents": 64,
 }
 
 
