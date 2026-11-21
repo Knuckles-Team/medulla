@@ -2314,6 +2314,13 @@ path = "benches/multi_graph_fanout.rs"
 harness = false
 required-features = ["full"]
 
+# MEDULLA-FEDERATED-QUERY-R058.4.6: served NlQuery engine overhead per planner step, nightly only.
+[[bench]]
+name = "nl_steps"
+path = "benches/nl_steps.rs"
+harness = false
+required-features = ["server", "security", "nl-query"]
+
 # MEDULLA-DURABLE-KERNEL-R095.1005: served BusHeartbeat through the dispatch entry.
 [[bench]]
 name = "bus_heartbeat"
