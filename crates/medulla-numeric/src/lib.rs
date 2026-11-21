@@ -27,6 +27,9 @@
 /// (MEDULLA-FINANCE-PRIMITIVES-R018.5).
 pub const KERNEL_REVISION: &str = medulla_version::VERSION;
 
+// Deterministic business rule kinds (MEDULLA-BUSINESS-OPS-R002): integer arithmetic, explicit
+// as-of times, one trace on every result.
+pub mod business;
 pub mod cluster;
 pub mod elementwise;
 pub mod error;

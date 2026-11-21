@@ -202,3 +202,23 @@ kg:IncidentSeverityShape a sh:NodeShape ;
         sh:message "An incident severity is low, medium, high or critical."
     ] ;
     sh:message "An incident severity is from the closed set." .
+
+# spec: MEDULLA-BUSINESS-OPS-R002.1
+kg:RuleSpecShape a sh:NodeShape ;
+    sh:targetClass kg:RuleSpec ;
+    sh:property [
+        sh:path kg:ruleKind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "recurrence" "threshold" "reconcile" "reorder" "phrase_policy" ) ;
+        sh:message "A RuleSpec kind is recurrence, threshold, reconcile, reorder or phrase_policy."
+    ] ;
+    sh:property [
+        sh:path kg:ruleVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "A RuleSpec carries exactly one version, an integer of at least 1."
+    ] ;
+    sh:property [
+        sh:path kg:ruleDigest ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$" ;
+        sh:message "A RuleSpec carries exactly one canonical digest of 64 lowercase hex characters."
+    ] ;
+    sh:message "A rule spec is immutable by id and version and carries its canonical digest." .

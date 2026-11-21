@@ -700,3 +700,33 @@
     rdfs:label "resolved by" ;
     rdfs:comment "Links an incident to the change, deploy or person that resolved it." ;
     rdfs:domain :Incident .
+
+# spec: MEDULLA-BUSINESS-OPS-R002.1
+:RuleSpec a owl:Class ;
+    rdfs:label "Rule Spec" ;
+    rdfs:comment "A deterministic business rule: its kind, version, parameters and the canonical digest of those. Immutable by id and version; every evaluation result names the digest of the rule that produced it." ;
+    rdfs:subClassOf :GovernanceRule .
+
+:ruleKind a owl:DatatypeProperty ;
+    rdfs:label "rule kind" ;
+    rdfs:comment "recurrence, threshold, reconcile, reorder or phrase_policy." ;
+    rdfs:domain :RuleSpec ;
+    rdfs:range xsd:string .
+
+:ruleVersion a owl:DatatypeProperty ;
+    rdfs:label "rule version" ;
+    rdfs:comment "The version of the rule kind the parameters are written for; an unknown version refuses with RULE_VERSION_UNKNOWN." ;
+    rdfs:domain :RuleSpec ;
+    rdfs:range xsd:integer .
+
+:ruleParameters a owl:DatatypeProperty ;
+    rdfs:label "rule parameters" ;
+    rdfs:comment "The rule parameters as one canonical text." ;
+    rdfs:domain :RuleSpec ;
+    rdfs:range xsd:string .
+
+:ruleDigest a owl:DatatypeProperty ;
+    rdfs:label "rule digest" ;
+    rdfs:comment "The canonical digest of kind, version and parameters: 64 lowercase hex characters." ;
+    rdfs:domain :RuleSpec ;
+    rdfs:range xsd:string .
