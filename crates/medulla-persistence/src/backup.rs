@@ -694,9 +694,48 @@ fn validate_manifest_file_digests(
 ) -> Result<(), String> {
     let actual_digests = portable_file_digests(dir, shard_files, &manifest.bundled_stores)?;
     if actual_digests != manifest.file_digests {
-        return Err("backup portable-file digests do not match the manifest".to_string());
+        // Name the first file whose digest differs from, or is missing in, the
+        // manifest (MEDULLA-DURABLE-KERNEL-R862.1).
+        let differing = manifest
+            .file_digests
+            .iter()
+            .find(|(name, digest)| actual_digests.get(*name) != Some(*digest))
+            .map(|(name, _)| name.as_str())
+            .or_else(|| {
+                actual_digests
+                    .keys()
+                    .find(|name| !manifest.file_digests.contains_key(*name))
+                    .map(String::as_str)
+            })
+            .unwrap_or("unknown");
+        return Err(archive_digest_mismatch(differing));
     }
     Ok(())
+}
+
+/// Check each bundle shard file against its manifest digest before any shard is
+/// opened, so a damaged shard is refused as `ARCHIVE_DIGEST_MISMATCH` naming the
+/// file rather than as a read failure of its pages.
+fn validate_shard_file_digests(dir: &Path, manifest: &BackupManifest) -> Result<(), String> {
+    for path in medulla_store::redb_layout::discover_current_shards(dir)? {
+        let name = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| "backup contains a non-portable file name".to_string())?;
+        if manifest.file_digests.get(name) != Some(&file_sha256(&path)?) {
+            return Err(archive_digest_mismatch(name));
+        }
+    }
+    Ok(())
+}
+
+/// The refusal for a bundle file, or its staged copy, whose digest differs from
+/// the manifest. It names the file.
+fn archive_digest_mismatch(file_name: &str) -> String {
+    format!(
+        "{}: {file_name} does not match its manifest digest",
+        medulla_types::contract::ServerErrorCode::ArchiveDigestMismatch.as_str()
+    )
 }
 
 /// Read + validate a bundle manifest from `<dir>/MANIFEST.json` (CONCEPT:MEDULLA-KG.sharding.reshard-on-restore).
@@ -706,6 +745,7 @@ pub fn read_manifest(dir: &Path) -> Result<BackupManifest, String> {
     validate_manifest_security(&manifest)?;
     validate_manifest_digest_inventory(&manifest)?;
     validate_bundled_store_declarations(&manifest)?;
+    validate_shard_file_digests(dir, &manifest)?;
     let shard_files = validate_manifest_shards(dir, &manifest)?;
     validate_manifest_admin_store(dir, &manifest)?;
     validate_manifest_file_digests(dir, &shard_files, &manifest)?;
@@ -761,14 +801,64 @@ fn validate_restore_key(manifest: &BackupManifest) -> Result<(), String> {
     Ok(())
 }
 
+/// Directory under the persist dir that holds the staged copies of the bundle's
+/// graph shards while they are adopted and moved out.
+const RESTORE_STAGING_DIR: &str = ".restore-staging";
+
+/// Copy each bundle graph shard into `staging`, hash the staged copy against the
+/// manifest, then adopt it through the one relocation entry point
+/// (`inspect_staged_mutation_store` then `adopt_staged_mutation_store`). The
+/// bundle directory is only read.
+fn stage_bundle_shards(
+    bundle_dir: &Path,
+    staging: &Path,
+    manifest: &BackupManifest,
+) -> Result<(), String> {
+    for source in medulla_store::redb_layout::discover_current_shards(bundle_dir)? {
+        let name = source
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| "backup contains a non-portable file name".to_string())?
+            .to_string();
+        let staged = staging.join(&name);
+        std::fs::copy(&source, &staged).map_err(|error| error.to_string())?;
+        if manifest.file_digests.get(&name) != Some(&file_sha256(&staged)?) {
+            return Err(archive_digest_mismatch(&name));
+        }
+        let validated = medulla_storage::inspect_staged_mutation_store(
+            &staged,
+            medulla_storage::PhysicalStoreIdentity::new(
+                medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE,
+            )?,
+            medulla_storage::OwnerLayout::GraphShard,
+            None,
+        )?;
+        medulla_storage::adopt_staged_mutation_store(validated)?;
+    }
+    Ok(())
+}
+
 fn restore_graph_shards(
     bundle_dir: &Path,
     persist_dir: &Path,
     manifest: &BackupManifest,
     target_shards: usize,
 ) -> Result<(shard_migrate::MigrationReport, Vec<RecoveryStoreCounts>), String> {
-    // The bundle's graph*.redb files are exactly the source shard set MEDULLA-030 consumes.
-    let migration = shard_migrate::migrate_shards(bundle_dir, persist_dir, target_shards)?;
+    // The bundle's graph shards are staged beside the destination, adopted onto
+    // their new files, and moved out by MEDULLA-030's migration. The move graft
+    // retires each scope in the staged copy only, so no bundle byte changes. The
+    // staging directory this call created is removed on success and on every error.
+    std::fs::create_dir_all(persist_dir).map_err(|error| error.to_string())?;
+    let staging = persist_dir.join(RESTORE_STAGING_DIR);
+    if staging.exists() {
+        return Err("restore target already contains a restore staging directory".to_string());
+    }
+    std::fs::create_dir(&staging).map_err(|error| error.to_string())?;
+    let staged = stage_bundle_shards(bundle_dir, &staging, manifest)
+        .and_then(|()| shard_migrate::migrate_shards(&staging, persist_dir, target_shards));
+    let removed = std::fs::remove_dir_all(&staging).map_err(|error| error.to_string());
+    let migration = staged?;
+    removed?;
     if migration.source_shards != manifest.shard_count {
         return Err("restored graph totals do not match the backup manifest".to_string());
     }

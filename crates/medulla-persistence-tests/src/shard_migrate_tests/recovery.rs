@@ -416,3 +416,134 @@ async fn in_place_changed_target_k_refuses_before_swap() {
     backend.shutdown();
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Seed `graphs` over two shards and take a backup bundle of them.
+async fn seeded_bundle(root: &Path, graphs: &[&str]) -> PathBuf {
+    let src = root.join("live");
+    let bundle = root.join("bundle");
+    std::fs::create_dir_all(&src).unwrap();
+    let src_s = src.to_string_lossy().to_string();
+    seed_at_k(&src_s, 2, graphs).await;
+    let backend = RedbBackend::open_with_shards(src_s, 256, 2).expect("reopen");
+    backend
+        .backup(&bundle, "test-engine", 1_700_000_000, "nightly", &[])
+        .expect("backup");
+    backend.shutdown();
+    bundle
+}
+
+/// MEDULLA-DURABLE-KERNEL-R862.1: a bundle copied to new inodes restores by
+/// content through staging and adoption, leaves every bundle byte unchanged and
+/// removes the staging directory.
+// spec: MEDULLA-DURABLE-KERNEL-R862.1
+#[tokio::test(flavor = "multi_thread")]
+async fn copied_bundle_restores_by_content() {
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let root = std::env::temp_dir().join(format!("medulla-r862-1-copy-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let graphs = ["alpha", "beta", "gamma"];
+    let bundle = seeded_bundle(&root, &graphs).await;
+
+    let copied = root.join("bundle-copy");
+    std::fs::create_dir_all(&copied).unwrap();
+    for entry in std::fs::read_dir(&bundle).unwrap() {
+        let entry = entry.unwrap();
+        std::fs::copy(entry.path(), copied.join(entry.file_name())).unwrap();
+    }
+    let digests_before: Vec<(String, String)> = std::fs::read_dir(&copied)
+        .unwrap()
+        .map(|entry| {
+            let path = entry.unwrap().path();
+            (
+                path.file_name().unwrap().to_string_lossy().to_string(),
+                file_sha256(&path).unwrap(),
+            )
+        })
+        .collect();
+
+    let restored = root.join("restored");
+    let report = medulla_persistence::backup::restore_bundle(&copied, &restored, 2, None)
+        .expect("a copied bundle restores");
+    assert_eq!(report.restored_shards, 2);
+
+    let backend =
+        RedbBackend::open_with_shards(restored.to_string_lossy().to_string(), 256, 2).unwrap();
+    for graph in &graphs {
+        assert!(
+            backend.read_graph_dump_blocking(graph).unwrap().is_some(),
+            "graph {graph} missing after the restore"
+        );
+    }
+    backend.shutdown();
+
+    for (name, digest) in digests_before {
+        assert_eq!(
+            file_sha256(&copied.join(&name)).unwrap(),
+            digest,
+            "bundle file {name} changed"
+        );
+    }
+    assert!(
+        !restored.join(".restore-staging").exists(),
+        "the staging directory was left behind"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// MEDULLA-DURABLE-KERNEL-R862.1: one changed byte in one bundle shard refuses
+/// `ARCHIVE_DIGEST_MISMATCH` naming that file and leaves the destination empty.
+// spec: MEDULLA-DURABLE-KERNEL-R862.1
+#[tokio::test(flavor = "multi_thread")]
+async fn one_changed_byte_refuses_and_leaves_destination_empty() {
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let root = std::env::temp_dir().join(format!("medulla-r862-1-flip-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let bundle = seeded_bundle(&root, &["alpha", "beta"]).await;
+
+    let shard = bundle.join("graph-0.redb");
+    let mut bytes = std::fs::read(&shard).unwrap();
+    let middle = bytes.len() / 2;
+    bytes[middle] ^= 0xFF;
+    std::fs::write(&shard, bytes).unwrap();
+
+    let restored = root.join("restored");
+    let refusal = medulla_persistence::backup::restore_bundle(&bundle, &restored, 2, None)
+        .expect_err("a changed byte is refused");
+    assert!(
+        refusal.starts_with("ARCHIVE_DIGEST_MISMATCH: ") && refusal.contains("graph-0.redb"),
+        "unexpected refusal: {refusal}"
+    );
+    let left: Vec<_> = std::fs::read_dir(&restored)
+        .map(|entries| entries.map(|entry| entry.unwrap().file_name()).collect())
+        .unwrap_or_default();
+    assert!(left.is_empty(), "the destination holds {left:?}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// MEDULLA-DURABLE-KERNEL-R862.1: a restore target that already holds a staging
+/// directory is refused, and no graph shard file is written.
+// spec: MEDULLA-DURABLE-KERNEL-R862.1
+#[tokio::test(flavor = "multi_thread")]
+async fn existing_staging_directory_refuses() {
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let root = std::env::temp_dir().join(format!("medulla-r862-1-stage-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let bundle = seeded_bundle(&root, &["alpha", "beta"]).await;
+
+    let restored = root.join("restored");
+    std::fs::create_dir_all(restored.join(".restore-staging")).unwrap();
+    let refusal = medulla_persistence::backup::restore_bundle(&bundle, &restored, 2, None)
+        .expect_err("an existing staging directory is refused");
+    assert_eq!(
+        refusal,
+        "restore target already contains a restore staging directory"
+    );
+    for entry in std::fs::read_dir(&restored).unwrap() {
+        let name = entry.unwrap().file_name().to_string_lossy().to_string();
+        assert!(!name.ends_with(".redb"), "a shard file {name} was written");
+    }
+    let _ = std::fs::remove_dir_all(&root);
+}
