@@ -37,6 +37,8 @@ mod harness_edit_tests;
 mod observation_state;
 #[cfg(test)]
 mod memory_surface_tests;
+#[cfg(all(test, feature = "query"))]
+mod discover_generation_tests;
 #[cfg(test)]
 mod observation_state_tests;
 #[cfg(test)]

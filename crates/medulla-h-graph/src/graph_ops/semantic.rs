@@ -181,31 +181,57 @@ fn gather_candidates(
 /// is set. Hits then expand over `hops` and hydrate. The verdict is
 /// [`discover_quality::quality_verdict`] and the plan carries the expansion evidence.
 #[cfg(feature = "query")]
-struct DiscoverCall<'a> {
-    keywords: &'a [String],
-    query_embedding: &'a [f32],
-    k: usize,
-    hops: u32,
-    as_of: Option<i64>,
-    graph_name: &'a str,
+pub(super) struct DiscoverCall<'a> {
+    pub(super) keywords: &'a [String],
+    pub(super) query_embedding: &'a [f32],
+    pub(super) k: usize,
+    pub(super) hops: u32,
+    pub(super) as_of: Option<i64>,
+    pub(super) graph_name: &'a str,
     /// The verified carrier tenant; drift monitors are read under it.
-    tenant: Option<&'a str>,
+    pub(super) tenant: Option<&'a str>,
     /// Digest of the adapter that re-aimed this query, `None` for the base space.
-    adapter_digest: Option<&'a str>,
+    pub(super) adapter_digest: Option<&'a str>,
     /// The `RetrievalQualityPolicy` node the verdict is judged by (R089.3).
-    quality_policy_ref: Option<&'a str>,
+    pub(super) quality_policy_ref: Option<&'a str>,
     /// Implicit feedback events derived from the tenant's stored retrieval outcomes
     /// (MEDULLA-FEDERATED-QUERY-R705.3); empty without a tenant or a control store.
-    implicit_feedback: &'a [medulla_result_types::feedback_event::RetrievalFeedback],
+    pub(super) implicit_feedback: &'a [medulla_result_types::feedback_event::RetrievalFeedback],
 }
 
 #[cfg(feature = "query")]
-fn discover(
+pub(super) fn discover(
     core: &GraphCore,
     call: &DiscoverCall<'_>,
     deep: super::discover_plan::DeepArms,
     req_id: u64,
 ) -> Response {
+    // MEDULLA-DECISION-ENGINE-R174.8.3.1: one response is gathered under one index
+    // generation. The stamp is pinned before the gather and read again when the verdict
+    // is built; a swap in between repeats the gather once, and a second swap refuses.
+    for _ in 0..2 {
+        let pinned = core.semantic_store.read().generation();
+        let (response, answered) = discover_pass(core, call, deep.clone(), req_id);
+        match answered {
+            Some(stamp) if stamp != pinned => continue,
+            _ => return response,
+        }
+    }
+    Response::err(
+        req_id,
+        "INDEX_UNAVAILABLE: the resident index changed during the read",
+    )
+}
+
+/// One gather-rank-verdict pass of [`discover`]. Returns the response and the index
+/// generation its verdict reports; `None` when the pass refused before reading one.
+#[cfg(feature = "query")]
+fn discover_pass(
+    core: &GraphCore,
+    call: &DiscoverCall<'_>,
+    deep: super::discover_plan::DeepArms,
+    req_id: u64,
+) -> (Response, Option<u64>) {
     use super::discover_plan::{fuse_arms, recency_boost, ArmList};
     use medulla_ingestion_types::ingestion_wire::{DiscoverArm, DiscoverPlan};
 
@@ -217,7 +243,12 @@ fn discover(
         super::discover_quality::QualityKnobs::from_registry(),
     ) {
         Ok(resolved) => resolved,
-        Err(message) => return Response::err(req_id, format!("INVALID_ARGUMENT: {message}")),
+        Err(message) => {
+            return (
+                Response::err(req_id, format!("INVALID_ARGUMENT: {message}")),
+                None,
+            )
+        }
     };
     let kws = normalized_keywords(call.keywords);
     let has_emb = !call.query_embedding.is_empty();
@@ -426,7 +457,7 @@ fn discover(
         &quality_knobs,
         &policy_revision,
     );
-    Response::ok(
+    let response = Response::ok(
         req_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(
             medulla_query_types::wire::DiscoverResult {
@@ -440,7 +471,8 @@ fn discover(
                 },
             },
         ),
-    )
+    );
+    (response, Some(index_generation))
 }
 
 /// The verified carrier tenant of a `Discover` read and the digest of the adapter that
