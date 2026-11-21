@@ -101,7 +101,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T093 [US2] MEDULLA-TYPED-PACKS-R059 Schema attach validates only newly introduced data
 - [ ] T094 [US2] MEDULLA-TYPED-PACKS-R061 Bounded schema source catalog: 32 sources, 2 MiB per document
 - [ ] T095 [US2] MEDULLA-TYPED-PACKS-R062 GraphSchema replicates through the existing GraphState route
-- [ ] T096 [US2] MEDULLA-TYPED-PACKS-R063 Agent-layer row types affected by a schema bump are enumerated
 - [ ] T097 [US2] MEDULLA-TYPED-PACKS-R064 Output-schema digest recorded on tool pins
 - [ ] T098 [US2] MEDULLA-TYPED-PACKS-R065 Medulla does not recompute the connector SDK's contract-pin normalization
 - [ ] T099 [US2] MEDULLA-TYPED-PACKS-R066.1 SHACL shapes validate the measured model facts
@@ -140,7 +139,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T132 [US3] MEDULLA-TYPED-PACKS-R093.1 Public Turtle parse identity locality
 - [ ] T133 [US3] MEDULLA-TYPED-PACKS-R093.2 Reproject-path blank-node isolation
 - [ ] T134 [US3] MEDULLA-TYPED-PACKS-R094.1 Stable content route returns verified bytes
-- [ ] T135 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export
+- [ ] T135 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export: `ExportBlueprint`, `BlueprintExport`, `COMPONENT_REVISION_UNKNOWN`
 - [ ] T136 [US3] MEDULLA-TYPED-PACKS-R094.3 Modified native blueprint import
 - [ ] T137 [US3] MEDULLA-TYPED-PACKS-R094.4 Blueprint retry identity
 - [ ] T138 [US3] MEDULLA-TYPED-PACKS-R094.5 Served lossless blueprint round trip
@@ -158,7 +157,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
 - [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
 - [ ] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
-- [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals
+- [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals: pinned revisions, activation coverage, `OntologyInspection.external_coverage`
 - [ ] T153 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
 - [ ] T154 [US3] MEDULLA-TYPED-PACKS-R097.700 Domain pack manifest, mapping language, loader and promotion bridge
 - [ ] T155 [US3] MEDULLA-TYPED-PACKS-R097.701 Domain pack refusals, evidence and hot-path proof
@@ -192,7 +191,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T183 [US4] MEDULLA-TYPED-PACKS-R103.6 Runtime ontology hot-path proof
 - [ ] T184 [US4] MEDULLA-TYPED-PACKS-R104.1 Model
 - [x] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
-- [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring
+- [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring: `PackEntryKind::SeedPart`, `validate_seed_entries`, `write_projection_triples`
 - [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
 - [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
 - [ ] T189 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
@@ -235,7 +234,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T221 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions
 - [ ] T222 [US4] MEDULLA-TYPED-PACKS-R108.12 Annotations: comments, tags, ratings and threads
 - [ ] T223 [US4] MEDULLA-TYPED-PACKS-R108.13 Curated articles and guides
-- [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates
+- [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates: `cat:SavedQueryAsset`, `cat:usesStoredQuery`, `AssetRecord::StoredQuery`
 - [ ] T225 [US4] MEDULLA-TYPED-PACKS-R108.15 AI and ML model assets
 - [ ] T226 [US4] MEDULLA-TYPED-PACKS-R108.16 One ranked index across all asset families, callable from queries
 - [ ] T227 [US4] MEDULLA-TYPED-PACKS-R109.1 Model
@@ -249,7 +248,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
 - [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
 - [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
-- [ ] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor
+- [ ] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor: `extract_object_model` in `medulla_rdf::pack`, `OBJECT_MODEL_INVALID`
 - [ ] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
 - [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
 - [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior

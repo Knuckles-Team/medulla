@@ -640,3 +640,12 @@ The row keeps its acceptance requirements. This declaration records the evidence
 MEDULLA-TYPED-PACKS-R002.9: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
 
 MEDULLA-TYPED-PACKS-R103.6: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
+
+## Amendments
+
+- 2026-11-20: MEDULLA-TYPED-PACKS-R063 withdrawn. Reason: main has no shared agent-layer schema version; each record type pins its own constant, and Spec trailers carry row IDs, not type names.
+- 2026-11-20: MEDULLA-TYPED-PACKS-R094.2 resolved. The export carries the full entry and the verified bytes unparsed; the tenant refusal is the shared `ACCESS_DENIED`, and an unknown revision is `COMPONENT_REVISION_UNKNOWN`.
+- 2026-11-20: MEDULLA-TYPED-PACKS-R650.7 resolved. The extractor lives in `medulla_rdf::pack`, because `medulla-core` does not parse pack Turtle; it reads existing SHACL, RDFS and system terms and adds none.
+- 2026-11-20: MEDULLA-TYPED-PACKS-R104.3 resolved and R104.2 trimmed to the pure planner. Seed parts are `SeedPart` pack entries, not a separate index list, so seed state is the head's member rows and the seed projects in the one pack projection commit.
+- 2026-11-20: MEDULLA-TYPED-PACKS-R097.2.7.3 resolved. The revisions come from the pinned vocabulary; coverage is recomputed at activation and stored on the schema source, as R097.2.3 does for crosswalks.
+- 2026-11-20: MEDULLA-TYPED-PACKS-R108.14 resolved. A saved query is the R708 stored query, catalogued as `cat:SavedQueryAsset` by the emitter; template parameters have one authority on that node.
