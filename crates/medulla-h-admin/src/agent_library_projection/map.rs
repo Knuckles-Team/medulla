@@ -7,10 +7,12 @@
 //! withdrawn revision projects nothing.
 
 use medulla_agent_types::agent_component::{
-    AgentComponentEntry, AgentComponentKind, A2A_AGENT_KIND_ATTRIBUTE,
+    AgentComponentEntry, AgentComponentFacts, AgentComponentKind, A2A_AGENT_KIND_ATTRIBUTE,
 };
+use medulla_agent_types::agent_guardrail::GuardrailRule;
 use medulla_agent_types::agent_library::{AgentLibraryEntry, AgentLibraryLifecycle};
-use medulla_rdf::oxrdf::{NamedNode, Triple};
+use medulla_rdf::oxrdf::vocab::xsd;
+use medulla_rdf::oxrdf::{Literal, NamedNode, Triple};
 
 /// The core ontology namespace the projected terms belong to.
 pub const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
@@ -102,6 +104,8 @@ pub fn project_component(entry: &AgentComponentEntry) -> Vec<Triple> {
     let subject = NamedNode::new_unchecked(component_iri(&entry.tenant_id, &entry.component_id));
     match entry.kind {
         AgentComponentKind::A2aAgentCard => project_a2a_card(&subject, entry),
+        AgentComponentKind::GuardrailRule => project_guardrail_rule(&subject, entry),
+        AgentComponentKind::ModelProfile => project_model_profile(&subject, entry),
         _ => Vec::new(),
     }
 }
@@ -134,6 +138,63 @@ fn project_a2a_card(subject: &NamedNode, entry: &AgentComponentEntry) -> Vec<Tri
         }
     }
     triples
+}
+
+/// A published guardrail rule as a best practice (MEDULLA-ORCH-VOCAB-R004.4), in this order:
+/// `a :BestPractice`, `:memberOfLibrary` its tenant's library, `:appliesToTaskClass` the rule's
+/// class. Publish refuses a rule whose class is missing or not an IRI, so a rule that does not
+/// decode (or whose class is not a valid IRI) is unreachable and writes no triple.
+fn project_guardrail_rule(subject: &NamedNode, entry: &AgentComponentEntry) -> Vec<Triple> {
+    let Ok(rule) = GuardrailRule::from_attributes(&entry.component_id, &entry.attributes) else {
+        return Vec::new();
+    };
+    let Ok(class) = NamedNode::new(rule.applies_to_class.as_str()) else {
+        return Vec::new();
+    };
+    vec![
+        Triple::new(
+            subject.clone(),
+            NamedNode::new_unchecked(RDF_TYPE),
+            term("BestPractice"),
+        ),
+        Triple::new(
+            subject.clone(),
+            term("memberOfLibrary"),
+            NamedNode::new_unchecked(library_iri(&entry.tenant_id)),
+        ),
+        Triple::new(subject.clone(), term("appliesToTaskClass"), class),
+    ]
+}
+
+/// A published model profile with its context window (MEDULLA-ORCH-VOCAB-R005.5), in this
+/// order: `a :ModelProfile`, `:memberOfLibrary` its tenant's library, `:contextWindow` as an
+/// `xsd:integer`. The window is the typed fact, not an attribute; facts of another variant
+/// (unreachable, publish binds facts to kind) write no triple.
+fn project_model_profile(subject: &NamedNode, entry: &AgentComponentEntry) -> Vec<Triple> {
+    let AgentComponentFacts::ModelProfile {
+        context_window_tokens,
+        ..
+    } = &entry.facts
+    else {
+        return Vec::new();
+    };
+    vec![
+        Triple::new(
+            subject.clone(),
+            NamedNode::new_unchecked(RDF_TYPE),
+            term("ModelProfile"),
+        ),
+        Triple::new(
+            subject.clone(),
+            term("memberOfLibrary"),
+            NamedNode::new_unchecked(library_iri(&entry.tenant_id)),
+        ),
+        Triple::new(
+            subject.clone(),
+            term("contextWindow"),
+            Literal::new_typed_literal(context_window_tokens.to_string(), xsd::INTEGER),
+        ),
+    ]
 }
 
 /// `triples` as one N-Triples document, one statement per line.
@@ -222,5 +283,75 @@ mod tests {
         retired.lifecycle = AgentLibraryLifecycle::Retired;
         assert!(project_component(&retired).is_empty());
         assert!(project_component(&card(AgentComponentKind::Tool, &[], &[])).is_empty());
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R004.4
+    #[test]
+    fn guardrail_rule_maps_to_best_practice_with_scope() {
+        let class = format!("{CORE}TaskClassRefactor");
+        let rule = card(
+            AgentComponentKind::GuardrailRule,
+            &[],
+            &[("applies_to_class", &class), ("source_generation", "gen-1")],
+        );
+        let subject = component_iri("tenant-a", "card-a");
+        let rendered: Vec<String> = project_component(&rule)
+            .iter()
+            .map(|t| t.to_string())
+            .collect();
+        assert_eq!(
+            rendered,
+            vec![
+                format!("<{subject}> <{RDF_TYPE}> <{CORE}BestPractice>"),
+                format!("<{subject}> <{CORE}memberOfLibrary> <{}>", library_iri("tenant-a")),
+                format!("<{subject}> <{CORE}appliesToTaskClass> <{class}>"),
+            ]
+        );
+        let mut retired = rule.clone();
+        retired.lifecycle = AgentLibraryLifecycle::Retired;
+        assert!(project_component(&retired).is_empty());
+        assert!(project_component(&card(AgentComponentKind::Tool, &[], &[])).is_empty());
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R005.5
+    #[test]
+    fn model_profile_maps_with_context_window() {
+        // Published as an opaque card, then re-kinded: the mapping reads only the stored fields.
+        let mut published = card(AgentComponentKind::A2aAgentCard, &[], &[]);
+        published.kind = AgentComponentKind::ModelProfile;
+        published.facts = AgentComponentFacts::ModelProfile {
+            provider: "vendor".into(),
+            model_identity: "model-a".into(),
+            context_window_tokens: 200_000,
+            max_output_tokens: 8_192,
+            supports_tools: true,
+            supports_structured_output: true,
+            supports_vision: false,
+            input_capabilities: None,
+            modalities: Default::default(),
+            cost: None,
+            latency_declared: None,
+            latency_observed_ref: None,
+            shell_proficiency: None,
+            stopping_behaviour: None,
+        };
+        let subject = component_iri("tenant-a", "card-a");
+        let rendered: Vec<String> = project_component(&published)
+            .iter()
+            .map(|t| t.to_string())
+            .collect();
+        assert_eq!(
+            rendered,
+            vec![
+                format!("<{subject}> <{RDF_TYPE}> <{CORE}ModelProfile>"),
+                format!("<{subject}> <{CORE}memberOfLibrary> <{}>", library_iri("tenant-a")),
+                format!(
+                    "<{subject}> <{CORE}contextWindow> \"200000\"^^<http://www.w3.org/2001/XMLSchema#integer>"
+                ),
+            ]
+        );
+        let mut retired = published.clone();
+        retired.lifecycle = AgentLibraryLifecycle::Retired;
+        assert!(project_component(&retired).is_empty());
     }
 }
