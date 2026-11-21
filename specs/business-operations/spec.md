@@ -52,19 +52,26 @@ The owner asks what needs approval, what is overdue and what changed this week. 
 - A reconciliation with two equal candidates picks by the fixed tie-break and reports the tie.
 - A request with no as-of time refuses with `ASOF_REQUIRED`.
 
+### Assumptions
+
+- The caller supplies the as-of time, the holiday calendar and the tax regime as facts; the engine ships no jurisdiction data.
+- Arbora triggers evaluation on a schedule; this spec adds no scheduler.
+- Connectors map external systems into the pack; this spec adds no connector.
+- The money rule, the state-machine rule and the numeric registry of their owning specs apply unchanged.
+
 ## Requirements
 
 - **FR-001**: One pack models profile, products, orders, money, procurement, compliance, tax, approvals, deploys and incidents. Rows: `MEDULLA-BUSINESS-OPS-R001`.
 - **FR-002**: Five rule kinds evaluate deterministically through UQL. Rows: `MEDULLA-BUSINESS-OPS-R002`.
 - **FR-003**: The owner digest answers as stored queries with as-of reads. Rows: `MEDULLA-BUSINESS-OPS-R003`.
-- **FR-004**: Action provenance is queryable. Rows: `MEDULLA-DECISION-ENGINE-R869`.
-- **FR-005**: Business and personal tenants stay separate with explicit sharing. Rows: `MEDULLA-IDENTITY-R727`.
+- **FR-004**: Approvals, gate decisions and deploys are stored so that action provenance can link to them. Rows: `MEDULLA-BUSINESS-OPS-R001.7`. The provenance rows themselves live in `MEDULLA-DECISION-ENGINE-R869`.
+- **FR-005**: The digest runs under the caller's tenant and scope. Rows: `MEDULLA-BUSINESS-OPS-R003.3`. Tenant separation and sharing live in `MEDULLA-IDENTITY-R727`.
 
 ## Success Criteria
 
-- **SC-001**: Every rule kind returns the same bytes for the same inputs on two architectures.
-- **SC-002**: No rule evaluation reads a wall clock.
-- **SC-003**: No pack class lacks a core subclass path.
+- **SC-001**: Every rule kind returns the same bytes for the same inputs on two architectures. Rows: `MEDULLA-BUSINESS-OPS-R002.9`.
+- **SC-002**: No rule evaluation reads a wall clock. Rows: `MEDULLA-BUSINESS-OPS-R002.10`.
+- **SC-003**: No pack class lacks a core subclass path. Rows: `MEDULLA-BUSINESS-OPS-R001.8`.
 
 ## Cross-repository rows to file
 
