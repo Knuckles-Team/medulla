@@ -150,3 +150,38 @@ async def test_discover_client_sends_planner_fields_and_reads_plan_vector() -> N
     out = await GraphOperationsClient(_Vector()).discover(["a"], [], k=1)
     assert out["plan"]["expansions"][0]["digest"] == "0" * 64
     assert out["hits"][0]["hop_path"] == ["s", "a"]
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R089.6
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R089.6")
+@pytest.mark.asyncio
+async def test_discover_returns_verdict() -> None:
+    """The verdict the engine judged the call by reaches the caller unchanged,
+    including a failed gate with its `sparse_index` failure mode."""
+    verdict = {
+        "gate_passed": False,
+        "failure_modes": ["sparse_index"],
+        "composite_quality_q16": 40000,
+        "index_population_ratio_q16": 6553,
+        "above_threshold": True,
+        "total_candidates": 1,
+        "policy_revision": "knobs",
+        "index_generation": 3,
+        "thresholds": {
+            "min_composite_quality_q16": 32768,
+            "min_population_ratio_q16": 32768,
+        },
+    }
+
+    class _Sparse(_FakeClient):
+        async def _send(self, method: str, params: Any = None, graph: Any = None, **_: Any) -> Any:
+            reply = await super()._send(method, params, graph)
+            reply["verdict"] = verdict
+            return reply
+
+    gc = GraphOperationsClient(_Sparse())
+    out = await gc.discover(["deploy"], [0.1, 0.2, 0.3], k=3)
+    assert out["verdict"] == verdict
+    assert out["verdict"]["gate_passed"] is False
+    assert out["verdict"]["failure_modes"] == ["sparse_index"]
+    assert out["hits"][0]["id"] == "deploy_runbook"

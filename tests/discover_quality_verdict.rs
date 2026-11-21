@@ -347,3 +347,50 @@ async fn verdict_carries_revision_generation_and_thresholds() {
         "{before} -> {after}"
     );
 }
+
+/// Write one node with no embedding through the commit path.
+async fn write_unembedded(state: &test_support::SharedState, n: u64) {
+    send(
+        state,
+        2 * n,
+        Method::AddNode {
+            node_id: format!("doc-{n}"),
+            properties_msgpack: pack(json!({"type": "Document", "name": "known term"})),
+        },
+    )
+    .await;
+}
+
+fn modes(verdict: &serde_json::Value) -> Vec<String> {
+    verdict["failure_modes"]
+        .as_array()
+        .expect("failure_modes")
+        .iter()
+        .map(|m| m.as_str().expect("mode").to_string())
+        .collect()
+}
+
+/// Verifies MEDULLA-FEDERATED-QUERY-R089.6: an index that embeds a tenth of the graph fails
+/// the gate with `sparse_index`; a fully embedded graph does not report it.
+// spec: MEDULLA-FEDERATED-QUERY-R089.6
+#[tokio::test]
+async fn sparse_index_fails_closed() {
+    let sparse = quality_state();
+    write(&sparse, 0, "known term").await;
+    for n in 1..10 {
+        write_unembedded(&sparse, n).await;
+    }
+    let verdict = verdict(&sparse, 900).await;
+    assert_eq!(verdict["gate_passed"], false, "{verdict}");
+    assert!(modes(&verdict).contains(&"sparse_index".to_string()), "{verdict}");
+    let ratio = verdict["index_population_ratio_q16"].as_u64().expect("ratio");
+    assert!(ratio <= 6_554, "a tenth embedded: {ratio}");
+
+    let full = quality_state();
+    for n in 0..10 {
+        write(&full, n, "known term").await;
+    }
+    let verdict = verdict(&full, 900).await;
+    assert!(!modes(&verdict).contains(&"sparse_index".to_string()), "{verdict}");
+    assert_eq!(verdict["index_population_ratio_q16"], 65_535);
+}
