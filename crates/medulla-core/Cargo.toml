@@ -136,6 +136,12 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-source-types = { path = "../medulla-source-types" }
 
+# Sensitive column scan over 10,000 values and 20 pattern detectors (MEDULLA-TYPED-PACKS-R803.6): nightly budget.
+[[bench]]
+name = "sensitive_scan"
+path = "benches/sensitive_scan.rs"
+harness = false
+
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }
