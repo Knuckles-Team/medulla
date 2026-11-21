@@ -1112,6 +1112,11 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R732.3` | `crates/medulla-exec/src/exec.rs::tests::shadow_challenger_never_serves_its_result` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R732.4` | `crates/medulla-server/src/downtime_plan_evolution.rs::tests::planner_evolution_refits_corrections_from_records` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `crates/medulla-server/src/planner_promotion.rs::tests::a_challenger_that_improves_both_p95s_with_equal_rows_is_accepted` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `crates/medulla-server/src/planner_promotion.rs::tests::a_challenger_that_loses_a_measure_or_differs_once_stays_a_challenger` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `crates/medulla-server/src/planner_promotion.rs::tests::fewer_comparisons_than_the_minimum_are_not_judged` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `crates/medulla-server/src/planner_promotion.rs::tests::the_service_principal_holds_exactly_the_promotion_scopes` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732.5` | `crates/medulla-decision-types/src/decision/planner_cost_head.rs::tests::a_cost_head_body_verifies_only_against_its_own_digest` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722.7` | `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R733` | `crates/medulla-uql/tests/group_stage.rs::group_by_label_counts_rows`, `crates/medulla-uql/tests/group_stage.rs::unknown_field_is_refused` and `tests/query/test_uql_group_served.py::test_node_type_counts_over_the_wire` (L2, L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R734` | `crates/medulla-uql/tests/order_skip_stage.rs::order_is_stable_with_row_id_tiebreak` and `crates/medulla-uql/tests/order_skip_stage.rs::skip_past_the_cap_is_refused` (L2). |

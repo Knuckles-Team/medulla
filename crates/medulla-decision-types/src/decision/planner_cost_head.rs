@@ -21,6 +21,9 @@ pub const PLANNER_COST_HEAD_ATTRIBUTE: &str = "planner.cost_head";
 /// `KnobSet` policy id the policy-evolution gate and the champion pointer name.
 pub const PLANNER_POLICY_ID: &str = "planner";
 
+/// The prefix a component's `content_digest` carries before the cost head's own hex digest.
+pub const COMPONENT_DIGEST_PREFIX: &str = "sha256:";
+
 /// Digest of a cost head: the correction curves `(op kind, coefficients)` in op-kind
 /// order, then the planner knobs in name order (MEDULLA-FEDERATED-QUERY-R732.2).
 pub fn cost_head_digest(curves: &[(&str, &[f64])], knobs: &[(&str, &str)]) -> String {
@@ -75,7 +78,10 @@ pub fn verify_cost_head(
         .map(|(k, v)| (k.as_str(), v.as_str()))
         .collect();
     let recomputed = cost_head_digest(&curves, &knobs);
-    if recomputed != view.digest || recomputed != content_digest {
+    let named = content_digest
+        .strip_prefix(COMPONENT_DIGEST_PREFIX)
+        .unwrap_or(content_digest);
+    if recomputed != view.digest || recomputed != named {
         return Err(DecisionErrorCode::PolicyBodyUnavailable);
     }
     Ok(())
@@ -99,6 +105,11 @@ mod tests {
     fn a_cost_head_body_verifies_only_against_its_own_digest() {
         let digest = cost_head_digest(&[("Scan", &[0.5, 0.0])], &[("join_cost", "2")]);
         assert_eq!(verify_cost_head(&attributes(&digest, 0.5), &digest), Ok(()));
+        let component_digest = format!("{COMPONENT_DIGEST_PREFIX}{digest}");
+        assert_eq!(
+            verify_cost_head(&attributes(&digest, 0.5), &component_digest),
+            Ok(())
+        );
         // A body whose curves moved no longer matches the digest it names.
         assert!(verify_cost_head(&attributes(&digest, 0.6), &digest).is_err());
         // A digest that is not the component's content digest is refused.

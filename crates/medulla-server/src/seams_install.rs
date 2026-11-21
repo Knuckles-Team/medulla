@@ -36,12 +36,26 @@ pub fn install_freshness_search_port(state: &ServerState) {
 #[allow(unused_variables)]
 pub fn install_downtime_bodies(shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
     #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
-    medulla_server_api::downtime::install_downtime_body(
-        "planner_evolution",
-        std::sync::Arc::new(crate::downtime_plan_evolution::PlannerEvolutionBody),
-    );
-    #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
     if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+        medulla_server_api::downtime::install_downtime_body(
+            "planner_evolution",
+            std::sync::Arc::new(crate::downtime_plan_evolution::PlannerEvolutionBody::new(
+                std::sync::Arc::clone(shared),
+                runtime.clone(),
+            )),
+        );
+        // The planner's champion is durable: rebuild it from the pointer at startup.
+        let restored = std::sync::Arc::clone(shared);
+        runtime.spawn(async move {
+            if let Err(error) = crate::planner_promotion::restore_champion(
+                &restored,
+                medulla_exec::learned_cost::PlanRecordStore::global(),
+            )
+            .await
+            {
+                tracing::warn!(%error, "planner champion not restored; the built-in cost head stays in force");
+            }
+        });
         medulla_server_api::downtime::install_downtime_body(
             "plan_evolution",
             std::sync::Arc::new(crate::downtime_plan_evolution::PlanEvolutionBody::new(

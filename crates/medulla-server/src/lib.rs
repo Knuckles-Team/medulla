@@ -33,6 +33,11 @@ pub mod downtime;
 #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
 pub mod downtime_plan_evolution;
 
+/// Promotion of the planner's challenger cost head on shadow evidence, and the champion's
+/// rebuild at startup (MEDULLA-FEDERATED-QUERY-R732.5).
+#[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
+pub mod planner_promotion;
+
 // ---- merged from the moved module root (src/server/mod.rs) ----
 #[cfg(feature = "ann-redb")]
 use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;

@@ -592,9 +592,16 @@ impl PlanRecordStore {
         recover_corrections(self.challenger.read()).clone()
     }
 
-    /// Set (or clear) the challenger. A challenger never answers a query.
+    /// Set (or clear) the challenger. A challenger never answers a query. Shadow comparisons
+    /// measure one challenger against one champion, so a different challenger starts with
+    /// none.
     pub fn set_challenger(&self, revision: Option<CostHeadRevision>) {
-        *recover_corrections(self.challenger.write()) = revision.map(Arc::new);
+        let mut slot = recover_corrections(self.challenger.write());
+        let held = slot.as_ref().map(|held| held.digest.as_str());
+        if held != revision.as_ref().map(|next| next.digest.as_str()) {
+            recover_corrections(self.shadows.lock()).clear();
+        }
+        *slot = revision.map(Arc::new);
     }
 
     /// Move the champion pointer to `revision` (MEDULLA-FEDERATED-QUERY-R732.5); the
@@ -608,6 +615,8 @@ impl PlanRecordStore {
             *challenger = None;
         }
         *recover_corrections(self.champion.write()) = Some(Arc::new(revision));
+        // The comparisons measured the previous champion.
+        recover_corrections(self.shadows.lock()).clear();
     }
 
     /// Bind the fraction of interactive plans that also run under the challenger (the server
@@ -645,6 +654,17 @@ impl PlanRecordStore {
             .get(tenant)
             .map(|queue| queue.iter().cloned().collect())
             .unwrap_or_default()
+    }
+
+    /// Every tenant's shadow comparisons, oldest first (ties by tenant): the pool the planner
+    /// promotion is judged on (MEDULLA-FEDERATED-QUERY-R732.5).
+    pub fn all_shadows(&self) -> Vec<ShadowComparison> {
+        let mut all: Vec<ShadowComparison> = recover_corrections(self.shadows.lock())
+            .values()
+            .flat_map(|queue| queue.iter().cloned())
+            .collect();
+        all.sort_by(|a, b| (a.recorded_at_ms, &a.tenant).cmp(&(b.recorded_at_ms, &b.tenant)));
+        all
     }
 
     /// Every tenant that has a record.

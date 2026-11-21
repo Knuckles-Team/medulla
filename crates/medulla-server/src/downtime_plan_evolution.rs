@@ -292,8 +292,20 @@ pub fn run_planner_evolution(
     receipts
 }
 
-/// The body of the `planner_evolution` intent (MEDULLA-FEDERATED-QUERY-R732.4).
-pub struct PlannerEvolutionBody;
+/// The body of the `planner_evolution` intent (MEDULLA-FEDERATED-QUERY-R732.4, R732.5): it
+/// refits the challenger, then judges it on the shadow comparisons as the engine's own
+/// service principal and promotes it only on a passing verdict.
+pub struct PlannerEvolutionBody {
+    state: Arc<RwLock<ServerState>>,
+    runtime: tokio::runtime::Handle,
+}
+
+impl PlannerEvolutionBody {
+    /// A body that reads `state` on `runtime`.
+    pub fn new(state: Arc<RwLock<ServerState>>, runtime: tokio::runtime::Handle) -> Self {
+        Self { state, runtime }
+    }
+}
 
 impl DowntimeBody for PlannerEvolutionBody {
     fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
@@ -301,11 +313,16 @@ impl DowntimeBody for PlannerEvolutionBody {
             medulla_server_api::knob_config::knobs().query_planner_min_records,
         )
         .unwrap_or(usize::MAX);
-        let receipts = run_planner_evolution(
-            medulla_exec::learned_cost::PlanRecordStore::global(),
+        let store = medulla_exec::learned_cost::PlanRecordStore::global();
+        let receipts = run_planner_evolution(store, min);
+        // The worker runs a step on a blocking thread, so waiting here never stalls the
+        // runtime's own workers.
+        let promotion = self.runtime.block_on(crate::planner_promotion::promote_on_shadow_evidence(
+            &self.state,
+            store,
             min,
-        );
-        let output = serde_json::json!({ "receipts": receipts });
+        ))?;
+        let output = serde_json::json!({ "receipts": receipts, "promotion": promotion });
         let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
         Ok(DowntimeStep::Done {
             result,
