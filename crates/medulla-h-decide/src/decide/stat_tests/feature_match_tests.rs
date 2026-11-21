@@ -525,3 +525,112 @@ async fn ledger_rows_cite_matches_and_plan() {
     .unwrap();
     assert!(foreign.entries.is_empty());
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R707.6: the hot-path journey. Two feature
+/// sets are matched, the unmatched feature is opened and planned on the ledger,
+/// a close without a known change is refused and leaves the entry planned, and
+/// a close naming a change the caller sees lands.
+// spec: MEDULLA-DECISION-ENGINE-R707.6
+#[tokio::test]
+async fn closeout_requires_linked_change() {
+    let h = Harness::with_isolation(reader_isolation("ledger-writer", &["repo-index"])).await;
+    index_commits(&h).await;
+    let pins = pins(&h, TENANT);
+
+    let batch = decide(&h, request(&pins.0, features(), Some("local")))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    let answer = record
+        .answer
+        .as_ref()
+        .and_then(|a| a.feature_match())
+        .expect("the family answers a feature comparison");
+    assert_eq!(answer.matches.len(), 1);
+    assert_eq!(answer.plans.len(), 1);
+    let plan = answer.plans[0].clone();
+    assert_eq!(plan.feature_ids, vec!["f-e2".to_string()]);
+
+    let opened = only(
+        ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Open {
+                feature_id: "f-e2".into(),
+                match_ids: vec![match_option_id("f-e1", "f-l1")],
+            },
+        )
+        .await
+        .unwrap(),
+    );
+    assert_eq!(opened.status, LedgerStatus::Open);
+    let planned = only(
+        ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Plan {
+                plan: plan.clone(),
+                expected_revision: 0,
+            },
+        )
+        .await
+        .unwrap(),
+    );
+    assert_eq!(planned.status, LedgerStatus::Planned);
+
+    // A close naming an absent change, then one only another agent may see,
+    // is refused and leaves the entry planned.
+    for change in ["f".repeat(40), HIDDEN_COMMIT.to_string()] {
+        let refused = ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Close {
+                feature_id: "f-e2".into(),
+                closed_by: change,
+                expected_revision: 1,
+            },
+        )
+        .await
+        .unwrap_err();
+        assert!(refused.starts_with("LEDGER_CLOSE_NO_CHANGE"), "{refused}");
+        let still = ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Get {
+                feature_ids: vec!["f-e2".into()],
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(only(still).status, LedgerStatus::Planned);
+    }
+
+    // Another tenant sees none of it.
+    let foreign = ledger(
+        &h,
+        OTHER_TENANT,
+        FeatureLedgerOp::Get {
+            feature_ids: vec![],
+        },
+    )
+    .await
+    .unwrap();
+    assert!(foreign.entries.is_empty());
+
+    // The close naming a known change lands.
+    let closed = only(
+        ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Close {
+                feature_id: "f-e2".into(),
+                closed_by: COMMIT.into(),
+                expected_revision: 1,
+            },
+        )
+        .await
+        .unwrap(),
+    );
+    assert_eq!(closed.status, LedgerStatus::Closed);
+    assert_eq!(closed.closed_by.as_deref(), Some(COMMIT));
+}
