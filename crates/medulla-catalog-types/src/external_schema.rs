@@ -372,6 +372,22 @@ pub enum ExternalSchemaRefusal {
     ReportForged,
 }
 
+impl ExternalSchemaRefusal {
+    /// The wire code a refusal is reported under; `MALFORMED_BODY` for a body that
+    /// is not an external schema at all.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Malformed => "MALFORMED_BODY",
+            Self::KindUnsupported => "EXTERNAL_KIND_UNSUPPORTED",
+            Self::TermDuplicate => "EXTERNAL_TERM_DUPLICATE",
+            Self::KindMismatch => "EXTERNAL_KIND_MISMATCH",
+            Self::MappingStale => "EXTERNAL_MAPPING_STALE",
+            Self::SourceOutOfScope => "EXTERNAL_SOURCE_OUT_OF_SCOPE",
+            Self::ReportForged => "EXTERNAL_REPORT_FORGED",
+        }
+    }
+}
+
 const KIND_NAMES: [&str; 5] = [
     "class",
     "object_property",
@@ -437,6 +453,14 @@ pub fn admit_external_schema(
             ));
         }
         let term = body.terms.iter().find(|term| term.external_iri == mapping.external_iri);
+        // A mapping whose external IRI names no term of the body is outside the
+        // pinned source set, as a crosswalk source outside it is.
+        if term.is_none() {
+            return Err((
+                R::SourceOutOfScope,
+                format!("the mapping names {}, which is no term of the body", mapping.external_iri),
+            ));
+        }
         let mismatched = term.is_some_and(|term| term.kind != mapping.external_kind)
             || mapping.platform_kind != mapping.external_kind;
         if mismatched {

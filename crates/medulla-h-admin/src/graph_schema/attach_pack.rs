@@ -25,6 +25,7 @@ pub(super) struct ResolvedPackSchema {
     pub(super) shapes: Vec<super::PackSchemaDocument>,
     pub(super) ontologies: Vec<super::PackSchemaDocument>,
     pub(super) crosswalks: Vec<super::PackSchemaDocument>,
+    pub(super) external_schemas: Vec<super::PackSchemaDocument>,
 }
 
 /// Resolve the one source `pack:<connector>` is allowed to install.
@@ -55,6 +56,7 @@ pub(super) async fn resolve(
         let mut shapes = Vec::new();
         let mut ontologies = Vec::new();
         let mut crosswalks = Vec::new();
+        let mut external_schemas = Vec::new();
         for body in head.bodies {
             let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
@@ -73,6 +75,9 @@ pub(super) async fn resolve(
                 medulla_catalog_types::connector_pack::PackEntryKind::Shapes => &mut shapes,
                 medulla_catalog_types::connector_pack::PackEntryKind::Ontology => &mut ontologies,
                 medulla_catalog_types::connector_pack::PackEntryKind::Crosswalk => &mut crosswalks,
+                medulla_catalog_types::connector_pack::PackEntryKind::ExternalSchema => {
+                    &mut external_schemas
+                }
                 _ => unreachable!("resolver selected only semantic pack members"),
             };
             documents.push(super::PackSchemaDocument {
@@ -85,6 +90,7 @@ pub(super) async fn resolve(
             shapes,
             ontologies,
             crosswalks,
+            external_schemas,
         })
     }
 }

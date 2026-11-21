@@ -160,6 +160,13 @@ pub struct GraphSchemaSource {
     /// revision, so it is outside both the composed digest and document identity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub crosswalk_coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+    /// The coverage of each external schema this pack source carries, computed by the
+    /// pack activation with `compute_external_coverage`
+    /// (MEDULLA-TYPED-PACKS-R097.2.7.3). Derived from the pack's `external_schema`
+    /// members and the composition's pins, so it is outside both the composed digest
+    /// and document identity.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub external_coverage: Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>,
     /// Deterministic provenance time. Replicated handlers must never read the
     /// local wall clock; until the commit envelope exposes a consensus time,
     /// live attachments use the documented sentinel `0`.
@@ -205,6 +212,7 @@ impl GraphSchemaSource {
             crosswalks: Vec::new(),
             contract: None,
             crosswalk_coverage: None,
+            external_coverage: Vec::new(),
             attached_at_ms,
         })
     }
@@ -486,6 +494,22 @@ impl GraphSchemaSources {
         match self.dynamic.get_mut(source_id) {
             Some(source) if source.crosswalk_coverage != coverage => {
                 source.crosswalk_coverage = coverage;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Record the external-schema coverage an activation computed for one dynamic
+    /// source. Returns whether the stored value changed; an unknown source is `false`.
+    pub fn set_dynamic_external_coverage(
+        &mut self,
+        source_id: &str,
+        coverage: Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>,
+    ) -> bool {
+        match self.dynamic.get_mut(source_id) {
+            Some(source) if source.external_coverage != coverage => {
+                source.external_coverage = coverage;
                 true
             }
             _ => false,

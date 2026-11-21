@@ -65,6 +65,8 @@ pub(crate) struct PackProjectionDocuments {
     pub(crate) shapes: Vec<PackSchemaDocument>,
     pub(crate) ontologies: Vec<PackSchemaDocument>,
     pub(crate) crosswalks: Vec<PackSchemaDocument>,
+    /// The `external_schema` members of the head (MEDULLA-TYPED-PACKS-R097.2.7.3).
+    pub(crate) external_schemas: Vec<PackSchemaDocument>,
     /// The seed graph parts of the head (MEDULLA-TYPED-PACKS-R104.3): written into the
     /// pack graph, never composed into its schema source.
     pub(crate) seed: Vec<PackSchemaDocument>,
@@ -119,6 +121,7 @@ pub(crate) async fn commit_pack_projection(
                     shapes: documents.shapes,
                     ontologies: documents.ontologies,
                     crosswalks: documents.crosswalks,
+                    external_schemas: documents.external_schemas,
                 },
                 None,
             )?;
@@ -450,6 +453,7 @@ async fn handle_attach_pack_gateway(
                 shapes: resolved.shapes,
                 ontologies: resolved.ontologies,
                 crosswalks: resolved.crosswalks,
+                external_schemas: resolved.external_schemas,
             },
             expected_digest.as_deref(),
         )
@@ -465,6 +469,7 @@ pub(crate) struct PackSourceDocuments {
     pub(crate) shapes: Vec<PackSchemaDocument>,
     pub(crate) ontologies: Vec<PackSchemaDocument>,
     pub(crate) crosswalks: Vec<PackSchemaDocument>,
+    pub(crate) external_schemas: Vec<PackSchemaDocument>,
 }
 
 /// Install one ConnectorPack semantic projection under its reserved source.
@@ -542,6 +547,7 @@ async fn prevalidate_pack_projection(
             shapes: documents.shapes.clone(),
             ontologies: documents.ontologies.clone(),
             crosswalks: documents.crosswalks.clone(),
+            external_schemas: documents.external_schemas.clone(),
         },
         None,
     )?;
@@ -576,6 +582,7 @@ fn pack_candidate_sources(
         shapes,
         ontologies,
         crosswalks,
+        external_schemas,
     } = documents;
 
     if record_id.is_empty() {
@@ -616,7 +623,11 @@ fn pack_candidate_sources(
     )?
     .with_crosswalks(records.clone());
     let source_id = format!("pack:{}", connector.as_str());
-    let changed = sources.attach_dynamic(source_id, source)?;
+    let changed = sources.attach_dynamic(source_id.clone(), source)?;
+    // The coverage of each external schema, under the pins of this composition. It
+    // is derived and stored beside the source, outside the composed digest.
+    let external = pack_external_coverage(&sources, record_id, &external_schemas)?;
+    let changed = sources.set_dynamic_external_coverage(&source_id, external) || changed;
     Ok((sources, changed, records))
 }
 
@@ -644,6 +655,47 @@ fn with_object_model_shapes(
         ));
     }
     Ok(Some(Arc::from(body)))
+}
+
+/// The coverage of every `external_schema` member of a pack head, in canonical order:
+/// each body is admitted with the pins of `sources`, the composition the pack is
+/// attached to (MEDULLA-TYPED-PACKS-R097.2.7.3). `pack_revision` is the head's record
+/// id and `platform_vocabulary_revision` the core composed digest, as the importer
+/// pins them; the body never supplies a pin. A refusal returns its `EXTERNAL_*` code
+/// as the first token.
+fn pack_external_coverage(
+    sources: &medulla_graph_core::graph::GraphSchemaSources,
+    record_id: &str,
+    documents: &[PackSchemaDocument],
+) -> Result<Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>, String> {
+    if documents.is_empty() {
+        return Ok(Vec::new());
+    }
+    let schema_revision = sources.composed_digest().to_hex();
+    let platform_revision =
+        medulla_graph_core::graph::GraphSchemaSources::default().composed_digest().to_hex();
+    let mut coverage = Vec::with_capacity(documents.len());
+    for document in documents {
+        let value: serde_json::Value = serde_json::from_str(&document.body).map_err(|error| {
+            format!(
+                "{}: external schema member '{}': {error}",
+                medulla_types::contract::ServerErrorCode::MalformedBody.as_str(),
+                document.uri
+            )
+        })?;
+        let (_, admitted) = medulla_catalog_types::external_schema::admit_external_schema(
+            &value,
+            record_id,
+            &schema_revision,
+            &platform_revision,
+        )
+        .map_err(|(refusal, detail)| {
+            format!("{}: external schema member '{}': {detail}", refusal.code(), document.uri)
+        })?;
+        coverage.push(admitted);
+    }
+    coverage.sort_by_key(|entry| entry.source_schema_digest.to_hex());
+    Ok(coverage)
 }
 
 /// The crosswalk records of a pack head, in canonical order. A body that is not

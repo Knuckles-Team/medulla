@@ -90,6 +90,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
             "ARCHIVE_",
             "MALFORMED_",
             "SEED_",
+            // MEDULLA-TYPED-PACKS-R097.2.7.3: an external schema the import refuses.
+            "EXTERNAL_",
             "SOURCE_APPROVAL_",
             "SOURCE_CONTRACT_",
             "SOURCE_REGISTRATION_",

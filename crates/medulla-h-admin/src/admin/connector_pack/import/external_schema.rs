@@ -14,6 +14,8 @@ use medulla_catalog_types::external_schema::{
     admit_external_schema, ExternalSchemaRefusal, ExternalTermResult,
 };
 
+use super::vocabulary::PinnedVocabulary;
+
 use super::validation::{section_bytes, violation};
 
 /// The most unmapped IRIs one warning names.
@@ -33,16 +35,22 @@ fn violation_code(refusal: ExternalSchemaRefusal) -> PackViolationCode {
 }
 
 /// Admit every `external_schema` entry of the pack and report its unmapped terms.
+///
+/// The importer stamps the three pins and never reads them from the body:
+/// `pack_revision` is the pack digest, `schema_revision` the composed digest of core
+/// plus this pack's ontology and shapes, and `platform_vocabulary_revision` the core
+/// composed digest the crosswalks pin.
 pub(super) fn validate_external_schemas(
     request: &ConnectorPackImportRequest,
     archive: &[u8],
     all: &[&PackEntry],
+    vocabulary: &PinnedVocabulary,
     violations: &mut Vec<PackViolation>,
     warnings: &mut Vec<PackWarning>,
 ) {
     let pack_revision = request.index.pack_digest.to_hex();
-    let schema_revision = request.index.server_package_version.as_str();
-    let vocabulary_revision = medulla_types::ontology_iri!("core");
+    let schema_revision = vocabulary.composed_revision.as_str();
+    let vocabulary_revision = vocabulary.revision.as_str();
     for entry in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::ExternalSchema)

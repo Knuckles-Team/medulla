@@ -296,6 +296,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document(
                 "ontology://graph-os/a.ttl",
@@ -329,6 +330,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document(
                 "ontology://graph-os/a.ttl",
@@ -350,6 +352,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         &connector,
         "pack:graph-os:0:bbbb",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document("ontology://graph-os/b.ttl", ontology_b)],
             crosswalks: Vec::new(),
@@ -375,6 +378,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &connector,
         "pack:meristem:1:aaaa",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document(
                 "ontology://meristem/a.ttl",
@@ -392,6 +396,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &connector,
         "pack:meristem:2:bbbb",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: Vec::new(),
             crosswalks: Vec::new(),
@@ -418,6 +423,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &connector,
         "pack:meristem:1:cccc",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document("ontology://meristem/a.ttl", ontology)],
             crosswalks: Vec::new()
@@ -531,6 +537,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v1))],
             crosswalks: Vec::new(),
@@ -556,6 +563,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         &connector,
         "pack:graph-os:2:bbbb",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v2))],
             crosswalks: Vec::new(),
@@ -657,6 +665,7 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
         "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/bug009/> . ex:Prevalidated a owl:Class .",
     );
     let documents = |ontologies: Vec<PackSchemaDocument>| PackProjectionDocuments {
+        external_schemas: Vec::new(),
         shapes: Vec::new(),
         ontologies,
         crosswalks: Vec::new(),
@@ -664,6 +673,7 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
         surface: None,
     };
     let source = |ontologies: Vec<PackSchemaDocument>| PackSourceDocuments {
+        external_schemas: Vec::new(),
         shapes: Vec::new(),
         ontologies,
         crosswalks: Vec::new(),
@@ -773,6 +783,7 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     let core = GraphCore::new();
     let connector = medulla_types::contract::ResourceId::new("coverage-pack").unwrap();
     let documents = || PackSourceDocuments {
+        external_schemas: Vec::new(),
         shapes: Vec::new(),
         ontologies: Vec::new(),
         crosswalks: vec![pack_document(
@@ -848,6 +859,7 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
         &connector,
         "record-2",
         PackSourceDocuments {
+            external_schemas: Vec::new(),
             shapes: Vec::new(),
             ontologies: Vec::new(),
             crosswalks: vec![pack_document(
@@ -859,4 +871,117 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     );
     assert!(refused.is_err());
     assert_eq!(core.schema_sources().dynamic, before.dynamic);
+}
+
+/// One external schema body: a mapped class and an unmapped property, both outside the
+/// platform vocabulary.
+fn external_schema_body(extra: serde_json::Value) -> Arc<str> {
+    let digest = medulla_types::contract::Digest256::sha256(b"external schema");
+    let mut value = serde_json::json!({
+        "schema_version": 1,
+        "source_schema_digest": digest,
+        "source_revision": "ext-2026-01",
+        "mapping_revision": "map-1",
+        "terms": [
+            {"external_iri": "http://example.org/ext#Patient", "kind": "class"},
+            {"external_iri": "http://example.org/ext#status", "kind": "datatype_property"}
+        ],
+        "mappings": [{
+            "schema_version": 1,
+            "source_schema_digest": digest,
+            "source_revision": "ext-2026-01",
+            "external_iri": "http://example.org/ext#Patient",
+            "external_kind": "class",
+            "platform_iri": "https://knuckles-team.github.io/ontology/core#Person",
+            "platform_kind": "class",
+            "mapping_revision": "map-1"
+        }]
+    });
+    if let (Some(target), Some(extra)) = (value.as_object_mut(), extra.as_object()) {
+        target.extend(extra.clone());
+    }
+    Arc::<str>::from(value.to_string())
+}
+
+// spec: MEDULLA-TYPED-PACKS-R097.2.7.3
+#[test]
+fn activation_stores_external_coverage_for_inspection() {
+    let core = GraphCore::new();
+    let connector = medulla_types::contract::ResourceId::new("external-pack").unwrap();
+    let documents = |body: Arc<str>| PackSourceDocuments {
+        external_schemas: vec![pack_document(
+            "external-schema://external-pack/ext.json",
+            body,
+        )],
+        shapes: Vec::new(),
+        ontologies: Vec::new(),
+        crosswalks: Vec::new(),
+    };
+    let first = apply_pack_source(
+        &core,
+        "pack__external-pack",
+        PACK_TENANT,
+        &connector,
+        "record-1",
+        documents(external_schema_body(serde_json::json!({}))),
+        None,
+    )
+    .unwrap();
+    assert!(first.changed);
+
+    let sources = core.schema_sources();
+    let stored = sources.dynamic.get("pack:external-pack").unwrap();
+    assert_eq!(stored.external_coverage.len(), 1, "one coverage per external schema");
+    let coverage = &stored.external_coverage[0];
+    assert_eq!(coverage.pack_revision, "record-1");
+    assert_eq!(
+        coverage.platform_vocabulary_revision,
+        medulla_graph_core::graph::GraphSchemaSources::default()
+            .composed_digest()
+            .to_hex()
+    );
+    assert_eq!(coverage.schema_revision, sources.composed_digest().to_hex());
+    assert_eq!(coverage.terms.len(), 2);
+    let mapped = coverage
+        .terms
+        .iter()
+        .filter(|term| {
+            matches!(
+                term.result,
+                medulla_catalog_types::external_schema::ExternalTermResult::Mapped { .. }
+            )
+        })
+        .count();
+    assert_eq!(mapped, 1, "the declared mapping is adopted; the other term is not");
+
+    // The same head activated again changes nothing.
+    let again = apply_pack_source(
+        &core,
+        "pack__external-pack",
+        PACK_TENANT,
+        &connector,
+        "record-1",
+        documents(external_schema_body(serde_json::json!({}))),
+        None,
+    )
+    .unwrap();
+    assert!(!again.changed);
+
+    // A body whose carried report is not the computed one is refused with its code.
+    let refused = apply_pack_source(
+        &core,
+        "pack__external-pack-forged",
+        PACK_TENANT,
+        &connector,
+        "record-2",
+        documents(external_schema_body(
+            serde_json::json!({"coverage": {"schema_version": 1}}),
+        )),
+        None,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with("EXTERNAL_REPORT_FORGED") || refused.starts_with("MALFORMED_BODY"),
+        "{refused}"
+    );
 }

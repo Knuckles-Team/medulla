@@ -88,6 +88,11 @@ async fn refusals_leave_head_and_schema_unchanged() {
             }),
         ),
         (
+            // A mapping whose external IRI names no term of the body is out of scope.
+            PackViolationCode::ExternalSourceOutOfScope,
+            Box::new(|v| v["mappings"][0]["external_iri"] = json!(format!("{EX}Unknown"))),
+        ),
+        (
             PackViolationCode::ExternalReportForged,
             Box::new(|v| v["coverage"] = json!({"schema_version": 1})),
         ),

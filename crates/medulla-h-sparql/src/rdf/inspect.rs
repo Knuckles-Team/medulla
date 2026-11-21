@@ -7,7 +7,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::ontology_inspection::{
-    OntologyClassView, OntologyCoverageView, OntologyCrosswalkView, OntologyInspection,
+    OntologyClassView, OntologyCoverageView, OntologyCrosswalkView, OntologyExternalCoverageView,
+    OntologyInspection,
     OntologyPropertyView, OntologyUnmappedClassView, MAX_INSPECT_DOCUMENTS,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
@@ -64,6 +65,7 @@ struct Inspected {
     composed_digest: Option<String>,
     crosswalks: Vec<OntologyCrosswalkView>,
     coverage: Vec<OntologyCoverageView>,
+    external_coverage: Vec<OntologyExternalCoverageView>,
 }
 
 fn inspect(
@@ -173,6 +175,7 @@ fn composed_documents(
     let mut inspected = parsed(&selected, Some(sources.composed_digest().to_hex()))?;
     inspected.crosswalks = crosswalk_views(sources, &wanted);
     inspected.coverage = coverage_views(sources, &wanted);
+    inspected.external_coverage = external_coverage_views(sources, &wanted);
     Ok(inspected)
 }
 
@@ -252,6 +255,35 @@ fn coverage_views(
     views
 }
 
+/// The external-schema coverage each selected pack source stored at activation,
+/// sorted by source id, then source schema digest (MEDULLA-TYPED-PACKS-R097.2.7.3).
+/// Read as stored: the activation computed it with `compute_external_coverage`.
+fn external_coverage_views(
+    sources: &GraphSchemaSources,
+    wanted: &BTreeSet<&str>,
+) -> Vec<OntologyExternalCoverageView> {
+    let mut views: Vec<OntologyExternalCoverageView> = sources
+        .all()
+        .filter(|(id, _)| wanted.is_empty() || wanted.contains(id))
+        .flat_map(|(id, source)| {
+            source
+                .external_coverage
+                .iter()
+                .map(move |coverage| OntologyExternalCoverageView {
+                    source_id: id.to_string(),
+                    coverage: coverage.clone(),
+                })
+        })
+        .collect();
+    views.sort_by(|left, right| {
+        (&left.source_id, left.coverage.source_schema_digest.to_hex()).cmp(&(
+            &right.source_id,
+            right.coverage.source_schema_digest.to_hex(),
+        ))
+    });
+    views
+}
+
 /// The relation's wire name, as `VocabularyCrosswalkRelation` serializes it.
 fn relation_name(
     relation: medulla_catalog_types::domain_pack::VocabularyCrosswalkRelation,
@@ -293,6 +325,7 @@ fn parsed(
         composed_digest,
         crosswalks: Vec::new(),
         coverage: Vec::new(),
+        external_coverage: Vec::new(),
     })
 }
 
@@ -320,6 +353,7 @@ fn inspection_of(inspected: Inspected) -> OntologyInspection {
         committed,
         crosswalks: inspected.crosswalks,
         coverage: inspected.coverage,
+        external_coverage: inspected.external_coverage,
     }
 }
 

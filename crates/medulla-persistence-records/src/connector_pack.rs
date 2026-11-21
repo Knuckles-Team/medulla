@@ -247,7 +247,10 @@ impl AgentLibraryStore {
                 || member.last_record_id != visible_record_id
                 || !matches!(
                     member.kind,
-                    PackEntryKind::Ontology | PackEntryKind::Shapes | PackEntryKind::Crosswalk
+                    PackEntryKind::Ontology
+                        | PackEntryKind::Shapes
+                        | PackEntryKind::Crosswalk
+                        | PackEntryKind::ExternalSchema
                 )
             {
                 continue;

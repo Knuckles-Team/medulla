@@ -122,7 +122,7 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
-    validate_vocabulary_entries(request, archive, &all, &mut violations);
+    validate_vocabulary_entries(request, archive, &all, &mut violations, &mut warnings);
     if !violations.is_empty() {
         return rejected(request, violations);
     }
@@ -138,16 +138,6 @@ pub(super) fn prepare(
         return rejected(request, violations);
     }
     super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
-    if !violations.is_empty() {
-        return rejected(request, violations);
-    }
-    super::external_schema::validate_external_schemas(
-        request,
-        archive,
-        &all,
-        &mut violations,
-        &mut warnings,
-    );
     if !violations.is_empty() {
         return rejected(request, violations);
     }
@@ -192,6 +182,7 @@ fn validate_vocabulary_entries(
     archive: &[u8],
     all: &[&PackEntry],
     violations: &mut Vec<PackViolation>,
+    warnings: &mut Vec<PackWarning>,
 ) {
     if !super::vocabulary::needs_vocabulary(all) {
         return;
@@ -200,6 +191,14 @@ fn validate_vocabulary_entries(
         Ok(vocabulary) => {
             super::crosswalk::validate_crosswalk_entries(archive, all, &vocabulary, violations);
             super::concept_path::validate_concept_paths(archive, all, &vocabulary, violations);
+            super::external_schema::validate_external_schemas(
+                request,
+                archive,
+                all,
+                &vocabulary,
+                violations,
+                warnings,
+            );
         }
         Err(error) => violations.push(violation(
             PackViolationCode::OntologyInvalid,

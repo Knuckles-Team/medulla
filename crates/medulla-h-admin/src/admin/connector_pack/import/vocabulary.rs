@@ -16,6 +16,10 @@ use medulla_catalog_types::connector_pack::{PackEntry, PackEntryKind};
 pub(crate) struct PinnedVocabulary {
     /// Composed schema digest of the core catalog: the pinned revision.
     pub(crate) revision: String,
+    /// Composed schema digest of core plus this pack's ontology and shapes: the
+    /// schema revision an external schema's coverage is bound to
+    /// (MEDULLA-TYPED-PACKS-R097.2.7.3).
+    pub(crate) composed_revision: String,
     /// Every composed class with its upper (BFO) category.
     pub(crate) categories: BTreeMap<String, String>,
     /// Classes of the core catalog: the authorized source set.
@@ -45,7 +49,7 @@ pub(super) fn needs_vocabulary(all: &[&PackEntry]) -> bool {
     all.iter().any(|entry| {
         matches!(
             entry.kind,
-            PackEntryKind::Crosswalk | PackEntryKind::ConceptPath
+            PackEntryKind::Crosswalk | PackEntryKind::ConceptPath | PackEntryKind::ExternalSchema
         )
     })
 }
@@ -112,39 +116,14 @@ mod compose {
         (classes, parents)
     }
 
-    /// Compose core plus the pack's own ontology entries and read the pinned
-    /// vocabulary from the result.
+    /// Compose core plus the pack's own ontology and shapes entries and read the
+    /// pinned vocabulary from the result.
     pub(in super::super) fn pin(
         request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
         archive: &[u8],
         all: &[&PackEntry],
     ) -> Result<PinnedVocabulary, String> {
-        let core_sources = GraphSchemaSources::default();
-        let mut documents = Vec::new();
-        for entry in all.iter().filter(|e| e.kind == PackEntryKind::Ontology) {
-            let bytes = super::super::validation::section_bytes(archive, &entry.body)?;
-            let text = std::str::from_utf8(bytes)
-                .map_err(|_| "MALFORMED_BODY: ontology is not UTF-8".to_string())?;
-            documents.push(crate::graph_schema::PackSchemaDocument {
-                uri: entry.uri.clone(),
-                body: std::sync::Arc::from(text),
-            });
-        }
-        let ontology = crate::graph_schema::compose_pack_documents("ONTOLOGY", documents)?;
-        let mut sources = core_sources;
-        if ontology.is_some() {
-            let source = GraphSchemaSource::new(
-                SchemaSourceOrigin::Pack {
-                    connector: request.index.connector.as_str().to_string(),
-                    record_id: format!("import:{}", request.index.pack_digest.to_hex()),
-                    tenant: Some(request.context.tenant_id.clone()),
-                },
-                None,
-                ontology,
-                0,
-            )?;
-            sources.attach_dynamic(format!("pack:{}", request.index.connector.as_str()), source)?;
-        }
+        let sources = pack_sources(request, archive, all)?;
         pin_composed(&GraphSchemaSources::default(), &sources)
     }
 
@@ -201,6 +180,7 @@ mod compose {
         sources: &GraphSchemaSources,
     ) -> Result<PinnedVocabulary, String> {
         let revision = core_sources.composed_digest().to_hex();
+        let composed_revision = sources.composed_digest().to_hex();
         let core = medulla_server_api::schema_compose::validate_and_compose(core_sources)?;
         let (core_classes, _) = hierarchy(&core.ontology);
         let composed = medulla_server_api::schema_compose::validate_and_compose(sources)?;
@@ -211,6 +191,7 @@ mod compose {
             .collect();
         Ok(PinnedVocabulary {
             revision,
+            composed_revision,
             categories,
             core_classes,
             parents,

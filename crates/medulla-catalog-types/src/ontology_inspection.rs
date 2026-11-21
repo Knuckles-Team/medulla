@@ -114,6 +114,16 @@ pub struct OntologyUnmappedClassView {
     pub reason: String,
 }
 
+/// One external schema's coverage, as its pack source stored it at activation
+/// (MEDULLA-TYPED-PACKS-R097.2.7.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyExternalCoverageView {
+    /// The GraphSchema source the coverage belongs to.
+    pub source_id: String,
+    pub coverage: crate::external_schema::ExternalOntologyCoverage,
+}
+
 /// The crosswalk coverage one pack source computed at activation, bound to the
 /// core revision it was computed against (MEDULLA-TYPED-PACKS-R097.2.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -167,6 +177,11 @@ pub struct OntologyInspection {
     /// for inline documents and for sources without crosswalks.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub coverage: Vec<OntologyCoverageView>,
+    /// The external-schema coverage each inspected pack source stored at activation,
+    /// sorted by source id, then source schema digest (MEDULLA-TYPED-PACKS-R097.2.7.3).
+    /// Empty for inline documents and for sources without an external schema.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub external_coverage: Vec<OntologyExternalCoverageView>,
     /// Whether the report reads committed GraphSchema sources. Inline
     /// inspection is `false` and never claims activation.
     #[serde(default)]
