@@ -662,6 +662,14 @@ closed_error_codes! {
         SourceIngestionStatusInvalid => "SOURCE_INGESTION_STATUS_INVALID",
         SourceIngestionUnavailable => "SOURCE_INGESTION_UNAVAILABLE",
         SourceUnreachable => "SOURCE_UNREACHABLE",
+        /// MEDULLA-DECISION-ENGINE-R869.2: an action record is malformed.
+        ActionRecordInvalid => "ACTION_RECORD_INVALID",
+        /// MEDULLA-DECISION-ENGINE-R869.2: a held action record has the same key and another digest.
+        ActionIdempotencyConflict => "ACTION_IDEMPOTENCY_CONFLICT",
+        /// MEDULLA-DECISION-ENGINE-R869.2: a used fact's node, revision and digest do not match the graph.
+        ActionFactRevisionUnknown => "ACTION_FACT_REVISION_UNKNOWN",
+        /// MEDULLA-DECISION-ENGINE-R869.2: a money, filing or publish action has no approved gate decision.
+        ActionApprovalRequired => "ACTION_APPROVAL_REQUIRED",
         TranscriptInvalid => "TRANSCRIPT_INVALID",
         TranscriptUnknownFormat => "TRANSCRIPT_UNKNOWN_FORMAT",
         TranscriptMissingEventTime => "TRANSCRIPT_MISSING_EVENT_TIME",

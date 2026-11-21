@@ -48,6 +48,8 @@ mod medulla_h_decide_failure_ingest_tests;
 mod medulla_h_decide_harness_config_tests;
 #[cfg(all(test, feature = "decide", feature = "redb", feature = "blob"))]
 mod medulla_h_decide_policy_evolution_tests;
+#[cfg(all(test, feature = "redb", feature = "blob"))]
+mod medulla_h_ingest_action_record_tests;
 #[cfg(all(test, feature = "redb"))]
 mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]

@@ -43,6 +43,8 @@ use medulla_server_api::state::ServerState;
 
 pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
+pub mod action_record;
+#[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
 pub mod drift_gate;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -254,7 +256,8 @@ fn admit_kind(
         | SourceBatchKind::Proposals
         | SourceBatchKind::Facts
         | SourceBatchKind::SkillDocuments
-        | SourceBatchKind::Transcripts => Ok(()),
+        | SourceBatchKind::Transcripts
+        | SourceBatchKind::ActionRecords => Ok(()),
         #[cfg(all(
             feature = "redb",
             feature = "blob",
@@ -286,6 +289,7 @@ pub async fn prepare(
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Facts
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::SkillDocuments
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Transcripts
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::ActionRecords
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Enumeration
     ) {
         return prepare_extension_batch(ctx, &request).await;
@@ -631,6 +635,7 @@ async fn prepare_extension_batch(
     let mut methods = Vec::new();
     let mut policies = Vec::new();
     let mut proposal_items = Vec::new();
+    let mut action_records: Vec<String> = Vec::new();
     let mut access = None;
     #[allow(unused_mut)]
     let mut reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport> = None;
@@ -838,6 +843,34 @@ async fn prepare_extension_batch(
             }
             methods.extend(admission.methods);
         }
+        Some(SourceBatchExtension::ActionRecords(items)) => {
+            // Append-only provenance: every check runs before any write, and a refusal
+            // refuses the whole batch (MEDULLA-DECISION-ENGINE-R869.2).
+            let decoded = action_record::decode_action_items(items.as_slice())?;
+            let mut held = action_record::read_held_nodes(
+                persistence.as_ref(),
+                &graph_fname,
+                &action_record::first_read_ids(ctx.tenant_scope, &decoded)?,
+            )
+            .await?;
+            let requests = action_record::read_held_nodes(
+                persistence.as_ref(),
+                &graph_fname,
+                &action_record::second_read_ids(&held, &decoded),
+            )
+            .await?;
+            held.extend(requests);
+            let reads = action_record::ActionReads {
+                held,
+                core: ctx.core.clone(),
+            };
+            let admission = action_record::admit_actions(ctx.tenant_scope, &decoded, &reads)?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
+            action_records = admission.record_ids;
+            methods.extend(admission.methods);
+        }
         _ => {
             return Err(format!(
                 "{}: extension batch carries no matching extension",
@@ -862,6 +895,7 @@ async fn prepare_extension_batch(
         &batch_id,
         applied,
         &proposal_items,
+        &action_records,
         access,
         reconcile.as_ref(),
     )?);
@@ -1142,6 +1176,7 @@ fn permission_receipt_method(
     batch_id: &str,
     applied: u64,
     proposal_items: &[proposals::ProposalItemReceipt],
+    action_records: &[String],
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
 ) -> Result<Method, String> {
@@ -1179,6 +1214,11 @@ fn permission_receipt_method(
         // The per-item judgments of a `proposals` batch (MEDULLA-INGEST-WORKER-R002.3).
         properties["proposals"] = serde_json::to_value(proposal_items)
             .map_err(|error| format!("proposal receipt encoding failed: {error}"))?;
+    }
+    if !action_records.is_empty() {
+        // The record node of each item of an `action_records` batch, a repeat naming the
+        // held node (MEDULLA-DECISION-ENGINE-R869.2).
+        properties["action_records"] = serde_json::json!(action_records);
     }
     Ok(Method::AddNode {
         node_id: batch_id.into(),

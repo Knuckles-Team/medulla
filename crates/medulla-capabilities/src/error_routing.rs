@@ -915,6 +915,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "SourceIngest",
         &[
+            // MEDULLA-DECISION-ENGINE-R869.2: the action record refusals.
+            "ACTION_APPROVAL_REQUIRED",
+            "ACTION_FACT_REVISION_UNKNOWN",
+            "ACTION_IDEMPOTENCY_CONFLICT",
+            "ACTION_RECORD_INVALID",
             "FORECAST_SAMPLE_INVALID",
             // MEDULLA-INGEST-WORKER-R002.7.
             "PROPOSAL_NOT_ADMITTED",

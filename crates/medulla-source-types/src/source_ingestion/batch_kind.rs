@@ -18,6 +18,8 @@ pub const MAX_PROPOSALS: usize = 64;
 pub const MAX_FACTS: usize = 1_024;
 pub const MAX_TRANSCRIPT_MESSAGES: usize = 1_024;
 pub const MAX_SKILL_DOCUMENTS: usize = 64;
+/// Most action records one `action_records` batch carries (MEDULLA-DECISION-ENGINE-R869.2).
+pub const MAX_ACTION_RECORDS: usize = 256;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -33,6 +35,7 @@ pub enum SourceBatchKind {
     Facts,
     Transcripts,
     SkillDocuments,
+    ActionRecords,
 }
 
 /// One page of an identifier-only enumeration run (MEDULLA-INGEST-WORKER-R903.2).
@@ -78,6 +81,7 @@ pub enum SourceBatchExtension {
     Facts(BoundedVec<SourceJson, MAX_FACTS>),
     Transcripts(BoundedVec<SourceJson, MAX_TRANSCRIPT_MESSAGES>),
     SkillDocuments(BoundedVec<SourceJson, MAX_SKILL_DOCUMENTS>),
+    ActionRecords(BoundedVec<SourceJson, MAX_ACTION_RECORDS>),
 }
 
 impl SourceBatchExtension {
@@ -91,6 +95,7 @@ impl SourceBatchExtension {
             Self::Facts(_) => SourceBatchKind::Facts,
             Self::Transcripts(_) => SourceBatchKind::Transcripts,
             Self::SkillDocuments(_) => SourceBatchKind::SkillDocuments,
+            Self::ActionRecords(_) => SourceBatchKind::ActionRecords,
         }
     }
 }

@@ -794,6 +794,44 @@ class AccessDecision(BaseModel):
     graph: str
 
 
+class ActionKind(str, Enum):
+    TOOL_CALL = "tool_call"
+    APPROVAL = "approval"
+    FILING = "filing"
+    MONEY_MOVEMENT = "money_movement"
+    PUBLISH = "publish"
+
+
+class FactUseItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: str
+    node_id: str
+    revision: Annotated[int, Field(ge=0)]
+
+
+class RuleUseItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    rule_id: str
+    version: Annotated[int, Field(ge=0)]
+
+
+class ActionRecordItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action_kind: ActionKind
+    actor: str
+    approved_by: str | None = None
+    caused_by: str | None = None
+    idempotency_key: str
+    no_inputs: str | None = None
+    outcome: str | None = None
+    used_facts: Annotated[list[FactUseItem], Field(max_length=64)] = []
+    used_rules: Annotated[list[RuleUseItem], Field(max_length=16)] = []
+
+
 class ActionSpace(str, Enum):
     TOOL_SET = "tool_set"
     SHELL_ONLY = "shell_only"
@@ -36267,6 +36305,8 @@ __all__ = [
     "AccessRequestState",
     "ActionEffectSpec",
     "ActionParameter",
+    "ActionKind",
+    "ActionRecordItem",
     "ActionRefusal",
     "ActionRefusalCriterionFailed",
     "ActionRefusalInvalidSpec",
@@ -36620,6 +36660,7 @@ __all__ = [
     "ExecutionAnswerPartAbstain",
     "ExecutionAnswerPartAnswer",
     "ExecutionAnswerParts",
+    "FactUseItem",
     "MediaAttachment",
     "Memento",
     "MemoryExportManifest",
@@ -37592,6 +37633,7 @@ __all__ = [
     "HeadKind",
     "HealthReport",
     "EngineCapabilities",
+    "RuleUseItem",
     "WireFeature",
     "IndexKind",
     "ConstraintKind",

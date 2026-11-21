@@ -12,6 +12,8 @@ pub mod ingest_job;
 // MEDULLA-INGEST-WORKER-R003.7 — normalized documents and accepted/quarantined outcomes.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_document;
+// MEDULLA-DECISION-ENGINE-R869.2 — the typed items of an `action_records` batch.
+pub mod source_action_record;
 // MEDULLA-INGEST-WORKER-R003.13 — source transcript threads and messages.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_transcript;
