@@ -302,7 +302,8 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply
 - [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Wire status codes: closed enums for Iceberg, KV and S3 (built); rename the TDS flag byte and the two upstream HTTP codes
 - [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Iceberg manifest entry, key-value cache reply and object-store reply statuses are closed enums
-- [ ] T200a [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2.1 Make `Span.status` the closed `SpanStatus` enum with its text form unchanged
+- [ ] T200a [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2.1 Make `Span.status` the closed `SpanOutcome` enum with its text form unchanged
+- [ ] T200a [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2.1 Rename `HttpResponse.status` to `http_code`, TDS `Header.status` to `flags`, Python `_Response.status` to `http_code`; make `Span.status` the closed `SpanOutcome` enum with its text form kept; write `span_outcome_is_closed_and_keeps_its_text_form` and `test_response_carries_http_code`
 - [x] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
 - [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 Add `SeriesProjectionMachine` (`crates/medulla-tsdb/src/projection_machine.rs`, edges SP01-SP12), move `ProjectionStatus` into it, add `projection_status_in_wtx`, route `append_scoped`, `stage_scoped_append`, `mark_projection_ready` and `mark_projection_degraded` through `apply`, add the Turtle block and the vocabulary tests
 - [x] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
