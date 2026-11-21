@@ -10,7 +10,9 @@ use std::sync::Mutex;
 use medulla_tables::schema::{ColumnType, TableSchema};
 use sha2::{Digest, Sha256};
 
-use crate::tables::embedding_binding::{is_embeddable, AdviceEligibility, ColumnVectorAdvice};
+use crate::tables::embedding_binding::{
+    is_embeddable, AdviceEligibility, AdviceReceipt, ColumnVectorAdvice,
+};
 
 /// Reason carried by a row whose column type cannot be embedded.
 pub const REASON_COLUMN_TYPE_UNSUPPORTED: &str = "COLUMN_TYPE_UNSUPPORTED";
@@ -80,6 +82,22 @@ pub struct AdvicePolicy {
     pub max_rows: usize,
 }
 
+impl AdvicePolicy {
+    /// The policy revision a receipt names: every knob the score reads, so a changed knob is a
+    /// changed revision (MEDULLA-FEDERATED-QUERY-R077.6.5).
+    pub fn revision(&self) -> String {
+        format!(
+            "sql_advice/v1 min_samples={} w_demand={} w_length={} w_distinct={} length_norm={} max_rows={}",
+            self.min_samples,
+            self.w_demand,
+            self.w_length,
+            self.w_distinct,
+            self.length_norm,
+            self.max_rows
+        )
+    }
+}
+
 /// Rank columns by observed text-search workload.
 ///
 /// Type admission runs first with [`is_embeddable`]. Score is
@@ -94,27 +112,28 @@ pub fn rank_columns(
 ) -> Result<Vec<ColumnVectorAdvice>, ColumnAdviceError> {
     let total: u64 = input.columns.iter().map(|c| c.text_search_uses).sum();
     let enough = total >= policy.min_samples;
+    let policy_revision = policy.revision();
     let mut rows: Vec<ColumnVectorAdvice> = input
         .columns
         .iter()
         .map(|column| {
-            let (eligibility, reason, score) = if !is_embeddable(column.ty) {
+            let (eligibility, reason, parts) = if !is_embeddable(column.ty) {
                 (
                     AdviceEligibility::UnsupportedType,
                     REASON_COLUMN_TYPE_UNSUPPORTED,
-                    0.0,
+                    (0.0, 0.0, 0.0),
                 )
             } else if column.observed_schema_revision != input.schema_revision {
                 (
                     AdviceEligibility::InsufficientObservations,
                     REASON_SCHEMA_REVISION_STALE,
-                    0.0,
+                    (0.0, 0.0, 0.0),
                 )
             } else if !enough || column.text_search_uses == 0 {
                 (
                     AdviceEligibility::InsufficientObservations,
                     REASON_INSUFFICIENT_OBSERVATIONS,
-                    0.0,
+                    (0.0, 0.0, 0.0),
                 )
             } else {
                 let share = column.text_search_uses as f64 / total as f64;
@@ -122,11 +141,14 @@ pub fn rank_columns(
                 (
                     AdviceEligibility::Eligible,
                     REASON_WORKLOAD_RANKED,
-                    policy.w_demand * share
-                        + policy.w_length * length
-                        + policy.w_distinct * column.distinct_ratio,
+                    (
+                        policy.w_demand * share,
+                        policy.w_length * length,
+                        policy.w_distinct * column.distinct_ratio,
+                    ),
                 )
             };
+            let (demand, length, distinct) = parts;
             ColumnVectorAdvice {
                 table: column.table.clone(),
                 column: column.column.clone(),
@@ -136,7 +158,14 @@ pub fn rank_columns(
                 sample_count: column.text_search_uses,
                 eligibility,
                 reason: reason.to_string(),
-                score,
+                score: demand + length + distinct,
+                receipt: AdviceReceipt {
+                    total_text_search_uses: total,
+                    policy_revision: policy_revision.clone(),
+                    demand,
+                    length,
+                    distinct,
+                },
             }
         })
         .collect();

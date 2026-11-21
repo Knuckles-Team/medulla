@@ -88,3 +88,55 @@ def test_workload_changes_advice(clean_graph):
     title_first = _advice(clean_graph, table)
     assert float(title_first["title"]["score"]) > float(title_first["body"]["score"])
     assert float(title_first["body"]["score"]) > 0.0
+
+
+def _receipt_rows(clean_graph, table: str) -> dict[str, dict]:
+    rows = clean_graph.query.sql(
+        "SELECT table_name, column_name, eligibility, score, sample_count, "
+        "total_text_search_uses, policy_revision, demand_contribution, "
+        "length_contribution, distinct_contribution "
+        "FROM information_schema.vector_advice"
+    )
+    return {r["column_name"]: r for r in rows if r["table_name"] == table}
+
+
+def _index_names(clean_graph) -> list[str]:
+    rows = clean_graph.query.sql(
+        "SELECT index_name FROM information_schema.medulla_index_status"
+    )
+    return sorted(r["index_name"] for r in rows)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.5")
+def test_receipt_matches_observations_binding_unchanged(clean_graph):
+    """MEDULLA-FEDERATED-QUERY-R077.6.5: the receipt explains the score from the uses issued."""
+    table = _table(clean_graph)
+    indexes_before = _index_names(clean_graph)
+    for _ in range(40):
+        clean_graph.query.sql(f"SELECT id FROM {table} WHERE body LIKE '%long%'")
+    for _ in range(20):
+        clean_graph.query.sql(f"SELECT id FROM {table} WHERE title LIKE '%a%'")
+    rows = _receipt_rows(clean_graph, table)
+    body, title = rows["body"], rows["title"]
+    assert body["eligibility"] == "eligible"
+    assert int(body["sample_count"]) == 40
+    assert int(title["sample_count"]) == 20
+    for row in (body, title):
+        assert int(row["total_text_search_uses"]) == int(rows["body"]["sample_count"]) + int(
+            rows["title"]["sample_count"]
+        )
+        assert row["policy_revision"].startswith("sql_advice/v1 min_samples=")
+        parts = (
+            float(row["demand_contribution"])
+            + float(row["length_contribution"])
+            + float(row["distinct_contribution"])
+        )
+        assert abs(parts - float(row["score"])) < 1e-9
+    assert float(body["demand_contribution"]) > float(title["demand_contribution"]) > 0.0
+    # a column that is not eligible carries zero contributions
+    qty = rows["qty"]
+    assert qty["eligibility"] == "unsupported_type"
+    assert float(qty["demand_contribution"]) == 0.0
+    assert float(qty["length_contribution"]) == 0.0
+    assert float(qty["distinct_contribution"]) == 0.0
+    assert _index_names(clean_graph) == indexes_before

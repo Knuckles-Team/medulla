@@ -219,7 +219,7 @@ pub(crate) fn read_advice(
 }
 
 /// `(column, type, nullable)`, in relation order.
-const COLUMNS: [(&str, DataType, bool); 9] = [
+const COLUMNS: [(&str, DataType, bool); 14] = [
     ("table_name", DataType::Utf8, false),
     ("column_name", DataType::Utf8, false),
     ("schema_revision", DataType::Int64, false),
@@ -229,6 +229,11 @@ const COLUMNS: [(&str, DataType, bool); 9] = [
     ("eligibility", DataType::Utf8, false),
     ("reason", DataType::Utf8, false),
     ("score", DataType::Float64, false),
+    ("total_text_search_uses", DataType::Int64, false),
+    ("policy_revision", DataType::Utf8, false),
+    ("demand_contribution", DataType::Float64, false),
+    ("length_contribution", DataType::Float64, false),
+    ("distinct_contribution", DataType::Float64, false),
 ];
 
 fn schema() -> SchemaRef {
@@ -265,6 +270,9 @@ pub(crate) fn register(ctx: &SessionContext, rows: &[ColumnVectorAdvice]) -> Res
     let number = |pick: fn(&ColumnVectorAdvice) -> i64| -> ArrayRef {
         Arc::new(Int64Array::from(rows.iter().map(pick).collect::<Vec<_>>()))
     };
+    let float = |pick: fn(&ColumnVectorAdvice) -> f64| -> ArrayRef {
+        Arc::new(Float64Array::from(rows.iter().map(pick).collect::<Vec<_>>()))
+    };
     let columns: Vec<ArrayRef> = vec![
         text(|row| row.table.clone()),
         text(|row| row.column.clone()),
@@ -274,9 +282,12 @@ pub(crate) fn register(ctx: &SessionContext, rows: &[ColumnVectorAdvice]) -> Res
         number(|row| saturating(row.sample_count)),
         text(|row| eligibility_name(row.eligibility).to_string()),
         text(|row| row.reason.clone()),
-        Arc::new(Float64Array::from(
-            rows.iter().map(|row| row.score).collect::<Vec<_>>(),
-        )),
+        float(|row| row.score),
+        number(|row| saturating(row.receipt.total_text_search_uses)),
+        text(|row| row.receipt.policy_revision.clone()),
+        float(|row| row.receipt.demand),
+        float(|row| row.receipt.length),
+        float(|row| row.receipt.distinct),
     ];
     let batch = RecordBatch::try_new(schema(), columns)
         .map_err(|error| format!("information_schema.{VECTOR_ADVICE_RELATION} batch: {error}"))?;

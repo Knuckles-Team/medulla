@@ -413,6 +413,26 @@ pub struct ColumnVectorAdvice {
     pub eligibility: AdviceEligibility,
     pub reason: String,
     pub score: f64,
+    /// The evidence behind `score` (MEDULLA-FEDERATED-QUERY-R077.6.5).
+    pub receipt: AdviceReceipt,
+}
+
+/// What a score came from, beside the row's own count and window
+/// (MEDULLA-FEDERATED-QUERY-R077.6.5). For an eligible row the three contributions sum to
+/// the row's `score`; every other row carries zeros.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AdviceReceipt {
+    /// The sum of text-search uses over every column of the ranked input.
+    pub total_text_search_uses: u64,
+    /// The policy the score was computed under; a changed knob is a changed revision.
+    pub policy_revision: String,
+    /// `w_demand * share`.
+    pub demand: f64,
+    /// `w_length * min(avg_length / length_norm, 1)`.
+    pub length: f64,
+    /// `w_distinct * distinct_ratio`.
+    pub distinct: f64,
 }
 
 /// A durable declaration that a text-bearing source is semantically indexed.
@@ -1106,6 +1126,13 @@ mod tests {
                 eligibility: AdviceEligibility::Eligible,
                 reason: "frequent text-search predicate".to_string(),
                 score: 0.75,
+                receipt: AdviceReceipt {
+                    total_text_search_uses: 160,
+                    policy_revision: "sql_advice/v1".to_string(),
+                    demand: 0.45,
+                    length: 0.2,
+                    distinct: 0.1,
+                },
             },
             ColumnVectorAdvice {
                 table: "items".to_string(),
@@ -1117,6 +1144,13 @@ mod tests {
                 eligibility: AdviceEligibility::UnsupportedType,
                 reason: "column type uuid is not text-bearing".to_string(),
                 score: 0.0,
+                receipt: AdviceReceipt {
+                    total_text_search_uses: 160,
+                    policy_revision: "sql_advice/v1".to_string(),
+                    demand: 0.0,
+                    length: 0.0,
+                    distinct: 0.0,
+                },
             },
         ];
         let bytes = rmp_serde::to_vec_named(&ranked).expect("encode advice");
