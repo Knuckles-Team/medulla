@@ -9530,3 +9530,125 @@
     :fromState :MaterializationStatusMachine_Retracted ;
     :toState :MaterializationStatusMachine_Fresh ;
     :firedBy :MaterializationStatusMachine_Event_Register .
+
+# spec: MEDULLA-PLACEMENT-R784.1
+# The CircuitBreaker machine, over the kind of an endpoint breaker state. The Rust edge table
+# CIRCUIT_BREAKER_MACHINE is the same table; the ontology test asserts equal edge sets.
+
+:CircuitBreakerState a owl:Class ;
+    rdfs:label "CircuitBreaker State" ;
+    rdfs:comment "A state of the CircuitBreaker machine." ;
+    rdfs:subClassOf :State .
+
+:CircuitBreakerTerminalState a owl:Class ;
+    rdfs:label "CircuitBreaker Terminal State" ;
+    rdfs:comment "A terminal state of the CircuitBreaker machine; the machine has none." ;
+    rdfs:subClassOf :TerminalState, :CircuitBreakerState .
+
+:CircuitBreakerTransition a owl:Class ;
+    rdfs:label "CircuitBreaker Transition" ;
+    rdfs:comment "A transition of the CircuitBreaker machine." ;
+    rdfs:subClassOf :Transition .
+
+:CircuitBreakerEvent a owl:Class ;
+    rdfs:label "CircuitBreaker Event" ;
+    rdfs:comment "An event of the CircuitBreaker machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:CircuitBreakerGuard a owl:Class ;
+    rdfs:label "CircuitBreaker Guard" ;
+    rdfs:comment "A guard of the CircuitBreaker machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:CircuitBreakerMachine a :StateMachine ;
+    rdfs:label "CircuitBreaker machine" ;
+    :initialState :CircuitBreakerMachine_Closed ;
+    :hasState :CircuitBreakerMachine_Closed, :CircuitBreakerMachine_Open, :CircuitBreakerMachine_HalfOpen .
+
+:CircuitBreakerMachine_Closed a :CircuitBreakerState ;
+    rdfs:label "CircuitBreaker Closed" ;
+    :storedForm "closed" .
+
+:CircuitBreakerMachine_Open a :CircuitBreakerState ;
+    rdfs:label "CircuitBreaker Open" ;
+    :storedForm "open" .
+
+:CircuitBreakerMachine_HalfOpen a :CircuitBreakerState ;
+    rdfs:label "CircuitBreaker HalfOpen" ;
+    :storedForm "half_open" .
+
+:CircuitBreakerMachine_Event_Tick a :CircuitBreakerEvent ;
+    rdfs:label "CircuitBreaker Tick" .
+
+:CircuitBreakerMachine_Event_Observe a :CircuitBreakerEvent ;
+    rdfs:label "CircuitBreaker Observe" .
+
+:CircuitBreakerMachine_Guard_CooldownElapsed a :CircuitBreakerGuard ;
+    rdfs:label "CircuitBreaker guard CooldownElapsed" .
+
+:CircuitBreakerMachine_Guard_SuccessObserved a :CircuitBreakerGuard ;
+    rdfs:label "CircuitBreaker guard SuccessObserved" .
+
+:CircuitBreakerMachine_Guard_FailureObserved a :CircuitBreakerGuard ;
+    rdfs:label "CircuitBreaker guard FailureObserved" .
+
+:CircuitBreakerMachine_Guard_FailureBelowThreshold a :CircuitBreakerGuard ;
+    rdfs:label "CircuitBreaker guard FailureBelowThreshold" .
+
+:CircuitBreakerMachine_Guard_FailureThresholdReached a :CircuitBreakerGuard ;
+    rdfs:label "CircuitBreaker guard FailureThresholdReached" .
+
+:CircuitBreakerMachine_CB01 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB01" ;
+    :edgeId "CB01" ;
+    :fromState :CircuitBreakerMachine_Closed ;
+    :toState :CircuitBreakerMachine_Closed ;
+    :guardedBy :CircuitBreakerMachine_Guard_SuccessObserved ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .
+
+:CircuitBreakerMachine_CB02 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB02" ;
+    :edgeId "CB02" ;
+    :fromState :CircuitBreakerMachine_Closed ;
+    :toState :CircuitBreakerMachine_Closed ;
+    :guardedBy :CircuitBreakerMachine_Guard_FailureBelowThreshold ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .
+
+:CircuitBreakerMachine_CB03 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB03" ;
+    :edgeId "CB03" ;
+    :fromState :CircuitBreakerMachine_Closed ;
+    :toState :CircuitBreakerMachine_Open ;
+    :guardedBy :CircuitBreakerMachine_Guard_FailureThresholdReached ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .
+
+:CircuitBreakerMachine_CB04 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB04" ;
+    :edgeId "CB04" ;
+    :fromState :CircuitBreakerMachine_Open ;
+    :toState :CircuitBreakerMachine_Open ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .
+
+:CircuitBreakerMachine_CB05 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB05" ;
+    :edgeId "CB05" ;
+    :fromState :CircuitBreakerMachine_Open ;
+    :toState :CircuitBreakerMachine_HalfOpen ;
+    :guardedBy :CircuitBreakerMachine_Guard_CooldownElapsed ;
+    :firedBy :CircuitBreakerMachine_Event_Tick .
+
+:CircuitBreakerMachine_CB06 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB06" ;
+    :edgeId "CB06" ;
+    :fromState :CircuitBreakerMachine_HalfOpen ;
+    :toState :CircuitBreakerMachine_Closed ;
+    :guardedBy :CircuitBreakerMachine_Guard_SuccessObserved ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .
+
+:CircuitBreakerMachine_CB07 a :CircuitBreakerTransition ;
+    rdfs:label "CircuitBreaker CB07" ;
+    :edgeId "CB07" ;
+    :fromState :CircuitBreakerMachine_HalfOpen ;
+    :toState :CircuitBreakerMachine_Open ;
+    :guardedBy :CircuitBreakerMachine_Guard_FailureObserved ;
+    :firedBy :CircuitBreakerMachine_Event_Observe .

@@ -7143,6 +7143,7 @@ dependencies = [
  "medulla-raft",
  "medulla-raft-xshard",
  "medulla-reasoner",
+ "medulla-resource",
  "medulla-result-types",
  "medulla-semantic-index",
  "medulla-server-ops",
@@ -7197,6 +7198,9 @@ version = "0.1.0"
 [[package]]
 name = "medulla-resource"
 version = "0.1.0"
+dependencies = [
+ "medulla-types",
+]
 
 [[package]]
 name = "medulla-resource-store"

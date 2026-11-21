@@ -95,7 +95,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T085 [US4] MEDULLA-PLACEMENT-R781.3 Delete the tombstone field from the record and the result. Size: M, 2 PRs, 5 hours.
 - [ ] T086 [US4] MEDULLA-PLACEMENT-R781.4 Declare the GraphShard predecessor and convert stored reservation rows in the offline upgrade (no open-time pass, no ledger). Size: S, 1 PR, 3 hours.
 - [x] T091 [US4] MEDULLA-PLACEMENT-R784 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T092 [US4] MEDULLA-PLACEMENT-R784.1 CircuitBreaker kind machine (CircuitKind, CB01-CB07): route tick and observe through CircuitBreaker::apply
+- [x] T092 [US4] MEDULLA-PLACEMENT-R784.1 CircuitBreaker kind machine (CircuitKind, CB01-CB07): route tick and observe through CircuitBreaker::apply
 - [x] T093 [US4] MEDULLA-PLACEMENT-R780.3 DevelopmentLaneHold/DevelopmentLaneHoldState state machine: route 1 census findings through HoldState::apply
 - [ ] T094 [US4] MEDULLA-PLACEMENT-R783.6 MembershipShrinkJournal/ShrinkStage state machine: route 2 census findings through MembershipShrinkJournal::advance
 - [ ] T095 [US4] MEDULLA-PLACEMENT-R783.7 MoveCheckpoint/MovePhase state machine: route 9 census findings through MovePhase::apply

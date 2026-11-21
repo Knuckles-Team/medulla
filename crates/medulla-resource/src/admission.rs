@@ -9,6 +9,12 @@
 
 use std::collections::BTreeMap;
 
+use medulla_types::transition_refused::{
+    TransitionRefusalReason, TransitionRefused, TRANSITION_REFUSED,
+};
+
+use crate::circuit_breaker_machine::{self, CircuitKind, CircuitStep};
+
 /// A refused admission input, with its stable code.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AdmissionError {
@@ -252,11 +258,25 @@ impl CircuitBreaker {
         }
     }
 
-    /// The open breaker half-opens once its cooldown has passed.
+    /// The one transition function of `CircuitBreakerMachine`: the next state, or the typed
+    /// refusal. The only code that assigns `state` after construction; a refusal changes nothing.
+    pub fn apply(&mut self, step: CircuitStep) -> Result<CircuitState, TransitionRefused> {
+        let next = circuit_breaker_machine::next_state(
+            self.state,
+            self.failure_threshold,
+            self.cooldown_ms,
+            step,
+        )?;
+        self.state = next;
+        Ok(next)
+    }
+
+    /// The open breaker half-opens once its cooldown has passed. A tick before the cooldown
+    /// elapses is refused by the guard and absorbed: the breaker stays open.
     pub fn tick(&mut self, now_ms: u64) {
-        if let CircuitState::Open { since_ms } = self.state {
-            if now_ms.saturating_sub(since_ms) >= self.cooldown_ms {
-                self.state = CircuitState::HalfOpen;
+        if self.state.kind() == CircuitKind::Open {
+            if let Err(refused) = self.apply(CircuitStep::Tick { now_ms }) {
+                debug_assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
             }
         }
     }
@@ -271,29 +291,8 @@ impl CircuitBreaker {
         let outcome = outcome.ok_or_else(|| {
             AdmissionError::new(BREAKER_TRANSITION_WITHOUT_OUTCOME, "no observed outcome")
         })?;
-        self.state = match (self.state, outcome) {
-            (CircuitState::Open { since_ms }, _) => CircuitState::Open { since_ms },
-            (_, Outcome::Success) => CircuitState::Closed {
-                consecutive_failures: 0,
-            },
-            (CircuitState::HalfOpen, Outcome::Failure) => CircuitState::Open { since_ms: now_ms },
-            (
-                CircuitState::Closed {
-                    consecutive_failures,
-                },
-                Outcome::Failure,
-            ) => {
-                let failures = consecutive_failures + 1;
-                if failures >= self.failure_threshold {
-                    CircuitState::Open { since_ms: now_ms }
-                } else {
-                    CircuitState::Closed {
-                        consecutive_failures: failures,
-                    }
-                }
-            }
-        };
-        Ok(self.state)
+        self.apply(CircuitStep::Observe { outcome, now_ms })
+            .map_err(|refused| AdmissionError::new(TRANSITION_REFUSED, refused.to_string()))
     }
 }
 

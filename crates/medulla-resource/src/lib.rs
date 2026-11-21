@@ -2,9 +2,10 @@
 //!
 //! Linux containers commonly expose the host's CPU count and `MemTotal` through
 //! `/proc` while enforcing a smaller cgroup quota.  Auto-sizing from those host
-//! values can therefore oversubscribe the pod.  This leaf crate is deliberately
-//! dependency-free so lower workspace crates (for example the optional ASR
-//! provider) can use the same parser without depending on the facade.
+//! values can therefore oversubscribe the pod.  This leaf crate keeps its
+//! dependencies to the shared types crate (the typed transition refusal of the circuit
+//! breaker machine), so lower workspace crates (for example the optional ASR provider) can
+//! use the same parser without depending on the facade.
 //!
 //! The resolver has one explicit safety policy:
 //!
@@ -20,6 +21,7 @@
 //! rounded up to a second lane.
 
 pub mod admission;
+pub mod circuit_breaker_machine;
 mod cgroup;
 use cgroup::{
     finite_cpu_limit, read_cgroup_file, read_cgroup_metadata, read_cpu_v1_pair,

@@ -1630,3 +1630,15 @@ fn materialization_status_machine_matches_edge_table() {
 fn materialization_status_machine_classes_extend_core() {
     sm::assert_extends_core("MaterializationStatus");
 }
+
+// spec: MEDULLA-PLACEMENT-R784.1
+#[test]
+fn circuit_breaker_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_resource::circuit_breaker_machine::CIRCUIT_BREAKER_MACHINE);
+}
+
+// spec: MEDULLA-PLACEMENT-R784.1
+#[test]
+fn circuit_breaker_machine_classes_extend_core() {
+    sm::assert_extends_core("CircuitBreaker");
+}

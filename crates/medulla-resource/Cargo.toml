@@ -3,8 +3,11 @@ name = "medulla-resource"
 version = "0.1.0"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
-description = "Dependency-free cgroup-aware resource capacity resolution for medulla-engine"
+description = "cgroup-aware resource capacity resolution and admission control for medulla-engine"
 license = "MIT"
 
 [lib]
 name = "medulla_resource"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }

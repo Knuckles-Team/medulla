@@ -171,6 +171,8 @@ medulla-jobs = { path = "../medulla-jobs" }
 # The SeriesProjection machine edge table the state-machine ontology test compares with
 # (MEDULLA-UNIFIED-DATA-PLANE-R768.4).
 medulla-tsdb = { path = "../medulla-tsdb" }
+# The CircuitBreaker machine edge table the state-machine ontology test compares with (MEDULLA-PLACEMENT-R784.1).
+medulla-resource = { path = "../medulla-resource" }
 # The direct-state install and exact-retirement machine edge tables (MEDULLA-DURABLE-KERNEL-R874.4, R874.6).
 medulla-direct-state = { path = "../medulla-direct-state" }
 # The semantic source-reconciliation and semantic stage machine edge tables (MEDULLA-DURABLE-KERNEL-R874.17, R874.18).
