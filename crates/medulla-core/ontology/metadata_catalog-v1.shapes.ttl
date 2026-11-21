@@ -12,7 +12,7 @@
 cat:ConnectorAssetShape a sh:NodeShape ;
     sh:targetClass cat:ToolAsset, cat:PromptAsset, cat:SkillAsset, cat:DataResource, cat:Field ;
     sh:property [ sh:path cp:ofConnector ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
-    [ sh:path cp:digest ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^[0-9a-f]{64}$" ] .
+    [ sh:path cp:digest ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^[0-9a-f]{64}$" ] .
 
 # A data resource serves exactly one ontology class.
 cat:DataResourceShape a sh:NodeShape ;
@@ -35,6 +35,21 @@ cat:StewardshipAssignmentShape a sh:NodeShape ;
     sh:property [ sh:path cat:assignedTo ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
     [ sh:path cat:principal ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
     [ sh:path cat:role ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( cat:owner cat:steward cat:custodian ) ] .
+
+# A change request names its target, the proposed digest and its state.
+cat:ChangeRequestShape a sh:NodeShape ;
+    sh:targetClass cat:ChangeRequest ;
+    sh:property [ sh:path cat:target ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:proposedDigest ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ],
+    [ sh:path cat:state ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "open" "approved" "rejected" "applied" ) ] .
+
+# A certification names the asset, its level, the certifier and its expiry.
+cat:CertificationShape a sh:NodeShape ;
+    sh:targetClass cat:Certification ;
+    sh:property [ sh:path cat:certifiedAsset ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:level ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ],
+    [ sh:path cat:certifiedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:expiresAt ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] .
 
 # A lineage edge names both ends and a closed hop type.
 cat:LineageEdgeShape a sh:NodeShape ;

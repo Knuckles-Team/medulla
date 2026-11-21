@@ -122,6 +122,14 @@ fn catalog_classes_roll_up_to_eg_core_and_align_to_w3c() {
             &[format!("{BFO}0000031"), format!("{PROV}Attribution")],
         ),
         (
+            format!("{CAT}ChangeRequest"),
+            &[format!("{BFO}0000031"), format!("{PROV}Activity")],
+        ),
+        (
+            format!("{CAT}Certification"),
+            &[format!("{BFO}0000031"), format!("{PROV}Attribution")],
+        ),
+        (
             format!("{CAT}StewardshipRole"),
             &[format!("{KG}Role"), format!("{ORG}Role")],
         ),
@@ -237,12 +245,12 @@ const DIGEST: &str = "0000000000000000000000000000000000000000000000000000000000
 fn catalog_shapes_accept_a_complete_catalog() {
     let data = format!(
         "<urn:c:sn> a cp:Connector . \
-         <urn:a:incidents> a cat:DataResource ; cp:ofConnector <urn:c:sn> ; cp:servesClass :Incident ; \
+         <urn:a:incidents> a cat:DataResource ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" ; cp:servesClass :Incident ; \
              cat:hasField <urn:a:incidents#group> . \
-         <urn:a:incidents#group> a cat:Field ; cp:ofConnector <urn:c:sn> ; cp:servesProperty cat:hasSteward ; cat:flag \"owner_missing\" . \
+         <urn:a:incidents#group> a cat:Field ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" ; cp:servesProperty cat:hasSteward ; cat:flag \"owner_missing\" . \
          <urn:a:get_incidents> a cat:ToolAsset ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" ; \
              cat:flag \"owner_missing\" . \
-         <urn:a:responder> a :PromptCandidate, cat:PromptAsset ; cp:ofConnector <urn:c:sn> ; \
+         <urn:a:responder> a :PromptCandidate, cat:PromptAsset ; cp:ofConnector <urn:c:sn> ; cp:digest \"{DIGEST}\" ; \
              :systemPromptFor <urn:task:incident-triage> ; cat:flag \"owner_missing\" . \
          <urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:incidents> ; \
              cat:principal <urn:g:service-desk> ; cat:role cat:owner . \
@@ -301,7 +309,12 @@ fn catalog_shapes_refuse_incomplete_or_open_vocabulary_records() {
         "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cat:flag \"stale\" ."
     ));
     // The owner_missing flag is part of the closed set.
-    assert!(conforms(
+    assert!(conforms(&format!(
+        "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cp:digest \"{DIGEST}\" ; \
+         cat:flag \"owner_missing\" ."
+    )));
+    // An asset without its digest cannot be integrity-checked (MEDULLA-TYPED-PACKS-R106.3).
+    assert!(!conforms(
         "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cat:flag \"owner_missing\" ."
     ));
 }
@@ -318,7 +331,9 @@ fn every_asset_has_owner_version_lineage_pair_and_class_link() {
     ));
     // An asset with neither an assignment nor the owner_missing flag is refused; either one
     // satisfies the shape.
-    let asset = "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> . ";
+    let asset = &format!(
+        "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cp:digest \"{DIGEST}\" . "
+    );
     assert!(!conforms(asset));
     assert!(conforms(&format!(
         "{asset}<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:t> ; \

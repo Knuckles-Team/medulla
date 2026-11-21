@@ -160,6 +160,55 @@ cat:StewardshipAssignment a owl:Class ;
     rdfs:comment "A role-qualified attribution: principal cat:principal holds role cat:role for the asset cat:assignedTo. A prov:Attribution." ;
     rdfs:subClassOf bfo:0000031, prov:Attribution .
 
+cat:ChangeRequest a owl:Class ;
+    rdfs:label "Change Request" ;
+    rdfs:comment "A proposed change to a governed asset, moving open to approved or rejected and then applied. It records the target, the proposed digest, the reviewers, each verdict and the before and after digests." ;
+    rdfs:subClassOf bfo:0000031, prov:Activity .
+
+cat:Certification a owl:Class ;
+    rdfs:label "Certification" ;
+    rdfs:comment "A steward's statement that an asset is trusted at a level, until it expires." ;
+    rdfs:subClassOf bfo:0000031, prov:Attribution .
+
+cat:target a owl:ObjectProperty ;
+    rdfs:label "target" ;
+    rdfs:comment "The asset a change request proposes to change." ;
+    rdfs:domain cat:ChangeRequest .
+
+cat:proposedDigest a owl:DatatypeProperty ;
+    rdfs:label "proposedDigest" ;
+    rdfs:comment "The sha256 digest of the proposed asset content." ;
+    rdfs:domain cat:ChangeRequest ;
+    rdfs:range xsd:string .
+
+cat:state a owl:DatatypeProperty ;
+    rdfs:label "state" ;
+    rdfs:comment "The change request state: open, approved, rejected or applied." ;
+    rdfs:domain cat:ChangeRequest ;
+    rdfs:range xsd:string .
+
+cat:certifiedAsset a owl:ObjectProperty ;
+    rdfs:label "certifiedAsset" ;
+    rdfs:comment "The asset a certification covers." ;
+    rdfs:domain cat:Certification .
+
+cat:level a owl:DatatypeProperty ;
+    rdfs:label "level" ;
+    rdfs:comment "The level at which the asset is certified." ;
+    rdfs:domain cat:Certification ;
+    rdfs:range xsd:string .
+
+cat:certifiedBy a owl:ObjectProperty ;
+    rdfs:label "certifiedBy" ;
+    rdfs:comment "The principal that certified the asset." ;
+    rdfs:domain cat:Certification .
+
+cat:expiresAt a owl:DatatypeProperty ;
+    rdfs:label "expiresAt" ;
+    rdfs:comment "Unix seconds after which the certification no longer holds." ;
+    rdfs:domain cat:Certification ;
+    rdfs:range xsd:nonNegativeInteger .
+
 cat:assignedTo a owl:ObjectProperty ;
     rdfs:label "assigned to" ;
     rdfs:domain cat:StewardshipAssignment ;
