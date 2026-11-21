@@ -261,3 +261,55 @@ async fn contradicting_rule_is_rejected_and_compatible_rule_promotes() {
     assert_eq!(rules[0].rule_id, "rule:add-check");
     assert_eq!(stored().len(), 2);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R129.5
+#[tokio::test]
+async fn rejected_rule_is_audited_not_active() {
+    use super::super::stat_rule_promotion::RulePromotionRecord;
+    let h = Harness::new().await;
+    let ids = resolutions(&h, 5, 0).await;
+    publish_invariant(
+        &h,
+        TENANT,
+        1,
+        &invariant("inv:review-required", "rule:skip-review"),
+    );
+
+    // Full human agreement does not override the invariant.
+    let rejected = promote(&h, "rule:skip-review", &ids).await.unwrap_err();
+    assert!(
+        rejected.starts_with("RULE_CONTRADICTS_INVARIANT")
+            && rejected.contains("inv:review-required"),
+        "{rejected}"
+    );
+
+    // The rejection is audited as one stored record naming the invariant.
+    let records: Vec<RulePromotionRecord> = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "rule_promotion:", 100)
+        .unwrap()
+        .into_iter()
+        .map(|(_, bytes)| {
+            medulla_persistence_records::decision_jobs::decode_artifact::<RulePromotionRecord>(
+                &bytes, "record",
+            )
+            .unwrap()
+        })
+        .collect();
+    assert_eq!(records.len(), 1);
+    assert_eq!(
+        records[0].verdict,
+        RulePromotionVerdict::RejectedInvariant {
+            invariant_iri: "inv:review-required".to_string()
+        }
+    );
+    assert_eq!(records[0].resolution_ids.len(), 5);
+
+    // The rejected rule is not active.
+    assert!(h
+        .store
+        .published_guardrail_rules(TENANT)
+        .unwrap()
+        .iter()
+        .all(|rule| rule.rule_id != "rule:skip-review"));
+}
