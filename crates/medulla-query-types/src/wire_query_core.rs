@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "query")]
 use super::{AttributionInput, AttributionMethod, AttributionValue};
+#[cfg(feature = "query")]
+use crate::contract::BoundedVec;
+
+/// MEDULLA-FEDERATED-QUERY-R040.1.1: the most predicates one constraint list carries.
+#[cfg(feature = "query")]
+pub const MAX_RETRIEVAL_PREDICATES: usize = 64;
+/// MEDULLA-FEDERATED-QUERY-R040.1.1: the most values one `IN` predicate carries.
+#[cfg(feature = "query")]
+pub const MAX_PREDICATE_VALUES: usize = 256;
 
 #[cfg(feature = "stream")]
 use super::CepPatternSpec;
@@ -207,7 +216,7 @@ pub enum EntityPredicate {
     },
     In {
         property: String,
-        values: Vec<PredLiteral>,
+        values: BoundedVec<PredLiteral, MAX_PREDICATE_VALUES>,
     },
 }
 
@@ -274,8 +283,10 @@ impl RelationshipPredicate {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetrievalConstraints {
     pub graph_revision: u64,
-    pub entity_predicates: Vec<EntityPredicate>,
-    pub relationship_predicates: Vec<RelationshipPredicate>,
+    #[serde(default)]
+    pub entity_predicates: BoundedVec<EntityPredicate, MAX_RETRIEVAL_PREDICATES>,
+    #[serde(default)]
+    pub relationship_predicates: BoundedVec<RelationshipPredicate, MAX_RETRIEVAL_PREDICATES>,
 }
 
 impl RetrievalConstraints {
@@ -1251,6 +1262,113 @@ pub enum UqlResult {
 #[cfg(all(test, feature = "query"))]
 mod tests {
     use super::*;
+
+    fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
+        BoundedVec::new(values).unwrap()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.1
+    #[test]
+    fn retrieval_constraints_round_trip_and_refuse_unknown_operator() {
+        let constraints = RetrievalConstraints {
+            graph_revision: 9,
+            entity_predicates: bounded(vec![
+                EntityPredicate::Eq {
+                    property: "kind".into(),
+                    value: PredLiteral::Str("person".into()),
+                },
+                EntityPredicate::Ge {
+                    property: "age".into(),
+                    value: PredLiteral::Num(18.0),
+                },
+                EntityPredicate::Ne {
+                    property: "active".into(),
+                    value: PredLiteral::Bool(false),
+                },
+                EntityPredicate::In {
+                    property: "city".into(),
+                    values: bounded(vec![
+                        PredLiteral::Str("oslo".into()),
+                        PredLiteral::Str("rome".into()),
+                    ]),
+                },
+            ]),
+            relationship_predicates: bounded(vec![
+                RelationshipPredicate {
+                    edge_kind: "works_for".into(),
+                    direction: EdgeDir::Out,
+                    target: EntityPredicate::Eq {
+                        property: "kind".into(),
+                        value: PredLiteral::Str("company".into()),
+                    },
+                    quantifier: RelationshipQuantifier::Exists,
+                },
+                RelationshipPredicate {
+                    edge_kind: "blocked_by".into(),
+                    direction: EdgeDir::In,
+                    target: EntityPredicate::Gt {
+                        property: "risk".into(),
+                        value: PredLiteral::Num(0.5),
+                    },
+                    quantifier: RelationshipQuantifier::NotExists,
+                },
+            ]),
+        };
+        constraints.validate().unwrap();
+        let wire = serde_json::to_string(&constraints).unwrap();
+        let back: RetrievalConstraints = serde_json::from_str(&wire).unwrap();
+        assert_eq!(back, constraints);
+        // Both quantifiers survive the round trip.
+        assert!(wire.contains("\"exists\"") && wire.contains("\"not_exists\""));
+
+        // An unknown operator, quantifier or field never decodes.
+        let unknown_operator = r#"{"graph_revision":1,"entity_predicates":[
+            {"operator":"like","property":"name","value":{"Str":"a%"}}]}"#;
+        assert!(serde_json::from_str::<RetrievalConstraints>(unknown_operator).is_err());
+        let unknown_quantifier = r#"{"graph_revision":1,"relationship_predicates":[
+            {"edge_kind":"e","direction":"Out","quantifier":"maybe",
+             "target":{"operator":"eq","property":"p","value":{"Str":"v"}}}]}"#;
+        assert!(serde_json::from_str::<RetrievalConstraints>(unknown_quantifier).is_err());
+        let unknown_field = r#"{"graph_revision":1,"extra":true}"#;
+        assert!(serde_json::from_str::<RetrievalConstraints>(unknown_field).is_err());
+
+        // Structural validation: empty property, empty IN, empty edge kind.
+        let empty_property = RetrievalConstraints {
+            graph_revision: 1,
+            entity_predicates: bounded(vec![EntityPredicate::Eq {
+                property: " ".into(),
+                value: PredLiteral::Bool(true),
+            }]),
+            relationship_predicates: BoundedVec::default(),
+        };
+        assert!(empty_property.validate().is_err());
+        let empty_in = EntityPredicate::In {
+            property: "p".into(),
+            values: BoundedVec::default(),
+        };
+        assert!(empty_in.validate().is_err());
+        let empty_edge = RelationshipPredicate {
+            edge_kind: String::new(),
+            direction: EdgeDir::Both,
+            target: EntityPredicate::Eq {
+                property: "p".into(),
+                value: PredLiteral::Bool(true),
+            },
+            quantifier: RelationshipQuantifier::Exists,
+        };
+        assert!(empty_edge.validate().is_err());
+
+        // Every list is bounded: one more than the bound is refused at decode.
+        let too_many = format!(
+            r#"{{"graph_revision":1,"entity_predicates":[{}]}}"#,
+            vec![
+                r#"{"operator":"eq","property":"p","value":{"Str":"v"}}"#;
+                MAX_RETRIEVAL_PREDICATES + 1
+            ]
+            .join(",")
+        );
+        assert!(serde_json::from_str::<RetrievalConstraints>(&too_many).is_err());
+    }
 
     // spec: MEDULLA-FEDERATED-QUERY-R088.1
     #[test]

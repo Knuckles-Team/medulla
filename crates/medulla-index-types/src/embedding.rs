@@ -13,6 +13,7 @@
 // below are the narrower ceilings a *maintained* coordinate space and a
 // *maintained ANN artifact* respectively may not exceed).
 
+use medulla_types::contract::ServerErrorCode;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
@@ -161,6 +162,42 @@ pub struct EmbeddingSpaceRef {
     /// Derived identity for the whole pinned tuple above — the value every
     /// space-vs-space and space-vs-vector comparison actually compares.
     pub digest: String,
+    /// MEDULLA-FEDERATED-QUERY-R039.1.1: the per-modality bindings of one
+    /// multimodal space. Empty for a single-modality space; when present it
+    /// holds exactly one binding per [`Modality`], all under this space's
+    /// identity tuple `(id, dimensions, revision)`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modalities: Vec<ModalityBinding>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.1: a modality one multimodal space embeds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Modality {
+    Text,
+    Image,
+    Audio,
+    Video,
+}
+
+impl Modality {
+    /// Every modality, in declaration order.
+    pub const ALL: [Modality; 4] = [
+        Modality::Text,
+        Modality::Image,
+        Modality::Audio,
+        Modality::Video,
+    ];
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.1: one modality's binding inside a pinned
+/// space. The encoder is named by the registry id that produces vectors for
+/// this modality in the space.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModalityBinding {
+    pub modality: Modality,
+    /// Registry id of the encoder that embeds this modality into the space.
+    pub encoder: String,
 }
 
 impl EmbeddingSpaceRef {
@@ -202,9 +239,27 @@ impl EmbeddingSpaceRef {
             dimensions,
             normalize,
             digest,
+            modalities: Vec::new(),
         };
         space.validate()?;
         Ok(space)
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R039.1.1: bind all four modalities into this
+    /// one pinned space. The digest folds the bindings in, so two spaces that
+    /// differ in any encoder are never comparable. Refuses with
+    /// `EMBEDDING_SPACE_INVALID` unless every modality is bound exactly once.
+    pub fn with_modalities(mut self, modalities: Vec<ModalityBinding>) -> Result<Self, String> {
+        self.modalities = modalities;
+        self.validate()?;
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.digest.hash(&mut hasher);
+        for binding in &self.modalities {
+            binding.modality.hash(&mut hasher);
+            binding.encoder.hash(&mut hasher);
+        }
+        self.digest = format!("{:016x}", hasher.finish());
+        Ok(self)
     }
 
     /// Structural well-formedness: non-empty identity fields, a non-zero
@@ -237,6 +292,43 @@ impl EmbeddingSpaceRef {
         }
         if self.digest.is_empty() {
             return Err("embedding space digest must not be empty".to_string());
+        }
+        self.validate_modalities()
+    }
+
+    /// The identity tuple `(id, dimensions, revision)` is checked above; a
+    /// multimodal space must additionally bind each of the four modalities
+    /// exactly once to a named encoder.
+    fn validate_modalities(&self) -> Result<(), String> {
+        if self.modalities.is_empty() {
+            return Ok(());
+        }
+        for modality in Modality::ALL {
+            let bound = self
+                .modalities
+                .iter()
+                .filter(|binding| binding.modality == modality)
+                .count();
+            if bound != 1 {
+                return Err(format!(
+                    "{}: modality {modality:?} is bound {bound} times; \
+                     a multimodal space binds each modality exactly once",
+                    ServerErrorCode::EmbeddingSpaceInvalid
+                ));
+            }
+        }
+        if self.modalities.len() != Modality::ALL.len() {
+            return Err(format!(
+                "{}: a multimodal space holds exactly {} bindings",
+                ServerErrorCode::EmbeddingSpaceInvalid,
+                Modality::ALL.len()
+            ));
+        }
+        if self.modalities.iter().any(|b| b.encoder.is_empty()) {
+            return Err(format!(
+                "{}: a modality binding must name its encoder",
+                ServerErrorCode::EmbeddingSpaceInvalid
+            ));
         }
         Ok(())
     }
@@ -454,5 +546,59 @@ mod tests {
             values: vec![1.0, f32::NAN],
         };
         assert!(stamped.validate().is_err());
+    }
+
+    fn bindings() -> Vec<ModalityBinding> {
+        Modality::ALL
+            .iter()
+            .map(|modality| ModalityBinding {
+                modality: *modality,
+                encoder: format!("encoder-{modality:?}"),
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.1
+    #[test]
+    fn modality_bindings_round_trip() {
+        let multimodal = space(8).with_modalities(bindings()).unwrap();
+        assert_eq!(multimodal.modalities.len(), Modality::ALL.len());
+        let wire = serde_json::to_string(&multimodal).unwrap();
+        let back: EmbeddingSpaceRef = serde_json::from_str(&wire).unwrap();
+        assert_eq!(back, multimodal);
+        assert!(back.validate().is_ok());
+        // The bindings are part of the pinned identity.
+        assert_ne!(multimodal.digest, space(8).digest);
+        let mut other = bindings();
+        other[1].encoder = "another-image-encoder".to_string();
+        let different = space(8).with_modalities(other).unwrap();
+        assert_ne!(different.digest, multimodal.digest);
+        // A single-modality space keeps its wire shape and digest.
+        let plain: EmbeddingSpaceRef =
+            serde_json::from_str(&serde_json::to_string(&space(8)).unwrap()).unwrap();
+        assert!(plain.modalities.is_empty());
+        assert_eq!(plain, space(8));
+        // Absent identity tuple, a missing or doubled modality: invalid.
+        let mut no_identity = multimodal.clone();
+        no_identity.revision.clear();
+        assert!(no_identity.validate().is_err());
+        let mut three = bindings();
+        three.pop();
+        let err = space(8).with_modalities(three).unwrap_err();
+        let typed = ServerErrorCode::EmbeddingSpaceInvalid;
+        assert_eq!(typed.as_str(), "EMBEDDING_SPACE_INVALID");
+        assert!(err.starts_with(typed.as_str()));
+        let mut doubled = bindings();
+        doubled[3].modality = Modality::Text;
+        assert!(space(8)
+            .with_modalities(doubled)
+            .unwrap_err()
+            .starts_with(typed.as_str()));
+        let mut unnamed = bindings();
+        unnamed[0].encoder.clear();
+        assert!(space(8)
+            .with_modalities(unnamed)
+            .unwrap_err()
+            .starts_with(typed.as_str()));
     }
 }

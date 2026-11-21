@@ -187,6 +187,7 @@ closed_error_codes! {
         EcosystemPackageUnknown => "ECOSYSTEM_PACKAGE_UNKNOWN",
         DurableReadUnavailable => "DURABLE_READ_UNAVAILABLE",
         EmbeddingDimensionMismatch => "EMBEDDING_DIMENSION_MISMATCH",
+        EmbeddingSpaceInvalid => "EMBEDDING_SPACE_INVALID",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",

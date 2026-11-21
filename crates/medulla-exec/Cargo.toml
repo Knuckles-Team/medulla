@@ -41,6 +41,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-index-types = { path = "../medulla-index-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }
 sha2 = "0.10"

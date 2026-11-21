@@ -67,6 +67,10 @@ pub(crate) use motif::motif_op;
 mod events;
 #[cfg(feature = "timeseries")]
 pub(crate) use events::events_op;
+// MEDULLA-FEDERATED-QUERY-R040.1.2 — hard retrieval constraints compiled to an id set.
+pub mod constraints;
+// MEDULLA-FEDERATED-QUERY-R040.2.1 — topic fusion backends.
+pub mod topic;
 // EH-521 — the `TSSCAN` source and the in-txn staged-series overlay it reads.
 #[cfg(feature = "timeseries")]
 mod tsscan;
@@ -236,6 +240,13 @@ pub struct PlanCtx<'a> {
     /// principal (the empty id) matches no exemption entry, so a bound policy set
     /// without a bound principal masks everything (fail closed, never a wildcard).
     pub principal: Option<crate::policy_mask::PrincipalRef<'a>>,
+    /// MEDULLA-FEDERATED-QUERY-R040.2.1 — how a topic backend's answer is cut
+    /// before fusion (`None`: no topic fusion is bound).
+    pub topic_policy: Option<topic::TopicRankingPolicy>,
+    /// MEDULLA-FEDERATED-QUERY-R040.1.2 — the ids that satisfy the request's hard
+    /// retrieval constraints (`None`: nothing is constrained). A ranking step takes
+    /// it as an id filter, so an excluded candidate never reaches a ranked result.
+    pub constraints: Option<constraints::ConstraintSet>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -456,6 +467,8 @@ impl<'a> PlanCtx<'a> {
             spatial: None,
             policies: None,
             principal: None,
+            topic_policy: None,
+            constraints: None,
         }
     }
 
@@ -484,6 +497,20 @@ impl<'a> PlanCtx<'a> {
     /// byte-for-byte as lowered — the rewrite is a no-op.
     pub fn with_policies(mut self, policies: &'a crate::policy_mask::PolicySet) -> Self {
         self.policies = Some(policies);
+        self
+    }
+
+    /// Bind the compiled hard retrieval constraints
+    /// (MEDULLA-FEDERATED-QUERY-R040.1.2).
+    pub fn with_constraints(mut self, constraints: constraints::ConstraintSet) -> Self {
+        self.constraints = Some(constraints);
+        self
+    }
+
+    /// Bind how topic fusion cuts a backend's answer
+    /// (MEDULLA-FEDERATED-QUERY-R040.2.1).
+    pub fn with_topic_policy(mut self, policy: topic::TopicRankingPolicy) -> Self {
+        self.topic_policy = Some(policy);
         self
     }
 

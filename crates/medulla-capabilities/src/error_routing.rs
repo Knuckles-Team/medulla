@@ -222,6 +222,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-UNIFIED-DATA-PLANE-R038.5.4: a search argument outside
             // what the remote source's tool declares.
             "UNSUPPORTED_SEARCH_ARGUMENT",
+            "EMBEDDING_SPACE_INVALID",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with
