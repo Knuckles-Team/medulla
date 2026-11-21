@@ -14,8 +14,9 @@ use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::trace_fix_binding::{
-    check_receipt_pattern, CorrectionBinding,
+    check_receipt_pattern, CorrectionBinding, RevisionOutcome,
 };
+use medulla_types::contract::Digest256;
 use medulla_decision_types::decision::{
     DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
 };
@@ -88,6 +89,74 @@ fn conclude_admission(request: &DecideRequest) -> Result<Executed, String> {
             "correction:receipts=failed_before_passed_after".to_string(),
         ),
     ];
+    // One premise per bound value (MEDULLA-DECISION-ENGINE-R161.5): the trace,
+    // fix and test, the two revisions and the outcome the receipt recorded at
+    // each, and the decision itself.
+    let outcome_at = |revision: &Digest256| -> &'static str {
+        binding
+            .receipts
+            .iter()
+            .find(|receipt| &receipt.revision_id == revision)
+            .map_or("unexecuted", |receipt| match receipt.outcome {
+                RevisionOutcome::Passed => "passed",
+                RevisionOutcome::Failed => "failed",
+            })
+    };
+    executed.family_premises.extend([
+        claim(
+            "binding_trace",
+            format!(
+                "binding:trace={}@{}",
+                binding.trace.trace_id.as_str(),
+                binding.trace.error_trace_digest.to_hex()
+            ),
+        ),
+        claim(
+            "binding_fix",
+            format!(
+                "binding:fix={}@{}",
+                binding.fix.fix_id.as_str(),
+                binding.fix.fix_digest.to_hex()
+            ),
+        ),
+        claim(
+            "binding_test",
+            format!(
+                "binding:test={}@{}",
+                binding.test.test_id.as_str(),
+                binding.test.test_digest.to_hex()
+            ),
+        ),
+        claim(
+            "binding_before_revision",
+            format!(
+                "binding:before_revision={}",
+                binding.test.before_revision.to_hex()
+            ),
+        ),
+        claim(
+            "binding_after_revision",
+            format!(
+                "binding:after_revision={}",
+                binding.test.after_revision.to_hex()
+            ),
+        ),
+        claim(
+            "binding_before_outcome",
+            format!(
+                "binding:before_outcome={}",
+                outcome_at(&binding.test.before_revision)
+            ),
+        ),
+        claim(
+            "binding_after_outcome",
+            format!(
+                "binding:after_outcome={}",
+                outcome_at(&binding.test.after_revision)
+            ),
+        ),
+        claim("binding_decision", format!("binding:decision={ADMIT_OPTION}")),
+    ]);
     Ok(executed)
 }
 
