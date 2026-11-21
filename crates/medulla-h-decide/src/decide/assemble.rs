@@ -153,6 +153,22 @@ pub(super) async fn assemble_for(
         ),
     )
     .await?;
+    // MEDULLA-ORCH-VOCAB-R800.3: the definitions the request names are read and validated here;
+    // the prompts are rendered once the solve is done.
+    let prompts = request.prompts.clone();
+    let definitions = telemetry::stage_async(
+        Stage::Entailment,
+        FAMILY,
+        tenant,
+        super::definitions_read::read_definitions(
+            state,
+            graph,
+            verified,
+            request.patterns.as_slice(),
+            request.prompts.as_slice(),
+        ),
+    )
+    .await?;
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| assembly_refusal(&error))?;
     inputs.topology = topology;
@@ -177,6 +193,7 @@ pub(super) async fn assemble_for(
     })?;
     let coding_agent_plan =
         coding_agent_plan(&assembly.record, coding_agent.as_ref(), receipt_age_limit_s);
+    let rendered_prompts = render_prompts(prompts.as_slice(), &definitions, assembly.agents.len())?;
     let result = telemetry::stage(Stage::Record, FAMILY, tenant, || {
         Ok::<_, String>(medulla_decision_types::decision::AssemblyResult {
             schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
@@ -188,6 +205,8 @@ pub(super) async fn assemble_for(
             model_revision,
             model_input,
             coding_agent_plan,
+            rendered_prompts: medulla_types::contract::BoundedVec::new(rendered_prompts)
+                .map_err(|error| error.to_string())?,
         })
     })?;
     telemetry::stage(Stage::Conclude, FAMILY, tenant, || {
@@ -195,6 +214,50 @@ pub(super) async fn assemble_for(
         Ok::<_, String>(())
     })?;
     Ok(result)
+}
+
+/// Render every assigned prompt against the template read for it (MEDULLA-ORCH-VOCAB-R800.3).
+/// An `agent_slot` outside the assembled agents refuses `ASSEMBLY_INPUTS_INVALID`; a render
+/// refusal returns its `TEMPLATE_SLOT_*` code as `CODE: detail`.
+#[cfg(feature = "decide")]
+fn render_prompts(
+    prompts: &[medulla_decision_types::decision::PromptAssignment],
+    definitions: &super::definitions_read::ReadDefinitions,
+    agents: usize,
+) -> Result<Vec<medulla_decision_types::decision::RenderedPrompt>, String> {
+    use medulla_work_types::orchestration::definitions::{render_digest, render_template};
+    prompts
+        .iter()
+        .zip(&definitions.templates)
+        .map(|(assignment, (template, body))| {
+            if usize::try_from(assignment.agent_slot).map_or(true, |slot| slot >= agents) {
+                return Err(format!(
+                    "ASSEMBLY_INPUTS_INVALID: prompts: slot {} is not assembled",
+                    assignment.agent_slot
+                ));
+            }
+            let values: Vec<(String, _)> = assignment
+                .values
+                .as_slice()
+                .iter()
+                .map(|slot| (slot.name.clone(), slot.value.clone()))
+                .collect();
+            let text = render_template(template, body, &values).map_err(|refusal| {
+                format!(
+                    "{}: template {} renders no text",
+                    refusal.as_str(),
+                    template.id
+                )
+            })?;
+            Ok(medulla_decision_types::decision::RenderedPrompt {
+                agent_slot: assignment.agent_slot,
+                template_id: template.id.clone(),
+                template_digest: template.digest.clone(),
+                text,
+                render_digest: render_digest(&template.digest, &values),
+            })
+        })
+        .collect()
 }
 
 /// The profile the request names, read as the verified caller: the owner or a

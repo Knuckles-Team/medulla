@@ -200,6 +200,49 @@ pub struct AssemblyRequest {
     /// (MEDULLA-DECISION-ENGINE-R019.100.1). Omitted when empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
+    /// The workflow pattern nodes (`workflow:<process_iri>:v<n>`) the assembly reads and
+    /// validates (MEDULLA-ORCH-VOCAB-R800.3). Absent when empty, so a request without them
+    /// keeps its bytes.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub patterns: BoundedVec<String, 8>,
+    /// The prompt templates to render, one assignment each (MEDULLA-ORCH-VOCAB-R800.3). Absent
+    /// when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub prompts: BoundedVec<PromptAssignment, 8>,
+}
+
+/// One typed value for a named slot of a prompt template (MEDULLA-ORCH-VOCAB-R800.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SlotAssignment {
+    pub name: String,
+    pub value: medulla_work_types::orchestration::definitions::SlotValue,
+}
+
+/// A prompt template assigned to one assembled agent, with its slot values
+/// (MEDULLA-ORCH-VOCAB-R800.3). `agent_slot` indexes `AssemblyResult.agents` (0 for the
+/// one-agent graph).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptAssignment {
+    pub agent_slot: u32,
+    pub template_id: String,
+    pub values: BoundedVec<SlotAssignment, 32>,
+}
+
+/// One rendered prompt: the text travels beside the draft, never inside the durable identity
+/// (MEDULLA-ORCH-VOCAB-R800.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RenderedPrompt {
+    pub agent_slot: u32,
+    pub template_id: String,
+    pub template_digest: String,
+    pub text: String,
+    pub render_digest: String,
 }
 
 /// The answer: always a record, and a graph draft only when one was proved.
@@ -236,6 +279,10 @@ pub struct AssemblyResult {
     /// for one and the outcome is `Solved` (MEDULLA-DECISION-ENGINE-R036.101).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coding_agent_plan: Option<super::coding_agent::CodingAgentPlan>,
+    /// The prompts the request assigned, rendered (MEDULLA-ORCH-VOCAB-R800.3). Absent when
+    /// empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub rendered_prompts: BoundedVec<RenderedPrompt, 8>,
 }
 
 /// Commit one assembly record as a durable `DecisionRecord` component.

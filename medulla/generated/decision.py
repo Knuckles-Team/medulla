@@ -363,6 +363,16 @@ class AgentUsageLimits(BaseModel):
     tool_calls_limit: Annotated[int, Field(ge=0)] | None = None
 
 
+class RenderedPrompt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_slot: Annotated[int, Field(ge=0)]
+    render_digest: str
+    template_digest: str
+    template_id: str
+    text: str
+
+
 class AssemblyResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -370,6 +380,7 @@ class AssemblyResult(BaseModel):
     graph: AgentGraphDraft | None = None
     model: SolveModelSpec | None = None
     record: DecisionRecord
+    rendered_prompts: list[RenderedPrompt] | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     model_revision: str | None = None
     model_input: ModelInputCapabilities | None = None
@@ -457,6 +468,7 @@ __all__ = [
     "AssemblyRequest",
     "AssemblyRequirements",
     "AssemblyResult",
+    "RenderedPrompt",
     "BoundProof",
     "BoundProofRoot",
     "BoundProofRootBody",

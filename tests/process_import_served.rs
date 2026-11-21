@@ -68,6 +68,7 @@ async fn import(
             workflow: workflow(text),
             workflow_id: WORKFLOW_ID.into(),
             expected_version,
+            preconditions: Vec::new(),
         },
     )
     .await
@@ -130,6 +131,7 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
             workflow: tampered,
             workflow_id: WORKFLOW_ID.into(),
             expected_version: None,
+            preconditions: Vec::new(),
         },
     )
     .await;

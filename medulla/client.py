@@ -7684,7 +7684,10 @@ class GraphOperationsClient:
         return result
 
     async def process_compile(
-        self, process_iri: str, expected_version: int | None = None
+        self,
+        process_iri: str,
+        expected_version: int | None = None,
+        preconditions: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Compile one process into the next stored workflow version
         (MEDULLA-CQ-ORCH-R700.3).
@@ -7694,11 +7697,16 @@ class GraphOperationsClient:
         none); a mismatch is refused ``WORKFLOW_VERSION_CONFLICT``. An unknown
         process, an unbound step, a cycle without a loop gate or an oversized
         process is refused with its ``PROCESS_*`` code and writes nothing.
+        ``preconditions`` (at most 32) are stored on the workflow node as
+        ``{"kind": "capability" | "fact", "iri": ...}`` entries
+        (MEDULLA-ORCH-VOCAB-R800.3).
         """
         params: dict[str, Any] = {
             "process_iri": process_iri,
             "expected_version": expected_version,
         }
+        if preconditions:
+            params["preconditions"] = preconditions
         result = await self._client._send(
             "ProcessCompile", params, None, idempotency_key=None
         )
@@ -7711,6 +7719,7 @@ class GraphOperationsClient:
         workflow: dict[str, Any],
         workflow_id: str,
         expected_version: int | None = None,
+        preconditions: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Store one canonical workflow as the next version of ``workflow_id``
         (MEDULLA-CQ-ORCH-R701.3).
@@ -7726,6 +7735,8 @@ class GraphOperationsClient:
             "workflow_id": workflow_id,
             "expected_version": expected_version,
         }
+        if preconditions:
+            params["preconditions"] = preconditions
         result = await self._client._send(
             "ProcessModelImport", params, None, idempotency_key=None
         )

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -420,8 +420,10 @@ class AssemblyRequest(BaseModel):
     assistant_profile_ref: str | None = None
     candidates: LibraryCandidateScope
     coding_agent: CodingAgentRequest | None = None
+    patterns: BoundedVec_string_8 | None = None
     policy: DecisionPolicyRef
     primitive_edges: BoundedVec_PrimitiveEdge_1024 | None = None
+    prompts: list[dict[str, Any]] | None = None
     replacements: BoundedVec_PrimitiveReplacement_64 | None = None
     requirements: AssemblyRequirements
     solver: SolverBudget | None = None

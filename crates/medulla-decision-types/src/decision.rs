@@ -180,7 +180,8 @@ pub use replay::{
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
-    LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, SolverBudget,
+    LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, PromptAssignment, RenderedPrompt,
+    SolverBudget,
     TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
     DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
 };

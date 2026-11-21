@@ -36853,6 +36853,7 @@ class MethodProcessCompileParams(BaseModel):
 
     process_iri: str
     expected_version: Annotated[int, Field(ge=0)] | None = None
+    preconditions: list[dict[str, Any]] | None = None
 
 
 class MethodProcessDocumentImportParams(BaseModel):
@@ -36869,6 +36870,7 @@ class MethodProcessModelImportParams(BaseModel):
     workflow: dict[str, Any]
     workflow_id: str
     expected_version: Annotated[int, Field(ge=0)] | None = None
+    preconditions: list[dict[str, Any]] | None = None
 
 
 class MethodProcessDocumentExportParams(BaseModel):

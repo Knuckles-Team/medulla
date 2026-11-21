@@ -37,6 +37,7 @@ fn process_compile_round_trips() {
         Method::ProcessCompile {
             process_iri,
             expected_version,
+            ..
         } => {
             assert_eq!(process_iri, "process:invoice");
             assert_eq!(expected_version, Some(1));

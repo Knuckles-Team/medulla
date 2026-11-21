@@ -152,6 +152,8 @@ fn request(tenant: &str) -> AssemblyRequest {
         assistant_profile_ref: None,
         coding_agent: None,
         evidence_streams: Default::default(),
+        patterns: Default::default(),
+        prompts: Default::default(),
     }
 }
 

@@ -247,6 +247,7 @@ async fn export_reads_model_and_workflow() {
             workflow,
             workflow_id: "invoice-approval".into(),
             expected_version: None,
+            preconditions: Vec::new(),
         },
     )
     .await;

@@ -197,6 +197,8 @@ pub(in crate::decide) fn request(required: Vec<ModelInputMediaType>) -> Assembly
         assistant_profile_ref: None,
         coding_agent: None,
         evidence_streams: Default::default(),
+        patterns: Default::default(),
+        prompts: Default::default(),
     }
 }
 

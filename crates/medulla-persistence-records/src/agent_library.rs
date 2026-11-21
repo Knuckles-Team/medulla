@@ -612,7 +612,12 @@ fn apply_entry_rows(
         .map_err(|error| error.to_string())?
         .is_some()
     {
-        return Err("agent library revision row already exists".to_string());
+        // MEDULLA-ORCH-VOCAB-R800.3: the `DefinitionRefusal::RevisionPublished` code of
+        // `medulla_work_types::orchestration::definitions`; an edit creates a new revision.
+        return Err(format!(
+            "DEFINITION_REVISION_PUBLISHED: {} revision {} is published",
+            entry.agent_id, entry.entry_revision
+        ));
     }
     revisions
         .insert(

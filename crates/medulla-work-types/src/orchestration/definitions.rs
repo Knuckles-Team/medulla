@@ -102,7 +102,9 @@ pub struct WorkflowPattern {
 
 /// One typed value for a template slot, matching [`SlotType`] one to one
 /// (MEDULLA-ORCH-VOCAB-R800.2).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SlotValue {
     /// Free text, rendered verbatim.
     Text(String),
@@ -132,6 +134,23 @@ impl SlotValue {
             Self::List(items) => out.push_str(&items.join(", ")),
         }
     }
+}
+
+/// The digest of one render (MEDULLA-ORCH-VOCAB-R800.3, R800.5): the lowercase hex SHA-256 of the
+/// template digest, one `\n`, and the canonical JSON (keys sorted, no whitespace) of the values
+/// sorted by name. Equal template digest and equal values give one digest, whatever the order the
+/// values were given in.
+pub fn render_digest(template_digest: &str, values: &[(String, SlotValue)]) -> String {
+    let sorted: std::collections::BTreeMap<&str, &SlotValue> = values
+        .iter()
+        .map(|(name, value)| (name.as_str(), value))
+        .collect();
+    let canonical = serde_json::to_string(&sorted).unwrap_or_default();
+    let mut framed = Vec::with_capacity(template_digest.len() + 1 + canonical.len());
+    framed.extend_from_slice(template_digest.as_bytes());
+    framed.push(b'\n');
+    framed.extend_from_slice(canonical.as_bytes());
+    medulla_types::contract::Digest256::sha256(&framed).to_hex()
 }
 
 /// Fill the `{{name}}` placeholders of `body`, the template text read from the blob of
@@ -213,6 +232,24 @@ mod tests {
                 SlotValue::List(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
             ),
         ]
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R800.5
+    #[test]
+    fn render_digest_golden() {
+        let template = four_slot_template();
+        let values = four_values();
+        let golden = include_str!("../../tests/fixtures/render_digest.golden.txt").trim();
+        assert_eq!(render_digest(&template.digest, &values), golden);
+        // The order the values arrive in never changes the digest.
+        let mut reversed = values.clone();
+        reversed.reverse();
+        assert_eq!(render_digest(&template.digest, &reversed), golden);
+        // A different value or a different template digest does.
+        let mut other = values;
+        other[1].1 = SlotValue::Integer(-41);
+        assert_ne!(render_digest(&template.digest, &other), golden);
+        assert_ne!(render_digest("sha256:00", &four_values()), golden);
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R800.2

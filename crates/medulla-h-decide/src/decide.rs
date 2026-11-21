@@ -210,6 +210,8 @@ mod telemetry;
 #[cfg(feature = "decide")]
 mod capacity_premise;
 #[cfg(feature = "decide")]
+mod definitions_read;
+#[cfg(feature = "decide")]
 mod steps_read;
 #[cfg(feature = "decide")]
 mod windows_read;

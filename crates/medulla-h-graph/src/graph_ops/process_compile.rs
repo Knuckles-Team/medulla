@@ -146,6 +146,7 @@ fn workflow_node(
     key: &str,
     version: u32,
     workflow: &CanonicalWorkflow,
+    preconditions: &str,
     extra: &[(&str, &str)],
 ) -> Result<serde_json::Value, String> {
     let canonical = serde_json::to_string(workflow).map_err(|error| {
@@ -163,6 +164,8 @@ fn workflow_node(
         "steps": steps,
         "workflowDigest": workflow.digest,
         "canonical": canonical,
+        // MEDULLA-ORCH-VOCAB-R800.3: the JSON text of the preconditions; not part of the digest.
+        "preconditions": preconditions,
     });
     for (name, value) in extra {
         properties[*name] = serde_json::Value::String((*value).to_string());
@@ -191,13 +194,46 @@ pub(super) fn batch(operations: &[serde_json::Value]) -> Result<Method, String> 
     Ok(Method::BatchUpdate { operations_msgpack })
 }
 
+/// The most preconditions a stored pattern holds and the longest IRI of one (MEDULLA-ORCH-VOCAB-R800.3).
+const MAX_PRECONDITIONS: usize = 32;
+const MAX_PRECONDITION_IRI_BYTES: usize = 512;
+
+/// The JSON text of the preconditions a pattern is stored with, or `PARAMETER_INVALID` when
+/// there are too many or one is too long.
+fn preconditions_text(
+    preconditions: &[medulla_work_types::orchestration::definitions::PatternPrecondition],
+) -> Result<String, String> {
+    use medulla_work_types::orchestration::definitions::PatternPrecondition;
+    let too_long = preconditions.iter().any(|precondition| match precondition {
+        PatternPrecondition::Capability(iri) | PatternPrecondition::Fact(iri) => {
+            iri.chars().count() > MAX_PRECONDITION_IRI_BYTES
+        }
+    });
+    if preconditions.len() > MAX_PRECONDITIONS || too_long {
+        return Err(refuse(
+            "PARAMETER_INVALID",
+            format!(
+                "preconditions hold at most {MAX_PRECONDITIONS} entries of at most {MAX_PRECONDITION_IRI_BYTES} characters"
+            ),
+        ));
+    }
+    serde_json::to_string(preconditions).map_err(|error| {
+        refuse(
+            "PARAMETER_INVALID",
+            format!("preconditions encoding failed: {error}"),
+        )
+    })
+}
+
 /// Admit one compile against the visible view, writing nothing.
 pub(super) fn admit_compile(
     core: &GraphCore,
     tenant: &str,
     process_iri: &str,
     expected_version: Option<u32>,
+    preconditions: &[medulla_work_types::orchestration::definitions::PatternPrecondition],
 ) -> Result<Admitted<ProcessCompiled>, String> {
+    let preconditions = preconditions_text(preconditions)?;
     let annotations = bpmn_kind_annotations().map_err(|error| {
         refuse(
             error.code(),
@@ -225,6 +261,7 @@ pub(super) fn admit_compile(
             process_iri,
             version,
             &workflow,
+            &preconditions,
             &[("processRevision", process_revision.as_str())],
         )?,
         serde_json::json!({
@@ -258,7 +295,9 @@ pub(super) fn admit_import(
     workflow: &CanonicalWorkflow,
     workflow_id: &str,
     expected_version: Option<u32>,
+    preconditions: &[medulla_work_types::orchestration::definitions::PatternPrecondition],
 ) -> Result<Admitted<ProcessModelImported>, String> {
+    let preconditions = preconditions_text(preconditions)?;
     let admitted = admit_canonical_with_limit(
         workflow,
         knobs().scheduler_process_import_max_elements,
@@ -282,6 +321,7 @@ pub(super) fn admit_import(
         workflow_id,
         version,
         &admitted,
+        &preconditions,
         &[
             ("importedFrom", admitted.source.model_id.as_str()),
             ("processAnnex", annex.as_str()),
@@ -366,6 +406,7 @@ pub(super) async fn handle_process_compile(
     let Method::ProcessCompile {
         process_iri,
         expected_version,
+        preconditions,
     } = method
     else {
         return None;
@@ -376,7 +417,13 @@ pub(super) async fn handle_process_compile(
             refuse("PARAMETER_INVALID", "process_iri is empty"),
         ));
     }
-    let admitted = match admit_compile(ctx.core, ctx.tenant_scope, process_iri, *expected_version) {
+    let admitted = match admit_compile(
+        ctx.core,
+        ctx.tenant_scope,
+        process_iri,
+        *expected_version,
+        preconditions,
+    ) {
         Ok(admitted) => admitted,
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
@@ -399,6 +446,7 @@ pub(super) async fn handle_process_model_import(
         workflow,
         workflow_id,
         expected_version,
+        preconditions,
     } = method
     else {
         return None;
@@ -415,6 +463,7 @@ pub(super) async fn handle_process_model_import(
         workflow,
         workflow_id,
         *expected_version,
+        preconditions,
     ) {
         Ok(admitted) => admitted,
         Err(error) => return Some(Response::err(ctx.req_id, error)),

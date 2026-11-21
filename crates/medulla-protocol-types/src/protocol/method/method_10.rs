@@ -203,6 +203,10 @@ $($variants)*
     ProcessCompile {
         process_iri: String,
         expected_version: Option<u32>,
+        /// What the pattern needs to hold before it applies, stored on the workflow node
+        /// (MEDULLA-ORCH-VOCAB-R800.3). At most 32 entries of at most 512 characters.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        preconditions: Vec<medulla_work_types::orchestration::definitions::PatternPrecondition>,
     },
     /// Store one canonical workflow as the next `WorkflowPattern` version of
     /// `workflow_id` (MEDULLA-CQ-ORCH-R701.3). `admit_canonical` checks the document;
@@ -211,6 +215,9 @@ $($variants)*
         workflow: medulla_types::process_import::CanonicalWorkflow,
         workflow_id: String,
         expected_version: Option<u32>,
+        /// As on `ProcessCompile` (MEDULLA-ORCH-VOCAB-R800.3).
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        preconditions: Vec<medulla_work_types::orchestration::definitions::PatternPrecondition>,
     },
     /// Import one BPMN 2.0 or DMN 1.3 document as the next version of the model `model_iri`
     /// (MEDULLA-CQ-ORCH-R702.9). The document is parsed, mapped onto element nodes and

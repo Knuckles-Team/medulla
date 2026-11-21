@@ -97,6 +97,7 @@ async fn compile(
         Method::ProcessCompile {
             process_iri: process_iri.into(),
             expected_version,
+            preconditions: Vec::new(),
         },
     )
     .await

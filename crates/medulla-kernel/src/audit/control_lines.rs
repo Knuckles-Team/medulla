@@ -285,6 +285,7 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::ProcessCompile {
             process_iri,
             expected_version,
+            ..
         } => Some(format!(
             "PROCESS_COMPILE|{process_iri}|{}",
             expected_version.map_or_else(|| "-".to_string(), |v| v.to_string())
