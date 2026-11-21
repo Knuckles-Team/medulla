@@ -21,6 +21,7 @@ mod decompose;
 pub mod fanout;
 pub mod horizon;
 pub mod pairwise;
+pub mod skill_binding;
 pub mod skill_plan;
 pub mod skill_tree;
 pub mod trajectory;

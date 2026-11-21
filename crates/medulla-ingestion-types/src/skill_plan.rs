@@ -50,3 +50,26 @@ impl SkillCompilation {
             || self.type_digest != *types
     }
 }
+
+/// The name of the first digest property of a stored `SkillCompilation` node that
+/// differs from the current one, in the order `document_digest`,
+/// `capability_digest`, `type_digest`; `None` when all three match. A node without
+/// one of the three properties counts as differing
+/// (MEDULLA-REPO-INGEST-R002.1.3). Staleness is computed, never stored.
+pub fn skill_binding_stale(
+    stored: &serde_json::Value,
+    document_digest: &Digest256,
+    capability_digest: &Digest256,
+    type_digest: &Digest256,
+) -> Option<&'static str> {
+    [
+        ("document_digest", document_digest),
+        ("capability_digest", capability_digest),
+        ("type_digest", type_digest),
+    ]
+    .into_iter()
+    .find(|(name, current)| {
+        stored.get(*name).and_then(serde_json::Value::as_str) != Some(current.to_hex().as_str())
+    })
+    .map(|(name, _)| name)
+}

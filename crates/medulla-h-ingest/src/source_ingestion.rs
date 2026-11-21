@@ -806,8 +806,19 @@ async fn prepare_extension_batch(
             let lookup = skill_document::CatalogCapabilityLookup {
                 type_digest: ctx.schema_sources.composed_digest(),
             };
-            let admission =
-                skill_document::admit_skill(ctx.tenant_scope, connector, &documents, &lookup)?;
+            let held = read_held_containers(
+                persistence.as_ref(),
+                &graph_fname,
+                &skill_document::held_ids(ctx.tenant_scope, connector, &documents)?,
+            )
+            .await?;
+            let admission = skill_document::admit_skill(
+                ctx.tenant_scope,
+                connector,
+                &documents,
+                &lookup,
+                &held,
+            )?;
             for node_id in &admission.node_ids {
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }

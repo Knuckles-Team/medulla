@@ -248,6 +248,7 @@ async fn recruit_allocate_and_twin_replay() {
         reader: None,
         assistant_profile: None,
         observation_windows: None,
+        type_digest: None,
     };
     for sealed in [&record, &twin_record] {
         let replayed = super::super::stat_replay::replay(&ctx, sealed)

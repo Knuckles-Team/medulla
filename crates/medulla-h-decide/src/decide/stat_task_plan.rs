@@ -1,5 +1,6 @@
 //! Evaluate-only explicit DAG planning. EG derives a plan; the host admits it.
 
+use medulla_decision_types::decision::task_plan::skill_binding::SKILL_BINDING_PARAM;
 use medulla_decision_types::decision::task_plan::trajectory::TRAJECTORY_PARAM;
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::DecideRequest,
@@ -14,7 +15,8 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
 };
-use medulla_types::contract::BoundedVec;
+use medulla_ingestion_types::skill_plan::skill_binding_stale;
+use medulla_types::contract::{BoundedVec, Digest256, ServerErrorCode};
 use medulla_types::refusal_code::RefusalCode;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
@@ -395,6 +397,7 @@ pub(super) fn plan_of_request(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     principal: &str,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan
         && !request.params.iter().any(|p| is_plan_param(&p.value))
@@ -404,11 +407,81 @@ pub(super) fn plan_of_request(
     let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
     match task_plan(ctx, request, &resolved.policy)? {
         Some(Planned::Plan(plan, notes)) => {
+            check_skill_binding(ctx, request, graph_view, &plan)?;
             let plan = with_skill_trees(ctx, request, principal, &resolved.policy, *plan)?;
             Ok(Some(Planned::Plan(Box::new(plan), notes)))
         }
         other => Ok(other),
     }
+}
+
+fn skill_binding_stale_error(detail: &str) -> String {
+    format!("{}: {detail}", ServerErrorCode::SkillBindingStale.as_str())
+}
+
+/// Whether a node belongs to the asking tenant; a node that carries no tenant
+/// belongs to the graph and counts.
+fn visible_to(row: &serde_json::Map<String, serde_json::Value>, tenant: &str) -> bool {
+    row.get("tenant_id")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|owner| owner == tenant)
+}
+
+/// The pinned skill binding of a request, when it carries one.
+pub(super) fn skill_binding_of(
+    request: &DecideRequest,
+) -> Option<&medulla_decision_types::decision::task_plan::skill_binding::SkillBindingPin> {
+    request.params.iter().find_map(|param| match &param.value {
+        TypedValue::SkillBinding(pin) if param.name == SKILL_BINDING_PARAM => Some(pin.as_ref()),
+        _ => None,
+    })
+}
+
+/// Refuse a plan whose pinned skill binding no longer matches the stored
+/// compilation (MEDULLA-REPO-INGEST-R002.1.3). The refusal returns before any
+/// decision record is written; a request without the param is unchanged.
+fn check_skill_binding(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
+    plan: &TaskPlan,
+) -> Result<(), String> {
+    let Some(pin) = skill_binding_of(request) else {
+        return Ok(());
+    };
+    let not_found = || skill_binding_stale_error("binding not found");
+    let row = graph_view
+        .and_then(|view| view.node_row_object(&pin.node_id))
+        .filter(|row| {
+            visible_to(row, ctx.tenant_id)
+                && row.get("type").and_then(serde_json::Value::as_str) == Some("SkillCompilation")
+        })
+        .ok_or_else(not_found)?;
+    let stored = serde_json::Value::Object(row);
+    let document = Digest256::parse(&pin.document_digest).map_err(invalid_parameter)?;
+    let capability = Digest256::parse(medulla_capabilities::catalog::contract_catalog_digest())
+        .map_err(invalid_parameter)?;
+    // Without a graph schema digest only the type comparison is skipped: the
+    // stored value stands in for the current one.
+    let types = ctx
+        .type_digest
+        .or_else(|| {
+            stored
+                .get("type_digest")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|hex| Digest256::parse(hex).ok())
+        })
+        .unwrap_or_else(|| Digest256::from_bytes([0; 32]));
+    if let Some(name) = skill_binding_stale(&stored, &document, &capability, &types) {
+        return Err(skill_binding_stale_error(&format!("{name} differs")));
+    }
+    let plan_digest = Digest256::sha256(plan.plan_digest.as_bytes());
+    if stored.get("plan_digest").and_then(serde_json::Value::as_str)
+        != Some(plan_digest.to_hex().as_str())
+    {
+        return Err(skill_binding_stale_error("plan_digest differs"));
+    }
+    Ok(())
 }
 
 /// The params a plan-producing question carries beyond the plan itself when it
@@ -426,7 +499,10 @@ pub(super) fn task_plan(
         if request
             .params
             .iter()
-            .any(|p| is_plan_param(&p.value) || matches!(p.value, TypedValue::Trajectory(_)))
+            .any(|p| {
+                is_plan_param(&p.value)
+                    || matches!(p.value, TypedValue::Trajectory(_) | TypedValue::SkillBinding(_))
+            })
         {
             return Err(invalid_parameter(
                 "task_plan parameter requires task_plan question",
@@ -464,11 +540,24 @@ pub(super) fn task_plan(
             "a task_plan question carries at most one trajectory query, named trajectory",
         ));
     }
-    if request.params.len()
-        != 1 + 2 * usize::from(has_admission_inputs(request)) + trajectories.len()
-    {
+    // At most one skill binding rides on the plan, named skill_binding; it reads
+    // its node from the graph named by the same `graph` param a plan admission
+    // uses (MEDULLA-REPO-INGEST-R002.1.3).
+    let bindings: Vec<_> = request
+        .params
+        .iter()
+        .filter(|p| matches!(p.value, TypedValue::SkillBinding(_)))
+        .collect();
+    if bindings.len() > 1 || bindings.iter().any(|p| p.name != SKILL_BINDING_PARAM) {
         return Err(invalid_parameter(
-            "task_plan takes its one proposer parameter and no other, besides a plan to admit and its graph and one trajectory query",
+            "a task_plan question carries at most one skill binding, named skill_binding",
+        ));
+    }
+    let admission = usize::from(has_admission_inputs(request));
+    let graph_param = usize::from(admission == 1 || !bindings.is_empty());
+    if request.params.len() != 1 + admission + graph_param + trajectories.len() + bindings.len() {
+        return Err(invalid_parameter(
+            "task_plan takes its one proposer parameter and no other, besides a plan to admit, the graph it reads, one trajectory query and one skill binding",
         ));
     }
     let param = request

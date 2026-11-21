@@ -84,6 +84,7 @@ fn decide_view(
         reader: None,
         assistant_profile: None,
         observation_windows: None,
+        type_digest: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

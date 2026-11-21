@@ -507,6 +507,9 @@ pub enum TypedValue {
     SafetyMeasurements(BoundedVec<super::safety::SafetyMeasurement, 32>),
     /// One trajectory decision of a task plan (MEDULLA-DECISION-ENGINE-R140.104).
     Trajectory(Box<super::task_plan::trajectory::TrajectoryQuery>),
+    /// The stored skill binding a task plan was built from, read from the param
+    /// `skill_binding` (MEDULLA-REPO-INGEST-R002.1.3).
+    SkillBinding(Box<super::task_plan::skill_binding::SkillBindingPin>),
     /// The proposed action to check against the policy's limits, read from the
     /// param `guarded_action` (MEDULLA-DECISION-ENGINE-R131.3).
     GuardedAction(Box<super::limit_types::GuardedAction>),

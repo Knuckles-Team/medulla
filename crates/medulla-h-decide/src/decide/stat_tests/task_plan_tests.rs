@@ -227,6 +227,7 @@ async fn task_plan_cannot_use_score_replay() {
         reader: None,
         assistant_profile: None,
         observation_windows: None,
+        type_digest: None,
     };
     assert!(super::super::stat_replay::replay(&ctx, &record)
         .unwrap_err()

@@ -91,14 +91,15 @@ fn graph_of(request: &DecideRequest) -> Option<&str> {
         })
 }
 
-/// Whether the question reads the repository graph for an admission: a
-/// `planning_admission` question, or a `task_plan` question that carries a plan
-/// to admit.
+/// Whether the question reads the repository graph: a `planning_admission`
+/// question, or a `task_plan` question that carries a plan to admit or a skill
+/// binding to check (MEDULLA-REPO-INGEST-R002.1.3).
 pub(crate) fn reads_repository_graph(request: &DecideRequest) -> bool {
     matches!(
         request.question.kind,
         QuestionKind::PlanningAdmission | QuestionKind::TaskPlan
-    ) && plan_of(request).is_some()
+    ) && (plan_of(request).is_some()
+        || crate::decide::stat_task_plan::skill_binding_of(request).is_some())
 }
 
 /// Open the repository graph a question names, under the same RLS-filtered

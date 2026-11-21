@@ -270,6 +270,7 @@ async fn resume_activates_once() {
         reader: None,
         assistant_profile: None,
         observation_windows: None,
+        type_digest: None,
     };
     let embedder = Counting(AtomicUsize::new(0));
     let run = CycleRun {
@@ -501,6 +502,7 @@ async fn refusal_codes() {
         reader: None,
         assistant_profile: None,
         observation_windows: None,
+        type_digest: None,
     };
     let embedder = MovesPointer(&h.store);
     let run = CycleRun {

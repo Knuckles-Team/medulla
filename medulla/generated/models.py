@@ -28999,6 +28999,13 @@ class ShieldedField(BaseModel):
     path: FieldPath
 
 
+class SkillBindingPin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    document_digest: str
+    node_id: str
+
+
 class SkillPlanQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -29261,6 +29268,13 @@ class TypedValuePlanningAdmission(BaseModel):
     value: PlanningAdmissionRequest
 
 
+class TypedValueSkillBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["skill_binding"]
+    value: SkillBindingPin
+
+
 class TypedValueSkillPlanQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -29446,6 +29460,7 @@ TypedValue = Annotated[
     | TypedValuePlacement
     | TypedValuePlacementPlan
     | TypedValuePlanningAdmission
+    | TypedValueSkillBinding
     | TypedValueSkillPlanQuery
     | TypedValueSkillUpgrade
     | TypedValueRetrievedEntries
@@ -42511,6 +42526,7 @@ __all__ = [
     "RevisionOutcome",
     "RevisionReceipt",
     "ShieldedField",
+    "SkillBindingPin",
     "SkillPlanQuery",
     "SkillSubtask",
     "SkillUpgradeRequest",
@@ -42544,6 +42560,7 @@ __all__ = [
     "TypedValuePlacement",
     "TypedValuePlacementPlan",
     "TypedValuePlanningAdmission",
+    "TypedValueSkillBinding",
     "TypedValueSkillPlanQuery",
     "TypedValueSkillUpgrade",
     "TypedValueRetrievedEntries",

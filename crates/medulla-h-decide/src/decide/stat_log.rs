@@ -1114,6 +1114,7 @@ async fn serve(
             reader: None,
             assistant_profile: None,
             observation_windows: None,
+            type_digest: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(

@@ -1029,6 +1029,8 @@ closed_error_codes! {
         SkillConsumerContractChanged => "SKILL_CONSUMER_CONTRACT_CHANGED",
         /// A skill migration is bound to another change or its receipt did not pass (MEDULLA-TYPED-PACKS-R100.101).
         SkillMigrationReceiptInvalid => "SKILL_MIGRATION_RECEIPT_INVALID",
+        /// A skill binding no longer matches its compilation (MEDULLA-REPO-INGEST-R002.1.3).
+        SkillBindingStale => "SKILL_BINDING_STALE",
         SkillCycle => "SKILL_CYCLE",
         SkillDependencyUnresolved => "SKILL_DEPENDENCY_UNRESOLVED",
         SkillSpanMissing => "SKILL_SPAN_MISSING",

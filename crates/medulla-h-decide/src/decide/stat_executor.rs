@@ -69,6 +69,10 @@ pub(super) struct ExecutionContext<'a> {
     /// other kind (MEDULLA-ORCH-VOCAB-R009.18.3).
     pub(super) observation_windows:
         Option<&'a [medulla_work_types::run_observation::RunObservationWindow]>,
+    /// The composed schema digest of the graph the question reads, for the
+    /// type-registry comparison of a skill binding (MEDULLA-REPO-INGEST-R002.1.3);
+    /// `None` skips only that comparison.
+    pub(super) type_digest: Option<medulla_types::contract::Digest256>,
 }
 
 /// The pinned inputs of one decision.

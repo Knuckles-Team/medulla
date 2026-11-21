@@ -497,6 +497,9 @@ async fn serve(
                     reader: Some(&reader),
                     assistant_profile: assistant_profile.as_ref(),
                     observation_windows: observation_windows.as_deref(),
+                    type_digest: graph_view
+                        .as_ref()
+                        .map(|view| view.schema_sources.composed_digest()),
                 };
                 decide_blocking(
                     &ctx,
@@ -525,7 +528,7 @@ pub(super) fn decide_blocking(
     let family = telemetry::family(request.question.kind);
     let (family, tenant) = (family.as_str(), ctx.tenant_id);
     let registry = super::family::for_kind(request.question.kind);
-    let task_plan = super::stat_task_plan::plan_of_request(ctx, request, &principal)?;
+    let task_plan = super::stat_task_plan::plan_of_request(ctx, request, &principal, graph_view)?;
     let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
         // A tool_relevance question reads its own index (R134.110.3), so the
