@@ -76,7 +76,7 @@ async fn handle_declare(ctx: GraphOpRouting<'_>, request: DataPrepDeclareRequest
         match prep::declare_data_prep(&view, &request.tenant, &request.payload, ctx.core.version())
         {
             Ok(declared) => declared,
-            Err(refusal) => return Response::err(req_id, refusal.to_string()),
+            Err(refusal) => return declare_refused(req_id, &refusal),
         }
     };
     let (content_digest, write_set, written) = match declared {
@@ -119,9 +119,28 @@ fn declare_ok(
         id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::DataPrepDeclare>(
             DataPrepDeclareReceipt {
-                content_digest,
+                content_digest: Some(content_digest),
                 written,
                 unchanged,
+                refused: 0,
+                refusal_code: None,
+            },
+        ),
+    )
+}
+
+/// A refused declaration is a report with `refused` 1 and the rule code, not a call error
+/// (MEDULLA-INGEST-WORKER-R001.1010). It changed no state.
+fn declare_refused(id: u64, refusal: &prep::DataPrepRefusal) -> Response {
+    Response::ok(
+        id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::DataPrepDeclare>(
+            DataPrepDeclareReceipt {
+                content_digest: None,
+                written: 0,
+                unchanged: 0,
+                refused: 1,
+                refusal_code: Some(refusal.code.to_string()),
             },
         ),
     )

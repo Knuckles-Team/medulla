@@ -30538,7 +30538,9 @@ class DataPrepDeclarationView(BaseModel):
 class DataPrepDeclareReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    content_digest: Digest256
+    content_digest: Digest256 | None = None
+    refusal_code: str | None = None
+    refused: Annotated[int, Field(ge=0)] = 0
     unchanged: Annotated[int, Field(ge=0)]
     written: Annotated[int, Field(ge=0)]
 

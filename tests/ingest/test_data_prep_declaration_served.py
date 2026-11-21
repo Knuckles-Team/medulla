@@ -75,8 +75,9 @@ def test_declare_replace_and_refuse(clean_graph):
     assert changed.content_digest != first.content_digest
     assert _fields(clean_graph) == {"b.field", "c.field"}
 
-    with pytest.raises(EngineResponseError, match="DATA_PREP_DECLARATION_INVALID"):
-        _declare(clean_graph, _payload(["usr/bin/sh"]))
+    refused = _declare(clean_graph, _payload(["usr/bin/sh"]))
+    assert (refused.written, refused.unchanged, refused.refused) == (0, 0, 1)
+    assert refused.refusal_code == "DATA_PREP_DECLARATION_INVALID"
     assert _fields(clean_graph) == {"b.field", "c.field"}
 
 
@@ -116,12 +117,30 @@ def test_declare_refusals_change_nothing(clean_graph):
         _payload(["a.field"], **{"import": "os"}),
     ]
     for payload in invalid:
-        with pytest.raises(EngineResponseError, match="DATA_PREP_DECLARATION_INVALID"):
-            _declare(clean_graph, payload)
+        refused = _declare(clean_graph, payload)
+        assert refused.refused == 1
+        assert refused.refusal_code == "DATA_PREP_DECLARATION_INVALID"
+        assert refused.content_digest is None
     too_many = [f"f{i}" for i in range(257)]
-    with pytest.raises(EngineResponseError, match="DATA_PREP_DECLARATION_TOO_LARGE"):
-        _declare(clean_graph, _payload(too_many))
+    refused = _declare(clean_graph, _payload(too_many))
+    assert refused.refused == 1
+    assert refused.refusal_code == "DATA_PREP_DECLARATION_TOO_LARGE"
 
     assert _counts(clean_graph) == before
     assert _read(clean_graph).content_digest == digest
+    assert _fields(clean_graph) == {"a.field"}
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.1010")
+def test_report_counts_written_unchanged_refused(clean_graph):
+    written = _declare(clean_graph, _payload(["a.field"]))
+    assert (written.written, written.unchanged, written.refused) == (1, 0, 0)
+    unchanged = _declare(clean_graph, _payload(["a.field"]))
+    assert (unchanged.written, unchanged.unchanged, unchanged.refused) == (0, 1, 0)
+    refused = _declare(clean_graph, _payload(["a:b"]))
+    assert (refused.written, refused.unchanged, refused.refused) == (0, 0, 1)
+    assert refused.refusal_code == "DATA_PREP_DECLARATION_INVALID"
+    # A refusal is a report, not a call error; a foreign tenant is still an error.
+    with pytest.raises(EngineResponseError, match="INGEST_TENANT_MISMATCH"):
+        _declare(clean_graph, _payload(["a.field"]), tenant="tenant:other")
     assert _fields(clean_graph) == {"a.field"}

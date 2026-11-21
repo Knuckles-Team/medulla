@@ -45,15 +45,30 @@ pub struct DataPrepDeclareRequest {
     pub payload: serde_json::Value,
 }
 
-/// What one served declaration did: exactly one of `written` or `unchanged` is 1.
+/// What one served declaration did: exactly one of `written`, `unchanged` or `refused` is 1
+/// (MEDULLA-INGEST-WORKER-R001.1010). A refused declaration changes no state; its rule code
+/// is in `refusal_code` and it has no content digest. A call-level error is reserved for a
+/// malformed request.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DataPrepDeclareReceipt {
-    /// Content digest of the stored declaration.
-    pub content_digest: Digest256,
+    /// Content digest of the stored declaration; absent when the declaration was refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_digest: Option<Digest256>,
     pub written: u64,
     pub unchanged: u64,
+    /// 1 when the declaration was refused, else 0.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub refused: u64,
+    /// The wire code of the refusal, `DATA_PREP_DECLARATION_INVALID` or
+    /// `DATA_PREP_DECLARATION_TOO_LARGE`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refusal_code: Option<String>,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 /// `Method::DataPrepDeclarationRead`: read one tenant's declaration of a capability.
