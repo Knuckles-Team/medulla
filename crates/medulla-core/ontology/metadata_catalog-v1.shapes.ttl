@@ -44,6 +44,22 @@ cat:LineageEdgeShape a sh:NodeShape ;
     [ sh:path cat:hop ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
       sh:in ( "connector" "operation" "resource" "field" "ingest" "transform" ) ] .
 
+# Each lineage edge node is paired with the direct cat:lineageTo edge between its ends
+# (MEDULLA-TYPED-PACKS-R106.2). The unpaired edge is refused as LINEAGE_EDGE_UNPAIRED (R106.4).
+cat:LineageEdgePairShape a sh:NodeShape ;
+    sh:targetClass cat:LineageEdge ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A lineage edge needs the direct cat:lineageTo edge from its cat:from to its cat:to." ;
+        sh:select """
+            SELECT $this WHERE {
+                $this <https://knuckles-team.github.io/ontology/catalog#from> ?from ;
+                      <https://knuckles-team.github.io/ontology/catalog#to> ?to .
+                FILTER NOT EXISTS { ?from <https://knuckles-team.github.io/ontology/catalog#lineageTo> ?to }
+            }
+        """ ;
+    ] .
+
 # A glossary term has one preferred label and names at least one class.
 cat:GlossaryTermShape a sh:NodeShape ;
     sh:targetClass cat:GlossaryTerm ;

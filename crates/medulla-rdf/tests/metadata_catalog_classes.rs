@@ -247,6 +247,7 @@ fn catalog_shapes_accept_a_complete_catalog() {
              cat:principal <urn:g:service-desk> ; cat:role cat:owner . \
          <urn:l:1> a cat:LineageEdge ; cat:from <urn:a:get_incidents> ; cat:to <urn:a:incidents> ; \
              cat:hop \"resource\" . \
+         <urn:a:get_incidents> cat:lineageTo <urn:a:incidents> . \
          <urn:t:incident> a cat:GlossaryTerm ; skos:prefLabel \"Incident\" ; cat:definesClass :Incident ."
     );
     assert!(conforms(&data));
@@ -302,6 +303,50 @@ fn catalog_shapes_refuse_incomplete_or_open_vocabulary_records() {
     assert!(conforms(
         "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cat:flag \"owner_missing\" ."
     ));
+}
+
+// spec: MEDULLA-TYPED-PACKS-R106.2
+#[test]
+fn every_asset_has_owner_version_lineage_pair_and_class_link() {
+    // A resource and a field name the class and the property they serve.
+    assert!(!conforms(
+        "<urn:a:r> a cat:DataResource ; cp:ofConnector <urn:c:a> ."
+    ));
+    assert!(!conforms(
+        "<urn:a:f> a cat:Field ; cp:ofConnector <urn:c:a> ."
+    ));
+    // The owner is a stewardship assignment with the owner role, one principal and one asset.
+    assert!(conforms(
+        "<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:r> ; \
+         cat:principal <urn:g:x> ; cat:role cat:owner ."
+    ));
+    assert!(!conforms(
+        "<urn:s:1> a cat:StewardshipAssignment ; cat:assignedTo <urn:a:r> ; cat:role cat:owner ."
+    ));
+    // A lineage edge is paired with the direct edge between its ends.
+    let edge = "<urn:l:1> a cat:LineageEdge ; cat:from <urn:a:x> ; cat:to <urn:a:y> ; \
+                cat:hop \"resource\" . ";
+    assert!(!conforms(edge));
+    assert!(conforms(&format!("{edge}<urn:a:x> cat:lineageTo <urn:a:y> .")));
+    // The vocabulary the batch uses is declared.
+    let triples = documents();
+    for (term, kind) in [
+        ("LineageEdge", "Class"),
+        ("lineageTo", "ObjectProperty"),
+        ("assignedTo", "ObjectProperty"),
+    ] {
+        assert!(has_iri(
+            &triples,
+            &format!("{CAT}{term}"),
+            &format!("{RDF}type"),
+            &format!("{OWL}{kind}")
+        ));
+    }
+    for term in ["declaredOwner", "ofConnector", "packVersion", "servesClass", "servesProperty"] {
+        assert!(triples
+            .iter()
+            .any(|t| t.subject.to_string() == format!("<{CP}{term}>")));
+    }
 }
 
 // spec: MEDULLA-TYPED-PACKS-R108.1
