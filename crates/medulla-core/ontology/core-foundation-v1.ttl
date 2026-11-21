@@ -630,6 +630,12 @@ necessarily depends on what it extends.""" ;
     rdfs:domain bfo:0000001 ;
     rdfs:range bfo:0000001 .
 
+:formalizes a owl:ObjectProperty ;
+    rdfs:label "formalizes" ;
+    rdfs:comment "Links a formal declaration to the informal claim, or document section, that it formalizes (MEDULLA-DECISION-ENGINE-R652.12). The edge extends core and adds no class: a connector pack that declares formal declarations as subclasses of a core class uses it without redeclaring it." ;
+    rdfs:domain bfo:0000001 ;
+    rdfs:range bfo:0000001 .
+
 :taggedWithHashtag a owl:ObjectProperty ;
     rdfs:label "tagged with hashtag" ;
     rdfs:comment "Links a Document to a Hashtag mined from the document's own structured entity metadata, deterministically at ingestion time before any LLM call (CONCEPT:AU-KG.ingest.deterministic-social-entity-mining)." ;
