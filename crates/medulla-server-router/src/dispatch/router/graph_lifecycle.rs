@@ -23,7 +23,37 @@ pub async fn dispatch_graph_lifecycle_methods(
             graph_type,
         } => match lifecycle_request(req, verified_context) {
             Ok(request) => {
-                dispatch_boxed(create_graph(state, request, graph_name, graph_type)).await
+                let created = dispatch_boxed(create_graph(
+                    state,
+                    request,
+                    graph_name.clone(),
+                    graph_type,
+                ))
+                .await;
+                // MEDULLA-TYPED-PACKS-R108.3: a created graph is cataloged by the one emitter, in
+                // the new graph, which the creator owns and which holds no shapes yet.
+                #[cfg(feature = "rdf")]
+                if created.refusal_text().is_none() {
+                    let emitted = super::catalog_emit::commit_asset(
+                        state,
+                        req,
+                        verified_context,
+                        &graph_name,
+                        medulla_catalog::emit::AssetRecord::Graph(
+                            medulla_catalog::emit::GraphRegistration {
+                                graph_id: &graph_name,
+                                ontology_revision: None,
+                                contract_digest: None,
+                                sources: &[],
+                            },
+                        ),
+                    )
+                    .await;
+                    return ControlFlow::Break(super::catalog_emit::after_emit(
+                        created, req.id, emitted,
+                    ));
+                }
+                created
             }
             Err(denied) => denied,
         },

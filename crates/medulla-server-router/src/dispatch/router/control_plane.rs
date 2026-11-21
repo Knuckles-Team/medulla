@@ -341,7 +341,7 @@ pub async fn dispatch_agent_library_methods(
         Method::AgentLibrary { op } => {
             #[cfg(feature = "redb")]
             {
-                dispatch_boxed(async {
+                let outcome = dispatch_boxed(async {
                     medulla_h_admin::admin::handle_agent_library(
                         state,
                         req.id,
@@ -350,7 +350,25 @@ pub async fn dispatch_agent_library_methods(
                     )
                     .await
                 })
-                .await
+                .await;
+                // MEDULLA-TYPED-PACKS-R108.3: a published entry is cataloged by the one emitter.
+                #[cfg(feature = "rdf")]
+                if let (Some(entry), None) = (&outcome.published, outcome.response.refusal_text()) {
+                    let emitted = super::catalog_emit::commit_asset(
+                        state,
+                        req,
+                        verified_context,
+                        &req.graph,
+                        medulla_catalog::emit::AssetRecord::AgentVersion(entry),
+                    )
+                    .await;
+                    return ControlFlow::Break(super::catalog_emit::after_emit(
+                        outcome.response,
+                        req.id,
+                        emitted,
+                    ));
+                }
+                outcome.response
             }
             #[cfg(not(feature = "redb"))]
             {

@@ -530,6 +530,43 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-TYPED-PACKS-R108.3: a registration commits through the graph gateway, then
+        // the registered definition is cataloged by the one emitter.
+        Method::WorkflowRegistry { op } => {
+            let registration = match op.as_ref() {
+                medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Register {
+                    registration,
+                } => Some(registration.clone()),
+                medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Read { .. } => {
+                    None
+                }
+            };
+            let response = dispatch_boxed(dispatch_graph_op(
+                state,
+                &req.graph,
+                req.id,
+                req.agent_id.as_deref(),
+                verified_context,
+                Method::WorkflowRegistry { op },
+            ))
+            .await;
+            #[cfg(feature = "rdf")]
+            if let (Some(registration), None) = (&registration, response.refusal_text()) {
+                let emitted = super::catalog_emit::commit_asset(
+                    state,
+                    req,
+                    verified_context,
+                    &req.graph,
+                    medulla_catalog::emit::AssetRecord::WorkflowDefinition(registration),
+                )
+                .await;
+                return ControlFlow::Break(super::catalog_emit::after_emit(
+                    response, req.id, emitted,
+                ));
+            }
+            let _ = registration;
+            response
+        }
         // MEDULLA-TYPED-PACKS-R801.3: the glossary ops commit through the graph gateway.
         Method::Glossary { op } => {
             dispatch_boxed(async {

@@ -875,33 +875,49 @@ fn graph_status(
     }
 }
 
+/// The served response, and the entry a `Publish` committed: the router emits that entry's
+/// catalog nodes through the one emitter (MEDULLA-TYPED-PACKS-R108.3).
+pub struct AgentLibraryOutcome {
+    pub response: Response,
+    pub published: Option<medulla_agent_types::agent_library::AgentLibraryEntry>,
+}
+
+impl From<Response> for AgentLibraryOutcome {
+    fn from(response: Response) -> Self {
+        Self {
+            response,
+            published: None,
+        }
+    }
+}
+
 pub async fn handle_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: medulla_agent_types::agent_library::AgentLibraryOp,
-) -> Response {
+) -> AgentLibraryOutcome {
     let store = match ensure_agent_library(state, req_id).await {
         Ok(store) => store,
-        Err(response) => return response,
+        Err(response) => return response.into(),
     };
     match op {
         medulla_agent_types::agent_library::AgentLibraryOp::Publish { request } => {
             library_publish(&store, req_id, verified, request)
         }
         medulla_agent_types::agent_library::AgentLibraryOp::Retire { request } => {
-            library_retire(&store, req_id, verified, request)
+            library_retire(&store, req_id, verified, request).into()
         }
         medulla_agent_types::agent_library::AgentLibraryOp::Current {
             tenant_id,
             agent_id,
-        } => library_current(&store, req_id, verified, tenant_id, agent_id),
+        } => library_current(&store, req_id, verified, tenant_id, agent_id).into(),
         medulla_agent_types::agent_library::AgentLibraryOp::History {
             tenant_id,
             agent_id,
-        } => library_history(&store, req_id, verified, tenant_id, agent_id),
+        } => library_history(&store, req_id, verified, tenant_id, agent_id).into(),
         medulla_agent_types::agent_library::AgentLibraryOp::Status { request } => {
-            library_status(&store, req_id, verified, request)
+            library_status(&store, req_id, verified, request).into()
         }
     }
 }
@@ -912,7 +928,7 @@ fn library_publish(
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_library::AgentLibraryPublishRequest>,
-) -> Response {
+) -> AgentLibraryOutcome {
     let context = match bind_agent_library_context(
         store,
         req_id,
@@ -922,21 +938,24 @@ fn library_publish(
         true,
     ) {
         Ok(context) => context,
-        Err(error) => return Response::err(req_id, error),
+        Err(error) => return Response::err(req_id, error).into(),
     };
     request.context = context.clone();
     request.entry = match bind_agent_library_draft(request.entry, verified, &context) {
         Ok(entry) => entry,
-        Err(error) => return Response::err(req_id, error),
+        Err(error) => return Response::err(req_id, error).into(),
     };
     match store.publish(*request) {
-        Ok(result) => Response::ok(
-            req_id,
-            ResultPayload::of_ref::<
-                medulla_protocol_types::result_contract::storage::AgentLibraryPublish,
-            >(&result),
-        ),
-        Err(error) => Response::err(req_id, error),
+        Ok(result) => AgentLibraryOutcome {
+            response: Response::ok(
+                req_id,
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::storage::AgentLibraryPublish,
+                >(&result),
+            ),
+            published: Some(result.entry.clone()),
+        },
+        Err(error) => Response::err(req_id, error).into(),
     }
 }
 

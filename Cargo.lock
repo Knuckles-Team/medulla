@@ -8242,6 +8242,7 @@ dependencies = [
  "jsonwebtoken",
  "medulla-agent-types",
  "medulla-capabilities",
+ "medulla-catalog",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",

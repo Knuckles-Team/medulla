@@ -42,6 +42,7 @@ use std::sync::OnceLock;
 mod changeset_index;
 mod branch_merge;
 mod branch_write;
+mod catalog_emit;
 mod channels;
 mod control_plane;
 mod data_plane;
