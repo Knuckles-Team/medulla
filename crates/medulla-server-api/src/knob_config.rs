@@ -656,6 +656,8 @@ knobs! {
     synthesis_context_budget_tokens: u64 = "synthesis.context_budget_tokens", U64(8_192), [512, 1_048_576], "tokens", Tunable;
     /// Evolving mode requires approval.
     sdlc_mode_evolving_requires_approval: bool = "sdlc.mode.evolving_requires_approval", Bool(true), [true, true], "flag", Fixed;
+    /// Byte bound of one task run context.
+    sdlc_task_context_max_bytes: u64 = "sdlc.task_context_max_bytes", U64(65_536), [4_096, 4_194_304], "bytes", Tunable;
     /// Unprompted delivery is shadow in development.
     sdlc_delivery_shadow_unprompted_in_development: bool = "sdlc.delivery.shadow_unprompted_in_development", Bool(true), [true, true], "flag", Fixed;
     /// Automated review round cap.

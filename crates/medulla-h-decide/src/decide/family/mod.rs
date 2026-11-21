@@ -84,6 +84,7 @@ mod step_verification;
 mod sub_call_admission;
 mod support;
 mod task_plan;
+pub(super) mod task_context;
 mod team_coordination;
 #[cfg(test)]
 mod template;

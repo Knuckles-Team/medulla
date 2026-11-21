@@ -197,6 +197,7 @@ pub fn project_requirements_in(
             "repo": repo,
             "title": property(triples, subject, "title").unwrap_or_default(),
             "state": state,
+            "text": body,
         });
         if let Some(file) = property(triples, subject, "declaredIn") {
             properties["declaredIn"] = file.into();
@@ -600,6 +601,7 @@ pub fn project(repo: &str, file: &str, text: &str) -> Vec<serde_json::Value> {
                 "start_line": start.to_string(),
                 "end_line": end.to_string(),
                 "digest": digest_of(&body),
+                "text": body,
             }),
         ));
         links.push(edge(&document, &id, "hasSection"));
@@ -687,6 +689,7 @@ pub fn project_plans(
             "start_line": start.to_string(),
             "end_line": end.to_string(),
             "digest": digest_of(&body),
+            "text": body,
         });
         if let Some(phase) = phase {
             properties["phase"] = phase.into();

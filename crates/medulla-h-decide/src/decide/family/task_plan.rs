@@ -53,6 +53,16 @@ impl DecisionFamily for TaskPlanFamily {
             Ok(None) => None,
         }
     }
+
+    /// The run context digest of a question that named a row (MEDULLA-SDLC-R015.2).
+    fn premises(
+        &self,
+        request: &DecideRequest,
+        _executed: &Executed,
+        _policy_digest: &str,
+    ) -> Vec<medulla_decision_types::decision::PremiseRef> {
+        super::task_context::premises(request)
+    }
 }
 
 fn executed(outcome: StatisticalOutcome) -> Executed {

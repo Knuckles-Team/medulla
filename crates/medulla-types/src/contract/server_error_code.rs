@@ -475,6 +475,10 @@ closed_error_codes! {
         ProposalNotAdmitted => "PROPOSAL_NOT_ADMITTED",
         /// MEDULLA-SDLC-R017.2: a proposal names a kind outside the closed set.
         ProposalKindUnknown => "PROPOSAL_KIND_UNKNOWN",
+        /// MEDULLA-SDLC-R015.2: a row with no `covers` plan section has no run context.
+        TaskContextPlanMissing => "TASK_CONTEXT_PLAN_MISSING",
+        /// MEDULLA-SDLC-R015.2: the row id of a run context names no requirement node.
+        TaskContextRowUnknown => "TASK_CONTEXT_ROW_UNKNOWN",
         /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
         ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",

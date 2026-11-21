@@ -1787,7 +1787,13 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     (
         "Decide",
-        &["DECISIONS", "UNSUPPORTED_COALITION", "CAPACITY_UNAVAILABLE"],
+        &[
+            "DECISIONS",
+            "UNSUPPORTED_COALITION",
+            "CAPACITY_UNAVAILABLE",
+            "TASK_CONTEXT_PLAN_MISSING",
+            "TASK_CONTEXT_ROW_UNKNOWN",
+        ],
     ),
     // The identity store's namespace is fenced off the two older RBAC
     // writers (identity_store_admin.rs). `RegisterIdentity` is refused for a

@@ -268,6 +268,17 @@ async fn serve(
             super::stat_capacity::with_read(state, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::TaskPlan {
+        // A `task_plan` question that names a requirement row gets its run context
+        // assembled here, where the graph is reachable, and records the context digest
+        // in its own parameter (MEDULLA-SDLC-R015.2).
+        telemetry::stage_async(
+            telemetry::Stage::Candidates,
+            &family,
+            verified.tenant(),
+            super::family::task_context::with_task_context(state, verified, request),
+        )
+        .await?
     } else if request.question.kind == QuestionKind::SkillEvolution {
         // A `skill_evolution` question reads the stored embedding of each
         // visible skill here, through the caller's graph access, and records
