@@ -9,15 +9,14 @@
 //! cross-repo (owner: Arbora) and is not claimed here; this slice fixes the
 //! method body and proves its output matches the typed model.
 
-use medulla_identity_types::authority_audit::AuditSourceMode;
 use medulla_source_types::{
     supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow,
     supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
-    supply_chain_report::SourcePremise, supply_chain_report::SupplyChainImpactReport,
+    supply_chain_report::sources_used_from_audit, supply_chain_report::SupplyChainImpactReport,
 };
 
 use crate::source_selection::{
-    select_sources, AbstainReason, CoverageFixture, CoverageResult, Premise,
+    audit_from, select_sources, AbstainReason, CoverageFixture, CoverageResult,
 };
 
 /// Plan `roots` (the question's ontology classes) against the authority
@@ -31,39 +30,13 @@ pub fn supply_chain_impact(
     rows: &[ImpactRow],
 ) -> Result<SupplyChainImpactReport, ReportError> {
     let results = select_sources(fixture, roots, hop_budget);
-    let mut premises: Vec<SourcePremise> = Vec::new();
-    for result in &results {
-        if let CoverageResult::Covered {
-            premises: covered_premises,
-            ..
-        } = result
-        {
-            for premise in covered_premises {
-                if let Premise::Authority {
-                    row,
-                    source,
-                    class,
-                    rank,
-                    ..
-                } = premise
-                {
-                    // The planner serves live when no copy has a watermark
-                    // (MEDULLA-UNIFIED-DATA-PLANE-R038.1).
-                    premises.push(SourcePremise {
-                        source: source.clone(),
-                        class_served: class.clone(),
-                        row: row.clone(),
-                        rank: *rank,
-                        mode: AuditSourceMode::Live,
-                        watermark: None,
-                        age_seconds: None,
-                    });
-                }
-            }
-        }
-    }
+    // `sources_used` is the authority audit of the same verdicts, entry for entry
+    // (MEDULLA-SRC-AUTH-R007.4): there is no second builder.
+    let audit = audit_from(&results);
     let abstentions = abstentions_from(&results);
-    assemble_supply_chain_report(rows, &premises, &abstentions)
+    let mut report = assemble_supply_chain_report(rows, &[], &abstentions)?;
+    report.sources_used = sources_used_from_audit(&audit.used)?;
+    Ok(report)
 }
 
 /// Map the planner's coverage results onto the report's typed abstentions
@@ -231,5 +204,39 @@ mod tests {
             class: "Legacy".to_string(),
         }]);
         assert!(matches!(extra[0], ReportAbstention::Disconnected { .. }));
+    }
+
+    // spec: MEDULLA-SRC-AUTH-R007.4
+    #[test]
+    fn sources_used_equals_audit() {
+        let fixture = CoverageFixture::new()
+            .with_authority("Supplier", "erpnext-suppliers", "erpnext-mcp", 5, 1)
+            .with_authority("Vulnerability", "gitlab-vulnerabilities", "gitlab-mcp", 3, 1)
+            .with_authority("ContainerImage", "dockerhub-images", "dockerhub-mcp", 4, 1)
+            .with_unconnected_source("dockerhub-mcp");
+        let roots = vec![
+            "Supplier".to_string(),
+            "Vulnerability".to_string(),
+            "ContainerImage".to_string(),
+        ];
+        let report = supply_chain_impact(&fixture, &roots, 0, &[]).expect("the report assembles");
+        let audit = audit_from(&select_sources(&fixture, &roots, 0));
+        // One entry per used audit entry, in the audit's order, with its premises and mode.
+        assert!(!audit.used.is_empty());
+        assert_eq!(report.sources_used.len(), audit.used.len());
+        for (reported, entry) in report.sources_used.iter().zip(&audit.used) {
+            assert_eq!(reported.source, entry.source);
+            assert_eq!(reported.class_served, entry.concept);
+            assert_eq!(reported.authority_premise, entry.premises.join("; "));
+            assert_eq!(Some(reported.mode), entry.mode);
+        }
+        // A not-used row (the unconnected source) never appears in `sources_used`.
+        assert!(!audit.not_used.is_empty());
+        for not_used in &audit.not_used {
+            assert!(report
+                .sources_used
+                .iter()
+                .all(|used| used.source != not_used.source));
+        }
     }
 }

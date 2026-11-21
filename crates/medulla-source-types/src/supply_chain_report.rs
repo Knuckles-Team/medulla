@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::authority_audit::AuditSourceMode;
+use medulla_identity_types::authority_audit::{AuditEntry, AuditSourceMode};
 use serde::{Deserialize, Serialize};
 
 /// The unified report: impact per service, the items behind each, the sources
@@ -202,6 +202,27 @@ impl SourceUsed {
             age_seconds,
         })
     }
+}
+
+/// The report's `sources_used` from the authority audit (MEDULLA-SRC-AUTH-R007.4): one entry
+/// per used audit entry, in the audit's order and not deduplicated, so the report and the audit
+/// never disagree. `authority_premise` is the entry's premises verbatim, joined with `"; "`.
+/// A `not_used` row is never an input: pass `AuthorityAudit::used` only. An entry served from a
+/// copy is refused, because the audit carries no watermark for it
+/// ([`ReportError::AcceleratedWithoutWatermark`]).
+pub fn sources_used_from_audit(used: &[AuditEntry]) -> Result<Vec<SourceUsed>, ReportError> {
+    used.iter()
+        .map(|entry| {
+            SourceUsed::try_new(
+                &entry.source,
+                &entry.concept,
+                &entry.premises.join("; "),
+                entry.mode.unwrap_or(AuditSourceMode::Live),
+                None,
+                None,
+            )
+        })
+        .collect()
 }
 
 /// A typed abstention: why a class or source is absent from the answer.
