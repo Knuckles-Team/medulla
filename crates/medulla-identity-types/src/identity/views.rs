@@ -254,6 +254,10 @@ pub enum IdentityReply<C = ()> {
         roles: Vec<crate::acl::Role>,
         grants: Vec<crate::acl::Grant>,
     },
+    /// `grant_wire_login` (MEDULLA-ENGINE-PARITY-R007.4).
+    WireLoginGranted(super::wire_login::WireLoginGranted),
+    /// `revoke_wire_login` (MEDULLA-ENGINE-PARITY-R007.4).
+    WireLoginRevoked(super::wire_login::WireLoginRevoked),
 }
 
 impl IdentityReply {
@@ -294,6 +298,8 @@ impl IdentityReply {
             Self::PolicyCompiled { roles, grants } => {
                 IdentityReply::PolicyCompiled { roles, grants }
             }
+            Self::WireLoginGranted(value) => IdentityReply::WireLoginGranted(value),
+            Self::WireLoginRevoked(value) => IdentityReply::WireLoginRevoked(value),
             Self::Done { changed } => IdentityReply::Done { changed },
             Self::Principal { principal_id } => IdentityReply::Principal { principal_id },
             Self::Resolution(value) => IdentityReply::Resolution(compose(value)?),

@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 
 /// How a wire login proves itself.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum WireLoginKind {
     Password,
     Certificate,
@@ -126,6 +127,61 @@ impl WireLoginRecord {
 
     pub fn is_active(&self) -> bool {
         self.state == WireLoginState::Active
+    }
+}
+
+/// What `grant_wire_login` answers (MEDULLA-ENGINE-PARITY-R007.4): the stored record's public
+/// facts. The verifier is never echoed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WireLoginGranted {
+    pub login: String,
+    pub kind: WireLoginKind,
+    pub principal: String,
+    pub tenant: String,
+    pub created_ms: u64,
+}
+
+impl From<&WireLoginRecord> for WireLoginGranted {
+    fn from(record: &WireLoginRecord) -> Self {
+        Self {
+            login: record.login.clone(),
+            kind: record.kind,
+            principal: record.principal.clone(),
+            tenant: record.tenant.clone(),
+            created_ms: record.created_ms,
+        }
+    }
+}
+
+/// What `revoke_wire_login` answers (MEDULLA-ENGINE-PARITY-R007.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WireLoginRevoked {
+    pub login: String,
+    pub revoked_ms: u64,
+}
+
+/// Whether `verifier` is in the form its `kind` stores (MEDULLA-ENGINE-PARITY-R007.4): the SCRAM
+/// salted credential `<salt hex>:<salted password hex>` for `Password`, the 64-character
+/// lowercase [`sha256_verifier`] hex for `Certificate` and `Token`.
+pub fn verifier_is_well_formed(kind: WireLoginKind, verifier: &str) -> bool {
+    let lower_hex = |text: &str| {
+        !text.is_empty()
+            && text.len() % 2 == 0
+            && text
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    };
+    match kind {
+        WireLoginKind::Password => verifier
+            .split_once(':')
+            .is_some_and(|(salt, salted)| lower_hex(salt) && lower_hex(salted)),
+        WireLoginKind::Certificate | WireLoginKind::Token => {
+            verifier.len() == 64 && lower_hex(verifier)
+        }
     }
 }
 

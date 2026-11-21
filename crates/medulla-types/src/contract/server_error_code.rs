@@ -1045,6 +1045,11 @@ closed_error_codes! {
         PolicyScopeBound => "POLICY_SCOPE_BOUND",
         /// MEDULLA-IDENTITY-R702: a policy bundle would raise its binding actor's own authority.
         PolicySelfAuthorization => "POLICY_SELF_AUTHORIZATION",
+        /// MEDULLA-ENGINE-PARITY-R007.4: a wire login grant names an existing login with a
+        /// different principal, kind or verifier.
+        WireLoginExists => "WIRE_LOGIN_EXISTS",
+        /// MEDULLA-ENGINE-PARITY-R007.4: a wire login revoke names no login.
+        WireLoginUnknown => "WIRE_LOGIN_UNKNOWN",
         /// MEDULLA-SRC-AUTH-R011.3: a node write named a `content_origin` that is not a known origin.
         ContentOriginUnknown => "CONTENT_ORIGIN_UNKNOWN",
         /// MEDULLA-SRC-AUTH-R011.3: an untrusted-to-trusted change had no operator approval id.

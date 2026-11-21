@@ -8803,6 +8803,28 @@ IdentityOpIdp = Annotated[
 ]
 
 
+class IdentityOpWireLoginGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["wire_login"]
+    op: Literal["grant"]
+    request: WireLoginGrant
+
+
+class IdentityOpWireLoginRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["wire_login"]
+    op: Literal["revoke"]
+    request: WireLoginRevoke
+
+
+IdentityOpWireLogin = Annotated[
+    IdentityOpWireLoginGrant | IdentityOpWireLoginRevoke,
+    Field(discriminator="op"),
+]
+
+
 IdentityOp = Annotated[
     IdentityOpConfig
     | IdentityOpUser
@@ -8811,7 +8833,8 @@ IdentityOp = Annotated[
     | IdentityOpToken
     | IdentityOpMfa
     | IdentityOpAccess
-    | IdentityOpIdp,
+    | IdentityOpIdp
+    | IdentityOpWireLogin,
     Field(discriminator="family"),
 ]
 
@@ -8963,6 +8986,20 @@ class IdentityReplyResetDelivery(BaseModel):
     value: ResetDelivery
 
 
+class IdentityReplyWireLoginGranted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["wire_login_granted"]
+    value: WireLoginGranted
+
+
+class IdentityReplyWireLoginRevoked(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["wire_login_revoked"]
+    value: WireLoginRevoked
+
+
 IdentityReply = Annotated[
     IdentityReplyApprovalKey
     | IdentityReplyDone
@@ -8984,7 +9021,9 @@ IdentityReply = Annotated[
     | IdentityReplyDirectoryGroup
     | IdentityReplyDirectoryGroups
     | IdentityReplyWebauthnCredentials
-    | IdentityReplyResetDelivery,
+    | IdentityReplyResetDelivery
+    | IdentityReplyWireLoginGranted
+    | IdentityReplyWireLoginRevoked,
     Field(discriminator="kind"),
 ]
 
@@ -29498,6 +29537,44 @@ class WhyNotWire(BaseModel):
     reason: str
 
 
+class WireLoginGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: WireLoginKind
+    login: str
+    principal: str
+    verifier: str
+
+
+class WireLoginGranted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_ms: Annotated[int, Field(ge=0)]
+    kind: WireLoginKind
+    login: str
+    principal: str
+    tenant: str
+
+
+class WireLoginKind(str, Enum):
+    PASSWORD = "Password"
+    CERTIFICATE = "Certificate"
+    TOKEN = "Token"
+
+
+class WireLoginRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    login: str
+
+
+class WireLoginRevoked(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    login: str
+    revoked_ms: Annotated[int, Field(ge=0)]
+
+
 class WorkItemCancelOutcome(str, Enum):
     CANCELLED = "cancelled"
     MISSING = "missing"
@@ -30661,6 +30738,8 @@ IdentityEvent = (
     | Literal["mfa_removed"]
     | Literal["password_reset_requested"]
     | Literal["system_identity_repaired"]
+    | Literal["wire_login_granted"]
+    | Literal["wire_login_revoked"]
 )
 
 
@@ -38047,6 +38126,9 @@ __all__ = [
     "IdentityOpUserSetStatus",
     "IdentityOpUserUnlock",
     "IdentityOpUserUpdate",
+    "IdentityOpWireLogin",
+    "IdentityOpWireLoginGrant",
+    "IdentityOpWireLoginRevoke",
     "IdentityReply",
     "IdentityReplyApprovalKey",
     "IdentityReplyAudit",
@@ -38072,6 +38154,8 @@ __all__ = [
     "IdentityReplyUser",
     "IdentityReplyUsers",
     "IdentityReplyWebauthnCredentials",
+    "IdentityReplyWireLoginGranted",
+    "IdentityReplyWireLoginRevoked",
     "IdentityStamp",
     "IdpConfig",
     "IdpKind",
@@ -40833,6 +40917,11 @@ __all__ = [
     "WhatChangedResult",
     "WhyNot",
     "WhyNotWire",
+    "WireLoginGrant",
+    "WireLoginGranted",
+    "WireLoginKind",
+    "WireLoginRevoke",
+    "WireLoginRevoked",
     "WorkItemCancelOutcome",
     "WorkItemClaimCapabilityDecision",
     "WorkItemClaimCapabilityMintRequest",

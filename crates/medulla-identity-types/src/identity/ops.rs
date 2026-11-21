@@ -22,7 +22,7 @@ use super::requests::{
 };
 use super::requests_admin::{
     GroupMembershipChange, GroupUpsert, ListQuery, ObjectRef, PolicyUpdate, RoleUpsert, SqlDump,
-    UserRoleChange,
+    UserRoleChange, WireLoginGrant, WireLoginRevoke,
 };
 use super::requests_provision::{
     DirectoryGroup, DirectoryGroupQuery, DirectoryGroupRef, ProvisionSubject, ProvisionedQuery,
@@ -386,6 +386,7 @@ macro_rules! in_family {
             IdentityOp::Idp($op) => $body,
             IdentityOp::Delegation($op) => $body,
             IdentityOp::Policy($op) => $body,
+            IdentityOp::WireLogin($op) => $body,
         }
     };
 }
@@ -406,6 +407,8 @@ pub enum IdentityOp {
     Delegation(DelegationOp),
     /// Policy rule bundles (MEDULLA-IDENTITY-R702).
     Policy(PolicyBundleOp),
+    /// Outside SQL client identities (MEDULLA-ENGINE-PARITY-R007.4).
+    WireLogin(WireLoginOp),
 }
 
 impl IdentityOp {
@@ -425,6 +428,25 @@ impl IdentityOp {
 
     pub fn name(&self) -> &'static str {
         self.meta().name
+    }
+}
+
+/// Wire logins: the identity-store records that map one SQL-wire login to one principal
+/// (MEDULLA-ENGINE-PARITY-R007.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WireLoginOp {
+    Grant { request: WireLoginGrant },
+    Revoke { request: WireLoginRevoke },
+}
+
+impl WireLoginOp {
+    fn meta(&self) -> OpMeta {
+        match self {
+            Self::Grant { .. } => meta("grant_wire_login", true, OpAuthority::Admin),
+            Self::Revoke { .. } => meta("revoke_wire_login", true, OpAuthority::Admin),
+        }
     }
 }
 

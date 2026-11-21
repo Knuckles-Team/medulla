@@ -1876,7 +1876,21 @@ fn login_state(principals: &[&str]) -> Arc<RwLock<ServerState>> {
     )
 }
 
-fn register_password_login(login: &str, principal: &str, tenant: &str) {
+/// Put `record` into the identity store the listener reads its logins from
+/// (MEDULLA-ENGINE-PARITY-R007.4).
+async fn register_wire_login(
+    state: &test_support::SharedState,
+    record: medulla_identity_types::identity::WireLoginRecord,
+) {
+    state.write().await.isolation.seed_wire_login(record);
+}
+
+async fn register_password_login(
+    state: &test_support::SharedState,
+    login: &str,
+    principal: &str,
+    tenant: &str,
+) {
     let record = medulla_identity_types::identity::WireLoginRecord::new(
         login,
         medulla_identity_types::identity::WireLoginKind::Password,
@@ -1885,9 +1899,7 @@ fn register_password_login(login: &str, principal: &str, tenant: &str) {
         tenant,
         1,
     );
-    medulla_wire_core::sql_wire_auth::wire_login_registry()
-        .put(record)
-        .expect("register wire login");
+    register_wire_login(state, record).await;
 }
 
 async fn wire_note_ids(client: &tokio_postgres::Client) -> Vec<String> {
@@ -1939,7 +1951,7 @@ async fn wire_rls_equals_native_rls() {
     let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
     for (n, principal) in principals.iter().enumerate() {
         let login = format!("bi-{principal}");
-        register_password_login(&login, principal, common::TEST_TENANT);
+        register_password_login(&state, &login, principal, common::TEST_TENANT).await;
         let client = connect_scram(&addr, &login, LOGIN_PASSWORD, "__commons__")
             .await
             .expect("wire login");
@@ -1964,8 +1976,8 @@ async fn wire_rls_equals_native_rls() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn wire_login_of_another_tenant_refuses_plan_scope_unverified() {
     let state = login_state(&["tenant-x"]);
-    let addr = spawn_listener_mode(state, pgwire::PgWireAuthMode::Scram).await;
-    register_password_login("bi-foreign", "tenant-x", "some-other-tenant");
+    let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
+    register_password_login(&state, "bi-foreign", "tenant-x", "some-other-tenant").await;
     let client = connect_scram(&addr, "bi-foreign", LOGIN_PASSWORD, "__commons__")
         .await
         .expect("SCRAM succeeds; the scope check runs on the first query");
@@ -1994,18 +2006,20 @@ async fn wire_login_of_another_tenant_refuses_plan_scope_unverified() {
 async fn login_maps_to_principal() {
     const TOKEN: &str = "wire-login-token-1"; // sanitizer:ignore
     let state = login_state(&["login-a"]);
-    let addr = spawn_listener_mode(state, pgwire::PgWireAuthMode::Scram).await;
-    register_password_login("bi-login-a", "login-a", common::TEST_TENANT);
-    medulla_wire_core::sql_wire_auth::wire_login_registry()
-        .put(medulla_identity_types::identity::WireLoginRecord::new(
+    let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
+    register_password_login(&state, "bi-login-a", "login-a", common::TEST_TENANT).await;
+    register_wire_login(
+        &state,
+        medulla_identity_types::identity::WireLoginRecord::new(
             "bi-token-a",
             medulla_identity_types::identity::WireLoginKind::Token,
             &medulla_identity_types::identity::sha256_verifier(TOKEN.as_bytes()),
             "login-a",
             common::TEST_TENANT,
             1,
-        ))
-        .expect("register token login");
+        ),
+    )
+    .await;
     for round in 0..1_000 {
         let by_password = connect_scram(&addr, "bi-login-a", LOGIN_PASSWORD, "__commons__")
             .await
@@ -2151,21 +2165,23 @@ async fn connect_mtls(
 async fn certificate_login_maps_to_principal() {
     let state = login_state(&["login-a"]);
     let fixture = mtls_fixture();
-    let addr = spawn_mtls_listener(state, &fixture).await;
+    let addr = spawn_mtls_listener(state.clone(), &fixture).await;
     let register = |login: &str, der: &[u8]| {
-        medulla_wire_core::sql_wire_auth::wire_login_registry()
-            .put(medulla_identity_types::identity::WireLoginRecord::new(
-                login,
-                medulla_identity_types::identity::WireLoginKind::Certificate,
-                &medulla_identity_types::identity::sha256_verifier(der),
-                "login-a",
-                common::TEST_TENANT,
-                1,
-            ))
-            .expect("register certificate login");
+        medulla_identity_types::identity::WireLoginRecord::new(
+            login,
+            medulla_identity_types::identity::WireLoginKind::Certificate,
+            &medulla_identity_types::identity::sha256_verifier(der),
+            "login-a",
+            common::TEST_TENANT,
+            1,
+        )
     };
-    register("bi-cert-a", &fixture.client_leaf_der);
-    register("bi-cert-other", b"not the presented certificate");
+    register_wire_login(&state, register("bi-cert-a", &fixture.client_leaf_der)).await;
+    register_wire_login(
+        &state,
+        register("bi-cert-other", b"not the presented certificate"),
+    )
+    .await;
     for round in 0..1_000 {
         let client = connect_mtls(&addr, &fixture.connector, "bi-cert-a")
             .await

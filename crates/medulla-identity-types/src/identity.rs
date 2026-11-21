@@ -83,7 +83,7 @@ pub use model::{
 };
 pub use ops::{
     AccessOp, ConfigOp, CredentialOp, DelegationOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta,
-    SessionOp, TokenOp, UserOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE,
+    SessionOp, TokenOp, UserOp, WireLoginOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE,
     IDENTITY_PROVISION_SCOPE, IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
 };
 pub use ownership::{
@@ -108,7 +108,7 @@ pub use requests::{
 };
 pub use requests_admin::{
     BindingChange, GroupMembershipChange, GroupUpsert, ListQuery, ObjectRef, PolicyUpdate,
-    RoleGraphGrant, RoleUpsert, SqlDump, UserRoleChange, MAX_PAGE,
+    RoleGraphGrant, RoleUpsert, SqlDump, UserRoleChange, WireLoginGrant, WireLoginRevoke, MAX_PAGE,
 };
 pub use requests_provision::{
     DirectoryGroup, DirectoryGroupQuery, DirectoryGroupRef, ProvisionSubject, ProvisionedQuery,
@@ -132,7 +132,8 @@ pub use views::{
     SessionView, UserView, WebauthnCredentialView,
 };
 pub use wire_login::{
-    sha256_verifier, WireLoginError, WireLoginEvent, WireLoginKind, WireLoginRecord, WireLoginState,
+    sha256_verifier, verifier_is_well_formed, WireLoginError, WireLoginEvent, WireLoginGranted,
+    WireLoginKind, WireLoginRecord, WireLoginRevoked, WireLoginState,
 };
 
 /// The principal id of the built-in bootstrap user (§2.2.3).
@@ -266,6 +267,11 @@ medulla_types::closed_error_codes! {
         /// A policy bundle would give its binding actor an `Admin` grant through a group
         /// that contains that actor (MEDULLA-IDENTITY-R702).
         PolicySelfAuthorization => "POLICY_SELF_AUTHORIZATION",
+        /// A wire login grant names an existing login with a different principal, kind or
+        /// verifier (MEDULLA-ENGINE-PARITY-R007.4).
+        WireLoginExists => "WIRE_LOGIN_EXISTS",
+        /// A wire login revoke names no login (MEDULLA-ENGINE-PARITY-R007.4).
+        WireLoginUnknown => "WIRE_LOGIN_UNKNOWN",
     }
 }
 

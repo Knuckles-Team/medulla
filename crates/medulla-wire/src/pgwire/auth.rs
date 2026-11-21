@@ -51,7 +51,7 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::startup::Authentication;
 use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
 
-use medulla_identity_types::identity::WireLoginKind;
+use medulla_identity_types::identity::{WireLoginKind, WireLoginRecord};
 use medulla_wire_core::sql_wire_auth::{
     resolve_wire_login, InvalidLogin, WireLoginSource, WireProof, INVALID_LOGIN_SQLSTATE,
 };
@@ -136,6 +136,46 @@ pub fn password_verifier(password: &str, salt: &[u8]) -> String {
 fn decode_password_verifier(verifier: &str) -> Option<(Vec<u8>, Vec<u8>)> {
     let (salt, salted) = verifier.split_once(':')?;
     Some((hex::decode(salt).ok()?, hex::decode(salted).ok()?))
+}
+
+/// The wire logins of the identity store (MEDULLA-ENGINE-PARITY-R007.4): the only source the
+/// listener reads. A record is read from the store as it stands; no process-local registry
+/// exists. `find` is synchronous, so the store is read with a bounded retry on the state lock;
+/// a lock that stays contended finds nothing, which refuses the login (fail closed).
+pub struct IdentityStoreWireLogins {
+    state: Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+}
+
+impl IdentityStoreWireLogins {
+    pub fn new(state: Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>) -> Self {
+        Self { state }
+    }
+}
+
+impl WireLoginSource for IdentityStoreWireLogins {
+    fn find(&self, login: &str) -> Option<WireLoginRecord> {
+        for _ in 0..200 {
+            if let Ok(state) = self.state.try_read() {
+                return state
+                    .isolation
+                    .rbac()
+                    .identity_store()
+                    .wire_login(login)
+                    .cloned();
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        None
+    }
+}
+
+/// A source with no logins: certificate validation builds a SCRAM handler it never logs in to.
+struct NoWireLogins;
+
+impl WireLoginSource for NoWireLogins {
+    fn find(&self, _login: &str) -> Option<WireLoginRecord> {
+        None
+    }
 }
 
 /// The refusal a failed wire login raises: SQLSTATE `28000`.
@@ -304,7 +344,7 @@ where
 pub fn validate_certificate(certificate_pem: &[u8]) -> PgWireResult<()> {
     let source = Arc::new(EngineAuthSource {
         secret: ["pgwire", "tls", "validation"].join("-"),
-        logins: medulla_wire_core::sql_wire_auth::wire_login_registry(),
+        logins: Arc::new(NoWireLogins),
     });
     let mut scram = ScramAuth::new(source);
     scram.configure_certificate(certificate_pem)
@@ -377,8 +417,36 @@ impl StartupHandler for EngineStartupHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::identity::{sha256_verifier, WireLoginRecord};
-    use medulla_wire_core::sql_wire_auth::{CachedWireLogins, WireLoginRegistry};
+    use medulla_identity_types::identity::sha256_verifier;
+    use medulla_wire_core::sql_wire_auth::CachedWireLogins;
+    use std::collections::HashMap;
+    use std::sync::RwLock;
+
+    /// A test-only source over a map of records.
+    #[derive(Default)]
+    struct WireLoginRegistry {
+        records: RwLock<HashMap<String, WireLoginRecord>>,
+    }
+
+    impl WireLoginRegistry {
+        fn put(&self, record: WireLoginRecord) -> Result<(), String> {
+            self.records
+                .write()
+                .expect("registry lock")
+                .insert(record.login.clone(), record);
+            Ok(())
+        }
+    }
+
+    impl WireLoginSource for WireLoginRegistry {
+        fn find(&self, login: &str) -> Option<WireLoginRecord> {
+            self.records
+                .read()
+                .expect("registry lock")
+                .get(login)
+                .cloned()
+        }
+    }
 
     fn record(kind: WireLoginKind, verifier: &str) -> WireLoginRecord {
         WireLoginRecord::new("bi", kind, verifier, "agent:analyst", "tenant-a", 1)

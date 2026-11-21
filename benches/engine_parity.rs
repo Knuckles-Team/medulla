@@ -67,7 +67,7 @@ use medulla_tables::schema::{Column, ColumnType, TableSchema};
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::contract::Digest256;
 use medulla_wire_core::sql_wire_auth::{
-    resolve_wire_login, CachedWireLogins, WireLoginRegistry, WireLoginSource, WireProof,
+    resolve_wire_login, CachedWireLogins, WireLoginSource, WireProof,
 };
 use serde_json::json;
 
@@ -538,13 +538,26 @@ fn disjoint_writers() -> Record {
     }
 }
 
+/// The wire-login records of the `pgwire_login` group: a fixed map standing in for the identity
+/// store the listener reads.
+#[derive(Default)]
+struct BenchLogins {
+    records: std::collections::HashMap<String, WireLoginRecord>,
+}
+
+impl WireLoginSource for BenchLogins {
+    fn find(&self, login: &str) -> Option<WireLoginRecord> {
+        self.records.get(login).cloned()
+    }
+}
+
 /// R007.3: login plus principal resolution at p99 <= 5 ms with a warm cache.
 /// One login of each kind is resolved repeatedly through `resolve_wire_login`
 /// over the cached lookup the pgwire startup handler uses.
 fn pgwire_login() -> Record {
     let certificate_der = b"bench-client-certificate-der".to_vec();
     let token = "bench-login-token"; // sanitizer:ignore
-    let registry = WireLoginRegistry::default();
+    let mut registry = BenchLogins::default();
     for (login, kind, verifier) in [
         (
             "bench-password",
@@ -562,16 +575,10 @@ fn pgwire_login() -> Record {
             sha256_verifier(token.as_bytes()),
         ),
     ] {
-        registry
-            .put(WireLoginRecord::new(
-                login,
-                kind,
-                &verifier,
-                "agent:bench",
-                "bench-tenant",
-                1,
-            ))
-            .expect("register bench login");
+        registry.records.insert(
+            login.to_string(),
+            WireLoginRecord::new(login, kind, &verifier, "agent:bench", "bench-tenant", 1),
+        );
     }
     let source = CachedWireLogins::new(Arc::new(registry), LOGIN_CACHE_TTL_S);
     for login in ["bench-password", "bench-certificate", "bench-token"] {

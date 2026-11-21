@@ -59,7 +59,7 @@ pub fn derive_hmac_hex(secret: &str, domain: &[u8], principal: &str) -> String {
 use medulla_identity_types::identity::{WireLoginKind, WireLoginRecord};
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 /// Stable refusal code of an unknown, revoked or mismatched wire login.
@@ -154,41 +154,6 @@ pub fn resolve_wire_login(
         principal: record.principal,
         tenant: record.tenant,
     })
-}
-
-/// The process registry of wire-login records.
-#[derive(Default)]
-pub struct WireLoginRegistry {
-    records: RwLock<HashMap<String, WireLoginRecord>>,
-}
-
-impl WireLoginRegistry {
-    /// Store `record`; a login that exists with a different principal refuses.
-    pub fn put(&self, record: WireLoginRecord) -> Result<(), String> {
-        let mut records = self.records.write_recovering("wire login registry");
-        if let Some(existing) = records.get(&record.login) {
-            if existing.principal != record.principal {
-                return Err(format!("WIRE_LOGIN_EXISTS: {}", record.login));
-            }
-        }
-        records.insert(record.login.clone(), record);
-        Ok(())
-    }
-}
-
-impl WireLoginSource for WireLoginRegistry {
-    fn find(&self, login: &str) -> Option<WireLoginRecord> {
-        self.records
-            .lock_recovering("wire login registry")
-            .get(login)
-            .cloned()
-    }
-}
-
-/// The registry every pgwire listener of this process reads.
-pub fn wire_login_registry() -> Arc<WireLoginRegistry> {
-    static REGISTRY: OnceLock<Arc<WireLoginRegistry>> = OnceLock::new();
-    REGISTRY.get_or_init(Default::default).clone()
 }
 
 /// A source that keeps each lookup for at most `ttl` (knob

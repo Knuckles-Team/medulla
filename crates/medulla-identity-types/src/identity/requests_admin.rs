@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use super::config::{LocalFallback, RegistrationPolicy};
+use super::wire_login::WireLoginKind;
 use crate::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
 /// One graph grant of a role, projected into the RBAC image under the role
@@ -119,3 +120,23 @@ pub struct SqlDump {
 
 /// Largest page any listing returns.
 pub const MAX_PAGE: u32 = 500;
+
+/// `grant_wire_login` (MEDULLA-ENGINE-PARITY-R007.4). The verifier is the stored form of the
+/// kind, never a secret; the record's tenant is the verified actor's tenant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WireLoginGrant {
+    pub login: String,
+    pub kind: WireLoginKind,
+    pub verifier: String,
+    pub principal: String,
+}
+
+/// `revoke_wire_login` (MEDULLA-ENGINE-PARITY-R007.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WireLoginRevoke {
+    pub login: String,
+}

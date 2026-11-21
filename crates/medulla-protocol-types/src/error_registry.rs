@@ -108,13 +108,16 @@ mod tests {
     fn every_refusal_is_reported_as_a_declared_wire_code() {
         // The codes their rows name outside the `IDENTITY_` family
         // (MEDULLA-IDENTITY-R003.4 mode transitions, R709 session liveness,
-        // R003.6 stale session epoch, R702 policy bundle binding).
-        const NAMED_OUTSIDE_FAMILY: [&str; 5] = [
+        // R003.6 stale session epoch, R702 policy bundle binding, MEDULLA-ENGINE-PARITY-R007.4
+        // wire login grant and revoke).
+        const NAMED_OUTSIDE_FAMILY: [&str; 7] = [
             "MODE_TRANSITION_FORBIDDEN",
             "SESSION_REFERENCE_UNKNOWN",
             "SESSION_EPOCH_STALE",
             "POLICY_SCOPE_BOUND",
             "POLICY_SELF_AUTHORIZATION",
+            "WIRE_LOGIN_EXISTS",
+            "WIRE_LOGIN_UNKNOWN",
         ];
         for refusal in medulla_identity_types::identity::IdentityRefusal::ALL {
             let code = refusal.to_string();

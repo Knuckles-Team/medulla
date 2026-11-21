@@ -83,6 +83,10 @@ pub enum IdentityEvent {
     /// (MEDULLA-IDENTITY-R702).
     PolicyBound,
     PolicyUnbound,
+    /// A wire login was granted or revoked (MEDULLA-ENGINE-PARITY-R007.4). The entry's
+    /// `target` is the login.
+    WireLoginGranted,
+    WireLoginRevoked,
 }
 
 /// The change of the canonical authorization digest across one identity or

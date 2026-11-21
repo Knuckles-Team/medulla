@@ -46,6 +46,7 @@ mod tokens;
 mod users;
 mod verdict;
 mod webauthn;
+mod wire_logins;
 
 pub use throttle::ThrottleEntry;
 
@@ -84,6 +85,9 @@ pub struct IdentityStore {
     /// (MEDULLA-IDENTITY-R702).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) policy_bundles: BTreeMap<String, super::policy_bundle::PolicyRuleBundle>,
+    /// Login → wire login record (MEDULLA-ENGINE-PARITY-R007.4). A record is never deleted.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) wire_logins: BTreeMap<String, super::wire_login::WireLoginRecord>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) users: BTreeMap<String, super::model::UserRecord>,
     /// Normalized username → principal id.
@@ -139,7 +143,7 @@ fn reshapes_authority(op: &IdentityOp) -> bool {
         | IdentityOp::User(_)
         | IdentityOp::Access(_)
         | IdentityOp::Idp(_) => op.is_mutation(),
-        IdentityOp::Delegation(_) | IdentityOp::Policy(_) => false,
+        IdentityOp::Delegation(_) | IdentityOp::Policy(_) | IdentityOp::WireLogin(_) => false,
         IdentityOp::Credential(op) => {
             matches!(op, super::ops::CredentialOp::ExternalLogin { .. })
         }
@@ -288,6 +292,7 @@ impl IdentityStore {
             IdentityOp::Idp(op) => self.apply_idp(op, stamp, ctx),
             IdentityOp::Delegation(op) => self.apply_delegation(op, stamp, ctx),
             IdentityOp::Policy(op) => self.apply_policy(op, stamp, ctx.now_ms),
+            IdentityOp::WireLogin(op) => self.apply_wire_login(op, stamp, ctx.now_ms),
         }
     }
 
