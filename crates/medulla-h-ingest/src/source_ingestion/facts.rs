@@ -485,6 +485,93 @@ fn push_grounding_edges(
     Ok(())
 }
 
+/// Apply the supersession rule to one stored claim whose grounding falls to `remaining`
+/// chunks: a claim read from no remaining chunk is removed with its atom; otherwise it is
+/// rewritten with the remaining chunk set and loses its `extractedFrom` edge to each of
+/// `dropped_edges`.
+fn supersede_claim(
+    tenant: &str,
+    claim_id: &str,
+    stored: &HeldClaim,
+    remaining: BTreeSet<String>,
+    dropped_edges: &[String],
+    admission: &mut FactAdmission,
+) -> Result<(), String> {
+    if remaining.is_empty() {
+        admission.methods.push(Method::RemoveNode {
+            node_id: claim_id.to_string(),
+        });
+        if let Some(fact) = stored
+            .properties
+            .get("fact")
+            .and_then(|fact| serde_json::from_value::<ExtractedFact>(fact.clone()).ok())
+        {
+            admission.methods.push(Method::RemoveNode {
+                node_id: atom_node_id(&fact_digest(tenant, &fact)?),
+            });
+        }
+        return Ok(());
+    }
+    let mut properties = stored.properties.clone();
+    properties["chunks"] = serde_json::json!(remaining);
+    for target in dropped_edges {
+        admission.methods.push(Method::RemoveEdge {
+            source_id: claim_id.to_string(),
+            target_id: target.clone(),
+        });
+    }
+    admission.methods.push(Method::AddNode {
+        node_id: claim_id.to_string(),
+        properties_msgpack: encode(&properties)?,
+    });
+    admission.node_ids.push(claim_id.to_string());
+    Ok(())
+}
+
+/// The writes that supersede the claims grounded in chunks an enrichment removes (a new
+/// Document digest, MEDULLA-UNIFIED-DATA-PLANE-R651.7.7): for each removed chunk the
+/// `chunk_facts` record is read through `read` (node id to decoded properties) and removed,
+/// and every claim it lists follows the rule of a re-extraction that states nothing: a claim
+/// read from no surviving chunk is removed with its atom, any other keeps only its surviving
+/// chunks. The removed chunk nodes carry their `extractedFrom` edges away, so no edge to a
+/// removed chunk is left.
+pub fn supersede_removed_chunks(
+    tenant: &str,
+    chunk_ids: &[String],
+    read: &dyn Fn(&str) -> Option<serde_json::Value>,
+) -> Result<Vec<Method>, String> {
+    let removed: BTreeSet<&String> = chunk_ids.iter().collect();
+    let mut admission = FactAdmission::default();
+    let mut claims: BTreeMap<String, HeldClaim> = BTreeMap::new();
+    for chunk_id in chunk_ids {
+        let record_id = chunk_facts_id(tenant, chunk_id)?;
+        let Some(record) = read(&record_id) else {
+            continue;
+        };
+        for claim_id in held_chunk_claims(&record) {
+            if claims.contains_key(&claim_id) {
+                continue;
+            }
+            if let Some(claim) = read(&claim_id).as_ref().and_then(held_claim) {
+                claims.insert(claim_id, claim);
+            }
+        }
+        admission
+            .methods
+            .push(Method::RemoveNode { node_id: record_id });
+    }
+    for (claim_id, stored) in &claims {
+        let remaining: BTreeSet<String> = stored
+            .chunks
+            .iter()
+            .filter(|chunk| !removed.contains(chunk))
+            .cloned()
+            .collect();
+        supersede_claim(tenant, claim_id, stored, remaining, &[], &mut admission)?;
+    }
+    Ok(admission.methods)
+}
+
 /// Record the claims the chunk now grounds and supersede the claims an earlier extraction
 /// of it grounded that this batch no longer states: a claim read from no other chunk is
 /// removed with its atom, one another chunk also grounds loses only this chunk. The
@@ -502,34 +589,16 @@ fn supersede_chunk_claims(
             continue;
         };
         superseded += 1;
-        let mut chunks = stored.chunks.clone();
-        chunks.remove(&chunk.chunk_id);
-        if chunks.is_empty() {
-            admission.methods.push(Method::RemoveNode {
-                node_id: prior.clone(),
-            });
-            if let Some(fact) = stored
-                .properties
-                .get("fact")
-                .and_then(|fact| serde_json::from_value::<ExtractedFact>(fact.clone()).ok())
-            {
-                admission.methods.push(Method::RemoveNode {
-                    node_id: atom_node_id(&fact_digest(tenant, &fact)?),
-                });
-            }
-        } else {
-            let mut properties = stored.properties.clone();
-            properties["chunks"] = serde_json::json!(chunks);
-            admission.methods.push(Method::RemoveEdge {
-                source_id: prior.clone(),
-                target_id: chunk.chunk_id.clone(),
-            });
-            admission.methods.push(Method::AddNode {
-                node_id: prior.clone(),
-                properties_msgpack: encode(&properties)?,
-            });
-            admission.node_ids.push(prior.clone());
-        }
+        let mut remaining = stored.chunks.clone();
+        remaining.remove(&chunk.chunk_id);
+        supersede_claim(
+            tenant,
+            prior,
+            stored,
+            remaining,
+            std::slice::from_ref(&chunk.chunk_id),
+            admission,
+        )?;
     }
     let record_id = chunk_facts_id(tenant, &chunk.chunk_id)?;
     admission.methods.push(Method::AddNode {

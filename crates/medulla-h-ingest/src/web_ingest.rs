@@ -331,6 +331,23 @@ pub struct EnrichmentPlan<'a> {
     pub tree_check: SectionTreeCheck,
     /// The links of the document, in source order.
     pub links: Vec<LinkAnchor>,
+    /// The writes that supersede the facts grounded in the chunks of `prior`
+    /// (`supersede_removed_chunks`, MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+    pub fact_supersession: Vec<Method>,
+}
+
+/// The writes that supersede the claims grounded in the chunks the `prior` enrichments
+/// hold: `read` returns a node's decoded properties (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+pub fn prior_fact_supersession(
+    tenant: &str,
+    prior: &[PriorEnrichment],
+    read: &dyn Fn(&str) -> Option<Value>,
+) -> Result<Vec<Method>, String> {
+    let chunk_ids: Vec<String> = prior
+        .iter()
+        .flat_map(|earlier| earlier.chunk_ids.iter().cloned())
+        .collect();
+    super::source_ingestion::facts::supersede_removed_chunks(tenant, &chunk_ids, read)
 }
 
 /// The section tree of a held Document and its verification: `Paged` when the text
@@ -425,6 +442,7 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
             node_id: prior.enrichment_id.clone(),
         });
     }
+    methods.extend(plan.fact_supersession.iter().cloned());
     let section_ids: Vec<String> = plan
         .sections
         .iter()

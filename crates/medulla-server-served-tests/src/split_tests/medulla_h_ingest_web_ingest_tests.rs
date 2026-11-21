@@ -53,6 +53,7 @@ fn plan_for<'a>(
         sections: &[],
         tree_check: medulla_document::processing::SectionTreeCheck::Valid,
         links: Vec::new(),
+        fact_supersession: Vec::new(),
     }
 }
 
@@ -165,4 +166,76 @@ fn retrieved_at_parses_numbers_and_rfc3339() {
         Some(1_700_000_000_000)
     );
     assert_eq!(retrieved_at_ms(&json!("yesterday")), None);
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.7
+#[test]
+fn removed_chunks_supersede_their_facts_and_leave_no_dangling_grounding() {
+    use medulla_h_ingest::source_ingestion::facts::chunk_facts_id;
+    use std::collections::BTreeMap;
+
+    let tenant = "tenant-scope";
+    let fact = json!({
+        "subject": "Ada", "predicate": "wrote", "object": "notes", "confidence": 0.9,
+        "evidence": {"source_ref": "chunk:old", "start": 0, "end": 3},
+    });
+    let claim = |chunks: &[&str]| {
+        json!({
+            "type": "CandidateClaim", "fact": fact, "unit_hash": "h",
+            "chunks": chunks, "documents": ["doc:1"],
+        })
+    };
+    let mut store: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    store.insert(
+        chunk_facts_id(tenant, "chunk:old").unwrap(),
+        json!({"claim_ids": ["claim:only-old", "claim:shared"]}),
+    );
+    store.insert("claim:only-old".into(), claim(&["chunk:old"]));
+    store.insert("claim:shared".into(), claim(&["chunk:old", "chunk:kept"]));
+    let prior = vec![PriorEnrichment {
+        enrichment_id: "enrichment:old".into(),
+        chunk_ids: vec!["chunk:old".into()],
+        section_ids: Vec::new(),
+        processed_id: None,
+        embedded: BTreeMap::new(),
+    }];
+    let read = |id: &str| store.get(id).cloned();
+    let methods = prior_fact_supersession(tenant, &prior, &read).unwrap();
+
+    let removed: Vec<&str> = methods
+        .iter()
+        .filter_map(|m| match m {
+            Method::RemoveNode { node_id } => Some(node_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    // The record, the claim read only from the removed chunk and its atom go.
+    assert!(removed.contains(&chunk_facts_id(tenant, "chunk:old").unwrap().as_str()));
+    assert!(removed.contains(&"claim:only-old"));
+    assert_eq!(removed.len(), 3, "{removed:?}");
+    // The claim another chunk also grounds survives with only that chunk.
+    assert!(!removed.contains(&"claim:shared"));
+    let rewritten = methods
+        .iter()
+        .find_map(|m| match m {
+            Method::AddNode {
+                node_id,
+                properties_msgpack,
+            } if node_id == "claim:shared" => {
+                medulla_types::msgpack::decode_property_value(properties_msgpack).ok()
+            }
+            _ => None,
+        })
+        .expect("the shared claim is rewritten");
+    assert_eq!(rewritten["chunks"], json!(["chunk:kept"]));
+
+    // The lowering carries those writes after the removal of the old chunks.
+    let held = held_document(&request(), &document("Short text.", "webarchiver")).unwrap();
+    let spans = chunks(&held, &chunking(&request()).unwrap()).unwrap();
+    let mut plan = plan_for(&held, &spans, prior);
+    plan.fact_supersession = methods.clone();
+    let (write_set, _) = lower(plan).unwrap();
+    assert!(write_set.methods().iter().any(
+        |m| matches!(m, Method::RemoveNode { node_id } if node_id == "claim:only-old")
+    ));
 }

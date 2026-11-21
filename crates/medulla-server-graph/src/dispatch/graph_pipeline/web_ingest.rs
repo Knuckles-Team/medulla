@@ -141,6 +141,19 @@ async fn enrich(
         .filter(web::DecidedSpan::kept)
         .map(|unit| (unit.span, unit.digest))
         .unzip();
+    let fact_supersession = {
+        let read = |node_id: &str| {
+            let bytes = ctx.core.get_node_properties(node_id)?;
+            medulla_types::msgpack::decode_property_value(&bytes).ok()
+        };
+        // The chunk facts records are keyed by the opaque tenant scope the facts
+        // batch handler uses.
+        let scope = medulla_server_api::carrier::tenant_scope_of(ctx.verified_context.tenant());
+        match web::prior_fact_supersession(&scope, &prior, &read) {
+            Ok(methods) => methods,
+            Err(error) => return Response::err(req_id, error),
+        }
+    };
     let plan = web::EnrichmentPlan {
         document_id: &doc_id,
         document: &document,
@@ -158,6 +171,7 @@ async fn enrich(
         sections: &sections,
         tree_check,
         links,
+        fact_supersession,
     };
     match web::lower(plan) {
         Ok((write_set, receipt)) => {
