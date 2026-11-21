@@ -1420,3 +1420,189 @@ async fn approval_to_verification_journey() {
     assert!(error.contains("SOURCE_QUERY_APPROVAL_REVOKED"), "{error}");
     assert!(!error.contains("SELECT") && !error.contains("Acme"), "{error}");
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R722.11
+#[tokio::test]
+async fn uql_joins_two_approved_sources_in_one_query() {
+    use medulla_types::contract::BoundedVec;
+    let connector = "r722-uql-two-sources";
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    bind(&served, connector, ADMIN).await;
+    let contract = format!(
+        r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
+<data://{connector}/first#access> a ac:AccessContract ; ac:classIri "urn:Item" ; ac:sourceId "{connector}/first" ; ac:entity "first" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ; ac:operation "list_first" ; ac:pagination "none" .
+<data://{connector}/second#access> a ac:AccessContract ; ac:classIri "urn:Item" ; ac:sourceId "{connector}/second" ; ac:entity "second" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ; ac:operation "list_second" ; ac:pagination "none" ."#
+    );
+    let pack = build_pack(
+        connector,
+        &[
+            tool(connector, "list_first", "First source."),
+            tool(connector, "list_second", "Second source."),
+            source_contract(connector, contract),
+        ],
+    );
+    let imported_pack = imported(&served, &pack, None).await;
+    let connector_id = medulla_types::contract::ResourceId::new(connector).unwrap();
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let member = store
+        .connector_pack_members(TENANT, &connector_id)
+        .unwrap()
+        .into_iter()
+        .find(|member| member.uri == format!("contract://{connector}"))
+        .unwrap();
+    let registrations = member.source_registrations.clone();
+    let contract_digest = member.body_sha256;
+    drop(store);
+    assert_eq!(registrations.len(), 2);
+    let names: Vec<String> = registrations
+        .iter()
+        .map(|item| item.source_id.clone())
+        .collect();
+    // One UQL statement names both sources; the join leg follows the first.
+    let text = format!("FOREIGN SCAN '{}' |> FOREIGN SCAN '{}' JOIN", names[0], names[1]);
+    let plan = medulla_exec::algebra::Plan::new(
+        names
+            .iter()
+            .enumerate()
+            .map(|(index, name)| medulla_exec::algebra::Op::ForeignScan {
+                source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
+                    name: name.clone(),
+                }),
+                join: index != 0,
+            })
+            .collect(),
+    );
+    let plan_digest = Digest256::sha256(&rmp_serde::to_vec_named(&plan).unwrap());
+    // The query pin the server computes for this text and parameter map.
+    let params = BTreeMap::<String, medulla_query_types::wire::UqlParam>::new();
+    let query_digest = Digest256::framed(
+        b"eg/foreign-read/uql-query/v1",
+        &[text.as_bytes(), &rmp_serde::to_vec_named(&params).unwrap()],
+    )
+    .unwrap();
+    let mut executions = Vec::new();
+    for registration in &registrations {
+        let approved: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+            "approve source",
+            approve_source(
+                &served,
+                connector,
+                &registration.contract_iri,
+                &registration.resource_uri,
+                head_of(&imported_pack),
+                contract_digest,
+            )
+            .await,
+        );
+        let _: String = ok(
+            "register source",
+            served
+                .call(
+                    &format!("r722-uql-two:register:{}", registration.source_id),
+                    medulla_protocol_types::protocol::Method::RegisterForeignSource {
+                        name: registration.source_id.clone(),
+                        quota: None,
+                        source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
+                            server: connector.to_string(),
+                            tool: registration.operation.clone(),
+                            capabilities: Default::default(),
+                        },
+                        acceleration: None,
+                    },
+                )
+                .await,
+        );
+        let opened: ForeignReadOpenResult = ok(
+            "open",
+            served
+                .call(
+                    &format!("r722-uql-two:open:{}", registration.source_id),
+                    medulla_protocol_types::protocol::Method::ForeignReadOpen {
+                        request: ForeignReadOpenRequest {
+                            schema_version: FOREIGN_READ_SCHEMA_VERSION,
+                            source_name: registration.source_id.clone(),
+                            approval: approved,
+                            plan_digest,
+                            query_digest,
+                            limits: ForeignReadLimits {
+                                max_rows: 10,
+                                max_bytes: 1024,
+                                chunk_rows: 2,
+                                chunk_bytes: 512,
+                                deadline_ms: 10_000,
+                            },
+                            submission: None,
+                        },
+                    },
+                )
+                .await,
+        );
+        let _: ForeignReadChunkResult = ok(
+            "chunk",
+            served
+                .call(
+                    &format!("r722-uql-two:chunk:{}", registration.source_id),
+                    medulla_protocol_types::protocol::Method::ForeignReadChunk {
+                        request: ForeignReadChunkRequest {
+                            execution: opened.execution,
+                            sequence: 0,
+                            source_identity: opened.source_identity,
+                            rows: vec![ForeignReadRow {
+                                id: "shared-1".into(),
+                                score: Some(0.5),
+                                columns: BTreeMap::new(),
+                                provenance: Vec::new(),
+                            }],
+                        },
+                    },
+                )
+                .await,
+        );
+        let _: ForeignReadCompleteResult = ok(
+            "complete",
+            served
+                .call(
+                    &format!("r722-uql-two:complete:{}", registration.source_id),
+                    medulla_protocol_types::protocol::Method::ForeignReadComplete {
+                        request: ForeignReadCompleteRequest {
+                            execution: opened.execution,
+                            sequence: 1,
+                        },
+                    },
+                )
+                .await,
+        );
+        executions.push(opened.execution);
+    }
+    let uql = |executions: Vec<_>| medulla_protocol_types::protocol::Method::Uql {
+        text: text.clone(),
+        params: BTreeMap::new(),
+        prepare: false,
+        foreign_executions: BoundedVec::new(executions).unwrap(),
+    };
+
+    // Tenant B presenting tenant A's execution ids is refused.
+    let other_tenant = served
+        .call_as_tenant(
+            "tenant-other",
+            ADMIN,
+            &["*"],
+            "r722-uql-two:other-tenant",
+            uql(executions.clone()),
+        )
+        .await;
+    assert!(
+        other_tenant.error.is_some(),
+        "another tenant must not consume this tenant's foreign executions"
+    );
+
+    // Two sources from two opened executions join in one served `Method::Uql`.
+    let result = served.call("r722-uql-two:query", uql(executions)).await;
+    let rows = match ok::<medulla_query_types::wire::UqlResult>("uql join", result) {
+        medulla_query_types::wire::UqlResult::Rows { rows, .. } => rows,
+        other => panic!("expected joined rows, got {other:?}"),
+    };
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].id, "shared-1");
+}
