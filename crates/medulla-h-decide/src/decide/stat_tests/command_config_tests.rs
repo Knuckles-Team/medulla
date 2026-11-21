@@ -276,7 +276,7 @@ async fn decide_routes_mode() {
         vec![text("mode_id", "fast"), int("expected_mode_revision", 6)],
     )
     .await;
-    assert_eq!(refusal_code(&record), "MODE_UNKNOWN");
+    assert_eq!(refusal_code(&record), "MODE_REVISION_STALE");
     let record = ask(
         &h,
         &schema_pin,
@@ -290,7 +290,7 @@ async fn decide_routes_mode() {
         ],
     )
     .await;
-    assert_eq!(refusal_code(&record), "CONFIG_INVALID");
+    assert_eq!(refusal_code(&record), "CONFIG_DIGEST_MISMATCH");
 
     // An unknown mode, and a mode whose settings miss a schema field.
     let record = ask(
@@ -390,6 +390,88 @@ async fn other_tenant_modes_are_not_read() {
 /// digest) and the mode (id, revision) as Definition premises bound to the policy, the config
 /// digest and the settings hash as observations of the mode node, and one Proof premise per
 /// schema rule applied.
+// spec: MEDULLA-DECISION-ENGINE-R148.4
+#[tokio::test]
+async fn invalid_config_refuses() {
+    let h = harness().await;
+    {
+        // A mode whose schema the graph does not hold.
+        let guard = h.state.read().await;
+        let core = guard.registry.get(GRAPH).unwrap().core.clone();
+        let mut orphan = mode("orphan", 3, 1, settings(1, "o"));
+        orphan.schema_id = "schema:absent".into();
+        add(&core, "mode:orphan", "CommandMode", &orphan, None);
+    }
+    let (schema_pin, _) = publish_route_schema(&h);
+    let default = DecisionPolicyRef::Default;
+    let code = |params: Vec<TypedParam>| {
+        let (h, schema_pin, default) = (&h, &schema_pin, default.clone());
+        async move { refusal_code(&ask(h, schema_pin, default, params).await) }
+    };
+
+    // The mode names a schema the tenant does not hold.
+    assert_eq!(
+        code(vec![text("mode_id", "orphan")]).await,
+        "CONFIG_SCHEMA_UNKNOWN"
+    );
+    // No mode matches the request.
+    assert_eq!(code(vec![text("mode_id", "nope")]).await, "MODE_UNKNOWN");
+    // The expected revision is not the stored one (`fast` is at 7).
+    assert_eq!(
+        code(vec![
+            text("mode_id", "fast"),
+            int("expected_mode_revision", 6)
+        ])
+        .await,
+        "MODE_REVISION_STALE"
+    );
+    // A setting fails the schema (`broken` misses `label`).
+    assert_eq!(
+        code(vec![text("mode_id", "broken")]).await,
+        "CONFIG_INVALID"
+    );
+    // The expected digest is not the one built now.
+    let stale = digest_of("fast", settings(6, "fast"));
+    assert_eq!(
+        code(vec![
+            text("mode_id", "fast"),
+            text("expected_config_digest", &stale)
+        ])
+        .await,
+        "CONFIG_DIGEST_MISMATCH"
+    );
+
+    // A config that changed between two calls: the digest read from the first
+    // answer no longer matches once the mode's settings change.
+    let first = ask(
+        &h,
+        &schema_pin,
+        default.clone(),
+        vec![text("mode_id", "fast")],
+    )
+    .await;
+    let seen = options(&first)[1].trim_start_matches("config:").to_string();
+    {
+        let guard = h.state.read().await;
+        let core = guard.registry.get(GRAPH).unwrap().core.clone();
+        let mut props = serde_json::to_value(mode("fast", 1, 7, settings(9, "fast"))).unwrap();
+        props["type"] = serde_json::json!("CommandMode");
+        props["tenant_id"] = serde_json::json!(TENANT);
+        core.put_node(
+            "mode:fast".to_string(),
+            rmp_serde::to_vec_named(&props).unwrap(),
+        );
+    }
+    assert_eq!(
+        code(vec![
+            text("mode_id", "fast"),
+            text("expected_config_digest", &seen)
+        ])
+        .await,
+        "CONFIG_DIGEST_MISMATCH"
+    );
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R148.5
 #[tokio::test]
 async fn config_evidence_binds_schema() {

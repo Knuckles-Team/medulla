@@ -147,7 +147,7 @@ fn conclude_mode(
         .unwrap_or_default();
     if let Some(expected) = expected_revision {
         if u64::try_from(expected).ok() != Some(mode.mode_revision) {
-            return refuse(ModeRefusal::ModeUnknown {
+            return refuse(ModeRefusal::RevisionStale {
                 detail: format!(
                     "mode {} is at revision {}, not the expected {expected}",
                     mode.mode_id, mode.mode_revision
@@ -163,7 +163,7 @@ fn conclude_mode(
         .filter(|(_, schema)| schema.schema_id == mode.schema_id)
         .max_by_key(|(_, schema)| schema.revision)
     else {
-        return refuse(ModeRefusal::ConfigInvalid {
+        return refuse(ModeRefusal::SchemaUnknown {
             detail: format!(
                 "mode {} names schema {}, which the graph does not hold",
                 mode.mode_id, mode.schema_id
@@ -177,7 +177,7 @@ fn conclude_mode(
     let digest = config.config_digest.to_hex();
     if let Some(expected) = expected_digest {
         if expected != digest {
-            return refuse(ModeRefusal::ConfigInvalid {
+            return refuse(ModeRefusal::DigestMismatch {
                 detail: format!("config digest {digest} is not the expected {expected}"),
             });
         }

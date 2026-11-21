@@ -18,10 +18,22 @@ pub const MODE_UNKNOWN: &str = "MODE_UNKNOWN";
 /// Refusal code: a setting is missing, unknown or of the wrong type.
 pub const CONFIG_INVALID: &str = "CONFIG_INVALID";
 
+/// Refusal code: the mode names a schema the tenant does not hold
+/// (MEDULLA-DECISION-ENGINE-R148.4).
+pub const CONFIG_SCHEMA_UNKNOWN: &str = "CONFIG_SCHEMA_UNKNOWN";
+/// Refusal code: `expected_mode_revision` differs from the stored revision.
+pub const MODE_REVISION_STALE: &str = "MODE_REVISION_STALE";
+/// Refusal code: `expected_config_digest` differs from the digest the family
+/// builds now.
+pub const CONFIG_DIGEST_MISMATCH: &str = "CONFIG_DIGEST_MISMATCH";
+
 /// The refusal codes the `command_config` family declares.
 pub const REFUSALS: &[RefusalCode] = &[
-    RefusalCode::new(MODE_UNKNOWN),
+    RefusalCode::new(CONFIG_DIGEST_MISMATCH),
     RefusalCode::new(CONFIG_INVALID),
+    RefusalCode::new(CONFIG_SCHEMA_UNKNOWN),
+    RefusalCode::new(MODE_REVISION_STALE),
+    RefusalCode::new(MODE_UNKNOWN),
 ];
 
 /// The `mode.*` knobs. `mode.default_mode_id` is an integer, so it names a
@@ -150,6 +162,12 @@ pub enum ModeRefusal {
     ModeUnknown { detail: String },
     /// A setting fails the schema (`CONFIG_INVALID`).
     ConfigInvalid { detail: String },
+    /// The mode names a schema the tenant does not hold (`CONFIG_SCHEMA_UNKNOWN`).
+    SchemaUnknown { detail: String },
+    /// The expected mode revision is not the stored one (`MODE_REVISION_STALE`).
+    RevisionStale { detail: String },
+    /// The expected config digest is not the one built now (`CONFIG_DIGEST_MISMATCH`).
+    DigestMismatch { detail: String },
 }
 
 impl ModeRefusal {
@@ -158,13 +176,20 @@ impl ModeRefusal {
         match self {
             Self::ModeUnknown { .. } => MODE_UNKNOWN,
             Self::ConfigInvalid { .. } => CONFIG_INVALID,
+            Self::SchemaUnknown { .. } => CONFIG_SCHEMA_UNKNOWN,
+            Self::RevisionStale { .. } => MODE_REVISION_STALE,
+            Self::DigestMismatch { .. } => CONFIG_DIGEST_MISMATCH,
         }
     }
 
     /// The human-readable detail.
     pub fn detail(&self) -> &str {
         match self {
-            Self::ModeUnknown { detail } | Self::ConfigInvalid { detail } => detail,
+            Self::ModeUnknown { detail }
+            | Self::ConfigInvalid { detail }
+            | Self::SchemaUnknown { detail }
+            | Self::RevisionStale { detail }
+            | Self::DigestMismatch { detail } => detail,
         }
     }
 }
