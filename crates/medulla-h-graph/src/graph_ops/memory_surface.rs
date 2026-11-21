@@ -165,11 +165,12 @@ fn load(core: &GraphCore, tenant: &str, tiers: &[MemoryTier]) -> Vec<Stored> {
     stored
 }
 
-/// The answer for a memory record the caller cannot see: absent, or another tenant's.
-fn absent_record(memory_id: &str) -> String {
+/// The one answer for a memory record the caller cannot see, whether it is absent or another
+/// tenant's: the same code and the same message, which never mentions a tenant.
+pub(super) fn absent_record(memory_id: &str) -> String {
     refuse(
         "PARAMETER_INVALID",
-        format!("memory record {memory_id} is not stored under the verified tenant"),
+        format!("memory record {memory_id} does not exist"),
     )
 }
 

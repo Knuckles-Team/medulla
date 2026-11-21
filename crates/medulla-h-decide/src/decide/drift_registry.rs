@@ -335,36 +335,23 @@ pub struct SwapConflict {
 }
 
 impl DriftRegistry {
-    /// Swap the generations of `expected` shards in one step: the registry lock is taken
-    /// once, every shard is verified, and only then is `ShardMonitorEvent::Refresh` applied.
-    /// A shard's current generation is its durable pointer in `durable` when it has one,
-    /// else the monitor's, else (a restart emptied the registry and no swap ever ran) the
-    /// plan's own: nothing moved it. A monitor present but not `Monitoring`, or a current
-    /// generation other than the expected one, is a [`SwapConflict`] that changes nothing.
-    /// Returns `(shard, before, after)` per shard.
-    pub fn swap_generations(
-        &self,
-        tenant: &str,
-        graph: &str,
-        expected: &[(u32, u64)],
-        durable: &BTreeMap<u32, u64>,
-    ) -> Result<Vec<(u32, u64, u64)>, SwapConflict> {
+    /// Apply swaps whose generation pointers are already committed durably
+    /// (MEDULLA-DECISION-ENGINE-R174.8.4): the committed pointer is the authority, so nothing
+    /// is verified again. Each `(shard, before, after)` present in the registry takes
+    /// `ShardMonitorEvent::Refresh` and the committed generation.
+    pub fn apply_committed_swaps(&self, tenant: &str, graph: &str, swaps: &[(u32, u64, u64)]) {
         let window = reference_vectors(&DecisionPolicy::engine_default());
         let mut shards = self.shards.lock();
-        let wanted = Self::verified(&shards, tenant, graph, expected, durable)?;
-        let mut swapped = Vec::with_capacity(wanted.len());
-        for (shard, generation) in wanted {
+        for &(shard, _, after) in swaps {
             if let Some(entry) = shards.get_mut(&(tenant.to_string(), graph.to_string(), shard)) {
                 if entry.transition(ShardMonitorEvent::Refresh, window).is_ok() {
-                    entry.generation = generation + 1;
+                    entry.generation = after;
                 }
             }
-            swapped.push((shard, generation, generation + 1));
         }
-        Ok(swapped)
     }
 
-    /// The check of [`Self::swap_generations`] without the swap: run before any embedding.
+    /// The check of [`Self::planned_swaps`] without the swap: run before any embedding.
     pub fn verify_generations(
         &self,
         tenant: &str,
@@ -374,6 +361,24 @@ impl DriftRegistry {
     ) -> Result<(), SwapConflict> {
         let shards = self.shards.lock();
         Self::verified(&shards, tenant, graph, expected, durable).map(|_| ())
+    }
+
+    /// Verify `expected` as a swap does, and return the `(shard, before,
+    /// after)` each shard would take, without changing the registry.
+    pub fn planned_swaps(
+        &self,
+        tenant: &str,
+        graph: &str,
+        expected: &[(u32, u64)],
+        durable: &BTreeMap<u32, u64>,
+    ) -> Result<Vec<(u32, u64, u64)>, SwapConflict> {
+        let shards = self.shards.lock();
+        Self::verified(&shards, tenant, graph, expected, durable).map(|wanted| {
+            wanted
+                .into_iter()
+                .map(|(shard, generation)| (shard, generation, generation + 1))
+                .collect()
+        })
     }
 
     fn verified(
@@ -510,6 +515,26 @@ mod tests {
         let wrong_dim = shard.observe(&[1.0], &["a"], 2).unwrap_err();
         assert!(matches!(wrong_dim, ShardMonitorFailure::Vector(_)));
         assert_eq!(shard.state(), ShardMonitorState::Monitoring);
+    }
+
+    /// Verifies MEDULLA-DECISION-ENGINE-R174.8.4: planning a swap changes nothing; the
+    /// generation moves only when the committed swaps are applied.
+    // spec: MEDULLA-DECISION-ENGINE-R174.8.4
+    #[test]
+    fn planned_swaps_leave_memory_until_the_commit_applies() {
+        let registry = DriftRegistry::default();
+        let mut shard = warm(4);
+        shard.transition(ShardMonitorEvent::SealReference, 4).unwrap();
+        registry.shards.lock().insert(("t".into(), "g".into(), 1), shard);
+        let durable = BTreeMap::new();
+        let planned = registry.planned_swaps("t", "g", &[(1, 1)], &durable).unwrap();
+        assert_eq!(planned, vec![(1, 1, 2)]);
+        let held = |registry: &DriftRegistry| {
+            registry.shards.lock().get(&("t".into(), "g".into(), 1)).map(|s| s.generation)
+        };
+        assert_eq!(held(&registry), Some(1), "planning moved the in-memory generation");
+        registry.apply_committed_swaps("t", "g", &planned);
+        assert_eq!(held(&registry), Some(2));
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R739.1

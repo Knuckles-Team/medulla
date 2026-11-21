@@ -84,6 +84,21 @@ pub(super) struct LearningInputs {
     /// The graph nodes a refresh staged; the served `DecisionLog` commits them through the
     /// durable mutation path once the blocking half returned.
     pub(super) refresh_link: std::sync::Arc<std::sync::Mutex<Option<super::run_record::StagedLink>>>,
+    /// What a drift refresh applies in memory (the shard swap and the monitors' new reference)
+    /// once its generation pointers committed; dropped when the commit fails.
+    pub(super) refresh_apply: std::sync::Arc<std::sync::Mutex<Option<RefreshApply>>>,
+}
+
+/// The in-memory half of a drift refresh, run after its durable commit.
+pub(super) type RefreshApply = Box<dyn FnOnce() + Send>;
+
+/// One re-embedded node as the drift monitors observe it.
+struct RefreshObservation {
+    shard: u32,
+    node_id: String,
+    node_type: String,
+    vector: Vec<f32>,
+    tokens: Vec<String>,
 }
 
 /// The background lease and embedder of one generation-cycle submission.
@@ -385,16 +400,15 @@ impl Serving<'_> {
             }
         }
 
+        // The generation pointers commit durably first; the in-memory swap and the monitors'
+        // new reference follow the commit, so memory is never ahead of the store.
         let swapped = registry()
-            .swap_generations(self.tenant(), logical, &scheduled.shard_generations, &durable)
+            .planned_swaps(self.tenant(), logical, &scheduled.shard_generations, &durable)
             .map_err(conflict)?;
-        // The embedding writes reach the monitors through the same port the commit path uses,
-        // so the refreshed shards' new reference collects them.
-        if let Some(signals) = medulla_retrieval::discover_signals::discover_signals() {
-            for (id, shard) in &nodes {
-                let Some(vector) = graph.stored_vector(id) else {
-                    continue;
-                };
+        let observations: Vec<RefreshObservation> = nodes
+            .iter()
+            .filter_map(|(id, shard)| {
+                let vector = graph.stored_vector(id)?;
                 let node_type = graph
                     .visible_properties(id)
                     .and_then(|props| props.get("type")?.as_str().map(str::to_string))
@@ -404,18 +418,16 @@ impl Serving<'_> {
                     .split_whitespace()
                     .map(str::to_lowercase)
                     .collect();
-                signals.observe_write(&medulla_retrieval::discover_signals::WrittenVector {
-                    tenant: self.tenant(),
-                    graph: logical,
+                Some(RefreshObservation {
                     shard: *shard,
-                    node_id: id,
-                    node_type: &node_type,
-                    vector: &vector,
-                    tokens: &tokens,
-                    version: graph.version(),
-                });
-            }
-        }
+                    node_id: id.clone(),
+                    node_type,
+                    vector,
+                    tokens,
+                })
+            })
+            .collect();
+        let version = graph.version();
 
         let receipt = DriftRefreshed {
             plan_digest: plan_digest.to_string(),
@@ -448,6 +460,35 @@ impl Serving<'_> {
                 properties_msgpack: rmp_serde::to_vec_named(&props).map_err(|error| error.to_string())?,
             });
         }
+        let apply = {
+            let tenant = self.tenant().to_string();
+            let logical = logical.to_string();
+            let swapped = swapped.clone();
+            move || {
+                registry().apply_committed_swaps(&tenant, &logical, &swapped);
+                // The embedding writes reach the monitors through the same port the commit
+                // path uses, so the refreshed shards' new reference collects them.
+                if let Some(signals) = medulla_retrieval::discover_signals::discover_signals() {
+                    for seen in &observations {
+                        signals.observe_write(&medulla_retrieval::discover_signals::WrittenVector {
+                            tenant: &tenant,
+                            graph: &logical,
+                            shard: seen.shard,
+                            node_id: &seen.node_id,
+                            node_type: &seen.node_type,
+                            vector: &seen.vector,
+                            tokens: &seen.tokens,
+                            version,
+                        });
+                    }
+                }
+            }
+        };
+        *self
+            .inputs
+            .refresh_apply
+            .lock()
+            .map_err(|_| "the staged refresh slot is poisoned".to_string())? = Some(Box::new(apply));
         if !methods.is_empty() {
             *self
                 .inputs
@@ -820,6 +861,7 @@ pub(super) async fn prepare(
         drift_embedder,
         refresh_graph,
         refresh_link: Default::default(),
+        refresh_apply: Default::default(),
     }))
 }
 

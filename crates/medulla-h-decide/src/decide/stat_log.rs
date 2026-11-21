@@ -1091,6 +1091,7 @@ async fn serve(
     };
     let blocking_graph = run_graph.clone();
     let refresh_link = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_link));
+    let refresh_apply = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_apply));
     let principal = verified.agent_id().to_string();
     let graphs = commit_graphs(state, verified, &op).await?;
     let provenance = match &op {
@@ -1150,11 +1151,24 @@ async fn serve(
                 Some(slot) => slot.lock().ok().and_then(|mut held| held.take()),
                 None => None,
             };
+            let apply = refresh_apply.and_then(|slot| slot.lock().ok().and_then(|mut held| held.take()));
             match staged {
-                Some(link) => commit_refresh_link(state, req_id, verified, link)
-                    .await
-                    .map(|()| payload),
-                None => Ok(payload),
+                Some(link) => {
+                    let committed = commit_refresh_link(state, req_id, verified, link).await;
+                    // Durable first: the in-memory swap runs only after the commit succeeded.
+                    if committed.is_ok() {
+                        if let Some(apply) = apply {
+                            apply();
+                        }
+                    }
+                    committed.map(|()| payload)
+                }
+                None => {
+                    if let Some(apply) = apply {
+                        apply();
+                    }
+                    Ok(payload)
+                }
             }
         }
         Ok(Served::RunRecord(staged)) => commit_run_record(state, req_id, verified, *staged).await,

@@ -2,7 +2,7 @@
 //! They run the admission, recall and export rules over one graph holding two
 //! tenants, and check how the three methods are routed.
 
-use super::memory_surface::{admit_remember, export, promotion_support_refusal, recall, Admitted};
+use super::memory_surface::{absent_record, admit_remember, export, promotion_support_refusal, recall, Admitted};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::{apply_coalescable_write, is_gateway_routed};
@@ -103,8 +103,10 @@ fn memory_methods_are_served_and_classified() {
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
     let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
-    assert!(!refusal.contains("ACCESS_DENIED") && !refusal.contains("TENANT"), "{refusal}");
+    assert!(!refusal.contains("ACCESS_DENIED") && !refusal.to_lowercase().contains("tenant"), "{refusal}");
     assert_eq!(core.node_count(), 0);
+    // Byte for byte the answer a write naming a nonexistent record receives.
+    assert_eq!(refusal, absent_record("m:1"));
 
     // Another tenant's record reads as absent to recall and to export.
     store(&core, "tenant-a", &foreign);
@@ -468,6 +470,8 @@ fn memory_refusals() {
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
     let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
+    assert_eq!(refusal, absent_record("m:1"), "a foreign tenant's write is an existence oracle");
+    assert!(!refusal.to_lowercase().contains("tenant"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
     // A record whose stored encoding is above the knob default of 65536 bytes is refused.
