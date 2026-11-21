@@ -387,10 +387,15 @@ pub fn run_unified_with<T>(
     // Built/bound ONLY when the plan actually references a text op, so a non-text
     // served query pays nothing either way.
     // The GROUP stage's key-group bound is the registry knob `uql.group.max_groups`
-    // (MEDULLA-FEDERATED-QUERY-R733).
+    // (MEDULLA-FEDERATED-QUERY-R733); the integrity-shape node budget is the registry
+    // knob `validate_shape.node_budget` (MEDULLA-FEDERATED-QUERY-R005.700).
     let ctx = PlanCtx::new(view, semantic).with_budget(medulla_exec::budget::Budget {
         max_groups: usize::try_from(medulla_server_api::knob_config::knobs().uql_group_max_groups)
             .unwrap_or(usize::MAX),
+        max_shape_nodes: usize::try_from(
+            medulla_server_api::knob_config::knobs().validate_shape_node_budget,
+        )
+        .unwrap_or(usize::MAX),
         ..medulla_exec::budget::Budget::default()
     });
     #[cfg(feature = "text")]

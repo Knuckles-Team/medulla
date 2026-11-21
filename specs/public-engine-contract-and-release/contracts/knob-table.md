@@ -91,6 +91,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `context_budget.relevance_min` | f64 | 0.5 | [0.0, 1.0] | ratio | Tunable | - |
 | `trace.critique_page_limit` | u64 | 64 | [1, 256] | rows | Tunable | `MEDULLA_TRACE_CRITIQUE_PAGE_LIMIT` |
 | `batch.max_operations` | u64 | 64 | [1, 1024] | operations | Tunable | `MEDULLA_BATCH_MAX_OPERATIONS` |
+| `validate_shape.node_budget` | u64 | 1000000 | [1000, 10000000] | nodes | Tunable | `MEDULLA_VALIDATE_SHAPE_NODE_BUDGET` |
 | `generation.batch_nodes` | u64 | 256 | [16, 4096] | nodes | Tunable | `MEDULLA_GENERATION_BATCH_NODES` |
 | `adapter.rank` | u64 | 8 | [1, 8] | directions | Tunable | `MEDULLA_ADAPTER_RANK` |
 | `adapter.holdout_pct` | u64 | 20 | [5, 50] | percent | Tunable | `MEDULLA_ADAPTER_HOLDOUT_PCT` |

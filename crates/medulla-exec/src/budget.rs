@@ -24,6 +24,9 @@ pub struct Budget {
     /// `UQL_GROUP_LIMIT` (MEDULLA-FEDERATED-QUERY-R733; the server sets it from the knob
     /// `uql.group.max_groups`).
     pub max_groups: usize,
+    /// Most graph nodes an integrity-shape scan may cover (`validate_shape.node_budget`,
+    /// MEDULLA-FEDERATED-QUERY-R005.700); a larger graph is reported as a coverage gap.
+    pub max_shape_nodes: usize,
 }
 
 impl Budget {
@@ -36,6 +39,8 @@ impl Budget {
     pub const DEFAULT_MAX_SERIES_WORK: u64 = 32_000_000;
     /// Default `GROUP` key-group bound, the default of the knob `uql.group.max_groups`.
     pub const DEFAULT_MAX_GROUPS: usize = 100_000;
+    /// Default integrity-shape node budget.
+    pub const DEFAULT_MAX_SHAPE_NODES: usize = 1_000_000;
 
     /// Refuse a final result larger than the bound.
     pub fn check_result(&self, rows: usize) -> Result<(), String> {
@@ -69,6 +74,7 @@ impl Default for Budget {
             max_traversal_visits: Self::DEFAULT_MAX_TRAVERSAL_VISITS,
             max_series_work: Self::DEFAULT_MAX_SERIES_WORK,
             max_groups: Self::DEFAULT_MAX_GROUPS,
+            max_shape_nodes: Self::DEFAULT_MAX_SHAPE_NODES,
         }
     }
 }
@@ -85,6 +91,7 @@ mod tests {
             max_traversal_visits: 3,
             max_series_work: 4,
             max_groups: 5,
+            max_shape_nodes: 5,
         };
         assert!(b.check_result(2).is_ok());
         assert!(b.check_result(3).unwrap_err().starts_with(BUDGET_EXCEEDED));

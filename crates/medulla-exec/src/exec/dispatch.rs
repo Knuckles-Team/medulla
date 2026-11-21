@@ -8,6 +8,9 @@ use super::*;
 // EH-196 — the `VALIDATE SHAPE` executor (SHACL focus-node validation of each row).
 #[cfg(feature = "owl")]
 mod shape;
+// MEDULLA-FEDERATED-QUERY-R005.700 — integrity shapes the stage runs in one pass.
+#[cfg(feature = "owl")]
+mod shape_integrity;
 
 /// The one error every op-dispatch tier below (and [`super::apply`]'s own trailing arm)
 /// falls back to when the `Op` variant it was handed exists on the wire

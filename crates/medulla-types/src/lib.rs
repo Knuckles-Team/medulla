@@ -22,6 +22,8 @@ pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
 pub mod transition_refused;
+// MEDULLA-FEDERATED-QUERY-R005.700 — graph integrity shapes and their report.
+pub mod shape_report;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_base;
 pub mod ontology_proposal;

@@ -3021,6 +3021,7 @@ mod scan_order_tests {
             max_traversal_visits: 2,
             max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
             max_groups: Budget::DEFAULT_MAX_GROUPS,
+            max_shape_nodes: Budget::DEFAULT_MAX_SHAPE_NODES,
         });
         let err = traverse_op(&tight, "CITES", 2, 2, input.clone()).unwrap_err();
         assert!(err.starts_with(BUDGET_EXCEEDED), "{err}");
@@ -3031,6 +3032,7 @@ mod scan_order_tests {
             max_traversal_visits: 3,
             max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
             max_groups: Budget::DEFAULT_MAX_GROUPS,
+            max_shape_nodes: Budget::DEFAULT_MAX_SHAPE_NODES,
         });
         assert_eq!(
             traverse_op(&boundary, "CITES", 2, 2, input).unwrap().ids(),

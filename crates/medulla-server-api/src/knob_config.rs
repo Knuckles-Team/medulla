@@ -257,6 +257,8 @@ knobs! {
     tables_trigger_depth_max: u64 = "tables.trigger_depth_max", U64(medulla_tables::TRIGGER_DEPTH_MAX_DEFAULT), [1, 64], "levels", Tunable;
     /// Trace critique read: most nodes one page returns (MEDULLA-DECISION-ENGINE-R133.7.3).
     trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
+    /// Graph integrity validation: most nodes one integrity-shape scan covers; a larger graph reports a coverage gap (MEDULLA-FEDERATED-QUERY-R005.700).
+    validate_shape_node_budget: u64 = "validate_shape.node_budget", U64(1_000_000), [1000, 10_000_000], "nodes", Tunable;
     /// Batch: most operations one served `Batch` carries; a larger batch refuses `BATCH_TOO_LARGE` before any operation runs (MEDULLA-DURABLE-KERNEL-R871).
     batch_max_operations: u64 = "batch.max_operations", U64(64), [1, 1024], "operations", Tunable;
     /// Wire logins: seconds a resolved wire-login record stays cached (MEDULLA-ENGINE-PARITY-R007.1).

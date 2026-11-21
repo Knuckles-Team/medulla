@@ -1164,6 +1164,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "FENCE_FIELD_MISSING",
             "PRESET_UNAVAILABLE",
             "RULE_VERSION_UNSUPPORTED",
+            "SHAPE_UNKNOWN",
             "SNAPSHOT_UNKNOWN",
         ],
     ),
