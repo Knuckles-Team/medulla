@@ -122,10 +122,6 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("drop_function", SqlFormState::Partial),
 ];
 
-/// The operational surfaces the engine serves today. `PgCompatibilityMatrix::with_served_forms`
-/// declares every surface listed here; each R035 child adds its own surface.
-pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[PgOperationalSurface::Explain];
-
 /// Scalar and aggregate functions the engine registers today.
 pub const SERVED_FUNCTIONS: &[&str] = &[
     "json_get",
@@ -147,6 +143,7 @@ pub const SERVED_FUNCTIONS: &[&str] = &[
 /// delivers a surface adds it here, and [`PgCompatibilityMatrix::with_served_forms`]
 /// declares every surface this list names.
 pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[
+    PgOperationalSurface::Explain,
     PgOperationalSurface::QueryCancellation,
     PgOperationalSurface::PoolerTransactionMode,
 ];
