@@ -6,8 +6,8 @@ One task per row of `requirements.md`, producer first: the backend spec (R001) p
 
 - [ ] T001 [US1] MEDULLA-OBJECT-STORAGE-BACKEND-R001 Typed object-store backend specification
 - [ ] T002 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002 Object-store read path
-- [ ] T010 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.2 Build the object-store client from the spec secret references (resolve_object_store_client)
-- [ ] T011 [P] [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.3 Loopback object-store fixture tests/_loopback_object_store.py and the store-upgrade layouts verb
+- [x] T010 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.2 Build the object-store client from the spec secret references (resolve_object_store_client)
+- [x] T011 [P] [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.3 Loopback object-store fixture tests/_loopback_object_store.py and the store-upgrade layouts verb
 - [ ] T003 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.1 Served cold open and corrupt-segment refusal over the loopback store
 - [ ] T004 [US3] MEDULLA-OBJECT-STORAGE-BACKEND-R003 Object-store commit path (commit before ack)
 - [ ] T005 [US3] MEDULLA-OBJECT-STORAGE-BACKEND-R003.1 Hot-path proof of the commit
