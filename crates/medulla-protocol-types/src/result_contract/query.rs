@@ -100,6 +100,8 @@ method_results! {
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.
     CrossSourceQuestion(CrossSourceQuestion) => Raw<medulla_source_types::cross_source_report::CrossSourceReport>;
+    // MEDULLA-CQ-XSRC-R011: the supply-chain impact report.
+    SupplyChainImpact(SupplyChainImpact) => Raw<medulla_source_types::supply_chain_report::SupplyChainImpactReport>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
     CatalogUsage(CatalogUsage) => Raw<medulla_catalog_types::asset_usage::CatalogUsageAnswer>;
     // MEDULLA-UNIFIED-DATA-PLANE-R029.2: what one attached table is, joins to, maps to and impacts.

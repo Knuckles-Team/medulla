@@ -597,6 +597,7 @@ METHOD_IDS = frozenset(
         "CorpusRetrieve",
         "IndexlessRetrieve",
         "CrossSourceQuestion",
+        "SupplyChainImpact",
         "EncodeDocument",
         "EncodedDocumentSearch",
         "FinanceAccountProject",

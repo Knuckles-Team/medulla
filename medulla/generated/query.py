@@ -1938,6 +1938,9 @@ send_indexless_retrieve = contract_sender(
 send_cross_source_question = contract_sender(
     "CrossSourceQuestion", "MethodCrossSourceQuestionParams"
 )
+send_supply_chain_impact = contract_sender(
+    "SupplyChainImpact", "MethodSupplyChainImpactParams"
+)
 send_encode_document = contract_sender("EncodeDocument", "MethodEncodeDocumentParams")
 send_encoded_document_search = contract_sender(
     "EncodedDocumentSearch", "MethodEncodedDocumentSearchParams"

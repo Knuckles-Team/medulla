@@ -207,6 +207,7 @@ SEND_BY_METHOD = {
     "CreateSummaryNode": graph.send_create_summary_node,
     "CrossSourceQuestion": query.send_cross_source_question,
     "CypherQuery": query.send_cypher_query,
+    "SupplyChainImpact": query.send_supply_chain_impact,
     "DataPrepDeclarationRead": ingestion.send_data_prep_declaration_read,
     "DataPrepDeclare": ingestion.send_data_prep_declare,
     "DataProductRegister": storage.send_data_product_register,

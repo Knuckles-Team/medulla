@@ -15509,6 +15509,13 @@ class MethodCrossSourceQuestion(BaseModel):
     params: MethodCrossSourceQuestionParams
 
 
+class MethodSupplyChainImpact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SupplyChainImpact"]
+    params: MethodSupplyChainImpactParams
+
+
 class CapabilityCohort(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16419,6 +16426,7 @@ Method = Annotated[
         MethodConceptLineage,
         MethodColumnLineage,
         MethodCrossSourceQuestion,
+        MethodSupplyChainImpact,
         MethodCatalogUsage,
         MethodSchemaContext,
         MethodRecordRelease,
@@ -35743,6 +35751,12 @@ class MethodCrossSourceQuestionParams(BaseModel):
     question: str
 
 
+class MethodSupplyChainImpactParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    roots: list[str]
+
+
 class MethodEncodeDocumentParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -42151,6 +42165,8 @@ __all__ = [
     "IndexlessRequest",
     "MethodCrossSourceQuestion",
     "MethodCrossSourceQuestionParams",
+    "MethodSupplyChainImpact",
+    "MethodSupplyChainImpactParams",
     "MethodEncodeDocument",
     "MethodEncodeDocumentParams",
     "MethodEncodedDocumentSearch",

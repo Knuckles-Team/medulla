@@ -9,6 +9,9 @@
 /// The served cross-source competency questions (MEDULLA-CQ-XSRC-R008.4).
 #[cfg(feature = "rdf")]
 pub mod cross_source_question;
+/// The served supply-chain impact report (MEDULLA-CQ-XSRC-R011).
+#[cfg(all(feature = "rdf", feature = "federation"))]
+pub mod supply_chain_impact;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "federation-search")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

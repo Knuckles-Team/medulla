@@ -34,6 +34,18 @@ pub async fn try_handle(
             question,
         ));
     }
+    // MEDULLA-CQ-XSRC-R011: the caller's own foreign catalog and the graph's rows; writes nothing.
+    #[cfg(feature = "federation")]
+    if let Method::SupplyChainImpact { roots } = &method {
+        return Ok(crate::supply_chain_impact::handle(
+            req_id,
+            state,
+            &core,
+            read_authority,
+            roots,
+        )
+        .await);
+    }
     if let Some(response) =
         try_handle_rdf(state, req_id, graph_name, read_authority, &core, &method).await
     {

@@ -86,6 +86,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // MEDULLA-CQ-XSRC-R008.4: `cross_source_question::items_of` keeps only the nodes
     // `read_authority.node_visible` admits; the authority rows are schema sources, not rows.
     "CrossSourceQuestion",
+    // MEDULLA-CQ-XSRC-R011: `supply_chain_impact::impact_rows` keeps only the nodes
+    // `read_authority.node_visible` admits; the authority rows are schema sources, not rows.
+    "SupplyChainImpact",
     "ComputeSimilarityEdges",
     "ConnectedComponents",
     "ContextFacts",

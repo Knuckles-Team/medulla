@@ -583,6 +583,21 @@ impl CoverageFixture {
         declared
     }
 
+    /// Every class the fixture names: an authority row's class, an object property's
+    /// endpoints and either side of an asserted `subClassOf`.
+    pub fn class_names(&self) -> BTreeSet<String> {
+        let mut classes: BTreeSet<String> = self.mappings.keys().cloned().collect();
+        for (from, _, to) in &self.object_properties {
+            classes.insert(from.clone());
+            classes.insert(to.clone());
+        }
+        for (sub, sup) in &self.subclass_of {
+            classes.insert(sub.clone());
+            classes.insert(sup.clone());
+        }
+        classes
+    }
+
     /// Every authority row, in class order.
     pub fn rows(&self) -> impl Iterator<Item = &AuthorityRow> {
         self.mappings.values().flatten()

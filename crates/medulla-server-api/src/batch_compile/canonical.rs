@@ -339,6 +339,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ExplainPlan { .. }
         | Method::ColumnLineage { .. }
         | Method::CrossSourceQuestion { .. }
+        | Method::SupplyChainImpact { .. }
         | Method::CatalogUsage { .. }
         | Method::SchemaContext { .. }
         | Method::ExplainPolicy { .. } => default_mutation_domain(surface),

@@ -329,6 +329,15 @@ $($variants)*
     CrossSourceQuestion {
         question: String,
     },
+    /// MEDULLA-CQ-XSRC-R011: the supply-chain impact report for the named class roots (class
+    /// IRIs or local names the graph's schema names). Sources come only from the graph's
+    /// `vg:SourceAuthority` rows and the caller's own foreign catalog; an authority source the
+    /// caller has not registered is a typed abstention in the answer. An unknown root refuses
+    /// `CQ_CLASS_UNKNOWN`; a blank or empty `roots` refuses `PARAMETER_INVALID`; a caller with no
+    /// verified tenant refuses `TENANT_DENIED`. Reads, commits nothing.
+    SupplyChainImpact {
+        roots: Vec<String>,
+    },
     /// MEDULLA-UNIFIED-DATA-PLANE-R764.8: the frequent users of one asset and the joins and
     /// filters common on it, from usage the engine recorded itself. Read only. Refuses
     /// `CATALOG_ASSET_NOT_FOUND` (also for an asset the caller cannot read) and

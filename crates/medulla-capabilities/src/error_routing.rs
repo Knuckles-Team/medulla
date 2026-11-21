@@ -572,6 +572,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CrossSourceQuestion",
         &["CQ_XSRC_ITEM_WITHOUT_SOURCE", "CQ_XSRC_UNKNOWN_QUESTION"],
     ),
+    // MEDULLA-CQ-XSRC-R011.
+    (
+        "SupplyChainImpact",
+        &["CQ_CLASS_UNKNOWN", "CQ_XSRC_ITEM_WITHOUT_SOURCE"],
+    ),
     // MEDULLA-REPO-INGEST-R002.100.
     (
         "VerifyIngestReadback",
