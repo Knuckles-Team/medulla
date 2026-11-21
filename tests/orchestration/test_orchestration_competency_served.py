@@ -30,14 +30,14 @@ from _commons_generation import (
     publish_schema,
 )
 from _decision_resident_fixture import publish
-from conftest import TEST_TENANT
+from conftest import TEST_TENANT, tenant_request_context
 from ontology_pack_support import import_entries
 from test_usage_guidance_served import STEPS, _guide, _import_pack
 from test_usage_guidance_served import _schema_body
 
 from medulla import ConnectorPackEntryContent
 from medulla import decision_client as dc
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, SyncMedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind, PackHeadRef
 from tests.federation.conftest import pg_source  # noqa: F401  (a fixture)
 from tests.federation.test_plan_evolution_served import (
@@ -693,3 +693,26 @@ def test_q11_best_plan(clean_graph, pg_source) -> None:  # noqa: F811
     ), report
     # The other connector has no kept plan: no receipt is named for it.
     assert _explain_kept(clean_graph, connector_b) == []
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R011.6")
+def test_q11_all_five_questions_after_connector_import(clean_graph, pg_source) -> None:  # noqa: F811
+    """The five questions of R011.1 to R011.5, one session: each answer is non-empty and
+    carries its provenance, and another tenant reads empty answers."""
+    test_q11_load_set()
+    test_q11_usage_guidance(clean_graph)
+    test_q11_downtime_next(clean_graph)
+    test_q11_best_plan(clean_graph, pg_source)
+    test_q11_seed_changes()
+
+    other = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context("tenant:q11-other"),
+    )
+    try:
+        # Downtime selections and kept plans belong to the tenant that produced them.
+        assert other.work_items.downtime_selections(limit=20)["selections"] == []
+        kept = other.query.uql("EXPLAIN MATCH (:PeDoc)")
+        assert kept.get("kept_plans", []) == []
+    finally:
+        other.close()
