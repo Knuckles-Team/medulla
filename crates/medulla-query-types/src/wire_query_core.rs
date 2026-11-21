@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "query")]
 use super::{AttributionInput, AttributionMethod, AttributionValue};
 #[cfg(feature = "query")]
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// MEDULLA-FEDERATED-QUERY-R040.1.1: the most predicates one constraint list carries.
 #[cfg(feature = "query")]
