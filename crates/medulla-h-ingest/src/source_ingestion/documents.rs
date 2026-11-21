@@ -741,4 +741,62 @@ mod tests {
         assert_eq!(plan.documents[0].first_version, 3);
         assert!(plan.methods.is_empty());
     }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.3
+    #[test]
+    fn original_documents_store_atoms_and_near_duplicates_store_none() {
+        let mut original = document("doc-a", &words("w", "end"));
+        let (methods, node_ids) = atom_methods(&original).unwrap();
+        assert_eq!(node_ids.len(), original.atoms.len());
+        assert_eq!(methods.len(), 2 * original.atoms.len());
+        match &methods[1] {
+            Method::AddEdge {
+                source_id,
+                target_id,
+                properties_msgpack,
+            } => {
+                assert_eq!(source_id, &node_ids[0]);
+                assert_eq!(target_id, &original.record_node_id);
+                let edge: serde_json::Value = rmp_serde::from_slice(properties_msgpack).unwrap();
+                assert_eq!(edge["relationship"], ATOM_OF);
+            }
+            _ => panic!("expected the atom_of edge"),
+        }
+        original.dedup = DedupOutcome::NearDuplicate {
+            of: "other".into(),
+            jaccard: 0.9,
+        };
+        let (methods, node_ids) = atom_methods(&original).unwrap();
+        assert!(methods.is_empty() && node_ids.is_empty());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.9
+    #[test]
+    fn prepare_validates_document_after_resolution() {
+        // `prepare` runs, in this order: authorization, the committed-replay shortcut, one
+        // mapping resolution, document normalization, reconciliation, record admission.
+        let source = include_str!("../source_ingestion.rs");
+        let gate = "#[cfg(all(feature = \"redb\", feature = \"blob\"))]\npub async fn prepare(";
+        let start = source.find(gate).expect("the served prepare exists");
+        let body = &source[start..];
+        let end = body.find("\n}\n").expect("prepare ends");
+        let body = &body[..end];
+        let at = |needle: &str| {
+            let hits: Vec<usize> = body.match_indices(needle).map(|(at, _)| at).collect();
+            assert_eq!(hits.len(), 1, "{needle} is called once in prepare");
+            hits[0]
+        };
+        let order = [
+            at("authorize_ingestion(&ctx)"),
+            at("read_change_envelope("),
+            at("resolve_mappings(&ctx, batch, &resources)"),
+            at("documents::normalize_documents("),
+            at("reconcile_batch("),
+            at("admit_records("),
+        ];
+        assert!(
+            order.windows(2).all(|pair| pair[0] < pair[1]),
+            "prepare calls authorization, replay, resolution, normalization, reconciliation and admission in order: {order:?}"
+        );
+    }
 }
