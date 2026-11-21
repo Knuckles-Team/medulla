@@ -176,7 +176,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
 - [ ] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
 - [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
-- [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
+- [x] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
 - [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
 - [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
 - [ ] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model
@@ -268,7 +268,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T164 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
 - [ ] T165 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
 - [x] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
-- [ ] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
+- [x] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
 - [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
 - [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
 - [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model

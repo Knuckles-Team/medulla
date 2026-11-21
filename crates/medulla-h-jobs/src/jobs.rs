@@ -239,7 +239,7 @@ use core::{
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
-use executor_profile::{execute_profile_claim, ProfileTarget};
+use executor_profile::{check_profile_submit, execute_profile_claim, ProfileTarget};
 #[cfg(feature = "program-optimization")]
 use executor_program::*;
 use executor_quality::{execute_quality_claim, QualityTarget};
@@ -710,6 +710,16 @@ async fn handle_submit(
             req_id,
             "INVALID_ARGUMENT: analytics job placement constraints are invalid",
         );
+    }
+    // MEDULLA-UNIFIED-DATA-PLANE-R761.4: a profile of a dataset outside the caller's tenant,
+    // or of a source that takes neither a pushed aggregate nor a sample, refuses here, before
+    // a job exists. A name that is not a plain identifier keeps its own refusal below.
+    if let JobKind::DatasetProfile { dataset, .. } = &kind {
+        if submit::plain_identifier(dataset) {
+            if let Err(refusal) = check_profile_submit(state, authority, dataset).await {
+                return Response::err(req_id, refusal.to_string());
+            }
+        }
     }
     // The immutable input-snapshot handle is stamped by the SERVER from the live
     // graph's OCC version, never accepted from the caller (CONCEPT:INT-P2-1: a

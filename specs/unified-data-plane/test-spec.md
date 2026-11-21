@@ -222,7 +222,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.1` | `crates/medulla-types/tests/profile.rs::profile_round_trips` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.2` | `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.3` | `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned) |
-| `MEDULLA-UNIFIED-DATA-PLANE-R761.4` | `tests/data_plane/test_profile_served.py::test_profile_refusals` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R761.4` | `tests/data_plane/test_profile_served.py::test_profile_refusals` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.5` | `tests/data_plane/test_profile_served.py::test_profile_method_recorded` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.6` | `cargo bench --bench column_profile` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762` | See each child. |
@@ -365,7 +365,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-h-jobs/src/jobs/executor_profile.rs::tests::sample_profile_counts_are_consistent` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.3:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog`. Proves the row: Wiring: the `DatasetProfile` job kind attaches profiles to the catalog.
-- **MEDULLA-UNIFIED-DATA-PLANE-R761.4:** `tests/data_plane/test_profile_served.py::test_profile_refusals` (planned). Proves the row: Refusal: out-of-scope dataset, unsupported source.
+- **MEDULLA-UNIFIED-DATA-PLANE-R761.4:** `tests/data_plane/test_profile_served.py::test_profile_refusals`. Proves the row: Refusal: out-of-scope dataset, unsupported source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.5:** `tests/data_plane/test_profile_served.py::test_profile_method_recorded` (planned). Proves the row: Evidence: each profile records its method and sample size.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.6:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned). Proves the row: Hot-path proof: profile ten columns of a native dataset.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned). Proves the row: Data quality rules, scores and quality incidents (rollup).

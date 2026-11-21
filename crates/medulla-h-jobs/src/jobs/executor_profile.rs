@@ -25,6 +25,10 @@ use crate::quality_rule::tenant_node_id;
 /// Refusal code: the source supports neither aggregate pushdown nor sampling
 /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
 pub(super) const PROFILE_UNSUPPORTED: &str = "PROFILE_UNSUPPORTED";
+/// Refusal code: the dataset is outside the caller's tenant or row-security scope
+/// (MEDULLA-UNIFIED-DATA-PLANE-R761.4). A dataset of another tenant and a dataset nobody
+/// registered refuse the same way, so a caller cannot enumerate another tenant's datasets.
+pub(super) const PROFILE_FORBIDDEN: &str = "PROFILE_FORBIDDEN";
 
 /// The SQL dialect of a profiled source; only the listed dialects take a
 /// pushed aggregate statement.
@@ -104,6 +108,63 @@ fn unsupported(detail: impl Into<String>) -> ProfileRefusal {
         code: PROFILE_UNSUPPORTED,
         detail: detail.into(),
     }
+}
+
+/// Refuse a profile at submit, before a job exists (MEDULLA-UNIFIED-DATA-PLANE-R761.4): the
+/// dataset must be a table of the caller's own tenant store or a table of an attached SQL
+/// source the caller owns (`PROFILE_FORBIDDEN` otherwise), and an attached source must take
+/// a pushed aggregate or a sample (`PROFILE_UNSUPPORTED` otherwise). Nothing is written.
+pub(super) async fn check_profile_submit(
+    state: &Arc<RwLock<ServerState>>,
+    authority: &CarrierAuthority,
+    dataset: &str,
+) -> Result<(), ProfileRefusal> {
+    #[cfg(feature = "federation-sql")]
+    {
+        use medulla_server_ops::api::query_txn::ForeignStateExt;
+        if let Some(source) = resolve_sql_source(state, authority.owner_scope(), dataset).await {
+            return if source.dialect.pushes_aggregates() {
+                Ok(())
+            } else {
+                Err(unsupported(format!(
+                    "dataset {dataset} supports neither aggregate pushdown nor sampling"
+                )))
+            };
+        }
+        // A source of any other kind the caller registered takes neither a pushed
+        // aggregate nor a sample.
+        if let Some((name, _)) = dataset.split_once('.') {
+            let catalog = state.read().await.foreign_sources();
+            if catalog.spec_for(authority, name).is_some() {
+                return Err(unsupported(format!(
+                    "dataset {dataset} supports neither aggregate pushdown nor sampling"
+                )));
+            }
+        }
+    }
+    let persist_dir = state.read().await.persist_dir.clone();
+    let Some(persist_dir) = persist_dir else {
+        return Err(unsupported("this server has no native table store"));
+    };
+    #[cfg(feature = "query")]
+    {
+        let visible = medulla_server_auth::sql_tables::tenant_table_store(
+            authority.tenant_scope(),
+            Path::new(&persist_dir),
+        )
+        .ok()
+        .and_then(|store| store.get_schema(dataset).ok().flatten())
+        .is_some();
+        if visible {
+            return Ok(());
+        }
+    }
+    #[cfg(not(feature = "query"))]
+    let _ = persist_dir;
+    Err(ProfileRefusal {
+        code: PROFILE_FORBIDDEN,
+        detail: format!("dataset {dataset} is not visible to the caller"),
+    })
 }
 
 /// Quote a column identifier for the pushed statement.

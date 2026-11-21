@@ -414,7 +414,7 @@ pub(super) fn submit_job_source_query_log(
 /// A dataset, column or target name a data-plane job accepts: 1 to 256 characters,
 /// letters, digits, `_`, `.`, `:` and `-` only, the character set `compile_rule`
 /// accepts for a rule target.
-fn plain_identifier(value: &str) -> bool {
+pub(super) fn plain_identifier(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 256
         && value

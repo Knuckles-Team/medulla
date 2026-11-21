@@ -456,6 +456,8 @@ closed_error_codes! {
         PromotionBlocked => "PROMOTION_BLOCKED",
         // MEDULLA-UNIFIED-DATA-PLANE-R761.3 / R762.3: data-plane profile and quality jobs.
         ProfileUnsupported => "PROFILE_UNSUPPORTED",
+        /// A profile submit naming a dataset outside the caller's tenant or row-security scope (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
+        ProfileForbidden => "PROFILE_FORBIDDEN",
         QualityMeasureUnavailable => "QUALITY_MEASURE_UNAVAILABLE",
         QualityRuleInvalid => "QUALITY_RULE_INVALID",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
