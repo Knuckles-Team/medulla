@@ -261,7 +261,6 @@ pub fn resource_build_record(
         state: ResourceReservationRecordState::Reserved,
         revision,
         lifecycle_revision,
-        tombstone: false,
     })
 }
 

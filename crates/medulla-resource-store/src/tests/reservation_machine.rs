@@ -211,3 +211,29 @@ fn every_transition_and_refusal_is_covered() {
         }
     }
 }
+
+// spec: MEDULLA-PLACEMENT-R781.3
+
+#[test]
+fn terminal_replay_is_decided_from_state() {
+    // The stored tombstone flag is gone: a terminal row is recognised from its state alone,
+    // and it is exactly the states the machine leaves no edge from.
+    let machine = &RESOURCE_RESERVATION_MACHINE;
+    for &state in machine.states {
+        assert_eq!(
+            state.is_terminal(),
+            machine.edges.iter().all(|edge| edge.from != state),
+            "{state:?}"
+        );
+    }
+    assert!(!ResourceReservationRecordState::Absent.is_terminal());
+    assert!(!ResourceReservationRecordState::Reserved.is_terminal());
+    for terminal in [
+        ResourceReservationRecordState::Released,
+        ResourceReservationRecordState::Reclaimed,
+        ResourceReservationRecordState::Expired,
+        ResourceReservationRecordState::Superseded,
+    ] {
+        assert!(terminal.is_terminal(), "{terminal:?}");
+    }
+}

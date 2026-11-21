@@ -90,7 +90,7 @@ pub fn build_resource_reservation_summary(
         } else {
             0
         },
-        tombstone: record.tombstone,
+        tombstone: record.state.is_terminal(),
     }
 }
 

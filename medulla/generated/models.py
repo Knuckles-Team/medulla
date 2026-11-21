@@ -22150,7 +22150,6 @@ class ResourceReservationRecord(BaseModel):
     target_alias: str | None = None
     target_kind: ResourceReservationRecordTargetKind
     tenant_ref: str
-    tombstone: bool
     work_item_id: str
 
 
@@ -22237,7 +22236,6 @@ class ResourceReservationResult(BaseModel):
     reservation_id: str | None = None
     schema_version: ResourceReservationResultSchemaVersion
     state: ResourceReservationResultState
-    tombstone: bool
     work_item_id: str
 
 

@@ -1950,7 +1950,7 @@ async fn drive_public_release_after_failover(
         ResourceReservationResultDecision::Accepted,
         ResourceReservationResultState::Released,
     );
-    assert!(released.tombstone);
+    assert!(released.state.is_terminal());
     assert_eq!(released.held_cpu_weight, 0);
     assert_eq!(released.held_memory_mib, 0);
     assert_eq!(released.held_disk_mib, 0);
@@ -1979,7 +1979,7 @@ async fn drive_public_release_after_failover(
         queried_release.lifecycle_revision,
         released.lifecycle_revision
     );
-    assert!(queried_release.tombstone);
+    assert!(queried_release.state.is_terminal());
 
     assert!(cluster.is_running(stale_follower));
     assert_ne!(stale_follower, current_leader);

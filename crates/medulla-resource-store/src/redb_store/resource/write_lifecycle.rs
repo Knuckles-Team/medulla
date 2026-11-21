@@ -1,5 +1,5 @@
 use super::*;
-use medulla_result_types::epistemic_operations::{ReservationEvent, RESOURCE_RESERVATION_MACHINE};
+use medulla_result_types::epistemic_operations::ReservationEvent;
 
 /// Tenant / record / terminal-state prechecks of a release-or-reclaim commit.
 /// A reserve that finds a live row is itself idempotent.  `Ok(Some(..))` decides
@@ -129,7 +129,6 @@ pub fn resource_build_released_record(
     next.record.revision = next.record.revision.saturating_add(1);
     next.record.lifecycle_revision = next.record.lifecycle_revision.saturating_add(1);
     next.record.expected_lifecycle_revision = request.expected_lifecycle_revision;
-    next.record.tombstone = RESOURCE_RESERVATION_MACHINE.is_terminal(state);
     next.held_cpu_weight = 0;
     next.held_memory_mib = 0;
     next.held_disk_mib = 0;

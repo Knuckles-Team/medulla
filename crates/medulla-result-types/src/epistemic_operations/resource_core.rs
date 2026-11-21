@@ -176,6 +176,12 @@ pub static RESOURCE_RESERVATION_MACHINE: MachineDef<
 };
 
 impl ResourceReservationRecordState {
+    /// Whether the state leaves no edge: the reservation is finished and its row is the
+    /// exact replay record (MEDULLA-PLACEMENT-R781.3). Replaces the stored tombstone flag.
+    pub fn is_terminal(self) -> bool {
+        RESOURCE_RESERVATION_MACHINE.is_terminal(self)
+    }
+
     /// The one transition function of `ResourceReservationMachine`. `guard_holds` answers each guard
     /// by name; an unguarded edge always holds.
     pub fn apply(
@@ -350,7 +356,6 @@ pub struct ResourceReservationRecord {
     pub state: ResourceReservationRecordState,
     pub revision: u64,
     pub lifecycle_revision: u64,
-    pub tombstone: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -377,7 +382,6 @@ pub struct ResourceReservationResult {
     pub held_disk_mib: u64,
     pub held_process_slots: u64,
     pub fairness_debt: u64,
-    pub tombstone: bool,
     pub changed_work_item_ids: Vec<String>,
 }
 

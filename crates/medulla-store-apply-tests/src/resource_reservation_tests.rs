@@ -2958,7 +2958,6 @@ fn terminal_result_replays_exact_record_without_held_capacity() {
     let request = request();
     let mut record = resource_build_record(&request, &host(), 7, 1).unwrap();
     record.state = ResourceReservationRecordState::Released;
-    record.tombstone = true;
     let result = resource_result_payload(
         ResourceReservationResultDecision::Idempotent,
         &request,
@@ -2969,7 +2968,7 @@ fn terminal_result_replays_exact_record_without_held_capacity() {
     )
     .unwrap();
     assert!(resource_request_matches_record(&request, &record));
-    assert!(result.tombstone);
+    assert!(result.state.is_terminal());
     assert_eq!(result.held_cpu_weight, 0);
     assert_eq!(result.held_memory_mib, 0);
     assert_eq!(result.held_disk_mib, 0);
@@ -3024,7 +3023,6 @@ fn graph_clear_streams_terminal_history_past_bound_and_preserves_active_holds() 
                     record.tenant_ref = "\u{10ffff}tenant-x".to_string();
                 }
                 record.state = ResourceReservationRecordState::Released;
-                record.tombstone = true;
                 record.revision = index as u64 + 1;
                 record.lifecycle_revision = index as u64 + 1;
                 let tenant = record.tenant_ref.clone();

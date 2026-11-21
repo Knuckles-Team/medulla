@@ -218,7 +218,7 @@ pub fn resource_result_payload(
     fairness_debt: u64,
     changed: Vec<String>,
 ) -> Result<ResourceReservationResult, String> {
-    let (state, lifecycle_revision, tombstone, held) = match record.as_ref() {
+    let (state, lifecycle_revision, held) = match record.as_ref() {
         Some(record) => {
             let held = if record.state == ResourceReservationRecordState::Reserved {
                 (
@@ -233,14 +233,12 @@ pub fn resource_result_payload(
             (
                 resource_result_state(record.state),
                 record.lifecycle_revision,
-                record.tombstone,
                 held,
             )
         }
         None => (
             ResourceReservationResultState::Absent,
             0,
-            false,
             (0, 0, 0, 0),
         ),
     };
@@ -276,7 +274,6 @@ pub fn resource_result_payload(
         held_disk_mib: held.2,
         held_process_slots: held.3,
         fairness_debt,
-        tombstone,
         changed_work_item_ids: changed,
     })
 }

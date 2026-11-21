@@ -111,7 +111,6 @@ def _record() -> dict[str, object]:
         "state": "reserved",
         "revision": 1,
         "lifecycle_revision": 1,
-        "tombstone": False,
     }
 
 
@@ -146,7 +145,6 @@ def test_client_bounds_changed_ids_and_rejects_duplicate_labels() -> None:
         "held_disk_mib": 0,
         "held_process_slots": 0,
         "fairness_debt": 0,
-        "tombstone": False,
         "changed_work_item_ids": ["work-1"] * 2,
     }
     with pytest.raises(ValueError, match="changed ids"):

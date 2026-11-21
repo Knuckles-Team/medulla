@@ -1526,7 +1526,6 @@ _RESOURCE_RESERVATION_RECORD_FIELDS = frozenset(
         "state",
         "revision",
         "lifecycle_revision",
-        "tombstone",
     }
 )
 _RESOURCE_RESERVATION_RECORD_STRING_FIELDS = (
@@ -1656,7 +1655,7 @@ def _reservation_record_placement(record: dict[str, Any]) -> None:
     _booleans(
         "ResourceReservation record",
         record,
-        ("repository_exclusive", "branch_exclusive", "tombstone"),
+        ("repository_exclusive", "branch_exclusive"),
     )
 
 
@@ -1706,7 +1705,6 @@ _RESOURCE_RESERVATION_RESULT_FIELDS = frozenset(
         "held_disk_mib",
         "held_process_slots",
         "fairness_debt",
-        "tombstone",
         "changed_work_item_ids",
     }
 )
@@ -1730,7 +1728,6 @@ def _reservation_result_outcome(result: dict[str, Any]) -> None:
         _resource_reservation_record(result["record"])
     if result["state"] not in _RESOURCE_RESERVATION_RECORD_STATES:
         raise ValueError("ResourceReservation result state is invalid")
-    _boolean("ResourceReservation result.tombstone", result["tombstone"])
     if not _is_bounded_id_list(result["changed_work_item_ids"]):
         raise ValueError("ResourceReservation result changed ids are invalid")
 

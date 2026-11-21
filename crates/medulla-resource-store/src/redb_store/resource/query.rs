@@ -74,7 +74,6 @@ pub fn resource_no_reservation_query_result(
         held_disk_mib: 0,
         held_process_slots: 0,
         fairness_debt: 0,
-        tombstone: false,
         changed_work_item_ids: Vec::new(),
     })
 }
@@ -364,7 +363,7 @@ pub fn build_resource_reservation_query_result(
     let current_valid = current
         .as_ref()
         .is_some_and(|props| resource_record_work_item_live(props, record, request.now_ms));
-    let tombstone_replay = record.tombstone;
+    let tombstone_replay = record.state.is_terminal();
     let decision = if current_valid || tombstone_replay {
         ResourceReservationResultDecision::Idempotent
     } else {
