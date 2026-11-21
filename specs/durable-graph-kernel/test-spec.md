@@ -665,10 +665,10 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-mutation-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-mutation-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` |
 | `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-mutation-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-mutation-types/src/pg_replication.rs::slot_row_round_trips_and_names_are_bounded` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-server-blob/src/kv/declaration.rs::served_writes_to_the_slot_namespace_refuse` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R035.7.2` | `crates/medulla-wire/src/pgwire/replication.rs::change_maps_to_pgoutput_messages_in_order` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R035.3.1` | `crates/medulla-sql/src/sql/catalog.rs::stat_views_answer_supplied_sessions_and_refuse_writes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-mutation-types/src/pg_replication.rs::slot_row_round_trips_and_names_are_bounded` (existing) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-server-blob/src/kv/declaration.rs::served_writes_to_the_slot_namespace_refuse` (existing) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.2` | `crates/medulla-wire/src/pgwire/replication.rs::change_maps_to_pgoutput_messages_in_order` (existing) |
+| `MEDULLA-DURABLE-KERNEL-R035.3.1` | `crates/medulla-sql/src/sql/catalog.rs::stat_views_answer_supplied_sessions_and_refuse_writes` (existing) |
 | `MEDULLA-DURABLE-KERNEL-R035.3.2` | `crates/medulla-wire-core/src/wire/activity.rs::guard_drop_removes_the_row_and_filter_scopes_by_principal` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
@@ -698,9 +698,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R094.7.1` | `tests/durable/test_concept_lineage_served.py::test_known_ids_and_edges_survive_restart` |
 | `MEDULLA-DURABLE-KERNEL-R094.7` | `tests/durable/test_concept_lineage_served.py::test_lineage_cycle_is_refused` |
 | `MEDULLA-DURABLE-KERNEL-R700`, `MEDULLA-DURABLE-KERNEL-R700.6` | `tests/durable/test_retention_cleanup_served.py::test_held_and_referenced_nodes_survive` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700.5` | `tests/durable/test_retention_cleanup_served.py::test_record_reproduces_report` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/durable/test_retention_cleanup_served.py::test_refusals_leave_state_unchanged` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/retention_cleanup_scope_served.rs::retention_run_without_the_scope_is_access_denied` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.5` | `tests/durable/test_retention_cleanup_served.py::test_record_reproduces_report` (existing) |
+| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/durable/test_retention_cleanup_served.py::test_refusals_leave_state_unchanged` (existing) |
+| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/retention_cleanup_scope_served.rs::retention_run_without_the_scope_is_access_denied` (existing) |
 | `MEDULLA-DURABLE-KERNEL-R700.3` | `tests/durable/test_retention_cleanup_served.py::test_run_method_matches_sweep` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R869` | `tests/durable/test_stream_log_served.py::test_order_cursor_and_restart` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.5` | `tests/durable/test_uncertain_effect_served.py::test_audit_and_metrics_after_uncertain_run` (planned) |

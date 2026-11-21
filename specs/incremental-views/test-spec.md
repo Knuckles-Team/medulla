@@ -59,7 +59,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R008` | Sampled shadow verification in production (rollup) | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::corrupted_state_is_caught_and_demoted` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R008.1` | Model: the check schedule | `crates/medulla-server-cdc/src/matview/manager.rs::tests::check_becomes_due_after_knob_changes` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R008.2` | Compare and demote | `crates/medulla-h-txn/src/matview_shadow.rs::tests::mismatch_demotes_and_match_keeps_mode` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R008.3` | Wiring: the check task | `crates/medulla-h-txn/src/matview_shadow.rs::tests::tick_runs_due_checks_with_deadline` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R008.3` | Wiring: the check task | `crates/medulla-h-txn/src/matview_shadow.rs::tests::tick_runs_due_checks_with_deadline` (existing) |
 | `MEDULLA-INCREMENTAL-VIEWS-R008.4` | Served proof of shadow verification | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::corrupted_state_is_caught_and_demoted` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009` | SQL views over one table are maintained in the commit (rollup) | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.1` | Model: the incremental view program | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::row_expr_three_valued_logic` (planned) |
@@ -74,7 +74,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R010.1` | Plan views publish their output delta | `crates/medulla-server-cdc/src/cdc.rs::tests::view_output_rows_reach_their_feed` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.2` | SQL views publish their output delta | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::maintain_views_reports_view_row_changes` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.3` | Resume, expiry and snapshot | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::view_feed_gap_then_snapshot_resume` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R010.4` | Served proof and arbora seam | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::view_delta_feed_matches_result_difference` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R010.4` | Served proof and arbora seam | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::view_delta_feed_matches_result_difference` (existing) |
 | `MEDULLA-INCREMENTAL-VIEWS-R011` | Ontology closure updates from fact deltas (rollup) | `crates/medulla-server-cdc/src/reasoning_cascade.rs::tests::retraction_updates_closure_without_full_rebuild` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R011.1` | Monotone axiom insert is incremental | `crates/medulla-reasoner/src/owl.rs::tests::incremental_add_axiom_only_adds` |
 | `MEDULLA-INCREMENTAL-VIEWS-R011.2` | Writes on opted-in graphs refresh the closure | `crates/medulla-server-cdc/src/reasoning_cascade.rs::tests::opted_in_graph_axiom_write_makes_a_new_inference_appear_after_debounce` |

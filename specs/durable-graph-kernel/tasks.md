@@ -203,7 +203,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T192 MEDULLA-DURABLE-KERNEL-R700.1 Model
 - [ ] T193 MEDULLA-DURABLE-KERNEL-R700.2 Behavior
 - [ ] T194 MEDULLA-DURABLE-KERNEL-R700.3 Wiring
-- [ ] T195 MEDULLA-DURABLE-KERNEL-R700.4 Refusal
+- [x] T195 MEDULLA-DURABLE-KERNEL-R700.4 Refusal
 - [x] T196 MEDULLA-DURABLE-KERNEL-R700.5 Evidence
 - [ ] T197 MEDULLA-DURABLE-KERNEL-R700.6 Hot-path proof
 - [ ] T198 MEDULLA-DURABLE-KERNEL-R800.1 Model
