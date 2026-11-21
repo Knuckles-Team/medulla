@@ -49,7 +49,7 @@ crates/medulla-competency/src/spec_artifact_questions.rs           new       spe
 crates/medulla-sdlc/src/lifecycle/                                 new       scenario, proposals, research and delivery logic (R013, R017, R019)
 crates/medulla-server-router/src/dispatch/router/sdlc.rs           new       served lifecycle method arms (R002.3, R019.14)
 crates/medulla-protocol-types/src/protocol/method/method_10.rs     existing  new Method variants (R002.3, R019.14)
-scripts/ci_full_suite.py                                           new       complete-suite landing gate (R010, R011)
+scripts/ci_full_suite.py                                           new       complete-suite landing gate (R010)
 specs/development-lifecycle/contracts/                             existing  seam contracts
 ```
 

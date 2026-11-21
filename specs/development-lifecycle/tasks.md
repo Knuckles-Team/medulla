@@ -56,7 +56,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T048 [US5] MEDULLA-SDLC-R008 Zero-backlog census gates.
 - [ ] T049 [US2] MEDULLA-SDLC-R009 Governed documentation projection.
 - [ ] T050 [US5] MEDULLA-SDLC-R010 Landing gate runs the complete test suite.
-- [ ] T051 [US5] MEDULLA-SDLC-R011 Signal-killed test binaries rerun in isolation.
+- [ ] T051 [US5] MEDULLA-SDLC-R011 RETIRED: nextest in the R010 gate already runs one process per test
 - [ ] T052 [US1] MEDULLA-SDLC-R012 Graph-native development: the ecosystem is developed inside the engine .
 - [ ] T053 [US1] MEDULLA-SDLC-R012.1 Every ecosystem repository is ingested.
 - [ ] T054 [US1] MEDULLA-SDLC-R012.2 Spec rows are requirement records with caller and proof edges.
@@ -131,7 +131,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T127 MEDULLA-SDLC-R021.4 Move access control to medulla-identity-types. Size: S, 1 PR, 4 hours.
 - [ ] T128 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
 - [ ] T129 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
-- [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items. Size: M, 2 PRs, 6 hours.
+- [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items (16 lines, consumer edits listed in the row; compile lane). Size: M, 1 PR.
 - [x] T131 [US1] MEDULLA-SDLC-R014.10 Row-level spec vocabulary in the SDD ontology.
 - [ ] T132 [US1] MEDULLA-SDLC-R014.11 SHACL shapes mirror the spec-standard row checks.
 - [ ] T133 [US1] MEDULLA-SDLC-R014.12 Ingest every repository's specs and `Spec:` history.
