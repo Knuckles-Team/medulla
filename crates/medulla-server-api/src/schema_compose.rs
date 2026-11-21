@@ -946,7 +946,10 @@ ex:parent a owl:AsymmetricProperty .
         // (their triples, three module headers and three catalog imports); -30 the
         // duplicate class declarations removed when each class keeps one home and
         // the repeated local names merge into the core class.
-        assert_eq!(composed.ontology.len(), 24_882);
+        // -162 (MEDULLA-DURABLE-KERNEL-R874.21): the :CommitMachine and :ProjectionMachine
+        // blocks, which named Rust tables that do not exist, are deleted from
+        // state-machines-v1.ttl (rdflib per-file delta).
+        assert_eq!(composed.ontology.len(), 24_720);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

@@ -1287,3 +1287,22 @@ fn exact_retirement_machine_matches_edge_table() {
     sm::assert_matches(&medulla_direct_state::direct_state::EXACT_RETIREMENT_MACHINE);
     sm::assert_extends_core("ExactRetirement");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.21
+#[test]
+fn retired_commit_and_projection_machines_are_absent() {
+    for line in MACHINES.lines() {
+        for retired in [":Commit", ":Projection"] {
+            assert!(
+                !line.starts_with(retired),
+                "a retired machine term remains: {line}"
+            );
+        }
+        for comment in [
+            "# spec: MEDULLA-DURABLE-KERNEL-R874.2",
+            "# spec: MEDULLA-DURABLE-KERNEL-R874.16",
+        ] {
+            assert_ne!(line.trim_end(), comment, "a retired spec comment remains");
+        }
+    }
+}
