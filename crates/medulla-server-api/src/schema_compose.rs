@@ -953,7 +953,10 @@ ex:parent a owl:AsymmetricProperty .
         // one event, one edge) in state-machines-v1.ttl.
         // +90 (MEDULLA-DURABLE-KERNEL-R874.13): the :OutboxDeliveryMachine block (five states,
         // four events, two guards, five edges) in state-machines-v1.ttl.
-        assert_eq!(composed.ontology.len(), 24_850);
+        // +74 (MEDULLA-DURABLE-KERNEL-R874.14): the :ParentTransactionMachine block (five
+        // states, three events, four edges) in state-machines-v1.ttl. The participant
+        // machine's four edge ids are renamed E01-E04 to T01-T04 (R874.15), no count change.
+        assert_eq!(composed.ontology.len(), 24_924);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

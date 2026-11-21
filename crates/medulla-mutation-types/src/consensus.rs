@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::participant_transaction_machine::ParticipantTransactionEvent;
+use crate::parent_transaction_machine::ParentTransactionEvent;
 use medulla_identity_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
@@ -26,16 +28,18 @@ pub enum ParentTransactionState {
 }
 
 impl ParentTransactionState {
+    /// Accept `next` only when the parent-transaction machine reaches it from this
+    /// state by one event. An identical successor is a replay and is accepted first.
     pub fn validate_successor(self, next: Self) -> Result<(), String> {
-        match (self, next) {
-            (Self::Prepared, Self::Decided { .. }) => Ok(()),
-            (Self::Decided { decision: current }, Self::Finalized { decision: next })
-                if current == next =>
-            {
-                Ok(())
-            }
-            (current, next) if current == next => Ok(()),
-            _ => Err("invalid parent transaction state transition".into()),
+        if self == next {
+            return Ok(());
+        }
+        let event = ParentTransactionEvent::reaching(next.kind())
+            .ok_or_else(|| "invalid parent transaction state transition".to_string())?;
+        match self.kind().apply(event) {
+            Ok(reached) if reached == next.kind() => Ok(()),
+            Ok(_) => Err("invalid parent transaction state transition".into()),
+            Err(refused) => Err(refused.to_string()),
         }
     }
 
@@ -56,16 +60,18 @@ pub enum ParticipantTransactionState {
 }
 
 impl ParticipantTransactionState {
+    /// Accept `next` only when the participant-transaction machine reaches it from this
+    /// state by one event. An identical successor is a replay and is accepted first.
     pub fn validate_successor(self, next: Self) -> Result<(), String> {
-        match (self, next) {
-            (Self::Prepared, Self::Resolved { .. }) => Ok(()),
-            (Self::Resolved { decision: current }, Self::Collected { decision: next })
-                if current == next =>
-            {
-                Ok(())
-            }
-            (current, next) if current == next => Ok(()),
-            _ => Err("invalid participant transaction state transition".into()),
+        if self == next {
+            return Ok(());
+        }
+        let event = ParticipantTransactionEvent::reaching(next.kind())
+            .ok_or_else(|| "invalid participant transaction state transition".to_string())?;
+        match self.kind().apply(event) {
+            Ok(reached) if reached == next.kind() => Ok(()),
+            Ok(_) => Err("invalid participant transaction state transition".into()),
+            Err(refused) => Err(refused.to_string()),
         }
     }
 

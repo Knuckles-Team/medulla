@@ -5732,30 +5732,30 @@
 :ParticipantTransactionMachine_Event_CollectAbort a :ParticipantTransactionEvent ;
     rdfs:label "ParticipantTransaction CollectAbort" .
 
-:ParticipantTransactionMachine_E01 a :ParticipantTransactionTransition ;
-    rdfs:label "ParticipantTransaction E01" ;
-    :edgeId "E01" ;
+:ParticipantTransactionMachine_T01 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction T01" ;
+    :edgeId "T01" ;
     :fromState :ParticipantTransactionMachine_Prepared ;
     :toState :ParticipantTransactionMachine_ResolvedCommit ;
     :firedBy :ParticipantTransactionMachine_Event_ResolveCommit .
 
-:ParticipantTransactionMachine_E02 a :ParticipantTransactionTransition ;
-    rdfs:label "ParticipantTransaction E02" ;
-    :edgeId "E02" ;
+:ParticipantTransactionMachine_T02 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction T02" ;
+    :edgeId "T02" ;
     :fromState :ParticipantTransactionMachine_Prepared ;
     :toState :ParticipantTransactionMachine_ResolvedAbort ;
     :firedBy :ParticipantTransactionMachine_Event_ResolveAbort .
 
-:ParticipantTransactionMachine_E03 a :ParticipantTransactionTransition ;
-    rdfs:label "ParticipantTransaction E03" ;
-    :edgeId "E03" ;
+:ParticipantTransactionMachine_T03 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction T03" ;
+    :edgeId "T03" ;
     :fromState :ParticipantTransactionMachine_ResolvedCommit ;
     :toState :ParticipantTransactionMachine_CollectedCommit ;
     :firedBy :ParticipantTransactionMachine_Event_CollectCommit .
 
-:ParticipantTransactionMachine_E04 a :ParticipantTransactionTransition ;
-    rdfs:label "ParticipantTransaction E04" ;
-    :edgeId "E04" ;
+:ParticipantTransactionMachine_T04 a :ParticipantTransactionTransition ;
+    rdfs:label "ParticipantTransaction T04" ;
+    :edgeId "T04" ;
     :fromState :ParticipantTransactionMachine_ResolvedAbort ;
     :toState :ParticipantTransactionMachine_CollectedAbort ;
     :firedBy :ParticipantTransactionMachine_Event_CollectAbort .
@@ -7297,3 +7297,93 @@
     :toState :OutboxDeliveryMachine_Leased ;
     :guardedBy :OutboxDeliveryMachine_Guard_NextAttempt ;
     :firedBy :OutboxDeliveryMachine_Event_Lease .
+
+# spec: MEDULLA-DURABLE-KERNEL-R874.14
+# The ParentTransaction machine. The Rust edge table PARENT_TRANSACTION_MACHINE is the same table.
+
+:ParentTransactionState a owl:Class ;
+    rdfs:label "ParentTransaction State" ;
+    rdfs:comment "A state of the ParentTransaction machine." ;
+    rdfs:subClassOf :State .
+
+:ParentTransactionTerminalState a owl:Class ;
+    rdfs:label "ParentTransaction TerminalState" ;
+    rdfs:comment "A terminal state of the ParentTransaction machine." ;
+    rdfs:subClassOf :TerminalState, :ParentTransactionState .
+
+:ParentTransactionTransition a owl:Class ;
+    rdfs:label "ParentTransaction Transition" ;
+    rdfs:comment "A transition of the ParentTransaction machine." ;
+    rdfs:subClassOf :Transition .
+
+:ParentTransactionEvent a owl:Class ;
+    rdfs:label "ParentTransaction Event" ;
+    rdfs:comment "An event of the ParentTransaction machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ParentTransactionGuard a owl:Class ;
+    rdfs:label "ParentTransaction Guard" ;
+    rdfs:comment "A guard of the ParentTransaction machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ParentTransactionMachine a :StateMachine ;
+    rdfs:label "ParentTransaction machine" ;
+    :initialState :ParentTransactionMachine_Prepared ;
+    :hasState :ParentTransactionMachine_Prepared, :ParentTransactionMachine_DecidedCommit, :ParentTransactionMachine_DecidedAbort, :ParentTransactionMachine_FinalizedCommit, :ParentTransactionMachine_FinalizedAbort .
+
+:ParentTransactionMachine_Prepared a :ParentTransactionState ;
+    rdfs:label "ParentTransaction Prepared" ;
+    :storedForm "prepared" .
+
+:ParentTransactionMachine_DecidedCommit a :ParentTransactionState ;
+    rdfs:label "ParentTransaction DecidedCommit" ;
+    :storedForm "decided_commit" .
+
+:ParentTransactionMachine_DecidedAbort a :ParentTransactionState ;
+    rdfs:label "ParentTransaction DecidedAbort" ;
+    :storedForm "decided_abort" .
+
+:ParentTransactionMachine_FinalizedCommit a :ParentTransactionTerminalState ;
+    rdfs:label "ParentTransaction FinalizedCommit" ;
+    :storedForm "finalized_commit" .
+
+:ParentTransactionMachine_FinalizedAbort a :ParentTransactionTerminalState ;
+    rdfs:label "ParentTransaction FinalizedAbort" ;
+    :storedForm "finalized_abort" .
+
+:ParentTransactionMachine_Event_DecideCommit a :ParentTransactionEvent ;
+    rdfs:label "ParentTransaction DecideCommit" .
+
+:ParentTransactionMachine_Event_DecideAbort a :ParentTransactionEvent ;
+    rdfs:label "ParentTransaction DecideAbort" .
+
+:ParentTransactionMachine_Event_Finalize a :ParentTransactionEvent ;
+    rdfs:label "ParentTransaction Finalize" .
+
+:ParentTransactionMachine_P01 a :ParentTransactionTransition ;
+    rdfs:label "ParentTransaction P01" ;
+    :edgeId "P01" ;
+    :fromState :ParentTransactionMachine_Prepared ;
+    :toState :ParentTransactionMachine_DecidedCommit ;
+    :firedBy :ParentTransactionMachine_Event_DecideCommit .
+
+:ParentTransactionMachine_P02 a :ParentTransactionTransition ;
+    rdfs:label "ParentTransaction P02" ;
+    :edgeId "P02" ;
+    :fromState :ParentTransactionMachine_Prepared ;
+    :toState :ParentTransactionMachine_DecidedAbort ;
+    :firedBy :ParentTransactionMachine_Event_DecideAbort .
+
+:ParentTransactionMachine_P03 a :ParentTransactionTransition ;
+    rdfs:label "ParentTransaction P03" ;
+    :edgeId "P03" ;
+    :fromState :ParentTransactionMachine_DecidedCommit ;
+    :toState :ParentTransactionMachine_FinalizedCommit ;
+    :firedBy :ParentTransactionMachine_Event_Finalize .
+
+:ParentTransactionMachine_P04 a :ParentTransactionTransition ;
+    rdfs:label "ParentTransaction P04" ;
+    :edgeId "P04" ;
+    :fromState :ParentTransactionMachine_DecidedAbort ;
+    :toState :ParentTransactionMachine_FinalizedAbort ;
+    :firedBy :ParentTransactionMachine_Event_Finalize .

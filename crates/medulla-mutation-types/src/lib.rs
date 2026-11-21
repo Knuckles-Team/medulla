@@ -56,6 +56,9 @@ pub mod mutation_scope;
 pub mod outbox;
 // MEDULLA-DURABLE-KERNEL-R874.13 -- the outbox-delivery state machine.
 pub mod outbox_delivery_machine;
+// MEDULLA-DURABLE-KERNEL-R874.14, R874.15 -- the parent and participant transaction machines.
+pub mod parent_transaction_machine;
+pub mod participant_transaction_machine;
 // MEDULLA-DURABLE-KERNEL-R035 — the PostgreSQL wire protocol's required
 // operational surfaces and a fail-closed compatibility matrix. Pure serde,
 // no dep.

@@ -1334,3 +1334,21 @@ fn outbox_delivery_machine_matches_edge_table() {
     sm::assert_matches(&medulla_mutation_types::outbox_delivery_machine::OUTBOX_DELIVERY_MACHINE);
     sm::assert_extends_core("OutboxDelivery");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.14
+#[test]
+fn parent_transaction_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_mutation_types::parent_transaction_machine::PARENT_TRANSACTION_MACHINE,
+    );
+    sm::assert_extends_core("ParentTransaction");
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.15
+#[test]
+fn participant_transaction_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_mutation_types::participant_transaction_machine::PARTICIPANT_TRANSACTION_MACHINE,
+    );
+    sm::assert_extends_core("ParticipantTransaction");
+}
