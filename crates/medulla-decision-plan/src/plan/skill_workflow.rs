@@ -149,7 +149,7 @@ mod tests {
             format!("skill:{}", draft.skill_document_digest.to_hex())
         );
         assert_eq!(program.source_run_id, None);
-        let fetch = &program.steps[0];
+        let fetch = &program.steps.as_slice()[0];
         assert_eq!(fetch.next.as_deref(), Some("check"));
         let edges: Vec<(Option<&str>, &str)> = fetch
             .edges
@@ -164,8 +164,8 @@ mod tests {
                 (Some("error"), "recover")
             ]
         );
-        assert_eq!(program.steps[2].next, None);
-        assert!(program.steps[2].edges.is_empty());
+        assert_eq!(program.steps.as_slice()[2].next, None);
+        assert!(program.steps.as_slice()[2].edges.is_empty());
         assert_eq!(fetch.input_types, [TypeRef::Text]);
         assert_eq!(fetch.output_types, [TypeRef::Json]);
         program.validate().unwrap();

@@ -163,7 +163,7 @@ mod tests {
     fn no_writer_sets_stage_outside_apply() {
         for source in [
             include_str!("ingest_throughput.rs"),
-            include_str!("ingest_drain.rs"),
+            include_str!("../../medulla-ingestion-types/src/ingest_drain.rs"),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();
             let writes: Vec<&str> = production
