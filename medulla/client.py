@@ -3164,8 +3164,8 @@ class StatechartClient:
         )
         state = await client.statechart.get_state(instance["instance_id"])
 
-    ``send_event``'s response includes ``fired`` (``False`` on a well-defined no-op —
-    an undefined edge or every guard false — never an error) and the resulting
+    ``send_event``'s response includes ``fired`` (``False`` when every guard is false;
+    an event with no defined transition is refused ``STATECHART_NO_TRANSITION``) and the resulting
     ``instance["configuration"]["active"]`` (the new active state(s)).
     """
 

@@ -276,3 +276,48 @@ async fn recruit_allocate_and_twin_replay() {
     let refused = transition(&chart, "active", &context, &EventInput::new("activate"));
     assert!(refused.map(|out| !out.fired).unwrap_or(true));
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R750.752
+#[tokio::test]
+async fn pinless_twin_refuses_and_excluded_offer_has_no_top() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+
+    // Fault 1: a twin whose every pin is blank refuses the request.
+    let mut body = serde_json::to_value(asked(None)).unwrap();
+    body["twin"] = serde_json::json!({ "agent_ref": "agent:a", "pinned_revisions": [""] });
+    let mut pinless = request(&schema, &asked(None));
+    pinless.params = BoundedVec::new(vec![TypedParam {
+        name: "recruit".to_string(),
+        value: TypedValue::Text(body.to_string()),
+    }])
+    .unwrap();
+    let refused = decide(&h, pinless).await.unwrap_err();
+    assert!(refused.starts_with("PARAMETER_INVALID"), "{refused}");
+    assert!(refused.contains("TWIN_PIN_MISSING"), "{refused}");
+
+    // Fault 2: when every offer is excluded there is no top offer, and each
+    // excluded gap keeps its exclusion code.
+    let mut excluded = asked(None);
+    let market = excluded.market.as_mut().expect("a market was given");
+    market
+        .gaps
+        .retain(|gap| gap.gap_id == "gap:blocked" || gap.gap_id == "gap:over");
+    let record = decide(&h, request(&schema, &excluded))
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    let allocation = result_of(&record)
+        .allocation
+        .expect("a market was given");
+    assert!(allocation.top().is_none());
+    assert_eq!(
+        allocation.excluded,
+        vec![
+            ("gap:blocked".to_string(), OfferExclusion::DependencyOpen),
+            ("gap:over".to_string(), OfferExclusion::OverBudget),
+        ]
+    );
+}
