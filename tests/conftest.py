@@ -398,7 +398,35 @@ def selection_needs_engine(items) -> bool:
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
+def _is_static_item(item) -> bool:
+    return (
+        item.get_closest_marker("exact_artifact") is not None
+        or item.get_closest_marker("no_engine") is not None
+    )
+
+
+def pytest_collection_modifyitems(items):
+    """Pull the shared engine in per test, not for the whole session.
+
+    The engine fixture used to be session-autouse, so one engine-needing test in
+    a selection made the fixture start the engine for every selected test, and
+    when the engine could not start (no build host, no prebuilt binary) every
+    static `no_engine` test errored at setup with it. Now only the tests that are
+    not static request it; a static test that names the fixture itself still gets
+    it, exactly as before.
+    """
+
+    for item in items:
+        names = getattr(item, "fixturenames", None)
+        if (
+            names is not None
+            and not _is_static_item(item)
+            and "start_medulla_server" not in names
+        ):
+            names.insert(0, "start_medulla_server")
+
+
+@pytest.fixture(scope="session")
 def start_medulla_server(request, tmp_path_factory):
     # When no selected test needs the shared engine (see
     # `selection_needs_engine`: exact_artifact / no_engine only), never
@@ -602,8 +630,8 @@ def outside_postgres_dsn() -> str:
     (MEDULLA-ENGINE-PARITY-R019.3). An unset variable fails the test, never skips it."""
     dsn = os.environ.get("MEDULLA_TEST_POSTGRES_DSN")
     assert dsn, (
-        "MEDULLA_TEST_POSTGRES_DSN is unset: the L4 job must declare a PostgreSQL service "
-        "and export its DSN"
+        "MEDULLA_TEST_POSTGRES_DSN is unset: the L4 job must declare a "
+        "PostgreSQL service and export its DSN"
     )
     return dsn
 
