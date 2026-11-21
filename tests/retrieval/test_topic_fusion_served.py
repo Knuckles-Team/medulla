@@ -1,4 +1,4 @@
-"""Served topic fusion over stored centroids (MEDULLA-FEDERATED-QUERY-R040.2.5).
+"""Served topic fusion over stored centroids (MEDULLA-FEDERATED-QUERY-R040.2.5, R040.2.6).
 
 The topic request rides on ``UnifiedQuery.retrieval.topic``. The graph declares one
 single-modality space through the served ``DeclareEmbeddingSpace`` write, document vectors
@@ -42,18 +42,17 @@ def _eq(prop: str, value: str) -> dict[str, Any]:
 
 
 def _ranked(
-    cl: Any, graph: str, query: list[float], k: int, retrieval: dict[str, Any]
+    cl: Any, graph: str, query: list[float], k: int, retrieval: dict[str, Any] | None
 ) -> RankedRows:
     ops = [
         {"Scan": {"label": "Doc"}},
         {"Rank": {"query": query}},
         {"Limit": {"k": k}},
     ]
-    result = cl._send(
-        "UnifiedQuery",
-        {"plan": {"ops": ops, "report_shortfall": True}, "retrieval": retrieval},
-        graph,
-    )
+    body: dict[str, Any] = {"plan": {"ops": ops, "report_shortfall": True}}
+    if retrieval is not None:
+        body["retrieval"] = retrieval
+    result = cl._send("UnifiedQuery", body, graph)
     if isinstance(result, (bytes, bytearray)):
         result = msgpack.unpackb(result, raw=False)
     return RankedRows.model_validate(result)
@@ -132,4 +131,84 @@ def test_receipt_reproduces_final_score(start_medulla_server) -> None:
         assert {entry.topic_id for entry in topic.responsibilities} <= {"sports", "finance"}
     finally:
         cl.tenants.delete(graph)
+        cl.close()
+
+
+def _topic(space: dict[str, Any], corpus_revision: int) -> dict[str, Any]:
+    return {
+        "retrieval": {
+            "topic": {
+                "top_topics": 2,
+                "min_weight": 0.0,
+                "corpus_revision": corpus_revision,
+                "space": space,
+            }
+        }
+    }
+
+
+def _refusal(cl: Any, graph: str, retrieval: dict[str, Any]) -> str:
+    with pytest.raises(EngineResponseError) as refused:
+        _ranked(cl, graph, [1.0, 0.0, 0.0, 0.0], 3, retrieval["retrieval"])
+    return str(refused.value)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.2")
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.6")
+def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.6: topic fusion over stored centroid nodes
+    changes the order the dense score alone gives, and an incompatible space, an
+    incompatible centroid, a stale corpus revision and another tenant's centroids each
+    refuse before anything is ranked."""
+    graph = f"topic-hot-{uuid.uuid4().hex[:8]}"
+    foreign = f"topic-foreign-{uuid.uuid4().hex[:8]}"
+    bare = f"topic-bare-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    for name in (graph, foreign, bare):
+        cl.tenants.create(name)
+    try:
+        for name in (graph, foreign, bare):
+            assert cl.graph.declare_embedding_space(_space(), name) == "pinned-test-space-digest"
+        # The nearest document by dense score is not the one with the strongest topic.
+        docs = [
+            ("d1", [0.8, 0.6, 0.0, 0.0]),
+            ("d2", [0.78, 0.0, 0.6258, 0.0]),
+            ("d3", [0.1, 0.0, 0.0, 0.995]),
+        ]
+        for node_id, embedding in docs:
+            put(cl, graph, node_id, {"type": "Doc"}, embedding)
+            put(cl, bare, node_id, {"type": "Doc"}, embedding)
+        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
+            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        # Another tenant's centroids, of the wrong width.
+        put(cl, foreign, "c-x", {"type": "TopicCentroid", "topic": "x", "centroid": [1.0, 0.0, 0.0]})
+
+        query = [1.0, 0.0, 0.0, 0.0]
+        plain = _ranked(cl, graph, query, 3, None)
+        assert [row[0] for row in plain.rows] == ["d1", "d2", "d3"]
+
+        probe = _topic(_space(), 2**40)
+        text = _refusal(cl, graph, probe)
+        assert "TOPIC_CORPUS_STALE" in text
+        match = re.search(r"the corpus is at (\d+)", text)
+        assert match, text
+        revision = int(match.group(1))
+
+        fused = _ranked(cl, graph, query, 3, _topic(_space(), revision)["retrieval"])
+        assert [row[0] for row in fused.rows] == ["d2", "d1", "d3"]
+        assert fused.receipt is not None and fused.receipt.topic is not None
+        assert fused.receipt.topic.backend_id == "stored_centroid"
+
+        # A space pinned to another revision is not the retriever's space.
+        other_space = {**_space(), "revision": "2"}
+        assert "TOPIC_SPACE_MISMATCH" in _refusal(cl, graph, _topic(other_space, revision))
+        # A stale corpus revision.
+        assert "TOPIC_CORPUS_STALE" in _refusal(cl, graph, _topic(_space(), revision + 1))
+        # A tenant never reads another tenant's centroids: this graph holds none.
+        assert "TOPIC_BACKEND_UNAVAILABLE" in _refusal(cl, bare, _topic(_space(), revision))
+        # A stored centroid of another width refuses.
+        assert "3 dimensions" in _refusal(cl, foreign, _topic(_space(), revision))
+    finally:
+        for name in (graph, foreign, bare):
+            cl.tenants.delete(name)
         cl.close()
