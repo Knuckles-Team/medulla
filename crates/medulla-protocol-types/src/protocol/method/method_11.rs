@@ -640,6 +640,13 @@ $($variants)*
         grant_id: String,
         lease_ms: u64,
     },
+    /// Extend the live lease of a claimed task (MEDULLA-DURABLE-KERNEL-R072.1).
+    /// Scope `task:work`. The attempt count and the task state do not change.
+    TaskQueueRenew {
+        task_id: String,
+        worker_id: String,
+        lease_ms: u64,
+    },
     /// Acknowledge a leased task (MEDULLA-DURABLE-KERNEL-R072). Scope
     /// `task:work`. `Succeeded` completes it, `Failed` fails it for good and
     /// `Retry` releases it for redelivery keeping its attempt count.

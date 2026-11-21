@@ -19,11 +19,12 @@ mod test_support;
 
 use std::path::Path;
 
-use medulla_h_jobs::task_queue::{ack, claim, enqueue, TaskQueueCall};
+use medulla_h_jobs::task_queue::{ack, claim, enqueue, renew, TaskQueueCall};
 use medulla_jobs::JobStore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_work_types::task_queue::{
     ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome,
+    TaskRenew, TaskRenewed,
 };
 
 const SECRET: &str = "medulla-durable-kernel-r072-task-queue-secret";
@@ -154,6 +155,83 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
     let none: Option<ClaimedTask> =
         decode(&claim(&store, &call(tenant, later + 2), lease("w2", 1_000)));
     assert!(none.is_none(), "an acked task was delivered again");
+}
+
+fn renew_of(task_id: &str, worker: &str, lease_ms: u64) -> TaskRenew {
+    TaskRenew {
+        task_id: task_id.into(),
+        worker_id: worker.into(),
+        lease_ms,
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R072.1
+#[test]
+fn renew_extends_lease_and_refuses_expired_or_foreign() {
+    common::configure_authority();
+    let dir = test_support::fresh_dir("r072-1-task-queue-renew");
+    let tenant = "tenant-a";
+    let store = open(&dir);
+    let enqueued: TaskEnqueued = decode(&enqueue(&store, &call(tenant, T0), task("r1")));
+    let first: Option<ClaimedTask> = decode(&claim(&store, &call(tenant, T0), lease("w1", 1_000)));
+    let first = first.expect("the task is leased");
+    assert_eq!(first.attempt, 1);
+
+    // A renew extends the expiry to now + lease_ms and keeps the attempt.
+    let renewed: TaskRenewed = decode(&renew(
+        &store,
+        &call(tenant, T0 + 500),
+        renew_of(&enqueued.task_id, "w1", 5_000),
+    ));
+    assert_eq!(renewed.task_id, enqueued.task_id);
+    assert_eq!(renewed.lease_expires_at_ms, T0 + 500 + 5_000);
+
+    // Past the original expiry the renewed lease still holds: nothing redelivers.
+    let held: Option<ClaimedTask> =
+        decode(&claim(&store, &call(tenant, T0 + 2_000), lease("w2", 1_000)));
+    assert!(held.is_none(), "a renewed lease was redelivered");
+
+    // Another worker, another tenant, an unknown task and a zero lease refuse.
+    let foreign = renew(
+        &store,
+        &call(tenant, T0 + 2_000),
+        renew_of(&enqueued.task_id, "w2", 1_000),
+    );
+    assert_eq!(refusal_code(&foreign), "TASK_ACK_NOT_CLAIMED");
+    let other_tenant = renew(
+        &store,
+        &call("tenant-b", T0 + 2_000),
+        renew_of(&enqueued.task_id, "w1", 1_000),
+    );
+    assert_eq!(refusal_code(&other_tenant), "TASK_ACK_NOT_CLAIMED");
+    let unknown = renew(
+        &store,
+        &call(tenant, T0 + 2_000),
+        renew_of("no-such-task", "w1", 1_000),
+    );
+    assert_eq!(refusal_code(&unknown), "TASK_ACK_NOT_CLAIMED");
+    let zero = renew(
+        &store,
+        &call(tenant, T0 + 2_000),
+        renew_of(&enqueued.task_id, "w1", 0),
+    );
+    assert_eq!(refusal_code(&zero), "TASK_LEASE_ZERO");
+
+    // After the renewed lease lapses, the same worker's renew refuses expired.
+    let lapsed = renew(
+        &store,
+        &call(tenant, T0 + 500 + 5_001),
+        renew_of(&enqueued.task_id, "w1", 1_000),
+    );
+    assert_eq!(refusal_code(&lapsed), "TASK_ACK_LEASE_EXPIRED");
+
+    // The task redelivers with a higher attempt: renew never counted as one.
+    let again: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 500 + 5_001),
+        lease("w2", 1_000),
+    ));
+    assert_eq!(again.expect("redelivered").attempt, 2);
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R072

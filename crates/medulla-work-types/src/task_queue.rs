@@ -110,6 +110,26 @@ pub struct TaskAcked {
     pub outcome: TaskOutcome,
 }
 
+/// Extend the live lease of a claimed task (MEDULLA-DURABLE-KERNEL-R072.1).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TaskRenew {
+    pub task_id: String,
+    pub worker_id: String,
+    pub lease_ms: u64,
+}
+
+/// The reply of `TaskQueueRenew`: the task and its new lease expiry.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TaskRenewed {
+    pub task_id: String,
+    /// Engine time at which the extended lease lapses.
+    pub lease_expires_at_ms: i64,
+}
+
 /// A task-queue request refused before it reaches the queue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InvalidTaskQueueRequest {
@@ -188,6 +208,16 @@ impl TaskEnqueue {
 
 impl TaskClaim {
     /// Validate the lease bound.
+    pub fn validate(&self) -> Result<(), InvalidTaskQueueRequest> {
+        if !(TASK_LEASE_MIN_MS..=TASK_LEASE_MAX_MS).contains(&self.lease_ms) {
+            return Err(InvalidTaskQueueRequest::Lease);
+        }
+        Ok(())
+    }
+}
+
+impl TaskRenew {
+    /// Validate the lease bound, the same bound a claim carries.
     pub fn validate(&self) -> Result<(), InvalidTaskQueueRequest> {
         if !(TASK_LEASE_MIN_MS..=TASK_LEASE_MAX_MS).contains(&self.lease_ms) {
             return Err(InvalidTaskQueueRequest::Lease);

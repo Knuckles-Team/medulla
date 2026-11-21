@@ -1,7 +1,7 @@
 //! Served task-queue methods over the durable job store
 //! (MEDULLA-DURABLE-KERNEL-R072).
 //!
-//! `TaskQueueEnqueue`, `TaskQueueClaim` and `TaskQueueAck` are a typed facade
+//! `TaskQueueEnqueue`, `TaskQueueClaim`, `TaskQueueRenew` and `TaskQueueAck` are a typed facade
 //! over the one queue store, `medulla_jobs::JobStore`: enqueue submits a job of
 //! family `task.<queue>`, claim leases the next ready task through the worker
 //! claim, and ack maps `Succeeded`, `Failed` and `Retry` to the fenced terminal,
@@ -23,7 +23,8 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 use medulla_work_types::task_queue::{
-    ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome,
+    ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome, TaskRenew,
+    TaskRenewed,
 };
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
@@ -199,21 +200,58 @@ pub fn ack(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskAck) -> Resp
                 outcome: request.outcome,
             }),
         ),
-        Err(TaskAckError::NotClaimed) => Response::err(
+        Err(error) => lease_refusal(req_id, error, "ack"),
+    }
+}
+
+/// The refusal of a task call that needs a live lease: not claimed by this
+/// worker, lapsed before the call, or a store failure.
+fn lease_refusal(req_id: u64, error: TaskAckError, call: &str) -> Response {
+    match error {
+        TaskAckError::NotClaimed => Response::err(
             req_id,
             format!(
                 "{}: the task is not leased to this worker",
                 ServerErrorCode::TaskAckNotClaimed.as_str()
             ),
         ),
-        Err(TaskAckError::LeaseExpired) => Response::err(
+        TaskAckError::LeaseExpired => Response::err(
             req_id,
             format!(
-                "{}: the lease lapsed before the ack",
+                "{}: the lease lapsed before the {call}",
                 ServerErrorCode::TaskAckLeaseExpired.as_str()
             ),
         ),
-        Err(TaskAckError::Store(error)) => store_refusal(req_id, &error),
+        TaskAckError::Store(error) => store_refusal(req_id, &error),
+    }
+}
+
+/// Serve `TaskQueueRenew`: extend the live lease the caller's worker holds on a
+/// task. The attempt count and the task state do not change.
+pub fn renew(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskRenew) -> Response {
+    let req_id = call.req_id;
+    if let Err(refusal) = request.validate() {
+        return Response::err(req_id, refusal.to_string());
+    }
+    if !worker_field_valid(&request.worker_id) {
+        return invalid(req_id, "task worker_id must be 1 to 256 bytes");
+    }
+    let renewed = store.renew_task(
+        call.tenant,
+        &request.task_id,
+        &worker_ref(call, &request.worker_id),
+        call.now_ms,
+        request.lease_ms,
+    );
+    match renewed {
+        Ok(job) => answer(
+            req_id,
+            ResultPayload::of::<contract::TaskQueueRenew>(TaskRenewed {
+                task_id: job.job_id,
+                lease_expires_at_ms: job.lease.map(|lease| lease.expires_at_ms).unwrap_or_default(),
+            }),
+        ),
+        Err(error) => lease_refusal(req_id, error, "renewal"),
     }
 }
 
@@ -230,6 +268,7 @@ pub async fn try_handle(
         Method::TaskQueueEnqueue { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }
+            | Method::TaskQueueRenew { .. }
     ) {
         return Err(method);
     }
@@ -289,6 +328,19 @@ pub async fn try_handle(
                 worker_id,
                 outcome,
                 detail,
+            },
+        ),
+        Method::TaskQueueRenew {
+            task_id,
+            worker_id,
+            lease_ms,
+        } => renew(
+            &store,
+            &call,
+            TaskRenew {
+                task_id,
+                worker_id,
+                lease_ms,
             },
         ),
         other => return Err(other),

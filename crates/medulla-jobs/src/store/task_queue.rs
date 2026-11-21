@@ -109,6 +109,39 @@ fn task_ledger_key(tenant: &str, queue: &str, idempotency_key: &str) -> String {
     format!("task:{}", hex::encode(hasher.finalize()))
 }
 
+/// The one ownership rule of a leased task: the task is running, belongs to
+/// `tenant`, is of a `task.` family, and `worker_ref` holds a live lease on it.
+/// Ack and renew both call this; no second rule exists. Returns the running
+/// checkpoint.
+fn require_task_lease(
+    job: &AnalyticsJob,
+    tenant: &str,
+    worker_ref: &str,
+    now_ms: i64,
+) -> std::result::Result<Checkpoint, TaskAckError> {
+    let checkpoint = match &job.state {
+        JobState::Running { checkpoint } => checkpoint.clone(),
+        _ => return Err(TaskAckError::NotClaimed),
+    };
+    if job.policy.tenant != tenant || !job.algo.family.starts_with(TASK_FAMILY_PREFIX) {
+        return Err(TaskAckError::NotClaimed);
+    }
+    match job.lease.as_ref() {
+        Some(lease) if lease.worker_ref == worker_ref => {
+            if lease.expires_at_ms <= now_ms {
+                return Err(TaskAckError::LeaseExpired);
+            }
+        }
+        // A lapsed lease the scheduler already detached still names its last
+        // holder, so that holder reads as expired rather than never claimed.
+        None if job.last_worker_ref == worker_ref => {
+            return Err(TaskAckError::LeaseExpired);
+        }
+        _ => return Err(TaskAckError::NotClaimed),
+    }
+    Ok(checkpoint)
+}
+
 impl JobStore {
     /// Enqueue one task as a job of family `task.<queue>`. The first use of an
     /// idempotency key in a tenant's queue stores the task; any later use returns
@@ -210,26 +243,7 @@ impl JobStore {
             Err(JobError::NotFound(_)) => return Err(TaskAckError::NotClaimed),
             Err(error) => return Err(error.into()),
         };
-        let checkpoint = match &job.state {
-            JobState::Running { checkpoint } => checkpoint.clone(),
-            _ => return Err(TaskAckError::NotClaimed),
-        };
-        if job.policy.tenant != tenant || !job.algo.family.starts_with(TASK_FAMILY_PREFIX) {
-            return Err(TaskAckError::NotClaimed);
-        }
-        match job.lease.as_ref() {
-            Some(lease) if lease.worker_ref == worker_ref => {
-                if lease.expires_at_ms <= now_ms {
-                    return Err(TaskAckError::LeaseExpired);
-                }
-            }
-            // A lapsed lease the scheduler already detached still names its last
-            // holder, so that holder reads as expired rather than never claimed.
-            None if job.last_worker_ref == worker_ref => {
-                return Err(TaskAckError::LeaseExpired);
-            }
-            _ => return Err(TaskAckError::NotClaimed),
-        }
+        let checkpoint = require_task_lease(&job, tenant, worker_ref, now_ms)?;
         let reason = |fallback: &str| {
             if detail.is_empty() {
                 fallback.to_string()
@@ -266,6 +280,34 @@ impl JobStore {
             }
         }
         job.lease = None;
+        job.updated_at_ms = now_ms;
+        let (batch, _next_version) =
+            write_job_transition(self, &write, &job, expected_version, None)?;
+        self.mutations.commit(write, &batch).map_err(redb_err)?;
+        Ok(job)
+    }
+
+    /// Extend the live lease of a task `worker_ref` holds to `now_ms + lease_ms`
+    /// in one fenced transition. The attempt count and the job state do not
+    /// change. Ownership is the rule of [`ack_task`](Self::ack_task).
+    pub fn renew_task(
+        &self,
+        tenant: &str,
+        task_id: &str,
+        worker_ref: &str,
+        now_ms: i64,
+        lease_ms: u64,
+    ) -> std::result::Result<AnalyticsJob, TaskAckError> {
+        let expected_version = self.live_version()?;
+        let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
+        let mut job = match read_job_in_wtx(&write, task_id) {
+            Ok(job) => job,
+            Err(JobError::NotFound(_)) => return Err(TaskAckError::NotClaimed),
+            Err(error) => return Err(error.into()),
+        };
+        require_task_lease(&job, tenant, worker_ref, now_ms)?;
+        let lease = job.lease.as_mut().ok_or(TaskAckError::NotClaimed)?;
+        lease.expires_at_ms = now_ms.saturating_add(i64::try_from(lease_ms).unwrap_or(i64::MAX));
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;

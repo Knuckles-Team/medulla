@@ -453,6 +453,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("TaskQueueClaim", "AnalyticsJob"),
     ("SetSchedulerConfig", "AnalyticsJob"),
     ("TaskQueueAck", "AnalyticsJob"),
+    ("TaskQueueRenew", "AnalyticsJob"),
     ("KgDelegate", "ControlPlane"),
     ("SubmitWorkItem", "ControlPlane"),
     ("SubmitWorkItems", "ControlPlane"),

@@ -75,6 +75,7 @@ method_results! {
     // MEDULLA-DURABLE-KERNEL-R072: the stored task id, the leased task or nil, the recorded outcome.
     TaskQueueEnqueue(TaskQueueEnqueue) => Raw<medulla_work_types::task_queue::TaskEnqueued>;
     TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
+    TaskQueueRenew(TaskQueueRenew) => Raw<medulla_work_types::task_queue::TaskRenewed>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
     // MEDULLA-DURABLE-KERNEL-R076.2: the policy in force, and the policy just stored.
     GetSchedulerConfig(GetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
