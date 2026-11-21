@@ -244,6 +244,12 @@ fn parse_outcome(file_path: &str, source: &[u8]) -> (ParseResult, IndexFileOutco
     }
 }
 
+/// Whether the parser has a grammar for `file_path`'s extension: a path it has none
+/// for holds no code to index (MEDULLA-SCM-R006).
+pub fn is_parseable_path(file_path: &str) -> bool {
+    lang_for_path(file_path).is_some()
+}
+
 pub fn parse_file(file_path: &str, source: &[u8]) -> Result<ParseResult, String> {
     let mut parser = Parser::new();
     let (language, lang_label) = lang_for_path(file_path).ok_or("Unsupported file extension")?;

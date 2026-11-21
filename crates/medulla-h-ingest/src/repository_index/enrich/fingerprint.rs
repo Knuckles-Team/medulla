@@ -43,35 +43,45 @@ pub(super) fn file_fingerprints(rows: &[Row]) -> Vec<StructuralFingerprint> {
             .or_default()
             .push((id.as_str(), properties));
     }
-    let property = |properties: &BTreeMap<String, String>, key: &str| {
-        properties.get(key).cloned().unwrap_or_default()
-    };
     let mut fingerprints = Vec::with_capacity(files.len());
-    for (path, mut symbols) in files {
+    for (path, symbols) in files {
         let Ok(path_id) = Id::new(path) else {
             continue;
         };
-        symbols.sort_by(|left, right| left.0.cmp(right.0));
-        let mut content = String::new();
-        let mut signatures = Vec::with_capacity(symbols.len());
-        for (node_id, properties) in &symbols {
-            content.push_str(&format!(
-                "{node_id}\t{}\t{}\t{}\n",
-                property(properties, "ast_hash"),
-                property(properties, "start_byte"),
-                property(properties, "end_byte"),
-            ));
-            signatures.push(format!(
-                "{}\t{}\t{}",
-                property(properties, "qualified_symbol"),
-                property(properties, "symbol_type"),
-                property(properties, "kind_detail"),
-            ));
-        }
-        signatures.sort();
-        fingerprints.push(fingerprint(path_id, content.as_bytes(), Ok(&signatures)));
+        fingerprints.push(symbol_fingerprint(path_id, symbols));
     }
     fingerprints
+}
+
+/// The fingerprint of one file from its `SYMBOL` rows `(id, properties)`: the
+/// one definition of the content and structure hashes, shared by the committed
+/// rows above and the changeset re-index (MEDULLA-SCM-R006).
+pub(in crate::repository_index) fn symbol_fingerprint(
+    path_id: Id,
+    mut symbols: Vec<(&str, &BTreeMap<String, String>)>,
+) -> StructuralFingerprint {
+    let property = |properties: &BTreeMap<String, String>, key: &str| {
+        properties.get(key).cloned().unwrap_or_default()
+    };
+    symbols.sort_by(|left, right| left.0.cmp(right.0));
+    let mut content = String::new();
+    let mut signatures = Vec::with_capacity(symbols.len());
+    for (node_id, properties) in &symbols {
+        content.push_str(&format!(
+            "{node_id}\t{}\t{}\t{}\n",
+            property(properties, "ast_hash"),
+            property(properties, "start_byte"),
+            property(properties, "end_byte"),
+        ));
+        signatures.push(format!(
+            "{}\t{}\t{}",
+            property(properties, "qualified_symbol"),
+            property(properties, "symbol_type"),
+            property(properties, "kind_detail"),
+        ));
+    }
+    signatures.sort();
+    fingerprint(path_id, content.as_bytes(), Ok(&signatures))
 }
 
 /// The node id of the stored fingerprint of one file of one repository.

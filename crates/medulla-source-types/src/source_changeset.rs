@@ -335,6 +335,32 @@ pub struct SubmitChangesetReceipt {
     /// The branch head after the append: the id of the carrying branch commit.
     pub branch_head: String,
     pub replayed: bool,
+    /// What the code-graph re-index of the changeset did (MEDULLA-SCM-R006);
+    /// `None` on a replay or when the repository has no graph to index into.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<ChangesetIndex>,
+}
+
+/// The outcome of re-indexing the code graph for one accepted changeset
+/// (MEDULLA-SCM-R006).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ChangesetIndex {
+    /// The index write committed before the receipt returned.
+    Indexed {
+        /// Files re-parsed because their structure changed.
+        reparsed: u32,
+        /// Files whose nodes were removed.
+        deleted: u32,
+        /// Communities written for the affected subgraph.
+        communities: u32,
+    },
+    /// The index was not advanced; the accepted changeset stays accepted.
+    Refused {
+        /// The stable refusal code, e.g. `INDEX_BASE_MISMATCH`.
+        code: String,
+    },
 }
 
 /// The closed request of `Method::ImportGitHistory` (MEDULLA-SCM-R010):

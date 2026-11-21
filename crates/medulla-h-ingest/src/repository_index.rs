@@ -27,6 +27,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
+#[cfg(feature = "ast")]
+pub mod changeset;
 pub mod delta;
 pub mod ecosystem;
 pub mod enrich;

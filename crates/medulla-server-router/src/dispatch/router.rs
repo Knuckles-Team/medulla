@@ -38,6 +38,8 @@ use medulla_server_graph::{
 };
 use std::sync::OnceLock;
 
+#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
+mod changeset_index;
 mod branch_merge;
 mod branch_write;
 mod channels;

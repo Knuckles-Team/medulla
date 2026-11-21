@@ -214,7 +214,7 @@ fn relation(edge_type: &str) -> Option<(EdgeRelation, Rung)> {
 
 /// The R011 communities of the committed call graph, through the shared
 /// community detector (no second detector), labelled under `digest`.
-fn communities(
+pub(super) fn communities(
     symbols: &BTreeSet<String>,
     calls: &[(String, String)],
     digest: &str,
@@ -245,6 +245,35 @@ fn communities(
         }
     }
     Ok(assignment)
+}
+
+/// The feature node and the `memberOfFeature` edges of every community of
+/// `assignment` (entity to community label), under the rung and node shape the
+/// enrichment run writes; the one writer of feature nodes, also used by the
+/// changeset re-index (MEDULLA-SCM-R006).
+pub(super) fn feature_methods(assignment: &BTreeMap<Id, String>) -> Result<Vec<Method>, String> {
+    let mut methods = Vec::new();
+    for feature in medulla_enrich::code::features_from_communities(assignment)
+        .map_err(|error| error.to_string())?
+    {
+        let feature_id = feature.id.as_str().to_string();
+        methods.push(add_node(
+            feature_id.clone(),
+            &[
+                ("type", FEATURE_TYPE.to_string()),
+                ("members", feature.members.len().to_string()),
+                (PRODUCING_RUNG, rung_label(FEATURE_RUNG)),
+            ],
+        )?);
+        for member in &feature.members {
+            methods.push(add_edge(
+                member.as_str().to_string(),
+                feature_id.clone(),
+                "memberOfFeature",
+            )?);
+        }
+    }
+    Ok(methods)
 }
 
 /// The facts the enrichment run reads, all from the committed index envelope.

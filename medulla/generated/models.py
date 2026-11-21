@@ -37587,6 +37587,74 @@ class TraceCritiqueQuery(BaseModel):
     tenant: str
 
 
+class ChangedPath(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    mode: Annotated[int, Field(ge=0)]
+    new_blob: str | None = None
+    old_blob: str | None = None
+    op: PathOp
+    path: str
+
+
+class GitOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    commit_id: str
+    object_format: GitObjectFormat
+    parent_commit_ids: list[str]
+    raw_headers: str
+    side_pack_digest: str | None = None
+    tree_id: str
+
+
+class Changeset(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_identity: str | None = None
+    author_principal: str
+    changed_paths: list[ChangedPath]
+    created_at: Annotated[int, Field(ge=0)]
+    git: GitOrigin | None = None
+    id: str
+    message: str
+    parents: list[str]
+    repo: str
+    run_trace_id: str | None = None
+    trailers: Trailers
+
+
+class ChangesetIndexIndexed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    communities: Annotated[int, Field(ge=0)]
+    deleted: Annotated[int, Field(ge=0)]
+    outcome: Literal["indexed"]
+    reparsed: Annotated[int, Field(ge=0)]
+
+
+class ChangesetIndexRefused(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    outcome: Literal["refused"]
+
+
+ChangesetIndex = Annotated[
+    ChangesetIndexIndexed | ChangesetIndexRefused,
+    Field(discriminator="outcome"),
+]
+
+
+class SubmitChangesetReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch_head: str
+    changeset: Changeset
+    index: ChangesetIndex | None = None
+    replayed: bool
+
+
 class Trailers(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -44663,6 +44731,13 @@ __all__ = [
     "StoredParamType",
     "StoredQuery",
     "StoredQueryLanguage",
+    "ChangedPath",
+    "GitOrigin",
+    "Changeset",
+    "ChangesetIndexIndexed",
+    "ChangesetIndexRefused",
+    "ChangesetIndex",
+    "SubmitChangesetReceipt",
     "SubmitChangesetRequest",
     "SubmittedBlobRef",
     "SubmittedPath",

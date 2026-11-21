@@ -252,6 +252,7 @@ mod served {
                     changeset,
                     branch_head: commit.id,
                     replayed: true,
+                    index: None,
                 },
             )
         };
@@ -370,7 +371,7 @@ mod served {
             ChangesetAppend {
                 request: Arc::clone(&request),
                 store: Arc::clone(&store),
-                merge_owner,
+                merge_owner: merge_owner.clone(),
                 author,
                 agent_identity,
                 created_at_ms,
@@ -381,14 +382,37 @@ mod served {
         match appended {
             Ok(done) => match target.payload(&done.commit.id).await {
                 Ok(Some(bytes)) => match decode_changeset(&bytes) {
-                    Ok(changeset) => receipt_response(
-                        req.id,
-                        SubmitChangesetReceipt {
-                            changeset,
-                            branch_head: done.commit.id,
-                            replayed: done.replayed,
-                        },
-                    ),
+                    Ok(changeset) => {
+                        // MEDULLA-SCM-R006: the code graph follows the accepted
+                        // changeset before the receipt is built; a replay indexes
+                        // nothing.
+                        #[cfg(feature = "ast")]
+                        let index = if done.replayed {
+                            None
+                        } else {
+                            super::changeset_index::reindex(
+                                state,
+                                verified,
+                                Arc::clone(&store),
+                                merge_owner,
+                                changeset.clone(),
+                                done.commit.id.clone(),
+                                req.id,
+                            )
+                            .await
+                        };
+                        #[cfg(not(feature = "ast"))]
+                        let index = None;
+                        receipt_response(
+                            req.id,
+                            SubmitChangesetReceipt {
+                                changeset,
+                                branch_head: done.commit.id,
+                                replayed: done.replayed,
+                                index,
+                            },
+                        )
+                    }
                     Err(error) => Response::err(req.id, error),
                 },
                 Ok(None) => Response::err(req.id, "an appended commit carries no changeset"),
