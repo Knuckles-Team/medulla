@@ -36,7 +36,7 @@ mod planning;
 pub(super) mod release;
 mod skill_files;
 mod skill_graph;
-mod validation;
+pub(crate) mod validation;
 pub(crate) mod vocabulary;
 
 #[cfg(test)]

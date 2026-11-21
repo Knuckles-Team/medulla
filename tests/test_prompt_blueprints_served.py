@@ -80,7 +80,7 @@ async def _export(
     )
 
 
-# spec: MEDULLA-TYPED-PACKS-R094.2
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.2")
 @pytest.mark.asyncio
 async def test_lossless_blueprint_export() -> None:
     connector = f"blueprint-{uuid.uuid4().hex[:10]}"
@@ -134,7 +134,7 @@ async def _record(client: MedullaClient, effect: AgentComponentOpRecordSourceEff
     )
 
 
-# spec: MEDULLA-TYPED-PACKS-R094.8
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.8")
 @pytest.mark.asyncio
 async def test_source_effect_receipt_is_recorded_once() -> None:
     connector = f"blueprint-{uuid.uuid4().hex[:10]}"
@@ -201,7 +201,7 @@ class _LoopbackRepositoryConnector:
         }
 
 
-# spec: MEDULLA-TYPED-PACKS-R094.7
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.7")
 @pytest.mark.asyncio
 async def test_approved_source_effect_dependency() -> None:
     connector = f"blueprint-{uuid.uuid4().hex[:10]}"

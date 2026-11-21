@@ -21,11 +21,20 @@ class FieldContract(BaseModel):
     types: list[JsonType]
 
 
+class GraphSchemaInterfaceView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    class_: str = Field(alias="class")
+    interface: str
+    missing: list[str]
+
+
 class GraphSchemaClassesView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     composed_digest: str
     graph: str
+    interfaces: list[GraphSchemaInterfaceView] = Field(default_factory=list)
     next_cursor: str | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     terms: BoundedVec_GraphSchemaTermView_1000
@@ -325,6 +334,8 @@ BoundedVec_GraphSchemaTermView_1000 = Annotated[
 
 FieldContract.model_rebuild()
 
+GraphSchemaInterfaceView.model_rebuild()
+
 GraphSchemaClassesView.model_rebuild()
 
 GraphSchemaCommitted.model_rebuild()
@@ -377,6 +388,7 @@ __all__ = [
     "Digest256",
     "FieldContract",
     "GraphSchemaClassesView",
+    "GraphSchemaInterfaceView",
     "GraphSchemaCommitted",
     "GraphSchemaOp",
     "GraphSchemaOpAttach",

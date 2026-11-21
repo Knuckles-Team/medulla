@@ -18,6 +18,9 @@ use medulla_types::contract::BoundedVec;
 /// Largest page one `GraphSchemaClasses` read returns.
 pub const MAX_GRAPH_SCHEMA_TERMS_PAGE: usize = 1000;
 
+/// Most interface implementations one `GraphSchemaClasses` read reports.
+pub const MAX_GRAPH_SCHEMA_INTERFACE_REPORTS: usize = 4096;
+
 /// What a declared term is, by the RDF type that declares it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -114,6 +117,19 @@ pub struct GraphSchemaTermView {
     pub ontology_revision: Option<u64>,
 }
 
+/// One class that declares `:implementsInterface`, with the required members
+/// of that interface it does not declare (MEDULLA-TYPED-PACKS-R650.3). An empty
+/// `missing` is a complete implementation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GraphSchemaInterfaceView {
+    pub class: String,
+    pub interface: String,
+    /// Required property IRIs and link names the class lacks, sorted.
+    pub missing: Vec<String>,
+}
+
 /// One page of the composed schema's declared terms.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -126,6 +142,10 @@ pub struct GraphSchemaClassesView {
     /// Terms matching the request's `kind` filter, across all pages.
     pub total_terms: u64,
     pub terms: BoundedVec<GraphSchemaTermView, MAX_GRAPH_SCHEMA_TERMS_PAGE>,
+    /// Every interface implementation the composed schema declares, on every page
+    /// (MEDULLA-TYPED-PACKS-R650.3). At most [`MAX_GRAPH_SCHEMA_INTERFACE_REPORTS`].
+    #[serde(default)]
+    pub interfaces: Vec<GraphSchemaInterfaceView>,
     /// Pass back as `cursor` for the next page; absent on the last page.
     #[serde(default)]
     pub next_cursor: Option<String>,

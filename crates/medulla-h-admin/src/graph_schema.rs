@@ -575,7 +575,14 @@ fn pack_candidate_sources(
             ));
         }
     }
-    let shapes_ttl = compose_pack_documents("SHAPES", shapes)?;
+    // The shapes compiled from the pack's object-model declarations join its shape
+    // set, so the guard policy composed from the sources enforces them
+    // (MEDULLA-TYPED-PACKS-R650.3).
+    let object_model_shapes = pack_object_model_shapes(&ontologies)?;
+    let shapes_ttl = with_object_model_shapes(
+        compose_pack_documents("SHAPES", shapes)?,
+        &object_model_shapes,
+    )?;
     let ontology_ttl = compose_pack_documents("ONTOLOGY", ontologies)?;
     let records = parse_pack_crosswalks(&crosswalks)?;
     let source = medulla_graph_core::graph::GraphSchemaSource::new(
@@ -592,6 +599,32 @@ fn pack_candidate_sources(
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
     Ok((sources, changed, records))
+}
+
+/// The compiled shapes of the pack's ontology members, as one N-Triples document.
+fn pack_object_model_shapes(ontologies: &[PackSchemaDocument]) -> Result<String, String> {
+    let documents: Vec<&str> = ontologies.iter().map(|document| &*document.body).collect();
+    crate::admin::connector_pack::import::validation::object_model_shapes_document(&documents)
+        .map_err(|error| format!("ATTACH_PACK_SCHEMA_INVALID: {error}"))
+}
+
+/// The pack's composed shapes with its compiled object-model shapes appended.
+fn with_object_model_shapes(
+    composed: Option<Arc<str>>,
+    compiled: &str,
+) -> Result<Option<Arc<str>>, String> {
+    if compiled.is_empty() {
+        return Ok(composed);
+    }
+    let mut body = composed.as_deref().unwrap_or_default().to_string();
+    body.push_str(compiled);
+    if body.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
+        return Err(format!(
+            "ATTACH_PACK_SCHEMA_TOO_LARGE: composed SHAPES projection exceeds {} bytes",
+            medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+        ));
+    }
+    Ok(Some(Arc::from(body)))
 }
 
 /// The crosswalk records of a pack head, in canonical order. A body that is not

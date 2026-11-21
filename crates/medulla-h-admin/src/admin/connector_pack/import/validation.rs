@@ -627,7 +627,11 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
             "archive sections do not cover the complete archive",
         );
     }
-    if let Err((code, detail)) = validate_rdf_unions(&validator.ontologies, &validator.shapes) {
+    // The shapes compiled from the pack's object-model declarations join the pack
+    // shape set the union below cross-validates (MEDULLA-TYPED-PACKS-R650.3).
+    let mut shapes = validator.shapes.clone();
+    shapes.extend(flag_object_model(validator));
+    if let Err((code, detail)) = validate_rdf_unions(&validator.ontologies, &shapes) {
         validator.reject(code, None, detail);
     }
     flag_ontology_orphans(validator);
@@ -698,6 +702,102 @@ fn flag_ontology_orphans(validator: &mut IndexValidator<'_>) {
 
 #[cfg(not(feature = "rdf"))]
 fn flag_ontology_orphans(_validator: &mut IndexValidator<'_>) {}
+
+/// Convert one compiled shape triple to an RDF triple. `medulla-core` returns its own
+/// triple type so it never depends on `medulla-rdf`; this is the one conversion
+/// (MEDULLA-TYPED-PACKS-R650.2).
+#[cfg(feature = "rdf")]
+pub(crate) fn shape_triple_to_rdf(
+    triple: &medulla_core::ontology::object_model::ShapeTriple,
+) -> Result<medulla_rdf::oxrdf::Triple, String> {
+    use medulla_core::ontology::object_model::ShapeTerm;
+    use medulla_rdf::oxrdf::{Literal, NamedNode, Term, Triple};
+
+    let named = |iri: &str| {
+        NamedNode::new(iri).map_err(|error| format!("compiled shape IRI is invalid: {error}"))
+    };
+    let object = match &triple.object {
+        ShapeTerm::Iri(iri) => Term::from(named(iri)?),
+        ShapeTerm::Literal {
+            lexical,
+            datatype: Some(datatype),
+        } => Term::from(Literal::new_typed_literal(lexical.clone(), named(datatype)?)),
+        ShapeTerm::Literal {
+            lexical,
+            datatype: None,
+        } => Term::from(Literal::new_simple_literal(lexical.clone())),
+    };
+    Ok(Triple::new(
+        named(&triple.subject)?,
+        named(&triple.predicate)?,
+        object,
+    ))
+}
+
+/// The shapes compiled from the object-model declarations of `ontologies`, as one
+/// N-Triples document; empty when the ontologies declare none. The one place a pack
+/// head's ontologies become shapes: the import cross-validates the result and the
+/// schema attach hands it to the guard policy.
+#[cfg(feature = "rdf")]
+pub(crate) fn object_model_shapes_document(ontologies: &[&str]) -> Result<String, String> {
+    let model = medulla_rdf::pack::extract_object_model(ontologies).map_err(|error| {
+        format!(
+            "OBJECT_MODEL_INVALID: {}: {}",
+            error.subject(),
+            error.reason()
+        )
+    })?;
+    compiled_shapes_document(&model)
+}
+
+/// One model's compiled shapes as N-Triples, one statement per line, in the
+/// compiler's sorted order.
+#[cfg(feature = "rdf")]
+pub(crate) fn compiled_shapes_document(
+    model: &medulla_core::ontology::object_model::ObjectModel,
+) -> Result<String, String> {
+    let mut body = String::new();
+    for shape in medulla_core::ontology::object_model::compile_shapes(model) {
+        // `Triple`'s Display is the statement without its terminating ` .`.
+        body.push_str(&format!("{} .\n", shape_triple_to_rdf(&shape)?));
+    }
+    Ok(body)
+}
+
+/// Extract the pack's object model; refuse a malformed declaration with
+/// `OBJECT_MODEL_INVALID`. Returns the compiled shape document to cross-validate,
+/// if the ontologies declare any (MEDULLA-TYPED-PACKS-R650.3).
+#[cfg(feature = "rdf")]
+fn flag_object_model(validator: &mut IndexValidator<'_>) -> Option<String> {
+    if validator.ontologies.is_empty() {
+        return None;
+    }
+    let documents: Vec<&str> = validator.ontologies.iter().map(String::as_str).collect();
+    let model = match medulla_rdf::pack::extract_object_model(&documents) {
+        Ok(model) => model,
+        Err(error) => {
+            validator.reject(
+                PackViolationCode::ObjectModelInvalid,
+                Some(error.subject()),
+                error.reason(),
+            );
+            return None;
+        }
+    };
+    match compiled_shapes_document(&model) {
+        Ok(document) if document.is_empty() => None,
+        Ok(document) => Some(document),
+        Err(detail) => {
+            validator.reject(PackViolationCode::ObjectModelInvalid, None, &detail);
+            None
+        }
+    }
+}
+
+#[cfg(not(feature = "rdf"))]
+fn flag_object_model(_validator: &mut IndexValidator<'_>) -> Option<String> {
+    None
+}
 
 /// Kinds whose body is SDK-serialized JSON (G8): the server identity, a tool
 /// descriptor, a prompt's rendered `prompts/get` capture, a model profile and

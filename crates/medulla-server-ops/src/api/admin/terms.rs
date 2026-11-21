@@ -11,9 +11,11 @@ use std::sync::Arc;
 
 use medulla_catalog_types::{
     graph_schema::term_local_name, graph_schema::validate_term_page_limit,
-    graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaTermKind,
+    graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaInterfaceView,
+    graph_schema::GraphSchemaTermKind,
     graph_schema::GraphSchemaTermPosition, graph_schema::GraphSchemaTermView,
     graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+    graph_schema::MAX_GRAPH_SCHEMA_INTERFACE_REPORTS,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
@@ -110,8 +112,58 @@ fn classes_page(
         composed_digest: sources.composed_digest().to_hex(),
         total_terms,
         terms: medulla_types::contract::BoundedVec::new(page)?,
+        interfaces: interface_reports(sources)?,
         next_cursor,
     })
+}
+
+/// Every `:implementsInterface` the composed schema declares, with the required
+/// members the implementing class lacks (MEDULLA-TYPED-PACKS-R650.3). One
+/// extraction path: the model the pack import compiles its shapes from.
+fn interface_reports(sources: &GraphSchemaSources) -> Result<Vec<GraphSchemaInterfaceView>, String> {
+    use medulla_core::ontology::object_model::interface_gaps;
+
+    let documents: Vec<&str> = sources.ontologies().map(|(_, text)| text).collect();
+    let model = medulla_rdf::pack::extract_object_model(&documents).map_err(|error| {
+        format!(
+            "OBJECT_MODEL_INVALID: {}: {}",
+            error.subject(),
+            error.reason()
+        )
+    })?;
+    let mut missing: BTreeMap<(String, String), Vec<String>> = model
+        .implementations
+        .iter()
+        .map(|implementation| {
+            (
+                (implementation.class.clone(), implementation.interface.clone()),
+                Vec::new(),
+            )
+        })
+        .collect();
+    for gap in interface_gaps(&model) {
+        missing
+            .entry((gap.class, gap.interface))
+            .or_default()
+            .push(gap.member);
+    }
+    if missing.len() > MAX_GRAPH_SCHEMA_INTERFACE_REPORTS {
+        return Err(format!(
+            "GRAPH_SCHEMA_TOO_LARGE: more than {MAX_GRAPH_SCHEMA_INTERFACE_REPORTS} interface implementations"
+        ));
+    }
+    Ok(missing
+        .into_iter()
+        .map(|((class, interface), mut missing)| {
+            missing.sort();
+            missing.dedup();
+            GraphSchemaInterfaceView {
+                class,
+                interface,
+                missing,
+            }
+        })
+        .collect())
 }
 
 fn term_view(

@@ -23,8 +23,9 @@ pub mod repair;
 pub mod shadow_branch;
 mod terms;
 pub use terms::{
-    term_local_name, validate_term_page_limit, GraphSchemaClassesView, GraphSchemaTermKind,
-    GraphSchemaTermPosition, GraphSchemaTermView, MAX_GRAPH_SCHEMA_TERMS_PAGE,
+    term_local_name, validate_term_page_limit, GraphSchemaClassesView, GraphSchemaInterfaceView,
+    GraphSchemaTermKind, GraphSchemaTermPosition, GraphSchemaTermView,
+    MAX_GRAPH_SCHEMA_INTERFACE_REPORTS, MAX_GRAPH_SCHEMA_TERMS_PAGE,
 };
 
 /// Format identity (RF-ADR-006) of the schema-source views.
