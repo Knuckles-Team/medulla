@@ -85,13 +85,15 @@ pub async fn dispatch_graph_lifecycle_methods(
             target,
             merge_base,
             policy,
-        } => branch_merge(
-            state,
-            req.id,
-            verified_context,
-            (tenant, graph, source, target, merge_base, policy),
-        )
-        .await,
+        } => {
+            super::branch_merge::handle_branch_merge(
+                state,
+                req,
+                verified_context,
+                (tenant, graph, source, target, merge_base, policy),
+            )
+            .await
+        }
         // MEDULLA-BRANCH-MERGE-R006: the change feed between two chain versions.
         Method::BranchDiff {
             tenant,
@@ -226,46 +228,6 @@ async fn create_branch(
     {
         let _ = (state, verified_context, fields);
         Response::err(req_id, "CreateBranch requires the `redb` feature")
-    }
-}
-
-/// `BranchMerge` (MEDULLA-BRANCH-MERGE-R003), served only by a `redb` build.
-async fn branch_merge(
-    state: &Arc<RwLock<ServerState>>,
-    req_id: u64,
-    verified_context: &VerifiedRequestContext,
-    fields: (
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        Option<medulla_decision_types::decision::DecisionPolicyRef>,
-    ),
-) -> Response {
-    #[cfg(feature = "redb")]
-    {
-        let (tenant, graph, source, target, merge_base, policy) = fields;
-        let request = medulla_h_graph::graph_ops::branch::BranchMergeRequest {
-            tenant,
-            graph,
-            source,
-            target,
-            merge_base,
-            policy,
-        };
-        dispatch_boxed(medulla_h_graph::graph_ops::branch::handle_branch_merge(
-            state,
-            req_id,
-            verified_context,
-            request,
-        ))
-        .await
-    }
-    #[cfg(not(feature = "redb"))]
-    {
-        let _ = (state, verified_context, fields);
-        Response::err(req_id, "BranchMerge requires the `redb` feature")
     }
 }
 

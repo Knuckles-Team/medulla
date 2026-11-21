@@ -25,7 +25,7 @@ use medulla_mutation_types::branch::{
 };
 use medulla_persistence::branch_registry_store::{
     shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
-    BranchRegistry, CommitPlan, HeadMoveError, HistoryReader, MergeView, PayloadReader,
+    BranchRegistry, CommitPlan, HeadMoveError, HistoryReader, MergeView, MergeWrite, PayloadReader,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -192,15 +192,14 @@ fn publish_error_response(req_id: u64, error: publish::PublishError) -> Response
     }
 }
 
-/// The receipt of an outcome that writes no merge commit: `up_to_date` writes
-/// nothing, `fast_forward` moved the head.
-fn plain_receipt(classified: MergeClassification, moved: Option<String>) -> BranchMergeReceipt {
+/// The receipt of an `up_to_date` merge, which writes nothing.
+fn plain_receipt(classified: MergeClassification) -> BranchMergeReceipt {
     BranchMergeReceipt {
         outcome: classified.outcome,
         merge_base: classified.merge_base,
-        source_head: classified.source_head.clone(),
-        target_head: moved.clone().unwrap_or(classified.target_head),
-        merged_parent: moved.map(|_| classified.source_head),
+        source_head: classified.source_head,
+        target_head: classified.target_head,
+        merged_parent: None,
         commit: None,
         conflicts: Vec::new(),
         replayed: false,
@@ -280,26 +279,24 @@ fn classify_branches(
 
 /// `Method::BranchMerge` (MEDULLA-BRANCH-MERGE-R003): resolve both branches,
 /// find the merge base by highest generation, classify the closed outcome.
-/// `up_to_date` writes nothing; `fast_forward` moves the target head to the
-/// source head in one registry transaction, without an entity scan.
-pub async fn handle_branch_merge(
+/// `up_to_date` writes nothing. A `fast_forward` and a diverged merge both go
+/// through `publish_merge` (R007), which plans the write and answers a
+/// [`publish::MergeStep`]: the router arm applies the plan in one transaction.
+pub async fn plan_branch_merge(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
     request: BranchMergeRequest,
-) -> Response {
+) -> Result<publish::MergeStep, Response> {
     if request.tenant != verified.tenant() {
-        return merge_error_response(
+        return Err(merge_error_response(
             req_id,
             MergeClassifyError::Refused(ServerErrorCode::BranchTenantDenied),
-        );
+        ));
     }
     let registry = {
         let s = state.read().await;
-        match shared_branch_registry(&s) {
-            Ok(registry) => registry,
-            Err(error) => return Response::err(req_id, error),
-        }
+        shared_branch_registry(&s).map_err(|error| Response::err(req_id, error))?
     };
     let reference = |name: &str| BranchRef {
         tenant: request.tenant.clone(),
@@ -309,62 +306,47 @@ pub async fn handle_branch_merge(
     let (source, target) = (reference(&request.source), reference(&request.target));
     let tenant = verified.tenant().to_string();
     let pinned = request.merge_base.clone();
-    let outcome = tokio::task::spawn_blocking(move || {
-        let classified =
-            classify_branches(&registry, &source, &target, &tenant, pinned.as_deref())?;
-        match classified.outcome {
-            MergeOutcome::FastForward => registry
-                .fast_forward(&target, &source, &tenant, &classified.target_head)
-                .map(|head| (classified.clone(), Some(head)))
-                .map_err(|error| match error {
-                    HeadMoveError::Branch(refusal) => MergeClassifyError::Refused(refusal.code()),
-                    HeadMoveError::Stale => {
-                        MergeClassifyError::Refused(ServerErrorCode::MergeTargetStale)
-                    }
-                    HeadMoveError::Store(detail) => MergeClassifyError::Store(detail),
-                }),
-            _ => Ok((classified, None)),
-        }
-    })
-    .await;
-    let (classified, moved) = match outcome {
-        Ok(Ok(done)) => done,
-        Ok(Err(error)) => return merge_error_response(req_id, error),
-        Err(error) => return Response::err(req_id, error.to_string()),
+    let classified = {
+        let (source, target) = (source.clone(), target.clone());
+        tokio::task::spawn_blocking(move || {
+            classify_branches(&registry, &source, &target, &tenant, pinned.as_deref())
+        })
+        .await
+        .map_err(|error| Response::err(req_id, error.to_string()))?
+        .map_err(|error| merge_error_response(req_id, error))?
     };
-    let receipt = match classified.outcome {
-        MergeOutcome::Merged | MergeOutcome::Conflict => {
-            match publish::publish_merge(
-                state,
-                verified,
-                reference(&request.source),
-                reference(&request.target),
-                &classified,
-                request.policy.clone(),
-            )
-            .await
-            {
-                Ok(receipt) => receipt,
-                Err(error) => return publish_error_response(req_id, error),
-            }
-        }
+    match classified.outcome {
         MergeOutcome::UpToDate => {
             // A merge already published for this source head answers with its
             // original receipt (MEDULLA-BRANCH-MERGE-R007 replay).
-            match publish::chain_for_replay(state, verified, reference(&request.target)).await {
-                Ok(chain) => publish::replayed_receipt(&chain, &classified.source_head)
-                    .unwrap_or_else(|| plain_receipt(classified, moved)),
-                Err(error) => return publish_error_response(req_id, error),
-            }
+            let chain = publish::chain_for_replay(state, verified, target)
+                .await
+                .map_err(|error| publish_error_response(req_id, error))?;
+            let receipt = publish::replayed_receipt(&chain, &classified.source_head)
+                .unwrap_or_else(|| plain_receipt(classified));
+            Ok(publish::MergeStep::Done(receipt))
         }
-        MergeOutcome::FastForward => plain_receipt(classified, moved),
-    };
+        MergeOutcome::FastForward | MergeOutcome::Merged | MergeOutcome::Conflict => {
+            publish::publish_merge(state, verified, source, target, &classified, request.policy)
+                .await
+                .map_err(|error| publish_error_response(req_id, error))
+        }
+    }
+}
+
+/// The served response of a merge receipt.
+pub fn merge_receipt_response(req_id: u64, receipt: BranchMergeReceipt) -> Response {
     match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BranchMerge>(
         receipt,
     ) {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => Response::err(req_id, error),
     }
+}
+
+/// The refusal response of a failed merge publication.
+pub fn publish_failure_response(req_id: u64, error: publish::PublishError) -> Response {
+    publish_error_response(req_id, error)
 }
 
 /// Where one branch-scoped mutation commits (MEDULLA-BRANCH-MERGE-R002).
@@ -529,27 +511,38 @@ impl BranchTarget {
         .map_err(|error| AppendError::Branch(BranchCreateError::Store(error.to_string())))?
     }
 
-    /// Publish one merge into this branch with two parents
-    /// (MEDULLA-BRANCH-MERGE-R007), in one registry transaction.
+    /// Publish one merge into this branch (MEDULLA-BRANCH-MERGE-R007), in one
+    /// registry transaction: a two-parent commit or a fast-forward head move.
     pub async fn publish_merge(
         &self,
         source: &BranchRef,
         tenant: &str,
         expected_target_head: &str,
-        replay_key: &str,
-        input: BranchCommitInput,
+        write: MergeWrite,
     ) -> Result<AppendedCommit, HeadMoveError> {
         let registry = Arc::clone(&self.registry);
         let target = self.reference.clone();
         let source = source.clone();
         let tenant = tenant.to_string();
         let expected = expected_target_head.to_string();
-        let replay_key = replay_key.to_string();
         tokio::task::spawn_blocking(move || {
-            registry.publish_merge(&target, &source, &tenant, &expected, &replay_key, &input)
+            registry.publish_merge(&target, &source, &tenant, &expected, &write)
         })
         .await
         .map_err(|error| HeadMoveError::Store(error.to_string()))?
+    }
+
+    /// Whether the branch head is still `expected` (the stale check before the
+    /// data graph is touched).
+    pub async fn head_is(&self, tenant: &str, expected: &str) -> Result<bool, String> {
+        let tenant = tenant.to_string();
+        let expected = expected.to_string();
+        self.read_blocking(move |registry, reference| {
+            registry
+                .merge_view(reference, &tenant)
+                .map(|view| view.map(|view| view.head == expected).unwrap_or(false))
+        })
+        .await?
     }
 
     /// The served receipt of an appended (or replayed) commit.

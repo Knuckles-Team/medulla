@@ -55,7 +55,7 @@ fn check_mutation(
 
 #[cfg(feature = "redb")]
 /// Create the branch's target graph on the first write.
-async fn ensure_target_graph(
+pub(super) async fn ensure_target_graph(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,

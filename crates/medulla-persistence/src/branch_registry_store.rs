@@ -249,6 +249,28 @@ pub enum HeadMoveError {
     Store(String),
 }
 
+/// How a merge publication moves the target head (MEDULLA-BRANCH-MERGE-R007).
+#[derive(Debug, Clone)]
+pub enum MergeHeadMove {
+    /// Fast-forward: the head becomes the source head and no commit is written.
+    FastForward,
+    /// A two-parent merge commit (the target head first, the source head
+    /// second). `replay_key` is `(source_head, target_head, merge_base)`.
+    Merge {
+        replay_key: String,
+        input: BranchCommitInput,
+    },
+}
+
+/// What one merge publication writes into the registry, in one transaction.
+#[derive(Debug, Clone)]
+pub struct MergeWrite {
+    pub head_move: MergeHeadMove,
+    /// History index rows (relative keys) copied into the target when it lacks
+    /// them; a row the target already holds is left as it is.
+    pub history_rows: Vec<(String, Vec<u8>)>,
+}
+
 /// The commit a branch write produced and whether it already existed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppendedCommit {
@@ -404,107 +426,12 @@ impl BranchRegistry {
         }))
     }
 
-    /// Move the head of `target` to the head of `source` without an entity scan
-    /// (MEDULLA-BRANCH-MERGE-R003 `fast_forward`): the commit rows and payloads
-    /// the target lacks are copied into its namespace so its chain walks to the
-    /// new head, and the head pointer moves, in ONE registry transaction.
-    /// `expected_target_head` is the head the merge was classified against; a
-    /// target that moved since refuses [`HeadMoveError::Stale`] and writes nothing.
-    pub fn fast_forward(
-        &self,
-        target: &BranchRef,
-        source: &BranchRef,
-        caller_tenant: &str,
-        expected_target_head: &str,
-    ) -> Result<String, HeadMoveError> {
-        let target_key = target.registry_key();
-        let source_key = source.registry_key();
-        let mut refused: Option<HeadMoveError> = None;
-        let mut moved: Option<String> = None;
-        let outcome = self.durable.maintain("branch_fast_forward", |owner| {
-            let mut table = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
-            let mut rows = Vec::with_capacity(2);
-            for key in [&target_key, &source_key] {
-                let existing = table
-                    .get(key.as_str())
-                    .map_err(|error| error.to_string())?
-                    .map(|value| decode(value.value()))
-                    .transpose()?;
-                let Some(row) = existing else {
-                    refused = Some(HeadMoveError::Branch(BranchMutationRefusal::BranchUnknown));
-                    return Err("BRANCH_UNKNOWN".to_string());
-                };
-                if let Some(refusal) = branch_refusal(&row, caller_tenant) {
-                    refused = Some(HeadMoveError::Branch(refusal.clone()));
-                    return Err(refusal.code().as_str().to_string());
-                }
-                rows.push(row);
-            }
-            let source_row = rows.pop().ok_or("source row missing")?;
-            let mut target_row = rows.pop().ok_or("target row missing")?;
-            if target_row.head_commit != expected_target_head {
-                refused = Some(HeadMoveError::Stale);
-                return Err("MERGE_TARGET_STALE".to_string());
-            }
-            let mut stack = vec![source_row.head_commit.clone()];
-            let mut seen = std::collections::BTreeSet::new();
-            while let Some(id) = stack.pop() {
-                if id == target_row.head_commit || !seen.insert(id.clone()) {
-                    continue;
-                }
-                let target_commit = commit_row_key(target, &id);
-                if table
-                    .get(target_commit.as_str())
-                    .map_err(|error| error.to_string())?
-                    .is_some()
-                {
-                    continue;
-                }
-                let Some(bytes) = table
-                    .get(commit_row_key(source, &id).as_str())
-                    .map_err(|error| error.to_string())?
-                    .map(|value| value.value().to_vec())
-                else {
-                    continue;
-                };
-                let commit = decode_commit(&bytes)?;
-                stack.extend(commit.parents.iter().cloned());
-                table
-                    .insert(target_commit.as_str(), bytes.as_slice())
-                    .map_err(|error| error.to_string())?;
-                let payload = table
-                    .get(payload_row_key(source, &id).as_str())
-                    .map_err(|error| error.to_string())?
-                    .map(|value| value.value().to_vec());
-                if let Some(payload) = payload {
-                    table
-                        .insert(payload_row_key(target, &id).as_str(), payload.as_slice())
-                        .map_err(|error| error.to_string())?;
-                }
-            }
-            target_row.head_commit = source_row.head_commit.clone();
-            let row_bytes = encode(&target_row)?;
-            table
-                .insert(target_key.as_str(), row_bytes.as_slice())
-                .map_err(|error| error.to_string())?;
-            moved = Some(source_row.head_commit);
-            Ok(())
-        });
-        match (outcome, refused, moved) {
-            (Ok(()), _, Some(head)) => Ok(head),
-            (_, Some(error), _) => Err(error),
-            (Ok(()), None, None) => Err(HeadMoveError::Store(
-                "branch fast-forward was not applied".to_string(),
-            )),
-            (Err(error), None, _) => Err(HeadMoveError::Store(error)),
-        }
-    }
-
-    /// Publish one three-way merge (MEDULLA-BRANCH-MERGE-R007): copy the commit
-    /// rows and payloads the target lacks from the source, append the merge
-    /// commit with TWO parents (the target head first, the source head second)
-    /// and advance the target head, in ONE registry transaction. `replay_key`
-    /// is `(source_head, target_head, merge_base)`: a key that already has a
+    /// Publish one merge (MEDULLA-BRANCH-MERGE-R007): copy the commit rows and
+    /// payloads and the history index rows the target lacks from the source,
+    /// then either append the merge commit with TWO parents (the target head
+    /// first, the source head second) or, for a fast-forward, move the head to
+    /// the source head, in ONE registry transaction. A merge's `replay_key` is
+    /// `(source_head, target_head, merge_base)`: a key that already has a
     /// commit returns it unchanged with `replayed` set and writes nothing. A
     /// target that is no longer at `expected_target_head` refuses
     /// [`HeadMoveError::Stale`] and writes nothing; it is never rebased.
@@ -514,8 +441,7 @@ impl BranchRegistry {
         source: &BranchRef,
         caller_tenant: &str,
         expected_target_head: &str,
-        replay_key: &str,
-        input: &BranchCommitInput,
+        write: &MergeWrite,
     ) -> Result<AppendedCommit, HeadMoveError> {
         let target_key = target.registry_key();
         let source_key = source.registry_key();
@@ -542,11 +468,19 @@ impl BranchRegistry {
             }
             let source_row = rows.pop().ok_or("source row missing")?;
             let mut target_row = rows.pop().ok_or("target row missing")?;
-            let batch_key = batch_row_key(target, replay_key);
-            let prior = table
-                .get(batch_key.as_str())
-                .map_err(|error| error.to_string())?
-                .map(|value| value.value().to_vec());
+            let batch_key = match &write.head_move {
+                MergeHeadMove::Merge { replay_key, .. } => {
+                    Some(batch_row_key(target, replay_key))
+                }
+                MergeHeadMove::FastForward => None,
+            };
+            let prior = match &batch_key {
+                Some(key) => table
+                    .get(key.as_str())
+                    .map_err(|error| error.to_string())?
+                    .map(|value| value.value().to_vec()),
+                None => None,
+            };
             if let Some(id) = prior {
                 let id = String::from_utf8(id).map_err(|error| error.to_string())?;
                 let bytes = table
@@ -600,57 +534,89 @@ impl BranchRegistry {
                         .map_err(|error| error.to_string())?;
                 }
             }
-            let generation_of = |branch: &BranchRef, id: &str| -> Result<u64, String> {
-                Ok(table
-                    .get(commit_row_key(branch, id).as_str())
+            for (relative, value) in &write.history_rows {
+                let key = history_row_key(target, relative);
+                let present = table
+                    .get(key.as_str())
                     .map_err(|error| error.to_string())?
-                    .map(|value| decode_commit(value.value()))
-                    .transpose()?
-                    .map_or(0, |commit| commit.generation))
-            };
-            let generation = generation_of(target, &target_row.head_commit)?
-                .max(generation_of(target, &source_row.head_commit)?)
-                + 1;
-            let mut commit = BranchCommit::single_parent_commit(
-                branch_commit_id(
-                    target,
-                    &target_row.head_commit,
-                    replay_key,
-                    &input.manifest_digest,
-                ),
-                target.name.clone(),
-                target_row.head_commit.clone(),
-                input.engine_version,
-                input.manifest_digest.clone(),
-                input.actor.clone(),
-                input.created_at_ms,
-            )
-            .with_generation(generation);
-            commit.parents.push(source_row.head_commit.clone());
-            let commit_bytes =
-                rmp_serde::to_vec_named(&commit).map_err(|error| error.to_string())?;
-            table
-                .insert(
-                    commit_row_key(target, &commit.id).as_str(),
-                    commit_bytes.as_slice(),
-                )
-                .map_err(|error| error.to_string())?;
-            if let Some(payload) = &input.payload {
-                table
-                    .insert(
-                        payload_row_key(target, &commit.id).as_str(),
-                        payload.as_slice(),
-                    )
-                    .map_err(|error| error.to_string())?;
+                    .is_some();
+                if !present {
+                    table
+                        .insert(key.as_str(), value.as_slice())
+                        .map_err(|error| error.to_string())?;
+                }
             }
-            table
-                .insert(batch_key.as_str(), commit.id.as_bytes())
-                .map_err(|error| error.to_string())?;
-            target_row.head_commit = commit.id.clone();
-            let row_bytes = encode(&target_row)?;
-            table
-                .insert(target_key.as_str(), row_bytes.as_slice())
-                .map_err(|error| error.to_string())?;
+            let commit = match &write.head_move {
+                MergeHeadMove::FastForward => {
+                    let bytes = table
+                        .get(commit_row_key(target, &source_row.head_commit).as_str())
+                        .map_err(|error| error.to_string())?
+                        .map(|value| value.value().to_vec())
+                        .ok_or_else(|| "fast-forward source head has no commit row".to_string())?;
+                    target_row.head_commit = source_row.head_commit.clone();
+                    let row_bytes = encode(&target_row)?;
+                    table
+                        .insert(target_key.as_str(), row_bytes.as_slice())
+                        .map_err(|error| error.to_string())?;
+                    decode_commit(&bytes)?
+                }
+                MergeHeadMove::Merge { replay_key, input } => {
+                    let generation_of = |branch: &BranchRef, id: &str| -> Result<u64, String> {
+                        Ok(table
+                            .get(commit_row_key(branch, id).as_str())
+                            .map_err(|error| error.to_string())?
+                            .map(|value| decode_commit(value.value()))
+                            .transpose()?
+                            .map_or(0, |commit| commit.generation))
+                    };
+                    let generation = generation_of(target, &target_row.head_commit)?
+                        .max(generation_of(target, &source_row.head_commit)?)
+                        + 1;
+                    let mut commit = BranchCommit::single_parent_commit(
+                        branch_commit_id(
+                            target,
+                            &target_row.head_commit,
+                            replay_key,
+                            &input.manifest_digest,
+                        ),
+                        target.name.clone(),
+                        target_row.head_commit.clone(),
+                        input.engine_version,
+                        input.manifest_digest.clone(),
+                        input.actor.clone(),
+                        input.created_at_ms,
+                    )
+                    .with_generation(generation);
+                    commit.parents.push(source_row.head_commit.clone());
+                    let commit_bytes =
+                        rmp_serde::to_vec_named(&commit).map_err(|error| error.to_string())?;
+                    table
+                        .insert(
+                            commit_row_key(target, &commit.id).as_str(),
+                            commit_bytes.as_slice(),
+                        )
+                        .map_err(|error| error.to_string())?;
+                    if let Some(payload) = &input.payload {
+                        table
+                            .insert(
+                                payload_row_key(target, &commit.id).as_str(),
+                                payload.as_slice(),
+                            )
+                            .map_err(|error| error.to_string())?;
+                    }
+                    if let Some(batch_key) = &batch_key {
+                        table
+                            .insert(batch_key.as_str(), commit.id.as_bytes())
+                            .map_err(|error| error.to_string())?;
+                    }
+                    target_row.head_commit = commit.id.clone();
+                    let row_bytes = encode(&target_row)?;
+                    table
+                        .insert(target_key.as_str(), row_bytes.as_slice())
+                        .map_err(|error| error.to_string())?;
+                    commit
+                }
+            };
             appended = Some(AppendedCommit {
                 commit,
                 replayed: false,

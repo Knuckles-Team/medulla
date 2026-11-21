@@ -213,7 +213,11 @@ impl VersionState {
 
     /// Fold one merge publication: its explicit changes onto the target state
     /// (MEDULLA-BRANCH-MERGE-R007).
-    fn apply_merge(&mut self, merge: &MergePublication, image_ref: &str) -> Vec<KgDiffEntry> {
+    pub(super) fn apply_merge(
+        &mut self,
+        merge: &MergePublication,
+        image_ref: &str,
+    ) -> Vec<KgDiffEntry> {
         let mut entries = Vec::new();
         for item in &merge.changes {
             match item {
@@ -249,6 +253,49 @@ impl VersionState {
             }
         }
         entries
+    }
+
+    /// The `BatchUpdate` operations that turn `self` into `next`
+    /// (MEDULLA-BRANCH-MERGE-R007): removed edges, removed nodes, then every
+    /// node and edge that is new or changed as an upsert, nodes before edges.
+    /// The target data graph applies them through the ordinary mutation compile
+    /// path, so a read of it after a merge sees exactly the folded state.
+    pub fn operations_to(&self, next: &VersionState) -> Result<Vec<serde_json::Value>, String> {
+        let properties = |bytes: &[u8]| -> Result<serde_json::Value, String> {
+            if bytes.is_empty() {
+                return Ok(serde_json::json!({}));
+            }
+            let decoded: BTreeMap<String, serde_json::Value> = rmp_serde::from_slice(bytes)
+                .map_err(|error| format!("undecodable properties: {error}"))?;
+            Ok(serde_json::Value::Object(decoded.into_iter().collect()))
+        };
+        let mut operations = Vec::new();
+        for (source, target) in self.edges.keys().filter(|key| !next.edges.contains_key(*key)) {
+            if next.nodes.contains_key(source) && next.nodes.contains_key(target) {
+                operations.push(
+                    serde_json::json!({"op": "remove_edge", "source": source, "target": target}),
+                );
+            }
+        }
+        for id in self.nodes.keys().filter(|id| !next.nodes.contains_key(*id)) {
+            operations.push(serde_json::json!({"op": "remove_node", "id": id}));
+        }
+        for (id, bytes) in &next.nodes {
+            if self.nodes.get(id) != Some(bytes) {
+                operations.push(serde_json::json!({
+                    "op": "upsert_node", "id": id, "properties": properties(bytes)?
+                }));
+            }
+        }
+        for ((source, target), bytes) in &next.edges {
+            if self.edges.get(&(source.clone(), target.clone())) != Some(bytes) {
+                operations.push(serde_json::json!({
+                    "op": "upsert_edge", "source": source, "target": target,
+                    "properties": properties(bytes)?
+                }));
+            }
+        }
+        Ok(operations)
     }
 
     /// The raw property bytes of the node `id`, if it is present.

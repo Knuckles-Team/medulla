@@ -10,11 +10,12 @@ target head stays where it was.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 
 import pytest
-from conftest import TEST_TENANT, request_context
+from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
 
 from medulla.client import MedullaClient
 
@@ -113,3 +114,120 @@ async def _scenario(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-BRANCH-MERGE-R007")
 def test_atomic_two_parent_publication_and_replay():
     asyncio.run(_scenario(f"branch-merge-pub-{uuid.uuid4().hex[:8]}"))
+
+
+def _target_graph(graph: str, branch: str) -> str:
+    """The branch target graph name (``branch_target_graph``)."""
+    key = "/".join(f"{len(part)}:{part}" for part in (TEST_TENANT, graph, branch))
+    return f"{graph}~branch~{hashlib.sha256(key.encode()).hexdigest()[:16]}"
+
+
+# msgpack of {"type": "Doc"}
+_DOC = b"\x81\xa4type\xa3Doc"
+
+
+async def _fast_forward_scenario(graph: str) -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        stem = uuid.uuid4().hex[:8]
+        source, target = f"feature/src-{stem}", f"feature/dst-{stem}"
+        for name in (source, target):
+            await client._send(
+                "CreateBranch", {"tenant": TEST_TENANT, "graph": graph, "name": name}
+            )
+        await client._send(
+            "SetPathGrant",
+            {
+                "request": {
+                    "repo": graph,
+                    "principal": TEST_AGENT_ID,
+                    "prefix": "",
+                    "read": True,
+                    "write": True,
+                }
+            },
+        )
+        node = f"ff-{stem}"
+        await client._send(
+            "BranchWrite",
+            {
+                "tenant": TEST_TENANT,
+                "graph": graph,
+                "branch": source,
+                "mutation": {
+                    "method": "AddNode",
+                    "params": {"node_id": node, "properties_msgpack": _DOC},
+                },
+            },
+            idempotency_key=f"kff-{stem}",
+        )
+        digest = await client.blob.store(f"file {stem}".encode())
+        submitted = await client._send(
+            "SubmitChangeset",
+            {
+                "request": {
+                    "repo": graph,
+                    "branch": source,
+                    "base_head": None,
+                    "message": "add a\n\nSpec: MEDULLA-BRANCH-MERGE-R007",
+                    "paths": [
+                        {
+                            "path": "a",
+                            "op": "add",
+                            "blob": {"digest": digest, "size": len(f"file {stem}")},
+                            "mode": 0o100644,
+                            "renamed_from": None,
+                        }
+                    ],
+                    "trailers": None,
+                    "run_trace_id": None,
+                }
+            },
+            idempotency_key=f"kcs-{stem}",
+        )
+        graph_of_target = _target_graph(graph, target)
+        history = {
+            "request": {
+                "repo": graph,
+                "branch": target,
+                "rev": submitted["branch_head"],
+                "path": "a",
+                "limit": 0,
+            }
+        }
+
+        # Before: the target reads none of the source's data or history.
+        assert not await client._send("HasNode", {"node_id": node}, graph=graph_of_target)
+        try:
+            before = await client._send("ReadPathHistory", history)
+        except Exception:
+            before = {"entries": []}
+        assert before["entries"] == []
+
+        receipt = await client._send("BranchMerge", _merge(graph, source, target))
+        assert receipt["outcome"] == "fast_forward"
+        assert receipt["target_head"] == submitted["branch_head"]
+        assert receipt["merged_parent"] == submitted["branch_head"]
+
+        # After: the node reads through the target's own data graph (Uql) and
+        # the history row through the history read, with no further step.
+        found = await client._send(
+            "Uql", {"text": "MATCH (:Doc)", "params": {}}, graph=graph_of_target
+        )
+        assert node in [row["id"] for row in found["rows"]]
+        after = await client._send("ReadPathHistory", history)
+        assert [entry["commit"] for entry in after["entries"]] == [submitted["branch_head"]]
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-BRANCH-MERGE-R007
+@pytest.mark.spec("MEDULLA-BRANCH-MERGE-R007")
+def test_fast_forward_target_reads_source_data():
+    asyncio.run(_fast_forward_scenario(f"branch-merge-ff-{uuid.uuid4().hex[:8]}"))

@@ -19,7 +19,9 @@ use medulla_mutation_types::branch::{
     merge_replay_key, BranchCommit, BranchMergeReceipt, BranchRef, ConflictOutcome,
     ConflictRecord, ConflictSide, MergeChange, MergeOutcome, MergePublication,
 };
-use medulla_persistence::branch_registry_store::{BranchCommitInput, HeadMoveError};
+use medulla_persistence::branch_registry_store::{
+    AppendedCommit, BranchCommitInput, MergeHeadMove, MergeWrite,
+};
 use medulla_server_api::api::conflict_decider::conflict_feature_schema;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -225,7 +227,120 @@ pub async fn chain_for_replay(
     chain_of(state, verified, reference).await.map(|(_, chain)| chain)
 }
 
-/// Publish one three-way merge of `source` into `target`.
+/// Everything one merge publication writes, planned and not yet applied
+/// (MEDULLA-BRANCH-MERGE-R007). `h-graph` never calls the router, so it hands
+/// the plan to the `BranchMerge` router arm, which applies `operations` to the
+/// target data graph through the one graph mutation compile path (one
+/// `BatchUpdate`) and then commits `write` in one registry transaction, exactly
+/// as the decision plane commits a `PlannedWrite`.
+pub struct MergeApplyPlan {
+    pub tenant: String,
+    pub source: BranchRef,
+    /// The registry handle of the branch the merge publishes into.
+    pub target: super::BranchTarget,
+    /// The head the merge read; a target that moved refuses `MERGE_TARGET_STALE`.
+    pub expected_target_head: String,
+    /// `BatchUpdate` operations for `target.target_graph`: the replayed commit
+    /// payloads of a fast-forward, or the adopted rows of a three-way merge.
+    pub operations: Vec<serde_json::Value>,
+    /// The registry write: history rows, commit rows and the head move.
+    pub write: MergeWrite,
+    classified: MergeClassification,
+    /// The merge record of a two-parent merge; `None` for a fast-forward.
+    publication: Option<MergePublication>,
+}
+
+/// What `publish_merge` answers: a receipt that needs no write, or a plan.
+pub enum MergeStep {
+    /// A replay: the original receipt, nothing to apply.
+    Done(BranchMergeReceipt),
+    Apply(Box<MergeApplyPlan>),
+}
+
+impl MergeApplyPlan {
+    /// The receipt once the registry transaction committed `appended`. A
+    /// fast-forward names the source head as its single merged parent.
+    pub async fn finish(self, appended: AppendedCommit) -> Result<BranchMergeReceipt, PublishError> {
+        let Some(publication) = self.publication else {
+            return Ok(BranchMergeReceipt {
+                outcome: MergeOutcome::FastForward,
+                merge_base: self.classified.merge_base,
+                source_head: self.classified.source_head.clone(),
+                target_head: self.classified.source_head.clone(),
+                merged_parent: Some(self.classified.source_head),
+                commit: None,
+                conflicts: Vec::new(),
+                replayed: false,
+            });
+        };
+        if appended.replayed {
+            // The original publication is the answer: read its record back.
+            let chain = load_chain(&self.target).await.map_err(PublishError::Failed)?;
+            let found = chain
+                .iter()
+                .find(|(commit, _)| commit.id == appended.commit.id)
+                .and_then(|(_, payload)| payload.as_deref())
+                .and_then(|bytes| rmp_serde::from_slice::<MergePublication>(bytes).ok());
+            if let Some(original) = found {
+                return Ok(receipt_of(appended.commit, &original, true));
+            }
+        }
+        Ok(receipt_of(appended.commit, &publication, appended.replayed))
+    }
+}
+
+/// Plan the fast-forward of `target` to the source head: the ancestors of the
+/// source head the target lacks, ordered by (generation, id), are folded onto
+/// the target state; the difference is the target-graph batch. The source's
+/// history index rows travel in the same registry write.
+async fn plan_fast_forward(
+    target_branch: super::BranchTarget,
+    source_branch: &super::BranchTarget,
+    source_chain: &[ChainEntry],
+    target_chain: &[ChainEntry],
+    tenant: String,
+    classified: &MergeClassification,
+) -> Result<MergeApplyPlan, PublishError> {
+    let mut missing: Vec<&ChainEntry> = source_chain
+        .iter()
+        .filter(|(commit, _)| !target_chain.iter().any(|(held, _)| held.id == commit.id))
+        .collect();
+    missing.sort_by(|left, right| {
+        (left.0.generation, &left.0.id).cmp(&(right.0.generation, &right.0.id))
+    });
+    let current = fold_chain(target_chain);
+    let mut next = current.clone();
+    for (commit, payload) in missing {
+        next.apply_payload(payload.as_deref(), &commit.id);
+    }
+    let operations = current.operations_to(&next).map_err(PublishError::Failed)?;
+    let history_rows = source_branch
+        .read_blocking(|registry, reference| {
+            registry.history_scan_rev(reference, "", "\u{10FFFF}", usize::MAX)
+        })
+        .await
+        .and_then(|rows| rows)
+        .map_err(PublishError::Failed)?;
+    Ok(MergeApplyPlan {
+        tenant,
+        source: source_branch.reference.clone(),
+        target: target_branch,
+        expected_target_head: classified.target_head.clone(),
+        operations,
+        write: MergeWrite {
+            head_move: MergeHeadMove::FastForward,
+            history_rows,
+        },
+        classified: classified.clone(),
+        publication: None,
+    })
+}
+
+/// Publish one merge of `source` into `target`: the one publication route
+/// (MEDULLA-BRANCH-MERGE-R007). A `fast_forward` plans a single-parent head
+/// move with the data and history of the commits the target lacks; a diverged
+/// pair plans a two-parent merge commit with the adopted rows. Nothing is
+/// written here: the caller applies the returned plan.
 pub async fn publish_merge(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
@@ -233,13 +348,25 @@ pub async fn publish_merge(
     target: BranchRef,
     classified: &MergeClassification,
     policy: Option<DecisionPolicyRef>,
-) -> Result<BranchMergeReceipt, PublishError> {
+) -> Result<MergeStep, PublishError> {
     if verified.principal().trim().is_empty() {
         return Err(PublishError::Refused(ServerErrorCode::MergeActorUnknown));
     }
     let tenant = verified.tenant().to_string();
-    let (_, source_chain) = chain_of(state, verified, source.clone()).await?;
+    let (source_branch, source_chain) = chain_of(state, verified, source.clone()).await?;
     let (target_branch, target_chain) = chain_of(state, verified, target).await?;
+    if classified.outcome == MergeOutcome::FastForward {
+        let plan = plan_fast_forward(
+            target_branch,
+            &source_branch,
+            &source_chain,
+            &target_chain,
+            tenant,
+            classified,
+        )
+        .await?;
+        return Ok(MergeStep::Apply(Box::new(plan)));
+    }
     let source_state = fold_chain(&source_chain);
     let target_state = fold_chain(&target_chain);
     let base_state = base_state_of(&source_chain, &target_chain, &classified.merge_base)?;
@@ -283,6 +410,35 @@ pub async fn publish_merge(
         changes: changes_of(&plan, &conflicts, &source_state),
         conflicts,
     };
+    let replay_key = merge_replay_key(
+        &classified.source_head,
+        &classified.target_head,
+        &classified.merge_base,
+    );
+    // A merge already published for this key answers with its original receipt
+    // and applies nothing to the data graph a second time.
+    if let Some(commit) = target_branch
+        .replayed(&replay_key)
+        .await
+        .map_err(PublishError::Failed)?
+    {
+        let payload = target_branch
+            .payload(&commit.id)
+            .await
+            .map_err(PublishError::Failed)?;
+        if let Some(original) = payload
+            .as_deref()
+            .and_then(|bytes| rmp_serde::from_slice::<MergePublication>(bytes).ok())
+        {
+            return Ok(MergeStep::Done(receipt_of(commit, &original, true)));
+        }
+    }
+    // The adopted rows land in the target data graph: the target state with the
+    // publication folded in, as one batch, so reads use the graph and never
+    // the payload fold.
+    let mut next = target_state.clone();
+    next.apply_merge(&publication, &classified.target_head);
+    let operations = target_state.operations_to(&next).map_err(PublishError::Failed)?;
     let payload = rmp_serde::to_vec_named(&publication)
         .map_err(|error| PublishError::Failed(error.to_string()))?;
     let engine_version = [&source_chain, &target_chain]
@@ -291,11 +447,6 @@ pub async fn publish_merge(
         .map(|(commit, _)| commit.engine_version)
         .max()
         .unwrap_or(0);
-    let replay_key = merge_replay_key(
-        &classified.source_head,
-        &classified.target_head,
-        &classified.merge_base,
-    );
     let input = BranchCommitInput {
         batch_id: replay_key.clone(),
         engine_version,
@@ -304,34 +455,17 @@ pub async fn publish_merge(
         created_at_ms: now_ms(),
         payload: Some(payload),
     };
-    let appended = target_branch
-        .publish_merge(
-            &source,
-            &tenant,
-            &classified.target_head,
-            &replay_key,
-            input,
-        )
-        .await
-        .map_err(|error| match error {
-            HeadMoveError::Branch(refusal) => PublishError::Refused(refusal.code()),
-            HeadMoveError::Stale => PublishError::Refused(ServerErrorCode::MergeTargetStale),
-            HeadMoveError::Store(detail) => PublishError::Failed(detail),
-        })?;
-    let replayed = appended.replayed;
-    if replayed {
-        // The original publication is the answer: read its record back.
-        let chain = load_chain(&target_branch)
-            .await
-            .map_err(PublishError::Failed)?;
-        let found = chain
-            .iter()
-            .find(|(commit, _)| commit.id == appended.commit.id)
-            .and_then(|(_, payload)| payload.as_deref())
-            .and_then(|bytes| rmp_serde::from_slice::<MergePublication>(bytes).ok());
-        if let Some(original) = found {
-            return Ok(receipt_of(appended.commit, &original, true));
-        }
-    }
-    Ok(receipt_of(appended.commit, &publication, replayed))
+    Ok(MergeStep::Apply(Box::new(MergeApplyPlan {
+        tenant,
+        source,
+        target: target_branch,
+        expected_target_head: classified.target_head.clone(),
+        operations,
+        write: MergeWrite {
+            head_move: MergeHeadMove::Merge { replay_key, input },
+            history_rows: Vec::new(),
+        },
+        classified: classified.clone(),
+        publication: Some(publication),
+    })))
 }
