@@ -195,6 +195,19 @@ impl GraphViewCatalog {
         Ok(())
     }
 
+    /// Every view `owner` registered, in name order (MEDULLA-UNIFIED-DATA-PLANE-R029.2): another
+    /// owner's views are never listed.
+    pub fn registered_for(&self, owner: &CarrierAuthority) -> Vec<RegisteredGraphView> {
+        let mut named: Vec<(String, RegisteredGraphView)> = self
+            .entries
+            .iter()
+            .filter(|entry| entry.key().owner_scope == owner.owner_scope())
+            .map(|entry| (entry.key().name.clone(), entry.value().clone()))
+            .collect();
+        named.sort_by(|a, b| a.0.cmp(&b.0));
+        named.into_iter().map(|(_, view)| view).collect()
+    }
+
     /// `owner`'s view `name`, if the owner registered one.
     pub fn get(&self, owner: &CarrierAuthority, name: &str) -> Option<RegisteredGraphView> {
         self.entries

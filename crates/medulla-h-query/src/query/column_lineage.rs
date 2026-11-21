@@ -185,6 +185,34 @@ fn stored_column_edges(core: &medulla_graph_core::graph::GraphCore) -> Vec<Store
         .collect()
 }
 
+/// The columns downstream of any of `columns` (qualified names), within the same
+/// `lineage.impact_*` knobs `Impact` uses, over the caller's projected stored edges
+/// (MEDULLA-UNIFIED-DATA-PLANE-R029.2). Sorted and without duplicates; a column a walk starts
+/// from is not its own impact. A walk past the column bound refuses `LINEAGE_IMPACT_TOO_LARGE`.
+pub(crate) fn downstream_of(
+    ctx: &QueryHandlerCtx<'_>,
+    columns: &[String],
+) -> Result<Vec<String>, String> {
+    let knobs = medulla_server_api::knob_config::knobs();
+    let depth = (knobs.lineage_impact_max_depth as u32).min(LINEAGE_IMPACT_MAX_DEPTH_DEFAULT);
+    let core = match ctx.read_authority {
+        Some(authority) => authority.project_core(ctx.core),
+        None => ctx.core.clone(),
+    };
+    let stored = stored_column_edges(&core);
+    let max_columns = knobs.lineage_impact_max_columns as usize;
+    let mut reached = std::collections::BTreeSet::new();
+    for column in columns {
+        for edge in walk_impact(&stored, column, ImpactDirection::Downstream, depth, max_columns)? {
+            reached.insert(edge.target_column);
+        }
+    }
+    for column in columns {
+        reached.remove(column);
+    }
+    Ok(reached.into_iter().collect())
+}
+
 fn serve_impact(
     ctx: &QueryHandlerCtx<'_>,
     column: String,

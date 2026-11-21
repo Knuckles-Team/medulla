@@ -603,6 +603,7 @@ SEND_BY_METHOD = {
     "RunUdf": compute.send_run_udf,
     "SceneChildren": graph.send_scene_children,
     "SchemaProjections": graph.send_schema_projections,
+    "SchemaContext": query.send_schema_context,
     "SelectWebPages": query.send_select_web_pages,
     "SemanticEnrich": ingestion.send_semantic_enrich,
     "SemanticIndex": ingestion.send_semantic_index,

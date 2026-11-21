@@ -98,6 +98,15 @@ async fn dispatch_query_family(
         Method::CatalogUsage { asset, top_n } => {
             return Ok(super::catalog_search::handle_usage(hctx, asset, top_n).await)
         }
+        // MEDULLA-UNIFIED-DATA-PLANE-R029.2: reads the baselined catalog of the caller's own source.
+        Method::SchemaContext {
+            source_id,
+            schema,
+            object,
+            intent,
+        } => {
+            return Ok(handle_schema_context(hctx, source_id, schema, object, intent).await)
+        }
         // MEDULLA-UNIFIED-DATA-PLANE-R701.3: scores the caller tenant's standard and asset nodes.
         Method::StandardsDrift { scope, standard } => {
             return Ok(handle_standards_drift(hctx, scope, standard))

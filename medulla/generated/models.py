@@ -15443,6 +15443,13 @@ class MethodCatalogUsage(BaseModel):
     params: MethodCatalogUsageParams
 
 
+class MethodSchemaContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SchemaContext"]
+    params: MethodSchemaContextParams
+
+
 class MethodRecordRelease(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16273,6 +16280,7 @@ Method = Annotated[
         MethodColumnLineage,
         MethodCrossSourceQuestion,
         MethodCatalogUsage,
+        MethodSchemaContext,
         MethodRecordRelease,
         MethodRecordDeployment,
         MethodSourceCoverage,
@@ -34755,6 +34763,14 @@ class ImpactDirection(str, Enum):
     UPSTREAM = "upstream"
 
 
+class SchemaContextIntent(str, Enum):
+    DEFINITION = "definition"
+    JOINS = "joins"
+    ONTOLOGY = "ontology"
+    OWNER = "owner"
+    IMPACT = "impact"
+
+
 class ImprovementSample(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -35409,6 +35425,15 @@ class MethodCatalogUsageParams(BaseModel):
 
     asset: str
     top_n: Annotated[int, Field(ge=0)] | None = Field(default=None)
+
+
+class MethodSchemaContextParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    intent: SchemaContextIntent
+    object: str
+    schema_: str = Field(..., alias="schema")
+    source_id: str
 
 
 class MethodColumnLineageParams(BaseModel):
@@ -41872,6 +41897,9 @@ __all__ = [
     "MethodBranchWriteParams",
     "MethodCatalogUsage",
     "MethodCatalogUsageParams",
+    "MethodSchemaContext",
+    "MethodSchemaContextParams",
+    "SchemaContextIntent",
     "MethodColumnLineage",
     "MethodColumnLineageParams",
     "MethodConceptLineage",

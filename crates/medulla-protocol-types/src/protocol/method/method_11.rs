@@ -848,6 +848,19 @@ $($variants)*
     SetSchedulerConfig {
         config: medulla_work_types::scheduler_config::SchedulerConfig,
     },
+    /// MEDULLA-UNIFIED-DATA-PLANE-R029.2: what one table of an attached source is, what joins to
+    /// it, which ontology class and application it belongs to, who owns it and what a change
+    /// to it reaches. `source_id` names a source the caller registered (another owner's source
+    /// reads as absent), `schema` and `object` name the table, and `intent` names the part the
+    /// caller needs. Read only. Refuses `SCHEMA_CONTEXT_SOURCE_UNKNOWN`,
+    /// `SCHEMA_CONTEXT_TABLE_UNKNOWN`, and for the intent `ontology` `SCHEMA_CONTEXT_UNMAPPED`
+    /// and `SCHEMA_CONTEXT_CLASS_AMBIGUOUS`; it never answers a default.
+    SchemaContext {
+        source_id: String,
+        schema: String,
+        object: String,
+        intent: medulla_catalog_types::schema_context::SchemaContextIntent,
+    },
         ]);
     };
 }

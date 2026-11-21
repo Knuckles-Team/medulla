@@ -1946,6 +1946,7 @@ send_resolve_viewport_selection = contract_sender(
     "ResolveViewportSelection", "MethodResolveViewportSelectionParams"
 )
 send_retrieval_round = contract_sender("RetrievalRound", "MethodRetrievalRoundParams")
+send_schema_context = contract_sender("SchemaContext", "MethodSchemaContextParams")
 send_source_coverage = contract_sender("SourceCoverage", "MethodSourceCoverageParams")
 send_stored_query_call = contract_sender(
     "StoredQueryCall", "MethodStoredQueryCallParams"

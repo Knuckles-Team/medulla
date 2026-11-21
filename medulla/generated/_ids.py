@@ -611,6 +611,7 @@ METHOD_IDS = frozenset(
         "RegimeSizingInput",
         "ResolveViewportSelection",
         "RetrievalRound",
+        "SchemaContext",
         "SemanticEnrich",
         "SetPathGrant",
         "SourceCoverage",

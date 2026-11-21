@@ -1286,6 +1286,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "VISUAL_STATE_STALE",
         ],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R029.2: the schema context answer's refusals.
+    (
+        "SchemaContext",
+        &[
+            "SCHEMA_CONTEXT_SOURCE_UNKNOWN",
+            "SCHEMA_CONTEXT_TABLE_UNKNOWN",
+            "SCHEMA_CONTEXT_UNMAPPED",
+            "SCHEMA_CONTEXT_CLASS_AMBIGUOUS",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: the catalog usage answer's refusals.
     (
         "CatalogUsage",

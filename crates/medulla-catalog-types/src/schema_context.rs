@@ -19,20 +19,55 @@ use serde::{Deserialize, Serialize};
 
 /// One join EG's catalog knows reaches this table.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SchemaJoin {
     pub joined_table: String,
     pub on_column: String,
     pub joined_column: String,
 }
 
-/// `schema_context`'s answer for one table.
+/// The part of the answer one `Method::SchemaContext` call asks for
+/// (MEDULLA-UNIFIED-DATA-PLANE-R029.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum SchemaContextIntent {
+    /// The columns of the table.
+    Definition,
+    /// The joins that reach the table.
+    Joins,
+    /// The ontology class the table maps to.
+    Ontology,
+    /// The agent that registered the source.
+    Owner,
+    /// What a change to the table's columns reaches.
+    Impact,
+}
+
+/// One column of the table a `schema_context` answer defines.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SchemaColumn {
+    pub name: String,
+    pub type_name: String,
+    pub nullable: bool,
+}
+
+/// `schema_context`'s answer for one table. It always carries every part the engine can know;
+/// a part it cannot know is `None` or empty here and is refused when the intent asks for it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SchemaContextAnswer {
     pub table: String,
+    pub columns: Vec<SchemaColumn>,
     pub joins: Vec<SchemaJoin>,
-    pub ontology_class: String,
+    /// The ontology class a registered graph view maps this table to, when exactly one does.
+    pub ontology_class: Option<String>,
+    /// The attached source the table belongs to.
     pub application: String,
-    /// A description of what a schema change to this table affects.
+    /// The agent that registered the source.
+    pub owner: String,
+    /// What a change to this table's columns reaches: the downstream columns, sorted.
     pub change_impact: String,
 }
 
@@ -120,6 +155,106 @@ pub fn serve_schema_context(
         .map_err(SchemaContextQueryError::from)
 }
 
+/// The source named in the request is not one the caller registered (another owner's source
+/// of the same name reads exactly like an absent one).
+pub const SCHEMA_CONTEXT_SOURCE_UNKNOWN: &str = "SCHEMA_CONTEXT_SOURCE_UNKNOWN";
+/// The catalog of the source has no such table.
+pub const SCHEMA_CONTEXT_TABLE_UNKNOWN: &str = "SCHEMA_CONTEXT_TABLE_UNKNOWN";
+/// No registered graph view maps the table to an ontology class.
+pub const SCHEMA_CONTEXT_UNMAPPED: &str = "SCHEMA_CONTEXT_UNMAPPED";
+/// More than one ontology class is mapped to the table.
+pub const SCHEMA_CONTEXT_CLASS_AMBIGUOUS: &str = "SCHEMA_CONTEXT_CLASS_AMBIGUOUS";
+
+/// The name of `schema.name`, or just `name` for an unqualified source.
+pub fn qualified_name(schema: &str, name: &str) -> String {
+    if schema.is_empty() {
+        name.to_string()
+    } else {
+        format!("{schema}.{name}")
+    }
+}
+
+impl SchemaContextCatalog {
+    /// One answer per table of `graph`, keyed by its qualified name. The columns and the joins
+    /// (the table's own foreign keys, and every foreign key that references it) come from the
+    /// catalog; the ontology class and the change impact are filled by the caller that knows
+    /// them, so they start as `None` and empty.
+    pub fn from_attached(
+        graph: &crate::attached_catalog::AttachedCatalogGraph,
+        application: &str,
+        owner: &str,
+    ) -> Self {
+        use crate::attached_catalog::CatalogConstraintKind;
+        let mut tables = BTreeMap::new();
+        for table in &graph.tables {
+            let name = qualified_name(&table.schema, &table.name);
+            let mut joins = Vec::new();
+            for constraint in &table.constraints {
+                let (CatalogConstraintKind::ForeignKey, Some(target)) =
+                    (constraint.kind, &constraint.references)
+                else {
+                    continue;
+                };
+                for (index, column) in constraint.columns.iter().enumerate() {
+                    joins.push(SchemaJoin {
+                        joined_table: qualified_name(&target.schema, &target.table),
+                        on_column: column.clone(),
+                        joined_column: target.columns.get(index).cloned().unwrap_or_default(),
+                    });
+                }
+            }
+            for other in &graph.tables {
+                for constraint in &other.constraints {
+                    let (CatalogConstraintKind::ForeignKey, Some(target)) =
+                        (constraint.kind, &constraint.references)
+                    else {
+                        continue;
+                    };
+                    if target.schema != table.schema || target.table != table.name {
+                        continue;
+                    }
+                    for (index, column) in constraint.columns.iter().enumerate() {
+                        joins.push(SchemaJoin {
+                            joined_table: qualified_name(&other.schema, &other.name),
+                            on_column: target.columns.get(index).cloned().unwrap_or_default(),
+                            joined_column: column.clone(),
+                        });
+                    }
+                }
+            }
+            joins.sort_by(|a, b| {
+                (&a.joined_table, &a.on_column, &a.joined_column).cmp(&(
+                    &b.joined_table,
+                    &b.on_column,
+                    &b.joined_column,
+                ))
+            });
+            joins.dedup();
+            tables.insert(
+                name.clone(),
+                SchemaContextAnswer {
+                    table: name,
+                    columns: table
+                        .columns
+                        .iter()
+                        .map(|column| SchemaColumn {
+                            name: column.name.clone(),
+                            type_name: column.type_name.clone(),
+                            nullable: column.nullable,
+                        })
+                        .collect(),
+                    joins,
+                    ontology_class: None,
+                    application: application.to_string(),
+                    owner: owner.to_string(),
+                    change_impact: String::new(),
+                },
+            );
+        }
+        SchemaContextCatalog { tables }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,8 +270,14 @@ mod tests {
                     on_column: "family_id".to_string(),
                     joined_column: "id".to_string(),
                 }],
-                ontology_class: "gramps:Person".to_string(),
+                columns: vec![SchemaColumn {
+                    name: "family_id".to_string(),
+                    type_name: "integer".to_string(),
+                    nullable: false,
+                }],
+                ontology_class: Some("gramps:Person".to_string()),
                 application: "gramps".to_string(),
+                owner: "agent:gramps".to_string(),
                 change_impact: "breaks family-tree rendering".to_string(),
             },
         );
@@ -147,7 +288,7 @@ mod tests {
     #[test]
     fn known_table_returns_its_full_answer() {
         let answer = catalog().schema_context("person").unwrap().clone();
-        assert_eq!(answer.ontology_class, "gramps:Person");
+        assert_eq!(answer.ontology_class.as_deref(), Some("gramps:Person"));
         assert_eq!(answer.application, "gramps");
         assert_eq!(answer.joins.len(), 1);
         assert_eq!(answer.joins[0].joined_table, "family");
@@ -190,7 +331,7 @@ mod tests {
         let answer = serve_schema_context(&catalog(), &decoded_request).unwrap();
 
         assert_eq!(answer.table, "person");
-        assert_eq!(answer.ontology_class, "gramps:Person");
+        assert_eq!(answer.ontology_class.as_deref(), Some("gramps:Person"));
         assert_eq!(answer.application, "gramps");
         assert_eq!(answer.change_impact, "breaks family-tree rendering");
         assert_eq!(answer.joins.len(), 1);
@@ -214,5 +355,61 @@ mod tests {
         let encoded_err = serde_json::to_string(&err).unwrap();
         let decoded_err: SchemaContextQueryError = serde_json::from_str(&encoded_err).unwrap();
         assert_eq!(decoded_err, err);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R029.2
+    #[test]
+    fn attached_catalog_answers_carry_columns_and_both_join_directions() {
+        use crate::attached_catalog::{
+            AttachedCatalogGraph, CatalogColumn, CatalogConstraint, CatalogConstraintKind,
+            CatalogReference, CatalogTable,
+        };
+        let column = |name: &str| CatalogColumn {
+            name: name.to_string(),
+            type_name: "integer".to_string(),
+            nullable: false,
+        };
+        let graph = AttachedCatalogGraph {
+            tables: vec![
+                CatalogTable {
+                    schema: "main".to_string(),
+                    name: "family".to_string(),
+                    columns: vec![column("id")],
+                    constraints: Vec::new(),
+                },
+                CatalogTable {
+                    schema: "main".to_string(),
+                    name: "person".to_string(),
+                    columns: vec![column("id"), column("family_id")],
+                    constraints: vec![CatalogConstraint {
+                        name: "person_family".to_string(),
+                        kind: CatalogConstraintKind::ForeignKey,
+                        columns: vec!["family_id".to_string()],
+                        references: Some(CatalogReference {
+                            schema: "main".to_string(),
+                            table: "family".to_string(),
+                            columns: vec!["id".to_string()],
+                        }),
+                    }],
+                },
+            ],
+            views: Vec::new(),
+            version: 1,
+        };
+        let catalog = SchemaContextCatalog::from_attached(&graph, "gramps", "agent:gramps");
+        let person = catalog.schema_context("main.person").unwrap();
+        assert_eq!(person.columns.len(), 2);
+        assert_eq!(person.joins.len(), 1);
+        assert_eq!(person.joins[0].joined_table, "main.family");
+        assert_eq!(person.joins[0].on_column, "family_id");
+        // The referenced table sees the same join from its side.
+        let family = catalog.schema_context("main.family").unwrap();
+        assert_eq!(family.joins.len(), 1);
+        assert_eq!(family.joins[0].joined_table, "main.person");
+        assert_eq!(family.joins[0].on_column, "id");
+        assert_eq!(family.joins[0].joined_column, "family_id");
+        assert_eq!(family.application, "gramps");
+        assert_eq!(family.owner, "agent:gramps");
+        assert!(catalog.schema_context("main.absent").is_err());
     }
 }

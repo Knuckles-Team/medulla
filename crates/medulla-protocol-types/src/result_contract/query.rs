@@ -99,6 +99,8 @@ method_results! {
     CrossSourceQuestion(CrossSourceQuestion) => Raw<medulla_source_types::cross_source_report::CrossSourceReport>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
     CatalogUsage(CatalogUsage) => Raw<medulla_catalog_types::asset_usage::CatalogUsageAnswer>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R029.2: what one attached table is, joins to, maps to and impacts.
+    SchemaContext(SchemaContext) => Raw<medulla_catalog_types::schema_context::SchemaContextAnswer>;
     #[cfg(feature = "query")]
     ExplainPlan(ExplainPlan) => Raw<ExplainPlanResult>;
     ExplainProvenance(ExplainProvenance) => Raw<EvidenceBundle>;
