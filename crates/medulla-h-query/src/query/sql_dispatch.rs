@@ -606,6 +606,7 @@ async fn exec_sql_catalog_create(
 #[cfg(feature = "query")]
 enum SqlCatalogTerminalClass {
     TransactionControl,
+    SessionReset,
     CopyIn,
     PropertyGraph,
     Misclassified,
@@ -618,6 +619,7 @@ fn classify_sql_catalog_terminal(
     use medulla_sql_lang::sql::classify::StatementKind as K;
     match kind {
         K::Begin | K::Commit | K::Rollback => SqlCatalogTerminalClass::TransactionControl,
+        K::DiscardAll => SqlCatalogTerminalClass::SessionReset,
         K::CopyIn(_) | K::CopyOut(_) => SqlCatalogTerminalClass::CopyIn,
         K::Read
         | K::PropertyGraphDdlRequiresCatalogAdmission(_)
@@ -684,6 +686,11 @@ async fn exec_classified_sql_catalog_terminal(
         SqlCatalogTerminalClass::TransactionControl => Response::err(
             req_id,
             "INVALID_ARGUMENT: SQL error: transaction control requires a stateful SQL wire connection"
+                .to_string(),
+        ),
+        SqlCatalogTerminalClass::SessionReset => Response::err(
+            req_id,
+            "INVALID_ARGUMENT: SQL error: DISCARD ALL resets pgwire session state and requires a stateful SQL wire connection"
                 .to_string(),
         ),
         SqlCatalogTerminalClass::CopyIn => Response::err(
