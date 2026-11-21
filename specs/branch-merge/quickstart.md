@@ -16,7 +16,7 @@ Run the proof for `MEDULLA-BRANCH-MERGE-R001` and `MEDULLA-BRANCH-MERGE-R002` (p
 uv run pytest tests/test_branch_create.py tests/test_branch_scoped_mutation.py
 ```
 
-Run the merge proof of `MEDULLA-BRANCH-MERGE-R007` (planned):
+Run the merge proof of `MEDULLA-BRANCH-MERGE-R007`:
 
 ```text
 uv run pytest tests/test_branch_merge_publish.py

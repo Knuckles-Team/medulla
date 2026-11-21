@@ -283,6 +283,20 @@ pub struct BranchMergeReceipt {
     pub target_head: String,
     /// The source head when the merge moved the target; `None` when nothing was written.
     pub merged_parent: Option<String>,
+    /// The two-parent merge commit a three-way publication wrote
+    /// (MEDULLA-BRANCH-MERGE-R007): commit id, manifest digest, parents
+    /// (target head first, source head second), actor and creation time. `None`
+    /// for `up_to_date` and `fast_forward`, which write no commit.
+    #[serde(default)]
+    pub commit: Option<BranchCommit>,
+    /// Every conflict the three-way merge recorded (MEDULLA-BRANCH-MERGE-R005);
+    /// empty when the merge had none.
+    #[serde(default)]
+    pub conflicts: Vec<ConflictRecord>,
+    /// Whether this receipt is the original one returned again for a replayed
+    /// `(source_head, target_head, merge_base)` key.
+    #[serde(default)]
+    pub replayed: bool,
 }
 
 /// The property names a conflict candidate's provenance is read from
@@ -350,6 +364,53 @@ pub struct ConflictRecord {
     pub outcome: ConflictOutcome,
     /// The pinned policy's digest; `None` for the engine default policy.
     pub policy_digest: Option<String>,
+}
+
+/// One change a three-way merge publication applies to the target
+/// (MEDULLA-BRANCH-MERGE-R007). The properties are the raw MessagePack bytes of
+/// the version the merge settled on; `None` is a deletion.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(tag = "entity", rename_all = "snake_case")]
+pub enum MergeChange {
+    /// A node, by node id.
+    Node {
+        id: String,
+        properties_msgpack: Option<Vec<u8>>,
+    },
+    /// An edge, by its endpoints.
+    Edge {
+        source: String,
+        target: String,
+        properties_msgpack: Option<Vec<u8>>,
+    },
+}
+
+/// The record a merge commit carries as its payload (MEDULLA-BRANCH-MERGE-R007):
+/// the explicit changes that turn the target head into the merged state, the
+/// conflict records of R005 and the facts of the replay key. The state of the
+/// target at the merge commit is the fold of this payload onto the target chain
+/// (MEDULLA-BRANCH-MERGE-R006), so the engine keeps no second copy.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MergePublication {
+    pub merge_base: String,
+    pub source_head: String,
+    pub target_head: String,
+    pub changes: Vec<MergeChange>,
+    pub conflicts: Vec<ConflictRecord>,
+}
+
+/// The replay key of one merge: `(source_head, target_head, merge_base)`.
+pub fn merge_replay_key(source_head: &str, target_head: &str, merge_base: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for part in [source_head, target_head, merge_base] {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("merge:{}", hex::encode(hasher.finalize()))
 }
 
 /// MEDULLA-BRANCH-MERGE-R003 — the merge base is the common ancestor on the

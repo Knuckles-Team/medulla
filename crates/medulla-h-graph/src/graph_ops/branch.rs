@@ -13,6 +13,8 @@ pub mod conflict;
 pub mod line_merge;
 // MEDULLA-BRANCH-MERGE-R006 — branch diff and time-travel reads.
 pub mod time_travel;
+// MEDULLA-BRANCH-MERGE-R007 — atomic merge publication.
+pub mod publish;
 
 use std::sync::Arc;
 
@@ -151,6 +153,8 @@ pub struct BranchMergeRequest {
     pub target: String,
     /// The base commit the caller planned against, if it pinned one.
     pub merge_base: Option<String>,
+    /// The policy the conflicts resolve under; `None` is the engine default.
+    pub policy: Option<medulla_decision_types::decision::DecisionPolicyRef>,
 }
 
 /// The classified heads of one merge, before anything is written.
@@ -175,6 +179,31 @@ fn merge_error_response(req_id: u64, error: MergeClassifyError) -> Response {
             Response::err(req_id, format!("{}: branch merge refused", code.as_str()))
         }
         MergeClassifyError::Store(detail) => Response::err(req_id, detail),
+    }
+}
+
+fn publish_error_response(req_id: u64, error: publish::PublishError) -> Response {
+    match error {
+        publish::PublishError::Refused(code) => {
+            Response::err(req_id, format!("{}: branch merge refused", code.as_str()))
+        }
+        publish::PublishError::AdoptionInvalid(message) => Response::err(req_id, message),
+        publish::PublishError::Failed(detail) => Response::err(req_id, detail),
+    }
+}
+
+/// The receipt of an outcome that writes no merge commit: `up_to_date` writes
+/// nothing, `fast_forward` moved the head.
+fn plain_receipt(classified: MergeClassification, moved: Option<String>) -> BranchMergeReceipt {
+    BranchMergeReceipt {
+        outcome: classified.outcome,
+        merge_base: classified.merge_base,
+        source_head: classified.source_head.clone(),
+        target_head: moved.clone().unwrap_or(classified.target_head),
+        merged_parent: moved.map(|_| classified.source_head),
+        commit: None,
+        conflicts: Vec::new(),
+        replayed: false,
     }
 }
 
@@ -303,21 +332,32 @@ pub async fn handle_branch_merge(
         Ok(Err(error)) => return merge_error_response(req_id, error),
         Err(error) => return Response::err(req_id, error.to_string()),
     };
-    if classified.outcome == MergeOutcome::Merged {
-        return Response::err(
-            req_id,
-            format!(
-                "diverged heads (merge base {}) merge three-way through MEDULLA-BRANCH-MERGE-R007",
-                classified.merge_base
-            ),
-        );
-    }
-    let receipt = BranchMergeReceipt {
-        outcome: classified.outcome,
-        merge_base: classified.merge_base,
-        source_head: classified.source_head.clone(),
-        target_head: moved.clone().unwrap_or(classified.target_head),
-        merged_parent: moved.map(|_| classified.source_head),
+    let receipt = match classified.outcome {
+        MergeOutcome::Merged | MergeOutcome::Conflict => {
+            match publish::publish_merge(
+                state,
+                verified,
+                reference(&request.source),
+                reference(&request.target),
+                &classified,
+                request.policy.clone(),
+            )
+            .await
+            {
+                Ok(receipt) => receipt,
+                Err(error) => return publish_error_response(req_id, error),
+            }
+        }
+        MergeOutcome::UpToDate => {
+            // A merge already published for this source head answers with its
+            // original receipt (MEDULLA-BRANCH-MERGE-R007 replay).
+            match publish::chain_for_replay(state, verified, reference(&request.target)).await {
+                Ok(chain) => publish::replayed_receipt(&chain, &classified.source_head)
+                    .unwrap_or_else(|| plain_receipt(classified, moved)),
+                Err(error) => return publish_error_response(req_id, error),
+            }
+        }
+        MergeOutcome::FastForward => plain_receipt(classified, moved),
     };
     match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BranchMerge>(
         receipt,
@@ -487,6 +527,29 @@ impl BranchTarget {
         })
         .await
         .map_err(|error| AppendError::Branch(BranchCreateError::Store(error.to_string())))?
+    }
+
+    /// Publish one merge into this branch with two parents
+    /// (MEDULLA-BRANCH-MERGE-R007), in one registry transaction.
+    pub async fn publish_merge(
+        &self,
+        source: &BranchRef,
+        tenant: &str,
+        expected_target_head: &str,
+        replay_key: &str,
+        input: BranchCommitInput,
+    ) -> Result<AppendedCommit, HeadMoveError> {
+        let registry = Arc::clone(&self.registry);
+        let target = self.reference.clone();
+        let source = source.clone();
+        let tenant = tenant.to_string();
+        let expected = expected_target_head.to_string();
+        let replay_key = replay_key.to_string();
+        tokio::task::spawn_blocking(move || {
+            registry.publish_merge(&target, &source, &tenant, &expected, &replay_key, &input)
+        })
+        .await
+        .map_err(|error| HeadMoveError::Store(error.to_string()))?
     }
 
     /// The served receipt of an appended (or replayed) commit.

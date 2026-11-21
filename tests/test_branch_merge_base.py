@@ -99,10 +99,9 @@ async def _scenario(graph: str) -> None:
         await _create(client, graph, right)
         await _write(client, graph, left, f"l-{stem}", f"kl-{stem}")
         await _write(client, graph, right, f"r-{stem}", f"kr-{stem}")
-        diverged = await _refusal(client, _merge(graph, left, right))
-        assert "three-way" in diverged
-        base = diverged.split("merge base ")[1].split(")")[0]
-        assert base.startswith(f"{graph}@")
+        diverged = await client._send("BranchMerge", _merge(graph, left, right))
+        assert diverged["outcome"] == "merged"
+        assert diverged["merge_base"].startswith(f"{graph}@")
 
         # A caller-pinned base that is not the computed one is stale.
         stale = await _refusal(

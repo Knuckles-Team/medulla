@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalDecisionRecord};
 
 use super::reentry::SeamFuture;
@@ -31,6 +32,16 @@ pub trait ConflictDecider: Send + Sync {
         verified: &'a VerifiedRequestContext,
         request: DecideRequest,
     ) -> SeamFuture<'a, Result<StatisticalDecisionRecord, String>>;
+
+    /// The `FeatureSchema` pin every conflict `DecideRequest` carries: the conflict family's own
+    /// published schema component, resolved from the decide family registry by the family id in
+    /// the verified tenant (MEDULLA-BRANCH-MERGE-R007). A tenant with none published refuses
+    /// `CONFLICT_SCHEMA_MISSING`.
+    fn feature_schema<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        verified: &'a VerifiedRequestContext,
+    ) -> SeamFuture<'a, Result<ComponentDependency, String>>;
 }
 
 /// The installed conflict decider, if any.
@@ -56,4 +67,15 @@ pub async fn decide_conflict(
         return Err(CONFLICT_DECIDER_MISSING.to_string());
     };
     decider.decide_conflict(state, verified, request).await
+}
+
+/// The conflict family's published feature-schema pin; a missing installation refuses.
+pub async fn conflict_feature_schema(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+) -> Result<ComponentDependency, String> {
+    let Some(decider) = conflict_decider(state).await else {
+        return Err(CONFLICT_DECIDER_MISSING.to_string());
+    };
+    decider.feature_schema(state, verified).await
 }

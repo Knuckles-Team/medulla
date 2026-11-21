@@ -982,6 +982,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_NO_COMMON_ANCESTOR",
             "BRANCH_TENANT_DENIED",
             "BRANCH_UNKNOWN",
+            "MERGE_ACTOR_UNKNOWN",
+            "MERGE_ADOPTION_INVALID",
             "MERGE_TARGET_STALE",
         ],
     ),

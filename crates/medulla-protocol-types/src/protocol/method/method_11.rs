@@ -433,6 +433,10 @@ $($variants)*
     /// against; a different computed base refuses `MERGE_TARGET_STALE`. Heads
     /// with no common ancestor refuse `BRANCH_NO_COMMON_ANCESTOR`.
     /// `tenant` must be the verified request tenant (`BRANCH_TENANT_DENIED`).
+    /// Diverged heads merge three-way (MEDULLA-BRANCH-MERGE-R004, R005, R007):
+    /// `policy` is the decision policy the conflicts resolve under; unset, the
+    /// engine default applies and every conflict stays open
+    /// (`CONFLICT_POLICY_MISSING`).
     BranchMerge {
         tenant: String,
         graph: String,
@@ -440,6 +444,8 @@ $($variants)*
         target: String,
         #[serde(default)]
         merge_base: Option<String>,
+        #[serde(default)]
+        policy: Option<medulla_agent_types::agent_component::DecisionPolicyRef>,
     },
 
     /// Read a branch as of one engine version on its chain

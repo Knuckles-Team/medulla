@@ -105,6 +105,46 @@ impl medulla_server_api::api::conflict_decider::ConflictDecider for ConflictDeci
             })
         })
     }
+
+    fn feature_schema<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        verified: &'a VerifiedRequestContext,
+    ) -> medulla_server_api::api::reentry::SeamFuture<
+        'a,
+        Result<medulla_agent_types::agent_component::ComponentDependency, String>,
+    > {
+        Box::pin(async move {
+            let store = state.write().await.ensure_agent_library()?;
+            conflict_schema_pin(store.as_ref(), verified.tenant())
+        })
+    }
+}
+
+/// The newest published revision of the conflict family's `FeatureSchema` component in the
+/// verified tenant, as a pin (MEDULLA-BRANCH-MERGE-R007).
+fn conflict_schema_pin(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    tenant: &str,
+) -> Result<medulla_agent_types::agent_component::ComponentDependency, String> {
+    use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
+    use medulla_decision_types::decision::resolve_conflict::{
+        conflict_feature_schema_component_id, CONFLICT_SCHEMA_MISSING,
+    };
+    let component_id = conflict_feature_schema_component_id();
+    store
+        .component_revisions(tenant, &component_id)?
+        .into_iter()
+        .rev()
+        .find(|entry| entry.kind == AgentComponentKind::FeatureSchema)
+        .map(|entry| ComponentDependency {
+            component_id: component_id.clone(),
+            kind: AgentComponentKind::FeatureSchema,
+            definition_digest: entry.definition_digest,
+        })
+        .ok_or_else(|| {
+            format!("{CONFLICT_SCHEMA_MISSING}: {component_id} is not published in this tenant")
+        })
 }
 
 async fn serve(

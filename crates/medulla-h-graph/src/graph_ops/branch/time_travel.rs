@@ -20,7 +20,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_mutation_types::branch::{BranchCommit, BranchRef};
+use medulla_mutation_types::branch::{BranchCommit, BranchRef, MergeChange, MergePublication};
 use medulla_mutation_types::versioning::{
     page_of, BranchSnapshot, DiffEntity, DiffOperation, KgDiff, KgDiffEntry, KgTransaction,
     SnapshotEdge, SnapshotNode,
@@ -51,6 +51,8 @@ pub struct BranchReadAtRequest {
     pub branch: String,
     pub engine_version: u64,
 }
+
+use super::merge::{EntityIdentity, EntitySnapshot, EntityVersion};
 
 /// One chain commit with the payload it carries, oldest first.
 pub type ChainEntry = (BranchCommit, Option<Vec<u8>>);
@@ -209,6 +211,100 @@ impl VersionState {
         }
     }
 
+    /// Fold one merge publication: its explicit changes onto the target state
+    /// (MEDULLA-BRANCH-MERGE-R007).
+    fn apply_merge(&mut self, merge: &MergePublication, image_ref: &str) -> Vec<KgDiffEntry> {
+        let mut entries = Vec::new();
+        for item in &merge.changes {
+            match item {
+                MergeChange::Node {
+                    id,
+                    properties_msgpack: Some(props),
+                } => entries.push(self.upsert_node(id, props, image_ref)),
+                MergeChange::Node {
+                    id,
+                    properties_msgpack: None,
+                } => entries.extend(self.remove_node(id, image_ref)),
+                MergeChange::Edge {
+                    source,
+                    target,
+                    properties_msgpack: Some(props),
+                } => entries.push(self.upsert_edge(source, target, props, image_ref)),
+                MergeChange::Edge {
+                    source,
+                    target,
+                    properties_msgpack: None,
+                } => {
+                    if self.edges.remove(&(source.clone(), target.clone())).is_some() {
+                        entries.push(change(
+                            DiffEntity::Edge {
+                                source: source.clone(),
+                                target: target.clone(),
+                            },
+                            DiffOperation::Deleted,
+                            image_ref,
+                        ));
+                    }
+                }
+            }
+        }
+        entries
+    }
+
+    /// The raw property bytes of the node `id`, if it is present.
+    pub fn node_properties(&self, id: &str) -> Option<&[u8]> {
+        self.nodes.get(id).map(Vec::as_slice)
+    }
+
+    /// The raw property bytes of the edge `(source, target)`, if it is present.
+    pub fn edge_properties(&self, source: &str, target: &str) -> Option<&[u8]> {
+        self.edges
+            .get(&(source.to_string(), target.to_string()))
+            .map(Vec::as_slice)
+    }
+
+    /// The state as merge entities (MEDULLA-BRANCH-MERGE-R004): a node is
+    /// `(tenant, type, key)` with `type` read from its `type` or `node_type`
+    /// property and `key` its node id; an edge is `(source, target,
+    /// relation_type)` with the relation read from `relation_type`, `type` or
+    /// `label`, falling back to `related_to` (MEDULLA-REPO-INGEST-R009.1).
+    pub fn entities(&self, tenant: &str) -> Result<EntitySnapshot, String> {
+        let mut snapshot = EntitySnapshot::new();
+        for (id, bytes) in &self.nodes {
+            let properties = properties_text(bytes)?;
+            let node_type = ["type", "node_type"]
+                .iter()
+                .find_map(|key| properties.get(*key))
+                .cloned()
+                .unwrap_or_default();
+            snapshot.insert(
+                EntityIdentity::Node {
+                    tenant: tenant.to_string(),
+                    node_type,
+                    key: id.clone(),
+                },
+                EntityVersion { properties },
+            );
+        }
+        for ((source, target), bytes) in &self.edges {
+            let properties = properties_text(bytes)?;
+            let relation_type = ["relation_type", "type", "label"]
+                .iter()
+                .find_map(|key| properties.get(*key))
+                .cloned()
+                .unwrap_or_else(|| "related_to".to_string());
+            snapshot.insert(
+                EntityIdentity::Edge {
+                    source: source.clone(),
+                    target: target.clone(),
+                    relation_type,
+                },
+                EntityVersion { properties },
+            );
+        }
+        Ok(snapshot)
+    }
+
     /// Fold one commit payload into the state, returning its changes in apply
     /// order. A source changeset lists its paths; a commit with no readable
     /// payload is named, so no commit is silently empty.
@@ -216,6 +312,9 @@ impl VersionState {
         let Some(bytes) = payload else {
             return other("unrecorded", image_ref);
         };
+        if let Ok(merge) = rmp_serde::from_slice::<MergePublication>(bytes) {
+            return self.apply_merge(&merge, image_ref);
+        }
         if let Ok(mutation) = rmp_serde::from_slice::<Method>(bytes) {
             return self.apply_mutation(&mutation, image_ref);
         }
@@ -266,6 +365,39 @@ impl VersionState {
                 .collect(),
         }
     }
+}
+
+/// Decode a property blob into text values: a string stays as it is, any other
+/// value is its JSON text. An empty blob has no properties.
+fn properties_text(bytes: &[u8]) -> Result<BTreeMap<String, String>, String> {
+    if bytes.is_empty() {
+        return Ok(BTreeMap::new());
+    }
+    let decoded: BTreeMap<String, serde_json::Value> =
+        rmp_serde::from_slice(bytes).map_err(|error| format!("undecodable properties: {error}"))?;
+    Ok(decoded
+        .into_iter()
+        .map(|(key, value)| match value {
+            serde_json::Value::String(text) => (key, text),
+            other => (key, other.to_string()),
+        })
+        .collect())
+}
+
+/// The state after folding every commit of a first-parent chain, oldest first.
+pub fn fold_chain(chain: &[ChainEntry]) -> VersionState {
+    let mut state = VersionState::default();
+    for (commit, payload) in chain {
+        state.apply_payload(payload.as_deref(), &image_ref(commit));
+    }
+    state
+}
+
+/// The state at the commit `commit_id` of a first-parent chain, or `None` when
+/// that commit is not on this chain.
+pub fn fold_to_commit(chain: &[ChainEntry], commit_id: &str) -> Option<VersionState> {
+    let end = chain.iter().position(|(commit, _)| commit.id == commit_id)?;
+    Some(fold_chain(&chain[..=end]))
 }
 
 /// The method's variant name: the leading identifier of its `Debug` form.
@@ -372,7 +504,7 @@ fn refuse(req_id: u64, code: ServerErrorCode) -> Response {
 }
 
 /// The chain with each commit's payload, oldest first.
-async fn load_chain(target: &super::BranchTarget) -> Result<Vec<ChainEntry>, String> {
+pub(super) async fn load_chain(target: &super::BranchTarget) -> Result<Vec<ChainEntry>, String> {
     let mut entries = Vec::new();
     for commit in target.chain().await? {
         let payload = target.payload(&commit.id).await?;

@@ -21,6 +21,19 @@ pub const CONFLICT_POLICY_MISSING: &str = "CONFLICT_POLICY_MISSING";
 /// A candidate's score is not a finite number.
 pub const CONFLICT_NONFINITE: &str = "CONFLICT_NONFINITE";
 
+/// The id of the `resolve_conflict` question family in the decide family
+/// registry (MEDULLA-DECISION-ENGINE-R001.101). It is the one source of the
+/// conflict family's published schema component id.
+pub const CONFLICT_FAMILY_ID: &str = "resolve_conflict";
+/// The component id of the `FeatureSchema` the conflict family publishes: its
+/// family id, so a pin is resolved by the family id and never chosen by a
+/// caller (MEDULLA-BRANCH-MERGE-R007).
+pub fn conflict_feature_schema_component_id() -> String {
+    format!("{CONFLICT_FAMILY_ID}.feature_schema")
+}
+/// The conflict family has published no feature schema in this tenant.
+pub const CONFLICT_SCHEMA_MISSING: &str = "CONFLICT_SCHEMA_MISSING";
+
 /// The one option a conflict question declares.
 pub const CONFLICT_OPTION: &str = "resolve_conflict";
 /// The request parameter carrying the `ConflictCandidates`.

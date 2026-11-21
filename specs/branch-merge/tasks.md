@@ -14,5 +14,6 @@ One task per leaf row of `requirements.md`, producer first: the branch model (US
 - [x] T007 [US4] MEDULLA-BRANCH-MERGE-R005 Epistemic conflict resolution
 - [ ] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
 - [ ] T008a [US3] MEDULLA-BRANCH-MERGE-R007 Fast-forward publishes data and history; delete `BranchRegistry::fast_forward`
+- [x] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
 - [ ] T009 [US3] MEDULLA-BRANCH-MERGE-R009 Landing policy check at merge publish
 - [ ] T010 [US3] MEDULLA-BRANCH-MERGE-R010 Line-granularity file merge for source changesets

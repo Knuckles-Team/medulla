@@ -34189,6 +34189,7 @@ class MethodBranchMergeParams(BaseModel):
 
     graph: str
     merge_base: str | None = Field(default=None)
+    policy: DecisionPolicyRef | None = Field(default=None)
     source: str
     target: str
     tenant: str
