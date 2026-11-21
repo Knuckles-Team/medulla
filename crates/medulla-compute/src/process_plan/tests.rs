@@ -5,6 +5,8 @@ use medulla_types::process_import::{
 };
 
 use super::bind::{explicit_bindings, resolve_bindings, step_node_id};
+use super::rank::{ranked_bindings, DEFAULT_MIN_TOOL_SCORE_MICROS};
+use medulla_decision_types::decision::tool_relevance::AssignedTool;
 
 const WORKFLOW: &str = "workflow:invoice:v1";
 
@@ -184,4 +186,60 @@ fn explicit_bindings_follow_graph_links() {
         .any(|premise| premise.starts_with("tool_arguments:step=s1;")));
     // Equal views give equal bindings.
     assert_eq!(explicit_bindings(&view, WORKFLOW, &workflow), bindings);
+}
+
+fn assigned(tool: &str, rank: u32, relevance_micros: i64) -> AssignedTool {
+    AssignedTool {
+        tool_id: tool.to_string(),
+        server_id: "mail-mcp".to_string(),
+        lexical_rank: Some(rank),
+        embedding_rank: None,
+        fused_score_q32: 0,
+        relevance_q32: (relevance_micros << 32) / 1_000_000,
+        rank,
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.3
+#[test]
+fn ranked_fallback_respects_min_score() {
+    let steps = vec![
+        step("a", StepKind::Agent, Some("clerk"), None),
+        step("b", StepKind::Agent, None, None),
+        step("c", StepKind::Agent, None, None),
+        step("d", StepKind::Human, None, None),
+    ];
+    let explicit = vec![StepBinding {
+        step_id: "c".to_string(),
+        target: BindingTarget::Approval {
+            approver_role: "x".to_string(),
+        },
+        source: BindingSource::Explicit,
+    }];
+    // Step a: the top tool by rank scores 0.8; step b: the best tool scores 0.5, below 0.6.
+    let relevance = |label: &str, _lane: &str| match label {
+        "a" => vec![assigned("send_mail", 2, 900_000), assigned("find_mail", 1, 800_000)],
+        _ => vec![assigned("send_mail", 1, 500_000)],
+    };
+    let steps: Vec<CanonicalStep> = steps
+        .into_iter()
+        .map(|mut s| {
+            s.label = s.id.clone();
+            s
+        })
+        .collect();
+    let bound = ranked_bindings(&steps, &explicit, DEFAULT_MIN_TOOL_SCORE_MICROS, &relevance);
+    assert_eq!(bound.len(), 1, "only a clears the floor; b is below it, c is bound, d is human");
+    assert_eq!(bound[0].step_id, "a");
+    assert_eq!(
+        bound[0].target,
+        BindingTarget::Tool {
+            server: "mail-mcp".to_string(),
+            tool: "find_mail".to_string(),
+            contract_iri: "find_mail".to_string()
+        }
+    );
+    assert!(matches!(bound[0].source, BindingSource::Ranked { score_q32 } if score_q32 > 0));
+    // A lower floor binds b as well.
+    assert_eq!(ranked_bindings(&steps, &explicit, 400_000, &relevance).len(), 2);
 }
