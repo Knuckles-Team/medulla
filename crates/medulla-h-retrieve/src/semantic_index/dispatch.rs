@@ -26,7 +26,8 @@ fn family(op: &SemanticIndexOp) -> OperationFamily {
         SemanticIndexOp::AdmitBinding { .. }
         | SemanticIndexOp::RefreshBinding { .. }
         | SemanticIndexOp::TransitionBinding { .. }
-        | SemanticIndexOp::DropBinding { .. } => OperationFamily::Binding,
+        | SemanticIndexOp::DropBinding { .. }
+        | SemanticIndexOp::InstallModelConfig { .. } => OperationFamily::Binding,
         SemanticIndexOp::AdmitSourceRecord { .. }
         | SemanticIndexOp::AdmitSourcePage { .. }
         | SemanticIndexOp::AdmitSourceReconcile { .. }
@@ -39,6 +40,7 @@ fn family(op: &SemanticIndexOp) -> OperationFamily {
         | SemanticIndexOp::CompleteGenerationStage { .. }
         | SemanticIndexOp::CompleteSqlSourceStage { .. }
         | SemanticIndexOp::ReplayCompletedSqlSourceStage { .. }
+        | SemanticIndexOp::RecordProbeMeasurement { .. }
         | SemanticIndexOp::ReleaseStageLease { .. } => OperationFamily::Worker,
         SemanticIndexOp::GetBindingRequest { .. }
         | SemanticIndexOp::Binding { .. }

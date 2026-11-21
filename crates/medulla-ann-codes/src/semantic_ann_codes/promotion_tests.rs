@@ -185,3 +185,65 @@ fn missing_check_blocks_and_keeps_prior_live() {
     assert_eq!(fixture.codes.live_generation().unwrap(), Some(1));
     let _ = std::fs::remove_dir_all(&fixture.dir);
 }
+
+/// A text-and-image model at version 2: the image probe set has two queries at
+/// k = 2 with a 0.9 recall floor (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
+fn regressed_image_config(fixture: &S6Fixture) -> SemanticModelConfig {
+    let mut config = config(fixture, 2);
+    let image = ProbeSet {
+        k: 2,
+        queries: vec![vec![0.0, 1.0], vec![1.0, 1.0]],
+        ground_truth: vec![vec![1, 2], vec![3, 4]],
+        recall_floor: 0.9,
+    };
+    config
+        .probe_set_digests
+        .insert(PromotionModality::Image, image.digest());
+    config.probe_set.insert(PromotionModality::Image, image);
+    config.modalities = vec![PromotionModality::Text, PromotionModality::Image];
+    config
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R040.6
+#[test]
+fn regressed_image_blocks_promotion_and_keeps_prior_live() {
+    let fixture = seeded_s6_publication("promotion-gate-image");
+    seed_live_version_one(&fixture);
+    let codes = &fixture.codes;
+    codes
+        .install_model_config(regressed_image_config(&fixture))
+        .unwrap();
+    // Each query hits one of its two ground-truth ids: image recall 0.5.
+    for stage in [PromotionProbePoint::Vector, PromotionProbePoint::AnnIndex] {
+        codes
+            .record_probe_measurement(stage, 2, PromotionModality::Text, &[vec![1, 2]], 12)
+            .unwrap();
+        let receipt = codes
+            .record_probe_measurement(
+                stage,
+                2,
+                PromotionModality::Image,
+                &[vec![1, 9], vec![3, 9]],
+                12,
+            )
+            .unwrap();
+        assert_eq!(receipt.recall, 0.5);
+    }
+    let lease = claim(&fixture);
+    let refused = finalize(&fixture, &lease).unwrap_err().to_string();
+    assert!(refused.contains(PROMOTION_BLOCKED), "{refused}");
+    assert_eq!(codes.live_generation().unwrap(), Some(1));
+    let stored = codes
+        .promotion_verdict(2)
+        .unwrap()
+        .expect("blocked verdict stored");
+    assert!(!stored.promoted);
+    let image: Vec<_> = stored
+        .entries
+        .iter()
+        .filter(|entry| entry.modality == PromotionModality::Image)
+        .collect();
+    assert_eq!(image.len(), 1);
+    assert!(!image[0].passed);
+    let _ = std::fs::remove_dir_all(&fixture.dir);
+}

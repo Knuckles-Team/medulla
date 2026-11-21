@@ -149,6 +149,28 @@ impl SemanticIndexService {
             .complete_generation_stage(lease, transition, artifact, successor, now_ms)
     }
 
+    /// Install the model configuration the S6 promotion gate reads
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
+    pub fn install_model_config(
+        &self,
+        config: medulla_catalog_types::embedding_promotion::SemanticModelConfig,
+    ) -> Result<(), SemanticCodeError> {
+        self.store.install_model_config(config)
+    }
+
+    /// Record one S4 or S5 recall measurement (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
+    pub fn record_probe_measurement(
+        &self,
+        stage: medulla_catalog_types::embedding_promotion::PromotionProbePoint,
+        generation: u64,
+        modality: medulla_catalog_types::embedding_promotion::PromotionModality,
+        retrieved: &[Vec<u64>],
+        now_ms: u64,
+    ) -> Result<medulla_catalog_types::embedding_promotion::StageReceipt, SemanticCodeError> {
+        self.store
+            .record_probe_measurement(stage, generation, modality, retrieved, now_ms)
+    }
+
     pub fn release_stage_lease(
         &self,
         lease: &MutationOutboxLease,

@@ -112,6 +112,9 @@ pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) 
             )
             .await
         }
+        SemanticIndexOp::InstallModelConfig { config, .. } => {
+            install_model_config(ctx, *config).await
+        }
         _ => unreachable!("binding handler received a non-binding operation"),
     }
 }
@@ -208,6 +211,25 @@ async fn admit_binding(
         })
         .await
         .map(contracts::receipt),
+    )
+}
+
+/// Install the model configuration the S6 promotion gate reads
+/// (MEDULLA-UNIFIED-DATA-PLANE-R040.6). A config that fails its own validation
+/// refuses with `PROMOTION_BLOCKED`.
+async fn install_model_config(
+    ctx: &SemanticIndexContext<'_>,
+    config: medulla_catalog_types::embedding_promotion::SemanticModelConfig,
+) -> Response {
+    let service = Arc::clone(&ctx.service);
+    reply::<ingestion_results::SemanticIndexInstallModelConfig, _>(
+        ctx.req_id,
+        blocking(ctx.req_id, move || {
+            service
+                .install_model_config(config)
+                .map(|()| super::consumer_ack())
+        })
+        .await,
     )
 }
 

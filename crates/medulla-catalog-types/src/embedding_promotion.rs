@@ -14,6 +14,7 @@ use sha2::{Digest, Sha256};
 
 /// The closed set of modalities a promotion check covers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum PromotionModality {
     Text,
@@ -55,6 +56,7 @@ pub struct PromotionCandidate {
 /// probe query vectors, the exact-neighbour ground-truth vector ids of each
 /// query, the cut-off `k` and the recall floor.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ProbeSet {
     pub k: u32,
@@ -96,6 +98,7 @@ impl ProbeSet {
 /// its operator-bumped `model_version`, the modalities the model serves, and
 /// one digest-pinned probe set per served modality.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SemanticModelConfig {
     pub model_id: String,
@@ -155,6 +158,7 @@ impl SemanticModelConfig {
 
 /// The S4 and S5 points a probe measurement is taken at (a label, not a lifecycle).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum PromotionProbePoint {
     #[serde(rename = "S4")]
     Vector,
@@ -197,6 +201,7 @@ pub struct ModalityCheckRecord {
 /// The measured recall at k of one stage and modality of one generation
 /// (MEDULLA-UNIFIED-DATA-PLANE-R040.3), written by the stage itself.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct StageReceipt {
     pub binding_id: String,

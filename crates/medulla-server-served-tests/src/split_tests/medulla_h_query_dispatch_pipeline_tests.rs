@@ -45,10 +45,10 @@ const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:igno
 /// `policy-test`. A signed envelope that names anything else is refused at
 /// the request boundary before the method is ever looked at, so these are
 /// not arbitrary fixture names.
-const TENANT: &str = "tenant-shared";
-const WORKER: &str = "semantic-dispatch-worker";
+pub(super) const TENANT: &str = "tenant-shared";
+pub(super) const WORKER: &str = "semantic-dispatch-worker";
 
-fn dispatch_state(
+pub(super) fn dispatch_state(
     persist_dir: &std::path::Path,
 ) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server::seams_install::new_state_for_test(
@@ -78,7 +78,7 @@ fn claims(principal: &str) -> RequestContextClaims {
 /// One signed `Method::SemanticIndex` request, exactly as a connector mints
 /// it. The attempt nonce and idempotency key the handler uses are derived
 /// from THIS envelope, not from the op body.
-fn signed(id: u64, op: SemanticIndexOp) -> Request {
+pub(super) fn signed(id: u64, op: SemanticIndexOp) -> Request {
     let context = claims(WORKER);
     let mut request = Request {
         id,
@@ -114,7 +114,7 @@ fn future_ms() -> u64 {
         + 60_000
 }
 
-fn worker_authority() -> CarrierAuthority {
+pub(super) fn worker_authority() -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(
         claims(WORKER),
         "semantic-dispatch-key-0".to_string(),
@@ -122,7 +122,7 @@ fn worker_authority() -> CarrierAuthority {
     .unwrap()
 }
 
-fn refused(label: &str, response: Response) -> String {
+pub(super) fn refused(label: &str, response: Response) -> String {
     response
         .error_detail
         .unwrap_or_else(|| panic!("{label} was accepted but must be refused"))

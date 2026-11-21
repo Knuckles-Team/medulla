@@ -61,6 +61,14 @@ pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) 
             ..
         } => replay(ctx, *lease, *expected_intent).await,
         SemanticIndexOp::ReleaseStageLease { lease, .. } => release(ctx, *lease).await,
+        SemanticIndexOp::RecordProbeMeasurement {
+            lease,
+            stage,
+            generation,
+            modality,
+            retrieved,
+            ..
+        } => record_probe(ctx, *lease, stage, generation, modality, retrieved).await,
         _ => unreachable!("worker handler received a non-worker operation"),
     }
 }
@@ -143,6 +151,36 @@ async fn validate(
         service.validate_stage_lease(lease, &consumer, now_ms)
     });
     reply::<ingestion_results::SemanticIndexValidateStageLease, _>(ctx.req_id, validated.await)
+}
+
+/// Record one S4 or S5 recall measurement under the caller's own lease: the
+/// lease's intent stage must be S4 for `Vector` and S5 for `AnnIndex`
+/// (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
+async fn record_probe(
+    ctx: &SemanticIndexContext<'_>,
+    lease: medulla_mutation_types::mutation_scope::MutationOutboxLease,
+    stage: medulla_catalog_types::embedding_promotion::PromotionProbePoint,
+    generation: u64,
+    modality: medulla_catalog_types::embedding_promotion::PromotionModality,
+    retrieved: Vec<Vec<u64>>,
+) -> Response {
+    use medulla_catalog_types::embedding_promotion::PromotionProbePoint;
+    use medulla_index_types::semantic_index::SemanticStage;
+    let consumer = ctx.authority.agent_id().to_string();
+    let measured = on_own_lease(ctx, lease, move |service, lease, now_ms| {
+        let intent = service.validate_stage_lease(lease, &consumer, now_ms)?;
+        let expected = match stage {
+            PromotionProbePoint::Vector => SemanticStage::Vector,
+            PromotionProbePoint::AnnIndex => SemanticStage::AnnIndex,
+        };
+        if intent.stage != expected {
+            return Err(medulla_ann_codes::semantic_ann_codes::SemanticCodeError::Refused(
+                "probe measurement requires a lease of the measured stage".to_string(),
+            ));
+        }
+        service.record_probe_measurement(stage, generation, modality, &retrieved, now_ms)
+    });
+    reply::<ingestion_results::SemanticIndexRecordProbeMeasurement, _>(ctx.req_id, measured.await)
 }
 
 async fn status(

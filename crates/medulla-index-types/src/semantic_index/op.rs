@@ -33,6 +33,9 @@ use super::{
     SemanticQueueClass, SemanticSqlSourceManifestDraft, SemanticStageArtifact, SemanticStageIntent,
     SemanticStageTransition,
 };
+use medulla_catalog_types::embedding_promotion::{
+    PromotionModality, PromotionProbePoint, SemanticModelConfig,
+};
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 
@@ -162,6 +165,16 @@ pub enum SemanticIndexOp {
         expected_generation: u64,
         idempotency_key: String,
     },
+    /// Install the engine-owned model configuration the S6 promotion gate reads
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R040.6). A config that fails its own
+    /// validation refuses with `PROMOTION_BLOCKED`.
+    InstallModelConfig {
+        tenant_id: String,
+        binding_id: String,
+        /// Boxed: a probe set carries query vectors.
+        config: Box<SemanticModelConfig>,
+        idempotency_key: String,
+    },
 
     // ----------------------------------------------------------- S1 admission
     /// One coarse wakeup whose source owner guarantees exactly one complete
@@ -282,6 +295,18 @@ pub enum SemanticIndexOp {
         lease: Box<MutationOutboxLease>,
         expected_intent: Box<SemanticStageIntent>,
     },
+    /// Record the S4 or S5 recall measurement of one modality under the
+    /// caller's own stage lease (MEDULLA-UNIFIED-DATA-PLANE-R040.6). `retrieved`
+    /// holds the ids the stage returned for each probe query, in query order.
+    RecordProbeMeasurement {
+        tenant_id: String,
+        binding_id: String,
+        lease: Box<MutationOutboxLease>,
+        stage: PromotionProbePoint,
+        generation: u64,
+        modality: PromotionModality,
+        retrieved: Vec<Vec<u64>>,
+    },
     /// Hand a lease back unexecuted. Without this a connector that cannot do
     /// the work it claimed wedges the row until the lease lapses.
     ReleaseStageLease {
@@ -341,12 +366,14 @@ impl SemanticIndexOp {
             | Self::RefreshBinding { .. }
             | Self::TransitionBinding { .. }
             | Self::DropBinding { .. }
+            | Self::InstallModelConfig { .. }
             | Self::AdmitSourceRecord { .. }
             | Self::AdmitSourcePage { .. }
             | Self::AdmitSourceReconcile { .. }
             | Self::AdmitSourceReplacement { .. }
             | Self::SubscribeStageConsumer { .. }
             | Self::ClaimStageLeases { .. }
+            | Self::RecordProbeMeasurement { .. }
             | Self::CompleteStage { .. }
             | Self::CompleteGenerationStage { .. }
             | Self::CompleteSqlSourceStage { .. }
@@ -376,7 +403,8 @@ impl SemanticIndexOp {
             Self::AdmitBinding { .. }
             | Self::RefreshBinding { .. }
             | Self::TransitionBinding { .. }
-            | Self::DropBinding { .. } => "semantic:binding-write",
+            | Self::DropBinding { .. }
+            | Self::InstallModelConfig { .. } => "semantic:binding-write",
             Self::Binding { .. }
             | Self::GetBindingRequest { .. }
             | Self::ListBindings { .. }
@@ -391,7 +419,8 @@ impl SemanticIndexOp {
             Self::CompleteStage { .. }
             | Self::CompleteGenerationStage { .. }
             | Self::CompleteSqlSourceStage { .. }
-            | Self::ReplayCompletedSqlSourceStage { .. } => "semantic:stage-complete",
+            | Self::ReplayCompletedSqlSourceStage { .. }
+            | Self::RecordProbeMeasurement { .. } => "semantic:stage-complete",
             Self::ValidateStageLease { .. }
             | Self::StageStatus { .. }
             | Self::SqlSourceManifest { .. } => "semantic:stage-read",
@@ -407,6 +436,8 @@ impl SemanticIndexOp {
             | Self::RefreshBinding { tenant_id, .. }
             | Self::TransitionBinding { tenant_id, .. }
             | Self::DropBinding { tenant_id, .. }
+            | Self::InstallModelConfig { tenant_id, .. }
+            | Self::RecordProbeMeasurement { tenant_id, .. }
             | Self::AdmitSourceRecord { tenant_id, .. }
             | Self::AdmitSourcePage { tenant_id, .. }
             | Self::AdmitSourceReconcile { tenant_id, .. }
@@ -445,6 +476,8 @@ impl SemanticIndexOp {
             | Self::RefreshBinding { binding_id, .. }
             | Self::TransitionBinding { binding_id, .. }
             | Self::DropBinding { binding_id, .. }
+            | Self::InstallModelConfig { binding_id, .. }
+            | Self::RecordProbeMeasurement { binding_id, .. }
             | Self::AdmitSourceRecord { binding_id, .. }
             | Self::AdmitSourcePage { binding_id, .. }
             | Self::AdmitSourceReconcile { binding_id, .. }
@@ -488,7 +521,8 @@ impl SemanticIndexOp {
             Self::AdmitBinding { .. }
             | Self::RefreshBinding { .. }
             | Self::TransitionBinding { .. }
-            | Self::DropBinding { .. } => self.validate_binding_ops(),
+            | Self::DropBinding { .. }
+            | Self::InstallModelConfig { .. } => self.validate_binding_ops(),
             Self::AdmitSourceRecord { .. }
             | Self::AdmitSourcePage { .. }
             | Self::AdmitSourceReconcile { .. }
@@ -501,6 +535,7 @@ impl SemanticIndexOp {
             | Self::CompleteGenerationStage { .. }
             | Self::CompleteSqlSourceStage { .. }
             | Self::ReplayCompletedSqlSourceStage { .. }
+            | Self::RecordProbeMeasurement { .. }
             | Self::ReleaseStageLease { .. } => self.validate_completion_ops(),
             Self::Binding { .. }
             | Self::SqlSourceManifest { .. }
@@ -548,6 +583,9 @@ impl SemanticIndexOp {
                 validate_generation(*expected_generation)?;
                 validate_idempotency_key(idempotency_key)
             }
+            Self::InstallModelConfig {
+                idempotency_key, ..
+            } => validate_idempotency_key(idempotency_key),
             _ => Err(SemanticIndexError::AuthorizationContextMismatch),
         }
     }
@@ -661,6 +699,12 @@ impl SemanticIndexOp {
                 expected_intent.validate()
             }
             Self::ReleaseStageLease { lease, .. } => validate_lease(lease),
+            Self::RecordProbeMeasurement {
+                lease, generation, ..
+            } => {
+                validate_lease(lease)?;
+                validate_generation(*generation)
+            }
             _ => Err(SemanticIndexError::AuthorizationContextMismatch),
         }
     }

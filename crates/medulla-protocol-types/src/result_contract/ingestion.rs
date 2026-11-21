@@ -2,6 +2,7 @@
 
 #[cfg(feature = "modality-serving")]
 use super::Dynamic;
+use medulla_catalog_types::embedding_promotion::StageReceipt;
 use medulla_catalog_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticBindingPage,
@@ -104,6 +105,7 @@ method_results! {
     SemanticIndexRefreshBinding(SemanticIndex / "refresh_binding") => Raw<SemanticMutationReceipt>;
     SemanticIndexTransitionBinding(SemanticIndex / "transition_binding") => Raw<SemanticMutationReceipt>;
     SemanticIndexDropBinding(SemanticIndex / "drop_binding") => Raw<SemanticMutationReceipt>;
+    SemanticIndexInstallModelConfig(SemanticIndex / "install_model_config") => Raw<bool>;
     SemanticIndexAdmitSourceRecord(SemanticIndex / "admit_source_record") => Raw<SemanticMutationReceipt>;
     SemanticIndexAdmitSourcePage(SemanticIndex / "admit_source_page") => Raw<SemanticSqlSourcePageAdmission>;
     SemanticIndexAdmitSourceReconcile(SemanticIndex / "admit_source_reconcile") => Raw<SemanticSqlSourceReconciliationAdmission>;
@@ -116,6 +118,7 @@ method_results! {
     SemanticIndexCompleteGenerationStage(SemanticIndex / "complete_generation_stage") => Raw<SemanticMutationReceipt>;
     SemanticIndexCompleteSqlSourceStage(SemanticIndex / "complete_sql_source_stage") => Raw<SemanticMutationReceipt>;
     SemanticIndexReplayCompletedSqlSourceStage(SemanticIndex / "replay_completed_sql_source_stage") => Raw<Option<(SemanticStageTransition, SemanticMutationReceipt)>>;
+    SemanticIndexRecordProbeMeasurement(SemanticIndex / "record_probe_measurement") => Raw<StageReceipt>;
     SemanticIndexReleaseStageLease(SemanticIndex / "release_stage_lease") => Raw<bool>;
     SemanticIndexGetBindingRequest(SemanticIndex / "get_binding_request") => Raw<SemanticIndexResponse>;
     SemanticIndexBinding(SemanticIndex / "binding") => Raw<Option<SemanticBinding>>;

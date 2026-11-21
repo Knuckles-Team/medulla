@@ -24163,6 +24163,59 @@ class SemanticIndexOpTransitionBinding(BaseModel):
     tenant_id: str
 
 
+class PromotionModality(str, Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    AUDIO = "audio"
+
+
+class PromotionProbePoint(str, Enum):
+    VECTOR = "S4"
+    ANN_INDEX = "S5"
+
+
+class ProbeSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ground_truth: list[list[Annotated[int, Field(ge=0)]]]
+    k: Annotated[int, Field(ge=0)]
+    queries: list[list[float]]
+    recall_floor: float
+
+
+class SemanticModelConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    model_id: str
+    model_version: Annotated[int, Field(ge=0)]
+    modalities: list[PromotionModality]
+    probe_set: dict[str, ProbeSet]
+    probe_set_digests: dict[str, str]
+
+
+class SemanticIndexOpInstallModelConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    binding_id: str
+    config: SemanticModelConfig
+    idempotency_key: str
+    op: Literal["install_model_config"]
+    tenant_id: str
+
+
+class SemanticIndexOpRecordProbeMeasurement(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    binding_id: str
+    generation: Annotated[int, Field(ge=0)]
+    lease: MutationOutboxLease
+    modality: PromotionModality
+    op: Literal["record_probe_measurement"]
+    retrieved: list[list[Annotated[int, Field(ge=0)]]]
+    stage: PromotionProbePoint
+    tenant_id: str
+
+
 class SemanticIndexOpDropBinding(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -24356,6 +24409,7 @@ SemanticIndexOp = Annotated[
     | SemanticIndexOpRefreshBinding
     | SemanticIndexOpTransitionBinding
     | SemanticIndexOpDropBinding
+    | SemanticIndexOpInstallModelConfig
     | SemanticIndexOpAdmitSourceRecord
     | SemanticIndexOpAdmitSourcePage
     | SemanticIndexOpAdmitSourceReconcile
@@ -24368,6 +24422,7 @@ SemanticIndexOp = Annotated[
     | SemanticIndexOpCompleteGenerationStage
     | SemanticIndexOpCompleteSqlSourceStage
     | SemanticIndexOpReplayCompletedSqlSourceStage
+    | SemanticIndexOpRecordProbeMeasurement
     | SemanticIndexOpReleaseStageLease
     | SemanticIndexOpGetBindingRequest
     | SemanticIndexOpBinding
@@ -38730,6 +38785,8 @@ __all__ = [
     "SemanticIndexOpLiveGeneration",
     "SemanticIndexOpRefreshBinding",
     "SemanticIndexOpReleaseStageLease",
+    "SemanticIndexOpInstallModelConfig",
+    "SemanticIndexOpRecordProbeMeasurement",
     "SemanticIndexOpReplayCompletedSqlSourceStage",
     "SemanticIndexOpSqlSourceManifest",
     "SemanticIndexOpStageStatus",
