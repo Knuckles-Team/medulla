@@ -183,6 +183,10 @@ pub struct ServerState {
     /// opened once under `persist_dir` by the first state read or build.
     #[cfg(feature = "redb")]
     pub doc_state_store: Arc<Mutex<Option<ErasedHandle>>>,
+    /// The scheduler policy store (MEDULLA-DURABLE-KERNEL-R076.2), opened once
+    /// under `persist_dir` by the first policy read or write.
+    #[cfg(feature = "redb")]
+    pub scheduler_config_store: Arc<Mutex<Option<ErasedHandle>>>,
     /// The resident capability designation index (MEDULLA-DECISION-ENGINE-R172.7),
     /// opened once by the first designation read or feed write and then shared.
     /// The index stores nothing durable; the Agent Library is its source.
@@ -488,6 +492,8 @@ impl ServerState {
             branch_registry: Arc::default(),
             #[cfg(feature = "redb")]
             doc_state_store: Arc::default(),
+            #[cfg(feature = "redb")]
+            scheduler_config_store: Arc::default(),
             capability_index: Arc::default(),
             #[cfg(feature = "redb")]
             cold_tracker: None,

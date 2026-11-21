@@ -17,6 +17,7 @@ pub(crate) mod offline_upgrade;
 pub(crate) mod persisted_layout;
 pub(crate) mod registry;
 pub(crate) mod retrieval_state;
+pub(crate) mod scheduler_config;
 pub(crate) mod row_key;
 pub(crate) mod sql_checkpoint_upgrade;
 pub(crate) mod table_api;

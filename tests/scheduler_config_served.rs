@@ -104,7 +104,7 @@ async fn width_for_a_multi_shard_tenant_matches_configured_writers() {
 }
 
 /// MEDULLA-DURABLE-KERNEL-R076.2: `GetSchedulerConfig` and `SetSchedulerConfig`
-/// over the job store. The handlers run over a store opened from a directory, so
+/// over the control-plane owner file. The handlers run over a store opened from a directory, so
 /// a dropped and reopened store proves the setting is durable.
 #[cfg(feature = "jobs")]
 mod scheduler_settings {
@@ -112,7 +112,7 @@ mod scheduler_settings {
     use std::path::Path;
 
     use medulla_h_jobs::scheduler_config::{effective_config, get, set};
-    use medulla_jobs::JobStore;
+    use medulla_persistence::scheduler_config_store::SchedulerConfigStore;
     use medulla_protocol_types::protocol::{Response, ResultPayload};
     use medulla_work_types::scheduler_config::SchedulerConfig;
     use medulla_work_types::worker_registry::{
@@ -120,15 +120,9 @@ mod scheduler_settings {
         WorkerRecord, WorkerSizingInput,
     };
 
-    fn open(dir: &Path) -> JobStore {
-        let authority = medulla_kernel::store_authority::process_authority();
-        JobStore::open_in_dir(
-            dir,
-            authority.as_ref(),
-            authority.principal(),
-            &authority.proof(),
-        )
-        .expect("open the job store")
+    fn open(dir: &Path) -> SchedulerConfigStore {
+        SchedulerConfigStore::open(dir.to_str().expect("utf-8 temp dir"))
+            .expect("open the scheduler policy store")
     }
 
     fn decode(response: &Response) -> SchedulerConfig {

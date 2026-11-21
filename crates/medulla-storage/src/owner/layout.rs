@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const OWNER_LAYOUT_DOMAIN: &[u8] = b"eg/mutation-owner-layout/v1\0";
-const OWNER_LAYOUT_NAMES: [&str; 20] = [
+const OWNER_LAYOUT_NAMES: [&str; 21] = [
     "ledger_only",
     "rbac",
     "jobs",
@@ -27,8 +27,9 @@ const OWNER_LAYOUT_NAMES: [&str; 20] = [
     "agent_library",
     "branch_registry",
     "retrieval_state",
+    "scheduler_config",
 ];
-pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 20] = [
+pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 21] = [
     DurabilityDomain::ControlPlane,
     DurabilityDomain::ControlPlane,
     DurabilityDomain::AnalyticsJob,
@@ -52,6 +53,8 @@ pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 20] = [
     // MEDULLA-BRANCH-MERGE-R001 branch registry: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
     // MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval state: a derived ControlPlane owner file.
+    DurabilityDomain::ControlPlane,
+    // MEDULLA-DURABLE-KERNEL-R076.2 scheduler config: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
 ];
 
@@ -101,6 +104,9 @@ pub enum OwnerLayout {
     /// The derived retrieval document-state rows (`doc_state.redb`,
     /// MEDULLA-FEDERATED-QUERY-R081.101.1).
     RetrievalState,
+    /// The scheduler policy row (`scheduler_config.redb`,
+    /// MEDULLA-DURABLE-KERNEL-R076.2).
+    SchedulerConfig,
 }
 
 impl OwnerLayout {

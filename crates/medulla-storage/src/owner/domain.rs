@@ -40,4 +40,5 @@ owner_domains!(
     AgentLibraryOwner => AgentLibrary,
     BranchRegistryOwner => BranchRegistry,
     RetrievalStateOwner => RetrievalState,
+    SchedulerConfigOwner => SchedulerConfig,
 );

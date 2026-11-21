@@ -185,6 +185,7 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "cluster_hierarchy"
         | "branch_registry"
         | "doc_state"
+        | "scheduler_config"
         | "agent_library"
         | "agent_library_heads"
         | "agent_graph"

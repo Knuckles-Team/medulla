@@ -134,6 +134,9 @@ pub mod node_info_store;
 // MEDULLA-FEDERATED-QUERY-R081.101.1: the derived retrieval document-state owner file.
 #[cfg(feature = "redb")]
 pub mod doc_state_store;
+// MEDULLA-DURABLE-KERNEL-R076.2: the durable scheduler policy owner file.
+#[cfg(feature = "redb")]
+pub mod scheduler_config_store;
 // MEDULLA-BRANCH-MERGE-R001: the durable branch registry owner file.
 #[cfg(feature = "redb")]
 pub mod branch_registry_store;

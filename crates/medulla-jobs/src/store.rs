@@ -56,7 +56,6 @@ use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationK
 use redb::{ReadableTable, TableDefinition};
 
 mod index_keys;
-mod settings;
 mod task_queue;
 use index_keys::{capability_index_key, tenant_index_key};
 use serde::de::DeserializeOwned;

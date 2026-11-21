@@ -110,6 +110,7 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
                     | OwnerLayout::AgentLibrary
                     | OwnerLayout::BranchRegistry
                     | OwnerLayout::RetrievalState
+                    | OwnerLayout::SchedulerConfig
             )
         ) {
             TableScope::StorePrivate
@@ -223,7 +224,8 @@ fn domain_owner_key_type(name: &str) -> Option<&'static str> {
         | "node_info_meta"
         | "cluster_hierarchy"
         | "branch_registry"
-        | "doc_state" => Some("&str"),
+        | "doc_state"
+        | "scheduler_config" => Some("&str"),
         // Likewise: every layer's revision table is keyed `(tenant, id,
         // revision)`, which is what makes a retained revision addressable
         // after the head moves past it.
@@ -382,6 +384,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "cluster_hierarchy"
         | "branch_registry"
         | "doc_state"
+        | "scheduler_config"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -461,6 +464,7 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "cluster_hierarchy"
         | "branch_registry"
         | "doc_state"
+        | "scheduler_config"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -649,6 +653,7 @@ fn index_and_scalar_capabilities(name: &str) -> Option<u16> {
         | "cluster_hierarchy"
         | "branch_registry"
         | "doc_state"
+        | "scheduler_config"
         | "cas_uploads"
         | "cas_holders"
         | "cas_retention"

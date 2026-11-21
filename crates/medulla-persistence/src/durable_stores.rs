@@ -109,6 +109,12 @@ pub const DURABLE_STORES: &[DurableStore] = &[
          carry no recovery value, so they are deliberately not restored",
     ),
     excluded(
+        "scheduler_config.redb",
+        "MEDULLA-DURABLE-KERNEL-R076.2 the scheduler policy is one row that SetSchedulerConfig \
+         rewrites and that falls back to the startup knob values when absent, so a restore \
+         comes up on the knob policy and the operator sets it again",
+    ),
+    excluded(
         "doc_state.redb",
         "MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval document state is DERIVED from \
          document content and recomputed by the build job, so a stale or missing row costs \
