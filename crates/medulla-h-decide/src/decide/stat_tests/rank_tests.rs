@@ -26,10 +26,20 @@ pub(super) async fn published_head(
     kind: HeadKind,
     id: &str,
 ) -> (ComponentDependency, ComponentDependency) {
-    let body = schema_body();
+    published_head_over(h, kind, id, "schema-rank", schema_body()).await
+}
+
+/// [`published_head`] over `body`, published as the schema component `schema_id`.
+pub(super) async fn published_head_over(
+    h: &Harness,
+    kind: HeadKind,
+    id: &str,
+    schema_id: &str,
+    body: FeatureSchemaBody,
+) -> (ComponentDependency, ComponentDependency) {
     let schema_pin = h
         .publish_test_component(
-            "schema-rank",
+            schema_id,
             AgentComponentKind::FeatureSchema,
             "rank features",
             Some(&body),
@@ -99,7 +109,7 @@ pub(super) async fn published_head(
     (schema_pin, head_pin)
 }
 
-fn advisory_policy(h: &Harness) -> DecisionPolicyRef {
+pub(super) fn advisory_policy(h: &Harness) -> DecisionPolicyRef {
     let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::AdvisoryUncalibrated;
     DecisionPolicyRef::Pinned {

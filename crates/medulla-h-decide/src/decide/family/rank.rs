@@ -8,6 +8,8 @@
 //! by the caller's item-level score.
 
 use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_types::decision::codes::QUESTION_UNPUBLISHED;
+use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
 use medulla_decision_stats::decision::quant::unit_wire;
 use medulla_decision_types::decision::codes::UNCALIBRATED_CANDIDATE;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -22,9 +24,37 @@ use medulla_epistemic::{
 };
 use medulla_types::contract::BoundedVec;
 
-use crate::decide::stat_executor::{Executed, Pinned};
+use crate::decide::stat_executor::{Executed, ExecutionContext, Pinned};
 
+use crate::decide::connector_points::{point, CATALOG_PREFIX};
+use medulla_decision_types::decision::DecisionPolicy;
+use medulla_graph_core::graph::GraphView;
+
+use super::support::{abstained, invalid};
 use super::DecisionFamily;
+
+/// A `rank` question the family refuses to answer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RankRefusal {
+    /// A `catalog.` question id names no published decision point.
+    QuestionUnpublished { question_id: String },
+}
+
+impl DecisionRefusal for RankRefusal {
+    fn code(&self) -> RefusalCode {
+        match self {
+            Self::QuestionUnpublished { .. } => QUESTION_UNPUBLISHED,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::QuestionUnpublished { question_id } => {
+                format!("no decision point is published for {question_id}")
+            }
+        }
+    }
+}
 
 /// Candidate text naming the code options may tie on; the option id when absent.
 const CODE_KEY: &str = "rank.code";
@@ -45,8 +75,10 @@ fn q32_to_f64(q32: i64) -> f64 {
 
 /// The declared option `id`, when the request declares its options.
 fn declared<'a>(request: Option<&'a DecideRequest>, id: &str) -> Option<&'a DeclaredOption> {
-    let CandidateSource::Declared { options } = &request?.candidates else {
-        return None;
+    let options: &[DeclaredOption] = match &request?.candidates {
+        CandidateSource::Declared { options } => options.as_slice(),
+        CandidateSource::RankCatalog { options } => options.as_slice(),
+        _ => return None,
     };
     options.iter().find(|option| option.option_id == id)
 }
@@ -115,6 +147,61 @@ fn calibrated_scores(pinned: &Pinned, executed: &Executed) -> Option<Vec<ScoredO
 }
 
 impl DecisionFamily for RankFamily {
+    fn accepts_rank_catalog(&self) -> bool {
+        true
+    }
+
+    /// A `catalog.` question id must be asked exactly as its published point
+    /// declares, over a rank catalog (MEDULLA-DECISION-ENGINE-R829.1). An id
+    /// the table does not hold is answered by `conclude`.
+    fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        let question = &request.question;
+        if !question.question_id.starts_with(CATALOG_PREFIX) {
+            return Ok(());
+        }
+        if matches!(request.candidates, CandidateSource::Declared { .. }) {
+            return Err(invalid(format!(
+                "{} takes its candidates as a rank catalog, not declared options",
+                question.question_id
+            )));
+        }
+        let Some(entry) = point(&question.question_id) else {
+            return Ok(());
+        };
+        if question.kind != entry.kind || question.safety != entry.safety {
+            return Err(invalid(format!(
+                "{} is asked as its published kind and safety class",
+                entry.question_id
+            )));
+        }
+        if request.feature_schema.component_id != entry.feature_schema {
+            return Err(invalid(format!(
+                "{} pins the feature schema {}",
+                entry.question_id, entry.feature_schema
+            )));
+        }
+        Ok(())
+    }
+
+    fn conclude(
+        &self,
+        _ctx: &ExecutionContext,
+        request: &DecideRequest,
+        _policy: &DecisionPolicy,
+        _graph_view: Option<&GraphView>,
+    ) -> Option<Result<Executed, String>> {
+        let id = &request.question.question_id;
+        if id.starts_with(CATALOG_PREFIX) && point(id).is_none() {
+            return Some(Ok(abstained(
+                QuestionKind::Rank,
+                &RankRefusal::QuestionUnpublished {
+                    question_id: id.clone(),
+                },
+            )));
+        }
+        None
+    }
+
     fn refine(
         &self,
         request: Option<&DecideRequest>,

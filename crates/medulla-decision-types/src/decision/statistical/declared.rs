@@ -15,6 +15,10 @@ use medulla_types::contract::BoundedVec;
 /// Most options one declared source may carry (the assembly candidate cap).
 pub const MAX_DECLARED_OPTIONS: usize = 64;
 
+/// Most candidates one `CandidateSource::RankCatalog` may carry; a larger set
+/// is refused by value (MEDULLA-DECISION-ENGINE-R829.1).
+pub const MAX_RANK_CATALOG_CANDIDATES: usize = 2_000;
+
 /// One named numeric fact of a declared option, already on the `Q32` scale.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

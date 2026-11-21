@@ -388,6 +388,13 @@ pub enum CandidateSource {
     Declared {
         options: BoundedVec<declared::DeclaredOption, 64>,
     },
+    /// A capability catalog sent whole for ranking (MEDULLA-DECISION-ENGINE-R829.1):
+    /// one declared option per candidate, texts only. A `Vec`, not a
+    /// `BoundedVec`, so a set above
+    /// [`declared::MAX_RANK_CATALOG_CANDIDATES`] decodes and is refused by value.
+    RankCatalog {
+        options: Vec<declared::DeclaredOption>,
+    },
 }
 
 /// A typed question parameter. Scalar values are never interpolated into queries.

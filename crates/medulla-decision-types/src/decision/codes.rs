@@ -262,8 +262,12 @@ pub const PROMOTION: &[RefusalCode] = &[
 /// A ranked option has no calibrated probability; no likelihood substitutes.
 pub const UNCALIBRATED_CANDIDATE: RefusalCode = RefusalCode::new("UNCALIBRATED_CANDIDATE");
 
+/// A `catalog.` question id names no published decision point
+/// (MEDULLA-DECISION-ENGINE-R829.1); the client answers its own fallback.
+pub const QUESTION_UNPUBLISHED: RefusalCode = RefusalCode::new("QUESTION_UNPUBLISHED");
+
 /// Every `rank` family code, in declaration order.
-pub const RANK: &[RefusalCode] = &[UNCALIBRATED_CANDIDATE];
+pub const RANK: &[RefusalCode] = &[UNCALIBRATED_CANDIDATE, QUESTION_UNPUBLISHED];
 
 // The `resolve_entity` family's refusals (MEDULLA-DECISION-ENGINE-R032.2.2).
 /// A pair option names no left or right IRI, or one that is not an IRI.

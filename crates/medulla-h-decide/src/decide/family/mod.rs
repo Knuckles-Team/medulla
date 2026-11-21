@@ -137,6 +137,12 @@ pub trait DecisionFamily {
         Ok(())
     }
 
+    /// Candidates stage: whether the kind accepts `CandidateSource::RankCatalog`
+    /// (MEDULLA-DECISION-ENGINE-R829.1); only `rank` does.
+    fn accepts_rank_catalog(&self) -> bool {
+        false
+    }
+
     /// Constraints stage: the kind's admission over the request.
     fn constraints(&self, _request: &DecideRequest) -> Result<(), String> {
         Ok(())

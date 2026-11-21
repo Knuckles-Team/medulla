@@ -28,6 +28,7 @@ use medulla_decision_types::decision::statistical::graph_rows::{
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
 use medulla_decision_types::{
     decision::statistical::declared::check_declared,
+    decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
     decision::statistical::declared::DeclaredOption,
 };
 use medulla_decision_types::{
@@ -498,6 +499,24 @@ pub(super) fn read_candidates(
         CandidateSource::AgentLibrary { scope } => library_candidates(store, tenant_id, scope),
         CandidateSource::Declared { options } => {
             declared_candidates(options.as_slice(), principal, family)
+        }
+        CandidateSource::RankCatalog { options } => {
+            if !family.accepts_rank_catalog() {
+                return Err(refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "this question does not accept a rank catalog",
+                ));
+            }
+            if options.len() > MAX_RANK_CATALOG_CANDIDATES {
+                return Err(refusal(
+                    StatisticalErrorCode::CandidateSetTooLarge,
+                    format!(
+                        "a rank catalog names at most {MAX_RANK_CATALOG_CANDIDATES} candidates; {} were sent",
+                        options.len()
+                    ),
+                ));
+            }
+            declared_candidates(options, principal, family)
         }
         CandidateSource::Graph { graph, plan } => {
             let view = graph_view.ok_or_else(|| {

@@ -1875,8 +1875,18 @@ class CandidateSourceDeclared(BaseModel):
     source: Literal["declared"]
 
 
+class CandidateSourceRankCatalog(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    options: list[DeclaredOption]
+    source: Literal["rank_catalog"]
+
+
 CandidateSource = Annotated[
-    CandidateSourceAgentLibrary | CandidateSourceGraph | CandidateSourceDeclared,
+    CandidateSourceAgentLibrary
+    | CandidateSourceGraph
+    | CandidateSourceDeclared
+    | CandidateSourceRankCatalog,
     Field(discriminator="source"),
 ]
 
@@ -35386,6 +35396,7 @@ __all__ = [
     "CandidateSource",
     "CandidateSourceAgentLibrary",
     "CandidateSourceDeclared",
+    "CandidateSourceRankCatalog",
     "CandidateSourceGraph",
     "CandidateSourceRecord",
     "CandidateSourceRecordAgentLibrary",
