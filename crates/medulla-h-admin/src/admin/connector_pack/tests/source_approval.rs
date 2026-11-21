@@ -1619,18 +1619,15 @@ async fn uql_joins_two_approved_sources_in_one_query() {
     };
 
     // Tenant B presenting tenant A's execution ids is refused.
+    // The call reaches dispatch as the other tenant's verified context; the execution
+    // record is owned by tenant A's scope, so the lookup refuses on the owner.
     let other_tenant = served
-        .call_as_tenant(
-            "tenant-other",
-            ADMIN,
-            &["*"],
-            "r722-uql-two:other-tenant",
-            uql(executions.clone()),
-        )
+        .call_verified_as_tenant("tenant-other", &["*"], uql(executions.clone()))
         .await;
+    let other_error = refused("another tenant's foreign executions", other_tenant);
     assert!(
-        other_tenant.error.is_some(),
-        "another tenant must not consume this tenant's foreign executions"
+        other_error.contains("ACCESS_DENIED: foreign read belongs to another owner"),
+        "{other_error}"
     );
 
     // Two sources from two opened executions join in one served `Method::Uql`.
