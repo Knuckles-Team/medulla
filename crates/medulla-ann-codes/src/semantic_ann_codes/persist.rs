@@ -56,6 +56,18 @@ pub(super) fn persist_transition_checkpoints(
     }
     if let Some(update) = &transition.generation_checkpoint {
         persist_generation_checkpoint_update(rows, tenant, binding, transition, update)?;
+        // S5 publishes the S6 activation intent only when its generation-level checkpoint covers
+        // the whole entity set.
+        if transition.intent.stage == SemanticStage::AnnIndex {
+            ensure(
+                update.successor.aggregate.is_complete() == successor.is_some(),
+                if successor.is_some() {
+                    "an S5 checkpoint that does not cover the whole entity set cannot publish the S6 successor"
+                } else {
+                    "completed S5 transition requires an explicit successor proof"
+                },
+            )?;
+        }
     }
     Ok(())
 }
@@ -69,7 +81,6 @@ fn persist_vector_checkpoint(
     transition: &SemanticStageTransition,
     successor: Option<&SemanticStageIntent>,
 ) -> Result<(), SemanticCodeError> {
-    let coverage = vector_coverage(successor)?;
     let lexical_checkpoint_digest = lexical_predecessor_digest(transition)?;
     let at = GenerationCoordinates::of_intent(tenant, binding, &transition.intent);
     let lexical = current_checkpoint_in(rows, at, SemanticStage::LexicalIndex)?
@@ -98,10 +109,20 @@ fn persist_vector_checkpoint(
         refused("S4 vector checkpoint has no authoritative current entity member")
     })?;
     let expected = vector_checkpoint(transition, aggregate, lexical_checkpoint_digest)?;
-    ensure(
-        coverage == &expected,
-        "S4 successor coverage is not the authoritative vector checkpoint",
-    )?;
+    ensure_entity_set_fixed(&expected, previous_vector.as_ref().unwrap_or(&lexical))?;
+    // The S5 successor carries the coverage checkpoint only once it covers every entity of the
+    // generation; an earlier completion publishes none.
+    if expected.aggregate.is_complete() {
+        ensure(
+            vector_coverage(successor)? == &expected,
+            "S4 successor coverage is not the authoritative vector checkpoint",
+        )?;
+    } else {
+        ensure(
+            successor.is_none(),
+            "an S4 coverage checkpoint that does not cover the whole entity set cannot publish an S5 successor",
+        )?;
+    }
     ensure(
         (member.receipt_digest, member.artifact_digest)
             == (
@@ -129,6 +150,13 @@ pub(super) fn persist_generation_checkpoint_update(
     let at = GenerationCoordinates::of_intent(tenant, binding, &transition.intent);
     let current = current_checkpoint_in(rows, at, stage)?;
     ensure_checkpoint_cas(current.as_ref(), update)?;
+    let fixed_by = match (&current, stage) {
+        (None, SemanticStage::AnnIndex) => current_checkpoint_in(rows, at, SemanticStage::Vector)?,
+        _ => current.clone(),
+    };
+    if let Some(fixed_by) = &fixed_by {
+        ensure_entity_set_fixed(&update.successor, fixed_by)?;
+    }
     let current_entity = transition.intent.scope.source_entity_id();
     let (aggregate, members) = authoritative_state_in(rows, at, stage, current_entity)?;
     let member = current_entity
@@ -215,12 +243,15 @@ pub(super) fn persist_generation_artifact(
         .validate_against(&checkpoint.successor)
         .map_err(semantic_contract_error)?;
     let key = (tenant, binding, transition.intent.generation);
+    // The manifest names the generation-level checkpoint the completion just advanced, so each
+    // entity's completion replaces the one before; once the checkpoint covers the whole entity
+    // set no further update can pass its compare-and-swap, and the manifest is final.
     match artifact {
         SemanticGenerationArtifact::LexicalIndexManifest { manifest } => {
-            put_row_once(rows, SEMANTIC_LEXICAL, key, manifest.as_ref())
+            put_row_replacing(rows, SEMANTIC_LEXICAL, key, manifest.as_ref())
         }
         SemanticGenerationArtifact::AnnIndexManifest { manifest } => {
-            put_row_once(rows, SEMANTIC_ANN, key, manifest.as_ref())
+            put_row_replacing(rows, SEMANTIC_ANN, key, manifest.as_ref())
         }
         SemanticGenerationArtifact::Activation { .. } => Err(refused(
             "activation artifacts belong to the admitted S6 finalization path",
@@ -358,6 +389,40 @@ where
     put_bytes_once(&mut table, key, &bytes)
 }
 
+/// Encode `record` and write it under `key` of `definition`, replacing the row it holds.
+fn put_row_replacing<'k, K, R>(
+    rows: &OwnerRows<'_>,
+    definition: TableDefinition<'static, K, &'static [u8]>,
+    key: K::SelfType<'k>,
+    record: &R,
+) -> Result<(), SemanticCodeError>
+where
+    K: redb::Key + 'static,
+    R: CanonicalRow,
+{
+    let bytes = encode(record)?;
+    let mut table = rows.open_table(definition).map_err(kernel_error)?;
+    replace_bytes(&mut table, key, &bytes)
+}
+
+/// A generation's entity set (its digest and count) is fixed by its first checkpoint: every
+/// later checkpoint of any stage must name the same set.
+fn ensure_entity_set_fixed(
+    successor: &SemanticGenerationCheckpoint,
+    fixed_by: &SemanticGenerationCheckpoint,
+) -> Result<(), SemanticCodeError> {
+    ensure(
+        (
+            fixed_by.aggregate.entity_set_digest,
+            fixed_by.aggregate.expected_entity_count,
+        ) == (
+            successor.aggregate.entity_set_digest,
+            successor.aggregate.expected_entity_count,
+        ),
+        "the generation's entity set changed after its first checkpoint fixed it",
+    )
+}
+
 /// The current head of `stage` in the generation, read inside the write.
 fn current_checkpoint_in(
     rows: &OwnerRows<'_>,
@@ -467,7 +532,7 @@ fn vector_coverage(
     successor: Option<&SemanticStageIntent>,
 ) -> Result<&SemanticGenerationCheckpoint, SemanticCodeError> {
     let successor = successor
-        .ok_or_else(|| refused("completed S4 transition has no generation coverage successor"))?;
+        .ok_or_else(|| refused("completed S4 transition requires an explicit successor proof"))?;
     let SemanticStagePredecessor::GenerationCoverage { checkpoint } = &successor.predecessor else {
         return Err(refused(
             "S4 successor has no generation coverage checkpoint",

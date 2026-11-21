@@ -2,6 +2,7 @@
 //! outbox consumer port and successor-intent validation.
 
 use super::batch::MetadataMutation;
+use super::checkpoint::{authoritative_generation_state, GenerationCoordinates};
 use super::reconciliation::compare_source_revision;
 use super::record::{decode, encode, encode_valid, row};
 use super::{
@@ -21,7 +22,9 @@ use medulla_index_types::{
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS};
+use medulla_storage::{
+    ScopedRead, SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES,
+};
 use medulla_transaction::{AdmittedMutation, OutboxClaimBudget, OutboxClaimOutcome};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -616,14 +619,10 @@ pub(super) fn validate_successor_intent(
         return Ok(None);
     }
     let derived = derived_successor(transition)?;
+    // S4 and S5 publish a successor only when their generation-level checkpoint covers the whole
+    // entity set; the store refuses a missing or a premature one where it advances that checkpoint
+    // (`persist_transition_checkpoints`).
     let Some(successor) = successor else {
-        ensure(
-            !matches!(
-                transition.intent.stage,
-                SemanticStage::Vector | SemanticStage::AnnIndex
-            ),
-            "completed S4/S5 transition requires an explicit successor proof",
-        )?;
         return Ok(derived);
     };
     successor.validate().map_err(semantic_contract_error)?;
@@ -667,13 +666,18 @@ fn derived_successor(
                 .generation_checkpoint
                 .as_ref()
                 .ok_or_else(|| refused("completed S3 transition has no lexical checkpoint"))?;
-            Some((
-                next_stage(stage)?,
-                SemanticStagePredecessor::GenerationCheckpoint {
-                    stage,
-                    checkpoint_digest: checkpoint.successor.checkpoint_digest,
-                },
-            ))
+            // A lexical checkpoint that does not yet cover the whole entity set derives no S4.
+            if checkpoint.successor.aggregate.is_complete() {
+                Some((
+                    next_stage(stage)?,
+                    SemanticStagePredecessor::GenerationCheckpoint {
+                        stage,
+                        checkpoint_digest: checkpoint.successor.checkpoint_digest,
+                    },
+                ))
+            } else {
+                None
+            }
         }
         SemanticStage::Vector | SemanticStage::AnnIndex | SemanticStage::ReconcileAndActivate => {
             None
@@ -694,6 +698,60 @@ fn derived_successor(
     })
     .transpose()
     .map_err(|error| SemanticCodeError::Refused(format!("successor intent rejected: {error:?}")))
+}
+
+impl SemanticCodeStore {
+    /// The successor intents of every other entity of the generation, published with the one
+    /// successor that completes a generation-level S3 or S4 checkpoint: each carries the same
+    /// predecessor proof as `successor` and its own entity's stage output as input.
+    pub(super) fn sibling_successors(
+        &self,
+        read: &ScopedRead<'_, SemanticIndexOwner>,
+        transition: &SemanticStageTransition,
+        successor: Option<&SemanticStageIntent>,
+    ) -> Result<Vec<SemanticStageIntent>, SemanticCodeError> {
+        let intent = &transition.intent;
+        let Some(successor) = successor else {
+            return Ok(Vec::new());
+        };
+        if !matches!(
+            intent.stage,
+            SemanticStage::LexicalIndex | SemanticStage::Vector
+        ) {
+            return Ok(Vec::new());
+        }
+        let at = GenerationCoordinates::of_intent(self.tenant.as_str(), self.binding.as_str(), intent);
+        let (_, members) = authoritative_generation_state(
+            &read
+                .open_owner_table(SEMANTIC_SOURCE_PROGRESS)
+                .map_err(kernel_error)?,
+            &read.open_owner_table(SEMANTIC_STAGES).map_err(kernel_error)?,
+            at,
+            intent.stage,
+            intent.stage,
+            None,
+        )?;
+        let current = intent.scope.source_entity_id();
+        members
+            .into_iter()
+            .filter(|(source_entity_id, _)| Some(source_entity_id.as_str()) != current)
+            .map(|(source_entity_id, member)| {
+                SemanticStageIntent::create(SemanticStageIntentDraft {
+                    binding_id: successor.binding_id.clone(),
+                    binding_digest: successor.binding_digest,
+                    generation: successor.generation,
+                    scope: SemanticStageScope::Entity { source_entity_id },
+                    source_revision: successor.source_revision.clone(),
+                    stage: successor.stage,
+                    predecessor: successor.predecessor.clone(),
+                    input_digest: member.artifact_digest,
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| {
+                SemanticCodeError::Refused(format!("sibling successor intent rejected: {error:?}"))
+            })
+    }
 }
 
 /// The stage the semantic-stage machine reaches from `stage` by its one advancing event.

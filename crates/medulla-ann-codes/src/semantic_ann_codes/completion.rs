@@ -140,7 +140,8 @@ impl SemanticCodeStore {
         self.validate_stage_predecessor_in(&read, &intent, true)?;
         let successor = validate_successor_intent(transition, successor)?;
         let (mutation_bytes, mutation_digest) = mutation_row(&mutation)?;
-        let outbox = stage_outbox(transition, successor.as_ref())?;
+        let siblings = self.sibling_successors(&read, transition, successor.as_ref())?;
+        let outbox = stage_outbox(transition, successor.as_ref(), &siblings)?;
         let batch_id = format!("semantic-index:stage:{}", transition.intent.intent_digest);
         let subject = format!("stage:{}", transition.intent.intent_digest);
         let completion = Completion {
@@ -435,10 +436,14 @@ fn is_deferred(outcome: SemanticStageOutcome) -> bool {
 fn stage_outbox(
     transition: &SemanticStageTransition,
     successor: Option<&SemanticStageIntent>,
+    siblings: &[SemanticStageIntent],
 ) -> Result<Vec<MutationOutboxIntent>, SemanticCodeError> {
     let mut outbox = vec![stage_receipt_event(transition)?];
     if let Some(successor) = successor {
         outbox.push(stage_intent_outbox(successor)?);
+    }
+    for sibling in siblings {
+        outbox.push(stage_intent_outbox(sibling)?);
     }
     Ok(outbox)
 }
