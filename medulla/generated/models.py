@@ -30189,6 +30189,7 @@ class UqlResultExplainBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     applied_policies: list[AppliedPolicy] = []
+    baseline_digest: str | None = None
     canonical: str
     incremental: bool
     incremental_note: str

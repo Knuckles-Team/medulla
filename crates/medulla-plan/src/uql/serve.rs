@@ -364,6 +364,16 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         .unwrap_or_default();
     #[cfg(not(feature = "federation"))]
     let kept_plans = Vec::new();
+    // MEDULLA-CQ-ORCH-R011.3: with no kept plan, the baseline plan in force.
+    #[cfg(feature = "federation")]
+    let baseline_digest = if kept_plans.is_empty() {
+        ctx.federation
+            .and_then(|foreign| foreign.baseline_digest(&optimized.ops))
+    } else {
+        None
+    };
+    #[cfg(not(feature = "federation"))]
+    let baseline_digest: Option<String> = None;
     Ok(UqlResult::Explain {
         plan_digest: None,
         query_digest: None,
@@ -381,6 +391,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         // MEDULLA-FEDERATED-QUERY-R706.5: the records of the one rewrite `execute` runs.
         applied_policies: medulla_exec::exec::mask_plan(plan, ctx).1,
         kept_plans,
+        baseline_digest,
     })
 }
 

@@ -54,4 +54,10 @@ pub trait ForeignExecutor: Sync {
     fn kept_plans(&self, _ops: &[Op]) -> Vec<KeptPlanReport> {
         Vec::new()
     }
+
+    /// The baseline plan digest of the first foreign source `ops` reads that has observed
+    /// runs, named while no plan is kept (MEDULLA-CQ-ORCH-R011.3). None by default.
+    fn baseline_digest(&self, _ops: &[Op]) -> Option<String> {
+        None
+    }
 }

@@ -92,25 +92,10 @@ impl ForeignExecutor for FederatedExec<'_> {
                     _ => None,
                 }?;
                 let label = remote.label();
-                let shape = super::plan_evolution::shape_digest_of(&label);
-                let Some(kept) = super::plan_evolution::kept_plan(scope.owner_salt(), &shape)
-                else {
-                    // No plan is kept: the report names the baseline plan in force and no
-                    // receipt (MEDULLA-CQ-ORCH-R011.3). A shape never observed has none.
-                    let baseline =
-                        super::plan_evolution::baseline_plan_of(scope.owner_salt(), &shape)?;
-                    return Some(KeptPlanReport {
-                        source: redacted_label(&label),
-                        plan_digest: baseline.clone(),
-                        receipt_job_id: String::new(),
-                        baseline_digest: baseline,
-                        replays: 0,
-                        p50_before_us: 0,
-                        p50_after_us: 0,
-                        bytes_before: 0,
-                        bytes_after: 0,
-                    });
-                };
+                let kept = super::plan_evolution::kept_plan(
+                    scope.owner_salt(),
+                    &super::plan_evolution::shape_digest_of(&label),
+                )?;
                 Some(KeptPlanReport {
                     source: redacted_label(&label),
                     plan_digest: kept.plan_digest,
@@ -124,6 +109,28 @@ impl ForeignExecutor for FederatedExec<'_> {
                 })
             })
             .collect()
+    }
+
+    fn baseline_digest(&self, ops: &[Op]) -> Option<String> {
+        let scope = self.session.and_then(FederationSession::cache_scope)?;
+        if !super::enabled() {
+            return None;
+        }
+        // The first source the plan reads that this tenant has observed: the plan in force
+        // while none is kept (MEDULLA-CQ-ORCH-R011.3).
+        ops.iter().find_map(|op| {
+            let remote = match op {
+                Op::ForeignScan { source, .. } => super::remote::resolve(source, self.registry),
+                Op::Foreign { name } => self
+                    .registry
+                    .and_then(|registry| super::remote::resolve_named(name, registry)),
+                _ => None,
+            }?;
+            super::plan_evolution::baseline_plan_of(
+                scope.owner_salt(),
+                &super::plan_evolution::shape_digest_of(&remote.label()),
+            )
+        })
     }
 
     fn fragment_reports(&self) -> Vec<ForeignFragmentReport> {
