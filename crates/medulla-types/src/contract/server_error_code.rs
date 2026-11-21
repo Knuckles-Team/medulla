@@ -74,6 +74,14 @@ closed_error_codes! {
         MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
         SourceConflict => "SOURCE_CONFLICT",
         RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
+        /// MEDULLA-SCM-R005: the history index row of the branch head is absent, of another version, or names another commit.
+        HistoryIndexStale => "HISTORY_INDEX_STALE",
+        /// MEDULLA-SCM-R005.2: the blamed file is binary.
+        BlameBinary => "BLAME_BINARY",
+        /// MEDULLA-SCM-R005.2: the blamed file has more lines than the blame index holds.
+        BlameFileTooLarge => "BLAME_FILE_TOO_LARGE",
+        /// MEDULLA-SCM-R005.2: the blamed path is deleted or has no blame row at the revision.
+        BlamePathAbsent => "BLAME_PATH_ABSENT",
         Busy => "BUSY",
         BusFieldTooLarge => "BUS_FIELD_TOO_LARGE",
         BusRosterFull => "BUS_ROSTER_FULL",
