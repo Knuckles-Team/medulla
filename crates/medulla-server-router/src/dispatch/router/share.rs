@@ -213,6 +213,16 @@ async fn share_op_outcome(
         );
         copy.remove(GRANTS_KEY);
         copy.remove(COMMONS_COPY_KEY);
+        // The copy names its source graph and instant, so the reconcile sweep
+        // (R023.13.7) can find the node that must vouch for it.
+        copy.insert(
+            "_commons_source_graph".to_string(),
+            serde_json::Value::String(graph.to_string()),
+        );
+        copy.insert(
+            "_created_at_ms".to_string(),
+            serde_json::Value::from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms()),
+        );
         write(
             state,
             req,

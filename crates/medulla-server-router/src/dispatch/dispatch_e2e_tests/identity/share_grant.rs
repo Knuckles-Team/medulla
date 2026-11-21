@@ -81,3 +81,83 @@ async fn share_grant_commits_through_gateway() {
     assert_eq!(private["_shared_scope"], "private");
     assert_eq!(private["_grants"], serde_json::json!([]));
 }
+
+async fn has_node(state: &Arc<RwLock<ServerState>>, node_id: &str) -> bool {
+    let response = send_method(
+        state,
+        owner(),
+        Method::HasNode {
+            node_id: node_id.to_string(),
+        },
+    )
+    .await;
+    assert!(response.error.is_none(), "{:?}", response.error);
+    matches!(
+        response.result,
+        Some(ResultPayload::Bool(true)) | Some(ResultPayload::Json(serde_json::Value::Bool(true)))
+    )
+}
+
+async fn add_node(state: &Arc<RwLock<ServerState>>, node_id: &str, value: serde_json::Value) {
+    let created = send_method(
+        state,
+        owner(),
+        Method::AddNode {
+            node_id: node_id.to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&value).expect("encode"),
+        },
+    )
+    .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+}
+
+// spec: MEDULLA-IDENTITY-R023.13.7
+#[tokio::test(flavor = "multi_thread")]
+async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
+    use medulla_server::commons_reconcile::{run_tick_at, RECONCILE_GRACE_MS};
+    let state = state();
+    add_node(&state, "a", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    let promoted = send_method(
+        &state,
+        owner(),
+        Method::RbacAdmin {
+            op: RbacAdminOp::ShareGrant(ShareGrant::commons("a".to_string()).expect("a grant")),
+        },
+    )
+    .await;
+    assert!(promoted.error.is_none(), "{:?}", promoted.error);
+    assert!(has_node(&state, "commons:a").await);
+
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
+        + 2 * RECONCILE_GRACE_MS;
+    add_node(
+        &state,
+        "commons:b",
+        serde_json::json!({
+            "type": "Note",
+            "_commons_source_graph": "__commons__",
+            "_created_at_ms": 1u64,
+        }),
+    )
+    .await;
+    assert_eq!(run_tick_at(&state, now).await, 1);
+    assert!(!has_node(&state, "commons:b").await);
+    assert!(has_node(&state, "commons:a").await);
+
+    // A young orphan survives until the grace period has passed.
+    add_node(
+        &state,
+        "commons:c",
+        serde_json::json!({
+            "type": "Note",
+            "_commons_source_graph": "__commons__",
+            "_created_at_ms": now,
+        }),
+    )
+    .await;
+    assert_eq!(run_tick_at(&state, now).await, 0);
+    assert!(has_node(&state, "commons:c").await);
+    assert_eq!(run_tick_at(&state, now + RECONCILE_GRACE_MS + 1).await, 1);
+    assert!(!has_node(&state, "commons:c").await);
+    assert!(has_node(&state, "commons:a").await);
+}

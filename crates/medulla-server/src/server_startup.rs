@@ -1142,6 +1142,15 @@ pub async fn retention_cleanup_tick(state: SharedState) {
     }
 }
 
+/// One commons reconcile sweep (MEDULLA-IDENTITY-R023.13.7): removes every
+/// `__commons__` copy whose source node no longer holds the commons share.
+pub async fn commons_reconcile_tick(state: SharedState) {
+    let removed = crate::commons_reconcile::run_tick(&state).await;
+    if removed > 0 {
+        tracing::info!(removed, "Commons reconcile: removed orphan copy(ies) (R023.13.7)");
+    }
+}
+
 /// One downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3): lease and submit the
 /// downtime job types that fit the open window.
 #[cfg(all(feature = "jobs", feature = "sparql"))]

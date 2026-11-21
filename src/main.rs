@@ -2005,6 +2005,23 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
         });
     }
 
+    // ── Commons reconcile (MEDULLA-IDENTITY-R023.13.7) ──────────────────────────────
+    // Armed by default (hourly); `MEDULLA_COMMONS_RECONCILE_SECS=0` turns it off.
+    let commons_reconcile_secs = match std::env::var("MEDULLA_COMMONS_RECONCILE_SECS") {
+        Ok(_) => server_startup::optional_sweep_secs("MEDULLA_COMMONS_RECONCILE_SECS"),
+        Err(_) => 3600,
+    };
+    if commons_reconcile_secs > 0 {
+        info!(
+            "Commons reconcile: sweeping every {}s (R023.13.7)",
+            commons_reconcile_secs
+        );
+        let reconcile_state = state.clone();
+        spawn_periodic_sweep(commons_reconcile_secs, "commons_reconcile", move || {
+            server_startup::commons_reconcile_tick(reconcile_state.clone())
+        });
+    }
+
     // ── Downtime scheduler (MEDULLA-DURABLE-KERNEL-R101.3) ─────────────────────────
     // Every `downtime.tick_secs` seconds, lease and submit the downtime job types
     // that fit the open idle or declared window.
