@@ -838,4 +838,54 @@ mod tests {
             .collect();
         assert_eq!(writes, vec!["self.state = self.state.apply(event)?;"]);
     }
+
+    // spec: MEDULLA-INGEST-WORKER-R903.3
+    #[test]
+    fn sweep_methods_tombstone_only_the_due_record() {
+        let core = medulla_graph_core::graph::GraphCore::new();
+        let gone = entity("gone");
+        let kept = entity("kept");
+        let node_of = |record: &SourceEntityRef| {
+            super::super::source_node_id("tenant", "wiki", record.stream.as_str(), &record.record_id)
+                .unwrap()
+        };
+        for record in [&gone, &kept] {
+            core.add_node(
+                node_of(record),
+                rmp_serde::to_vec_named(&serde_json::json!({"type": "SourceRecord"})).unwrap(),
+            );
+        }
+        let enumerated_at_ms = 1_000_000u64;
+        let grace_s = 86_400u64;
+        let plan = StoredPlan {
+            node_type: PLAN_NODE_TYPE.into(),
+            tenant: "tenant".into(),
+            connector: "wiki".into(),
+            stream: "items".into(),
+            run_id: "run-1".into(),
+            ids_digest: digest_of_run(&["kept"]),
+            missing: vec![PlannedMissing {
+                record: gone.clone(),
+                due_ms: enumerated_at_ms + grace_s * 1000,
+            }],
+        };
+
+        let (methods, count) =
+            sweep_methods(&core, &plan, enumerated_at_ms + grace_s * 1000 - 1).unwrap();
+        assert!(methods.is_empty());
+        assert_eq!(count, 0);
+
+        let (methods, count) =
+            sweep_methods(&core, &plan, enumerated_at_ms + grace_s * 1000 + 1).unwrap();
+        assert_eq!(count, 1);
+        let tombstoned: Vec<&str> = methods
+            .iter()
+            .filter_map(|method| match method {
+                Method::CompareAndSetNodeFields { node_id, .. } => Some(node_id.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(tombstoned, vec![node_of(&gone).as_str()]);
+        assert!(!tombstoned.contains(&node_of(&kept).as_str()));
+    }
 }

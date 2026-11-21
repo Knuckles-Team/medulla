@@ -86,3 +86,23 @@ async def test_reconcile_receipt_reads_back() -> None:
         assert receipt.reconcile.override_principal == ""
     finally:
         await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R903.3")
+@pytest.mark.asyncio
+async def test_enumeration_prunes_deleted_record() -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    try:
+        await _submit(client, _two_records(connector), "held")
+        # The enumeration lists only `item-1`: `item-2` is planned for removal after the
+        # grace window. The grace window cannot be waited out through the wire, so the
+        # prune itself is proven with an injected clock in `sweep.rs`.
+        receipt = await _submit(
+            client, _enumeration(connector, ["item-1"]), "enumerate-prune"
+        )
+        assert receipt.reconcile is not None
+        assert receipt.reconcile.missing_count == 1
+        assert receipt.reconcile.deleted_count == 0
+    finally:
+        await _close(client, graph)
