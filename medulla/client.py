@@ -50,6 +50,7 @@ from .policy_evolution import PolicyEvolutionClient
 from .work_market import GapClient, WorkMarketClient
 
 if TYPE_CHECKING:
+    from .generated._runtime import OpaqueResult
     from .generated.models import SearchTaskRejection, SparqlResult
 
 logger = logging.getLogger(__name__)
@@ -18153,6 +18154,27 @@ class MedullaClient:
         )
         _validate_write_admission(binding.claims, required, binding.admission)
         return binding
+
+    async def call(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        graph: str | None = None,
+        *,
+        idempotency_key: str | None = None,
+    ) -> OpaqueResult:
+        """Send any served method by its id (MEDULLA-CONTRACT-R059.1).
+
+        The generated sender validates ``params`` with its own model before it
+        sends, so an invalid body raises ``pydantic.ValidationError``. An id the
+        engine does not serve raises ``ValueError`` before any transport use.
+        """
+        from .generated import SEND_BY_METHOD
+
+        sender = SEND_BY_METHOD.get(method)
+        if sender is None:
+            raise ValueError(f"unknown engine method {method!r}")
+        return await sender(self, params, graph, idempotency_key=idempotency_key)
 
     async def _send(
         self,
