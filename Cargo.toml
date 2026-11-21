@@ -2073,6 +2073,12 @@ name = "data_prep_declare"
 path = "benches/data_prep_declare.rs"
 harness = false
 
+# Source reconcile at one million identifiers (MEDULLA-INGEST-WORKER-R903.6): nightly budget.
+[[bench]]
+name = "ingest_source_reconcile"
+path = "benches/ingest_source_reconcile.rs"
+harness = false
+
 # Source group expansion on the read gate (MEDULLA-IDENTITY-R706): nightly budget.
 [[bench]]
 name = "ingest_group_expansion"
