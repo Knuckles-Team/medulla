@@ -80,6 +80,13 @@ pub const HARNESS_QUERIES: &[HarnessQuery] = &[
             "mean_tool_call_count",
         ],
     },
+    // MEDULLA-ORCH-VOCAB-R010.100: one proposal's measured source traces, joined
+    // by `crate::evolution_metrics`; no group keys.
+    HarnessQuery {
+        name: crate::evolution_metrics::EVOLUTION_TRACE_METRICS,
+        groups: &[],
+        columns: &crate::evolution_metrics::EVOLUTION_COLUMNS,
+    },
     // MEDULLA-ORCH-VOCAB-R010.101: grouped by the request's `grouping`, so it
     // declares no fixed group keys; see [`RunTraceUsageQuery`].
     HarnessQuery {
@@ -154,7 +161,11 @@ pub fn run_harness_query(query: &HarnessQuery, traces: &[Map<String, Value>]) ->
         .collect()
 }
 
-fn answer_group(name: &str, group: String, members: &[&Map<String, Value>]) -> MetricRow {
+pub(crate) fn answer_group(
+    name: &str,
+    group: String,
+    members: &[&Map<String, Value>],
+) -> MetricRow {
     let total = members.len();
     let wins = members.iter().filter(|t| solved(t)).count();
     let counted = |key: &str| -> Vec<f64> {

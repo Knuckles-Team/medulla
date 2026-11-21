@@ -7,6 +7,9 @@
 
 use super::*;
 
+use medulla_mutation_types::evolution_metrics::{
+    evolution_trace_metrics, EvolutionTraceQuery, EVOLUTION_TRACE_METRICS,
+};
 use medulla_mutation_types::harness_metrics::{
     price_table_from_node, run_harness_query, run_trace_usage, HarnessQuery, RunTraceUsageQuery,
     RUN_TRACE_USAGE,
@@ -21,6 +24,9 @@ pub(crate) fn handle_harness_metric(
 ) -> Response {
     if query.name == RUN_TRACE_USAGE {
         return handle_run_trace_usage(ctx, query, params);
+    }
+    if query.name == EVOLUTION_TRACE_METRICS {
+        return handle_evolution_trace_metrics(ctx, query, params);
     }
     let (snap, version) = sql_read_snapshot(
         ctx.core,
@@ -155,6 +161,62 @@ fn handle_run_trace_usage(
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows,
         warnings: page.warnings,
+        snapshot_revision: version,
+        knowledge_revision: 0,
+        source_coverage: Vec::new(),
+    };
+    served_response::<query_results::Uql>(
+        ctx.req_id,
+        Ok(Ok(result)),
+        "UQL",
+        #[cfg(feature = "result-cache")]
+        ctx.core,
+        #[cfg(feature = "result-cache")]
+        None,
+    )
+}
+
+/// MEDULLA-ORCH-VOCAB-R010.100: one evolution proposal joined to its measured source traces.
+/// One RLS-filtered snapshot is read; a proposal of another tenant is outside it and reads as
+/// `EVOLUTION_REVISION_UNKNOWN`. The statement writes nothing.
+#[cfg(feature = "query")]
+fn handle_evolution_trace_metrics(
+    ctx: &QueryHandlerCtx<'_>,
+    query: &HarnessQuery,
+    params: &UqlParams,
+) -> Response {
+    let evolution = match EvolutionTraceQuery::from_params(
+        |name| text_param(params, name),
+        |name| number_param(params, name),
+    ) {
+        Ok(evolution) => evolution,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let (snap, version) = sql_read_snapshot(
+        ctx.core,
+        #[cfg(feature = "security")]
+        ctx.caller,
+        #[cfg(feature = "security")]
+        ctx.rls,
+    );
+    let nodes: std::collections::BTreeMap<_, _> = snap
+        .node_map
+        .keys()
+        .filter_map(|id| snap.node_row_object(id).map(|props| (id.clone(), props)))
+        .collect();
+    let answer = match evolution_trace_metrics(&evolution, &nodes) {
+        Ok(answer) => answer,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let warnings = answer
+        .missing_ids
+        .iter()
+        .map(|id| format!("missing trace: {id}"))
+        .collect();
+    let result = medulla_query_types::wire::UqlResult::Rows {
+        columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
+        rows: answer.to_rows(),
+        warnings,
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),

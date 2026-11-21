@@ -1438,6 +1438,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "Uql",
         &[
+            "EVOLUTION_DIGEST_MISMATCH",
+            "EVOLUTION_REVISION_UNKNOWN",
+            "EVOLUTION_WINDOW_STALE",
             "UQL_E_CLUSTER_NO_VECTOR",
             "UQL_E_DECAY_NO_TIME",
             "USAGE_CURSOR_INVALID",

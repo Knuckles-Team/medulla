@@ -667,6 +667,54 @@
     ordered :RunEvent path plus the :RunCommit history a fork/revert branches from.""" ;
     rdfs:seeAlso prov:Activity .
 
+:EvolutionProgress a owl:Class ;
+    rdfs:label "EvolutionProgress" ;
+    rdfs:comment """MEDULLA-ORCH-VOCAB-R010.100 -- the harness's progress record of one evolution
+    proposal: the proposal and prompt it tests, the metric window it measures and the ordered
+    run ids of its source traces. A :RunTrace joins by its node id, which equals a listed run id.""" ;
+    rdfs:subClassOf prov:Entity .
+
+:proposalId a owl:DatatypeProperty ;
+    rdfs:label "proposalId" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:string .
+
+:proposalRevision a owl:DatatypeProperty ;
+    rdfs:label "proposalRevision" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:integer .
+
+:promptVersionId a owl:DatatypeProperty ;
+    rdfs:label "promptVersionId" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:string .
+
+:promptRevision a owl:DatatypeProperty ;
+    rdfs:label "promptRevision" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:integer .
+
+:metricWindowId a owl:DatatypeProperty ;
+    rdfs:label "metricWindowId" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:string .
+
+:metricWindowRevision a owl:DatatypeProperty ;
+    rdfs:label "metricWindowRevision" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:integer .
+
+:sourceRunIds a owl:DatatypeProperty ;
+    rdfs:label "sourceRunIds" ;
+    rdfs:comment "A JSON array of the source run ids, in run order." ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:string .
+
+:observedAtMs a owl:DatatypeProperty ;
+    rdfs:label "observedAtMs" ;
+    rdfs:domain :EvolutionProgress ;
+    rdfs:range xsd:integer .
+
 :CompiledProgram a owl:Class ;
     rdfs:label "CompiledProgram" ;
     rdfs:comment """MEDULLA-DECISION-ENGINE-R135.5 — the stored state-machine program a

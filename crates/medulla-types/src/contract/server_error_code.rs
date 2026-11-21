@@ -296,6 +296,12 @@ closed_error_codes! {
         ElevationInvalid => "ELEVATION_INVALID",
         EdgeAlreadyClosed => "EDGE_ALREADY_CLOSED",
         EdgeNotFound => "EDGE_NOT_FOUND",
+        /// MEDULLA-ORCH-VOCAB-R010.100: a pinned prompt or metric window digest differs from the stored one.
+        EvolutionDigestMismatch => "EVOLUTION_DIGEST_MISMATCH",
+        /// MEDULLA-ORCH-VOCAB-R010.100: the proposal, prompt or metric window revision is not held.
+        EvolutionRevisionUnknown => "EVOLUTION_REVISION_UNKNOWN",
+        /// MEDULLA-ORCH-VOCAB-R010.100: the stored metric window is newer than the one asked for.
+        EvolutionWindowStale => "EVOLUTION_WINDOW_STALE",
         ElevationLedgerFull => "ELEVATION_LEDGER_FULL",
         ElevationNotApprover => "ELEVATION_NOT_APPROVER",
         ElevationNotFound => "ELEVATION_NOT_FOUND",

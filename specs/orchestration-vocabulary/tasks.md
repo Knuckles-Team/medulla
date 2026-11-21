@@ -36,7 +36,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T029 [P] [US1] MEDULLA-ORCH-VOCAB-R006.2 Add property `swarm:feeds`
 - [ ] T030 [P] [US1] MEDULLA-ORCH-VOCAB-R006.3 Add property `swarm:loopsBackTo`
 - [ ] T031 [P] [US1] MEDULLA-ORCH-VOCAB-R006.4 Add DAG acyclicity shape
-- [ ] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:` facts
+- [x] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:` facts
 - [ ] T033 [P] [US1] MEDULLA-ORCH-VOCAB-R006.6 Add Q6 and Q7 query tests
 - [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly steps by `:hasStep`
 - [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
@@ -85,7 +85,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T089 [US6] MEDULLA-ORCH-VOCAB-R012.9 Requirement rows become typed nodes
 - [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
 - [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
-- [ ] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join an evolution proposal to its measured source traces as a read view
+- [x] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join an evolution proposal to its measured source traces as a read view
 - [x] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
 - [ ] T094 [US7] MEDULLA-ORCH-VOCAB-R616.3 Wiring: synthesis proposes and assemble decides
 - [ ] T095 [US7] MEDULLA-ORCH-VOCAB-R616.4 Refusal: a draft that fails its shape

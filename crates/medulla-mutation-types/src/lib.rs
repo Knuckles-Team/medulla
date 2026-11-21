@@ -90,6 +90,8 @@ pub mod governed_change;
 // MEDULLA-DURABLE-KERNEL-R043.100.1 — graph change-feed types and snapshot digest.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graph_change_feed;
+// MEDULLA-ORCH-VOCAB-R010.100 — one proposal's measured source traces as a read view.
+pub mod evolution_metrics;
 // MEDULLA-ORCH-VOCAB-R010.1 — the closed harness metric statement table, beside
 // the price table its usage statement reads.
 pub mod harness_metrics;
