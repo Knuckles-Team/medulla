@@ -74,8 +74,13 @@ pub struct ProcessDocumentImported {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ExportSource {
-    /// The latest stored version of the imported model `model_iri`.
-    Model { model_iri: String },
+    /// Version `version` of the imported model `model_iri`; the latest stored version when unset.
+    /// Every version stays readable: a re-import writes a new one and changes no earlier one.
+    Model {
+        model_iri: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        version: Option<u32>,
+    },
     /// Version `version` of the stored canonical workflow `workflow_id`.
     Workflow { workflow_id: String, version: u32 },
 }

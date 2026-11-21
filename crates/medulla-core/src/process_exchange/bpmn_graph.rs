@@ -16,6 +16,9 @@ use crate::architecture_exchange::graph::ExchangeMutation;
 const ATTRIBUTE_PREFIX: &str = "bpmnAttribute:";
 /// Property prefix of a namespace the root element declares.
 const NAMESPACE_PREFIX: &str = "bpmnNamespace:";
+/// Property of the definitions node that keeps the collaborations and their participants, as a
+/// JSON array in document order, so an export restores them (MEDULLA-CQ-ORCH-R702.9).
+const COLLABORATIONS_PROPERTY: &str = "bpmnCollaborations";
 
 /// The node id of one element of the model `model_iri`.
 pub fn element_iri(model_iri: &str, element_id: &str) -> String {
@@ -137,11 +140,16 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
         ));
     };
 
-    let namespaces: Vec<(String, String)> = doc
+    let mut namespaces: Vec<(String, String)> = doc
         .namespaces
         .iter()
         .map(|(prefix, iri)| (format!("{NAMESPACE_PREFIX}{prefix}"), iri.clone()))
         .collect();
+    if !doc.collaborations.is_empty() {
+        if let Ok(text) = serde_json::to_string(&doc.collaborations) {
+            namespaces.push((COLLABORATIONS_PROPERTY.to_owned(), text));
+        }
+    }
     push_node(&doc.id, "BpmnDefinitions", "", &namespaces);
     for process in &doc.processes {
         push_node(&process.id, "BpmnProcess", &process.name, &[]);
@@ -269,8 +277,9 @@ fn not_deployable(reason: impl Into<String>) -> ProcessExchangeError {
 /// The inverse of [`bpmn_mutations`]: rebuild the BPMN document of the model `model_iri` from
 /// the node and edge writes that stored it (MEDULLA-CQ-ORCH-R702.10). A model without one
 /// `BpmnDefinitions` node refuses `NotDeployable`. Elements come back in element id order, a
-/// lane's members in id order, an element's event definitions in their stored order. Collaboration
-/// participants are not part of the stored form and are not restored.
+/// lane's members in id order, an element's event definitions in their stored order. The
+/// collaborations and their participants come back from the definitions node's
+/// `bpmnCollaborations` property.
 pub fn bpmn_document(
     mutations: &[ExchangeMutation],
     model_iri: &str,
@@ -348,6 +357,10 @@ pub fn bpmn_document(
                     .map(|prefix| (prefix.to_owned(), value.clone()))
             })
             .collect(),
+        collaborations: definitions_properties
+            .get(COLLABORATIONS_PROPERTY)
+            .and_then(|text| serde_json::from_str(text).ok())
+            .unwrap_or_default(),
         ..BpmnDocument::default()
     };
     doc.preserved

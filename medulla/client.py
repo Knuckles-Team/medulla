@@ -7781,7 +7781,7 @@ class GraphOperationsClient:
         """Write one BPMN 2.0 or DMN 1.3 document from a stored model or workflow
         (MEDULLA-CQ-ORCH-R702.10, R702.11).
 
-        ``source`` is ``{"kind": "model", "model_iri": ...}`` or
+        ``source`` is ``{"kind": "model", "model_iri": ..., "version": <optional, latest when omitted>}`` or
         ``{"kind": "workflow", "workflow_id": ..., "version": ...}``; ``format`` is
         ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest, canonical_model_digest}`` where
         ``document`` is ``{format, document: <bytes>}``.

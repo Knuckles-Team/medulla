@@ -8,9 +8,11 @@
 //! gateway, under the same compare-and-set as a workflow version: a version that is not the
 //! stored one refuses `WORKFLOW_VERSION_CONFLICT`, and the commit closure re-reads the stored
 //! version so two racing imports never both write version `n + 1`. A document the reader
-//! refuses writes nothing. A re-import replaces the model: the previous version's element nodes
-//! the new document no longer has are removed, and so are its edges, before the new ones are
-//! written; the model node's `elementIds` records the exact element set of its version.
+//! refuses writes nothing. Versions are immutable: a re-import writes version `n + 1` and its
+//! own element nodes, named `process:<model_iri>:v<n + 1>:<id>` (a DMN element
+//! `<model_iri>:v<n + 1>#<id>`), and removes or changes nothing of an earlier version; every
+//! version stays readable. The model node's `elementIds` records the exact element set of its
+//! version, and `canonicalModelDigest` the version-independent digest of it.
 //!
 //! `ProcessDocumentExport` (MEDULLA-CQ-ORCH-R702.10, R702.11) is the tenant-bound read: a model
 //! is rebuilt from its element nodes and edges with `bpmn_document` or `dmn_document` and
@@ -43,6 +45,11 @@ use medulla_types::process_exchange::{
 use medulla_types::process_import::{
     PROCESS_EXPORT_NOT_DEPLOYABLE, PROCESS_IMPORT_UNKNOWN_MODEL, WORKFLOW_VERSION_CONFLICT,
 };
+
+/// The scope a version's element nodes are named under: `<model_iri>:v<version>`.
+pub(super) fn version_scope(model_iri: &str, version: u32) -> String {
+    format!("{model_iri}:v{version}")
+}
 
 /// The id of version `version` of the model `model_iri`.
 pub(super) fn model_node_id(model_iri: &str, version: u32) -> String {
@@ -123,8 +130,10 @@ pub(super) fn admit_document_import(
     model_iri: &str,
     expected_version: Option<u32>,
 ) -> Result<Admitted<ProcessDocumentImported>, String> {
-    let mutations = document_mutations(document, model_iri)?;
     let stored = stored_model_version(core, model_iri);
+    let version = stored + 1;
+    let scope = version_scope(model_iri, version);
+    let mutations = document_mutations(document, &scope)?;
     if let Some(expected) = expected_version {
         if expected != stored {
             return Err(refuse(
@@ -133,7 +142,6 @@ pub(super) fn admit_document_import(
             ));
         }
     }
-    let version = stored + 1;
     let digest = sha256_hex(&document.document);
     let format = serde_json::to_value(document.format)
         .ok()
@@ -149,22 +157,7 @@ pub(super) fn admit_document_import(
         .collect();
     element_ids.sort_unstable();
     element_ids.dedup();
-    // The previous version's edges and the nodes the new document no longer has go first, so
-    // the stored element set is exactly the new document's.
     let mut operations: Vec<serde_json::Value> = Vec::new();
-    let previous = node_properties(core, &model_node_id(model_iri, stored))
-        .map(|properties| recorded_elements(&properties))
-        .unwrap_or_default();
-    for from in &previous {
-        for to in core.get_successors(from).unwrap_or_default() {
-            if previous.contains(&to) {
-                operations.push(serde_json::json!({"op": "remove_edge", "source": from, "target": to}));
-            }
-        }
-    }
-    for gone in previous.iter().filter(|id| !element_ids.contains(&id.as_str())) {
-        operations.push(serde_json::json!({"op": "remove_node", "id": gone}));
-    }
     operations.push(serde_json::json!({
         "op": "upsert_node",
         "id": node_id,
@@ -177,7 +170,7 @@ pub(super) fn admit_document_import(
             "importedFrom": digest,
             "sourceDocumentDigest": digest,
             "elementIds": serde_json::to_string(&element_ids).unwrap_or_default(),
-            "canonicalModelDigest": canonical_model_digest(&mutations),
+            "canonicalModelDigest": canonical_model_digest(&mutations, &scope),
         },
     }));
     let (mut nodes, mut edges) = (0u64, 0u64);
@@ -254,22 +247,25 @@ pub(super) async fn handle_process_document_import(
     )
 }
 
-/// The element writes that stored the latest version of the model `model_iri`, read back from
-/// the graph; the model must be of the tenant and of `format`.
+/// The version scope and the element writes that stored version `requested` (the latest when
+/// unset) of the model `model_iri`, read back from the graph; the model must be of the tenant
+/// and of `format`.
 fn stored_model_mutations(
     core: &GraphCore,
     tenant: &str,
     model_iri: &str,
     format: ProcessDocumentFormat,
-) -> Result<Vec<ExchangeMutation>, String> {
+    requested: Option<u32>,
+) -> Result<(String, Vec<ExchangeMutation>), String> {
     let unknown = || {
         refuse(
             PROCESS_IMPORT_UNKNOWN_MODEL,
             format!("no model {model_iri} is available to the caller's tenant"),
         )
     };
-    let version = stored_model_version(core, model_iri);
-    if version == 0 {
+    let latest = stored_model_version(core, model_iri);
+    let version = requested.unwrap_or(latest);
+    if version == 0 || version > latest {
         return Err(unknown());
     }
     let model = node_properties(core, &model_node_id(model_iri, version)).ok_or_else(unknown)?;
@@ -329,7 +325,7 @@ fn stored_model_mutations(
             }
         }
     }
-    Ok(out)
+    Ok((version_scope(model_iri, version), out))
 }
 
 /// Answer one document export, writing nothing.
@@ -340,19 +336,21 @@ pub(super) fn export_document(
     format: ProcessDocumentFormat,
 ) -> Result<ProcessDocumentExported, String> {
     let (bytes, canonical) = match (source, format) {
-        (ExportSource::Model { model_iri }, ProcessDocumentFormat::Bpmn20) => {
-            let stored = stored_model_mutations(core, tenant, model_iri, format)?;
-            let bytes = bpmn_document(&stored, model_iri)
+        (ExportSource::Model { model_iri, version }, ProcessDocumentFormat::Bpmn20) => {
+            let (scope, stored) =
+                stored_model_mutations(core, tenant, model_iri, format, *version)?;
+            let bytes = bpmn_document(&stored, &scope)
                 .and_then(|doc| write_bpmn(&doc))
                 .map_err(|error| exchange_refusal(&error))?;
-            (bytes, canonical_model_digest(&stored))
+            (bytes, canonical_model_digest(&stored, &scope))
         }
-        (ExportSource::Model { model_iri }, ProcessDocumentFormat::Dmn13) => {
-            let stored = stored_model_mutations(core, tenant, model_iri, format)?;
-            let bytes = dmn_document(&stored, model_iri)
+        (ExportSource::Model { model_iri, version }, ProcessDocumentFormat::Dmn13) => {
+            let (scope, stored) =
+                stored_model_mutations(core, tenant, model_iri, format, *version)?;
+            let bytes = dmn_document(&stored, &scope)
                 .and_then(|doc| write_dmn(&doc))
                 .map_err(|error| exchange_refusal(&error))?;
-            (bytes, canonical_model_digest(&stored))
+            (bytes, canonical_model_digest(&stored, &scope))
         }
         (
             ExportSource::Workflow {

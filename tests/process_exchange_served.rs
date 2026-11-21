@@ -83,6 +83,7 @@ fn export_method(source: ExportSource, format: ProcessDocumentFormat) -> Method 
 fn model(iri: &str) -> ExportSource {
     ExportSource::Model {
         model_iri: iri.into(),
+        version: None,
     }
 }
 
@@ -137,7 +138,7 @@ async fn import_writes_model_in_one_batch() {
         Some("ProcessModel")
     );
     assert_eq!(
-        node_type(&state, &format!("process:{MODEL_IRI}:user1")).as_deref(),
+        node_type(&state, &format!("process:{MODEL_IRI}:v1:user1")).as_deref(),
         Some("BpmnUserTask")
     );
 
@@ -190,7 +191,8 @@ async fn export_reads_model_and_workflow() {
         "the exported model maps onto the same graph writes"
     );
 
-    // A re-import with fewer elements replaces the model: the export carries no stale element.
+    // A re-import with fewer elements is version 2: the latest export carries no element of
+    // version 1, and version 1 stays readable and unchanged.
     let slim = br#"<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs"><process id="p"><startEvent id="s"/><endEvent id="e"/><sequenceFlow id="f" sourceRef="s" targetRef="e"/></process></definitions>"#;
     let _: ProcessDocumentImported = payload(
         send(&state, 4, import_document(slim, ProcessDocumentFormat::Bpmn20, MODEL_IRI)).await,
@@ -208,6 +210,33 @@ async fn export_reads_model_and_workflow() {
         bpmn_mutations(&replaced, MODEL_IRI),
         bpmn_mutations(&parse_bpmn(slim, BpmnLimits::default()).unwrap(), MODEL_IRI)
     );
+    assert_eq!(
+        node_type(&state, &format!("process:{MODEL_IRI}:v1:user1")).as_deref(),
+        Some("BpmnUserTask"),
+        "an earlier version's nodes are never removed"
+    );
+    assert_eq!(node_type(&state, &format!("process:{MODEL_IRI}:v2:user1")), None);
+    let first_again: ProcessDocumentExported = payload(
+        send(
+            &state,
+            9,
+            export_method(
+                ExportSource::Model {
+                    model_iri: MODEL_IRI.into(),
+                    version: Some(1),
+                },
+                ProcessDocumentFormat::Bpmn20,
+            ),
+        )
+        .await,
+    );
+    let first_again = parse_bpmn(&first_again.document.document, BpmnLimits::default()).unwrap();
+    assert_eq!(
+        bpmn_mutations(&first_again, MODEL_IRI),
+        bpmn_mutations(&original, MODEL_IRI),
+        "version 1 still exports as imported"
+    );
+    assert_eq!(first_again.collaborations, original.collaborations);
 
     // A stored workflow exports as a deployable document.
     let workflow: CanonicalWorkflow = serde_json::from_str(WORKFLOW_JSON).unwrap();

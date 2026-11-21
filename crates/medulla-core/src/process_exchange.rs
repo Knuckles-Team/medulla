@@ -20,29 +20,63 @@ pub mod xml_tree;
 
 pub use medulla_types::process_exchange::ProcessExchangeError;
 
+/// `text` with the version scope of its model removed: a BPMN node id `process:<scope>:<id>`
+/// becomes `process::<id>` and a DMN node id `<scope>#<id>` becomes `#<id>`; other text is
+/// unchanged.
+fn unscoped(text: &str, scope: &str) -> String {
+    if let Some(rest) = text
+        .strip_prefix("process:")
+        .and_then(|rest| rest.strip_prefix(scope))
+        .filter(|rest| rest.starts_with(':'))
+    {
+        return format!("process:{rest}");
+    }
+    match text.strip_prefix(scope) {
+        Some(rest) if rest.starts_with('#') => rest.to_owned(),
+        _ => text.to_owned(),
+    }
+}
+
 /// The canonical model digest of one stored process or decision model (MEDULLA-CQ-ORCH-R702.13):
 /// SHA-256, as 64 lowercase hex characters, of its node and edge writes with nodes ordered by
 /// id and edges by (source, predicate, target), so the digest is the same whether the writes
-/// come from the import mapping or are read back from the graph.
-pub fn canonical_model_digest(mutations: &[crate::architecture_exchange::graph::ExchangeMutation]) -> String {
+/// come from the import mapping or are read back from the graph. `scope` is the version scope
+/// the writes were mapped under (`<model_iri>:v<n>`, MEDULLA-CQ-ORCH-R702.9); it is removed from
+/// every node id and id-valued property first, so two imports of one document into different
+/// models or versions have the same digest (MEDULLA-CQ-ORCH-R702.14, R702.15).
+pub fn canonical_model_digest(
+    mutations: &[crate::architecture_exchange::graph::ExchangeMutation],
+    scope: &str,
+) -> String {
     use crate::architecture_exchange::graph::ExchangeMutation;
-    let mut nodes: Vec<(&str, &str, &BTreeMap<String, String>)> = Vec::new();
-    let mut edges: Vec<(&str, &str, &str)> = Vec::new();
+    let mut nodes: Vec<(String, &str, BTreeMap<&str, String>)> = Vec::new();
+    let mut edges: Vec<(String, &str, String)> = Vec::new();
     for mutation in mutations {
         match mutation {
             ExchangeMutation::UpsertNode {
                 id,
                 label,
                 properties,
-            } => nodes.push((id.as_str(), label.as_str(), properties)),
+            } => nodes.push((
+                unscoped(id, scope),
+                label.as_str(),
+                properties
+                    .iter()
+                    .map(|(key, value)| (key.as_str(), unscoped(value, scope)))
+                    .collect(),
+            )),
             ExchangeMutation::Link {
                 source,
                 target,
                 predicate,
-            } => edges.push((source.as_str(), predicate.as_str(), target.as_str())),
+            } => edges.push((
+                unscoped(source, scope),
+                predicate.as_str(),
+                unscoped(target, scope),
+            )),
         }
     }
-    nodes.sort_by(|a, b| a.0.cmp(b.0));
+    nodes.sort_by(|a, b| a.0.cmp(&b.0));
     edges.sort_unstable();
     edges.dedup();
     let value = serde_json::json!({"nodes": nodes, "edges": edges});
