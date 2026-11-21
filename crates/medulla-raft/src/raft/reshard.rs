@@ -50,7 +50,8 @@ use std::sync::Arc;
 
 use super::multi::MultiRaft;
 use super::placement::{
-    MoveStage, PartitionMoveJournal, PartitionState, PlacementEntry, PlacementFence,
+    MoveStage, MoveStageEvent, PartitionMoveJournal, PartitionState, PlacementEntry,
+    PlacementFence,
 };
 use super::GroupId;
 use medulla_persistence::redb_backend::rehydrate_core_from_dump;
@@ -291,7 +292,9 @@ impl TenantManager {
             return Err("partition move passed its rollback fence".to_string());
         }
         if journal.stage != MoveStage::Aborting {
-            journal.stage = MoveStage::Aborting;
+            journal
+                .apply_stage(MoveStageEvent::BeginAbort)
+                .map_err(|refused| refused.to_string())?;
             self.multi.persist_move_journal(&journal).await?;
         }
         let range = (journal.key.range_start, journal.key.range_end);
@@ -329,7 +332,9 @@ impl TenantManager {
         // A crash after the cutover commit but before its journal update is resolved
         // strictly forward; the epoch itself is the irreversible fence.
         let epoch = if PlacementFence::observe(&entry, &journal).active_target {
-            journal.stage = MoveStage::CutoverCommitted;
+            journal
+                .apply_stage(MoveStageEvent::CommitCutover)
+                .map_err(|refused| refused.to_string())?;
             self.multi.persist_move_journal(&journal).await?;
             entry.epoch
         } else {
@@ -533,7 +538,9 @@ async fn reconcile_abort_forward(
     manager: &TenantManager,
     mut journal: PartitionMoveJournal,
 ) -> Result<(), String> {
-    journal.stage = MoveStage::CutoverCommitted;
+    journal
+        .apply_stage(MoveStageEvent::CommitCutover)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(&journal).await?;
     manager.drive_move(journal).await?;
     Err("partition move passed its rollback fence and was reconciled forward".to_string())
@@ -548,7 +555,9 @@ async fn restore_source_route(
     for graph in &journal.graphs {
         manager.multi.router().assign(graph, journal.source);
     }
-    journal.stage = MoveStage::Aborted;
+    journal
+        .apply_stage(MoveStageEvent::FinishAbort)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(&journal).await
 }
 
@@ -577,7 +586,9 @@ async fn cut_over_move(
         .multi
         .placement_fence_cutover(&journal.key.tenant, range, journal.target)
         .await?;
-    journal.stage = MoveStage::CutoverCommitted;
+    journal
+        .apply_stage(MoveStageEvent::CommitCutover)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(journal).await?;
     Ok(epoch)
 }
@@ -596,7 +607,9 @@ async fn start_move_if_active(
         .multi
         .placement_start_move(&journal.key.tenant, range, journal.target)
         .await?;
-    journal.stage = MoveStage::Moving;
+    journal
+        .apply_stage(MoveStageEvent::StartMove)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(journal).await?;
     manager.partition_entry(&journal.key.tenant, range).await
 }
@@ -607,7 +620,9 @@ async fn transfer_move_graphs(
     manager: &TenantManager,
     journal: &mut PartitionMoveJournal,
 ) -> Result<(), String> {
-    journal.stage = MoveStage::Transferring;
+    journal
+        .apply_stage(MoveStageEvent::BeginTransfer)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(journal).await?;
     for graph in journal.graphs.clone() {
         if journal.completed_graphs.binary_search(&graph).is_err() {
@@ -618,7 +633,9 @@ async fn transfer_move_graphs(
             manager.multi.persist_move_journal(journal).await?;
         }
     }
-    journal.stage = MoveStage::ReadyForCutover;
+    journal
+        .apply_stage(MoveStageEvent::FinishTransfer)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(journal).await?;
 
     // Re-verify from authoritative storage even when every graph was marked
@@ -666,7 +683,9 @@ async fn complete_move(
             nodes_transferred: manager.verify_graph_durable(graph).await?,
         });
     }
-    journal.stage = MoveStage::Completed;
+    journal
+        .apply_stage(MoveStageEvent::Complete)
+        .map_err(|refused| refused.to_string())?;
     manager.multi.persist_move_journal(&journal).await?;
     Ok(PlacementMoveReport {
         tenant: journal.key.tenant,

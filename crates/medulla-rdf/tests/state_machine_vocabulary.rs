@@ -1579,3 +1579,14 @@ fn quality_rule_machine_matches_edge_table() {
 fn quality_rule_machine_classes_extend_core() {
     sm::assert_extends_core("QualityRule");
 }
+
+// spec: MEDULLA-PLACEMENT-R783.8
+#[test]
+fn move_stage_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_raft::raft::placement::MOVE_STAGE_MACHINE);
+}
+// spec: MEDULLA-PLACEMENT-R783.8
+#[test]
+fn move_stage_machine_classes_extend_core() {
+    sm::assert_extends_core("MoveStage");
+}

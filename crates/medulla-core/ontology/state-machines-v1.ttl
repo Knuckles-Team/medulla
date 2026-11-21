@@ -9011,3 +9011,187 @@
     :fromState :QualityRuleMachine_Proposed ;
     :toState :QualityRuleMachine_Approved ;
     :firedBy :QualityRuleMachine_Event_Approve .
+# spec: MEDULLA-PLACEMENT-R783.8
+# The MoveStage machine, over the stage of a partition move journal. The Rust edge table MOVE_STAGE_MACHINE
+# is the same table; the ontology test asserts equal edge sets.
+
+:MoveStageState a owl:Class ;
+    rdfs:label "MoveStage State" ;
+    rdfs:comment "A state of the MoveStage machine." ;
+    rdfs:subClassOf :State .
+
+:MoveStageTerminalState a owl:Class ;
+    rdfs:label "MoveStage Terminal State" ;
+    rdfs:comment "A terminal state of the MoveStage machine." ;
+    rdfs:subClassOf :TerminalState, :MoveStageState .
+
+:MoveStageTransition a owl:Class ;
+    rdfs:label "MoveStage Transition" ;
+    rdfs:comment "A transition of the MoveStage machine." ;
+    rdfs:subClassOf :Transition .
+
+:MoveStageEvent a owl:Class ;
+    rdfs:label "MoveStage Event" ;
+    rdfs:comment "An event of the MoveStage machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MoveStageGuard a owl:Class ;
+    rdfs:label "MoveStage Guard" ;
+    rdfs:comment "A guard of the MoveStage machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MoveStageMachine a :StateMachine ;
+    rdfs:label "MoveStage machine" ;
+    :initialState :MoveStageMachine_Planned ;
+    :hasState :MoveStageMachine_Planned, :MoveStageMachine_Moving, :MoveStageMachine_Transferring, :MoveStageMachine_ReadyForCutover, :MoveStageMachine_CutoverCommitted, :MoveStageMachine_Aborting, :MoveStageMachine_Completed, :MoveStageMachine_Aborted .
+
+:MoveStageMachine_Planned a :MoveStageState ;
+    rdfs:label "MoveStage Planned" ;
+    :storedForm "planned" .
+
+:MoveStageMachine_Moving a :MoveStageState ;
+    rdfs:label "MoveStage Moving" ;
+    :storedForm "moving" .
+
+:MoveStageMachine_Transferring a :MoveStageState ;
+    rdfs:label "MoveStage Transferring" ;
+    :storedForm "transferring" .
+
+:MoveStageMachine_ReadyForCutover a :MoveStageState ;
+    rdfs:label "MoveStage ReadyForCutover" ;
+    :storedForm "ready_for_cutover" .
+
+:MoveStageMachine_CutoverCommitted a :MoveStageState ;
+    rdfs:label "MoveStage CutoverCommitted" ;
+    :storedForm "cutover_committed" .
+
+:MoveStageMachine_Aborting a :MoveStageState ;
+    rdfs:label "MoveStage Aborting" ;
+    :storedForm "aborting" .
+
+:MoveStageMachine_Completed a :MoveStageTerminalState ;
+    rdfs:label "MoveStage Completed" ;
+    :storedForm "completed" .
+
+:MoveStageMachine_Aborted a :MoveStageTerminalState ;
+    rdfs:label "MoveStage Aborted" ;
+    :storedForm "aborted" .
+
+:MoveStageMachine_Event_StartMove a :MoveStageEvent ;
+    rdfs:label "MoveStage StartMove" .
+
+:MoveStageMachine_Event_BeginTransfer a :MoveStageEvent ;
+    rdfs:label "MoveStage BeginTransfer" .
+
+:MoveStageMachine_Event_FinishTransfer a :MoveStageEvent ;
+    rdfs:label "MoveStage FinishTransfer" .
+
+:MoveStageMachine_Event_CommitCutover a :MoveStageEvent ;
+    rdfs:label "MoveStage CommitCutover" .
+
+:MoveStageMachine_Event_Complete a :MoveStageEvent ;
+    rdfs:label "MoveStage Complete" .
+
+:MoveStageMachine_Event_BeginAbort a :MoveStageEvent ;
+    rdfs:label "MoveStage BeginAbort" .
+
+:MoveStageMachine_Event_FinishAbort a :MoveStageEvent ;
+    rdfs:label "MoveStage FinishAbort" .
+
+:MoveStageMachine_S01 a :MoveStageTransition ;
+    rdfs:label "MoveStage S01" ;
+    :edgeId "S01" ;
+    :fromState :MoveStageMachine_Planned ;
+    :toState :MoveStageMachine_Moving ;
+    :firedBy :MoveStageMachine_Event_StartMove .
+
+:MoveStageMachine_S02 a :MoveStageTransition ;
+    rdfs:label "MoveStage S02" ;
+    :edgeId "S02" ;
+    :fromState :MoveStageMachine_Planned ;
+    :toState :MoveStageMachine_Transferring ;
+    :firedBy :MoveStageMachine_Event_BeginTransfer .
+
+:MoveStageMachine_S03 a :MoveStageTransition ;
+    rdfs:label "MoveStage S03" ;
+    :edgeId "S03" ;
+    :fromState :MoveStageMachine_Moving ;
+    :toState :MoveStageMachine_Transferring ;
+    :firedBy :MoveStageMachine_Event_BeginTransfer .
+
+:MoveStageMachine_S04 a :MoveStageTransition ;
+    rdfs:label "MoveStage S04" ;
+    :edgeId "S04" ;
+    :fromState :MoveStageMachine_Transferring ;
+    :toState :MoveStageMachine_Transferring ;
+    :firedBy :MoveStageMachine_Event_BeginTransfer .
+
+:MoveStageMachine_S05 a :MoveStageTransition ;
+    rdfs:label "MoveStage S05" ;
+    :edgeId "S05" ;
+    :fromState :MoveStageMachine_Transferring ;
+    :toState :MoveStageMachine_ReadyForCutover ;
+    :firedBy :MoveStageMachine_Event_FinishTransfer .
+
+:MoveStageMachine_S06 a :MoveStageTransition ;
+    rdfs:label "MoveStage S06" ;
+    :edgeId "S06" ;
+    :fromState :MoveStageMachine_ReadyForCutover ;
+    :toState :MoveStageMachine_CutoverCommitted ;
+    :firedBy :MoveStageMachine_Event_CommitCutover .
+
+:MoveStageMachine_S07 a :MoveStageTransition ;
+    rdfs:label "MoveStage S07" ;
+    :edgeId "S07" ;
+    :fromState :MoveStageMachine_Aborting ;
+    :toState :MoveStageMachine_CutoverCommitted ;
+    :firedBy :MoveStageMachine_Event_CommitCutover .
+
+:MoveStageMachine_S08 a :MoveStageTransition ;
+    rdfs:label "MoveStage S08" ;
+    :edgeId "S08" ;
+    :fromState :MoveStageMachine_CutoverCommitted ;
+    :toState :MoveStageMachine_CutoverCommitted ;
+    :firedBy :MoveStageMachine_Event_CommitCutover .
+
+:MoveStageMachine_S09 a :MoveStageTransition ;
+    rdfs:label "MoveStage S09" ;
+    :edgeId "S09" ;
+    :fromState :MoveStageMachine_CutoverCommitted ;
+    :toState :MoveStageMachine_Completed ;
+    :firedBy :MoveStageMachine_Event_Complete .
+
+:MoveStageMachine_S10 a :MoveStageTransition ;
+    rdfs:label "MoveStage S10" ;
+    :edgeId "S10" ;
+    :fromState :MoveStageMachine_Planned ;
+    :toState :MoveStageMachine_Aborting ;
+    :firedBy :MoveStageMachine_Event_BeginAbort .
+
+:MoveStageMachine_S11 a :MoveStageTransition ;
+    rdfs:label "MoveStage S11" ;
+    :edgeId "S11" ;
+    :fromState :MoveStageMachine_Moving ;
+    :toState :MoveStageMachine_Aborting ;
+    :firedBy :MoveStageMachine_Event_BeginAbort .
+
+:MoveStageMachine_S12 a :MoveStageTransition ;
+    rdfs:label "MoveStage S12" ;
+    :edgeId "S12" ;
+    :fromState :MoveStageMachine_Transferring ;
+    :toState :MoveStageMachine_Aborting ;
+    :firedBy :MoveStageMachine_Event_BeginAbort .
+
+:MoveStageMachine_S13 a :MoveStageTransition ;
+    rdfs:label "MoveStage S13" ;
+    :edgeId "S13" ;
+    :fromState :MoveStageMachine_ReadyForCutover ;
+    :toState :MoveStageMachine_Aborting ;
+    :firedBy :MoveStageMachine_Event_BeginAbort .
+
+:MoveStageMachine_S14 a :MoveStageTransition ;
+    rdfs:label "MoveStage S14" ;
+    :edgeId "S14" ;
+    :fromState :MoveStageMachine_Aborting ;
+    :toState :MoveStageMachine_Aborted ;
+    :firedBy :MoveStageMachine_Event_FinishAbort .

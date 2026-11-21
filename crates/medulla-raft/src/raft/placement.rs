@@ -108,10 +108,13 @@ use medulla_protocol_types::protocol::Method;
 use medulla_server_api::state::ServerState;
 
 mod move_journal;
+mod move_stage;
 mod partition_move;
 pub use partition_move::{
     PartitionKind, PartitionMove, PartitionMoveEvent, PARTITION_MOVE_MACHINE,
 };
+
+pub use move_stage::{MoveStageEvent, MOVE_STAGE_MACHINE};
 
 pub(crate) use move_journal::PlacementFence;
 pub use move_journal::{MoveStage, PartitionMoveJournal};

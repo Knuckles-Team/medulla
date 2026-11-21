@@ -13,6 +13,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
+use super::move_stage::MOVE_STAGE_MACHINE;
 use super::{
     GroupId, PartitionKey, PartitionState, PlacementEntry, MAX_PARTITION_MOVE_GRAPHS,
     MAX_PARTITION_MOVE_GRAPH_BYTES, MOVE_JOURNAL_NODE_PREFIX,
@@ -215,31 +216,14 @@ fn retains_completed_graphs(current: &PartitionMoveJournal, next: &PartitionMove
         .all(|graph| next.completed_graphs.binary_search(graph).is_ok())
 }
 
-/// The monotonic stage transition table (self-loops are idempotent re-writes).
+/// A stage step is a progress rewrite (the same stage) or an edge of `MoveStageMachine`.
+/// The machine is the one edge table (MEDULLA-PLACEMENT-R783.8).
 fn stage_step_is_permitted(current: &PartitionMoveJournal, next: &PartitionMoveJournal) -> bool {
-    matches!(
-        (current.stage, next.stage),
-        (MoveStage::Planned, MoveStage::Planned)
-            | (MoveStage::Planned, MoveStage::Moving)
-            | (MoveStage::Planned, MoveStage::Transferring)
-            | (MoveStage::Planned, MoveStage::Aborting)
-            | (MoveStage::Moving, MoveStage::Moving)
-            | (MoveStage::Moving, MoveStage::Transferring)
-            | (MoveStage::Moving, MoveStage::Aborting)
-            | (MoveStage::Transferring, MoveStage::Transferring)
-            | (MoveStage::Transferring, MoveStage::ReadyForCutover)
-            | (MoveStage::Transferring, MoveStage::Aborting)
-            | (MoveStage::ReadyForCutover, MoveStage::ReadyForCutover)
-            | (MoveStage::ReadyForCutover, MoveStage::CutoverCommitted)
-            | (MoveStage::ReadyForCutover, MoveStage::Aborting)
-            | (MoveStage::CutoverCommitted, MoveStage::CutoverCommitted)
-            | (MoveStage::CutoverCommitted, MoveStage::Completed)
-            | (MoveStage::Aborting, MoveStage::Aborting)
-            | (MoveStage::Aborting, MoveStage::CutoverCommitted)
-            | (MoveStage::Aborting, MoveStage::Aborted)
-            | (MoveStage::Completed, MoveStage::Completed)
-            | (MoveStage::Aborted, MoveStage::Aborted)
-    )
+    next.stage == current.stage
+        || MOVE_STAGE_MACHINE
+            .edges
+            .iter()
+            .any(|edge| edge.from == current.stage && edge.to == next.stage)
 }
 
 /// Which of the three crash-reachable placement fences a partition row shows
