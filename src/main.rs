@@ -433,13 +433,6 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .map_err(std::io::Error::other)?;
-    #[cfg(feature = "ann-redb")]
-    medulla_server::rebuild_graph_source_registry(std::path::Path::new(
-        args.persist_dir
-            .as_deref()
-            .expect("persist dir was required"),
-    ))
-    .map_err(std::io::Error::other)?;
 
     let limits = server_startup::admission_limits(&host_capacity);
     // OCC ACID transaction limits (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid).
@@ -487,6 +480,11 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     server_state.write_conflict_strategy =
         server_startup::parse_write_conflict_strategy(&args.write_conflict_strategy);
     let state = Arc::new(RwLock::new(server_state));
+    // The bound-source registry of graph-sourced semantic indexes is rebuilt from its owner
+    // table, after the semantic owner activation and before any listener can commit.
+    #[cfg(feature = "ann-redb")]
+    medulla_server::rebuild_graph_source_registry(&*state.read().await)
+        .map_err(std::io::Error::other)?;
     medulla_server::seams_install::install_walkthrough_seam(&*state.read().await, &state);
 
     // Compose the ordinary process as a real local-placement server before any

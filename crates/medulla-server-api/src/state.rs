@@ -187,6 +187,10 @@ pub struct ServerState {
     /// under `persist_dir` by the first policy read or write.
     #[cfg(feature = "redb")]
     pub scheduler_config_store: Arc<Mutex<Option<ErasedHandle>>>,
+    /// The graph-sourced semantic binding registry (MEDULLA-MEDIA-VOCAB-R001.102.2), opened
+    /// once under `persist_dir` by the first registration or the startup rebuild.
+    #[cfg(feature = "redb")]
+    pub graph_source_binding_store: Arc<Mutex<Option<ErasedHandle>>>,
     /// The served worker registry (MEDULLA-DURABLE-KERNEL-R074.2): in-memory, owned
     /// per verified principal. A restart empties it and workers register again.
     pub worker_registry: Arc<Mutex<medulla_work_types::worker_registry::OwnedWorkerRegistry>>,
@@ -497,6 +501,8 @@ impl ServerState {
             doc_state_store: Arc::default(),
             #[cfg(feature = "redb")]
             scheduler_config_store: Arc::default(),
+            #[cfg(feature = "redb")]
+            graph_source_binding_store: Arc::default(),
             worker_registry: Arc::default(),
             capability_index: Arc::default(),
             #[cfg(feature = "redb")]

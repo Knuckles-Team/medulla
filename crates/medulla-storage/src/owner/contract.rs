@@ -187,6 +187,7 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
                     | OwnerLayout::BranchRegistry
                     | OwnerLayout::RetrievalState
                     | OwnerLayout::SchedulerConfig
+                    | OwnerLayout::GraphSourceBindings
             )
         ) {
             TableScope::StorePrivate
@@ -331,6 +332,7 @@ fn connector_owner_key_type(name: &str) -> Option<&'static str> {
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipt_heads"
+        | "graph_source_bindings"
         | "capability_reward" => Some("(&str,&str)"),
         "connector_pack_members" | "mcp_catalog_scopes" | "concept_lineage_edges" => {
             Some("(&str,&str,&str)")
@@ -471,6 +473,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "branch_registry"
         | "doc_state"
         | "scheduler_config"
+        | "graph_source_bindings"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -568,7 +571,10 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipts" => "msgpack-v1",
-        "decision_records" | "capability_reward" | "decision_retry_allowance" => "json-utf8-v1",
+        "decision_records"
+        | "capability_reward"
+        | "decision_retry_allowance"
+        | "graph_source_bindings" => "json-utf8-v1",
         "rbac"
         | "rbac_profile_use_grant"
         | "rbac_data_product"
@@ -825,6 +831,7 @@ fn connector_capabilities(name: &str) -> Option<u16> {
         | "write_back_receipt_heads"
         | "capability_reward"
         | "decision_retry_allowance"
+        | "graph_source_bindings"
         | "decision_artifacts" => CAP_READ | CAP_INSERT | CAP_UPDATE,
         "connector_pack_bindings" => CAP_READ | CAP_INSERT | CAP_UPDATE | CAP_DELETE,
         _ => return None,

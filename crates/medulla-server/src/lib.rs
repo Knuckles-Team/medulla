@@ -200,12 +200,14 @@ pub fn install_rf019_activation(
     medulla_h_retrieve::semantic_index_runtime::install_rf019_activation(pending, persist_dir)
 }
 
-/// Rebuild the bound-source registry of graph-sourced semantic indexes from the stored
-/// bindings, so a graph commit made before the first semantic operation of a restarted process
-/// still wakes its index (MEDULLA-MEDIA-VOCAB-R001.102.2). Run after the activation install.
+/// Rebuild the bound-source registry of graph-sourced semantic indexes from its owner table in
+/// the engine store, so a graph commit made before the first semantic operation of a restarted
+/// process still wakes its index (MEDULLA-MEDIA-VOCAB-R001.102.2). Run once the state is composed.
 #[cfg(feature = "ann-redb")]
-pub fn rebuild_graph_source_registry(persist_dir: &std::path::Path) -> Result<usize, String> {
-    medulla_h_retrieve::semantic_index_runtime::rebuild_graph_source_registry(persist_dir)
+pub fn rebuild_graph_source_registry(
+    state: &medulla_server_api::state::ServerState,
+) -> Result<usize, String> {
+    medulla_h_retrieve::semantic_index_runtime::rebuild_graph_source_registry(state)
 }
 
 /// Operator-only, offline RF-019 observation. The public server route remains

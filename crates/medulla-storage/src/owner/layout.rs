@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const OWNER_LAYOUT_DOMAIN: &[u8] = b"eg/mutation-owner-layout/v1\0";
-const OWNER_LAYOUT_NAMES: [&str; 21] = [
+const OWNER_LAYOUT_NAMES: [&str; 22] = [
     "ledger_only",
     "rbac",
     "jobs",
@@ -28,8 +28,9 @@ const OWNER_LAYOUT_NAMES: [&str; 21] = [
     "branch_registry",
     "retrieval_state",
     "scheduler_config",
+    "graph_source_bindings",
 ];
-pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 21] = [
+pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 22] = [
     DurabilityDomain::ControlPlane,
     DurabilityDomain::ControlPlane,
     DurabilityDomain::AnalyticsJob,
@@ -55,6 +56,8 @@ pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 21] = [
     // MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval state: a derived ControlPlane owner file.
     DurabilityDomain::ControlPlane,
     // MEDULLA-DURABLE-KERNEL-R076.2 scheduler config: a ControlPlane owner file.
+    DurabilityDomain::ControlPlane,
+    // MEDULLA-MEDIA-VOCAB-R001.102.2 graph-source binding registry: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
 ];
 
@@ -107,6 +110,9 @@ pub enum OwnerLayout {
     /// The scheduler policy row (`scheduler_config.redb`,
     /// MEDULLA-DURABLE-KERNEL-R076.2).
     SchedulerConfig,
+    /// The registry of graph-sourced semantic bindings (`graph_source_bindings.redb`,
+    /// MEDULLA-MEDIA-VOCAB-R001.102.2).
+    GraphSourceBindings,
 }
 
 impl OwnerLayout {

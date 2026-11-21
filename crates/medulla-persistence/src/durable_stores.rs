@@ -115,6 +115,13 @@ pub const DURABLE_STORES: &[DurableStore] = &[
          comes up on the knob policy and the operator sets it again",
     ),
     excluded(
+        "graph_source_bindings.redb",
+        "MEDULLA-MEDIA-VOCAB-R001.102.2 the registry of graph-sourced semantic bindings is \
+         rebuilt at startup and re-recorded by every semantic operation on a binding, and the \
+         semantic-index owner files it points at are not bundled either, so a restore carries \
+         neither and the registry refills as each binding is used",
+    ),
+    excluded(
         "doc_state.redb",
         "MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval document state is DERIVED from \
          document content and recomputed by the build job, so a stale or missing row costs \

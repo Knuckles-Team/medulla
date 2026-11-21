@@ -41,4 +41,5 @@ owner_domains!(
     BranchRegistryOwner => BranchRegistry,
     RetrievalStateOwner => RetrievalState,
     SchedulerConfigOwner => SchedulerConfig,
+    GraphSourceBindingsOwner => GraphSourceBindings,
 );
