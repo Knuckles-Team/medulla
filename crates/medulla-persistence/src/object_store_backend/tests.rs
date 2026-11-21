@@ -385,3 +385,67 @@ async fn undeclared_durability_class_refuses_open() {
     .unwrap_err();
     assert_eq!(err.wire_code(), "OBJECT_DURABILITY_UNDECLARED");
 }
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R004
+// Two nodes over one shared root: each fetches the `HEAD` version in one pass and reads
+// identical state, and a commit by either node is read by the other. The root is the only
+// shared state; the store layer adds no second consensus.
+#[tokio::test]
+async fn two_nodes_read_identical_state() {
+    use medulla_storage::object::fetch::ObjectFetcher;
+
+    let store = Arc::new(InMemory::new());
+    seed(&store).await;
+    let node_a = backend(store.clone());
+    let node_b = backend(store.clone());
+    let reader_a = ObjectFetcher::new(store.clone(), ROOT);
+    let reader_b = ObjectFetcher::new(store.clone(), ROOT);
+
+    let batch_one = to_vec_named(&["node-a-rows"]).unwrap();
+    let batch_two = to_vec_named(&["node-a-more-rows"]).unwrap();
+    assert_eq!(
+        node_a
+            .commit_mutation_batch(TENANT, GRAPH, &batch_one)
+            .await
+            .unwrap()
+            .version,
+        1
+    );
+    assert_eq!(
+        node_a
+            .commit_mutation_batch(TENANT, GRAPH, &batch_two)
+            .await
+            .unwrap()
+            .version,
+        2
+    );
+
+    // A node with no local copy fetches `HEAD` and its segments and sees the same version.
+    let head_a = reader_a.head(TENANT, GRAPH).await.unwrap();
+    let head_b = reader_b.head(TENANT, GRAPH).await.unwrap();
+    assert_eq!(head_a, head_b);
+    assert_eq!(head_a.version, 2);
+    let state_a = reader_a.materialize(TENANT, GRAPH, head_a.version).await.unwrap();
+    let state_b = reader_b.materialize(TENANT, GRAPH, head_b.version).await.unwrap();
+    assert_eq!(state_a, state_b);
+    assert_eq!(state_a.batches.len(), 2);
+    assert_eq!(state_a.batches[0].bytes, batch_one);
+    assert_eq!(state_a.batches[1].bytes, batch_two);
+
+    // The second node commits next on the same root; the first node reads it.
+    let batch_three = to_vec_named(&["node-b-rows"]).unwrap();
+    assert_eq!(
+        node_b
+            .commit_mutation_batch(TENANT, GRAPH, &batch_three)
+            .await
+            .unwrap()
+            .version,
+        3
+    );
+    let head_a = reader_a.head(TENANT, GRAPH).await.unwrap();
+    assert_eq!(head_a.version, 3);
+    let state_a = reader_a.materialize(TENANT, GRAPH, head_a.version).await.unwrap();
+    let state_b = reader_b.materialize(TENANT, GRAPH, 3).await.unwrap();
+    assert_eq!(state_a, state_b);
+    assert_eq!(state_a.batches.len(), 3);
+}
