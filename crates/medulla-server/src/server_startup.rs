@@ -374,8 +374,10 @@ pub fn acquire_persist_lock(
 fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::PersistDirLock) {
     use medulla_persistence_ops::store_upgrade as upgrade;
 
+    let step = medulla_observe::startup().step("store_migration", "");
     let enabled = upgrade::auto_migrate_enabled().unwrap_or_else(|error| exit_with(error, 2));
     if !enabled {
+        step.skipped("automatic store migration is off");
         info!(
             "Automatic store migration is off ({}=false)",
             upgrade::AUTO_MIGRATE_ENV
@@ -383,11 +385,18 @@ fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::Persis
         medulla_kernel::metrics::process().store_migration_step("run", "disabled");
         return;
     }
-    let migration = upgrade::migrate_on_open(std::path::Path::new(dir), lock)
-        .unwrap_or_else(|error| exit_with(error, 1));
+    let migration = match upgrade::migrate_on_open(std::path::Path::new(dir), lock) {
+        Ok(migration) => migration,
+        Err(error) => {
+            step.failed("STORE_MIGRATION_FAILED");
+            exit_with(error, 1)
+        }
+    };
     if let Some(refusal) = migration.startup_refusal() {
+        step.refused("STORE_MIGRATION_REFUSED");
         exit_with(refusal, 1);
     }
+    step.ok();
 }
 
 #[cfg(not(feature = "redb"))]

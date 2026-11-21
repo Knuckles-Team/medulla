@@ -42,6 +42,7 @@ medulla-h-query = { path = "../medulla-h-query" }
 medulla-h-txn = { path = "../medulla-h-txn" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-kernel = { path = "../medulla-kernel" }
+medulla-observe = { path = "../medulla-observe" }
 medulla-kvcache = { path = "../medulla-kvcache", optional = true }
 medulla-lake = { path = "../medulla-lake", optional = true }
 medulla-modality = { path = "../medulla-modality", optional = true }

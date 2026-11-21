@@ -50,6 +50,7 @@ pub async fn spawn_post_bind_maintenance(state: Arc<RwLock<ServerState>>) {
 fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
     tokio::spawn(async move {
         let started = Instant::now();
+        let step = medulla_observe::startup().step("matview_reload", "");
         tracing::info!("post-bind maintenance: materialized-view reload started");
         let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
         let reloaded = match txn {
@@ -68,6 +69,7 @@ fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
         }
         match reloaded {
             Ok(0) => {
+                step.skipped("no materialized views to reload");
                 tracing::info!(
                     "post-bind maintenance: materialized-view reload finished in {:.3}s \
                      (0 view(s) reloaded)",
@@ -75,13 +77,17 @@ fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
                 )
             }
             Ok(n) => {
+                step.ok();
                 tracing::info!(
                     "post-bind maintenance: reloaded {n} materialized view(s) from redb in \
                      {:.3}s (CONCEPT:MEDULLA-KG.storage.feature)",
                     started.elapsed().as_secs_f64()
                 )
             }
-            Err(e) => tracing::warn!("materialized-view reload skipped: {e}"),
+            Err(e) => {
+                step.failed("MATVIEW_RELOAD_FAILED");
+                tracing::warn!("materialized-view reload skipped: {e}")
+            }
         }
     });
 }
@@ -109,6 +115,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
     };
     tokio::spawn(async move {
         let started = Instant::now();
+        let step = medulla_observe::startup().step("time_series_reconcile", "");
         tracing::info!(
             "post-bind maintenance: time-series startup reconciliation started \
              (CONCEPT:MEDULLA-KG.backend.ts-startup-reconcile)"
@@ -118,6 +125,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
                 "post-bind maintenance: time-series startup reconciliation \
                  skipped (no redb backend)"
             );
+            step.skipped("no redb backend");
             return;
         }
         // The redb lookup is repeated INSIDE the blocking closure (it borrows
@@ -143,6 +151,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
                     "time-series startup reconciliation failed; the crash-window residual \
                      stays open until the next boot"
                 );
+                step.failed("TS_STARTUP_RECONCILE_FAILED");
                 return;
             }
         };
@@ -157,5 +166,6 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
             elapsed_ms = started.elapsed().as_millis() as u64,
             "post-bind maintenance: time-series startup reconciliation complete"
         );
+        step.ok();
     });
 }

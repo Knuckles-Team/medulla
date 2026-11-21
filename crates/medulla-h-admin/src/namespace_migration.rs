@@ -675,7 +675,15 @@ pub fn plan_graph(
 pub(crate) fn spawn(state: Arc<RwLock<ServerState>>) {
     tokio::spawn(async move {
         let started = std::time::Instant::now();
+        let step = medulla_observe::startup().step("namespace_migration", "");
         let report = run(&state).await;
+        if !report.refusals.is_empty() {
+            step.refused("NAMESPACE_MIGRATION_REFUSED");
+        } else if report.writes == 0 {
+            step.skipped("no retired namespace stored");
+        } else {
+            step.ok();
+        }
         if report.writes > 0 || !report.refusals.is_empty() {
             tracing::info!(
                 graphs = report.graphs,

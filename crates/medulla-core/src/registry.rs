@@ -1242,6 +1242,11 @@ impl GraphRegistry {
             return None;
         }
         readiness_events::materializing(ticket.name());
+        // The boot report records one `graph_materialization` step per graph, on the
+        // final page that completes it (MEDULLA-OBSERVE-R008.1).
+        let final_page = page.next_cursor.is_none();
+        let step = final_page
+            .then(|| medulla_observe::startup().step("graph_materialization", ticket.name()));
         apply_material_page(&handle.core, &page);
         let next_cursor = page.next_cursor.clone();
         advance_partial_manifest(manifest_ref, &page, next_cursor.clone());
@@ -1251,19 +1256,25 @@ impl GraphRegistry {
             // bloom filter reflects the complete set regardless of index-rebuild
             // outcome (index validity is orthogonal to node-id completeness).
             handle.core.mark_bloom_complete();
-            finish_materialization(manifest_ref, &handle.core);
+            finish_materialization(manifest_ref, &handle.core, ticket.name());
             let valid = manifest_ref
                 .read()
                 .map(|manifest| manifest.valid)
                 .unwrap_or(false);
             if valid {
                 readiness_events::ready(ticket.name());
+                if let Some(step) = step {
+                    step.ok();
+                }
             } else {
                 readiness_events::degraded(
                     ticket.name(),
                     "PARTIAL_MATERIALIZATION",
                     "a secondary index is not valid after the last page",
                 );
+                if let Some(step) = step {
+                    step.failed("PARTIAL_MATERIALIZATION");
+                }
             }
         }
         next_cursor
@@ -2335,61 +2346,6 @@ mod readiness_events {
     pub(super) fn evicted(name: &str) {
         if state(name) == Some(ReadinessState::Ready) {
             apply(name, ReadinessEvent::Reopen);
-        }
-    }
-
-    /// Paging into memory began or continues.
-    pub(super) fn materializing(name: &str) {
-        if matches!(
-            state(name),
-            Some(ReadinessState::Opening | ReadinessState::Migrating)
-        ) {
-            apply(name, ReadinessEvent::BeginMaterialize);
-        }
-    }
-
-    /// The manifest is complete.
-    pub(super) fn ready(name: &str) {
-        apply(name, ReadinessEvent::Materialized);
-    }
-
-    /// The manifest failed: the graph cannot serve complete reads.
-    pub(super) fn degraded(name: &str, code: &str, detail: &str) {
-        let reason = DegradeReason {
-            code: code.to_string(),
-            task: None,
-            detail: detail.to_string(),
-        };
-        if let Err(refused) = medulla_observe::readiness().degrade(name, reason) {
-            tracing::debug!(graph = name, %refused, "readiness degrade refused");
-        }
-    }
-}
-
-/// Readiness events of the graph registry (MEDULLA-OBSERVE-R007.1). The registry is the one
-/// caller that moves a graph's `ReadinessMachine`: open, eviction, paging and a failed or
-/// complete manifest each map to one event. A refused pair is logged, never hidden.
-mod readiness_events {
-    use medulla_observe::machine::readiness::{DegradeReason, ReadinessEvent, ReadinessState};
-
-    fn apply(name: &str, event: ReadinessEvent) {
-        if let Err(refused) = medulla_observe::readiness().apply(name, event, None) {
-            tracing::debug!(graph = name, %refused, "readiness event refused");
-        }
-    }
-
-    fn state(name: &str) -> Option<ReadinessState> {
-        medulla_observe::readiness().get(name).map(|row| row.state)
-    }
-
-    /// The graph is being opened: a new row starts `Opening`, a `Ready` or `Degraded` one
-    /// reopens.
-    pub(super) fn opening(name: &str) {
-        match state(name) {
-            Some(ReadinessState::Ready | ReadinessState::Degraded) => {
-                apply(name, ReadinessEvent::Reopen)
-            }
-            _ => medulla_observe::readiness().open(name),
         }
     }
 

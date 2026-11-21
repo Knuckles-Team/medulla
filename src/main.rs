@@ -1570,11 +1570,14 @@ async fn recover_durable_catalog(
     // This bounded current path is the only served startup mode.
     let persistence_for_load = { state.read().await.persistence.clone() };
     if let Some(p) = &persistence_for_load {
+        let step = medulla_observe::startup().step("catalog_recovery", "");
         match p.load_catalog(state).await {
-            Ok(n) => info!(
-                "durable catalog recovered: {n} graph(s); material pages load on first access"
-            ),
+            Ok(n) => {
+                step.ok();
+                info!("durable catalog recovered: {n} graph(s); material pages load on first access")
+            }
             Err(error) => {
+                step.failed("DURABLE_RECOVERY_FAILED");
                 return Err(
                     format!("durable recovery failed; refusing availability: {error}").into(),
                 );

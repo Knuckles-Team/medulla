@@ -78,9 +78,16 @@ pub(super) fn advance_partial_manifest(
 pub(super) fn finish_materialization(
     manifest_ref: &Arc<RwLock<MaterializationManifest>>,
     core: &Arc<GraphCore>,
+    graph: &str,
 ) {
+    let step = medulla_observe::startup().step("index_rebuild", graph);
     rebuild_secondary_indexes(core);
     let indexes_valid = secondary_indexes_valid(core);
+    if indexes_valid {
+        step.ok();
+    } else {
+        step.failed("SECONDARY_INDEX_INVALID");
+    }
     if let Ok(mut manifest) = manifest_ref.write() {
         manifest.phase = if indexes_valid {
             MaterializationPhase::Complete

@@ -1463,6 +1463,7 @@ medulla-protocol-types = { path = "crates/medulla-protocol-types" }
 medulla-result-types = { path = "crates/medulla-result-types" }
 medulla-resource = { path = "crates/medulla-resource" }
 medulla-kernel = { path = "crates/medulla-kernel" }
+medulla-observe = { path = "crates/medulla-observe" }
 medulla-types = { path = "crates/medulla-types" }
 medulla-query-types = { path = "crates/medulla-query-types" }
 medulla-core = { path = "crates/medulla-core" }
