@@ -357,6 +357,148 @@ async fn served_semantic_search_never_returns_another_agents_private_node() {
     );
 }
 
+/// One stored media tag the way `materialize_media_tags` writes it (`mediaRevision` is a decimal
+/// string), owned and made visible like the rows of `seed`, with its embedding.
+async fn seed_media_tag(
+    state: &test_support::SharedState,
+    id: u64,
+    node_id: &str,
+    owner: Option<&str>,
+    embedding: Vec<f32>,
+) {
+    let mut properties = json!({
+        "type": "MediaTag",
+        "label": "harbor",
+        "tagKind": "object",
+        "tagConfidence": 0.9,
+        "producerId": "tagger",
+        "producerRevision": "v1",
+        "evidenceRef": "frame:12",
+        "mediaRevision": "3",
+        "provenanceDigest": "d".repeat(64),
+    });
+    let object = properties.as_object_mut().expect("tag properties are an object");
+    match owner {
+        Some(owner) => {
+            object.insert("_owner".into(), owner.into());
+            object.insert("_visibility".into(), "private".into());
+        }
+        None => {
+            object.insert("_visibility".into(), "public".into());
+            object.insert("_grants".into(), "alice,bob".into());
+        }
+    }
+    ok(
+        state,
+        id,
+        Method::AddNode {
+            node_id: node_id.into(),
+            properties_msgpack: pack(properties),
+        },
+    )
+    .await;
+    ok(
+        state,
+        id + 1,
+        Method::AddEmbedding {
+            node_id: node_id.into(),
+            embedding,
+        },
+    )
+    .await;
+}
+
+/// The stored properties of `node_id` as `agent` reads them: `None` for a node the caller may
+/// not read.
+async fn node_properties(
+    state: &test_support::SharedState,
+    id: u64,
+    agent: &str,
+    node_id: &str,
+) -> Option<serde_json::Value> {
+    let r = Box::pin(dispatch(
+        state,
+        req_as(
+            id,
+            agent,
+            Method::GetNodeProperties {
+                node_id: node_id.into(),
+            },
+        ),
+    ))
+    .await;
+    assert!(r.error.is_none(), "GetNodeProperties failed: {:?}", r.error);
+    match &r.result {
+        Some(ResultPayload::Raw(bytes)) => Some(rmp_serde::from_slice(bytes).expect("property map")),
+        Some(ResultPayload::Null) | None => None,
+        other => panic!("expected Raw or Null, got {other:?}"),
+    }
+}
+
+/// MEDULLA-MEDIA-VOCAB-R001.100.3: `Method::SemanticSearch` over stored media tags returns only
+/// the tags the caller may read, even when a denied tag is the exact query match, and the media
+/// revision of a visible tag reads back through `GetNodeProperties` while a denied tag reads as
+/// absent.
+// spec: MEDULLA-MEDIA-VOCAB-R001.100.3
+#[tokio::test]
+async fn served_semantic_search_returns_only_visible_media_tags() {
+    let state = state().await;
+    seed(&state).await;
+    seed_media_tag(&state, 30, "tag-alice", Some("alice"), vec![0.9, 0.1]).await;
+    seed_media_tag(&state, 32, "tag-bob", Some("bob"), vec![0.0, 1.0]).await;
+    seed_media_tag(&state, 34, "tag-public", None, vec![0.5, 0.5]).await;
+
+    let r = Box::pin(dispatch(
+        &state,
+        req_as(
+            40,
+            "alice",
+            Method::SemanticSearch {
+                query_embedding: vec![0.0, 1.0],
+                n_results: 6,
+            },
+        ),
+    ))
+    .await;
+    let rows = semantic_search_rows(&r);
+    let ids: Vec<&str> = rows.iter().map(|(id, _)| id.as_str()).collect();
+    assert!(
+        !ids.contains(&"tag-bob"),
+        "alice must never see bob's private tag, the exact query match: {ids:?}"
+    );
+    assert!(
+        ids.contains(&"tag-alice") && ids.contains(&"tag-public"),
+        "alice must still see her own tag and the public tag: {ids:?}"
+    );
+
+    // Sanity: bob sees his own tag for the same query, so the negative above is not vacuous.
+    let r = Box::pin(dispatch(
+        &state,
+        req_as(
+            41,
+            "bob",
+            Method::SemanticSearch {
+                query_embedding: vec![0.0, 1.0],
+                n_results: 6,
+            },
+        ),
+    ))
+    .await;
+    assert!(
+        semantic_search_rows(&r).iter().any(|(id, _)| id == "tag-bob"),
+        "bob must see his own tag"
+    );
+
+    let visible = node_properties(&state, 42, "alice", "tag-alice")
+        .await
+        .expect("alice reads her own tag");
+    assert_eq!(visible["mediaRevision"], "3");
+    assert!(
+        node_properties(&state, 43, "alice", "tag-bob").await.is_none(),
+        "a denied tag reads as absent"
+    );
+}
+
 /// Sibling proof for `Method::Discover` (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery):
 /// the hybrid keyword+vector discovery surface must not hydrate or return another
 /// agent's private node's id/name/description, even when both its embedding AND its
