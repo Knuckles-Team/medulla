@@ -150,6 +150,10 @@ pub struct GapTopic {
     pub signature: Signature,
     /// Open or addressed.
     pub status: GapStatus,
+    /// The `DERIVED_FROM` targets of the gap, the failing runs, in byte order
+    /// (MEDULLA-DECISION-ENGINE-R701.5). Omitted from the wire when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<String>,
 }
 
 impl GapTopic {
