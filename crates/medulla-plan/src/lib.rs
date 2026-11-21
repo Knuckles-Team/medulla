@@ -124,6 +124,8 @@ pub mod rules;
 
 // MEDULLA-FEDERATED-QUERY-R651.1 — query understanding model (filters, intent, expansion port types).
 pub mod query_understanding;
+// MEDULLA-FEDERATED-QUERY-R039.1.3 — the engine-local modality encoder registry.
+pub mod embed_registry;
 // MEDULLA-FEDERATED-QUERY-R652.1 — rerank scorer port, calibration curve and receipt types.
 pub mod rerank;
 

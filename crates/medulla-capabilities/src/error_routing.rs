@@ -256,6 +256,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBEDDING_SPACE_INVALID",
             // MEDULLA-FEDERATED-QUERY-R040.1.7: the served retrieval request refusals.
             "EMBEDDING_SPACE_INCOMPATIBLE",
+            "QUERY_ENCODER_UNAVAILABLE",
             "CONSTRAINT_INVALID",
             "GRAPH_REVISION_STALE",
             "CONSTRAINT_UNEVALUABLE",

@@ -285,6 +285,9 @@ closed_error_codes! {
         EmbeddingSpaceInvalid => "EMBEDDING_SPACE_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R039.1.2: a query and target modality do not bind one embedding space.
         EmbeddingSpaceIncompatible => "EMBEDDING_SPACE_INCOMPATIBLE",
+        /// MEDULLA-FEDERATED-QUERY-R039.1.3: no engine-local encoder is registered for the
+        /// query modality in the request's embedding space.
+        QueryEncoderUnavailable => "QUERY_ENCODER_UNAVAILABLE",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a retrieval constraint predicate is malformed or unsupported.
         ConstraintInvalid => "CONSTRAINT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a graph revision other than the one the query reads.

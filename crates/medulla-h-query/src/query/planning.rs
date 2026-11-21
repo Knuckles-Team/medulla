@@ -503,7 +503,13 @@ pub fn run_unified_with<T>(
     // MEDULLA-FEDERATED-QUERY-R040.1.7 — the served retrieval request binds the
     // compiled constraints, the topic policy and the modality pair onto the context.
     let ctx = match retrieval {
-        Some(request) => run_unified_bind_retrieval(ctx, view, graph_revision, request)?,
+        Some(request) => {
+            let ctx = run_unified_bind_retrieval(ctx, view, graph_revision, request)?;
+            match &request.modality {
+                Some(pair) => bind_modality_encoders(ctx, &ops, pair)?,
+                None => ctx,
+            }
+        }
         None => ctx,
     };
     let result = finish(&medulla_exec::algebra::Plan::new(ops), &ctx);
@@ -588,6 +594,54 @@ pub(crate) fn run_unified_bind_embedder(
         Some(embedder) => ctx.with_embedder(embedder),
         None => ctx,
     }
+}
+
+/// Does `ops` embed a query text (`Op::RankEmbed`), at the top level or inside an
+/// `Op::FuseRrf` branch? Only such a plan needs a modality encoder.
+#[cfg(feature = "query")]
+fn plan_needs_embedder(ops: &[medulla_exec::algebra::Op]) -> bool {
+    ops.iter().any(|op| match op {
+        medulla_exec::algebra::Op::RankEmbed { .. } => true,
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+            branches.iter().any(|b| plan_needs_embedder(b))
+        }
+        _ => false,
+    })
+}
+
+/// The modality-encoder binding of [`run_unified_with`] (MEDULLA-FEDERATED-QUERY-R039.1.3):
+/// a plan that embeds its query text under a modality pair takes the encoder of the pair's
+/// query modality from the engine-local registry, looked up by the id the store's declared
+/// space binds for that modality and the space's exact `(id, dimensions, revision)` tuple.
+/// No entry refuses `QUERY_ENCODER_UNAVAILABLE`. A space that does not bind the query
+/// modality is left to the rank step, which refuses `EMBEDDING_SPACE_INCOMPATIBLE`.
+#[cfg(feature = "query")]
+pub(crate) fn bind_modality_encoders<'a>(
+    ctx: medulla_exec::exec::PlanCtx<'a>,
+    ops: &[medulla_exec::algebra::Op],
+    pair: &medulla_index_types::retrieval_request::ModalityPair,
+) -> Result<medulla_exec::exec::PlanCtx<'a>, String> {
+    if !plan_needs_embedder(ops) {
+        return Ok(ctx);
+    }
+    let semantic = ctx.semantic;
+    let Some(space) = semantic.space() else {
+        return Ok(ctx);
+    };
+    let Some(binding) = space
+        .modalities
+        .iter()
+        .find(|binding| binding.modality == pair.query)
+    else {
+        return Ok(ctx);
+    };
+    let encoder = medulla_plan::embed_registry::modality_encoders().lookup(
+        &binding.encoder,
+        &space.id,
+        space.dimensions,
+        &space.revision,
+    )?;
+    Ok(ctx.with_embedder(encoder))
 }
 
 /// The retrieval-request binding of [`run_unified_with`]
@@ -1681,5 +1735,49 @@ mod tests {
 
         let (constraints, topic, pair) = bound_by(&view, None);
         assert!(constraints.is_none() && topic.is_none() && pair.is_none());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.3
+    #[test]
+    fn modality_encoder_binds_from_the_registry_or_refuses() {
+        let space = EmbeddingSpaceRef::pinned("bind-model", "r1", "hash", "pre", 4, true)
+            .unwrap()
+            .with_modalities(
+                Modality::ALL
+                    .iter()
+                    .map(|modality| ModalityBinding {
+                        modality: *modality,
+                        encoder: format!("bind-enc-{modality:?}"),
+                    })
+                    .collect(),
+            )
+            .unwrap();
+        let store = SemanticStore::new_in_space(space).unwrap();
+        let view = GraphCore::new().analysis_snapshot();
+        let embed = [medulla_exec::algebra::Op::RankEmbed { text: "q".into() }];
+        let pair = ModalityPair {
+            query: Modality::Image,
+            target: Modality::Text,
+        };
+        // No registry entry: the request refuses before any rank.
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &store);
+        let refusal = bind_modality_encoders(ctx, &embed, &pair).err().unwrap();
+        assert!(refusal.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{refusal}");
+        // A plan that embeds no text needs no encoder.
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &store);
+        assert!(bind_modality_encoders(ctx, &[], &pair).unwrap().embedder.is_none());
+        // The registered encoder for the exact space tuple is the one bound.
+        medulla_plan::embed_registry::modality_encoders()
+            .register(
+                "bind-enc-Image",
+                "bind-model",
+                4,
+                "r1",
+                Box::new(medulla_exec::exec::HashEmbedder::new(4)),
+            )
+            .unwrap();
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &store);
+        let bound = bind_modality_encoders(ctx, &embed, &pair).unwrap();
+        assert_eq!(bound.embedder.unwrap().embed("q").unwrap().len(), 4);
     }
 }
