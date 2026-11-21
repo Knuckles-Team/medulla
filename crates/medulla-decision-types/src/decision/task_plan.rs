@@ -15,6 +15,7 @@ use medulla_query_types::solve_scalar::digest_text;
 mod aggregation;
 pub mod branch_breadth;
 mod call;
+pub mod context;
 mod control;
 pub mod critical_path;
 mod decompose;
@@ -208,6 +209,11 @@ pub struct TaskPlan {
     /// the executable body is the same with or without it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trajectory: Option<trajectory::TrajectoryDecision>,
+    /// The run context of the requirement row the question named, sealed as the body of the
+    /// record (MEDULLA-SDLC-R015.3). Its digest is the `task_context.digest` premise. It is
+    /// not part of the plan digest: the executable body is the same with or without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<context::TaskContext>,
 }
 
 /// The policy digest includes every engine bound and ordering rule.
@@ -426,6 +432,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
         critical_chain: None,
         horizons: None,
         trajectory: None,
+        context: None,
     };
     plan.plan_digest = compute_plan_digest(&plan);
     Ok(plan)
@@ -460,11 +467,12 @@ pub fn compute_plan_digest(plan: &TaskPlan) -> String {
 }
 
 /// The plan as `plan_explicit_tasks` derives it, without the engine-derived
-/// critical chain and horizons a served plan adds.
+/// critical chain, horizons and run context a served plan adds.
 pub fn without_derived(plan: &TaskPlan) -> TaskPlan {
     let mut base = plan.clone();
     base.critical_chain = None;
     base.horizons = None;
+    base.context = None;
     base.plan_digest = compute_plan_digest(&base);
     base
 }

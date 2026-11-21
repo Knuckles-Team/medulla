@@ -590,6 +590,8 @@ pub(super) fn decide_blocking(
     // clock and the outcome records this reader may see (R140.104).
     let (task_plan, trajectory_premises) = match task_plan {
         Some(super::stat_task_plan::Planned::Plan(mut plan, notes)) => {
+            // The run context the question named rides in the sealed plan (R015.3).
+            plan.context = super::family::task_context::body_of(request)?;
             match super::stat_trajectory::query_of(request) {
                 Some(query) => {
                     let (decision, premises) =

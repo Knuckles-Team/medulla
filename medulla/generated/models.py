@@ -28093,9 +28093,30 @@ class SvmKernel(str, Enum):
     LINEAR = "linear"
 
 
+class ContextSection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+    text: str
+    title: str
+
+
+class TaskContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    contracts: list[ContextSection]
+    data_model: ContextSection | None
+    neighbourhood: list[str]
+    plan_sections: list[ContextSection]
+    row_id: str
+    row_text: str
+    truncated: bool
+
+
 class TaskPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    context: TaskContext | None = None
     critical_chain: CriticalChain | None = None
     final_artifact: FinalArtifactDecl | None = None
     horizons: HorizonPartition | None = None
@@ -44267,6 +44288,8 @@ __all__ = [
     "SyncStamp",
     "SyncStanding",
     "TaskPlan",
+    "ContextSection",
+    "TaskContext",
     "ApprovalSpec",
     "BranchArm",
     "BranchComparison",

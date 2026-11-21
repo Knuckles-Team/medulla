@@ -10,12 +10,11 @@
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, TypedParam, TypedValue,
 };
+use medulla_decision_types::decision::task_plan::context::{ContextSection, TaskContext};
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_types::contract::BoundedVec;
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
 use crate::decide::stat_support::invalid_parameter;
@@ -30,38 +29,13 @@ pub const REPO_PARAM: &str = "task_context_repo";
 pub const GRAPH_PARAM: &str = "graph";
 /// The text param the engine fills with the digest of the assembled context.
 pub const DIGEST_PARAM: &str = "task_context_digest";
+/// The text param the engine fills with the assembled context itself (canonical JSON). It
+/// is sealed into the plan the answer carries (MEDULLA-SDLC-R015.3).
+pub const BODY_PARAM: &str = "task_context_body";
 
 const PLAN_MISSING: &str = "TASK_CONTEXT_PLAN_MISSING";
 const ROW_UNKNOWN: &str = "TASK_CONTEXT_ROW_UNKNOWN";
 const MAX_NODES: usize = 1_000_000;
-
-/// One section of a run context.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ContextSection {
-    pub node_id: String,
-    pub title: String,
-    pub text: String,
-}
-
-/// The run context of one requirement row.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TaskContext {
-    pub row_id: String,
-    pub row_text: String,
-    pub plan_sections: Vec<ContextSection>,
-    pub contracts: Vec<ContextSection>,
-    pub data_model: Option<ContextSection>,
-    pub neighbourhood: Vec<String>,
-    pub truncated: bool,
-}
-
-impl TaskContext {
-    /// The lowercase hex SHA-256 of the context's canonical JSON.
-    pub fn digest(&self) -> String {
-        let bytes = serde_json::to_vec(self).unwrap_or_default();
-        hex::encode(Sha256::digest(bytes))
-    }
-}
 
 /// Cut `text` to at most `room` bytes at a UTF-8 boundary.
 fn cut(text: &str, room: usize) -> &str {
@@ -280,9 +254,9 @@ pub(in crate::decide) async fn with_task_context(
     if request.question.kind != QuestionKind::TaskPlan {
         return Ok(request);
     }
-    if text_param(&request, DIGEST_PARAM).is_some() {
+    if text_param(&request, DIGEST_PARAM).is_some() || text_param(&request, BODY_PARAM).is_some() {
         return Err(invalid_parameter(
-            "the task context digest is filled by the engine and cannot be supplied",
+            "the task context digest and body are filled by the engine and cannot be supplied",
         ));
     }
     let Some(row) = text_param(&request, ROW_PARAM).map(str::to_string) else {
@@ -307,8 +281,25 @@ pub(in crate::decide) async fn with_task_context(
         name: DIGEST_PARAM.to_string(),
         value: TypedValue::Text(context.digest()),
     });
+    params.push(TypedParam {
+        name: BODY_PARAM.to_string(),
+        value: TypedValue::Text(
+            serde_json::to_string(&context)
+                .map_err(|error| format!("task context body did not encode: {error}"))?,
+        ),
+    });
     request.params = BoundedVec::new(params).map_err(invalid_parameter)?;
     Ok(request)
+}
+
+/// The context body the engine recorded on a question, read back for sealing into the plan.
+pub(in crate::decide) fn body_of(request: &DecideRequest) -> Result<Option<TaskContext>, String> {
+    text_param(request, BODY_PARAM)
+        .map(|body| {
+            serde_json::from_str(body)
+                .map_err(|error| format!("task context body did not decode: {error}"))
+        })
+        .transpose()
 }
 
 /// The premise a recorded context digest gives: one observation, `task_context.digest`.

@@ -7,6 +7,8 @@ digest of the context rides in the answer's premises as `task_context.digest`.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 import uuid
 from pathlib import Path
@@ -139,6 +141,16 @@ def _digest(record: dict) -> str:
     return facts[0].split("=", 1)[1]
 
 
+def _body(record: dict) -> dict:
+    """The context body sealed in the `TaskPlan` answer of a record."""
+    return record["answer"]["value"]["context"]
+
+
+def _canonical(body: dict) -> bytes:
+    """The bytes the engine digests: compact JSON in struct field order."""
+    return json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode()
+
+
 @pytest.mark.spec("MEDULLA-SDLC-R015.2")
 def test_context_holds_row_plan_contracts_and_neighbourhood(
     authenticated_plan_client,
@@ -232,7 +244,7 @@ def test_hidden_section_changes_neither_digest_nor_bound(plan_writer_and_reader)
 
 @pytest.mark.spec("MEDULLA-SDLC-R015.3")
 def test_dispatch_hands_context_to_a_run_and_logs_it(authenticated_plan_client) -> None:
-    """One sealed dispatch record per task, each pinned to its own context digest.
+    """One sealed dispatch record per task, each carrying its own context and digest.
 
     Each task of the slice is one `TaskPlan` question naming its row; the engine
     assembles that task's context and seals one record whose premises carry the
@@ -269,6 +281,14 @@ def test_dispatch_hands_context_to_a_run_and_logs_it(authenticated_plan_client) 
             )
             assert entry["record"] == record
             assert _digest(entry["record"]) == digests[row]
+            # The context body is sealed in the record and returned in the answer, so the
+            # run receives it and the log holds it; its digest is the premise digest.
+            for held in (record, entry["record"]):
+                body = _body(held)
+                assert body["row_id"] == row
+                assert body["row_text"] == f"Serve {row}."
+                assert [s["text"] for s in body["plan_sections"]] == [f"Plan {row}."]
+                assert hashlib.sha256(_canonical(body)).hexdigest() == digests[row]
         # One context per task: the two rows never share a context.
         assert digests[rows[0]] != digests[rows[1]]
     finally:
