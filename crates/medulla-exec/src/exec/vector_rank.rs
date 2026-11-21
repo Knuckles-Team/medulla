@@ -514,6 +514,7 @@ mod tests {
             centroids: vec![("t".to_string(), vec![0.0, 1.0])],
             corpus_revision: 7,
             space: space.clone(),
+            revisions: Default::default(),
         };
         let bound = |weight: f32, current: Option<u64>| {
             PlanCtx::new(&view, &semantic)
@@ -523,6 +524,7 @@ mod tests {
                         centroids: backend.centroids.clone(),
                         corpus_revision: backend.corpus_revision,
                         space: backend.space.clone(),
+                        revisions: Default::default(),
                     }),
                     current_corpus_revision: current,
                 })

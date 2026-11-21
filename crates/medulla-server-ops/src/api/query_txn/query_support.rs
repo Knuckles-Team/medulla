@@ -246,6 +246,17 @@ pub fn execute_ranked(
             .drain(..)
             .map(|part| (part.candidate_id.clone(), part))
             .collect();
+        // MEDULLA-FEDERATED-QUERY-R040.2.7: the assignments follow the same rows, each row's
+        // kept topics in the order the fusion recorded them (topic id ascending).
+        let mut traces: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+        for trace in receipt.assignments.drain(..) {
+            traces.entry(trace.candidate_id.clone()).or_default().push(trace);
+        }
+        receipt.assignments = result
+            .rows()
+            .iter()
+            .flat_map(|row| traces.remove(&row.id).unwrap_or_default())
+            .collect();
         receipt.component_scores = result
             .rows()
             .iter()

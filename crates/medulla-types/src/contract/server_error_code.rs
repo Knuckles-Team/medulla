@@ -334,6 +334,12 @@ closed_error_codes! {
         TopicCorpusStale => "TOPIC_CORPUS_STALE",
         /// MEDULLA-FEDERATED-QUERY-R040.2.4: the topic backend holds no topic evidence to fuse.
         TopicBackendUnavailable => "TOPIC_BACKEND_UNAVAILABLE",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.7: a candidate has no stored embedding or no assignment for a kept topic.
+        TopicAssignmentMissing => "TOPIC_ASSIGNMENT_MISSING",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.7: two assignments share one document and topic.
+        TopicAssignmentDuplicate => "TOPIC_ASSIGNMENT_DUPLICATE",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.7: a document's stored vector predates its current content.
+        TopicAssignmentStale => "TOPIC_ASSIGNMENT_STALE",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",

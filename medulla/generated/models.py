@@ -32677,11 +32677,23 @@ class TopicFusionPolicy(BaseModel):
     weight_micros: Annotated[int, Field(ge=0)]
 
 
+class TopicAssignmentTrace(BaseModel):
+    """One document's responsibility for one kept topic."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_id: str
+    content_revision: Annotated[int, Field(ge=0)]
+    responsibility_micros: Annotated[int, Field(ge=0)]
+    topic_id: str
+
+
 class TopicReceipt(BaseModel):
     """The topic evidence of one ranked answer."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    assignments: list[TopicAssignmentTrace]
     backend_id: str
     backend_revision: Annotated[int, Field(ge=0)]
     centroid_generation: Annotated[int, Field(ge=0)]

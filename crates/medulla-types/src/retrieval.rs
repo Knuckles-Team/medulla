@@ -222,6 +222,22 @@ pub struct TopicReceipt {
     pub fusion_policy: TopicFusionPolicy,
     /// The generation counter of the vector index the dense scores were read from.
     pub source_vector_generation: u64,
+    /// MEDULLA-FEDERATED-QUERY-R040.2.7: one entry per row of the final answer and kept
+    /// topic, in final order and then topic id ascending.
+    pub assignments: Vec<TopicAssignmentTrace>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.7: one document's responsibility for one kept topic.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicAssignmentTrace {
+    pub candidate_id: String,
+    pub topic_id: String,
+    /// The document's `content_revision` the assignment was computed at.
+    pub content_revision: u64,
+    /// The responsibility times 1,000,000, rounded half away from zero.
+    pub responsibility_micros: u32,
 }
 
 /// MEDULLA-FEDERATED-QUERY-R040.2.5: one topic's responsibility.

@@ -212,3 +212,91 @@ def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
         for name in (graph, foreign, bare):
             cl.tenants.delete(name)
         cl.close()
+
+
+def _components(topic: Any) -> dict[str, Any]:
+    return {part.candidate_id: part for part in topic.component_scores}
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.7")
+def test_document_responsibilities_change_order(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: each topic component is recomputed from the
+    receipt's assignments and the query responsibilities; replacing one document's embedding
+    changes only that document's component and the order; a missing embedding, a duplicate
+    topic, a stale embedding and another space each refuse and return no rows."""
+    graph = f"topic-docs-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    try:
+        assert cl.graph.declare_embedding_space(_space(), graph) == "pinned-test-space-digest"
+        put(cl, graph, "d1", {"type": "Doc", "kind": "doc"}, [1.0, 0.2, 0.0, 0.0])
+        put(cl, graph, "d2", {"type": "Doc", "kind": "doc"}, [0.2, 1.0, 0.0, 0.0])
+        put(cl, graph, "m1", {"type": "Doc", "kind": "memo"}, [1.0, 0.2, 0.0, 0.0])
+        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
+            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        retrieval: dict[str, Any] = {
+            "constraints": {"graph_revision": 0, "entity_predicates": [_eq("kind", "doc")]},
+            "topic": {"top_topics": 2, "min_weight": 0.0, "corpus_revision": 0, "space": _space()},
+        }
+        retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
+        query = [1.0, 0.2, 0.0, 0.0]
+
+        def run() -> Any:
+            answer = _ranked(cl, graph, query, 2, retrieval)
+            assert answer.receipt is not None and answer.receipt.topic is not None
+            return answer, answer.receipt.topic
+
+        first_answer, first = run()
+        assert "m1" not in {row[0] for row in first_answer.rows}
+        query_weight = {r.topic_id: r.weight_micros for r in first.responsibilities}
+        # Assignments: final order, then topic id ascending.
+        order = [row[0] for row in first_answer.rows]
+        assert [(t.candidate_id, t.topic_id) for t in first.assignments] == [
+            (doc, topic) for doc in order for topic in ("a", "b")
+        ]
+        by_doc = {(t.candidate_id, t.topic_id): t.responsibility_micros for t in first.assignments}
+        for part in first.component_scores:
+            expected = sum(
+                query_weight[topic] * by_doc[(part.candidate_id, topic)] for topic in query_weight
+            ) / _MICROS
+            assert abs(part.topic_micros - expected) <= 2, part
+
+        # Only d2's embedding changes: d1's entry is untouched, d2's topic term and the order change.
+        put(cl, graph, "d2", {"type": "Doc", "kind": "doc"}, [1.0, 0.2, 0.0, 0.0])
+        retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
+        second_answer, second = run()
+        # The graph revision moved, so only the fusion parts are compared, not the generation.
+        assert _components(second)["d1"].topic_micros == _components(first)["d1"].topic_micros
+        assert _components(second)["d2"].topic_micros != _components(first)["d2"].topic_micros
+        assert [row[0] for row in second_answer.rows] != order
+
+        # A stored embedding older than the document's content refuses.
+        cl._send(
+            "CompareAndSetNodeFields",
+            {
+                "node_id": "d1",
+                "conditions_msgpack": msgpack.packb({"kind": "doc"}),
+                "updates_msgpack": msgpack.packb({"content_revision": 2, "embedded_revision": 1}),
+            },
+            graph,
+        )
+        retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
+        with pytest.raises(EngineResponseError) as refused:
+            _ranked(cl, graph, query, 2, retrieval)
+        assert "TOPIC_ASSIGNMENT_STALE" in str(refused.value)
+
+        # A second centroid for topic `a` is a duplicate assignment.
+        put(cl, graph, "c-a2", {"type": "TopicCentroid", "topic": "a", "centroid": [0.0, 0.0, 1.0, 0.0]})
+        retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
+        with pytest.raises(EngineResponseError) as duplicate:
+            _ranked(cl, graph, query, 2, retrieval)
+        assert "TOPIC_ASSIGNMENT_DUPLICATE" in str(duplicate.value)
+
+        # A request space of another revision is a space mismatch.
+        retrieval["topic"]["space"] = {**_space(), "revision": "2"}
+        with pytest.raises(EngineResponseError) as mismatch:
+            _ranked(cl, graph, query, 2, retrieval)
+        assert "TOPIC_SPACE_MISMATCH" in str(mismatch.value)
+    finally:
+        cl.tenants.delete(graph)
+        cl.close()

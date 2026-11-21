@@ -104,17 +104,51 @@ pub(crate) fn fuse_ranked(
         .to_string()
     })?;
     let topics = fusion.backend.topics(query, &policy)?;
-    let vector_of = |id: &str| ctx.semantic.get_embedding(id);
-    let scored =
-        fuse_topic_dense_scored(&dense, &vector_of, &topics, weight, retriever, current)
-            .map_err(String::from)?;
+    // A topic result of another corpus revision refuses before any assignment is computed.
+    if topics.corpus_revision != current {
+        return Err(TopicRefusal::CorpusStale {
+            topics: topics.corpus_revision,
+            current,
+        }
+        .to_string());
+    }
+    let mut candidates = Vec::with_capacity(dense.len());
+    let mut unembedded = None;
+    for (id, _) in &dense {
+        match ctx.semantic.get_embedding(id) {
+            Some(embedding) => candidates.push((id.clone(), embedding)),
+            None => {
+                unembedded.get_or_insert_with(|| id.clone());
+            }
+        }
+    }
+    let assignments = fusion.backend.assignments(&candidates)?;
+    let kept: Vec<String> = topics.topic_weights.iter().map(|(topic, _)| topic.clone()).collect();
+    check_assignments(
+        &candidates,
+        &assignments,
+        &kept,
+        retriever,
+        current,
+        fusion.backend.id(),
+        fusion.backend.revision(),
+    )?;
+    if let Some(id) = unembedded {
+        return Err(TopicRefusal::AssignmentMissing(format!(
+            "candidate `{id}` has no stored embedding to assign to the topics"
+        ))
+        .to_string());
+    }
+    let scored = fuse_topic_dense_scored(&dense, &assignments, &topics, weight, retriever, current)
+        .map_err(String::from)?;
     let receipt = topic_receipt(
         fusion.backend.id(),
-        current,
+        fusion.backend.revision(),
         &topics,
         weight,
         retriever,
         &scored,
+        &assignments,
         ctx.semantic.generation(),
     );
     Ok((
@@ -136,11 +170,32 @@ fn topic_receipt(
     weight: f32,
     retriever: &EmbeddingSpaceRef,
     scored: &[FusedScore],
+    assignments: &[DocumentTopicAssignment],
     source_vector_generation: u64,
 ) -> medulla_types::retrieval::TopicReceipt {
     use medulla_types::retrieval::{
-        TopicComponentScore, TopicFusionPolicy, TopicReceipt, TopicResponsibility,
+        TopicAssignmentTrace, TopicComponentScore, TopicFusionPolicy, TopicReceipt,
+        TopicResponsibility,
     };
+    // One entry per fused candidate and kept topic, in fused order, then topic id ascending.
+    let mut traces = Vec::new();
+    for part in scored {
+        let mut own: Vec<&DocumentTopicAssignment> = assignments
+            .iter()
+            .filter(|a| {
+                a.document_id == part.id
+                    && topics.topic_weights.iter().any(|(topic, _)| *topic == a.topic_id)
+            })
+            .collect();
+        own.sort_by(|a, b| a.topic_id.cmp(&b.topic_id));
+        own.dedup_by(|a, b| a.topic_id == b.topic_id);
+        traces.extend(own.into_iter().map(|a| TopicAssignmentTrace {
+            candidate_id: a.document_id.clone(),
+            topic_id: a.topic_id.clone(),
+            content_revision: a.content_revision,
+            responsibility_micros: micros(a.responsibility).clamp(0, 1_000_000) as u32,
+        }));
+    }
     let weight_micros = micros(weight).clamp(0, 1_000_000);
     TopicReceipt {
         backend_id: backend_id.to_string(),
@@ -178,6 +233,7 @@ fn topic_receipt(
             weight_micros: weight_micros as u32,
         },
         source_vector_generation,
+        assignments: traces,
     }
 }
 
@@ -213,6 +269,21 @@ pub enum TopicRefusal {
     },
     /// The backend holds no topic evidence to fuse (`TOPIC_BACKEND_UNAVAILABLE`).
     BackendUnavailable(String),
+    /// A candidate has no stored embedding, or no assignment for a kept topic
+    /// (`TOPIC_ASSIGNMENT_MISSING`).
+    AssignmentMissing(String),
+    /// Two assignments share one document and topic (`TOPIC_ASSIGNMENT_DUPLICATE`).
+    AssignmentDuplicate(String),
+    /// A document's stored vector predates its current content
+    /// (`TOPIC_ASSIGNMENT_STALE`).
+    AssignmentStale {
+        /// The document.
+        document_id: String,
+        /// The document's current content revision.
+        content_revision: u64,
+        /// The content revision its stored embedding was computed from.
+        embedded_revision: u64,
+    },
 }
 
 impl TopicRefusal {
@@ -223,6 +294,9 @@ impl TopicRefusal {
             Self::SpaceMismatch(_) => ServerErrorCode::TopicSpaceMismatch,
             Self::CorpusStale { .. } => ServerErrorCode::TopicCorpusStale,
             Self::BackendUnavailable(_) => ServerErrorCode::TopicBackendUnavailable,
+            Self::AssignmentMissing(_) => ServerErrorCode::TopicAssignmentMissing,
+            Self::AssignmentDuplicate(_) => ServerErrorCode::TopicAssignmentDuplicate,
+            Self::AssignmentStale { .. } => ServerErrorCode::TopicAssignmentStale,
         }
     }
 }
@@ -235,9 +309,18 @@ impl std::fmt::Display for TopicRefusal {
                 f,
                 "{code}: topic fusion weight {weight} must be finite and within [0, 1]"
             ),
-            Self::SpaceMismatch(message) | Self::BackendUnavailable(message) => {
-                write!(f, "{code}: {message}")
-            }
+            Self::SpaceMismatch(message)
+            | Self::BackendUnavailable(message)
+            | Self::AssignmentMissing(message)
+            | Self::AssignmentDuplicate(message) => write!(f, "{code}: {message}"),
+            Self::AssignmentStale {
+                document_id,
+                content_revision,
+                embedded_revision,
+            } => write!(
+                f,
+                "{code}: document `{document_id}` is at content revision {content_revision}, its stored embedding was computed from revision {embedded_revision}"
+            ),
             Self::CorpusStale { topics, current } => write!(
                 f,
                 "{code}: the topic centroids describe corpus revision {topics}, the corpus is at {current}"
@@ -267,7 +350,7 @@ fn same_space(a: &EmbeddingSpaceRef, b: &EmbeddingSpaceRef) -> bool {
 /// `dense` is each candidate's similarity, min-max normalized over the candidate set
 /// (a set with no spread normalizes to `0`). `topic` is the sum over the backend's
 /// topics of the topic's responsibility times the cosine similarity between the
-/// candidate's vector and the topic's centroid. Ties break by candidate id ascending.
+/// candidate's checked assignment for that topic. Ties break by candidate id ascending.
 /// A pure function: hard constraints have already narrowed `dense`, and it reads no
 /// state.
 ///
@@ -278,7 +361,7 @@ fn same_space(a: &EmbeddingSpaceRef, b: &EmbeddingSpaceRef) -> bool {
 /// contribution is never dropped silently.
 pub fn fuse_topic_dense(
     dense: &[(String, f32)],
-    vector_of: &dyn Fn(&str) -> Option<Vec<f32>>,
+    assignments: &[DocumentTopicAssignment],
     topics: &TopicResult,
     weight: f32,
     retriever: &EmbeddingSpaceRef,
@@ -286,7 +369,7 @@ pub fn fuse_topic_dense(
 ) -> Result<Vec<(String, f32)>, TopicRefusal> {
     Ok(fuse_topic_dense_scored(
         dense,
-        vector_of,
+        assignments,
         topics,
         weight,
         retriever,
@@ -315,7 +398,7 @@ pub struct FusedScore {
 /// exactly the numbers the score was computed from. The one scorer both reach.
 pub fn fuse_topic_dense_scored(
     dense: &[(String, f32)],
-    vector_of: &dyn Fn(&str) -> Option<Vec<f32>>,
+    assignments: &[DocumentTopicAssignment],
     topics: &TopicResult,
     weight: f32,
     retriever: &EmbeddingSpaceRef,
@@ -348,33 +431,20 @@ pub fn fuse_topic_dense_scored(
     let mut fused = Vec::with_capacity(dense.len());
     for (id, score) in dense {
         let normalized = if spread > 0.0 { (score - low) / spread } else { 0.0 };
-        let vector = vector_of(id).ok_or_else(|| {
-            TopicRefusal::SpaceMismatch(format!(
-                "candidate `{id}` has no stored embedding to compare with the topic centroids"
-            ))
-        })?;
-        if vector.len() != retriever.dimensions {
-            return Err(TopicRefusal::SpaceMismatch(format!(
-                "candidate `{id}` has {} dimensions, the retriever's space has {}",
-                vector.len(),
-                retriever.dimensions
-            )));
+        // The checked assignments (R040.2.7): the candidate's responsibility for each kept
+        // topic, weighted by the query's responsibility for it.
+        let mut topic = 0.0_f32;
+        for (topic_id, responsibility) in &topics.topic_weights {
+            let assigned = assignments
+                .iter()
+                .find(|a| a.document_id == *id && a.topic_id == *topic_id)
+                .ok_or_else(|| {
+                    TopicRefusal::AssignmentMissing(format!(
+                        "candidate `{id}` has no assignment for topic `{topic_id}`"
+                    ))
+                })?;
+            topic += responsibility * assigned.responsibility;
         }
-        let vector_norm = norm(&vector);
-        let topic: f32 = topics
-            .topic_weights
-            .iter()
-            .zip(&topics.centroid_vectors)
-            .map(|((_, responsibility), (_, centroid))| {
-                let denominator = vector_norm * norm(centroid);
-                let cosine = if denominator > 0.0 {
-                    dot(&vector, centroid) / denominator
-                } else {
-                    0.0
-                };
-                responsibility * cosine
-            })
-            .sum();
         fused.push(FusedScore {
             id: id.clone(),
             dense: normalized,
@@ -408,6 +478,172 @@ pub trait TopicBackend: Send + Sync {
     /// Weigh the backend's topics against `query` and cut the answer down with
     /// `policy`. Refuses a query whose width differs from the backend's space.
     fn topics(&self, query: &[f32], policy: &TopicRankingPolicy) -> Result<TopicResult, String>;
+
+    /// The revision the backend reports for its topics: the graph revision of the read
+    /// snapshot for the stored backend, the corpus revision for a fixture.
+    fn revision(&self) -> u64;
+
+    /// MEDULLA-FEDERATED-QUERY-R040.2.7: the assignment of every candidate (document id and
+    /// stored embedding) to every stored topic. The backend only computes; the checks are
+    /// made by [`check_assignments`].
+    fn assignments(
+        &self,
+        candidates: &[(String, Vec<f32>)],
+    ) -> Result<Vec<DocumentTopicAssignment>, String>;
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.7: one document's responsibility for one stored topic.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocumentTopicAssignment {
+    pub document_id: String,
+    /// The document's `content_revision` (absent means 0).
+    pub content_revision: u64,
+    /// The content revision its stored embedding was computed from.
+    pub embedded_revision: u64,
+    /// The backend's corpus revision.
+    pub corpus_generation: u64,
+    pub backend_id: String,
+    pub backend_revision: u64,
+    /// `<id>|<dimensions>|<revision>` of the backend's space.
+    pub space_tuple: String,
+    pub topic_id: String,
+    /// `max(cosine, 0) / S` over the candidate's stored topics; all 0 when `S` is 0.
+    pub responsibility: f32,
+}
+
+/// `<id>|<dimensions>|<revision>` of a space.
+fn space_tuple(space: &EmbeddingSpaceRef) -> String {
+    format!("{}|{}|{}", space.id, space.dimensions, space.revision)
+}
+
+/// What a backend stamps on every assignment it computes.
+struct AssignmentStamp<'a> {
+    backend_id: &'static str,
+    backend_revision: u64,
+    corpus_generation: u64,
+    space: &'a EmbeddingSpaceRef,
+}
+
+/// Shared by both backends so they cannot disagree: for each candidate (by document id
+/// ascending) and every stored topic (by topic id ascending, stored duplicates in stored
+/// order) the clipped cosine over the candidate's sum of clipped cosines.
+fn assign(
+    centroids: &[(String, Vec<f32>)],
+    candidates: &[(String, Vec<f32>)],
+    revisions: &dyn Fn(&str) -> (u64, u64),
+    stamp: &AssignmentStamp<'_>,
+) -> Vec<DocumentTopicAssignment> {
+    let mut ordered: Vec<&(String, Vec<f32>)> = candidates.iter().collect();
+    ordered.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut topics: Vec<&(String, Vec<f32>)> = centroids.iter().collect();
+    topics.sort_by(|a, b| a.0.cmp(&b.0));
+    let tuple = space_tuple(stamp.space);
+    let mut out = Vec::with_capacity(ordered.len() * topics.len());
+    for (document, embedding) in ordered {
+        let (content_revision, embedded_revision) = revisions(document);
+        let embedding_norm = norm(embedding);
+        let clipped: Vec<f32> = topics
+            .iter()
+            .map(|(_, centroid)| {
+                let denominator = embedding_norm * norm(centroid);
+                if denominator > 0.0 {
+                    (dot(embedding, centroid) / denominator).max(0.0)
+                } else {
+                    0.0
+                }
+            })
+            .collect();
+        let total: f32 = clipped.iter().sum();
+        for ((topic, _), value) in topics.iter().zip(clipped) {
+            out.push(DocumentTopicAssignment {
+                document_id: document.clone(),
+                content_revision,
+                embedded_revision,
+                corpus_generation: stamp.corpus_generation,
+                backend_id: stamp.backend_id.to_string(),
+                backend_revision: stamp.backend_revision,
+                space_tuple: tuple.clone(),
+                topic_id: topic.clone(),
+                responsibility: if total > 0.0 { value / total } else { 0.0 },
+            });
+        }
+    }
+    out
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.7: check a backend's assignments before any candidate is
+/// scored, so every refusal precedes truncation and none falls back to dense-only ranking.
+/// In order: (1) `TOPIC_SPACE_MISMATCH` for an assignment of another space tuple, backend
+/// id or backend revision, or a candidate embedding whose width is not the retriever's;
+/// (2) `TOPIC_ASSIGNMENT_MISSING` for a candidate with no assignment for a kept topic;
+/// (3) `TOPIC_ASSIGNMENT_DUPLICATE` for two assignments of one document and topic;
+/// (4) `TOPIC_ASSIGNMENT_STALE` for an embedding older than its document's content.
+pub(crate) fn check_assignments(
+    candidates: &[(String, Vec<f32>)],
+    assignments: &[DocumentTopicAssignment],
+    kept_topics: &[String],
+    retriever: &EmbeddingSpaceRef,
+    current_corpus_revision: u64,
+    backend_id: &str,
+    backend_revision: u64,
+) -> Result<(), TopicRefusal> {
+    let _ = current_corpus_revision;
+    let tuple = space_tuple(retriever);
+    for assignment in assignments {
+        if assignment.space_tuple != tuple
+            || assignment.backend_id != backend_id
+            || assignment.backend_revision != backend_revision
+        {
+            return Err(TopicRefusal::SpaceMismatch(format!(
+                "the assignment of document `{}` to topic `{}` was computed by backend `{}` at revision {} in space `{}`, the retriever reads backend `{backend_id}` at revision {backend_revision} in space `{tuple}`",
+                assignment.document_id,
+                assignment.topic_id,
+                assignment.backend_id,
+                assignment.backend_revision,
+                assignment.space_tuple
+            )));
+        }
+    }
+    for (document, embedding) in candidates {
+        if embedding.len() != retriever.dimensions {
+            return Err(TopicRefusal::SpaceMismatch(format!(
+                "candidate `{document}` has {} dimensions, the retriever's space has {}",
+                embedding.len(),
+                retriever.dimensions
+            )));
+        }
+    }
+    for (document, _) in candidates {
+        for topic in kept_topics {
+            if !assignments
+                .iter()
+                .any(|a| a.document_id == *document && a.topic_id == *topic)
+            {
+                return Err(TopicRefusal::AssignmentMissing(format!(
+                    "candidate `{document}` has no assignment for topic `{topic}`"
+                )));
+            }
+        }
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for assignment in assignments {
+        if !seen.insert((assignment.document_id.as_str(), assignment.topic_id.as_str())) {
+            return Err(TopicRefusal::AssignmentDuplicate(format!(
+                "document `{}` has two assignments for topic `{}`",
+                assignment.document_id, assignment.topic_id
+            )));
+        }
+    }
+    for assignment in assignments {
+        if assignment.embedded_revision != assignment.content_revision {
+            return Err(TopicRefusal::AssignmentStale {
+                document_id: assignment.document_id.clone(),
+                content_revision: assignment.content_revision,
+                embedded_revision: assignment.embedded_revision,
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Shared by both backends so they cannot disagree: cosine similarity clipped
@@ -492,6 +728,8 @@ pub struct InMemoryTopicBackend {
     pub centroids: Vec<(String, Vec<f32>)>,
     pub corpus_revision: u64,
     pub space: EmbeddingSpaceRef,
+    /// `(content_revision, embedded_revision)` by document id; absent means `(0, 0)`.
+    pub revisions: std::collections::BTreeMap<String, (u64, u64)>,
 }
 
 #[cfg(test)]
@@ -508,6 +746,28 @@ impl TopicBackend for InMemoryTopicBackend {
             self.corpus_revision,
             &self.space,
         )
+    }
+
+    fn revision(&self) -> u64 {
+        self.corpus_revision
+    }
+
+    fn assignments(
+        &self,
+        candidates: &[(String, Vec<f32>)],
+    ) -> Result<Vec<DocumentTopicAssignment>, String> {
+        let revisions = |id: &str| self.revisions.get(id).copied().unwrap_or((0, 0));
+        Ok(assign(
+            &self.centroids,
+            candidates,
+            &revisions,
+            &AssignmentStamp {
+                backend_id: "in_memory",
+                backend_revision: self.corpus_revision,
+                corpus_generation: self.corpus_revision,
+                space: &self.space,
+            },
+        ))
     }
 }
 
@@ -579,6 +839,40 @@ impl TopicBackend for StoredCentroidTopicBackend<'_> {
         let centroids = self.stored_centroids()?;
         weigh(&centroids, query, policy, self.corpus_revision, &self.space)
     }
+
+    fn revision(&self) -> u64 {
+        self.corpus_revision
+    }
+
+    fn assignments(
+        &self,
+        candidates: &[(String, Vec<f32>)],
+    ) -> Result<Vec<DocumentTopicAssignment>, String> {
+        let centroids = self.stored_centroids()?;
+        // The revisions of each candidate come from this backend's own graph view.
+        let revisions = |id: &str| {
+            let props = self.view.node_row_object(id);
+            let read = |key: &str| {
+                props
+                    .as_ref()
+                    .and_then(|props| props.get(key))
+                    .and_then(|value| value.as_u64())
+            };
+            let content = read("content_revision").unwrap_or(0);
+            (content, read("embedded_revision").unwrap_or(content))
+        };
+        Ok(assign(
+            &centroids,
+            candidates,
+            &revisions,
+            &AssignmentStamp {
+                backend_id: STORED_CENTROID_BACKEND_ID,
+                backend_revision: self.corpus_revision,
+                corpus_generation: self.corpus_revision,
+                space: &self.space,
+            },
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -626,6 +920,7 @@ mod tests {
             centroids: fixture(),
             corpus_revision: 7,
             space: space(),
+            revisions: Default::default(),
         };
         let core = stored(&fixture());
         let view = core.analysis_snapshot();
@@ -672,6 +967,7 @@ mod tests {
             centroids: fixture(),
             corpus_revision: 7,
             space: space(),
+            revisions: Default::default(),
         };
         let topics = memory.topics(&[1.0, 0.5], &policy).unwrap();
         // (id, dense similarity, candidate vector). `d` ties `c` on dense.
@@ -685,12 +981,11 @@ mod tests {
             .iter()
             .map(|(id, score, _)| (id.to_string(), *score))
             .collect();
-        let lookup = |id: &str| {
-            candidates
-                .iter()
-                .find(|(candidate, _, _)| *candidate == id)
-                .map(|(_, _, vector)| vector.clone())
-        };
+        let embedded: Vec<(String, Vec<f32>)> = candidates
+            .iter()
+            .map(|(id, _, vector)| (id.to_string(), vector.clone()))
+            .collect();
+        let assignments = memory.assignments(&embedded).unwrap();
 
         // The oracle recomputes every score from the definition in f64.
         let oracle = |weight: f64| -> Vec<(String, f64)> {
@@ -699,10 +994,9 @@ mod tests {
                 .iter()
                 .map(|(id, score, vector)| {
                     let normalized = (f64::from(*score) - low) / (high - low);
-                    let mut topic = 0.0_f64;
-                    for ((_, responsibility), (_, centroid)) in
-                        topics.topic_weights.iter().zip(&topics.centroid_vectors)
-                    {
+                    // The document's responsibility for every stored topic, then the
+                    // query-weighted sum over the kept ones.
+                    let cosine = |centroid: &Vec<f32>| -> f64 {
                         let dot: f64 = vector
                             .iter()
                             .zip(centroid)
@@ -710,7 +1004,14 @@ mod tests {
                             .sum();
                         let norms = vector.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt()
                             * centroid.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt();
-                        topic += f64::from(*responsibility) * dot / norms;
+                        (dot / norms).max(0.0)
+                    };
+                    let total: f64 = fixture().iter().map(|(_, c)| cosine(c)).sum();
+                    let mut topic = 0.0_f64;
+                    for (kept, responsibility) in &topics.topic_weights {
+                        let centroid = fixture().into_iter().find(|(t, _)| t == kept).unwrap().1;
+                        let doc = if total > 0.0 { cosine(&centroid) / total } else { 0.0 };
+                        topic += f64::from(*responsibility) * doc;
                     }
                     (id.to_string(), (1.0 - weight) * normalized + weight * topic)
                 })
@@ -721,7 +1022,7 @@ mod tests {
 
         for weight in [0.0_f32, 1.0, 0.5] {
             let fused =
-                fuse_topic_dense(&dense, &lookup, &topics, weight, &space(), 7).unwrap();
+                fuse_topic_dense(&dense, &assignments, &topics, weight, &space(), 7).unwrap();
             let expected = oracle(f64::from(weight));
             let got: Vec<&str> = fused.iter().map(|(id, _)| id.as_str()).collect();
             let want: Vec<&str> = expected.iter().map(|(id, _)| id.as_str()).collect();
@@ -731,21 +1032,19 @@ mod tests {
             }
         }
         // w = 0 is the dense order alone, ties by id ascending.
-        let dense_only = fuse_topic_dense(&dense, &lookup, &topics, 0.0, &space(), 7).unwrap();
+        let dense_only = fuse_topic_dense(&dense, &assignments, &topics, 0.0, &space(), 7).unwrap();
         let order: Vec<&str> = dense_only.iter().map(|(id, _)| id.as_str()).collect();
         assert_eq!(order, ["a", "b", "c", "d"]);
         // A weight outside [0, 1] or non-finite refuses TOPIC_WEIGHT_INVALID.
         for bad in [-0.1_f32, 1.1, f32::NAN, f32::INFINITY] {
             let refusal =
-                fuse_topic_dense(&dense, &lookup, &topics, bad, &space(), 7).unwrap_err();
+                fuse_topic_dense(&dense, &assignments, &topics, bad, &space(), 7).unwrap_err();
             assert_eq!(refusal.code(), ServerErrorCode::TopicWeightInvalid);
             assert!(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(bad).is_err());
         }
-        // A candidate with no vector is refused, never silently unweighted.
-        let missing = |_: &str| None;
-        let refusal =
-            fuse_topic_dense(&dense, &missing, &topics, 0.5, &space(), 7).unwrap_err();
-        assert_eq!(refusal.code(), ServerErrorCode::TopicSpaceMismatch);
+        // A candidate with no assignment is refused, never silently unweighted.
+        let refusal = fuse_topic_dense(&dense, &[], &topics, 0.5, &space(), 7).unwrap_err();
+        assert_eq!(refusal.code(), ServerErrorCode::TopicAssignmentMissing);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R040.2.4
@@ -756,12 +1055,17 @@ mod tests {
             centroids: fixture(),
             corpus_revision: 7,
             space: space(),
+            revisions: Default::default(),
         };
         let topics = memory.topics(&[1.0, 0.5], &policy).unwrap();
         let dense = vec![("a".to_string(), 0.9_f32), ("b".to_string(), 0.5)];
-        let lookup = |_: &str| Some(vec![1.0_f32, 0.0]);
+        let embedded: Vec<(String, Vec<f32>)> = ["a", "b"]
+            .iter()
+            .map(|id| (id.to_string(), vec![1.0_f32, 0.0]))
+            .collect();
+        let assignments = memory.assignments(&embedded).unwrap();
         let run = |topics: &TopicResult, retriever: &EmbeddingSpaceRef, current: u64| {
-            fuse_topic_dense(&dense, &lookup, topics, 0.5, retriever, current)
+            fuse_topic_dense(&dense, &assignments, topics, 0.5, retriever, current)
         };
         assert!(run(&topics, &space(), 7).is_ok());
 
@@ -786,9 +1090,11 @@ mod tests {
             ServerErrorCode::TopicSpaceMismatch
         );
         // A candidate vector of another width refuses.
-        let narrow = |_: &str| Some(vec![1.0_f32]);
+        let narrow = vec![("a".to_string(), vec![1.0_f32])];
+        let kept: Vec<String> = topics.topic_weights.iter().map(|(t, _)| t.clone()).collect();
+        let narrow_assignments = memory.assignments(&narrow).unwrap();
         assert_eq!(
-            fuse_topic_dense(&dense, &narrow, &topics, 0.5, &space(), 7)
+            check_assignments(&narrow, &narrow_assignments, &kept, &space(), 7, "in_memory", 7)
                 .unwrap_err()
                 .code(),
             ServerErrorCode::TopicSpaceMismatch
@@ -802,6 +1108,7 @@ mod tests {
             centroids: Vec::new(),
             corpus_revision: 7,
             space: space(),
+            revisions: Default::default(),
         };
         let unavailable = empty.topics(&[1.0, 0.5], &policy).unwrap_err();
         assert!(unavailable.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{unavailable}");
@@ -829,21 +1136,34 @@ mod tests {
         };
         let dense = vec![("a".to_string(), 0.9_f32), ("b".to_string(), 0.2)];
         let vectors = [("a", vec![1.0_f32, 0.0]), ("b", vec![0.6, 0.8])];
-        let lookup = |id: &str| {
-            vectors
-                .iter()
-                .find(|(candidate, _)| *candidate == id)
-                .map(|(_, vector)| vector.clone())
+        let memory = InMemoryTopicBackend {
+            centroids: vec![("t1".to_string(), vec![1.0, 0.0]), ("t2".to_string(), vec![0.0, 1.0])],
+            corpus_revision: 7,
+            space: space(),
+            revisions: Default::default(),
         };
+        let embedded: Vec<(String, Vec<f32>)> = vectors
+            .iter()
+            .map(|(id, vector)| (id.to_string(), vector.clone()))
+            .collect();
+        let assignments = memory.assignments(&embedded).unwrap();
         let weight = 0.5_f32;
         let scored =
-            fuse_topic_dense_scored(&dense, &lookup, &topics, weight, &space(), 7).unwrap();
-        let receipt = topic_receipt("stored_centroid", 7, &topics, weight, &space(), &scored, 3);
+            fuse_topic_dense_scored(&dense, &assignments, &topics, weight, &space(), 7).unwrap();
+        let receipt = topic_receipt("stored_centroid", 7, &topics, weight, &space(), &scored, &assignments, 3);
         assert_eq!(receipt.backend_id, "stored_centroid");
         assert_eq!(receipt.centroid_generation, 7);
         assert_eq!(receipt.space_tuple, format!("model|2|1"));
         assert_eq!(receipt.fusion_policy.weight_micros, 500_000);
         assert_eq!(receipt.source_vector_generation, 3);
+        // One assignment per fused candidate and kept topic, topic id ascending.
+        let traced: Vec<(&str, &str)> = receipt
+            .assignments
+            .iter()
+            .map(|a| (a.candidate_id.as_str(), a.topic_id.as_str()))
+            .collect();
+        assert_eq!(traced.len(), 4);
+        assert!(traced.windows(2).all(|p| p[0].0 != p[1].0 || p[0].1 < p[1].1));
         let weights: Vec<u32> = receipt.responsibilities.iter().map(|r| r.weight_micros).collect();
         assert_eq!(weights, [750_000, 250_000]);
         let w = i64::from(receipt.fusion_policy.weight_micros);
@@ -853,5 +1173,96 @@ mod tests {
         }
         let finals: Vec<i64> = receipt.component_scores.iter().map(|p| p.final_micros).collect();
         assert!(finals.windows(2).all(|pair| pair[0] >= pair[1]), "{finals:?}");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.7
+    #[test]
+    fn assignments_match_the_clipped_cosine_oracle_and_sum_to_one() {
+        let memory = InMemoryTopicBackend {
+            centroids: fixture(),
+            corpus_revision: 7,
+            space: space(),
+            revisions: Default::default(),
+        };
+        let candidates = vec![
+            ("z".to_string(), vec![1.0_f32, 1.0]),
+            ("a".to_string(), vec![-1.0_f32, 0.0]),
+        ];
+        let assignments = memory.assignments(&candidates).unwrap();
+        // Ordered by document id, then topic id ascending.
+        let keys: Vec<(&str, &str)> = assignments
+            .iter()
+            .map(|a| (a.document_id.as_str(), a.topic_id.as_str()))
+            .collect();
+        let mut sorted = keys.clone();
+        sorted.sort();
+        assert_eq!(keys, sorted);
+        assert_eq!(keys.len(), 8);
+        for document in ["a", "z"] {
+            let own: Vec<&DocumentTopicAssignment> =
+                assignments.iter().filter(|a| a.document_id == document).collect();
+            let sum: f32 = own.iter().map(|a| a.responsibility).sum();
+            assert!((sum - 1.0).abs() < 1e-5, "{document}: {sum}");
+        }
+        // `a` points opposite `sports`: it is clipped to zero there, and `opposite` takes it all.
+        let opposite = assignments
+            .iter()
+            .find(|a| a.document_id == "a" && a.topic_id == "opposite")
+            .unwrap();
+        assert!((opposite.responsibility - 1.0).abs() < 1e-5);
+        assert_eq!(opposite.space_tuple, "model|2|1");
+        assert_eq!(opposite.backend_id, "in_memory");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.7
+    #[test]
+    fn missing_duplicate_stale_and_mismatched_assignments_refuse_in_order() {
+        let memory = InMemoryTopicBackend {
+            centroids: fixture(),
+            corpus_revision: 7,
+            space: space(),
+            revisions: Default::default(),
+        };
+        let candidates = vec![("d".to_string(), vec![1.0_f32, 0.0])];
+        let kept = vec!["sports".to_string(), "finance".to_string()];
+        let good = memory.assignments(&candidates).unwrap();
+        let check = |assignments: &[DocumentTopicAssignment]| {
+            check_assignments(&candidates, assignments, &kept, &space(), 7, "in_memory", 7)
+        };
+        assert_eq!(check(&good), Ok(()));
+
+        let mut stale = good.clone();
+        stale[0].embedded_revision = 1;
+        stale[0].content_revision = 2;
+        let mut duplicate = stale.clone();
+        duplicate.push(duplicate[0].clone());
+        let mut missing = duplicate.clone();
+        missing.retain(|a| a.topic_id != "finance");
+        let mut mismatched = missing.clone();
+        mismatched[0].space_tuple = "other|2|1".to_string();
+
+        // Each fault shadows the one after it, in the specified order.
+        assert_eq!(
+            check(&mismatched).unwrap_err().code(),
+            ServerErrorCode::TopicSpaceMismatch
+        );
+        assert_eq!(
+            check(&missing).unwrap_err().code(),
+            ServerErrorCode::TopicAssignmentMissing
+        );
+        assert_eq!(
+            check(&duplicate).unwrap_err().code(),
+            ServerErrorCode::TopicAssignmentDuplicate
+        );
+        let refusal = check(&stale).unwrap_err();
+        assert_eq!(refusal.code(), ServerErrorCode::TopicAssignmentStale);
+        assert!(refusal.to_string().starts_with("TOPIC_ASSIGNMENT_STALE"));
+        // A backend id or revision other than the topics result's is a space mismatch.
+        assert_eq!(
+            check_assignments(&candidates, &good, &kept, &space(), 7, "stored_centroid", 7)
+                .unwrap_err()
+                .code(),
+            ServerErrorCode::TopicSpaceMismatch
+        );
     }
 }

@@ -277,6 +277,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RETRIEVAL_K_INVALID",
             "TOPIC_CORPUS_STALE",
             "TOPIC_BACKEND_UNAVAILABLE",
+            "TOPIC_ASSIGNMENT_MISSING",
+            "TOPIC_ASSIGNMENT_DUPLICATE",
+            "TOPIC_ASSIGNMENT_STALE",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with
