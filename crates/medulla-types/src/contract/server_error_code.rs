@@ -920,5 +920,11 @@ closed_error_codes! {
         WalkthroughArtifactUnresolved => "WALKTHROUGH_ARTIFACT_UNRESOLVED",
         WalkthroughNoteOrderInvalid => "WALKTHROUGH_NOTE_ORDER_INVALID",
         WalkthroughSpanOutsideRun => "WALKTHROUGH_SPAN_OUTSIDE_RUN",
+        /// MEDULLA-SRC-AUTH-R011.3: a node write named a `content_origin` that is not a known origin.
+        ContentOriginUnknown => "CONTENT_ORIGIN_UNKNOWN",
+        /// MEDULLA-SRC-AUTH-R011.3: an untrusted-to-trusted change had no operator approval id.
+        TrustMarkDowngradeRefused => "TRUST_MARK_DOWNGRADE_REFUSED",
+        /// MEDULLA-SRC-AUTH-R011.3: a write set a reserved trust-mark field without a valid mark.
+        TrustMarkFieldsReserved => "TRUST_MARK_FIELDS_RESERVED",
     }
 }

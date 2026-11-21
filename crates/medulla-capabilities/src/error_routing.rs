@@ -1618,6 +1618,13 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     if id == "GetNodeProperties" {
         codes.extend(["UNIT_OUT_OF_SCOPE", "DURABLE_READ_UNAVAILABLE"]);
     }
+    // MEDULLA-SRC-AUTH-R011.3: the trust mark is stamped in the mutation gateway.
+    if id == "AddNode" {
+        codes.insert("CONTENT_ORIGIN_UNKNOWN");
+    }
+    if id == "CompareAndSetNodeFields" {
+        codes.extend(["TRUST_MARK_DOWNGRADE_REFUSED", "TRUST_MARK_FIELDS_RESERVED"]);
+    }
     if d.policy.is_durable() {
         codes.insert("CORRUPT_MUTATION_LEDGER");
     }

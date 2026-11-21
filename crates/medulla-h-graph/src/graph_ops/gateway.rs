@@ -119,6 +119,17 @@ pub async fn try_handle_gateway(
     #[cfg(feature = "security")]
     let method = super::gateway_graph::stamp_owner_id_if_applicable(method, caller, isolation);
 
+    // MEDULLA-SRC-AUTH-R011.3: the trust mark is stamped (AddNode) or change-checked
+    // (CompareAndSetNodeFields) at the same pre-commit point, so the persisted blob and the
+    // applied one carry the same mark.
+    #[cfg(feature = "security")]
+    let method = match super::gateway_graph::stamp_trust_mark_if_applicable(
+        method, core, caller, isolation,
+    ) {
+        Ok(stamped) => stamped,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+
     // MEDULLA-ORCH-VOCAB-R801.3: a harness-component version write is admitted at
     // the SAME pre-commit point — validated, bitemporally stamped and linked
     // to the current version before either the durable commit or the apply

@@ -124,6 +124,251 @@ fn stamp_batch_operation(
     }
 }
 
+/// The node keys of a stored trust mark (MEDULLA-SRC-AUTH-R011.3). Only the mutation gateway
+/// writes them.
+#[cfg(feature = "security")]
+const TRUST_MARK_KEY: &str = "trust_mark";
+#[cfg(feature = "security")]
+const MARKED_BY_KEY: &str = "marked_by";
+#[cfg(feature = "security")]
+const MARKED_AT_KEY: &str = "marked_at_generation";
+#[cfg(feature = "security")]
+const APPROVAL_KEY: &str = "trust_mark_approval_id";
+/// The reserved key of an `AddNode` blob that names where its content came from.
+#[cfg(feature = "security")]
+const CONTENT_ORIGIN_KEY: &str = "content_origin";
+
+#[cfg(feature = "security")]
+fn trust_mark_reserved(detail: &str) -> String {
+    format!(
+        "{}: {detail}",
+        medulla_virtual_graph::source_selection::TRUST_MARK_FIELDS_RESERVED
+    )
+}
+
+/// MEDULLA-SRC-AUTH-R011.3: stamp the trust mark in the mutation gateway, beside the owner
+/// stamp and before the harness admission.
+///
+/// `AddNode`: drop every caller-supplied mark key; a `content_origin` maps to a
+/// [`ContentOrigin`](medulla_virtual_graph::source_selection::ContentOrigin) and the default
+/// policy stamps `trust_mark`, `marked_by` and `marked_at_generation`; no `content_origin`
+/// stamps nothing. `CompareAndSetNodeFields`: a mark change runs through `change_trust_mark`
+/// against the node's current stored mark (an unmarked node counts as `untrusted`) and pins
+/// that mark as a CAS condition, so a concurrent change fails the CAS instead of being
+/// overwritten. A `System` caller and an absent caller (replicated apply) pass through.
+#[cfg(feature = "security")]
+pub(super) fn stamp_trust_mark_if_applicable(
+    method: Method,
+    core: &GraphCore,
+    caller: Option<&str>,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
+) -> Result<Method, String> {
+    if !matches!(
+        method,
+        Method::AddNode { .. } | Method::CompareAndSetNodeFields { .. }
+    ) {
+        return Ok(method);
+    }
+    let Some(caller_id) = caller else {
+        return Ok(method);
+    };
+    if isolation.is_system(caller_id) {
+        return Ok(method);
+    }
+    match method {
+        Method::AddNode {
+            node_id,
+            properties_msgpack,
+        } => stamp_add_node_trust_mark(core, node_id, properties_msgpack),
+        Method::CompareAndSetNodeFields {
+            node_id,
+            conditions_msgpack,
+            updates_msgpack,
+        } => stamp_cas_trust_mark(core, node_id, conditions_msgpack, updates_msgpack),
+        other => Ok(other),
+    }
+}
+
+/// The origin a `content_origin` value names.
+#[cfg(feature = "security")]
+fn parse_content_origin(
+    value: &serde_json::Value,
+) -> Result<medulla_virtual_graph::source_selection::ContentOrigin, String> {
+    use medulla_virtual_graph::source_selection::{ContentOrigin, CONTENT_ORIGIN_UNKNOWN};
+    match value.as_str() {
+        Some("tool_result") => Ok(ContentOrigin::ToolResult),
+        Some("retrieved_document") => Ok(ContentOrigin::RetrievedDocument),
+        Some("upload") => Ok(ContentOrigin::Upload),
+        Some("source") => Ok(ContentOrigin::Source {
+            approved_mapping: false,
+        }),
+        Some("derived") => Ok(ContentOrigin::Derived { inputs: Vec::new() }),
+        _ => Err(format!(
+            "{CONTENT_ORIGIN_UNKNOWN}: `{}` is not a known content origin",
+            value.as_str().unwrap_or("<non-string>")
+        )),
+    }
+}
+
+#[cfg(feature = "security")]
+fn stamp_add_node_trust_mark(
+    core: &GraphCore,
+    node_id: String,
+    properties_msgpack: Vec<u8>,
+) -> Result<Method, String> {
+    use medulla_virtual_graph::source_selection::{DefaultTrustMarkPolicy, StoredTrustMark};
+    let unchanged = |node_id: String, properties_msgpack: Vec<u8>| Method::AddNode {
+        node_id,
+        properties_msgpack,
+    };
+    let Ok(mut props) = medulla_types::msgpack::decode_property_object(&properties_msgpack) else {
+        return Ok(unchanged(node_id, properties_msgpack));
+    };
+    let mut dropped = false;
+    for key in [TRUST_MARK_KEY, MARKED_BY_KEY, MARKED_AT_KEY, APPROVAL_KEY] {
+        dropped |= props.remove(key).is_some();
+    }
+    let origin = props
+        .get(CONTENT_ORIGIN_KEY)
+        .map(parse_content_origin)
+        .transpose()?;
+    if !dropped && origin.is_none() {
+        return Ok(unchanged(node_id, properties_msgpack));
+    }
+    if let Some(origin) = origin {
+        let stamp = StoredTrustMark::stamp(&DefaultTrustMarkPolicy, &origin, None, core.version());
+        props.insert(
+            TRUST_MARK_KEY.into(),
+            serde_json::to_value(stamp.mark).map_err(|error| error.to_string())?,
+        );
+        props.insert(MARKED_BY_KEY.into(), stamp.marked_by.into());
+        props.insert(MARKED_AT_KEY.into(), stamp.marked_at_generation.into());
+    }
+    let properties_msgpack = rmp_serde::to_vec_named(&serde_json::Value::Object(props))
+        .map_err(|error| error.to_string())?;
+    Ok(unchanged(node_id, properties_msgpack))
+}
+
+/// The mark a node stores now; a node with no stored mark counts as `untrusted`, so a caller
+/// cannot assert trust on unmarked content without an approval.
+#[cfg(feature = "security")]
+fn current_stored_trust_mark(
+    core: &GraphCore,
+    node_id: &str,
+) -> (
+    medulla_virtual_graph::source_selection::StoredTrustMark,
+    serde_json::Value,
+) {
+    use medulla_virtual_graph::source_selection::{StoredTrustMark, TrustMark};
+    let props = core
+        .get_node_properties(node_id)
+        .and_then(|blob| medulla_types::msgpack::decode_property_object(&blob).ok())
+        .unwrap_or_default();
+    let stored = props
+        .get(TRUST_MARK_KEY)
+        .and_then(|value| serde_json::from_value::<TrustMark>(value.clone()).ok());
+    let pinned = props
+        .get(TRUST_MARK_KEY)
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let current = StoredTrustMark {
+        mark: stored.unwrap_or(TrustMark::Untrusted),
+        marked_by: props
+            .get(MARKED_BY_KEY)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("unmarked_untrusted")
+            .to_string(),
+        marked_at_generation: props
+            .get(MARKED_AT_KEY)
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0),
+        approval_id: props
+            .get(APPROVAL_KEY)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string),
+    };
+    (current, pinned)
+}
+
+#[cfg(feature = "security")]
+fn stamp_cas_trust_mark(
+    core: &GraphCore,
+    node_id: String,
+    conditions_msgpack: Vec<u8>,
+    updates_msgpack: Vec<u8>,
+) -> Result<Method, String> {
+    use medulla_virtual_graph::source_selection::{change_trust_mark, TrustMark};
+    let unchanged = |node_id: String, conditions_msgpack: Vec<u8>, updates_msgpack: Vec<u8>| {
+        Method::CompareAndSetNodeFields {
+            node_id,
+            conditions_msgpack,
+            updates_msgpack,
+        }
+    };
+    let (Ok(mut updates), Ok(mut conditions)) = (
+        medulla_types::msgpack::decode_property_object(&updates_msgpack),
+        medulla_types::msgpack::decode_property_object(&conditions_msgpack),
+    ) else {
+        return Ok(unchanged(node_id, conditions_msgpack, updates_msgpack));
+    };
+    let reserved = [TRUST_MARK_KEY, MARKED_BY_KEY, MARKED_AT_KEY, APPROVAL_KEY];
+    if !reserved.iter().any(|key| updates.contains_key(*key)) {
+        return Ok(unchanged(node_id, conditions_msgpack, updates_msgpack));
+    }
+    let Some(requested) = updates.get(TRUST_MARK_KEY) else {
+        return Err(trust_mark_reserved(
+            "marked_by, marked_at_generation and trust_mark_approval_id are set only with trust_mark",
+        ));
+    };
+    let requested: TrustMark = serde_json::from_value(requested.clone())
+        .map_err(|_| trust_mark_reserved("trust_mark must be `trusted` or `untrusted`"))?;
+    let approval_id = match updates.remove(APPROVAL_KEY) {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(id)) => Some(id),
+        Some(_) => {
+            return Err(trust_mark_reserved(
+                "trust_mark_approval_id must be a string",
+            ))
+        }
+    };
+    let (current, pinned) = current_stored_trust_mark(core, &node_id);
+    let stored = change_trust_mark(
+        &node_id,
+        &current,
+        requested,
+        approval_id.as_deref(),
+        core.version(),
+    )
+    .map_err(|refusal| refusal.to_string())?;
+    for key in reserved {
+        updates.remove(key);
+    }
+    updates.insert(
+        TRUST_MARK_KEY.into(),
+        serde_json::to_value(stored.mark).map_err(|error| error.to_string())?,
+    );
+    updates.insert(MARKED_BY_KEY.into(), stored.marked_by.into());
+    updates.insert(MARKED_AT_KEY.into(), stored.marked_at_generation.into());
+    match stored.approval_id {
+        Some(id) => {
+            updates.insert(APPROVAL_KEY.into(), id.into());
+        }
+        // Clear an approval id a previous lowering left on the node.
+        None if current.approval_id.is_some() => {
+            updates.insert(APPROVAL_KEY.into(), serde_json::Value::Null);
+        }
+        None => {}
+    }
+    conditions.insert(TRUST_MARK_KEY.into(), pinned);
+    Ok(unchanged(
+        node_id,
+        rmp_serde::to_vec_named(&serde_json::Value::Object(conditions))
+            .map_err(|error| error.to_string())?,
+        rmp_serde::to_vec_named(&serde_json::Value::Object(updates))
+            .map_err(|error| error.to_string())?,
+    ))
+}
+
 /// SHA-256 of a request text as 64 lowercase hex characters (MEDULLA-FEDERATED-QUERY-R707.5).
 #[cfg(all(feature = "sparql", feature = "shacl"))]
 fn hex_sha256(text: &str) -> String {
@@ -1014,5 +1259,171 @@ mod tests {
         let refusal = crate::harness_admission::direct_add_node(&gap, &core, 7, None).unwrap_err();
         assert!(refusal.starts_with("STEP_ORDER_INVALID"), "{refusal}");
         assert!(!core.has_node("trace-steps"));
+    }
+
+    #[cfg(feature = "security")]
+    fn blob(value: serde_json::Value) -> Vec<u8> {
+        rmp_serde::to_vec_named(&value).unwrap()
+    }
+
+    #[cfg(feature = "security")]
+    fn props(blob: &[u8]) -> serde_json::Map<String, serde_json::Value> {
+        medulla_types::msgpack::decode_property_object(blob).unwrap()
+    }
+
+    #[cfg(feature = "security")]
+    fn add_node(properties: serde_json::Value) -> Method {
+        Method::AddNode {
+            node_id: "doc-1".into(),
+            properties_msgpack: blob(properties),
+        }
+    }
+
+    // spec: MEDULLA-SRC-AUTH-R011.3
+    #[cfg(feature = "security")]
+    #[test]
+    fn add_node_stamps_trust_mark() {
+        let core = GraphCore::new();
+        let isolation = medulla_isolation::isolation::IsolationLayer::new();
+        let stamp = |method| {
+            super::stamp_trust_mark_if_applicable(method, &core, Some("agent-1"), &isolation)
+        };
+
+        // A tool result is stamped untrusted; the forged keys the caller sent are dropped.
+        let Method::AddNode {
+            properties_msgpack, ..
+        } = stamp(add_node(serde_json::json!({
+            "node_type": "Doc",
+            "content_origin": "tool_result",
+            "trust_mark": "trusted",
+            "marked_by": "forged",
+            "trust_mark_approval_id": "forged-approval",
+        })))
+        .unwrap()
+        else {
+            panic!("AddNode came back");
+        };
+        let stamped = props(&properties_msgpack);
+        assert_eq!(stamped["trust_mark"], "untrusted");
+        assert_eq!(stamped["marked_by"], "tool_result_untrusted");
+        assert_eq!(stamped["marked_at_generation"], core.version());
+        assert!(!stamped.contains_key("trust_mark_approval_id"));
+
+        // Without a content origin nothing is stamped, and a forged mark is still dropped.
+        let Method::AddNode {
+            properties_msgpack, ..
+        } = stamp(add_node(serde_json::json!({
+            "node_type": "Doc",
+            "trust_mark": "trusted",
+        })))
+        .unwrap()
+        else {
+            panic!("AddNode came back");
+        };
+        assert!(!props(&properties_msgpack).contains_key("trust_mark"));
+
+        // An unknown origin is refused.
+        let refusal = stamp(add_node(serde_json::json!({"content_origin": "telepathy"})))
+            .unwrap_err();
+        assert!(refusal.starts_with("CONTENT_ORIGIN_UNKNOWN"), "{refusal}");
+
+        // An absent caller (replicated apply) passes through unchanged.
+        let forged = serde_json::json!({"content_origin": "upload", "trust_mark": "x"});
+        let Method::AddNode {
+            properties_msgpack, ..
+        } = super::stamp_trust_mark_if_applicable(add_node(forged.clone()), &core, None, &isolation)
+            .unwrap()
+        else {
+            panic!("AddNode came back");
+        };
+        assert_eq!(properties_msgpack, blob(forged));
+    }
+
+    #[cfg(feature = "security")]
+    fn cas(updates: serde_json::Value) -> Method {
+        Method::CompareAndSetNodeFields {
+            node_id: "doc-1".into(),
+            conditions_msgpack: blob(serde_json::json!({"status": "open"})),
+            updates_msgpack: blob(updates),
+        }
+    }
+
+    // spec: MEDULLA-SRC-AUTH-R011.3
+    #[cfg(feature = "security")]
+    #[test]
+    fn cas_lowering_needs_approval_and_pins_current_mark() {
+        let core = GraphCore::new();
+        core.add_node(
+            "doc-1".into(),
+            blob(serde_json::json!({
+                "node_type": "Doc",
+                "trust_mark": "untrusted",
+                "marked_by": "tool_result_untrusted",
+                "marked_at_generation": 1,
+            })),
+        );
+        let isolation = medulla_isolation::isolation::IsolationLayer::new();
+        let stamp = |method| {
+            super::stamp_trust_mark_if_applicable(method, &core, Some("agent-1"), &isolation)
+        };
+
+        // A write that touches no mark key passes through byte for byte.
+        let plain = serde_json::json!({"status": "closed"});
+        let Method::CompareAndSetNodeFields {
+            updates_msgpack, ..
+        } = stamp(cas(plain.clone())).unwrap()
+        else {
+            panic!("CompareAndSetNodeFields came back");
+        };
+        assert_eq!(updates_msgpack, blob(plain));
+
+        // A lone reserved field without the mark is refused.
+        let refusal = stamp(cas(serde_json::json!({"marked_by": "me"}))).unwrap_err();
+        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+
+        // Lowering without an approval id is refused.
+        let refusal = stamp(cas(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
+        assert!(
+            refusal.starts_with("TRUST_MARK_DOWNGRADE_REFUSED"),
+            "{refusal}"
+        );
+
+        // With an approval id the updates carry the approved mark and the CAS pins the
+        // current mark.
+        let Method::CompareAndSetNodeFields {
+            conditions_msgpack,
+            updates_msgpack,
+            ..
+        } = stamp(cas(serde_json::json!({
+            "trust_mark": "trusted",
+            "trust_mark_approval_id": "approval-7",
+        })))
+        .unwrap()
+        else {
+            panic!("CompareAndSetNodeFields came back");
+        };
+        let updates = props(&updates_msgpack);
+        assert_eq!(updates["trust_mark"], "trusted");
+        assert_eq!(updates["marked_by"], "operator_approval");
+        assert_eq!(updates["trust_mark_approval_id"], "approval-7");
+        let conditions = props(&conditions_msgpack);
+        assert_eq!(conditions["trust_mark"], "untrusted");
+        assert_eq!(conditions["status"], "open");
+
+        // An unmarked node counts as untrusted: the same request is refused, and the pinned
+        // condition is null.
+        core.add_node("doc-1".into(), blob(serde_json::json!({"node_type": "Doc"})));
+        let refusal = stamp(cas(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
+        assert!(
+            refusal.starts_with("TRUST_MARK_DOWNGRADE_REFUSED"),
+            "{refusal}"
+        );
+        let Method::CompareAndSetNodeFields {
+            conditions_msgpack, ..
+        } = stamp(cas(serde_json::json!({"trust_mark": "untrusted"}))).unwrap()
+        else {
+            panic!("CompareAndSetNodeFields came back");
+        };
+        assert!(props(&conditions_msgpack)["trust_mark"].is_null());
     }
 }

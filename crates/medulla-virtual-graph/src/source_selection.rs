@@ -45,7 +45,8 @@ pub use live::{
 };
 pub use trust::{
     change_trust_mark, mark_for_origin, ContentOrigin, DefaultTrustMarkPolicy, StoredTrustMark,
-    TrustMark, TrustMarkPolicy, TrustMarkRefusal, TRUST_MARK_DOWNGRADE_REFUSED,
+    TrustMark, TrustMarkPolicy, TrustMarkRefusal, CONTENT_ORIGIN_UNKNOWN,
+    TRUST_MARK_DOWNGRADE_REFUSED, TRUST_MARK_FIELDS_RESERVED,
 };
 
 /// The reason a selection abstained (MEDULLA-SRC-AUTH-R006.1, R010.4). It is the

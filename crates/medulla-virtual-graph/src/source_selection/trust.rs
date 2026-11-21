@@ -14,6 +14,14 @@ use super::SourceRole;
 /// The stable code of a refused `untrusted` to `trusted` change.
 pub const TRUST_MARK_DOWNGRADE_REFUSED: &str = "TRUST_MARK_DOWNGRADE_REFUSED";
 
+/// The stable code of a write whose `content_origin` names no known origin
+/// (MEDULLA-SRC-AUTH-R011.3).
+pub const CONTENT_ORIGIN_UNKNOWN: &str = "CONTENT_ORIGIN_UNKNOWN";
+
+/// The stable code of a write that sets a reserved trust-mark field without the mark itself,
+/// or a mark that is neither `trusted` nor `untrusted` (MEDULLA-SRC-AUTH-R011.3).
+pub const TRUST_MARK_FIELDS_RESERVED: &str = "TRUST_MARK_FIELDS_RESERVED";
+
 /// The closed trust mark of one content node (`vg:trustMark`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
