@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::source_ingestion::SourceIngestionRequest;
-use medulla_types::contract::ResourceId;
+use medulla_types::contract::{Digest256, ResourceId};
 
 /// Maximum messages one thread may reference.
 pub const MAX_THREAD_MESSAGES: usize = 16_384;
@@ -100,6 +100,23 @@ pub struct TranscriptHeader {
 pub enum TranscriptItem {
     Thread(TranscriptHeader),
     Message(TranscriptMessage),
+}
+
+/// The evidence of an accepted `transcripts` batch (MEDULLA-INGEST-WORKER-R003.17): the thread it
+/// wrote and what was written, never message text. `source_digest` is the digest of the batch
+/// the thread came from and `accepted_checkpoint_digest` the checkpoint the batch accepted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TranscriptReceipt {
+    pub connector: ResourceId,
+    pub stream: ResourceId,
+    pub session_id: String,
+    pub source_digest: Digest256,
+    pub dialect: String,
+    pub message_count: u64,
+    pub concept_link_count: u64,
+    pub accepted_checkpoint_digest: Digest256,
 }
 
 /// A transcript refusal with a stable wire code (MEDULLA-INGEST-WORKER-R003.16). Each happens

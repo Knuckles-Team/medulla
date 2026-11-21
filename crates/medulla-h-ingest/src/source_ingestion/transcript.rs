@@ -21,7 +21,8 @@ use medulla_document::TranscriptDialect;
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{SourceIngestionRequest, SourceJson};
 use medulla_source_types::source_transcript::{
-    TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptThread, SEGMENT_CLOCKS,
+    TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptReceipt, TranscriptThread,
+    SEGMENT_CLOCKS,
 };
 use medulla_types::contract::Digest256;
 
@@ -235,6 +236,34 @@ pub(super) fn transcript_methods(
     Ok(admission)
 }
 
+/// The receipt of one admitted transcripts batch (MEDULLA-INGEST-WORKER-R003.17): the thread's
+/// source identity, the declared format, the messages and concept links written, and the
+/// digests of the batch and of the checkpoint it accepts. It never carries message text; each
+/// message node keeps the `source_record_id` of its provenance (`transcript_methods`).
+pub(super) fn transcript_receipt(
+    decoded: &DecodedTranscript,
+    validated: &ValidatedTranscript,
+    admission: &TranscriptAdmission,
+    source_digest: Digest256,
+    accepted_checkpoint_digest: Digest256,
+) -> Result<TranscriptReceipt, String> {
+    let dialect = serde_json::to_value(decoded.dialect)
+        .map_err(invalid)?
+        .as_str()
+        .map(str::to_string)
+        .ok_or_else(|| invalid("a dialect has no name"))?;
+    Ok(TranscriptReceipt {
+        connector: decoded.thread.connector.clone(),
+        stream: decoded.thread.stream.clone(),
+        session_id: decoded.thread.session_id.clone(),
+        source_digest,
+        dialect,
+        message_count: validated.messages.len() as u64,
+        concept_link_count: admission.concept_link_count,
+        accepted_checkpoint_digest,
+    })
+}
+
 /// `parse_dialect`: the declared transcript format of a thread header. Only a name in
 /// `TranscriptDialect::ALL` is accepted (MEDULLA-INGEST-WORKER-R003.16); the dialect is a
 /// provenance label because the producer has already parsed the source lines.
@@ -424,6 +453,58 @@ mod tests {
         assert!(missing.unwrap_err().starts_with("TRANSCRIPT_INVALID:"));
         let short = self::thread(&request, &["m1", "m2"]);
         assert!(validate_transcript("t1", &request, &short, &sent, |_| true).is_err());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.17
+    #[test]
+    fn receipt_preserves_message_provenance() {
+        let request = request();
+        let decoded = decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
+        let validated = validate_transcript(
+            "t1",
+            &request,
+            &decoded.thread,
+            &decoded.messages,
+            |id| id == "concept-a",
+        )
+        .unwrap();
+        let admission = transcript_methods(&decoded, &validated).unwrap();
+        let source = Digest256::sha256(b"batch");
+        let checkpoint = Digest256::sha256(b"checkpoint");
+        let receipt =
+            transcript_receipt(&decoded, &validated, &admission, source, checkpoint).unwrap();
+        assert_eq!(receipt.connector, decoded.thread.connector);
+        assert_eq!(receipt.stream, decoded.thread.stream);
+        assert_eq!(receipt.session_id, "session-1");
+        assert_eq!(receipt.source_digest, source);
+        assert_eq!(receipt.dialect, "claude");
+        assert_eq!(receipt.message_count, 3);
+        assert_eq!(receipt.concept_link_count, 3);
+        assert_eq!(receipt.accepted_checkpoint_digest, checkpoint);
+        // The receipt holds no message text; every message node keeps the source record id
+        // of its provenance.
+        assert!(!serde_json::to_string(&receipt).unwrap().contains("text of"));
+        let records: Vec<String> = admission
+            .methods
+            .iter()
+            .filter_map(|method| match method {
+                Method::AddNode {
+                    node_id,
+                    properties_msgpack,
+                } if node_id.starts_with("transcript-message:") => {
+                    let props: serde_json::Value =
+                        rmp_serde::from_slice(properties_msgpack).unwrap();
+                    Some(props["source_record_id"].as_str().unwrap().to_string())
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(records, ["record-m1", "record-m2", "record-m3"]);
+        assert_eq!(receipt.message_count as usize, records.len());
+        // The receipt round-trips.
+        let decoded_receipt: TranscriptReceipt =
+            serde_json::from_str(&serde_json::to_string(&receipt).unwrap()).unwrap();
+        assert_eq!(decoded_receipt, receipt);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R003.16

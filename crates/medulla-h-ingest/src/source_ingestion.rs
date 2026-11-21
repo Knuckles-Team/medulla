@@ -130,6 +130,8 @@ pub struct PreparedSourceIngestion {
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
     reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport>,
+    /// Evidence of a `transcripts` batch (R003.17); `None` for every other kind.
+    transcript: Option<medulla_source_types::source_transcript::TranscriptReceipt>,
     committed_graph_version: u64,
     /// Set when the batch is quarantined instead of accepted: the envelope then
     /// stores restricted evidence only (MEDULLA-INGEST-WORKER-R003.10.1) and
@@ -636,6 +638,7 @@ pub async fn prepare(
         facts: Default::default(),
         access: None,
         reconcile: None,
+        transcript: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         quarantine: None,
         drift,
@@ -677,6 +680,8 @@ async fn prepare_extension_batch(
     let mut fact_report = medulla_ingestion_types::extracted_fact::FactReport::default();
     #[allow(unused_mut)]
     let mut reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport> = None;
+    let mut transcript_receipt: Option<medulla_source_types::source_transcript::TranscriptReceipt> =
+        None;
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
             let snapshots = decode_permission_items::<
@@ -918,6 +923,13 @@ async fn prepare_extension_batch(
                 |concept| held.contains(concept),
             )?;
             let admission = transcript::transcript_methods(&decoded, &validated)?;
+            transcript_receipt = Some(transcript::transcript_receipt(
+                &decoded,
+                &validated,
+                &admission,
+                batch_digest,
+                batch.provider_checkpoint.digest()?,
+            )?);
             for node_id in &admission.node_ids {
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }
@@ -978,6 +990,7 @@ async fn prepare_extension_batch(
         &action_records,
         access,
         reconcile.as_ref(),
+        transcript_receipt.as_ref(),
         &fact_report,
     )?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
@@ -1027,6 +1040,7 @@ async fn prepare_extension_batch(
         facts: fact_report,
         access,
         reconcile,
+        transcript: transcript_receipt,
         drift: Vec::new(),
         quarantine: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
@@ -1335,6 +1349,7 @@ fn permission_receipt_method(
     action_records: &[String],
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
+    transcript: Option<&medulla_source_types::source_transcript::TranscriptReceipt>,
     facts: &medulla_ingestion_types::extracted_fact::FactReport,
 ) -> Result<Method, String> {
     let mut properties = serde_json::json!({
@@ -1362,6 +1377,10 @@ fn permission_receipt_method(
     if let Some(reconcile) = reconcile {
         properties["reconcile"] = serde_json::to_value(reconcile)
             .map_err(|error| format!("reconcile receipt encoding failed: {error}"))?;
+    }
+    if let Some(transcript) = transcript {
+        properties["transcript"] = serde_json::to_value(transcript)
+            .map_err(|error| format!("transcript receipt encoding failed: {error}"))?;
     }
     if *facts != Default::default() {
         // The per-unit outcomes of a `facts` batch (MEDULLA-INGEST-WORKER-R701.5).
@@ -3440,6 +3459,7 @@ fn build_terminal_receipt(
         facts: prepared.facts,
         access: prepared.access,
         reconcile: prepared.reconcile,
+        transcript: prepared.transcript,
         report: medulla_types::ingest_materialize::IngestBatchReport {
             written: prepared
                 .affected_count
@@ -3528,6 +3548,7 @@ impl PreparedSourceIngestion {
             facts: Default::default(),
             access: None,
             reconcile: None,
+            transcript: None,
             committed_graph_version: receipt.committed_graph_version,
             quarantine: Some(receipt),
             drift: Vec::new(),
@@ -3843,6 +3864,15 @@ fn prepared_replay(
             .map(|value| {
                 serde_json::from_value(value.clone())
                     .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: reconcile: {error}"))
+            })
+            .transpose()?,
+        transcript: receipt
+            .get("transcript")
+            .filter(|value| !value.is_null())
+            .map(|value| {
+                serde_json::from_value(value.clone()).map_err(|error| {
+                    format!("SOURCE_INGESTION_REPLAY_INVALID: transcript: {error}")
+                })
             })
             .transpose()?,
         committed_graph_version,

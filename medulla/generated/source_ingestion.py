@@ -364,6 +364,19 @@ class StreamDrift(BaseModel):
     stream: str
 
 
+class TranscriptReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    accepted_checkpoint_digest: Digest256
+    concept_link_count: Annotated[int, Field(ge=0)]
+    connector: str
+    dialect: str
+    message_count: Annotated[int, Field(ge=0)]
+    session_id: str
+    source_digest: Digest256
+    stream: str
+
+
 class SourceIngestionReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -403,6 +416,7 @@ class SourceIngestionReceipt(BaseModel):
     stream_object_id: str
     tombstoned_count: Annotated[int, Field(ge=0)]
     tombstones: BoundedVec_SourceTombstoneReceipt_16384
+    transcript: TranscriptReceipt | None = None
 
 
 class SourceMappingKind(str, Enum):
@@ -731,6 +745,8 @@ FactReport.model_rebuild()
 RowVersionReport.model_rebuild()
 
 GovernanceReport.model_rebuild()
+TranscriptReceipt.model_rebuild()
+
 SourceIngestionReceipt.model_rebuild()
 
 QuarantineReceipt.model_rebuild()
@@ -790,6 +806,7 @@ __all__ = [
     "ColumnExclusionReason",
     "ColumnExclusion",
     "EmbeddingSetEntry",
+    "TranscriptReceipt",
     "SourceIngestionReceipt",
     "QuarantineReason",
     "QuarantineReceipt",

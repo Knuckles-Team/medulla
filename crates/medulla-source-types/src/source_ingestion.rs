@@ -540,6 +540,10 @@ pub struct SourceIngestionReceipt {
     /// every other kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reconcile: Option<ReconcileReport>,
+    /// The thread, message and concept-link counts of a `transcripts` batch
+    /// (MEDULLA-INGEST-WORKER-R003.17); absent for every other kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transcript: Option<crate::source_transcript::TranscriptReceipt>,
     /// Written, unchanged and refused counts of this batch
     /// (MEDULLA-INGEST-WORKER-R606.1).
     pub report: IngestBatchReport,
