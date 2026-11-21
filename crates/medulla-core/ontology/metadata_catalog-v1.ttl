@@ -101,6 +101,30 @@ cat:hasField a owl:ObjectProperty ;
     rdfs:domain cat:DataResource ;
     rdfs:range cat:Field .
 
+cat:columnName a owl:DatatypeProperty ;
+    rdfs:label "column name" ;
+    rdfs:comment "The column name of a field of a tabular data resource." ;
+    rdfs:domain cat:Field ;
+    rdfs:range xsd:string .
+
+cat:columnType a owl:DatatypeProperty ;
+    rdfs:label "column type" ;
+    rdfs:comment "The declared type name of a field of a tabular data resource." ;
+    rdfs:domain cat:Field ;
+    rdfs:range xsd:string .
+
+cat:columnNullable a owl:DatatypeProperty ;
+    rdfs:label "column nullable" ;
+    rdfs:comment "Whether a field of a tabular data resource admits null (true or false)." ;
+    rdfs:domain cat:Field ;
+    rdfs:range xsd:string .
+
+cat:schemaDigest a owl:DatatypeProperty ;
+    rdfs:label "schema digest" ;
+    rdfs:comment "The engine-computed schema digest of a data resource: sha256:<64 hex> over its fields in sorted order (name, type, nullability). Written at catalog ingest, never by the writer (MEDULLA-TYPED-PACKS-R805.3)." ;
+    rdfs:domain cat:DataResource ;
+    rdfs:range xsd:string .
+
 cat:actionType a owl:ObjectProperty ;
     rdfs:label "action type" ;
     rdfs:comment "The schema.org Action subtype a tool performs: schema:SearchAction for a read, schema:CreateAction, schema:UpdateAction or schema:DeleteAction for a write." ;

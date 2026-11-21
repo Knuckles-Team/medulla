@@ -59,6 +59,30 @@ pub struct DataContract {
     pub freshness_s: u64,
 }
 
+/// One column of a data resource as the schema digest reads it.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DigestColumn {
+    pub name: String,
+    pub type_name: String,
+    pub nullable: bool,
+}
+
+/// The schema digest of a data resource (MEDULLA-TYPED-PACKS-R805.3): `sha256:<64 hex>` over its
+/// columns in canonical sorted order, each as a length-prefixed `name`, `type`, `nullable` line.
+/// Catalog ingest writes it as `cat:schemaDigest`; a contract promises one.
+pub fn schema_digest(columns: &[DigestColumn]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut sorted: Vec<&DigestColumn> = columns.iter().collect();
+    sorted.sort();
+    let mut hash = Sha256::new();
+    for column in sorted {
+        let line = format!("{}\t{}\t{}", column.name, column.type_name, column.nullable);
+        hash.update((line.len() as u64).to_be_bytes());
+        hash.update(line.as_bytes());
+    }
+    format!("sha256:{}", hex::encode(hash.finalize()))
+}
+
 pub use medulla_types::access_request_machine::AccessRequestState;
 
 /// A consumer's governed request to use a product.

@@ -141,7 +141,67 @@ pub(super) fn guard_catalog_write(
         },
     )?;
     triples.extend(flag_ownerless(&catalog).iter().filter_map(to_rdf));
+    // The schema digest is the engine's to write (MEDULLA-TYPED-PACKS-R805.3): a writer's own
+    // value is dropped and the digest of the batch's fields stands in its place.
+    let digest_predicate = format!("{CAT}schemaDigest");
+    triples.retain(|triple| triple.predicate.as_str() != digest_predicate);
+    triples.extend(schema_digest_triples(&catalog).iter().filter_map(to_rdf));
     Ok(())
+}
+
+/// `cat:schemaDigest` for every `cat:DataResource` of the batch that names at least one field
+/// with a `cat:columnName`. A field's type defaults to the empty string and its nullability to
+/// `true` when the batch does not state them.
+fn schema_digest_triples(catalog: &[Triple]) -> Vec<Triple> {
+    use medulla_catalog_types::data_product::{schema_digest, DigestColumn};
+    const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    let resource_class = Object::Iri(format!("{CAT}DataResource"));
+    let has_field = format!("{CAT}hasField");
+    fn literal<'a>(catalog: &'a [Triple], subject: &str, predicate: &str) -> Option<&'a str> {
+        catalog
+            .iter()
+            .find(|t| t.subject == subject && t.predicate == predicate)
+            .and_then(|t| match &t.object {
+                Object::Literal(value) => Some(value.as_str()),
+                Object::Iri(_) => None,
+            })
+    }
+    let (name, kind, nullable) = (
+        format!("{CAT}columnName"),
+        format!("{CAT}columnType"),
+        format!("{CAT}columnNullable"),
+    );
+    let resources: BTreeSet<&str> = catalog
+        .iter()
+        .filter(|t| t.predicate == RDF_TYPE && t.object == resource_class)
+        .map(|t| t.subject.as_str())
+        .collect();
+    let mut out = Vec::new();
+    for resource in resources {
+        let columns: Vec<DigestColumn> = catalog
+            .iter()
+            .filter(|t| t.subject == resource && t.predicate == has_field)
+            .filter_map(|t| match &t.object {
+                Object::Iri(field) => Some(field.as_str()),
+                Object::Literal(_) => None,
+            })
+            .filter_map(|field| {
+                Some(DigestColumn {
+                    name: literal(catalog, field, &name)?.to_string(),
+                    type_name: literal(catalog, field, &kind).unwrap_or_default().to_string(),
+                    nullable: literal(catalog, field, &nullable) != Some("false"),
+                })
+            })
+            .collect();
+        if !columns.is_empty() {
+            out.push(Triple {
+                subject: resource.to_string(),
+                predicate: format!("{CAT}schemaDigest"),
+                object: Object::Literal(schema_digest(&columns)),
+            });
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -193,5 +253,40 @@ mod tests {
         guard_catalog_write(&mut ownerless, None)
             .expect("an ownerless node is flagged, not refused");
         assert_eq!(ownerless.len(), before + 1);
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R805.3
+    #[test]
+    fn ingest_writes_the_schema_digest_over_sorted_columns_and_drops_a_forged_one() {
+        let head = format!("@prefix cat: <{CAT}> .\n");
+        let batch = |order: &[(&str, &str)], forged: &str| {
+            let mut text = format!(
+                "{head}<urn:medulla:asset:resource:r> a cat:DataResource ; cat:hasOwner <urn:o:a> {forged} ;\n  cat:hasField <urn:medulla:asset:field:a>, <urn:medulla:asset:field:b> .\n"
+            );
+            for (id, ty) in order {
+                text.push_str(&format!(
+                    "<urn:medulla:asset:field:{id}> a cat:Field ; cat:hasOwner <urn:o:a> ; cat:columnName \"{id}\" ; cat:columnType \"{ty}\" ; cat:columnNullable \"false\" .\n"
+                ));
+            }
+            let mut triples = parse(&text);
+            guard_catalog_write(&mut triples, None).expect("the batch is accepted");
+            triples
+        };
+        let digest_of = |triples: &[oxrdf::Triple]| -> Vec<String> {
+            triples
+                .iter()
+                .filter(|t| t.predicate.as_str() == format!("{CAT}schemaDigest"))
+                .map(|t| t.object.to_string())
+                .collect()
+        };
+        let one = digest_of(&batch(&[("a", "int"), ("b", "text")], ""));
+        let two = digest_of(&batch(&[("b", "text"), ("a", "int")], ""));
+        assert_eq!(one.len(), 1);
+        assert_eq!(one, two);
+        assert!(one[0].starts_with("\"sha256:"));
+        let forged = digest_of(&batch(&[("a", "int"), ("b", "text")], "; cat:schemaDigest \"sha256:forged\""));
+        assert_eq!(forged, one);
+        let changed = digest_of(&batch(&[("a", "bigint"), ("b", "text")], ""));
+        assert_ne!(changed, one);
     }
 }
