@@ -15,7 +15,8 @@ import os
 import pytest
 from conftest import request_context
 
-from medulla.client import MedullaClient
+from medulla.client import EngineResponseError, MedullaClient
+from medulla.generated import graph as graph_methods
 from medulla.generated import reasoning
 
 CHAIN_LENGTH = 12
@@ -51,12 +52,15 @@ def _ancestor_oracle() -> set[tuple[str, str]]:
     }
 
 
-async def _run_rules(client: MedullaClient, max_steps: int | None) -> object:
+async def _run_rules(
+    client: MedullaClient, max_steps: int | None, explain: bool = False
+) -> object:
     params: dict[str, object] = {
         "ontology_ttl": _chain_ttl(),
         "rules": RULES,
         "query_predicate": "ancestor",
         "derived_only": True,
+        "explain": explain,
     }
     if max_steps is not None:
         params["max_steps"] = max_steps
@@ -151,3 +155,79 @@ async def test_both_methods_reach_the_kernels() -> None:
     assert [f["nrmse"] for f in bad["per_variable"] if f["id"] == "y"][
         0
     ] == pytest.approx(bad_expected["y"], rel=1e-9)
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R608.4
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.4")
+@pytest.mark.asyncio
+async def test_rule_bound_flag_and_causal_refusals() -> None:
+    client = await _connect()
+    nodes_before = await graph_methods.send_node_count(client)
+
+    # Reaching the step bound is a normal answer: the partial derivation, flagged.
+    bounded = await _run_rules(client, 2)
+    assert bounded.complete is False  # type: ignore[attr-defined]
+    assert bounded.bound_code == "RULE_FIXPOINT_BOUND"  # type: ignore[attr-defined]
+    assert 0 < len(bounded.facts) < len(_ancestor_oracle())  # type: ignore[attr-defined]
+
+    # Fewer than eight observations are refused, exactly eight are answered.
+    rows = _observations()
+    with pytest.raises(EngineResponseError, match="CAUSAL_OBSERVATIONS_INSUFFICIENT"):
+        await client.query.causal_verify(VARIABLES, rows[:7])
+    assert (await client.query.causal_verify(VARIABLES, rows[:8]))["per_variable"]
+
+    # A cyclic model and a model naming a missing parent are refused.
+    cyclic = [
+        {"id": "a", "parents": [["b", 1.0]], "bias": 0.0, "noise_var": 0.1},
+        {"id": "b", "parents": [["a", 1.0]], "bias": 0.0, "noise_var": 0.1},
+    ]
+    cyclic_rows = [{"a": float(i), "b": float(i)} for i in range(12)]
+    with pytest.raises(EngineResponseError, match="CAUSAL_MODEL_INVALID"):
+        await client.query.causal_verify(cyclic, cyclic_rows)
+    orphan = [{"id": "a", "parents": [["ghost", 1.0]], "bias": 0.0, "noise_var": 0.1}]
+    with pytest.raises(EngineResponseError, match="CAUSAL_MODEL_INVALID"):
+        await client.query.causal_verify(orphan, [{"a": float(i)} for i in range(12)])
+
+    # Neither the bound nor a refusal wrote a node.
+    assert await graph_methods.send_node_count(client) == nodes_before
+
+
+def _leaf_rules(node: object) -> set[str]:
+    if node.truncated:  # type: ignore[attr-defined]
+        return set()  # a cut node is bounded by the proof budget, not a leaf
+    premises = node.premises  # type: ignore[attr-defined]
+    if not premises:
+        return {node.rule}  # type: ignore[attr-defined]
+    return set().union(*(_leaf_rules(p) for p in premises))
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R608.5
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.5")
+@pytest.mark.asyncio
+async def test_evidence_after_success_and_bound() -> None:
+    client = await _connect()
+
+    done = await _run_rules(client, None, explain=True)
+    assert done.complete is True  # type: ignore[attr-defined]
+    assert done.steps > 0  # type: ignore[attr-defined]
+    assert 0 < done.rules_fired <= done.steps  # type: ignore[attr-defined]
+    derived = [fact for fact in done.facts if fact.derived]  # type: ignore[attr-defined]
+    assert derived
+    assert all(fact.proof is not None for fact in derived)
+    # Every derived fact's proof names a rule and bottoms out in asserted leaves.
+    for fact in derived:
+        assert fact.proof.rule != "asserted"
+        assert _leaf_rules(fact.proof) <= {"asserted"}
+
+    stopped = await _run_rules(client, 3)
+    assert stopped.complete is False  # type: ignore[attr-defined]
+    assert stopped.steps == 3  # type: ignore[attr-defined]
+    assert stopped.rules_fired <= stopped.steps  # type: ignore[attr-defined]
+    assert stopped.steps < done.steps  # type: ignore[attr-defined]
+    assert all(fact.proof is None for fact in stopped.facts)  # type: ignore[attr-defined]
+
+    verdict = await client.query.causal_verify(VARIABLES, _observations())
+    assert [fit["id"] for fit in verdict["per_variable"]] == ["z", "x", "y"]
+    for fit in verdict["per_variable"]:
+        assert fit["nrmse"] >= 0.0
+        assert fit["limit"] > 0.0

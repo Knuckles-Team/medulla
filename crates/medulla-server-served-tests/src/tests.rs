@@ -3364,6 +3364,88 @@ async fn test_discover_blends_keyword_and_semantic() {
     assert_eq!(rows[0]["id"], "deploy_runbook");
 }
 
+/// MEDULLA-FEDERATED-QUERY-R089.6: two tenants' graphs live in the same store. The one
+/// with 10 percent of its nodes embedded fails closed with `sparse_index`; the other,
+/// fully embedded, never lends its embeddings to the ratio of the first.
+// spec: MEDULLA-FEDERATED-QUERY-R089.6
+#[tokio::test]
+async fn test_discover_verdict_ratio_counts_only_the_callers_graph() {
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state();
+    {
+        let mut s = state.write().await;
+        for graph in ["agent:thin", "agent:dense"] {
+            s.registry
+                .create_graph(graph, GraphType::Agent, None)
+                .unwrap();
+        }
+    }
+    let seed = |graph: &str, nodes: usize, embedded: usize| {
+        let core = {
+            let s = state.try_read().expect("no writer is active");
+            s.registry.get(graph).unwrap().core.clone()
+        };
+        for n in 0..nodes {
+            let id = format!("{graph}-{n}");
+            let props = serde_json::json!({"type": "doc", "name": "known term"});
+            core.add_node(id.clone(), rmp_serde::to_vec(&props).unwrap());
+            if n < embedded {
+                core.semantic_store
+                    .write()
+                    .add_embedding(id, vec![1.0, 1.0, 2.0])
+                    .unwrap();
+            }
+        }
+    };
+    seed("agent:thin", 10, 1);
+    seed("agent:dense", 90, 90);
+
+    let verdict_of = |id: u64, graph: &'static str| {
+        let state = state.clone();
+        async move {
+            let resp = dispatch_on_heap(
+                &state,
+                request(
+                    id,
+                    graph,
+                    Some(graph),
+                    Method::Discover {
+                        keywords: vec!["known".into()],
+                        query_embedding: vec![1.0, 1.0, 2.0],
+                        k: 5,
+                        quality_policy_ref: None,
+                        hops: 0,
+                        query_text: None,
+                        mode: Default::default(),
+                        as_of: None,
+                        perspectives: None,
+                        capability: None,
+                    },
+                ),
+            )
+            .await;
+            assert_ok(&resp);
+            let Some(ResultPayload::Json(serde_json::Value::Object(envelope))) = resp.result
+            else {
+                panic!("expected the Discover envelope");
+            };
+            envelope["verdict"].clone()
+        }
+    };
+    let thin = verdict_of(1, "agent:thin").await;
+    let dense = verdict_of(2, "agent:dense").await;
+    assert_eq!(thin["gate_passed"], false, "{thin}");
+    assert!(thin["failure_modes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m == "sparse_index"));
+    assert_eq!(thin["index_population_ratio_q16"], 6_554, "1 of 10");
+    assert_eq!(dense["index_population_ratio_q16"], 65_535, "90 of 90");
+    assert_eq!(dense["gate_passed"], true, "{dense}");
+}
+
 #[cfg(feature = "redb")]
 #[tokio::test]
 async fn test_offloaded_algorithms_round_trip() {

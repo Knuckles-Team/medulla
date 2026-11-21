@@ -94,17 +94,29 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
         explain,
         max_steps,
     };
+    // MEDULLA-FEDERATED-QUERY-R608.5: the evidence counters of the fixpoint ride the span.
+    let span = tracing::info_span!(
+        "medulla.reasoning.rules",
+        steps = tracing::field::Empty,
+        rules_fired = tracing::field::Empty,
+        complete = tracing::field::Empty,
+    );
     match compute_off_lock(req_id, move || {
         medulla_reasoner::rules::run_rule_reasoning_on_view(&snap, &req)
     })
     .await
     {
-        Ok(Ok(response)) => Response::ok(
-            req_id,
-            ResultPayload::of_ref::<medulla_protocol_types::result_contract::reasoning::RunRules>(
-                &response,
-            ),
-        ),
+        Ok(Ok(response)) => {
+            span.record("steps", response.steps);
+            span.record("rules_fired", response.rules_fired);
+            span.record("complete", response.complete);
+            Response::ok(
+                req_id,
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::reasoning::RunRules,
+                >(&response),
+            )
+        }
         Ok(Err(msg)) => Response::err(req_id, format!("RunRules error: {msg}")),
         Err(resp) => resp,
     }
