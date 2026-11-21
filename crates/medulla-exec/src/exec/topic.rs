@@ -129,7 +129,6 @@ pub(crate) fn fuse_ranked(
         &assignments,
         &kept,
         retriever,
-        current,
         fusion.backend.id(),
         fusion.backend.revision(),
     )?;
@@ -583,11 +582,9 @@ pub(crate) fn check_assignments(
     assignments: &[DocumentTopicAssignment],
     kept_topics: &[String],
     retriever: &EmbeddingSpaceRef,
-    current_corpus_revision: u64,
     backend_id: &str,
     backend_revision: u64,
 ) -> Result<(), TopicRefusal> {
-    let _ = current_corpus_revision;
     let tuple = space_tuple(retriever);
     for assignment in assignments {
         if assignment.space_tuple != tuple
@@ -1094,7 +1091,7 @@ mod tests {
         let kept: Vec<String> = topics.topic_weights.iter().map(|(t, _)| t.clone()).collect();
         let narrow_assignments = memory.assignments(&narrow).unwrap();
         assert_eq!(
-            check_assignments(&narrow, &narrow_assignments, &kept, &space(), 7, "in_memory", 7)
+            check_assignments(&narrow, &narrow_assignments, &kept, &space(), "in_memory", 7)
                 .unwrap_err()
                 .code(),
             ServerErrorCode::TopicSpaceMismatch
@@ -1227,7 +1224,7 @@ mod tests {
         let kept = vec!["sports".to_string(), "finance".to_string()];
         let good = memory.assignments(&candidates).unwrap();
         let check = |assignments: &[DocumentTopicAssignment]| {
-            check_assignments(&candidates, assignments, &kept, &space(), 7, "in_memory", 7)
+            check_assignments(&candidates, assignments, &kept, &space(), "in_memory", 7)
         };
         assert_eq!(check(&good), Ok(()));
 
@@ -1259,7 +1256,7 @@ mod tests {
         assert!(refusal.to_string().starts_with("TOPIC_ASSIGNMENT_STALE"));
         // A backend id or revision other than the topics result's is a space mismatch.
         assert_eq!(
-            check_assignments(&candidates, &good, &kept, &space(), 7, "stored_centroid", 7)
+            check_assignments(&candidates, &good, &kept, &space(), "stored_centroid", 7)
                 .unwrap_err()
                 .code(),
             ServerErrorCode::TopicSpaceMismatch
