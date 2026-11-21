@@ -350,7 +350,36 @@ pub async fn prepare(
             reconciliation.entry_revision,
         ));
     }
-    admitted.methods.extend(dedup.methods);
+    // A refused, replayed or invalid-version record writes no node: a link from or to such a
+    // record of this batch is dropped, and only the links written are counted.
+    let written: BTreeSet<&str> = admitted
+        .methods
+        .iter()
+        .filter_map(|method| match method {
+            Method::AddNode { node_id, .. } => Some(node_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let batch_ids: BTreeSet<&str> = dedup
+        .documents
+        .iter()
+        .map(|document| document.record_node_id.as_str())
+        .collect();
+    let usable = |id: &str| !batch_ids.contains(id) || written.contains(id);
+    let mut dedup_methods = dedup.methods;
+    dedup_methods.retain(|method| match method {
+        Method::AddEdge {
+            source_id,
+            target_id,
+            ..
+        } => usable(source_id) && usable(target_id),
+        _ => true,
+    });
+    let duplicates = dedup_methods
+        .iter()
+        .filter(|method| matches!(method, Method::AddEdge { .. }))
+        .count() as u64;
+    admitted.methods.extend(dedup_methods);
     admit_relationship_tombstones(
         &ctx,
         batch,
@@ -402,7 +431,7 @@ pub async fn prepare(
         admitted.governance,
         admitted.row_versions,
         medulla_source_types::source_document::DocumentReport {
-            duplicates: dedup.duplicates,
+            duplicates,
         },
         &embedding_set,
     )?);
@@ -460,7 +489,7 @@ pub async fn prepare(
         governance: admitted.governance,
         row_versions: admitted.row_versions,
         documents: medulla_source_types::source_document::DocumentReport {
-            duplicates: dedup.duplicates,
+            duplicates,
         },
         access: None,
         reconcile: None,
