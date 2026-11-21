@@ -8234,3 +8234,114 @@
     :toState :OntologyProposalMachine_Admitted ;
     :firedBy :OntologyProposalMachine_Event_Admit .
 
+# spec: MEDULLA-BUSINESS-OPS-R001.5
+# The ObligationInstance machine. The Rust edge table OBLIGATION_INSTANCE_MACHINE in
+# crates/medulla-core/src/obligation_machine.rs is the same table; the ontology test
+# asserts equal edge sets.
+
+:ObligationInstanceState a owl:Class ;
+    rdfs:label "ObligationInstance State" ;
+    rdfs:comment "A state of the ObligationInstance machine." ;
+    rdfs:subClassOf :State .
+
+:ObligationInstanceTerminalState a owl:Class ;
+    rdfs:label "ObligationInstance Terminal State" ;
+    rdfs:comment "A terminal state of the ObligationInstance machine." ;
+    rdfs:subClassOf :TerminalState, :ObligationInstanceState .
+
+:ObligationInstanceTransition a owl:Class ;
+    rdfs:label "ObligationInstance Transition" ;
+    rdfs:comment "A transition of the ObligationInstance machine." ;
+    rdfs:subClassOf :Transition .
+
+:ObligationInstanceEvent a owl:Class ;
+    rdfs:label "ObligationInstance Event" ;
+    rdfs:comment "An event of the ObligationInstance machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ObligationInstanceGuard a owl:Class ;
+    rdfs:label "ObligationInstance Guard" ;
+    rdfs:comment "A guard of the ObligationInstance machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ObligationInstanceMachine a :StateMachine ;
+    rdfs:label "ObligationInstance machine" ;
+    :initialState :ObligationInstanceMachine_Open ;
+    :hasState :ObligationInstanceMachine_Open, :ObligationInstanceMachine_Satisfied, :ObligationInstanceMachine_Waived, :ObligationInstanceMachine_Overdue .
+
+:ObligationInstanceMachine_Open a :ObligationInstanceState ;
+    rdfs:label "ObligationInstance Open" ;
+    :storedForm "open" .
+
+:ObligationInstanceMachine_Satisfied a :ObligationInstanceTerminalState ;
+    rdfs:label "ObligationInstance Satisfied" ;
+    :storedForm "satisfied" .
+
+:ObligationInstanceMachine_Waived a :ObligationInstanceTerminalState ;
+    rdfs:label "ObligationInstance Waived" ;
+    :storedForm "waived" .
+
+:ObligationInstanceMachine_Overdue a :ObligationInstanceState ;
+    rdfs:label "ObligationInstance Overdue" ;
+    :storedForm "overdue" .
+
+:ObligationInstanceMachine_Event_Satisfy a :ObligationInstanceEvent ;
+    rdfs:label "ObligationInstance Satisfy" .
+
+:ObligationInstanceMachine_Event_Waive a :ObligationInstanceEvent ;
+    rdfs:label "ObligationInstance Waive" .
+
+:ObligationInstanceMachine_Event_MarkOverdue a :ObligationInstanceEvent ;
+    rdfs:label "ObligationInstance MarkOverdue" .
+
+:ObligationInstanceMachine_Guard_EvidenceRecorded a :ObligationInstanceGuard ;
+    rdfs:label "ObligationInstance EvidenceRecorded" ;
+    rdfs:comment "Guard: an evidence item is recorded." .
+
+:ObligationInstanceMachine_Guard_WaiverRecorded a :ObligationInstanceGuard ;
+    rdfs:label "ObligationInstance WaiverRecorded" ;
+    rdfs:comment "Guard: a waiver is recorded." .
+
+:ObligationInstanceMachine_Guard_DueDatePassed a :ObligationInstanceGuard ;
+    rdfs:label "ObligationInstance DueDatePassed" ;
+    rdfs:comment "Guard: the as-of time is past the due date." .
+
+:ObligationInstanceMachine_O01 a :ObligationInstanceTransition ;
+    rdfs:label "ObligationInstance O01" ;
+    :edgeId "O01" ;
+    :fromState :ObligationInstanceMachine_Open ;
+    :toState :ObligationInstanceMachine_Satisfied ;
+    :guardedBy :ObligationInstanceMachine_Guard_EvidenceRecorded ;
+    :firedBy :ObligationInstanceMachine_Event_Satisfy .
+
+:ObligationInstanceMachine_O02 a :ObligationInstanceTransition ;
+    rdfs:label "ObligationInstance O02" ;
+    :edgeId "O02" ;
+    :fromState :ObligationInstanceMachine_Open ;
+    :toState :ObligationInstanceMachine_Waived ;
+    :guardedBy :ObligationInstanceMachine_Guard_WaiverRecorded ;
+    :firedBy :ObligationInstanceMachine_Event_Waive .
+
+:ObligationInstanceMachine_O03 a :ObligationInstanceTransition ;
+    rdfs:label "ObligationInstance O03" ;
+    :edgeId "O03" ;
+    :fromState :ObligationInstanceMachine_Open ;
+    :toState :ObligationInstanceMachine_Overdue ;
+    :guardedBy :ObligationInstanceMachine_Guard_DueDatePassed ;
+    :firedBy :ObligationInstanceMachine_Event_MarkOverdue .
+
+:ObligationInstanceMachine_O04 a :ObligationInstanceTransition ;
+    rdfs:label "ObligationInstance O04" ;
+    :edgeId "O04" ;
+    :fromState :ObligationInstanceMachine_Overdue ;
+    :toState :ObligationInstanceMachine_Satisfied ;
+    :guardedBy :ObligationInstanceMachine_Guard_EvidenceRecorded ;
+    :firedBy :ObligationInstanceMachine_Event_Satisfy .
+
+:ObligationInstanceMachine_O05 a :ObligationInstanceTransition ;
+    rdfs:label "ObligationInstance O05" ;
+    :edgeId "O05" ;
+    :fromState :ObligationInstanceMachine_Overdue ;
+    :toState :ObligationInstanceMachine_Waived ;
+    :guardedBy :ObligationInstanceMachine_Guard_WaiverRecorded ;
+    :firedBy :ObligationInstanceMachine_Event_Waive .

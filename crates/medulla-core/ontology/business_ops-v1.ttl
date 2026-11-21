@@ -352,3 +352,127 @@
     rdfs:comment "The trailing days of sales a reorder review measures velocity over." ;
     rdfs:domain :ReorderPolicy ;
     rdfs:range xsd:integer .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.5
+# Compliance obligations. The status of an obligation instance follows the one explicit
+# state machine :ObligationInstanceMachine of state-machines-v1.ttl; its only writer is
+# the transition function of `medulla_core::obligation_machine`.
+:Jurisdiction a owl:Class ;
+    rdfs:label "Jurisdiction" ;
+    rdfs:comment "A legal territory whose authority imposes obligations, taxes and registrations." ;
+    rdfs:subClassOf :DomainEntity .
+
+:ComplianceObligation a owl:Class ;
+    rdfs:label "Compliance Obligation" ;
+    rdfs:comment "A recurring duty an authority imposes on a business, with the rule that says when it applies and the evidence that satisfies it." ;
+    rdfs:subClassOf :GovernanceRule .
+
+:RecurrenceRule a owl:Class ;
+    rdfs:label "Recurrence Rule" ;
+    rdfs:comment "When an obligation falls due: a frequency, an interval, day selectors and a business-day adjustment against a holiday calendar." ;
+    rdfs:subClassOf :DomainEntity .
+
+:HolidayCalendar a owl:Class ;
+    rdfs:label "Holiday Calendar" ;
+    rdfs:comment "The non-business days of one jurisdiction, revisioned." ;
+    rdfs:subClassOf :DomainEntity .
+
+:ObligationInstance a owl:Class ;
+    rdfs:label "Obligation Instance" ;
+    rdfs:comment "One due occurrence of a compliance obligation, with a due date, a status and its evidence items." ;
+    rdfs:subClassOf :DomainEntity .
+
+:EvidenceItem a owl:Class ;
+    rdfs:label "Evidence Item" ;
+    rdfs:comment "One piece of evidence that an obligation instance was met." ;
+    rdfs:subClassOf :Evidence .
+
+:obligationJurisdiction a owl:ObjectProperty ;
+    rdfs:label "obligation jurisdiction" ;
+    rdfs:comment "The jurisdiction that imposes the obligation." ;
+    rdfs:domain :ComplianceObligation ;
+    rdfs:range :Jurisdiction .
+
+:obligationAuthority a owl:DatatypeProperty ;
+    rdfs:label "obligation authority" ;
+    rdfs:comment "The name of the authority the obligation is owed to." ;
+    rdfs:domain :ComplianceObligation ;
+    rdfs:range xsd:string .
+
+:obligationRecurrence a owl:ObjectProperty ;
+    rdfs:label "obligation recurrence" ;
+    rdfs:comment "The recurrence rule that says when the obligation falls due." ;
+    rdfs:domain :ComplianceObligation ;
+    rdfs:range :RecurrenceRule .
+
+:applicabilityRule a owl:DatatypeProperty ;
+    rdfs:label "applicability rule" ;
+    rdfs:comment "The expression that decides whether the obligation applies, evaluated by the threshold rule kind." ;
+    rdfs:domain :ComplianceObligation ;
+    rdfs:range xsd:string .
+
+:evidenceRequirement a owl:DatatypeProperty ;
+    rdfs:label "evidence requirement" ;
+    rdfs:comment "What evidence satisfies one instance of the obligation." ;
+    rdfs:domain :ComplianceObligation ;
+    rdfs:range xsd:string .
+
+:recurrenceFrequency a owl:DatatypeProperty ;
+    rdfs:label "recurrence frequency" ;
+    rdfs:comment "daily, weekly, monthly, quarterly or yearly." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range xsd:string .
+
+:recurrenceInterval a owl:DatatypeProperty ;
+    rdfs:label "recurrence interval" ;
+    rdfs:comment "Every n-th period of the frequency, an integer of at least 1." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range xsd:integer .
+
+:recurrenceDaySelector a owl:DatatypeProperty ;
+    rdfs:label "recurrence day selector" ;
+    rdfs:comment "Which day: a day of month, last, or the nth weekday of the month." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range xsd:string .
+
+:businessDayAdjustment a owl:DatatypeProperty ;
+    rdfs:label "business day adjustment" ;
+    rdfs:comment "none, next_business_day or previous_business_day." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range xsd:string .
+
+:recurrenceCalendar a owl:ObjectProperty ;
+    rdfs:label "recurrence calendar" ;
+    rdfs:comment "The holiday calendar the business-day adjustment reads." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range :HolidayCalendar .
+
+:recurrenceZone a owl:DatatypeProperty ;
+    rdfs:label "recurrence zone" ;
+    rdfs:comment "The IANA time zone the rule is stated in." ;
+    rdfs:domain :RecurrenceRule ;
+    rdfs:range xsd:string .
+
+:instanceOfObligation a owl:ObjectProperty ;
+    rdfs:label "instance of obligation" ;
+    rdfs:comment "Links an obligation instance to its compliance obligation." ;
+    rdfs:domain :ObligationInstance ;
+    rdfs:range :ComplianceObligation .
+
+:instanceDueDate a owl:DatatypeProperty ;
+    rdfs:label "instance due date" ;
+    rdfs:comment "The date the instance falls due." ;
+    rdfs:domain :ObligationInstance ;
+    rdfs:range xsd:date .
+
+:obligationStatus a owl:DatatypeProperty ;
+    rdfs:label "obligation status" ;
+    rdfs:comment "open, satisfied, waived or overdue; written only by the ObligationInstanceMachine transition function." ;
+    rdfs:domain :ObligationInstance ;
+    rdfs:range xsd:string .
+
+:instanceEvidence a owl:ObjectProperty ;
+    rdfs:label "instance evidence" ;
+    rdfs:comment "Links an obligation instance to an evidence item that shows it was met." ;
+    rdfs:domain :ObligationInstance ;
+    rdfs:range :EvidenceItem .

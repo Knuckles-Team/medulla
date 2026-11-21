@@ -1487,3 +1487,14 @@ fn ontology_proposal_machine_matches_edge_table() {
 fn ontology_proposal_machine_classes_extend_core() {
     sm::assert_extends_core("OntologyProposal");
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.5
+#[test]
+fn obligation_instance_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_core::obligation_machine::OBLIGATION_INSTANCE_MACHINE);
+}
+// spec: MEDULLA-BUSINESS-OPS-R001.5
+#[test]
+fn obligation_instance_machine_classes_extend_core() {
+    sm::assert_extends_core("ObligationInstance");
+}

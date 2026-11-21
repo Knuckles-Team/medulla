@@ -86,3 +86,31 @@ kg:RefundShape a sh:NodeShape ;
         """ ;
     ] ;
     sh:message "A refund returns part or all of one payment." .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.5
+kg:ObligationInstanceShape a sh:NodeShape ;
+    sh:targetClass kg:ObligationInstance ;
+    sh:property [
+        sh:path kg:obligationStatus ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "open" "satisfied" "waived" "overdue" ) ;
+        sh:message "An obligation instance status is open, satisfied, waived or overdue."
+    ] ;
+    sh:property [
+        sh:path kg:instanceDueDate ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:date ;
+        sh:message "An obligation instance has exactly one due date."
+    ] ;
+    sh:message "An obligation instance has a due date and a status of the instance machine." .
+
+kg:RecurrenceRuleShape a sh:NodeShape ;
+    sh:targetClass kg:RecurrenceRule ;
+    sh:property [
+        sh:path kg:recurrenceFrequency ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "daily" "weekly" "monthly" "quarterly" "yearly" ) ;
+        sh:message "A recurrence rule frequency is daily, weekly, monthly, quarterly or yearly."
+    ] ;
+    sh:property [
+        sh:path kg:businessDayAdjustment ; sh:maxCount 1 ;
+        sh:in ( "none" "next_business_day" "previous_business_day" ) ;
+        sh:message "A business-day adjustment is none, next_business_day or previous_business_day."
+    ] ;
+    sh:message "A recurrence rule names its frequency." .

@@ -249,3 +249,133 @@ fn procurement_terms_reuse_commercial_and_supply_chain() {
         "leadTimeDays is declared"
     );
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.5
+#[test]
+fn obligation_terms_and_instance_state_machine() {
+    use medulla_core::obligation_machine::{
+        ObligationEvent, ObligationFacts, ObligationInstanceMachine, ObligationStatus,
+        OBLIGATION_INSTANCE_MACHINE,
+    };
+    use medulla_types::transition_refused::{
+        MachineEvent, MachineState, TransitionRefusalReason,
+    };
+
+    let triples = triples();
+    for class in [
+        "Jurisdiction",
+        "ComplianceObligation",
+        "RecurrenceRule",
+        "HolidayCalendar",
+        "ObligationInstance",
+        "EvidenceItem",
+    ] {
+        assert_class(&triples, class);
+    }
+    assert_parent(&triples, "ComplianceObligation", "GovernanceRule");
+    assert_parent(&triples, "EvidenceItem", "Evidence");
+    // The core :GovernanceRule and :Evidence are reused, not redeclared.
+    let declared = declared_classes(&triples);
+    assert!(!declared.contains(&format!("{KG}GovernanceRule")));
+    assert!(!declared.contains(&format!("{KG}Evidence")));
+
+    // The shape accepts a well-formed instance and refuses a status outside the machine.
+    let (ok, _) = conforms(
+        "ex:i a :ObligationInstance ; :instanceDueDate \"2027-04-15\"^^xsd:date ; \
+         :obligationStatus \"open\" .\n",
+    );
+    assert!(ok);
+    let (ok, paths) = conforms(
+        "ex:i a :ObligationInstance ; :instanceDueDate \"2027-04-15\"^^xsd:date ; \
+         :obligationStatus \"pending\" .\n",
+    );
+    assert!(!ok, "a status outside the machine is refused");
+    assert!(paths.iter().any(|path| path.ends_with("obligationStatus>")));
+
+    // The transition function: the edge table is closed and guarded.
+    let all = ObligationFacts {
+        evidence_recorded: true,
+        waiver_recorded: true,
+        due_date_passed: true,
+    };
+    use ObligationEvent::{MarkOverdue, Satisfy, Waive};
+    use ObligationStatus::{Open, Overdue, Satisfied, Waived};
+    assert_eq!(ObligationInstanceMachine::apply(Open, Satisfy, all), Ok(Satisfied));
+    assert_eq!(ObligationInstanceMachine::apply(Open, Waive, all), Ok(Waived));
+    assert_eq!(ObligationInstanceMachine::apply(Open, MarkOverdue, all), Ok(Overdue));
+    assert_eq!(ObligationInstanceMachine::apply(Overdue, Satisfy, all), Ok(Satisfied));
+    assert_eq!(ObligationInstanceMachine::apply(Overdue, Waive, all), Ok(Waived));
+    // A guard that does not hold refuses.
+    for (from, event) in [(Open, Satisfy), (Open, Waive), (Open, MarkOverdue), (Overdue, Satisfy)] {
+        let refused =
+            ObligationInstanceMachine::apply(from, event, ObligationFacts::default()).unwrap_err();
+        assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+    }
+    // Overdue cannot go back to open, and the terminals accept no event.
+    let refused = ObligationInstanceMachine::apply(Overdue, MarkOverdue, all).unwrap_err();
+    assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
+    for terminal in [Satisfied, Waived] {
+        for event in [Satisfy, Waive, MarkOverdue] {
+            let refused = ObligationInstanceMachine::apply(terminal, event, all).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::TerminalState);
+        }
+    }
+
+    // The machine is registered in state-machines-v1.ttl with the same edges.
+    let machines = parse_turtle(include_str!("../ontology/state-machines-v1.ttl")).unwrap();
+    let machine = &OBLIGATION_INSTANCE_MACHINE;
+    let edge_id = format!("{KG}edgeId");
+    for edge in machine.edges {
+        let transition = format!("{KG}{}_{}", machine.name, edge.id);
+        let literal_of = |predicate: &str| {
+            machines
+                .iter()
+                .find(|t| {
+                    subject_str(&t.subject) == Some(&transition)
+                        && t.predicate.as_str() == format!("{KG}{predicate}")
+                })
+                .and_then(|t| object_iri(&t.object).map(str::to_string))
+        };
+        assert_eq!(
+            literal_of("fromState"),
+            Some(format!("{KG}{}_{:?}", machine.name, edge.from)),
+            "{} from",
+            edge.id
+        );
+        assert_eq!(
+            literal_of("toState"),
+            Some(format!("{KG}{}_{:?}", machine.name, edge.to)),
+            "{} to",
+            edge.id
+        );
+        assert_eq!(
+            literal_of("firedBy"),
+            Some(format!("{KG}{}_Event_{}", machine.name, edge.event.name())),
+            "{} event",
+            edge.id
+        );
+        assert!(machines.iter().any(|t| {
+            subject_str(&t.subject) == Some(&transition) && t.predicate.as_str() == edge_id
+        }));
+    }
+    let registered_edges = machines
+        .iter()
+        .filter(|t| {
+            t.predicate.as_str() == format!("{RDF}type")
+                && object_iri(&t.object) == Some(&format!("{KG}ObligationInstanceTransition"))
+        })
+        .count();
+    assert_eq!(registered_edges, machine.edges.len());
+    for state in machine.states {
+        let subject = format!("{KG}{}_{:?}", machine.name, state);
+        let stored = machines.iter().find_map(|t| {
+            (subject_str(&t.subject) == Some(&subject)
+                && t.predicate.as_str() == format!("{KG}storedForm"))
+            .then(|| match &t.object {
+                Term::Literal(value) => value.value().to_string(),
+                _ => String::new(),
+            })
+        });
+        assert_eq!(stored.as_deref(), Some(state.stored()));
+    }
+}

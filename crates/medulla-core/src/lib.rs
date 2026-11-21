@@ -49,6 +49,8 @@ pub mod lifecycle;
 pub mod meeting_transcript;
 /// Memory snapshot head, revision, candidate and acknowledgment rows (MEDULLA-DURABLE-KERNEL-R085.3).
 pub mod memory_snapshot_store;
+/// MEDULLA-BUSINESS-OPS-R001.5 — the compliance obligation instance state machine.
+pub mod obligation_machine;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape
 /// text generated from a typed Rust vocabulary, with a byte-equality regeneration test
 /// (MEDULLA-TYPED-PACKS-R090.1). The canonical ontology/shape corpus itself is owned by the
