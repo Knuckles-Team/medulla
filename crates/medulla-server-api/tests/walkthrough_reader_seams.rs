@@ -41,8 +41,8 @@ impl RepositoryIndexReader for Index {
 struct Blobs;
 
 impl BlobReader for Blobs {
-    fn read(&self, tenant: &str, artifact_ref: &str) -> Option<Vec<u8>> {
-        (tenant == "tenant-a" && artifact_ref == "blob:1").then(|| ARTIFACT.to_vec())
+    fn read(&self, owner_scope: &str, artifact_ref: &str) -> Option<Vec<u8>> {
+        (owner_scope == "owner-a" && artifact_ref == "blob:1").then(|| ARTIFACT.to_vec())
     }
 }
 
@@ -78,36 +78,36 @@ fn walkthrough() -> CodeWalkthrough {
 #[test]
 fn validation_reads_snapshot_and_blobs_only_through_the_seams() {
     let readers = WalkthroughReaders::new(Arc::new(Index), Arc::new(Blobs));
-    assert_eq!(readers.resolve("tenant-a", &walkthrough()), Ok(()));
+    assert_eq!(readers.resolve("tenant-a", "owner-a", &walkthrough()), Ok(()));
 
     let mut stale = walkthrough();
     stale.repository_revision = "rev-1".to_string();
     assert_eq!(
-        readers.resolve("tenant-a", &stale),
+        readers.resolve("tenant-a", "owner-a", &stale),
         Err(WalkthroughReadRefusal::RevisionStale)
     );
     assert_eq!(
-        readers.resolve("tenant-b", &walkthrough()),
+        readers.resolve("tenant-b", "owner-b", &walkthrough()),
         Err(WalkthroughReadRefusal::RevisionStale)
     );
 
     let mut outside = walkthrough();
     outside.ordered_sections[0].source_refs[0].entity_id = "entity-9".to_string();
     assert_eq!(
-        readers.resolve("tenant-a", &outside),
+        readers.resolve("tenant-a", "owner-a", &outside),
         Err(WalkthroughReadRefusal::RefOutsideSnapshot)
     );
 
     let mut tampered = walkthrough();
     tampered.artifact_digest = Digest256::sha256(b"other");
     assert_eq!(
-        readers.resolve("tenant-a", &tampered),
+        readers.resolve("tenant-a", "owner-a", &tampered),
         Err(WalkthroughReadRefusal::ArtifactUnresolved)
     );
     let mut missing = walkthrough();
     missing.artifact_ref = "blob:2".to_string();
     assert_eq!(
-        readers.resolve("tenant-a", &missing),
+        readers.resolve("tenant-a", "owner-a", &missing),
         Err(WalkthroughReadRefusal::ArtifactUnresolved)
     );
 

@@ -898,6 +898,7 @@ pub enum WalkthroughChecks {
 pub fn resolve_walkthrough_checks(
     method: &Method,
     tenant: &str,
+    blob_owner: &str,
     readers: Option<&WalkthroughReaders>,
 ) -> WalkthroughChecks {
     let Method::AddNode {
@@ -911,7 +912,7 @@ pub fn resolve_walkthrough_checks(
         return WalkthroughChecks::Resolved;
     };
     match readers {
-        Some(readers) => match readers.resolve(tenant, &manifest) {
+        Some(readers) => match readers.resolve(tenant, blob_owner, &manifest) {
             Ok(()) => WalkthroughChecks::Resolved,
             Err(refusal) => WalkthroughChecks::Refused(refusal),
         },

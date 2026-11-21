@@ -33,8 +33,8 @@ pub trait RepositoryIndexReader: Send + Sync {
 /// Reads an artifact by its reference.
 pub trait BlobReader: Send + Sync {
     /// The artifact bytes, or `None` when the reference names nothing for
-    /// `tenant`.
-    fn read(&self, tenant: &str, artifact_ref: &str) -> Option<Vec<u8>>;
+    /// `owner_scope`, the carrier owner scope that stored the upload.
+    fn read(&self, owner_scope: &str, artifact_ref: &str) -> Option<Vec<u8>>;
 }
 
 /// The three checks that need the repository index or the blob store, run
@@ -82,10 +82,13 @@ impl WalkthroughReaders {
         Self { index, blobs }
     }
 
-    /// Resolve `walkthrough` for `tenant` through the seams only.
+    /// Resolve `walkthrough` for `tenant` through the seams only. The artifact is read
+    /// under `blob_owner`, the carrier owner scope of the writing request, because that
+    /// is the owner every served upload is stored under.
     pub fn resolve(
         &self,
         tenant: &str,
+        blob_owner: &str,
         walkthrough: &CodeWalkthrough,
     ) -> Result<(), WalkthroughReadRefusal> {
         match self.index.current_revision(tenant, &walkthrough.repository_id) {
@@ -106,7 +109,7 @@ impl WalkthroughReaders {
                 }
             }
         }
-        match self.blobs.read(tenant, &walkthrough.artifact_ref) {
+        match self.blobs.read(blob_owner, &walkthrough.artifact_ref) {
             Some(bytes) if Digest256::sha256(&bytes) == walkthrough.artifact_digest => Ok(()),
             _ => Err(WalkthroughReadRefusal::ArtifactUnresolved),
         }

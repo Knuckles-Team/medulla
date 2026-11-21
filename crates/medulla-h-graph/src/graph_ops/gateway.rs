@@ -140,7 +140,17 @@ pub async fn try_handle_gateway(
     // only their result. A failed check refuses before any harness admission runs.
     let walkthrough_checks = {
         let readers = state.read().await.seams.walkthrough.get().cloned();
-        crate::harness_admission::resolve_walkthrough_checks(&method, tenant_id, readers.as_ref())
+        // The artifact blob is owned by the carrier owner scope of the writing request;
+        // a request with no verified carrier owns nothing, so its artifact reads as absent.
+        let blob_owner = read_authority
+            .and_then(|authority| authority.carrier())
+            .map_or("", |carrier| carrier.owner_scope());
+        crate::harness_admission::resolve_walkthrough_checks(
+            &method,
+            tenant_id,
+            blob_owner,
+            readers.as_ref(),
+        )
     };
     if let crate::harness_admission::WalkthroughChecks::Refused(refusal) = walkthrough_checks {
         return Ok(Response::err(

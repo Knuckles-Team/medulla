@@ -1599,8 +1599,8 @@ mod tests {
     struct Blobs;
 
     impl medulla_server_api::walkthrough_readers::BlobReader for Blobs {
-        fn read(&self, tenant: &str, artifact_ref: &str) -> Option<Vec<u8>> {
-            (tenant == "tenant-a" && artifact_ref == "blob:1").then(|| b"artifact".to_vec())
+        fn read(&self, owner_scope: &str, artifact_ref: &str) -> Option<Vec<u8>> {
+            (owner_scope == "owner-a" && artifact_ref == "blob:1").then(|| b"artifact".to_vec())
         }
     }
 
@@ -1656,7 +1656,12 @@ mod tests {
         use medulla_server_api::walkthrough_readers::WalkthroughReaders;
         let readers = WalkthroughReaders::new(std::sync::Arc::new(Index), std::sync::Arc::new(Blobs));
         let checks =
-            crate::harness_admission::resolve_walkthrough_checks(write, tenant, Some(&readers));
+            crate::harness_admission::resolve_walkthrough_checks(
+            write,
+            tenant,
+            if tenant == "tenant-a" { "owner-a" } else { "owner-b" },
+            Some(&readers),
+        );
         if let crate::harness_admission::WalkthroughChecks::Refused(refusal) = checks {
             return Err(refusal.code().as_str().to_string());
         }

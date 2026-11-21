@@ -30,7 +30,8 @@ fn with_state<T>(
     state.try_read().ok().and_then(|guard| read(&guard))
 }
 
-/// Reads an artifact body from the engine blob chunk store, owned by the tenant.
+/// Reads an artifact body from the engine blob chunk store, owned by the carrier owner scope
+/// that uploaded it.
 pub struct ServerBlobReader {
     state: Arc<RwLock<ServerState>>,
 }
@@ -43,7 +44,7 @@ impl ServerBlobReader {
 }
 
 impl BlobReader for ServerBlobReader {
-    fn read(&self, tenant: &str, artifact_ref: &str) -> Option<Vec<u8>> {
+    fn read(&self, owner_scope: &str, artifact_ref: &str) -> Option<Vec<u8>> {
         #[cfg(feature = "blob")]
         {
             use medulla_server_blob::blob::BlobStateExt;
@@ -54,7 +55,7 @@ impl BlobReader for ServerBlobReader {
             })?;
             medulla_server_blob::blob::engine_bodies::read_owned_blob(
                 store.as_ref(),
-                tenant,
+                owner_scope,
                 artifact_ref,
                 WALKTHROUGH_ARTIFACT_MAX_BYTES,
             )
@@ -62,7 +63,7 @@ impl BlobReader for ServerBlobReader {
         }
         #[cfg(not(feature = "blob"))]
         {
-            let _ = (&self.state, tenant, artifact_ref);
+            let _ = (&self.state, owner_scope, artifact_ref);
             None
         }
     }
