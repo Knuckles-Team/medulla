@@ -4326,10 +4326,10 @@ mod admit_kind_tests {
 
     // spec: MEDULLA-REPO-INGEST-R002.1.6
     #[test]
-    fn skill_documents_is_admitted_and_facts_stays_refused() {
+    fn skill_documents_and_facts_are_admitted() {
         assert!(admit_kind(SourceBatchKind::SkillDocuments).is_ok());
         // MEDULLA-INGEST-WORKER-R701.3 admits `facts` through `facts::admit_facts`, so the
-        // refusal of the kind that R002.1.6 names no longer applies; see SPEC-GAPS.
+        // refusal of the kind that R002.1.6 named no longer applies.
         assert!(admit_kind(SourceBatchKind::Facts).is_ok());
     }
 }
