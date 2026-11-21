@@ -40,6 +40,9 @@ pub struct GlossaryTerm {
     #[serde(default)]
     pub related: Vec<String>,
     pub status: GlossaryTermStatus,
+    /// `dct:isReplacedBy`: the term a deprecated term names as its replacement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replaced_by: Option<String>,
 }
 
 /// One `(predicate, object)` pair of a term's SKOS projection.
@@ -78,6 +81,9 @@ impl GlossaryTerm {
                 .iter()
                 .map(|r| (SKOS_RELATED, SkosObject::Iri(r.clone()))),
         );
+        if let Some(replacement) = &self.replaced_by {
+            out.push((DCT_IS_REPLACED_BY, SkosObject::Iri(replacement.clone())));
+        }
         out
     }
 }

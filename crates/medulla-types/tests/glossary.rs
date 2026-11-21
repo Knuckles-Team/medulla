@@ -16,6 +16,7 @@ fn term_round_trips_and_maps_to_skos() {
         broader: vec!["http://example.org/term/revenue".into()],
         related: vec!["http://example.org/term/refund".into()],
         status: GlossaryTermStatus::InReview,
+        replaced_by: None,
     };
     let json = serde_json::to_value(&term).unwrap();
     assert_eq!(json["status"], "in_review");
