@@ -1198,7 +1198,7 @@ pub fn free() {}
 
     #[test]
     fn qualification_survives_index_repository_resolution() {
-        // resolve() strips `call_sites`/`minhash` — it must NOT strip the new facts.
+        // resolve() strips `call_sites` — it must NOT strip the new facts.
         let files: Vec<(String, Vec<u8>)> = vec![(
             "x.py".into(),
             b"class A:\n    def run(self):\n        return 1\n".to_vec(),

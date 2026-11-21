@@ -9,7 +9,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use medulla_compute::parser::resolve::{file_node, resolution_names, resolve};
+use medulla_compute::parser::resolve::{
+    file_node, resolution_names, resolve, similarity_bands, unresolved_imports,
+    HAS_UNRESOLVED_CALLS, HAS_UNRESOLVED_IMPORTS, UNRESOLVED_CALLS, UNRESOLVED_IMPORTS,
+};
 use medulla_compute::parser::tree_sitter::{is_parseable_path, parse_file};
 use medulla_enrich::fingerprint::{classify, ChangeLevel, StructuralFingerprint};
 use medulla_enrich::Id;
@@ -161,6 +164,13 @@ pub trait StoredLookup {
     fn definitions(&self, name: &str) -> Result<Vec<StoredNode>, String>;
     /// The path of every file node of the repository.
     fn file_paths(&self) -> Result<Vec<String>, String>;
+    /// The stored `SYMBOL` nodes that share any of these signature band keys and
+    /// hashes: the symbols a changed symbol can be similar to.
+    fn similar_candidates(&self, bands: &[(String, String)]) -> Result<Vec<StoredNode>, String>;
+    /// The stored `SYMBOL` nodes that hold call sites bound to no definition.
+    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String>;
+    /// The stored `FILE` nodes that hold import modules bound to no file.
+    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String>;
 }
 
 /// A repository graph that holds no other symbol and no other file.
@@ -172,6 +182,18 @@ impl StoredLookup for NoLookup {
     }
 
     fn file_paths(&self) -> Result<Vec<String>, String> {
+        Ok(Vec::new())
+    }
+
+    fn similar_candidates(&self, _bands: &[(String, String)]) -> Result<Vec<StoredNode>, String> {
+        Ok(Vec::new())
+    }
+
+    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
+        Ok(Vec::new())
+    }
+
+    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
         Ok(Vec::new())
     }
 }
@@ -188,6 +210,78 @@ fn extracted(node: &StoredNode) -> ExtractedNode {
         node_type,
         properties,
     }
+}
+
+/// A stored symbol as a resolution input that defines and is similar but calls
+/// nothing: its call edges are stored, not resolved again.
+fn inert(mut node: ExtractedNode) -> ExtractedNode {
+    node.properties.remove("calls");
+    node.properties.remove("call_sites");
+    node
+}
+
+/// A stored caller as a resolution input: the call sites it left unresolved and the
+/// names of the calls whose target was removed, and nothing else it calls.
+fn caller_node(node: &StoredNode, fed: &BTreeSet<String>) -> ExtractedNode {
+    let mut input = extracted(node);
+    let mut sites: BTreeSet<String> = input
+        .properties
+        .get(UNRESOLVED_CALLS)
+        .map(|sites| split_list(sites))
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    sites.extend(fed.iter().cloned());
+    input.properties.remove("calls");
+    input.properties.insert(
+        "call_sites".to_string(),
+        sites.into_iter().collect::<Vec<_>>().join(";"),
+    );
+    input
+}
+
+/// The `;`-joined entries of a stored list property.
+fn split_list(list: &str) -> Vec<String> {
+    list.split(';')
+        .filter(|entry| !entry.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// The receiver and callee names of encoded call sites (`receiver:callee:argc`).
+fn site_names(sites: &str) -> Vec<String> {
+    split_list(sites)
+        .iter()
+        .flat_map(|site| {
+            site.splitn(3, ':')
+                .take(2)
+                .filter(|name| !name.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// `node` with the properties named by `keys` taken from `now` (or dropped when `now`
+/// lacks them), or `None` when that changes nothing.
+fn with_unresolved(
+    node: &StoredNode,
+    keys: [&str; 2],
+    now: &std::collections::HashMap<String, String>,
+) -> Option<ExtractedNode> {
+    let before = extracted(node);
+    let mut after = extracted(node);
+    for key in keys {
+        match now.get(key) {
+            Some(value) => {
+                after.properties.insert(key.to_string(), value.clone());
+            }
+            None => {
+                after.properties.remove(key);
+            }
+        }
+    }
+    (after.properties != before.properties).then_some(after)
 }
 
 /// The outcome of re-indexing one changeset.
@@ -338,9 +432,13 @@ pub fn reindex_changeset(
         })
         .collect();
     for path in &deleted {
-        methods.push(Method::RemoveNode {
-            node_id: fingerprint_node_id(&changeset.repo, path)?,
-        });
+        // The fingerprint node carries the path, so it is usually removed above.
+        let fingerprint = fingerprint_node_id(&changeset.repo, path)?;
+        if !removed.contains(&fingerprint) {
+            methods.push(Method::RemoveNode {
+                node_id: fingerprint,
+            });
+        }
     }
 
     let inputs: Vec<(String, Vec<u8>)> = parsed
@@ -370,30 +468,129 @@ pub fn reindex_changeset(
             },
         })
         .collect();
-    // Resolution sees the changed files beside the stored symbols they bind to and
-    // the stored callers whose edges the removal broke, so a call into an unchanged
-    // file resolves and an edge from an unchanged file is re-resolved, not dropped.
+    // Resolution sees the changed files beside the stored symbols they bind to, the
+    // stored callers whose edges the removal broke, and the stored references that were
+    // unresolved and now name a changed or new symbol or path, so a call into an
+    // unchanged file resolves and an edge from an unchanged file is re-resolved, not
+    // dropped.
+    let fresh_ids: BTreeSet<String> = results
+        .iter()
+        .flat_map(|result| result.nodes.iter().map(|node| node.node_id.clone()))
+        .chain(inputs.iter().map(|(path, _)| format!("file:{path}")))
+        .collect();
+    let alive = |id: &str| !removed.contains(id) || fresh_ids.contains(id);
+    // A similarity edge that touches a changed node is recomputed, not carried over.
     let cross: Vec<&StoredEdge> = stored
         .edges
         .iter()
+        .filter(|edge| edge.edge_type != "similar_to")
         .filter(|edge| removed.contains(&edge.source) != removed.contains(&edge.target))
         .collect();
+    // Stored callers and importers: the node and what is fed to the resolver for it.
+    let mut callers: BTreeMap<String, (StoredNode, BTreeSet<String>)> = BTreeMap::new();
+    let mut importers: BTreeMap<String, (StoredNode, BTreeSet<String>)> = BTreeMap::new();
     let mut context: BTreeMap<String, StoredNode> = BTreeMap::new();
     for edge in &cross {
-        let outer = if removed.contains(&edge.source) {
-            &edge.target
-        } else {
+        let stored_source = !removed.contains(&edge.source);
+        let outer = if stored_source {
             &edge.source
+        } else {
+            &edge.target
         };
-        if let Some(node) = stored.neighbours.get(outer) {
-            context.insert(outer.clone(), node.clone());
+        let Some(node) = stored.neighbours.get(outer) else {
+            continue;
+        };
+        match (edge.edge_type.as_str(), stored_source) {
+            ("calls", true) => {
+                let fed = callers
+                    .entry(outer.clone())
+                    .or_insert_with(|| (node.clone(), BTreeSet::new()));
+                // The stored symbol keeps the callee name only: a call whose target is
+                // gone is fed back as that name, so it can bind again or stay unresolved.
+                if !alive(&edge.target) {
+                    if let Some(name) = edge.properties.get("name") {
+                        fed.1.insert(format!(":{name}:"));
+                    }
+                }
+            }
+            ("depends_on", true) => {
+                let fed = importers
+                    .entry(outer.clone())
+                    .or_insert_with(|| (node.clone(), BTreeSet::new()));
+                if let Some(module) = edge.properties.get("module") {
+                    fed.1.insert(module.clone());
+                }
+            }
+            _ => {
+                context.insert(outer.clone(), node.clone());
+            }
+        }
+    }
+    // The symbols the changed files define and the paths they add decide which stored
+    // unresolved references can bind now.
+    let defined: BTreeSet<String> = results
+        .iter()
+        .flat_map(|result| result.nodes.iter())
+        .filter(|node| node.node_type == "SYMBOL")
+        .filter_map(|node| node.properties.get("name").cloned())
+        .collect();
+    if !defined.is_empty() {
+        for node in lookup.unresolved_calls()? {
+            let names = node
+                .properties
+                .get(UNRESOLVED_CALLS)
+                .map(|sites| site_names(sites))
+                .unwrap_or_default();
+            if !removed.contains(&node.id) && names.iter().any(|name| defined.contains(name)) {
+                callers
+                    .entry(node.id.clone())
+                    .or_insert_with(|| (node, BTreeSet::new()));
+            }
+        }
+    }
+    let new_paths = reparsed.iter().any(|path| {
+        let file_id = format!("file:{path}");
+        !stored
+            .nodes_by_path
+            .get(path)
+            .is_some_and(|ids| ids.contains(&file_id))
+    });
+    if new_paths {
+        for node in lookup.unresolved_imports()? {
+            if !removed.contains(&node.id) {
+                importers
+                    .entry(node.id.clone())
+                    .or_insert_with(|| (node, BTreeSet::new()));
+            }
+        }
+    }
+    for id in callers.keys().chain(importers.keys()) {
+        context.remove(id);
+    }
+    // The stored symbols that collide with a changed symbol's signature bands.
+    for node in results.iter().flat_map(|result| result.nodes.iter()) {
+        let Some(bands) = similarity_bands(node) else {
+            continue;
+        };
+        for candidate in lookup.similar_candidates(&bands)? {
+            if !removed.contains(&candidate.id)
+                && !callers.contains_key(&candidate.id)
+                && !importers.contains_key(&candidate.id)
+            {
+                context.entry(candidate.id.clone()).or_insert(candidate);
+            }
         }
     }
     let mut asked: BTreeSet<String> = BTreeSet::new();
     let mut pending: Vec<ExtractedNode> = results
         .iter()
         .flat_map(|result| result.nodes.iter().map(clone_node))
-        .chain(context.values().map(extracted))
+        .chain(context.values().map(|node| inert(extracted(node))))
+        .chain(
+            callers
+                .values()
+                .map(|(node, fed)| caller_node(node, fed)),
+        )
         .collect();
     while !pending.is_empty() {
         let wanted: Vec<String> = resolution_names(&pending)
@@ -403,24 +600,37 @@ pub fn reindex_changeset(
         pending = Vec::new();
         for name in wanted {
             for definition in lookup.definitions(&name)? {
-                if !removed.contains(&definition.id) && !context.contains_key(&definition.id) {
-                    pending.push(extracted(&definition));
+                if !removed.contains(&definition.id)
+                    && !context.contains_key(&definition.id)
+                    && !callers.contains_key(&definition.id)
+                {
+                    pending.push(inert(extracted(&definition)));
                     context.insert(definition.id.clone(), definition);
                 }
             }
             asked.insert(name);
         }
     }
-    let raw_imports: Vec<ExtractedEdge> = cross
+    let raw_imports: Vec<ExtractedEdge> = importers
         .iter()
-        .filter(|edge| edge.edge_type == "depends_on" && !removed.contains(&edge.source))
-        .filter_map(|edge| {
-            edge.properties.get("module").map(|module| ExtractedEdge {
-                source: edge.source.clone(),
-                target: module.clone(),
-                edge_type: "depends_on_raw".to_string(),
-                properties: Default::default(),
-            })
+        .flat_map(|(id, (node, fed))| {
+            let stored_modules = node
+                .properties
+                .get(UNRESOLVED_IMPORTS)
+                .map(|modules| split_list(modules))
+                .unwrap_or_default();
+            stored_modules
+                .into_iter()
+                .chain(fed.iter().cloned())
+                .collect::<BTreeSet<String>>()
+                .into_iter()
+                .map(|module| ExtractedEdge {
+                    source: id.clone(),
+                    target: module,
+                    edge_type: "depends_on_raw".to_string(),
+                    properties: Default::default(),
+                })
+                .collect::<Vec<_>>()
         })
         .collect();
     let mut all_inputs = inputs.clone();
@@ -436,36 +646,69 @@ pub fn reindex_changeset(
         nodes: context
             .values()
             .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
-            .map(extracted)
+            .map(|node| inert(extracted(node)))
+            .chain(
+                callers
+                    .values()
+                    .map(|(node, fed)| caller_node(node, fed)),
+            )
             .collect(),
         edges: raw_imports,
         symbols_extracted: 0,
     });
     let mut resolved = resolve(&all_inputs, &all_results);
+    let unresolved = unresolved_imports(&all_inputs, &all_results);
+    // A stored caller or importer that held an unresolved reference is written again
+    // with what is still unresolved.
+    let mut rewritten: Vec<ExtractedNode> = Vec::new();
+    for (id, (node, _)) in &callers {
+        if let Some(now) = resolved.nodes.iter().find(|written| &written.node_id == id) {
+            rewritten.extend(with_unresolved(
+                node,
+                [UNRESOLVED_CALLS, HAS_UNRESOLVED_CALLS],
+                &now.properties,
+            ));
+        }
+    }
+    for (id, (node, _)) in &importers {
+        let path = id.strip_prefix("file:").unwrap_or(id);
+        let now = file_node(path, unresolved.get(path));
+        rewritten.extend(with_unresolved(
+            node,
+            [UNRESOLVED_IMPORTS, HAS_UNRESOLVED_IMPORTS],
+            &now.properties,
+        ));
+    }
+    // Only the changed files' nodes are new.
     resolved
         .nodes
-        .retain(|node| !context.contains_key(&node.node_id));
-    resolved
-        .nodes
-        .extend(inputs.iter().map(|(path, _)| file_node(path)));
+        .retain(|node| fresh_ids.contains(&node.node_id));
+    resolved.nodes.extend(
+        inputs
+            .iter()
+            .map(|(path, _)| file_node(path, unresolved.get(path))),
+    );
 
     let new_ids: BTreeSet<String> = resolved
         .nodes
         .iter()
         .map(|node| node.node_id.clone())
         .collect();
-    // Only an edge that touches a re-indexed node is written: the edges among the
-    // stored nodes stay as they are.
-    resolved
-        .edges
-        .retain(|edge| new_ids.contains(&edge.source) || new_ids.contains(&edge.target));
+    // Only an edge that touches a re-indexed node is written, and the resolved edges
+    // of a stored caller or importer: the edges among the stored nodes stay as they are.
+    resolved.edges.retain(|edge| {
+        new_ids.contains(&edge.source)
+            || new_ids.contains(&edge.target)
+            || (matches!(edge.edge_type.as_str(), "calls" | "depends_on")
+                && (callers.contains_key(&edge.source) || importers.contains_key(&edge.source)))
+    });
     let new_symbols: BTreeSet<String> = resolved
         .nodes
         .iter()
         .filter(|node| node.node_type == "SYMBOL")
         .map(|node| node.node_id.clone())
         .collect();
-    let alive = |id: &str| !removed.contains(id) || new_ids.contains(id);
+    resolved.nodes.extend(rewritten);
 
     // A stored edge between a removed node and a node that survives is written again.
     // From a changed caller the resolver's edge is the answer and a stored edge it did
@@ -787,6 +1030,31 @@ mod tests {
 
         fn file_paths(&self) -> Result<Vec<String>, String> {
             Ok(self.files.clone())
+        }
+
+        fn similar_candidates(
+            &self,
+            bands: &[(String, String)],
+        ) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|node| {
+                bands
+                    .iter()
+                    .any(|(key, value)| node.properties.get(key) == Some(value))
+            }))
+        }
+
+        fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|node| node.properties.contains_key(HAS_UNRESOLVED_CALLS)))
+        }
+
+        fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|node| node.properties.contains_key(HAS_UNRESOLVED_IMPORTS)))
+        }
+    }
+
+    impl Memory {
+        fn marked(&self, keep: impl Fn(&StoredNode) -> bool) -> Vec<StoredNode> {
+            self.nodes.iter().filter(|node| keep(node)).cloned().collect()
         }
     }
 

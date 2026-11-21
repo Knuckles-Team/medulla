@@ -19,7 +19,7 @@
 use super::tree_sitter::{
     decode_call_sites, DecodedSite, ExtractedEdge, ExtractedNode, ParseResult,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 #[path = "resolve_imports.rs"]
 mod imports;
@@ -64,10 +64,12 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     let (results, file_outcomes) = super::tree_sitter::parse_files_with_outcomes(files);
     let mut indexed = resolve(files, &results);
     // Every file is a node of its own, carrying the `file_path` its symbols carry, so
-    // one path names the file node and its symbols alike (MEDULLA-SCM-R006).
+    // one path names the file node and its symbols alike, and the import modules that
+    // bound to no file of the batch (MEDULLA-SCM-R006).
+    let unresolved = unresolved_imports(files, &results);
     indexed
         .nodes
-        .extend(files.iter().map(|(path, _)| file_node(path)));
+        .extend(files.iter().map(|(path, _)| file_node(path, unresolved.get(path))));
     indexed.files_parsed = file_outcomes
         .iter()
         .filter(|outcome| {
@@ -112,13 +114,95 @@ pub fn resolution_names(nodes: &[ExtractedNode]) -> std::collections::BTreeSet<S
     names
 }
 
-/// The node of one indexed file.
-pub fn file_node(path: &str) -> ExtractedNode {
+/// Property of a symbol node: the call sites that bound to no definition, encoded
+/// like a call-site list (`receiver:callee:argc` joined by `;`), sorted.
+pub const UNRESOLVED_CALLS: &str = "unresolved_calls";
+/// Property of a file node: the import modules that bound to no file, sorted and
+/// joined by `;`.
+pub const UNRESOLVED_IMPORTS: &str = "unresolved_imports";
+/// Marker of a symbol node that holds [`UNRESOLVED_CALLS`]: a fixed key and value,
+/// so the property index lists the symbols to re-resolve.
+pub const HAS_UNRESOLVED_CALLS: &str = "has_unresolved_calls";
+/// Marker of a file node that holds [`UNRESOLVED_IMPORTS`].
+pub const HAS_UNRESOLVED_IMPORTS: &str = "has_unresolved_imports";
+/// Prefix of the stored similarity band keys: `minhash_band_<n>` holds the hash of
+/// band `n` of the symbol's signature, so the property index finds the stored symbols
+/// that collide with a changed one.
+pub const BAND_KEY_PREFIX: &str = "minhash_band_";
+
+/// The node of one indexed file, with the import modules that bound to no file.
+pub fn file_node(path: &str, unresolved: Option<&BTreeSet<String>>) -> ExtractedNode {
+    let mut properties = HashMap::from([("file_path".to_string(), path.to_string())]);
+    if let Some(modules) = unresolved.filter(|modules| !modules.is_empty()) {
+        properties.insert(
+            UNRESOLVED_IMPORTS.to_string(),
+            modules.iter().cloned().collect::<Vec<_>>().join(";"),
+        );
+        properties.insert(HAS_UNRESOLVED_IMPORTS.to_string(), "true".to_string());
+    }
     ExtractedNode {
         node_id: format!("file:{path}"),
         node_type: "FILE".to_string(),
-        properties: HashMap::from([("file_path".to_string(), path.to_string())]),
+        properties,
     }
+}
+
+/// The import modules of each file of `results` that bind to no file of `files`,
+/// by importing path. The same resolver `resolve` binds imports with.
+pub fn unresolved_imports(
+    files: &[(String, Vec<u8>)],
+    results: &[ParseResult],
+) -> BTreeMap<String, BTreeSet<String>> {
+    let file_paths: HashSet<&str> = files.iter().map(|(path, _)| path.as_str()).collect();
+    let mut unresolved: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for edge in results.iter().flat_map(|result| &result.edges) {
+        if edge.edge_type != "depends_on_raw" {
+            continue;
+        }
+        let importer = edge.source.strip_prefix("file:").unwrap_or(&edge.source);
+        if resolve_import(importer, &edge.target, &file_paths).is_none() {
+            unresolved
+                .entry(importer.to_string())
+                .or_default()
+                .insert(edge.target.clone());
+        }
+    }
+    unresolved
+}
+
+/// The band keys and hashes of one symbol's stored signature, `None` when it has
+/// none. The hash of a band is what `similarity_scored_pairs` buckets on.
+pub fn similarity_bands(node: &ExtractedNode) -> Option<Vec<(String, String)>> {
+    let sig = super::tree_sitter::decode_minhash(node.properties.get("minhash")?)?;
+    Some(
+        band_hashes(&sig)
+            .iter()
+            .enumerate()
+            .map(|(band, hash)| (format!("{BAND_KEY_PREFIX}{band}"), format!("{hash:016x}")))
+            .collect(),
+    )
+}
+
+/// LSH banding: BANDS bands of ROWS rows (BANDS*ROWS == MINHASH_K).
+const BANDS: usize = 8;
+const ROWS: usize = super::tree_sitter::MINHASH_K / BANDS;
+
+fn band_hashes(sig: &[u32; super::tree_sitter::MINHASH_K]) -> Vec<u64> {
+    sig.as_chunks::<ROWS>()
+        .0
+        .iter()
+        .take(BANDS)
+        .map(|rows| {
+            rows.iter().fold(0xcbf2_9ce4_8422_2325, |h, row| {
+                (h ^ *row as u64).wrapping_mul(0x0000_0100_0000_01b3)
+            })
+        })
+        .collect()
+}
+
+fn encode_site(site: &DecodedSite) -> String {
+    let argc = site.argc.map(|n| n.to_string()).unwrap_or_default();
+    format!("{}:{}:{}", site.receiver, site.callee, argc)
 }
 
 /// Resolve already-parsed results against the file set they came from. Split out
@@ -139,7 +223,8 @@ pub fn resolve(files: &[(String, Vec<u8>)], results: &[ParseResult]) -> IndexRes
     };
 
     // ── Resolve calls: caller symbol → callee definition (type/scope-aware) ──
-    let calls = resolve_call_edges(&out.nodes, &context, &mut inputs.edges);
+    let mut calls = resolve_call_edges(&out.nodes, &context, &mut inputs.edges);
+    let unresolved_sites = std::mem::take(&mut calls.unresolved_sites);
     out.calls_resolved = calls.resolved;
     out.calls_unresolved = calls.unresolved;
     out.calls_scope_resolved = calls.scope_resolved;
@@ -158,10 +243,24 @@ pub fn resolve(files: &[(String, Vec<u8>)], results: &[ParseResult]) -> IndexRes
     // ── Model-free similarity: LSH-band the MinHash signatures (CONCEPT:MEDULLA-KG.compute.model-free-similar-code) ──
     out.similar_edges = similarity_edges(&out.nodes, &mut inputs.edges);
 
-    // `call_sites`/`minhash` are resolution-only inputs; don't leak them onto nodes.
+    // `call_sites` is a resolution-only input; don't leak it onto nodes. What it could
+    // not bind is kept, and so is the similarity signature with its band hashes, so a
+    // later changeset resolves again without the file bytes (MEDULLA-SCM-R006).
     for n in &mut out.nodes {
         n.properties.remove("call_sites");
-        n.properties.remove("minhash");
+        n.properties.remove(UNRESOLVED_CALLS);
+        n.properties.remove(HAS_UNRESOLVED_CALLS);
+        if let Some(sites) = unresolved_sites.get(&n.node_id) {
+            n.properties
+                .insert(UNRESOLVED_CALLS.to_string(), sites.iter().cloned().collect::<Vec<_>>().join(";"));
+            n.properties
+                .insert(HAS_UNRESOLVED_CALLS.to_string(), "true".to_string());
+        }
+        if n.node_type == "SYMBOL" {
+            for (key, value) in similarity_bands(n).into_iter().flatten() {
+                n.properties.insert(key, value);
+            }
+        }
     }
 
     out.edges = inputs.edges;
@@ -214,6 +313,8 @@ struct CallCounts {
     unresolved: usize,
     scope_resolved: usize,
     type_resolved: usize,
+    /// Per caller node id: the encoded call sites that bound to no definition.
+    unresolved_sites: HashMap<String, BTreeSet<String>>,
 }
 
 struct CallResolutionState<'a> {
@@ -405,7 +506,15 @@ fn resolve_call_edges(
                 Some((target, strategy, confidence)) => record_call_resolution(
                     &caller.id, site, target, strategy, confidence, &mut state,
                 ),
-                None => state.counts.unresolved += 1,
+                None => {
+                    state.counts.unresolved += 1;
+                    state
+                        .counts
+                        .unresolved_sites
+                        .entry(caller.id.clone())
+                        .or_default()
+                        .insert(encode_site(site));
+                }
             }
         }
     }
@@ -664,17 +773,11 @@ fn similarity_edges(nodes: &[ExtractedNode], edges: &mut Vec<ExtractedEdge>) -> 
 }
 
 fn similarity_scored_pairs(sigs: &[SimilaritySignature<'_>]) -> Vec<(usize, usize, f64)> {
-    use super::tree_sitter::{minhash_jaccard, MINHASH_K};
+    use super::tree_sitter::minhash_jaccard;
 
-    // LSH banding: BANDS bands of ROWS rows (BANDS*ROWS == MINHASH_K).
-    const BANDS: usize = 8;
-    const ROWS: usize = MINHASH_K / BANDS;
     let mut buckets: HashMap<(usize, u64), Vec<usize>> = HashMap::new();
     for (idx, (_, sig)) in sigs.iter().enumerate() {
-        for (band, rows) in sig.as_chunks::<ROWS>().0.iter().enumerate().take(BANDS) {
-            let h = rows.iter().fold(0xcbf2_9ce4_8422_2325, |h, row| {
-                (h ^ *row as u64).wrapping_mul(0x0000_0100_0000_01b3)
-            });
+        for (band, h) in band_hashes(sig).into_iter().enumerate() {
             buckets.entry((band, h)).or_default().push(idx);
         }
     }
@@ -1201,7 +1304,8 @@ mod tests {
                 .any(|(a, b)| a == "unrelated" || b == "unrelated"),
             "unrelated function must not be linked, got {sim:?}"
         );
-        // Every similar_to edge carries a score; minhash is stripped from nodes.
+        // Every similar_to edge carries a score; the signature stays on the symbol
+        // with its band keys, so a later changeset finds its collisions (SCM-R006).
         assert!(r
             .edges
             .iter()
@@ -1211,7 +1315,53 @@ mod tests {
         assert!(r
             .nodes
             .iter()
-            .all(|n| !n.properties.contains_key("minhash")));
+            .filter(|n| n.properties.contains_key("minhash"))
+            .all(|n| (0..BANDS).all(|band| n
+                .properties
+                .contains_key(&format!("{BAND_KEY_PREFIX}{band}")))));
+        assert!(r
+            .nodes
+            .iter()
+            .any(|n| n.properties.contains_key("minhash")));
+    }
+
+    // spec: MEDULLA-SCM-R006
+    #[test]
+    fn unresolved_references_stay_on_their_nodes() {
+        let r = index_repository(&files(&[
+            (
+                "m.py",
+                "import os\n\ndef caller():\n    helper()\n    return missing()\n\ndef helper():\n    return 1\n",
+            ),
+            ("n.py", "def other():\n    return 1\n"),
+        ]));
+        let caller = r
+            .nodes
+            .iter()
+            .find(|n| n.properties.get("name").map(String::as_str) == Some("caller"))
+            .unwrap();
+        assert_eq!(
+            caller.properties.get(UNRESOLVED_CALLS).map(String::as_str),
+            Some(":missing:0"),
+            "only the call that bound to no definition is kept"
+        );
+        assert_eq!(
+            caller.properties.get(HAS_UNRESOLVED_CALLS).map(String::as_str),
+            Some("true")
+        );
+        let helper = r
+            .nodes
+            .iter()
+            .find(|n| n.properties.get("name").map(String::as_str) == Some("helper"))
+            .unwrap();
+        assert!(!helper.properties.contains_key(UNRESOLVED_CALLS));
+        let module = r.nodes.iter().find(|n| n.node_id == "file:m.py").unwrap();
+        assert_eq!(
+            module.properties.get(UNRESOLVED_IMPORTS).map(String::as_str),
+            Some("os")
+        );
+        let other = r.nodes.iter().find(|n| n.node_id == "file:n.py").unwrap();
+        assert!(!other.properties.contains_key(HAS_UNRESOLVED_IMPORTS));
     }
 
     #[test]

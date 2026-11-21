@@ -7,6 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
 
+use medulla_compute::parser::resolve::{HAS_UNRESOLVED_CALLS, HAS_UNRESOLVED_IMPORTS};
 use medulla_graph_core::graph::GraphCore;
 use medulla_h_ingest::repository_index::changeset::{
     generation_node_id, reindex_changeset, stored_generation, ChangesetFile, StoredEdge,
@@ -109,6 +110,45 @@ impl StoredLookup for CoreLookup<'_> {
             .filter_map(|(id, _)| id.strip_prefix("file:").map(str::to_string))
             .collect())
     }
+
+    fn similar_candidates(&self, bands: &[(String, String)]) -> Result<Vec<StoredNode>, String> {
+        let mut ids = BTreeSet::new();
+        for (key, value) in bands {
+            ids.extend(
+                self.0
+                    .nodes_by_property(key, value)
+                    .ok_or("INDEX_FAILED: the property index cannot cover the similarity bands")?,
+            );
+        }
+        Ok(self.symbols(ids))
+    }
+
+    fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
+        self.marked(HAS_UNRESOLVED_CALLS)
+    }
+
+    fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
+        self.marked(HAS_UNRESOLVED_IMPORTS)
+    }
+}
+
+impl CoreLookup<'_> {
+    /// The stored `SYMBOL` nodes among `ids`.
+    fn symbols(&self, ids: BTreeSet<String>) -> Vec<StoredNode> {
+        ids.iter()
+            .filter_map(|id| stored_node(self.0, id))
+            .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
+            .collect()
+    }
+
+    /// The nodes carrying the fixed marker `key`.
+    fn marked(&self, key: &str) -> Result<Vec<StoredNode>, String> {
+        let ids = self
+            .0
+            .nodes_by_property(key, "true")
+            .ok_or("INDEX_FAILED: the property index cannot cover the unresolved markers")?;
+        Ok(ids.iter().filter_map(|id| stored_node(self.0, id)).collect())
+    }
 }
 
 /// The stored index of `repo` as `reindex_changeset` reads it: the generation, the
@@ -143,17 +183,12 @@ fn stored_index(core: &GraphCore, changeset: &Changeset) -> Result<StoredIndex, 
         let ids = core
             .nodes_by_property("file_path", path)
             .ok_or("INDEX_FAILED: the property index cannot cover file_path")?;
-        for id in ids {
-            let indexed = stored_node(core, &id).is_some_and(|node| {
-                matches!(
-                    node.properties.get("type").map(String::as_str),
-                    Some("FILE" | "SYMBOL")
-                )
-            });
-            if indexed {
-                nodes_by_path.entry(path.to_string()).or_default().push(id);
-            }
-        }
+        // Every node kind that carries the path: the file node, its symbols, tests,
+        // spans and fingerprint.
+        nodes_by_path
+            .entry(path.to_string())
+            .or_default()
+            .extend(ids);
     }
     let held: BTreeSet<&String> = nodes_by_path.values().flatten().collect();
     let mut edges: Vec<StoredEdge> = Vec::new();
