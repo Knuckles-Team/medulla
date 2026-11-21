@@ -93,6 +93,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // MEDULLA-INGEST-WORKER-R003.3: atoms listed from the core `read_authority` projected.
     "AtomContext",
     "ArchitectureModelExport",
+    "ProcessModelExport",
     // MEDULLA-CQ-ORCH-R010.3: `mining::architecture::handle_architecture_view` derives the view
     // from the core `read_authority.project_core` projected.
     "ArchitectureView",

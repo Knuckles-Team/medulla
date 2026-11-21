@@ -204,6 +204,26 @@ $($variants)*
         process_iri: String,
         expected_version: Option<u32>,
     },
+    /// Store one canonical workflow as the next `WorkflowPattern` version of
+    /// `workflow_id` (MEDULLA-CQ-ORCH-R701.3). `admit_canonical` checks the document;
+    /// the write is the compare-and-set of `ProcessCompile` on `expected_version`.
+    ProcessModelImport {
+        workflow: medulla_types::process_import::CanonicalWorkflow,
+        workflow_id: String,
+        expected_version: Option<u32>,
+    },
+    /// Read version `version` of the stored workflow `workflow_id`
+    /// (MEDULLA-CQ-ORCH-R701.3). With no `target` the canonical form is returned; with
+    /// `bpmn20` the deployable BPMN document too; with `aris_epc` the canonical form with
+    /// the EPC losses. `strict` refuses `PROCESS_EXPORT_LOSSY` instead of listing losses.
+    /// Reads only.
+    ProcessModelExport {
+        workflow_id: String,
+        version: u32,
+        target: Option<medulla_types::process_import::ProcessSourceSystem>,
+        #[serde(default)]
+        strict: bool,
+    },
 
     /// Keep one federated secondary in step with the native graph, the system
     /// of record (MEDULLA-SRC-AUTH-R012.6). The host owns the connector call:

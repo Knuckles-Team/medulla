@@ -492,6 +492,8 @@ SEND_BY_METHOD = {
     "NumericEvaluate": compute.send_numeric_evaluate,
     "HarnessEdit": coordination.send_harness_edit,
     "ProcessCompile": coordination.send_process_compile,
+    "ProcessModelImport": coordination.send_process_model_import,
+    "ProcessModelExport": coordination.send_process_model_export,
     "ObservationState": coordination.send_observation_state,
     "ObserveDevelopmentLane": coordination.send_observe_development_lane,
     "ObserveScreen": ingestion.send_observe_screen,

@@ -125,6 +125,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-CQ-ORCH-R700.3: the process compile commits the next workflow version as one batch.
     "ProcessCompile",
+    "ProcessModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
@@ -779,6 +780,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-CQ-ORCH-R700.3: the process compile commits the next workflow version as one batch.
     "ProcessCompile",
+    "ProcessModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
@@ -876,6 +878,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::NlQueryCorrect { .. } => Some("NlQueryCorrect"),
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
         Method::ProcessCompile { .. } => Some("ProcessCompile"),
+        Method::ProcessModelImport { .. } => Some("ProcessModelImport"),
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::RetentionCleanupRun { .. } => Some("RetentionCleanupRun"),
         Method::PolicySourceBind { .. } => Some("PolicySourceBind"),

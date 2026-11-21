@@ -1,4 +1,5 @@
-//! Served process compile (MEDULLA-CQ-ORCH-R700.3, R700.4, R700.5).
+//! Served process compile and canonical workflow import and export (MEDULLA-CQ-ORCH-R700.3,
+//! R700.4, R700.5, R701.3).
 //!
 //! `ProcessCompile` is gateway-routed (`Route::ProcessCompile`). The handler reads the
 //! caller's tenant-visible process view (the `hasStep` and `handsOffTo` edges and the nodes
@@ -10,15 +11,33 @@
 //! racing compiles never both write version `n + 1`. A published version is never mutated.
 //! A refusal writes nothing. The `compiledFrom` edge carries `processRevision`, `compilerId`
 //! and `workflowDigest`; the answer returns the digest, the version and the process revision.
+//!
+//! `ProcessModelImport` is gateway-routed beside it (`Route::ProcessModelImport`): the stated
+//! canonical workflow is admitted with `admit_canonical_with_limit` and committed as the next
+//! version of `workflow:<workflow_id>:v<n>` under the same compare-and-set. `ProcessModelExport`
+//! is a tenant-bound graph read of one stored version: the canonical form, the deployable BPMN
+//! document for `bpmn20`, or the canonical form with the losses of the target.
 
 use super::*;
 use medulla_core::process_compile::{
     compile_process_view, CompiledProcess, ProcessCompilationError, ViewEdge, ViewNode,
 };
+use super::terminal::GraphOpsContext;
 use medulla_core::process_exchange::bpmn_lower::bpmn_kind_annotations;
-use medulla_protocol_types::result_contract::coordination::ProcessCompile;
+use medulla_core::process_exchange::bpmn_write::write_bpmn;
+use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
+use medulla_core::process_import::{admit_canonical_with_limit, export_canonical_strict};
+use medulla_protocol_types::result_contract::coordination::{
+    ProcessCompile, ProcessModelExport, ProcessModelImport,
+};
 use medulla_server_api::knob_config::knobs;
-use medulla_types::process_import::{ProcessCompiled, WORKFLOW_VERSION_CONFLICT};
+use medulla_types::process_import::{
+    CanonicalWorkflow, ImportError, ProcessCompiled, ProcessModelExported, ProcessModelImported,
+    ProcessSourceSystem, WORKFLOW_VERSION_CONFLICT,
+};
+
+/// The wire code of a workflow no BPMN process can be written for.
+const PROCESS_EXPORT_NOT_DEPLOYABLE: &str = "PROCESS_EXPORT_NOT_DEPLOYABLE";
 
 /// The id of the compiler recorded on every `compiledFrom` edge.
 pub(super) const COMPILER_ID: &str = "medulla.process-compile/v1";
@@ -110,11 +129,72 @@ fn compile_refusal(error: &ProcessCompilationError) -> String {
     refuse(error.code(), error)
 }
 
-/// One admitted compile: the batch to commit, the answer and the version it was admitted at.
-pub(super) struct Admitted {
+/// The compare-and-set of the version store: the stored version of `key`, or
+/// `WORKFLOW_VERSION_CONFLICT` when the caller expected another.
+fn check_version(
+    core: &GraphCore,
+    key: &str,
+    expected_version: Option<u32>,
+) -> Result<u32, String> {
+    let stored = stored_version(core, key);
+    match expected_version {
+        Some(expected) if expected != stored => Err(refuse(
+            WORKFLOW_VERSION_CONFLICT,
+            format!("workflow {key} is at version {stored}, the caller expected {expected}"),
+        )),
+        _ => Ok(stored),
+    }
+}
+
+/// The `upsert_node` operation of one stored workflow version.
+fn workflow_node(
+    tenant: &str,
+    key: &str,
+    version: u32,
+    workflow: &CanonicalWorkflow,
+    extra: &[(&str, &str)],
+) -> Result<serde_json::Value, String> {
+    let canonical = serde_json::to_string(workflow).map_err(|error| {
+        refuse(
+            "PARAMETER_INVALID",
+            format!("workflow encoding failed: {error}"),
+        )
+    })?;
+    let steps: Vec<&str> = workflow.steps.iter().map(|step| step.id.as_str()).collect();
+    let mut properties = serde_json::json!({
+        "type": "WorkflowPattern",
+        "tenant_id": tenant,
+        "process_iri": key,
+        "version": version,
+        "steps": steps,
+        "workflowDigest": workflow.digest,
+        "canonical": canonical,
+    });
+    for (name, value) in extra {
+        properties[*name] = serde_json::Value::String((*value).to_string());
+    }
+    Ok(serde_json::json!({
+        "op": "upsert_node",
+        "id": workflow_node_id(key, version),
+        "properties": properties,
+    }))
+}
+
+/// One admitted write: the batch to commit, the answer and the version it was admitted at.
+pub(super) struct Admitted<A> {
     pub(super) write: Method,
-    pub(super) answer: ProcessCompiled,
+    pub(super) answer: A,
     pub(super) stored: u32,
+}
+
+fn batch(operations: &[serde_json::Value]) -> Result<Method, String> {
+    let operations_msgpack = rmp_serde::to_vec_named(operations).map_err(|error| {
+        refuse(
+            "PARAMETER_INVALID",
+            format!("workflow encoding failed: {error}"),
+        )
+    })?;
+    Ok(Method::BatchUpdate { operations_msgpack })
 }
 
 /// Admit one compile against the visible view, writing nothing.
@@ -123,9 +203,12 @@ pub(super) fn admit_compile(
     tenant: &str,
     process_iri: &str,
     expected_version: Option<u32>,
-) -> Result<Admitted, String> {
+) -> Result<Admitted<ProcessCompiled>, String> {
     let annotations = bpmn_kind_annotations().map_err(|error| {
-        refuse(error.code(), format!("the process annotations are unreadable: {error}"))
+        refuse(
+            error.code(),
+            format!("the process annotations are unreadable: {error}"),
+        )
     })?;
     let (nodes, edges) = read_view(core, tenant);
     let CompiledProcess {
@@ -139,36 +222,17 @@ pub(super) fn admit_compile(
         annotations,
     )
     .map_err(|error| compile_refusal(&error))?;
-    let stored = stored_version(core, process_iri);
-    if expected_version.is_some_and(|expected| expected != stored) {
-        return Err(refuse(
-            WORKFLOW_VERSION_CONFLICT,
-            format!(
-                "process {process_iri} is at version {stored}, the caller expected {}",
-                expected_version.unwrap_or_default()
-            ),
-        ));
-    }
+    let stored = check_version(core, process_iri, expected_version)?;
     let version = stored + 1;
     let workflow_id = workflow_node_id(process_iri, version);
-    let canonical = serde_json::to_string(&workflow)
-        .map_err(|error| refuse("PARAMETER_INVALID", format!("workflow encoding failed: {error}")))?;
-    let steps: Vec<&str> = workflow.steps.iter().map(|step| step.id.as_str()).collect();
     let operations = vec![
-        serde_json::json!({
-            "op": "upsert_node",
-            "id": workflow_id,
-            "properties": {
-                "type": "WorkflowPattern",
-                "tenant_id": tenant,
-                "process_iri": process_iri,
-                "version": version,
-                "steps": steps,
-                "workflowDigest": workflow.digest,
-                "processRevision": process_revision,
-                "canonical": canonical,
-            },
-        }),
+        workflow_node(
+            tenant,
+            process_iri,
+            version,
+            &workflow,
+            &[("processRevision", process_revision.as_str())],
+        )?,
         serde_json::json!({
             "op": "upsert_edge",
             "source": workflow_id,
@@ -181,10 +245,8 @@ pub(super) fn admit_compile(
             },
         }),
     ];
-    let operations_msgpack = rmp_serde::to_vec_named(&operations)
-        .map_err(|error| refuse("PARAMETER_INVALID", format!("compile encoding failed: {error}")))?;
     Ok(Admitted {
-        write: Method::BatchUpdate { operations_msgpack },
+        write: batch(&operations)?,
         answer: ProcessCompiled {
             workflow_id,
             version,
@@ -193,6 +255,68 @@ pub(super) fn admit_compile(
         },
         stored,
     })
+}
+
+/// Admit one canonical import, writing nothing.
+pub(super) fn admit_import(
+    core: &GraphCore,
+    tenant: &str,
+    workflow: &CanonicalWorkflow,
+    workflow_id: &str,
+    expected_version: Option<u32>,
+) -> Result<Admitted<ProcessModelImported>, String> {
+    let admitted = admit_canonical_with_limit(
+        workflow,
+        knobs().scheduler_process_import_max_elements,
+    )
+    .map_err(|error: ImportError| refuse(error.code(), error))?;
+    let stored = check_version(core, workflow_id, expected_version)?;
+    let version = stored + 1;
+    let operations = vec![workflow_node(tenant, workflow_id, version, &admitted, &[])?];
+    Ok(Admitted {
+        write: batch(&operations)?,
+        answer: ProcessModelImported {
+            workflow_id: workflow_node_id(workflow_id, version),
+            version,
+            workflow_digest: admitted.digest,
+        },
+        stored,
+    })
+}
+
+/// Commit one admitted version through the staged gateway. The commit closure re-reads the
+/// stored version so two racing writers never both write version `n + 1`.
+async fn commit_version<A>(
+    ctx: &MutationCtx<'_>,
+    admitted: Admitted<A>,
+    key: String,
+    seal: impl FnOnce(A) -> Result<ResultPayload, String>,
+) -> Response {
+    let Admitted {
+        write,
+        answer,
+        stored,
+    } = admitted;
+    let Method::BatchUpdate { operations_msgpack } = &write else {
+        unreachable!("an admitted version is a BatchUpdate");
+    };
+    let operations = operations_msgpack.clone();
+    let plan = MutationPlan::for_method(&write);
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
+        let current = stored_version(core, &key);
+        if current != stored {
+            return Err(refuse(
+                WORKFLOW_VERSION_CONFLICT,
+                format!(
+                    "workflow {key} moved to version {current} while version {} was admitted",
+                    stored + 1
+                ),
+            ));
+        }
+        medulla_graph_algos::algorithms::batch_update(core, &operations)
+            .and_then(|_| seal(answer))
+    })
+    .await
 }
 
 /// The `Route::ProcessCompile` entry: admit the compile, then commit the batch through the
@@ -215,36 +339,155 @@ pub(super) async fn handle_process_compile(
             refuse("PARAMETER_INVALID", "process_iri is empty"),
         ));
     }
-    let tenant = ctx.tenant_scope;
-    let Admitted {
-        write,
-        answer,
-        stored,
-    } = match admit_compile(ctx.core, tenant, process_iri, *expected_version) {
+    let admitted = match admit_compile(ctx.core, ctx.tenant_scope, process_iri, *expected_version) {
         Ok(admitted) => admitted,
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
-    let Method::BatchUpdate { operations_msgpack } = &write else {
-        unreachable!("admit_compile builds a BatchUpdate");
-    };
-    let operations = operations_msgpack.clone();
-    let plan = MutationPlan::for_method(&write);
-    let process_iri = process_iri.clone();
     Some(
-        medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
-            let current = stored_version(core, &process_iri);
-            if current != stored {
-                return Err(refuse(
-                    WORKFLOW_VERSION_CONFLICT,
-                    format!(
-                        "process {process_iri} moved to version {current} while version {} was compiled",
-                        stored + 1
-                    ),
-                ));
-            }
-            medulla_graph_algos::algorithms::batch_update(core, &operations)
-                .and_then(|_| ResultPayload::of::<ProcessCompile>(answer))
+        commit_version(ctx, admitted, process_iri.clone(), |answer| {
+            ResultPayload::of::<ProcessCompile>(answer)
         })
         .await,
     )
+}
+
+/// The `Route::ProcessModelImport` entry: admit the canonical document, then commit the next
+/// version through the staged gateway.
+pub(super) async fn handle_process_model_import(
+    ctx: &MutationCtx<'_>,
+    _tenant_id: &str,
+    method: &Method,
+) -> Option<Response> {
+    let Method::ProcessModelImport {
+        workflow,
+        workflow_id,
+        expected_version,
+    } = method
+    else {
+        return None;
+    };
+    if workflow_id.is_empty() {
+        return Some(Response::err(
+            ctx.req_id,
+            refuse("PARAMETER_INVALID", "workflow_id is empty"),
+        ));
+    }
+    let admitted = match admit_import(
+        ctx.core,
+        ctx.tenant_scope,
+        workflow,
+        workflow_id,
+        *expected_version,
+    ) {
+        Ok(admitted) => admitted,
+        Err(error) => return Some(Response::err(ctx.req_id, error)),
+    };
+    Some(
+        commit_version(ctx, admitted, workflow_id.clone(), |answer| {
+            ResultPayload::of::<ProcessModelImport>(answer)
+        })
+        .await,
+    )
+}
+
+/// The one non-disclosing refusal of an absent, foreign or malformed stored workflow.
+fn unknown_model(workflow_id: &str, version: u32) -> String {
+    let error = ImportError::UnknownModel {
+        workflow_id: format!("{workflow_id}:v{version}"),
+    };
+    refuse(
+        error.code(),
+        format!("no workflow {workflow_id} version {version} is available to the caller's tenant"),
+    )
+}
+
+/// The stored canonical workflow `workflow_id` at `version` that `tenant` may see.
+fn stored_workflow(
+    core: &GraphCore,
+    tenant: &str,
+    workflow_id: &str,
+    version: u32,
+) -> Result<CanonicalWorkflow, String> {
+    let unknown = || unknown_model(workflow_id, version);
+    let blob = core
+        .get_node_properties(&workflow_node_id(workflow_id, version))
+        .ok_or_else(unknown)?;
+    let properties =
+        medulla_types::msgpack::decode_property_object(&blob).map_err(|_| unknown())?;
+    if text(&properties, "type") != Some("WorkflowPattern")
+        || text(&properties, "tenant_id").is_some_and(|owner| owner != tenant)
+    {
+        return Err(unknown());
+    }
+    let canonical = text(&properties, "canonical").ok_or_else(unknown)?;
+    serde_json::from_str(canonical).map_err(|_| unknown())
+}
+
+/// Answer one export of a stored workflow version.
+pub(super) fn export_model(
+    core: &GraphCore,
+    tenant: &str,
+    workflow_id: &str,
+    version: u32,
+    target: Option<ProcessSourceSystem>,
+    strict: bool,
+) -> Result<ProcessModelExported, String> {
+    let stored = stored_workflow(core, tenant, workflow_id, version)?;
+    let Some(target) = target else {
+        return Ok(ProcessModelExported {
+            workflow: stored,
+            document: None,
+        });
+    };
+    let workflow = export_canonical_strict(&stored, target, strict).map_err(|lossy| {
+        let named: Vec<String> = lossy
+            .losses
+            .iter()
+            .map(|loss| format!("{}@{}", loss.construct, loss.element))
+            .collect();
+        refuse(lossy.code(), named.join(", "))
+    })?;
+    let document = if target == ProcessSourceSystem::Bpmn20 {
+        let bpmn = workflow_to_bpmn(&workflow)
+            .and_then(|doc| write_bpmn(&doc))
+            .map_err(|error| refuse(PROCESS_EXPORT_NOT_DEPLOYABLE, error))?;
+        Some(String::from_utf8(bpmn).map_err(|error| {
+            refuse(
+                PROCESS_EXPORT_NOT_DEPLOYABLE,
+                format!("the BPMN document is not text: {error}"),
+            )
+        })?)
+    } else {
+        None
+    };
+    Ok(ProcessModelExported { workflow, document })
+}
+
+/// Route the export read served from the graph.
+pub(super) async fn try_handle_process_model_export(
+    ctx: GraphOpsContext<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let Method::ProcessModelExport {
+        workflow_id,
+        version,
+        target,
+        strict,
+    } = &method
+    else {
+        return ControlFlow::Continue(method);
+    };
+    let tenant = ctx
+        .read_authority
+        .carrier()
+        .map(|carrier| carrier.tenant_scope().to_owned())
+        .unwrap_or_default();
+    let response = match export_model(ctx.core, &tenant, workflow_id, *version, *target, *strict) {
+        Ok(exported) => Response::ok(
+            ctx.req_id,
+            ResultPayload::of::<ProcessModelExport>(exported),
+        ),
+        Err(error) => Response::err(ctx.req_id, error),
+    };
+    ControlFlow::Break(response)
 }

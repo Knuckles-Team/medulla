@@ -23,6 +23,7 @@ pub(super) async fn try_handle_graph_domains(
     method = super::read_span::try_handle_read_span(ctx, method).await?;
     method = super::atom_context::try_handle_atom_context(ctx, method).await?;
     method = super::architecture_exchange::try_handle_architecture_export(ctx, method).await?;
+    method = super::process_compile::try_handle_process_model_export(ctx, method).await?;
     #[cfg(feature = "streaming")]
     {
         method = super::graph_change_feed::try_handle_graph_change_feed(ctx, method).await?;

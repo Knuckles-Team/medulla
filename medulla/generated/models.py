@@ -14900,6 +14900,20 @@ class MethodProcessCompile(BaseModel):
     params: MethodProcessCompileParams
 
 
+class MethodProcessModelImport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProcessModelImport"]
+    params: MethodProcessModelImportParams
+
+
+class MethodProcessModelExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProcessModelExport"]
+    params: MethodProcessModelExportParams
+
+
 class MethodArchitectureView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15819,6 +15833,8 @@ Method = Annotated[
         MethodFeatureLedger,
         MethodArchitectureModelImport,
         MethodProcessCompile,
+        MethodProcessModelImport,
+        MethodProcessModelExport,
         MethodArchitectureModelExport,
         MethodArchitectureView,
         MethodDomainPack,
@@ -33973,6 +33989,23 @@ class MethodProcessCompileParams(BaseModel):
     expected_version: Annotated[int, Field(ge=0)] | None = None
 
 
+class MethodProcessModelImportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    workflow: dict[str, Any]
+    workflow_id: str
+    expected_version: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodProcessModelExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    workflow_id: str
+    version: Annotated[int, Field(ge=0)]
+    target: Literal["bpmn20", "aris_epc"] | None = None
+    strict: bool = False
+
+
 class MethodBatchParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40433,6 +40466,10 @@ __all__ = [
     "MethodArchitectureModelImportParams",
     "MethodProcessCompile",
     "MethodProcessCompileParams",
+    "MethodProcessModelImport",
+    "MethodProcessModelImportParams",
+    "MethodProcessModelExport",
+    "MethodProcessModelExportParams",
     "MethodArgumentMapEvaluate",
     "MethodArgumentMapGet",
     "MethodArgumentMapPut",

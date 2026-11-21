@@ -23,6 +23,7 @@ fn schema_version() -> u16 {
 /// The closed step kinds, in their canonical order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum StepKind {
     Start,
     End,
@@ -40,6 +41,7 @@ pub enum StepKind {
 /// The gate of a split, a join or an event-based wait.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum GateKind {
     And,
     Or,
@@ -49,6 +51,7 @@ pub enum GateKind {
 /// One canonical step. `id` is `s1` to `sn` in canonical order.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CanonicalStep {
     pub id: String,
     pub kind: StepKind,
@@ -66,6 +69,7 @@ pub struct CanonicalStep {
 /// One canonical flow between two step ids.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CanonicalFlow {
     pub source: String,
     pub target: String,
@@ -171,6 +175,7 @@ pub struct AllocatedProcess {
 /// The system a canonical workflow was imported from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ProcessSourceSystem {
     Bpmn20,
     ArisEpc,
@@ -179,6 +184,7 @@ pub enum ProcessSourceSystem {
 /// Where each step came from: step id to source element id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SourceTrace {
     #[serde(default = "schema_version")]
     pub schema_version: u16,
@@ -191,6 +197,7 @@ pub struct SourceTrace {
 /// One source-only construct kept for a same-source re-export.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct AnnexEntry {
     #[serde(default = "schema_version")]
     pub schema_version: u16,
@@ -209,6 +216,7 @@ pub struct AnnexEntry {
 /// One construct a target format cannot hold, and how it was treated.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProcessLoss {
     #[serde(default = "schema_version")]
     pub schema_version: u16,
@@ -221,6 +229,7 @@ pub struct ProcessLoss {
 /// The canonical workflow. Only `schema`, `steps` and `flows` enter `digest`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CanonicalWorkflow {
     #[serde(default = "schema_version")]
     pub schema_version: u16,
@@ -308,6 +317,30 @@ pub struct ProcessCompiled {
     pub workflow_digest: String,
     /// SHA-256 of the canonical process subgraph (`processRevision`).
     pub process_revision: String,
+}
+
+/// The answer of the served `ProcessModelImport` (MEDULLA-CQ-ORCH-R701.3).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProcessModelImported {
+    /// The id of the stored `WorkflowPattern` node, `workflow:<workflow_id>:v<version>`.
+    pub workflow_id: String,
+    /// The stored version, 1 for the first import under the workflow id.
+    pub version: u32,
+    /// The canonical digest `admit_canonical` checked.
+    pub workflow_digest: String,
+}
+
+/// The answer of the served `ProcessModelExport` (MEDULLA-CQ-ORCH-R701.3).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProcessModelExported {
+    /// The stored canonical workflow, its `losses` listing every construct the target
+    /// cannot hold; the annex is kept for a same-source or an absent target.
+    pub workflow: CanonicalWorkflow,
+    /// The deployable BPMN 2.0 document, set only for the target `bpmn20`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document: Option<String>,
 }
 
 impl ImportError {

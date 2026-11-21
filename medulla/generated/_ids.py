@@ -574,6 +574,8 @@ METHOD_IDS = frozenset(
         "ProjectionRead",
         "ArchitectureModelImport",
         "ProcessCompile",
+        "ProcessModelImport",
+        "ProcessModelExport",
         "Batch",
         "BeliefRevise",
         "BranchDiff",

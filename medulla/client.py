@@ -7608,6 +7608,61 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessCompile must answer with an object")
         return result
 
+    async def process_model_import(
+        self,
+        workflow: dict[str, Any],
+        workflow_id: str,
+        expected_version: int | None = None,
+    ) -> dict[str, Any]:
+        """Store one canonical workflow as the next version of ``workflow_id``
+        (MEDULLA-CQ-ORCH-R701.3).
+
+        ``workflow`` is the ``medulla.process.canonical/v1`` document. Returns
+        ``{workflow_id, version, workflow_digest}``. A document that is not
+        canonical, or whose digest differs from the computed one, is refused with
+        its ``PROCESS_IMPORT_*`` code; a stale ``expected_version`` is refused
+        ``WORKFLOW_VERSION_CONFLICT``. Both write nothing.
+        """
+        params: dict[str, Any] = {
+            "workflow": workflow,
+            "workflow_id": workflow_id,
+            "expected_version": expected_version,
+        }
+        result = await self._client._send(
+            "ProcessModelImport", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessModelImport must answer with an object")
+        return result
+
+    async def process_model_export(
+        self,
+        workflow_id: str,
+        version: int,
+        target: str | None = None,
+        strict: bool = False,
+    ) -> dict[str, Any]:
+        """Read one stored workflow version (MEDULLA-CQ-ORCH-R701.3).
+
+        Returns ``{workflow, document}``. ``target`` is ``None`` for the canonical
+        form, ``"bpmn20"`` for the canonical form and the BPMN document, or
+        ``"aris_epc"`` for the canonical form with the EPC losses listed in
+        ``workflow["losses"]``. ``strict`` refuses ``PROCESS_EXPORT_LOSSY`` when
+        the target loses a construct.
+        """
+        params: dict[str, Any] = {
+            "workflow_id": workflow_id,
+            "version": version,
+            "target": target,
+            "strict": strict,
+        }
+        result = await self._client._send(
+            "ProcessModelExport", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessModelExport must answer with an object")
+        return result
+
     async def architecture_model_export(
         self, scope: str | None = None
     ) -> dict[str, Any]:

@@ -189,6 +189,14 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "PROCESS_COMPILE|{process_iri}|{}",
             expected_version.map_or_else(|| "-".to_string(), |v| v.to_string())
         )),
+        Method::ProcessModelImport {
+            workflow,
+            workflow_id,
+            ..
+        } => Some(format!(
+            "PROCESS_MODEL_IMPORT|{workflow_id}|{}",
+            workflow.digest
+        )),
         Method::LiveArtifactPut { artifact } => Some(format!(
             "LIVE_ARTIFACT_PUT|{}|{}",
             artifact.id, artifact.version

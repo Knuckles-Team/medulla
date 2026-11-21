@@ -1135,6 +1135,29 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PARAMETER_INVALID",
         ],
     ),
+    // MEDULLA-CQ-ORCH-R701.3/R701.4: a canonical document the import refuses, or a stale version.
+    (
+        "ProcessModelImport",
+        &[
+            "PROCESS_IMPORT_UNMAPPED_ELEMENT",
+            "PROCESS_IMPORT_NOT_CANONICAL",
+            "PROCESS_IMPORT_DIGEST_MISMATCH",
+            "PROCESS_IMPORT_UNKNOWN_SOURCE",
+            "PROCESS_IMPORT_TOO_LARGE",
+            "WORKFLOW_VERSION_CONFLICT",
+            "PARAMETER_INVALID",
+        ],
+    ),
+    // MEDULLA-CQ-ORCH-R701.3/R701.4: an invisible workflow, a lossy strict export, an undeployable one.
+    (
+        "ProcessModelExport",
+        &[
+            "PROCESS_IMPORT_UNKNOWN_MODEL",
+            "PROCESS_EXPORT_LOSSY",
+            "PROCESS_EXPORT_NOT_DEPLOYABLE",
+            "PARAMETER_INVALID",
+        ],
+    ),
     // MEDULLA-SRC-AUTH-R012.7: a sync the authority rows or the adapter table refuse.
     (
         "SourceSync",
