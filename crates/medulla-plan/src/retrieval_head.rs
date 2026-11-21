@@ -158,6 +158,28 @@ pub fn check_champion_quality(measured: f64, min_quality: f64) -> Result<(), Ret
     }
 }
 
+/// Promote `candidate` over the `prior` champion: it must be bound to the round's revisions
+/// and reach `min_quality` nDCG@10 on the held-out set. On success the candidate is the new
+/// champion; on any refusal (`RETRIEVAL_POLICY_UNVERIFIED`) the `prior` champion stays and is
+/// returned unchanged to the caller through the error path, so a failed evaluation never
+/// retires it.
+pub fn promote_champion(
+    prior: Option<RerankHeadArtifact>,
+    candidate: RerankHeadArtifact,
+    corpus_revision: &str,
+    index_revision: &str,
+    held_out: &[HeldOutQuery],
+    min_quality: f64,
+) -> Result<RerankHeadArtifact, (Option<RerankHeadArtifact>, RetrievalRefusal)> {
+    let verdict = check_head_binding(&candidate, corpus_revision, index_revision)
+        .and_then(|()| held_out_ndcg(&candidate, held_out))
+        .and_then(|measured| check_champion_quality(measured, min_quality));
+    match verdict {
+        Ok(()) => Ok(candidate),
+        Err(refusal) => Err((prior, refusal)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

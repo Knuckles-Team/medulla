@@ -2322,3 +2322,68 @@ async fn abstain_returns_both_candidates() {
         ArbitrationChoice::Retrieved
     );
 }
+
+// ---- R081.102: the distilled rerank head and its champion gate ----
+
+fn fitted_head(
+    weights: Vec<f64>,
+) -> medulla_plan::retrieval_head::RerankHeadArtifact {
+    let mut head = medulla_plan::retrieval_head::RerankHeadArtifact {
+        weights,
+        corpus_revision: "corpus-1".into(),
+        index_revision: "index-1".into(),
+        teacher_model_revision: "teacher-1".into(),
+        judgment_dataset_digest: "dataset-1".into(),
+        metric_policy: "ndcg@10".into(),
+        artifact_digest: String::new(),
+    };
+    head.artifact_digest = medulla_plan::retrieval_head::artifact_digest(&head);
+    head
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.102
+#[test]
+fn distilled_head_activates_only_above_threshold() {
+    use medulla_plan::retrieval_head::{promote_champion, score_with_head, HeldOutQuery};
+
+    let held_out = vec![HeldOutQuery {
+        features: vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![0.5, 0.5]],
+        gains: vec![2.0, 0.0, 1.0],
+    }];
+    let floor = 0.8;
+
+    // A head that orders candidates like the teacher reaches the floor and becomes champion.
+    let good = fitted_head(vec![1.0, 0.0]);
+    let champion = promote_champion(None, good.clone(), "corpus-1", "index-1", &held_out, floor)
+        .expect("a head above the floor is promoted");
+    assert_eq!(champion, good);
+    // Scoring is a dot product over the stored features: no model call.
+    assert_eq!(score_with_head(&champion, &[0.5, 0.5]), Ok(0.5));
+
+    // A below-threshold artifact refuses and the prior champion stays.
+    let weak = fitted_head(vec![-1.0, 0.0]);
+    let (kept, refusal) = promote_champion(
+        Some(champion.clone()),
+        weak,
+        "corpus-1",
+        "index-1",
+        &held_out,
+        floor,
+    )
+    .expect_err("a head below the floor is refused");
+    assert_eq!(refusal.code, RETRIEVAL_POLICY_UNVERIFIED);
+    assert_eq!(kept, Some(champion.clone()));
+
+    // A stale artifact (another index revision) refuses the same way.
+    let (kept, refusal) = promote_champion(
+        Some(champion.clone()),
+        good,
+        "corpus-1",
+        "index-2",
+        &held_out,
+        floor,
+    )
+    .expect_err("a stale head is refused");
+    assert_eq!(refusal.code, RETRIEVAL_POLICY_UNVERIFIED);
+    assert_eq!(kept, Some(champion));
+}
