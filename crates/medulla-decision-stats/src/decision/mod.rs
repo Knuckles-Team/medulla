@@ -61,6 +61,7 @@ pub mod legal_option_filter;
 pub mod memory;
 pub mod memory_benchmark;
 pub mod memory_rewrite;
+pub mod session_note;
 pub mod nl;
 pub mod playbook;
 pub mod population;
