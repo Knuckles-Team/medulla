@@ -9,6 +9,7 @@
 
 mod commit;
 mod contracts;
+mod evidence;
 pub mod corpus;
 pub mod optimize;
 mod optimizer;
@@ -17,6 +18,7 @@ mod transport;
 
 pub use commit::*;
 pub use contracts::*;
+pub use evidence::program_held_out_evidence;
 pub use optimize::*;
 pub use optimizer::*;
 pub use plan::*;

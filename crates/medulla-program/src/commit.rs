@@ -311,9 +311,28 @@ pub struct ProgramRevisionIdentity {
     pub model_profile_ref: Option<OpaqueRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate_record: Option<ProgramCandidateRecord>,
+    /// The held-out evidence the revision was evaluated on, stored as the
+    /// `held_out` property of its node (MEDULLA-DECISION-ENGINE-R810.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub held_out: Option<medulla_decision_outcome_types::decision::promotion::HeldOutEvidence>,
 }
 
 impl ProgramRevisionIdentity {
+    /// The identity carrying the evidence of its evaluation: the challenger is
+    /// this revision and the champion is the pointer's active revision it was
+    /// derived over.
+    pub fn with_held_out(
+        mut self,
+        evidence: Option<medulla_decision_outcome_types::decision::promotion::HeldOutEvidence>,
+    ) -> Self {
+        self.held_out = evidence.map(|mut evidence| {
+            evidence.challenger_ref = self.revision_ref.as_str().to_owned();
+            evidence.champion_ref = self.parent_ref.as_ref().map(|r| r.as_str().to_owned());
+            evidence
+        });
+        self
+    }
+
     /// Derive the next immutable revision from one validated base program and
     /// one compiler-selected candidate. `active_revision_ref` is the observed
     /// current pointer, not [`ProgramRevision::parent_ref`], which describes the
@@ -393,6 +412,7 @@ impl ProgramRevisionIdentity {
             tool_policy_ref: candidate.tool_policy_ref.clone(),
             model_profile_ref: candidate.model_profile_ref.clone(),
             candidate_record,
+            held_out: None,
         };
         identity.validate()?;
         Ok(identity)

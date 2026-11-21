@@ -171,6 +171,7 @@ fn program_promotion_methods(
         "tool_policy_ref": identity.tool_policy_ref.as_ref().map(|value| value.as_str()),
         "model_profile_ref": identity.model_profile_ref.as_ref().map(|value| value.as_str()),
         "candidate_record": &identity.candidate_record,
+        "held_out": &identity.held_out,
     });
     let active_properties = serde_json::json!({
         "type": "ProgramActiveRevision",

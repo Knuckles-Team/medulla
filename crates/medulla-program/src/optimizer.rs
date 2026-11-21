@@ -495,6 +495,10 @@ pub struct OptimizationResult {
     pub request_ref: OpaqueRef,
     pub program_ref: OpaqueRef,
     pub optimizer: OptimizerKind,
+    /// The held-out evidence of the selected candidate, read by the promotion
+    /// gate (MEDULLA-DECISION-ENGINE-R810.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub held_out: Option<medulla_decision_outcome_types::decision::promotion::HeldOutEvidence>,
     pub candidates: Vec<ProgramCandidate>,
     #[serde(default)]
     pub plans: Vec<OptimizationPlan>,
@@ -603,11 +607,12 @@ impl NativeCompiler {
         let generated_candidates = candidates.len();
         let planned_steps = plans.iter().map(|plan| plan.steps.len()).sum();
         let generated_plans = plans.len();
-        Ok(OptimizationResult {
+        let mut result = OptimizationResult {
             schema_version: PROGRAM_SCHEMA_VERSION,
             request_ref: request.request_ref.clone(),
             program_ref: request.program.program_ref.clone(),
             optimizer: request.optimizer,
+            held_out: None,
             candidates,
             plans,
             stage: if selected_candidate_ref.is_some() {
@@ -626,7 +631,9 @@ impl NativeCompiler {
                 planned_steps,
                 evaluated_candidates,
             },
-        })
+        };
+        result.held_out = crate::evidence::program_held_out_evidence(request, &result);
+        Ok(result)
     }
 }
 

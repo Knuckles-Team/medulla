@@ -442,6 +442,7 @@ mod privacy_tests {
             request_ref: opaque("optimization_request", "program-result-request"),
             program_ref,
             optimizer: OptimizerKind::LabeledFewShot,
+            held_out: None,
             candidates: vec![candidate],
             plans: Vec::new(),
             selected_candidate_ref: None,

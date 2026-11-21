@@ -125,6 +125,7 @@ async fn program_promotion_identity(
                 },
                 seed,
             )
+            .map(|identity| identity.with_held_out(optimization.held_out.clone()))
         })
         .transpose()
         .map_err(|error| format!("program promotion identity failed: {error}"))

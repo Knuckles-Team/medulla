@@ -250,6 +250,45 @@ fn all_modalities_compile_and_require_evidence_before_promotion() {
     assert_eq!(decoded, promoted);
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R810.7
+#[test]
+fn selected_candidate_carries_held_out_evidence() {
+    use medulla_decision_outcome_types::decision::promotion::ReceiptKind;
+    let mut request = request(OptimizerKind::LabeledFewShot);
+    let proposal = NativeCompiler::compile(&request).expect("compile proposal");
+    assert_eq!(proposal.held_out, None, "no evaluated candidate, no evidence");
+    request.candidate_evaluations.push(EvaluationSummary {
+        subject_ref: proposal.candidates[0].candidate_ref.clone(),
+        aggregate_score: 0.8,
+        modality_scores: ProgramModality::ALL
+            .into_iter()
+            .map(|modality| (modality, 0.8))
+            .collect(),
+        evidence_refs: vec![opaque("evaluation", "candidate-evidence")],
+    });
+    let promoted = NativeCompiler::compile(&request).expect("compile evaluated candidate");
+    let evidence = promoted.held_out.clone().expect("evidence of the selected candidate");
+    assert_eq!(evidence.receipt_kind, ReceiptKind::ProgramEvaluation);
+    assert_eq!(evidence.challenger_score_ppm, 800_000);
+    assert_eq!(
+        evidence.champion_score_ppm,
+        Some((request.baseline.aggregate_score * 1_000_000.0).round() as i64)
+    );
+    assert_eq!(
+        evidence.delta_ppm,
+        evidence.challenger_score_ppm - evidence.champion_score_ppm.unwrap()
+    );
+    let tests = request
+        .corpus
+        .examples
+        .iter()
+        .filter(|example| example.split == medulla_program::ExampleSplit::Test)
+        .count();
+    assert_eq!(evidence.case_count, tests as u64);
+    assert_eq!(evidence.evaluation_set_digest.len(), 64);
+    assert_eq!(promoted, NativeCompiler::compile(&request).expect("again"));
+}
+
 #[test]
 fn random_search_is_deterministic() {
     let mut request = request(OptimizerKind::BootstrapFewShotWithRandomSearch);
