@@ -46,9 +46,15 @@ pub(super) async fn handle_add_triples(
     {
         // An object-model refusal leads with its typed code, so the wire code is
         // the refusal's own (MEDULLA-TYPED-PACKS-R650.4).
-        let typed = ["VALUE_CONSTRAINT_VIOLATED", "LINK_CARDINALITY_EXCEEDED"]
-            .iter()
-            .any(|code| rej.message.starts_with(code));
+        let typed = [
+            "VALUE_CONSTRAINT_VIOLATED",
+            "LINK_CARDINALITY_EXCEEDED",
+            "UNRESOLVED_REFERENCE",
+            "RESOURCE_UNOWNED",
+            "LINEAGE_EDGE_UNPAIRED",
+        ]
+        .iter()
+        .any(|code| rej.message.starts_with(code));
         if typed {
             return Response::err(req_id, rej.message);
         }

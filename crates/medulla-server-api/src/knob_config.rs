@@ -422,6 +422,7 @@ knobs! {
     ontology_diff_max_listed: u64 = "ontology_diff.max_listed", U64(100), [10, 1_000], "ids", Tunable;
     /// Most breaking changes a pending pack release reports (MEDULLA-TYPED-PACKS-R107.4).
     catalog_contract_break_report_max: u64 = "catalog.contract_break_report_max", U64(100), [10, 1_000], "items", Tunable;
+    catalog_onboard_batch_max_triples: u64 = "catalog.onboard_batch_max_triples", U64(50_000), [1_000, 500_000], "triples", Tunable;
     /// Reputation minimum independent labels.
     reputation_min_support: u64 = "reputation.min_support", U64(10), [5, 1_000], "labels", Tunable;
     /// Fewest backbones a transfer estimate may declare (MEDULLA-DECISION-ENGINE-R059.1.2).

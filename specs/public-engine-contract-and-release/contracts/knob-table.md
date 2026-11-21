@@ -38,6 +38,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `schema_repair.shadow_sample_nodes` | u64 | 10000 | [100, 1000000] | nodes | Tunable | `MEDULLA_SCHEMA_REPAIR_SHADOW_SAMPLE_NODES` |
 | `ontology_diff.max_listed` | u64 | 100 | [10, 1000] | ids | Tunable | `MEDULLA_ONTOLOGY_DIFF_MAX_LISTED` |
 | `catalog.contract_break_report_max` | u64 | 100 | [10, 1000] | items | Tunable | `MEDULLA_CATALOG_CONTRACT_BREAK_REPORT_MAX` |
+| `catalog.onboard_batch_max_triples` | u64 | 50000 | [1000, 500000] | triples | Tunable | `MEDULLA_CATALOG_ONBOARD_BATCH_MAX_TRIPLES` |
 | `orchestration_limits.page_size_max` | u64 | 100 | [1, 1000] | rows | Tunable | `MEDULLA_ORCHESTRATION_LIMITS_PAGE_SIZE_MAX` |
 | `reputation.min_support` | u64 | 10 | [1, 1000] | observations | Tunable | `MEDULLA_REPUTATION_MIN_SUPPORT` |
 | `transfer.min_backbones` | u64 | 2 | [2, 16] | count | Tunable | `MEDULLA_TRANSFER_MIN_BACKBONES` |

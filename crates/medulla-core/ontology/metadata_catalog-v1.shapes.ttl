@@ -19,6 +19,17 @@ cat:DataResourceShape a sh:NodeShape ;
     sh:targetClass cat:DataResource ;
     sh:property [ sh:path cp:servesClass ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .
 
+# A data resource without its connector is refused as RESOURCE_UNOWNED (MEDULLA-TYPED-PACKS-R106.4).
+cat:ResourceConnectorShape a sh:NodeShape ;
+    sh:targetClass cat:DataResource ;
+    sh:property [ sh:path cp:ofConnector ; sh:minCount 1 ] .
+
+# The class a resource serves exists in the pack ontology or the parent graph; one that does not
+# is refused as UNRESOLVED_REFERENCE (MEDULLA-TYPED-PACKS-R106.4).
+cat:ServesClassShape a sh:NodeShape ;
+    sh:targetClass cat:DataResource ;
+    sh:property [ sh:path cp:servesClass ; sh:class <http://www.w3.org/2002/07/owl#Class> ] .
+
 # A field names exactly one ontology property.
 cat:FieldShape a sh:NodeShape ;
     sh:targetClass cat:Field ;

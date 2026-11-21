@@ -129,6 +129,31 @@ impl WriteGuard for CoreIcvGuard<'_> {
     }
 }
 
+/// The catalog shapes whose violation has a stable wire code (MEDULLA-TYPED-PACKS-R106.4):
+/// the shape IRI and the `ServerErrorCode` token it refuses with.
+pub const CATALOG_SHAPE_CODES: &[(&str, &str)] = &[
+    (
+        "https://knuckles-team.github.io/ontology/catalog#ServesClassShape",
+        "UNRESOLVED_REFERENCE",
+    ),
+    (
+        "https://knuckles-team.github.io/ontology/catalog#ResourceConnectorShape",
+        "RESOURCE_UNOWNED",
+    ),
+    (
+        "https://knuckles-team.github.io/ontology/catalog#LineageEdgePairShape",
+        "LINEAGE_EDGE_UNPAIRED",
+    ),
+];
+
+/// The code a catalog shape refuses with, when it has one.
+fn catalog_shape_code(shape: &str) -> Option<&'static str> {
+    CATALOG_SHAPE_CODES
+        .iter()
+        .find(|(iri, _)| *iri == shape)
+        .map(|(_, code)| *code)
+}
+
 /// Name an object-model violation by its typed code (MEDULLA-TYPED-PACKS-R650.4).
 ///
 /// A violation of a shape the pack's object model compiled to
@@ -151,12 +176,15 @@ pub fn object_model_refusal(rejection: GuardRejection) -> GuardRejection {
     };
     let mut typed = Vec::new();
     for violation in violations {
-        let Some(rule) = text(violation, "source_shape").filter(|r| r.starts_with(OBJECT_MODEL_NS))
+        let Some(rule) = text(violation, "source_shape")
+            .filter(|r| r.starts_with(OBJECT_MODEL_NS) || catalog_shape_code(r).is_some())
         else {
             continue;
         };
         let component = text(violation, "constraint_component").unwrap_or_default();
-        let code = if component.ends_with("MaxCountConstraintComponent") {
+        let code = if let Some(code) = catalog_shape_code(&rule) {
+            code
+        } else if component.ends_with("MaxCountConstraintComponent") {
             "LINK_CARDINALITY_EXCEEDED"
         } else if [
             "DatatypeConstraintComponent",

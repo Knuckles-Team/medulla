@@ -37,20 +37,33 @@ def _triple(subject: str, predicate: str, obj: str, *, literal: bool = False) ->
     return f"<{subject}> <{predicate}> {value} .\n"
 
 
-def _batch(*, with_digest: bool) -> str:
+OWL_CLASS = "http://www.w3.org/2002/07/owl#Class"
+
+
+def _batch(
+    *,
+    with_digest: bool,
+    declare_class: bool = True,
+    resource_connector: bool = True,
+    pair_edge: bool = True,
+) -> str:
     lines = [
         _triple(CONNECTOR, RDF_TYPE, f"{CONNECTOR_PACK}Connector"),
         _triple(TOOL, RDF_TYPE, f"{CATALOG}ToolAsset"),
         _triple(TOOL, f"{CONNECTOR_PACK}ofConnector", CONNECTOR),
         _triple(RESOURCE, RDF_TYPE, f"{CATALOG}DataResource"),
-        _triple(RESOURCE, f"{CONNECTOR_PACK}ofConnector", CONNECTOR),
         _triple(RESOURCE, f"{CONNECTOR_PACK}servesClass", f"{EXAMPLE}Customer"),
-        _triple(TOOL, f"{CATALOG}lineageTo", RESOURCE),
         _triple(f"{EXAMPLE}edge", RDF_TYPE, f"{CATALOG}LineageEdge"),
         _triple(f"{EXAMPLE}edge", f"{CATALOG}from", TOOL),
         _triple(f"{EXAMPLE}edge", f"{CATALOG}to", RESOURCE),
         _triple(f"{EXAMPLE}edge", f"{CATALOG}hop", "resource", literal=True),
     ]
+    if declare_class:
+        lines.append(_triple(f"{EXAMPLE}Customer", RDF_TYPE, OWL_CLASS))
+    if resource_connector:
+        lines.append(_triple(RESOURCE, f"{CONNECTOR_PACK}ofConnector", CONNECTOR))
+    if pair_edge:
+        lines.append(_triple(TOOL, f"{CATALOG}lineageTo", RESOURCE))
     for index, asset in enumerate((TOOL, RESOURCE)):
         assignment = f"{EXAMPLE}owner-{index}"
         lines += [
@@ -105,5 +118,30 @@ def test_catalog_batch_is_validated_by_the_guard_and_found_by_query(catalog_grap
     assert _tool_ids(admin) == set()
 
     # The conforming batch is stored and found by served UQL.
+    admin.rdf.add_triples(turtle=_batch(with_digest=True))
+    assert _tool_ids(admin) == {TOOL}
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.4")
+def test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refuse(
+    catalog_graph,
+):
+    """Verifies MEDULLA-TYPED-PACKS-R106.4: each refusal has its code and leaves the graph unchanged."""
+    admin = catalog_graph
+    cases = {
+        "UNRESOLVED_REFERENCE": _batch(with_digest=True, declare_class=False),
+        "RESOURCE_UNOWNED": _batch(with_digest=True, resource_connector=False),
+        "LINEAGE_EDGE_UNPAIRED": _batch(with_digest=True, pair_edge=False),
+        "CATALOG_BATCH_TOO_LARGE": _batch(with_digest=True)
+        + "".join(
+            _triple(f"{EXAMPLE}filler-{i}", f"{CATALOG}note", "x", literal=True)
+            for i in range(50_000)
+        ),
+    }
+    for code, batch in cases.items():
+        with pytest.raises(Exception, match=code):
+            admin.rdf.add_triples(turtle=batch)
+        assert _tool_ids(admin) == set(), code
+    # An ownerless pack is not a refusal: it imports flagged.
     admin.rdf.add_triples(turtle=_batch(with_digest=True))
     assert _tool_ids(admin) == {TOOL}

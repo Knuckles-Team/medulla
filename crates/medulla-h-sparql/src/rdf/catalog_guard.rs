@@ -13,7 +13,7 @@ use std::sync::OnceLock;
 
 use medulla_catalog::emit::{Object, Triple, CAT};
 use medulla_catalog::guard::{
-    check_catalog_write, flag_ownerless, CatalogGuardContext, CatalogGuardError,
+    check_batch_size, check_catalog_write, flag_ownerless, CatalogGuardContext, CatalogGuardError,
 };
 use medulla_identity_types::tenancy::Marking;
 use medulla_rdf::oxrdf::{self, NamedOrBlankNode, Term};
@@ -130,6 +130,8 @@ pub(super) fn guard_catalog_write(
     let rules = rules();
     let held = held_markings(authority);
     let catalog = catalog_triples(triples);
+    let max = medulla_server_api::knob_config::knobs().catalog_onboard_batch_max_triples as usize;
+    check_batch_size(&catalog, max)?;
     let is_asset_class = |class: &str| rules.asset_classes.contains(class);
     let field_marking = |predicate: &str| rules.field_markings.get(predicate).cloned();
     check_catalog_write(

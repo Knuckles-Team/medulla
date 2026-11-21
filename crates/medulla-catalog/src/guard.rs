@@ -22,6 +22,8 @@ use crate::emit::{Object, Triple, ASSET_NODE_PREFIX, CAT, OWNER_MISSING_FLAG};
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 /// The wire code of an orphan asset class.
 pub const ASSET_CLASS_ORPHAN: &str = "ASSET_CLASS_ORPHAN";
+/// The wire code of a catalog batch over the size bound.
+pub const CATALOG_BATCH_TOO_LARGE: &str = "CATALOG_BATCH_TOO_LARGE";
 /// The wire code of a field the writer is not cleared for.
 pub const FIELD_MARKED: &str = "FIELD_MARKED";
 
@@ -35,6 +37,14 @@ pub enum CatalogGuardError {
         node: String,
         /// Its class IRI.
         class: String,
+    },
+    /// A catalog batch holds more triples than `catalog.onboard_batch_max_triples`.
+    #[error("CATALOG_BATCH_TOO_LARGE: the batch holds {triples} triples, over the bound of {max}")]
+    BatchTooLarge {
+        /// Triples in the batch.
+        triples: usize,
+        /// The bound.
+        max: usize,
     },
     /// A person field carries a marking the writer does not hold.
     #[error("FIELD_MARKED: field {predicate} of {node} carries marking {marking}, which the writer does not hold")]
@@ -54,6 +64,7 @@ impl CatalogGuardError {
         match self {
             Self::AssetClassOrphan { .. } => ASSET_CLASS_ORPHAN,
             Self::FieldMarked { .. } => FIELD_MARKED,
+            Self::BatchTooLarge { .. } => CATALOG_BATCH_TOO_LARGE,
         }
     }
 }
@@ -68,6 +79,23 @@ pub struct CatalogGuardContext<'a> {
     pub held: &'a BTreeSet<Marking>,
     /// The marking of one field of a `cat:PersonAsset` node, when it has one.
     pub field_marking: &'a dyn Fn(&str) -> Option<Marking>,
+}
+
+/// Refuse a catalog batch of more than `max` triples. A write that declares no `cat:` asset node
+/// is not a catalog batch and is never refused here.
+pub fn check_batch_size(triples: &[Triple], max: usize) -> Result<(), CatalogGuardError> {
+    let declares_asset = triples.iter().any(|t| {
+        t.predicate == RDF_TYPE
+            && t.subject.starts_with(ASSET_NODE_PREFIX)
+            && matches!(&t.object, Object::Iri(class) if class.starts_with(CAT))
+    });
+    if declares_asset && triples.len() > max {
+        return Err(CatalogGuardError::BatchTooLarge {
+            triples: triples.len(),
+            max,
+        });
+    }
+    Ok(())
 }
 
 /// Check the triples of one catalog write. The first refusal wins and nothing is
