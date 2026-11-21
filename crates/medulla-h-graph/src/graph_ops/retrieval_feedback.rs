@@ -60,6 +60,7 @@ pub(super) async fn handle_record(
         tenant: tenant_id.to_string(),
         principal: principal.to_string(),
         at: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000,
+        idempotency_key: ctx.idempotency_key.to_string(),
     };
     let event = RetrievalFeedback::from_record(document_ref, *kind, *weight, &stamp);
     let node_id = match event.node_id() {
@@ -217,6 +218,7 @@ mod tests {
             kind,
             weight,
             at,
+            idempotency_key: format!("{document}-{at}"),
         };
         core.add_node(
             event.node_id().unwrap(),
@@ -240,6 +242,7 @@ mod tests {
             tenant: "t1".into(),
             principal: "alice".into(),
             at: 100,
+            idempotency_key: "req-1".into(),
         };
         let logged = Method::RetrievalFeedbackRecord {
             document_ref: "doc".into(),
@@ -282,6 +285,7 @@ mod tests {
             kind: FeedbackKind::Cited,
             weight: 0.05,
             at: 100,
+            idempotency_key: String::new(),
         }];
         let boosts = load_feedback(&core, "t1", &candidates, 100, &knobs, &implicit);
         let value = |id: &str| boosts.iter().find(|b| b.document_ref == id).map(|b| b.value);

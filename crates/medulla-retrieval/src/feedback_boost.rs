@@ -79,6 +79,7 @@ pub fn implicit_events(
         kind,
         weight,
         at,
+        idempotency_key: String::new(),
     };
     let mut events: Vec<RetrievalFeedback> = cited
         .iter()
@@ -105,6 +106,7 @@ mod tests {
             kind,
             weight,
             at,
+            idempotency_key: String::new(),
         }
     }
 
