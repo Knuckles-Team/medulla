@@ -1012,6 +1012,19 @@ pub struct PlanScope {
 }
 
 #[cfg(feature = "query")]
+impl PlanScope {
+    /// The closed predicate set this scope stamps, rendered one text per
+    /// predicate (MEDULLA-FEDERATED-QUERY-R078.5): the tenant equality, then the
+    /// clearance-label set. `EXPLAIN` and the executed-plan trace print these.
+    pub fn predicate_texts(&self) -> Vec<String> {
+        vec![
+            format!("tenant = {}", self.tenant),
+            format!("clearance subset of [{}]", self.clearance_labels.join(", ")),
+        ]
+    }
+}
+
+#[cfg(feature = "query")]
 impl Plan {
     pub fn new(ops: Vec<Op>) -> Self {
         Self { ops, scope: None }
@@ -1248,6 +1261,14 @@ pub enum UqlResult {
         /// the plan DAG has. One program compiles to one plan with one root.
         #[serde(default)]
         plan_root_count: u32,
+        /// MEDULLA-FEDERATED-QUERY-R078.5: the tenant the executed plan was scoped to;
+        /// absent when the plan carries no scope (a standalone planner run).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        plan_scope_tenant: Option<String>,
+        /// MEDULLA-FEDERATED-QUERY-R078.5: the closed predicate set the scope stamped
+        /// onto the plan, one text per predicate.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        plan_scope_predicates: Vec<String>,
     },
     /// `PROFILE`: the rows plus per-stage actual rows and time.
     Profile {
@@ -1264,6 +1285,14 @@ pub enum UqlResult {
         /// snapshot; 0 when the build has no epistemic layer.
         #[serde(default)]
         knowledge_revision: u64,
+        /// MEDULLA-FEDERATED-QUERY-R078.5: the tenant the executed plan was scoped to;
+        /// absent when the plan carries no scope (a standalone planner run).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        plan_scope_tenant: Option<String>,
+        /// MEDULLA-FEDERATED-QUERY-R078.5: the closed predicate set the scope stamped
+        /// onto the plan, one text per predicate.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        plan_scope_predicates: Vec<String>,
     },
 }
 
@@ -1408,6 +1437,8 @@ mod tests {
                 warnings: vec!["w".into()],
                 snapshot_revision: 9,
                 knowledge_revision: 0,
+                plan_scope_tenant: Some("tenant-a".into()),
+                plan_scope_predicates: vec!["tenant = tenant-a".into()],
             },
         ] {
             let bytes = rmp_serde::to_vec_named(&result).unwrap();

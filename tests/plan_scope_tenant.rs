@@ -130,3 +130,87 @@ async fn planned_statement_executes_only_with_predicate() {
     };
     assert_eq!(rows.len(), 2, "both rows return: {run:?}");
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R078.4
+#[tokio::test]
+async fn unverified_tenant_refused_zero_reads() {
+    use medulla_server_api::api::reentry::TryHandleContext;
+
+    let state = state();
+    add_doc(&state, 1, "d1").await;
+
+    // The served handler is entered with no verified read authority: the
+    // caller has no verified tenant, so the statement is refused before any
+    // leg binds or any read runs — never answered by post-filtering rows.
+    let rls = std::sync::Arc::new(common::current_isolation());
+    let response = medulla_h_query::query::try_handle(
+        &state,
+        TryHandleContext {
+            req_id: 5,
+            graph_name: "__commons__",
+            read_authority: None,
+            caller: "",
+        },
+        std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new()),
+        Method::Uql {
+            text: "MATCH (:Doc)".to_string(),
+            params: Default::default(),
+            prepare: false,
+            foreign_executions: Default::default(),
+        },
+        &rls,
+    )
+    .await
+    .unwrap_or_else(|method| panic!("the query family handles Uql, not {method:?}"));
+    assert_eq!(
+        response.error.as_deref(),
+        Some("PLAN_SCOPE_UNVERIFIED"),
+        "an unverified caller is refused with the registered code: {response:?}"
+    );
+    assert!(
+        response.result.is_none(),
+        "no rows, no snapshot header, no source coverage: {response:?}"
+    );
+
+    // The same text from a verified caller (the served dispatch) still runs.
+    let verified = uql(&state, 6, "MATCH (:Doc)").await;
+    assert!(verified.error.is_none(), "{:?}", verified.error);
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R078.5
+#[tokio::test]
+async fn trace_and_explain_show_scope() {
+    let state = state();
+    add_doc(&state, 1, "d1").await;
+
+    let explain = uql(&state, 2, "EXPLAIN MATCH (:Doc)").await;
+    assert!(explain.error.is_none(), "{:?}", explain.error);
+    let UqlResult::Explain {
+        plan_scope_tenant,
+        plan_scope_predicates,
+        ..
+    } = body(&explain)
+    else {
+        panic!("EXPLAIN result expected: {explain:?}")
+    };
+    assert_eq!(plan_scope_tenant.as_deref(), Some("__commons__"));
+    assert_eq!(
+        plan_scope_predicates.len(),
+        2,
+        "the tenant equality and the clearance-label set: {plan_scope_predicates:?}"
+    );
+    assert!(plan_scope_predicates[0].contains("__commons__"));
+
+    let profile = uql(&state, 3, "PROFILE MATCH (:Doc)").await;
+    assert!(profile.error.is_none(), "{:?}", profile.error);
+    let UqlResult::Profile {
+        plan_scope_tenant: traced_tenant,
+        plan_scope_predicates: traced_predicates,
+        ..
+    } = body(&profile)
+    else {
+        panic!("PROFILE result expected: {profile:?}")
+    };
+    assert_eq!(traced_tenant.as_deref(), Some("__commons__"));
+    assert_eq!(traced_predicates, plan_scope_predicates);
+}

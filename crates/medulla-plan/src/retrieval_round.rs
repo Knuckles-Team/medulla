@@ -22,7 +22,7 @@ use medulla_result_types::retrieval_verdict::{
     RETRIEVAL_EMBEDDING_REVISION_MISMATCH, RETRIEVAL_POLICY_UNVERIFIED,
     RETRIEVAL_SCORE_PAIR_REQUIRED, RETRIEVAL_SOLVER_NOT_CONVERGED,
 };
-use medulla_result_types::retrieval_verdict::{FeedbackLimits, RepairStep};
+use medulla_result_types::retrieval_verdict::{FeedbackLimits, RepairStep, SufficiencyVerdict};
 use medulla_retrieval::leanrag::{retrieve_vector_free, SectionGranularity, VectorFreeLimits};
 use medulla_retrieval::retrieval_verdict::{
     check_activation, descend_hierarchy, judge_sufficiency, select_chunks, SufficiencyCall,
@@ -303,6 +303,28 @@ fn run_selection(
         }),
     });
     Ok(receipt)
+}
+
+/// MEDULLA-FEDERATED-QUERY-R081.5: the sufficiency verdict as one premise
+/// `retrieval.sufficiency` listing the six verdict fields. The round is read-only: the
+/// premise rides in `RoundResult.premises`, and the harness persists the round result
+/// digest through the `DecisionLog` run outcome.
+fn sufficiency_premise(verdict: &SufficiencyVerdict) -> Result<RetrievalPremise, RoundError> {
+    let encode = |value: serde_json::Result<serde_json::Value>| {
+        value.map_err(|error| contract_invalid(&error.to_string()))
+    };
+    Ok(RetrievalPremise {
+        step: "sufficiency".into(),
+        name: "retrieval.sufficiency".into(),
+        value: serde_json::json!({
+            "verdict": encode(serde_json::to_value(&verdict.verdict))?,
+            "evidence_count": verdict.evidence_count,
+            "reason": verdict.reason,
+            "repair": encode(serde_json::to_value(&verdict.repair))?,
+            "fallback": encode(serde_json::to_value(&verdict.fallback))?,
+            "round": verdict.round,
+        }),
+    })
 }
 
 /// Joint sparse nonnegative selection (R081.100): reconstruct the query vector from the
@@ -768,7 +790,9 @@ pub fn run_round_with_state(
                 fallback_mode: part.fallback_mode.clone(),
                 fallback: part.fallback,
             };
-            Some(judge_sufficiency(&evidence, &rule, &call)?)
+            let verdict = judge_sufficiency(&evidence, &rule, &call)?;
+            steps.premises.push(sufficiency_premise(&verdict)?);
+            Some(verdict)
         }
     };
     let mut joint_selection = None;

@@ -192,6 +192,58 @@ async fn served_round_returns_verdict_beside_rows() {
         .is_none());
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R081.5
+#[tokio::test(flavor = "multi_thread")]
+async fn sufficiency_premise_lists_all_six_fields() {
+    let state = state();
+    seed(&state, 2).await;
+    let result = decode(round_as(&state, None, request(Some(part(Some(4))))).await);
+    let verdict = result.sufficiency.clone().expect("verdict beside rows");
+    let premises: Vec<_> = result
+        .premises
+        .iter()
+        .filter(|premise| premise.name == "retrieval.sufficiency")
+        .collect();
+    assert_eq!(premises.len(), 1, "one sufficiency premise: {result:?}");
+    let value = premises[0].value.as_object().expect("premise value object");
+    let mut keys: Vec<&str> = value.keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        [
+            "evidence_count",
+            "fallback",
+            "reason",
+            "repair",
+            "round",
+            "verdict"
+        ],
+        "the six verdict fields and no other"
+    );
+    assert_eq!(value["evidence_count"], verdict.evidence_count);
+    assert_eq!(value["reason"], verdict.reason.as_str());
+    assert_eq!(value["round"], verdict.round);
+    assert_eq!(
+        value["verdict"],
+        serde_json::to_value(&verdict.verdict).expect("verdict value")
+    );
+    assert_eq!(
+        value["repair"],
+        serde_json::to_value(&verdict.repair).expect("repair value")
+    );
+    assert_eq!(
+        value["fallback"],
+        serde_json::to_value(&verdict.fallback).expect("fallback value")
+    );
+
+    // A round without the part appends no sufficiency premise.
+    let rows_only = decode(round_as(&state, None, request(None)).await);
+    assert!(rows_only
+        .premises
+        .iter()
+        .all(|premise| premise.name != "retrieval.sufficiency"));
+}
+
 // ---- shared seeding for the selection and hierarchy parts ----
 
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1000);

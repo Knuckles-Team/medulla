@@ -27732,6 +27732,8 @@ class UqlResultExplainBody(BaseModel):
     incremental_note: str
     optimized: str
     plan_digest: Digest256 | None = None
+    plan_scope_predicates: list[str] = []
+    plan_scope_tenant: str | None = None
     query_digest: Digest256 | None = None
     stages: list[UqlStageReport]
     warnings: list[str]
@@ -27747,6 +27749,8 @@ class UqlResultProfileBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     columns: list[str]
+    plan_scope_predicates: list[str] = []
+    plan_scope_tenant: str | None = None
     rows: list[UqlRow]
     stages: list[UqlStageReport]
     warnings: list[str]

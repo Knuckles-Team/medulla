@@ -5,7 +5,7 @@
 //! plan and adds the tenant predicate to every graph, edge, and vector scan
 //! leaf under the default [`ScopeRule`] table entry `scan_all_leaves`. Served
 //! refusal, trace evidence, and served proof belong to the later
-//! `MEDULLA-FEDERATED-QUERY-R078.4` through `.6` requirements.
+//! `MEDULLA-FEDERATED-QUERY-R078.5` and `.6` requirements.
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -41,12 +41,19 @@ pub struct PlanScope {
 pub enum PlanScopeError {
     /// A scope without a tenant cannot safely constrain a query.
     EmptyTenant,
+    /// The scope did not come from verified authority (MEDULLA-FEDERATED-QUERY-R078.4):
+    /// a plan is never scoped by an unverified tenant, and rows are never
+    /// post-filtered instead.
+    Unverified,
 }
 
 impl std::fmt::Display for PlanScopeError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::EmptyTenant => formatter.write_str("plan scope tenant must be non-empty"),
+            Self::Unverified => {
+                formatter.write_str("PLAN_SCOPE_UNVERIFIED: the plan scope tenant is not verified")
+            }
         }
     }
 }
@@ -183,6 +190,10 @@ pub fn inject_scope_with_rule(
     scope: &PlanScope,
     rule: ScopeRule,
 ) -> Result<(), PlanScopeError> {
+    // MEDULLA-FEDERATED-QUERY-R078.4: an unverified scope never constrains a plan.
+    if !scope.verified {
+        return Err(PlanScopeError::Unverified);
+    }
     let predicates = scope.predicate()?;
     plan.scope = Some(medulla_query_types::wire::PlanScope {
         tenant: scope.tenant.clone(),

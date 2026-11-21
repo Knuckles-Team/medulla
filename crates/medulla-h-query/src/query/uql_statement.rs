@@ -80,13 +80,18 @@ pub(crate) async fn handle_uql(
     // that reaches `run_statement` carries the closed predicate set at every
     // scan leaf, and a scope that cannot bind is refused before any leg binds
     // or read runs (an unverified scope is refused by R078.4).
-    if let Err(detail) = served_plan_scope(ctx)
-        .and_then(|scope| inject_served_scope(&mut stmt, &mut binding, &scope))
+    // MEDULLA-FEDERATED-QUERY-R078.4: a caller without a verified tenant is refused
+    // here, before any leg binds or read runs; rows are never post-filtered instead.
+    if let Err(error) = served_plan_scope(ctx)
+        .map_err(|detail| format!("PLAN_SCOPE_INVALID: {detail}"))
+        .and_then(|scope| {
+            inject_served_scope(&mut stmt, &mut binding, &scope).map_err(|error| match error {
+                medulla_table_store::plan_scope::PlanScopeError::Unverified => error.to_string(),
+                other => format!("PLAN_SCOPE_INVALID: {other}"),
+            })
+        })
     {
-        return Ok(Response::err(
-            req_id,
-            format!("PLAN_SCOPE_INVALID: {detail}"),
-        ));
+        return Ok(Response::err(req_id, error));
     }
     let stmt_for_run = if prepare {
         let mut prepared = stmt.clone();
@@ -260,11 +265,11 @@ fn inject_served_scope(
     stmt: &mut medulla_uql::Statement,
     binding: &mut medulla_exec::algebra::Plan,
     scope: &medulla_table_store::plan_scope::PlanScope,
-) -> Result<(), String> {
+) -> Result<(), medulla_table_store::plan_scope::PlanScopeError> {
     use medulla_table_store::plan_scope::inject_scope;
-    inject_scope(binding, scope).map_err(|error| error.to_string())?;
+    inject_scope(binding, scope)?;
     if let medulla_uql::Body::Pipeline(plan) = &mut stmt.body {
-        inject_scope(plan, scope).map_err(|error| error.to_string())?;
+        inject_scope(plan, scope)?;
     }
     Ok(())
 }

@@ -25,6 +25,11 @@ closed_error_codes! {
         ArchiveMissing => "ARCHIVE_MISSING",
         /// A read met a graph whose durable material is only partly in memory (MEDULLA-OBSERVE-R001.1).
         PartialMaterialization => "PARTIAL_MATERIALIZATION",
+        /// MEDULLA-FEDERATED-QUERY-R078.3: the caller scope cannot bind to the plan.
+        PlanScopeInvalid => "PLAN_SCOPE_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R078.4: the caller has no verified tenant; the
+        /// statement is refused before any read.
+        PlanScopeUnverified => "PLAN_SCOPE_UNVERIFIED",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
         /// A catalog node is typed with a class that is not under `cat:Asset` (MEDULLA-TYPED-PACKS-R108.4).
         AssetClassOrphan => "ASSET_CLASS_ORPHAN",
