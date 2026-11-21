@@ -146,6 +146,21 @@ pub struct SourceRecordProvenance {
     pub source_uri: String,
 }
 
+/// Most observed terms one proposal submission carries (MEDULLA-INGEST-WORKER-R002.3).
+pub const MAX_OBSERVED_TERMS: usize = 4_096;
+
+/// One induced ontology proposal with the terms the worker observed in the source: the
+/// `Proposals` extension element (MEDULLA-INGEST-WORKER-R002.3). The worker runs the
+/// model; the engine only judges.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProposalSubmission {
+    pub proposal: medulla_types::ontology_proposal::OntologyProposal,
+    #[serde(default)]
+    pub observed_terms: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

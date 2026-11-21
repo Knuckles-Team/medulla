@@ -45,6 +45,8 @@ pub mod transcript;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod proposals;
 pub mod spec_projection;
 // The sweep lowers a Document delete through `crate::document_delete`, so it needs that
 // module's features as well.
@@ -219,7 +221,8 @@ fn admit_kind(
         SourceBatchKind::Records
         | SourceBatchKind::Access
         | SourceBatchKind::Groups
-        | SourceBatchKind::Containers => Ok(()),
+        | SourceBatchKind::Containers
+        | SourceBatchKind::Proposals => Ok(()),
         _ => Err(format!(
             "{}: batch kind {kind:?} has no admission path",
             medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
@@ -240,6 +243,7 @@ pub async fn prepare(
         medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Access
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Proposals
     ) {
         return prepare_extension_batch(ctx, &request).await;
     }
@@ -425,6 +429,7 @@ async fn prepare_extension_batch(
     let stream = batch.provider_checkpoint.stream.as_str();
     let mut methods = Vec::new();
     let mut policies = Vec::new();
+    let mut proposal_items = Vec::new();
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
             let snapshots = decode_permission_items::<
@@ -477,6 +482,21 @@ async fn prepare_extension_batch(
                 methods.push(update.method);
             }
         }
+        Some(SourceBatchExtension::Proposals(items)) => {
+            let knobs = medulla_server_api::knob_config::knobs();
+            let admission = proposals::admit_proposals(
+                &proposals::decode_proposals(items.as_slice())?,
+                &medulla_types::ontology_proposal::ProposalThresholds {
+                    min_coverage: knobs.ingest_proposal_min_coverage,
+                    max_redundancy: knobs.ingest_proposal_max_redundancy,
+                },
+            )?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
+            proposal_items = admission.items;
+            methods.extend(admission.methods);
+        }
         Some(SourceBatchExtension::Containers(items)) => {
             let found = containers::decode_containers(items.as_slice())?;
             let held = read_held_containers(
@@ -510,7 +530,7 @@ async fn prepare_extension_batch(
         &policy_subject,
         0,
     ));
-    methods.push(permission_receipt_method(batch, &batch_id, applied)?);
+    methods.push(permission_receipt_method(batch, &batch_id, applied, &proposal_items)?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
     let mutation = compile_mutation(&ctx, &batch_id, methods)?;
     let previous_stream_digest = stream_content_digest(
@@ -656,8 +676,9 @@ fn permission_receipt_method(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     applied: u64,
+    proposal_items: &[proposals::ProposalItemReceipt],
 ) -> Result<Method, String> {
-    let properties = serde_json::json!({
+    let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
         "connector": batch.connector.as_str(),
         "mode": batch.mode,
@@ -679,6 +700,11 @@ fn permission_receipt_method(
         "relationship_tombstoned_count": 0,
         "affected_count": applied,
     });
+    if !proposal_items.is_empty() {
+        // The per-item judgments of a `proposals` batch (MEDULLA-INGEST-WORKER-R002.3).
+        properties["proposals"] = serde_json::to_value(proposal_items)
+            .map_err(|error| format!("proposal receipt encoding failed: {error}"))?;
+    }
     Ok(Method::AddNode {
         node_id: batch_id.into(),
         properties_msgpack: rmp_serde::to_vec_named(&properties)
