@@ -81,6 +81,15 @@ from .generated.server_registry import (
 from .otlp_logs import OtlpLogBatch
 from .parser import RustASTParser
 from .policy_evolution import PolicyEvolutionClient, PolicyEvolutionRefused
+from .world_view import (
+    CatalogEntry,
+    Layout,
+    Override,
+    OverrideStore,
+    Placement,
+    apply_overrides,
+    derive_placements,
+)
 
 
 def _add_editable_native_overlay() -> None:
@@ -132,6 +141,13 @@ __all__ = [
     "FleetCatalogPage",
     "FleetCatalogSnapshotError",
     "PolicyEvolutionClient",
+    "CatalogEntry",
+    "Layout",
+    "Override",
+    "OverrideStore",
+    "Placement",
+    "apply_overrides",
+    "derive_placements",
     "PolicyEvolutionRefused",
     "FleetDiscoveryRecordRequest",
     "FleetOverrideClearRequest",

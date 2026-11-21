@@ -531,3 +531,15 @@ organizes under one worldview instead of floating per-document tags.""" .
     rdfs:comment "The depth of a building's footprint." ;
     rdfs:domain :Building ;
     rdfs:range xsd:decimal .
+
+:serverId a owl:DatatypeProperty ;
+    rdfs:label "server id" ;
+    rdfs:comment "The id of the connector server a stored building override places (MEDULLA-WORLD-VIEW-R002)." ;
+    rdfs:domain :Building ;
+    rdfs:range xsd:string .
+
+:overrideReason a owl:DatatypeProperty ;
+    rdfs:label "override reason" ;
+    rdfs:comment "The stated reason a building was moved by hand (MEDULLA-WORLD-VIEW-R002)." ;
+    rdfs:domain :Building ;
+    rdfs:range xsd:string .
