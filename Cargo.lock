@@ -7084,6 +7084,7 @@ dependencies = [
  "medulla-shacl",
  "medulla-source-types",
  "medulla-statechart",
+ "medulla-store",
  "medulla-transaction",
  "medulla-types",
  "medulla-virtual-graph",
