@@ -3332,6 +3332,75 @@ async fn view_and_matview_over_wire() {
         .expect("IF EXISTS of an absent view succeeds");
 }
 
+/// A materialized view over 100,000 rows refreshes to the same row count and checksum as
+/// its input, and a read of the view answers from the stored rows.
+// spec: MEDULLA-ENGINE-PARITY-R014.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn matview_refresh_checksum() {
+    const ROWS: i64 = 100_000;
+    const BATCH: i64 = 1_000;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    let matview = format!("{table}_mv");
+
+    client
+        .simple_query(&format!("CREATE TABLE {table} (id BIGINT PRIMARY KEY, v BIGINT)"))
+        .await
+        .expect("CREATE TABLE");
+    client
+        .simple_query(&format!(
+            "CREATE MATERIALIZED VIEW {matview} AS SELECT id, v FROM {table}"
+        ))
+        .await
+        .expect("CREATE MATERIALIZED VIEW over an empty table");
+    for first in (0..ROWS).step_by(BATCH as usize) {
+        let values: Vec<String> = (first..first + BATCH)
+            .map(|id| format!("({id}, {})", id * 7))
+            .collect();
+        client
+            .simple_query(&format!(
+                "INSERT INTO {table} (id, v) VALUES {}",
+                values.join(", ")
+            ))
+            .await
+            .expect("insert a batch");
+    }
+    client
+        .simple_query(&format!("REFRESH MATERIALIZED VIEW {matview}"))
+        .await
+        .expect("REFRESH MATERIALIZED VIEW");
+
+    let expected_sum: i64 = (0..ROWS).map(|id| id * 7).sum();
+    let summary = |relation: String| {
+        let client = &client;
+        async move {
+            let msgs = client
+                .simple_query(&format!("SELECT count(*), sum(v) FROM {relation}"))
+                .await
+                .expect("summarize");
+            msgs.iter()
+                .find_map(|m| match m {
+                    tokio_postgres::SimpleQueryMessage::Row(row) => Some((
+                        row.get(0).map(str::to_string),
+                        row.get(1).map(str::to_string),
+                    )),
+                    _ => None,
+                })
+                .expect("one summary row")
+        }
+    };
+    let from_view = summary(matview.clone()).await;
+    let from_table = summary(table.clone()).await;
+    assert_eq!(from_view.0.as_deref(), Some(ROWS.to_string().as_str()));
+    assert_eq!(from_view.1.as_deref(), Some(expected_sum.to_string().as_str()));
+    assert_eq!(from_view, from_table, "the view equals its input");
+
+    let _ = client.simple_query(&format!("DROP MATERIALIZED VIEW {matview}")).await;
+    let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
+}
+
 // ─── pg_dump and pg_restore round trip (MEDULLA-DURABLE-KERNEL-R035.2) ──────────────────
 
 /// Rows of each of the two tables the dump and restore carry.

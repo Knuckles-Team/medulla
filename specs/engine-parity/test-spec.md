@@ -48,7 +48,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R013.3` | `tests/pgwire_roundtrip.rs::serial_column_uses_sequence`; bench group `engine_parity/sequence_nextval` | existing |
 | `MEDULLA-ENGINE-PARITY-R014.1` | `crates/medulla-sql-tests/tests/matview.rs::refresh_recomputes_and_records_input_versions`; `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` | planned |
 | `MEDULLA-ENGINE-PARITY-R014.2` | `crates/medulla-server-served-tests/src/split_tests/medulla_wire_wire_tests.rs::wired_catalog_tests::stale_matview_is_reported_on_read_until_refreshed` | bound |
-| `MEDULLA-ENGINE-PARITY-R014.3` | `tests/pgwire_roundtrip.rs::matview_refresh_checksum`; bench group `engine_parity/matview_refresh` | planned |
+| `MEDULLA-ENGINE-PARITY-R014.3` | `tests/pgwire_roundtrip.rs::matview_refresh_checksum`; bench group `engine_parity/matview_refresh` | bound |
 | `MEDULLA-ENGINE-PARITY-R015.1` | `crates/medulla-server-cdc/src/cdc.rs::tests::row_changes_emit_in_commit_order`; `tests/test_change_subscribe_served.py::test_cdc_read_resumes_and_expires` | existing |
 | `MEDULLA-ENGINE-PARITY-R015.2` | `tests/test_change_subscribe_served.py::test_cdc_read_resumes_and_expires` | existing |
 | `MEDULLA-ENGINE-PARITY-R015.3` | `tests/test_change_subscribe_served.py::test_thousand_changes_arrive_in_order`; bench group `engine_parity/cdc_emit` | planned |

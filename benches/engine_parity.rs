@@ -92,6 +92,10 @@ const INDEX_PROBE_SEED: u64 = 0x5eed_1d3c;
 const NEXTVAL_SAMPLES: usize = 60_000;
 const NEXTVAL_BLOCK: u64 = 65_536;
 const NEXTVAL_P99_BUDGET_NS: u128 = 2_000;
+const MATVIEW_ROWS: usize = 1_000_000;
+const MATVIEW_READ_SAMPLES: usize = 5_000;
+const MATVIEW_REFRESH_BUDGET: Duration = Duration::from_secs(2);
+const MATVIEW_READ_P99_BUDGET_US: u64 = 3_000;
 
 /// One workload result line.
 struct Record {
@@ -755,6 +759,72 @@ fn sequence_nextval() -> Record {
     }
 }
 
+/// MEDULLA-ENGINE-PARITY-R014.3: refresh a materialized view of 1,000,000 rows through the
+/// one refresh transaction of the table store, then sample point reads of its result table.
+fn matview_refresh() -> Record {
+    use medulla_table_store::tables::{refresh_matview_txn, MatViewSpec};
+    let store = open_table_store("matview_refresh");
+    let name = "bench_mv";
+    let schema = TableSchema::new(
+        name,
+        vec![
+            Column::new("id", ColumnType::BigInt, true, false),
+            Column::new("v", ColumnType::BigInt, true, false),
+        ],
+    );
+    let col_order = vec!["id".to_string(), "v".to_string()];
+    let spec = || MatViewSpec {
+        name: name.to_string(),
+        select_sql: "SELECT id, v FROM bench_src".to_string(),
+        inputs: vec!["bench_src".to_string()],
+        owner: "bench".to_string(),
+        refreshed_seq: store.commit_seq(),
+        stale: false,
+    };
+    let rows = |count: usize| -> Vec<Vec<serde_json::Value>> {
+        (0..count)
+            .map(|i| vec![json!(i as i64), json!((i * 7) as i64)])
+            .collect()
+    };
+    // The first refresh creates the result table; the timed one replaces its rows.
+    let mut first = TableTxn::new();
+    first.push(TxnOp::CreateTable {
+        schema: schema.clone(),
+        if_not_exists: false,
+    });
+    commit(&store, &first).expect("create the result table");
+    let txn = refresh_matview_txn(spec(), schema, col_order, rows(MATVIEW_ROWS));
+    let started = Instant::now();
+    commit(&store, &txn).expect("refresh commits");
+    let refresh = started.elapsed();
+    assert!(
+        refresh <= MATVIEW_REFRESH_BUDGET,
+        "matview_refresh took {refresh:?}, over the {MATVIEW_REFRESH_BUDGET:?} budget"
+    );
+    let mut seed = INDEX_PROBE_SEED;
+    let mut samples = Vec::with_capacity(MATVIEW_READ_SAMPLES);
+    for _ in 0..MATVIEW_READ_SAMPLES {
+        let rowid = 1 + next_random(&mut seed) % (MATVIEW_ROWS as u64 - 2);
+        let begun = Instant::now();
+        let row = store.get_row(name, rowid).expect("point read");
+        samples.push(begun.elapsed());
+        assert!(row.is_some(), "row {rowid} of the refreshed view exists");
+    }
+    samples.sort();
+    let p99_us = percentile(&samples, 99);
+    assert!(
+        p99_us <= MATVIEW_READ_P99_BUDGET_US,
+        "matview read p99 {p99_us} us over the {MATVIEW_READ_P99_BUDGET_US} us budget"
+    );
+    Record {
+        workload: "matview_refresh",
+        parameters: format!("rows={MATVIEW_ROWS};samples={MATVIEW_READ_SAMPLES}"),
+        p50_us: percentile(&samples, 50),
+        p99_us,
+        throughput: MATVIEW_ROWS as f64 / refresh.as_secs_f64(),
+    }
+}
+
 /// Run W1 to W5 and the OCC and login budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -778,6 +848,7 @@ fn emit_workload_records() {
     emit(&pgwire_login());
     emit(&index_probe());
     emit(&sequence_nextval());
+    emit(&matview_refresh());
 }
 
 fn main() {
