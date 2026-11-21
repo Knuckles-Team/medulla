@@ -193,6 +193,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ProposalList",
     // `dispatch_sdlc_methods::spec_question` reads only nodes `can_see_node` admits.
     "SpecQuestion",
+    // `dispatch_sdlc_methods::get_defect` reads only a node `can_see_node` admits.
+    "GetDefect",
     "KnowledgeStream",
     "ListGraphs",
     // `graph_ops::memory_snapshot::{list, read}` read the projected core of

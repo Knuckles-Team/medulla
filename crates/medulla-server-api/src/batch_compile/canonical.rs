@@ -811,8 +811,11 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ProposalList { .. }
         // MEDULLA-SDLC-R014.6: the competency questions commit nothing.
         | Method::SpecQuestion { .. }
+        // MEDULLA-SDLC-R003.5: the defect read commits nothing.
+        | Method::GetDefect { .. }
         | Method::LandingPolicyPut { .. }
         | Method::FileDefect { .. }
+        | Method::TransitionDefect { .. }
         | Method::ProposalDecide { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
         | Method::ActionRegister { .. }

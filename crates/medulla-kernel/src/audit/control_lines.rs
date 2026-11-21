@@ -220,6 +220,11 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "FILE_DEFECT|{}|{:?}",
             request.repo, request.intake
         )),
+        // MEDULLA-SDLC-R003.4: the line names the defect and the move, never the reason text.
+        Method::TransitionDefect { request } => Some(format!(
+            "TRANSITION_DEFECT|{}|{}|{:?}",
+            request.repo, request.defect_id, request.to
+        )),
         // MEDULLA-SDLC-R017.6: the line names the proposal and the decision, never the reason.
         Method::ProposalDecide { request } => Some(format!(
             "PROPOSAL_DECIDE|{}|{:?}",

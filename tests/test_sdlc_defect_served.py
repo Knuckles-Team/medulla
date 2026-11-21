@@ -306,3 +306,153 @@ async def _incident_scenario(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-SDLC-R003.3")
 def test_incident_naming_a_symbol_opens_defect():
     asyncio.run(_incident_scenario(f"sdlc-defect-inc-{uuid.uuid4().hex[:8]}"))
+
+
+async def _file_direct(client: MedullaClient, graph: str, text: str) -> dict:
+    return await client.file_defect(
+        {
+            "repo": graph,
+            "intake": "direct",
+            "title": "transition probe",
+            "source_record_id": "record-1",
+            "observed_at": 1000,
+            "text": text,
+        }
+    )
+
+
+async def _transition(client: MedullaClient, graph: str, to: str, **extra) -> dict:
+    return await client.transition_defect(
+        {"repo": graph, "defect_id": "def-0001", "to": to, **extra}
+    )
+
+
+async def _transition_scenario(graph: str) -> None:
+    client = await _client(graph)
+    try:
+        await _file_direct(client, graph, "panic in transition probe")
+        # A move that skips a state refuses and writes nothing.
+        with pytest.raises(Exception, match="DEFECT_TRANSITION_ILLEGAL"):
+            await _transition(client, graph, "verified")
+        assert (await _defect(client, graph, "def-0001"))["status"] == "new"
+        await _transition(client, graph, "triaged")
+        await _transition(client, graph, "fixing")
+        # The fix reference is a guard of the move to fixed.
+        with pytest.raises(Exception, match="DEFECT_TRANSITION_ILLEGAL"):
+            await _transition(client, graph, "fixed")
+        fix, _, fix_digest = await _submit(client, graph, None, "fix")
+        await _transition(client, graph, "fixed", fix_changeset=fix)
+        # No verdict of the bound test yet: the move to verified is unverified.
+        with pytest.raises(Exception, match="DEFECT_UNVERIFIED"):
+            await _transition(client, graph, "verified", gate_id="bound-test")
+        failing = _body(
+            await client._send(
+                "RecordGateVerdict",
+                {
+                    "changeset": fix,
+                    "branch": "main",
+                    "gate_id": "bound-test",
+                    "input_digest": fix_digest,
+                    "verdict": "fail",
+                    "evidence_digest": hashlib.sha256(b"log").hexdigest(),
+                    "duration_ms": 5,
+                },
+                graph,
+            )
+        )
+        assert failing["node_id"]
+        with pytest.raises(Exception, match="DEFECT_UNVERIFIED"):
+            await _transition(client, graph, "verified", gate_id="bound-test")
+        assert (await _defect(client, graph, "def-0001"))["status"] == "fixed"
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R003.4
+@pytest.mark.spec("MEDULLA-SDLC-R003.4")
+def test_illegal_transitions_refuse():
+    asyncio.run(_transition_scenario(f"sdlc-defect-move-{uuid.uuid4().hex[:8]}"))
+
+
+async def _verified_scenario(graph: str) -> None:
+    client = await _client(graph)
+    try:
+        await _file_direct(client, graph, "panic in verified probe")
+        fix, _, fix_digest = await _submit(client, graph, None, "fix")
+        for to, extra in (
+            ("triaged", {}),
+            ("fixing", {}),
+            ("fixed", {"fix_changeset": fix}),
+        ):
+            await _transition(client, graph, to, **extra)
+        await client._send(
+            "RecordGateVerdict",
+            {
+                "changeset": fix,
+                "branch": "main",
+                "gate_id": "bound-test",
+                "input_digest": fix_digest,
+                "verdict": "pass",
+                "evidence_digest": hashlib.sha256(b"log").hexdigest(),
+                "duration_ms": 5,
+            },
+            graph,
+        )
+        moved = await _transition(client, graph, "verified", gate_id="bound-test")
+        assert moved["from"] == "fixed" and moved["to"] == "verified"
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R003.4
+@pytest.mark.spec("MEDULLA-SDLC-R003.4")
+def test_verified_move_needs_a_passing_bound_test():
+    asyncio.run(_verified_scenario(f"sdlc-defect-ver-{uuid.uuid4().hex[:8]}"))
+
+
+async def _readback_scenario(graph: str) -> None:
+    client = await _client(graph)
+    try:
+        await _file_direct(client, graph, "panic in readback probe")
+        await client.file_defect(
+            {
+                "repo": graph,
+                "intake": "run_failure",
+                "title": "transition probe",
+                "source_record_id": "record-2",
+                "observed_at": 2000,
+                "text": "panic in readback probe",
+            }
+        )
+        stored = json.loads((await _defect(client, graph, "def-0001"))["defect_record"])
+        # A read through a second principal context equals the stored list.
+        reader = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(),
+            timeout=60,
+        )
+        try:
+            answer = await reader.get_defect({"repo": graph, "defect_id": "def-0001"})
+        finally:
+            await reader.close()
+        assert answer["defect"]["symptoms"] == stored["symptoms"]
+        assert [s["intake"] for s in answer["defect"]["symptoms"]] == [
+            "direct",
+            "run_failure",
+        ]
+        assert [s["source_record_id"] for s in answer["defect"]["symptoms"]] == [
+            "record-1",
+            "record-2",
+        ]
+        assert [s["observed_at"] for s in answer["defect"]["symptoms"]] == [1000, 2000]
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R003.5
+@pytest.mark.spec("MEDULLA-SDLC-R003.5")
+def test_symptom_evidence_reads_back():
+    asyncio.run(_readback_scenario(f"sdlc-defect-read-{uuid.uuid4().hex[:8]}"))

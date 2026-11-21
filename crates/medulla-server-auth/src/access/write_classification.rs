@@ -484,6 +484,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ProposalPut { .. }
                 | Method::LandingPolicyPut { .. }
                 | Method::FileDefect { .. }
+                | Method::TransitionDefect { .. }
                 | Method::ProposalDecide { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
                 | Method::ActionRegister { .. }

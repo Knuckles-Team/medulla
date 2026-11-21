@@ -19177,6 +19177,33 @@ class MedullaClient:
             raise TypeError("FileDefect returned a non-object result")
         return result
 
+    async def transition_defect(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Move one defect to another status (MEDULLA-SDLC-R003.4).
+
+        ``request`` carries ``repo``, ``defect_id``, ``to`` (the target status), and as
+        the move needs them ``fix_changeset``, ``gate_id`` and ``reason``. A move that
+        is not an edge of the defect machine is refused ``DEFECT_TRANSITION_ILLEGAL``; a
+        move to ``verified`` without a passing verdict of the bound test on the fix
+        changeset is refused ``DEFECT_UNVERIFIED``. The receipt names ``node_id``,
+        ``from`` and ``to``.
+        """
+        result = await self._send("TransitionDefect", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("TransitionDefect returned a non-object result")
+        return result
+
+    async def get_defect(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Read one defect with its symptom list (MEDULLA-SDLC-R003.5).
+
+        ``request`` carries ``repo`` and ``defect_id``. The answer names ``node_id``,
+        ``fix_changeset`` and the stored ``defect``; each symptom lists its ``intake``,
+        ``source_record_id``, ``observed_at`` and ``text``.
+        """
+        result = await self._send("GetDefect", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("GetDefect returned a non-object result")
+        return result
+
     async def landing_policy_put(self, request: dict[str, Any]) -> dict[str, Any]:
         """Set the landing policy of one branch (MEDULLA-SCM-R008).
 

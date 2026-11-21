@@ -74,6 +74,7 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("ProposalPut");
     covered.insert("LandingPolicyPut");
     covered.insert("FileDefect");
+    covered.insert("TransitionDefect");
     covered.insert("ProposalDecide");
     covered.insert("ActionRegister");
     covered.insert("ActionSubmit");

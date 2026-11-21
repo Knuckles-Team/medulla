@@ -6,7 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    FileDefect as FileDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    FileDefect as FileDefectResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
@@ -20,7 +20,8 @@ use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
-    handle_file_defect, Defect, DefectWrite, FileDefectRequest,
+    handle_file_defect, handle_get_defect, handle_transition_defect, defect_node_id, defect_from_node,
+    DefectFileOutcome, GetDefectReceipt, GetDefectRequest, TransitionDefectRequest, Defect, DefectWrite, FileDefectRequest,
     DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
     ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
@@ -129,6 +130,10 @@ pub async fn dispatch_sdlc_methods(
         Method::FileDefect { request } => {
             dispatch_boxed(file_defect(state, target, request)).await
         }
+        Method::TransitionDefect { request } => {
+            dispatch_boxed(transition_defect(state, target, request)).await
+        }
+        Method::GetDefect { request } => dispatch_boxed(get_defect(state, target, request)).await,
         Method::LandingPolicyPut { request } => {
             dispatch_boxed(landing_policy_put(state, target, request)).await
         }
@@ -408,6 +413,91 @@ async fn file_defect(
     }
     .await;
     typed_response::<FileDefectResult>(target.req_id, result)
+}
+
+/// The stored defect and its fix changeset, when the caller can see the node.
+async fn stored_defect(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    repo: &str,
+    defect_id: &str,
+) -> Result<(String, Defect, Option<String>), String> {
+    let node_id = defect_node_id(repo, defect_id);
+    let unknown = || LifecycleRefusal::EndpointUnknown(node_id.clone()).to_string();
+    let node = visible_node(state, target, &node_id).await?.ok_or_else(unknown)?;
+    let defect = defect_from_node(&node, target.verified.tenant()).ok_or_else(unknown)?;
+    let fix = node.get("fix_changeset").and_then(Value::as_str).map(str::to_owned);
+    Ok((node_id, defect, fix))
+}
+
+/// `TransitionDefect` (MEDULLA-SDLC-R003.4): decide the move through the defect machine against
+/// the stored defect, then write the changed `Defect` node in one gateway-routed batch. A move
+/// to `verified` reads the sealed gate verdict of the stored fix changeset first.
+async fn transition_defect(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: TransitionDefectRequest,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let (node_id, defect, stored_fix) =
+            stored_defect(state, &target, &request.repo, &request.defect_id).await?;
+        let mut verdict_passed = false;
+        if let (Some(fix), Some(gate)) = (stored_fix.as_deref(), request.gate_id.as_deref()) {
+            if let Some(node) = visible_node(state, &target, &gate_verdict_node_id(fix, gate)).await? {
+                verdict_passed = node
+                    .get(GATE_VERDICT_RECORD_PROPERTY)
+                    .and_then(Value::as_str)
+                    .and_then(|body| serde_json::from_str::<GateVerdictRecord>(body).ok())
+                    .is_some_and(|record| record.verdict == VerificationVerdict::Pass);
+            }
+        }
+        let moved = handle_transition_defect(&request, &defect, stored_fix.as_deref(), verdict_passed)
+            .map_err(|e| e.to_string())?;
+        let write = DefectWrite {
+            defect: moved.defect.clone(),
+            outcome: DefectFileOutcome::Absorbed,
+        };
+        let mut properties = defect_properties(&write, &target)?;
+        if let Some(fix) = &moved.fix_changeset {
+            properties.insert("fix_changeset".into(), fix.clone().into());
+        }
+        commit(
+            state,
+            &target,
+            vec![json!({"op": "upsert_node", "id": node_id, "properties": properties})],
+        )
+        .await?;
+        Ok(moved.receipt())
+    }
+    .await;
+    typed_response::<TransitionDefectResult>(target.req_id, result)
+}
+
+/// `GetDefect` (MEDULLA-SDLC-R003.5): the stored defect with its symptom list, read through the
+/// caller's visible store; nothing is written.
+async fn get_defect(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: GetDefectRequest,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let request = handle_get_defect(request).map_err(|e| e.to_string())?;
+        let (node_id, defect, fix_changeset) =
+            stored_defect(state, &target, &request.repo, &request.defect_id).await?;
+        Ok(GetDefectReceipt {
+            node_id,
+            fix_changeset,
+            defect,
+        })
+    }
+    .await;
+    typed_response::<GetDefectResult>(target.req_id, result)
 }
 
 /// File `request` against the stored defects of its repository: the decision, not the write.

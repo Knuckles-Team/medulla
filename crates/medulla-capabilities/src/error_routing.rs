@@ -1782,6 +1782,23 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "TransitionDefect",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "LIFECYCLE_ENDPOINT_UNKNOWN",
+            "DEFECT_TRANSITION_ILLEGAL",
+            "DEFECT_UNVERIFIED",
+        ],
+    ),
+    (
+        "GetDefect",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "LIFECYCLE_ENDPOINT_UNKNOWN",
+        ],
+    ),
+    (
         "ProposalDecide",
         &[
             "TENANT_SCOPE_REQUIRED",

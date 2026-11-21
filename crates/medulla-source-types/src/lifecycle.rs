@@ -139,6 +139,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("LANDING_GATE_BLOCKED"),
     RefusalCode::new("LANDING_POLICY_APPROVAL_REQUIRED"),
     RefusalCode::new("COMPETENCY_SUBJECT_UNKNOWN"),
+    RefusalCode::new("DEFECT_TRANSITION_ILLEGAL"),
+    RefusalCode::new("DEFECT_UNVERIFIED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -188,6 +190,10 @@ pub enum LifecycleRefusal {
     LandingPolicyApprovalRequired(String),
     #[error("COMPETENCY_SUBJECT_UNKNOWN: {0}")]
     CompetencySubjectUnknown(String),
+    #[error("DEFECT_TRANSITION_ILLEGAL: {0}")]
+    DefectTransitionIllegal(String),
+    #[error("DEFECT_UNVERIFIED: {0}")]
+    DefectUnverified(String),
     #[error("PARAMETER_INVALID: {0}")]
     ParameterInvalid(String),
     #[error("INVALID_ARGUMENT: {0}")]
@@ -222,6 +228,8 @@ impl LifecycleRefusal {
             Self::LandingGateBlocked(_) => "LANDING_GATE_BLOCKED",
             Self::LandingPolicyApprovalRequired(_) => "LANDING_POLICY_APPROVAL_REQUIRED",
             Self::CompetencySubjectUnknown(_) => "COMPETENCY_SUBJECT_UNKNOWN",
+            Self::DefectTransitionIllegal(_) => "DEFECT_TRANSITION_ILLEGAL",
+            Self::DefectUnverified(_) => "DEFECT_UNVERIFIED",
             Self::ParameterInvalid(_) => "PARAMETER_INVALID",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
@@ -989,6 +997,7 @@ pub enum Severity {
 
 /// One observation of a defect, with its intake path and source record.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Symptom {
     pub intake: DefectIntake,
@@ -999,6 +1008,7 @@ pub struct Symptom {
 
 /// A code fault, deduplicated by the digest of its normalized symptom.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Defect {
     pub id: String,
@@ -1137,6 +1147,149 @@ pub fn defect_from_node(node: &serde_json::Value, tenant: &str) -> Option<Defect
         return None;
     }
     serde_json::from_str::<Defect>(node.get(DEFECT_RECORD_PROPERTY)?.as_str()?).ok()
+}
+
+/// One status move of a defect (MEDULLA-SDLC-R003.4): the request of `TransitionDefect`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct TransitionDefectRequest {
+    /// The repository the defect belongs to.
+    pub repo: String,
+    /// The defect id inside its repository.
+    pub defect_id: String,
+    /// The status to move to; it must be one edge of the defect machine from the stored status.
+    pub to: DefectStatus,
+    /// The changeset that fixes the defect; required for the move to `fixed`, and the changeset
+    /// whose gate verdict a move to `verified` reads.
+    #[serde(default)]
+    pub fix_changeset: Option<String>,
+    /// The bound test's gate on the fix changeset; required for the move to `verified`.
+    #[serde(default)]
+    pub gate_id: Option<String>,
+    /// The recorded reason; required for a move to `rejected` and for a reopening.
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+/// What `TransitionDefect` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TransitionDefectReceipt {
+    /// The defect node id.
+    pub node_id: String,
+    /// The status before the move.
+    pub from: DefectStatus,
+    /// The status after the move.
+    pub to: DefectStatus,
+}
+
+/// The request of `GetDefect` (MEDULLA-SDLC-R003.5).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GetDefectRequest {
+    /// The repository the defect belongs to.
+    pub repo: String,
+    /// The defect id inside its repository.
+    pub defect_id: String,
+}
+
+/// What `GetDefect` answers: the stored defect with its symptom list, each symptom carrying
+/// its intake path, source record id and time.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GetDefectReceipt {
+    /// The defect node id.
+    pub node_id: String,
+    /// The fix changeset recorded by the move to `fixed`, when there is one.
+    pub fix_changeset: Option<String>,
+    /// The defect as stored.
+    pub defect: Defect,
+}
+
+/// What one status move writes (not on the wire).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DefectMove {
+    /// The defect with its new status.
+    pub defect: Defect,
+    /// The status before the move.
+    pub from: DefectStatus,
+    /// The fix changeset the defect carries after the move.
+    pub fix_changeset: Option<String>,
+}
+
+impl DefectMove {
+    /// The receipt of this move.
+    pub fn receipt(&self) -> TransitionDefectReceipt {
+        TransitionDefectReceipt {
+            node_id: defect_node_id(&self.defect.repo, &self.defect.id),
+            from: self.from,
+            to: self.defect.status,
+        }
+    }
+}
+
+/// Check the bounds of a `GetDefect` request.
+pub fn handle_get_defect(request: GetDefectRequest) -> Result<GetDefectRequest, LifecycleRefusal> {
+    if request.repo.trim().is_empty() || request.defect_id.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a defect read names its repo and defect id".to_owned(),
+        ));
+    }
+    Ok(request)
+}
+
+/// Decide one status move against the stored `defect` (MEDULLA-SDLC-R003.4). The move must be
+/// an edge of the defect machine from the stored status, else `DEFECT_TRANSITION_ILLEGAL`; a
+/// guard that does not hold (a fix changeset, a reason) refuses the same way. The move to
+/// `verified` needs a passing verdict of the bound test on the stored fix changeset
+/// (`verdict_passed`, read by the caller from the sealed gate verdict), else
+/// `DEFECT_UNVERIFIED`. A refusal changes nothing.
+pub fn handle_transition_defect(
+    request: &TransitionDefectRequest,
+    defect: &Defect,
+    stored_fix_changeset: Option<&str>,
+    verdict_passed: bool,
+) -> Result<DefectMove, LifecycleRefusal> {
+    use crate::defect_machine::{DefectEvent, DefectFacts, DEFECT_MACHINE};
+    let filled = |value: &Option<String>| value.as_deref().is_some_and(|text| !text.trim().is_empty());
+    let from = defect.status;
+    let edge = DEFECT_MACHINE
+        .edges
+        .iter()
+        .find(|edge| edge.from == from && edge.to == request.to)
+        .ok_or_else(|| {
+            LifecycleRefusal::DefectTransitionIllegal(format!(
+                "a defect in {from:?} does not move to {:?}",
+                request.to
+            ))
+        })?;
+    if edge.event == DefectEvent::Verify && !verdict_passed {
+        return Err(LifecycleRefusal::DefectUnverified(
+            "no passing verdict of the bound test on the fix changeset".to_owned(),
+        ));
+    }
+    let facts = DefectFacts {
+        fix_reference_recorded: filled(&request.fix_changeset),
+        verification_evidence_recorded: verdict_passed,
+        reason_recorded: filled(&request.reason),
+    };
+    let status = from
+        .apply(edge.event, facts)
+        .map_err(|refused| LifecycleRefusal::DefectTransitionIllegal(refused.to_string()))?;
+    let fix_changeset = match edge.event {
+        DefectEvent::Fix => request.fix_changeset.clone(),
+        _ => stored_fix_changeset.map(str::to_owned),
+    };
+    Ok(DefectMove {
+        defect: Defect {
+            status,
+            ..defect.clone()
+        },
+        from,
+        fix_changeset,
+    })
 }
 
 /// Check one filing's bounds; the served `FileDefect` and every in-process caller go through
@@ -1388,4 +1541,61 @@ pub fn plan_changeset_node(
             parents: changeset.parents.join(","),
         }),
     })
+}
+
+#[cfg(test)]
+mod defect_transition_tests {
+    use super::*;
+
+    fn defect(status: DefectStatus) -> Defect {
+        Defect {
+            id: "def-0001".into(),
+            repo: "r".into(),
+            title: "t".into(),
+            intake: DefectIntake::Direct,
+            signature_digest: "d".into(),
+            severity: Severity::Medium,
+            status,
+            symptoms: Vec::new(),
+            created_at: 1,
+        }
+    }
+
+    fn request(to: DefectStatus) -> TransitionDefectRequest {
+        TransitionDefectRequest {
+            repo: "r".into(),
+            defect_id: "def-0001".into(),
+            to,
+            fix_changeset: None,
+            gate_id: None,
+            reason: None,
+        }
+    }
+
+    // spec: MEDULLA-SDLC-R003.4
+    #[test]
+    fn a_skipped_state_refuses_illegal_and_a_failed_verification_refuses_unverified() {
+        let skipped = handle_transition_defect(&request(DefectStatus::Verified), &defect(DefectStatus::New), None, true);
+        assert_eq!(skipped.unwrap_err().code(), "DEFECT_TRANSITION_ILLEGAL");
+        let unverified =
+            handle_transition_defect(&request(DefectStatus::Verified), &defect(DefectStatus::Fixed), Some("c1"), false);
+        assert_eq!(unverified.unwrap_err().code(), "DEFECT_UNVERIFIED");
+        let unfixed = handle_transition_defect(&request(DefectStatus::Fixed), &defect(DefectStatus::Fixing), None, false);
+        assert_eq!(unfixed.unwrap_err().code(), "DEFECT_TRANSITION_ILLEGAL");
+    }
+
+    // spec: MEDULLA-SDLC-R003.4
+    #[test]
+    fn a_legal_move_changes_only_the_status_and_keeps_the_fix_reference() {
+        let mut fix = request(DefectStatus::Fixed);
+        fix.fix_changeset = Some("c1".into());
+        let fixed = handle_transition_defect(&fix, &defect(DefectStatus::Fixing), None, false).expect("fixed");
+        assert_eq!((fixed.from, fixed.defect.status), (DefectStatus::Fixing, DefectStatus::Fixed));
+        assert_eq!(fixed.fix_changeset.as_deref(), Some("c1"));
+        let verified =
+            handle_transition_defect(&request(DefectStatus::Verified), &fixed.defect, Some("c1"), true).expect("verified");
+        assert_eq!(verified.defect.status, DefectStatus::Verified);
+        assert_eq!(verified.fix_changeset.as_deref(), Some("c1"));
+        assert_eq!(verified.defect.symptoms, fixed.defect.symptoms);
+    }
 }

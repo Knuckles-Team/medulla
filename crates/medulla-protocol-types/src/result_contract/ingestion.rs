@@ -134,6 +134,8 @@ method_results! {
     ProposalList(ProposalList) => Raw<Vec<medulla_source_types::lifecycle::ProposalListEntry>>;
     LandingPolicyPut(LandingPolicyPut) => Raw<medulla_source_types::gate_verdict::LandingPolicyReceipt>;
     FileDefect(FileDefect) => Raw<medulla_source_types::lifecycle::FileDefectReceipt>;
+    TransitionDefect(TransitionDefect) => Raw<medulla_source_types::lifecycle::TransitionDefectReceipt>;
+    GetDefect(GetDefect) => Raw<medulla_source_types::lifecycle::GetDefectReceipt>;
     ProposalDecide(ProposalDecide) => Raw<medulla_source_types::lifecycle::ProposalDecideReceipt>;
     // MEDULLA-SDLC-R012.8: the project mode record.
     ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;

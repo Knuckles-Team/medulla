@@ -1097,6 +1097,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::ProposalPut { .. }
             | Method::LandingPolicyPut { .. }
             | Method::FileDefect { .. }
+            | Method::TransitionDefect { .. }
             | Method::ProposalDecide { .. }
             | Method::ActionRegister { .. }
             | Method::ActionSubmit { .. }

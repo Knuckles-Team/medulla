@@ -297,6 +297,7 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         | Method::ProposalPut { .. }
         | Method::LandingPolicyPut { .. }
         | Method::FileDefect { .. }
+        | Method::TransitionDefect { .. }
         | Method::ProposalDecide { .. } => Some("__lifecycle"),
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the action outbox topics.
         Method::ActionRegister { .. } => Some("__action_register"),

@@ -416,6 +416,17 @@ $($variants)*
     FileDefect {
         request: medulla_source_types::lifecycle::FileDefectRequest,
     },
+    /// Move one defect to another status (MEDULLA-SDLC-R003.4). The move must be an edge of the
+    /// defect machine (`DEFECT_TRANSITION_ILLEGAL`), and a move to `verified` needs a passing
+    /// verdict of the bound test on the fix changeset (`DEFECT_UNVERIFIED`). A refusal writes
+    /// nothing.
+    TransitionDefect {
+        request: medulla_source_types::lifecycle::TransitionDefectRequest,
+    },
+    /// Read one defect with its symptom list (MEDULLA-SDLC-R003.5). Reads only.
+    GetDefect {
+        request: medulla_source_types::lifecycle::GetDefectRequest,
+    },
     /// Set the landing policy of one branch (MEDULLA-SCM-R008): the gates a landing
     /// needs. Lowering the stored policy needs an operator approval
     /// (`LANDING_POLICY_APPROVAL_REQUIRED`).

@@ -525,6 +525,10 @@ closed_error_codes! {
         LandingPolicyApprovalRequired => "LANDING_POLICY_APPROVAL_REQUIRED",
         /// MEDULLA-SDLC-R014.6: a competency question names a goal or phase the graph does not hold.
         CompetencySubjectUnknown => "COMPETENCY_SUBJECT_UNKNOWN",
+        /// MEDULLA-SDLC-R003.4: a defect status move is not an edge of the defect machine, or a guard of the edge does not hold.
+        DefectTransitionIllegal => "DEFECT_TRANSITION_ILLEGAL",
+        /// MEDULLA-SDLC-R003.4: a move to verified has no passing verdict of the bound test on the fix changeset.
+        DefectUnverified => "DEFECT_UNVERIFIED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",
