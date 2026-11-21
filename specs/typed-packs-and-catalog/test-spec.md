@@ -472,7 +472,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R106`: See each child.
 - `MEDULLA-TYPED-PACKS-R106.1`: `crates/medulla-rdf/tests/metadata_catalog_classes.rs::catalog_classes_roll_up_to_eg_core_and_align_to_w3c`, `crates/medulla-rdf/tests/metadata_catalog_classes.rs::owner_steward_and_lineage_properties_specialise_prov`, `crates/medulla-rdf/tests/metadata_catalog_classes.rs::catalog_shapes_accept_a_complete_catalog`, `crates/medulla-rdf/tests/metadata_catalog_classes.rs::catalog_shapes_refuse_incomplete_or_open_vocabulary_records`.
 - `MEDULLA-TYPED-PACKS-R106.2`: `crates/medulla-rdf/tests/metadata_catalog_classes.rs::every_asset_has_owner_version_lineage_pair_and_class_link`.
-- `MEDULLA-TYPED-PACKS-R106.3`: `tests/typed_packs/test_connector_catalog_served.py::test_onboarding_batch_is_validated_by_the_guard_and_found_by_query`.
+- `MEDULLA-TYPED-PACKS-R106.3`: `tests/typed_packs/test_connector_catalog_served.py::test_catalog_batch_is_validated_by_the_guard_and_found_by_query`.
 - `MEDULLA-TYPED-PACKS-R106.4`: `tests/typed_packs/test_connector_catalog_served.py::test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refuse`.
 - `MEDULLA-TYPED-PACKS-R106.5`: `tests/typed_packs/test_connector_catalog_served.py::test_asset_carries_digest_version_revision_and_class_counts`.
 - `MEDULLA-TYPED-PACKS-R106.6`: `tests/typed_packs/test_connector_catalog_served.py::test_catalog_search_finds_assets_with_owner_term_and_lineage`.
