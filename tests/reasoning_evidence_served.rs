@@ -58,7 +58,7 @@ async fn rules_span_carries_the_response_counters() {
     let state = state();
     for (id, bound) in [(1_u64, None), (2, Some(2_u64))] {
         let response = test_support::call_ok(&state, SECRET, id, GRAPH, run_rules(bound)).await;
-        let report: medulla_types::rdf_report::RuleReasonResponse = match response.result {
+        let report: medulla_query_types::rdf_report::RuleReasonResponse = match response.result {
             Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
                 rmp_serde::from_slice(&bytes).expect("typed rule response")
             }

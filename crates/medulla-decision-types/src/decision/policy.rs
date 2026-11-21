@@ -171,7 +171,7 @@ pub struct DecisionPolicy {
     #[serde(default)]
     pub statistical: Option<StatisticalPolicy>,
     /// Topology caps and the per-harness sub-agent opt-in. Absent means the
-    /// engine default ([`medulla_types::agent_topology::TopologyPolicy::engine_default`]),
+    /// engine default ([`medulla_agent_types::agent_topology::TopologyPolicy::engine_default`]),
     /// and keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<medulla_agent_types::agent_topology::TopologyPolicy>,

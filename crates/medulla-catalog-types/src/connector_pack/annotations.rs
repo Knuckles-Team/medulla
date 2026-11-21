@@ -1,8 +1,8 @@
 //! What a pack entry DECLARES about itself.
 //!
 //! Every value here is a publisher claim. The engine records it as one: an
-//! imported cost becomes [`medulla_types::agent_component::FactQuality::Declared`] with
-//! a [`medulla_types::agent_component::PriceSource::ConnectorPack`] naming the entry it
+//! imported cost becomes [`medulla_agent_types::agent_component::FactQuality::Declared`] with
+//! a [`medulla_agent_types::agent_component::PriceSource::ConnectorPack`] naming the entry it
 //! came from, so a decision that used it can say exactly whose number it was.
 
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use medulla_agent_types::{
 use medulla_types::contract::BoundedVec;
 
 /// Declared per-invocation prices, in integer micros — the same shape an
-/// [`medulla_types::agent_component::CostFacts`] carries once the engine has recorded
+/// [`medulla_agent_types::agent_component::CostFacts`] carries once the engine has recorded
 /// who declared it, so a pack entry's raw claim and the digested fact can
 /// never drift into two different ideas of "cost".
 pub type PackCost = DeclaredCost;

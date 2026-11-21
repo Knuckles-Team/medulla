@@ -207,7 +207,7 @@ pub struct OutboxHeadView {
 /// One consumer's standing on one outbox -- the fields that mean the same
 /// thing regardless of WHICH durable outbox backs the view. Shared by
 /// [`MutationOutboxStatusView`] (this generic outbox) and
-/// [`medulla_types::result_contract::ingestion::SemanticOutboxStatus`] (the
+/// `medulla_protocol_types::result_contract::ingestion::SemanticOutboxStatus` (the
 /// semantic-index stage queue's own outbox), which otherwise built an
 /// identical 13-field struct independently; each view keeps its own
 /// system-specific fields (a schema version and the head-of-queue detail
