@@ -210,7 +210,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.7`: `tests/federation/test_w
 | Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.4` | `tests/web_document_enrich_served.rs::test_web_document_refusals`: Each case returns its code and writes nothing. |
 | Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.5` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: The receipt counts match a separate read of the chunks. |
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.6` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: Both backends store equal chunk sets, and `document_chunk_tree` meets the budgets. |
-| Extraction | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.7` | `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts` (planned): Each extracted fact links to a chunk of the Document. |
+| Extraction | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.7` | `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts` and `::test_extracted_facts_are_grounded_to_their_chunk_and_document`: Each extracted fact links to a chunk of the Document. |
 
 Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`.
 
@@ -330,7 +330,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R651.5:** `tests/ingest/test_document_delete_served.py::test_deletion_record_readable` (planned). Proves the row: Evidence: the delete receipt and a content-free deletion record.
 - **MEDULLA-UNIFIED-DATA-PLANE-R651.6:** `tests/ingest/test_document_delete_served.py::test_delete_cascades_and_leaves_no_orphan` (planned). Proves the row: Hot-path proof: a 500-chunk delete leaves no orphan.
 - **MEDULLA-UNIFIED-DATA-PLANE-R651.7.1:** `web_document.rs::tests::web_provenance_round_trips` (planned). Proves the row: Model.
-- **MEDULLA-UNIFIED-DATA-PLANE-R651.7.7:** `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts` (planned). Proves the row: Extraction: a worker submits facts for the enriched chunks and the engine grounds them.
+- **MEDULLA-UNIFIED-DATA-PLANE-R651.7.7:** `tests/ingest/test_web_document_extraction_served.py::test_enriched_chunks_extract_facts` and `::test_extracted_facts_are_grounded_to_their_chunk_and_document`. Proves the row: Extraction: a worker submits facts for the enriched chunks and the engine grounds them.
 - **MEDULLA-UNIFIED-DATA-PLANE-R700:** `tests/data_plane/test_actions_served.py::test_failed_criterion_applies_no_effect` (planned). Proves the row: Governed Actions: typed parameters, submission criteria, effects and write-back (rollup).
 - **MEDULLA-UNIFIED-DATA-PLANE-R700.2:** `crates/medulla-work-types/src/action_spec.rs::tests::template_resolution_is_single_pass` (planned). Proves the row: Behavior: parameters, ordered criteria, one-pass templates, one mutation batch.
 - **MEDULLA-UNIFIED-DATA-PLANE-R700.2:** `crates/medulla-work-types/src/action_spec.rs::tests::criteria_stop_at_first_failure` (planned). Proves the row: Behavior: parameters, ordered criteria, one-pass templates, one mutation batch.
