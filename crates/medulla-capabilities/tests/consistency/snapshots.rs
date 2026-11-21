@@ -222,6 +222,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     // MEDULLA-FEDERATED-QUERY-R724: `put` writes; `list` is a graph read.
     "SchemaProjections",
     "DomainPack",
@@ -408,6 +409,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     "NlQueryCorrect",
     // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
     // `Method::AddNode` upsert, which carries the durable effect.
@@ -676,6 +678,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     "NlQueryCorrect",
     "FinanceRecordPut",
     "FinanceAlertRaise",
@@ -755,6 +758,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     "NlQueryCorrect",
     "SchemaProjections",
     "DomainPack",
@@ -827,6 +831,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     "NlQueryCorrect",
     "FinanceRecordPut",
     "FinanceAlertRaise",
@@ -856,6 +861,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "WorkflowRegistry",
     "AssistantProfile",
     "ObservationState",
+    "MemoryRemember",
     "NlQueryCorrect",
     "SchemaProjections",
     "DomainPack",

@@ -806,6 +806,11 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::AssistantProfile { .. }
         // MEDULLA-DECISION-ENGINE-R816: a put commits as one `AddNode` upsert.
         | Method::ObservationState { .. }
+        // MEDULLA-DECISION-ENGINE-R651.3: a remember commits as one `AddNode`
+        // upsert; recall and export commit nothing.
+        | Method::MemoryRemember { .. }
+        | Method::MemoryRecall { .. }
+        | Method::MemoryExport { .. }
         // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
         // `AddNode` upsert; a list commits nothing.
         | Method::SchemaProjections { .. }

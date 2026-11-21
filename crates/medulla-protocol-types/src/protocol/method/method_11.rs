@@ -566,6 +566,24 @@ $($variants)*
         stamp: Option<medulla_mutation_types::memory_sync::SyncStamp>,
     },
 
+    // ── Memory surface (MEDULLA-DECISION-ENGINE-R651.3) ─────────────────────
+    /// Store one memory record and its embedding under the verified tenant.
+    /// Needs `memory:write`. See [`medulla_work_types::memory`].
+    MemoryRemember {
+        request: Box<medulla_work_types::memory::MemoryRememberRequest>,
+    },
+    /// Rank the caller's memory by embedding and keyword relevance inside a
+    /// token budget, optionally with session mementos and a consolidation
+    /// plan. Reads only. Needs `memory:read`.
+    MemoryRecall {
+        request: Box<medulla_work_types::memory::MemoryRecallRequest>,
+    },
+    /// Export the procedural and semantic tiers with a manifest. Reads only.
+    /// Needs `memory:read`.
+    MemoryExport {
+        request: medulla_work_types::memory::MemoryExportRequest,
+    },
+
     // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
     /// Register one data product with its contract in the `rbac.redb` policy
     /// store, keyed by tenant and product id. `tenant` must equal the verified

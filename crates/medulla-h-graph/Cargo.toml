@@ -49,6 +49,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-stats = { path = "../medulla-decision-stats", features = ["decision"] }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-persistence-ops = { path = "../medulla-persistence-ops" }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["shacl"] }

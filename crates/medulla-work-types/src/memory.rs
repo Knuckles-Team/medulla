@@ -525,6 +525,117 @@ pub struct TrajectoryEntry {
     pub references: Vec<ResourceId>,
 }
 
+/// `MemoryRemember`: store one record and the embedding it is recalled by
+/// (MEDULLA-DECISION-ENGINE-R651.3). The tenant is the verified request
+/// tenant; a record naming another tenant is refused.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryRememberRequest {
+    pub record: MemoryRecord,
+    /// The record's embedding; empty when it is recalled by keyword only.
+    #[serde(default)]
+    pub embedding: Vec<f32>,
+}
+
+/// The answer to `MemoryRemember`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryRememberResult {
+    pub memory_id: ResourceId,
+    /// False when the very same record was already stored and nothing was written.
+    pub stored: bool,
+}
+
+/// `MemoryRecall`: rank the caller's memory by cosine on stored embeddings and
+/// by keyword overlap with the text and the media derivation text
+/// (MEDULLA-DECISION-ENGINE-R651.3).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryRecallRequest {
+    #[serde(default)]
+    pub query_embedding: Vec<f32>,
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    /// The tiers to search; empty searches all four.
+    #[serde(default)]
+    pub tiers: Vec<MemoryTier>,
+    /// Restrict to the records of one session.
+    #[serde(default)]
+    pub scope: Option<ResourceId>,
+    /// Read the memory as of this instant: later records and records that
+    /// had expired by it are not returned.
+    #[serde(default)]
+    pub as_of_ms: Option<i64>,
+    /// The most tokens the returned hits may total.
+    pub budget: u32,
+    /// Return the mementos of this session.
+    #[serde(default)]
+    pub prime_session: Option<ResourceId>,
+    /// Return a consolidation plan over the searched records.
+    #[serde(default)]
+    pub include_plan: bool,
+}
+
+/// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryHit {
+    pub record: MemoryRecord,
+    pub score_q16: u32,
+}
+
+/// The answer to `MemoryRecall`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryRecallResult {
+    pub hits: Vec<MemoryHit>,
+    /// Tokens the hits total, at most the request budget.
+    pub tokens_used: u32,
+    #[serde(default)]
+    pub mementos: Vec<Memento>,
+    #[serde(default)]
+    pub plan: Option<ConsolidationPlan>,
+}
+
+/// `MemoryExport`: the durable tiers of the caller's memory
+/// (MEDULLA-DECISION-ENGINE-R651.3).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryExportRequest {
+    /// The most records to return; absent uses the knob default, and a value
+    /// above the knob maximum is clamped to it.
+    #[serde(default)]
+    pub limit: Option<u32>,
+}
+
+/// What an export holds.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryExportManifest {
+    pub tiers: Vec<MemoryTier>,
+    pub record_count: u32,
+    /// SHA-256 over the exported record ids in order, 64 lowercase hex characters.
+    pub ids_digest: String,
+    /// True when the limit cut the export short.
+    pub truncated: bool,
+}
+
+/// The answer to `MemoryExport`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryExportResult {
+    pub manifest: MemoryExportManifest,
+    pub records: Vec<MemoryRecord>,
+}
+
 /// A search run's state, saved so it survives context eviction
 /// (MEDULLA-DECISION-ENGINE-R149.1). The four arrays hold opaque JSON values;
 /// medulla owns no item schema inside them. Digests are derived on read, never

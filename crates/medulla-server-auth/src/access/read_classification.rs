@@ -174,6 +174,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "LiveArtifactGet",
     "MatchOntologyTerms",
     "MaterializationStatus",
+    // MEDULLA-DECISION-ENGINE-R651.3: both read the memory nodes of the core
+    // `read_authority.project_core` projected, then keep the verified tenant's.
+    "MemoryExport",
+    "MemoryRecall",
     "MineClassifyFit",
     "MineTopology",
     // t1-grounding-0802 follow-up audit: `medulla_h_graph::pipeline::try_handle` (module doc,

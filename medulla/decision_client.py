@@ -1230,6 +1230,38 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def memory_remember(
+        self,
+        record: Mapping[str, Any],
+        embedding: Sequence[float] = (),
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Send ``MemoryRemember``: store one memory record and the embedding it is
+        recalled by under the verified tenant."""
+        result = await self.client._send(
+            "MemoryRemember",
+            {"request": {"record": dict(record), "embedding": [float(v) for v in embedding]}},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
+    async def memory_recall(self, request: Mapping[str, Any]) -> Any:
+        """Send ``MemoryRecall``: rank the tenant's memory inside ``budget`` tokens;
+        ``prime_session`` adds session mementos and ``include_plan`` a consolidation plan."""
+        result = await self.client._send(
+            "MemoryRecall", {"request": dict(request)}, self.graph
+        )
+        return _payload(result)
+
+    async def memory_export(self, limit: int | None = None) -> Any:
+        """Send ``MemoryExport``: the procedural and semantic tiers with a manifest."""
+        result = await self.client._send(
+            "MemoryExport", {"request": {"limit": limit}}, self.graph
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",

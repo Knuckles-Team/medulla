@@ -49,6 +49,9 @@ method_results! {
     ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_mutation_types::memory_sync::MemorySnapshotList>;
     SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_mutation_types::memory_sync::SyncOutcome>;
     DecayMemories(DecayMemories) => Count<u64>;
+    MemoryRemember(MemoryRemember) => Json<medulla_work_types::memory::MemoryRememberResult>;
+    MemoryRecall(MemoryRecall) => Json<medulla_work_types::memory::MemoryRecallResult>;
+    MemoryExport(MemoryExport) => Json<medulla_work_types::memory::MemoryExportResult>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;
     SummariesAtLevel(SummariesAtLevel) => Ids<Vec<String>>;

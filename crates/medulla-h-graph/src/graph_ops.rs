@@ -31,6 +31,8 @@ mod argument_map;
 pub mod assistant_profile;
 mod observation_state;
 #[cfg(test)]
+mod memory_surface_tests;
+#[cfg(test)]
 mod observation_state_tests;
 #[cfg(test)]
 mod participant_memory_tests;
@@ -70,6 +72,7 @@ mod graph_change_feed;
 mod hierarchy;
 mod memory;
 mod memory_cursor;
+mod memory_surface;
 pub mod memory_snapshot;
 mod nl_correction;
 mod nodes;

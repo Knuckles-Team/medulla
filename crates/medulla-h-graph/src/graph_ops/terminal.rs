@@ -32,6 +32,7 @@ pub(super) async fn try_handle_graph_domains(
     method = super::broker::try_handle_streams(ctx, method).await?;
     method = super::broker::try_handle_publisher_confirms(ctx, method).await?;
     method = super::memory::try_handle_memory_maintenance(ctx, method).await?;
+    method = super::memory_surface::try_handle_memory_surface(ctx, method).await?;
     method = super::assistant_profile::try_handle_assistant_profile(ctx, method).await?;
     method = super::observation_state::try_handle_observation_state(ctx, method).await?;
     method = super::memory::try_handle_summary_reads(ctx, method).await?;

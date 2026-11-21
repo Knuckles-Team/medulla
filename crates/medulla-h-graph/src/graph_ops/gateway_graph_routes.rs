@@ -25,6 +25,7 @@ enum Route {
     AssistantProfile,
     NlCorrection,
     ObservationState,
+    MemorySurface,
     ArchitectureExchange,
     Other,
 }
@@ -172,6 +173,10 @@ fn is_observation_state(method: &Method) -> bool {
     matches!(method, Method::ObservationState { op } if op.is_mutation())
 }
 
+fn is_memory_surface(method: &Method) -> bool {
+    matches!(method, Method::MemoryRemember { .. })
+}
+
 fn is_domain_pack(method: &Method) -> bool {
     matches!(method, Method::DomainPack { .. })
 }
@@ -206,6 +211,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_assistant_profile, Route::AssistantProfile),
     (is_nl_correction, Route::NlCorrection),
     (is_observation_state, Route::ObservationState),
+    (is_memory_surface, Route::MemorySurface),
     (is_architecture_exchange, Route::ArchitectureExchange),
 ];
 
@@ -232,6 +238,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::AssistantProfile
         | Route::NlCorrection
         | Route::ObservationState
+        | Route::MemorySurface
         | Route::ArchitectureExchange
         | Route::FinanceRecords
         | Route::WorkflowRegistry
@@ -316,6 +323,9 @@ async fn try_handle_admin(
         Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
         Route::ObservationState => {
             super::super::observation_state::handle_put(ctx, tenant_id, method).await
+        }
+        Route::MemorySurface => {
+            super::super::memory_surface::handle_remember(ctx, tenant_id, method).await
         }
         Route::AssistantProfile => {
             super::super::assistant_profile::handle_put(ctx, tenant_id, method).await

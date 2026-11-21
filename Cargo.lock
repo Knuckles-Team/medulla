@@ -5787,6 +5787,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-stats",
  "medulla-decision-types",
  "medulla-document",
  "medulla-finance",

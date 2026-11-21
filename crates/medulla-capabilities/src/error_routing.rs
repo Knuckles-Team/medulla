@@ -576,6 +576,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     ("BusRoster", &["BUS_SCOPE_REQUIRED"]),
+    // MEDULLA-DECISION-ENGINE-R651.3.
+    ("MemoryRemember", &["ACCESS_DENIED", "PARAMETER_INVALID"]),
+    ("MemoryRecall", &["ACCESS_DENIED", "PARAMETER_INVALID"]),
+    ("MemoryExport", &["ACCESS_DENIED"]),
     // MEDULLA-DURABLE-KERNEL-R085.5.
     (
         "ReadMemorySnapshot",

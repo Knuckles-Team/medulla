@@ -148,6 +148,10 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::ObservationState { op } => {
             op.is_mutation().then(|| "OBSERVATION_STATE".to_string())
         }
+        Method::MemoryRemember { request } => Some(format!(
+            "MEMORY_REMEMBER|{}",
+            request.record.memory_id.as_str()
+        )),
         Method::AssistantProfile { op } => {
             op.is_mutation().then(|| "ASSISTANT_PROFILE".to_string())
         }
