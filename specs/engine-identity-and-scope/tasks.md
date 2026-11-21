@@ -24,7 +24,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T017 [US4] MEDULLA-IDENTITY-R008.3 Pure subset check
 - [ ] T018 [US4] MEDULLA-IDENTITY-R008.4 Bound is read from the stored policy node
 - [ ] T019 [US4] MEDULLA-IDENTITY-R008.5 Typed refusal ScopeExceedsPolicy with an audit record
-- [ ] T020 [US4] MEDULLA-IDENTITY-R008.6 End-to-end proof over the wire
+- [ ] T020 [US4] MEDULLA-IDENTITY-R008.6 End-to-end proof through the served handler (L2, assemble harness)
 - [ ] T021 [US5] MEDULLA-IDENTITY-R023.1 Model
 - [ ] T022 [US5] MEDULLA-IDENTITY-R023.2 Behavior
 - [ ] T023 [US5] MEDULLA-IDENTITY-R023.3 Wiring: visible-unit filter on the served read path

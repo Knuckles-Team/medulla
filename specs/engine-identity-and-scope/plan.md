@@ -301,6 +301,8 @@ R003.1 call path: `src/main.rs` CLI mode selection -> `crates/medulla-server/src
 ### Unit ownership key (MEDULLA-IDENTITY-R726)
 Decision: a principal id is unique only within its tenant, so ownership is the pair (tenant, principal). The visibility owner map is keyed by unit id and carries the owning principal with its tenant; "own unit" requires both to match the reader. This leaves the `KnowledgeUnit` wire type unchanged (no new field, no layout change). Read-side owner checks for typed metadata and stored-query calls use the same pair. Row-level security in the graph core keys on agent id inside one tenant graph and is not an owner map across tenants.
 
+Proof level (R008.6): publishing tool components needs the Rust draft and mutation-context fixtures, so the end-to-end proof runs through `handle_agent_assemble` in the assemble harness of `medulla-h-decide` (L2), with a redb backend attached for the audit readback. The policy node id is reproducible: `urn:policy:run-scope:principal:sha256:<hex SHA-256 of the claims principal>`.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row, producers first: issuer trust and RBAC audit, then the mode singleton and its preconditions, the scope registry, the run-scope bound, the knowledge segments and typed metadata, the share operations, the ownership plan and the session and approval-key operations. Rows that edit `identity_access.rs` or `server_error_code.rs` run in sequence; rows of different crates run in parallel. Delivery slices:

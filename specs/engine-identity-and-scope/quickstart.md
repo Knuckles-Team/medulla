@@ -20,7 +20,7 @@ uv run pytest tests/identity/test_identity_mode_served.py
 Run the run-scope journey (planned):
 
 ```text
-uv run pytest tests/identity/test_scope_bound_served.py
+cargo test -p medulla-h-decide plan_scope_is_bounded_by_policy
 ```
 
 Run the share-and-restart journey (planned):
