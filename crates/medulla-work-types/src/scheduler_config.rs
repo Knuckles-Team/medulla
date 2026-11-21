@@ -350,6 +350,15 @@ fn default_process_import_max_elements() -> u64 {
     DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS
 }
 
+/// Default bound on the nodes of one compiled process (MEDULLA-CQ-ORCH-R700.2).
+pub const DEFAULT_PROCESS_COMPILE_MAX_NODES: u64 = 100_000;
+/// Accepted range of `process_compile_max_nodes`.
+pub const PROCESS_COMPILE_MAX_NODES_RANGE: std::ops::RangeInclusive<u64> = 100..=1_000_000;
+
+fn default_process_compile_max_nodes() -> u64 {
+    DEFAULT_PROCESS_COMPILE_MAX_NODES
+}
+
 /// Default bound on one process document, in bytes (MEDULLA-CQ-ORCH-R702.2).
 pub const DEFAULT_PROCESS_DOCUMENT_MAX_BYTES: u64 = 16 * 1024 * 1024;
 /// Accepted range of `process_document_max_bytes`.
@@ -480,6 +489,9 @@ pub struct SchedulerConfig {
     /// Most steps plus flows of one imported process.
     #[serde(default = "default_process_import_max_elements")]
     pub process_import_max_elements: u64,
+    /// Most nodes of one process compiled from the graph (MEDULLA-CQ-ORCH-R700.2).
+    #[serde(default = "default_process_compile_max_nodes")]
+    pub process_compile_max_nodes: u64,
     /// Largest process document read, in bytes.
     #[serde(default = "default_process_document_max_bytes")]
     pub process_document_max_bytes: u64,
@@ -523,6 +535,7 @@ pub enum InvalidSchedulerConfig {
     AnalyticsPollOutOfRange,
     ArchitectureViewMaxContainersOutOfRange,
     ProcessImportMaxElementsOutOfRange,
+    ProcessCompileMaxNodesOutOfRange,
     ProcessDocumentBoundOutOfRange(&'static str),
     OversubscribedFloors { total_workers: u32 },
     HydrationScopeCapOutOfRange,
@@ -590,6 +603,10 @@ impl std::fmt::Display for InvalidSchedulerConfig {
             Self::ProcessImportMaxElementsOutOfRange => write!(
                 f,
                 "scheduler process_import_max_elements must be in [100, 1000000]"
+            ),
+            Self::ProcessCompileMaxNodesOutOfRange => write!(
+                f,
+                "scheduler process_compile_max_nodes must be in [100, 1000000]"
             ),
             Self::ProcessDocumentBoundOutOfRange(key) => {
                 write!(f, "scheduler {key} is outside its accepted range")
@@ -715,6 +732,9 @@ impl SchedulerConfig {
         }
         if !PROCESS_IMPORT_MAX_ELEMENTS_RANGE.contains(&self.process_import_max_elements) {
             return Err(InvalidSchedulerConfig::ProcessImportMaxElementsOutOfRange);
+        }
+        if !PROCESS_COMPILE_MAX_NODES_RANGE.contains(&self.process_compile_max_nodes) {
+            return Err(InvalidSchedulerConfig::ProcessCompileMaxNodesOutOfRange);
         }
         if !PROCESS_DOCUMENT_MAX_BYTES_RANGE.contains(&self.process_document_max_bytes) {
             return Err(InvalidSchedulerConfig::ProcessDocumentBoundOutOfRange(

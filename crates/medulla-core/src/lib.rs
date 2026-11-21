@@ -71,6 +71,7 @@ pub mod persist_lock;
 // MEDULLA-CQ-ORCH-R702: native BPMN 2.0 read and export.
 pub mod process_exchange;
 // MEDULLA-CQ-ORCH-R701.2: canonical process form, admission and export.
+pub mod process_compile;
 pub mod process_import;
 /// Quality rule compilation, scoring and failure tracking (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
 pub mod quality;

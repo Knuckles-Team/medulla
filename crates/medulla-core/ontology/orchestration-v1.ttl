@@ -960,6 +960,12 @@
     rdfs:domain :TaskStep ;
     rdfs:range :TaskStep .
 
+# MEDULLA-CQ-ORCH-R700.2: a property of a :handsOffTo edge, not of a node.
+:loopGate a owl:DatatypeProperty ;
+    rdfs:label "loopGate" ;
+    rdfs:comment "Set to true on a :handsOffTo edge that closes a cycle on purpose. A cycle of hand-offs compiles only when one of its edges carries it." ;
+    rdfs:range xsd:boolean .
+
 # MEDULLA-ORCH-VOCAB-R009.9 through R009.11: what a harness run applied and ran on.
 
 :TaskClass a owl:Class ;
