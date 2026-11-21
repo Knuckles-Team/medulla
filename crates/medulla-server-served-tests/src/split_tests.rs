@@ -108,6 +108,7 @@ mod medulla_h_retrieve_promotion_ops_tests;
 mod medulla_h_query_nl_sparql_tenant_tests;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod medulla_h_query_retrieval_round_two_tenant_tests;
+mod harness_edit_served_tests;
 mod tenant_separation_tests;
 #[cfg(all(test, feature = "query", feature = "ann-redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

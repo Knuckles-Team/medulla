@@ -1641,6 +1641,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R173.7` | `crates/medulla-h-graph/src/graph_ops/harness_edit_tests.rs::transitions_move_the_status_and_refuse_illegal_pairs` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-api/src/mutation_batch/edit_status.rs::tests::caller_writes_of_edit_status_are_refused` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-h-graph/src/graph_ops/harness_edit_tests.rs::only_harness_edit_sets_edit_status` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::harness_edit_create_is_served` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::second_create_refuses_harness_edit_exists` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::served_add_node_of_edit_status_is_refused` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-decision-types/src/decision/tool_relevance.rs::tests::assignment_round_trips` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
