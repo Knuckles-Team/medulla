@@ -4,7 +4,7 @@
 //! The scope check (`memory:read` / `memory:write`) runs at the request
 //! boundary before this module is reached and refuses with
 //! `MEMSYNC_NOT_AVAILABLE`. Every refusal here is decided before the commit
-//! and writes nothing. A sync is planned, then applied: [`plan_sync`] decides
+//! and writes nothing. A sync is planned, then applied: [`decide_sync`] decides
 //! against the stored rows and returns the outcome with the rows it writes;
 //! the router arm gates it and hands the plan back on the method, and
 //! [`sync`] commits it through the gateway only over the pre-image it was
@@ -293,7 +293,7 @@ fn plan_acknowledge(
 /// Decide `request` against the stored rows and return the outcome with the rows
 /// it writes, bound to the pre-image it was decided against. A reply or refusal
 /// plans no row.
-pub fn plan_sync(
+pub fn decide_sync(
     core: &GraphCore,
     request: &SyncRequest,
     stamp: &SyncStamp,

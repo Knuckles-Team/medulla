@@ -2,7 +2,7 @@
 //! the bytes the CAS receives before the graph commit are the bytes the commit
 //! stores, read from the plan alone.
 
-use super::memory_snapshot::{planned_content, plan_sync};
+use super::memory_snapshot::{planned_content, decide_sync};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::memory_snapshot as store;
 use medulla_mutation_types::memory_sync::{
@@ -39,7 +39,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
     let core = GraphCore::new();
     let doc = DocId::new(DOC).unwrap();
     let first = submit("p1", None, "one");
-    let (outcome, plan) = plan_sync(&core, &first, &stamp());
+    let (outcome, plan) = decide_sync(&core, &first, &stamp());
     // Nothing is committed yet: the content comes from the plan alone.
     assert!(store::load_head(&core, &doc).is_none());
     assert_eq!(
@@ -50,7 +50,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
 
     // A competing save is retained as a candidate and its bytes are staged.
     let competing = submit("p2", None, "two");
-    let (outcome, plan) = plan_sync(&core, &competing, &stamp());
+    let (outcome, plan) = decide_sync(&core, &competing, &stamp());
     let SyncOutcome::ConflictRetained {
         candidate_revision, ..
     } = outcome

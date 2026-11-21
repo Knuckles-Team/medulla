@@ -9,6 +9,7 @@ mod test_support;
 
 use medulla_mutation_types::memory_sync::{
     DocId, MemorySnapshotRead, RequestId, Resolution, SyncAction, SyncOutcome, SyncRequest,
+    SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_types::contract::Digest256;
@@ -321,4 +322,190 @@ async fn sync_rewrite_requires_a_current_admit_receipt() {
     }
     let head: MemorySnapshotRead = json_of(read(&state, 5, None).await);
     assert_eq!((head.head.revision, head.content.as_str()), (1, "one"));
+}
+
+/// The head and the content of `DOC` as a client reads them.
+async fn head_bytes(state: &test_support::SharedState, id: u64) -> (u64, String) {
+    let read: MemorySnapshotRead = json_of(read(state, id, None).await);
+    (read.head.revision, read.content)
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.5
+#[tokio::test(flavor = "multi_thread")]
+async fn denied_and_malformed_requests_have_no_effects() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-refusals",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let first: SyncOutcome = json_of(send(&state, 2, submit("n1", None, "one")).await);
+    assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    let before = head_bytes(&state, 3).await;
+
+    // Malformed submits are refused by name and write nothing.
+    let mismatch = sync(
+        "n2",
+        SyncAction::Submit {
+            expected_revision: Some(1),
+            content: "two".to_string(),
+            content_digest: Digest256::sha256(b"not two"),
+        },
+    );
+    assert!(error_of(&send(&state, 4, mismatch).await).contains("MEMSYNC_DIGEST_MISMATCH"));
+    let big = "x".repeat(1_048_577);
+    let too_large = sync(
+        "n3",
+        SyncAction::Submit {
+            expected_revision: Some(1),
+            content_digest: Digest256::sha256(big.as_bytes()),
+            content: big,
+        },
+    );
+    assert!(error_of(&send(&state, 5, too_large).await).contains("MEMSYNC_CONTENT_TOO_LARGE"));
+    let bad_cursor = send(&state, 6, list(Some("not-a-cursor".to_string()))).await;
+    assert!(error_of(&bad_cursor).contains("MEMSYNC_CURSOR_INVALID"));
+
+    // A resolution of a candidate that does not exist answers the same bytes
+    // whether the document exists or not.
+    let resolve = |id: &str, doc: &str| {
+        let mut method = sync(
+            id,
+            SyncAction::Resolve {
+                candidate_revision: 9,
+                expected_head_revision: 1,
+                resolution: Resolution::KeepHead,
+            },
+        );
+        if let Method::SyncMemorySnapshot { request, .. } = &mut method {
+            request.doc_id = DocId::new(doc).expect("doc id");
+        }
+        method
+    };
+    let existing = send(&state, 7, resolve("n4", DOC)).await;
+    let absent = send(&state, 8, resolve("n5", "notes/absent.md")).await;
+    assert!(error_of(&existing).contains("MEMSYNC_NOT_AVAILABLE"), "{existing:?}");
+    assert_eq!(error_of(&existing), error_of(&absent));
+    assert_eq!(existing.error_detail, absent.error_detail);
+    // A creation attempt that names a revision of an absent document is the same refusal.
+    let mut create = submit("n6", Some(4), "new");
+    if let Method::SyncMemorySnapshot { request, .. } = &mut create {
+        request.doc_id = DocId::new("notes/absent.md").expect("doc id");
+    }
+    assert_eq!(error_of(&send(&state, 9, create).await), error_of(&absent));
+
+    // A foreign tenant is refused and changes nothing.
+    let mut foreign = common::context_for(common::TEST_AGENT);
+    foreign.tenant = "tenant-foreign".to_string();
+    let cross = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            10,
+            GRAPH,
+            foreign,
+            submit("n7", Some(1), "foreign"),
+        ),
+    )
+    .await;
+    assert!(cross.error.is_some(), "{cross:?}");
+    // A writer without the write scope is refused and changes nothing.
+    let mut reader = common::context_for(common::TEST_AGENT);
+    reader.scopes = vec!["memory:read".to_string()];
+    let denied = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            11,
+            GRAPH,
+            reader,
+            submit("n8", Some(1), "denied"),
+        ),
+    )
+    .await;
+    assert!(denied.error.is_some(), "{denied:?}");
+
+    assert_eq!(head_bytes(&state, 12).await, before, "no refusal wrote anything");
+    let none: Response = read(&state, 13, Some(2)).await;
+    assert!(none.error.is_some(), "no second revision exists");
+}
+
+/// Reopen `dir` after the first engine let go of its durable file lock.
+async fn restart(
+    dir: &std::path::Path,
+    backend: test_support::SharedPersistence,
+    state: test_support::SharedState,
+) -> test_support::SharedState {
+    state.write().await.persistence = None;
+    drop(state);
+    test_support::reopen_after_sole_reference(
+        backend,
+        || Ok::<(), String>(()),
+        "release the durable backend before the restart",
+    )
+    .await;
+    test_support::durable_state_read_through(
+        SECRET,
+        common::current_isolation(),
+        &dir.to_string_lossy(),
+    )
+    .await
+}
+
+fn acknowledge(request_id: &str, revision: u64, content: &str, generation: u64) -> Method {
+    sync(
+        request_id,
+        SyncAction::Acknowledge {
+            revision,
+            content_digest: Digest256::sha256(content.as_bytes()),
+            observation_generation: generation,
+        },
+    )
+}
+
+fn standing_of(outcome: SyncOutcome) -> SyncStanding {
+    match outcome {
+        SyncOutcome::Acknowledged { standing } | SyncOutcome::Observed { standing, .. } => standing,
+        other => panic!("expected a standing, got {other:?}"),
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.6
+#[tokio::test(flavor = "multi_thread")]
+async fn provenance_and_materialization_ack_survive_restart() {
+    let (dir, backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-ack",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let first: SyncOutcome = json_of(send(&state, 2, submit("a1", None, "one")).await);
+    assert!(matches!(first, SyncOutcome::Accepted { .. }));
+    // Matching revision, digest and generation is in sync; a wrong digest is pending.
+    let ok = standing_of(json_of(send(&state, 3, acknowledge("a2", 1, "one", 5)).await));
+    assert_eq!(ok, SyncStanding::InSync);
+    let wrong = standing_of(json_of(send(&state, 4, acknowledge("a3", 1, "other", 6)).await));
+    assert_eq!(wrong, SyncStanding::Pending);
+    // An acknowledgment older than the latest observation is pending.
+    let stale = standing_of(json_of(send(&state, 5, acknowledge("a4", 1, "one", 2)).await));
+    assert_eq!(stale, SyncStanding::Pending);
+    // An unresolved conflict is a conflict, whatever the acknowledgment says.
+    let _: SyncOutcome = json_of(send(&state, 6, submit("a5", None, "rival")).await);
+    let conflict = standing_of(json_of(send(&state, 7, acknowledge("a6", 1, "one", 9)).await));
+    assert_eq!(conflict, SyncStanding::Conflict);
+    let head: MemorySnapshotRead = json_of(read(&state, 8, None).await);
+    assert_eq!(head.head.provenance.request_id.as_str(), "a1");
+    assert_eq!(head.head.provenance.actor, common::TEST_AGENT);
+    assert_eq!(head.head.parent_revision, None);
+
+    let state = restart(&dir, backend, state).await;
+    let after: MemorySnapshotRead = json_of(read(&state, 10, None).await);
+    assert_eq!(after.head, head.head, "provenance survives the restart");
+    // The retained candidate is durable, so the standing is still a conflict.
+    let stale = standing_of(json_of(send(&state, 11, acknowledge("a7", 1, "one", 3)).await));
+    assert_eq!(stale, SyncStanding::Conflict, "the conflict survives the restart");
 }
