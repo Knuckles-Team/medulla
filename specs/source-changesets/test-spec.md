@@ -118,4 +118,4 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R013.1` | `crates/medulla-types/tests/source_symbol_edit.rs::edit_round_trips_and_kinds_are_closed` | L2 | existing |
 | `MEDULLA-SCM-R013.2` | `crates/medulla-compute/tests/source_symbol_edit.rs::bytes_outside_spans_are_unchanged` | L2 | existing |
 | `MEDULLA-SCM-R013.4` | `tests/scm_symbol_edit_served.rs::accept_path_runs_after_projection` | L3 | planned |
-| `MEDULLA-SCM-R014` | `tests/test_scm_git_export_pack.py::test_clone_matches_tree_hash_and_denied_path_refuses` | L3 | planned |
+| `MEDULLA-SCM-R014` | `tests/test_scm_git_export_pack.py::test_clone_matches_tree_hash_and_denied_path_refuses`; `crates/medulla-server-router/src/dispatch/router/git_export_pack.rs::tests::receipt_carries_a_blob_ref_not_hex`; `crates/medulla-source-types/src/source_changeset.rs::tests::gitlink_mode_valid_only_on_import` | L3 | planned |
