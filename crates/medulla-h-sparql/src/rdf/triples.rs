@@ -44,11 +44,6 @@ pub(super) async fn handle_add_triples(
         return Response::err(req_id, refusal);
     }
 
-    // MEDULLA-TYPED-PACKS-R108.11: a metric formula names only glossary terms that exist.
-    if let Err(refusal) = super::catalog_guard::guard_metric_terms(&triples, core) {
-        return Response::err(req_id, refusal);
-    }
-
     // MEDULLA-TYPED-PACKS-R108.16: an article's described-asset ranking text is a node property
     // written with the article or with the asset it describes.
     super::catalog_guard::materialize_described_best(&mut triples, core);
@@ -67,6 +62,7 @@ pub(super) async fn handle_add_triples(
             "UNRESOLVED_REFERENCE",
             "RESOURCE_UNOWNED",
             "LINEAGE_EDGE_UNPAIRED",
+            "METRIC_TERM_UNRESOLVED",
         ]
         .iter()
         .any(|code| rej.message.starts_with(code));

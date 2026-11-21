@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, OnceLock};
 
 use medulla_rdf::guard::{GuardRejection, WriteGuard};
-use medulla_rdf::oxrdf::{Graph, Triple};
+use medulla_rdf::oxrdf::{Graph, NamedOrBlankNode, Term, Triple};
 use medulla_shacl::policy::{IcvPolicy, IcvPolicyRegistry};
 
 use medulla_graph_core::graph::GraphCore;
@@ -282,6 +282,113 @@ pub fn object_model_refusal(rejection: GuardRejection) -> GuardRejection {
     }
 }
 
+/// Refuse a `cat:Metric` write whose formula names a glossary term that does not exist or
+/// carries a malformed reference (MEDULLA-TYPED-PACKS-R108.11). A reference is written in braces:
+/// `{term:<prefLabel>}` resolves by exact, trimmed, case-sensitive `skos:prefLabel` against the
+/// `cat:CatalogGlossaryTerm` nodes of the base graph `check_before_write` exports and the additions of the same write
+/// (never by node IRI); `{prop:<IRI>}` is an absolute IRI with no whitespace, syntax-checked here
+/// and resolved by the UQL evaluation. Any other prefix or an unclosed brace is refused too. The
+/// refusal leads with `METRIC_TERM_UNRESOLVED`; a refused batch commits nothing.
+fn guard_metric_terms(
+    core: &GraphCore,
+    base: &[Triple],
+    triples: &[Triple],
+) -> Result<(), GuardRejection> {
+    const PREF_LABEL: &str = "http://www.w3.org/2004/02/skos/core#prefLabel";
+    let cat = "https://knuckles-team.github.io/ontology/catalog#";
+    let formula_key = format!("{cat}metricFormula");
+    let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    let term_class = format!("{cat}CatalogGlossaryTerm");
+    let refuse = |detail: String| GuardRejection {
+        graph: None,
+        message: format!("METRIC_TERM_UNRESOLVED: {detail}"),
+        details: serde_json::Value::Null,
+    };
+    let formulas: Vec<&str> = triples
+        .iter()
+        .filter(|t| t.predicate.as_str() == formula_key)
+        .filter_map(|t| match &t.object {
+            Term::Literal(value) => Some(value.value()),
+            _ => None,
+        })
+        .collect();
+    if formulas.is_empty() {
+        return Ok(());
+    }
+    // The references of every formula, checked for form before any term lookup.
+    let mut wanted: Vec<String> = Vec::new();
+    for formula in formulas {
+        let mut rest = formula;
+        while let Some(open) = rest.find('{') {
+            let after = &rest[open + 1..];
+            let Some(close) = after.find('}') else {
+                return Err(refuse("a reference is not closed".to_string()));
+            };
+            let reference = &after[..close];
+            if let Some(label) = reference.strip_prefix("term:") {
+                wanted.push(label.trim().to_string());
+            } else if let Some(iri) = reference.strip_prefix("prop:") {
+                if iri.chars().any(char::is_whitespace) || medulla_rdf::oxrdf::NamedNode::new(iri).is_err() {
+                    return Err(refuse(format!("`{{prop:{iri}}}` is not an absolute IRI")));
+                }
+            } else {
+                return Err(refuse(format!(
+                    "`{{{reference}}}` is not a term or property reference"
+                )));
+            }
+            rest = &after[close + 1..];
+        }
+    }
+    if wanted.is_empty() {
+        return Ok(());
+    }
+    let mut known: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    // Terms in the same write.
+    let term_subjects: std::collections::BTreeSet<&NamedOrBlankNode> = base
+        .iter()
+        .chain(triples)
+        .filter(|t| {
+            t.predicate.as_str() == rdf_type
+                && matches!(&t.object, Term::NamedNode(class) if class.as_str() == term_class)
+        })
+        .map(|t| &t.subject)
+        .collect();
+    for triple in base.iter().chain(triples) {
+        if triple.predicate.as_str() == PREF_LABEL && term_subjects.contains(&triple.subject) {
+            if let Term::Literal(value) = &triple.object {
+                known.insert(value.value().trim().to_string());
+            }
+        }
+    }
+    // Terms already in the graph.
+    for label in [term_class.clone(), format!("<{term_class}>")] {
+        for (_, bytes) in core.get_nodes_by_label(&label, 0) {
+            let Ok(serde_json::Value::Object(node)) =
+                medulla_types::msgpack::decode_property_value(&bytes)
+            else {
+                continue;
+            };
+            for key in [PREF_LABEL, "prefLabel"] {
+                match node.get(key) {
+                    Some(serde_json::Value::String(text)) => {
+                        known.insert(text.trim().to_string());
+                    }
+                    Some(serde_json::Value::Array(values)) => {
+                        known.extend(
+                            values.iter().filter_map(|v| v.as_str()).map(|t| t.trim().to_string()),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    match wanted.iter().find(|label| !known.contains(*label)) {
+        Some(label) => Err(refuse(format!("no glossary term has the preferred label `{label}`"))),
+        None => Ok(()),
+    }
+}
+
 /// Enforce the policy on a direct property-graph RDF write. Export failure and
 /// absent/invalid policy are hard rejections before any live mutation occurs.
 pub fn check_before_write(
@@ -298,6 +405,8 @@ pub fn check_before_write(
             ),
             details: serde_json::Value::Null,
         })?;
+    // MEDULLA-TYPED-PACKS-R108.11: a metric formula names only glossary terms that exist.
+    guard_metric_terms(core.as_ref(), &exported, additions)?;
     let mut base = Graph::new();
     for triple in &exported {
         base.insert(triple);
