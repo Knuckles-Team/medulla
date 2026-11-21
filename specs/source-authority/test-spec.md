@@ -26,13 +26,13 @@ Negative cases that must exist: an origin-approved rank-1 declaration with a con
 - `MEDULLA-SRC-AUTH-R010.3`: `crates/medulla-virtual-graph/src/source_selection/live.rs::tests::roles_read_from_schema_sources` (L2); `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::an_unknown_source_role_is_refused_and_the_closed_set_attaches` (L1, `SOURCE_ROLE_UNKNOWN`); `tests/federated/test_source_role_served.py::test_live_truth_wins_conflict` (L3).
 - `MEDULLA-SRC-AUTH-R010.4`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::inspiration_only_abstains_role_insufficient`.
 - `MEDULLA-SRC-AUTH-R010.5`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::role_premise_names_both_sources`.
-- `MEDULLA-SRC-AUTH-R010.6`: `tests/federated/test_source_role_served.py::test_live_truth_wins_conflict` (planned, L3): the file does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R010.6`: `tests/federated/test_source_role_served.py::test_role_conflict_audit_names_both_sources_and_roles`, `tests/federated/test_source_role_served.py::test_inspiration_only_abstains_role_insufficient` and `tests/federated/test_source_role_served.py::test_other_principal_sees_no_role_verdict` (planned, L3): the file exists; the owning change adds these three cases to it.
 
 ### MEDULLA-SRC-AUTH-R011 tests
 
 - `MEDULLA-SRC-AUTH-R011.1`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::trust_mark_round_trips`.
 - `MEDULLA-SRC-AUTH-R011.2`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::derived_content_inherits_untrusted`.
-- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::cas_lowering_needs_approval_and_pins_current_mark` (planned, L2): the tests do not exist yet; the owning change adds them at this exact path. The approval id is the reserved updates-blob key `trust_mark_approval_id`.
 - `MEDULLA-SRC-AUTH-R011.4`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::downgrade_without_approval_refused`.
 - `MEDULLA-SRC-AUTH-R011.5`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::mark_carries_rule_and_generation`.
 - `MEDULLA-SRC-AUTH-R011.6`: `tests/federated/test_trust_mark_served.py::test_tool_result_is_untrusted_and_sticky` (planned, L3): the file does not exist yet; the owning change adds it at this exact path.
@@ -68,5 +68,5 @@ Each entry below is planned. The test file or function does not exist in the tre
 
 ## Explicit state machine rows (Article XXXI)
 
-- `MEDULLA-SRC-AUTH-R802`: see each child (rollup).
-- `MEDULLA-SRC-AUTH-R802.1`: `crates/medulla-plan/src/mapping_approval_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-plan/src/mapping_approval_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-plan/src/mapping_approval_machine.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::mapping_approval_machine_matches_edge_table` (planned, L1): proves: MappingNotApproved/MappingApprovalState state machine: route 1 census findings through MappingApprovalState::apply.
+- `MEDULLA-SRC-AUTH-R802`: retired (no remaining lifecycle; see `MEDULLA-SRC-AUTH-R802.1`).
+- `MEDULLA-SRC-AUTH-R802.1`: retired (`MappingApprovalState` is fixed at construction; no machine).

@@ -18,7 +18,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T012 [US1] MEDULLA-SRC-AUTH-R002.6 Shape: equal-rank claims by different sources on one (class, facet, scope) are refused inside one graph
 - [ ] T013 [US2] MEDULLA-SRC-AUTH-R003.1 Declare kind `governed.source-authority` with approver scope `governance:approve-source-authority` in `GOVE...
 - [ ] T014 [US2] MEDULLA-SRC-AUTH-R003.2 Attach refuses `vg:approved true` inside a `Pack` or `Ingestion` origin schema source
-- [ ] T066 [US2] MEDULLA-SRC-AUTH-R003.6 Governed-ledger served harness
+- [ ] T066 [US2] MEDULLA-SRC-AUTH-R003.6 Governed-ledger served harness `tests/source_authority/governed_ledger.py` (moves the lease and attach helpers out of `tests/packs/test_schema_drift_served.py`)
 - [ ] T015 [US2] MEDULLA-SRC-AUTH-R003.3 AttachApproved accepts an authority candidate bound to its digest
 - [ ] T016 [US2] MEDULLA-SRC-AUTH-R003.4 Planner derives effectiveness from origin, not from the flag
 - [ ] T017 [US2] MEDULLA-SRC-AUTH-R003.5 Proposed rows are listed, never selected
@@ -55,7 +55,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T048 [US5] MEDULLA-SRC-AUTH-R010.6 Hot-path proof for source roles
 - [ ] T049 [US5] MEDULLA-SRC-AUTH-R011.1 Model
 - [ ] T050 [US5] MEDULLA-SRC-AUTH-R011.2 Behavior
-- [ ] T051 [US5] MEDULLA-SRC-AUTH-R011.3 Stamp the trust mark in the mutation gateway
+- [ ] T051 [US5] MEDULLA-SRC-AUTH-R011.3 Stamp the trust mark in the mutation gateway (`stamp_trust_mark_if_applicable` in `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs`; approval id is the reserved updates key `trust_mark_approval_id`)
 - [ ] T052 [US5] MEDULLA-SRC-AUTH-R011.4 Refusal
 - [ ] T053 [US5] MEDULLA-SRC-AUTH-R011.5 Evidence
 - [ ] T054 [US5] MEDULLA-SRC-AUTH-R011.6 Hot-path proof for the trust mark
@@ -72,3 +72,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T064 [US6] MEDULLA-SRC-AUTH-R012.9 Source sync hot-path proof: one L3 journey through the served `SourceSync` and the nightly `source_sync` bench
 - [ ] T067 [US6] MEDULLA-SRC-AUTH-R802 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T068 [US6] MEDULLA-SRC-AUTH-R802.1 MappingNotApproved/MappingApprovalState state machine: route 1 census findings through MappingApprovalState::apply
+- [ ] T064 [US6] MEDULLA-SRC-AUTH-R012.9 Source sync hot-path proof
+- [ ] T067 [US6] MEDULLA-SRC-AUTH-R802 RETIRED: no remaining lifecycle in this feature
+- [ ] T068 [US6] MEDULLA-SRC-AUTH-R802.1 RETIRED: `MappingApprovalState` never moves after construction
