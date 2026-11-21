@@ -20,7 +20,7 @@ use medulla_mutation_types::branch::{
     ConflictRecord, ConflictSide, MergeChange, MergeOutcome, MergePublication,
 };
 use medulla_persistence::branch_registry_store::{
-    AppendedCommit, BranchCommitInput, MergeHeadMove, MergeWrite,
+    AppendedCommit, BranchCommitInput, HeadMoveError, MergeHeadMove, MergeWrite,
 };
 use medulla_server_api::api::conflict_decider::conflict_feature_schema;
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -40,6 +40,9 @@ pub enum PublishError {
     Refused(ServerErrorCode),
     /// `MERGE_ADOPTION_INVALID{entity}`: an adopted entity failed validation.
     AdoptionInvalid(String),
+    /// `BRANCH_PAYLOAD_UNREPLAYABLE`: a branch carries payload methods the merge cannot fold
+    /// into rows (their names, comma separated). The merge publishes nothing.
+    Unreplayable(String),
     /// The store or the decision seam failed; the detail is the refusal text.
     Failed(String),
 }
@@ -50,6 +53,22 @@ impl From<MergeClassifyError> for PublishError {
             MergeClassifyError::Refused(code) => Self::Refused(code),
             MergeClassifyError::Store(detail) => Self::Failed(detail),
         }
+    }
+}
+
+/// Refuse a merge when any folded commit carries a payload method that has no row effect the
+/// merge can replay: publishing the folded state would leave that effect out.
+fn require_replayable(states: &[&VersionState]) -> Result<(), PublishError> {
+    let mut methods: Vec<&str> = states
+        .iter()
+        .flat_map(|state| state.unreplayable().iter().map(String::as_str))
+        .collect();
+    methods.sort_unstable();
+    methods.dedup();
+    if methods.is_empty() {
+        Ok(())
+    } else {
+        Err(PublishError::Unreplayable(methods.join(", ")))
     }
 }
 
@@ -227,24 +246,37 @@ pub async fn chain_for_replay(
     chain_of(state, verified, reference).await.map(|(_, chain)| chain)
 }
 
-/// Everything one merge publication writes, planned and not yet applied
-/// (MEDULLA-BRANCH-MERGE-R007). `h-graph` never calls the router, so it hands
-/// the plan to the `BranchMerge` router arm, which applies `operations` to the
-/// target data graph through the one graph mutation compile path (one
-/// `BatchUpdate`) and then commits `write` in one registry transaction, exactly
-/// as the decision plane commits a `PlannedWrite`.
-pub struct MergeApplyPlan {
-    pub tenant: String,
-    pub source: BranchRef,
+/// The registry half of a merge: the branch that takes the head move, the head the merge read and
+/// the transaction to commit.
+#[derive(Clone)]
+pub struct RegistryStep {
     /// The registry handle of the branch the merge publishes into.
     pub target: super::BranchTarget,
     /// The head the merge read; a target that moved refuses `MERGE_TARGET_STALE`.
     pub expected_target_head: String,
-    /// `BatchUpdate` operations for `target.target_graph`: the replayed commit
-    /// payloads of a fast-forward, or the adopted rows of a three-way merge.
-    pub operations: Vec<serde_json::Value>,
     /// The registry write: history rows, commit rows and the head move.
     pub write: MergeWrite,
+}
+
+/// Everything one merge publication writes, planned and not yet applied
+/// (MEDULLA-BRANCH-MERGE-R007). `h-graph` never calls the router, so it hands
+/// the plan to the `BranchMerge` router arm, which commits it through
+/// [`MergeApplyPlan::commit`]: `operations` land in the target data graph through the one graph
+/// mutation compile path (one `BatchUpdate`), then `registry` commits in one registry
+/// transaction, exactly as the decision plane commits a `PlannedWrite`.
+#[derive(Clone)]
+pub struct MergeApplyPlan {
+    pub tenant: String,
+    pub source: BranchRef,
+    /// The graph the operations land in: the target branch's own graph, or the base graph when
+    /// the target is `main`.
+    pub target_graph: String,
+    /// `BatchUpdate` operations for `target_graph`: the replayed commit payloads of a
+    /// fast-forward, the adopted rows of a three-way merge, or the net changes of a branch
+    /// merged into `main`. Applying them twice leaves the same state.
+    pub operations: Vec<serde_json::Value>,
+    /// The registry half; `None` when the target is `main`, which has no registry row.
+    pub registry: Option<RegistryStep>,
     classified: MergeClassification,
     /// The merge record of a two-parent merge; `None` for a fast-forward.
     publication: Option<MergePublication>,
@@ -257,10 +289,92 @@ pub enum MergeStep {
     Apply(Box<MergeApplyPlan>),
 }
 
+/// Why a merge commit wrote or finished nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MergeCommitError {
+    /// The graph batch was refused; the text is the refusal.
+    Graph(String),
+    /// The registry transaction refused or failed; `Stale` is `MERGE_TARGET_STALE`.
+    Head(HeadMoveError),
+    /// The receipt could not be built.
+    Finish(PublishError),
+    /// A registry read failed.
+    Store(String),
+}
+
+/// The two writes of a merge. The router implements `apply_graph` through the graph mutation
+/// compile path; `publish` is the registry transaction and a test replaces it to fail one.
+#[allow(async_fn_in_trait)]
+pub trait MergeEffects {
+    /// Apply `operations` to `graph` as one batch, creating the graph first when `create_graph`.
+    /// The operations are full replacements and removals, so a repeat is harmless.
+    async fn apply_graph(
+        &self,
+        graph: &str,
+        operations: &[serde_json::Value],
+        create_graph: bool,
+    ) -> Result<(), String>;
+
+    /// Commit the registry half in one transaction.
+    async fn publish(
+        &self,
+        step: &RegistryStep,
+        source: &BranchRef,
+        tenant: &str,
+    ) -> Result<AppendedCommit, HeadMoveError> {
+        step.target
+            .publish_merge(source, tenant, &step.expected_target_head, step.write.clone())
+            .await
+    }
+}
+
 impl MergeApplyPlan {
-    /// The receipt once the registry transaction committed `appended`. A
-    /// fast-forward names the source head as its single merged parent.
-    pub async fn finish(self, appended: AppendedCommit) -> Result<BranchMergeReceipt, PublishError> {
+    /// Commit the plan, retry-safe by construction: a stale target head is refused before
+    /// anything is written, the graph batch commits first, then the registry transaction under
+    /// the merge's replay key. When the registry write fails after the graph batch committed,
+    /// nothing is claimed rolled back: the same merge run again re-reads the same heads, plans
+    /// the same operations, applies them again over the same rows and commits the head move,
+    /// and a merge whose registry write did commit answers its original receipt.
+    pub async fn commit<E: MergeEffects>(
+        self,
+        effects: &E,
+    ) -> Result<BranchMergeReceipt, MergeCommitError> {
+        if let Some(step) = &self.registry {
+            match step
+                .target
+                .head_is(&self.tenant, &step.expected_target_head)
+                .await
+            {
+                Ok(true) => {}
+                Ok(false) => return Err(MergeCommitError::Head(HeadMoveError::Stale)),
+                Err(error) => return Err(MergeCommitError::Store(error)),
+            }
+        }
+        if !self.operations.is_empty() {
+            effects
+                .apply_graph(&self.target_graph, &self.operations, self.registry.is_some())
+                .await
+                .map_err(MergeCommitError::Graph)?;
+        }
+        let appended = match &self.registry {
+            Some(step) => Some(
+                effects
+                    .publish(step, &self.source, &self.tenant)
+                    .await
+                    .map_err(MergeCommitError::Head)?,
+            ),
+            None => None,
+        };
+        self.finish(appended).await.map_err(MergeCommitError::Finish)
+    }
+
+    /// The receipt once the registry transaction committed `appended` (`None` for a merge into
+    /// `main`, which has no registry row). A fast-forward names the source head as its single
+    /// merged parent.
+    async fn finish(
+        self,
+        appended: Option<AppendedCommit>,
+    ) -> Result<BranchMergeReceipt, PublishError> {
         let Some(publication) = self.publication else {
             return Ok(BranchMergeReceipt {
                 outcome: MergeOutcome::FastForward,
@@ -273,9 +387,14 @@ impl MergeApplyPlan {
                 replayed: false,
             });
         };
+        let (Some(appended), Some(step)) = (appended, &self.registry) else {
+            return Err(PublishError::Failed(
+                "a two-parent merge has no registry commit".to_string(),
+            ));
+        };
         if appended.replayed {
             // The original publication is the answer: read its record back.
-            let chain = load_chain(&self.target).await.map_err(PublishError::Failed)?;
+            let chain = load_chain(&step.target).await.map_err(PublishError::Failed)?;
             let found = chain
                 .iter()
                 .find(|(commit, _)| commit.id == appended.commit.id)
@@ -324,13 +443,16 @@ async fn plan_fast_forward(
     Ok(MergeApplyPlan {
         tenant,
         source: source_branch.reference.clone(),
-        target: target_branch,
-        expected_target_head: classified.target_head.clone(),
+        target_graph: target_branch.target_graph.clone(),
         operations,
-        write: MergeWrite {
-            head_move: MergeHeadMove::FastForward,
-            history_rows,
-        },
+        registry: Some(RegistryStep {
+            target: target_branch,
+            expected_target_head: classified.target_head.clone(),
+            write: MergeWrite {
+                head_move: MergeHeadMove::FastForward,
+                history_rows,
+            },
+        }),
         classified: classified.clone(),
         publication: None,
     })
@@ -355,6 +477,7 @@ pub async fn publish_merge(
     let tenant = verified.tenant().to_string();
     let (source_branch, source_chain) = chain_of(state, verified, source.clone()).await?;
     let (target_branch, target_chain) = chain_of(state, verified, target).await?;
+    require_replayable(&[&fold_chain(&source_chain), &fold_chain(&target_chain)])?;
     if classified.outcome == MergeOutcome::FastForward {
         let plan = plan_fast_forward(
             target_branch,
@@ -458,14 +581,268 @@ pub async fn publish_merge(
     Ok(MergeStep::Apply(Box::new(MergeApplyPlan {
         tenant,
         source,
-        target: target_branch,
-        expected_target_head: classified.target_head.clone(),
+        target_graph: target_branch.target_graph.clone(),
         operations,
-        write: MergeWrite {
-            head_move: MergeHeadMove::Merge { replay_key, input },
-            history_rows: Vec::new(),
-        },
+        registry: Some(RegistryStep {
+            target: target_branch,
+            expected_target_head: classified.target_head.clone(),
+            write: MergeWrite {
+                head_move: MergeHeadMove::Merge { replay_key, input },
+                history_rows: Vec::new(),
+            },
+        }),
         classified: classified.clone(),
         publication: Some(publication),
     })))
+}
+
+/// Plan the merge of `source` into `main`, the base graph `graph` (MEDULLA-BRANCH-MERGE-R007).
+///
+/// `main` is not a registry branch: it has no commit chain, head or registry transaction, so the
+/// plan carries only the graph batch. The batch is the net change of the source chain (every
+/// removal it made and every row it leaves, [`VersionState::trunk_operations`]) written over the
+/// base graph, and the receipt names the source head as the merged parent. The base graph keeps
+/// no history to fold, so a change both sides made to one entity is not detected: the branch's
+/// version replaces it.
+pub async fn plan_trunk_merge(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    source: BranchRef,
+    graph: &str,
+) -> Result<MergeStep, PublishError> {
+    if verified.principal().trim().is_empty() {
+        return Err(PublishError::Refused(ServerErrorCode::MergeActorUnknown));
+    }
+    let (source_branch, source_chain) = chain_of(state, verified, source.clone()).await?;
+    let source_state = fold_chain(&source_chain);
+    require_replayable(&[&source_state])?;
+    let tenant = verified.tenant().to_string();
+    let head = {
+        let tenant = tenant.clone();
+        source_branch
+            .read_blocking(move |registry, reference| registry.merge_view(reference, &tenant))
+            .await
+            .and_then(|view| view)
+            .map_err(PublishError::Failed)?
+            .map_err(|refusal| PublishError::Refused(refusal.code()))?
+            .head
+    };
+    let merge_base = source_chain
+        .first()
+        .and_then(|(commit, _)| commit.parents.first().cloned())
+        .unwrap_or_else(|| head.clone());
+    let classified = MergeClassification {
+        outcome: MergeOutcome::FastForward,
+        merge_base,
+        source_head: head.clone(),
+        target_head: head.clone(),
+    };
+    let operations = source_state.trunk_operations().map_err(PublishError::Failed)?;
+    if operations.is_empty() {
+        return Ok(MergeStep::Done(BranchMergeReceipt {
+            outcome: MergeOutcome::UpToDate,
+            merge_base: classified.merge_base,
+            source_head: head.clone(),
+            target_head: head,
+            merged_parent: None,
+            commit: None,
+            conflicts: Vec::new(),
+            replayed: false,
+        }));
+    }
+    Ok(MergeStep::Apply(Box::new(MergeApplyPlan {
+        tenant,
+        source,
+        target_graph: graph.to_string(),
+        operations,
+        registry: None,
+        classified,
+        publication: None,
+    })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_mutation_types::branch::Branch;
+    use medulla_persistence::branch_registry_store::BranchRegistry;
+    use std::collections::BTreeMap;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::sync::Mutex;
+
+    const TENANT: &str = "tenant-a";
+
+    /// A graph that applies the plan's operations as the compile path does (`add_node` replaces
+    /// a row, `remove_node` deletes it) and a registry write that fails once.
+    struct FlakyEffects {
+        graph: Mutex<BTreeMap<String, serde_json::Value>>,
+        applies: AtomicUsize,
+        fail_publish_once: AtomicBool,
+    }
+
+    impl MergeEffects for FlakyEffects {
+        async fn apply_graph(
+            &self,
+            _graph: &str,
+            operations: &[serde_json::Value],
+            _create_graph: bool,
+        ) -> Result<(), String> {
+            self.applies.fetch_add(1, Ordering::SeqCst);
+            let mut graph = self.graph.lock().unwrap();
+            for operation in operations {
+                let id = operation["id"].as_str().unwrap().to_string();
+                match operation["op"].as_str().unwrap() {
+                    "add_node" => {
+                        graph.insert(id, operation["properties"].clone());
+                    }
+                    "remove_node" => {
+                        graph.remove(&id);
+                    }
+                    other => panic!("unexpected operation {other}"),
+                }
+            }
+            Ok(())
+        }
+
+        async fn publish(
+            &self,
+            step: &RegistryStep,
+            source: &BranchRef,
+            tenant: &str,
+        ) -> Result<AppendedCommit, HeadMoveError> {
+            if self.fail_publish_once.swap(false, Ordering::SeqCst) {
+                return Err(HeadMoveError::Store("registry write failed".to_string()));
+            }
+            step.target
+                .publish_merge(source, tenant, &step.expected_target_head, step.write.clone())
+                .await
+        }
+    }
+
+    fn branch(registry: &BranchRegistry, name: &str) -> BranchRef {
+        let reference = BranchRef {
+            tenant: TENANT.into(),
+            graph: "g".into(),
+            name: name.into(),
+        };
+        registry
+            .create(&Branch {
+                tenant: TENANT.into(),
+                graph: "g".into(),
+                name: name.into(),
+                base_version: 1,
+                head_commit: "g@1".into(),
+                created_by: "agent".into(),
+                created_at: 0,
+                deleted: false,
+            })
+            .unwrap();
+        let input = BranchCommitInput {
+            batch_id: format!("write-{name}"),
+            engine_version: 2,
+            manifest_digest: format!("digest-{name}"),
+            actor: "agent".into(),
+            created_at_ms: 1,
+            payload: None,
+        };
+        registry.append_commit(&reference, TENANT, &input).unwrap();
+        reference
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R007
+    #[tokio::test]
+    async fn a_merge_rerun_after_the_registry_write_failed_finishes_the_head_move() {
+        let dir = std::env::temp_dir().join(format!("merge-retry-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let registry = Arc::new(BranchRegistry::open(dir.to_str().unwrap()).unwrap());
+        let source = branch(&registry, "feature/source");
+        let target_ref = branch(&registry, "feature/target");
+        let heads = |reference: &BranchRef| registry.merge_view(reference, TENANT).unwrap().unwrap();
+        let (source_head, target_head) = (heads(&source).head, heads(&target_ref).head);
+        let replay_key = merge_replay_key(&source_head, &target_head, "g@1");
+        let publication = MergePublication {
+            merge_base: "g@1".into(),
+            source_head: source_head.clone(),
+            target_head: target_head.clone(),
+            changes: vec![MergeChange::Node {
+                id: "n".into(),
+                properties_msgpack: Some(vec![0x80]),
+            }],
+            conflicts: Vec::new(),
+        };
+        let payload = rmp_serde::to_vec_named(&publication).unwrap();
+        let input = BranchCommitInput {
+            batch_id: replay_key.clone(),
+            engine_version: 2,
+            manifest_digest: payload_digest(&payload),
+            actor: "agent".into(),
+            created_at_ms: 3,
+            payload: Some(payload),
+        };
+        let target = super::super::BranchTarget {
+            reference: target_ref.clone(),
+            target_graph: "g--feature-target".into(),
+            registry: Arc::clone(&registry),
+        };
+        let plan = MergeApplyPlan {
+            tenant: TENANT.into(),
+            source: source.clone(),
+            target_graph: target.target_graph.clone(),
+            operations: vec![serde_json::json!({"op": "add_node", "id": "n", "properties": {}})],
+            registry: Some(RegistryStep {
+                target: target.clone(),
+                expected_target_head: target_head.clone(),
+                write: MergeWrite {
+                    head_move: MergeHeadMove::Merge {
+                        replay_key,
+                        input,
+                    },
+                    history_rows: Vec::new(),
+                },
+            }),
+            classified: MergeClassification {
+                outcome: MergeOutcome::Merged,
+                merge_base: "g@1".into(),
+                source_head: source_head.clone(),
+                target_head: target_head.clone(),
+            },
+            publication: Some(publication),
+        };
+        let effects = FlakyEffects {
+            graph: Mutex::new(BTreeMap::new()),
+            applies: AtomicUsize::new(0),
+            fail_publish_once: AtomicBool::new(true),
+        };
+
+        // The registry write fails after the graph batch committed: nothing is rolled back and
+        // the target head has not moved.
+        let failed = plan.clone().commit(&effects).await.unwrap_err();
+        assert_eq!(
+            failed,
+            MergeCommitError::Head(HeadMoveError::Store("registry write failed".to_string()))
+        );
+        assert_eq!(effects.graph.lock().unwrap().len(), 1);
+        assert!(target.head_is(TENANT, &target_head).await.unwrap());
+
+        // The same merge run again re-applies the same rows (a repeat changes nothing) and
+        // finishes the head move: one two-parent commit, the target head first.
+        let receipt = plan.clone().commit(&effects).await.unwrap();
+        assert_eq!(receipt.outcome, MergeOutcome::Merged);
+        assert!(!receipt.replayed);
+        let commit = receipt.commit.expect("the merge commit");
+        assert_eq!(commit.parents, vec![target_head.clone(), source_head]);
+        assert_eq!(heads(&target_ref).head, commit.id);
+        assert_eq!(effects.graph.lock().unwrap().len(), 1);
+        assert_eq!(effects.applies.load(Ordering::SeqCst), 2);
+
+        // A merge whose registry write committed answers its original commit and writes nothing.
+        let step = plan.registry.as_ref().unwrap();
+        let replayed = target
+            .publish_merge(&source, TENANT, &step.expected_target_head, step.write.clone())
+            .await
+            .unwrap();
+        assert!(replayed.replayed);
+        assert_eq!(replayed.commit.id, commit.id);
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }

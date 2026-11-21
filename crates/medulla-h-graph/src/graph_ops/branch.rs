@@ -188,6 +188,13 @@ fn publish_error_response(req_id: u64, error: publish::PublishError) -> Response
             Response::err(req_id, format!("{}: branch merge refused", code.as_str()))
         }
         publish::PublishError::AdoptionInvalid(message) => Response::err(req_id, message),
+        publish::PublishError::Unreplayable(methods) => Response::err(
+            req_id,
+            format!(
+                "{}: branch merge refused: the branch carries payload methods a merge cannot replay: {methods}",
+                ServerErrorCode::BranchPayloadUnreplayable.as_str()
+            ),
+        ),
         publish::PublishError::Failed(detail) => Response::err(req_id, detail),
     }
 }
@@ -304,6 +311,13 @@ pub async fn plan_branch_merge(
         name: name.to_string(),
     };
     let (source, target) = (reference(&request.source), reference(&request.target));
+    // The trunk has no registry row, head or chain: the source's net changes land in the base
+    // graph (MEDULLA-BRANCH-MERGE-R007).
+    if request.target == RESERVED_BRANCH_NAME {
+        return publish::plan_trunk_merge(state, verified, source, &request.graph)
+            .await
+            .map_err(|error| publish_error_response(req_id, error));
+    }
     let tenant = verified.tenant().to_string();
     let pinned = request.merge_base.clone();
     let classified = {

@@ -231,3 +231,38 @@ async def _fast_forward_scenario(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-BRANCH-MERGE-R007")
 def test_fast_forward_target_reads_source_data():
     asyncio.run(_fast_forward_scenario(f"branch-merge-ff-{uuid.uuid4().hex[:8]}"))
+
+
+async def _trunk_scenario(graph: str) -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        stem = uuid.uuid4().hex[:8]
+        branch = f"feature/trunk-{stem}"
+        await client._send("CreateBranch", {"tenant": TEST_TENANT, "graph": graph, "name": branch})
+        node = f"t-{stem}"
+        await _write(client, graph, branch, node, f"kt-{stem}")
+        assert not await client._send("HasNode", {"node_id": node}, graph=graph)
+
+        # A merge into `main` writes the base graph.
+        receipt = await client._send("BranchMerge", _merge(graph, branch, "main"))
+        assert receipt["outcome"] == "fast_forward"
+        assert await client._send("HasNode", {"node_id": node}, graph=graph)
+
+        # A re-run changes nothing: the rows are replaced by themselves.
+        again = await client._send("BranchMerge", _merge(graph, branch, "main"))
+        assert again["source_head"] == receipt["source_head"]
+        assert await client._send("HasNode", {"node_id": node}, graph=graph)
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-BRANCH-MERGE-R007
+@pytest.mark.spec("MEDULLA-BRANCH-MERGE-R007")
+def test_merge_into_main_writes_the_base_graph():
+    asyncio.run(_trunk_scenario(f"branch-merge-main-{uuid.uuid4().hex[:8]}"))

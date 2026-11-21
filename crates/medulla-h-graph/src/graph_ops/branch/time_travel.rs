@@ -17,7 +17,7 @@
 //! Both resolve the branch through [`super::resolve_target`], so a foreign
 //! tenant refuses `BRANCH_TENANT_DENIED` before any chain read. Writes: none.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use medulla_mutation_types::branch::{BranchCommit, BranchRef, MergeChange, MergePublication};
@@ -62,6 +62,15 @@ pub type ChainEntry = (BranchCommit, Option<Vec<u8>>);
 pub struct VersionState {
     nodes: BTreeMap<String, Vec<u8>>,
     edges: BTreeMap<(String, String), Vec<u8>>,
+    /// Nodes a folded payload removed, kept even when the fold never held them: a branch that
+    /// removes a node of the graph it was cut from has no row for it, and a merge into the base
+    /// graph must still remove it (MEDULLA-BRANCH-MERGE-R007).
+    removed_nodes: BTreeSet<String>,
+    /// Edges a folded payload removed, kept for the same reason as `removed_nodes`.
+    removed_edges: BTreeSet<(String, String)>,
+    /// The payload methods that changed the branch and cannot be folded into rows. A merge
+    /// refuses `BRANCH_PAYLOAD_UNREPLAYABLE` naming them; a read lists them as `other` changes.
+    unreplayable: BTreeSet<String>,
 }
 
 fn change(entity: DiffEntity, operation: DiffOperation, image_ref: &str) -> KgDiffEntry {
@@ -84,6 +93,7 @@ fn other(method: &str, image_ref: &str) -> Vec<KgDiffEntry> {
 
 impl VersionState {
     fn upsert_node(&mut self, id: &str, props: &[u8], image_ref: &str) -> KgDiffEntry {
+        self.removed_nodes.remove(id);
         let operation = if self.nodes.insert(id.to_string(), props.to_vec()).is_some() {
             DiffOperation::Updated
         } else {
@@ -104,6 +114,7 @@ impl VersionState {
         image_ref: &str,
     ) -> KgDiffEntry {
         let key = (source.to_string(), target.to_string());
+        self.removed_edges.remove(&key);
         let operation = if self.edges.insert(key, props.to_vec()).is_some() {
             DiffOperation::Updated
         } else {
@@ -117,6 +128,7 @@ impl VersionState {
     }
 
     fn remove_node(&mut self, id: &str, image_ref: &str) -> Vec<KgDiffEntry> {
+        self.removed_nodes.insert(id.to_string());
         if self.nodes.remove(id).is_none() {
             return Vec::new();
         }
@@ -134,6 +146,7 @@ impl VersionState {
         )];
         for (source, target) in incident {
             self.edges.remove(&(source.clone(), target.clone()));
+            self.removed_edges.insert((source.clone(), target.clone()));
             entries.push(change(
                 DiffEntity::Edge { source, target },
                 DiffOperation::Deleted,
@@ -143,8 +156,75 @@ impl VersionState {
         entries
     }
 
+    fn remove_edge_row(&mut self, source: &str, target: &str) -> Option<Vec<u8>> {
+        let key = (source.to_string(), target.to_string());
+        self.removed_edges.insert(key.clone());
+        self.edges.remove(&key)
+    }
+
+    /// Fold one `BatchUpdate` payload: each operation is the row change the graph applies.
+    /// An embedding operation has no row in the fold, so it cannot be replayed.
+    fn apply_batch(&mut self, operations_msgpack: &[u8], image_ref: &str) -> Vec<KgDiffEntry> {
+        use medulla_graph_algos::algorithms::{decode_batch_operations, BatchOperation};
+        let Ok(operations) = decode_batch_operations(operations_msgpack) else {
+            self.unreplayable.insert("BatchUpdate".to_string());
+            return other("BatchUpdate", image_ref);
+        };
+        let mut entries = Vec::new();
+        for operation in operations {
+            match operation {
+                BatchOperation::AddNode {
+                    id,
+                    properties_msgpack,
+                    upsert,
+                } => {
+                    let merged = match (upsert, self.nodes.get(&id)) {
+                        (true, Some(current)) => {
+                            medulla_graph_algos::algorithms::merge_batch_node_properties(
+                                current,
+                                &properties_msgpack,
+                            )
+                            .unwrap_or(properties_msgpack)
+                        }
+                        _ => properties_msgpack,
+                    };
+                    entries.push(self.upsert_node(&id, &merged, image_ref));
+                }
+                BatchOperation::RemoveNode { id } => entries.extend(self.remove_node(&id, image_ref)),
+                BatchOperation::AddEdge {
+                    source,
+                    target,
+                    properties_msgpack,
+                    ..
+                } => entries.push(self.upsert_edge(&source, &target, &properties_msgpack, image_ref)),
+                BatchOperation::RemoveEdge { source, target } => {
+                    if self.remove_edge_row(&source, &target).is_some() {
+                        entries.push(change(
+                            DiffEntity::Edge { source, target },
+                            DiffOperation::Deleted,
+                            image_ref,
+                        ));
+                    }
+                }
+                BatchOperation::AddEmbedding { .. } => {
+                    self.unreplayable.insert("BatchUpdate.add_embedding".to_string());
+                    entries.extend(other("BatchUpdate.add_embedding", image_ref));
+                }
+            }
+        }
+        entries
+    }
+
+    /// The payload methods of this state's commits that a merge cannot replay.
+    pub fn unreplayable(&self) -> &BTreeSet<String> {
+        &self.unreplayable
+    }
+
     fn apply_mutation(&mut self, mutation: &Method, image_ref: &str) -> Vec<KgDiffEntry> {
         match mutation {
+            Method::BatchUpdate { operations_msgpack } => {
+                self.apply_batch(operations_msgpack, image_ref)
+            }
             Method::AddNode {
                 node_id,
                 properties_msgpack,
@@ -175,7 +255,7 @@ impl VersionState {
             Method::RemoveEdge {
                 source_id,
                 target_id,
-            } => match self.edges.remove(&(source_id.clone(), target_id.clone())) {
+            } => match self.remove_edge_row(source_id, target_id) {
                 Some(_) => vec![change(
                     DiffEntity::Edge {
                         source: source_id.clone(),
@@ -186,12 +266,14 @@ impl VersionState {
                 )],
                 None => Vec::new(),
             },
-            // Closes the windows of an edge; the edge stays, changed.
+            // Closes the windows of an edge; the edge stays, changed. The close time is not in
+            // the row bytes the fold keeps, so a merge cannot replay it.
             Method::InvalidateEdge {
                 source_id,
                 target_id,
                 ..
             } => {
+                self.unreplayable.insert("InvalidateEdge".to_string());
                 let key = (source_id.clone(), target_id.clone());
                 if self.edges.contains_key(&key) {
                     vec![change(
@@ -206,8 +288,13 @@ impl VersionState {
                     Vec::new()
                 }
             }
-            // A mutation this feed does not enumerate is named, never hidden.
-            _ => other(&method_name(mutation), image_ref),
+            // A mutation this feed does not enumerate is named, never hidden, and a merge
+            // refuses it rather than publish a state that left its effect out.
+            _ => {
+                let name = method_name(mutation);
+                self.unreplayable.insert(name.clone());
+                other(&name, image_ref)
+            }
         }
     }
 
@@ -239,7 +326,7 @@ impl VersionState {
                     target,
                     properties_msgpack: None,
                 } => {
-                    if self.edges.remove(&(source.clone(), target.clone())).is_some() {
+                    if self.remove_edge_row(source, target).is_some() {
                         entries.push(change(
                             DiffEntity::Edge {
                                 source: source.clone(),
@@ -257,9 +344,12 @@ impl VersionState {
 
     /// The `BatchUpdate` operations that turn `self` into `next`
     /// (MEDULLA-BRANCH-MERGE-R007): removed edges, removed nodes, then every
-    /// node and edge that is new or changed as an upsert, nodes before edges.
-    /// The target data graph applies them through the ordinary mutation compile
-    /// path, so a read of it after a merge sees exactly the folded state.
+    /// node and edge that is new or changed, nodes before edges. A changed node is written with
+    /// `add_node`, which replaces the row outright, so a property the merged state dropped is
+    /// removed from the target graph (`upsert_node` would merge over the old row and keep it).
+    /// An edge is written with `upsert_edge`, which replaces the edge. The target data graph
+    /// applies them through the ordinary mutation compile path, so a read of it after a merge
+    /// sees exactly the folded state, and applying them twice leaves the same state.
     pub fn operations_to(&self, next: &VersionState) -> Result<Vec<serde_json::Value>, String> {
         let properties = |bytes: &[u8]| -> Result<serde_json::Value, String> {
             if bytes.is_empty() {
@@ -283,7 +373,7 @@ impl VersionState {
         for (id, bytes) in &next.nodes {
             if self.nodes.get(id) != Some(bytes) {
                 operations.push(serde_json::json!({
-                    "op": "upsert_node", "id": id, "properties": properties(bytes)?
+                    "op": "add_node", "id": id, "properties": properties(bytes)?
                 }));
             }
         }
@@ -295,6 +385,28 @@ impl VersionState {
                 }));
             }
         }
+        Ok(operations)
+    }
+
+    /// The `BatchUpdate` operations that apply this state's net changes to a graph that holds
+    /// other data: every removal the folded commits made, then every row they leave, nodes before
+    /// edges (MEDULLA-BRANCH-MERGE-R007, a merge into the base graph). Applying them twice leaves
+    /// the same state.
+    pub fn trunk_operations(&self) -> Result<Vec<serde_json::Value>, String> {
+        let mut operations = Vec::new();
+        for (source, target) in &self.removed_edges {
+            if !self.edges.contains_key(&(source.clone(), target.clone())) {
+                operations.push(
+                    serde_json::json!({"op": "remove_edge", "source": source, "target": target}),
+                );
+            }
+        }
+        for id in &self.removed_nodes {
+            if !self.nodes.contains_key(id) {
+                operations.push(serde_json::json!({"op": "remove_node", "id": id}));
+            }
+        }
+        operations.extend(VersionState::default().operations_to(self)?);
         Ok(operations)
     }
 
@@ -357,6 +469,7 @@ impl VersionState {
     /// payload is named, so no commit is silently empty.
     pub fn apply_payload(&mut self, payload: Option<&[u8]>, image_ref: &str) -> Vec<KgDiffEntry> {
         let Some(bytes) = payload else {
+            self.unreplayable.insert("unrecorded".to_string());
             return other("unrecorded", image_ref);
         };
         if let Ok(merge) = rmp_serde::from_slice::<MergePublication>(bytes) {
@@ -385,6 +498,7 @@ impl VersionState {
                 })
                 .collect();
         }
+        self.unreplayable.insert("undecodable".to_string());
         other("undecodable", image_ref)
     }
 
@@ -759,5 +873,102 @@ mod tests {
             diff("feature/x", &chain, &request(Some(7), None), 10).unwrap_err(),
             ServerErrorCode::BranchVersionNotOnChain
         );
+    }
+
+    fn props(pairs: &[(&str, &str)]) -> Vec<u8> {
+        let map: BTreeMap<&str, &str> = pairs.iter().copied().collect();
+        rmp_serde::to_vec_named(&map).unwrap()
+    }
+
+    fn state_with(nodes: &[(&str, Vec<u8>)]) -> VersionState {
+        let mut state = VersionState::default();
+        for (id, bytes) in nodes {
+            state.upsert_node(id, bytes, "image");
+        }
+        state
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R007
+    #[test]
+    fn diff_replaces_a_node_so_a_removed_property_is_removed() {
+        let before = state_with(&[("n", props(&[("a", "1"), ("b", "2")]))]);
+        let after = state_with(&[("n", props(&[("a", "1")]))]);
+        let operations = before.operations_to(&after).unwrap();
+        assert_eq!(operations.len(), 1);
+        // `add_node` replaces the row; `upsert_node` would keep the dropped property.
+        assert_eq!(operations[0]["op"], "add_node");
+        assert_eq!(operations[0]["properties"], serde_json::json!({"a": "1"}));
+        let decoded = medulla_graph_algos::algorithms::decode_batch_operations(
+            &rmp_serde::to_vec_named(&operations).unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            decoded[0],
+            medulla_graph_algos::algorithms::BatchOperation::AddNode { upsert: false, .. }
+        ));
+        // Applying the operations twice is the same as once: the replay of a retried merge.
+        assert_eq!(operations, before.operations_to(&after).unwrap());
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R007
+    #[test]
+    fn every_payload_method_is_folded_or_named_unreplayable() {
+        let mut state = VersionState::default();
+        let batch = serde_json::json!([
+            {"op": "add_node", "id": "a", "properties": {"k": "1"}},
+            {"op": "upsert_node", "id": "a", "properties": {"j": "2"}},
+            {"op": "add_node", "id": "b", "properties": {}},
+            {"op": "add_edge", "source": "a", "target": "b", "properties": {}},
+            {"op": "remove_node", "id": "b"},
+        ]);
+        let batch = Method::BatchUpdate {
+            operations_msgpack: rmp_serde::to_vec_named(&batch).unwrap(),
+        };
+        state.apply_payload(Some(&rmp_serde::to_vec_named(&batch).unwrap()), "c0");
+        assert!(state.unreplayable().is_empty());
+        // The upsert merged over the node and the removal took the edge with it.
+        assert_eq!(state.nodes.len(), 1);
+        let merged: BTreeMap<String, String> = rmp_serde::from_slice(&state.nodes["a"]).unwrap();
+        assert_eq!(merged.len(), 2);
+        assert!(state.edges.is_empty());
+
+        let invalidate = Method::InvalidateEdge {
+            source_id: "a".into(),
+            target_id: "b".into(),
+            relationship: "rel".into(),
+            invalid_at: 5,
+            tx_now: 6,
+        };
+        state.apply_payload(Some(&rmp_serde::to_vec_named(&invalidate).unwrap()), "c1");
+        let embedding = serde_json::json!([{"op": "add_embedding", "id": "a", "embedding": [1.0]}]);
+        let embedding = Method::BatchUpdate {
+            operations_msgpack: rmp_serde::to_vec_named(&embedding).unwrap(),
+        };
+        state.apply_payload(Some(&rmp_serde::to_vec_named(&embedding).unwrap()), "c2");
+        state.apply_payload(None, "c3");
+        let named: Vec<&str> = state.unreplayable().iter().map(String::as_str).collect();
+        assert_eq!(
+            named,
+            ["BatchUpdate.add_embedding", "InvalidateEdge", "unrecorded"]
+        );
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R007
+    #[test]
+    fn trunk_operations_remove_what_the_branch_removed() {
+        let mut state = VersionState::default();
+        state.apply_payload(Some(&remove("base-node")), "c0");
+        state.apply_payload(Some(&node("fresh")), "c1");
+        let operations = state.trunk_operations().unwrap();
+        assert_eq!(operations[0], serde_json::json!({"op": "remove_node", "id": "base-node"}));
+        assert_eq!(operations[1]["op"], "add_node");
+        assert_eq!(operations[1]["id"], "fresh");
+        // A node removed and added again is added, not removed.
+        state.apply_payload(Some(&node("base-node")), "c2");
+        assert!(state
+            .trunk_operations()
+            .unwrap()
+            .iter()
+            .all(|operation| operation["op"] != "remove_node"));
     }
 }

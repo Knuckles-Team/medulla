@@ -986,6 +986,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &[
             "BRANCH_DELETED",
             "BRANCH_NO_COMMON_ANCESTOR",
+            "BRANCH_PAYLOAD_UNREPLAYABLE",
             "BRANCH_TENANT_DENIED",
             "BRANCH_UNKNOWN",
             "MERGE_ACTOR_UNKNOWN",

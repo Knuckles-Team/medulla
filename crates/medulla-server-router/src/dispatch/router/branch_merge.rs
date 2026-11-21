@@ -2,12 +2,13 @@
 //!
 //! `h-graph` plans the merge and never calls the router: `publish_merge`
 //! answers a `MergeApplyPlan` (the target-graph mutation batch, the history
-//! rows and the head move). This arm applies it the way the decision plane
-//! commits a `PlannedWrite`: the batch goes through the one graph mutation
-//! compile path as one `BatchUpdate` under the caller's verified context, then
-//! the registry transaction writes the history rows, the commit rows and the
-//! head move. Every refusal that can be decided before the data graph changes
-//! (a stale target head) is decided first.
+//! rows and the head move). This arm commits it with `MergeApplyPlan::commit`:
+//! a stale target head is refused first, the batch goes through the one graph
+//! mutation compile path as one `BatchUpdate` under the caller's verified
+//! context, then the registry transaction writes the history rows, the commit
+//! rows and the head move under the merge's replay key. A merge whose registry
+//! write failed is retried by running it again. A merge into `main` writes the
+//! base graph and has no registry half.
 
 use super::*;
 
@@ -30,6 +31,7 @@ pub async fn handle_branch_merge(
     fields: BranchMergeFields,
 ) -> Response {
     use medulla_h_graph::graph_ops::branch as ops;
+    use medulla_h_graph::graph_ops::branch::publish::MergeCommitError;
     use medulla_persistence::branch_registry_store::HeadMoveError;
     let (tenant, graph, source, target, merge_base, policy) = fields;
     let request = ops::BranchMergeRequest {
@@ -50,71 +52,72 @@ pub async fn handle_branch_merge(
         }
         ops::publish::MergeStep::Apply(plan) => *plan,
     };
-    let stale = || {
-        Response::err(
+    let effects = RouterMergeEffects {
+        state,
+        req,
+        verified,
+    };
+    match plan.commit(&effects).await {
+        Ok(receipt) => ops::merge_receipt_response(req.id, receipt),
+        Err(MergeCommitError::Graph(refusal)) => Response::err(req.id, refusal),
+        Err(MergeCommitError::Store(detail)) => Response::err(req.id, detail),
+        Err(MergeCommitError::Head(HeadMoveError::Branch(refusal))) => Response::err(
+            req.id,
+            format!("{}: branch merge refused", refusal.code().as_str()),
+        ),
+        Err(MergeCommitError::Head(HeadMoveError::Stale)) => Response::err(
             req.id,
             format!(
                 "{}: branch merge refused",
                 medulla_types::contract::ServerErrorCode::MergeTargetStale.as_str()
             ),
-        )
-    };
-    match plan
-        .target
-        .head_is(&plan.tenant, &plan.expected_target_head)
-        .await
-    {
-        Ok(true) => {}
-        Ok(false) => return stale(),
-        Err(error) => return Response::err(req.id, error),
+        ),
+        Err(MergeCommitError::Head(HeadMoveError::Store(detail))) => Response::err(req.id, detail),
+        Err(MergeCommitError::Finish(error)) => ops::publish_failure_response(req.id, error),
     }
-    if !plan.operations.is_empty() {
-        if let Err(refused) =
-            super::branch_write::ensure_target_graph(state, req, verified, &plan.target.target_graph)
+}
+
+/// The graph half of a merge: one `BatchUpdate` under the caller's verified context through the
+/// one graph mutation compile path. The registry half is the trait's default transaction.
+#[cfg(feature = "redb")]
+struct RouterMergeEffects<'a> {
+    state: &'a Arc<RwLock<ServerState>>,
+    req: &'a DispatchHeader,
+    verified: &'a VerifiedRequestContext,
+}
+
+#[cfg(feature = "redb")]
+impl medulla_h_graph::graph_ops::branch::publish::MergeEffects for RouterMergeEffects<'_> {
+    async fn apply_graph(
+        &self,
+        graph: &str,
+        operations: &[serde_json::Value],
+        create_graph: bool,
+    ) -> Result<(), String> {
+        if create_graph {
+            super::branch_write::ensure_target_graph(self.state, self.req, self.verified, graph)
                 .await
-        {
-            return refused;
+                .map_err(|refused| {
+                    refused.refusal_text().unwrap_or_else(|| {
+                        "branch merge target graph could not be created".to_string()
+                    })
+                })?;
         }
-        let operations_msgpack = match rmp_serde::to_vec_named(&plan.operations) {
-            Ok(bytes) => bytes,
-            Err(_) => return Response::err(req.id, "merge batch encoding failed"),
-        };
+        let operations_msgpack = rmp_serde::to_vec_named(operations)
+            .map_err(|_| "merge batch encoding failed".to_string())?;
         let applied = dispatch_boxed(dispatch_graph_op(
-            state,
-            &plan.target.target_graph,
-            req.id,
-            req.agent_id.as_deref(),
-            verified,
+            self.state,
+            graph,
+            self.req.id,
+            self.req.agent_id.as_deref(),
+            self.verified,
             Method::BatchUpdate { operations_msgpack },
         ))
         .await;
-        if let Some(refusal) = applied.refusal_text() {
-            return Response::err(req.id, refusal);
+        match applied.refusal_text() {
+            Some(refusal) => Err(refusal),
+            None => Ok(()),
         }
-    }
-    let appended = plan
-        .target
-        .publish_merge(
-            &plan.source,
-            &plan.tenant,
-            &plan.expected_target_head,
-            plan.write.clone(),
-        )
-        .await;
-    let appended = match appended {
-        Ok(appended) => appended,
-        Err(HeadMoveError::Branch(refusal)) => {
-            return Response::err(
-                req.id,
-                format!("{}: branch merge refused", refusal.code().as_str()),
-            )
-        }
-        Err(HeadMoveError::Stale) => return stale(),
-        Err(HeadMoveError::Store(detail)) => return Response::err(req.id, detail),
-    };
-    match plan.finish(appended).await {
-        Ok(receipt) => ops::merge_receipt_response(req.id, receipt),
-        Err(error) => ops::publish_failure_response(req.id, error),
     }
 }
 

@@ -68,6 +68,8 @@ closed_error_codes! {
         MergeTargetStale => "MERGE_TARGET_STALE",
         /// MEDULLA-BRANCH-MERGE-R007: the merge actor is not a known principal.
         MergeActorUnknown => "MERGE_ACTOR_UNKNOWN",
+        /// MEDULLA-BRANCH-MERGE-R007: a branch carries a payload method the merge cannot fold into rows; nothing is published.
+        BranchPayloadUnreplayable => "BRANCH_PAYLOAD_UNREPLAYABLE",
         /// MEDULLA-BRANCH-MERGE-R004: an adopted entity failed validation; the whole merge refuses.
         MergeAdoptionInvalid => "MERGE_ADOPTION_INVALID",
         /// MEDULLA-BRANCH-MERGE-R005: a conflict side has no readable evidence; an open-conflict code, not a merge refusal.
