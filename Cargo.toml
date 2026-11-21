@@ -325,6 +325,8 @@ kv = ["medulla-server/kv", "medulla-wire/kv", "medulla-wire-msg/kv", "medulla-h-
 # (CONCEPT:KG-2.206). It is separate from `blob` and absent from the main, `cluster`,
 # and `full-extras` bundles, so only an explicit source build selecting `blob-s3`
 # links the `object_store` SDK (asserted by cargo tree).
+# The comparative cost bench of the object-store backend (MEDULLA-OBJECT-STORAGE-BACKEND-R005).
+object-store-bench = ["dep:object_store", "medulla-persistence/object-store"]
 blob-s3 = ["medulla-server/blob-s3", "medulla-server-api/blob-s3", "medulla-server-blob/blob-s3", "blob", "dep:object_store"]
 # L21 / W4.7 (CONCEPT:MEDULLA-P1-3 follow-up, DONE) — a REAL `medulla_alignment::EvidenceResolver`
 # backed by the engine's own blob CAS: `src/server/blob/cas_resolver.rs`'s
@@ -2132,6 +2134,12 @@ harness = false
 name = "identity_metadata_admit"
 path = "benches/identity_metadata_admit.rs"
 harness = false
+
+[[bench]]
+name = "object_store_cost"
+path = "benches/object_store_cost.rs"
+harness = false
+required-features = ["object-store-bench"]
 
 [[bench]]
 name = "write_coalescer_bench"

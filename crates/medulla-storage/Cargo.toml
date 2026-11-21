@@ -26,13 +26,15 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 object_store = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
+async-trait = { version = "0.1", optional = true }
+futures-util = { version = "0.3", default-features = false, optional = true }
 
 [features]
 # Archive segments over the S3-compatible object_store trait of
 # the read row MEDULLA-OBJECT-STORAGE-BACKEND-R002 and the archive row
 # MEDULLA-OBJECT-STORAGE-BACKEND-R006. Feature-gated so
 # the product bundles link no object-store SDK by default.
-object-archive = ["dep:object_store", "dep:serde_json"]
+object-archive = ["dep:object_store", "dep:serde_json", "dep:async-trait", "dep:futures-util"]
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.5", features = ["fs", "process"] }

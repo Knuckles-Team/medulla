@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "release": "baseline",
+  "lifecycle_digest": "908be11541ed3a23be53b04bcfac9218835775ec73285b8d436aa0a9416bc8f8",
+  "regression_tolerance": 0.1,
+  "dimensions": {
+    "object_actions": null,
+    "bytes": null,
+    "time_ms": null,
+    "peak_memory_bytes": null
+  }
+}
