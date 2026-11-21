@@ -181,6 +181,8 @@ pub use governed_admin::GovernedError;
 mod layer_store;
 /// MEDULLA-IDENTITY-R700.2: graph ownership plan, apply and rollback.
 pub mod ownership;
+// MEDULLA-IDENTITY-R023.13.2: the share transition of one node.
+pub mod share;
 mod policy_admin;
 mod scope_bound;
 pub use scope_bound::{
