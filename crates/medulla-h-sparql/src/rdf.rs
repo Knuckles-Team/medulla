@@ -44,6 +44,8 @@ mod ontology_hash;
 mod typed_triples;
 
 pub use dispatch::try_handle;
+#[cfg(feature = "rdf")]
+pub use catalog_guard::carries_catalog_asset;
 #[cfg(feature = "owl")]
 pub use reasoning::try_handle_distributed;
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]

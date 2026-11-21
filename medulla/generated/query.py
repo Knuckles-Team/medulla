@@ -1929,6 +1929,10 @@ send_approve_entity_link = contract_sender(
     "ApproveEntityLink", "MethodApproveEntityLinkParams"
 )
 send_catalog_usage = contract_sender("CatalogUsage", "MethodCatalogUsageParams")
+send_catalog_read = contract_sender("CatalogRead", "MethodCatalogReadParams")
+decode_catalog_read_browse = contract_decoder("CatalogRead", "CatalogReadAnswer", "browse")
+decode_catalog_read_search = contract_decoder("CatalogRead", "CatalogReadAnswer", "search")
+decode_catalog_read_detail = contract_decoder("CatalogRead", "CatalogReadAnswer", "detail")
 send_column_lineage = contract_sender("ColumnLineage", "MethodColumnLineageParams")
 send_context_compile = contract_sender("ContextCompile", "MethodContextCompileParams")
 send_corpus_retrieve = contract_sender("CorpusRetrieve", "MethodCorpusRetrieveParams")

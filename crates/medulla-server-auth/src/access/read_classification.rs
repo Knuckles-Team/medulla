@@ -74,6 +74,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `graph_ops::bus::roster` reads the core `terminal::try_handle` projected
     // through `read_authority.project_core` (graph_ops/terminal.rs).
     "BusRoster",
+    // MEDULLA-TYPED-PACKS-R108.17: every op runs a registered stored query through the served
+    // SPARQL read, which narrows each row to the caller's read grants.
+    "CatalogRead",
     "CdcRead",
     "CommunityDetectEphemeral",
     "CommunityDetection",

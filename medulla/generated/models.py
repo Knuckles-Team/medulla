@@ -16108,6 +16108,13 @@ class MethodCatalogUsage(BaseModel):
     params: MethodCatalogUsageParams
 
 
+class MethodCatalogRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CatalogRead"]
+    params: MethodCatalogReadParams
+
+
 class MethodSchemaContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16958,6 +16965,7 @@ Method = Annotated[
         MethodCrossSourceQuestion,
         MethodSupplyChainImpact,
         MethodCatalogUsage,
+        MethodCatalogRead,
         MethodSchemaContext,
         MethodRecordRelease,
         MethodRecordDeployment,
@@ -34025,6 +34033,89 @@ DashboardAssetOp = Annotated[
 ]
 
 
+class CatalogKindCount(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: str
+    count: Annotated[int, Field(ge=0)]
+
+
+class CatalogAssetRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    kind: str
+    name: str | None = None
+    owner: str | None = None
+    score: float | None = None
+
+
+class CatalogComment(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    text: str
+    author: str | None = None
+    at_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class CatalogAssetDetail(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    kind: str
+    name: str | None = None
+    owners: list[str]
+    terms: list[str]
+    upstream: list[str]
+    downstream: list[str]
+    rating_count: Annotated[int, Field(ge=0)]
+    rating_mean: float | None = None
+    comments: list[CatalogComment]
+
+
+class CatalogReadAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind_counts: list[CatalogKindCount]
+    rows: list[CatalogAssetRow]
+    next_cursor: str | None = None
+    detail: CatalogAssetDetail | None = None
+
+
+class CatalogReadOpBrowse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["browse"]
+    kind: str | None = None
+    owner: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    cursor: str | None = None
+
+
+class CatalogReadOpSearch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["search"]
+    text: str
+    kinds: list[str] = Field(default_factory=list)
+    limit: Annotated[int, Field(ge=0)] | None = None
+    cursor: str | None = None
+
+
+class CatalogReadOpDetail(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["detail"]
+    asset_id: str
+
+
+CatalogReadOp = Annotated[
+    CatalogReadOpBrowse | CatalogReadOpSearch | CatalogReadOpDetail,
+    Field(discriminator="op"),
+]
+
+
 class ClassificationClaimOpReject(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -36464,6 +36555,12 @@ class MethodCatalogUsageParams(BaseModel):
 
     asset: str
     top_n: Annotated[int, Field(ge=0)] | None = Field(default=None)
+
+
+class MethodCatalogReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: CatalogReadOp
 
 
 class MethodSchemaContextParams(BaseModel):
@@ -42713,6 +42810,17 @@ __all__ = [
     "StewardshipOpMarkCritical",
     "MethodDashboardAsset",
     "MethodDashboardAssetParams",
+    "MethodCatalogRead",
+    "MethodCatalogReadParams",
+    "CatalogKindCount",
+    "CatalogAssetRow",
+    "CatalogComment",
+    "CatalogAssetDetail",
+    "CatalogReadAnswer",
+    "CatalogReadOp",
+    "CatalogReadOpBrowse",
+    "CatalogReadOpSearch",
+    "CatalogReadOpDetail",
     "DashboardRole",
     "DashboardGrant",
     "DashboardPanel",

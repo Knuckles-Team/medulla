@@ -558,3 +558,112 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     )
     assert len(thread) == 4
     assert all(str(row["revision"]).strip('"').startswith("1") for row in thread)
+
+
+def _read(client, graph: str, op: dict):
+    return support.decode(client._send("CatalogRead", {"op": op}, graph))
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.17")
+def test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_assets():
+    # spec: MEDULLA-TYPED-PACKS-R108.17
+    graph = f"medulla-r10817-{uuid.uuid4().hex}"
+    owner_id, stranger_id = "agent-catalog-reader", "agent-catalog-stranger"
+    admin = support.connect()
+    created = False
+    owner = stranger = None
+    try:
+        admin.tenants.create(graph, graph_type="Global")
+        created = True
+        support.register_agents(graph, owner_id, stranger_id)
+        owner = support.connect(graph, agent_id=owner_id)
+        stranger = support.connect(graph, agent_id=stranger_id)
+        xsd = "http://www.w3.org/2001/XMLSchema#"
+        tool = "urn:medulla:asset:tool:orders"
+        skill = "urn:medulla:asset:skill:orders"
+        prompt = "urn:medulla:asset:prompt:refunds"
+        owner.rdf.add_triples(
+            turtle=(
+                f"{PREFIX}<{tool}> a cat:ToolAsset ; skos:prefLabel \"orders tool\" ;"
+                " cat:hasOwner <urn:principal:data-team> .\n"
+                f"<{skill}> a cat:SkillAsset ; skos:prefLabel \"orders skill\" ;"
+                " cat:hasOwner <urn:principal:ops-team> .\n"
+                f"<{prompt}> a cat:PromptAsset ; skos:prefLabel \"refunds prompt\" ;"
+                " cat:hasOwner <urn:principal:data-team> .\n"
+                f"<urn:annotation:orders:1> a cat:Annotation ; cat:annotates <{tool}> ;"
+                ' cat:annotationKind "rating" ; cat:annotationAuthor "agent-a" ;'
+                f' cat:annotatedAtMs "1700000000000"^^<{xsd}nonNegativeInteger> ;'
+                f' cat:annotationRevision "1"^^<{xsd}nonNegativeInteger> ;'
+                f' cat:rating "4"^^<{xsd}integer> .\n'
+                f"<urn:annotation:orders:2> a cat:Annotation ; cat:annotates <{tool}> ;"
+                ' cat:annotationKind "comment" ; cat:annotationAuthor "agent-a" ;'
+                f' cat:annotatedAtMs "1700000000001"^^<{xsd}nonNegativeInteger> ;'
+                f' cat:annotationRevision "1"^^<{xsd}nonNegativeInteger> ;'
+                ' cat:annotationText "check the totals" .\n'
+            )
+        )
+
+        # Browse: the kind counts and the rows come back in one result, filtered by kind/owner.
+        browsed = _read(owner, graph, {"op": "browse"})
+        counts = {entry["kind"]: entry["count"] for entry in browsed["kind_counts"]}
+        assert counts["ToolAsset"] == 1 and counts["SkillAsset"] == 1 and counts["PromptAsset"] == 1
+        assert {row["asset"] for row in browsed["rows"]} >= {tool, skill, prompt}
+        only_tools = _read(owner, graph, {"op": "browse", "kind": "ToolAsset"})
+        assert [row["asset"] for row in only_tools["rows"]] == [tool]
+        data_team = _read(
+            owner, graph, {"op": "browse", "owner": "urn:principal:data-team", "kind": "PromptAsset"}
+        )
+        assert [row["asset"] for row in data_team["rows"]] == [prompt]
+
+        # Paging: a page of one carries the cursor of the next page.
+        first = _read(owner, graph, {"op": "browse", "limit": 1})
+        assert len(first["rows"]) == 1 and first["next_cursor"]
+        second = _read(owner, graph, {"op": "browse", "limit": 1, "cursor": first["next_cursor"]})
+        assert second["rows"][0]["asset"] != first["rows"][0]["asset"]
+
+        # Search: ranked rows, narrowed by the kinds list.
+        found = _read(owner, graph, {"op": "search", "text": "orders"})
+        assert {row["asset"] for row in found["rows"]} == {tool, skill}
+        assert all(row["score"] > 0 for row in found["rows"])
+        narrowed = _read(owner, graph, {"op": "search", "text": "orders", "kinds": ["SkillAsset"]})
+        assert [row["asset"] for row in narrowed["rows"]] == [skill]
+
+        # Detail: owners, rating count and mean, and the comment.
+        detail = _read(owner, graph, {"op": "detail", "asset_id": tool})["detail"]
+        assert detail["kind"] == "ToolAsset" and detail["owners"] == ["urn:principal:data-team"]
+        assert detail["rating_count"] == 1 and detail["rating_mean"] == 4.0
+        assert [c["text"] for c in detail["comments"]] == ["check the totals"]
+
+        # A caller who may read none of it sees no row and no count, and an asset it cannot
+        # read answers like an unknown one.
+        hidden = _read(stranger, graph, {"op": "browse"})
+        assert hidden["rows"] == [] and all(e["count"] == 0 for e in hidden["kind_counts"])
+        assert _read(stranger, graph, {"op": "search", "text": "orders"})["rows"] == []
+        with pytest.raises(Exception, match="ASSET_NOT_FOUND") as unreadable:
+            _read(stranger, graph, {"op": "detail", "asset_id": tool})
+        with pytest.raises(Exception, match="ASSET_NOT_FOUND") as unknown:
+            _read(owner, graph, {"op": "detail", "asset_id": "urn:medulla:asset:tool:none"})
+        assert str(unreadable.value).split("ASSET_NOT_FOUND")[1] == str(unknown.value).split(
+            "ASSET_NOT_FOUND"
+        )[1]
+
+        # The refusals: unknown kind, bad cursor, page size out of bounds, text over the knob.
+        for op in (
+            {"op": "browse", "kind": "NoSuchKind"},
+            {"op": "browse", "cursor": "not-a-cursor"},
+            {"op": "browse", "limit": 0},
+            {"op": "search", "text": "orders", "kinds": ["NoSuchKind"]},
+        ):
+            with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+                _read(owner, graph, op)
+        with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):
+            _read(owner, graph, {"op": "search", "text": "x" * 1001})
+    finally:
+        for client in (owner, stranger):
+            if client is not None:
+                client.close()
+        try:
+            if created:
+                admin.tenants.delete(graph)
+        finally:
+            admin.close()

@@ -1408,6 +1408,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CatalogUsage",
         &["CATALOG_ASSET_NOT_FOUND", "CATALOG_LIMIT_INVALID"],
     ),
+    // MEDULLA-TYPED-PACKS-R108.17: the catalog read refusals.
+    (
+        "CatalogRead",
+        &[
+            "ASSET_NOT_FOUND",
+            "INVALID_ARGUMENT",
+            "CATALOG_QUERY_TOO_LONG",
+            "CATALOG_QUERY_EMPTY",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
     (
         "AssistantProfile",

@@ -121,6 +121,26 @@ fn to_rdf(triple: &Triple) -> Option<oxrdf::Triple> {
     Some(oxrdf::Triple::new(subject, predicate, object))
 }
 
+/// Whether one `AddTriples` payload declares a catalog asset: a subject typed with a class
+/// at or below `cat:Asset` (MEDULLA-TYPED-PACKS-R108.17). A payload that does not parse
+/// carries none; the write refuses it on its own.
+pub fn carries_catalog_asset(turtle: &str, ntriples: &str) -> bool {
+    let parsed = match (turtle.trim().is_empty(), ntriples.trim().is_empty()) {
+        (false, true) => medulla_rdf::mapping::parse_turtle(turtle),
+        (true, false) => medulla_rdf::mapping::parse_ntriples(ntriples),
+        _ => return false,
+    };
+    let Ok(triples) = parsed else {
+        return false;
+    };
+    let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    let classes = &rules().asset_classes;
+    triples.iter().any(|triple| {
+        triple.predicate.as_str() == rdf_type
+            && matches!(&triple.object, Term::NamedNode(class) if classes.contains(class.as_str()))
+    })
+}
+
 /// Check one `AddTriples` batch and add the `owner_missing` flag to every asset
 /// node it declares without an owner. A refusal leaves the batch unwritten.
 pub(super) fn guard_catalog_write(

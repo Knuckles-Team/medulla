@@ -302,4 +302,5 @@ pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R764.1/.2 — asset usage and catalog search hits.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod asset_usage;
+pub mod catalog_read;
 pub mod catalog_relevance;

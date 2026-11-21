@@ -292,6 +292,7 @@ fn is_sql_query_method(method: &Method) -> bool {
             | Method::StoredQueryPut { .. }
             | Method::ApproveEntityLink { .. }
             | Method::StoredQueryCall { .. }
+            | Method::CatalogRead { .. }
             | Method::EncodeDocument { .. }
     )
 }
@@ -356,6 +357,8 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         other @ (Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }) => {
             super::stored_query::dispatch_stored_query(ctx, other).await
         }
+        // MEDULLA-TYPED-PACKS-R108.17: browse, search and detail run the registered stored queries.
+        Method::CatalogRead { op } => Ok(super::catalog_read::handle_catalog_read(ctx, *op).await),
         // MEDULLA-FEDERATED-QUERY-R039.2.5: one document encoded and published as a generation.
         Method::EncodeDocument {
             document_id,

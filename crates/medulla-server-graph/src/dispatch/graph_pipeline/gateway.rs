@@ -163,7 +163,18 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
             &method,
             true,
             move |staged_core| async move {
-                medulla_h_sparql::rdf::try_handle(
+                // MEDULLA-TYPED-PACKS-R108.17: the first write that carries a catalog asset
+                // registers the catalog stored queries in the same staged graph.
+                #[cfg(feature = "query")]
+                let seed_core = match &method_apply {
+                    Method::AddTriples { turtle, ntriples }
+                        if medulla_h_sparql::rdf::carries_catalog_asset(turtle, ntriples) =>
+                    {
+                        Some(staged_core.clone())
+                    }
+                    _ => None,
+                };
+                let response = medulla_h_sparql::rdf::try_handle(
                     state,
                     medulla_server_api::api::reentry::TryHandleContext {
                         req_id,
@@ -180,7 +191,16 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
                 .map_err(|_| {
                     "ENGINE_UNAVAILABLE: rdf surface not available in this build".to_string()
                 })
-                .and_then(medulla_h_graph::graph_ops::gateway_response_result)
+                .and_then(medulla_h_graph::graph_ops::gateway_response_result);
+                #[cfg(feature = "query")]
+                if let (Ok(_), Some(core)) = (&response, seed_core) {
+                    medulla_h_query::query::seed_registered_queries(
+                        &core,
+                        rdf_read_authority.as_ref(),
+                        graph_name,
+                    )?;
+                }
+                response
             },
         )
         .await;

@@ -370,6 +370,14 @@ $($variants)*
         #[serde(default)]
         top_n: Option<u32>,
     },
+    /// MEDULLA-TYPED-PACKS-R108.17: one catalog read, `Browse` (kind counts and a page of
+    /// assets), `Search` (ranked text search) or `Detail` (one asset's owners, terms, lineage
+    /// neighbours, ratings and comments). Every result is narrowed to what the caller may read.
+    /// Refuses `ASSET_NOT_FOUND` (unknown or unreadable asset, one body), `INVALID_ARGUMENT`
+    /// (unknown kind, bad cursor, page size out of bounds) and `CATALOG_QUERY_TOO_LONG`.
+    CatalogRead {
+        op: Box<medulla_catalog_types::catalog_read::CatalogReadOp>,
+    },
     // ── Software lifecycle records (MEDULLA-SDLC-R002.3) ────────────────────
     /// Record one published release of a repository: a sealed `Release` node
     /// and a `contains` edge to each changeset after the repository's previous

@@ -165,6 +165,8 @@ mod access_port;
 #[cfg(feature = "query")]
 mod asset_usage;
 #[cfg(feature = "query")]
+mod catalog_read;
+#[cfg(feature = "query")]
 mod catalog_search;
 #[cfg(feature = "query")]
 mod column_lineage;
@@ -288,6 +290,8 @@ mod harness_metrics;
 mod live_artifact;
 #[cfg(feature = "query")]
 mod stored_query;
+#[cfg(feature = "query")]
+pub use stored_query::seed_registered_queries;
 #[cfg(feature = "query")]
 mod uql_statement;
 

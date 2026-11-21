@@ -162,6 +162,7 @@ SEND_BY_METHOD = {
     "CatalogList": cluster.send_catalog_list,
     "CatalogReassign": cluster.send_catalog_reassign,
     "CatalogRemove": cluster.send_catalog_remove,
+    "CatalogRead": query.send_catalog_read,
     "CatalogUsage": query.send_catalog_usage,
     "CausalCounterfactual": query.send_causal_counterfactual,
     "CausalEstimate": query.send_causal_estimate,

@@ -603,6 +603,7 @@ METHOD_IDS = frozenset(
         "BranchMerge",
         "BranchReadAt",
         "BranchWrite",
+        "CatalogRead",
         "CatalogUsage",
         "ColumnLineage",
         "ContextCompile",

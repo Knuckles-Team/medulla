@@ -141,6 +141,47 @@ fn reader_of(ctx: &QueryHandlerCtx<'_>) -> UnitPrincipal {
     principal
 }
 
+/// Register the catalog stored queries in the graph of `core` when it holds none of that name
+/// (MEDULLA-TYPED-PACKS-R108.17): the first catalog write of a graph seeds them, like the first
+/// `Stewardship.MarkCritical` seeds `catalog.critical_gaps`. Each is written in the node shape
+/// `StoredQueryPut` publishes, authored by the verified writer and shared with the tenant.
+/// `core` is the staged graph of the write, so the queries commit with the asset or not at all.
+pub fn seed_registered_queries(
+    core: &GraphCore,
+    authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
+    graph_name: &str,
+) -> Result<(), String> {
+    let author = authority
+        .map(medulla_server_api::carrier::GraphReadAuthority::verified_principal)
+        .unwrap_or_default()
+        .to_string();
+    let tenant = ReadCaller::from_authority(authority, graph_name).principal.tenant;
+    for mut query in medulla_source_types::catalog_queries::catalog_queries() {
+        if core.has_node(&head_node(&query.name)) {
+            continue;
+        }
+        query.author = author.clone();
+        let stored = json!({
+            "type": QUERY_LABEL,
+            "name": query.name,
+            "version": query.version,
+            "author": author,
+            "author_tenant": tenant,
+            "query": serde_json::to_value(&query).map_err(|e| e.to_string())?,
+        });
+        write_node(core, query_node(&query.name, query.version), &stored)
+            .map_err(|refusal| refusal.to_string())?;
+        let head = json!({
+            "type": HEAD_LABEL,
+            "name": query.name,
+            "author": author,
+            "latest": query.version,
+        });
+        write_node(core, head_node(&query.name), &head).map_err(|refusal| refusal.to_string())?;
+    }
+    Ok(())
+}
+
 // ── Put ───────────────────────────────────────────────────────────────────────────────
 
 /// Declared parameter types as placeholder bindings, so a put parses the text once.
