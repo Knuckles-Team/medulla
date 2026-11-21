@@ -20,7 +20,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T014 [US1] MEDULLA-TYPED-PACKS-R002.4 Withdrawn holder transition
 - [ ] T015 [US1] MEDULLA-TYPED-PACKS-R002.5 Orphan grace and fault recovery
 - [ ] T016 [US1] MEDULLA-TYPED-PACKS-R002.6 Verified body serving
-- [ ] T017 [US1] MEDULLA-TYPED-PACKS-R002.7 Native prompt body persistence
+- [ ] T017 [US1] MEDULLA-TYPED-PACKS-R002.7 BUILD native prompt body persistence: add `AgentComponentPublishRequest.prompt_blueprint`, make `component_publish` async and stage the verified blueprint through `put_engine_bodies`, give `publish_component` a `staged_body: Option<ConnectorPackHolderCommit>` committed through `write_revision_with_rows` + `apply_holders`, update every caller with `None`, regenerate the contract, and write `prompt_publish_commits_one_holder_with_its_revision` and `test_prompt_owner_commit`
 - [ ] T018 [US1] MEDULLA-TYPED-PACKS-R002.8 Prompt graph projection
 - [ ] T019 [US1] MEDULLA-TYPED-PACKS-R002.9 Served prompt rendering
 - [ ] T020 [US1] MEDULLA-TYPED-PACKS-R002.10 Receipt verification before model dispatch
@@ -295,8 +295,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T281 [US7] MEDULLA-TYPED-PACKS-R802.6 Hot-path proof
 - [ ] T282 [US7] MEDULLA-TYPED-PACKS-R802.7 Trust flags on assets
 - [ ] T283 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
-- [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 Model
-- [ ] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Column scan behavior
+- [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 BUILD: add `ChecksumAlgorithm`, `DetectorRule`, `SensitiveDetector.rule`, `Detection.sample_size`/`scanned_at_ms`, `InvalidDetector`, `SensitiveDetector::validate`, `DEFAULT_THRESHOLD` and `builtin_detectors()` to `crates/medulla-query-types/src/sensitive_detect.rs`; test `detector_rules_round_trip_and_validate`
+- [ ] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Add `crates/medulla-core/src/sensitive_scan.rs` (`ScanLimits`, `DetectorResources`, `NoResources`, `ScanError`, `scan_values`, `passing`), the `regex` dependency and the `DETECTOR_RESOURCE_MISSING` / `SCAN_LIMITS_INVALID` codes; test `scan_values_counts_hits_without_values`
 - [ ] T286 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
 - [ ] T287 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
 - [ ] T288 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
