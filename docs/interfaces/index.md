@@ -35,6 +35,7 @@ with the connection guide, then jump straight to the surface the operator needs.
 |---|---|
 | [Messaging & broker](messaging.md) | A RabbitMQ-class native message broker — exchanges, queues, bindings, DLQ, TTL, priority, delayed delivery, consumer groups, replayable streams, publisher confirms. |
 | [Observability](observability.md) | A full observability backend (logs + metrics + traces) served from the same durable engine — PromQL, OTLP traces, VRL pipelines; the engine also emits its own OTLP + Prometheus remote-write. |
+| [Engine observability](engine-observability.md) | Symbolize a stack of a released server from the per-platform symbol artifact of its tag with one command. |
 | [KV-cache (vLLM / LMCache)](kvcache.md) | A tiered, shared LLM KV-block cache acting as the durable L2 tier under vLLM's GPU cache and LMCache's CPU tier. See also the [remote KV-cache HTTP backend](../architecture/kvcache_remote_backend.md) for multi-worker sharing. |
 
 ## Agent & knowledge surfaces
