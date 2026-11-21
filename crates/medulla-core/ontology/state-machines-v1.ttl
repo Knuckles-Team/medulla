@@ -8345,3 +8345,67 @@
     :toState :ObligationInstanceMachine_Waived ;
     :guardedBy :ObligationInstanceMachine_Guard_WaiverRecorded ;
     :firedBy :ObligationInstanceMachine_Event_Waive .
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R768.7
+# The Session machine. The Rust edge table is the same table.
+
+:SessionState a owl:Class ;
+    rdfs:label "Session State" ;
+    rdfs:comment "A state of the Session machine." ;
+    rdfs:subClassOf :State .
+
+:SessionTerminalState a owl:Class ;
+    rdfs:label "Session Terminal State" ;
+    rdfs:comment "A terminal state of the Session machine." ;
+    rdfs:subClassOf :TerminalState, :SessionState .
+
+:SessionTransition a owl:Class ;
+    rdfs:label "Session Transition" ;
+    rdfs:comment "A transition of the Session machine." ;
+    rdfs:subClassOf :Transition .
+
+:SessionEvent a owl:Class ;
+    rdfs:label "Session Event" ;
+    rdfs:comment "An event of the Session machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SessionGuard a owl:Class ;
+    rdfs:label "Session Guard" ;
+    rdfs:comment "A guard of the Session machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SessionMachine a :StateMachine ;
+    rdfs:label "Session machine" ;
+    :initialState :SessionMachine_Open ;
+    :hasState :SessionMachine_Open, :SessionMachine_Complete, :SessionMachine_Aborted .
+
+:SessionMachine_Open a :SessionState ;
+    rdfs:label "Session Open" ;
+    :storedForm "open" .
+
+:SessionMachine_Complete a :SessionTerminalState ;
+    rdfs:label "Session Complete" ;
+    :storedForm "complete" .
+
+:SessionMachine_Aborted a :SessionTerminalState ;
+    rdfs:label "Session Aborted" ;
+    :storedForm "aborted" .
+
+:SessionMachine_Event_Complete a :SessionEvent ;
+    rdfs:label "Session Complete" .
+
+:SessionMachine_Event_Abort a :SessionEvent ;
+    rdfs:label "Session Abort" .
+
+:SessionMachine_S01 a :SessionTransition ;
+    rdfs:label "Session S01" ;
+    :edgeId "S01" ;
+    :fromState :SessionMachine_Open ;
+    :toState :SessionMachine_Complete ;
+    :firedBy :SessionMachine_Event_Complete .
+
+:SessionMachine_S02 a :SessionTransition ;
+    rdfs:label "Session S02" ;
+    :edgeId "S02" ;
+    :fromState :SessionMachine_Open ;
+    :toState :SessionMachine_Aborted ;
+    :firedBy :SessionMachine_Event_Abort .

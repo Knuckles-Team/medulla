@@ -7130,6 +7130,7 @@ dependencies = [
  "medulla-reasoner",
  "medulla-result-types",
  "medulla-semantic-index",
+ "medulla-server-ops",
  "medulla-shacl",
  "medulla-source-types",
  "medulla-statechart",

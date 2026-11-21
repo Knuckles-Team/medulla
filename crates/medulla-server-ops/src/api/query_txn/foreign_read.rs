@@ -25,6 +25,7 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
+use super::session_machine::{SessionEvent, SessionState};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_api::api::persistence::SourceApprovalStore;
 use medulla_server_api::carrier::CarrierAuthority;
@@ -49,13 +50,6 @@ const MAX_COLUMN_NAME_BYTES: usize = 256;
 const MAX_COLUMN_VALUE_BYTES: usize = 64 * 1024;
 const MAX_PROVENANCE_ITEMS: usize = 32;
 const MAX_PROVENANCE_BYTES: usize = 4 * 1024;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SessionState {
-    Open,
-    Complete,
-    Aborted,
-}
 
 struct SessionRecord {
     owner_scope: String,
@@ -303,7 +297,10 @@ impl ForeignReadSessions {
         let mut record = lock(&record)?;
         self.check_open(&record, request.execution, request.sequence)?;
         self.check_expiry(&record)?;
-        record.state = SessionState::Complete;
+        record.state = record
+            .state
+            .apply(SessionEvent::Complete)
+            .map_err(|refused| refused.to_string())?;
         Ok(ForeignReadCompleteResult {
             execution: request.execution,
             sequence: request.sequence,
@@ -325,7 +322,10 @@ impl ForeignReadSessions {
         if request.reason.is_empty() || request.reason.len() > MAX_ID_BYTES {
             return Err("INVALID_ARGUMENT: foreign read abort reason is empty or too large".into());
         }
-        record.state = SessionState::Aborted;
+        record.state = record
+            .state
+            .apply(SessionEvent::Abort)
+            .map_err(|refused| refused.to_string())?;
         Ok(ForeignReadAbortResult {
             execution: request.execution,
             sequence: request.sequence,
@@ -404,7 +404,10 @@ impl ForeignReadSessions {
         let mut record = lock(&record)?;
         self.check_open(&record, request.execution, request.sequence)?;
         self.check_expiry(&record)?;
-        record.state = SessionState::Complete;
+        record.state = record
+            .state
+            .apply(SessionEvent::Complete)
+            .map_err(|refused| refused.to_string())?;
         Ok(ForeignReadCompleteResult {
             execution: request.execution,
             sequence: request.sequence,
@@ -428,7 +431,10 @@ impl ForeignReadSessions {
         if request.reason.is_empty() || request.reason.len() > MAX_ID_BYTES {
             return Err("INVALID_ARGUMENT: foreign read abort reason is empty or too large".into());
         }
-        record.state = SessionState::Aborted;
+        record.state = record
+            .state
+            .apply(SessionEvent::Abort)
+            .map_err(|refused| refused.to_string())?;
         Ok(ForeignReadAbortResult {
             execution: request.execution,
             sequence: request.sequence,

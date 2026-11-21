@@ -1498,3 +1498,14 @@ fn obligation_instance_machine_matches_edge_table() {
 fn obligation_instance_machine_classes_extend_core() {
     sm::assert_extends_core("ObligationInstance");
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.7
+#[test]
+fn session_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_server_ops::api::query_txn::session_machine::SESSION_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.7
+#[test]
+fn session_machine_classes_extend_core() {
+    sm::assert_extends_core("Session");
+}

@@ -174,3 +174,5 @@ medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-store = { path = "../medulla-store", features = ["redb", "statechart"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }
+# The foreign-read session machine edge table (MEDULLA-UNIFIED-DATA-PLANE-R768.7).
+medulla-server-ops = { path = "../medulla-server-ops" }

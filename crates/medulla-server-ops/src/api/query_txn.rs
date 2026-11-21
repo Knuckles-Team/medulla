@@ -19,6 +19,8 @@ pub mod foreign_share;
 #[cfg(feature = "federation")]
 pub mod hive_sources;
 pub mod query_support;
+/// MEDULLA-UNIFIED-DATA-PLANE-R768.7 — the foreign-read execution lifecycle as a state machine.
+pub mod session_machine;
 pub mod txn_intent;
 pub mod txn_support;
 
