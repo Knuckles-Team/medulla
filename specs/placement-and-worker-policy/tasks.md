@@ -23,7 +23,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T017 [US2] MEDULLA-PLACEMENT-R002.1 Register carries capacity.
 - [x] T018 [US2] MEDULLA-PLACEMENT-R002.2 Autosize and depth limit live in `SchedulerConfig`.
 - [x] T019 [US2] MEDULLA-PLACEMENT-R002.3 Pure grant function.
-- [ ] T020 [US2] MEDULLA-PLACEMENT-R002.4 Serve `Method::AdmitWorkerTask` through the worker-registry arm, add `JobStore::task_lane_counts` as the lane-load source, `OwnedWorkerRegistry::owner_of` for the owner check, and the `grant:` id digest.
+- [x] T020 [US2] MEDULLA-PLACEMENT-R002.4 Serve `Method::AdmitWorkerTask` through the worker-registry arm, add `JobStore::task_lane_counts` as the lane-load source, `OwnedWorkerRegistry::owner_of` for the owner check, and the `grant:` id digest.
 - [ ] T021 [US2] MEDULLA-PLACEMENT-R002.5 Routing is engine-side only.
 - [ ] T022 [US2] MEDULLA-PLACEMENT-R002.14 Analytics pool size is a SchedulerConfig field.
 - [x] T023 [US2] MEDULLA-PLACEMENT-R002.600 Integration proof: reserved-worker admission.
@@ -52,10 +52,10 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T046 [US1] MEDULLA-PLACEMENT-R700 Infrastructure inventory and capacity-bounded placement plans (rollup).
 - [ ] T047 [US1] MEDULLA-PLACEMENT-R700.1 Model: host capacity, service spec, placement plan.
 - [ ] T048 [US1] MEDULLA-PLACEMENT-R700.2 Behavior: bounded 0-1 program with a deterministic budget.
-- [ ] T049 [US1] MEDULLA-PLACEMENT-R700.3 Add `QuestionKind::PlacementPlan`, `TypedValue::PlacementPlan`, `FamilyAnswer::PlacementPlan`, the `placement:Host` node shape, `stat_placement_plan.rs` (`question_of`, `load_host_budgets`, `with_read`, `placement_plan_outcome`, `premises`) and `PlacementPlanFamily` in `family::for_kind`.
+- [x] T049 [US1] MEDULLA-PLACEMENT-R700.3 Add `QuestionKind::PlacementPlan`, `TypedValue::PlacementPlan`, `FamilyAnswer::PlacementPlan`, the `placement:Host` node shape, `stat_placement_plan.rs` (`question_of`, `load_host_budgets`, `with_read`, `placement_plan_outcome`, `premises`) and `PlacementPlanFamily` in `family::for_kind`.
 - [ ] T050 [US1] MEDULLA-PLACEMENT-R700.4 Refusal: capability gap and capacity overrun.
 - [ ] T051 [US1] MEDULLA-PLACEMENT-R700.5 Evidence: solver certificate.
-- [ ] T052 [US1] MEDULLA-PLACEMENT-R700.6 Hot-path journey: capability gap abstains, feasible plan solves.
+- [x] T052 [US1] MEDULLA-PLACEMENT-R700.6 Hot-path journey: capability gap abstains, feasible plan solves.
 - [ ] T053 [US4] MEDULLA-PLACEMENT-R750 Claim pacing and priority classes in the job claim path (rollup).
 - [x] T054 [P] [US4] MEDULLA-PLACEMENT-R750.750 Model: Admission pacing and priority classes.
 - [x] T055 [US4] MEDULLA-PLACEMENT-R750.751 Behavior: Admission pacing and priority classes.
@@ -74,7 +74,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T065 [US4] MEDULLA-PLACEMENT-R751.756 Pause and resume.
 - [x] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
 - [ ] T067 [US4] MEDULLA-PLACEMENT-R751.758 Run observability.
-- [ ] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.
+- [x] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.
 - [x] T087 [US4] MEDULLA-PLACEMENT-R751.760 Exclusion group with minimum spacing across schedules.
 - [ ] T069 [US4] MEDULLA-PLACEMENT-R780 Development lane hold is one explicit state machine
 - [x] T070 [US4] MEDULLA-PLACEMENT-R780.1 Hold transition function
@@ -100,7 +100,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T094 [US4] MEDULLA-PLACEMENT-R783.6 MembershipShrinkJournal/ShrinkStage state machine: route 2 census findings through MembershipShrinkJournal::advance
 - [ ] T095 [US4] MEDULLA-PLACEMENT-R783.7 MoveCheckpoint/MovePhase state machine: route 9 census findings through MovePhase::apply
 - [ ] T096 [US4] MEDULLA-PLACEMENT-R784.2 Rename OperationResult.status to outcome (type OperationResultOutcome, serde name `status` kept); no state machine
-- [ ] T097 [US4] MEDULLA-PLACEMENT-R783.8 MoveStageMachine: add `MOVE_STAGE_MACHINE` and `MoveStage::apply` in new `crates/medulla-raft/src/raft/placement/move_stage.rs`, route the nine `journal.stage =` writers in `reshard.rs` through `PartitionMoveJournal::apply_stage`, replace `stage_step_is_permitted` in `permits_successor` with the machine's edges, add the `:MoveStageMachine` Turtle block
+- [x] T097 [US4] MEDULLA-PLACEMENT-R783.8 MoveStageMachine: add `MOVE_STAGE_MACHINE` and `MoveStage::apply` in new `crates/medulla-raft/src/raft/placement/move_stage.rs`, route the nine `journal.stage =` writers in `reshard.rs` through `PartitionMoveJournal::apply_stage`, replace `stage_step_is_permitted` in `permits_successor` with the machine's edges, add the `:MoveStageMachine` Turtle block
 - [ ] T098 [US4] MEDULLA-PLACEMENT-R783.9 PlacementEntry/PartitionState state machine: route 1 census findings through PlacementEntry::apply_move
 - [ ] T099 [US4] MEDULLA-PLACEMENT-R784.3 Rename ReadLeg.status to outcome (type ReadLegOutcome, serde name `status` kept); no state machine
 - [x] T100 [US4] MEDULLA-PLACEMENT-R781.5 ResourceReservationResult/ResourceReservationResultState state machine: route 1 census findings through ResourceReservationRecordState::apply
