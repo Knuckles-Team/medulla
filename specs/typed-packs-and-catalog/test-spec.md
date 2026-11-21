@@ -838,3 +838,4 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R811`: see each child (rollup).
 - `MEDULLA-TYPED-PACKS-R811.1`: `tests/test_wire_mirror_state_words.py::test_conformance_evidence_types_state_as_the_rust_enum` (L1): proves: Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine.
 - `MEDULLA-TYPED-PACKS-R811.2`: `crates/medulla-catalog-types/src/fleet_catalog/vocabulary.rs::tests::discovery_outcome_tag_is_probe_not_status` (L1): proves: the discovery outcome tag is a probe-result tag, not a lifecycle.
+- `MEDULLA-TYPED-PACKS-R108.17`: `tests/typed_packs/test_catalog_capabilities_served.py::test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_assets` (planned, L3): proves: browse, search and detail run as registered queries and hide assets the caller may not read

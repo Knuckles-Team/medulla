@@ -974,3 +974,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals: `SourceBatchExtension::ActionRecords`, `source_action_record.rs` types, `source_ingestion/action_record.rs` validator, four `ServerErrorCode` variants; test `medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay`.
 - [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain: stored query `why_action` over `TRAVERSE -[*]->{1,8} WITH PROOF`; test `medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision`.
 - [ ] T961 [US7] MEDULLA-DECISION-ENGINE-R869.4 Hot-path proof: why did we reorder
+- [ ] T971 [US7] MEDULLA-DECISION-ENGINE-R870 Committed decisions are listed, explained and re-solved on demand (rollup)
+- [ ] T972 [US7] MEDULLA-DECISION-ENGINE-R870.1 List committed records of a tenant
+- [ ] T973 [US7] MEDULLA-DECISION-ENGINE-R870.2 Read the provenance of one committed record
+- [ ] T974 [US7] MEDULLA-DECISION-ENGINE-R870.3 Re-solve why one option was not chosen, within a bounded budget
+- [ ] T975 [US7] MEDULLA-DECISION-ENGINE-R870.4 Hot-path proof: list, explain and re-solve through the served op
