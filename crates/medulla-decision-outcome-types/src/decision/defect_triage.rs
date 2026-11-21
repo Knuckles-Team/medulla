@@ -160,10 +160,40 @@ pub struct SuspectInput {
     pub blame_at: u64,
 }
 
-/// Rank suspects: symbols last changed by the bisect culprit first, then the
-/// most recently changed, then by symbol id so equal inputs rank equally.
-pub fn rank_suspects(inputs: &[SuspectInput], culprit: Option<&str>) -> Vec<String> {
-    let mut ranked: Vec<&SuspectInput> = inputs.iter().collect();
+/// An open defect of a repository, with its ranked suspect symbols.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpenDefect {
+    pub defect_id: String,
+    pub repository: String,
+    pub suspects: Vec<String>,
+}
+
+const DAY_MS: u64 = 86_400_000;
+
+/// Keep the first `knobs.max_frames` symptom frames, in order.
+pub fn cap_frames<T: Clone>(frames: &[T], knobs: &TriageKnobs) -> Vec<T> {
+    frames
+        .iter()
+        .take(knobs.max_frames as usize)
+        .cloned()
+        .collect()
+}
+
+/// Rank suspects: drop blame older than the window before `as_of_ms`, then
+/// symbols last changed by the bisect culprit first, then the most recently
+/// changed, then by symbol id so equal inputs rank equally. Repeated symbols
+/// keep their first place and the list is cut to `knobs.max_suspects`.
+pub fn rank_suspects(
+    inputs: &[SuspectInput],
+    culprit: Option<&str>,
+    as_of_ms: u64,
+    knobs: &TriageKnobs,
+) -> Vec<String> {
+    let window_ms = u64::from(knobs.blame_window_days) * DAY_MS;
+    let mut ranked: Vec<&SuspectInput> = inputs
+        .iter()
+        .filter(|input| input.blame_at.saturating_add(window_ms) >= as_of_ms)
+        .collect();
     ranked.sort_by(|a, b| {
         let culprit_a = culprit == Some(a.blame_changeset.as_str());
         let culprit_b = culprit == Some(b.blame_changeset.as_str());
@@ -172,13 +202,72 @@ pub fn rank_suspects(inputs: &[SuspectInput], culprit: Option<&str>) -> Vec<Stri
             .then(b.blame_at.cmp(&a.blame_at))
             .then_with(|| a.symbol_id.cmp(&b.symbol_id))
     });
-    let mut seen = Vec::new();
+    let mut seen: Vec<String> = Vec::new();
     for suspect in ranked {
         if !seen.contains(&suspect.symbol_id) {
             seen.push(suspect.symbol_id.clone());
         }
     }
+    seen.truncate(knobs.max_suspects as usize);
     seen
+}
+
+/// Raise the severity one level when the defect has at least
+/// `knobs.escalate_symptoms` symptoms; `Critical` stays.
+pub fn escalate_severity(
+    severity: Severity,
+    symptom_count: u32,
+    knobs: &TriageKnobs,
+) -> Severity {
+    if symptom_count < knobs.escalate_symptoms {
+        return severity;
+    }
+    match severity {
+        Severity::Low => Severity::Medium,
+        Severity::Medium => Severity::High,
+        Severity::High | Severity::Critical => Severity::Critical,
+    }
+}
+
+/// The open defect of the same repository whose suspects overlap these the
+/// most, at or above `knobs.duplicate_min_overlap_micros`. The overlap is
+/// `intersection * 1_000_000 / union` over distinct symbols; the lowest defect
+/// id wins a tie.
+pub fn find_duplicate(
+    repository: &str,
+    suspects: &[String],
+    open: &[OpenDefect],
+    knobs: &TriageKnobs,
+) -> Option<String> {
+    let mut mine: Vec<&str> = suspects.iter().map(String::as_str).collect();
+    mine.sort_unstable();
+    mine.dedup();
+    let mut best: Option<(i64, &str)> = None;
+    for defect in open.iter().filter(|defect| defect.repository == repository) {
+        let mut theirs: Vec<&str> = defect.suspects.iter().map(String::as_str).collect();
+        theirs.sort_unstable();
+        theirs.dedup();
+        let intersection = mine.iter().filter(|symbol| theirs.contains(symbol)).count() as i64;
+        let union = mine.len() as i64 + theirs.len() as i64 - intersection;
+        let overlap = if union == 0 {
+            0
+        } else {
+            intersection * 1_000_000 / union
+        };
+        if overlap < knobs.duplicate_min_overlap_micros {
+            continue;
+        }
+        let better = match best {
+            None => true,
+            Some((top, id)) => {
+                overlap > top || (overlap == top && defect.defect_id.as_str() < id)
+            }
+        };
+        if better {
+            best = Some((overlap, defect.defect_id.as_str()));
+        }
+    }
+    best.map(|(_, id)| id.to_owned())
 }
 
 /// Pick the owner from path ownership records first, then recent authors.
@@ -194,10 +283,12 @@ pub fn pick_owner(path_owners: &[String], recent_authors: &[String]) -> Option<S
 pub fn decide_triage(
     defect_id: &str,
     severity: Severity,
+    symptom_count: u32,
     suspects: Vec<String>,
     owner: Option<String>,
     duplicate_of: Option<String>,
     evidence_refs: Vec<String>,
+    knobs: &TriageKnobs,
 ) -> TriageDecision {
     let abstain = if evidence_refs.is_empty() {
         Some(TriageAbstainReason::InsufficientEvidence)
@@ -210,7 +301,9 @@ pub fn decide_triage(
     };
     TriageDecision {
         defect_id: defect_id.to_owned(),
-        severity: abstain.is_none().then_some(severity),
+        severity: abstain
+            .is_none()
+            .then(|| escalate_severity(severity, symptom_count, knobs)),
         suspected_symbols: suspects,
         owner_principal: owner,
         duplicate_of,
@@ -234,6 +327,10 @@ impl TriageDecision {
 mod tests {
     use super::*;
 
+    fn knobs() -> TriageKnobs {
+        TriageKnobs::from_policy(&DecisionPolicy::engine_default())
+    }
+
     fn suspect(symbol: &str, changeset: &str, at: u64) -> SuspectInput {
         SuspectInput {
             symbol_id: symbol.into(),
@@ -248,10 +345,12 @@ mod tests {
         let decision = decide_triage(
             "d1",
             Severity::High,
+            1,
             vec!["sym::a".into()],
             Some("alice".into()),
             Some("d0".into()),
             vec!["gv-1".into()],
+            &knobs(),
         );
         let json = serde_json::to_string(&decision).unwrap();
         assert_eq!(
@@ -259,7 +358,16 @@ mod tests {
             decision
         );
 
-        let abstained = decide_triage("d2", Severity::Low, vec![], None, None, vec!["x".into()]);
+        let abstained = decide_triage(
+            "d2",
+            Severity::Low,
+            1,
+            vec![],
+            None,
+            None,
+            vec!["x".into()],
+            &knobs(),
+        );
         assert_eq!(
             abstained.abstain_reason,
             Some(TriageAbstainReason::NoSymbolMatch)
@@ -275,19 +383,23 @@ mod tests {
         let ownerless = decide_triage(
             "d3",
             Severity::Low,
+            1,
             vec!["s".into()],
             None,
             None,
             vec!["x".into()],
+            &knobs(),
         );
         assert_eq!(ownerless.abstain_reason, Some(TriageAbstainReason::NoOwner));
         let thin = decide_triage(
             "d4",
             Severity::Low,
+            1,
             vec!["s".into()],
             Some("o".into()),
             None,
             vec![],
+            &knobs(),
         );
         assert_eq!(
             thin.abstain_reason,
@@ -305,16 +417,16 @@ mod tests {
             suspect("recent", "c9", 900),
         ];
         assert_eq!(
-            rank_suspects(&inputs, Some("c2")),
+            rank_suspects(&inputs, Some("c2"), 1_000, &knobs()),
             ["culprit_sym", "recent", "older"]
         );
         assert_eq!(
-            rank_suspects(&inputs, None),
+            rank_suspects(&inputs, None, 1_000, &knobs()),
             ["recent", "older", "culprit_sym"]
         );
         assert_eq!(
-            rank_suspects(&inputs, Some("c2")),
-            rank_suspects(&inputs, Some("c2"))
+            rank_suspects(&inputs, Some("c2"), 1_000, &knobs()),
+            rank_suspects(&inputs, Some("c2"), 1_000, &knobs())
         );
 
         let owners = ["team".to_string()];
@@ -326,15 +438,73 @@ mod tests {
         let decision = decide_triage(
             "d1",
             Severity::Medium,
-            rank_suspects(&inputs, Some("c2")),
+            1,
+            rank_suspects(&inputs, Some("c2"), 1_000, &knobs()),
             pick_owner(&owners, &authors),
             None,
             vec!["culprit:c2".into()],
+            &knobs(),
         );
         assert_eq!(
             decision.affects_edges()[0],
             ("d1".to_string(), "culprit_sym".to_string())
         );
+    }
+
+    // spec: MEDULLA-SDLC-R004.8
+    #[test]
+    fn window_cap_escalation_and_duplicate_follow_the_knobs() {
+        let knobs = TriageKnobs {
+            max_frames: 2,
+            max_suspects: 2,
+            blame_window_days: 1,
+            escalate_symptoms: 3,
+            duplicate_min_overlap_micros: 500_000,
+        };
+        let as_of = 10 * DAY_MS;
+        let edge = as_of - DAY_MS;
+        let inputs = [
+            suspect("edge", "c1", edge),
+            suspect("past", "c2", edge - 1),
+            suspect("b", "c3", as_of),
+            suspect("a", "c4", as_of),
+        ];
+        assert_eq!(rank_suspects(&inputs, None, as_of, &knobs), ["a", "b"]);
+        let wide = TriageKnobs {
+            max_suspects: 10,
+            ..knobs
+        };
+        assert_eq!(rank_suspects(&inputs, None, as_of, &wide), ["a", "b", "edge"]);
+        assert_eq!(cap_frames(&[1, 2, 3], &knobs), [1, 2]);
+
+        assert_eq!(escalate_severity(Severity::Low, 2, &knobs), Severity::Low);
+        assert_eq!(escalate_severity(Severity::Low, 3, &knobs), Severity::Medium);
+        assert_eq!(escalate_severity(Severity::Medium, 3, &knobs), Severity::High);
+        assert_eq!(escalate_severity(Severity::High, 3, &knobs), Severity::Critical);
+        assert_eq!(
+            escalate_severity(Severity::Critical, 9, &knobs),
+            Severity::Critical
+        );
+
+        let open = |id: &str, repo: &str, symbols: &[&str]| OpenDefect {
+            defect_id: id.into(),
+            repository: repo.into(),
+            suspects: symbols.iter().map(|s| (*s).to_owned()).collect(),
+        };
+        let mine = vec!["a".to_owned(), "b".to_owned()];
+        // overlap exactly 500_000: {a} of {a,b,c} is 1/3 (no), {a,b} of {a,b,c,d} is 1/2.
+        let defects = [
+            open("d9", "r", &["a", "b", "c", "d"]),
+            open("d1", "r", &["a", "b", "c", "d"]),
+            open("d0", "other", &["a", "b"]),
+        ];
+        assert_eq!(find_duplicate("r", &mine, &defects, &knobs).as_deref(), Some("d1"));
+        assert_eq!(find_duplicate("none", &mine, &defects, &knobs), None);
+        assert_eq!(
+            find_duplicate("r", &mine, &[open("d2", "r", &["a", "c", "d"])], &knobs),
+            None
+        );
+        assert_eq!(find_duplicate("r", &[], &[open("d3", "r", &[])], &knobs), None);
     }
 
     // spec: MEDULLA-SDLC-R004.7
