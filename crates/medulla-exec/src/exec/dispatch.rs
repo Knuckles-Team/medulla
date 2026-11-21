@@ -42,6 +42,7 @@ pub(crate) fn is_epistemic_op(op: &Op) -> bool {
             | Op::SupportedBy { .. }
             | Op::Contradicts { .. }
             | Op::EvidenceFor { .. }
+            | Op::EvidenceForEach
     )
 }
 
@@ -126,6 +127,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         // the match stops being exhaustive.
         #[cfg(feature = "epistemic")]
         Op::EvidenceFor { .. }
+        | Op::EvidenceForEach
         | Op::Contradicts { .. }
         | Op::SupportedBy { .. }
         | Op::BeliefAsOf { .. }
@@ -501,6 +503,7 @@ pub(super) fn apply_geo_and_tensor(
 pub(super) fn apply_epistemic(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
     match op {
         Op::EvidenceFor { claim_id } => Ok(evidence_for_op(ctx.view, input, claim_id)),
+        Op::EvidenceForEach => Ok(evidence_for_each_op(ctx.view, input)),
         Op::Contradicts { node_id } => Ok(contradicts_op(ctx.view, input, node_id)),
         Op::SupportedBy { node_id } => Ok(supported_by_op(ctx.view, input, node_id)),
         Op::BeliefAsOf { ts } => Ok(belief_as_of_op(ctx, input, *ts)),

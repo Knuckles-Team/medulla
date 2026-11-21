@@ -2399,6 +2399,36 @@ fn evidence_for_op(view: &GraphView, input: RowSet, claim_id: &str) -> RowSet {
     )
 }
 
+/// `EvidenceForEach` (MEDULLA-CQ-XSRC-R009.6) — for each input row, in input order, the
+/// nodes with an INCOMING `Supports` edge into it, ids of one row sorted by byte order, each
+/// id emitted once. Output rows carry no score; an empty input gives an empty output.
+#[cfg(feature = "epistemic")]
+pub(crate) fn evidence_for_each_op(view: &GraphView, input: RowSet) -> RowSet {
+    if input.is_empty() {
+        return RowSet::new();
+    }
+    let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
+    let mut emitted: HashSet<String> = HashSet::new();
+    let mut ids: Vec<String> = Vec::new();
+    for row in input.rows() {
+        let mut linked: Vec<String> = linked_ids(
+            &bg,
+            &row.id,
+            &[medulla_epistemic::EdgeKind::Supports],
+            EdgeDir::Incoming,
+        )
+        .into_iter()
+        .collect();
+        linked.sort();
+        for id in linked {
+            if emitted.insert(id.clone()) {
+                ids.push(id);
+            }
+        }
+    }
+    RowSet::from_ids(ids)
+}
+
 /// `Contradicts { node_id }` — the nodes with an INCOMING `Contradicts` OR `Attacks` edge
 /// into `node_id` (an attack is a stronger contradiction, so both count,
 /// CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate).

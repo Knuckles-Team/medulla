@@ -430,6 +430,8 @@ pub fn uql_op(op: &Op) -> Printed {
         #[cfg(feature = "epistemic")]
         Op::EvidenceFor { claim_id } => keyword_quoted("EVIDENCE FOR", claim_id),
         #[cfg(feature = "epistemic")]
+        Op::EvidenceForEach => "EVIDENCE EACH".to_string(),
+        #[cfg(feature = "epistemic")]
         Op::Contradicts { node_id } => keyword_quoted("CONTRADICTS", node_id),
         #[cfg(feature = "epistemic")]
         Op::SupportedBy { node_id } => keyword_quoted("SUPPORTED BY", node_id),

@@ -893,6 +893,13 @@ pub enum Op {
     /// lives in medulla-epistemic behind medulla-plan's own `epistemic` gate; this is the wire variant).
     #[cfg(feature = "epistemic")]
     EvidenceFor { claim_id: String },
+    /// TRANSFORM (epistemic, MEDULLA-CQ-XSRC-R009.6) — for each input row, in input
+    /// order, the nodes with an INCOMING `SUPPORTS` edge into that row, each id
+    /// emitted once. An empty input gives an empty output (no seed form). The claim
+    /// an evidence row supports is not carried. Serde form: the string
+    /// `"EvidenceForEach"`. UQL: `EVIDENCE EACH`. Gated by `epistemic`.
+    #[cfg(feature = "epistemic")]
+    EvidenceForEach,
     /// FILTER/SOURCE (epistemic, CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E2) — evidence
     /// AGAINST `node_id`: nodes linked to it by an INCOMING `CONTRADICTS`/`CONTRADICTS_BELIEF`/
     /// `REFUTES` OR `ATTACKS`/`DEFEATS`/`UNDERCUTS` edge (an attack is a stronger contradiction,

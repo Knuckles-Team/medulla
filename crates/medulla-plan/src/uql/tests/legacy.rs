@@ -552,6 +552,22 @@ fn evidence_for_clause_parses() {
     );
 }
 
+// spec: MEDULLA-CQ-XSRC-R009.6
+/// `EVIDENCE EACH` lowers to `Op::EvidenceForEach`; `EVIDENCE FOR EACH` is still a claim id.
+#[cfg(feature = "epistemic")]
+#[test]
+fn evidence_each_lowers_to_evidence_for_each() {
+    let p = parse("MATCH (:Claim) |> EVIDENCE EACH |> LIMIT 5").unwrap();
+    assert_eq!(p.ops[1], Op::EvidenceForEach);
+    let p = parse("MATCH (:Claim) |> EVIDENCE FOR EACH |> LIMIT 5").unwrap();
+    assert_eq!(
+        p.ops[1],
+        Op::EvidenceFor {
+            claim_id: "EACH".into()
+        }
+    );
+}
+
 /// `CONTRADICTS <id>` lowers to `Op::Contradicts`.
 #[cfg(feature = "epistemic")]
 #[test]

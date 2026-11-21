@@ -19669,6 +19669,10 @@ class OpEvidenceFor(BaseModel):
     EvidenceFor: OpEvidenceForBody
 
 
+# `Op::EvidenceForEach` is a unit variant: its serde form is the bare string.
+OpEvidenceForEach = Literal["EvidenceForEach"]
+
+
 class OpEvidenceForBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30225,6 +30229,7 @@ Op = (
     | OpEvents
     | OpProbabilistic
     | OpEvidenceFor
+    | OpEvidenceForEach
     | OpContradicts
     | OpSupportedBy
     | OpBeliefAsOf
@@ -37779,6 +37784,7 @@ __all__ = [
     "OpEventsBody",
     "OpEvidenceFor",
     "OpEvidenceForBody",
+    "OpEvidenceForEach",
     "OpExpand",
     "OpExpandBody",
     "OpExplainBelief",

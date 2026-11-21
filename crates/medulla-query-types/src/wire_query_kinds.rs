@@ -63,6 +63,7 @@ kinds! {
     #[cfg(feature = "timeseries")] Events,
     #[cfg(feature = "probabilistic")] Probabilistic,
     #[cfg(feature = "epistemic")] EvidenceFor,
+    #[cfg(feature = "epistemic")] EvidenceForEach,
     #[cfg(feature = "epistemic")] Contradicts,
     #[cfg(feature = "epistemic")] SupportedBy,
     #[cfg(feature = "epistemic")] BeliefAsOf,
@@ -155,6 +156,8 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::Probabilistic { .. } => OpKind::Probabilistic,
         #[cfg(feature = "epistemic")]
         Op::EvidenceFor { .. } => OpKind::EvidenceFor,
+        #[cfg(feature = "epistemic")]
+        Op::EvidenceForEach => OpKind::EvidenceForEach,
         #[cfg(feature = "epistemic")]
         Op::Contradicts { .. } => OpKind::Contradicts,
         #[cfg(feature = "epistemic")]
@@ -272,7 +275,10 @@ impl OpKind {
             #[cfg(feature = "timeseries")]
             OpKind::Derive | OpKind::Skill | OpKind::Evaluate | OpKind::Motif | OpKind::Events => None,
             #[cfg(feature = "epistemic")]
-            OpKind::EvidenceFor | OpKind::Contradicts | OpKind::SupportedBy => None,
+            OpKind::EvidenceFor
+            | OpKind::EvidenceForEach
+            | OpKind::Contradicts
+            | OpKind::SupportedBy => None,
         }
     }
 
@@ -340,6 +346,7 @@ impl OpKind {
             OpKind::Probabilistic => ProofRole::Unproved,
             #[cfg(feature = "epistemic")]
             OpKind::EvidenceFor
+            | OpKind::EvidenceForEach
             | OpKind::Contradicts
             | OpKind::SupportedBy
             | OpKind::BeliefAsOf

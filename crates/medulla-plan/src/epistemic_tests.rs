@@ -274,3 +274,39 @@ fn belief_as_of_and_valid_as_of_diverge_on_bitemporal_fixture() {
         "BELIEF AS OF @600 must include late_claim (past tx_from=500)"
     );
 }
+
+// spec: MEDULLA-CQ-XSRC-R009.6
+/// `EvidenceForEach` runs once per input row, in input order: the supporting ids of one
+/// row sort by byte order and an id already emitted is not emitted again.
+#[test]
+fn evidence_for_runs_once_per_input_row() {
+    let core = GraphCore::new();
+    for id in ["c1", "c2", "e1", "e2", "e3"] {
+        core.add_node(id.into(), blob(json!({ "type": "Claim" })));
+    }
+    for (from, to) in [("e1", "c1"), ("e2", "c1"), ("e2", "c2"), ("e3", "c2")] {
+        core.add_edge(
+            from.into(),
+            to.into(),
+            blob(json!({ "relationship": "SUPPORTS" })),
+        )
+        .unwrap();
+    }
+    let view = core.analysis_snapshot();
+    let sem = SemanticStore::new();
+    let ctx = PlanCtx::new(&view, &sem);
+    let input = medulla_exec::rowset::RowSet::from_ids(["c2".to_string(), "c1".to_string()]);
+    let out = medulla_exec::exec::apply(&Op::EvidenceForEach, input, &ctx).unwrap();
+    assert_eq!(
+        out.ids(),
+        vec!["e2".to_string(), "e3".to_string(), "e1".to_string()]
+    );
+    // An empty input gives an empty output: there is no seed form.
+    let empty = medulla_exec::exec::apply(
+        &Op::EvidenceForEach,
+        medulla_exec::rowset::RowSet::new(),
+        &ctx,
+    )
+    .unwrap();
+    assert!(empty.ids().is_empty());
+}

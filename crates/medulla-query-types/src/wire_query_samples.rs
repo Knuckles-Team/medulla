@@ -252,6 +252,8 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             claim_id: "c:1".into(),
         },
         #[cfg(feature = "epistemic")]
+        OpKind::EvidenceForEach => Op::EvidenceForEach,
+        #[cfg(feature = "epistemic")]
         OpKind::Contradicts => Op::Contradicts {
             node_id: "c1".into(),
         },

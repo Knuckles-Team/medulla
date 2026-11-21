@@ -765,6 +765,7 @@ impl SchemaContext {
             Op::Cep { .. } => Ok((op.clone(), Scope::AnyLocal)),
             #[cfg(feature = "epistemic")]
             Op::EvidenceFor { .. }
+            | Op::EvidenceForEach
             | Op::Contradicts { .. }
             | Op::SupportedBy { .. }
             | Op::ExplainBelief { .. } => Ok((op.clone(), Scope::AnyLocal)),

@@ -409,6 +409,7 @@ mod epistemic_tests {
             Op::EvidenceFor {
                 claim_id: "c1".into(),
             },
+            Op::EvidenceForEach,
             Op::Contradicts {
                 node_id: "c1".into(),
             },

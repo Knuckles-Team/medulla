@@ -178,8 +178,12 @@ impl<'a> Parser<'a> {
     }
 
     gated! { "epistemic",
-        /// `EVIDENCE FOR id`.
+        /// `EVIDENCE FOR id` or `EVIDENCE EACH`. The per-row form drops `FOR`, so a
+        /// claim whose id is `EACH` is still reached as `EVIDENCE FOR EACH`.
         fn evidence_for(&mut self) -> Result<Op, UqlError> {
+            if self.eat_kw("EACH") {
+                return Ok(Op::EvidenceForEach);
+            }
             self.expect_kw("FOR")?;
             Ok(Op::EvidenceFor {
                 claim_id: self.id("a claim id")?,
