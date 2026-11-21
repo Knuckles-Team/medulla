@@ -25,7 +25,11 @@ const MAX_CURSOR_CHARS: usize = 256;
 ///
 /// Refusals: `INTROSPECT_LIMIT_INVALID` for a limit of 0 or over 500 and
 /// `INTROSPECT_CURSOR_INVALID` for a cursor that is not a key of the section.
-pub fn handle(req_id: u64, method: Method) -> Response {
+pub async fn handle(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    req_id: u64,
+    method: Method,
+) -> Response {
     let Method::Introspect {
         section,
         limit,
@@ -57,7 +61,8 @@ pub fn handle(req_id: u64, method: Method) -> Response {
             );
         }
     }
-    match read_section(section, limit, cursor.as_deref()) {
+    let text_space = bound_text_space(state).await;
+    match read_section(section, limit, cursor.as_deref(), text_space) {
         Ok(page) => Response::ok(
             req_id,
             ResultPayload::of::<medulla_protocol_types::result_contract::security::Introspect>(
@@ -72,12 +77,13 @@ fn read_section(
     section: IntrospectSection,
     limit: usize,
     cursor: Option<&str>,
+    text_space: Option<(String, usize)>,
 ) -> Result<IntrospectPage, String> {
     match section {
         IntrospectSection::Tasks => tasks_page(limit, cursor),
         IntrospectSection::Readiness => Ok(readiness_page(limit, cursor)),
         IntrospectSection::Build => Ok(build_page(cursor)),
-        IntrospectSection::Indexes => Ok(indexes_page(cursor)),
+        IntrospectSection::Indexes => Ok(indexes_page(cursor, text_space)),
         IntrospectSection::Startup => Ok(startup_page(limit, cursor)),
         IntrospectSection::Requests => requests_page(limit, cursor),
         IntrospectSection::Locks => Ok(locks_page(limit, cursor)),
@@ -216,12 +222,12 @@ fn build_page(cursor: Option<&str>) -> IntrospectPage {
 /// The `indexes` section: one row per engine-maintained semantic index, key ascending. The
 /// bookmark index needs a bound text embedder; with none, its row says so
 /// (MEDULLA-MEDIA-VOCAB-R001.102.2), so authoring nothing is never silent.
-fn indexes_page(cursor: Option<&str>) -> IntrospectPage {
+fn indexes_page(cursor: Option<&str>, text_space: Option<(String, usize)>) -> IntrospectPage {
     const KEY: &str = "bookmark_index";
     let rows = if cursor.is_some_and(|last| last >= KEY) {
         Vec::new()
     } else {
-        let row = match bound_text_space() {
+        let row = match text_space {
             Some((space_id, dimensions)) => json!({
                 "key": KEY,
                 "state": "bound",
@@ -247,16 +253,25 @@ fn indexes_page(cursor: Option<&str>) -> IntrospectPage {
     }
 }
 
-/// The space id and width of the bound text embedder, or `None` when none is bound.
+/// The space id and width of the text embedder this state serves with, or `None` when none is
+/// bound. It resolves through the same identity as binding authoring: the state's injected
+/// embedder first, then the process-wide one (MEDULLA-MEDIA-VOCAB-R001.102.2).
 #[cfg(feature = "query")]
-fn bound_text_space() -> Option<(String, usize)> {
-    medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity()
-        .map(|identity| (identity.space_id, identity.dimensions))
+async fn bound_text_space(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+) -> Option<(String, usize)> {
+    let state_embedder = state.read().await.text_embedder_override.clone();
+    medulla_server_ops::api::query_txn::query_support::state_text_encoder_identity(
+        state_embedder.as_ref(),
+    )
+    .map(|identity| (identity.space_id, identity.dimensions))
 }
 
 /// Without the `query` feature no text embedder can be bound.
 #[cfg(not(feature = "query"))]
-fn bound_text_space() -> Option<(String, usize)> {
+async fn bound_text_space(
+    _state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+) -> Option<(String, usize)> {
     None
 }
 

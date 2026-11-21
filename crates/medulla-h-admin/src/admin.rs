@@ -81,7 +81,7 @@ pub async fn try_handle(
 ) -> Result<Response, Method> {
     match method {
         Method::DescribeContract { .. } => Ok(describe_contract::handle(req_id, method)),
-        Method::Introspect { .. } => Ok(introspect::handle(req_id, method)),
+        Method::Introspect { .. } => Ok(introspect::handle(_state, req_id, method).await),
         Method::Reshard { .. }
         | Method::CatalogAssign { .. }
         | Method::CatalogReassign { .. }
