@@ -284,7 +284,9 @@ impl Search<'_> {
                     gap,
                 };
                 let key = |g: &Group| (g.gap, g.residual.abs());
-                let ordering = best.as_ref().map(|current| key(&candidate).cmp(&key(current)));
+                let ordering = best
+                    .as_ref()
+                    .map(|current| key(&candidate).cmp(&key(current)));
                 match ordering {
                     None | Some(std::cmp::Ordering::Less) => {
                         tied = None;
@@ -342,7 +344,9 @@ fn link(
             (rights, lefts, &mut right_free, &mut left_free)
         };
         let mut order: Vec<usize> = anchor_free.iter().copied().collect();
-        order.sort_by(|&a, &b| (anchors[a].day, &anchors[a].id).cmp(&(anchors[b].day, &anchors[b].id)));
+        order.sort_by(|&a, &b| {
+            (anchors[a].day, &anchors[a].id).cmp(&(anchors[b].day, &anchors[b].id))
+        });
         for anchor_index in order {
             let anchor = &anchors[anchor_index];
             let mut pool: Vec<usize> = pool_free
@@ -360,7 +364,8 @@ fn link(
             });
             pool.truncate(MAX_POOL);
             let candidates: Vec<&Item> = pool.iter().map(|&i| &pool_items[i]).collect();
-            let Some((group, tied)) = search.best_group(anchor, anchor_is_left, &candidates)? else {
+            let Some((group, tied)) = search.best_group(anchor, anchor_is_left, &candidates)?
+            else {
                 continue;
             };
             let members: Vec<usize> = group.members.iter().map(|&i| pool[i]).collect();
@@ -368,8 +373,10 @@ fn link(
                 members.iter().map(|&i| pool_items[i].id.clone()).collect();
             member_ids.sort();
             if let Some(other) = tied {
-                let mut other_ids: Vec<String> =
-                    other.iter().map(|&i| pool_items[pool[i]].id.clone()).collect();
+                let mut other_ids: Vec<String> = other
+                    .iter()
+                    .map(|&i| pool_items[pool[i]].id.clone())
+                    .collect();
                 other_ids.sort();
                 out.ties.push(Tie {
                     kind,
@@ -411,7 +418,10 @@ fn link(
         if in_currency.is_empty() {
             return Reason::CurrencyMismatch;
         }
-        if in_currency.iter().all(|o| (o.day - item.day).abs() > window) {
+        if in_currency
+            .iter()
+            .all(|o| (o.day - item.day).abs() > window)
+        {
             return Reason::OutsideWindow;
         }
         Reason::NoMatchWithinTolerance
@@ -477,15 +487,26 @@ pub fn match_sets(
     let mut refunded: BTreeMap<&str, i128> = BTreeMap::new();
     for refund in &sets.refunds {
         *refunded.entry(refund.payment_id.as_str()).or_default() += i128::from(refund.amount);
-        trace.inputs.push(InputRef::new(refund.id.clone(), refund.revision));
+        trace
+            .inputs
+            .push(InputRef::new(refund.id.clone(), refund.revision));
     }
     let mut fees: BTreeMap<&str, i128> = BTreeMap::new();
     for fee in &sets.fees {
         *fees.entry(fee.payout_id.as_str()).or_default() += i128::from(fee.amount);
-        trace.inputs.push(InputRef::new(fee.id.clone(), fee.revision));
+        trace
+            .inputs
+            .push(InputRef::new(fee.id.clone(), fee.revision));
     }
-    for node in sets.orders.iter().chain(&sets.payments).chain(&sets.payouts) {
-        trace.inputs.push(InputRef::new(node.id.clone(), node.revision));
+    for node in sets
+        .orders
+        .iter()
+        .chain(&sets.payments)
+        .chain(&sets.payouts)
+    {
+        trace
+            .inputs
+            .push(InputRef::new(node.id.clone(), node.revision));
     }
     trace.inputs.sort();
     trace.inputs.dedup();
@@ -526,7 +547,12 @@ pub fn match_sets(
     ));
     let mut search = Search { params, work: 0 };
     let first = link(MatchKind::OrderPayment, &orders, &net_payments, &mut search)?;
-    let second = link(MatchKind::PaymentPayout, &net_payments, &payouts, &mut search)?;
+    let second = link(
+        MatchKind::PaymentPayout,
+        &net_payments,
+        &payouts,
+        &mut search,
+    )?;
     trace.step(format!(
         "{} order matches, {} payout matches, {} group candidates tried",
         first.matches.len(),
@@ -634,12 +660,18 @@ mod tests {
         assert!(orders
             .iter()
             .any(|m| m.left == ids(&["order:3"]) && m.right == ids(&["pay:3"])));
-        assert!(result.unmatched.iter().any(|u| u.kind == MatchKind::OrderPayment
-            && u.id == "order:2"
-            && u.reason == Reason::NoMatchWithinTolerance));
-        assert!(result.unmatched.iter().any(|u| u.kind == MatchKind::OrderPayment
-            && u.id == "pay:2"
-            && u.reason == Reason::NoMatchWithinTolerance));
+        assert!(result
+            .unmatched
+            .iter()
+            .any(|u| u.kind == MatchKind::OrderPayment
+                && u.id == "order:2"
+                && u.reason == Reason::NoMatchWithinTolerance));
+        assert!(result
+            .unmatched
+            .iter()
+            .any(|u| u.kind == MatchKind::OrderPayment
+                && u.id == "pay:2"
+                && u.reason == Reason::NoMatchWithinTolerance));
 
         // Every node read is an input with its revision.
         for id in ["order:1", "pay:2", "payout:1", "refund:1", "fee:1"] {
@@ -652,10 +684,16 @@ mod tests {
 
         // A tolerance of zero leaves the payout unmatched, in its own reason.
         let strict = match_sets(&sets, &params(0, 5), trace()).unwrap();
-        assert!(strict.matches.iter().all(|m| m.kind != MatchKind::PaymentPayout));
-        assert!(strict.unmatched.iter().any(|u| u.kind == MatchKind::PaymentPayout
-            && u.id == "payout:1"
-            && u.reason == Reason::NoMatchWithinTolerance));
+        assert!(strict
+            .matches
+            .iter()
+            .all(|m| m.kind != MatchKind::PaymentPayout));
+        assert!(strict
+            .unmatched
+            .iter()
+            .any(|u| u.kind == MatchKind::PaymentPayout
+                && u.id == "payout:1"
+                && u.reason == Reason::NoMatchWithinTolerance));
 
         // The same inputs give the same result.
         assert_eq!(match_sets(&sets, &params(1, 5), trace()).unwrap(), result);

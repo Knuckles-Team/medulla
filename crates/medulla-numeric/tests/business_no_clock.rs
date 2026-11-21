@@ -33,7 +33,10 @@ const BANNED_FRAGMENTS: &[&str] = &["std::time", "::now(", ".elapsed(", "time::O
 fn business_sources() -> Vec<(String, String)> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/business");
     let mut files = Vec::new();
-    for entry in std::fs::read_dir(&dir).expect("src/business exists").flatten() {
+    for entry in std::fs::read_dir(&dir)
+        .expect("src/business exists")
+        .flatten()
+    {
         let path = entry.path();
         if path.extension().is_some_and(|ext| ext == "rs") {
             let text = std::fs::read_to_string(&path).expect("a business source reads");
@@ -92,7 +95,10 @@ fn business_module_has_no_clock_or_random() {
 /// The scan itself catches a planted clock read and a planted random source.
 #[test]
 fn the_scan_finds_a_planted_clock_and_a_planted_random_source() {
-    let planted = ["let t = std::time::SystemTime::now();", "let r = thread_rng();"];
+    let planted = [
+        "let t = std::time::SystemTime::now();",
+        "let r = thread_rng();",
+    ];
     let mut hits = 0;
     for line in planted {
         let code = line.split("//").next().unwrap_or_default();

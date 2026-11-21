@@ -142,7 +142,9 @@ fn collect_metrics<'a>(
     names: &mut Vec<&'a str>,
 ) -> Result<(), RuleRefusal> {
     if depth > MAX_DEPTH {
-        return Err(not_valid(format!("the expression is deeper than {MAX_DEPTH}")));
+        return Err(not_valid(format!(
+            "the expression is deeper than {MAX_DEPTH}"
+        )));
     }
     match expr {
         Expr::Compare { metric, .. } => names.push(metric),
@@ -208,12 +210,12 @@ fn compute(
 }
 
 fn decide(expr: &Expr, values: &BTreeMap<&str, Option<i64>>) -> Applies {
-    let check = |metric: &str, test: &dyn Fn(i64) -> bool| match values.get(metric).copied().flatten()
-    {
-        None => Applies::Unknown,
-        Some(value) if test(value) => Applies::Yes,
-        Some(_) => Applies::No,
-    };
+    let check =
+        |metric: &str, test: &dyn Fn(i64) -> bool| match values.get(metric).copied().flatten() {
+            None => Applies::Unknown,
+            Some(value) if test(value) => Applies::Yes,
+            Some(_) => Applies::No,
+        };
     match expr {
         Expr::Compare { metric, op, value } => check(metric, &|v| match op {
             Comparison::Less => v < *value,
@@ -347,10 +349,7 @@ mod tests {
         assert_eq!(result.metrics.len(), 1);
         assert_eq!(result.metrics[0].value, Some(11_500_000));
         assert_eq!(result.metrics[0].nodes, ["pay:1", "pay:2"]);
-        assert!(result
-            .trace
-            .inputs
-            .contains(&InputRef::new("pay:1", 1)));
+        assert!(result.trace.inputs.contains(&InputRef::new("pay:1", 1)));
         assert!(result.trace.inputs.contains(&InputRef::new("rule:t1", 1)));
         assert!(!result
             .trace
@@ -361,7 +360,9 @@ mod tests {
         // A higher threshold gates it out.
         let high = compare("revenue", Comparison::GreaterOrEqual, 12_000_000);
         assert_eq!(
-            applies(&high, &metrics, &points, 365, as_of, trace()).unwrap().applies,
+            applies(&high, &metrics, &points, 365, as_of, trace())
+                .unwrap()
+                .applies,
             Applies::No
         );
 
@@ -379,7 +380,11 @@ mod tests {
         let yes = gate.clone();
         let no = high.clone();
         let unknown = orders.clone();
-        let check = |expr: Expr| applies(&expr, &metrics, &points, 365, as_of, trace()).unwrap().applies;
+        let check = |expr: Expr| {
+            applies(&expr, &metrics, &points, 365, as_of, trace())
+                .unwrap()
+                .applies
+        };
         assert_eq!(check(and(no.clone(), unknown.clone())), Applies::No);
         assert_eq!(check(and(yes.clone(), unknown.clone())), Applies::Unknown);
         assert_eq!(check(and(yes.clone(), yes.clone())), Applies::Yes);
@@ -412,11 +417,15 @@ mod tests {
         let gate = compare("revenue", Comparison::Greater, 1);
         let undefined = compare("profit", Comparison::Greater, 1);
         assert_eq!(
-            applies(&undefined, &metrics, &[], 30, 100, trace()).unwrap_err().code,
+            applies(&undefined, &metrics, &[], 30, 100, trace())
+                .unwrap_err()
+                .code,
             THRESHOLD_METRIC_UNDEFINED
         );
         assert_eq!(
-            applies(&gate, &metrics, &[], 0, 100, trace()).unwrap_err().code,
+            applies(&gate, &metrics, &[], 0, 100, trace())
+                .unwrap_err()
+                .code,
             THRESHOLD_EXPRESSION_INVALID
         );
         let empty = Expr::Between {
@@ -425,7 +434,9 @@ mod tests {
             high: 1,
         };
         assert_eq!(
-            applies(&empty, &metrics, &[], 30, 100, trace()).unwrap_err().code,
+            applies(&empty, &metrics, &[], 30, 100, trace())
+                .unwrap_err()
+                .code,
             THRESHOLD_EXPRESSION_INVALID
         );
         let overflow = [
@@ -433,7 +444,9 @@ mod tests {
             point("b", "payments", 99, 1),
         ];
         assert_eq!(
-            applies(&gate, &metrics, &overflow, 30, 100, trace()).unwrap_err().code,
+            applies(&gate, &metrics, &overflow, 30, 100, trace())
+                .unwrap_err()
+                .code,
             THRESHOLD_OVERFLOW
         );
         let mut deep = gate.clone();
@@ -441,7 +454,9 @@ mod tests {
             deep = Expr::And(Box::new(deep), Box::new(gate.clone()));
         }
         assert_eq!(
-            applies(&deep, &metrics, &[], 30, 100, trace()).unwrap_err().code,
+            applies(&deep, &metrics, &[], 30, 100, trace())
+                .unwrap_err()
+                .code,
             THRESHOLD_EXPRESSION_INVALID
         );
     }

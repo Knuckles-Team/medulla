@@ -75,65 +75,68 @@ pub const OBLIGATION_GUARD_DUE_DATE_PASSED: &str = "DueDatePassed";
 
 /// `ObligationInstanceMachine`: the closed edge table. Every other pair of state and
 /// event is refused.
-pub static OBLIGATION_INSTANCE_MACHINE: MachineDef<ObligationStatus, ObligationEvent, &'static str> =
-    MachineDef {
-        name: "ObligationInstanceMachine",
-        states: &[
-            ObligationStatus::Open,
-            ObligationStatus::Satisfied,
-            ObligationStatus::Waived,
-            ObligationStatus::Overdue,
-        ],
-        initial: ObligationStatus::Open,
-        terminals: &[ObligationStatus::Satisfied, ObligationStatus::Waived],
-        events: &[
-            ObligationEvent::Satisfy,
-            ObligationEvent::Waive,
-            ObligationEvent::MarkOverdue,
-        ],
-        guards: &[
-            OBLIGATION_GUARD_EVIDENCE_RECORDED,
-            OBLIGATION_GUARD_WAIVER_RECORDED,
-            OBLIGATION_GUARD_DUE_DATE_PASSED,
-        ],
-        edges: &[
-            Edge {
-                id: "O01",
-                from: ObligationStatus::Open,
-                event: ObligationEvent::Satisfy,
-                guard: Some(OBLIGATION_GUARD_EVIDENCE_RECORDED),
-                to: ObligationStatus::Satisfied,
-            },
-            Edge {
-                id: "O02",
-                from: ObligationStatus::Open,
-                event: ObligationEvent::Waive,
-                guard: Some(OBLIGATION_GUARD_WAIVER_RECORDED),
-                to: ObligationStatus::Waived,
-            },
-            Edge {
-                id: "O03",
-                from: ObligationStatus::Open,
-                event: ObligationEvent::MarkOverdue,
-                guard: Some(OBLIGATION_GUARD_DUE_DATE_PASSED),
-                to: ObligationStatus::Overdue,
-            },
-            Edge {
-                id: "O04",
-                from: ObligationStatus::Overdue,
-                event: ObligationEvent::Satisfy,
-                guard: Some(OBLIGATION_GUARD_EVIDENCE_RECORDED),
-                to: ObligationStatus::Satisfied,
-            },
-            Edge {
-                id: "O05",
-                from: ObligationStatus::Overdue,
-                event: ObligationEvent::Waive,
-                guard: Some(OBLIGATION_GUARD_WAIVER_RECORDED),
-                to: ObligationStatus::Waived,
-            },
-        ],
-    };
+pub static OBLIGATION_INSTANCE_MACHINE: MachineDef<
+    ObligationStatus,
+    ObligationEvent,
+    &'static str,
+> = MachineDef {
+    name: "ObligationInstanceMachine",
+    states: &[
+        ObligationStatus::Open,
+        ObligationStatus::Satisfied,
+        ObligationStatus::Waived,
+        ObligationStatus::Overdue,
+    ],
+    initial: ObligationStatus::Open,
+    terminals: &[ObligationStatus::Satisfied, ObligationStatus::Waived],
+    events: &[
+        ObligationEvent::Satisfy,
+        ObligationEvent::Waive,
+        ObligationEvent::MarkOverdue,
+    ],
+    guards: &[
+        OBLIGATION_GUARD_EVIDENCE_RECORDED,
+        OBLIGATION_GUARD_WAIVER_RECORDED,
+        OBLIGATION_GUARD_DUE_DATE_PASSED,
+    ],
+    edges: &[
+        Edge {
+            id: "O01",
+            from: ObligationStatus::Open,
+            event: ObligationEvent::Satisfy,
+            guard: Some(OBLIGATION_GUARD_EVIDENCE_RECORDED),
+            to: ObligationStatus::Satisfied,
+        },
+        Edge {
+            id: "O02",
+            from: ObligationStatus::Open,
+            event: ObligationEvent::Waive,
+            guard: Some(OBLIGATION_GUARD_WAIVER_RECORDED),
+            to: ObligationStatus::Waived,
+        },
+        Edge {
+            id: "O03",
+            from: ObligationStatus::Open,
+            event: ObligationEvent::MarkOverdue,
+            guard: Some(OBLIGATION_GUARD_DUE_DATE_PASSED),
+            to: ObligationStatus::Overdue,
+        },
+        Edge {
+            id: "O04",
+            from: ObligationStatus::Overdue,
+            event: ObligationEvent::Satisfy,
+            guard: Some(OBLIGATION_GUARD_EVIDENCE_RECORDED),
+            to: ObligationStatus::Satisfied,
+        },
+        Edge {
+            id: "O05",
+            from: ObligationStatus::Overdue,
+            event: ObligationEvent::Waive,
+            guard: Some(OBLIGATION_GUARD_WAIVER_RECORDED),
+            to: ObligationStatus::Waived,
+        },
+    ],
+};
 
 /// The obligation instance machine: its one transition function.
 pub struct ObligationInstanceMachine;
@@ -146,12 +149,17 @@ impl ObligationInstanceMachine {
         event: ObligationEvent,
         facts: ObligationFacts,
     ) -> Result<ObligationStatus, TransitionRefused> {
-        transition(&OBLIGATION_INSTANCE_MACHINE, status, event, |guard| match guard {
-            OBLIGATION_GUARD_EVIDENCE_RECORDED => facts.evidence_recorded,
-            OBLIGATION_GUARD_WAIVER_RECORDED => facts.waiver_recorded,
-            OBLIGATION_GUARD_DUE_DATE_PASSED => facts.due_date_passed,
-            _ => false,
-        })
+        transition(
+            &OBLIGATION_INSTANCE_MACHINE,
+            status,
+            event,
+            |guard| match guard {
+                OBLIGATION_GUARD_EVIDENCE_RECORDED => facts.evidence_recorded,
+                OBLIGATION_GUARD_WAIVER_RECORDED => facts.waiver_recorded,
+                OBLIGATION_GUARD_DUE_DATE_PASSED => facts.due_date_passed,
+                _ => false,
+            },
+        )
         .map(|edge| edge.to)
     }
 }

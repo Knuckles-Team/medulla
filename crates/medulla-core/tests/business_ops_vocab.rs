@@ -142,10 +142,11 @@ fn profile_and_governance_terms_with_shapes() {
          :approvalCeilingMinor 500.5 ; :approvalCurrency \"USD\" .\n",
     );
     assert!(!ok, "a non-integer ceiling is refused");
-    assert!(paths.iter().any(|path| path.ends_with("approvalCeilingMinor>")));
-    let (ok, paths) = conforms(
-        "ex:r a :ApprovalRule ; rdfs:label \"Refunds\" ; :approvalCeilingMinor 500 .\n",
-    );
+    assert!(paths
+        .iter()
+        .any(|path| path.ends_with("approvalCeilingMinor>")));
+    let (ok, paths) =
+        conforms("ex:r a :ApprovalRule ; rdfs:label \"Refunds\" ; :approvalCeilingMinor 500 .\n");
     assert!(!ok, "a rule with no currency is refused");
     assert!(paths.iter().any(|path| path.ends_with("approvalCurrency>")));
 }
@@ -175,9 +176,8 @@ fn money_terms_refuse_floats_and_overrefunds() {
     assert_eq!(conforms(good), (true, Vec::new()));
 
     // A float literal on an amount property is refused.
-    let (ok, paths) = conforms(
-        "ex:pay a :Payment ; :amountMinor 41.58 ; :amountCurrency \"USD\" .\n",
-    );
+    let (ok, paths) =
+        conforms("ex:pay a :Payment ; :amountMinor 41.58 ; :amountCurrency \"USD\" .\n");
     assert!(!ok, "a float amount is refused");
     assert!(paths.iter().any(|path| path.ends_with("amountMinor>")));
     let (ok, _) = conforms("ex:line a :OrderLine ; :unitPriceMinor 19.99 .\n");
@@ -188,9 +188,7 @@ fn money_terms_refuse_floats_and_overrefunds() {
     assert!(!ok, "an amount without a currency is refused");
 
     // A refund with no payment is refused.
-    let (ok, paths) = conforms(
-        "ex:ref a :Refund ; :amountMinor 100 ; :amountCurrency \"USD\" .\n",
-    );
+    let (ok, paths) = conforms("ex:ref a :Refund ; :amountMinor 100 ; :amountCurrency \"USD\" .\n");
     assert!(!ok, "a refund without a payment is refused");
     assert!(paths.iter().any(|path| path.ends_with("refundOf>")));
 
@@ -208,7 +206,12 @@ fn money_terms_refuse_floats_and_overrefunds() {
 #[test]
 fn procurement_terms_reuse_commercial_and_supply_chain() {
     let triples = triples();
-    for class in ["PurchaseOrderLine", "GoodsReceipt", "StockLevel", "ReorderPolicy"] {
+    for class in [
+        "PurchaseOrderLine",
+        "GoodsReceipt",
+        "StockLevel",
+        "ReorderPolicy",
+    ] {
         assert_class(&triples, class);
     }
     // Reuse: the classes of the commercial and supply-chain modules are declared there
@@ -257,9 +260,7 @@ fn obligation_terms_and_instance_state_machine() {
         ObligationEvent, ObligationFacts, ObligationInstanceMachine, ObligationStatus,
         OBLIGATION_INSTANCE_MACHINE,
     };
-    use medulla_types::transition_refused::{
-        MachineEvent, MachineState, TransitionRefusalReason,
-    };
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     let triples = triples();
     for class in [
@@ -300,13 +301,33 @@ fn obligation_terms_and_instance_state_machine() {
     };
     use ObligationEvent::{MarkOverdue, Satisfy, Waive};
     use ObligationStatus::{Open, Overdue, Satisfied, Waived};
-    assert_eq!(ObligationInstanceMachine::apply(Open, Satisfy, all), Ok(Satisfied));
-    assert_eq!(ObligationInstanceMachine::apply(Open, Waive, all), Ok(Waived));
-    assert_eq!(ObligationInstanceMachine::apply(Open, MarkOverdue, all), Ok(Overdue));
-    assert_eq!(ObligationInstanceMachine::apply(Overdue, Satisfy, all), Ok(Satisfied));
-    assert_eq!(ObligationInstanceMachine::apply(Overdue, Waive, all), Ok(Waived));
+    assert_eq!(
+        ObligationInstanceMachine::apply(Open, Satisfy, all),
+        Ok(Satisfied)
+    );
+    assert_eq!(
+        ObligationInstanceMachine::apply(Open, Waive, all),
+        Ok(Waived)
+    );
+    assert_eq!(
+        ObligationInstanceMachine::apply(Open, MarkOverdue, all),
+        Ok(Overdue)
+    );
+    assert_eq!(
+        ObligationInstanceMachine::apply(Overdue, Satisfy, all),
+        Ok(Satisfied)
+    );
+    assert_eq!(
+        ObligationInstanceMachine::apply(Overdue, Waive, all),
+        Ok(Waived)
+    );
     // A guard that does not hold refuses.
-    for (from, event) in [(Open, Satisfy), (Open, Waive), (Open, MarkOverdue), (Overdue, Satisfy)] {
+    for (from, event) in [
+        (Open, Satisfy),
+        (Open, Waive),
+        (Open, MarkOverdue),
+        (Overdue, Satisfy),
+    ] {
         let refused =
             ObligationInstanceMachine::apply(from, event, ObligationFacts::default()).unwrap_err();
         assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
@@ -497,13 +518,33 @@ fn approval_gate_deploy_incident_terms_with_shapes() {
         approver_holds_role: true,
         quorum_met: true,
     };
-    assert_eq!(ApprovalRequestMachine::apply(Pending, Approve, all), Ok(Approved));
-    assert_eq!(ApprovalRequestMachine::apply(Pending, Reject, all), Ok(Rejected));
-    assert_eq!(ApprovalRequestMachine::apply(Pending, Defer, all), Ok(Deferred));
-    assert_eq!(ApprovalRequestMachine::apply(Deferred, Approve, all), Ok(Approved));
-    assert_eq!(ApprovalRequestMachine::apply(Deferred, Reject, all), Ok(Rejected));
+    assert_eq!(
+        ApprovalRequestMachine::apply(Pending, Approve, all),
+        Ok(Approved)
+    );
+    assert_eq!(
+        ApprovalRequestMachine::apply(Pending, Reject, all),
+        Ok(Rejected)
+    );
+    assert_eq!(
+        ApprovalRequestMachine::apply(Pending, Defer, all),
+        Ok(Deferred)
+    );
+    assert_eq!(
+        ApprovalRequestMachine::apply(Deferred, Approve, all),
+        Ok(Approved)
+    );
+    assert_eq!(
+        ApprovalRequestMachine::apply(Deferred, Reject, all),
+        Ok(Rejected)
+    );
     let none = ApprovalFacts::default();
-    for (from, event) in [(Pending, Approve), (Pending, Reject), (Pending, Defer), (Deferred, Approve)] {
+    for (from, event) in [
+        (Pending, Approve),
+        (Pending, Reject),
+        (Pending, Defer),
+        (Deferred, Approve),
+    ] {
         let refused = ApprovalRequestMachine::apply(from, event, none).unwrap_err();
         assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
     }

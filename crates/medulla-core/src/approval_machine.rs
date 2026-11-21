@@ -140,11 +140,16 @@ impl ApprovalRequestMachine {
         event: ApprovalEvent,
         facts: ApprovalFacts,
     ) -> Result<ApprovalStatus, TransitionRefused> {
-        transition(&APPROVAL_REQUEST_MACHINE, status, event, |guard| match guard {
-            APPROVAL_GUARD_APPROVER_HOLDS_ROLE => facts.approver_holds_role,
-            APPROVAL_GUARD_QUORUM_MET => facts.quorum_met,
-            _ => false,
-        })
+        transition(
+            &APPROVAL_REQUEST_MACHINE,
+            status,
+            event,
+            |guard| match guard {
+                APPROVAL_GUARD_APPROVER_HOLDS_ROLE => facts.approver_holds_role,
+                APPROVAL_GUARD_QUORUM_MET => facts.quorum_met,
+                _ => false,
+            },
+        )
         .map(|edge| edge.to)
     }
 }
@@ -152,7 +157,11 @@ impl ApprovalRequestMachine {
 impl StateMachineApply for ApprovalStatus {
     type Event = ApprovalEvent;
     type Facts = ApprovalFacts;
-    fn apply(&self, event: ApprovalEvent, facts: &ApprovalFacts) -> Result<Self, TransitionRefused> {
+    fn apply(
+        &self,
+        event: ApprovalEvent,
+        facts: &ApprovalFacts,
+    ) -> Result<Self, TransitionRefused> {
         ApprovalRequestMachine::apply(*self, event, *facts)
     }
 }

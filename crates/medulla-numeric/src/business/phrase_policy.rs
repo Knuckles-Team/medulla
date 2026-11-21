@@ -223,10 +223,15 @@ fn find(sentence: &str, phrase: &Phrase) -> Vec<(usize, usize)> {
 }
 
 fn sentences(text: &str) -> Vec<String> {
-    text.split(|c: char| matches!(c, '.' | '!' | '?' | '\n' | '\u{3002}' | '\u{FF01}' | '\u{FF1F}'))
-        .map(normalize)
-        .filter(|sentence| !sentence.is_empty())
-        .collect()
+    text.split(|c: char| {
+        matches!(
+            c,
+            '.' | '!' | '?' | '\n' | '\u{3002}' | '\u{FF01}' | '\u{FF1F}'
+        )
+    })
+    .map(normalize)
+    .filter(|sentence| !sentence.is_empty())
+    .collect()
 }
 
 /// Check `text` in `locale` against `policy`. `trace` carries the rule digest and the policy
@@ -240,7 +245,10 @@ pub fn check_text(
     if text.len() > MAX_TEXT_BYTES {
         return Err(RuleRefusal::new(
             PHRASE_TEXT_TOO_LARGE,
-            format!("the text holds {} bytes; the ceiling is {MAX_TEXT_BYTES}", text.len()),
+            format!(
+                "the text holds {} bytes; the ceiling is {MAX_TEXT_BYTES}",
+                text.len()
+            ),
         ));
     }
     if policy.forbidden.len() + policy.approved.len() > MAX_PHRASES
@@ -287,11 +295,16 @@ pub fn check_text(
                 });
             }
         }
-        if !approved.iter().any(|phrase| !find(claim, phrase).is_empty()) {
+        if !approved
+            .iter()
+            .any(|phrase| !find(claim, phrase).is_empty())
+        {
             unmatched.push(claim.clone());
         }
     }
-    spans.sort_by(|a, b| (a.sentence, a.start, a.end, &a.phrase).cmp(&(b.sentence, b.start, b.end, &b.phrase)));
+    spans.sort_by(|a, b| {
+        (a.sentence, a.start, a.end, &a.phrase).cmp(&(b.sentence, b.start, b.end, &b.phrase))
+    });
     let verdict = if !spans.is_empty() {
         unmatched.clear();
         Verdict::Fail
@@ -372,13 +385,7 @@ mod tests {
         );
 
         // Full-width letters fold to ordinary width.
-        let wide = check_text(
-            "\u{FF33}upports healthy skin",
-            "en",
-            &policy(),
-            trace(),
-        )
-        .unwrap();
+        let wide = check_text("\u{FF33}upports healthy skin", "en", &policy(), trace()).unwrap();
         assert_eq!(wide.verdict, Verdict::Pass);
 
         // A claim that is neither approved nor forbidden needs review and is listed.
@@ -416,7 +423,13 @@ mod tests {
         assert!(forbidden.unmatched.is_empty());
 
         // Word mode is bounded by non-letters: "guaranteedly" is not the word.
-        let bounded = check_text("Supports healthy skin guaranteedly.", "en", &policy(), trace()).unwrap();
+        let bounded = check_text(
+            "Supports healthy skin guaranteedly.",
+            "en",
+            &policy(),
+            trace(),
+        )
+        .unwrap();
         assert!(bounded.forbidden.is_empty());
 
         // Stem mode matches word forms: "whitening" and "whitens" are "whiten".
@@ -444,7 +457,9 @@ mod tests {
         assert_eq!(Mode::parse("stem"), Ok(Mode::Stem));
         let too_big = "a".repeat(MAX_TEXT_BYTES + 1);
         assert_eq!(
-            check_text(&too_big, "en", &policy(), trace()).unwrap_err().code,
+            check_text(&too_big, "en", &policy(), trace())
+                .unwrap_err()
+                .code,
             PHRASE_TEXT_TOO_LARGE
         );
         let mut blank = policy();

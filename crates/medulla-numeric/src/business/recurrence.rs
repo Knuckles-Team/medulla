@@ -325,7 +325,8 @@ fn scheduled(rule: &RecurrenceRule, index: i64) -> Option<Date> {
                 Frequency::Quarterly => 3,
                 _ => 12,
             };
-            let total = i64::from(year) * 12 + i64::from(month) - 1 + index * interval * months_per_period;
+            let total =
+                i64::from(year) * 12 + i64::from(month) - 1 + index * interval * months_per_period;
             let target_year = total.div_euclid(12) as i32;
             let target_month = (total.rem_euclid(12) + 1) as u8;
             if !rule.months.is_empty() && !rule.months.contains(&target_month) {
@@ -443,7 +444,18 @@ mod tests {
     fn civil_dates_round_trip_and_weekdays_are_right() {
         assert_eq!(date(1970, 1, 1).epoch_days(), 0);
         assert_eq!(date(2000, 3, 1).epoch_days(), 11_017);
-        for days in [-800_000_i64, -1, 0, 59, 60, 365, 11_016, 11_017, 20_000, 400_000] {
+        for days in [
+            -800_000_i64,
+            -1,
+            0,
+            59,
+            60,
+            365,
+            11_016,
+            11_017,
+            20_000,
+            400_000,
+        ] {
             let (y, m, d) = Date::from_epoch_days(days).ymd();
             assert_eq!(Date::from_ymd(y, m, d).unwrap().epoch_days(), days);
         }
@@ -465,7 +477,11 @@ mod tests {
             dues(&result),
             ["2027-01-29", "2027-02-25", "2027-03-31", "2027-04-30"]
         );
-        let scheduled: Vec<String> = result.dates.iter().map(|d| d.scheduled.to_string()).collect();
+        let scheduled: Vec<String> = result
+            .dates
+            .iter()
+            .map(|d| d.scheduled.to_string())
+            .collect();
         assert_eq!(
             scheduled,
             ["2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30"]
@@ -544,19 +560,25 @@ mod tests {
         let mut bad = rule.clone();
         bad.interval = 0;
         assert_eq!(
-            next_due(&bad, &none, date(2027, 1, 1), 1, trace()).unwrap_err().code,
+            next_due(&bad, &none, date(2027, 1, 1), 1, trace())
+                .unwrap_err()
+                .code,
             RECURRENCE_RULE_INVALID
         );
         let mut bad = rule.clone();
         bad.day = DaySelector::DayOfMonth(32);
         assert_eq!(
-            next_due(&bad, &none, date(2027, 1, 1), 1, trace()).unwrap_err().code,
+            next_due(&bad, &none, date(2027, 1, 1), 1, trace())
+                .unwrap_err()
+                .code,
             RECURRENCE_RULE_INVALID
         );
         let mut bad = rule;
         bad.zone = String::new();
         assert_eq!(
-            next_due(&bad, &none, date(2027, 1, 1), 1, trace()).unwrap_err().code,
+            next_due(&bad, &none, date(2027, 1, 1), 1, trace())
+                .unwrap_err()
+                .code,
             RECURRENCE_RULE_INVALID
         );
     }

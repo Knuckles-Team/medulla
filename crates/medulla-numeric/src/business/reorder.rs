@@ -107,9 +107,8 @@ pub struct ReorderResult {
 }
 
 fn to_i64(value: i128, what: &str) -> Result<i64, RuleRefusal> {
-    i64::try_from(value).map_err(|_| {
-        RuleRefusal::new(REORDER_OVERFLOW, format!("{what} does not fit in 64 bits"))
-    })
+    i64::try_from(value)
+        .map_err(|_| RuleRefusal::new(REORDER_OVERFLOW, format!("{what} does not fit in 64 bits")))
 }
 
 /// Ceiling division for a non-negative numerator and a positive denominator.
@@ -162,7 +161,10 @@ pub fn reorder_point(
     trace.inputs.sort();
     trace.inputs.dedup();
 
-    let on_order: i128 = open_lines.iter().map(|line| i128::from(line.quantity)).sum();
+    let on_order: i128 = open_lines
+        .iter()
+        .map(|line| i128::from(line.quantity))
+        .sum();
     let position = to_i64(
         i128::from(stock.on_hand) + on_order - i128::from(stock.reserved),
         "the position",
@@ -193,7 +195,10 @@ pub fn reorder_point(
         units.max(0) * i128::from(policy.lead_time_days),
         i128::from(policy.review_window_days),
     );
-    let point = to_i64(demand + i128::from(policy.safety_stock), "the reorder point")?;
+    let point = to_i64(
+        demand + i128::from(policy.safety_stock),
+        "the reorder point",
+    )?;
     trace.step(format!(
         "point = ceil({units} * {} / {}) + {} = {point}",
         policy.lead_time_days, policy.review_window_days, policy.safety_stock
@@ -292,11 +297,26 @@ mod tests {
         assert!(result.reorder);
         assert_eq!(result.quantity, 50);
         assert_eq!(result.samples, 3);
-        assert_eq!(result.trace.rule_digest, load("reorder", 1, BTreeMap::new()).unwrap().digest);
-        for (id, revision) in [("line:1", 1), ("stock:s1", 4), ("pol:1", 2), ("policy:p1", 1)] {
-            assert!(result.trace.inputs.contains(&InputRef::new(id, revision)), "{id}");
+        assert_eq!(
+            result.trace.rule_digest,
+            load("reorder", 1, BTreeMap::new()).unwrap().digest
+        );
+        for (id, revision) in [
+            ("line:1", 1),
+            ("stock:s1", 4),
+            ("pol:1", 2),
+            ("policy:p1", 1),
+        ] {
+            assert!(
+                result.trace.inputs.contains(&InputRef::new(id, revision)),
+                "{id}"
+            );
         }
-        assert!(!result.trace.inputs.iter().any(|input| input.node_id == "line:old"));
+        assert!(!result
+            .trace
+            .inputs
+            .iter()
+            .any(|input| input.node_id == "line:old"));
 
         // A shortfall of 120 rounds up to 150; with no minimum the shortfall is ordered.
         let big = reorder_point(&policy(), &sales, &stock(0, 70), &[], as_of, trace()).unwrap();
@@ -315,7 +335,11 @@ mod tests {
 
         // The product is rounded up before the division: 7 units over 30 days at a lead time
         // of 10 days is ceil(70 / 30) = 3 units of demand.
-        let slow = [sale("line:1", as_of, 3), sale("line:2", as_of, 2), sale("line:3", as_of, 2)];
+        let slow = [
+            sale("line:1", as_of, 3),
+            sale("line:2", as_of, 2),
+            sale("line:3", as_of, 2),
+        ];
         let mut rounding = policy();
         rounding.safety_stock = 0;
         let result = reorder_point(&rounding, &slow, &stock(0, 0), &[], as_of, trace()).unwrap();
@@ -339,21 +363,31 @@ mod tests {
         let mut bad = policy();
         bad.review_window_days = 0;
         assert_eq!(
-            reorder_point(&bad, &sales, &stock(0, 0), &[], as_of, trace()).unwrap_err().code,
+            reorder_point(&bad, &sales, &stock(0, 0), &[], as_of, trace())
+                .unwrap_err()
+                .code,
             REORDER_POLICY_INVALID
         );
         let mut bad = policy();
         bad.safety_stock = -1;
         assert_eq!(
-            reorder_point(&bad, &sales, &stock(0, 0), &[], as_of, trace()).unwrap_err().code,
+            reorder_point(&bad, &sales, &stock(0, 0), &[], as_of, trace())
+                .unwrap_err()
+                .code,
             REORDER_POLICY_INVALID
         );
-        let huge = [sale("line:1", as_of, i64::MAX), sale("line:2", as_of, i64::MAX), sale("line:3", as_of, i64::MAX)];
+        let huge = [
+            sale("line:1", as_of, i64::MAX),
+            sale("line:2", as_of, i64::MAX),
+            sale("line:3", as_of, i64::MAX),
+        ];
         let mut wide = policy();
         wide.lead_time_days = u32::MAX;
         wide.review_window_days = 1;
         assert_eq!(
-            reorder_point(&wide, &huge, &stock(0, 0), &[], as_of, trace()).unwrap_err().code,
+            reorder_point(&wide, &huge, &stock(0, 0), &[], as_of, trace())
+                .unwrap_err()
+                .code,
             REORDER_OVERFLOW
         );
     }

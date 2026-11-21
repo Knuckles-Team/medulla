@@ -57,7 +57,11 @@ fn rule_digests_are_pinned() {
         ),
     ];
     for (kind, digest) in expected {
-        assert_eq!(load(kind, 1, BTreeMap::new()).unwrap().digest, digest, "{kind}");
+        assert_eq!(
+            load(kind, 1, BTreeMap::new()).unwrap().digest,
+            digest,
+            "{kind}"
+        );
     }
     let parameters: BTreeMap<String, String> = [("interval", "1"), ("frequency", "monthly")]
         .into_iter()
