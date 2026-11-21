@@ -410,47 +410,24 @@ pub struct PageCursorRef<'a> {
     pub page_size: usize,
 }
 
-/// What one row of a paged node scan contributes to the page.
-pub(crate) enum GraphDumpPageNodeRowStep {
-    /// At or before the caller's cursor: an earlier page already returned it.
-    BeforeCursor,
-    Pushed(String, Vec<u8>),
-}
-
 /// One `(graph, id) -> value` NODES row as the scope-bounded scan yields it.
 pub(crate) type GraphDumpNodeRow = ScopeRow<'static, (&'static str, &'static str), &'static [u8]>;
 
 pub(crate) fn graph_dump_page_node_row_step(
     row: GraphDumpNodeRow,
-    resume_after: Option<&str>,
     crypto: DurableCrypto<'_>,
-) -> Result<GraphDumpPageNodeRowStep, String> {
+) -> Result<(String, Vec<u8>), String> {
     let (k, v) = row?;
     let (graph, id) = k.value();
-    if resume_after.is_some_and(|cursor| id <= cursor) {
-        return Ok(GraphDumpPageNodeRowStep::BeforeCursor);
-    }
-    Ok(GraphDumpPageNodeRowStep::Pushed(
-        id.to_string(),
-        crypto.unseal_node(graph, id, v.value())?,
-    ))
+    Ok((id.to_string(), crypto.unseal_node(graph, id, v.value())?))
 }
 
-// Nodes: walk this graph's scope from its first row, drop everything at or
-// before the caller's cursor, then take at most `page_size` more. One extra
-// `.next()` after filling the page (NOT collected) tells us whether more nodes
-// remain.
-//
-// **Why the resume is a forward skip and not a seek.** The keyed resume this
-// replaces was `range((graph, node_after)..)`, which no scope-bounded accessor
-// can express: `range_inclusive` needs BOTH bounds inside the scope and the
-// trailing key component here is a `&str`, which has no maximum -- any string
-// having a candidate sentinel as a proper prefix sorts after it. Inventing an
-// end key would be an assumption this layer cannot enforce, because node ids
-// are caller bytes. The cursor is therefore re-found by skipping, which costs a
-// scan of the already-returned prefix per page; the page's own memory bound --
-// the property this function exists for -- is unaffected, and the seek returns
-// unchanged the day a scope-bounded `range_from` lands beside `scope_rows`.
+// Paging resumes by seek (MEDULLA-DURABLE-KERNEL-R873.2): the scan starts at the cursor
+// key `(graph, after)` through the scope-bounded `scope_rows_from`, which stops at the first
+// key of another graph, and drops that one row when it is the cursor itself (the cursor is
+// exclusive). A page after any prefix therefore reads at most `page_size + 1` rows, plus the
+// cursor row, instead of re-reading every row an earlier page returned. One extra `.next()`
+// after filling the page (NOT collected) tells us whether more nodes remain.
 pub(crate) fn read_graph_dump_page_nodes(
     read: &ScopedRead<'_, GraphShardOwner>,
     node_after: Option<&str>,
@@ -458,32 +435,30 @@ pub(crate) fn read_graph_dump_page_nodes(
     crypto: DurableCrypto<'_>,
 ) -> Result<NodePageScan, String> {
     let table = read.scoped_owner_table(NODES)?;
+    let scope = table.scope_key().to_string();
     let mut nodes = Vec::with_capacity(page_size.min(1024));
     let mut nodes_exhausted = true;
     let mut next_node_after = node_after.map(str::to_string);
-    let mut rows = table.scope_rows()?;
+    let mut rows = table
+        .scope_rows_from((scope.as_str(), node_after.unwrap_or("")))?
+        .peekable();
+    if let Some(cursor) = node_after {
+        let at_cursor = matches!(rows.peek(), Some(Ok((k, _))) if k.value().1 == cursor);
+        if at_cursor {
+            rows.next();
+        }
+    }
     while nodes.len() < page_size {
         let Some(row) = rows.next() else { break };
-        match graph_dump_page_node_row_step(row, node_after, crypto)? {
-            GraphDumpPageNodeRowStep::BeforeCursor => continue,
-            GraphDumpPageNodeRowStep::Pushed(id, bytes) => {
-                next_node_after = Some(id.clone());
-                nodes.push((id, bytes));
-                nodes_exhausted = false; // provisional; corrected by the peek below
-            }
-        }
+        let (id, bytes) = graph_dump_page_node_row_step(row, crypto)?;
+        next_node_after = Some(id.clone());
+        nodes.push((id, bytes));
+        nodes_exhausted = false; // provisional; corrected by the peek below
     }
     if !nodes_exhausted {
         nodes_exhausted = scan_exhausted(&mut rows)?;
     }
     Ok((nodes, nodes_exhausted, next_node_after))
-}
-
-/// What one row of a paged edge scan contributes to the page.
-pub(crate) enum GraphDumpPageEdgeRowStep {
-    /// At or before the caller's cursor: an earlier page already returned it.
-    BeforeCursor,
-    Pushed(String, String, u32, Vec<u8>),
 }
 
 /// One `(graph, source, target, ordinal) -> value` EDGES row as the
@@ -493,15 +468,11 @@ pub(crate) type GraphDumpEdgeRow =
 
 pub(crate) fn graph_dump_page_edge_row_step(
     row: GraphDumpEdgeRow,
-    resume_after: Option<(&str, &str, u32)>,
     crypto: DurableCrypto<'_>,
-) -> Result<GraphDumpPageEdgeRowStep, String> {
+) -> Result<(String, String, u32, Vec<u8>), String> {
     let (k, v) = row?;
     let (_, source, target, ordinal) = k.value();
-    if resume_after.is_some_and(|cursor| (source, target, ordinal) <= cursor) {
-        return Ok(GraphDumpPageEdgeRowStep::BeforeCursor);
-    }
-    Ok(GraphDumpPageEdgeRowStep::Pushed(
+    Ok((
         source.to_string(),
         target.to_string(),
         ordinal,
@@ -517,9 +488,8 @@ pub(crate) fn graph_dump_page_edge_row_step(
 // The returned `bool` tracks whether the EDGE scan itself is drained (only
 // meaningful once nodes are exhausted); the caller always ANDs it with
 // `nodes_exhausted`, so a page that is still working through nodes never
-// falsely reports edges done. The cursor is re-found by skipping for the reason
-// given on [`read_graph_dump_page_nodes`], and even more strictly here: an edge
-// key's trailing components are two caller `&str`s and an ordinal.
+// falsely reports edges done. Like the node scan, the edge scan resumes by seek
+// from the cursor key `(graph, source, target, ordinal)` and drops the cursor row.
 pub(crate) fn read_graph_dump_page_edges(
     read: &ScopedRead<'_, GraphShardOwner>,
     edge_after: Option<(&str, &str, u32)>,
@@ -535,18 +505,30 @@ pub(crate) fn read_graph_dump_page_edges(
         return Ok((edges, edges_done_this_call, next_edge_after));
     }
     let table = read.scoped_owner_table(EDGES)?;
-    let mut rows = table.scope_rows()?;
+    let scope = table.scope_key().to_string();
+    let (start_source, start_target, start_ordinal) = edge_after.unwrap_or(("", "", 0));
+    let mut rows = table
+        .scope_rows_from((scope.as_str(), start_source, start_target, start_ordinal))?
+        .peekable();
+    if let Some(cursor) = edge_after {
+        let at_cursor = matches!(
+            rows.peek(),
+            Some(Ok((k, _))) if {
+                let (_, source, target, ordinal) = k.value();
+                (source, target, ordinal) == cursor
+            }
+        );
+        if at_cursor {
+            rows.next();
+        }
+    }
     edges_done_this_call = true;
     while edges.len() < edge_budget {
         let Some(row) = rows.next() else { break };
-        match graph_dump_page_edge_row_step(row, edge_after, crypto)? {
-            GraphDumpPageEdgeRowStep::BeforeCursor => continue,
-            GraphDumpPageEdgeRowStep::Pushed(source, target, ordinal, bytes) => {
-                next_edge_after = Some((source.clone(), target.clone(), ordinal));
-                edges.push((source, target, bytes));
-                edges_done_this_call = false;
-            }
-        }
+        let (source, target, ordinal, bytes) = graph_dump_page_edge_row_step(row, crypto)?;
+        next_edge_after = Some((source.clone(), target.clone(), ordinal));
+        edges.push((source, target, bytes));
+        edges_done_this_call = false;
     }
     if !edges_done_this_call {
         edges_done_this_call = scan_exhausted(&mut rows)?;
