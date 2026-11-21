@@ -22,10 +22,11 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R001.4` | `tests/ingest/test_ingest_queue_served.py::test_duplicate_enqueue_is_one_task` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.7` | `crates/medulla-source-types/src/ingest_job.rs::tests::retry_policy_refusals` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R001.8` | `crates/medulla-source-types/src/ingest_job.rs::tests::next_delay_is_bounded_growing_and_seeded` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R001.9` | `tests/ingest/test_ingest_queue_served.py::test_failed_job_retries_then_dead_letters` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R001.4.1` | `crates/medulla-jobs/src/store/task_queue.rs::tests::task_queue_load_counts_queued_running_and_oldest`; `crates/medulla-h-jobs/src/task_queue.rs::tests::ingest_task_keeps_its_digest_id_and_reserved_queue_refuses` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R001.9` | `tests/ingest/test_ingest_queue_served.py::test_failed_job_retries_then_dead_letters`; `crates/medulla-source-types/src/ingest_job.rs::tests::ack_decision_redelivers_then_dead_letters`; `crates/medulla-jobs/src/store/task_queue.rs::tests::dead_letter_ack_fails_task_and_parks_item_in_one_commit` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.10` | `tests/ingest/test_ingest_queue_served.py::test_hydration_kinds_use_hydration_queue` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R001.11` | `tests/ingest/test_ingest_queue_served.py::test_full_queue_refuses_and_depth_is_unchanged` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R001.12` | `tests/ingest/test_ingest_queue_served.py::test_lapsed_lease_redelivers_then_exhausts` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R001.11` | `tests/ingest/test_ingest_queue_served.py::test_full_queue_refuses_and_depth_is_unchanged`; `crates/medulla-h-ingest/src/ingest_queue.rs::tests::depth_report_orders_queues_and_saturates_age` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R001.12` | `tests/ingest/test_ingest_queue_served.py::test_lapsed_lease_redelivers_then_exhausts`; `crates/medulla-source-types/src/ingest_job.rs::tests::claim_exhaustion_is_after_max_attempts` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.13` | `crates/medulla-kernel/src/metrics/tests.rs::ingest_metrics_after_success_retry_dead_letter` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R001.14` | `tests/ingest/test_ingest_worker_contract_served.py::test_runner_call_sequence` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.1006` | `crates/medulla-ingestion-types/src/data_prep_declaration.rs::tests::declaration_round_trips_and_rejects_unknown_fields` | L1 | planned |
@@ -38,9 +39,9 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R002.2` | `crates/medulla-ingestion-types/src/ontology_proposal.rs::tests::score_proposal_checks_coverage_and_redundancy` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R002.3` | `crates/medulla-h-ingest/src/source_ingestion/proposals.rs::tests::judge_runs_inside_prepare` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R002.4` | `crates/medulla-types/tests/ingest_rules.rs::a_failing_proposal_is_refused_stays_draft_and_allows_no_instances` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R002.5` | `tests/ingest/test_ontology_induction_served.py::test_receipt_reports_scores_and_replays` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R002.5` | `tests/ingest/test_ontology_induction_served.py::test_receipt_reports_scores_and_replays` | L4 | Reads `coverage` and `redundancy` per item in the receipt node's `proposals` property for one admitted and one draft proposal, then replays the batch and reads them unchanged. |
 | `MEDULLA-INGEST-WORKER-R002.6` | `tests/ingest/test_ontology_induction_served.py::test_passing_proposal_admitted_failing_stays_draft` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R002.7` | `tests/ingest/test_ontology_induction_served.py::test_draft_proposal_takes_no_instances` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R002.7` | `tests/ingest/test_ontology_induction_served.py::test_draft_proposal_takes_no_instances` | L4 | A records batch whose pack mapping names `proposal:<draft_id>#<class>` refuses `PROPOSAL_NOT_ADMITTED` and writes zero nodes; the same batch against the admitted proposal writes records typed `<class>`. |
 | `MEDULLA-INGEST-WORKER-R003.1` | `crates/medulla-ingestion-types/src/knowledge_atom.rs::tests::atom_round_trips_and_rejects_unknown_kind` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.2` | `crates/medulla-document/src/atoms.rs::tests::decompose_kinds_and_split` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R003.3` | `tests/ingest/test_knowledge_atoms_served.py::test_ingest_then_context_cites_provenance` | L4 | exists |
@@ -63,7 +64,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R003.20` | `tests/typed_packs/test_connector_vocabulary_served.py::test_pack_record_of_each_new_term_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R604.1` | `crates/medulla-types/src/ingest_lanes.rs::tests::lane_ids_validate_and_round_trip` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R604.2` | `crates/medulla-types/src/ingest_lanes.rs::tests::every_stage_has_one_class` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R604.3` | `tests/ingest/test_lane_admission_served.py::test_claim_enforces_admission` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R604.3` | `tests/ingest/test_lane_admission_served.py::test_claim_enforces_admission`; `crates/medulla-h-jobs/src/task_queue.rs::tests::claim_runs_admission_before_leasing` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R604.4` | `tests/ingest/test_lane_admission_served.py::test_reserve_refusal_has_code_and_retry_hint` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R604.5` | `crates/medulla-kernel/src/metrics/tests.rs::lane_gauges_after_success_and_refusal` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R604.6` | `benches/ingest_claim_admit.rs` | L5 | exists |
@@ -81,7 +82,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R606.6` | `benches/ingest_materialize.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R700.1` | `crates/medulla-document/src/fragment.rs::tests::golden_fragment_round_trips_and_rejects_bad_spans` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R700.2` | `crates/medulla-document/tests/readers_scale.rs::time_and_memory_scale_linearly` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R700.3` | `tests/ingest/test_readers_served.py::test_each_format_yields_spanned_fragments` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R700.3` | `tests/ingest/test_readers_served.py::test_text_formats_yield_document_atoms` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R700.4` | `tests/ingest/test_readers_served.py::test_reader_refusals_quarantine_without_projection` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R700.5` | `crates/medulla-document/tests/readers_scale.rs::spans_reextract_to_fragment_text` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R700.6` | `tests/ingest/test_readers_served.py::test_each_format_yields_spanned_fragments` | L4 | planned |
@@ -118,9 +119,9 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R902.6` | `benches/ingest_permission_sync.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R903.1` | `crates/medulla-types/tests/source_governance.rs::reconcile_plan_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R903.2` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::missing_records_delete_after_grace` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R903.3` | `tests/ingest/test_source_reconcile_served.py::test_enumeration_prunes_deleted_record` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R903.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_source_reconcile_tests.rs::an_enumeration_prunes_a_deleted_record_after_the_grace_window` | L3 | `reconcile_sweep` with an injected time deletes nothing before the grace window ends and only the dropped record after it. Served wire check: `tests/ingest/test_source_reconcile_served.py::test_enumeration_prunes_deleted_record` (L4) asserts `missing_count` 1 and `deleted_count` 0 in the receipt. |
 | `MEDULLA-INGEST-WORKER-R903.4` | `crates/medulla-types/tests/ingest_rules.rs::incomplete_enumerations_never_delete_and_mass_deletes_are_guarded` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R903.5` | `tests/ingest/test_source_reconcile_served.py::test_reconcile_receipt_reads_back` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R903.5` | `tests/ingest/test_source_reconcile_served.py::test_reconcile_receipt_reads_back` | L4 | Asserts `ids_digest`, `missing_count` 1, `deleted_count` 0 and an empty `override_principal`; needs no clock control. |
 | `MEDULLA-INGEST-WORKER-R903.6` | `benches/ingest_source_reconcile.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R904.1` | `crates/medulla-types/tests/source_governance.rs::container_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R904.2` | `crates/medulla-core/tests/source_hierarchy.rs::subtree_returns_descendants` | L1 | planned |

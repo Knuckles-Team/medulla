@@ -13,12 +13,12 @@ This file lists the entities that the ingest worker rows add. Each is a typed Ru
 ### IngestRetryPolicy
 
 - Fields: `max_attempts`, `base_delay`, `max_delay`, `jitter`.
-- Relation: read from `SchedulerConfig.ingest_retry` and used by `next_delay`.
+- Relation: built by `IngestRetryPolicy::from_limits` from `SchedulerConfig.ingest_retry` (`IngestRetryLimits`, integer fields, R001.4.1) and used by `next_delay`, `on_ingest_ack` and `on_ingest_claim`.
 
 ### DeadLetterItem
 
-- Fields: queue, task id, tenant, corpus key, kind, target, attempts, `last_error_code`, `last_error_digest`.
-- Rule: one item per exhausted task, written by `on_ingest_ack` through `park`; the error text is cut to 1 KiB.
+- Fields (MEDULLA-REPO-INGEST-R002.650, unchanged): `item_id` (the task id), `queue`, `reason` (`INGEST_RETRIES_EXHAUSTED` or `LEASE_EXPIRED_EXHAUSTED`), `attempts`, `last_error` (the ack detail, at most 1024 bytes), `parked_at_ms`, `payload_digest`.
+- Rule: one item per exhausted task, in table `TASK_DEAD_LETTERS` of `jobs.redb`, written in the same commit as the task's `Failed` transition (R001.9, R001.12). Tenant, corpus key, kind and target are read from the failed task's stored envelope by `item_id`.
 
 ### Lane, QueueClass and LaneMetrics
 

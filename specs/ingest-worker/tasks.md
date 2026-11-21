@@ -8,6 +8,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T002 [US1] MEDULLA-INGEST-WORKER-R001.2 Typed job kinds and lane derivation
 - [ ] T003 [US1] MEDULLA-INGEST-WORKER-R001.3 Partition key function
 - [ ] T004 [US1] MEDULLA-INGEST-WORKER-R001.4 Enqueue maps onto the served task queue with deterministic ids
+- [ ] T126 [US1] MEDULLA-INGEST-WORKER-R001.4.1 Wiring: the served ingest enqueue and the shared ingest queue stack (before T007, T009, T010 and T046)
 - [ ] T005 [US1] MEDULLA-INGEST-WORKER-R001.7 Typed retry policy with validation
 - [ ] T006 [US1] MEDULLA-INGEST-WORKER-R001.8 Retry delay function with jitter
 - [ ] T007 [US1] MEDULLA-INGEST-WORKER-R001.9 Failure routing: retry with backoff, then dead letter
@@ -26,9 +27,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T020 [US4] MEDULLA-INGEST-WORKER-R002.2 Behavior
 - [ ] T021 [US4] MEDULLA-INGEST-WORKER-R002.3 Wiring: proposals are judged inside SourceIngest admission
 - [ ] T022 [US4] MEDULLA-INGEST-WORKER-R002.4 Refusal
-- [ ] T023 [US4] MEDULLA-INGEST-WORKER-R002.5 Evidence: proposal receipt
+- [ ] T023 [US4] MEDULLA-INGEST-WORKER-R002.5 Evidence: coverage and redundancy on ProposalItemReceipt
 - [ ] T024 [US4] MEDULLA-INGEST-WORKER-R002.6 Hot-path proof: ontology induction through SourceIngest
-- [ ] T025 [US4] MEDULLA-INGEST-WORKER-R002.7 Behavior: instances populate only against admitted proposals
+- [ ] T025 [US4] MEDULLA-INGEST-WORKER-R002.7 Behavior: gate_proposal_classes refuses pack mappings that name an unadmitted proposal class
 - [ ] T026 [US3] MEDULLA-INGEST-WORKER-R003.1 Model
 - [ ] T027 [US3] MEDULLA-INGEST-WORKER-R003.2 Behavior: atom decomposition and context selection
 - [ ] T028 [US3] MEDULLA-INGEST-WORKER-R003.3 Wiring: decompose at ingest and select at query
@@ -106,7 +107,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T098 [US5] MEDULLA-INGEST-WORKER-R902.6 Hot-path proof: permission sync at batch size
 - [ ] T099 [US5] MEDULLA-INGEST-WORKER-R903.1 Model
 - [ ] T100 [US5] MEDULLA-INGEST-WORKER-R903.2 Behavior: plan, grace window and sweep
-- [ ] T101 [US5] MEDULLA-INGEST-WORKER-R903.3 Wiring: enumeration pages and the sweep job
+- [ ] T101 [US5] MEDULLA-INGEST-WORKER-R903.3 Wiring: enumeration pages and the sweep job; Rust served test injects the sweep time
 - [ ] T102 [US5] MEDULLA-INGEST-WORKER-R903.4 Refusal
 - [ ] T103 [US5] MEDULLA-INGEST-WORKER-R903.5 Evidence: reconcile receipt
 - [ ] T104 [US5] MEDULLA-INGEST-WORKER-R903.6 Hot-path proof: reconcile at 1M identifiers

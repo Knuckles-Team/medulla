@@ -15,7 +15,9 @@ connector    --> SourceIngest > prepare > resolve_mappings > match batch.kind > 
 | Concern | Owning code | Rows |
 |---|---|---|
 | Job types, lanes, retry | `crates/medulla-source-types/src/ingest_job.rs` | `MEDULLA-INGEST-WORKER-R001.1` to `MEDULLA-INGEST-WORKER-R001.8` |
-| Queue handler | `crates/medulla-h-ingest/src/ingest_queue.rs` | `MEDULLA-INGEST-WORKER-R001.4`, `MEDULLA-INGEST-WORKER-R001.9` to `MEDULLA-INGEST-WORKER-R001.12` |
+| Queue producer and depth report | `crates/medulla-h-ingest/src/ingest_queue.rs`, router arms in `crates/medulla-server-router/src/dispatch/router/source_ingest.rs` | `MEDULLA-INGEST-WORKER-R001.4`, `MEDULLA-INGEST-WORKER-R001.4.1`, `MEDULLA-INGEST-WORKER-R001.11` |
+| Ingest ack and claim rules (pure) | `crates/medulla-source-types/src/ingest_job.rs` (`on_ingest_ack`, `on_ingest_claim`, `ingest_lane_of_queue`) | `MEDULLA-INGEST-WORKER-R001.9`, `MEDULLA-INGEST-WORKER-R001.12` |
+| Task store, load, dead letter, claim admission | `crates/medulla-jobs/src/store/task_queue.rs`, `crates/medulla-h-jobs/src/task_queue.rs`, `crates/medulla-h-jobs/src/worker_admission.rs` | `MEDULLA-INGEST-WORKER-R001.4.1`, `MEDULLA-INGEST-WORKER-R001.9`, `MEDULLA-INGEST-WORKER-R001.12`, `MEDULLA-INGEST-WORKER-R604.3` |
 | Metrics | `crates/medulla-kernel/src/metrics/ingest.rs` | `MEDULLA-INGEST-WORKER-R001.13`, `MEDULLA-INGEST-WORKER-R604.5` |
 | Drains | `crates/medulla-h-ingest/src/ingest_drain.rs` | `MEDULLA-INGEST-WORKER-R605.2` |
 | Documents and transcripts | `crates/medulla-h-ingest/src/source_ingestion/documents.rs`, `transcript.rs` | `MEDULLA-INGEST-WORKER-R003.8`, `MEDULLA-INGEST-WORKER-R003.14` |
@@ -90,7 +92,7 @@ The rules below bind every row.
 2. **One admission path.** Every connector batch converges on `prepare` and `admit_records`. The batch kind selects the admission function. Authorization and the committed-replay shortcut come first; mappings resolve once; validators share that snapshot.
 3. **One envelope per batch.** A batch commits one accepted or quarantine envelope. A normalization failure returns a prepared quarantine outcome and never bypasses the commit. A quarantine stores restricted evidence only and never advances a checkpoint.
 4. **No second policy writer.** The ack handler is the only dead-letter writer. The claim handler evaluates admission itself. One routing function and one gauge set exist.
-5. **Cross-handler calls use seams.** The queue handler reaches the task queue through `jobs_seam`, and the task-queue handler reaches `on_ingest_ack` and `on_ingest_claim` through `ingest_seam`. The implementations are installed in `crates/medulla-server/src/seams_install.rs`.
+5. **Cross-handler calls use seams; ingest rules are pure.** The queue producer in `medulla-h-ingest` reaches the task queue through `jobs_seam` (`JobsSeam`, installed in `crates/medulla-server/src/seams_install.rs`). The task-queue handler in `medulla-h-jobs` calls `on_ingest_ack` and `on_ingest_claim`, which are pure functions of `crates/medulla-source-types/src/ingest_job.rs`, directly. No seam carries an ingest decision.
 6. **Wire changes carry no shim.** A changed Rust wire type updates the generated Python models in `medulla/generated/` and gets a Rust round-trip vector in the same change.
 7. **Names and ids.** Ids are framed digests built with `Digest256::framed` under a domain tag per kind. No component name carries a version suffix.
 8. **Knobs.** Each tunable value is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`.
@@ -140,7 +142,8 @@ Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enume
 
 ### Non-record kind dispatch
 `source_ingestion.rs::admit_extension` is the single place `prepare` dispatches a non-record kind; `source_ingestion/proposals.rs` (R002.3) and `source_ingestion/transcript.rs` (R003.14) hold the kind logic. Thresholds come from the `ingest.proposal_min_coverage` and `ingest.proposal_max_redundancy` knobs.
-- Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim_admitted` in `crates/medulla-h-jobs/src/task_queue_served.rs`, reached from the router's control-plane task-queue arm; lane ownership in `lane_of_queue`; the ingest queue rule in `IngestSeam`.
+- Ingest queue stack (`MEDULLA-INGEST-WORKER-R001.4.1`): the ingest queue is the `jobs.redb` task queue. `medulla-h-jobs` owns every store call (enqueue through `JobsSeam`, ack, claim, depth through `JobStore::task_queue_load`). The ingest-specific rules are pure functions in `ingest_job.rs` that `medulla-h-jobs` calls directly, so no handler calls a sibling handler and no seam round trip carries an ingest decision. The dead-letter row is written in the same `jobs.redb` commit as the failing transition (R001.9); there is no second dead-letter store.
+- Claim-time admission (`MEDULLA-INGEST-WORKER-R604.3`): `claim` in `crates/medulla-h-jobs/src/task_queue.rs` calls `admit_reserved_worker_task` over the inputs of `worker_admission::admission_inputs`, which the served `AdmitWorkerTask` of MEDULLA-DURABLE-KERNEL-R075 also uses.
 
 ## Phase 2: Task approach
 
@@ -161,10 +164,10 @@ none
 
 ## Production caller chain
 
-- `Method::IngestEnqueue` arm (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods`, new) to `enqueue_ingest_job` (`crates/medulla-h-ingest/src/ingest_queue.rs`, new) to `jobs_seam` (`crates/medulla-server-ops/src/api/ingest.rs`) to the task-queue handler of `MEDULLA-DURABLE-KERNEL-R072`.
-- `Method::TaskQueueAck` and `TaskQueueClaim` arms of `MEDULLA-DURABLE-KERNEL-R072` to `ingest_seam` to `on_ingest_ack` and `on_ingest_claim` in `ingest_queue.rs` (new).
+- `Method::IngestEnqueue` arm (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods`, new) to `enqueue_ingest_job` (`crates/medulla-h-ingest/src/ingest_queue.rs`, new) to `jobs_seam` (`crates/medulla-server-ops/src/api/ingest.rs`) to `JobsSeam::enqueue_ingest_task` (`crates/medulla-h-jobs/src/jobs.rs`) to `JobStore::submit_task` (R001.4.1).
+- `Method::TaskQueueAck` and `TaskQueueClaim` arms of `MEDULLA-DURABLE-KERNEL-R072` (`crates/medulla-h-jobs/src/task_queue.rs::ack` and `claim`) to the pure `on_ingest_ack` and `on_ingest_claim` of `crates/medulla-source-types/src/ingest_job.rs`; the claim first runs `admit_reserved_worker_task` over `worker_admission::admission_inputs` (R604.3).
 - `Method::SourceIngest` (`crates/medulla-protocol-types/src/protocol/method/method_10.rs`) to `route_source_ingestion_or_resources` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs`) to `route_source_ingestion_dispatch` to `route_source_ingestion_request` to `prepare` (`crates/medulla-h-ingest/src/source_ingestion.rs`) to the admission function for the batch kind, then `apply_one_change_envelope` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs`) and `finish`.
-- `Method::AtomContext`, `Method::SourceDrainStatus` and `Method::IngestQueueDepth` arms of `source_ingest.rs` (new) to `atom_context`, `drain_status` and `queue_depth` in `crates/medulla-h-ingest/src/`.
+- `Method::AtomContext`, `Method::SourceDrainStatus` and `Method::IngestQueueDepth` arms of `source_ingest.rs` (new) to `atom_context`, `drain_status` and `queue_depth_report` (fed by `JobsApi::task_queue_load`) in `crates/medulla-h-ingest/src/`.
 - `Method::DataPrepDeclare` and `Method::DataPrepDeclarationRead` (`method_11.rs`) to `route_data_prep` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/data_prep.rs`, reached from `route_native_store_ops`) to `declare_data_prep` and `read_data_prep_declaration` (`crates/medulla-h-ingest/src/data_prep_declaration.rs`), then `apply_one_change_envelope` for the write.
 - Background: `src/main.rs` starts `spawn_reconcile_sweep` (`crates/medulla-h-ingest/src/source_ingestion/sweep.rs`, new) and registers the metrics collector.
 
