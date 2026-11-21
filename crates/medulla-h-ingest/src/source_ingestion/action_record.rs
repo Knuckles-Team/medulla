@@ -101,17 +101,27 @@ pub fn first_read_ids(
     Ok(ids)
 }
 
-/// The approval requests the held gate decisions name: the second read.
+/// The approval request a gate decision decides: the target of its `decisionRequest` edge.
+/// The graph is the authority; the decision node carries no request id property.
+pub fn decision_request(core: &GraphCore, gate: &str) -> Option<String> {
+    core.get_successors(gate).ok()?.into_iter().find(|target| {
+        core.get_edge_properties(gate, target).iter().any(|bytes| {
+            rmp_serde::from_slice::<Value>(bytes).ok().is_some_and(|edge| {
+                edge.get("relationship").and_then(Value::as_str) == Some("decisionRequest")
+            })
+        })
+    })
+}
+
+/// The approval requests the gate decisions name by `decisionRequest` edge: the second read.
 pub fn second_read_ids(
-    held: &BTreeMap<String, Value>,
+    core: &GraphCore,
     items: &[ActionRecordItem],
 ) -> std::collections::BTreeSet<String> {
     items
         .iter()
         .filter_map(|item| item.approved_by.as_ref())
-        .filter_map(|gate| held.get(gate))
-        .filter_map(|gate| gate.get("decisionRequest").and_then(Value::as_str))
-        .map(str::to_string)
+        .filter_map(|gate| decision_request(core, gate))
         .collect()
 }
 
@@ -174,7 +184,11 @@ fn check_facts(core: &GraphCore, facts: &[FactUseItem]) -> Result<(), String> {
     Ok(())
 }
 
-fn check_approval(item: &ActionRecordItem, held: &BTreeMap<String, Value>) -> Result<(), String> {
+fn check_approval(
+    item: &ActionRecordItem,
+    held: &BTreeMap<String, Value>,
+    core: &GraphCore,
+) -> Result<(), String> {
     if !item.action_kind.needs_approval() {
         return Ok(());
     }
@@ -193,10 +207,9 @@ fn check_approval(item: &ActionRecordItem, held: &BTreeMap<String, Value>) -> Re
     if gate.get("gateOutcome").and_then(Value::as_str) != Some("approve") {
         return Err(required("the gate outcome is not approve"));
     }
-    let request = gate
-        .get("decisionRequest")
-        .and_then(Value::as_str)
-        .and_then(|id| held.get(id))
+    let gate_id = item.approved_by.as_deref().unwrap_or_default();
+    let request = decision_request(core, gate_id)
+        .and_then(|id| held.get(&id))
         .filter(|node| type_of(node) == Some("ApprovalRequest"))
         .ok_or_else(|| required("the decision names no held ApprovalRequest"))?;
     if request.get("requestStatus").and_then(Value::as_str) != Some(ApprovalStatus::Approved.stored()) {
@@ -335,7 +348,7 @@ pub fn admit_actions(
             None => {}
         }
         check_facts(&reads.core, item.used_facts.as_slice())?;
-        check_approval(item, &reads.held)?;
+        check_approval(item, &reads.held, &reads.core)?;
         seen.insert(id.clone(), digest.clone());
         record_methods(tenant, &id, item, &digest, &mut admission)?;
     }

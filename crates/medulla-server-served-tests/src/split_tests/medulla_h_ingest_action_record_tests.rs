@@ -63,11 +63,23 @@ fn refusal_of(result: Result<impl std::fmt::Debug, String>) -> String {
     result.unwrap_err()
 }
 
+/// The gate decision and its request as graph nodes joined by a `decisionRequest` edge.
+fn add_gate_edge(core: &Arc<GraphCore>) {
+    core.add_node("gate:1".to_string(), blob(&json!({"type": "GateDecision"})));
+    core.add_node("req:1".to_string(), blob(&json!({"type": "ApprovalRequest"})));
+    core.add_edge(
+        "gate:1".to_string(),
+        "req:1".to_string(),
+        blob(&json!({"relationship": "decisionRequest"})),
+    )
+    .unwrap();
+}
+
 fn approved_gate() -> Vec<(&'static str, Value)> {
     vec![
         (
             "gate:1",
-            json!({"type": "GateDecision", "gateOutcome": "approve", "decisionRequest": "req:1"}),
+            json!({"type": "GateDecision", "gateOutcome": "approve"}),
         ),
         (
             "req:1",
@@ -106,8 +118,12 @@ fn refusals_and_idempotent_replay() {
     assert!(refused.starts_with("ACTION_APPROVAL_REQUIRED:"), "{refused}");
 
     // An approved money movement commits: the record, one fact use, and its edges.
+    // A decision with no `decisionRequest` edge in the graph is not approved.
     let mut paid = record(ActionKind::MoneyMovement, "k-4", Some(&fact));
     paid.approved_by = Some("gate:1".to_string());
+    let refused = refusal_of(admit_actions(TENANT, &[paid.clone()], &reads(&core, approved_gate())));
+    assert!(refused.starts_with("ACTION_APPROVAL_REQUIRED:"), "{refused}");
+    add_gate_edge(&core);
     let admitted = admit_actions(TENANT, &[paid.clone()], &reads(&core, approved_gate())).unwrap();
     let id = action_node_id(TENANT, "k-4").unwrap();
     assert_eq!(admitted.record_ids, vec![id.clone()]);

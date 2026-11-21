@@ -856,7 +856,7 @@ async fn prepare_extension_batch(
             let requests = action_record::read_held_nodes(
                 persistence.as_ref(),
                 &graph_fname,
-                &action_record::second_read_ids(&held, &decoded),
+                &action_record::second_read_ids(&ctx.core, &decoded),
             )
             .await?;
             held.extend(requests);
