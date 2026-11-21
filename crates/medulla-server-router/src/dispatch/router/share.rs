@@ -62,6 +62,23 @@ fn optional_text(value: &Option<String>) -> serde_json::Value {
         .map_or(serde_json::Value::Null, |text| serde_json::Value::String(text.clone()))
 }
 
+/// The answer for a node that does not exist, which is also the answer for a
+/// node the caller cannot see.
+fn node_absent(node_id: &str) -> String {
+    format!("INVALID_ARGUMENT: node '{node_id}' does not exist")
+}
+
+/// Whether the actor may see the node: its owner, a `kg:admin` holder, a named
+/// grantee, or anyone when the node is shared with the org or the commons.
+fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
+    use medulla_isolation::isolation::share::{SCOPE_COMMONS, SCOPE_ORG};
+    actor.admin
+        || state.owner_id.as_deref() == Some(actor.principal_id.as_str())
+        || state.shared_scope == SCOPE_COMMONS
+        || state.shared_scope == SCOPE_ORG
+        || state.grants.iter().any(|grantee| *grantee == actor.principal_id)
+}
+
 /// Whether a write answer means the write took effect: a failed compare-and-set
 /// answers `false`.
 fn took_effect(response: &Response) -> bool {
@@ -165,14 +182,24 @@ async fn share_op_outcome(
         ShareOp::Revoke(revoke) => revoke.node_id.clone(),
     };
     let graph = req.graph.as_str();
-    let properties = read_node(state, req, verified_context, graph, &node_id)
-        .await?
-        .ok_or_else(|| format!("INVALID_ARGUMENT: node '{node_id}' does not exist"))?;
+    // A node the caller may not see answers exactly as an absent node does, so a
+    // refusal never reveals that a hidden node exists.
+    let properties = match read_node(state, req, verified_context, graph, &node_id).await {
+        Ok(Some(properties)) => properties,
+        Ok(None) => return Err(node_absent(&node_id)),
+        Err(refusal) if refusal.starts_with("UNIT_OUT_OF_SCOPE") => {
+            return Err(node_absent(&node_id))
+        }
+        Err(refusal) => return Err(refusal),
+    };
     let current = state_of(&node_id, &properties);
     let actor = ShareActor {
         principal_id: verified_context.principal().to_string(),
         admin: verified_context.allows_action(ADMIN_SCOPE),
     };
+    if !visible_to(&current, &actor) {
+        return Err(node_absent(&node_id));
+    }
     let next = share_transition(&current, &share, &actor).map_err(|refusal| refusal.to_string())?;
 
     // The commons copy goes first on a promotion, so a refused copy leaves the

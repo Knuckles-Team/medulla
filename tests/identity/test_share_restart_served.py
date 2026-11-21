@@ -90,6 +90,18 @@ def test_share_refusals_change_nothing(clean_graph):
         with pytest.raises(EngineResponseError):
             owner.rbac.share_grant("share-refusal-1", "placement")
 
+        # A private node the caller cannot see answers exactly as an absent node
+        # does, so the refusal does not reveal that the node exists.
+        owner.nodes.add("share-refusal-hidden", {**_note(OWNER), "_shared_scope": "private"})
+        with pytest.raises(EngineResponseError) as absent:
+            other.rbac.share_revoke("share-refusal-absent")
+        with pytest.raises(EngineResponseError) as hidden:
+            other.rbac.share_revoke("share-refusal-hidden")
+        assert "INVALID_ARGUMENT" in str(hidden.value)
+        assert str(hidden.value).replace("share-refusal-hidden", "X") == str(
+            absent.value
+        ).replace("share-refusal-absent", "X")
+
         assert owner.nodes.properties("share-refusal-1") == before
     finally:
         for client in (owner, other, foreign):
