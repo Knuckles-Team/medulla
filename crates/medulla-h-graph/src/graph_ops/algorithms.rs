@@ -407,16 +407,25 @@ fn topology_node_label(view: &medulla_graph_core::graph::GraphView, id: &str) ->
         .to_string()
 }
 
-/// The relationship an edge blob stores, else `related`.
-fn topology_edge_relation(blob: &[u8]) -> String {
+/// The relationship an edge blob stores (else `related`) and its `weight`
+/// (else 1). A stored weight that is not a finite positive number is passed
+/// through as it is, so the kernel check refuses it (MEDULLA-FEDERATED-QUERY-R607.4).
+fn topology_edge(blob: &[u8]) -> (String, f64) {
     match medulla_types::msgpack::decode_property_value(blob) {
-        Ok(serde_json::Value::Object(props)) => ["relationship", "type", "label"]
-            .iter()
-            .filter_map(|key| props.get(*key).and_then(serde_json::Value::as_str))
-            .find(|value| !value.is_empty())
-            .unwrap_or("related")
-            .to_string(),
-        _ => "related".to_string(),
+        Ok(serde_json::Value::Object(props)) => {
+            let relation = ["relationship", "type", "label"]
+                .iter()
+                .filter_map(|key| props.get(*key).and_then(serde_json::Value::as_str))
+                .find(|value| !value.is_empty())
+                .unwrap_or("related")
+                .to_string();
+            let weight = match props.get("weight") {
+                None => 1.0,
+                Some(value) => value.as_f64().unwrap_or(f64::NAN),
+            };
+            (relation, weight)
+        }
+        _ => ("related".to_string(), 1.0),
     }
 }
 
@@ -453,13 +462,13 @@ fn mine_topology(
             params.max_nodes
         ));
     }
-    let mut labeled_edges: Vec<(String, String, String)> = Vec::new();
+    let mut weighted_edges: Vec<(String, String, String, f64)> = Vec::new();
     for ((from, to), blobs) in &view.edge_properties {
         if !node_labels.contains_key(from) || !node_labels.contains_key(to) {
             continue;
         }
         for blob in blobs.iter() {
-            let relation = topology_edge_relation(blob);
+            let (relation, weight) = topology_edge(blob);
             if params
                 .relationship
                 .as_deref()
@@ -467,9 +476,15 @@ fn mine_topology(
             {
                 continue;
             }
-            labeled_edges.push((from.clone(), to.clone(), relation));
+            weighted_edges.push((from.clone(), to.clone(), relation, weight));
         }
     }
+    // The view's maps iterate in hash order; sort so one graph always yields one input.
+    weighted_edges.sort_by(|a, b| (&a.0, &a.1, &a.2).cmp(&(&b.0, &b.1, &b.2)));
+    let labeled_edges: Vec<(String, String, String)> = weighted_edges
+        .iter()
+        .map(|(from, to, relation, _)| (from.clone(), to.clone(), relation.clone()))
+        .collect();
     if labeled_edges.len() as u64 > params.max_edges {
         return Err(format!(
             "TOPOLOGY_GRAPH_TOO_LARGE: {} edges exceed topology.max_edges {}",
@@ -477,15 +492,13 @@ fn mine_topology(
             params.max_edges
         ));
     }
-    // The view's maps iterate in hash order; sort so one graph always yields one input.
-    labeled_edges.sort();
     let mut outgoing: std::collections::BTreeMap<String, Vec<(String, f64)>> = node_labels
         .keys()
         .map(|id| (id.clone(), Vec::new()))
         .collect();
-    for (from, to, _) in &labeled_edges {
+    for (from, to, _, weight) in &weighted_edges {
         if let Some(list) = outgoing.get_mut(from) {
-            list.push((to.clone(), 1.0));
+            list.push((to.clone(), *weight));
         }
     }
     let graph = AdjacencyGraph::from_adjacency(outgoing);
@@ -596,11 +609,62 @@ async fn handle_mine_topology(
     params: TopologyParams,
 ) -> Response {
     let snap = core.analysis_snapshot();
+    let analytic = params.analytic;
     match compute_off_lock(req_id, move || mine_topology(&snap, &params)).await {
-        Ok(Ok(result)) => Response::ok(req_id, ResultPayload::of::<results::MineTopology>(result)),
-        Ok(Err(message)) => Response::err(req_id, message),
+        Ok(Ok(result)) => {
+            topology_span(analytic, Ok(&result.evidence));
+            Response::ok(req_id, ResultPayload::of::<results::MineTopology>(result))
+        }
+        Ok(Err(message)) => {
+            topology_span(analytic, Err(&message));
+            Response::err(req_id, message)
+        }
         Err(resp) => resp,
     }
+}
+
+/// The `medulla.topology.<analytic>` span (MEDULLA-FEDERATED-QUERY-R607.5): a
+/// run records the evidence counts with outcome `ok`; a refusal records
+/// outcome `refused` and its code. One event inside the span carries it to the
+/// subscriber.
+fn topology_span(analytic: TopologyAnalytic, outcome: Result<&TopologyEvidence, &String>) {
+    macro_rules! span_for {
+        ($name:literal) => {
+            tracing::info_span!(
+                $name,
+                analytic = analytic.as_str(),
+                outcome = tracing::field::Empty,
+                code = tracing::field::Empty,
+                nodes = tracing::field::Empty,
+                edges = tracing::field::Empty,
+                iterations = tracing::field::Empty,
+                elapsed_ms = tracing::field::Empty,
+                seed = tracing::field::Empty,
+            )
+        };
+    }
+    let span = match analytic {
+        TopologyAnalytic::Spectral => span_for!("medulla.topology.spectral"),
+        TopologyAnalytic::Mincut => span_for!("medulla.topology.mincut"),
+        TopologyAnalytic::Analogy => span_for!("medulla.topology.analogy"),
+        TopologyAnalytic::Synergy => span_for!("medulla.topology.synergy"),
+        TopologyAnalytic::HyperedgeScore => span_for!("medulla.topology.hyperedge_score"),
+    };
+    match outcome {
+        Ok(evidence) => {
+            span.record("outcome", "ok");
+            span.record("nodes", evidence.nodes);
+            span.record("edges", evidence.edges);
+            span.record("iterations", evidence.iterations);
+            span.record("elapsed_ms", evidence.elapsed_ms);
+            span.record("seed", evidence.seed);
+        }
+        Err(message) => {
+            span.record("outcome", "refused");
+            span.record("code", message.split(':').next().unwrap_or_default());
+        }
+    }
+    span.in_scope(|| tracing::info!("topology analytic finished"));
 }
 
 /// Handle graph algorithms and metrics.

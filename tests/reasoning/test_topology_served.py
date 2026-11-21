@@ -9,9 +9,24 @@ nodes of different labels are an exact analogy.
 
 from __future__ import annotations
 
-import pytest
+import re
+import secrets
 
-from medulla.client import EngineResponseError
+import pytest
+from conftest import (
+    TEST_AGENT_ID,
+    TEST_SIGNER_KEY,
+    bootstrap_context,
+    find_server_binary,
+    request_context,
+    server_timeout,
+    spawn_server,
+    stop_server,
+    strict_server_env,
+    wait_for_server,
+)
+
+from medulla.client import EngineResponseError, SyncMedullaClient
 
 _LEFT = ["tri-a1", "tri-a2", "tri-a3"]
 _RIGHT = ["tri-b1", "tri-b2", "tri-b3"]
@@ -85,3 +100,186 @@ def test_kernel_refusals_are_typed(clean_graph):
             gc.graph.mine_topology("spectral", k=bad_k)
     with pytest.raises(EngineResponseError, match="TOPOLOGY_PARAM_INVALID"):
         gc.graph.mine_topology("hyperedge_score", candidates=[["tri-a1", "ghost"]])
+
+
+# ---------------------------------------------------------------------------
+# Refusals and evidence (MEDULLA-FEDERATED-QUERY-R607.4, R607.5) run on their own
+# engine: the size caps are set at their registry floors with `--knob`, and the
+# engine's own log is read for the `medulla.topology.<analytic>` spans.
+# ---------------------------------------------------------------------------
+
+# The registry floors of `topology.max_nodes` and `topology.max_edges`.
+_MAX_NODES = 1_000
+_MAX_EDGES = 10_000
+_BATCH = 200
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+@pytest.fixture(scope="module")
+def capped_engine(tmp_path_factory):
+    """One engine with the topology size caps at their floors and a readable log."""
+    binary = find_server_binary()
+    assert binary, (
+        "supply a prebuilt full MEDULLA_TEST_BINARY; no cold build is attempted"
+    )
+    runtime = tmp_path_factory.mktemp("topology-capped")
+    socket_path = str(runtime / "engine.sock")
+    persist = runtime / "persist"
+    persist.mkdir()
+    log_path = runtime / "engine.log"
+    secret = secrets.token_hex(32)
+    env = strict_server_env(
+        str(runtime / "security"), auth_secret=secret, persist_dir=str(persist)
+    )
+    env.pop("RUST_LOG", None)
+    process = spawn_server(
+        [
+            binary,
+            "--socket-path",
+            socket_path,
+            "--knob",
+            f"topology.max_nodes={_MAX_NODES}",
+            "--knob",
+            f"topology.max_edges={_MAX_EDGES}",
+        ],
+        env=env,
+        log_path=log_path,
+    )
+    try:
+        wait_for_server(
+            process, socket_path, name="topology capped engine", log_path=log_path
+        )
+        with SyncMedullaClient.connect(
+            socket_path=socket_path,
+            auth_secret=secret,
+            verified_context=bootstrap_context(),
+        ) as bootstrap:
+            bootstrap.consensus.bootstrap_system_identity(
+                agent_id=TEST_AGENT_ID,
+                signer_id=TEST_AGENT_ID,
+                signer_key=TEST_SIGNER_KEY,
+            )
+        with SyncMedullaClient.connect(
+            socket_path=socket_path,
+            auth_secret=secret,
+            verified_context=request_context(),
+            timeout=server_timeout(),
+        ) as client:
+            yield client, log_path
+    finally:
+        stop_server(process, name="topology capped engine", log_path=log_path)
+
+
+def _span_lines(log_path, analytic: str) -> list[str]:
+    text = _ANSI.sub("", log_path.read_text("utf-8", "replace"))
+    return [
+        line
+        for line in text.splitlines()
+        if f"medulla.topology.{analytic}{{" in line
+        and "topology analytic finished" in line
+    ]
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R607.4
+def test_topology_refusals(capped_engine):
+    client, _ = capped_engine
+    client.graph.clear()
+
+    # TOPOLOGY_TRIVIAL_GRAPH: fewer than 3 nodes.
+    client.nodes.add("lone-a", {"type": "Alpha"})
+    client.nodes.add("lone-b", {"type": "Alpha"})
+    with pytest.raises(EngineResponseError, match="TOPOLOGY_TRIVIAL_GRAPH"):
+        client.graph.mine_topology("mincut")
+
+    # TOPOLOGY_PARAM_INVALID: k outside [2, 256], and an edge weight that is not a
+    # finite positive number.
+    client.graph.clear()
+    _seed(client)
+    for bad_k in (1, 257):
+        with pytest.raises(EngineResponseError, match="TOPOLOGY_PARAM_INVALID"):
+            client.graph.mine_topology("spectral", k=bad_k)
+    client.edges.add("tri-a1", "tri-b3", {"relationship": "BAD", "weight": -1.0})
+    with pytest.raises(EngineResponseError, match="TOPOLOGY_PARAM_INVALID"):
+        client.graph.mine_topology("mincut")
+    with pytest.raises(EngineResponseError, match="TOPOLOGY_PARAM_INVALID"):
+        client.graph.mine_topology("spectral", k=2)
+    # The relationship filter leaves the bad edge out, so the same graph reads.
+    assert (
+        client.graph.mine_topology("mincut", relationship="LINKS")["evidence"][
+            "cut_weight"
+        ]
+        == 1.0
+    )
+
+    # TOPOLOGY_GRAPH_TOO_LARGE: one node over `topology.max_nodes`.
+    client.graph.clear()
+    ids = [f"big-{i:05d}" for i in range(_MAX_NODES + 1)]
+    for start in range(0, len(ids), _BATCH):
+        client.lifecycle.batch_update(
+            [
+                {"op": "add_node", "id": node, "properties": {"type": "Big"}}
+                for node in ids[start : start + _BATCH]
+            ]
+        )
+    with pytest.raises(EngineResponseError, match="TOPOLOGY_GRAPH_TOO_LARGE"):
+        client.graph.mine_topology("mincut")
+    # A refusal writes nothing: a label-narrowed read sees exactly the nodes
+    # written after it.
+    client.nodes.add("small-a", {"type": "Small"})
+    client.nodes.add("small-b", {"type": "Small"})
+    client.nodes.add("small-c", {"type": "Small"})
+    client.edges.add("small-a", "small-b", {"relationship": "LINKS"})
+    client.edges.add("small-b", "small-c", {"relationship": "LINKS"})
+    small = client.graph.mine_topology("mincut", label="Small")
+    assert small["evidence"]["nodes"] == 3
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R607.5
+def test_evidence_fields_after_success_and_refusal(capped_engine):
+    client, log_path = capped_engine
+    client.graph.clear()
+    _seed(client)
+
+    spectral = client.graph.mine_topology("spectral", k=2, seed=11)
+    evidence = spectral["evidence"]
+    assert set(evidence) == {
+        "nodes",
+        "edges",
+        "iterations",
+        "modularity",
+        "cut_weight",
+        "match_scores",
+        "elapsed_ms",
+        "seed",
+    }
+    assert evidence["nodes"] == 6
+    assert evidence["edges"] == 7
+    assert evidence["seed"] == 11
+    assert evidence["iterations"] > 0
+    assert isinstance(evidence["modularity"], float)
+    assert evidence["cut_weight"] is None
+    assert evidence["elapsed_ms"] >= 0
+
+    mincut = client.graph.mine_topology("mincut")["evidence"]
+    assert mincut["cut_weight"] == 1.0
+    assert mincut["modularity"] is None
+
+    analogy = client.graph.mine_topology("analogy", k=4)
+    assert analogy["evidence"]["match_scores"] == [
+        m["score"] for m in analogy["matches"]
+    ]
+
+    with pytest.raises(EngineResponseError, match="TOPOLOGY_PARAM_INVALID"):
+        client.graph.mine_topology("spectral", k=1)
+
+    # The engine's own spans carry the same counts, and the refusal its outcome.
+    spectral_spans = _span_lines(log_path, "spectral")
+    ok = [line for line in spectral_spans if "outcome=" in line and "ok" in line]
+    assert any(
+        "nodes=6" in line and "edges=7" in line and "seed=11" in line for line in ok
+    ), spectral_spans
+    assert any(
+        "refused" in line and "TOPOLOGY_PARAM_INVALID" in line
+        for line in spectral_spans
+    ), spectral_spans
+    assert any("nodes=6" in line for line in _span_lines(log_path, "mincut"))
