@@ -35,6 +35,7 @@ use std::sync::Arc;
 
 use medulla_ann_codes::semantic_ann_codes::SemanticCodeError;
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
+use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticIndexError,
     semantic_index::SemanticIndexOp, semantic_index::SemanticSourceSelector,
@@ -72,6 +73,7 @@ pub async fn handle_semantic_index(
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     graph_sources: &dyn GraphSourceProvider,
+    bound_space: &(dyn Fn() -> Option<EmbeddingSpaceRef> + Sync),
     op: Box<SemanticIndexOp>,
 ) -> Response {
     let op = *op;
@@ -98,6 +100,21 @@ pub async fn handle_semantic_index(
     // mutation so a binding admitted by this very operation is registered.
     let bound_service = Arc::clone(&service);
     let mutation = op.is_mutation();
+    // The engine's S6 worker consumes the S6 intent that S5 publishes, so its consumer is
+    // installed before any stage completes.
+    if matches!(
+        op,
+        SemanticIndexOp::CompleteStage { .. }
+            | SemanticIndexOp::CompleteGenerationStage { .. }
+            | SemanticIndexOp::CompleteSqlSourceStage { .. }
+    ) {
+        let worker = Arc::clone(&service);
+        if let Err(response) =
+            blocking(req_id, move || worker.subscribe_s6_worker()).await
+        {
+            return response;
+        }
+    }
     if let Err(response) = register_graph_source(req_id, state, &bound_service).await {
         return response;
     }
@@ -115,13 +132,48 @@ pub async fn handle_semantic_index(
         doc_state,
         graph_source,
     };
+    let completes_generation = matches!(op, SemanticIndexOp::CompleteGenerationStage { .. });
     let response = dispatch::handle(&context, op).await;
+    if completes_generation && response.error.is_none() {
+        run_s6_worker(&bound_service, bound_space, now_ms).await;
+    }
     if mutation {
         if let Err(failure) = register_graph_source(req_id, state, &bound_service).await {
             return failure;
         }
     }
     response
+}
+
+/// Run the engine's S6 stage worker once after a generation stage completes. It activates the
+/// generation when S5 has just published the S6 intent and the bound text embedder's pinned
+/// space is the binding's model space (the one `pin_embedding_space` feeds the binding and the
+/// image). A refusal, a blocked promotion included, is logged: the stage completion that woke
+/// the worker has already committed, and the prior generation stays live.
+async fn run_s6_worker(
+    service: &Arc<SemanticIndexService>,
+    bound_space: &(dyn Fn() -> Option<EmbeddingSpaceRef> + Sync),
+    now_ms: u64,
+) {
+    let Some(space) = bound_space() else {
+        return;
+    };
+    let service = Arc::clone(service);
+    let outcome = tokio::task::spawn_blocking(move || {
+        let Some(binding) = service.binding()? else {
+            return Ok(None);
+        };
+        if binding.model_digest != space.digest {
+            return Ok(None);
+        }
+        service.run_s6_stage(&space, now_ms)
+    })
+    .await;
+    match outcome {
+        Ok(Ok(_)) => {}
+        Ok(Err(error)) => tracing::warn!(%error, "the S6 stage worker did not activate the generation"),
+        Err(_) => tracing::warn!("the S6 stage worker could not be scheduled"),
+    }
 }
 
 /// Record the binding's graph text property, when it has one, in the registry the graph commit

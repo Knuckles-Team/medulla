@@ -436,6 +436,15 @@ pub async fn dispatch_agent_library_methods(
                             state,
                             verified: verified_context,
                         },
+                        &|| {
+                            medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity()
+                                .and_then(|identity| {
+                                    medulla_server_ops::api::query_txn::query_support::pin_embedding_space(
+                                        &identity,
+                                    )
+                                    .ok()
+                                })
+                        },
                         op,
                     )
                     .await
