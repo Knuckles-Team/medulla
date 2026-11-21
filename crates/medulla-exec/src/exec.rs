@@ -41,6 +41,8 @@ pub use decisions::DecisionSource;
 // MEDULLA-TYPED-PACKS-R108.8 — the `USAGE` source over the caller's usage log.
 mod usage;
 pub use usage::{UsageSeries, UsageSource, UsageWindow};
+// MEDULLA-FEDERATED-QUERY-R078.7 — the `COMPANY CONTEXT` source over the pinned snapshot.
+mod company_context;
 pub(crate) mod dispatch;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;
@@ -270,6 +272,14 @@ pub struct PlanCtx<'a> {
     /// filter stranded (the registry knobs `retrieval.replenish_max_rounds` and
     /// `retrieval.oversample_factor`, resolved by the served planner).
     pub replenish: vector_rank::ReplenishPolicy,
+    /// MEDULLA-FEDERATED-QUERY-R078.7 — the verified caller scope the executed plan
+    /// carries (`Plan.scope`, stamped by the served Uql path). `execute` binds it from the
+    /// plan; the company-context view reads its clearance labels. `None` means the plan
+    /// never passed scope injection, and that view then refuses `PLAN_SCOPE_UNVERIFIED`.
+    pub plan_scope: Option<medulla_query_types::wire::PlanScope>,
+    /// MEDULLA-FEDERATED-QUERY-R078.7 — the revision of the one snapshot this read is
+    /// pinned to, the `source_revision` a company-context row reports when its node names none.
+    pub snapshot_revision: Option<u64>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -495,7 +505,21 @@ impl<'a> PlanCtx<'a> {
             constraints: None,
             modality_pair: None,
             replenish: vector_rank::ReplenishPolicy::default(),
+            plan_scope: None,
+            snapshot_revision: None,
         }
+    }
+
+    /// Bind the revision of the snapshot this read is pinned to (MEDULLA-FEDERATED-QUERY-R078.7).
+    pub fn with_snapshot_revision(mut self, revision: u64) -> Self {
+        self.snapshot_revision = Some(revision);
+        self
+    }
+
+    /// Bind the verified caller scope the executed plan carries (MEDULLA-FEDERATED-QUERY-R078.7).
+    pub fn with_plan_scope(mut self, scope: medulla_query_types::wire::PlanScope) -> Self {
+        self.plan_scope = Some(scope);
+        self
     }
 
     /// Pin the instants edges must be live at (MEDULLA-DURABLE-KERNEL-R079).
@@ -744,6 +768,16 @@ pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<crate::policy_mask::A
 ///     contract), or Lane B's rayon-morsel `ParallelDriver` when the opt-in `par-runtime`
 ///     feature is built and the environment asks for it.
 pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
+    // MEDULLA-FEDERATED-QUERY-R078.7: the scope the plan carries reaches the operators that
+    // read it (the company-context view), read before any rewrite below can drop it.
+    let scoped;
+    let ctx = match &plan.scope {
+        Some(scope) if ctx.plan_scope.is_none() => {
+            scoped = ctx.clone().with_plan_scope(scope.clone());
+            &scoped
+        }
+        _ => ctx,
+    };
     // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking + row filters: the
     // ONE rewrite, at the top of execute, BEFORE pushdown (see [`mask_plan`]).
     let (plan, _applied) = mask_plan(plan, ctx);

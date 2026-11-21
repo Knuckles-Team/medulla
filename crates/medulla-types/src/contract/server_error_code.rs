@@ -32,6 +32,9 @@ closed_error_codes! {
         /// MEDULLA-FEDERATED-QUERY-R078.4: the caller has no verified tenant; the
         /// statement is refused before any read.
         PlanScopeUnverified => "PLAN_SCOPE_UNVERIFIED",
+        /// MEDULLA-FEDERATED-QUERY-R078.7: the requested company-context category's class is
+        /// not declared in the snapshot's composed schema.
+        CompanyMappingMissing => "COMPANY_MAPPING_MISSING",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
         /// A catalog node is typed with a class that is not under `cat:Asset` (MEDULLA-TYPED-PACKS-R108.4).
         AssetClassOrphan => "ASSET_CLASS_ORPHAN",

@@ -37,6 +37,10 @@ closed_error_codes! {
         /// `EVALUATE kernel ...` (MEDULLA-FEDERATED-QUERY-R726): the kernel name is not
         /// one of `medulla_query_types::series_expr::EVALUATE_KERNELS`. Refused at parse time.
         EvaluateKernel => "UQL_E_EVALUATE_KERNEL",
+        /// `COMPANY CONTEXT CATEGORY name` (MEDULLA-FEDERATED-QUERY-R078.7): the name is
+        /// not one of `organization`, `role`, `data_asset`, `permission`, `time_series`.
+        /// Refused at parse time.
+        CompanyCategory => "UQL_E_COMPANY_CATEGORY",
         /// `WITH KNOWLEDGE` (MEDULLA-FEDERATED-QUERY-R028.1): a row's provenance or
         /// policy frame was omitted — no snapshot binding. A typed absence, never an
         /// empty success; the annotated result is refused whole.

@@ -87,6 +87,17 @@ impl CommittedSeries<'_> {
     }
 }
 
+impl CommittedSeries<'_> {
+    /// The latest committed point of `series` at or before `at_ns`, `None` when the store,
+    /// its scope or the series holds none (MEDULLA-FEDERATED-QUERY-R078.7). Several versions
+    /// of one timestamp read as the last one, the latest correction.
+    pub(crate) fn latest_at_or_before(&self, series: &str, at_ns: i64) -> Option<(i64, Vec<f64>)> {
+        self.range(series, 0, at_ns.saturating_add(1))
+            .into_iter()
+            .max_by_key(|(ts, _)| *ts)
+    }
+}
+
 /// SOURCE (time-series): read the points of each id in `series` within the `[from, to)`
 /// window and emit one row per point per series — `id` = `series@ts`, `score` = field 0
 /// narrowed to `f32`, value channels `v0..vk` = every field exactly — so a downstream

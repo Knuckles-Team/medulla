@@ -306,6 +306,9 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::UsageScan => Op::UsageScan {
             view: UsageView::Queries,
         },
+        OpKind::CompanyContextScan => Op::CompanyContextScan {
+            category: Some(CompanyCategory::DataAsset),
+        },
         OpKind::ScanEdges => Op::ScanEdges {
             rel: Some("dependsOn".into()),
             preds: vec![],

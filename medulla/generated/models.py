@@ -3249,6 +3249,14 @@ class CommunityRow(BaseModel):
     members: list[str]
 
 
+class CompanyCategory(str, Enum):
+    ORGANIZATION = "organization"
+    ROLE = "role"
+    DATA_ASSET = "data_asset"
+    PERMISSION = "permission"
+    TIME_SERIES = "time_series"
+
+
 class CompactNodesResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -20140,6 +20148,18 @@ class OpCepBody(BaseModel):
     pattern: CepPatternSpec
 
 
+class OpCompanyContextScan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    CompanyContextScan: OpCompanyContextScanBody
+
+
+class OpCompanyContextScanBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    category: CompanyCategory | None = None
+
+
 class OpConfidenceOp(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -31017,6 +31037,7 @@ Op = (
     | OpAttribute
     | OpDecisionScan
     | OpUsageScan
+    | OpCompanyContextScan
     | OpScanEdges
     | OpLimit
     | OpProject
@@ -36887,6 +36908,7 @@ __all__ = [
     "CommunityDetectionResult",
     "CommunityMiningResult",
     "CommunityQualityFunction",
+    "CompanyCategory",
     "CommunityRow",
     "CompactNodesResult",
     "ComponentContribution",
@@ -39264,6 +39286,8 @@ __all__ = [
     "OpBeliefAsOfBody",
     "OpCep",
     "OpCepBody",
+    "OpCompanyContextScan",
+    "OpCompanyContextScanBody",
     "OpConfidenceOp",
     "OpContradicts",
     "OpContradictsBody",

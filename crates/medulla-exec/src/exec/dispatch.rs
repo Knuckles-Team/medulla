@@ -75,6 +75,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::DecisionScan { .. }
         | Op::ScanEdges { .. }
         | Op::UsageScan { .. }
+        | Op::CompanyContextScan { .. }
         | Op::Attribute { .. }
         | Op::Decay { .. }
         | Op::ClusterByEmbedding { .. }
@@ -347,6 +348,9 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
         Op::DecisionScan { preds } => super::decisions::decision_scan(ctx, preds),
         Op::ScanEdges { rel, preds } => super::edges::scan_edges(ctx, rel.as_deref(), preds),
         Op::UsageScan { view } => super::usage::usage_scan(ctx, *view),
+        Op::CompanyContextScan { category } => {
+            super::company_context::company_context_scan(ctx, *category)
+        }
         Op::Attribute {
             input: players,
             value,

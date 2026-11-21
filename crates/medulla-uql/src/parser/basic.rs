@@ -1,7 +1,7 @@
 //! The always-available clauses: `MATCH`, `WHERE`, `TRAVERSE`, `RANK`, `RERANK`,
 //! `AS OF`/`VALID AS OF`, `WINDOW`, `LIMIT`, `RETURN`, `FOREIGN`, `DECISIONS` and `USAGE`.
 
-use medulla_query_types::wire::{Op, TimeAxis, UsageView};
+use medulla_query_types::wire::{CompanyCategory, Op, TimeAxis, UsageView};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};
@@ -89,6 +89,36 @@ impl<'a> Parser<'a> {
             return Err(self.err_here("expected `QUERIES` or `ASSETS` after USAGE"));
         };
         Ok(Op::UsageScan { view })
+    }
+
+    /// `COMPANY CONTEXT [ CATEGORY name ]` (MEDULLA-FEDERATED-QUERY-R078.7) — the governed
+    /// company-context view. A category outside the closed five refuses at parse time with
+    /// `UQL_E_COMPANY_CATEGORY`.
+    pub(super) fn company_context(&mut self) -> Result<Op, UqlError> {
+        if !self.eat_kw("CONTEXT") {
+            return Err(self.err_here("expected `CONTEXT` after COMPANY"));
+        }
+        if !self.eat_kw("CATEGORY") {
+            return Ok(Op::CompanyContextScan { category: None });
+        }
+        let span = self.cur_span();
+        let word = self.name("a company category")?;
+        let Some(category) = CompanyCategory::from_name(&word) else {
+            return Err(UqlError::new(
+                crate::diag::UqlCode::CompanyCategory,
+                format!("`{word}` is not a company category"),
+                span,
+            )
+            .expecting(
+                CompanyCategory::ALL
+                    .iter()
+                    .map(|category| format!("`{}`", category.name()))
+                    .collect(),
+            ));
+        };
+        Ok(Op::CompanyContextScan {
+            category: Some(category),
+        })
     }
 
     pub(super) fn where_stage(&mut self) -> Result<Op, UqlError> {

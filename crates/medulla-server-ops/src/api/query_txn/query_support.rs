@@ -131,6 +131,12 @@ fn unified_rows(
 pub fn plan_needs_tsdb(ops: &[medulla_exec::algebra::Op]) -> bool {
     ops.iter().any(|op| match op {
         medulla_exec::algebra::Op::TsScan { .. } => true,
+        // MEDULLA-FEDERATED-QUERY-R078.7: the time-series rows of the company-context view
+        // read the committed store, so every scan that can emit them binds it.
+        medulla_exec::algebra::Op::CompanyContextScan { category } => matches!(
+            category,
+            None | Some(medulla_query_types::wire::CompanyCategory::TimeSeries)
+        ),
         #[cfg(feature = "text")]
         medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|branch| plan_needs_tsdb(branch))

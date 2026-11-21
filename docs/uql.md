@@ -61,6 +61,7 @@ foreign            = "FOREIGN" id | "FOREIGN" "SCAN" string [ "JOIN" ] | "FOREIG
 decisions          = "DECISIONS" [ "WHERE" pred ] ;
 edges              = "EDGES" [ ":" name ] [ "WHERE" pred ] ;
 usage              = "USAGE" ( "QUERIES" | "ASSETS" ) ;
+company_context    = "COMPANY" "CONTEXT" [ "CATEGORY" name ] ;
 sparql             = "SPARQL" string "VAR" string ;   (* feature `owl` *)
 tsscan             = "TSSCAN" string_list "FROM" num "TO" num ;   (* feature `timeseries` *)
 sensor             = "SENSOR" "FUSE" string_list "TOLERANCE" int | "SENSOR" "ALIGN" "[" string interp { "," string interp } "]" "CLOCK" clock [ "TOLERANCE" int ] ;   (* feature `timeseries` *)
@@ -162,6 +163,7 @@ A source seeds the RowSet from nothing. Start every pipeline with one.
 | `DECISIONS [WHERE p]` | `DecisionScan{preds}` — the caller's visible decision records | — (served: `decide`) |
 | `EDGES [:rel] [WHERE p]` | `ScanEdges{rel,preds}` — one row per visible edge (`id` is `source\|target\|ord`) | — |
 | `USAGE QUERIES` / `USAGE ASSETS` | `UsageScan{view}` — the caller's usage over the trailing window, ranked by use | — (served: `tsdb`) |
+| `COMPANY CONTEXT [CATEGORY c]` | `CompanyContextScan{category}` — source-bound references to the organizations, roles, data assets, permissions and latest time-series points the caller's clearance allows; `c` is `organization`, `role`, `data_asset`, `permission` or `time_series` | — (served: `tsdb`) |
 
 These also seed when they lead a pipeline, and narrow when they follow one: `WHERE`,
 `AS OF`, `VALID AS OF`, `REASON`, `EVIDENCE FOR`, `CONTRADICTS`, `SUPPORTED BY`,
@@ -206,6 +208,21 @@ window, each a use of the tool its `tool_name` names. Every row carries the valu
 
 ```uql
 USAGE QUERIES |> LIMIT 10
+```
+
+`COMPANY CONTEXT` is the governed company-context view of the caller's own pinned snapshot.
+Each row is a source-bound reference, never a copied value: an `organization`, `role`,
+`data_asset` or `permission` node (a node takes the first category that matches, in that
+order), or, for `time_series`, the latest committed point of a data asset's `series_id` at or
+before the snapshot (row id `ts:<series_id>:<timestamp_ms>`). The row's provenance carries
+`category`, `entity_id`, `source_id` (the node's `source`, else `native`), `source_revision`
+(the node's external version, else the snapshot revision) and `clearance`. A node whose
+`clearance` labels are not all among the caller's scopes is dropped before any series is read.
+An unknown category refuses `UQL_E_COMPANY_CATEGORY`; a category whose class the snapshot
+schema does not declare refuses `COMPANY_MAPPING_MISSING`.
+
+```uql
+COMPANY CONTEXT CATEGORY data_asset |> LIMIT 20
 ```
 
 ## Stages

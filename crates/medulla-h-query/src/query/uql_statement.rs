@@ -191,7 +191,8 @@ pub(crate) async fn handle_uql(
             let bound = plan_ctx
                 .clone()
                 .with_policies(&policies)
-                .with_principal(&principal);
+                .with_principal(&principal)
+                .with_snapshot_revision(version);
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, &bound)?;
             if let medulla_query_types::wire::UqlResult::Rows {
                 snapshot_revision,

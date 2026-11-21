@@ -493,6 +493,52 @@ pub struct OrderKey {
     pub descending: bool,
 }
 
+/// The category of a governed company-context row (MEDULLA-FEDERATED-QUERY-R078.7).
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum CompanyCategory {
+    /// An `Organization` node.
+    Organization,
+    /// A `Role` node.
+    Role,
+    /// A `DataAsset` node.
+    DataAsset,
+    /// A `SecurityClearance` node.
+    Permission,
+    /// The latest committed point of a data asset's series.
+    TimeSeries,
+}
+
+#[cfg(feature = "query")]
+impl CompanyCategory {
+    /// Every category, in the fixed order a node takes its first match.
+    pub const ALL: [Self; 5] = [
+        Self::Organization,
+        Self::Role,
+        Self::DataAsset,
+        Self::Permission,
+        Self::TimeSeries,
+    ];
+
+    /// The snake_case name `COMPANY CONTEXT CATEGORY` spells.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Organization => "organization",
+            Self::Role => "role",
+            Self::DataAsset => "data_asset",
+            Self::Permission => "permission",
+            Self::TimeSeries => "time_series",
+        }
+    }
+
+    /// The category a name spells, if any.
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|category| category.name() == name)
+    }
+}
+
 /// Which usage an [`Op::UsageScan`] ranks (MEDULLA-TYPED-PACKS-R108.8).
 #[cfg(feature = "query")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1056,6 +1102,15 @@ pub enum Op {
     /// value channels and never a result row. The served path binds the usage of the
     /// caller's tenant and graph; unbound it is a typed error, never an empty set.
     UsageScan { view: UsageView },
+    /// SOURCE (MEDULLA-FEDERATED-QUERY-R078.7, UQL `COMPANY CONTEXT [CATEGORY name]`) — the
+    /// governed company-context view: one source-bound reference per organization, role,
+    /// data asset and permission node of the caller's pinned snapshot, and per time-series
+    /// data asset its latest committed point. Rows carry their provenance as text columns
+    /// and never a copied value. A row whose clearance exceeds the scope's is dropped.
+    CompanyContextScan {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        category: Option<CompanyCategory>,
+    },
     /// LIMIT — top-k, respecting the current order.
     Limit { k: usize },
     /// PROJECT (UQL `RETURN`, UQL-08) — name the score CHANNELS the result carries per
