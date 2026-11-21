@@ -137,6 +137,11 @@ path = "benches/r602_links_served.rs"
 harness = false
 
 [[bench]]
+name = "r603_fingerprint_served"
+path = "benches/r603_fingerprint_served.rs"
+harness = false
+
+[[bench]]
 name = "r600_enrich_served"
 path = "benches/r600_enrich_served.rs"
 harness = false
