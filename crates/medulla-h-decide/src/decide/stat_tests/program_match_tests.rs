@@ -13,6 +13,7 @@ use medulla_decision_types::decision::program_store::{
     program_node_id, RunRecord, RunRecordStored, StoredRun,
 };
 use medulla_decision_types::decision::run_governance::RunOutcome;
+use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
 use medulla_decision_types::decision::StatisticalOutcome;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 
@@ -352,4 +353,56 @@ async fn each_match_refusal_names_its_code() {
         .await
         .unwrap();
     assert_eq!(abstain_codes(&unbound), ["PROGRAM_SLOTS_UNBOUND"]);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R135.16.5
+#[tokio::test]
+async fn match_record_lists_score_threshold_and_bindings() {
+    let f = Fixture::new().await;
+    f.add_trace_node(&trace("run-e", RunOutcome::Succeeded, 3, "weekly"), "recorder")
+        .await;
+    commit_phrased(&f, "run-e", &["summarize the {p0} report"], Some(500_000))
+        .await
+        .unwrap();
+    let fact = |record: &StatisticalDecisionRecord, fact: &str| {
+        record.premises.iter().any(|p| p.fact == fact)
+    };
+
+    let semantic = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "another-task", "summarize the weekly report"),
+    )
+    .await
+    .unwrap();
+    let record = &semantic.records.as_slice()[0];
+    for expected in [
+        "program.match_kind=semantic",
+        "program.match_threshold_micros=500000",
+        "program.match_threshold_source=program",
+        "program.embedding_calls=1",
+        "program.binding.p0=slot:\"weekly\"",
+    ] {
+        assert!(fact(record, expected), "premise {expected} is missing");
+    }
+    assert!(record.premises.iter().any(|p| p.fact.starts_with("program.match_score_micros=")
+        && !p.fact.ends_with("none")));
+    assert!(record.premises.iter().any(|p| p.fact.starts_with("program.matched_node=program:")));
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(
+        record.record_digest,
+        medulla_decision_types::decision::digest::statistical_record_digest(record)
+    );
+
+    let exact = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "summarize-report", "summarize the weekly report"),
+    )
+    .await
+    .unwrap();
+    let record = &exact.records.as_slice()[0];
+    assert!(fact(record, "program.match_kind=exact"));
+    assert!(fact(record, "program.match_score_micros=none"));
+    assert!(fact(record, "program.embedding_calls=0"));
+    assert_eq!(record.evidence_class, EvidenceClass::Observation);
 }

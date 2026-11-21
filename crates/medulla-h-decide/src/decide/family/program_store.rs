@@ -9,7 +9,7 @@
 
 use medulla_decision_types::decision::program_store::preplan::{pattern_key, ReusablePattern};
 use medulla_decision_types::decision::program_store::semantic::{
-    bind_request, bind_steps, match_key, select_match, MatchKind, MatchRefusal, ProgramCandidates,
+    bind_request, bind_steps, match_key, Binding, BindingSource, select_match, MatchKind, MatchRefusal, ProgramCandidates,
     ProgramHit, ProgramMatch, ProgramMatchIndex, Selection, MATCH_ANSWER_PREFIX,
     MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES, PARAM_PROGRAM_GRAPH,
     PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
@@ -21,6 +21,7 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::{
     DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
 };
@@ -115,6 +116,57 @@ fn stored_index(
     decode_artifact(&bytes, "program match index").map(Some)
 }
 
+/// The request-text premises of a match answer or abstention (R135.16.5): the match kind,
+/// score, threshold and where it came from, the matched node, the embedding calls, the space and
+/// one premise per binding.
+fn match_claims(
+    kind: &str,
+    score: Option<i64>,
+    threshold: i64,
+    source: &str,
+    node: Option<&str>,
+    candidates: &ProgramCandidates,
+    bindings: &[Binding],
+) -> Vec<FamilyPremise> {
+    let or_none = |value: Option<String>| value.unwrap_or_else(|| "none".to_string());
+    let mut claims = vec![
+        claim(format!("program.match_kind={kind}"), PARAM_REQUEST_TEXT),
+        claim(
+            format!("program.match_score_micros={}", or_none(score.map(|n| n.to_string()))),
+            PARAM_REQUEST_TEXT,
+        ),
+        claim(format!("program.match_threshold_micros={threshold}"), PARAM_REQUEST_TEXT),
+        claim(format!("program.match_threshold_source={source}"), PARAM_REQUEST_TEXT),
+        claim(
+            format!("program.matched_node={}", or_none(node.map(str::to_string))),
+            PARAM_REQUEST_TEXT,
+        ),
+        claim(
+            format!("program.embedding_calls={}", candidates.embedding_calls),
+            PARAM_REQUEST_TEXT,
+        ),
+        claim(
+            format!("program.space_digest={}", or_none(candidates.space_digest.clone())),
+            PARAM_REQUEST_TEXT,
+        ),
+    ];
+    for binding in bindings {
+        let from = match binding.source {
+            BindingSource::Slot => "slot",
+            BindingSource::Fixed => "fixed",
+        };
+        claims.push(claim(
+            format!(
+                "program.binding.{}={from}:{}",
+                binding.parameter,
+                serde_json::to_string(&binding.value).unwrap_or_default()
+            ),
+            PARAM_REQUEST_TEXT,
+        ));
+    }
+    claims
+}
+
 /// The semantic answer of a lookup that carries `request_text` (R135.16.3): the exact program,
 /// else the nearest candidate; its parameters are bound from the text.
 fn semantic(
@@ -132,18 +184,35 @@ fn semantic(
         let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
         ProgramKnobs::from_policy(&resolved.policy).match_threshold_micros
     };
+    // An abstention states the same score and threshold premises as an answer.
+    let abstain = |refusal: &dyn DecisionRefusal,
+                   score: Option<i64>,
+                   threshold: i64,
+                   source: &str|
+     -> Executed {
+        let mut executed = abstained(QuestionKind::ProgramLookup, refusal);
+        executed.family_premises =
+            match_claims("none", score, threshold, source, None, &candidates, &[]);
+        executed
+    };
     let (chosen, kind, score, threshold, node) = if stored(ctx, task_signature)?.is_some() {
-        let own = stored_index(ctx, task_signature)?
-            .and_then(|index| index.threshold_micros)
-            .unwrap_or(default_micros);
-        (task_signature.to_string(), MatchKind::Exact, None, own, None)
+        let own = stored_index(ctx, task_signature)?.and_then(|index| index.threshold_micros);
+        (
+            task_signature.to_string(),
+            MatchKind::Exact,
+            None,
+            own.unwrap_or(default_micros),
+            None,
+        )
     } else {
         if let Some(cause) = &candidates.unavailable {
-            return Ok(abstained(
-                QuestionKind::ProgramLookup,
+            return Ok(abstain(
                 &MatchRefusal::EmbeddingUnavailable {
                     cause: cause.clone(),
                 },
+                None,
+                default_micros,
+                "knob",
             ));
         }
         let threshold_of = |signature: &str| -> Option<Option<i64>> {
@@ -169,58 +238,78 @@ fn semantic(
                 score_micros,
                 threshold_micros,
             } => {
-                return Ok(abstained(
-                    QuestionKind::ProgramLookup,
+                return Ok(abstain(
                     &MatchRefusal::BelowThreshold {
                         score_micros,
                         threshold_micros,
                     },
+                    Some(score_micros),
+                    threshold_micros,
+                    "knob",
                 ))
             }
             Selection::NoProgram => {
-                return Ok(abstained(
-                    QuestionKind::ProgramLookup,
+                return Ok(abstain(
                     &NoProgram {
                         task_signature: task_signature.to_string(),
                     },
+                    None,
+                    default_micros,
+                    "knob",
                 ))
             }
         }
     };
+    let index = stored_index(ctx, &chosen)?;
+    let source = if index.as_ref().is_some_and(|i| i.threshold_micros.is_some()) {
+        "program"
+    } else {
+        "knob"
+    };
     let Some(program) = stored(ctx, &chosen)? else {
-        return Ok(abstained(
-            QuestionKind::ProgramLookup,
+        return Ok(abstain(
             &NoProgram {
                 task_signature: chosen,
             },
+            score,
+            threshold,
+            source,
         ));
     };
     // A program with no index matches by exact signature only: it has no slots to bind.
-    let (bindings, steps) = match stored_index(ctx, &chosen)? {
+    let (bindings, steps) = match index {
         None => (Vec::new(), Vec::new()),
         Some(index) => {
             let bindings = match bind_request(&index, request_text) {
                 Ok(bindings) => bindings,
                 Err(unbound) => {
-                    return Ok(abstained(
-                        QuestionKind::ProgramLookup,
+                    return Ok(abstain(
                         &MatchRefusal::SlotsUnbound {
                             parameters: unbound.parameters,
                         },
+                        score,
+                        threshold,
+                        source,
                     ))
                 }
             };
             if !index.executable {
-                return Ok(abstained(
-                    QuestionKind::ProgramLookup,
+                return Ok(abstain(
                     &MatchRefusal::NotExecutable {
                         task_signature: chosen,
                     },
+                    score,
+                    threshold,
+                    source,
                 ));
             }
             let steps = bind_steps(&index, &bindings);
             (bindings, steps)
         }
+    };
+    let kind_text = match kind {
+        MatchKind::Exact => "exact",
+        MatchKind::Semantic => "semantic",
     };
     let matched = ProgramMatch {
         schema_version: MATCH_SCHEMA_VERSION,
@@ -229,20 +318,26 @@ fn semantic(
         match_kind: kind,
         score_micros: score,
         threshold_micros: threshold,
-        matched_node: node,
-        bindings: BoundedVec::new(bindings).map_err(invalid)?,
+        matched_node: node.clone(),
+        bindings: BoundedVec::new(bindings.clone()).map_err(invalid)?,
         steps: BoundedVec::new(steps).map_err(invalid)?,
     };
     let body = serde_json::to_string(&matched)
         .map_err(|error| invalid(format!("program match encoding failed: {error}")))?;
     let mut executed = advisory(vec![format!("{MATCH_ANSWER_PREFIX}{body}")])?;
-    executed.family_premises = vec![
-        claim(format!("program.task_signature={chosen}"), PARAM_TASK_SIGNATURE),
-        claim(
-            format!("program.match_score_micros={}", score.unwrap_or(1_000_000)),
-            PARAM_REQUEST_TEXT,
-        ),
-    ];
+    executed.family_premises = vec![claim(
+        format!("program.task_signature={chosen}"),
+        PARAM_TASK_SIGNATURE,
+    )];
+    executed.family_premises.extend(match_claims(
+        kind_text,
+        score,
+        threshold,
+        source,
+        node.as_deref(),
+        &candidates,
+        &bindings,
+    ));
     Ok(executed)
 }
 
@@ -450,7 +545,22 @@ impl DecisionFamily for ProgramLookupFamily {
         Some(ResolutionKind::Constraint)
     }
 
-    fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
-        Some(EvidenceClass::Observation)
+    /// A semantic match scores by a model embedding, so it is a `Claim`; an exact answer, an
+    /// abstention and a plain lookup stay `Observation` (R135.16.5).
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        let semantic = match outcome {
+            StatisticalOutcome::Advisory { scores, .. } => scores
+                .as_slice()
+                .first()
+                .and_then(|score| score.option_id.strip_prefix(MATCH_ANSWER_PREFIX))
+                .and_then(|body| serde_json::from_str::<ProgramMatch>(body).ok())
+                .is_some_and(|matched| matched.match_kind == MatchKind::Semantic),
+            _ => false,
+        };
+        Some(if semantic {
+            EvidenceClass::Claim
+        } else {
+            EvidenceClass::Observation
+        })
     }
 }
