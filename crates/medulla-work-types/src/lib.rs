@@ -12,10 +12,6 @@ pub mod action_spec;
 // MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_bus;
-// MEDULLA-UNIFIED-DATA-PLANE-R750.750-752 — run audit rows, tool calls and the
-// scoped conversation-history step store.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod run_history;
 // MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_observation;
