@@ -242,3 +242,156 @@ mod mine_associate_submission_tests {
         }
     }
 }
+
+// MEDULLA-DURABLE-KERNEL-R082.1: a submitted MineAssociate job completes on the
+// colocated executor with no external worker connected.
+#[cfg(test)]
+mod colocated_executor_tests {
+    use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
+    use medulla_server_api::state::ServerState;
+    use medulla_server_auth::auth::{
+        dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller,
+    };
+    use medulla_work_types::jobs::{JobKind, JobOp, SubmitJobSpec};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::sync::RwLock;
+
+    const SECRET: &str = "colocated-executor-test-secret";
+    const ISSUER: &str = "colocated-executor-test-issuer";
+    const TENANT: &str = "tenant-colocated-executor";
+    const GRAPH: &str = "colocated-executor-test";
+
+    fn next_nonce() -> u64 {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    async fn call(state: &Arc<RwLock<ServerState>>, id: u64, method: Method) -> Response {
+        let request = scoped_test_request_on(
+            SECRET,
+            id,
+            GRAPH,
+            method,
+            ScopedTestCaller {
+                principal: ISSUER,
+                tenant: TENANT,
+                scopes: &["*"],
+                nonce: &format!("colocated-executor-nonce-{id}-{}", next_nonce()),
+                idempotency_key: &format!("colocated-executor-key-{id}-{}", next_nonce()),
+            },
+        );
+        dispatch_test_on_heap(state, request).await
+    }
+
+    fn json_of(response: Response) -> serde_json::Value {
+        assert!(response.error.is_none(), "{:?}", response.error);
+        match response.result.expect("a result payload") {
+            ResultPayload::Json(value) => value,
+            ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
+            other => panic!("unexpected payload {other:?}"),
+        }
+    }
+
+    fn submit_spec() -> SubmitJobSpec {
+        SubmitJobSpec {
+            graph: GRAPH.to_string(),
+            tenant: String::new(),
+            actor: String::new(),
+            purpose: "colocated-executor".to_string(),
+            priority: 0,
+            deadline_unix_ms: None,
+            quota_cpu_ms: None,
+            memory_bytes: None,
+            io_bytes: None,
+            output_bytes: None,
+            worker_pool: String::new(),
+            worker_region: String::new(),
+            required_capabilities: Vec::new(),
+            max_attempts: 1,
+            backoff_ms: 0,
+            kind: JobKind::MineAssociate {
+                transactions: vec![
+                    vec!["item-a".to_string(), "item-b".to_string()],
+                    vec!["item-a".to_string(), "item-b".to_string()],
+                    vec!["item-a".to_string(), "item-c".to_string()],
+                ],
+                min_support: 0.3,
+                min_confidence: 0.5,
+                algorithm: "fpgrowth".to_string(),
+            },
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.1
+    #[tokio::test]
+    async fn mine_associate_job_succeeds_on_the_colocated_executor() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        let state = Arc::new(RwLock::new(server));
+
+        let created = call(
+            &state,
+            1,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+
+        let submitted = json_of(
+            call(
+                &state,
+                2,
+                Method::AnalyticsJob {
+                    op: JobOp::Submit(submit_spec()),
+                },
+            )
+            .await,
+        );
+        let job_id = submitted
+            .get("job_id")
+            .and_then(serde_json::Value::as_str)
+            .expect("submitted job id")
+            .to_string();
+
+        let mut succeeded = false;
+        for id in 10..210 {
+            let status = json_of(
+                call(
+                    &state,
+                    id,
+                    Method::AnalyticsJob {
+                        op: JobOp::Status {
+                            job_id: job_id.clone(),
+                        },
+                    },
+                )
+                .await,
+            );
+            let job_state = status.get("state").expect("job state");
+            if job_state.get("Succeeded").is_some() {
+                assert!(status.get("output").is_some_and(|value| !value.is_null()));
+                succeeded = true;
+                break;
+            }
+            assert!(
+                job_state.get("Failed").is_none() && job_state.get("Cancelled").is_none(),
+                "the colocated executor terminated the job unsuccessfully: {status}"
+            );
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert!(succeeded, "the colocated executor did not finish the job");
+    }
+}
