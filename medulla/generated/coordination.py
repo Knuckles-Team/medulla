@@ -3017,6 +3017,16 @@ send_get_shard_writer_width = contract_sender(
 decode_get_shard_writer_width = contract_decoder(
     "GetShardWriterWidth", "ShardWriterWidth"
 )
+send_task_queue_enqueue = contract_sender(
+    "TaskQueueEnqueue", "MethodTaskQueueEnqueueParams"
+)
+decode_task_queue_enqueue = contract_decoder("TaskQueueEnqueue", "TaskEnqueued")
+send_task_queue_claim = contract_sender("TaskQueueClaim", "MethodTaskQueueClaimParams")
+decode_task_queue_claim = contract_decoder("TaskQueueClaim", "TaskQueueClaimResult")
+send_task_queue_renew = contract_sender("TaskQueueRenew", "MethodTaskQueueRenewParams")
+decode_task_queue_renew = contract_decoder("TaskQueueRenew", "TaskRenewed")
+send_task_queue_ack = contract_sender("TaskQueueAck", "MethodTaskQueueAckParams")
+decode_task_queue_ack = contract_decoder("TaskQueueAck", "TaskAcked")
 send_mark_work_item_effect_started = contract_sender(
     "MarkWorkItemEffectStarted", "MethodMarkWorkItemEffectStartedParams"
 )

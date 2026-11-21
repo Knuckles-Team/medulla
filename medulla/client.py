@@ -51,7 +51,14 @@ from .work_market import GapClient, WorkMarketClient
 
 if TYPE_CHECKING:
     from .generated._runtime import OpaqueResult
-    from .generated.models import SearchTaskRejection, SparqlResult
+    from .generated.models import (
+        ClaimedTask,
+        SearchTaskRejection,
+        SparqlResult,
+        TaskAcked,
+        TaskEnqueued,
+        TaskRenewed,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -4854,6 +4861,89 @@ def _work_item_view(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != _WORK_ITEM_VIEW_FIELDS:
         raise RuntimeError("WorkItem view does not match the typed contract")
     return value
+
+
+class TaskQueueClient:
+    """Durable task queue: enqueue, claim under a grant, renew a lease, acknowledge.
+
+    The tenant and principal come from the verified request; a claim names no lane
+    or partition because placement is the engine's choice (MEDULLA-DURABLE-KERNEL-R073).
+    """
+
+    def __init__(self, client: MedullaClient) -> None:
+        self._client = client
+
+    async def enqueue(
+        self,
+        *,
+        queue: str,
+        kind: str,
+        payload_ref: str,
+        idempotency_key: str,
+        priority: int = 5,
+        not_before_ms: int = 0,
+    ) -> TaskEnqueued:
+        """Store one task; a repeated ``idempotency_key`` in a queue is refused."""
+        result = await _gen.coordination.send_task_queue_enqueue(
+            self._client,
+            {
+                "queue": queue,
+                "kind": kind,
+                "payload_ref": payload_ref,
+                "idempotency_key": idempotency_key,
+                "priority": priority,
+                "not_before_ms": not_before_ms,
+            },
+            idempotency_key=idempotency_key,
+        )
+        return cast(
+            "TaskEnqueued", _gen.coordination.decode_task_queue_enqueue(result)
+        )
+
+    async def claim(
+        self, *, worker_id: str, grant_id: str, lease_ms: int
+    ) -> ClaimedTask | None:
+        """Lease the next ready task to ``worker_id``, or ``None`` when none is ready."""
+        result = await _gen.coordination.send_task_queue_claim(
+            self._client,
+            {"worker_id": worker_id, "grant_id": grant_id, "lease_ms": lease_ms},
+        )
+        return cast(
+            "ClaimedTask | None",
+            _gen.coordination.decode_task_queue_claim(result),
+        )
+
+    async def renew(
+        self, *, task_id: str, worker_id: str, lease_ms: int
+    ) -> TaskRenewed:
+        """Extend the live lease of a claimed task."""
+        result = await _gen.coordination.send_task_queue_renew(
+            self._client,
+            {"task_id": task_id, "worker_id": worker_id, "lease_ms": lease_ms},
+        )
+        return cast(
+            "TaskRenewed", _gen.coordination.decode_task_queue_renew(result)
+        )
+
+    async def ack(
+        self,
+        *,
+        task_id: str,
+        worker_id: str,
+        outcome: str,
+        detail: str = "",
+    ) -> TaskAcked:
+        """Complete (``Succeeded``), fail (``Failed``) or release (``Retry``) a task."""
+        result = await _gen.coordination.send_task_queue_ack(
+            self._client,
+            {
+                "task_id": task_id,
+                "worker_id": worker_id,
+                "outcome": outcome,
+                "detail": detail,
+            },
+        )
+        return cast("TaskAcked", _gen.coordination.decode_task_queue_ack(result))
 
 
 class ControlLeaseClient:
@@ -17226,6 +17316,7 @@ class MedullaClient:
         # Namespaced Sub-Clients (Composition)
         self.nodes = NodeClient(self)
         self.work_items = WorkItemClient(self)
+        self.task_queue = TaskQueueClient(self)
         self.control_leases = ControlLeaseClient(self)
         self.gaps = GapClient(self)
         self.work_market = WorkMarketClient(self)
@@ -18664,6 +18755,7 @@ class SyncMedullaClient:
         # We need to wrap the namespaces synchronously as well
         self.nodes = self._SyncWrapper(self._client.nodes, self._loop)
         self.work_items = self._SyncWrapper(self._client.work_items, self._loop)
+        self.task_queue = self._SyncWrapper(self._client.task_queue, self._loop)
         self.control_leases = self._SyncWrapper(self._client.control_leases, self._loop)
         self.gaps = self._SyncWrapper(self._client.gaps, self._loop)
         self.work_market = self._SyncWrapper(self._client.work_market, self._loop)

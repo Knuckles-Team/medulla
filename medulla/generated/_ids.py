@@ -610,5 +610,9 @@ METHOD_IDS = frozenset(
         "TraceCritique",
         "TsDefineStateSpace",
         "ViewportQuery",
+        "TaskQueueEnqueue",
+        "TaskQueueClaim",
+        "TaskQueueRenew",
+        "TaskQueueAck",
     }
 )

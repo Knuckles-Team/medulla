@@ -15105,6 +15105,34 @@ class MethodReadGraphChanges(BaseModel):
     params: MethodReadGraphChangesParams
 
 
+class MethodTaskQueueEnqueue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TaskQueueEnqueue"]
+    params: MethodTaskQueueEnqueueParams
+
+
+class MethodTaskQueueClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TaskQueueClaim"]
+    params: MethodTaskQueueClaimParams
+
+
+class MethodTaskQueueRenew(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TaskQueueRenew"]
+    params: MethodTaskQueueRenewParams
+
+
+class MethodTaskQueueAck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TaskQueueAck"]
+    params: MethodTaskQueueAckParams
+
+
 # The PEP 604 `|` chain spelling of this 539-member union overflows vulture's
 # AST recursion depth in the whole-repo pre-push scan; `typing.Union[...]` is a
 # single subscript node, shallow at any member count.
@@ -15753,6 +15781,10 @@ Method = Annotated[
         MethodAtomContext,
         MethodOpenGraphSnapshot,
         MethodReadGraphChanges,
+        MethodTaskQueueEnqueue,
+        MethodTaskQueueClaim,
+        MethodTaskQueueRenew,
+        MethodTaskQueueAck,
     ],
     Field(discriminator="method"),
 ]
@@ -34154,6 +34186,82 @@ class MethodReadGraphChangesParams(BaseModel):
     table: str | None = None
 
 
+class MethodTaskQueueEnqueueParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    idempotency_key: str
+    kind: str
+    not_before_ms: Annotated[int, Field(ge=0)] = 0
+    payload_ref: str
+    priority: Annotated[int, Field(ge=0, le=255)] = 5
+    queue: str
+
+
+class MethodTaskQueueClaimParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grant_id: str
+    lease_ms: Annotated[int, Field(ge=0)]
+    worker_id: str
+
+
+class MethodTaskQueueRenewParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    lease_ms: Annotated[int, Field(ge=0)]
+    task_id: str
+    worker_id: str
+
+
+class MethodTaskQueueAckParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    detail: str = ""
+    outcome: TaskOutcome
+    task_id: str
+    worker_id: str
+
+
+class TaskOutcome(str, Enum):
+    SUCCEEDED = "Succeeded"
+    FAILED = "Failed"
+    RETRY = "Retry"
+
+
+class TaskEnqueued(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    task_id: str
+
+
+class ClaimedTask(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0, le=4294967295)]
+    kind: str
+    lease_expires_at_ms: int
+    payload_ref: str
+    queue: str
+    task_id: str
+
+
+TaskQueueClaimResult = ClaimedTask | None
+
+
+class TaskRenewed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    lease_expires_at_ms: int
+    task_id: str
+
+
+class TaskAcked(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: TaskOutcome
+    task_id: str
+
+
 class MethodReadSpanParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -39950,6 +40058,20 @@ __all__ = [
     "MethodOpenGraphSnapshot",
     "MethodReadGraphChanges",
     "MethodReadGraphChangesParams",
+    "MethodTaskQueueEnqueue",
+    "MethodTaskQueueEnqueueParams",
+    "MethodTaskQueueClaim",
+    "MethodTaskQueueClaimParams",
+    "MethodTaskQueueRenew",
+    "MethodTaskQueueRenewParams",
+    "MethodTaskQueueAck",
+    "MethodTaskQueueAckParams",
+    "TaskOutcome",
+    "TaskEnqueued",
+    "ClaimedTask",
+    "TaskQueueClaimResult",
+    "TaskRenewed",
+    "TaskAcked",
     "MethodReadSpan",
     "MethodReadSpanParams",
     "MethodAtomContext",
