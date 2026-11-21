@@ -51,7 +51,7 @@ pub(super) async fn stored_head_revision(
         super::topology_read::graph_core(state, &proposal.graph, verified)
             .await
             .ok()?;
-    medulla_core::memory_snapshot_store::load_head(&core, &doc).map(|head| head.revision)
+    medulla_graph_core::memory_snapshot::load_head(&core, &doc).map(|head| head.revision)
 }
 
 fn hex_digest(digest: &str) -> &str {
@@ -210,11 +210,33 @@ pub async fn consolidate_candidate(
     let core = super::topology_read::graph_core(state, graph, verified).await?;
     let head_revision = DocId::new(record_id.clone())
         .ok()
-        .and_then(|doc| medulla_core::memory_snapshot_store::load_head(&core, &doc))
+        .and_then(|doc| medulla_graph_core::memory_snapshot::load_head(&core, &doc))
         .map_or(0, |head| head.revision);
     Ok(MemoryChangeCandidate {
         record_id,
         candidate_digest,
+        head_revision,
+    })
+}
+
+/// The candidate a sync of document `record_id` makes: the digest of the content
+/// it writes and the stored head revision of the document in `graph` (0 when the
+/// document has no head).
+pub async fn sync_candidate(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    record_id: &str,
+    candidate_digest: &str,
+) -> Result<MemoryChangeCandidate, String> {
+    let core = super::topology_read::graph_core(state, graph, verified).await?;
+    let head_revision = DocId::new(record_id.to_string())
+        .ok()
+        .and_then(|doc| medulla_graph_core::memory_snapshot::load_head(&core, &doc))
+        .map_or(0, |head| head.revision);
+    Ok(MemoryChangeCandidate {
+        record_id: record_id.to_string(),
+        candidate_digest: candidate_digest.to_string(),
         head_revision,
     })
 }

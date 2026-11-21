@@ -97,6 +97,39 @@ pub(super) fn finance_alert_intents(
         .collect()
 }
 
+/// The `memory_snapshot_synced` intent of every planned `SyncMemorySnapshot` in
+/// `methods` that writes a row (MEDULLA-DURABLE-KERNEL-R085.4). It is built here,
+/// from the very method that commits the head and revision rows, so the rows and
+/// the intent share one batch. The payload is the request; the consumer reads the
+/// committed head, never the payload, for the content it holds.
+pub(super) fn memory_snapshot_intents(
+    methods: &[medulla_protocol_types::protocol::Method],
+) -> Result<Vec<MutationOutboxIntent>, String> {
+    methods
+        .iter()
+        .filter_map(|method| match method {
+            medulla_protocol_types::protocol::Method::SyncMemorySnapshot {
+                request,
+                plan: Some(plan),
+                ..
+            } if !plan.writes.is_empty() => Some(
+                rmp_serde::to_vec_named(request.as_ref())
+                    .map_err(|error| format!("memory snapshot intent encoding failed: {error}"))
+                    .map(|payload| MutationOutboxIntent {
+                        topic: "memory_snapshot_synced".to_string(),
+                        key: request.doc_id.as_str().to_string(),
+                        payload,
+                        headers: BTreeMap::from([(
+                            "request_id".to_string(),
+                            request.request_id.as_str().to_string(),
+                        )]),
+                    }),
+            ),
+            _ => None,
+        })
+        .collect()
+}
+
 /// Construct every intent before minting the envelope that covers their bytes.
 pub(super) fn compiled_outbox(
     outbox_plan: CompiledOutbox,

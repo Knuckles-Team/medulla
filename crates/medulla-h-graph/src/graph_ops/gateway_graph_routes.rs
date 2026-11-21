@@ -535,9 +535,7 @@ async fn try_handle_bus(
             participant,
             principal,
         } => bus::register(ctx, plan, tenant_id, participant, principal).await,
-        Method::SyncMemorySnapshot { request, .. } => {
-            super::memory_snapshot::sync(ctx, plan, request).await
-        }
+        Method::SyncMemorySnapshot { .. } => super::memory_snapshot::sync(ctx, plan, method).await,
         Method::BusHeartbeat {
             session_ref,
             now_ms,

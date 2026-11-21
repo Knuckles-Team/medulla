@@ -23,7 +23,9 @@ use super::terminal_outcome::lower_terminal_outcome_extensions;
 use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
-use finish_helpers::{compiled_outbox, compiled_scope_identity, finance_alert_intents};
+use finish_helpers::{
+    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_snapshot_intents,
+};
 
 /// Resolve the current graph version without treating RAM as a substitute for a
 /// missing durable authority. Version zero is the sole implicit bootstrap state;
@@ -156,6 +158,7 @@ pub fn compile_methods_with_outbox(
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.1: an alert's outbox fact is built here, from
     // the very method that commits its event node, so both share one batch.
     terminal_outbox.extend(finance_alert_intents(&methods)?);
+    terminal_outbox.extend(memory_snapshot_intents(&methods)?);
     terminal_outbox.extend(additional_outbox);
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =

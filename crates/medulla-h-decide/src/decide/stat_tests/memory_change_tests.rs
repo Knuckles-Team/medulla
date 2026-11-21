@@ -47,10 +47,11 @@ async fn seed_head(h: &Harness) -> u64 {
                 content_digest: Digest256::sha256(content.as_bytes()),
             },
         };
-        medulla_core::memory_snapshot_store::apply_sync(&core, &request, &stamp);
+        let (_, plan) = medulla_h_graph::graph_ops::memory_snapshot::plan_sync(&core, &request, &stamp);
+        medulla_graph_core::memory_snapshot::apply_plan(&core, &plan);
         expected = Some(index as u64 + 1);
     }
-    medulla_core::memory_snapshot_store::load_head(&core, &DocId::new(DOC).unwrap())
+    medulla_graph_core::memory_snapshot::load_head(&core, &DocId::new(DOC).unwrap())
         .expect("the seeded head")
         .revision
 }
@@ -58,7 +59,7 @@ async fn seed_head(h: &Harness) -> u64 {
 async fn head_digest(h: &Harness) -> Digest256 {
     let state = h.state.read().await;
     let core = state.registry.get(GRAPH).unwrap().core.clone();
-    medulla_core::memory_snapshot_store::load_head(&core, &DocId::new(DOC).unwrap())
+    medulla_graph_core::memory_snapshot::load_head(&core, &DocId::new(DOC).unwrap())
         .expect("the head")
         .content_digest
 }

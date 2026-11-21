@@ -47,8 +47,6 @@ pub mod fs;
 pub mod lifecycle;
 /// MEDULLA-MEDIA-VOCAB-R001.101.2 — the pure meeting transcript revision function.
 pub mod meeting_transcript;
-/// Memory snapshot head, revision, candidate and acknowledgment rows (MEDULLA-DURABLE-KERNEL-R085.3).
-pub mod memory_snapshot_store;
 /// MEDULLA-BUSINESS-OPS-R001.7 — the approval request state machine.
 pub mod approval_machine;
 /// MEDULLA-BUSINESS-OPS-R001.5 — the compliance obligation instance state machine.

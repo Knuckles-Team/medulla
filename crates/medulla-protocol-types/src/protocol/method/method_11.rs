@@ -694,11 +694,19 @@ $($variants)*
         cursor: Option<String>,
     },
     /// Observe, submit, resolve or acknowledge one document. The engine fills
-    /// `stamp` from the verified request context. Needs `memory:write`.
+    /// `stamp` and `plan` from the verified request context and the graph's
+    /// pre-image (MEDULLA-DURABLE-KERNEL-R085.4); a client value of either is
+    /// replaced. A submit over existing content and a resolution that writes a
+    /// revision name the memory-change receipts that admit them in
+    /// `admit_receipt_digests` (MEDULLA-DURABLE-KERNEL-R863). Needs `memory:write`.
     SyncMemorySnapshot {
         request: Box<medulla_mutation_types::memory_sync::SyncRequest>,
         #[serde(default)]
         stamp: Option<medulla_mutation_types::memory_sync::SyncStamp>,
+        #[serde(default)]
+        admit_receipt_digests: Vec<String>,
+        #[serde(default)]
+        plan: Option<medulla_mutation_types::memory_sync::SnapshotPlan>,
     },
 
     // ── Memory surface (MEDULLA-DECISION-ENGINE-R651.3) ─────────────────────

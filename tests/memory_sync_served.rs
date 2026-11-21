@@ -39,6 +39,8 @@ fn sync(request_id: &str, action: SyncAction) -> Method {
             action,
         }),
         stamp: None,
+        admit_receipt_digests: Vec::new(),
+        plan: None,
     }
 }
 
@@ -145,6 +147,8 @@ async fn authorized_read_list_and_cursor_isolation() {
                 },
             }),
             stamp: None,
+            admit_receipt_digests: Vec::new(),
+            plan: None,
         };
         let _: SyncOutcome = json_of(send(&state, id, method).await);
     }
@@ -185,4 +189,90 @@ async fn authorized_read_list_and_cursor_isolation() {
     )
     .await;
     assert!(cross.error.is_some(), "a foreign tenant is refused");
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.4
+#[tokio::test(flavor = "multi_thread")]
+async fn wire_methods_reach_durable_gateway() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-gateway",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    // A client that names its own plan or stamp has both replaced by the engine's.
+    let forged = Method::SyncMemorySnapshot {
+        request: Box::new(SyncRequest {
+            request_id: RequestId::new("forged").expect("request id"),
+            doc_id: DocId::new(DOC).expect("doc id"),
+            action: SyncAction::Submit {
+                expected_revision: None,
+                content: "one".to_string(),
+                content_digest: Digest256::sha256(b"one"),
+            },
+        }),
+        stamp: None,
+        admit_receipt_digests: Vec::new(),
+        plan: Some(medulla_mutation_types::memory_sync::SnapshotPlan {
+            base_revision: None,
+            base_candidates: 0,
+            writes: vec![medulla_mutation_types::memory_sync::SnapshotRowWrite {
+                node_id: "memsnap:forged".to_string(),
+                properties_msgpack: Vec::new(),
+            }],
+        }),
+    };
+    let outcome: SyncOutcome = json_of(send(&state, 2, forged).await);
+    assert!(matches!(outcome, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    let head: MemorySnapshotRead = json_of(read(&state, 3, None).await);
+    assert_eq!(head.content, "one");
+    let revision: MemorySnapshotRead = json_of(read(&state, 4, Some(1)).await);
+    assert_eq!(revision.head, head.head);
+    let forged_doc = send(
+        &state,
+        5,
+        Method::ReadMemorySnapshot {
+            doc_id: "forged".to_string(),
+            revision: None,
+        },
+    )
+    .await;
+    assert!(forged_doc.error.is_some(), "the forged row was never written");
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R863
+#[tokio::test(flavor = "multi_thread")]
+async fn sync_rewrite_requires_a_current_admit_receipt() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-gate",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let first: SyncOutcome = json_of(send(&state, 2, submit("g1", None, "one")).await);
+    assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    for (id, digests) in [
+        (3, Vec::new()),
+        (4, vec!["sha256:absent".to_string()]),
+    ] {
+        let mut method = submit(&format!("g{id}"), Some(1), "two");
+        if let Method::SyncMemorySnapshot {
+            admit_receipt_digests,
+            ..
+        } = &mut method
+        {
+            *admit_receipt_digests = digests;
+        }
+        let refused = send(&state, id, method).await;
+        assert!(
+            error_of(&refused).contains("MEMORY_RECEIPT_REQUIRED"),
+            "{refused:?}"
+        );
+    }
+    let head: MemorySnapshotRead = json_of(read(&state, 5, None).await);
+    assert_eq!((head.head.revision, head.content.as_str()), (1, "one"));
 }

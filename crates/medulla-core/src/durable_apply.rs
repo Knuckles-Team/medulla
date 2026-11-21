@@ -174,17 +174,17 @@ impl std::fmt::Display for ReplayDivergence {
 
 impl std::error::Error for ReplayDivergence {}
 
-/// Memory snapshot rows (MEDULLA-DURABLE-KERNEL-R085.3): the logged method
-/// carries the engine stamp, so replay rebuilds the same rows.
+/// Memory snapshot rows (MEDULLA-DURABLE-KERNEL-R085.4): the logged method
+/// carries the plan the router built from the graph handler's decision, so
+/// replay writes the same rows verbatim and decides nothing.
 fn apply_memory_snapshot(core: &GraphCore, m: &Method) -> bool {
     let Method::SyncMemorySnapshot {
-        request,
-        stamp: Some(stamp),
+        plan: Some(plan), ..
     } = m
     else {
         return matches!(m, Method::SyncMemorySnapshot { .. });
     };
-    let _ = crate::memory_snapshot_store::apply_sync(core, request, stamp);
+    medulla_graph_core::memory_snapshot::apply_plan(core, plan);
     true
 }
 

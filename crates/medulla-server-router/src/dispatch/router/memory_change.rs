@@ -90,6 +90,118 @@ async fn handle_consolidate(
     .await
 }
 
+/// Hand `SyncMemorySnapshot` through plan, gate and apply; every other method
+/// continues (MEDULLA-DURABLE-KERNEL-R085.4, R863).
+pub async fn dispatch_sync_memory_method(
+    ctx: DispatchCtx<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let Method::SyncMemorySnapshot {
+        request,
+        admit_receipt_digests,
+        ..
+    } = method
+    else {
+        return ControlFlow::Continue(method);
+    };
+    ControlFlow::Break(handle_sync_memory(ctx, *request, admit_receipt_digests).await)
+}
+
+/// How many times a plan is made again when the head moved before its commit.
+const SYNC_PLAN_ATTEMPTS: usize = 3;
+
+/// Serve `Method::SyncMemorySnapshot`: the graph handler plans the sync against
+/// the stored rows, a change to existing content passes the admission gate, and
+/// the plan commits through the graph gateway as one batch (head, revision and
+/// the `memory_snapshot_synced` outbox intent) over the pre-image it was decided
+/// against. The blob holder of the committed content is taken after the commit
+/// by the server layer, never by a graph-handler dependency on the blob store.
+/// A client-supplied stamp or plan is replaced; a refusal writes nothing.
+async fn handle_sync_memory(
+    ctx: DispatchCtx<'_>,
+    request: medulla_mutation_types::memory_sync::SyncRequest,
+    admit_receipt_digests: Vec<String>,
+) -> Response {
+    use medulla_decision_types::decision::memory_benchmark::ChangeKind;
+    use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
+    use medulla_h_graph::graph_ops::memory_snapshot::{
+        content_change, outcome_response, plan_sync, stamp_for, ContentChange,
+    };
+    let DispatchCtx {
+        state,
+        req,
+        verified_context,
+        ..
+    } = ctx;
+    if let Err(error) = request.validate() {
+        return Response::err(req.id, error.code.as_str());
+    }
+    let stamp = stamp_for(req.agent_id.as_deref(), verified_context.tenant(), &req.graph);
+    let mut last = Response::err(req.id, "BUSY: the memory snapshot moved between plan and commit");
+    for _ in 0..SYNC_PLAN_ATTEMPTS {
+        medulla_server_api::api::reentry::ensure_graph_resident(state, &req.graph).await;
+        let core = {
+            let s = state.read().await;
+            match s.registry.get(&req.graph) {
+                Some(entry) => entry.core.clone(),
+                None => {
+                    return Response::err(
+                        req.id,
+                        medulla_mutation_types::memory_sync::MemorySyncRefusal::NotAvailable
+                            .as_str(),
+                    )
+                }
+            }
+        };
+        let (outcome, snapshot) = plan_sync(&core, &request, &stamp);
+        if snapshot.writes.is_empty() {
+            return outcome_response(req.id, outcome);
+        }
+        if let Some((change, digest, _)) = content_change(&request, &outcome, &snapshot) {
+            let kind = match change {
+                ContentChange::Rewrite => ChangeKind::Rewrite,
+                ContentChange::Consolidate => ChangeKind::Consolidate,
+            };
+            let admitted = async {
+                let candidate = sync_candidate(
+                    state,
+                    verified_context,
+                    &req.graph,
+                    request.doc_id.as_str(),
+                    &format!("sha256:{}", digest.to_hex()),
+                )
+                .await?;
+                require_admit_receipts(state, verified_context, kind, &candidate, &admit_receipt_digests)
+                    .await
+            }
+            .await;
+            if let Err(refusal) = admitted {
+                return Response::err(req.id, refusal);
+            }
+        }
+        let response = dispatch_boxed(dispatch_graph_op(
+            state,
+            &req.graph,
+            req.id,
+            req.agent_id.as_deref(),
+            verified_context,
+            Method::SyncMemorySnapshot {
+                request: Box::new(request.clone()),
+                stamp: Some(stamp.clone()),
+                admit_receipt_digests: admit_receipt_digests.clone(),
+                plan: Some(snapshot),
+            },
+        ))
+        .await;
+        match response.error.as_deref() {
+            None => return outcome_response(req.id, outcome),
+            Some(error) if error.starts_with("BUSY") => last = response,
+            Some(_) => return response,
+        }
+    }
+    last
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

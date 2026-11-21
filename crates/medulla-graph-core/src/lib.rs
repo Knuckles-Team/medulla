@@ -21,6 +21,7 @@ pub mod broker_keys;
 pub mod cold_tier;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graph;
+pub mod memory_snapshot;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod index;
 /// CONCEPT:MEDULLA-KG.compute.jsonpath-evaluator — pure-Rust JSONPath evaluator + Postgres-`@>` containment.

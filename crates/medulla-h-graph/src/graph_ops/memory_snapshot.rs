@@ -4,15 +4,21 @@
 //! The scope check (`memory:read` / `memory:write`) runs at the request
 //! boundary before this module is reached and refuses with
 //! `MEMSYNC_NOT_AVAILABLE`. Every refusal here is decided before the commit
-//! and writes nothing. The rows and the compare-and-set live in
-//! `medulla_core::memory_snapshot_store`, shared with durable replay.
+//! and writes nothing. A sync is planned, then applied: [`plan_sync`] decides
+//! against the stored rows and returns the outcome with the rows it writes;
+//! the router arm gates it and hands the plan back on the method, and
+//! [`sync`] commits it through the gateway only over the pre-image it was
+//! decided against. The row layout and reads live in
+//! `medulla_graph_core::memory_snapshot`, shared with the decide handler.
 
 use super::memory_cursor;
-use medulla_core::memory_snapshot_store as store;
+use medulla_graph_core::memory_snapshot as store;
+use medulla_graph_core::memory_snapshot::{AckRow, CandidateRow, RevisionRow};
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
-    decide, Decision, DocId, ListCursor, MemorySnapshotList, MemorySyncError, MemorySyncRefusal,
-    SyncOutcome, SyncRequest, SyncStamp,
+    decide, revision_node_id, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySnapshotList,
+    MemorySyncError, MemorySyncRefusal, Resolution, SnapshotPlan, SnapshotProvenance,
+    SnapshotRowWrite, SyncAction, SyncOutcome, SyncRequest, SyncStamp, SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::graph as results;
@@ -140,7 +146,7 @@ fn list_page(
     Ok(MemorySnapshotList { heads, next_cursor })
 }
 
-fn outcome_response(req_id: u64, outcome: SyncOutcome) -> Response {
+pub fn outcome_response(req_id: u64, outcome: SyncOutcome) -> Response {
     match outcome {
         SyncOutcome::Refused { code } => refuse(req_id, code),
         other => payload(
@@ -150,35 +156,276 @@ fn outcome_response(req_id: u64, outcome: SyncOutcome) -> Response {
     }
 }
 
-fn stamp_of(ctx: &MutationCtx<'_>) -> SyncStamp {
-    let policy = format!("{}|{}|memory:write", ctx.tenant_scope, ctx.graph_name);
+/// The engine stamp of a sync made by `caller` on `graph_name` of `tenant_scope`.
+pub fn stamp_for(caller: Option<&str>, tenant_scope: &str, graph_name: &str) -> SyncStamp {
+    let policy = format!("{tenant_scope}|{graph_name}|memory:write");
     SyncStamp {
-        actor: ctx.caller.unwrap_or("anonymous").to_string(),
+        actor: caller.unwrap_or("anonymous").to_string(),
         policy_digest: Digest256::sha256(policy.as_bytes()),
-        graph_incarnation: ctx.graph_name.to_string(),
+        graph_incarnation: graph_name.to_string(),
     }
 }
 
-/// `SyncMemorySnapshot`: validate, decide against the head, then commit the
-/// write the decision names through the gateway. A reply or refusal commits
-/// nothing.
+fn write_of<T: serde::Serialize>(node_id: String, row: &T) -> SnapshotRowWrite {
+    SnapshotRowWrite {
+        node_id,
+        properties_msgpack: store::encode_row(row),
+    }
+}
+
+/// The revision row and the head row of one accepted or resolved revision.
+fn revision_writes(
+    request: &SyncRequest,
+    stamp: &SyncStamp,
+    revision: u64,
+    parent_revision: Option<u64>,
+    content: String,
+    content_digest: Digest256,
+) -> (MemorySnapshotHead, Vec<SnapshotRowWrite>) {
+    let head = MemorySnapshotHead {
+        doc_id: request.doc_id.clone(),
+        revision,
+        parent_revision,
+        content_digest,
+        content_len: u32::try_from(content.len()).unwrap_or(u32::MAX),
+        graph_incarnation: stamp.graph_incarnation.clone(),
+        provenance: SnapshotProvenance {
+            actor: stamp.actor.clone(),
+            policy_digest: stamp.policy_digest,
+            request_id: request.request_id.clone(),
+        },
+        retain_until_ms: None,
+    };
+    let row = RevisionRow {
+        label: store::REVISION_LABEL.to_string(),
+        head: head.clone(),
+        content,
+    };
+    let revision_write = write_of(revision_node_id(&request.doc_id, revision), &row);
+    let head_write = write_of(
+        store::head_node_id(&request.doc_id),
+        &RevisionRow {
+            label: store::HEAD_LABEL.to_string(),
+            ..row
+        },
+    );
+    (head, vec![revision_write, head_write])
+}
+
+fn refused(code: MemorySyncRefusal) -> SyncOutcome {
+    SyncOutcome::Refused { code }
+}
+
+fn plan_resolve(
+    core: &GraphCore,
+    request: &SyncRequest,
+    stamp: &SyncStamp,
+    candidate_revision: u64,
+    resolution: Resolution,
+    new_revision: u64,
+) -> (SyncOutcome, Vec<SnapshotRowWrite>) {
+    let doc = &request.doc_id;
+    let candidate_id = format!("{}{candidate_revision}", store::candidate_prefix(doc));
+    let Some(mut candidate) =
+        store::load_row::<CandidateRow>(core, &candidate_id).filter(|c| !c.resolved)
+    else {
+        return (refused(MemorySyncRefusal::NotAvailable), Vec::new());
+    };
+    let Some(head) = store::load_head(core, doc) else {
+        return (refused(MemorySyncRefusal::NotAvailable), Vec::new());
+    };
+    candidate.resolved = true;
+    let mut writes = vec![write_of(candidate_id, &candidate)];
+    let (content, digest) = match resolution {
+        Resolution::KeepHead => return (SyncOutcome::Resolved { head }, writes),
+        Resolution::TakeCandidate => (candidate.content, candidate.content_digest),
+        Resolution::Merged {
+            content,
+            content_digest,
+        } => (content, content_digest),
+    };
+    let (head, rows) = revision_writes(
+        request,
+        stamp,
+        new_revision,
+        Some(head.revision),
+        content,
+        digest,
+    );
+    writes.extend(rows);
+    (SyncOutcome::Resolved { head }, writes)
+}
+
+fn plan_acknowledge(
+    core: &GraphCore,
+    request: &SyncRequest,
+    standing: SyncStanding,
+) -> (SyncOutcome, Vec<SnapshotRowWrite>) {
+    let SyncAction::Acknowledge {
+        revision,
+        content_digest,
+        observation_generation,
+    } = &request.action
+    else {
+        return (refused(MemorySyncRefusal::VersionMalformed), Vec::new());
+    };
+    let doc = &request.doc_id;
+    let unresolved = store::candidates(core, doc).iter().any(|(_, c)| !c.resolved);
+    let stale = store::load_row::<AckRow>(core, &store::ack_node_id(doc))
+        .is_some_and(|held| held.observation_generation > *observation_generation);
+    let standing = match (unresolved, stale, standing) {
+        (true, _, _) => SyncStanding::Conflict,
+        (false, true, _) => SyncStanding::Pending,
+        (false, false, standing) => standing,
+    };
+    let row = AckRow {
+        label: store::ACK_LABEL.to_string(),
+        revision: *revision,
+        content_digest: *content_digest,
+        observation_generation: *observation_generation,
+    };
+    (
+        SyncOutcome::Acknowledged { standing },
+        vec![write_of(store::ack_node_id(doc), &row)],
+    )
+}
+
+/// Decide `request` against the stored rows and return the outcome with the rows
+/// it writes, bound to the pre-image it was decided against. A reply or refusal
+/// plans no row.
+pub fn plan_sync(
+    core: &GraphCore,
+    request: &SyncRequest,
+    stamp: &SyncStamp,
+) -> (SyncOutcome, SnapshotPlan) {
+    let head = store::load_head(core, &request.doc_id);
+    let candidate_rows = store::candidates(core, &request.doc_id);
+    let (outcome, writes) = match decide(head.as_ref(), request) {
+        Decision::Reply(outcome) => (outcome, Vec::new()),
+        Decision::Accept {
+            revision,
+            parent_revision,
+            content,
+            content_digest,
+        } => {
+            let (head, writes) =
+                revision_writes(request, stamp, revision, parent_revision, content, content_digest);
+            (SyncOutcome::Accepted { head }, writes)
+        }
+        Decision::RetainCandidate {
+            content,
+            content_digest,
+            head_revision,
+        } => match head.clone() {
+            None => (refused(MemorySyncRefusal::NotAvailable), Vec::new()),
+            Some(head) => {
+                let candidate_revision =
+                    candidate_rows.iter().map(|(n, _)| *n).max().unwrap_or(0) + 1;
+                let row = CandidateRow {
+                    label: store::CANDIDATE_LABEL.to_string(),
+                    base_revision: head_revision,
+                    content,
+                    content_digest,
+                    resolved: false,
+                };
+                let id = format!(
+                    "{}{candidate_revision}",
+                    store::candidate_prefix(&request.doc_id)
+                );
+                (
+                    SyncOutcome::ConflictRetained {
+                        head,
+                        candidate_revision,
+                    },
+                    vec![write_of(id, &row)],
+                )
+            }
+        },
+        Decision::Resolve {
+            candidate_revision,
+            resolution,
+            new_revision,
+        } => plan_resolve(
+            core,
+            request,
+            stamp,
+            candidate_revision,
+            resolution,
+            new_revision,
+        ),
+        Decision::Acknowledge { standing } => plan_acknowledge(core, request, standing),
+    };
+    (
+        outcome,
+        SnapshotPlan {
+            base_revision: head.map(|head| head.revision),
+            base_candidates: candidate_rows.len() as u64,
+            writes,
+        },
+    )
+}
+
+/// The change a planned sync makes to existing content, as the admission gate
+/// names it: the new content digest and the head revision it replaces. A submit
+/// over a head is a rewrite and a resolution that writes a revision is a
+/// consolidation; every other sync changes no existing content and needs no
+/// receipt (MEDULLA-DURABLE-KERNEL-R863).
+pub fn content_change(
+    request: &SyncRequest,
+    outcome: &SyncOutcome,
+    plan: &SnapshotPlan,
+) -> Option<(ContentChange, Digest256, u64)> {
+    let head_revision = plan.base_revision?;
+    match (&request.action, outcome) {
+        (SyncAction::Submit { .. }, SyncOutcome::Accepted { head }) => {
+            Some((ContentChange::Rewrite, head.content_digest, head_revision))
+        }
+        (SyncAction::Resolve { .. }, SyncOutcome::Resolved { head })
+            if head.revision > head_revision =>
+        {
+            Some((ContentChange::Consolidate, head.content_digest, head_revision))
+        }
+        _ => None,
+    }
+}
+
+/// Which gate kind a content change maps to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContentChange {
+    Rewrite,
+    Consolidate,
+}
+
+/// Commit a planned sync through the gateway. The router filled `stamp`, `plan`
+/// and the receipt gate before this route; a method without them did not come
+/// through the router and is refused. The plan applies only over the pre-image
+/// it was decided against, so a head that moved between plan and commit
+/// answers `BUSY` and the router plans again.
 pub(crate) async fn sync(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
-    request: &SyncRequest,
+    method: &Method,
 ) -> Response {
-    let head = store::load_head(ctx.core, &request.doc_id);
-    if let Decision::Reply(outcome) = decide(head.as_ref(), request) {
-        return outcome_response(ctx.req_id, outcome);
-    }
-    let stamp = stamp_of(ctx);
-    let stamped = Method::SyncMemorySnapshot {
-        request: Box::new(request.clone()),
-        stamp: Some(stamp.clone()),
+    let Method::SyncMemorySnapshot {
+        request,
+        stamp: Some(_),
+        plan: Some(snapshot),
+        ..
+    } = method
+    else {
+        return Response::err(
+            ctx.req_id,
+            "INTERNAL: a memory sync reached the graph route without its plan".to_string(),
+        );
     };
-    let request = request.clone();
-    commit_gateway(ctx, plan, &stamped, move |core| {
-        ResultPayload::of::<results::SyncMemorySnapshot>(store::apply_sync(core, &request, &stamp))
+    let doc = request.doc_id.clone();
+    let snapshot = snapshot.clone();
+    commit_gateway(ctx, plan, method, move |core| {
+        if !store::plan_is_current(core, &doc, &snapshot) {
+            return Err("BUSY: the memory snapshot moved between plan and commit".to_string());
+        }
+        store::apply_plan(core, &snapshot);
+        Ok(ResultPayload::Bool(true))
     })
     .await
 }

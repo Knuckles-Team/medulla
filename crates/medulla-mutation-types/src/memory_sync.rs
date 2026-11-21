@@ -479,6 +479,30 @@ pub struct SyncStamp {
     pub graph_incarnation: String,
 }
 
+/// One row a sync plan writes: the node id and its MessagePack properties.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SnapshotRowWrite {
+    pub node_id: String,
+    pub properties_msgpack: Vec<u8>,
+}
+
+/// The rows one sync decision writes, planned against the pre-image it names
+/// (MEDULLA-DURABLE-KERNEL-R085.4). The router fills it from the plan the graph
+/// handler returns; the commit applies it only over the same pre-image, and
+/// replay writes the same rows verbatim, so no decision logic runs at replay.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SnapshotPlan {
+    /// The head revision the plan was decided against; `None` while the document has no head.
+    pub base_revision: Option<u64>,
+    /// How many retained candidates the document held when the plan was decided.
+    pub base_candidates: u64,
+    pub writes: Vec<SnapshotRowWrite>,
+}
+
 /// The served `ReadMemorySnapshot` result: the head or a retained revision
 /// with its bytes (MEDULLA-DURABLE-KERNEL-R085.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

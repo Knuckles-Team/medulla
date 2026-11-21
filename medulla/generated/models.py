@@ -34337,6 +34337,8 @@ class MethodSubmitAdmittedRequestParams(BaseModel):
 class MethodSyncMemorySnapshotParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    admit_receipt_digests: list[str] | None = None
+    plan: SnapshotPlan | None = None
     request: SyncRequest
     stamp: SyncStamp | None = None
 
@@ -34709,6 +34711,21 @@ class SyncOutcomeResolved(BaseModel):
 
     head: MemorySnapshotHead
     outcome: Literal["resolved"]
+
+
+class SnapshotRowWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+    properties_msgpack: _EgOctets
+
+
+class SnapshotPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_candidates: int
+    base_revision: int | None = None
+    writes: list[SnapshotRowWrite]
 
 
 class SyncRequest(BaseModel):
@@ -43934,6 +43951,8 @@ __all__ = [
     "SyncOutcomeObserved",
     "SyncOutcomeRefused",
     "SyncOutcomeResolved",
+    "SnapshotPlan",
+    "SnapshotRowWrite",
     "SyncRequest",
     "SyncStamp",
     "SyncStanding",
