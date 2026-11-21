@@ -538,6 +538,7 @@ METHOD_IDS = frozenset(
         "QualityRulePut",
         "ClassificationClaim",
         "Glossary",
+        "Stewardship",
         "LineageIngest",
         "ListMemorySnapshots",
         "LiveArtifactGet",

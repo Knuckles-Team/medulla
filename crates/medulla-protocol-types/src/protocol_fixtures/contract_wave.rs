@@ -119,7 +119,62 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
     samples.extend(glossary_ops().into_iter().map(|(label, op)| {
         (label, Method::Glossary { op: Box::new(op) })
     }));
+    samples.extend(stewardship_ops().into_iter().map(|(label, op)| {
+        (label, Method::Stewardship { op: Box::new(op) })
+    }));
     samples
+}
+
+/// One valid `Stewardship` op per op (MEDULLA-TYPED-PACKS-R802.3).
+fn stewardship_ops() -> Vec<(
+    &'static str,
+    medulla_catalog_types::stewardship::StewardshipOp,
+)> {
+    use medulla_catalog_types::stewardship::{
+        StewardRole, StewardshipAssignment, StewardshipOp, StewardshipScope, StewardshipTarget,
+    };
+    let assignment = StewardshipAssignment {
+        scope: StewardshipScope::Asset("col:orders.total".to_string()),
+        role: StewardRole::Steward,
+        principal: "alice".to_string(),
+    };
+    let request_id = "change_request:t:col:orders.total:sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string();
+    vec![
+        (
+            "Stewardship.assign",
+            StewardshipOp::Assign {
+                assignment: assignment.clone(),
+            },
+        ),
+        ("Stewardship.revoke", StewardshipOp::Revoke { assignment }),
+        (
+            "Stewardship.open_change_request",
+            StewardshipOp::OpenChangeRequest {
+                target: "col:orders.total".to_string(),
+                proposed_digest: format!("sha256:{}", "0".repeat(64)),
+                scopes: StewardshipTarget {
+                    asset: Some("col:orders.total".to_string()),
+                    concept_scheme: None,
+                    domain: None,
+                },
+            },
+        ),
+        (
+            "Stewardship.review",
+            StewardshipOp::Review {
+                request_id: request_id.clone(),
+                approve: true,
+            },
+        ),
+        ("Stewardship.apply", StewardshipOp::Apply { request_id }),
+        (
+            "Stewardship.certify",
+            StewardshipOp::Certify {
+                asset: "col:orders.total".to_string(),
+                level: "gold".to_string(),
+            },
+        ),
+    ]
 }
 
 /// One valid `Glossary` op per op (MEDULLA-TYPED-PACKS-R801.3).

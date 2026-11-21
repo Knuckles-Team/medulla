@@ -1574,6 +1574,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TENANT_SCOPE_REQUIRED"],
     ),
     (
+        "Stewardship",
+        &["TENANT_SCOPE_REQUIRED", "STEWARD_ROLE_MISSING"],
+    ),
+    (
         "ClassificationClaim",
         &[
             "TENANT_SCOPE_REQUIRED",

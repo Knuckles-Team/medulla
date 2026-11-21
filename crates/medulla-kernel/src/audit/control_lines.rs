@@ -150,6 +150,26 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 GlossaryOp::Bind { term, .. } => format!("GLOSSARY|bind|{term}"),
             })
         }
+        // MEDULLA-TYPED-PACKS-R802.3: the line names the op and the node it addresses.
+        Method::Stewardship { op } => {
+            use medulla_catalog_types::stewardship::StewardshipOp;
+            Some(match op.as_ref() {
+                StewardshipOp::Assign { assignment } => {
+                    format!("STEWARDSHIP|assign|{}", assignment.principal)
+                }
+                StewardshipOp::Revoke { assignment } => {
+                    format!("STEWARDSHIP|revoke|{}", assignment.principal)
+                }
+                StewardshipOp::OpenChangeRequest { target, .. } => {
+                    format!("STEWARDSHIP|open_change_request|{target}")
+                }
+                StewardshipOp::Review { request_id, .. } => {
+                    format!("STEWARDSHIP|review|{request_id}")
+                }
+                StewardshipOp::Apply { request_id } => format!("STEWARDSHIP|apply|{request_id}"),
+                StewardshipOp::Certify { asset, .. } => format!("STEWARDSHIP|certify|{asset}"),
+            })
+        }
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
         Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
         _ => record_write_audit_line(method),

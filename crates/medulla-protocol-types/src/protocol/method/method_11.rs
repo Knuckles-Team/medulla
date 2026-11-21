@@ -298,6 +298,15 @@ $($variants)*
         op: Box<medulla_catalog_types::glossary::GlossaryOp>,
     },
 
+    // ── Stewardship (MEDULLA-TYPED-PACKS-R802.3) ───────────────────────────
+    /// One stewardship op in the caller's tenant: `Assign` or `Revoke` a role,
+    /// `OpenChangeRequest`, `Review`, `Apply` or `Certify`. Scope
+    /// `stewardship:write`. The answer carries the owners and stewards that govern
+    /// the target so a caller can decide whom to admit.
+    Stewardship {
+        op: Box<medulla_catalog_types::stewardship::StewardshipOp>,
+    },
+
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
     /// Validate and register one action spec in the request graph's registry.
     ActionRegister {

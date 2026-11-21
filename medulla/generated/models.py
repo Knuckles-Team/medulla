@@ -14753,6 +14753,13 @@ class MethodGlossary(BaseModel):
     params: MethodGlossaryParams
 
 
+class MethodStewardship(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Stewardship"]
+    params: MethodStewardshipParams
+
+
 class MethodClassificationClaim(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16019,6 +16026,7 @@ Method = Annotated[
         MethodQualityRulePut,
         MethodClassificationClaim,
         MethodGlossary,
+        MethodStewardship,
         MethodLineageIngest,
         MethodListMemorySnapshots,
         MethodLiveArtifactGet,
@@ -32536,6 +32544,147 @@ GlossaryOp = Annotated[
 ]
 
 
+class StewardRole(str, Enum):
+    OWNER = "owner"
+    STEWARD = "steward"
+    CUSTODIAN = "custodian"
+
+
+class StewardshipScopeDomain(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["domain"]
+    id: str
+
+
+class StewardshipScopeConceptScheme(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["concept_scheme"]
+    id: str
+
+
+class StewardshipScopeAsset(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["asset"]
+    id: str
+
+
+StewardshipScope = Annotated[
+    StewardshipScopeDomain | StewardshipScopeConceptScheme | StewardshipScopeAsset,
+    Field(discriminator="kind"),
+]
+
+
+class StewardshipAssignment(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope: StewardshipScope
+    role: StewardRole
+    principal: str
+
+
+class ChangeRequestState(str, Enum):
+    OPEN = "open"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    APPLIED = "applied"
+
+
+class ChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    target: str
+    proposed_digest: str
+    state: ChangeRequestState
+    reviewers: list[str]
+
+
+class Certification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    level: str
+    by: str
+    expires_at: Annotated[int, Field(ge=0)]
+
+
+class StewardshipTarget(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str | None = None
+    concept_scheme: str | None = None
+    domain: str | None = None
+
+
+class StewardshipReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    change_request: ChangeRequest | None = None
+    certification: Certification | None = None
+    owners: list[str]
+    stewards: list[str]
+
+
+class StewardshipOpAssign(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["assign"]
+    assignment: StewardshipAssignment
+
+
+class StewardshipOpRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["revoke"]
+    assignment: StewardshipAssignment
+
+
+class StewardshipOpOpenChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["open_change_request"]
+    target: str
+    proposed_digest: str
+    scopes: StewardshipTarget
+
+
+class StewardshipOpReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["review"]
+    request_id: str
+    approve: bool
+
+
+class StewardshipOpApply(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["apply"]
+    request_id: str
+
+
+class StewardshipOpCertify(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["certify"]
+    asset: str
+    level: str
+
+
+StewardshipOp = Annotated[
+    StewardshipOpAssign
+    | StewardshipOpRevoke
+    | StewardshipOpOpenChangeRequest
+    | StewardshipOpReview
+    | StewardshipOpApply
+    | StewardshipOpCertify,
+    Field(discriminator="op"),
+]
+
+
 class ClassificationClaimOpReject(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32924,6 +33073,12 @@ class MethodGlossaryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     op: GlossaryOp
+
+
+class MethodStewardshipParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: StewardshipOp
 
 
 class MethodClassificationClaimParams(BaseModel):
@@ -39069,6 +39224,26 @@ __all__ = [
     "GlossaryOpPutTerm",
     "GlossaryOpTransition",
     "GlossaryOpBind",
+    "MethodStewardship",
+    "MethodStewardshipParams",
+    "StewardRole",
+    "StewardshipScopeDomain",
+    "StewardshipScopeConceptScheme",
+    "StewardshipScopeAsset",
+    "StewardshipScope",
+    "StewardshipAssignment",
+    "ChangeRequestState",
+    "ChangeRequest",
+    "Certification",
+    "StewardshipTarget",
+    "StewardshipReceipt",
+    "StewardshipOp",
+    "StewardshipOpAssign",
+    "StewardshipOpRevoke",
+    "StewardshipOpOpenChangeRequest",
+    "StewardshipOpReview",
+    "StewardshipOpApply",
+    "StewardshipOpCertify",
     "ClaimKind",
     "ClaimState",
     "ClaimProvenance",

@@ -51,6 +51,8 @@ pub mod graph_pipeline;
 pub mod policy_evolution;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod shared;
+#[allow(missing_docs)]
+pub mod stewardship;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sparql_update;
 

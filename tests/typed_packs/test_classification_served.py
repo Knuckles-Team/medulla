@@ -98,6 +98,21 @@ def served():
         created = True
         _node(admin, graph, "marking:pii", {"type": "Marking"})
         _node(admin, graph, "col:orders.email", {"type": "Column"})
+        # The steward check reads the stewardship store (MEDULLA-TYPED-PACKS-R802.3).
+        admin._send(
+            "Stewardship",
+            {
+                "op": {
+                    "op": "assign",
+                    "assignment": {
+                        "scope": {"kind": "asset", "id": "col:orders.email"},
+                        "role": "steward",
+                        "principal": request_context(roles=[STEWARD])["principal"],
+                    },
+                }
+            },
+            graph,
+        )
         yield graph, admin
     finally:
         try:

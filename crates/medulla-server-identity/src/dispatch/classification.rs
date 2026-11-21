@@ -35,7 +35,10 @@ use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::ClassificationClaim as ClassificationClaimResultContract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_core::stewardship::TargetScopes;
+use medulla_server_graph::dispatch::graph_client::GraphTarget;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
+use medulla_server_graph::dispatch::stewardship::holds_review_role;
 use medulla_server_graph::dispatch::shared::typed_response;
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
@@ -44,8 +47,6 @@ use tokio::sync::RwLock;
 pub const MARKINGS_PROPERTY: &str = medulla_server_api::read_scope::MARKINGS_KEY;
 /// The node id prefix of a registered marking.
 pub const MARKING_NODE_PREFIX: &str = "marking:";
-/// The roles that may promote or reject a claim.
-const REVIEW_ROLES: [&str; 2] = ["steward", "owner"];
 /// Edges fetched per page while building the lineage map.
 const EDGE_PAGE: usize = 1000;
 
@@ -128,15 +129,25 @@ async fn serve(
     }
 }
 
-fn holds_review_role(verified: &VerifiedRequestContext) -> bool {
-    verified
-        .roles()
-        .iter()
-        .any(|role| REVIEW_ROLES.contains(&role.as_str()))
-}
-
-fn require_review_role(verified: &VerifiedRequestContext) -> Result<(), String> {
-    if holds_review_role(verified) {
+/// The steward or owner check reads the stewardship store (MEDULLA-TYPED-PACKS-R802.3):
+/// the verified principal must be an owner or steward governing the claim's asset.
+async fn require_review_role(
+    state: &Arc<RwLock<ServerState>>,
+    target: &ClassificationTarget<'_>,
+    asset: &str,
+) -> Result<(), String> {
+    let graph_target = GraphTarget {
+        graph: target.graph,
+        req_id: target.req_id,
+        caller: target.caller,
+        verified: target.verified,
+    };
+    let scopes = TargetScopes {
+        asset: Some(asset.to_string()),
+        concept_scheme: None,
+        domain: None,
+    };
+    if holds_review_role(state, &graph_target, &scopes).await? {
         Ok(())
     } else {
         Err(refuse(
@@ -316,10 +327,10 @@ async fn review(
     to: ClaimState,
     request_evidence: Vec<String>,
 ) -> Result<ClassificationClaimResult, String> {
-    require_review_role(target.verified)?;
     let mut record = stored_record(state, target, claim_id)
         .await?
         .ok_or_else(|| format!("INVALID_ARGUMENT: claim '{claim_id}' does not exist"))?;
+    require_review_role(state, target, &record.claim.asset).await?;
     if !legal_move(record.claim.state, to) {
         return Err(state_illegal(record.claim.state.as_str(), to.as_str()));
     }

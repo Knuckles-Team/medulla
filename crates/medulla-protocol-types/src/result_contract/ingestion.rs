@@ -98,6 +98,13 @@ method_results! {
     GlossaryPutTerm(Glossary / "put_term") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     GlossaryTransition(Glossary / "transition") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     GlossaryBind(Glossary / "bind") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    // MEDULLA-TYPED-PACKS-R802.3: every stewardship op answers one receipt.
+    StewardshipAssign(Stewardship / "assign") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipRevoke(Stewardship / "revoke") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipOpenChangeRequest(Stewardship / "open_change_request") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipReview(Stewardship / "review") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipApply(Stewardship / "apply") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipCertify(Stewardship / "certify") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;

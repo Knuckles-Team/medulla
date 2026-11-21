@@ -281,6 +281,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         # MEDULLA-TYPED-PACKS-R801.3: the glossary ops self-translate into
         # request-graph writes, like the classification claim ops.
         "Glossary",
+        # MEDULLA-TYPED-PACKS-R802.3: the stewardship ops, like the glossary ops.
+        "Stewardship",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",

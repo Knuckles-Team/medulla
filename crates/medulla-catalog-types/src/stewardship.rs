@@ -167,3 +167,65 @@ impl Certification {
         now < self.expires_at
     }
 }
+
+/// The scopes one target belongs to, named on the wire so the engine can resolve
+/// the governing assignments (MEDULLA-TYPED-PACKS-R802.3).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StewardshipTarget {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub concept_scheme: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+}
+
+/// One stewardship operation (`Method::Stewardship`, MEDULLA-TYPED-PACKS-R802.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum StewardshipOp {
+    /// Record one principal's role over one scope.
+    Assign { assignment: StewardshipAssignment },
+    /// Remove one assignment.
+    Revoke { assignment: StewardshipAssignment },
+    /// Open a change request for `target`, naming its governing owners and stewards
+    /// as reviewers.
+    OpenChangeRequest {
+        target: String,
+        proposed_digest: String,
+        scopes: StewardshipTarget,
+    },
+    /// A reviewer approves or rejects an open request.
+    Review { request_id: String, approve: bool },
+    /// A reviewer applies an approved request and records its evidence.
+    Apply { request_id: String },
+    /// A steward or owner certifies an asset at `level`.
+    Certify { asset: String, level: String },
+}
+
+impl StewardshipOp {
+    /// Every stewardship operation writes.
+    pub fn is_mutation(&self) -> bool {
+        true
+    }
+}
+
+/// The answer of a stewardship operation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StewardshipReceipt {
+    /// The id of the node the operation wrote.
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub change_request: Option<ChangeRequest>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub certification: Option<Certification>,
+    /// The owners that govern the addressed target, so a caller can decide whom to admit.
+    pub owners: Vec<String>,
+    /// The stewards that govern the addressed target.
+    pub stewards: Vec<String>,
+}

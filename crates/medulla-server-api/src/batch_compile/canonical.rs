@@ -780,6 +780,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ClassificationClaim { .. }
         // MEDULLA-TYPED-PACKS-R801.3: the glossary ops self-translate into request-graph writes.
         | Method::Glossary { .. }
+        // MEDULLA-TYPED-PACKS-R802.3: the stewardship ops self-translate into request-graph writes.
+        | Method::Stewardship { .. }
         // MEDULLA-SDLC-R002.3: release and deployment records self-translate
         // into a request-graph `BatchUpdate`.
         | Method::RecordRelease { .. }

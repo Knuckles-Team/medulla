@@ -423,6 +423,7 @@ SEND_BY_METHOD = {
     "QualityRulePut": ingestion.send_quality_rule_put,
     "ClassificationClaim": ingestion.send_classification_claim,
     "Glossary": ingestion.send_glossary,
+    "Stewardship": ingestion.send_stewardship,
     "IndexRepository": ingestion.send_index_repository,
     "InvalidateEdge": graph.send_invalidate_edge,
     "IssueControlLease": coordination.send_issue_control_lease,

@@ -1071,6 +1071,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::QualityRulePut { .. }
             | Method::ClassificationClaim { .. }
             | Method::Glossary { .. }
+            | Method::Stewardship { .. }
             | Method::RecordRelease { .. }
             | Method::RecordDeployment { .. }
             | Method::GoalPut { .. }
