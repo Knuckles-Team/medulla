@@ -41,6 +41,13 @@ pub async fn dispatch_identity_and_access_methods(
             dispatch_get_delegation_record(state, req.id, verified_context, &work_item_id).await
         }
 
+        // One graph's read-only ownership plan (MEDULLA-IDENTITY-R700.3), gated `identity:admin`.
+        #[cfg(all(feature = "redb", feature = "security"))]
+        Method::GraphOwnershipPlan { graph } => {
+            medulla_h_admin::admin::ownership::handle_plan(state, req.id, &graph, verified_context)
+                .await
+        }
+
         // A principal's CURRENT access to the request graph, for an executor
         // acting on that principal's behalf (gated `security:check`).
         Method::CheckAccess { agent_id, access } => {

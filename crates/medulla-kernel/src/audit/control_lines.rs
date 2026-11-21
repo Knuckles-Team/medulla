@@ -310,6 +310,9 @@ fn rbac_admin_audit_line(op: &medulla_identity_types::acl::RbacAdminOp) -> Optio
         // The share audit line is the graph audit-chain entry of the share
         // transition (MEDULLA-IDENTITY-R023.13.5), not an RBAC line.
         RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) => None,
+        // The identity trail records the ownership apply and rollback
+        // (MEDULLA-IDENTITY-R700.5); they write no RBAC line.
+        RbacAdminOp::ApplyOwnership(_) | RbacAdminOp::RollbackOwnership(_) => None,
         RbacAdminOp::List => None,
     }
 }

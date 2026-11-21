@@ -87,8 +87,9 @@ pub use ops::{
     IDENTITY_PROVISION_SCOPE, IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
 };
 pub use ownership::{
-    plan_digest, GrantPlanEntry, GraphOwnershipSignals, InvalidOwnership, OwnershipDisposition,
-    RollbackEntry, MAX_OWNERSHIP_ROLES, MAX_OWNERSHIP_WRITERS, OWNERSHIP_SCHEMA_VERSION,
+    plan_digest, signals_digest, AppliedSummary, GrantPlanEntry, GraphOwnershipPlanReply,
+    GraphOwnershipSignals, InvalidOwnership, OwnershipDisposition, OwnershipRecord, RollbackEntry,
+    MAX_OWNERSHIP_RECORDS, MAX_OWNERSHIP_ROLES, MAX_OWNERSHIP_WRITERS, OWNERSHIP_SCHEMA_VERSION,
 };
 pub use password_policy::check_password;
 pub use policy_bundle::{
@@ -272,6 +273,15 @@ medulla_types::closed_error_codes! {
         WireLoginExists => "WIRE_LOGIN_EXISTS",
         /// A wire login revoke names no login (MEDULLA-ENGINE-PARITY-R007.4).
         WireLoginUnknown => "WIRE_LOGIN_UNKNOWN",
+        /// An ownership plan or rollback would leave the policy with no administrator
+        /// (MEDULLA-IDENTITY-R700.4).
+        OwnershipLastAdmin => "OWNERSHIP_LAST_ADMIN",
+        /// An ownership plan grants a role the principal does not hold and that is not one of
+        /// the plan's own three graph roles (MEDULLA-IDENTITY-R700.4).
+        OwnershipWidensTenant => "OWNERSHIP_WIDENS_TENANT",
+        /// An ownership apply cannot store its rollback record, or a rollback names no live
+        /// record (MEDULLA-IDENTITY-R700.4).
+        OwnershipNoRollback => "OWNERSHIP_NO_ROLLBACK",
     }
 }
 

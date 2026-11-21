@@ -207,6 +207,16 @@ pub struct RbacGrantRemoval {
     pub removed: bool,
 }
 
+/// `RbacAdmin` op `ApplyOwnership`: the graph, the applied plan digest and how many principals
+/// changed (MEDULLA-IDENTITY-R700.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OwnershipApplied {
+    pub graph: String,
+    pub plan_digest: String,
+    pub principals: u32,
+}
+
 /// `RbacAdmin` op `List`: the whole current RBAC policy.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -235,6 +245,8 @@ method_results! {
     RbacRevokeResource(RbacAdmin / "RevokeResource") => Text<String>;
     RbacShareGrant(RbacAdmin / "ShareGrant") => Text<String>;
     RbacShareRevoke(RbacAdmin / "ShareRevoke") => Text<String>;
+    RbacApplyOwnership(RbacAdmin / "ApplyOwnership") => Json<OwnershipApplied>;
+    RbacRollbackOwnership(RbacAdmin / "RollbackOwnership") => Text<String>;
     RbacList(RbacAdmin / "List") => Json<RbacPolicyListing>;
     // EH-404: every write answers the lease as it now stands; `list` answers
     // the caller's visible leases with their status at the engine's clock.
@@ -246,6 +258,7 @@ method_results! {
     // roles is a present identity with an empty `roles` list.
     GetIdentity(GetIdentity) => Json<Option<AgentIdentity>>;
     GetDelegationRecord(GetDelegationRecord) => Json<medulla_identity_types::identity::DelegationState>;
+    GraphOwnershipPlan(GraphOwnershipPlan) => Json<medulla_identity_types::identity::GraphOwnershipPlanReply>;
     CheckAccess(CheckAccess) => Json<AccessDecision>;
     CheckResourceAccess(CheckResourceAccess) => Json<medulla_identity_types::acl::ResourceAccessDecision>;
     // Every identity op answers one tagged reply; no reply variant can

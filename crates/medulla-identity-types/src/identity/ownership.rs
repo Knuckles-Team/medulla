@@ -15,11 +15,14 @@ use sha2::{Digest, Sha256};
 pub const OWNERSHIP_SCHEMA_VERSION: u32 = 1;
 /// Most writers one signal set may carry.
 pub const MAX_OWNERSHIP_WRITERS: usize = 256;
+/// Most apply records the identity store holds (MEDULLA-IDENTITY-R700.5).
+pub const MAX_OWNERSHIP_RECORDS: usize = 1024;
 /// Most roles one grant entry may carry.
 pub const MAX_OWNERSHIP_ROLES: usize = 64;
 
 /// What the planner reads for one graph.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct GraphOwnershipSignals {
     pub schema_version: u32,
@@ -35,6 +38,7 @@ pub struct GraphOwnershipSignals {
 
 /// The access a planned principal receives.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OwnershipDisposition {
     Owner,
@@ -44,6 +48,7 @@ pub enum OwnershipDisposition {
 
 /// One planned grant: the principal's complete role set after apply.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct GrantPlanEntry {
     pub schema_version: u32,
@@ -54,11 +59,63 @@ pub struct GrantPlanEntry {
 
 /// The role set a principal held before apply, restored by rollback.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RollbackEntry {
     pub schema_version: u32,
     pub principal: String,
     pub prior_role_set: BTreeSet<String>,
+}
+
+/// The wire reply of `GraphOwnershipPlan` (MEDULLA-IDENTITY-R700.3): the signals the plan was
+/// built from, their digest, the plan and its digest, and the newest applied record of the graph
+/// when one exists (R700.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GraphOwnershipPlanReply {
+    pub schema_version: u32,
+    pub graph: String,
+    pub signals: GraphOwnershipSignals,
+    /// SHA-256 over `serde_json::to_vec(&signals)`, 64 lowercase hex.
+    pub signals_digest: String,
+    pub plan: Vec<GrantPlanEntry>,
+    pub plan_digest: String,
+    /// The newest stored record of this graph, when one exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied: Option<AppliedSummary>,
+}
+
+/// What the plan reply says about the newest stored record of the graph (R700.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AppliedSummary {
+    pub plan_digest: String,
+    pub actor: String,
+    pub applied_at_ms: u64,
+    pub rolled_back: bool,
+}
+
+/// One stored apply: who applied which plan from which signals, and the exact prior role sets
+/// that rollback restores (MEDULLA-IDENTITY-R700.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OwnershipRecord {
+    pub schema_version: u32,
+    pub graph: String,
+    pub actor: String,
+    pub plan_digest: String,
+    pub signals_digest: String,
+    pub applied_at_ms: u64,
+    pub rollback: Vec<RollbackEntry>,
+    pub rolled_back: bool,
+}
+
+/// SHA-256 over `serde_json::to_vec(signals)`, 64 lowercase hex (the `signals_digest` of the
+/// plan reply).
+pub fn signals_digest(signals: &GraphOwnershipSignals) -> String {
+    hex::encode(Sha256::digest(serde_json::to_vec(signals).unwrap_or_default()))
 }
 
 /// An ownership value outside its bounds.

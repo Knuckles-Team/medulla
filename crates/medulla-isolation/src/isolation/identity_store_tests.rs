@@ -11,6 +11,7 @@ use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,
 };
 use medulla_identity_types::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
+use medulla_identity_types::acl::{ApplyOwnership, RollbackOwnership};
 use medulla_identity_types::identity::*;
 use medulla_protocol_types::protocol::GraphType;
 
@@ -289,6 +290,151 @@ fn create_user_cannot_take_over_a_registered_principal() {
         layer.get_identity(SYSTEM_AGENT).unwrap().role,
         AgentRole::System
     );
+}
+
+/// A layer with an administrator role `ops` and three registered agents: `usr:a` holds `ops`,
+/// `usr:b` holds nothing and `usr:c` holds `extra`.
+fn ownership_layer() -> IsolationLayer {
+    use medulla_identity_types::acl::Grant;
+    let mut layer = bootstrapped();
+    layer
+        .try_rbac_admin_audited(RbacAdminOp::AddRole(Role::new("ops")), actor())
+        .unwrap();
+    layer
+        .try_rbac_admin_audited(
+            RbacAdminOp::AddGrant(Grant {
+                role: "ops".to_string(),
+                resource: ResourceSelector::Graph("*".to_string()),
+                action: RbacAction::Admin,
+                effect: GrantEffect::Allow,
+            }),
+            actor(),
+        )
+        .unwrap();
+    for (id, roles) in [("usr:a", vec!["ops"]), ("usr:b", vec![]), ("usr:c", vec!["extra"])] {
+        let mut identity = agent(id);
+        identity.roles = roles.into_iter().map(str::to_string).collect();
+        layer.try_register_agent_audited(identity, actor()).unwrap();
+    }
+    layer
+}
+
+fn roles_of(layer: &IsolationLayer, id: &str) -> Vec<String> {
+    layer.agents[id].roles.clone()
+}
+
+fn plan_entry(principal: &str, disposition: OwnershipDisposition, roles: &[&str]) -> GrantPlanEntry {
+    GrantPlanEntry {
+        schema_version: OWNERSHIP_SCHEMA_VERSION,
+        principal: principal.to_string(),
+        disposition,
+        full_role_set: roles.iter().map(|role| role.to_string()).collect(),
+    }
+}
+
+fn apply_op(graph: &str, plan: Vec<GrantPlanEntry>) -> ApplyOwnership {
+    ApplyOwnership {
+        graph: graph.to_string(),
+        plan_digest: plan_digest(&plan),
+        plan,
+        signals_digest: "a".repeat(64),
+    }
+}
+
+// spec: MEDULLA-IDENTITY-R700.4
+// spec: MEDULLA-IDENTITY-R700.5
+#[test]
+fn ownership_refusals_change_nothing() {
+    let mut layer = ownership_layer();
+    let before: Vec<_> = ["usr:a", "usr:b", "usr:c"]
+        .iter()
+        .map(|id| roles_of(&layer, id))
+        .collect();
+    let unchanged = |layer: &IsolationLayer| {
+        let now: Vec<_> = ["usr:a", "usr:b", "usr:c"]
+            .iter()
+            .map(|id| roles_of(layer, id))
+            .collect();
+        assert_eq!(now, before);
+    };
+
+    // (1) a digest that is not the plan's, an unregistered principal.
+    let mut tampered = apply_op(
+        "g",
+        vec![plan_entry("usr:b", OwnershipDisposition::Reader, &["graph:g:reader"])],
+    );
+    tampered.plan_digest = "0".repeat(64);
+    let refused = layer.try_apply_ownership_audited(tampered, actor()).unwrap_err();
+    assert!(refused.starts_with("INVALID_ARGUMENT"), "{refused}");
+    let ghost = apply_op(
+        "g",
+        vec![plan_entry("usr:ghost", OwnershipDisposition::Reader, &["graph:g:reader"])],
+    );
+    let refused = layer.try_apply_ownership_audited(ghost, actor()).unwrap_err();
+    assert!(refused.starts_with("INVALID_ARGUMENT"), "{refused}");
+    unchanged(&layer);
+
+    // (2) a role of another graph.
+    let widening = apply_op(
+        "g",
+        vec![plan_entry("usr:b", OwnershipDisposition::Owner, &["graph:other:owner"])],
+    );
+    let refused = layer.try_apply_ownership_audited(widening, actor()).unwrap_err();
+    assert!(refused.starts_with("OWNERSHIP_WIDENS_TENANT: "), "{refused}");
+    unchanged(&layer);
+
+    // (3) the only administrator is demoted to a reader.
+    let demoting = apply_op(
+        "g",
+        vec![plan_entry("usr:a", OwnershipDisposition::Reader, &["graph:g:reader"])],
+    );
+    let refused = layer.try_apply_ownership_audited(demoting, actor()).unwrap_err();
+    assert!(refused.starts_with("OWNERSHIP_LAST_ADMIN: "), "{refused}");
+    unchanged(&layer);
+
+    // A rollback of an unknown plan.
+    let unknown = RollbackOwnership {
+        graph: "g".to_string(),
+        plan_digest: "f".repeat(64),
+    };
+    let refused = layer.try_rollback_ownership_audited(unknown, actor()).unwrap_err();
+    assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
+    unchanged(&layer);
+
+    // A valid plan applies, stores its record, and rolls back exactly once.
+    let plan = vec![
+        plan_entry("usr:a", OwnershipDisposition::Owner, &["graph:g:owner", "ops"]),
+        plan_entry("usr:b", OwnershipDisposition::Reader, &["graph:g:reader"]),
+        plan_entry("usr:c", OwnershipDisposition::Writer, &["extra", "graph:g:writer"]),
+    ];
+    let valid = apply_op("g", plan);
+    let digest = valid.plan_digest.clone();
+    assert_eq!(layer.try_apply_ownership_audited(valid.clone(), actor()), Ok(3));
+    assert_eq!(roles_of(&layer, "usr:b"), vec!["graph:g:reader".to_string()]);
+    let record = layer
+        .rbac()
+        .identity_store()
+        .ownership_record("g", &digest)
+        .unwrap()
+        .clone();
+    assert_eq!(record.actor, "svc:au");
+    assert_eq!(record.applied_at_ms, NOW);
+    assert!(!record.rolled_back);
+    // The same live plan is not applied twice: that would overwrite the true prior sets.
+    let refused = layer.try_apply_ownership_audited(valid, actor()).unwrap_err();
+    assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
+
+    let rollback = RollbackOwnership {
+        graph: "g".to_string(),
+        plan_digest: digest.clone(),
+    };
+    layer
+        .try_rollback_ownership_audited(rollback.clone(), actor())
+        .unwrap();
+    unchanged(&layer);
+    assert!(layer.rbac().identity_store().ownership_record("g", &digest).unwrap().rolled_back);
+    let refused = layer.try_rollback_ownership_audited(rollback, actor()).unwrap_err();
+    assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
 }
 
 #[test]

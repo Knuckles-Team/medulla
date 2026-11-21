@@ -364,6 +364,7 @@ SEND_BY_METHOD = {
     "GetControlLease": coordination.send_get_control_lease,
     "GetCurrentPlan": coordination.send_get_current_plan,
     "GetDelegationRecord": security.send_get_delegation_record,
+    "GraphOwnershipPlan": security.send_graph_ownership_plan,
     "GetEdgeProperties": graph.send_get_edge_properties,
     "GetEdgePropertiesBatch": graph.send_get_edge_properties_batch,
     "GetEdges": graph.send_get_edges,

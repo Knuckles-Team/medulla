@@ -279,6 +279,11 @@ pub enum RbacAdminOp {
     ShareGrant(ShareGrant),
     /// Withdraw every share of one node (MEDULLA-IDENTITY-R023.13.3).
     ShareRevoke(ShareRevoke),
+    /// Apply a graph ownership plan: replace each planned principal's complete role set in one
+    /// transaction and store the rollback record (MEDULLA-IDENTITY-R700.3).
+    ApplyOwnership(ApplyOwnership),
+    /// Restore the prior role sets recorded by an applied plan (MEDULLA-IDENTITY-R700.3).
+    RollbackOwnership(RollbackOwnership),
     /// Read-only: list the current roles + grants.
     List,
 }
@@ -570,9 +575,61 @@ impl ShareRevoke {
     }
 }
 
+/// Apply one graph's ownership plan (MEDULLA-IDENTITY-R700.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ApplyOwnership {
+    pub graph: String,
+    pub plan: Vec<crate::identity::GrantPlanEntry>,
+    pub plan_digest: String,
+    pub signals_digest: String,
+}
+
+/// Roll back one applied ownership plan (MEDULLA-IDENTITY-R700.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct RollbackOwnership {
+    pub graph: String,
+    pub plan_digest: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-IDENTITY-R700.3
+    #[test]
+    fn ownership_ops_round_trip() {
+        use crate::identity::{
+            plan_digest, GrantPlanEntry, OwnershipDisposition, OWNERSHIP_SCHEMA_VERSION,
+        };
+        let plan = vec![GrantPlanEntry {
+            schema_version: OWNERSHIP_SCHEMA_VERSION,
+            principal: "usr:a".to_string(),
+            disposition: OwnershipDisposition::Owner,
+            full_role_set: std::collections::BTreeSet::from(["graph:g:owner".to_string()]),
+        }];
+        let digest = plan_digest(&plan);
+        for op in [
+            RbacAdminOp::ApplyOwnership(ApplyOwnership {
+                graph: "g".to_string(),
+                plan,
+                plan_digest: digest.clone(),
+                signals_digest: "0".repeat(64),
+            }),
+            RbacAdminOp::RollbackOwnership(RollbackOwnership {
+                graph: "g".to_string(),
+                plan_digest: digest,
+            }),
+        ] {
+            let json = serde_json::to_string(&op).unwrap();
+            assert_eq!(serde_json::from_str::<RbacAdminOp>(&json).unwrap(), op);
+            let packed = rmp_serde::to_vec_named(&op).unwrap();
+            assert_eq!(rmp_serde::from_slice::<RbacAdminOp>(&packed).unwrap(), op);
+        }
+    }
 
     #[test]
     fn share_ops_round_trip() {

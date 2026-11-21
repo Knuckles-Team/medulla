@@ -14832,6 +14832,13 @@ class MethodGetDelegationRecord(BaseModel):
     params: MethodGetDelegationRecordParams
 
 
+class MethodGraphOwnershipPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GraphOwnershipPlan"]
+    params: MethodGraphOwnershipPlanParams
+
+
 class MethodGetEffectReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16171,6 +16178,7 @@ Method = Annotated[
         MethodGetAdmittedRequest,
         MethodGetDelegationRecord,
         MethodGetEffectReceipt,
+        MethodGraphOwnershipPlan,
         MethodGetShardWriterWidth,
         MethodGetTelemetrySnapshot,
         MethodStandardsDrift,
@@ -22660,6 +22668,18 @@ class RbacAdminOpShareRevoke(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     ShareRevoke: ShareRevoke
+
+
+class RbacAdminOpApplyOwnership(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ApplyOwnership: ApplyOwnership
+
+
+class RbacAdminOpRollbackOwnership(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    RollbackOwnership: RollbackOwnership
 
 
 class RbacAdminOpAddGrant(BaseModel):
@@ -31536,6 +31556,8 @@ RbacAdminOp = (
     | RbacAdminOpRevokeResource
     | RbacAdminOpShareGrant
     | RbacAdminOpShareRevoke
+    | RbacAdminOpApplyOwnership
+    | RbacAdminOpRollbackOwnership
     | Literal["List"]
 )
 
@@ -33186,6 +33208,12 @@ class MethodGetDelegationRecordParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     work_item_id: str
+
+
+class MethodGraphOwnershipPlanParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
 
 
 class MethodGetEffectReceiptParams(BaseModel):
@@ -36208,6 +36236,93 @@ class ShareRevoke(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     node_id: str
+
+
+class OwnershipDisposition(str, Enum):
+    OWNER = "owner"
+    WRITER = "writer"
+    READER = "reader"
+
+
+class GrantPlanEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    disposition: OwnershipDisposition
+    full_role_set: list[str]
+    principal: str
+    schema_version: int
+
+
+class RollbackEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal: str
+    prior_role_set: list[str]
+    schema_version: int
+
+
+class GraphOwnershipSignals(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    creator: str | None = None
+    graph: str
+    name_hint: str | None = None
+    schema_version: int
+    writers: list[GraphOwnershipSignalsWritersItem] = Field(default_factory=list)
+
+
+class AppliedSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    applied_at_ms: int
+    plan_digest: str
+    rolled_back: bool
+
+
+class GraphOwnershipPlanReply(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    applied: AppliedSummary | None = None
+    graph: str
+    plan: list[GrantPlanEntry]
+    plan_digest: str
+    schema_version: int
+    signals: GraphOwnershipSignals
+    signals_digest: str
+
+
+class ApplyOwnership(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    plan: list[GrantPlanEntry]
+    plan_digest: str
+    signals_digest: str
+
+
+class RollbackOwnership(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    plan_digest: str
+
+
+class OwnershipApplied(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    plan_digest: str
+    principals: int
+
+
+GraphOwnershipSignalsWritersItem = Annotated[
+    tuple[str, int],
+    Field(
+        min_length=2,
+        max_length=2,
+    ),
+]
 
 
 class StoredQuery(BaseModel):
@@ -39309,6 +39424,8 @@ __all__ = [
     "MethodGetCurrentPlanParams",
     "MethodGetDelegationRecord",
     "MethodGetDelegationRecordParams",
+    "MethodGraphOwnershipPlan",
+    "MethodGraphOwnershipPlanParams",
     "MethodGetEdgeProperties",
     "MethodGetEdgePropertiesBatch",
     "MethodGetEdgePropertiesBatchParams",
@@ -40448,6 +40565,8 @@ __all__ = [
     "RbacAdminOpRemoveRole",
     "RbacAdminOpShareGrant",
     "RbacAdminOpShareRevoke",
+    "RbacAdminOpApplyOwnership",
+    "RbacAdminOpRollbackOwnership",
     "RbacElevationOp",
     "RbacElevationOpApprove",
     "RbacElevationOpList",
@@ -41668,6 +41787,16 @@ __all__ = [
     "SemanticEnrichOpRankProposals",
     "ShareGrant",
     "ShareRevoke",
+    "OwnershipDisposition",
+    "GrantPlanEntry",
+    "RollbackEntry",
+    "GraphOwnershipSignals",
+    "GraphOwnershipSignalsWritersItem",
+    "AppliedSummary",
+    "GraphOwnershipPlanReply",
+    "ApplyOwnership",
+    "RollbackOwnership",
+    "OwnershipApplied",
     "ShareScope",
     "SourceCoverageFacet",
     "StatePart",

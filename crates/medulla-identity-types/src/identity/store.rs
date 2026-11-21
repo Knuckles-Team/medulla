@@ -36,6 +36,7 @@ mod import;
 mod invariants;
 mod mfa;
 mod modes;
+mod ownership;
 mod provision;
 mod recovery;
 mod session_reference;
@@ -85,6 +86,9 @@ pub struct IdentityStore {
     /// (MEDULLA-IDENTITY-R702).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) policy_bundles: BTreeMap<String, super::policy_bundle::PolicyRuleBundle>,
+    /// `<graph>\0<plan_digest>` → the stored ownership apply (MEDULLA-IDENTITY-R700.5).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) ownership_records: BTreeMap<String, super::ownership::OwnershipRecord>,
     /// Login → wire login record (MEDULLA-ENGINE-PARITY-R007.4). A record is never deleted.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) wire_logins: BTreeMap<String, super::wire_login::WireLoginRecord>,

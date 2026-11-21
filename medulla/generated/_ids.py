@@ -523,6 +523,7 @@ METHOD_IDS = frozenset(
         "FinanceRecordPut",
         "GetAdmittedRequest",
         "GetDelegationRecord",
+        "GraphOwnershipPlan",
         "CheckResourceAccess",
         "PolicySourceBind",
         "GetEffectReceipt",

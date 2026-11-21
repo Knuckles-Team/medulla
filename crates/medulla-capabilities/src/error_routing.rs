@@ -1637,7 +1637,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RegisterIdentity",
         &["IDENTITY_STORE_MANAGED", "IDENTITY_STORE_NAMESPACE"],
     ),
-    ("RbacAdmin", &["IDENTITY_STORE_NAMESPACE"]),
+    // `RbacAdmin` also serves the ownership apply and rollback (MEDULLA-IDENTITY-R700.4): a
+    // store-managed principal in a plan meets the managed fence, and the three ownership
+    // refusals are its own.
+    (
+        "RbacAdmin",
+        &[
+            "IDENTITY_STORE_NAMESPACE",
+            "IDENTITY_STORE_MANAGED",
+            "OWNERSHIP_LAST_ADMIN",
+            "OWNERSHIP_WIDENS_TENANT",
+            "OWNERSHIP_NO_ROLLBACK",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R720.5: the DECAY and CLUSTER BY EMBEDDING stage refusals.
     (
         "Uql",
@@ -2240,7 +2252,10 @@ mod tests {
             ("RegisterIdentity", "IDENTITY_STORE_MANAGED", true),
             ("RegisterIdentity", "IDENTITY_STORE_NAMESPACE", true),
             ("RbacAdmin", "IDENTITY_STORE_NAMESPACE", true),
-            ("RbacAdmin", "IDENTITY_STORE_MANAGED", false),
+            ("RbacAdmin", "IDENTITY_STORE_MANAGED", true),
+            ("RbacAdmin", "OWNERSHIP_LAST_ADMIN", true),
+            ("RbacAdmin", "OWNERSHIP_WIDENS_TENANT", true),
+            ("RbacAdmin", "OWNERSHIP_NO_ROLLBACK", true),
             ("GetIdentity", "IDENTITY_STORE_NAMESPACE", false),
         ] {
             assert_eq!(

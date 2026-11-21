@@ -444,6 +444,13 @@ $($variants)*
         agent_id: String,
     },
 
+    /// Read one graph's deterministic ownership plan (MEDULLA-IDENTITY-R700.3): the signals
+    /// from the write ledger, their digest, the plan and its digest, and the newest applied
+    /// record. Read-only; gated `identity:admin`.
+    GraphOwnershipPlan {
+        graph: String,
+    },
+
     /// Read one WorkItem's delegation record (MEDULLA-IDENTITY-R701): its
     /// current standing, and whether the principal is active and holds the tool
     /// scope. Resolves under the verified request tenant; an unknown id and a

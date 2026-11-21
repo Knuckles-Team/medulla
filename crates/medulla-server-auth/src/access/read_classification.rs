@@ -319,6 +319,8 @@ pub(super) const REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE: &str =
 // boot precisely because no such RPC existed).
 pub(super) const REASON_IDENTITY_STORE_ADMIN_GATED: &str =
     "src/server/dispatch.rs's GetIdentity arm answers from IsolationLayer::get_identity -- a point read of the in-memory RBAC identity map (`agents: HashMap<String, AgentIdentity>`, crates/medulla-core/src/isolation.rs), the SAME store RegisterIdentity writes and RbacAdmin governs. It is control-plane principal metadata (agent_id/role/teams/roles), not one resolved graph's rows: it never constructs a GraphView/GraphCore and never calls project_core/filter_view, so there is no per-node `_owner`/`_visibility`/`_grants` for RLS to filter on. Authority is the same `security:admin` authz_action the rest of the Zero-Trust Consensus family carries (crates/medulla-capabilities/src/lib.rs), so it grants no visibility to any caller who could not already call RegisterIdentity/RbacAdmin against that identical store";
+pub(super) const REASON_OWNERSHIP_PLAN_ADMIN_GATED: &str =
+    "GraphOwnershipPlan answers from the durable write ledger and creator of one graph's shard file (crates/medulla-store/src/redb_store/write_ledger.rs) and the identity store's ownership records, never from node or edge rows: it reads per-principal write counts, not graph content, so there is no per-node RLS to filter on; authority is the exact identity:admin scope";
 pub(super) const REASON_DELEGATION_RECORD_TENANT_SCOPED: &str =
     "GetDelegationRecord answers from the engine identity store's delegation table (crates/medulla-identity-types/src/identity/store/delegation.rs), a point read keyed by WorkItem id under the verified request tenant: another tenant's record resolves as absent. It is control-plane identity metadata, not one resolved graph's rows, so there is no per-node RLS to filter on; authority is the exact identity:read scope";
 pub(super) const REASON_TELEMETRY_TENANT_SCOPED: &str =
@@ -568,6 +570,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_CLUSTER_TOPOLOGY_READ
     ("ClusterMembers", REASON_CLUSTER_TOPOLOGY_READ),
     ("GetIdentity", REASON_IDENTITY_STORE_ADMIN_GATED),
+    ("GraphOwnershipPlan", REASON_OWNERSHIP_PLAN_ADMIN_GATED),
     ("CheckAccess", REASON_IDENTITY_ACCESS_CHECK),
     ("CheckResourceAccess", REASON_RESOURCE_ACCESS_CHECK),
     ("GetTelemetrySnapshot", REASON_TELEMETRY_TENANT_SCOPED),

@@ -11,7 +11,9 @@
 //! principal, and `RbacAdmin` cannot touch an `idm:` role or grant.
 #![cfg(feature = "security")]
 
-use medulla_identity_types::acl::{Grant, RbacAdminOp, Role};
+use medulla_identity_types::acl::{
+    ApplyOwnership, Grant, GrantEffect, RbacAction, RbacAdminOp, RollbackOwnership, Role,
+};
 use medulla_identity_types::{
     identity::ApplyContext, identity::AuditRecord, identity::ConfigOp, identity::DenialSample,
     identity::IdentityEvent, identity::IdentityOp, identity::IdentityRefusal,
@@ -262,6 +264,11 @@ impl IsolationLayer {
             // A share never touches the RBAC image: the share transition commits
             // it through the graph gateway (MEDULLA-IDENTITY-R023.13.3).
             RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) => return Ok(false),
+            // The ownership apply and rollback are served by their own functions
+            // (`try_apply_ownership_audited`, `try_rollback_ownership_audited`).
+            RbacAdminOp::ApplyOwnership(_) | RbacAdminOp::RollbackOwnership(_) => {
+                return Ok(false)
+            }
             RbacAdminOp::List => return Ok(false),
         };
         if touches_store {
@@ -295,9 +302,11 @@ impl IsolationLayer {
                     }
                     Ok(())
                 }
-                RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) | RbacAdminOp::List => {
-                    Ok(())
-                }
+                RbacAdminOp::ShareGrant(_)
+                | RbacAdminOp::ShareRevoke(_)
+                | RbacAdminOp::ApplyOwnership(_)
+                | RbacAdminOp::RollbackOwnership(_)
+                | RbacAdminOp::List => Ok(()),
             },
         )?;
         Ok(changed)
@@ -436,3 +445,254 @@ fn owned_grant(grant: &Grant) -> bool {
 
 #[path = "identity_store_admin/session_authority.rs"]
 mod session_authority;
+
+// -- graph ownership apply and rollback (MEDULLA-IDENTITY-R700.4, R700.5) ----------------------
+
+/// The role store the ownership planner writes through: the identities' own role sets in the
+/// isolation layer. `replace_role_sets` changes memory only; the caller persists.
+struct IsolationRoleStore<'a>(&'a mut IsolationLayer);
+
+impl super::ownership::OwnershipRoleStore for IsolationRoleStore<'_> {
+    type Error = String;
+
+    fn role_set(&self, principal: &str) -> std::collections::BTreeSet<String> {
+        self.0
+            .agents
+            .get(principal)
+            .map(|identity| identity.roles.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    fn replace_role_sets(
+        &mut self,
+        _graph: &str,
+        sets: &[(String, std::collections::BTreeSet<String>)],
+    ) -> Result<(), String> {
+        if let Some((principal, _)) = sets
+            .iter()
+            .find(|(principal, _)| !self.0.agents.contains_key(principal))
+        {
+            return Err(unregistered(principal));
+        }
+        for (principal, set) in sets {
+            if let Some(identity) = self.0.agents.get_mut(principal) {
+                identity.roles = set.iter().cloned().collect();
+            }
+        }
+        Ok(())
+    }
+}
+
+fn unregistered(principal: &str) -> String {
+    format!("INVALID_ARGUMENT: principal '{principal}' has no registered identity")
+}
+
+fn ownership_refusal(refusal: IdentityRefusal, detail: &str) -> String {
+    format!("{refusal}: {detail}")
+}
+
+impl IsolationLayer {
+    /// Whether any registered identity is an administrator once `substitutions` replace the
+    /// named principals' role sets: its expanded roles contain a role that holds an `Allow`
+    /// grant with `RbacAction::Admin`.
+    fn has_administrator_after(
+        &self,
+        substitutions: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
+    ) -> bool {
+        self.agents.iter().any(|(principal, identity)| {
+            let roles: Vec<String> = match substitutions.get(principal) {
+                Some(set) => set.iter().cloned().collect(),
+                None => identity.roles.clone(),
+            };
+            let expanded = self.rbac.expand_roles(&roles);
+            self.rbac.grants().iter().any(|grant| {
+                grant.effect == GrantEffect::Allow
+                    && grant.action == RbacAction::Admin
+                    && expanded.contains(&grant.role)
+            })
+        })
+    }
+
+    /// The refusals of an ownership apply, in the order the row states them, before any write.
+    fn check_ownership_apply(&self, op: &ApplyOwnership) -> Result<(), String> {
+        use super::ownership::ownership_role;
+        use medulla_identity_types::identity::{plan_digest, OwnershipDisposition};
+        // (1) the plan is well formed and every principal can be changed.
+        if op.plan.is_empty() {
+            return Err("INVALID_ARGUMENT: the ownership plan has no entries".to_string());
+        }
+        if op.plan_digest != plan_digest(&op.plan) {
+            return Err("INVALID_ARGUMENT: plan_digest does not match the plan".to_string());
+        }
+        let hex64 = |value: &str| {
+            value.len() == 64 && value.bytes().all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+        };
+        if !hex64(&op.signals_digest) {
+            return Err("INVALID_ARGUMENT: signals_digest is not 64 lowercase hex".to_string());
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for entry in &op.plan {
+            entry
+                .validate()
+                .map_err(|error| format!("INVALID_ARGUMENT: ownership plan entry: {error:?}"))?;
+            if !seen.insert(entry.principal.as_str()) {
+                return Err(format!(
+                    "INVALID_ARGUMENT: principal '{}' appears twice in the plan",
+                    entry.principal
+                ));
+            }
+            if !self.agents.contains_key(&entry.principal) {
+                return Err(unregistered(&entry.principal));
+            }
+            if self.rbac.identity_store().manages(&entry.principal) {
+                return Err(STORE_MANAGED.to_string());
+            }
+        }
+        // (2) a plan role is held already or is one of this graph's three roles.
+        let graph_roles: std::collections::BTreeSet<String> = [
+            OwnershipDisposition::Owner,
+            OwnershipDisposition::Writer,
+            OwnershipDisposition::Reader,
+        ]
+        .into_iter()
+        .map(|disposition| ownership_role(&op.graph, disposition))
+        .collect();
+        for entry in &op.plan {
+            let held = &self.agents[&entry.principal].roles;
+            if let Some(role) = entry
+                .full_role_set
+                .iter()
+                .find(|role| !graph_roles.contains(*role) && !held.contains(*role))
+            {
+                return Err(ownership_refusal(
+                    IdentityRefusal::OwnershipWidensTenant,
+                    &format!("role '{role}' is neither held by '{}' nor a role of this graph", entry.principal),
+                ));
+            }
+        }
+        // (3) the plan leaves an administrator.
+        let substitutions = op
+            .plan
+            .iter()
+            .map(|entry| (entry.principal.clone(), entry.full_role_set.clone()))
+            .collect();
+        if !self.has_administrator_after(&substitutions) {
+            return Err(ownership_refusal(
+                IdentityRefusal::OwnershipLastAdmin,
+                "the plan would leave the policy with no administrator",
+            ));
+        }
+        // (4) the rollback record can be stored, and a live record of the same plan is not
+        // overwritten: that would replace the true prior role sets with the planned ones.
+        let store = self.rbac.identity_store();
+        match store.ownership_record(&op.graph, &op.plan_digest) {
+            Some(record) if !record.rolled_back => Err(ownership_refusal(
+                IdentityRefusal::OwnershipNoRollback,
+                "this plan is already applied; roll it back first",
+            )),
+            None if store.ownership_record_count()
+                >= medulla_identity_types::identity::MAX_OWNERSHIP_RECORDS =>
+            {
+                Err(ownership_refusal(
+                    IdentityRefusal::OwnershipNoRollback,
+                    "the ownership record store is full",
+                ))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// `RbacAdmin` `ApplyOwnership`: replace each planned principal's complete role set, store
+    /// the rollback record and append the identity-trail entry, in one persisted image. Returns
+    /// the number of principals changed. A refusal or a failed write changes nothing.
+    pub fn try_apply_ownership_audited(
+        &mut self,
+        op: ApplyOwnership,
+        actor: AuditActor<'_>,
+    ) -> Result<u32, String> {
+        use medulla_identity_types::identity::{
+            OwnershipRecord, OWNERSHIP_SCHEMA_VERSION,
+        };
+        self.check_ownership_apply(&op)?;
+        let principals = u32::try_from(op.plan.len()).unwrap_or(u32::MAX);
+        let prior_agents = self.agents.clone();
+        let (now_ms, actor_principal) = (actor.now_ms, actor.principal.to_string());
+        let graph = op.graph.clone();
+        let outcome = self.audited(actor, IdentityEvent::RbacPolicyChanged, &graph, |layer| {
+            let rollback =
+                super::ownership::apply(&mut IsolationRoleStore(layer), &op.graph, &op.plan)?;
+            let record = OwnershipRecord {
+                schema_version: OWNERSHIP_SCHEMA_VERSION,
+                graph: op.graph.clone(),
+                actor: actor_principal,
+                plan_digest: op.plan_digest.clone(),
+                signals_digest: op.signals_digest.clone(),
+                applied_at_ms: now_ms,
+                rollback,
+                rolled_back: false,
+            };
+            layer
+                .rbac
+                .identity_store_mut()
+                .record_ownership(record)
+                .map_err(|_| {
+                    ownership_refusal(
+                        IdentityRefusal::OwnershipNoRollback,
+                        "the rollback record cannot be stored",
+                    )
+                })?;
+            layer.persist_state()
+        });
+        if outcome.is_err() {
+            self.agents = prior_agents;
+        }
+        outcome.map(|()| principals)
+    }
+
+    /// `RbacAdmin` `RollbackOwnership`: restore exactly the prior role sets of one applied plan.
+    pub fn try_rollback_ownership_audited(
+        &mut self,
+        op: RollbackOwnership,
+        actor: AuditActor<'_>,
+    ) -> Result<(), String> {
+        let entries = match self.rbac.identity_store().ownership_record(&op.graph, &op.plan_digest)
+        {
+            Some(record) if !record.rolled_back => record.rollback.clone(),
+            _ => {
+                return Err(ownership_refusal(
+                    IdentityRefusal::OwnershipNoRollback,
+                    "no live ownership record for this graph and plan",
+                ))
+            }
+        };
+        let substitutions = entries
+            .iter()
+            .map(|entry| (entry.principal.clone(), entry.prior_role_set.clone()))
+            .collect();
+        if !self.has_administrator_after(&substitutions) {
+            return Err(ownership_refusal(
+                IdentityRefusal::OwnershipLastAdmin,
+                "restoring the prior role sets would leave the policy with no administrator",
+            ));
+        }
+        // A principal unregistered since the apply has no role set to restore.
+        let present: Vec<_> = entries
+            .into_iter()
+            .filter(|entry| self.agents.contains_key(&entry.principal))
+            .collect();
+        let prior_agents = self.agents.clone();
+        let graph = op.graph.clone();
+        let outcome = self.audited(actor, IdentityEvent::RbacPolicyChanged, &graph, |layer| {
+            super::ownership::rollback(&mut IsolationRoleStore(layer), &op.graph, &present)?;
+            layer
+                .rbac
+                .identity_store_mut()
+                .mark_ownership_rolled_back(&op.graph, &op.plan_digest);
+            layer.persist_state()
+        });
+        if outcome.is_err() {
+            self.agents = prior_agents;
+        }
+        outcome
+    }
+}

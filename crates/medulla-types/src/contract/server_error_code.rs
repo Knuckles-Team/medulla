@@ -1079,6 +1079,12 @@ closed_error_codes! {
         WireLoginExists => "WIRE_LOGIN_EXISTS",
         /// MEDULLA-ENGINE-PARITY-R007.4: a wire login revoke names no login.
         WireLoginUnknown => "WIRE_LOGIN_UNKNOWN",
+        /// MEDULLA-IDENTITY-R700.4: an ownership plan or rollback would leave no administrator.
+        OwnershipLastAdmin => "OWNERSHIP_LAST_ADMIN",
+        /// MEDULLA-IDENTITY-R700.4: an ownership plan grants a role outside its own graph's three.
+        OwnershipWidensTenant => "OWNERSHIP_WIDENS_TENANT",
+        /// MEDULLA-IDENTITY-R700.4: no rollback record can be stored, or none is live.
+        OwnershipNoRollback => "OWNERSHIP_NO_ROLLBACK",
         /// MEDULLA-SRC-AUTH-R011.3: a node write named a `content_origin` that is not a known origin.
         ContentOriginUnknown => "CONTENT_ORIGIN_UNKNOWN",
         /// MEDULLA-SRC-AUTH-R011.3: an untrusted-to-trusted change had no operator approval id.

@@ -723,6 +723,27 @@ fn rbac_admin_response(
             req_id,
             "INVALID_ARGUMENT: a share commits through the graph gateway, not the RBAC image",
         ),
+        // The ownership plan apply and rollback (MEDULLA-IDENTITY-R700.3): one persisted image
+        // each, with the checks of R700.4 before any write.
+        RbacAdminOp::ApplyOwnership(op) => {
+            let (graph, plan_digest) = (op.graph.clone(), op.plan_digest.clone());
+            match s.isolation.try_apply_ownership_audited(op, audit) {
+                Ok(principals) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::RbacApplyOwnership>(results::OwnershipApplied {
+                        graph,
+                        plan_digest,
+                        principals,
+                    }),
+                ),
+                Err(message) => Response::err(req_id, message),
+            }
+        }
+        RbacAdminOp::RollbackOwnership(op) => rbac_admin_ack::<results::RbacRollbackOwnership>(
+            req_id,
+            s.isolation.try_rollback_ownership_audited(op, audit),
+            "ownership_rolled_back",
+        ),
         RbacAdminOp::RemoveGrant(grant) => {
             match s
                 .isolation

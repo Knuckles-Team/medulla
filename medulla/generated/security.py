@@ -590,6 +590,12 @@ send_get_delegation_record = contract_sender(
 decode_get_delegation_record = contract_decoder(
     "GetDelegationRecord", "DelegationState"
 )
+send_graph_ownership_plan = contract_sender(
+    "GraphOwnershipPlan", "MethodGraphOwnershipPlanParams"
+)
+decode_graph_ownership_plan = contract_decoder(
+    "GraphOwnershipPlan", "GraphOwnershipPlanReply"
+)
 send_check_resource_access = contract_sender(
     "CheckResourceAccess", "MethodCheckResourceAccessParams"
 )
