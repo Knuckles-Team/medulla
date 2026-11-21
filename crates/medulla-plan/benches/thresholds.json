@@ -30,7 +30,8 @@
   },
   "latency_p99_ns_baseline": {
     "_comment": "MEDULLA-FEDERATED-QUERY-R709.6: the stored p99 (ns) of the served geosparql bench that a later run may exceed by at most 10 percent; null until the nightly lane records one.",
-    "geosparql_within": null
+    "geosparql_within": null,
+    "sparql_update_insert_10k": null
   },
   "latency_p99_ns_max": {
     "access_check_256": 1000000,
@@ -46,6 +47,7 @@
     "live_artifact_refresh": 30000000,
     "ontology_diff": 50000000,
     "shortcut_detectors": 40000000,
+    "sparql_update_insert_10k": 50000000,
     "stored_query": 3000000
   }
 }

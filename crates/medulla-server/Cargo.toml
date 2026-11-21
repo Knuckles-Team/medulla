@@ -273,3 +273,12 @@ name = "geosparql"
 path = "benches/geosparql.rs"
 harness = false
 required-features = ["sparql-http", "geosparql", "redb", "test-support"]
+
+# Served SPARQL update bench (MEDULLA-FEDERATED-QUERY-R707.6): `INSERT DATA` of 10,000 triples through
+# the served `Method::ApplyMutation` chain; the key `sparql_update_insert_10k` in
+# `crates/medulla-plan/benches/thresholds.json` caps p99 at 50 ms. Nightly only.
+[[bench]]
+name = "sparql_update"
+path = "benches/sparql_update.rs"
+harness = false
+required-features = ["sparql-http", "redb", "test-support"]
