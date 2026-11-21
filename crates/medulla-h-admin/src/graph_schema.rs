@@ -89,81 +89,21 @@ pub(crate) async fn commit_pack_projection(
         verified.tenant(),
         connector,
     )?;
-    #[cfg(feature = "raft")]
-    if state.read().await.multi_raft.is_some() {
-        return Err(
-            "CONNECTOR_PACK_PROJECTION_CLUSTER_UNAVAILABLE: ConnectorPack control state is not replicated"
-                .to_string(),
-        );
-    }
-    medulla_server_api::api::reentry::ensure_internal_global_graph(
+    let core =
+        resident_internal_graph(state, req_id, verified, &graph_name, idempotency_key).await?;
+    prevalidate_pack_projection(&core, connector, record_id, &documents).await?;
+    let result_graph_name = graph_name.clone();
+    let source = connector.clone();
+    let connector = connector.clone();
+    let record_id = record_id.to_string();
+    commit_internal_graph_write(
         state,
         req_id,
         verified,
         &graph_name,
         idempotency_key,
-    )
-    .await?;
-    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
-    let (entry, isolation, persistence, materialization_manifest, write_coalescer) = {
-        let state = state.read().await;
-        let entry = state
-            .registry
-            .get(&graph_name)
-            .cloned()
-            .ok_or_else(|| format!("pack projection graph '{graph_name}' is not resident"))?;
-        let materialization_manifest = state.registry.materialization_handle(&graph_name);
-        (
-            entry,
-            state.isolation.clone(),
-            state.persistence.clone(),
-            materialization_manifest,
-            state.routed_write_coalescer.clone(),
-        )
-    };
-    if materialization_manifest
-        .as_ref()
-        .is_some_and(|manifest| manifest.read().map_or(true, |manifest| !manifest.valid))
-    {
-        return Err(
-            "PACK_PROJECTION_GRAPH_NOT_MATERIALIZED: projection graph is incomplete".into(),
-        );
-    }
-    prevalidate_pack_projection(&entry.core, connector, record_id, &documents).await?;
-    #[cfg(feature = "streaming")]
-    let cdc = state.read().await.cdc_hub().cloned();
-    let method = Method::GraphSchema {
-        op: Box::new(
-            medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
-                connector: connector.clone(),
-                if_composed_digest: None,
-            },
-        ),
-    };
-    let plan = MutationPlan::for_method(&method);
-    let result_graph_name = graph_name.clone();
-    let ctx = MutationCtx {
-        anonymous: state.read().await.local_anonymous,
-        req_id,
-        caller: Some(verified.agent_id()),
-        attempt_nonce: verified.attempt_nonce(),
-        idempotency_key,
-        tenant_scope: authority.tenant_scope(),
-        graph_name: &graph_name,
-        graph_type: entry.graph_type,
-        owner: entry.owner.as_deref(),
-        isolation: &isolation,
-        core: &entry.core,
-        persistence: persistence.as_ref(),
-        #[cfg(feature = "streaming")]
-        cdc: cdc.as_ref(),
-        materialization_manifest: materialization_manifest.as_ref(),
-        write_coalescer: Some(&write_coalescer),
-    };
-    let connector = connector.clone();
-    let record_id = record_id.to_string();
-    let response =
-        medulla_server_ops::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
+        &source,
+        move |core| {
             let committed = apply_pack_source(
                 core,
                 &result_graph_name,
@@ -177,8 +117,131 @@ pub(crate) async fn commit_pack_projection(
                 None,
             )?;
             write_pack_surface(core, &result_graph_name, documents.surface.as_deref())?;
+            Ok(committed)
+        },
+    )
+    .await
+}
+
+/// The resident, fully materialized internal graph `graph_name`, created
+/// through the authoritative lifecycle path when it does not exist yet.
+///
+/// Shared by every engine projection that writes an internal graph (the pack
+/// projection and the native-component projection), so there is one lifecycle
+/// and one materialization check.
+pub(crate) async fn resident_internal_graph(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    graph_name: &str,
+    idempotency_key: &str,
+) -> Result<Arc<GraphCore>, String> {
+    #[cfg(feature = "raft")]
+    if state.read().await.multi_raft.is_some() {
+        return Err(
+            "CONNECTOR_PACK_PROJECTION_CLUSTER_UNAVAILABLE: ConnectorPack control state is not replicated"
+                .to_string(),
+        );
+    }
+    medulla_server_api::api::reentry::ensure_internal_global_graph(
+        state,
+        req_id,
+        verified,
+        graph_name,
+        idempotency_key,
+    )
+    .await?;
+    let (entry, materialization_manifest) = {
+        let state = state.read().await;
+        let entry = state
+            .registry
+            .get(graph_name)
+            .cloned()
+            .ok_or_else(|| format!("pack projection graph '{graph_name}' is not resident"))?;
+        let materialization_manifest = state.registry.materialization_handle(graph_name);
+        (entry, materialization_manifest)
+    };
+    if materialization_manifest
+        .as_ref()
+        .is_some_and(|manifest| manifest.read().map_or(true, |manifest| !manifest.valid))
+    {
+        return Err(
+            "PACK_PROJECTION_GRAPH_NOT_MATERIALIZED: projection graph is incomplete".into(),
+        );
+    }
+    Ok(entry.core.clone())
+}
+
+/// Commit one engine projection into the internal graph `graph_name` through
+/// the graph mutation gateway: audited, CDC-emitting and ordered with every
+/// other write to that graph. `apply` runs inside the commit kernel and
+/// returns what it committed. The graph must already be resident
+/// ([`resident_internal_graph`]); `source` names the projection the write
+/// belongs to.
+pub(crate) async fn commit_internal_graph_write<F>(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    graph_name: &str,
+    idempotency_key: &str,
+    source: &medulla_types::contract::ResourceId,
+    apply: F,
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String>
+where
+    F: FnOnce(
+        &GraphCore,
+    ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String>,
+{
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
+    let (entry, isolation, persistence, materialization_manifest, write_coalescer) = {
+        let state = state.read().await;
+        let entry = state
+            .registry
+            .get(graph_name)
+            .cloned()
+            .ok_or_else(|| format!("pack projection graph '{graph_name}' is not resident"))?;
+        let materialization_manifest = state.registry.materialization_handle(graph_name);
+        (
+            entry,
+            state.isolation.clone(),
+            state.persistence.clone(),
+            materialization_manifest,
+            state.routed_write_coalescer.clone(),
+        )
+    };
+    #[cfg(feature = "streaming")]
+    let cdc = state.read().await.cdc_hub().cloned();
+    let method = Method::GraphSchema {
+        op: Box::new(
+            medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
+                connector: source.clone(),
+                if_composed_digest: None,
+            },
+        ),
+    };
+    let plan = MutationPlan::for_method(&method);
+    let ctx = MutationCtx {
+        anonymous: state.read().await.local_anonymous,
+        req_id,
+        caller: Some(verified.agent_id()),
+        attempt_nonce: verified.attempt_nonce(),
+        idempotency_key,
+        tenant_scope: authority.tenant_scope(),
+        graph_name,
+        graph_type: entry.graph_type,
+        owner: entry.owner.as_deref(),
+        isolation: &isolation,
+        core: &entry.core,
+        persistence: persistence.as_ref(),
+        #[cfg(feature = "streaming")]
+        cdc: cdc.as_ref(),
+        materialization_manifest: materialization_manifest.as_ref(),
+        write_coalescer: Some(&write_coalescer),
+    };
+    let response =
+        medulla_server_ops::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
             ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
-                committed,
+                apply(core)?,
             )
         })
         .await;

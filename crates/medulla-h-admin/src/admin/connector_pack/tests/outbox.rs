@@ -872,3 +872,117 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
     )
     .remove(failing);
 }
+
+/// Publish `draft` as the admin through the served component operation.
+async fn publish_native(
+    served: &Served,
+    key: &str,
+    draft: medulla_agent_types::agent_component::AgentComponentDraft,
+) {
+    let mut publish_context = super::context(key);
+    publish_context.principal = super::persistence_id(ADMIN);
+    publish_context.caller_principal = super::persistence_id(ADMIN);
+    publish_context.expected_revision = Some(0);
+    let response = served
+        .call(
+            key,
+            Method::AgentComponent {
+                op: AgentComponentOp::Publish {
+                    request: Box::new(
+                        medulla_agent_types::agent_component::AgentComponentPublishRequest {
+                            context: publish_context,
+                            component: draft,
+                            evaluation_receipt_digest: None,
+                        },
+                    ),
+                },
+            },
+        )
+        .await;
+    assert!(response.error.is_none(), "{key}: {response:?}");
+}
+
+// spec: MEDULLA-TYPED-PACKS-R002.12
+#[tokio::test]
+async fn native_component_event_projects() {
+    use medulla_agent_types::agent_component::{
+        AgentComponentFacts, ComponentDependency, PromptMode, PROMPT_SCHEMA_REVISION,
+    };
+    use medulla_catalog_types::connector_pack::ids::native_component_projection_graph_name;
+    use crate::connector_pack_projection::worker::native::sweep as native_sweep;
+
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    publish_native(
+        &served,
+        "native:tool",
+        medulla_persistence_records::agent_component::test_component_draft(TENANT, "tool:dep"),
+    )
+    .await;
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let dependency = store
+        .current_component(TENANT, "tool:dep")
+        .unwrap()
+        .expect("the dependency is published");
+    let mut prompt = medulla_persistence_records::agent_component::test_component_draft(
+        TENANT,
+        "prompt:greeting",
+    );
+    prompt.kind = AgentComponentKind::SystemPrompt;
+    prompt.facts = AgentComponentFacts::SystemPrompt {
+        prompt_mode: PromptMode::Static,
+        token_estimate: 128,
+        variables: Vec::new(),
+        body_sha256: Some("a".repeat(64)),
+        schema_revision: Some(PROMPT_SCHEMA_REVISION),
+    };
+    prompt.requires = vec![ComponentDependency {
+        component_id: "tool:dep".to_string(),
+        kind: AgentComponentKind::Tool,
+        definition_digest: dependency.definition_digest.clone(),
+    }];
+    publish_native(&served, "native:prompt", prompt).await;
+
+    let subscribed = AtomicBool::new(false);
+    assert!(
+        native_sweep(&served.state, &subscribed).await.unwrap(),
+        "the component events are consumed"
+    );
+    assert!(
+        !native_sweep(&served.state, &subscribed).await.unwrap(),
+        "and only once"
+    );
+
+    let graph = native_component_projection_graph_name(TENANT).unwrap();
+    let core = served
+        .state
+        .read()
+        .await
+        .registry
+        .get(&graph)
+        .cloned()
+        .expect("the native component graph is resident")
+        .core
+        .clone();
+    let projected: Vec<String> = medulla_rdf::mapping::export_triples(&core, &graph)
+        .unwrap()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let has = |needle: &str| projected.iter().any(|triple| triple.contains(needle));
+    assert!(
+        has("prompt-revision:prompt%3Agreeting:1") && has("#PromptRevision"),
+        "the prompt revision node is projected: {projected:?}"
+    );
+    assert!(has(&"a".repeat(64)), "the body pin is projected");
+    assert!(
+        has("#requires") && has("#ComponentRef") && has(&dependency.definition_digest),
+        "the dependency is linked with its pinned digest: {projected:?}"
+    );
+    assert!(
+        !projected
+            .iter()
+            .any(|triple| triple.contains("tool%3Adep") && triple.contains("PromptRevision")),
+        "a tool revision is never projected as a prompt"
+    );
+}

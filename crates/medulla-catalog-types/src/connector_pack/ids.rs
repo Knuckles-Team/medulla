@@ -38,6 +38,22 @@ pub fn pack_projection_graph_name(
     Ok(format!("pack__{}", digest.to_hex()))
 }
 
+const NATIVE_COMPONENT_GRAPH_DOMAIN: &[u8] = b"eg/native-component-projection-graph/v1";
+
+/// Tenant-safe, non-reversible physical graph identity for one tenant's
+/// native-component projection (MEDULLA-TYPED-PACKS-R002.12). Hashed like
+/// [`pack_projection_graph_name`] so the name leaks nothing about the tenant.
+pub fn native_component_projection_graph_name(tenant_id: &str) -> Result<String, String> {
+    medulla_types::contract::TenantId::new(tenant_id).map_err(|error| {
+        format!("invalid verified tenant for native component projection: {error}")
+    })?;
+    let digest = medulla_types::contract::Digest256::framed(
+        NATIVE_COMPONENT_GRAPH_DOMAIN,
+        &[tenant_id.as_bytes()],
+    )?;
+    Ok(format!("component__{}", digest.to_hex()))
+}
+
 const HEX: &[u8; 16] = b"0123456789ABCDEF";
 
 /// Percent-encode `name` under the pack's unreserved set.

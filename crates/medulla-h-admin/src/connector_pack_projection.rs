@@ -17,6 +17,11 @@
 //!
 //! The worker runs under a fixed engine service identity; it is started once,
 //! after catalog recovery, and polls the deployment tenant's outbox.
+//!
+//! Native component revisions are drained by a second durable consumer on the
+//! component revision topic ([`worker::native`], MEDULLA-TYPED-PACKS-R002.12),
+//! started beside it and sharing its claim, settle, tenant and service-identity
+//! helpers.
 
 use std::sync::Arc;
 
@@ -28,7 +33,10 @@ use medulla_server_api::state::ServerState;
 /// the Blob CAS or the SHACL projection has nothing to project.
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
     #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-    tokio::spawn(worker::run(state));
+    {
+        tokio::spawn(worker::native::run(Arc::clone(&state)));
+        tokio::spawn(worker::run(state));
+    }
     #[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
     drop(state);
 }
@@ -60,6 +68,8 @@ pub mod worker {
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_server_api::state::ServerState;
+
+    pub(crate) mod native;
 
     /// The label a failed blocking store task names.
     const BLOCKING_TASK: &str = "connector pack projection";
@@ -125,19 +135,7 @@ pub mod worker {
         subscribed: &AtomicBool,
         retry_at: RetryAt,
     ) -> Result<bool, String> {
-        let (anonymous, server) = {
-            let state = state.read().await;
-            (state.local_anonymous, state.context.clone())
-        };
-        let tenant = if anonymous {
-            // Deployment authority owns the namespace; no signer/OIDC policy
-            // exists (or is consulted) for an isolated anonymous store.
-            VerifiedRequestContext::anonymous_local(None)
-                .tenant()
-                .to_string()
-        } else {
-            server.request_policy()?.expected_tenant.clone()
-        };
+        let tenant = deployment_tenant(state).await?;
         let store = open_agent_library(state).await?;
         if !subscribed.load(Ordering::Acquire) {
             let (store, tenant) = (Arc::clone(&store), tenant.clone());
@@ -148,8 +146,8 @@ pub mod worker {
             subscribed.store(true, Ordering::Release);
         }
         let drain_started = std::time::Instant::now();
-        let outcome = claim(&store, &tenant).await?;
-        report(&outcome);
+        let outcome = claim(&store, &tenant, CONSUMER).await?;
+        report(&outcome, CONSUMER, CONNECTOR_PACK_IMPORT_TOPIC);
         let claimed = outcome.claims.len();
         let mut progressed = claimed > 0;
         let mut committed_graphs = 0usize;
@@ -159,7 +157,16 @@ pub mod worker {
         for (lease, (reason, projected)) in outcome.claims.into_iter().zip(outcomes) {
             // MEDULLA-TYPED-PACKS-R096.2: one row's failure never ends the sweep;
             // the rows after it keep flowing.
-            match resolve(&store, &tenant, lease, reason).await {
+            match resolve(
+            &store,
+            &tenant,
+            lease,
+            reason,
+            CONSUMER,
+            CONNECTOR_PACK_IMPORT_TOPIC,
+        )
+        .await
+        {
                 Ok(()) if projected => committed_graphs += 1,
                 Ok(()) => {}
                 Err(error) => tracing::warn!(
@@ -184,6 +191,25 @@ pub mod worker {
         Ok(progressed)
     }
 
+    /// The deployment tenant whose outbox the projection consumers poll.
+    pub(super) async fn deployment_tenant(
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Result<String, String> {
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
+        Ok(if anonymous {
+            // Deployment authority owns the namespace; no signer/OIDC policy
+            // exists (or is consulted) for an isolated anonymous store.
+            VerifiedRequestContext::anonymous_local(None)
+                .tenant()
+                .to_string()
+        } else {
+            server.request_policy()?.expected_tenant.clone()
+        })
+    }
+
     /// Open/ensure the Agent Library store OUTSIDE the global write lock
     /// (MEDULLA-DURABLE-KERNEL-R006.4). The open is slow on a large store, and pre-G9
     /// the first sweep held the `ServerState` write lock across it — queueing
@@ -191,30 +217,31 @@ pub mod worker {
     /// the whole drain. A read lock adopts an already-ensured handle; the open
     /// itself runs unlocked, and only the publish takes a short write. The
     /// shared open slot also serializes it with request-side initialization.
-    async fn open_agent_library(
+    pub(super) async fn open_agent_library(
         state: &Arc<RwLock<ServerState>>,
     ) -> Result<Arc<AgentLibraryStore>, String> {
         medulla_persistence_records::agent_library::shared_agent_library(state).await
     }
 
-    async fn claim(
+    pub(super) async fn claim(
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
+        consumer: &'static str,
     ) -> Result<OutboxClaimOutcome, String> {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let mut budget = OutboxClaimBudget::new(CLAIM_LIMIT, LEASE_MS, now_ms)?;
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-            store.outbox_claim(&tenant, CONSUMER, &mut budget)
+            store.outbox_claim(&tenant, consumer, &mut budget)
         })
         .await
     }
 
-    fn report(outcome: &OutboxClaimOutcome) {
+    pub(super) fn report(outcome: &OutboxClaimOutcome, consumer: &str, topic: &str) {
         if !outcome.dead_lettered.is_empty() {
             medulla_kernel::metrics::process().outbox_dead_lettered(
-                CONSUMER,
-                CONNECTOR_PACK_IMPORT_TOPIC,
+                consumer,
+                topic,
                 "exhausted",
                 outcome.dead_lettered.len() as u64,
             );
@@ -222,8 +249,8 @@ pub mod worker {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let head = outcome.claims.first();
         medulla_kernel::metrics::process().set_outbox_head(
-            CONSUMER,
-            CONNECTOR_PACK_IMPORT_TOPIC,
+            consumer,
+            topic,
             head.map_or(0, |lease| now_ms.saturating_sub(lease.record.created_at_ms)),
             head.map_or(0, |lease| lease.attempt),
         );
@@ -342,11 +369,13 @@ pub mod worker {
         }
     }
 
-    async fn resolve(
+    pub(super) async fn resolve(
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
         lease: MutationOutboxLease,
         reason: Option<OutboxRejectReason>,
+        consumer: &str,
+        topic: &str,
     ) -> Result<(), String> {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
@@ -358,8 +387,8 @@ pub mod worker {
             .await;
         };
         medulla_kernel::metrics::process().outbox_dead_lettered(
-            CONSUMER,
-            CONNECTOR_PACK_IMPORT_TOPIC,
+            consumer,
+            topic,
             reject_cause(reason),
             1,
         );
@@ -596,6 +625,15 @@ pub mod worker {
         server: &medulla_server_api::server_context::ServerContext,
         record_id: &str,
     ) -> Result<VerifiedRequestContext, String> {
+        service_context_for(server, CONSUMER, record_id)
+    }
+
+    /// The same service identity keyed for `consumer`'s own operations.
+    pub(super) fn service_context_for(
+        server: &medulla_server_api::server_context::ServerContext,
+        consumer: &str,
+        record_id: &str,
+    ) -> Result<VerifiedRequestContext, String> {
         let service = VerifiedRequestContext::authenticated_fixed_service_actor(
             server,
             super::grant::PROJECTION_SERVICE,
@@ -603,7 +641,7 @@ pub mod worker {
         )?;
         Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
             service.claims().clone(),
-            format!("{CONSUMER}:{record_id}"),
+            format!("{consumer}:{record_id}"),
             Some(medulla_types::contract::Nonce::minted()),
         ))
     }
