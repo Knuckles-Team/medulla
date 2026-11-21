@@ -11,7 +11,7 @@ import os
 import uuid
 
 import pytest
-from conftest import register_commons_agents, request_context
+from conftest import register_commons_agents, request_context, tenant_request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
@@ -27,6 +27,7 @@ def _agent_client() -> SyncMedullaClient:
 
 
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R011.3")
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R011.6")
 def test_tool_result_is_untrusted_and_sticky() -> None:
     client = _agent_client()
     try:
@@ -75,5 +76,17 @@ def test_tool_result_is_untrusted_and_sticky() -> None:
         assert approved["trust_mark"] == "trusted"
         assert approved["marked_by"] == "operator_approval"
         assert approved["trust_mark_approval_id"] == "operator-approval-1"
+
+        # Another tenant cannot read the node: its context is refused at the door.
+        with pytest.raises(EngineResponseError) as foreign:
+            stranger = SyncMedullaClient.connect(
+                socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+                verified_context=tenant_request_context("tenant-other"),
+            )
+            try:
+                stranger.nodes.properties(node)
+            finally:
+                stranger.close()
+        assert "AUTH_TENANT_MISMATCH" in str(foreign.value)
     finally:
         client.close()
