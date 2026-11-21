@@ -260,7 +260,7 @@ fn effect_records_round_trip_with_golden_digest() {
         request_ref,
         principal_ref: "principal-a".into(),
         outcome: EffectOutcome::NotApplied,
-        receipt_ref: "receipt-1".into(),
+        receipt_ref: ReceiptId::parse(&format!("sha256:{}", "d".repeat(64))).unwrap(),
         committed_at: 1_700_000_000_000,
     };
     let receipt_json = serde_json::to_value(&receipt).expect("ser");
@@ -327,4 +327,22 @@ fn terminal_event_read_tag_is_not_a_lifecycle_field() {
         json!({"status": "unavailable", "reason": "legacy_unbound"})
     )
     .is_err());
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.1
+#[test]
+fn receipt_id_is_sha256_with_lowercase_hex() {
+    let valid = format!("sha256:{}", "ab".repeat(32));
+    assert_eq!(ReceiptId::parse(&valid).unwrap().as_str(), valid);
+    for invalid in [
+        "receipt-1",
+        "sha256:abc",
+        &format!("sha256:{}", "AB".repeat(32)),
+        &format!("md5:{}", "ab".repeat(32)),
+    ] {
+        assert!(ReceiptId::parse(invalid).is_err(), "{invalid}");
+    }
+    let wire = serde_json::to_string(&ReceiptId::parse(&valid).unwrap()).unwrap();
+    assert_eq!(wire, format!("\"{valid}\""));
+    assert!(serde_json::from_str::<ReceiptId>("\"nope\"").is_err());
 }

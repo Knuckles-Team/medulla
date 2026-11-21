@@ -422,7 +422,7 @@ pub fn read_admitted_request(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_work_types::work_item_read::EffectOutcome;
+    use medulla_work_types::work_item_read::{EffectOutcome, ReceiptId};
 
     fn claimed() -> serde_json::Map<String, serde_json::Value> {
         serde_json::json!({
@@ -452,7 +452,7 @@ mod tests {
             request_ref: "sha256:r".into(),
             principal_ref: "p".into(),
             outcome,
-            receipt_ref: "rcpt".into(),
+            receipt_ref: ReceiptId::parse(&format!("sha256:{}", "c".repeat(64))).unwrap(),
             committed_at: 7,
         }
     }

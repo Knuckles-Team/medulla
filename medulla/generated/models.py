@@ -28454,6 +28454,7 @@ class WorkItemView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     effect_phase: EffectPhase = EffectPhase.UNSTARTED
+    effect_receipt: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")] | None = None
     input_ref: str
     kind: str
     metadata: dict[str, Any]
@@ -30792,7 +30793,7 @@ class EffectReceipt(BaseModel):
     job_id: str
     outcome: EffectOutcome
     principal_ref: str
-    receipt_ref: str
+    receipt_ref: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
     request_ref: str
 
 

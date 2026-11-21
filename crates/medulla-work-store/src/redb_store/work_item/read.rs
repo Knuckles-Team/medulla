@@ -57,9 +57,26 @@ pub fn read_work_item(
 ) -> Result<Option<WorkItemView>, String> {
     validate_work_item_get(tenant, work_item_id)?;
     let (_, row) = snapshot_row(shard, graph, work_item_id, crypto)?;
-    row.map_or(Ok(None), |row| {
-        WorkItemView::from_tenant_row(work_item_id, &row, tenant)
-    })
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let Some(mut view) = WorkItemView::from_tenant_row(work_item_id, &row, tenant)? else {
+        return Ok(None);
+    };
+    // The receipt of the current attempt, from its own table.
+    let attempt = row
+        .get("attempt")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    let receipts = read.scoped_owner_table(super::effect::EFFECT_RECEIPTS)?;
+    if let Some(bytes) = receipts.get((graph, work_item_id, attempt))? {
+        let receipt: medulla_work_types::work_item_read::EffectReceipt =
+            decode_durable(&crypto.unseal(bytes.value())?)?;
+        view.effect_receipt = Some(receipt.receipt_ref);
+    }
+    Ok(Some(view))
 }
 
 /// `GetWorkItemOutcome` (graph-os MEDULLA-3): a WorkItem of `tenant` and the

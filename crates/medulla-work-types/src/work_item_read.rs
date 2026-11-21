@@ -197,6 +197,47 @@ impl EffectPhase {
     }
 }
 
+/// The identity of one effect receipt: `sha256:` plus 64 lowercase hex characters of the
+/// SHA-256 of the canonical receipt (MEDULLA-DURABLE-KERNEL-R820.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "contract-schema", schemars(transparent))]
+pub struct ReceiptId(String);
+
+impl ReceiptId {
+    /// The id of `text`, refused unless it has the `sha256:` form.
+    pub fn parse(text: &str) -> Result<Self, String> {
+        let valid = text.strip_prefix("sha256:").is_some_and(|hex| {
+            hex.len() == 64 && hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+        });
+        if valid {
+            Ok(Self(text.to_string()))
+        } else {
+            Err("a receipt id is sha256: plus 64 lowercase hex characters".to_string())
+        }
+    }
+
+    /// The id as text.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ReceiptId {
+    type Error = String;
+
+    fn try_from(text: String) -> Result<Self, String> {
+        Self::parse(&text)
+    }
+}
+
+impl From<ReceiptId> for String {
+    fn from(id: ReceiptId) -> String {
+        id.0
+    }
+}
+
 /// The closed outcome set of one effect receipt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -228,7 +269,7 @@ pub struct EffectReceipt {
     pub request_ref: String,
     pub principal_ref: String,
     pub outcome: EffectOutcome,
-    pub receipt_ref: String,
+    pub receipt_ref: ReceiptId,
     pub committed_at: u64,
 }
 
@@ -395,6 +436,9 @@ pub struct WorkItemView {
     /// Where the item's external effect stands.
     #[serde(default)]
     pub effect_phase: EffectPhase,
+    /// The receipt of the current attempt, `None` until one exists.
+    #[serde(default)]
+    pub effect_receipt: Option<ReceiptId>,
 }
 
 impl WorkItemView {
@@ -432,6 +476,8 @@ impl WorkItemView {
             updated_at_ms: seconds_to_ms(row.get("updated_at").and_then(Value::as_f64)),
             effect_phase: EffectPhase::from_row(row)
                 .map_err(|error| format!("WorkItem '{work_item_id}': {error}"))?,
+            // The receipt lives in its own table; the store reader fills it in.
+            effect_receipt: None,
         }))
     }
 }
