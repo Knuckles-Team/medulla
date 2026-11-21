@@ -12,6 +12,20 @@ pub(super) struct PersistedIndexManifest {
     pub(super) dimension: usize,
     pub(super) members: Vec<String>,
     pub(super) space: Option<EmbeddingSpaceRef>,
+    /// Which artifact the image carries. A manifest written before flat images existed names
+    /// no kind and is an ANN image.
+    #[serde(default)]
+    pub(super) kind: GenerationImageKind,
+}
+
+/// The typed kind of one generation image (MEDULLA-MEDIA-VOCAB-R001.102.2): an IVF-PQ ANN
+/// artifact above `ANN_BUILD_THRESHOLD`, a flat exact-search artifact below it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GenerationImageKind {
+    #[default]
+    Ann,
+    Flat,
 }
 
 impl Serialize for SemanticStore {
@@ -91,6 +105,49 @@ impl SemanticGenerationImage {
     }
 }
 
+impl SemanticGenerationImage {
+    /// Whether this image is an ANN artifact or a flat exact-search artifact.
+    pub fn kind(&self) -> std::io::Result<GenerationImageKind> {
+        Ok(decode_index_manifest(&self.manifest)?.kind)
+    }
+
+    /// The `k` members nearest to `vector` by cosine similarity, best first, as
+    /// `(member id, similarity)`. An ANN image is probed through its index; a flat image is
+    /// scanned exactly.
+    pub fn search(&self, vector: &[f32], k: usize) -> std::io::Result<Vec<(String, f32)>> {
+        let manifest = decode_index_manifest(&self.manifest)?;
+        if vector.len() != manifest.dimension {
+            return Err(invalid_index_manifest(
+                "the probe vector does not match the image dimension",
+            ));
+        }
+        match manifest.kind {
+            GenerationImageKind::Ann => Ok(AnnIndex::from_image(&self.index)?.search(vector, k)),
+            GenerationImageKind::Flat => {
+                let query_norm = vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+                let mut scored: Vec<(String, f32)> = self
+                    .index
+                    .flat_rows(manifest.dimension)?
+                    .into_iter()
+                    .map(|(id, row)| {
+                        let norm = row.iter().map(|x| x * x).sum::<f32>().sqrt();
+                        let dot: f32 = row.iter().zip(vector).map(|(a, b)| a * b).sum();
+                        let similarity = if norm == 0.0 || query_norm == 0.0 {
+                            0.0
+                        } else {
+                            dot / (norm * query_norm)
+                        };
+                        (id, similarity)
+                    })
+                    .collect();
+                scored.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                scored.truncate(k);
+                Ok(scored)
+            }
+        }
+    }
+}
+
 impl SemanticStore {
     /// Take this store's index generation as a durable image: the IVF-PQ
     /// artifact plus the exact live member/space manifest.
@@ -104,11 +161,31 @@ impl SemanticStore {
     pub fn export_generation(&self) -> std::io::Result<SemanticGenerationImage> {
         self.ensure_index("export_generation");
         let mut index = self.index.write();
-        let ann = index.as_mut().ok_or_else(|| {
-            std::io::Error::other(
-                "no ANN index to persist (store empty, below build threshold, or wider than maintained ANN)",
-            )
-        })?;
+        let Some(ann) = index.as_mut() else {
+            // Below `ANN_BUILD_THRESHOLD` there is no ANN index: the generation is a flat
+            // exact-search image over the arena, so a small index still goes live.
+            if self.arena.ids.is_empty() {
+                return Err(std::io::Error::other("no vectors to persist (store empty)"));
+            }
+            if self.arena.dim == 0 || self.arena.dim > MAX_MAINTAINED_DIMENSION {
+                return Err(invalid_index_manifest(
+                    "flat image dimension exceeds the maintained artifact ceiling",
+                ));
+            }
+            let members = canonical_members(&self.arena.ids)?;
+            let space = validated_space(self.space.as_ref())?;
+            let manifest = IndexManifest {
+                version: 1,
+                dimension: self.arena.dim,
+                members,
+                space,
+                kind: GenerationImageKind::Flat,
+            };
+            return Ok(SemanticGenerationImage {
+                index: AnnIndexImage::flat(&self.arena.ids, &self.arena.data)?,
+                manifest: encode_index_manifest(&manifest)?,
+            });
+        };
         validate_index_dimensions(ann, self.arena.dim)?;
         // Drop tombstones before taking the identity image. This makes the
         // exported index's rows exactly the current arena member set.
@@ -120,6 +197,7 @@ impl SemanticStore {
             dimension: ann.dim(),
             members,
             space,
+            kind: GenerationImageKind::Ann,
         };
         Ok(SemanticGenerationImage {
             index: ann.to_image()?,
@@ -132,6 +210,11 @@ impl SemanticStore {
     /// declaration; this is the activation step, and it sets `STATE_READY`.
     pub fn adopt_generation(&self, image: &SemanticGenerationImage) -> std::io::Result<()> {
         let manifest = decode_index_manifest(&image.manifest)?;
+        if manifest.kind != GenerationImageKind::Ann {
+            return Err(invalid_index_manifest(
+                "a flat exact-search image is served by its own scan and is never adopted as an ANN index",
+            ));
+        }
         let ann = AnnIndex::from_image(&image.index)?;
         validate_index_dimensions(&ann, self.arena.dim)?;
         validate_member_sets(&manifest, &ann, &self.arena.ids)?;

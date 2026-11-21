@@ -20,7 +20,60 @@ pub struct AnnIndexImage {
     pub ids: Vec<u8>,
 }
 
+/// The marker a flat exact-search artifact carries in its `meta` and `refine` parts.
+const FLAT_ARTIFACT_MARKER: &[u8] = b"medulla-flat-exact/v1";
+
 impl AnnIndexImage {
+    /// A flat exact-search artifact (MEDULLA-MEDIA-VOCAB-R001.102.2): the raw row-major
+    /// vectors in `codes` and the row-id sidecar in `ids`, for a generation below
+    /// `ANN_BUILD_THRESHOLD` that has no ANN index.
+    pub fn flat(ids: &[String], vectors: &[f32]) -> std::io::Result<Self> {
+        let mut codes = Vec::with_capacity(vectors.len() * std::mem::size_of::<f32>());
+        for value in vectors {
+            codes.extend_from_slice(&value.to_le_bytes());
+        }
+        Ok(Self {
+            codes: medulla_ann::durable_codes::AnnCodeArtifact {
+                meta: FLAT_ARTIFACT_MARKER.to_vec(),
+                codes,
+                refine: FLAT_ARTIFACT_MARKER.to_vec(),
+            },
+            ids: encode_ids(ids)?,
+        })
+    }
+
+    /// The `(member id, vector)` rows of a flat artifact, in row order. Refuses an artifact
+    /// whose marker, width or length does not describe `dimension`-wide rows.
+    pub fn flat_rows(&self, dimension: usize) -> std::io::Result<Vec<(String, Vec<f32>)>> {
+        if self.codes.meta != FLAT_ARTIFACT_MARKER || self.codes.refine != FLAT_ARTIFACT_MARKER {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "the artifact is not a flat exact-search artifact",
+            ));
+        }
+        let ids = decode_ids(&self.ids)?;
+        let width = dimension.checked_mul(std::mem::size_of::<f32>());
+        if dimension == 0
+            || width.and_then(|w| w.checked_mul(ids.len())) != Some(self.codes.codes.len())
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "the flat artifact length does not match its member count and dimension",
+            ));
+        }
+        Ok(ids
+            .into_iter()
+            .zip(self.codes.codes.chunks_exact(dimension * std::mem::size_of::<f32>()))
+            .map(|(id, row)| {
+                let vector = row
+                    .chunks_exact(std::mem::size_of::<f32>())
+                    .map(|bytes| f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+                    .collect();
+                (id, vector)
+            })
+            .collect())
+    }
+
     /// The image's stored vector ids, in row order: `0..n` over its row-id
     /// sidecar. The promotion gate tags exactly these (MEDULLA-UNIFIED-DATA-
     /// PLANE-R040.3).

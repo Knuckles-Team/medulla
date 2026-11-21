@@ -242,7 +242,7 @@ fn l2(values: &[f32]) -> f32 {
 /// maintains a persisted artifact; the default HNSW backend rebuilds from raw
 /// vectors and has none.
 #[cfg(feature = "ann")]
-pub use backend::SemanticGenerationImage;
+pub use backend::{GenerationImageKind, SemanticGenerationImage};
 
 /// Upper bound on a single embedding's dimensionality (CONCEPT:MEDULLA-KG.compute.rank-dim-mismatch-guard,
 /// BUG-007). Shared by both `SemanticStore` backends' `add_embedding` chokepoint and

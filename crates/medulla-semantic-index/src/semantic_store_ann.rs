@@ -258,7 +258,7 @@ mod semantic_ann_shape;
 use crate::semantic_ann::AnnIndexImage;
 pub use semantic_ann_build::{build_off_lock, BuildHooks, BuildOutcome};
 use semantic_ann_persistence::PersistedIndexManifest as IndexManifest;
-pub use semantic_ann_persistence::SemanticGenerationImage;
+pub use semantic_ann_persistence::{GenerationImageKind, SemanticGenerationImage};
 
 impl Clone for SemanticStore {
     fn clone(&self) -> Self {
@@ -473,6 +473,7 @@ mod tests {
             dimension: 2,
             members: vec!["a".to_string()],
             space: None,
+            kind: GenerationImageKind::Ann,
         };
         let encoded = encode_index_manifest(&manifest).unwrap();
         assert_eq!(
@@ -1105,6 +1106,22 @@ mod tests {
             after.iter().map(|r| r.0.clone()).collect::<Vec<_>>(),
             "no-rebuild activation must match"
         );
+    }
+
+    #[test]
+    fn a_store_below_the_build_threshold_exports_a_flat_exact_image() {
+        let mut store = SemanticStore::new();
+        store.add_embedding("a".to_string(), vec![1.0, 0.0, 0.0]).unwrap();
+        store.add_embedding("b".to_string(), vec![0.0, 1.0, 0.0]).unwrap();
+        store.add_embedding("c".to_string(), vec![0.9, 0.1, 0.0]).unwrap();
+        let image = store.export_generation().unwrap();
+        assert_eq!(image.kind().unwrap(), GenerationImageKind::Flat);
+        assert_eq!(image.identity().unwrap().0, 3);
+        let hits = image.search(&[1.0, 0.0, 0.0], 2).unwrap();
+        assert_eq!(hits[0].0, "a");
+        assert_eq!(hits[1].0, "c");
+        assert!(hits[0].1 > hits[1].1);
+        assert!(store.adopt_generation(&image).is_err());
     }
 
     #[test]

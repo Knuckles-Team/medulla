@@ -8,7 +8,6 @@
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 use medulla_exec::exec::TextEmbedder;
 use medulla_index_types::semantic_index::SemanticBinding;
-use medulla_semantic_index::semantic_ann::AnnIndex;
 use medulla_types::contract::ServerErrorCode;
 
 /// What one live probe answered.
@@ -73,10 +72,10 @@ impl LiveImage {
                 self.dimension
             ));
         }
-        let index = AnnIndex::from_image(&self.image.index)
-            .map_err(|error| format!("{}: {error}", ServerErrorCode::SearchProbeModelMismatch))?;
-        let hits = index
+        let hits = self
+            .image
             .search(vector, k)
+            .map_err(|error| format!("{}: {error}", ServerErrorCode::SearchProbeModelMismatch))?
             .into_iter()
             .map(|(member, similarity)| (member, 1.0 - similarity))
             .collect();
