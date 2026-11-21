@@ -423,3 +423,68 @@ def test_evidence_properties_read_back(clean_graph):
     assert props["confidence_bp"] == classified["confidence_bp"]
     assert props["embedder"]
     assert props["schedule_record_id"] == classify_schedule
+
+
+def _seed_articles(clean_graph: Any, count: int) -> None:
+    """Two topics and ``count`` articles, each naming one of them, in batches."""
+    topics = [
+        ("topic:a", {"type": "Topic", "taxonomy": TAXONOMY, "name": "parsing"}),
+        ("topic:b", {"type": "Topic", "taxonomy": TAXONOMY, "name": "weather"}),
+    ]
+    articles = [
+        (f"art:{i:04}", {"type": "Article", "category": topics[i % 2][0]})
+        for i in range(count)
+    ]
+    nodes = topics + articles
+    step = 250
+    for sequence, start in enumerate(range(0, len(nodes), step), start=1):
+        envelope = _envelope(
+            _graph_name(clean_graph),
+            f"w614:articles-{sequence}",
+            f"w614:articles-{sequence}",
+            sequence,
+            [
+                _op(
+                    ordinal,
+                    "AddNode",
+                    {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
+                )
+                for ordinal, (node_id, props) in enumerate(
+                    nodes[start : start + step]
+                )
+            ],
+        )
+        results = clean_graph.changes.apply_batch([envelope])
+        assert [result["result"] for result in results] == ["applied"], results
+
+
+# spec: MEDULLA-DECISION-ENGINE-R614.6
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.6")
+def test_project_one_thousand_nodes_in_one_batch(clean_graph):
+    _seed_articles(clean_graph, 1000)
+    schema = publish(clean_graph, "enrich-schema", "feature_schema", _schema_body())
+    policy = _publish_policy(clean_graph)
+    schedule = asyncio.run(_schedule(schema, policy, "semantic:project:Article"))
+
+    before = _counts(clean_graph)
+    projected = _call(
+        clean_graph,
+        {
+            "op": "project",
+            "schedule_record_id": schedule,
+            "subject": "Article",
+            "rules": [
+                {
+                    "id": "rule:category",
+                    "taxonomy": TAXONOMY,
+                    "property": "category",
+                    "relation": "inCategory",
+                }
+            ],
+        },
+    )
+    # The default projection batch (10,000) holds every article in one call.
+    assert projected["edge_count"] == 1000
+    assert projected["unresolved"] == 0
+    assert projected["more"] is False
+    assert _counts(clean_graph) == (before[0], before[1] + 1000)
