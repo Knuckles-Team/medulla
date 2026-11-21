@@ -6123,6 +6123,7 @@ dependencies = [
  "medulla-server-api",
  "medulla-server-auth",
  "medulla-storage",
+ "medulla-table-store",
  "medulla-test-ambient-auth",
  "medulla-text",
  "medulla-transaction",

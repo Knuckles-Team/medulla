@@ -132,8 +132,64 @@ fn checked_admission_inputs(
     stamp_draft_identity(&mut draft, ctx.authority);
     let binding = SemanticBinding::create(*draft)
         .map_err(|_| invalid_semantic_input(ctx.req_id, "semantic binding"))?;
+    check_sql_column_source(ctx, &binding)?;
     let (service, now_ms, actor, nonce) = binding_operation_inputs(ctx)?;
     Ok((binding, service, now_ms, actor, nonce))
+}
+
+/// Admit a SQL column source only when the caller may `SELECT` its table and the
+/// column exists with an embeddable type (MEDULLA-FEDERATED-QUERY-R077.2). It
+/// runs only for a `SqlColumnRef` selector and reads the schema through the
+/// caller's `AuthorizedTable`, so a table the caller may not read refuses
+/// `ACCESS_DENIED` without revealing whether it exists.
+#[cfg(feature = "query")]
+fn check_sql_column_source(
+    ctx: &SemanticIndexContext<'_>,
+    binding: &SemanticBinding,
+) -> Result<(), Response> {
+    use medulla_index_types::semantic_index::SemanticSourceSelector;
+    use medulla_server_auth::sql_catalog_acl::{open_authorized_table, SqlPrivilege, ACCESS_DENIED};
+
+    let SemanticSourceSelector::SqlColumnRef(selector) = &binding.source_selector else {
+        return Ok(());
+    };
+    let denied = || Response::err(ctx.req_id, ACCESS_DENIED);
+    let table = open_authorized_table(
+        ctx.authority,
+        ctx.persist_dir,
+        &selector.table_id,
+        SqlPrivilege::Select,
+    )
+    .map_err(|_| denied())?;
+    let schema = table.schema().map_err(|_| denied())?;
+    let Some(column) = schema.column(&selector.column_id) else {
+        return Err(Response::err(
+            ctx.req_id,
+            "COLUMN_UNKNOWN: the source column is not in the table schema",
+        ));
+    };
+    if !medulla_table_store::tables::is_embeddable(column.ty) {
+        return Err(Response::err(
+            ctx.req_id,
+            "COLUMN_TYPE_UNSUPPORTED: only text and json columns can be embedded",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "query"))]
+fn check_sql_column_source(
+    ctx: &SemanticIndexContext<'_>,
+    binding: &SemanticBinding,
+) -> Result<(), Response> {
+    use medulla_index_types::semantic_index::SemanticSourceSelector;
+    match &binding.source_selector {
+        SemanticSourceSelector::SqlColumnRef(_) => Err(invalid_semantic_input(
+            ctx.req_id,
+            "semantic SQL column source",
+        )),
+        _ => Ok(()),
+    }
 }
 
 async fn admit_binding(

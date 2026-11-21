@@ -339,6 +339,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBED_BUDGET_EXHAUSTED",
             "EMBED_VECTOR_INVALID",
             "EMBED_PROVIDER_FAILED",
+            // MEDULLA-FEDERATED-QUERY-R077.2: a SQL column source that is absent or cannot be embedded.
+            "COLUMN_UNKNOWN",
+            "COLUMN_TYPE_UNSUPPORTED",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R039.2.5/R039.2.6: the served chunk encoding and
