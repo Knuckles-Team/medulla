@@ -2397,6 +2397,13 @@ name = "standards_drift"
 path = "benches/standards_drift.rs"
 harness = false
 
+# Catalog search over 1,000,000 assets (MEDULLA-UNIFIED-DATA-PLANE-R764.6): nightly budget.
+# Never gates a PR.
+[[bench]]
+name = "catalog_search"
+path = "benches/catalog_search.rs"
+harness = false
+
 # Source sync core at 10,000 records (MEDULLA-SRC-AUTH-R012.10): nightly budget.
 # Never gates a PR.
 [[bench]]

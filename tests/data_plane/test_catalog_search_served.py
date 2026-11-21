@@ -574,3 +574,83 @@ def test_search_refusals(start_medulla_server) -> None:
     finally:
         owner.close()
         reader.close()
+
+
+_ASSET_COUNT = 10_000
+_PAGE = 100
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.6")
+def test_search_over_ten_thousand_assets(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.6: ranking order and a stable page cursor
+    over a 10,000-asset catalog, and the refusal of text over the knob."""
+    from medulla.client import SyncMedullaClient
+
+    graph = f"search10k-{uuid.uuid4().hex[:8]}"
+    admin = _client()
+    admin.tenants.create(graph, graph_type="Global")
+    client = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        graph_name=graph,
+        verified_context=request_context(),
+    )
+    ranked = (
+        f"PREFIX cat: <{_CATALOG}>\n"
+        "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+        "SELECT ?asset ?score WHERE {\n"
+        "  ?asset skos:prefLabel ?name .\n"
+        '  BIND(cat:relevance(?asset, "ledgerfact") AS ?score)\n'
+        "  FILTER(?score > 0)\n"
+        "} ORDER BY DESC(?score) ?asset LIMIT %d OFFSET %d"
+    )
+    try:
+        # Every tenth asset matches by name, every fiftieth also by description; the
+        # rest never match.
+        for start in range(0, _ASSET_COUNT, 1_000):
+            lines = [
+                f"@prefix cat: <{_CATALOG}> .\n",
+                "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n",
+                "@prefix dct: <http://purl.org/dc/terms/> .\n",
+            ]
+            for index in range(start, start + 1_000):
+                name = f"ledgerfact table {index}" if index % 10 == 0 else f"asset {index}"
+                lines.append(
+                    f'<urn:medulla:asset:table:{index:05d}> a cat:DataResource ; '
+                    f'skos:prefLabel "{name}"'
+                )
+                if index % 50 == 0:
+                    lines.append(f' ; dct:description "ledgerfact detail {index}"')
+                lines.append(" .\n")
+            client.rdf.add_triples(turtle="".join(lines))
+
+        # Order: the best score comes first, and the description match ranks above a
+        # name-only match.
+        first = client.rdf.sparql(ranked % (_PAGE, 0))
+        assert len(first) == _PAGE
+        scores = [float(row["score"]) for row in first]
+        assert scores == sorted(scores, reverse=True)
+        assert scores[0] > scores[-1]
+        best = {row["asset"].strip("<>") for row in first[:10]}
+        assert all(int(asset.rsplit(":", 1)[1]) % 50 == 0 for asset in best)
+
+        # Cursor: the same request returns the same page, and consecutive pages share no
+        # asset and together hold every matching asset exactly once.
+        assert client.rdf.sparql(ranked % (_PAGE, 0)) == first
+        seen: list[str] = []
+        offset = 0
+        while True:
+            page = client.rdf.sparql(ranked % (_PAGE, offset))
+            if not page:
+                break
+            seen.extend(row["asset"].strip("<>") for row in page)
+            offset += _PAGE
+        assert len(seen) == len(set(seen)) == _ASSET_COUNT // 10
+        assert seen[:_PAGE] == [row["asset"].strip("<>") for row in first]
+
+        # Text over the knob refuses.
+        with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):
+            _relevance_rows(client, "x" * 1001)
+    finally:
+        client.close()
+        admin.tenants.delete(graph)
+        admin.close()
