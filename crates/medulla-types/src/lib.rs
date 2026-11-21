@@ -44,6 +44,8 @@ pub mod ingest_materialize;
 pub mod code_context;
 pub mod participant;
 pub mod media_tag;
+// MEDULLA-MEDIA-VOCAB-R001.102.1 — bookmark semantic search and relations wire types.
+pub mod bookmark_query;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;
 // MEDULLA-FEDERATED-QUERY-R081.101.1 — the reusable compressed document state.
