@@ -114,7 +114,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T106 [US5] MEDULLA-INGEST-WORKER-R904.2 Behavior
 - [ ] T107 [US5] MEDULLA-INGEST-WORKER-R904.3 Wiring: containers batches and the record container edge
 - [ ] T108 [US5] MEDULLA-INGEST-WORKER-R904.4 Refusal
-- [ ] T109 [US5] MEDULLA-INGEST-WORKER-R904.5 Evidence
+- [ ] T109 [US5] MEDULLA-INGEST-WORKER-R904.5 Evidence: source_path, synced_at and the container counts on the receipt
 - [ ] T110 [US5] MEDULLA-INGEST-WORKER-R904.6 Hot-path proof
 - [ ] T111 [US5] MEDULLA-INGEST-WORKER-R910.1 Model
 - [ ] T112 [US5] MEDULLA-INGEST-WORKER-R910.2 Behavior

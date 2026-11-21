@@ -126,7 +126,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R904.2` | `crates/medulla-core/tests/source_hierarchy.rs::subtree_returns_descendants` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R904.3` | `tests/ingest/test_source_hierarchy_served.py::test_container_tree_ingests_and_links_records`; `tests/ingest/test_source_hierarchy_served.py::test_record_in_container_is_admitted_with_its_edge` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R904.4` | `crates/medulla-types/tests/ingest_rules.rs::container_cycles_and_excess_depth_are_refused` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R904.5` | `tests/ingest/test_source_hierarchy_served.py::test_container_tree_reads_back` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R904.5` | `tests/ingest/test_source_hierarchy_served.py::test_container_tree_reads_back`; `crates/medulla-core/tests/source_hierarchy.rs::source_path_joins_ids_from_the_root` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R904.6` | `tests/ingest/test_source_hierarchy_served.py::test_containers_ingest_and_scope` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R910.1` | `crates/medulla-h-ingest/src/source_ingestion.rs::tests::stream_object_id_ignores_batch_and_source_name` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R910.2` | `crates/medulla-h-ingest/src/source_ingestion.rs::tests::previous_digest_is_none_then_prior_batch_digest` | L2 | planned |
