@@ -294,7 +294,7 @@ pub(in crate::decide) fn plan(
         let (bindings, _) = binder.bind(&node, &workflow);
         Some(Callee { workflow, bindings })
     };
-    let planned = plan_from_workflow(&workflow, &bindings, &callee, knobs.max_call_depth)
+    let planned = plan_from_workflow(&workflow, &bindings, &callee, knobs.max_call_depth, knobs.approval_timeout_s)
         .and_then(|drafted| {
             plan_explicit_tasks(&drafted.proposal)
                 .map(|plan| (plan, drafted.questions))

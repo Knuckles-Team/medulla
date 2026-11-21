@@ -307,7 +307,7 @@ fn sealed(
     callee: super::plan::CalleeOf<'_>,
     max_call_depth: u32,
 ) -> Result<medulla_decision_types::decision::task_plan::TaskPlan, medulla_decision_types::decision::process_plan::ProcessPlanRefusal> {
-    let drafted = super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth)?;
+    let drafted = super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth, 86_400)?;
     medulla_decision_types::decision::task_plan::plan_explicit_tasks(&drafted.proposal)
         .map_err(|message| super::plan::engine_refusal(&message))
 }
@@ -404,7 +404,7 @@ fn workflow_maps_to_canonical_plan() {
     assert_eq!(task("s11").join.as_ref().unwrap().branch_task_id, "s8");
     assert_eq!(task("s8").branch.as_ref().unwrap().kind, BranchKind::Parallel);
     // The flow condition is also returned as a decision question for the caller to register.
-    let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
+    let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4, 86_400).unwrap();
     assert_eq!(
         drafted.questions,
         vec![super::plan::ConditionQuestion {
@@ -423,13 +423,13 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
     let (wf, bindings) = invoice();
     // An agent step with no binding is named.
     let partial: Vec<StepBinding> = bindings.iter().filter(|b| b.step_id != "s9").cloned().collect();
-    let refused = super::plan::plan_from_workflow(&wf, &partial, &no_callee, 4).unwrap_err();
+    let refused = super::plan::plan_from_workflow(&wf, &partial, &no_callee, 4, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_STEP_UNBOUND);
     assert_eq!(refused.steps, vec!["s9".to_string()]);
     // A flow back into the XOR split is a loop.
     let mut looped = wf.clone();
     looped.flows.push(flow("s7", "s4", None, false));
-    let refused = super::plan::plan_from_workflow(&looped, &bindings, &no_callee, 4).unwrap_err();
+    let refused = super::plan::plan_from_workflow(&looped, &bindings, &no_callee, 4, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_PLAN_LOOP);
     assert!(refused.steps.contains(&"s4".to_string()), "{:?}", refused.steps);
     // A call step: unknown callee, then inlined, then too deep.
@@ -448,7 +448,7 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
             contract_iri: "urn:contract:post".to_string(),
         },
     );
-    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4).unwrap_err();
+    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4, 86_400).unwrap_err();
     assert_eq!(refused.code, WORKFLOW_UNKNOWN);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
     let mut inner = workflow(vec![
@@ -467,9 +467,76 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
     let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
     assert_eq!(ids, vec!["s2:s2", "s3"]);
     assert_eq!(plan.tasks.as_slice()[1].depends_on.as_slice().to_vec(), vec!["s2:s2".to_string()]);
-    let refused = super::plan::plan_from_workflow(&caller, &[post], &callee, 0).unwrap_err();
+    let refused = super::plan::plan_from_workflow(&caller, &[post], &callee, 0, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_PLAN_CALL_DEPTH);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.4
+#[test]
+fn several_boundaries_on_one_activity_split_normal_and_trigger_arms() {
+    use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind};
+    let mut wf = workflow(vec![
+        step("s1", StepKind::Start, None, None),
+        step("s2", StepKind::Agent, None, None),
+        step("s3", StepKind::Boundary, None, Some("timer")),
+        step("s4", StepKind::Boundary, None, Some("error")),
+        step("s5", StepKind::Agent, None, None),
+        step("s6", StepKind::Agent, None, None),
+        step("s7", StepKind::Agent, None, None),
+        step("s8", StepKind::End, None, None),
+    ]);
+    wf.flows = vec![
+        flow("s1", "s2", None, false),
+        flow("s2", "s3", None, false),
+        flow("s2", "s4", None, false),
+        flow("s2", "s5", None, false),
+        flow("s3", "s6", None, false),
+        flow("s4", "s7", None, false),
+        flow("s5", "s8", None, false),
+        flow("s6", "s8", None, false),
+        flow("s7", "s8", None, false),
+    ];
+    let prompt = |step_id: &str| {
+        bound(
+            step_id,
+            BindingTarget::Prompt {
+                prompt_iri: format!("urn:prompt:{step_id}"),
+                agent_kind: "writer".to_string(),
+            },
+        )
+    };
+    let bindings: Vec<StepBinding> = ["s2", "s5", "s6", "s7"].into_iter().map(prompt).collect();
+    let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4, 86_400).unwrap();
+    let task = |id: &str| {
+        drafted
+            .proposal
+            .tasks
+            .iter()
+            .find(|t| t.task_id == id)
+            .unwrap_or_else(|| panic!("task {id}"))
+    };
+    // The first boundary by id carries the activity's normal arm and its own trigger arm.
+    let first = task("s3").branch.as_ref().unwrap();
+    assert_eq!(first.kind, BranchKind::Exclusive);
+    let arms = first.arms.as_slice();
+    assert_eq!(arms.len(), 2);
+    assert_eq!(arms[0].target_task_id, "s5");
+    assert!(arms[0].condition.is_none(), "the normal arm has no trigger");
+    assert_eq!(arms[1].target_task_id, "s6");
+    match arms[1].condition.as_ref().unwrap() {
+        BranchCondition::Decision(d) => assert_eq!(d.decision_iri, "flowcondition:d:s3:trigger"),
+        other => panic!("{other:?}"),
+    }
+    // The later boundary is a trigger-only branch.
+    let later = task("s4").branch.as_ref().unwrap();
+    let arms = later.arms.as_slice();
+    assert_eq!(arms.len(), 1);
+    assert_eq!(arms[0].target_task_id, "s7");
+    match arms[0].condition.as_ref().unwrap() {
+        BranchCondition::Decision(d) => assert_eq!(d.decision_iri, "flowcondition:d:s4:trigger"),
+        other => panic!("{other:?}"),
+    }
 }
 
 // spec: MEDULLA-CQ-ORCH-R704.9
@@ -522,4 +589,18 @@ fn equal_canonical_digest_gives_equal_plan_digest() {
     let second = sealed(&epc, &bindings, &no_callee, 4).unwrap();
     assert_eq!(first.plan_digest, second.plan_digest);
     assert_eq!(first.input_digest, second.input_digest);
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.4
+#[test]
+fn approval_timeout_is_the_knob_value() {
+    let (wf, bindings) = invoice();
+    let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4, 3_600).unwrap();
+    let approvals: Vec<u64> = drafted
+        .proposal
+        .tasks
+        .iter()
+        .filter_map(|t| t.approval.as_ref().map(|a| a.timeout_s))
+        .collect();
+    assert_eq!(approvals, vec![3_600, 3_600]);
 }

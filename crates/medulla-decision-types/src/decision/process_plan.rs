@@ -42,7 +42,7 @@ pub struct ProcessPlanRefusal {
 }
 
 /// The `process_plan.*` knobs (MEDULLA-CQ-ORCH-R704.3, R704.4): the least relevance a ranked
-/// tool needs to bind an unbound agent step, and how many `call` levels a plan inlines.
+/// tool needs to bind an unbound agent step, and how many `call` levels a plan inlines, and how long an approval wait lasts.
 pub const KNOBS: &[KnobSpec] = &[
     KnobSpec {
         name: "process_plan.min_tool_score",
@@ -60,6 +60,14 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(16),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "process_plan.approval_timeout_s",
+        unit: "seconds",
+        default: KnobValue::Integer(86_400),
+        min: KnobValue::Integer(60),
+        max: KnobValue::Integer(2_592_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The resolved `process_plan.*` knobs of one request.
@@ -69,6 +77,8 @@ pub struct ProcessPlanKnobs {
     pub min_tool_score_micros: u64,
     /// `process_plan.max_call_depth`, in levels.
     pub max_call_depth: u32,
+    /// `process_plan.approval_timeout_s`, in seconds.
+    pub approval_timeout_s: u64,
 }
 
 impl ProcessPlanKnobs {
@@ -83,6 +93,8 @@ impl ProcessPlanKnobs {
                 .unwrap_or(600_000),
             max_call_depth: u32::try_from(number(policy.knob(&KNOBS[1])).clamp(1, 16))
                 .unwrap_or(4),
+            approval_timeout_s: u64::try_from(number(policy.knob(&KNOBS[2])).clamp(60, 2_592_000))
+                .unwrap_or(86_400),
         }
     }
 }

@@ -23,10 +23,6 @@ use medulla_decision_types::decision::task_plan::{
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_import::{CanonicalStep, CanonicalWorkflow, GateKind, StepKind};
 
-/// How long an approval wait lasts, in seconds: one day, inside
-/// `MIN_APPROVAL_TIMEOUT_S..=MAX_APPROVAL_TIMEOUT_S`.
-pub const APPROVAL_TIMEOUT_S: u64 = 86_400;
-
 /// The prefix of the decision IRI a flow condition becomes; the digest of the workflow that
 /// holds the flow and the flow id (`f<n>`, the 1-based position of the flow) follow.
 pub const CONDITION_IRI_PREFIX: &str = "flowcondition:";
@@ -222,7 +218,7 @@ fn contract_anchors(graph: &mut Graph) {
 /// activity moves to leave the boundary instead (the normal arm), and each flow out of the
 /// boundary without a condition of its own carries the trigger as its condition.
 fn lower_boundaries(graph: &mut Graph, digest: &str) {
-    let boundaries: Vec<(String, String)> = graph
+    let mut boundaries: Vec<(String, String)> = graph
         .nodes
         .iter()
         .filter(|n| n.step.kind == StepKind::Boundary)
@@ -231,6 +227,8 @@ fn lower_boundaries(graph: &mut Graph, digest: &str) {
             (n.id.clone(), trigger)
         })
         .collect();
+    // With several boundaries on one activity the first by id carries the normal arms.
+    boundaries.sort();
     let boundary_ids: BTreeSet<String> = boundaries.iter().map(|(id, _)| id.clone()).collect();
     for (boundary, trigger) in &boundaries {
         let hosts: Vec<String> = graph
@@ -404,6 +402,7 @@ fn task_of(
     graph: &Graph,
     splits: &BTreeMap<String, String>,
     questions: &mut Vec<ConditionQuestion>,
+    approval_timeout_s: u64,
 ) -> Result<Option<TaskPlanTask>, ProcessPlanRefusal> {
     let kind = node.step.kind;
     let mut depends: Vec<String> = graph
@@ -452,7 +451,7 @@ fn task_of(
         (StepKind::Human | StepKind::Wait, Some(BindingTarget::Approval { approver_role })) => {
             task.approval = Some(ApprovalSpec {
                 approver_role: approver_role.clone(),
-                timeout_s: APPROVAL_TIMEOUT_S,
+                timeout_s: approval_timeout_s,
             });
         }
         (StepKind::Branch | StepKind::Fork | StepKind::Boundary, _) => {
@@ -479,13 +478,15 @@ fn task_of(
 
 /// The proposal for `workflow` and its `bindings`, with the decision questions its flow
 /// conditions became. `callee` resolves the workflow a `call` step names; `max_call_depth` is
-/// `knob process_plan.max_call_depth`. The caller passes the proposal through
+/// `knob process_plan.max_call_depth`; `approval_timeout_s` is `knob
+/// process_plan.approval_timeout_s`, the seconds a human or wait approval lasts. The caller passes the proposal through
 /// `plan_explicit_tasks`.
 pub fn plan_from_workflow(
     workflow: &CanonicalWorkflow,
     bindings: &[StepBinding],
     callee: CalleeOf<'_>,
     max_call_depth: u32,
+    approval_timeout_s: u64,
 ) -> Result<PlanFromWorkflow, ProcessPlanRefusal> {
     let mut graph = flatten(workflow, bindings, "", 0, max_call_depth, callee)?;
     contract_anchors(&mut graph);
@@ -519,7 +520,7 @@ pub fn plan_from_workflow(
     let mut unbound = Vec::new();
     let mut questions = Vec::new();
     for node in &graph.nodes {
-        match task_of(node, &graph, &splits, &mut questions) {
+        match task_of(node, &graph, &splits, &mut questions, approval_timeout_s) {
             Ok(task) => tasks.extend(task),
             Err(refused) if refused.code == PROCESS_STEP_UNBOUND => unbound.extend(refused.steps),
             Err(refused) => return Err(refused),
