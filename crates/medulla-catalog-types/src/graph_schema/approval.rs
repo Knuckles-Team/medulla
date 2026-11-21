@@ -103,6 +103,45 @@ pub fn verify_schema_approval(
         return Err(mismatch("lease kind"));
     }
     verify_approved_state(lease, now_ms)?;
+    verify_bindings(lease, expected_action, source_id, candidate_digest)
+}
+
+/// Whether `lease` is an UNSPENT approval of `expected_action` for
+/// `candidate_digest` under `source_id` at `now_ms` (MEDULLA-SRC-AUTH-R003.3).
+/// A governed source-authority approval is issued `active` and is spent once,
+/// by the attach that consumes it, so the states read the other way round from
+/// [`verify_schema_approval`]: `active` is approved and unused, `consumed` is
+/// already used and is refused.
+pub fn verify_unspent_approval(
+    lease: Option<&ControlLeaseView>,
+    expected_action: &str,
+    source_id: &str,
+    candidate_digest: &str,
+    now_ms: u64,
+) -> Result<(), String> {
+    let lease = lease.ok_or_else(|| required("no approval lease with this id is visible"))?;
+    if lease.kind != SCHEMA_APPROVAL_LEASE_KIND {
+        return Err(mismatch("lease kind"));
+    }
+    verify_bindings(lease, expected_action, source_id, candidate_digest)?;
+    match lease.status {
+        ControlLeaseStatus::Active => {}
+        ControlLeaseStatus::Consumed => return Err(required("the approval was already used")),
+        ControlLeaseStatus::Revoked => return Err(required("the approval was refused")),
+        ControlLeaseStatus::Expired => return Err(required("the approval has expired")),
+    }
+    if now_ms >= lease.expires_at_ms.min(lease.hard_expires_at_ms) {
+        return Err(required("the approval has expired"));
+    }
+    Ok(())
+}
+
+fn verify_bindings(
+    lease: &ControlLeaseView,
+    expected_action: &str,
+    source_id: &str,
+    candidate_digest: &str,
+) -> Result<(), String> {
     let grant_text = |key: &str| lease.grant.get(key).and_then(Value::as_str);
     let bindings = [
         ("kind", expected_action),

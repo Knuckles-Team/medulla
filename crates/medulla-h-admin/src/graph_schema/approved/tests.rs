@@ -34,6 +34,8 @@ use medulla_server_auth::auth::dispatch_test_on_heap;
 const SECRET: &str = "schema-approval-served-secret"; // sanitizer:ignore
 const TENANT: &str = "tenant-shared";
 const ADMIN: &str = "schema-approval-admin";
+const PROPOSER: &str = "authority-proposer";
+const APPROVER: &str = "authority-approver";
 const GRAPH: &str = "drift-live";
 const SOURCE: &str = "approved:container-manager-mcp";
 
@@ -60,6 +62,21 @@ fn contract() -> RecordContract {
     contract_with("name")
 }
 
+/// The admin and the two governed-change principals, each a registered agent
+/// (`ServerState::test_isolation` registers one).
+fn test_isolation() -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation = ServerState::test_isolation(ADMIN);
+    for agent in [PROPOSER, APPROVER] {
+        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+            agent_id: agent.into(),
+            role: medulla_identity_types::acl::AgentRole::System,
+            teams: Vec::new(),
+            roles: Vec::new(),
+        });
+    }
+    isolation
+}
+
 struct Served {
     _dir: tempfile::TempDir,
     _env: medulla_kernel::crypto::TestEnvReadGuard,
@@ -77,7 +94,7 @@ impl Served {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
-            ServerState::test_isolation(ADMIN),
+            test_isolation(),
         );
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let backend = medulla_persistence::redb_backend::RedbBackend::open(
@@ -157,7 +174,7 @@ impl Served {
         };
         let proposed = self
             .call_as(
-                "authority-proposer",
+                PROPOSER,
                 &["governance:propose"],
                 GRAPH,
                 &format!("propose:{change_id}"),
@@ -176,7 +193,7 @@ impl Served {
         };
         let approved = self
             .call_as(
-                "authority-approver",
+                APPROVER,
                 &["governance:approve-source-authority", "governance:read"],
                 GRAPH,
                 &format!("approve:{change_id}"),
@@ -184,6 +201,24 @@ impl Served {
             )
             .await;
         assert!(approved.error.is_none(), "{:?}", approved.error);
+    }
+
+    /// The tenant's view of one control lease (`None` when none is visible).
+    async fn lease(
+        &self,
+        lease_id: &str,
+    ) -> Option<medulla_work_types::control_lease::ControlLeaseView> {
+        let response = self
+            .call(
+                GRAPH,
+                &format!("get:{lease_id}"),
+                Method::GetControlLease {
+                    tenant: TENANT.to_string(),
+                    lease_id: lease_id.to_string(),
+                },
+            )
+            .await;
+        decode(response)
     }
 
     /// Issue an approval lease whose grant names `candidate`, and approve it
@@ -573,11 +608,14 @@ async fn authority_candidate_needs_matching_action_and_digest() {
         .await;
     assert!(refusal(&ordinary).starts_with("SCHEMA_APPROVAL_MISMATCH"));
 
-    // A matching lease that no governed change issued is refused.
+    // A matching, unspent lease that no governed change issued is refused.
+    served
+        .approval_of("action_approval:unbound", SOURCE_AUTHORITY_KIND, &digest, false)
+        .await;
     let unbound = served
         .attach_contract(
             "attach:unbound",
-            "action_approval:authority",
+            "action_approval:unbound",
             authority.clone(),
             None,
         )
@@ -594,4 +632,45 @@ async fn authority_candidate_needs_matching_action_and_digest() {
             .await,
     );
     assert!(committed.changed);
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn an_approved_authority_attach_is_single_use() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    served.govern_authority("change-single-use", &digest).await;
+    let lease_id =
+        medulla_work_types::control_lease::governed_approval_lease_id("change-single-use");
+
+    // The approval issued the lease unspent.
+    let issued = served
+        .lease(&lease_id)
+        .await
+        .expect("the approval issued the lease");
+    assert_eq!(
+        issued.status,
+        medulla_work_types::control_lease::ControlLeaseStatus::Active
+    );
+
+    let first: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:first", &lease_id, authority.clone(), None)
+            .await,
+    );
+    assert!(first.changed);
+    let spent = served.lease(&lease_id).await.expect("the lease is kept");
+    assert_eq!(
+        spent.status,
+        medulla_work_types::control_lease::ControlLeaseStatus::Consumed
+    );
+
+    // The same approval attaches exactly once.
+    let second = served
+        .attach_contract("attach:second", &lease_id, authority, None)
+        .await;
+    assert!(refusal(&second).starts_with("SCHEMA_APPROVAL_REQUIRED"));
 }

@@ -86,3 +86,11 @@ async def test_authority_attach_needs_distinct_approver() -> None:
         assert len(attached) == 1
         assert isinstance(attached[0].origin, SchemaSourceOriginViewApproved)
         assert attached[0].origin.approval_lease_id == lease_id
+
+        # The approval is single use: the attach spent its lease, so a second
+        # attach under it is refused.
+        with pytest.raises(EngineResponseError) as refused:
+            await attach_approved(
+                ledger.admin, lease_id, fields, source_id, source_authority=True
+            )
+        assert refused.value.code == "SCHEMA_APPROVAL_REQUIRED"

@@ -470,10 +470,11 @@ pub fn governed_approval_lease_id(change_id: &str) -> String {
 }
 
 impl IssueControlLeaseRequest {
-    /// The approval lease of an approved governed change: kind
-    /// `action.approval`, id [`governed_approval_lease_id`], and a grant naming
-    /// the change's kind, target, candidate digest and `change_id`. It expires
-    /// when the approved window does.
+    /// The approval lease of a governed change: kind `action.approval`, id
+    /// [`governed_approval_lease_id`], and a grant naming the change's kind,
+    /// target, candidate digest and `change_id`. It is issued `active` and is
+    /// spent once, by the attach that uses it. It expires when the approved
+    /// window does.
     pub fn for_approved_change(
         tenant: &str,
         change: &medulla_mutation_types::governed_change::GovernedChange,
@@ -503,6 +504,20 @@ impl IssueControlLeaseRequest {
 }
 
 impl TransitionControlLeaseRequest {
+    /// The one use of a governed approval lease: `active -> consumed` at the
+    /// revision `revision` the attach read (MEDULLA-SRC-AUTH-R003.3). The retry
+    /// identity is the lease id, so a replayed attach consumes it once.
+    pub fn consume_governed_approval(tenant: &str, lease_id: &str, revision: u64) -> Self {
+        Self {
+            tenant: tenant.to_string(),
+            lease_id: lease_id.to_string(),
+            expected_revision: revision,
+            to: ControlLeaseTarget::Consumed,
+            pending_call_consumption: None,
+            idempotency_key: format!("{lease_id}:consume"),
+        }
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         bounded("tenant", &self.tenant)?;
         bounded("lease_id", &self.lease_id)?;
