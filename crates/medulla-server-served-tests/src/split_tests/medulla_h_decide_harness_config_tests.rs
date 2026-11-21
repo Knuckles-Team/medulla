@@ -674,6 +674,45 @@ async fn missing_fact_adds_a_claim_premise() {
     assert!(!has_premise(&record, "harness_config.shell_proficiency="));
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R011.11
+#[tokio::test]
+async fn harness_config_cites_profile_fact_and_abstains_without() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    // The measured fact of the current profile head is cited as an Observation premise whose
+    // provenance names the evaluation that measured it.
+    let (h, asked) = config_fixture(&Cfg::default()).await;
+    let record = decided(&h, asked).await;
+    assert_eq!(
+        premise(&record, "harness_config.shell_proficiency=").provenance,
+        PremiseProvenance::Observation {
+            evaluation_id: "eval:shell".to_string()
+        }
+    );
+    assert_eq!(
+        premise(&record, "harness_config.stopping_behaviour=").provenance,
+        PremiseProvenance::Observation {
+            evaluation_id: "eval:stopping".to_string()
+        }
+    );
+
+    // Without the fact the action space abstains with its conservative default and the
+    // record cites no measured shell proficiency.
+    let (h, asked) = config_fixture(&Cfg {
+        shell: None,
+        ..Cfg::default()
+    })
+    .await;
+    let record = decided(&h, asked).await;
+    assert!(!has_premise(&record, "harness_config.shell_proficiency="));
+    match &answer(&record).action_space {
+        HarnessPart::Abstained {
+            conservative_default,
+            ..
+        } => assert_eq!(*conservative_default, ActionSpace::ToolSet),
+        other => panic!("no shell fact must abstain the action space: {other:?}"),
+    }
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R128.12
 #[tokio::test]
 async fn all_parts_abstained_seals_abstention() {
