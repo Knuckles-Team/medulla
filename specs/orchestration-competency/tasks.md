@@ -56,10 +56,10 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T050 [US4] MEDULLA-CQ-ORCH-R010.4 Architecture view refusal
 - [ ] T051 [US4] MEDULLA-CQ-ORCH-R010.5 Architecture view evidence
 - [ ] T052 [US4] MEDULLA-CQ-ORCH-R010.6 Architecture view hot-path proof
-- [ ] T053 [US5] MEDULLA-CQ-ORCH-R011.1 Job load-set question
+- [x] T053 [US5] MEDULLA-CQ-ORCH-R011.1 Job load-set question
 - [ ] T054 [US5] MEDULLA-CQ-ORCH-R011.2 Downtime next-job question
 - [ ] T055 [US5] MEDULLA-CQ-ORCH-R011.3 Best virtual query plan question
-- [ ] T056 [US5] MEDULLA-CQ-ORCH-R011.4 Connector usage guidance question
+- [x] T056 [US5] MEDULLA-CQ-ORCH-R011.4 Connector usage guidance question
 - [ ] T057 [US5] MEDULLA-CQ-ORCH-R011.5 Connector seed changes question
 - [ ] T058 [US5] MEDULLA-CQ-ORCH-R011.6 Job, downtime and plan hot-path proof
 - [ ] T059 [US6] MEDULLA-CQ-ORCH-R700.2 Process compile behaviour

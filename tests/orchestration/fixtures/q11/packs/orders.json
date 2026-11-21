@@ -1,0 +1,15 @@
+{
+  "connector": "q11-orders",
+  "tools": [
+    {
+      "name": "find_order",
+      "description": "look up an order",
+      "provides": "cap:look-up-order"
+    },
+    {
+      "name": "update_order",
+      "description": "update an order",
+      "provides": "cap:update-order"
+    }
+  ]
+}

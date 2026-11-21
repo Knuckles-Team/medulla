@@ -1,0 +1,15 @@
+{
+  "connector": "q11-tickets",
+  "tools": [
+    {
+      "name": "find_ticket",
+      "description": "look up a ticket",
+      "provides": "cap:look-up-ticket"
+    },
+    {
+      "name": "close_ticket",
+      "description": "close a ticket",
+      "provides": "cap:close-ticket"
+    }
+  ]
+}
