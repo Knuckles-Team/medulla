@@ -97,10 +97,13 @@ fn memory_methods_are_served_and_classified() {
     assert!(!is_gateway_routed(&export_method));
 
     let core = GraphCore::new();
-    // A record naming another tenant is refused and writes nothing.
+    // A record naming another tenant answers like a record that does not exist for the caller:
+    // no ACCESS_DENIED and no tenant-specific code (MEDULLA-DECISION-ENGINE-R651.4), and it
+    // writes nothing.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
     let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
-    assert!(refusal.starts_with("ACCESS_DENIED"), "{refusal}");
+    assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
+    assert!(!refusal.contains("ACCESS_DENIED") && !refusal.contains("TENANT"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
     // Another tenant's record reads as absent to recall and to export.
@@ -454,4 +457,42 @@ fn consolidation_and_export_evidence_reads_back() {
     let drifted = recall(&core, "tenant-a", NOW, &asked).unwrap().drift.expect("a report");
     assert!(drifted.drifted);
     assert_eq!(drifted.previous_manifest_digest, changed.manifest.manifest_digest);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R651.4
+#[test]
+fn memory_refusals() {
+    let core = GraphCore::new();
+    // A foreign tenant's record reads exactly as one that is absent: the same code and text
+    // shape as a record the caller never stored, and nothing is written.
+    let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
+    let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
+    assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
+    assert_eq!(core.node_count(), 0);
+
+    // A record whose stored encoding is above the knob default of 65536 bytes is refused.
+    let huge = remember(
+        record("tenant-a", "m:big", MemoryTier::Semantic, &"x".repeat(70_000)),
+        vec![],
+    );
+    let refusal = admit_remember(&core, "tenant-a", &huge, &Default::default()).err().unwrap();
+    assert!(refusal.starts_with("MEMORY_ENTRY_TOO_LARGE"), "{refusal}");
+    assert_eq!(core.node_count(), 0);
+
+    // A hard removal leaves a node a live node still points to, and reports it.
+    let props = |importance: f64| {
+        rmp_serde::to_vec_named(&serde_json::json!({"importance": importance, "last_access_ms": 0})).unwrap()
+    };
+    core.add_node("old".into(), props(0.1));
+    core.add_node("live".into(), props(9.0));
+    core.add_edge("live".into(), "old".into(), rmp_serde::to_vec_named(&serde_json::json!({"relationship": "CITES"})).unwrap()).unwrap();
+    let (pruned, live_referenced) = core.evict_below(&["old".to_string()], 0.5, true);
+    assert!(pruned.is_empty());
+    assert_eq!(live_referenced, ["old"]);
+    assert!(core.get_node_properties("old").is_some(), "the node stays with its edges");
+    // Once the referrer is forgotten, the removal goes through.
+    assert!(core.forget("live", false));
+    let (pruned, live_referenced) = core.evict_below(&["old".to_string()], 0.5, true);
+    assert_eq!(pruned, ["old"]);
+    assert!(live_referenced.is_empty());
 }

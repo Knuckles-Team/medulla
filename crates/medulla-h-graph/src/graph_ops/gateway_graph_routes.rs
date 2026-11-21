@@ -593,8 +593,8 @@ async fn try_handle_memory(
         } => {
             let (ids, threshold, delete) = (ids.clone(), *threshold, *delete);
             commit_gateway(ctx, plan, method, move |core| {
-                let pruned = core.evict_below(&ids, threshold, delete);
-                Ok(ResultPayload::Ids(pruned))
+                let out = core.evict_below(&ids, threshold, delete);
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::EvictBelow>(out)
             })
             .await
         }

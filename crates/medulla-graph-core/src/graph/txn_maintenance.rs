@@ -186,6 +186,11 @@ impl<'a> GraphTxn<'a> {
             if !self.topo.node_map.contains_key(id) {
                 return false;
             }
+            // MEDULLA-DECISION-ENGINE-R651.4 (`MEMORY_LIVE_REFERENCE`): a node a live node
+            // still points to stays, with its edges.
+            if self.has_live_referrer(id) {
+                return false;
+            }
             self.remove_node(id.to_string());
             true
         } else {
@@ -195,16 +200,43 @@ impl<'a> GraphTxn<'a> {
         }
     }
 
+    /// Whether a live node has an edge to `id`. A live node exists and its `forgotten`
+    /// property is not `true` (MEDULLA-DECISION-ENGINE-R651.4).
+    pub(super) fn has_live_referrer(&self, id: &str) -> bool {
+        let Some(&idx) = self.topo.node_map.get(id) else {
+            return false;
+        };
+        let referrers: Vec<String> = self
+            .topo
+            .graph
+            .edges_directed(idx, petgraph::Direction::Incoming)
+            .map(|edge| self.topo.graph[petgraph::visit::EdgeRef::source(&edge)].clone())
+            .collect();
+        referrers.iter().any(|source| {
+            source != id
+                && self
+                    .node_object(source)
+                    .is_some_and(|obj| obj.get("forgotten").and_then(|v| v.as_bool()) != Some(true))
+        })
+    }
+
     /// CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive — EVICT every memory in the working set `ids` whose (already-
     /// decayed) `importance` has fallen strictly BELOW `threshold`, pruning it via
     /// [`GraphTxn::forget`] (mark when `delete == false`, hard-remove when `true`). A
     /// node carrying no current-schema `importance` is skipped rather than assigned a
     /// synthetic score. A node already marked `forgotten = true` is skipped (not re-pruned). LOCALIZED (only
-    /// `ids` are considered — no full scan) and deterministic; returns the pruned ids,
-    /// sorted + deduped. Callers typically [`GraphTxn::decay_memories`] first. Runs
+    /// `ids` are considered — no full scan) and deterministic; returns the pruned ids and
+    /// the ids a live node still references (`MEMORY_LIVE_REFERENCE`, hard removal only),
+    /// each sorted + deduped. Callers typically [`GraphTxn::decay_memories`] first. Runs
     /// under the held write guard.
-    pub fn evict_below(&mut self, ids: &[String], threshold: f64, delete: bool) -> Vec<String> {
+    pub fn evict_below(
+        &mut self,
+        ids: &[String],
+        threshold: f64,
+        delete: bool,
+    ) -> (Vec<String>, Vec<String>) {
         let mut pruned: Vec<String> = Vec::new();
+        let mut live_referenced: Vec<String> = Vec::new();
         for id in ids {
             let Some(obj) = self.node_object(id) else {
                 continue; // absent/undecodable — nothing to evict.
@@ -212,15 +244,21 @@ impl<'a> GraphTxn<'a> {
             if obj.get("forgotten").and_then(|v| v.as_bool()) == Some(true) {
                 continue; // already forgotten — idempotent skip.
             }
-            if Self::memory_importance(&obj).is_some_and(|importance| importance < threshold)
-                && self.forget(id, delete)
-            {
+            if !Self::memory_importance(&obj).is_some_and(|importance| importance < threshold) {
+                continue;
+            }
+            if self.forget(id, delete) {
                 pruned.push(id.clone());
+            } else if delete {
+                // The one chokepoint refused: a live node still points here.
+                live_referenced.push(id.clone());
             }
         }
-        pruned.sort();
-        pruned.dedup();
-        pruned
+        for list in [&mut pruned, &mut live_referenced] {
+            list.sort();
+            list.dedup();
+        }
+        (pruned, live_referenced)
     }
 
     /// CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive — the combined maintenance primitive the AU maintenance loop
@@ -228,8 +266,8 @@ impl<'a> GraphTxn<'a> {
     /// then EVICT those that fell below `evict_threshold`. LOCALIZED (only `ids`),
     /// atomic (one held write guard), deterministic + idempotent at a fixed `now_ms`.
     /// `delete` selects mark (`false`, the default, provenance-preserving) vs
-    /// hard-remove (`true`) for eviction. Returns `(decayed_count, pruned_ids)`. Runs
-    /// under the held write guard.
+    /// hard-remove (`true`) for eviction. Returns `(decayed_count, pruned_ids,
+    /// live_referenced_ids)`. Runs under the held write guard.
     pub fn maintain(
         &mut self,
         ids: &[String],
@@ -237,10 +275,10 @@ impl<'a> GraphTxn<'a> {
         half_life_ms: u64,
         evict_threshold: f64,
         delete: bool,
-    ) -> (usize, Vec<String>) {
+    ) -> (usize, Vec<String>, Vec<String>) {
         let decayed = self.decay_memories(now_ms, half_life_ms, ids);
-        let pruned = self.evict_below(ids, evict_threshold, delete);
-        (decayed, pruned)
+        let (pruned, live_referenced) = self.evict_below(ids, evict_threshold, delete);
+        (decayed, pruned, live_referenced)
     }
 }
 

@@ -617,7 +617,7 @@ async def send_evict_below(
     graph: str | None = None,
     *,
     idempotency_key: str | None = None,
-) -> list[str]:
+) -> OpaqueResult:
     """Send one engine-contract request.
 
     Method:
@@ -629,7 +629,7 @@ async def send_evict_below(
     Replay:
         OperationIdentity
     Result:
-        ResultPayload::Ids
+        ResultPayload::Raw
     Result schema:
         contract/schemas/result.graph.json
         #/methods/EvictBelow
@@ -648,7 +648,12 @@ async def send_evict_below(
         graph,
         idempotency_key=idempotency_key,
     )
-    return expect_ids("EvictBelow", payload)
+    return OpaqueResult("EvictBelow", payload)
+
+
+def decode_evict_below(result: OpaqueResult) -> _models.EvictBelowResult:
+    """Validate this method's result against its contract model."""
+    return decode_result("EvictBelow", models().EvictBelowResult, result)
 
 
 async def send_maintain(

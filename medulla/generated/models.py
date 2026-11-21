@@ -31978,6 +31978,21 @@ ListGraphsResult = list[GraphListing]
 ListTriggersResult = list[TriggerInfo]
 
 
+EvictBelowResultItem0 = list[str]
+
+
+EvictBelowResultItem1 = list[str]
+
+
+EvictBelowResult = Annotated[
+    tuple[EvictBelowResultItem0, EvictBelowResultItem1],
+    Field(
+        min_length=2,
+        max_length=2,
+    ),
+]
+
+
 LocalFallback = str | Literal["break_glass"]
 
 
@@ -31990,11 +32005,14 @@ MaintainResultItem0 = Annotated[int, Field(ge=0)]
 MaintainResultItem1 = list[str]
 
 
+MaintainResultItem2 = list[str]
+
+
 MaintainResult = Annotated[
-    tuple[MaintainResultItem0, MaintainResultItem1],
+    tuple[MaintainResultItem0, MaintainResultItem1, MaintainResultItem2],
     Field(
-        min_length=2,
-        max_length=2,
+        min_length=3,
+        max_length=3,
     ),
 ]
 
@@ -42111,6 +42129,7 @@ __all__ = [
     "LogicalName",
     "LogprobSupport",
     "MaintainResult",
+    "EvictBelowResult",
     "MaintenanceEnvelope",
     "ManagedIndexFamily",
     "ManagedIndexState",

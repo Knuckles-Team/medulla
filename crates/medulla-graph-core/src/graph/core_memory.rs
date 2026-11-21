@@ -141,18 +141,23 @@ impl GraphCore {
 
     /// One-shot [`GraphTxn::evict_below`] (CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive): prune the sub-threshold
     /// members of the working set under ONE topology write guard. Returns the pruned
-    /// ids (sorted).
-    pub fn evict_below(&self, ids: &[String], threshold: f64, delete: bool) -> Vec<String> {
-        let pruned = self.txn().evict_below(ids, threshold, delete);
-        if !pruned.is_empty() {
+    /// ids and the live-referenced ids (each sorted).
+    pub fn evict_below(
+        &self,
+        ids: &[String],
+        threshold: f64,
+        delete: bool,
+    ) -> (Vec<String>, Vec<String>) {
+        let out = self.txn().evict_below(ids, threshold, delete);
+        if !out.0.is_empty() {
             self.mark_dirty();
         }
-        pruned
+        out
     }
 
     /// One-shot [`GraphTxn::maintain`] (CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive): decay-then-evict the working
     /// set under ONE topology write guard (atomic + localized — no global reindex) —
-    /// the primitive the AU maintenance loop schedules. Returns `(decayed, pruned_ids)`.
+    /// the primitive the AU maintenance loop schedules. Returns `(decayed, pruned_ids, live_referenced_ids)`.
     pub fn maintain(
         &self,
         ids: &[String],
@@ -160,7 +165,7 @@ impl GraphCore {
         half_life_ms: u64,
         evict_threshold: f64,
         delete: bool,
-    ) -> (usize, Vec<String>) {
+    ) -> (usize, Vec<String>, Vec<String>) {
         let out = self
             .txn()
             .maintain(ids, now_ms, half_life_ms, evict_threshold, delete);

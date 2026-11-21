@@ -28,6 +28,17 @@ pub const PROMOTE_MIN_SUPPORT: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
+/// The most bytes one memory record may store: the msgpack property map written as its
+/// node (MEDULLA-DECISION-ENGINE-R651.4).
+pub const ENTRY_MAX_BYTES: KnobSpec = KnobSpec {
+    name: "memory.entry_max_bytes",
+    unit: "bytes",
+    default: KnobValue::Integer(65_536),
+    min: KnobValue::Integer(1_024),
+    max: KnobValue::Integer(1_048_576),
+    safety: KnobSafety::Tunable,
+};
+
 /// The default decay half-life of the working tier.
 pub const HALF_LIFE_WORKING: KnobSpec = KnobSpec {
     name: "memory.half_life_working",
@@ -120,6 +131,7 @@ pub const KNOBS: &[KnobSpec] = &[
     },
     IMPORTANCE_CAP,
     PROMOTE_MIN_SUPPORT,
+    ENTRY_MAX_BYTES,
     HALF_LIFE_WORKING,
     HALF_LIFE_EPISODIC,
     HALF_LIFE_PROCEDURAL,

@@ -37,6 +37,15 @@ pub const MEDIA_DERIVATION_KIND_INVALID: RefusalCode =
 pub const MEMORY_SUPPORT_BELOW_THRESHOLD: RefusalCode =
     RefusalCode::new("MEMORY_SUPPORT_BELOW_THRESHOLD");
 
+/// A `MemoryRemember` whose stored encoding is above `knob memory.entry_max_bytes`
+/// (MEDULLA-DECISION-ENGINE-R651.4).
+pub const MEMORY_ENTRY_TOO_LARGE: RefusalCode = RefusalCode::new("MEMORY_ENTRY_TOO_LARGE");
+
+/// A hard removal that left a node a live node still references
+/// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
+/// `live_referenced` list, not answered as a request refusal.
+pub const MEMORY_LIVE_REFERENCE: RefusalCode = RefusalCode::new("MEMORY_LIVE_REFERENCE");
+
 /// Every refusal code of the `memory` family (MEDULLA-DECISION-ENGINE-R010.100).
 pub const REFUSALS: &[RefusalCode] = &[
     MEDIA_TOO_LARGE,
@@ -46,6 +55,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEDIA_DERIVATION_EMPTY,
     MEDIA_DERIVATION_KIND_INVALID,
     MEMORY_SUPPORT_BELOW_THRESHOLD,
+    MEMORY_ENTRY_TOO_LARGE,
+    MEMORY_LIVE_REFERENCE,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.

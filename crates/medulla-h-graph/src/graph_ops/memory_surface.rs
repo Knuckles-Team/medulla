@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_stats::decision::memory as kernel;
-use medulla_decision_types::decision::knob_families::memory::PROMOTE_MIN_SUPPORT;
+use medulla_decision_types::decision::knob_families::memory::{ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT};
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::graph::{
@@ -37,7 +37,7 @@ use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
     MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
-    MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
+    MEMORY_ENTRY_TOO_LARGE, MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
 };
 use sha2::{Digest, Sha256};
 
@@ -165,6 +165,14 @@ fn load(core: &GraphCore, tenant: &str, tiers: &[MemoryTier]) -> Vec<Stored> {
     stored
 }
 
+/// The answer for a memory record the caller cannot see: absent, or another tenant's.
+fn absent_record(memory_id: &str) -> String {
+    refuse(
+        "PARAMETER_INVALID",
+        format!("memory record {memory_id} is not stored under the verified tenant"),
+    )
+}
+
 fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
     let mut props = request.record.to_props();
     props.insert(TENANT_KEY.into(), tenant.into());
@@ -237,11 +245,10 @@ pub(super) fn admit_remember(
     known_digests: &BTreeSet<String>,
 ) -> Result<Admitted, String> {
     let record = &request.record;
+    // A record naming another tenant answers exactly like a record that does not exist for
+    // the caller (MEDULLA-DECISION-ENGINE-R651.4): no distinct code, no existence oracle.
     if record.tenant.as_str() != tenant {
-        return Err(refuse(
-            "ACCESS_DENIED",
-            "a memory record may only be stored under the verified tenant",
-        ));
+        return Err(absent_record(record.memory_id.as_str()));
     }
     if record.schema_version != MEMORY_RECORD_SCHEMA_VERSION {
         return Err(refuse(
@@ -253,6 +260,18 @@ pub(super) fn admit_remember(
         return Err(refuse(
             "PARAMETER_INVALID",
             "a memory record needs text and a finite importance",
+        ));
+    }
+    // MEDULLA-DECISION-ENGINE-R651.4: the bytes the node would store, measured before any write.
+    let blob = node_blob(tenant, request)?;
+    let max_entry_bytes = usize::try_from(knob_integer(&ENTRY_MAX_BYTES)).unwrap_or(usize::MAX);
+    if blob.len() > max_entry_bytes {
+        return Err(refuse(
+            MEMORY_ENTRY_TOO_LARGE.as_str(),
+            format!(
+                "memory record stores {} bytes, above knob memory.entry_max_bytes ({max_entry_bytes})",
+                blob.len()
+            ),
         ));
     }
     check_embedding(&request.embedding, "the embedding")?;
@@ -312,7 +331,7 @@ pub(super) fn admit_remember(
     let Some(existing) = read_stored(core, tenant, record.memory_id.as_str()) else {
         let write = Method::AddNode {
             node_id: id.clone(),
-            properties_msgpack: node_blob(tenant, request)?,
+            properties_msgpack: blob,
         };
         return Ok(Admitted::Write(Box::new(write), embed(&request.embedding), answer(true)));
     };
