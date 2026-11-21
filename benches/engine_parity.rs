@@ -20,6 +20,9 @@
 //! * `pgwire_login` (R007.3): login plus principal resolution through the warm
 //!   lookup cache, one login of each kind, p99 <= 5 ms.
 //!
+//! * `pgwire_prepared_read` (R006.3): 10,000 executions of one prepared point read on a
+//!   1,000-row table over loopback pgwire, every row checked, p99 <= 1 ms.
+//!
 //! * `index_probe` (R010.3): a point probe on a non-key column served by a partial
 //!   index over 10 million rows, p99 <= 2 ms, and index upkeep adding at most
 //!   20 percent to insert cost (fixed-seed rows).
@@ -38,6 +41,7 @@
 // spec: MEDULLA-ENGINE-PARITY-R005.1
 // spec: MEDULLA-ENGINE-PARITY-R002.3
 // spec: MEDULLA-ENGINE-PARITY-R004.3
+// spec: MEDULLA-ENGINE-PARITY-R006.3
 // spec: MEDULLA-ENGINE-PARITY-R007.3
 // spec: MEDULLA-ENGINE-PARITY-R010.3
 // spec: MEDULLA-ENGINE-PARITY-R013.3
@@ -45,6 +49,12 @@
 //!
 //! Run: cargo bench --features full,object-store-bench --bench engine_parity
 
+#![allow(dead_code)]
+
+#[path = "../tests/common/mod.rs"]
+mod common;
+#[path = "../tests/common/test_support.rs"]
+mod test_support;
 #[path = "../crates/medulla-sql-tests/tests/common/commit_batch.rs"]
 mod commit_batch;
 #[path = "common/redb_fan_in.rs"]
@@ -91,6 +101,9 @@ const DISJOINT_WAIT_P99_BUDGET_US: u64 = 200;
 const LOGIN_SAMPLES_PER_KIND: usize = 5_000;
 const LOGIN_CACHE_TTL_S: u64 = 60;
 const LOGIN_P99_BUDGET_US: u64 = 5_000;
+const PREPARED_ROWS: i64 = 1_000;
+const PREPARED_EXECUTIONS: i64 = 10_000;
+const PREPARED_P99_BUDGET_US: u64 = 1_000;
 const INDEX_PROBE_ROWS: usize = 10_000_000;
 const INDEX_PROBE_BATCH: usize = 10_000;
 const INDEX_PROBE_SAMPLES: usize = 2_000;
@@ -551,6 +564,92 @@ impl WireLoginSource for BenchLogins {
     }
 }
 
+/// A pgwire listener on a loopback port over a seeded durable state, and a connected
+/// client (the helper `tests/pgwire_roundtrip.rs` uses: `spawn_pgwire_listener` and
+/// `connect_pgwire` of `tests/common/test_support.rs`).
+async fn pgwire_listener_and_client() -> tokio_postgres::Client {
+    // The text embedder binds once per process, before any listener exists.
+    static TEXT_EMBEDDER_ENV: std::sync::Once = std::sync::Once::new();
+    TEXT_EMBEDDER_ENV.call_once(|| std::env::set_var("MEDULLA_UQL_TEXT_EMBEDDER", "hash"));
+    let persistence = test_support::durable_persistence("engine-parity-bench-recovery-key");
+    let state = test_support::seeded_wire_state(
+        "bench",
+        "tester",
+        Some(test_support::sql_test_persist_dir("pgwire-bench")),
+        persistence,
+    );
+    let addr =
+        test_support::spawn_pgwire_listener(state, medulla_wire::pgwire::PgWireAuthMode::Scram)
+            .await;
+    test_support::connect_pgwire(&addr, "bench", "tester", "__commons__")
+        .await
+        .expect("pgwire connect")
+}
+
+/// R006.3: one prepared point read executed 10,000 times on loopback over a 1,000-row table,
+/// ids cycling over the table, p99 <= 1 ms. Every returned row is checked against its seed.
+fn pgwire_prepared_read(rt: &tokio::runtime::Runtime) -> Record {
+    rt.block_on(async {
+        let client = pgwire_listener_and_client().await;
+        client
+            .simple_query("CREATE TABLE bench_prepared (id BIGINT PRIMARY KEY, v BIGINT NOT NULL)")
+            .await
+            .expect("CREATE TABLE");
+        for chunk in (0..PREPARED_ROWS).collect::<Vec<_>>().chunks(100) {
+            let values: Vec<String> = chunk
+                .iter()
+                .map(|id| format!("({id}, {})", id * 7 + 3))
+                .collect();
+            client
+                .simple_query(&format!(
+                    "INSERT INTO bench_prepared (id, v) VALUES {}",
+                    values.join(", ")
+                ))
+                .await
+                .expect("seed rows");
+        }
+        let statement = client
+            .prepare("SELECT v FROM bench_prepared WHERE id = $1")
+            .await
+            .expect("prepare the point read once");
+        let hits_before = medulla_wire::pgwire::plan_cache_hits();
+        let mut samples = Vec::with_capacity(PREPARED_EXECUTIONS as usize);
+        let started = Instant::now();
+        for execution in 0..PREPARED_EXECUTIONS {
+            let id = execution % PREPARED_ROWS;
+            let begun = Instant::now();
+            let rows = client
+                .query(&statement, &[&id])
+                .await
+                .expect("prepared point read");
+            samples.push(begun.elapsed());
+            assert_eq!(rows.len(), 1, "id {id} returns one row");
+            assert_eq!(rows[0].get::<_, i64>(0), id * 7 + 3, "value of id {id}");
+        }
+        let wall = started.elapsed();
+        let hits = medulla_wire::pgwire::plan_cache_hits() - hits_before;
+        assert!(
+            hits >= (PREPARED_EXECUTIONS - 1) as u64,
+            "the plan cache served {hits} of {PREPARED_EXECUTIONS} executions"
+        );
+        samples.sort();
+        let record = Record {
+            workload: "pgwire_prepared_read",
+            parameters: format!("rows={PREPARED_ROWS};executions={PREPARED_EXECUTIONS}"),
+            p50_us: percentile(&samples, 50),
+            p99_us: percentile(&samples, 99),
+            throughput: PREPARED_EXECUTIONS as f64 / wall.as_secs_f64(),
+        };
+        assert!(
+            record.p99_us <= PREPARED_P99_BUDGET_US,
+            "pgwire_prepared_read p99 {} us over the {} us budget",
+            record.p99_us,
+            PREPARED_P99_BUDGET_US
+        );
+        record
+    })
+}
+
 /// R007.3: login plus principal resolution at p99 <= 5 ms with a warm cache.
 /// One login of each kind is resolved repeatedly through `resolve_wire_login`
 /// over the cached lookup the pgwire startup handler uses.
@@ -956,6 +1055,7 @@ fn emit_workload_records() {
     emit(&occ_validate());
     emit(&disjoint_writers());
     emit(&pgwire_login());
+    emit(&pgwire_prepared_read(&rt));
     emit(&index_probe());
     emit(&sequence_nextval());
     emit(&matview_refresh());
