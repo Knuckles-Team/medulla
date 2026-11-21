@@ -10,7 +10,8 @@ use medulla_identity_types::{
     identity::check_password, identity::check_recovery_code, identity::check_token,
     identity::check_totp_secret, identity::normalize_username, identity::ConfigOp,
     identity::CredentialOp, identity::IdentityOp, identity::IdentityRefusal,
-    identity::IdentityStamp, identity::IdentityStore, identity::IdpOp, identity::MfaOp,
+    identity::IdentityStamp, identity::IdentityStore, identity::InitializeRequest,
+    identity::IdpOp, identity::MfaOp,
     identity::PasswordCheck, identity::PasswordCredential, identity::Secret, identity::SessionOp,
     identity::TokenOp, identity::UserOp, identity::DEFAULT_PASSWORD_MIN_CHARS,
 };
@@ -153,19 +154,29 @@ pub fn derive(op: &mut IdentityOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>
     }
 }
 
+/// Stamp an `Initialize` request: password policy, then argon2id over the bootstrap
+/// administrator's password (MEDULLA-IDENTITY-R003.7). The served `Initialize` arm and the
+/// offline identity-mode command both call it, so the two paths hash the same way. It reads
+/// no service secret.
+pub fn stamp_initialize(
+    request: &mut InitializeRequest,
+    stamp: &mut IdentityStamp,
+    min_chars: u32,
+) -> Derived {
+    let username = request.admin_username.clone().unwrap_or_default();
+    let name = normalize_username(&username).unwrap_or(username);
+    stamp.password_hash = new_password(
+        &mut request.admin_password,
+        (&name, None),
+        None,
+        min_chars,
+    )?;
+    Ok(())
+}
+
 fn derive_config(op: &mut ConfigOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>) -> Derived {
     match op {
-        ConfigOp::Initialize { request } => {
-            let username = request.admin_username.clone().unwrap_or_default();
-            let name = normalize_username(&username).unwrap_or(username);
-            stamp.password_hash = new_password(
-                &mut request.admin_password,
-                (&name, None),
-                None,
-                env.min_chars(),
-            )?;
-            Ok(())
-        }
+        ConfigOp::Initialize { request } => stamp_initialize(request, stamp, env.min_chars()),
         ConfigOp::Transition { .. } => {
             stamp.engine_loopback = env.engine_loopback;
             Ok(())

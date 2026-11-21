@@ -9,6 +9,10 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod server_startup;
 
+/// Offline conversion of an anonymous store to local accounts (MEDULLA-IDENTITY-R003.7).
+#[cfg(feature = "security")]
+pub mod identity_mode_offline;
+
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod query_seam;
 

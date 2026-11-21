@@ -19,6 +19,43 @@ pub(super) enum OperatorCommand {
         #[command(subcommand)]
         verb: StoreUpgradeVerb,
     },
+    /// Change the identity mode of a stopped engine's data directory
+    /// (MEDULLA-IDENTITY-R003.7).
+    #[cfg(feature = "security")]
+    IdentityMode {
+        #[command(subcommand)]
+        verb: IdentityModeVerb,
+    },
+}
+
+/// The one identity mode an anonymous store converts to.
+#[cfg(feature = "security")]
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
+pub(super) enum TargetMode {
+    /// Local accounts in the engine's identity store.
+    Local,
+}
+
+#[cfg(feature = "security")]
+#[derive(clap::Subcommand, Debug)]
+pub(super) enum IdentityModeVerb {
+    /// Convert an anonymous (`none`) store to local accounts, keeping all data. The
+    /// engine must be stopped. The administrator's password is read as one line from
+    /// stdin, never from an argument or the environment. Exit status: 0 done, 1 refused.
+    Set {
+        /// The engine's persistence directory.
+        #[arg(env = "GRAPH_SERVICE_PERSIST_DIR", value_name = "DATA_DIR")]
+        data_dir: PathBuf,
+        /// The mode to convert to.
+        #[arg(long, value_enum)]
+        to: TargetMode,
+        /// The bootstrap administrator's username.
+        #[arg(long)]
+        admin_username: String,
+        /// Required: confirm that the store may be converted.
+        #[arg(long)]
+        confirm: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -108,7 +145,11 @@ pub(super) fn exit_if_requested(command: Option<OperatorCommand>) {
 impl OperatorCommand {
     /// Run the command, print its report, and return the exit status.
     pub(super) fn run(self) -> i32 {
-        let Self::StoreUpgrade { verb } = self;
+        let verb = match self {
+            Self::StoreUpgrade { verb } => verb,
+            #[cfg(feature = "security")]
+            Self::IdentityMode { verb } => return run_identity_mode(verb),
+        };
         if matches!(verb, StoreUpgradeVerb::Layouts) {
             for line in store_upgrade::layouts_listing() {
                 println!("{line}");
@@ -167,6 +208,34 @@ impl OperatorCommand {
     }
 }
 
+/// Run `identity-mode set`: read the password from stdin, convert, print the report.
+#[cfg(feature = "security")]
+fn run_identity_mode(verb: IdentityModeVerb) -> i32 {
+    let IdentityModeVerb::Set {
+        data_dir,
+        to: TargetMode::Local,
+        admin_username,
+        confirm,
+    } = verb;
+    let mut line = String::new();
+    if let Err(error) = std::io::stdin().read_line(&mut line) {
+        eprintln!("error: identity-mode set could not read the password from stdin: {error}");
+        return 1;
+    }
+    let password = line.trim_end_matches(['\n', '\r']).to_string();
+    let report = medulla_server::identity_mode_offline::set_local(
+        &data_dir,
+        &admin_username,
+        medulla_identity_types::identity::Secret::new(password),
+        confirm,
+    );
+    print!("{}", report.render());
+    if let Some(error) = &report.error {
+        eprintln!("error: identity-mode {} refused: {error}", report.verb);
+    }
+    report.exit_code
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,6 +277,27 @@ mod tests {
                 verb: StoreUpgradeVerb::Rebind { confirm: true, .. }
             })
         ));
+        #[cfg(feature = "security")]
+        {
+            let set = Cli::try_parse_from([
+                "server",
+                "identity-mode",
+                "set",
+                "/data",
+                "--to",
+                "local",
+                "--admin-username",
+                "admin",
+                "--confirm",
+            ])
+            .unwrap();
+            assert!(matches!(
+                set.command,
+                Some(OperatorCommand::IdentityMode {
+                    verb: IdentityModeVerb::Set { confirm: true, .. }
+                })
+            ));
+        }
         assert!(Cli::try_parse_from(["server"]).unwrap().command.is_none());
     }
 

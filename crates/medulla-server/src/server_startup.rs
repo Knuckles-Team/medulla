@@ -762,7 +762,7 @@ pub fn open_isolation_layer(
     if anonymous {
         isolation
             .try_register_agent(medulla_identity_types::acl::AgentIdentity {
-                agent_id: "anonymous".into(),
+                agent_id: ANONYMOUS_AGENT_ID.into(),
                 role: medulla_identity_types::acl::AgentRole::System,
                 teams: Vec::new(),
                 roles: Vec::new(),
@@ -1187,17 +1187,24 @@ fn anonymous_env_conflicts(name: &str, value: &str) -> bool {
 }
 
 /// Called while holding the existing engine.lock and before opening any stores.
+/// The file that marks a store as anonymous (MEDULLA-IDENTITY-R003.7).
+pub const ANONYMOUS_MARKER_FILE: &str = "anonymous-store-v1";
+/// The exact bytes of the anonymous marker file.
+pub const ANONYMOUS_MARKER_BYTES: &[u8] = b"epistemic-graph anonymous local store v1\n";
+/// The System agent an anonymous store registers.
+pub const ANONYMOUS_AGENT_ID: &str = "anonymous";
+
 /// A mode marker is not an authentication credential. It prevents accidental
 /// reuse of protected data under anonymous authority. No implicit conversions.
 pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
     use std::io::Write;
     let root = std::path::Path::new(dir);
-    let marker = root.join("anonymous-store-v1");
+    let marker = root.join(ANONYMOUS_MARKER_FILE);
     match std::fs::symlink_metadata(&marker) {
         Ok(meta) => {
             if mode != "none"
                 || !meta.file_type().is_file()
-                || std::fs::read(&marker)? != b"epistemic-graph anonymous local store v1\n"
+                || std::fs::read(&marker)? != ANONYMOUS_MARKER_BYTES
             {
                 return Err(
                     "store authentication mode conflict or invalid anonymous marker".into(),
@@ -1223,7 +1230,7 @@ pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
         .write(true)
         .create_new(true)
         .open(&marker)?;
-    file.write_all(b"epistemic-graph anonymous local store v1\n")?;
+    file.write_all(ANONYMOUS_MARKER_BYTES)?;
     file.sync_all()?;
     std::fs::File::open(root)?.sync_all()?;
     Ok(())
