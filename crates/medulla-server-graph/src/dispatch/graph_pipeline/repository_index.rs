@@ -63,6 +63,23 @@ struct ChangesetChain {
     /// The id of the newest commit of the branch (empty when it has none): the base
     /// the next changeset chains from (MEDULLA-SCM-R006).
     head: String,
+    /// The `seq` of each changeset of the chain by changeset id, from the branch history
+    /// index (MEDULLA-SCM-R005.1).
+    seqs: std::collections::BTreeMap<String, u64>,
+    /// The branch the chain was read from.
+    #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+    source: Option<crate::dispatch::changeset_lifecycle::BranchChain>,
+}
+
+/// What the route does after the index commits (MEDULLA-SDLC-R001.3): the lifecycle accept of
+/// each changeset the chain delta cites, through the one accept `SubmitChangeset` runs.
+#[derive(Default)]
+struct AcceptFollow {
+    #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+    delta: Vec<(medulla_source_types::source_changeset::Changeset, u64)>,
+    #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+    source: Option<crate::dispatch::changeset_lifecycle::BranchChain>,
+    branch: String,
 }
 
 /// The changesets of the repository's branch chain that follow the last one cited
@@ -92,8 +109,14 @@ async fn branch_changesets(
     let last_cited = stored
         .get(medulla_h_ingest::source_ingestion::spec_projection::CHANGESETS_ARTIFACT)
         .map(|artifact| artifact.digest.clone());
+    #[cfg(feature = "blob")]
+    let source = Some(crate::dispatch::changeset_lifecycle::BranchChain::new(
+        std::sync::Arc::clone(&registry),
+        reference.clone(),
+    ));
     tokio::task::spawn_blocking(move || {
         let mut chain = Vec::new();
+        let mut seqs = std::collections::BTreeMap::new();
         let mut head = String::new();
         // `chain` answers newest first. The delta stops at the last changeset already
         // cited; the whole chain is kept for the row status (MEDULLA-SDLC-R014.12).
@@ -111,6 +134,15 @@ async fn branch_changesets(
             if delta_len.is_none() && last_cited.as_deref() == Some(changeset.id.as_str()) {
                 delta_len = Some(chain.len());
             }
+            if let Some(bytes) = registry.history_row(
+                &reference,
+                &medulla_compute::source_history::seq_key(&commit.id),
+            )? {
+                seqs.insert(
+                    changeset.id.clone(),
+                    medulla_compute::source_history::decode_seq(&bytes)?,
+                );
+            }
             chain.push(changeset);
         }
         let delta_len = delta_len.unwrap_or(chain.len());
@@ -118,7 +150,14 @@ async fn branch_changesets(
         let mut delta: Vec<_> = chain[..delta_len].to_vec();
         delta.reverse();
         chain.reverse();
-        Ok::<_, String>(ChangesetChain { chain, delta, head })
+        Ok::<_, String>(ChangesetChain {
+            chain,
+            delta,
+            head,
+            seqs,
+            #[cfg(feature = "blob")]
+            source,
+        })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -143,7 +182,7 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<medulla_ingestion_types::ingestion_wire::IndexResult, Response> {
+) -> Result<(medulla_ingestion_types::ingestion_wire::IndexResult, AcceptFollow), Response> {
     use super::super::request_boundary::preflight::{ast_input_limits, decode_ast_sources};
     let req_id = ctx.req_id;
     // Entries are content-keyed: one path may name several blobs (EH-280).
@@ -165,9 +204,27 @@ async fn index_scoped(
         chain,
         delta: changesets,
         head,
+        seqs,
+        #[cfg(all(feature = "redb", feature = "blob"))]
+        source,
+        ..
     } = branch_changesets(&ctx, &branch_name, &stored_specs)
         .await
         .map_err(|error| Response::err(req_id, error))?;
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    let follow = AcceptFollow {
+        delta: changesets
+            .iter()
+            .filter_map(|changeset| Some((changeset.clone(), *seqs.get(&changeset.id)?)))
+            .collect(),
+        source,
+        branch: branch_name.clone(),
+    };
+    #[cfg(not(all(feature = "redb", feature = "blob")))]
+    let follow = {
+        let _ = &seqs;
+        AcceptFollow { branch: branch_name.clone() }
+    };
     // MEDULLA-SCM-R006: the generation this full index leaves; the next changeset chains
     // from the branch head.
     let generation = ctx
@@ -231,7 +288,7 @@ async fn index_scoped(
         .map_err(|error| Response::err(req_id, error))?;
     let refs = admit_repository_sources(ctx, &repository_id, &files).await?;
     attach_content_refs(&mut result, &refs);
-    Ok(result)
+    Ok((result, follow))
 }
 
 #[cfg(feature = "ast")]
@@ -258,7 +315,7 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<medulla_ingestion_types::ingestion_wire::IndexResult, Response> {
+) -> Result<(medulla_ingestion_types::ingestion_wire::IndexResult, AcceptFollow), Response> {
     let req_id = ctx.req_id;
     let _ = (files_msgpack, scope);
     Err(Response::err(req_id, "AST feature not enabled".to_string()))
@@ -370,10 +427,20 @@ pub async fn route_repository_index(
         graph: ctx.graph_name.to_string(),
         repository_id: scope.repository_id.clone(),
     };
-    let result = match index_scoped(ctx, files_msgpack, scope).await {
-        Ok(result) => result,
+    let repository_id = scope.repository_id.clone();
+    let (result, follow) = match index_scoped(ctx, files_msgpack, scope).await {
+        Ok(indexed) => indexed,
         Err(response) => return response,
     };
+    // The requirement records this index writes: references waiting on them resolve once the
+    // batch commits.
+    let requirement_prefix = format!("requirement:{repository_id}:");
+    let requirements: Vec<String> = result
+        .nodes
+        .iter()
+        .filter(|node| node.node_id.starts_with(&requirement_prefix))
+        .map(|node| node.node_id.clone())
+        .collect();
     let write_set = match medulla_h_ingest::repository_index::lower(&result) {
         Ok(write_set) => write_set,
         Err(error) => return Response::err(ctx.req_id, error),
@@ -433,7 +500,74 @@ pub async fn route_repository_index(
     #[cfg(not(all(feature = "ast", feature = "redb")))]
     let commit =
         crate::dispatch::change_envelope::apply_lowered_change_envelope(ctx, held, envelope).await;
-    medulla_h_ingest::repository_index::finish(result, commit)
+    let response = medulla_h_ingest::repository_index::finish(result, commit);
+    if response.refusal_text().is_some() {
+        return response;
+    }
+    match accept_followers(&ctx, &repository_id, follow, &requirements).await {
+        Ok(()) => response,
+        Err(error) => Response::err(ctx.req_id, error),
+    }
+}
+
+/// MEDULLA-SDLC-R001.3: the lifecycle accept of every changeset the index followed, through
+/// the accept `SubmitChangeset` runs (the same derivation and the same
+/// `CHANGESET_NODE_CONFLICT` check), then the resolution of the references that waited on the
+/// requirement records this index wrote.
+#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+async fn accept_followers(
+    ctx: &GraphOpRouting<'_>,
+    repository_id: &str,
+    follow: AcceptFollow,
+    requirements: &[String],
+) -> Result<(), String> {
+    use crate::dispatch::changeset_lifecycle::{accept_edges, resolve_waiting};
+    use medulla_server_blob::blob::BlobStateExt;
+    let store = ctx
+        .state
+        .read()
+        .await
+        .blob_cursors()
+        .map(|cursors| std::sync::Arc::clone(&cursors.store));
+    if let (Some(source), Some(store)) = (follow.source, store) {
+        let owner = medulla_server_api::carrier::CarrierAuthority::from_verified(
+            ctx.verified_context,
+        )?
+        .owner_scope()
+        .to_string();
+        for (changeset, seq) in &follow.delta {
+            Box::pin(accept_edges(
+                ctx.state,
+                ctx.verified_context,
+                ctx.req_id,
+                std::sync::Arc::clone(&store),
+                owner.clone(),
+                changeset,
+                &follow.branch,
+                *seq,
+                source.clone(),
+            ))
+            .await?;
+        }
+    }
+    Box::pin(resolve_waiting(
+        ctx.state,
+        ctx.verified_context,
+        ctx.req_id,
+        repository_id,
+        requirements,
+    ))
+    .await
+}
+
+#[cfg(not(all(feature = "ast", feature = "redb", feature = "blob")))]
+async fn accept_followers(
+    _ctx: &GraphOpRouting<'_>,
+    _repository_id: &str,
+    _follow: AcceptFollow,
+    _requirements: &[String],
+) -> Result<(), String> {
+    Ok(())
 }
 
 #[cfg(all(feature = "ast", feature = "redb"))]

@@ -1,6 +1,6 @@
 //! The changeset node of an accept (MEDULLA-SDLC-R001.3).
 
-use medulla_core::lifecycle::accept::{accept_changeset_edges, graph_endpoint};
+use medulla_core::lifecycle::accept::{accept_changeset_edges, graph_endpoint, UnresolvedReference};
 use medulla_core::lifecycle::derive::CodeGraphView;
 use medulla_core::lifecycle::store::LifecycleStore;
 use medulla_source_types::lifecycle::{
@@ -102,10 +102,19 @@ fn changeset_node_is_written_once_with_edges_and_reindex_is_idempotent() {
     )
     .expect("a trailer edge waits for its record");
     assert!(waiting.edges.is_empty());
-    assert_eq!(
-        waiting.unresolved,
-        vec![(LifecycleEdgeKind::CitesRequirement, requirement.to_string())]
-    );
+    assert_eq!(waiting.unresolved.len(), 1);
+    let reference = &waiting.unresolved[0];
+    assert_eq!(reference.edge.kind, LifecycleEdgeKind::CitesRequirement);
+    assert_eq!(reference.missing, requirement);
+    assert_eq!(reference.bucket_id(), format!("unresolved:{requirement}"));
+    // The waiting edge carries the whole derived edge and reads back identically.
+    let stored: std::collections::BTreeMap<String, String> = reference
+        .waiting_properties()
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value))
+        .collect();
+    let read = UnresolvedReference::resolve(&|key: &str| stored.get(key).cloned());
+    assert_eq!(read.as_ref(), Some(&reference.edge));
     // A run that produced the changeset must exist: an absent endpoint refuses the write.
     let mut produced = changeset.clone();
     produced.run_trace_id = Some("run-1".into());

@@ -37,6 +37,8 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 
+#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
+pub mod changeset_lifecycle;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod change_envelope;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

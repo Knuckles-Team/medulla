@@ -493,6 +493,11 @@ impl BranchTarget {
             .map_err(|error| error.to_string())?
     }
 
+    /// The registry this branch lives in, for a caller that walks the chain itself.
+    pub fn registry(&self) -> Arc<BranchRegistry> {
+        Arc::clone(&self.registry)
+    }
+
     /// Run `read` against the registry and this branch on a blocking thread
     /// (MEDULLA-SCM-R004): a read that walks the chain does so with sync calls.
     pub async fn read_blocking<R, F>(&self, read: F) -> Result<R, String>

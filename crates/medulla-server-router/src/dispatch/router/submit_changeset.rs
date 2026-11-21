@@ -429,7 +429,7 @@ mod served {
                             };
                             let accepted = match seq {
                                 Ok(seq) => {
-                                    super::changeset_lifecycle::accept_edges(
+                                    medulla_server_graph::dispatch::changeset_lifecycle::accept_edges(
                                         state,
                                         verified,
                                         req.id,
@@ -438,6 +438,10 @@ mod served {
                                         &changeset,
                                         &request.branch,
                                         seq,
+                                        medulla_server_graph::dispatch::changeset_lifecycle::BranchChain::new(
+                                            target.registry(),
+                                            target.reference.clone(),
+                                        ),
                                     )
                                     .await
                                 }

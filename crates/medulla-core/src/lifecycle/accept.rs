@@ -20,9 +20,71 @@ use super::store::LifecycleStore;
 pub struct ChangesetWrites {
     pub node: ChangesetNodeWrite,
     pub edges: Vec<DerivedEdge>,
-    /// The trailer-derived edges dropped because the record they name is not in the graph
-    /// yet: `(edge kind, the missing graph node id)`.
-    pub unresolved: Vec<(LifecycleEdgeKind, String)>,
+    /// The trailer-derived edges whose record is not in the graph yet. The caller stores each
+    /// as a waiting reference (`UnresolvedReference::waiting_operation`) that resolves to the
+    /// edge when the record is ingested.
+    pub unresolved: Vec<UnresolvedReference>,
+}
+
+/// The graph type of the bucket node that holds the references waiting on one record.
+pub const UNRESOLVED_TYPE: &str = "UnresolvedReference";
+
+/// The relationship of the edge from a changeset node to a bucket it waits on.
+pub const AWAITS: &str = "awaits";
+
+/// The bucket node id for the references that wait on the record `missing` (a graph node id):
+/// one bucket per missing record, so ingesting the record reads exactly its waiters.
+pub fn unresolved_node_id(missing: &str) -> String {
+    format!("unresolved:{missing}")
+}
+
+/// A trailer-derived edge whose endpoint record is not ingested yet.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnresolvedReference {
+    /// The edge as it will be written once the record exists, endpoints already graph ids.
+    pub edge: DerivedEdge,
+    /// The graph node id of the record the edge waits for.
+    pub missing: String,
+}
+
+impl UnresolvedReference {
+    /// The bucket node id this reference waits in.
+    pub fn bucket_id(&self) -> String {
+        unresolved_node_id(&self.missing)
+    }
+
+    /// The properties of the `awaits` edge from the changeset node to the bucket: the whole
+    /// derived edge, so a later resolution reads nothing else.
+    pub fn waiting_properties(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("relationship", AWAITS.to_owned()),
+            ("edge_kind", self.edge.kind.name().to_owned()),
+            ("edge_from", self.edge.from.clone()),
+            ("edge_to", self.edge.to.clone()),
+            ("rule", self.edge.rule.clone()),
+            ("rule_version", self.edge.rule_version.to_string()),
+            ("input_digests", self.edge.input_digests.join(",")),
+        ]
+    }
+
+    /// Read a waiting edge back from the properties of its `awaits` edge. `None` when a
+    /// property is missing or names no lifecycle edge kind.
+    pub fn resolve(get: &dyn Fn(&str) -> Option<String>) -> Option<DerivedEdge> {
+        let name = get("edge_kind")?;
+        let kind = LifecycleEdgeKind::ALL.into_iter().find(|k| k.name() == name)?;
+        Some(DerivedEdge {
+            kind,
+            from: get("edge_from")?,
+            to: get("edge_to")?,
+            rule: get("rule")?,
+            rule_version: get("rule_version")?.parse().ok()?,
+            input_digests: get("input_digests")?
+                .split(',')
+                .filter(|digest| !digest.is_empty())
+                .map(str::to_owned)
+                .collect(),
+        })
+    }
 }
 
 /// A trailer names a requirement or a defect that may not be ingested yet; the edge it
@@ -38,7 +100,8 @@ fn names_a_record(kind: LifecycleEdgeKind) -> bool {
 
 /// The graph node id of one derived-edge endpoint. A changeset is its `commit:` node; the
 /// requirement end of `citesRequirement`, `implements` and `verifiedBy` is the requirement
-/// record `requirement:<repo>:<row>`; every other endpoint already is a node id.
+/// record `requirement:<repo>:<row>`, the defect end of `fixedBy` and `introducedBy` is
+/// `defect:<repo>/<id>`; every other endpoint already is a node id.
 pub fn graph_endpoint(
     changeset: &Changeset,
     kind: LifecycleEdgeKind,
@@ -53,8 +116,13 @@ pub fn graph_endpoint(
         LifecycleEdgeKind::VerifiedBy => from_side,
         _ => false,
     };
+    // A defect is graph-unique by repository: `defect:<repo>/<id>`.
+    let defect = from_side
+        && matches!(kind, LifecycleEdgeKind::FixedBy | LifecycleEdgeKind::IntroducedBy);
     if requirement {
         format!("requirement:{}:{raw}", changeset.repo)
+    } else if defect {
+        format!("defect:{}/{raw}", changeset.repo)
     } else {
         raw.to_owned()
     }
@@ -87,7 +155,8 @@ pub fn changed_span(old: &[u8], new: &[u8]) -> Option<Span> {
 /// what the graph holds under a node id (its lifecycle kind), or `None` when it holds nothing
 /// the caller may see. A derived edge whose endpoint is unknown refuses the whole write with
 /// `LIFECYCLE_ENDPOINT_UNKNOWN` and nothing is returned; only an edge a trailer derives
-/// (`citesRequirement`, `implements`, `fixedBy`) is dropped and reported in `unresolved`.
+/// (`citesRequirement`, `implements`, `fixedBy`) is held back and reported in `unresolved`, to
+/// wait in a bucket until its record is ingested.
 pub fn accept_changeset_edges(
     store: &mut LifecycleStore,
     changeset: &Changeset,
@@ -96,7 +165,7 @@ pub fn accept_changeset_edges(
     known: &dyn Fn(&str) -> Option<LifecycleKind>,
 ) -> Result<ChangesetWrites, LifecycleRefusal> {
     let mut kept = Vec::new();
-    let mut unresolved = Vec::new();
+    let mut waiting: Vec<(DerivedEdge, String)> = Vec::new();
     let mut seen = Vec::new();
     'edges: for edge in derive_lifecycle_edges(changeset, view) {
         let mut ends = Vec::new();
@@ -108,7 +177,7 @@ pub fn accept_changeset_edges(
             match known(&id) {
                 Some(kind) => ends.push((raw.clone(), kind)),
                 None if names_a_record(edge.kind) => {
-                    unresolved.push((edge.kind, id));
+                    waiting.push((edge.clone(), id));
                     continue 'edges;
                 }
                 None => return Err(LifecycleRefusal::EndpointUnknown(id)),
@@ -128,6 +197,17 @@ pub fn accept_changeset_edges(
             from: graph_endpoint(changeset, edge.kind, true, &edge.from),
             to: graph_endpoint(changeset, edge.kind, false, &edge.to),
             ..edge
+        })
+        .collect();
+    let unresolved = waiting
+        .into_iter()
+        .map(|(edge, missing)| UnresolvedReference {
+            edge: DerivedEdge {
+                from: graph_endpoint(changeset, edge.kind, true, &edge.from),
+                to: graph_endpoint(changeset, edge.kind, false, &edge.to),
+                ..edge
+            },
+            missing,
         })
         .collect();
     Ok(ChangesetWrites {
