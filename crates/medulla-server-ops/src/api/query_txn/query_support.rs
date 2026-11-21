@@ -12,8 +12,50 @@ use medulla_protocol_types::protocol::Method;
 /// embedding model (an ONNX/remote-service impl of `medulla_plan::TextEmbedder`) is wired in HERE.
 #[cfg(feature = "query")]
 pub fn uql_text_embedder() -> Option<&'static dyn medulla_exec::exec::TextEmbedder> {
+    bound_text_embedder().map(|(embedder, _)| embedder)
+}
+
+/// The identity a bound text embedder registers under in the modality encoder registry
+/// (MEDULLA-FEDERATED-QUERY-R039.1.3): the registry id a space's text binding names, and
+/// the `(space id, dimensions, revision)` tuple of the space its vectors live in.
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextEncoderIdentity {
+    pub encoder_id: String,
+    pub space_id: String,
+    pub dimensions: usize,
+    pub revision: String,
+}
+
+/// The revision both built-in text encoders report: the encoding recipe they implement.
+#[cfg(feature = "query")]
+pub const TEXT_ENCODER_REVISION: &str = "1";
+
+/// The registry id of the deterministic hash encoder.
+#[cfg(feature = "query")]
+pub const HASH_ENCODER_ID: &str = "builtin:hash";
+
+/// The registry id of the configured remote chunk embedder.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
+pub const REMOTE_ENCODER_ID: &str = "remote:openai-compatible";
+
+/// The identity of the bound text embedder, or `None` when nothing is bound.
+#[cfg(feature = "query")]
+pub fn uql_text_encoder_identity() -> Option<TextEncoderIdentity> {
+    bound_text_embedder().map(|(_, identity)| identity)
+}
+
+#[cfg(feature = "query")]
+fn bound_text_embedder() -> Option<(
+    &'static dyn medulla_exec::exec::TextEmbedder,
+    TextEncoderIdentity,
+)> {
     use std::sync::OnceLock;
-    static EMBEDDER: OnceLock<Option<Box<dyn medulla_exec::exec::TextEmbedder>>> = OnceLock::new();
+    type Bound = Option<(
+        Box<dyn medulla_exec::exec::TextEmbedder>,
+        TextEncoderIdentity,
+    )>;
+    static EMBEDDER: OnceLock<Bound> = OnceLock::new();
     EMBEDDER
         .get_or_init(|| {
             // The configured chunk embedder (MEDULLA-UNIFIED-DATA-PLANE-R651.7.2) when an
@@ -22,16 +64,42 @@ pub fn uql_text_embedder() -> Option<&'static dyn medulla_exec::exec::TextEmbedd
             {
                 let config = crate::api::ingest::embedder::EmbedderConfig::from_env();
                 if config.name() == crate::api::ingest::embedder::REMOTE {
-                    return Some(Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>);
+                    let identity = TextEncoderIdentity {
+                        encoder_id: REMOTE_ENCODER_ID.to_string(),
+                        space_id: config
+                            .model
+                            .clone()
+                            .unwrap_or_else(|| crate::api::ingest::embedder::REMOTE.to_string()),
+                        dimensions: config.dims,
+                        revision: TEXT_ENCODER_REVISION.to_string(),
+                    };
+                    return Some((
+                        Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>,
+                        identity,
+                    ));
                 }
             }
             match std::env::var("MEDULLA_UQL_TEXT_EMBEDDER").ok().as_deref() {
-                Some("hash") => Some(Box::new(medulla_exec::exec::HashEmbedder::default())
-                    as Box<dyn medulla_exec::exec::TextEmbedder>),
+                Some("hash") => {
+                    let embedder = medulla_exec::exec::HashEmbedder::default();
+                    let dimensions = medulla_exec::exec::TextEmbedder::embed(&embedder, "")
+                        .map(|vector| vector.len())
+                        .unwrap_or_default();
+                    Some((
+                        Box::new(embedder) as Box<dyn medulla_exec::exec::TextEmbedder>,
+                        TextEncoderIdentity {
+                            encoder_id: HASH_ENCODER_ID.to_string(),
+                            space_id: HASH_ENCODER_ID.to_string(),
+                            dimensions,
+                            revision: TEXT_ENCODER_REVISION.to_string(),
+                        },
+                    ))
+                }
                 _ => None,
             }
         })
-        .as_deref()
+        .as_ref()
+        .map(|(embedder, identity)| (&**embedder, identity.clone()))
 }
 
 /// Bind the SQL `medulla_embed(text)` function's process-wide embedder to the SAME
