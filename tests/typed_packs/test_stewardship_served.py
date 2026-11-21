@@ -228,6 +228,15 @@ def test_critical_element_gaps_reported(served) -> None:
     # A steward is assigned; no owner and no active quality rule exist yet.
     assert node["gaps"] == "owner,quality_rule"
     assert node["element"] == ASSET
+    # The marking seeded the registered stored query, and it lists the element.
+    called = _decode(
+        client._send(
+            "StoredQueryCall",
+            {"name": "catalog.critical_gaps", "version": None, "args": {}},
+            graph,
+        )
+    )
+    assert ASSET in str(called), called
     rule = {
         "id": "total-present",
         "target": ASSET,
@@ -252,3 +261,11 @@ def test_critical_element_gaps_reported(served) -> None:
     _op(client, graph, {"op": "mark_critical", "element": ASSET})
     node = _decode(client._send("GetNodeProperties", {"node_id": marked["id"]}, graph))
     assert node["gaps"] == ""
+    called = _decode(
+        client._send(
+            "StoredQueryCall",
+            {"name": "catalog.critical_gaps", "version": None, "args": {}},
+            graph,
+        )
+    )
+    assert ASSET not in str(called), called

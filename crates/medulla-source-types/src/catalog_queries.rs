@@ -1,7 +1,8 @@
 //! The registered catalog stored queries (MEDULLA-TYPED-PACKS-R802.8).
 //!
-//! The definitions are written once here and put with `Method::StoredQueryPut` at tenant
-//! bootstrap, like the owner digest of `business_digest`. A query is data, not code.
+//! The definitions are written once here. The engine seeds them into a graph when the graph
+//! first records a critical element (`Stewardship.MarkCritical`), in the stored-query node shape
+//! of `Method::StoredQueryPut`, shared with the tenant. A query is data, not code.
 
 use std::collections::BTreeMap;
 
@@ -34,6 +35,6 @@ pub fn catalog_queries() -> [StoredQuery; 1] {
         refresh: RefreshPolicy::OnChange,
         // The engine stamps `author` on put and ignores whatever a request carries.
         author: String::new(),
-        share: ShareScope::Private,
+        share: ShareScope::Tenant,
     }]
 }

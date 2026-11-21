@@ -740,6 +740,59 @@ async fn has_active_quality_rule(
     }
 }
 
+/// Seed the registered catalog stored queries into the graph when it holds none of that name
+/// (MEDULLA-TYPED-PACKS-R802.8): the first marking of a critical element in a graph registers
+/// `catalog.critical_gaps`, written in the stored-query node shape `StoredQueryPut` publishes,
+/// authored by the marking principal and shared with the tenant.
+async fn seed_catalog_queries(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    author: &str,
+    tenant: &str,
+) -> Result<(), String> {
+    for mut query in medulla_source_types::catalog_queries::catalog_queries() {
+        let head_id = format!("stored_query_head:{}", query.name);
+        if read_node(state, target, &head_id).await?.is_some() {
+            continue;
+        }
+        query.author = author.to_string();
+        let mut stored = Properties::new();
+        stored.insert("type".into(), "StoredQuery".into());
+        stored.insert("name".into(), query.name.clone().into());
+        stored.insert("version".into(), query.version.into());
+        stored.insert("author".into(), author.into());
+        stored.insert("author_tenant".into(), tenant.into());
+        stored.insert(
+            "query".into(),
+            serde_json::to_value(&query).map_err(|error| error.to_string())?,
+        );
+        write(
+            state,
+            target,
+            Method::AddNode {
+                node_id: format!("stored_query:{}:{}", query.name, query.version),
+                properties_msgpack: encode(&stored)?,
+            },
+        )
+        .await?;
+        let mut head = Properties::new();
+        head.insert("type".into(), "StoredQueryHead".into());
+        head.insert("name".into(), query.name.clone().into());
+        head.insert("author".into(), author.into());
+        head.insert("latest".into(), query.version.into());
+        write(
+            state,
+            target,
+            Method::AddNode {
+                node_id: head_id,
+                properties_msgpack: encode(&head)?,
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 /// Mark `element` critical and record what it misses (MEDULLA-TYPED-PACKS-R802.8). The marker
 /// must be an owner or steward of the element; the stored query `catalog.critical_gaps` lists
 /// every element whose `gaps` is not empty.
@@ -774,6 +827,7 @@ async fn mark_critical(
         gaps.push("quality_rule");
     }
     let tenant = target.verified.tenant();
+    seed_catalog_queries(state, target, principal, tenant).await?;
     let id = format!("critical_element:{tenant}:{element}");
     let mut properties = Properties::new();
     properties.insert("type".into(), CRITICAL_ELEMENT_LABEL.into());
