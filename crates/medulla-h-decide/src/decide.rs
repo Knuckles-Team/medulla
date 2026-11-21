@@ -17,11 +17,13 @@ mod execution_answer_tests;
 pub(crate) mod execution_answer;
 #[cfg(all(test, feature = "decide"))]
 mod coverage_tests;
+pub mod failure_ingest;
 pub(crate) mod feature_ledger;
 pub(crate) mod guardrail;
 pub(crate) mod jobs;
 pub(crate) mod log;
 pub(crate) mod loops;
+pub mod planned_write;
 #[cfg(feature = "decide")]
 pub(crate) mod shape;
 pub(crate) mod statistical;

@@ -140,18 +140,23 @@ impl GapTopic {
     }
 }
 
-/// The body of `Method::FailureIngest`.
+/// The body of `Method::FailureIngest`. Every op names the caller `graph`
+/// that holds the runs and receives the gaps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "op", deny_unknown_fields)]
 pub enum FailureOp {
     /// Read failed runs, cluster them and file gaps for recurring patterns.
     Ingest {
+        /// The graph that holds the runs and receives the gaps.
+        graph: String,
         /// Only runs that failed at or after this time, Unix milliseconds.
         #[serde(default)]
         since_ms: Option<u64>,
     },
     /// Mark a topic addressed by a source node that `COVERS` it.
     MarkAddressed {
+        /// The graph that holds the gap.
+        graph: String,
         /// The topic id.
         topic_id: String,
         /// The covering source node.
@@ -159,9 +164,37 @@ pub enum FailureOp {
     },
     /// Read one gap with its member run ids.
     Get {
+        /// The graph that holds the gap.
+        graph: String,
         /// The topic id.
         topic_id: String,
     },
+}
+
+impl FailureOp {
+    /// Whether the op writes: `Ingest` and `MarkAddressed` do, `Get` does not.
+    pub fn is_mutation(&self) -> bool {
+        matches!(self, Self::Ingest { .. } | Self::MarkAddressed { .. })
+    }
+
+    /// The graph the op reads and writes.
+    pub fn graph(&self) -> &str {
+        match self {
+            Self::Ingest { graph, .. }
+            | Self::MarkAddressed { graph, .. }
+            | Self::Get { graph, .. } => graph,
+        }
+    }
+}
+
+/// What `FailureOp::Ingest` answers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FailureIngestResult {
+    /// Every pattern the failed runs cluster into, ordered by signature.
+    pub patterns: Vec<FailurePattern>,
+    /// Topic ids whose gap node this call created.
+    pub filed: Vec<String>,
 }
 
 #[cfg(test)]
@@ -226,15 +259,25 @@ mod tests {
         );
 
         for op in [
-            FailureOp::Ingest { since_ms: Some(5) },
+            FailureOp::Ingest {
+                graph: "g".into(),
+                since_ms: Some(5),
+            },
             FailureOp::MarkAddressed {
+                graph: "g".into(),
                 topic_id: id.clone(),
                 by: "doc:1".into(),
             },
-            FailureOp::Get { topic_id: id },
+            FailureOp::Get {
+                graph: "g".into(),
+                topic_id: id,
+            },
         ] {
             let json = serde_json::to_string(&op).unwrap();
+            assert!(json.contains(r#""graph":"g""#));
             assert_eq!(serde_json::from_str::<FailureOp>(&json).unwrap(), op);
+            assert_eq!(op.graph(), "g");
+            assert_eq!(op.is_mutation(), !matches!(op, FailureOp::Get { .. }));
         }
 
         // deny_unknown_fields and the step bound both refuse on decode.

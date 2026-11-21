@@ -39,6 +39,8 @@ mod medulla_h_decide_decide_guardrail_tests;
     feature = "security"
 ))]
 mod medulla_h_decide_harness_config_pack_tests;
+#[cfg(all(test, feature = "decide", feature = "redb", feature = "security"))]
+mod medulla_h_decide_failure_ingest_tests;
 #[cfg(all(test, feature = "decide"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_decide_harness_config_tests;

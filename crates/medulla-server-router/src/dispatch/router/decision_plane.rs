@@ -16,6 +16,38 @@ pub async fn dispatch_decision_plane_methods(
     dispatch_catalog_admin_methods(ctx, method).await
 }
 
+/// Commit the batch a decision handler planned (MEDULLA-DECISION-ENGINE-R701.3)
+/// as one `BatchUpdate` through the graph gateway under the caller's verified
+/// context, exactly as the incident handlers commit. A refused commit answers
+/// the refusal and never the reply; an empty plan commits nothing and answers
+/// the reply.
+async fn commit_planned_write(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    plan: medulla_h_decide::decide::planned_write::PlannedWrite,
+) -> Response {
+    if !plan.operations.is_empty() {
+        let operations_msgpack = match rmp_serde::to_vec_named(&plan.operations) {
+            Ok(bytes) => bytes,
+            Err(_) => return Response::err(req_id, "planned write encoding failed"),
+        };
+        let response = dispatch_graph_op(
+            state,
+            &plan.graph,
+            req_id,
+            Some(verified.agent_id()),
+            verified,
+            Method::BatchUpdate { operations_msgpack },
+        )
+        .await;
+        if let Some(refusal) = response.refusal_text() {
+            return Response::err(req_id, refusal);
+        }
+    }
+    Response::ok(req_id, plan.reply)
+}
+
 async fn dispatch_write_back_method(
     ctx: DispatchCtx<'_>,
     method: Method,
@@ -306,6 +338,21 @@ async fn dispatch_decision_methods(
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_decision_log(state, req.id, verified_context, *op)
                     .await
+            })
+            .await
+        }
+        Method::FailureIngest { op } => {
+            dispatch_boxed(async {
+                match medulla_h_decide::decide::failure_ingest::handle_failure_ingest(
+                    state,
+                    verified_context,
+                    *op,
+                )
+                .await
+                {
+                    Ok(plan) => commit_planned_write(state, req.id, verified_context, plan).await,
+                    Err(refusal) => Response::err(req.id, refusal),
+                }
             })
             .await
         }

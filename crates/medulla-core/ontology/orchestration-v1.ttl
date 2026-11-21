@@ -1233,6 +1233,11 @@
     rdfs:subClassOf bfo:0000001 ;
     rdfs:comment "A capability the library lacks for a task class (MEDULLA-ORCH-VOCAB-R004.6.1)." .
 
+:FailureGap a owl:Class ;
+    rdfs:label "FailureGap" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "A recurring failure pattern filed as a gap (MEDULLA-DECISION-ENGINE-R701.3). Not a CapabilityGap: it names a failure signature, not a capability, task class and domain." .
+
 :DesiredEnhancement a owl:Class ;
     rdfs:label "DesiredEnhancement" ;
     rdfs:subClassOf bfo:0000001 ;

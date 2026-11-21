@@ -14593,6 +14593,13 @@ class MethodUsage(BaseModel):
     params: MethodUsageParams
 
 
+class MethodFailureIngest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FailureIngest"]
+    params: MethodFailureIngestParams
+
+
 class MethodPublishSkillPackage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15410,6 +15417,7 @@ Method = Annotated[
         MethodLoops,
         MethodBeliefRevise,
         MethodUsage,
+        MethodFailureIngest,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
@@ -33226,6 +33234,43 @@ UsageOp = Annotated[
 ]
 
 
+class FailureOpIngest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    op: Literal["ingest"]
+    since_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class FailureOpMarkAddressed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    by: str
+    graph: str
+    op: Literal["mark_addressed"]
+    topic_id: str
+
+
+class FailureOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    op: Literal["get"]
+    topic_id: str
+
+
+FailureOp = Annotated[
+    FailureOpIngest | FailureOpMarkAddressed | FailureOpGet,
+    Field(discriminator="op"),
+]
+
+
+class MethodFailureIngestParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: FailureOp
+
+
 class UsageAppended(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -39022,6 +39067,7 @@ __all__ = [
     "MethodBeliefRevise",
     "MethodBeliefReviseParams",
     "MethodUsage",
+    "MethodFailureIngest",
     "MethodPublishSkillPackage",
     "MethodPublishSkillPackageParams",
     "PublishSkillPackageRequest",
@@ -39036,6 +39082,11 @@ __all__ = [
     "FeatureLedgerPlanProposal",
     "FeatureLedgerStatus",
     "FeatureLedgerView",
+    "FailureOp",
+    "FailureOpGet",
+    "FailureOpIngest",
+    "FailureOpMarkAddressed",
+    "MethodFailureIngestParams",
     "MethodUsageParams",
     "PriceCatalog",
     "PriceEntry",

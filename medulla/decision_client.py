@@ -1060,6 +1060,14 @@ def usage_record(
     }
 
 
+def failure_ingest_op(graph: str, since_ms: int | None = None) -> dict[str, Any]:
+    """A ``FailureIngest`` ingest of the failed runs in ``graph`` (optionally since ``since_ms``)."""
+    op: dict[str, Any] = {"op": "ingest", "graph": graph}
+    if since_ms is not None:
+        op["since_ms"] = since_ms
+    return op
+
+
 def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """A ``Usage`` append of ``records`` (scope ``usage:write``)."""
     return {"op": "append", "records": [dict(record) for record in records]}
@@ -1169,6 +1177,17 @@ class DecisionClient:
         from medulla.generated.coordination import send_usage
 
         result = await send_usage(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def failure_ingest(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``FailureIngest`` (cluster failed runs and file one gap per recurring pattern)."""
+        from medulla.generated.coordination import send_failure_ingest
+
+        result = await send_failure_ingest(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -1308,6 +1327,7 @@ __all__ = [
     "document_set_wire",
     "declared",
     "evaluate_op",
+    "failure_ingest_op",
     "feature_ledger_close_op",
     "feature_ledger_get_op",
     "feature_ledger_open_op",

@@ -115,6 +115,8 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::FeatureLedger { op } => Some(op.is_mutation()),
         Method::BeliefRevise { .. } => Some(true),
         Method::DecisionLog { op } => Some(op.is_mutation()),
+        // MEDULLA-DECISION-ENGINE-R701.3: `Get` reads; `Ingest` and `MarkAddressed` write.
+        Method::FailureIngest { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R801.8: append and put_price both write.
         Method::Usage { .. } => Some(true),
         // MEDULLA-DECISION-ENGINE-R160.3: a publication writes its receipt.

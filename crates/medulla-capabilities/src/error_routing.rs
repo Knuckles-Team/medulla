@@ -330,6 +330,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("BeliefRevise", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("Loops", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("FeatureLedger", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
+    // MEDULLA-DECISION-ENGINE-R701.3: an absent or unreadable graph, and a topic with no gap.
+    (
+        "FailureIngest",
+        &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
+    ),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
@@ -1742,6 +1747,8 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
 /// `{code: TRANSITION_REFUSED, machine, from, event, reason}`.
 pub const MACHINE_METHODS: &[&str] = &[
     "FeatureLedger",
+    // MEDULLA-DECISION-ENGINE-R701.3: `MarkAddressed` moves the gap-topic machine.
+    "FailureIngest",
     "SubmitWorkItem",
     "ClaimWorkItem",
     "CancelWorkItem",

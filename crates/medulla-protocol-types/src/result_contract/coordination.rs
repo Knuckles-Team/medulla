@@ -240,6 +240,10 @@ method_results! {
     FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     BeliefRevise(BeliefRevise) => Raw<medulla_decision_types::belief_revision::BeliefPassResult>;
     PublishSkillPackage(PublishSkillPackage) => Raw<medulla_decision_types::decision::package_validation::PublicationReceipt>;
+    // MEDULLA-DECISION-ENGINE-R701.3: failure-pattern ingest, mark-addressed and get.
+    FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_types::failure_patterns::FailureIngestResult>;
+    FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
+    FailureGet(FailureIngest / "get") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

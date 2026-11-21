@@ -107,6 +107,13 @@ $($variants)*
     DecisionLog {
         op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
+    /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
+    /// runs of a caller graph, cluster them by signature and file one gap per
+    /// recurring pattern; mark a gap addressed; read one gap. The
+    /// `FailureIngest` handler is the single writer of gap nodes.
+    FailureIngest {
+        op: Box<medulla_decision_types::failure_patterns::FailureOp>,
+    },
     /// The per-tenant usage ledger (MEDULLA-DECISION-ENGINE-R801.8): append
     /// observed model calls or store a price catalog under the verified tenant.
     /// Both ops need the service-only scope `usage:write`.
