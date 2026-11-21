@@ -316,3 +316,40 @@ def test_shape_and_freshness_scored(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.6")
+def test_hundred_rules_over_a_native_dataset(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.6: 100 rules over 100,000 native rows."""
+    client = _client()
+    graph = f"quality-{uuid.uuid4().hex[:8]}"
+    table = f"q100_{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        client.query.sql(f"CREATE TABLE {table} (id int primary key, v int)")
+        for batch in range(100):
+            rows = ", ".join(
+                f"({batch * 1000 + n}, {(batch * 1000 + n) % 100})" for n in range(1000)
+            )
+            client.query.sql(f"INSERT INTO {table} VALUES {rows}")
+        for n in range(100):
+            rule = {
+                "id": f"r{n:03d}",
+                "target": table,
+                "dimension": "validity",
+                "expression": f"v >= {n}",
+                "threshold": 0.5,
+                "severity": "warning",
+            }
+            receipt = _decode(client._send("QualityRulePut", {"rule": rule}, graph))
+            assert receipt["rule_id"] == rule["id"]
+
+        rows = _evaluate(client, graph, table)
+        assert len(rows) == 100
+        assert sorted(row["rule"] for row in rows) == [f"r{n:03d}" for n in range(100)]
+        assert all(isinstance(row["passed"], bool) for row in rows)
+        # `v >= N` holds for at least half the rows only when N <= 50.
+        assert sum(1 for row in rows if row["passed"]) == 51
+    finally:
+        client.tenants.delete(graph)
+        client.close()
