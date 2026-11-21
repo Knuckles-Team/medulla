@@ -578,6 +578,8 @@ METHOD_IDS = frozenset(
         "ArchitectureView",
         "DomainPack",
         "ProjectionRead",
+        "BookmarkSemanticSearch",
+        "BookmarkRelations",
         "ArchitectureModelImport",
         "ProcessCompile",
         "ProcessModelImport",

@@ -1954,3 +1954,9 @@ send_stored_query_call = contract_sender(
 send_stored_query_put = contract_sender("StoredQueryPut", "MethodStoredQueryPutParams")
 send_viewport_query = contract_sender("ViewportQuery", "MethodViewportQueryParams")
 send_projection_read = contract_sender("ProjectionRead", "MethodProjectionReadParams")
+send_bookmark_semantic_search = contract_sender(
+    "BookmarkSemanticSearch", "MethodBookmarkSemanticSearchParams"
+)
+send_bookmark_relations = contract_sender(
+    "BookmarkRelations", "MethodBookmarkRelationsParams"
+)

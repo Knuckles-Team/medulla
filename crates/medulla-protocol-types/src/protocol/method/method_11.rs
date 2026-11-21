@@ -861,6 +861,17 @@ $($variants)*
         object: String,
         intent: medulla_catalog_types::schema_context::SchemaContextIntent,
     },
+
+    /// One semantic search over the caller's bookmarks, on one pinned index and graph snapshot
+    /// (MEDULLA-MEDIA-VOCAB-R001.102.2). A read; nothing is committed.
+    BookmarkSemanticSearch {
+        request: Box<medulla_types::bookmark_query::BookmarkSemanticSearchRequest>,
+    },
+    /// The authorized relations among bookmark nodes, read at one pinned graph snapshot
+    /// (MEDULLA-MEDIA-VOCAB-R001.102.3). A read; nothing is committed.
+    BookmarkRelations {
+        request: Box<medulla_types::bookmark_query::BookmarkRelationsRequest>,
+    },
         ]);
     };
 }

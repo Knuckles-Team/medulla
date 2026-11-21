@@ -860,6 +860,27 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CodeContext",
         &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"],
     ),
+    // MEDULLA-MEDIA-VOCAB-R001.102.4: the bookmark search and relations refusals.
+    (
+        "BookmarkSemanticSearch",
+        &[
+            "BOOKMARK_POLICY_INVALID",
+            "BOOKMARK_LIMIT_EXCEEDED",
+            "BOOKMARK_INDEX_STALE",
+            "BOOKMARK_REVISION_MISMATCH",
+            "BOOKMARK_RESPONSE_TOO_LARGE",
+        ],
+    ),
+    (
+        "BookmarkRelations",
+        &[
+            "BOOKMARK_POLICY_INVALID",
+            "BOOKMARK_LIMIT_EXCEEDED",
+            "BOOKMARK_INDEX_STALE",
+            "BOOKMARK_REVISION_MISMATCH",
+            "BOOKMARK_RESPONSE_TOO_LARGE",
+        ],
+    ),
     // MEDULLA-REPO-INGEST-R002.651.4: a conformance request for a model the graph does not hold.
     ("ProcessConformance", &["PROCESS_MODEL_UNKNOWN"]),
     // MEDULLA-REPO-INGEST-R700.3: a step budget outside its range.

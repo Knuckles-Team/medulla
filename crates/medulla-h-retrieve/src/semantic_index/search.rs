@@ -34,6 +34,63 @@ pub fn search_live(
     text: &str,
     k: usize,
 ) -> Result<LiveSearch, String> {
+    let live = live_image(service, binding)?;
+    let encoder = medulla_plan::embed_registry::modality_encoders().lookup_by_space(
+        &binding.model_id,
+        live.dimension,
+        &binding.model_revision,
+    )?;
+    let vector = encoder.embed(text)?;
+    live.probe(&vector, k)
+}
+
+/// Probe the live generation of `binding` for the `k` members nearest to `vector`.
+///
+/// The bookmark search (MEDULLA-MEDIA-VOCAB-R001.102.2) passes the caller's embedding; the
+/// refusals are those of [`search_live`] without the encoder lookup.
+pub fn probe_vector(
+    service: &SemanticIndexService,
+    binding: &SemanticBinding,
+    vector: &[f32],
+    k: usize,
+) -> Result<LiveSearch, String> {
+    live_image(service, binding)?.probe(vector, k)
+}
+
+struct LiveImage {
+    generation: u64,
+    dimension: usize,
+    image: medulla_semantic_index::semantic::SemanticGenerationImage,
+}
+
+impl LiveImage {
+    fn probe(&self, vector: &[f32], k: usize) -> Result<LiveSearch, String> {
+        if vector.len() != self.dimension {
+            return Err(format!(
+                "{}: the encoder returned {} dimensions, the binding holds {}",
+                ServerErrorCode::SearchProbeModelMismatch,
+                vector.len(),
+                self.dimension
+            ));
+        }
+        let index = AnnIndex::from_image(&self.image.index)
+            .map_err(|error| format!("{}: {error}", ServerErrorCode::SearchProbeModelMismatch))?;
+        let hits = index
+            .search(vector, k)
+            .into_iter()
+            .map(|(member, similarity)| (member, 1.0 - similarity))
+            .collect();
+        Ok(LiveSearch {
+            generation: self.generation,
+            hits,
+        })
+    }
+}
+
+fn live_image(
+    service: &SemanticIndexService,
+    binding: &SemanticBinding,
+) -> Result<LiveImage, String> {
     let dimension = usize::try_from(binding.dimension)
         .map_err(|_| format!("{}: binding dimension", ServerErrorCode::SearchProbeModelMismatch))?;
     let (generation, image) = service
@@ -54,25 +111,9 @@ pub fn search_live(
             ServerErrorCode::SearchProbeModelMismatch
         ));
     }
-    let encoder = medulla_plan::embed_registry::modality_encoders().lookup_by_space(
-        &binding.model_id,
+    Ok(LiveImage {
+        generation,
         dimension,
-        &binding.model_revision,
-    )?;
-    let vector = encoder.embed(text)?;
-    if vector.len() != dimension {
-        return Err(format!(
-            "{}: the encoder returned {} dimensions, the binding holds {dimension}",
-            ServerErrorCode::SearchProbeModelMismatch,
-            vector.len()
-        ));
-    }
-    let index = AnnIndex::from_image(&image.index)
-        .map_err(|error| format!("{}: {error}", ServerErrorCode::SearchProbeModelMismatch))?;
-    let hits = index
-        .search(&vector, k)
-        .into_iter()
-        .map(|(member, similarity)| (member, 1.0 - similarity))
-        .collect();
-    Ok(LiveSearch { generation, hits })
+        image,
+    })
 }

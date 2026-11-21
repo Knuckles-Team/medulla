@@ -400,6 +400,28 @@ pub async fn dispatch_agent_library_methods(
                 )
             }
         }
+        // MEDULLA-MEDIA-VOCAB-R001.102.2: one bookmark search over the `bookmark` semantic index.
+        Method::BookmarkSemanticSearch { request } => {
+            #[cfg(all(feature = "ann-redb", feature = "query"))]
+            {
+                dispatch_boxed(super::bookmark::handle_bookmark_search(
+                    state,
+                    &req.graph,
+                    req.id,
+                    verified_context,
+                    *request,
+                ))
+                .await
+            }
+            #[cfg(not(all(feature = "ann-redb", feature = "query")))]
+            {
+                let _ = (state, verified_context, request);
+                Response::err(
+                    req.id,
+                    "Bookmark search is not available in this build (requires `ann-redb` and `query`)",
+                )
+            }
+        }
         Method::SemanticIndex { op } => {
             #[cfg(all(feature = "ann-redb", feature = "query"))]
             {

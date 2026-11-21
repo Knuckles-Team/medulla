@@ -17,6 +17,8 @@ pub mod reasoning_projection;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod secondary_indexes;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "ann-redb", feature = "query"))]
+pub mod bookmark;
 #[cfg(feature = "ann-redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod semantic_index;

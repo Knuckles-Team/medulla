@@ -75,6 +75,14 @@
         sh:message "A MediaTag confidence lies in [0, 1]."
     ] .
 
+:BookmarkShape a sh:NodeShape ;
+    sh:targetClass :Bookmark ;
+    sh:property [ sh:path :bookmarkId ; sh:minCount 1 ; sh:message "A Bookmark carries bookmarkId." ] ;
+    sh:property [ sh:path :recordKey ; sh:minCount 1 ; sh:message "A Bookmark carries recordKey." ] ;
+    sh:property [ sh:path :fileSha256 ; sh:minCount 1 ; sh:message "A Bookmark carries fileSha256." ] ;
+    sh:property [ sh:path :sourceId ; sh:minCount 1 ; sh:message "A Bookmark carries sourceId." ] ;
+    sh:property [ sh:path :ingestionReceiptId ; sh:minCount 1 ; sh:message "A Bookmark carries ingestionReceiptId." ] .
+
 :MediaVocabShapePrefixes a owl:Ontology ;
     sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "dc" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

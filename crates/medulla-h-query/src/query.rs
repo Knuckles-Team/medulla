@@ -171,6 +171,8 @@ mod column_lineage;
 #[cfg(feature = "query")]
 mod code_context;
 #[cfg(feature = "query")]
+mod bookmark_relations;
+#[cfg(feature = "query")]
 mod context_compile;
 #[cfg(feature = "query")]
 mod context_search;

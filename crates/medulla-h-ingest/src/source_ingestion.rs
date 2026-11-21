@@ -42,6 +42,7 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 pub mod containers;
+mod bookmark;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod action_record;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -416,6 +417,8 @@ pub async fn prepare(
         RecordContext {
             documents: &dedup.documents,
             held_row_versions: &held_row_versions,
+            receipt_id: &batch_id,
+            receipt_digest: batch_digest.to_hex(),
         },
     )?;
     // The bucket nodes of the originals and the links of the near duplicates commit with the
@@ -2020,6 +2023,10 @@ struct RecordContext<'a> {
     documents: &'a [documents::DocumentOutput],
     /// The row versions the record nodes already hold (R901.2).
     held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
+    /// The envelope id of the commit this batch writes (`source-ingest:<batch digest>`).
+    receipt_id: &'a str,
+    /// The batch digest, the content digest of that envelope.
+    receipt_digest: String,
 }
 
 /// [`RecordContext`] keyed for the per-record lookups of `admit_record`.
@@ -2027,6 +2034,8 @@ struct RecordContext<'a> {
 struct RecordLookups<'a> {
     documents: &'a BTreeMap<&'a str, &'a documents::DocumentOutput>,
     held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
+    receipt_id: &'a str,
+    receipt_digest: String,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2047,7 +2056,10 @@ fn admit_records(
     let context = RecordLookups {
         documents: &documents,
         held_row_versions: context.held_row_versions,
+        receipt_id: context.receipt_id,
+        receipt_digest: context.receipt_digest,
     };
+    let mut bookmark_entities = BTreeSet::new();
     let mut admitted = AdmittedRecords {
         raw_admissions: Vec::with_capacity(batch.records.len()),
         relationship_raw_admissions: Vec::with_capacity(batch.relationships.len()),
@@ -2103,6 +2115,18 @@ fn admit_records(
         }
         admitted.methods.push(item.method);
         admitted.methods.extend(item.container_edge);
+        // A bookmark's entity nodes are written once per batch, each with the record's policy;
+        // its edges follow the nodes (MEDULLA-MEDIA-VOCAB-R001.102.2).
+        for (entity_id, entity_method) in item.bookmark_entities {
+            if bookmark_entities.insert(entity_id.clone()) {
+                let mut entity_policy = item.policy.clone();
+                entity_policy.policy_id = format!("policy:{entity_id}");
+                entity_policy.object_id = entity_id;
+                admitted.policies.push(entity_policy);
+                admitted.methods.push(entity_method);
+            }
+        }
+        admitted.methods.extend(item.bookmark_edges);
         // An original document's atoms commit in the same envelope as its record node; each
         // atom node takes the record's policy (MEDULLA-INGEST-WORKER-R003.3).
         if let Some(document) = context.documents.get(item.lineage.object_id.as_str()) {
@@ -2589,6 +2613,9 @@ struct AdmittedRecord {
     /// The `inContainer` edge of a record whose `container_id` property names a
     /// container (MEDULLA-INGEST-WORKER-R904.3).
     container_edge: Option<Method>,
+    /// The entity nodes and edges of a bookmark record (MEDULLA-MEDIA-VOCAB-R001.102.2).
+    bookmark_entities: Vec<(String, Method)>,
+    bookmark_edges: Vec<Method>,
     lineage: medulla_protocol_types::change_envelope::LineageRecord,
     policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
@@ -2702,6 +2729,26 @@ fn admit_record(
         &raw_digest_hex,
         batch.strict_schema,
     )?;
+    // A bookmark record is the `bookmark:<record_key>` node; its envelope keys replace the mapped
+    // ones and `raw` is not stored (MEDULLA-MEDIA-VOCAB-R001.102.2).
+    let bookmark = if mapping.schema_mapping.ontology_class.trim_start_matches(':') == bookmark::BOOKMARK_CLASS {
+        Some(bookmark::map_bookmark(
+            &record.payload.value()?,
+            record.stream.as_str(),
+            lookups.receipt_id,
+            &lookups.receipt_digest,
+        )?)
+    } else {
+        None
+    };
+    let (node_id, bookmark_entities, bookmark_edges) = match bookmark {
+        Some(mapped) => {
+            properties.remove("raw");
+            properties.extend(mapped.properties);
+            (mapped.node_id, mapped.entities, mapped.edges)
+        }
+        None => (node_id, Vec::new(), Vec::new()),
+    };
     let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
     // An original document carries its signature and first-indexed version; a near duplicate
     // carries neither (MEDULLA-INGEST-WORKER-R702.3).
@@ -2782,6 +2829,8 @@ fn admit_record(
         toc_blobs,
         method,
         container_edge,
+        bookmark_entities,
+        bookmark_edges,
         lineage,
         policy,
     }))

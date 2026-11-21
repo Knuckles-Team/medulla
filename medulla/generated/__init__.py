@@ -106,6 +106,8 @@ SEND_BY_METHOD = {
     "ArchitectureView": graph.send_architecture_view,
     "DomainPack": graph.send_domain_pack,
     "ProjectionRead": query.send_projection_read,
+    "BookmarkSemanticSearch": query.send_bookmark_semantic_search,
+    "BookmarkRelations": query.send_bookmark_relations,
     "ArgumentMapEvaluate": query.send_argument_map_evaluate,
     "ArgumentMapGet": query.send_argument_map_get,
     "ArgumentMapPut": query.send_argument_map_put,

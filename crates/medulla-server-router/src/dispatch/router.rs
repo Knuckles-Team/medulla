@@ -54,6 +54,8 @@ mod lifecycle;
 mod data_product;
 mod quality;
 mod resource_cost;
+#[cfg(all(feature = "ann-redb", feature = "query"))]
+mod bookmark;
 mod sdlc;
 mod service_control;
 #[cfg(feature = "security")]

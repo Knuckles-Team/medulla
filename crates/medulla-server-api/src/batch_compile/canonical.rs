@@ -668,6 +668,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetForeignSource { .. }
         | Method::ProbeForeignSource { .. }
         | Method::CodeContext { .. }
+        | Method::BookmarkSemanticSearch { .. }
+        | Method::BookmarkRelations { .. }
         | Method::CodeHealthSweep { .. }
         | Method::Diagnose { .. }
         | Method::EncodedDocumentSearch { .. }

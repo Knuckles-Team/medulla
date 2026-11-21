@@ -1297,6 +1297,126 @@
     rdfs:domain :MediaDerivation ;
     rdfs:range xsd:string .
 
+# ── Bookmark vocabulary (MEDULLA-MEDIA-VOCAB-R001.102.2) ───────────────────────────
+# One bookmark record of a host-authorized export. `:sourceRevision` and `:usesTool` are declared in
+# other modules and are used here without a second domain.
+
+:Bookmark a owl:Class ;
+    rdfs:label "Bookmark" ;
+    rdfs:comment "One bookmark of a host-authorized export, with its hashtags, mentions, tools, URLs and domains." ;
+    rdfs:subClassOf :Document .
+
+:bookmarkId a owl:DatatypeProperty ;
+    rdfs:label "bookmark id" ;
+    rdfs:comment "The export-assigned identifier of the bookmark." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:recordKey a owl:DatatypeProperty ;
+    rdfs:label "record key" ;
+    rdfs:comment "The content key of the bookmark record: lowercase hex SHA-256." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:bookmarkText a owl:DatatypeProperty ;
+    rdfs:label "bookmark text" ;
+    rdfs:comment "The text of the bookmark." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:sourceOffset a owl:DatatypeProperty ;
+    rdfs:label "source offset" ;
+    rdfs:comment "The offset of the bookmark in its export file, a decimal string." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:fileSha256 a owl:DatatypeProperty ;
+    rdfs:label "file digest" ;
+    rdfs:comment "The SHA-256 of the export file the bookmark came from." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:exportRevision a owl:DatatypeProperty ;
+    rdfs:label "export revision" ;
+    rdfs:comment "The revision of the export format." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:vocabularyRevision a owl:DatatypeProperty ;
+    rdfs:label "vocabulary revision" ;
+    rdfs:comment "The revision of the vocabulary the extraction used." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:vocabularySha256 a owl:DatatypeProperty ;
+    rdfs:label "vocabulary digest" ;
+    rdfs:comment "The SHA-256 of the vocabulary the extraction used." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:hashtags a owl:DatatypeProperty ;
+    rdfs:label "hashtags" ;
+    rdfs:comment "The hashtags of the bookmark, a compact JSON array of strings." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:mentions a owl:DatatypeProperty ;
+    rdfs:label "mentions" ;
+    rdfs:comment "The account mentions of the bookmark, a compact JSON array of strings." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:tools a owl:DatatypeProperty ;
+    rdfs:label "tools" ;
+    rdfs:comment "The tools the bookmark names, a compact JSON array of strings." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:urls a owl:DatatypeProperty ;
+    rdfs:label "urls" ;
+    rdfs:comment "The URLs of the bookmark, a compact JSON array of strings." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:domains a owl:DatatypeProperty ;
+    rdfs:label "domains" ;
+    rdfs:comment "The domains of the bookmark, a compact JSON array of [domain, label-or-null] pairs." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:sourceId a owl:DatatypeProperty ;
+    rdfs:label "source id" ;
+    rdfs:comment "The connector stream id of the record that wrote the node." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:ingestionReceiptId a owl:DatatypeProperty ;
+    rdfs:label "ingestion receipt id" ;
+    rdfs:comment "The envelope id of the SourceIngest commit that wrote the node." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:ingestionReceiptDigest a owl:DatatypeProperty ;
+    rdfs:label "ingestion receipt digest" ;
+    rdfs:comment "The envelope digest of the SourceIngest commit that wrote the node." ;
+    rdfs:domain :Bookmark ;
+    rdfs:range xsd:string .
+
+:taggedWith a owl:ObjectProperty ;
+    rdfs:label "tagged with" ;
+    rdfs:comment "Links a bookmark to a hashtag it carries." ;
+    rdfs:domain :Bookmark .
+
+:mentionsAccount a owl:ObjectProperty ;
+    rdfs:label "mentions account" ;
+    rdfs:comment "Links a bookmark to an account it mentions." ;
+    rdfs:domain :Bookmark .
+
+:linksToDomain a owl:ObjectProperty ;
+    rdfs:label "links to domain" ;
+    rdfs:comment "Links a bookmark to a domain it links to." ;
+    rdfs:domain :Bookmark .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/core#GamePlatform> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

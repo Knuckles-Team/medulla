@@ -24,14 +24,14 @@ use medulla_protocol_types::result_contract::query::{CodeContext, CodeHealthSwee
 use medulla_types::code_context::{CodeContextRequest, DiagnoseRequest};
 use std::collections::BTreeSet;
 
-type Props = serde_json::Map<String, serde_json::Value>;
+pub(super) type Props = serde_json::Map<String, serde_json::Value>;
 
-fn props_of(core: &GraphCore, id: &str) -> Option<Props> {
+pub(super) fn props_of(core: &GraphCore, id: &str) -> Option<Props> {
     let blob = core.get_node_properties(id)?;
     Some(medulla_types::msgpack::decode_property_object(&blob).unwrap_or_default())
 }
 
-fn text(props: &Props, key: &str) -> String {
+pub(super) fn text(props: &Props, key: &str) -> String {
     props
         .get(key)
         .and_then(serde_json::Value::as_str)
@@ -47,7 +47,7 @@ fn label_of(props: &Props) -> String {
 }
 
 /// `(target, edge properties)` of every out-edge of `id`.
-fn out_edges(core: &GraphCore, id: &str) -> Vec<(String, Props)> {
+pub(super) fn out_edges(core: &GraphCore, id: &str) -> Vec<(String, Props)> {
     let mut found = Vec::new();
     for (from, neighbours) in core.get_neighbors_batch(vec![id.to_string()]) {
         for to in neighbours {
@@ -61,7 +61,7 @@ fn out_edges(core: &GraphCore, id: &str) -> Vec<(String, Props)> {
     found
 }
 
-fn relationship(props: &Props) -> String {
+pub(super) fn relationship(props: &Props) -> String {
     ["relationship", "type", "edge_type"]
         .iter()
         .map(|key| text(props, key))

@@ -179,6 +179,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-MEDIA-VOCAB-R001.102.3: the authorized relations among bookmark nodes.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::BookmarkRelations { request } => {
+            return Ok(super::bookmark_relations::handle_bookmark_relations(hctx, *request))
+        }
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis over the projected core.
     #[cfg(feature = "query")]
     let method = match method {

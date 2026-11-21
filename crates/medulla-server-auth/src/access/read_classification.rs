@@ -121,6 +121,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "CorpusRetrieve",
     "SourceCoverage",
     "CodeContext",
+    "BookmarkSemanticSearch",
+    "BookmarkRelations",
     "CodeHealthSweep",
     "Diagnose",
     "ViewportQuery",

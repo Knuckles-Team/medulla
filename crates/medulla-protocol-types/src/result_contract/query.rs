@@ -93,6 +93,9 @@ method_results! {
     // MEDULLA-REPO-INGEST-R700.3: the findings of one code-health sweep.
     CodeHealthSweep(CodeHealthSweep) => Raw<medulla_ingestion_types::code_health::CodeHealthReport>;
     Diagnose(Diagnose) => Raw<medulla_types::code_context::SymptomDiagnosis>;
+    // MEDULLA-MEDIA-VOCAB-R001.102.2, R001.102.3: bookmark search and relations.
+    BookmarkSemanticSearch(BookmarkSemanticSearch) => Raw<medulla_types::bookmark_query::BookmarkSearchResult>;
+    BookmarkRelations(BookmarkRelations) => Raw<medulla_types::bookmark_query::BookmarkRelationsResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.

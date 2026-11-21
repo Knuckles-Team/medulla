@@ -15344,6 +15344,20 @@ class MethodProjectionRead(BaseModel):
     params: MethodProjectionReadParams
 
 
+class MethodBookmarkSemanticSearch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BookmarkSemanticSearch"]
+    params: MethodBookmarkSemanticSearchParams
+
+
+class MethodBookmarkRelations(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BookmarkRelations"]
+    params: MethodBookmarkRelationsParams
+
+
 class MethodSourceSync(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16275,6 +16289,8 @@ Method = Annotated[
         MethodArchitectureView,
         MethodDomainPack,
         MethodProjectionRead,
+        MethodBookmarkSemanticSearch,
+        MethodBookmarkRelations,
         MethodSourceSync,
         MethodConceptLineage,
         MethodColumnLineage,
@@ -35078,6 +35094,43 @@ class MethodProjectionReadParams(BaseModel):
     request: ProjectionReadRequest
 
 
+class BookmarkQueryLimitPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_hits: int
+    max_relationships: int
+    max_response_bytes: int
+
+
+class BookmarkSemanticSearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    query_embedding: list[float]
+    source_ids: list[str]
+    limit_policy: BookmarkQueryLimitPolicy
+    cursor: str | None = None
+
+
+class BookmarkRelationsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_ids: list[str]
+    limit_policy: BookmarkQueryLimitPolicy
+    cursor: str | None = None
+
+
+class MethodBookmarkSemanticSearchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: BookmarkSemanticSearchRequest
+
+
+class MethodBookmarkRelationsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: BookmarkRelationsRequest
+
+
 class MethodArchitectureModelImportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -42455,6 +42508,13 @@ __all__ = [
     "MethodDomainPackParams",
     "MethodProjectionRead",
     "MethodProjectionReadParams",
+    "BookmarkQueryLimitPolicy",
+    "BookmarkSemanticSearchRequest",
+    "BookmarkRelationsRequest",
+    "MethodBookmarkSemanticSearch",
+    "MethodBookmarkSemanticSearchParams",
+    "MethodBookmarkRelations",
+    "MethodBookmarkRelationsParams",
     "Modality",
     "ModalityBinding",
     "EmbeddingSpaceRef",
