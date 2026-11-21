@@ -168,3 +168,77 @@ async def test_source_effect_receipt_is_recorded_once() -> None:
             )
     finally:
         await client.close()
+
+
+class _LoopbackRepositoryConnector:
+    """The repository connector arbora's ``fleet.write_back.commit`` reaches.
+
+    It stands in for the provider: it accepts only an effect whose approval is bound
+    to the exact payload digest, holds the "repository" in memory, and answers with a
+    receipt binding the approved request, the actual revision it produced and the
+    digest of the content it wrote. Medulla writes no file; it only keeps the receipt.
+    """
+
+    def __init__(self) -> None:
+        self.files: dict[str, bytes] = {}
+
+    def commit(
+        self, path: str, payload: bytes, approved_digest: str | None
+    ) -> dict[str, str]:
+        payload_digest = hashlib.sha256(payload).hexdigest()
+        if approved_digest != payload_digest:
+            raise PermissionError("write-back refused: approval does not bind payload")
+        self.files[path] = payload
+        request_digest = hashlib.sha256(f"{path}\0{payload_digest}".encode()).hexdigest()
+        effect_revision = hashlib.sha256(payload + path.encode()).hexdigest()[:12]
+        receipt_digest = hashlib.sha256(
+            f"{request_digest}\0{effect_revision}\0{payload_digest}".encode()
+        ).hexdigest()
+        return {
+            "request_digest": request_digest,
+            "effect_revision": effect_revision,
+            "receipt_digest": receipt_digest,
+        }
+
+
+# spec: MEDULLA-TYPED-PACKS-R094.7
+@pytest.mark.asyncio
+async def test_approved_source_effect_dependency() -> None:
+    connector = f"blueprint-{uuid.uuid4().hex[:10]}"
+    name = "approved-prompt"
+    client = await connect()
+    try:
+        await _import_prompt(client, connector, name)
+        component_id = _component_id(connector, name)
+        exported = await _export(client, component_id, 1)
+        provider = _LoopbackRepositoryConnector()
+        path = "prompts/approved-prompt.json"
+
+        # Without approval bound to the exact payload nothing is written or recorded.
+        with pytest.raises(PermissionError):
+            provider.commit(path, exported.body, approved_digest=None)
+        assert provider.files == {}
+
+        receipt = provider.commit(
+            path,
+            exported.body,
+            approved_digest=exported.content_digest.removeprefix("sha256:"),
+        )
+        assert provider.files[path] == exported.body
+
+        recorded = await _record(
+            client,
+            _effect(
+                component_id,
+                exported.entry.entry_revision,
+                receipt["receipt_digest"],
+                repository="prompt-repository",
+                path=path,
+                effect_revision=receipt["effect_revision"],
+                request_digest=receipt["request_digest"],
+            ),
+        )
+        assert recorded.recorded is True
+        assert recorded.revision == 1
+    finally:
+        await client.close()
