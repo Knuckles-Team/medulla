@@ -175,6 +175,13 @@ WEB_TOOL = "web_search"
 RECORDED = json.loads(
     (Path(__file__).parent / "web_search_recorded.json").read_text(encoding="utf-8")
 )
+# The recorded search index (MEDULLA-UNIFIED-DATA-PLANE-R038.5.6): thirty hits in score
+# order, served as `offset`/`k` slices by the tool `index_search`.
+SEARCH_SERVER = "search-stub-mcp"
+SEARCH_TOOL = "index_search"
+SEARCH_HITS = json.loads(
+    (Path(__file__).parent / "search_index_recorded.json").read_text(encoding="utf-8")
+)
 
 
 @dataclass
@@ -182,6 +189,8 @@ class WebGateway:
     """A loopback fleet gateway: replays a recorded `web_search` reply, counts calls."""
 
     calls: list[dict] = field(default_factory=list)
+    # Each call of the recorded search tool (`index_search`), as posted.
+    search_calls: list[dict] = field(default_factory=list)
     # Read-time access checks (MEDULLA-FEDERATED-QUERY-R703.3): each check the engine
     # posted, and the record refs this gateway answers as denied.
     access_calls: list[dict] = field(default_factory=list)
@@ -204,12 +213,17 @@ def web_gateway() -> Iterator[WebGateway]:
                 self.rfile.read(int(self.headers.get("Content-Length", "0")))
             )
             known = body.get("server") == WEB_SERVER and body.get("tool") == WEB_TOOL
+            searchable = (
+                body.get("server") == SEARCH_SERVER and body.get("tool") == SEARCH_TOOL
+            )
             op = body["op"]
             if op == "declared_arguments":
                 reply: dict[str, Any] = {
                     "arguments": (
                         ["query", "categories", "engines", "language", "pageno"]
                         if known
+                        else ["query", "k", "offset"]
+                        if searchable
                         else None
                     )
                 }
@@ -225,6 +239,17 @@ def web_gateway() -> Iterator[WebGateway]:
                 }
             elif op == "web_capability":
                 reply = {"capability": RECORDED["capability"] if known else None}
+            elif op == "rows" and body["request"]["server"] == SEARCH_SERVER:
+                request = body["request"]
+                gateway.search_calls.append(request)
+                start = int(request["arguments"]["offset"])
+                size = int(request["arguments"]["k"])
+                reply = {
+                    "source_label": request["source_label"],
+                    "rows": SEARCH_HITS[start : start + size],
+                    "truncated": False,
+                    "missing_source": None,
+                }
             else:
                 request = body["request"]
                 gateway.calls.append(request)

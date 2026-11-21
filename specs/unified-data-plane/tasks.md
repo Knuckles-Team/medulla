@@ -99,7 +99,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T089 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 Wiring: the search remote joins the shared fusion
 - [ ] T090 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.4 Refusal: vector-space mismatch, page overflow, invented scores
 - [ ] T091 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.5 Evidence: each fragment receipt names the index request
-- [ ] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 WRITE-TEST: add `tests/federation/search_index_recorded.json` and the `index_search` tool to the `web_gateway` stub, rename the R038.5.1 test, write `test_relevance_pushed_and_k_replenished`
+- [x] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 WRITE-TEST: add `tests/federation/search_index_recorded.json` and the `index_search` tool to the `web_gateway` stub, rename the R038.5.1 test, write `test_relevance_pushed_and_k_replenished`
 - [ ] T093 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 openCypher answers over relational and lake sources through the virtual view, without a copy: Model
 - [ ] T094 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.2 Behavior: compile node and relationship patterns to the virtual SPARQL path
 - [x] T095 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 Wiring: a named view routes the read through view compilation
