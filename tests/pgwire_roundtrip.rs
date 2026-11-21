@@ -3570,3 +3570,59 @@ async fn pg_dump_then_pg_restore_round_trips_two_tables() {
         let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
     }
 }
+
+// spec: MEDULLA-ENGINE-PARITY-R006.3
+/// A prepared point read executed 10,000 times returns the seeded value for every id
+/// and is served from the connection's plan cache: the process counter rises by at
+/// least one hit per execution after the first. The 1 ms p99 budget runs only in the
+/// nightly group `engine_parity/pgwire_prepared_read`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn prepared_point_read_plan_cache_hits() {
+    const ROWS: i64 = 1_000;
+    const EXECUTIONS: i64 = 10_000;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, v BIGINT NOT NULL)"
+        ))
+        .await
+        .expect("CREATE TABLE");
+    for chunk in (0..ROWS).collect::<Vec<_>>().chunks(100) {
+        let values: Vec<String> = chunk
+            .iter()
+            .map(|id| format!("({id}, {})", id * 7 + 3))
+            .collect();
+        client
+            .simple_query(&format!(
+                "INSERT INTO {table} (id, v) VALUES {}",
+                values.join(", ")
+            ))
+            .await
+            .expect("seed rows");
+    }
+
+    let stmt = client
+        .prepare(&format!("SELECT v FROM {table} WHERE id = $1"))
+        .await
+        .expect("prepare the point read once");
+    let hits_before = pgwire::plan_cache_hits();
+    for execution in 0..EXECUTIONS {
+        let id = execution % ROWS;
+        let rows = client
+            .query(&stmt, &[&id])
+            .await
+            .expect("prepared point read");
+        assert_eq!(rows.len(), 1, "id {id} returns one row");
+        assert_eq!(rows[0].get::<_, i64>(0), id * 7 + 3, "value of id {id}");
+    }
+    let hits = pgwire::plan_cache_hits() - hits_before;
+    assert!(
+        hits >= (EXECUTIONS - 1) as u64,
+        "the plan cache served {hits} of {EXECUTIONS} executions"
+    );
+    let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
+}
