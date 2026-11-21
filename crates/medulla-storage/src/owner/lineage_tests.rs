@@ -518,10 +518,12 @@ fn agent_library_before_retry_allowances_is_a_frozen_predecessor() {
 #[test]
 fn graph_shard_before_reservation_tombstone_removal_is_a_frozen_predecessor() {
     let predecessor = &GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL;
-    // Same table names as the current layout: only the reservation row shape moved.
+    // The current table names without the two write-ledger tables added after it: only the
+    // reservation row shape moved.
     assert_eq!(
         predecessor.owner_tables,
-        owner_table_names(OwnerLayout::GraphShard)
+        &owner_table_names(OwnerLayout::GraphShard)
+            [..owner_table_names(OwnerLayout::GraphShard).len() - 2]
     );
     let manifest = predecessor_manifest(predecessor);
     assert_eq!(
@@ -529,6 +531,29 @@ fn graph_shard_before_reservation_tombstone_removal_is_a_frozen_predecessor() {
         GRAPH_SHARD_PRE_RESERVATION_TOMBSTONE_REMOVAL_DIGEST
     );
     assert_ne!(manifest.layout_digest, OwnerLayout::GraphShard.digest());
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
+}
+
+// spec: MEDULLA-IDENTITY-R700.7
+#[test]
+fn graph_shard_before_write_ledger_is_a_frozen_predecessor() {
+    let predecessor = &GRAPH_SHARD_BEFORE_WRITE_LEDGER;
+    // The current census without the ledger and creator tables, which close it.
+    let current = owner_table_names(OwnerLayout::GraphShard);
+    assert_eq!(predecessor.owner_tables, &current[..current.len() - 2]);
+    assert!(!predecessor.owner_tables.contains(&"write_days"));
+    assert!(!predecessor.owner_tables.contains(&"graph_creator"));
+    assert!(current.contains(&"write_days"));
+    assert!(current.contains(&"graph_creator"));
+    assert_ne!(
+        GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST,
+        OwnerLayout::GraphShard.digest()
+    );
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(manifest.layout_digest, GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST);
     let error = validate_against_lineage(&manifest).unwrap_err();
     assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
     assert!(error.contains(predecessor.label));

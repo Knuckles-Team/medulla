@@ -119,6 +119,8 @@ pub use store_types::*;
 pub use unreadable::{NodeUnreadable, UnsealFailure};
 
 pub mod enrichment_budget;
+/// The per-graph write ledger and creator (MEDULLA-IDENTITY-R700.7).
+pub mod write_ledger;
 /// The graph shard as a kernel-owned store (RF-RULING-004 step 8).
 #[cfg(feature = "redb")]
 pub mod shard;

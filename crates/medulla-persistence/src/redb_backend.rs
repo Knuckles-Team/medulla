@@ -71,6 +71,7 @@ mod backend_audit;
 mod backend_archive;
 mod backend_backup;
 mod backend_effect_audit;
+mod backend_write_ledger;
 mod backend_load;
 mod backend_object_root;
 mod backend_open;

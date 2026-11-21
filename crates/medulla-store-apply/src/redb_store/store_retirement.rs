@@ -59,6 +59,7 @@ impl medulla_storage::OwnerPayloadRetirement<GraphShardOwner> for GraphShardReti
         enrichment_budget::retire_graph_rows(write)?;
         work_item_capability::retire_graph_rows(write)?;
         development_lane::retire_graph_rows(write)?;
+        write_ledger::retire_graph_rows(write)?;
         Ok(())
     }
 }

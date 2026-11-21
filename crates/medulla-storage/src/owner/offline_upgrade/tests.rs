@@ -247,6 +247,49 @@ fn graph_shard_upgrade_creates_empty_decision_certificate_table() {
     assert!(ordinary_open(&changed, predecessor.layout).is_err());
 }
 
+// spec: MEDULLA-IDENTITY-R700.7
+#[test]
+fn graph_shard_upgrade_creates_empty_write_ledger_tables() {
+    use crate::owner::graph_shard::{GRAPH_CREATOR, NODES, WRITE_DAYS};
+    use redb::{ReadableDatabase, ReadableTableMetadata};
+
+    let predecessor = &GRAPH_SHARD_BEFORE_WRITE_LEDGER;
+    let upgrade = registered_offline_upgrade(predecessor).expect("a registered upgrade");
+    let directory = private_local_tempdir();
+    let path = directory.path().join("graph-upgrade");
+    create_predecessor_owner_file(&path, identity(), predecessor).unwrap();
+    {
+        let database = redb::Database::open(&path).unwrap();
+        let write = database.begin_write().unwrap();
+        write
+            .open_table(NODES)
+            .unwrap()
+            .insert(("graph-a", "node-a"), b"kept node".as_slice())
+            .unwrap();
+        write.commit().unwrap();
+    }
+    let inspected = upgrade
+        .inspect(&path, identity(), None, options(&path))
+        .unwrap();
+    inspected.apply().unwrap();
+    let database = redb::Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(
+        read.open_table(NODES)
+            .unwrap()
+            .get(("graph-a", "node-a"))
+            .unwrap()
+            .unwrap()
+            .value(),
+        b"kept node"
+    );
+    assert_eq!(read.open_table(WRITE_DAYS).unwrap().len().unwrap(), 0);
+    assert_eq!(read.open_table(GRAPH_CREATOR).unwrap().len().unwrap(), 0);
+    drop(read);
+    drop(database);
+    ordinary_open(&path, predecessor.layout).unwrap();
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
 #[test]
 fn agent_library_upgrade_creates_empty_retry_allowance_table() {

@@ -172,6 +172,16 @@ pub(crate) const EFFECT_RECEIPTS: TableDefinition<'static, (&str, &str, u64), &[
 pub(crate) const ADMITTED_REQUESTS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
     TableDefinition::new("work_item_admitted_requests");
 
+/// Writes per `(graph, principal, day)`, `day` = whole days since the epoch
+/// (MEDULLA-IDENTITY-R700.7). The source of `writes_30d` for the ownership plan.
+pub(crate) const WRITE_DAYS: TableDefinition<'static, (&str, &str, u32), u64> =
+    TableDefinition::new("write_days");
+
+/// The principal that created each graph, keyed by graph name
+/// (MEDULLA-IDENTITY-R700.7).
+pub(crate) const GRAPH_CREATOR: TableDefinition<'static, &str, &str> =
+    TableDefinition::new("graph_creator");
+
 // -- development lane -----------------------------------------------------
 pub(crate) const DEVELOPMENT_LANE_HOLDS: TableDefinition<'static, (&str, &str), &[u8]> =
     TableDefinition::new("development_lane_holds");
@@ -271,6 +281,8 @@ macro_rules! visit_graph_shard_tables {
         $visit!(shard::EFFECT_RECEIPTS);
         $visit!(shard::ADMITTED_REQUESTS);
         $visit!(shard::XSHARD_DECISION_CERTIFICATE);
+        $visit!(shard::WRITE_DAYS);
+        $visit!(shard::GRAPH_CREATOR);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITIES);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITY_INVOCATIONS);
         $visit!(shard::NATIVE_WORK_ITEM_AUTHORITY);
@@ -375,6 +387,8 @@ pub(crate) const GRAPH_SHARD_TABLES: &[&str] = graph_shard_table_names!(
     "work_item_effect_receipts",
     "work_item_admitted_requests",
     "xshard_decision_certificate",
+    "write_days",
+    "graph_creator",
 );
 
 /// The eight tables of the shard's retired private mutation ledger.
@@ -420,7 +434,9 @@ fn key_type_scalar_or_narrow_tuple(name: &str) -> Option<&'static str> {
         | "matview_operator_state"
         | "repository_enrichment_parks"
         | "encryption_canary"
-        | "storage_scrub_cursor" => Some("&str"),
+        | "storage_scrub_cursor"
+        | "graph_creator" => Some("&str"),
+        "write_days" => Some("(&str,&str,u32)"),
         "edges" => Some("(&str,&str,&str,u32)"),
         "ledger" | "audit_chain" | "provenance_anchor_members" | "xshard_prepare" => {
             Some("(&str,u64)")
@@ -484,9 +500,10 @@ fn key_type_wide_tuple(name: &str) -> Option<&'static str> {
 /// Redb value type for one graph-shard table, or `None` when the name is not one.
 pub(crate) fn value_type(name: &str) -> Option<&'static str> {
     match name {
-        "work_item_command_sequence" | "resource_concurrency" | "resource_anti_affinity" => {
-            Some("u64")
-        }
+        "work_item_command_sequence"
+        | "resource_concurrency"
+        | "resource_anti_affinity"
+        | "write_days" => Some("u64"),
         "xshard_decision" | "development_lane_pressure_index" => Some("u8"),
         "ledger"
         | "resource_reservation_tenant_index"
@@ -496,7 +513,8 @@ pub(crate) fn value_type(name: &str) -> Option<&'static str> {
         | "development_lane_lane_index"
         | "development_lane_repository_branch_index"
         | "development_lane_worktree_index"
-        | "development_lane_work_item_index" => Some("&str"),
+        | "development_lane_work_item_index"
+        | "graph_creator" => Some("&str"),
         name if GRAPH_SHARD_TABLES.contains(&name) => Some("&[u8]"),
         _ => None,
     }
@@ -518,7 +536,9 @@ pub(crate) fn logical_codec(name: &str) -> Option<&'static str> {
         | "development_lane_lane_index"
         | "development_lane_repository_branch_index"
         | "development_lane_worktree_index"
-        | "development_lane_work_item_index" => Some("redb-scalar-v1"),
+        | "development_lane_work_item_index"
+        | "write_days"
+        | "graph_creator" => Some("redb-scalar-v1"),
         // Opaque byte payloads the shard never interprets as a document: the
         // audit chain's `prev|entry|line` framing, replicated Raft bytes, and
         // the encryption-key canary.

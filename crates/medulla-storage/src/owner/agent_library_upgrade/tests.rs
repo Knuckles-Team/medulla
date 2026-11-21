@@ -145,6 +145,8 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "work_item_effect_receipts",
             "work_item_admitted_requests",
             "xshard_decision_certificate",
+            "write_days",
+            "graph_creator",
         ],
     },
     GraphGeneration {
@@ -157,6 +159,8 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "work_item_effect_receipts",
             "work_item_admitted_requests",
             "xshard_decision_certificate",
+            "write_days",
+            "graph_creator",
         ],
     },
 ];

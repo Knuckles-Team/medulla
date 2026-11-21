@@ -76,6 +76,8 @@ pub struct GraphLifecycleRequest {
     /// Verified carrier tenant scope (EH-375): part of the durable lifecycle batch id,
     /// so two tenants sharing an agent id + idempotency key never replay each other.
     tenant_scope: String,
+    /// The verified principal, recorded as the graph's creator (MEDULLA-IDENTITY-R700.7).
+    principal: String,
 }
 
 impl GraphLifecycleRequest {
@@ -94,6 +96,7 @@ impl GraphLifecycleRequest {
             attempt_nonce: verified.attempt_nonce(),
             idempotency_key,
             tenant_scope: carrier.tenant_scope().to_string(),
+            principal: verified.principal().to_string(),
         })
     }
 }
@@ -178,6 +181,7 @@ async fn create_declared_graph(
         attempt_nonce,
         idempotency_key,
         tenant_scope,
+        principal,
     } = request;
     // Lifecycle shares the same per-graph serialization lane as ordinary
     // MutationBatch/txn writes.  The durable identity must land before the
@@ -248,6 +252,26 @@ async fn create_declared_graph(
         );
     }
     let graph_fname = medulla_kernel::persist::sanitize(&graph_name);
+    // The creator is recorded before the committed version is read: the record is a durable
+    // commit in the graph's scope, and the registry must publish the version that includes it.
+    #[cfg(feature = "redb")]
+    {
+        use medulla_persistence::AsRedb;
+        if let Some(redb) = backend.as_redb() {
+            if let Err(error) = redb.record_graph_creator(&graph_fname, &principal).await {
+                return Response::err(
+                    req_id,
+                    medulla_protocol_types::error_registry::classify_refusal(
+                        "INTERNAL",
+                        "durable graph creator record failed: ",
+                        &error,
+                    ),
+                );
+            }
+        }
+    }
+    #[cfg(not(feature = "redb"))]
+    let _ = &principal;
     let committed_version = match read_committed_graph_version(&backend, &graph_fname, req_id).await
     {
         Ok(version) => version,
@@ -382,6 +406,7 @@ async fn delete_declared_graph(
         attempt_nonce,
         idempotency_key,
         tenant_scope,
+        principal: _,
     } = request;
     // Fence gateway/txn writes for this graph across durable purge and RAM
     // teardown.  A retry after a crash at that boundary reconciles from the

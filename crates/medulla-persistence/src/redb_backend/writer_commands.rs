@@ -131,6 +131,35 @@ macro_rules! writer_command_arms {
             let _ = reply.send(result);
             false
         }
+        Cmd::WriteDayBump {
+            graph,
+            principal,
+            day,
+            reply,
+        } => {
+            flush(pending);
+            let result = in_graph_write(shard, &graph, "write_day_bump", |write| {
+                medulla_store::redb_store::write_ledger::bump_write_day(
+                    write, &graph, &principal, day,
+                )
+            });
+            let _ = reply.send(result);
+            false
+        }
+        Cmd::RecordGraphCreator {
+            graph,
+            principal,
+            reply,
+        } => {
+            flush(pending);
+            let result = in_graph_write(shard, &graph, "record_graph_creator", |write| {
+                medulla_store::redb_store::write_ledger::record_graph_creator(
+                    write, &graph, &principal,
+                )
+            });
+            let _ = reply.send(result);
+            false
+        }
         #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
         Cmd::TestTamperAudit { graph, seq, reply } => {
             flush(pending);

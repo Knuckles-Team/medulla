@@ -190,6 +190,20 @@ pub enum Cmd {
             Result<medulla_protocol_types::protocol::AuditAppendReceipt, String>,
         >,
     },
+    /// Add one write of `principal` on `day` to the graph's write ledger
+    /// (MEDULLA-IDENTITY-R700.7).
+    WriteDayBump {
+        graph: String,
+        principal: String,
+        day: u32,
+        reply: std::sync::mpsc::SyncSender<Result<(), String>>,
+    },
+    /// Record the creator of the graph when it has none (MEDULLA-IDENTITY-R700.7).
+    RecordGraphCreator {
+        graph: String,
+        principal: String,
+        reply: std::sync::mpsc::SyncSender<Result<(), String>>,
+    },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
     #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
     TestTamperAudit {

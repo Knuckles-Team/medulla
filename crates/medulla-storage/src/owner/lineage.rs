@@ -548,6 +548,36 @@ pub(crate) fn frozen_reservation_revision(predecessor: &LayoutPredecessor) -> u3
     }
 }
 
+// Frozen census of the last layout before the per-graph write ledger and creator tables
+// (MEDULLA-IDENTITY-R700.7).
+const GRAPH_SHARD_TABLES_BEFORE_WRITE_LEDGER: &[&str] = super::graph_shard::graph_shard_table_names!(
+    "repository_enrichment_budgets",
+    "repository_enrichment_policy_revisions",
+    "repository_enrichment_supersessions",
+    "repository_enrichment_parks",
+    "audit_requests",
+    "work_item_current_plans",
+    "work_item_run_checkpoints",
+    "work_item_effect_receipts",
+    "work_item_admitted_requests",
+    "xshard_decision_certificate",
+);
+/// The `c613...` digest every graph shard carried before the write ledger: the GraphShard pin of
+/// the parent commit.
+pub const GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST: [u8; 32] = [
+    0xc6, 0x13, 0xd4, 0x8a, 0xf8, 0x64, 0x9e, 0x05, 0xa3, 0xa0, 0x73, 0x7c, 0xe6, 0xab, 0xa8, 0xd4,
+    0xed, 0xd5, 0x8c, 0x88, 0xc0, 0xca, 0x24, 0x4d, 0x05, 0xfc, 0x11, 0xdd, 0x9e, 0xdc, 0x52, 0xa5,
+];
+/// A graph shard file from before the write ledger. The offline upgrade creates both tables
+/// empty.
+pub const GRAPH_SHARD_BEFORE_WRITE_LEDGER: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::GraphShard,
+    label: "graph shard before the per-graph write ledger and creator tables",
+    owner_tables: GRAPH_SHARD_TABLES_BEFORE_WRITE_LEDGER,
+    data_lost: "none; run `store-upgrade` (the explicit offline layout upgrade). Normal open refuses this predecessor.",
+    file_name: "graph-*.redb",
+};
+
 /// Earlier graph-shard layout before the node-payload scrub cursor (EH-384).
 const GRAPH_SHARD_TABLES_BEFORE_STORAGE_SCRUB: &[&str] = GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT
     .split_at(GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT.len() - 1)
@@ -839,6 +869,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
             GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
             GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
+            GRAPH_SHARD_BEFORE_WRITE_LEDGER,
         ],
     }
 }
@@ -911,6 +942,10 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         OwnerLayout::ClusterHierarchy => {
             "0561a2a2ae13f067bf01a4c94d6cbaeb280aaefa56c68036a1f01da92cba8431"
         }
+        // LAYOUT-REGEN needed: the compiled GraphShard digest changed with `write_days` and
+        // `graph_creator` (MEDULLA-IDENTITY-R700.7); the gate fixer runs the digest-printing test
+        // and replaces this pin. The previous pin lives on as
+        // `GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST`.
         OwnerLayout::GraphShard => {
             "c613d48af8649e05a3a0737ce6aba8d4edd58c88c0ca244d05fc11dd9edc52a5"
         }

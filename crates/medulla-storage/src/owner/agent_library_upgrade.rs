@@ -142,6 +142,8 @@ pub enum GraphShardSource {
     BeforeDecisionCertificates,
     /// Before the reservation record lost its `tombstone` field (MEDULLA-PLACEMENT-R781.4).
     BeforeReservationTombstoneRemoval,
+    /// Before the per-graph write ledger and creator tables (MEDULLA-IDENTITY-R700.7).
+    BeforeWriteLedger,
 }
 
 impl GraphShardSource {
@@ -174,6 +176,10 @@ impl GraphShardSource {
             Self::BeforeReservationTombstoneRemoval => (
                 &super::lineage::GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
                 super::lineage::GRAPH_SHARD_PRE_RESERVATION_TOMBSTONE_REMOVAL_DIGEST,
+            ),
+            Self::BeforeWriteLedger => (
+                &super::lineage::GRAPH_SHARD_BEFORE_WRITE_LEDGER,
+                super::lineage::GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST,
             ),
         }
     }
