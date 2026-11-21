@@ -130,6 +130,9 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        record @ AgentComponentOp::RecordSourceEffect { .. } => {
+            component_record_source_effect(&store, req_id, &record)
+        }
         AgentComponentOp::ExportBlueprint { request } => {
             super::component_content::serve_blueprint_export(
                 state, &store, req_id, verified, request,
@@ -139,6 +142,28 @@ pub async fn handle_agent_component(
         AgentComponentOp::AdmitSkillUpgrade { request } => {
             super::skill_admission::handle_admit_skill_upgrade(&store, req_id, request)
         }
+    }
+}
+
+/// `AgentComponent.record_source_effect`: keep the receipt of an approved
+/// repository-source effect on the revision it exported (MEDULLA-TYPED-PACKS-R094.8).
+#[cfg(feature = "redb")]
+fn component_record_source_effect(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    req_id: u64,
+    op: &medulla_agent_types::agent_component::AgentComponentOp,
+) -> Response {
+    let Some(receipt) = op.source_effect_receipt() else {
+        return Response::err(req_id, "INVALID_ARGUMENT: not a source-effect receipt");
+    };
+    match store.record_source_effect(&receipt) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentRecordSourceEffect,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
     }
 }
 

@@ -28,9 +28,11 @@ from .agent_component import (
     AgentComponentOpCurrent,
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
+    AgentComponentOpRecordSourceEffect,
     BlueprintExport,
     SkillAdmission,
     SkillAdmissionRequest,
+    SourceEffectRecordResult,
 )
 from .concept_lineage import (
     ConceptEdgeRecord,
@@ -596,6 +598,27 @@ async def send_agent_component_export_blueprint(
         idempotency_key=idempotency_key,
     )
     return BlueprintExport.model_validate(payload)
+
+
+async def send_agent_component_record_source_effect(
+    client: Any,
+    request: AgentComponentOpRecordSourceEffect,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> SourceEffectRecordResult:
+    """Send typed AgentComponent.record_source_effect."""
+    request = AgentComponentOpRecordSourceEffect.model_validate(request)
+    params = {
+        "op": request.model_dump(mode="json", exclude_unset=True, exclude_none=True),
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return SourceEffectRecordResult.model_validate(payload)
 
 
 async def send_agent_component_current(

@@ -55,6 +55,7 @@ pub mod input_capabilities;
 pub mod red_team;
 pub mod search;
 pub mod skill_admission;
+pub mod source_effect;
 
 mod validation;
 
@@ -73,6 +74,10 @@ pub use input_capabilities::{ModelInputCapabilities, ModelInputMediaType};
 pub use search::{
     decode_search_cursor, encode_search_cursor, AgentComponentSearchPage,
     AgentComponentSearchRequest, AgentComponentStatusRequest,
+};
+pub use source_effect::{
+    SourceEffectReceipt, SourceEffectRecordResult, RECEIPT_DIGEST_INVALID, RECEIPT_DIGEST_REUSED,
+    RECEIPT_REVISION_UNKNOWN,
 };
 pub use skill_admission::{
     SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire, MAX_SKILL_ADMISSION_COHORT,
@@ -1370,13 +1375,28 @@ pub enum AgentComponentOp {
     ExportBlueprint {
         request: AgentComponentBlueprintExportRequest,
     },
+    /// Record the receipt of an approved repository-source effect on the component
+    /// revision it exported (MEDULLA-TYPED-PACKS-R094.8).
+    RecordSourceEffect {
+        tenant_id: String,
+        component_id: String,
+        revision: u64,
+        repository: String,
+        path: String,
+        effect_revision: String,
+        request_digest: String,
+        receipt_digest: String,
+    },
 }
 
 impl AgentComponentOp {
     pub fn is_mutation(&self) -> bool {
         matches!(
             self,
-            Self::Publish { .. } | Self::Retire { .. } | Self::AdmitSkillUpgrade { .. }
+            Self::Publish { .. }
+                | Self::Retire { .. }
+                | Self::AdmitSkillUpgrade { .. }
+                | Self::RecordSourceEffect { .. }
         )
     }
 
@@ -1388,7 +1408,9 @@ impl AgentComponentOp {
     pub fn authz_action(&self) -> &'static str {
         match self {
             Self::Publish { request } => request.component.kind.publish_authz_action(),
-            Self::Retire { .. } | Self::AdmitSkillUpgrade { .. } => "agent:component-write",
+            Self::Retire { .. }
+            | Self::AdmitSkillUpgrade { .. }
+            | Self::RecordSourceEffect { .. } => "agent:component-write",
             Self::Current { .. }
             | Self::History { .. }
             | Self::Status { .. }
@@ -1400,6 +1422,32 @@ impl AgentComponentOp {
 
     pub fn tenant_id(&self) -> &str {
         component_op_tenant_id(self)
+    }
+
+    /// The receipt a `RecordSourceEffect` carries, as the one stored shape.
+    pub fn source_effect_receipt(&self) -> Option<SourceEffectReceipt> {
+        match self {
+            Self::RecordSourceEffect {
+                tenant_id,
+                component_id,
+                revision,
+                repository,
+                path,
+                effect_revision,
+                request_digest,
+                receipt_digest,
+            } => Some(SourceEffectReceipt {
+                tenant_id: tenant_id.clone(),
+                component_id: component_id.clone(),
+                revision: *revision,
+                repository: repository.clone(),
+                path: path.clone(),
+                effect_revision: effect_revision.clone(),
+                request_digest: request_digest.clone(),
+                receipt_digest: receipt_digest.clone(),
+            }),
+            _ => None,
+        }
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -1420,6 +1468,10 @@ impl AgentComponentOp {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)
             }
+            Self::RecordSourceEffect { .. } => match self.source_effect_receipt() {
+                Some(receipt) => receipt.validate(),
+                None => Ok(()),
+            },
             Self::ExportBlueprint { request } => {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)?;
@@ -1461,6 +1513,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Search { request } => &request.tenant_id,
         AgentComponentOp::Content { request } => &request.tenant_id,
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
+        AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,
         AgentComponentOp::AdmitSkillUpgrade { request } => &request.tenant_id,
         AgentComponentOp::Current { tenant_id, .. }
         | AgentComponentOp::History { tenant_id, .. } => tenant_id,

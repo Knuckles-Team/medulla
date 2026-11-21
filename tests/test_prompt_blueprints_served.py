@@ -26,6 +26,7 @@ from medulla import ConnectorPackEntryContent  # noqa: E402
 from medulla.client import EngineResponseError, MedullaClient  # noqa: E402
 from medulla.generated.agent_component import (  # noqa: E402
     AgentComponentBlueprintExportRequest,
+    AgentComponentOpRecordSourceEffect,
 )
 from medulla.generated.connector_pack import (  # noqa: E402
     PackAnnotations,
@@ -33,6 +34,7 @@ from medulla.generated.connector_pack import (  # noqa: E402
 )
 from medulla.generated.storage import (  # noqa: E402
     send_agent_component_export_blueprint,
+    send_agent_component_record_source_effect,
 )
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "blueprint" / "lossless.json"
@@ -104,5 +106,65 @@ async def test_lossless_blueprint_export() -> None:
             await _export(client, component_id, 99)
         with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
             await _export(client, component_id, 1, tenant="tenant-other")
+    finally:
+        await client.close()
+
+
+def _effect(
+    component_id: str, revision: int, receipt_digest: str, **override: Any
+) -> AgentComponentOpRecordSourceEffect:
+    fields: dict[str, Any] = {
+        "op": "record_source_effect",
+        "tenant_id": TEST_TENANT,
+        "component_id": component_id,
+        "revision": revision,
+        "repository": "prompt-repository",
+        "path": "prompts/lossless.json",
+        "effect_revision": "c0ffee1",
+        "request_digest": hashlib.sha256(b"request").hexdigest(),
+        "receipt_digest": receipt_digest,
+    }
+    fields.update(override)
+    return AgentComponentOpRecordSourceEffect(**fields)
+
+
+async def _record(client: MedullaClient, effect: AgentComponentOpRecordSourceEffect):
+    return await send_agent_component_record_source_effect(
+        client, effect, idempotency_key=f"source-effect-{uuid.uuid4().hex}"
+    )
+
+
+# spec: MEDULLA-TYPED-PACKS-R094.8
+@pytest.mark.asyncio
+async def test_source_effect_receipt_is_recorded_once() -> None:
+    connector = f"blueprint-{uuid.uuid4().hex[:10]}"
+    name = "effect-prompt"
+    client = await connect()
+    try:
+        await _import_prompt(client, connector, name)
+        component_id = _component_id(connector, name)
+        digest = hashlib.sha256(b"receipt").hexdigest()
+
+        first = await _record(client, _effect(component_id, 1, digest))
+        assert first.recorded is True
+        assert first.receipt_digest == digest
+        # The same receipt again writes nothing.
+        replay = await _record(client, _effect(component_id, 1, digest))
+        assert replay.recorded is False
+
+        # The same digest with other bytes refuses by name.
+        with pytest.raises(EngineResponseError, match="RECEIPT_DIGEST_REUSED"):
+            await _record(
+                client, _effect(component_id, 1, digest, path="prompts/other.json")
+            )
+        with pytest.raises(EngineResponseError, match="RECEIPT_REVISION_UNKNOWN"):
+            await _record(client, _effect(component_id, 99, digest))
+        with pytest.raises(EngineResponseError, match="RECEIPT_DIGEST_INVALID"):
+            await _record(client, _effect(component_id, 1, "NOT-A-DIGEST"))
+        # A cross-tenant caller refuses.
+        with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+            await _record(
+                client, _effect(component_id, 1, digest, tenant_id="tenant-other")
+            )
     finally:
         await client.close()

@@ -121,6 +121,12 @@ closed_error_codes! {
         NutrientIdUnmapped => "NUTRIENT_ID_UNMAPPED",
         /// The tenant has no such revision of the component (MEDULLA-TYPED-PACKS-R094.2).
         ComponentRevisionUnknown => "COMPONENT_REVISION_UNKNOWN",
+        /// A source-effect digest is not SHA-256 lowercase hex (MEDULLA-TYPED-PACKS-R094.8).
+        ReceiptDigestInvalid => "RECEIPT_DIGEST_INVALID",
+        /// The receipt digest is already recorded with other bytes (MEDULLA-TYPED-PACKS-R094.8).
+        ReceiptDigestReused => "RECEIPT_DIGEST_REUSED",
+        /// The component has no such revision to record a receipt on (MEDULLA-TYPED-PACKS-R094.8).
+        ReceiptRevisionUnknown => "RECEIPT_REVISION_UNKNOWN",
         ComponentBodyUnavailable => "COMPONENT_BODY_UNAVAILABLE",
         ComponentWithdrawn => "COMPONENT_WITHDRAWN",
         MemsyncContentMalformed => "MEMSYNC_CONTENT_MALFORMED",

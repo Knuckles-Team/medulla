@@ -65,6 +65,78 @@ impl AgentLibraryStore {
         )
     }
 
+    /// Record a source-effect receipt on one committed component revision
+    /// (MEDULLA-TYPED-PACKS-R094.8).
+    ///
+    /// The fact lives in the tenant-scoped write-back idempotency table, keyed by
+    /// component, revision and receipt digest, so no table or layout changes. The
+    /// same receipt again writes nothing; the same digest with other bytes refuses
+    /// with `RECEIPT_DIGEST_REUSED`.
+    pub fn record_source_effect(
+        &self,
+        receipt: &medulla_agent_types::agent_component::SourceEffectReceipt,
+    ) -> Result<medulla_agent_types::agent_component::SourceEffectRecordResult, String> {
+        use medulla_agent_types::agent_component::{
+            SourceEffectRecordResult, RECEIPT_DIGEST_REUSED, RECEIPT_REVISION_UNKNOWN,
+        };
+        receipt.validate()?;
+        medulla_agent_types::agent_library::validate_key(
+            &receipt.tenant_id,
+            &receipt.component_id,
+        )?;
+        let revision_exists = {
+            let read = self.read()?;
+            let revisions = read.open_owner_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
+            let found = revisions
+                .get((
+                    receipt.tenant_id.as_str(),
+                    receipt.component_id.as_str(),
+                    receipt.revision,
+                ))
+                .map_err(|error| error.to_string())?
+                .is_some();
+            found
+        };
+        if !revision_exists {
+            return Err(format!(
+                "{RECEIPT_REVISION_UNKNOWN}: the tenant has no such revision of the component"
+            ));
+        }
+        let encoded = rmp_serde::to_vec_named(receipt).map_err(|error| error.to_string())?;
+        let key = receipt.key();
+        let mut recorded = false;
+        self.maintain_control_rows(
+            &receipt.tenant_id,
+            "agent_component_source_effect",
+            |owner| {
+                let mut table = owner.open_table(medulla_storage::WRITE_BACK_IDEMPOTENCY)?;
+                let existing = table
+                    .get((receipt.tenant_id.as_str(), key.as_str()))
+                    .map_err(|error| error.to_string())?
+                    .map(|row| row.value().to_vec());
+                match existing {
+                    Some(stored) if stored == encoded => Ok(()),
+                    Some(_) => Err(format!(
+                        "{RECEIPT_DIGEST_REUSED}: the receipt digest is recorded with other bytes"
+                    )),
+                    None => {
+                        table
+                            .insert((receipt.tenant_id.as_str(), key.as_str()), encoded.as_slice())
+                            .map_err(|error| error.to_string())?;
+                        recorded = true;
+                        Ok(())
+                    }
+                }
+            },
+        )?;
+        Ok(SourceEffectRecordResult {
+            component_id: receipt.component_id.clone(),
+            revision: receipt.revision,
+            receipt_digest: receipt.receipt_digest.clone(),
+            recorded,
+        })
+    }
+
     /// Retain the current component revision as a durable tombstone.
     pub fn retire_component(
         &self,

@@ -9,6 +9,7 @@ use crate::storage_wire::{
 };
 use medulla_agent_types::agent_component::AgentComponentCommittedResult;
 use medulla_agent_types::agent_component::BlueprintExport;
+use medulla_agent_types::agent_component::SourceEffectRecordResult;
 use medulla_agent_types::agent_component::AgentComponentContentResult;
 use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_agent_types::agent_component::AgentComponentSearchPage;
@@ -109,6 +110,7 @@ method_results! {
     SqlSourceBatch(SqlSourceBatch) => Raw<SqlSourceBatchResult>;
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
     AgentComponentBlueprintExport(AgentComponent / "export_blueprint") => Raw<BlueprintExport>;
+    AgentComponentRecordSourceEffect(AgentComponent / "record_source_effect") => Raw<SourceEffectRecordResult>;
     AgentComponentAdmitSkillUpgrade(AgentComponent / "admit_skill_upgrade") => Raw<SkillAdmission>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;
     CapabilityCoverage(CapabilityCoverage) => Raw<CapabilityCoverageResult>;

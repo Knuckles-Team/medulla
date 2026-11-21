@@ -103,6 +103,15 @@ class BlueprintExport(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
+class SourceEffectRecordResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    receipt_digest: str
+    recorded: bool
+    revision: Annotated[int, Field(ge=0)]
+
+
 class AgentComponentDraft(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -240,6 +249,20 @@ class AgentComponentOpExportBlueprint(BaseModel):
     request: AgentComponentBlueprintExportRequest
 
 
+class AgentComponentOpRecordSourceEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    effect_revision: str
+    op: Literal["record_source_effect"]
+    path: str
+    receipt_digest: str
+    repository: str
+    request_digest: str
+    revision: Annotated[int, Field(ge=0)]
+    tenant_id: str
+
+
 AgentComponentOp = Annotated[
     AgentComponentOpPublish
     | AgentComponentOpRetire
@@ -249,7 +272,8 @@ AgentComponentOp = Annotated[
     | AgentComponentOpSearch
     | AgentComponentOpContent
     | AgentComponentOpAdmitSkillUpgrade
-    | AgentComponentOpExportBlueprint,
+    | AgentComponentOpExportBlueprint
+    | AgentComponentOpRecordSourceEffect,
     Field(discriminator="op"),
 ]
 
@@ -326,6 +350,10 @@ AgentComponentOpAdmitSkillUpgrade.model_rebuild()
 
 AgentComponentOpExportBlueprint.model_rebuild()
 
+AgentComponentOpRecordSourceEffect.model_rebuild()
+
+SourceEffectRecordResult.model_rebuild()
+
 SkillContractFieldWire.model_rebuild()
 
 SkillMigrationWire.model_rebuild()
@@ -346,6 +374,8 @@ AgentComponentStatusRequest.model_rebuild()
 
 
 __all__ = [
+    "AgentComponentOpRecordSourceEffect",
+    "SourceEffectRecordResult",
     "AgentComponentBlueprintExportRequest",
     "AgentComponentOpExportBlueprint",
     "BlueprintExport",
