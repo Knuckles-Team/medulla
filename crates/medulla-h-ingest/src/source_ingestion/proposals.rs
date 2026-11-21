@@ -84,6 +84,72 @@ pub fn proposal_node_id(proposal_id: &str) -> String {
     format!("ontology_proposal:{proposal_id}")
 }
 
+/// The proposal and class an `ontology_class` of the form `proposal:<proposal_id>#<class_name>`
+/// names (MEDULLA-INGEST-WORKER-R002.7). Both parts must be non-empty; the split is at the
+/// first `#`.
+pub fn proposal_class(ontology_class: &str) -> Option<(&str, &str)> {
+    let (proposal_id, class_name) = ontology_class.strip_prefix("proposal:")?.split_once('#')?;
+    (!proposal_id.is_empty() && !class_name.is_empty()).then_some((proposal_id, class_name))
+}
+
+/// Refuse the whole batch when a resolved entity mapping names a proposed class whose
+/// proposal is absent, is not `admitted` or does not declare the class: instances populate
+/// only against admitted proposals, and nothing is written.
+pub(super) async fn gate_proposal_classes(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    resolved: &super::ResolvedIngestionMappings,
+) -> Result<(), String> {
+    let mut named: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
+    for mapping in resolved.entities.values() {
+        if let Some((proposal_id, class_name)) =
+            proposal_class(&mapping.schema_mapping.ontology_class)
+        {
+            named.insert((proposal_id.to_string(), class_name.to_string()));
+        }
+    }
+    let refuse = |proposal_id: &str, class_name: &str| {
+        format!(
+            "{}: {proposal_id}#{class_name}",
+            ServerErrorCode::ProposalNotAdmitted.as_str()
+        )
+    };
+    let mut held: std::collections::BTreeMap<String, Option<serde_json::Value>> =
+        std::collections::BTreeMap::new();
+    for (proposal_id, class_name) in &named {
+        if !held.contains_key(proposal_id) {
+            let value = match persistence
+                .read_node(graph_fname, &proposal_node_id(proposal_id))
+                .await?
+            {
+                Some(bytes) => Some(
+                    rmp_serde::from_slice::<serde_json::Value>(&bytes)
+                        .map_err(|error| invalid(format!("held proposal: {error}")))?,
+                ),
+                None => None,
+            };
+            held.insert(proposal_id.clone(), value);
+        }
+        let admitted = held
+            .get(proposal_id)
+            .and_then(Option::as_ref)
+            .is_some_and(|node| {
+                node["state"].as_str() == Some("admitted")
+                    && node["proposal"]["classes"]
+                        .as_array()
+                        .is_some_and(|classes| {
+                            classes
+                                .iter()
+                                .any(|class| class["name"].as_str() == Some(class_name.as_str()))
+                        })
+            });
+        if !admitted {
+            return Err(refuse(proposal_id, class_name));
+        }
+    }
+    Ok(())
+}
+
 /// Judge each submission and compile its node write.
 pub fn admit_proposals(
     submissions: &[ProposalSubmission],
@@ -146,6 +212,16 @@ mod tests {
             "observed_terms": observed,
         });
         serde_json::from_value(json).unwrap()
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R002.7
+    #[test]
+    fn a_proposed_class_parses_only_in_its_one_form() {
+        assert_eq!(proposal_class("proposal:p1#Thing"), Some(("p1", "Thing")));
+        assert_eq!(proposal_class("proposal:p#1#Thing"), Some(("p", "1#Thing")));
+        for plain in ["Document", ":Document", "proposal:#Thing", "proposal:p1#", "proposal:p1"] {
+            assert_eq!(proposal_class(plain), None, "{plain}");
+        }
     }
 
     // spec: MEDULLA-INGEST-WORKER-R002.3

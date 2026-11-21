@@ -882,6 +882,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "SourceIngest",
         &[
             "FORECAST_SAMPLE_INVALID",
+            // MEDULLA-INGEST-WORKER-R002.7.
+            "PROPOSAL_NOT_ADMITTED",
             "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",
             "TRANSCRIPT_FOREIGN_CONCEPT",
             "TRANSCRIPT_INVALID",

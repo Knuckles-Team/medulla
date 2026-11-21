@@ -359,6 +359,8 @@ closed_error_codes! {
         GeoCrsUnsupported => "GEO_CRS_UNSUPPORTED",
         GeoLiteralInvalid => "GEO_LITERAL_INVALID",
         GoalTargetRequired => "GOAL_TARGET_REQUIRED",
+        /// MEDULLA-INGEST-WORKER-R002.7: instances name a proposal that is absent, still a draft, or does not declare the class.
+        ProposalNotAdmitted => "PROPOSAL_NOT_ADMITTED",
         /// MEDULLA-SDLC-R017.2: a proposal names a kind outside the closed set.
         ProposalKindUnknown => "PROPOSAL_KIND_UNKNOWN",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",

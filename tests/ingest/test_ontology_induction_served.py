@@ -8,15 +8,27 @@ so the scores read back unchanged.
 
 from __future__ import annotations
 
+import json
+import os
+import sys
 import uuid
+from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import request_context
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
+from ontology_pack_support import connect, import_entries
+
+from medulla import ConnectorPackEntryContent
+from medulla.client import MedullaClient
+from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 from medulla.generated.source_ingestion import SourceIngestionDisposition
 
 from .test_source_stream_versions_served import (
     STREAM,
+    _batch as _records_batch,
     _close,
     _connector,
     _ingest_client,
@@ -95,5 +107,71 @@ async def test_receipt_reports_scores_and_replays() -> None:
         assert replay.receipt_id == first.receipt_id
         again = await client.nodes.properties(first.receipt_id)
         assert _proposals_of(again) == items
+    finally:
+        await _close(client, graph)
+
+
+def _proposal_declaration(connector: str, proposal_id: str) -> ConnectorPackEntryContent:
+    body = {
+        "connector": connector,
+        "schema_mappings": {
+            "item": {
+                "fields": {"id": "identifier", "name": "label"},
+                # A pack names a proposed class as proposal:<id>#<class>.
+                "ontology_class": f"proposal:{proposal_id}#Thing",
+            }
+        },
+        "sources": [],
+    }
+    return ConnectorPackEntryContent(
+        kind=PackEntryKind.RESOURCE,
+        uri="connector://resources",
+        output_schema=b'{"type":"object"}',
+        name="connector-resources",
+        media_type="application/json",
+        body=json.dumps(body).encode(),
+        annotations=PackAnnotations(),
+    )
+
+
+async def _proposal_client(connector: str, proposal_id: str) -> tuple[MedullaClient, str]:
+    admin = await connect()
+    graph = f"induction-{uuid.uuid4().hex[:8]}"
+    try:
+        await import_entries(
+            admin, connector, [_proposal_declaration(connector, proposal_id)]
+        )
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    return client, graph
+
+
+# spec: MEDULLA-INGEST-WORKER-R002.7
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.7")
+@pytest.mark.asyncio
+async def test_draft_proposal_takes_no_instances() -> None:
+    connector = _connector()
+    proposal_id = f"p-{uuid.uuid4().hex[:8]}"
+    client, graph = await _proposal_client(connector, proposal_id)
+    try:
+        # The proposal does not exist yet: the records batch refuses and writes nothing.
+        records = _records_batch(connector, 2, None, "first")
+        with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
+            await _submit(client, records, "absent")
+
+        # A draft proposal takes no instances either.
+        draft = _batch(
+            connector, [_submission(proposal_id, ["name"], ["name", "age", "city", "zip"])]
+        )
+        await _submit(client, draft, "draft")
+        with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
+            await _submit(client, records, "draft-instances")
+        assert list(await client.nodes.list_by_label("Thing", 0)) == []
     finally:
         await _close(client, graph)

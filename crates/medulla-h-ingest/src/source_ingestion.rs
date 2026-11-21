@@ -294,6 +294,8 @@ pub async fn prepare(
     let resources = load_resources(&ctx).await?;
     authorize_empty_reconciliation(&ctx, batch)?;
     let resolved = resolve_mappings(&ctx, batch, &resources)?;
+    // Instances populate only against admitted proposals (MEDULLA-INGEST-WORKER-R002.7).
+    proposals::gate_proposal_classes(persistence.as_ref(), &graph_fname, &resolved).await?;
     // Document-class records normalize against the one mapping snapshot, before any
     // reconciliation or admission (MEDULLA-INGEST-WORKER-R003.9).
     let layout = documents::lsh_layout()?;
@@ -3277,6 +3279,10 @@ fn mapped_properties(
     if ontology_class.is_empty() {
         return Err("CONNECTOR_SCHEMA_MAPPING_INVALID: ontology_class is empty".into());
     }
+    // A proposed class (`proposal:<id>#<name>`) is stored under its own class name.
+    let ontology_class = proposals::proposal_class(ontology_class)
+        .map(|(_, class_name)| class_name)
+        .unwrap_or(ontology_class);
     let payload = record.payload.value()?;
     let source = payload
         .as_object()
