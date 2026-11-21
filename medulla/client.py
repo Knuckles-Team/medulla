@@ -2746,6 +2746,33 @@ class EngineResponseError(RuntimeError):
         super().__init__(f"{code}: {detail}" if detail else code)
 
 
+class TransitionRefusedError(EngineResponseError):
+    """Raised when a state machine refuses an event (``TRANSITION_REFUSED``).
+
+    Carries the four fields of the typed refusal record
+    (MEDULLA-ORCH-VOCAB-R811.9): the ``machine`` instance name, the stored text
+    of the state it was in (``from_state``), the ``event`` name and the closed
+    ``reason`` (``illegal_transition``, ``guard_failed``, ``terminal_state`` or
+    ``unknown_event``).
+    """
+
+    def __init__(
+        self,
+        code: str,
+        detail: str | None,
+        *,
+        machine: str,
+        from_state: str,
+        event: str,
+        reason: str,
+    ) -> None:
+        super().__init__(code, detail)
+        self.machine = machine
+        self.from_state = from_state
+        self.event = event
+        self.reason = reason
+
+
 class ResultTooLargeError(EngineResponseError):
     """Raised when an unbounded read (e.g. ``nodes.list()`` / ``GetNodes``) would
     return more than the engine's configured node cap
@@ -11705,6 +11732,20 @@ def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
     # caller can fall back to a bounded query without string-matching.
     if code == "RESULT_TOO_LARGE":
         raise ResultTooLargeError(code, error_detail)
+    refused = resp.get("transition_refused")
+    if code == "TRANSITION_REFUSED" and isinstance(refused, dict):
+        fields = {
+            key: refused.get(key) for key in ("machine", "from", "event", "reason")
+        }
+        if all(isinstance(value, str) for value in fields.values()):
+            raise TransitionRefusedError(
+                code,
+                error_detail,
+                machine=fields["machine"],
+                from_state=fields["from"],
+                event=fields["event"],
+                reason=fields["reason"],
+            )
     raise EngineResponseError(code, error_detail)
 
 

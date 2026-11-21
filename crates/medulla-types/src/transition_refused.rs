@@ -79,6 +79,25 @@ impl TransitionRefused {
     pub fn code(&self) -> ServerErrorCode {
         ServerErrorCode::TransitionRefused
     }
+
+    /// The record of a refusal detail: the exact inverse of the `Display` text after its
+    /// code, `{machine} refused '{event}' from '{from}' ({reason})`. `None` when the text is
+    /// not that shape or names a reason outside the closed set.
+    pub fn from_detail(detail: &str) -> Option<Self> {
+        let (head, reason) = detail.strip_suffix(')')?.rsplit_once(" (")?;
+        let reason = TransitionRefusalReason::ALL
+            .into_iter()
+            .find(|candidate| candidate.as_str() == reason)?;
+        let (machine, rest) = head.split_once(" refused '")?;
+        let (event, from) = rest.split_once("' from '")?;
+        let from = from.strip_suffix('\'')?;
+        Some(Self {
+            machine: machine.to_string(),
+            from: from.to_string(),
+            event: event.to_string(),
+            reason,
+        })
+    }
 }
 
 /// The wire form: the record plus its fixed `code` key.
@@ -317,6 +336,29 @@ mod tests {
             },
         ],
     };
+
+    // spec: MEDULLA-ORCH-VOCAB-R811.9
+    #[test]
+    fn display_and_from_detail_round_trip() {
+        for reason in TransitionRefusalReason::ALL {
+            let refused = TransitionRefused {
+                machine: "IncidentRecordMachine".into(),
+                from: "open".into(),
+                event: "resolve".into(),
+                reason,
+            };
+            let text = refused.to_string();
+            let detail = text
+                .strip_prefix("TRANSITION_REFUSED: ")
+                .expect("the display text starts with the code");
+            assert_eq!(TransitionRefused::from_detail(detail), Some(refused));
+        }
+        assert_eq!(TransitionRefused::from_detail("not a refusal"), None);
+        assert_eq!(
+            TransitionRefused::from_detail("M refused 'e' from 's' (no_such_reason)"),
+            None
+        );
+    }
 
     // spec: MEDULLA-ORCH-VOCAB-R811.4
     #[test]

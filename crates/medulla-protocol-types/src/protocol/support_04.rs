@@ -123,6 +123,10 @@ pub struct Response {
     /// Human-readable detail for a declared error code.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_detail: Option<String>,
+    /// The four fields of a refused state-machine transition
+    /// (MEDULLA-ORCH-VOCAB-R811.9). Present only when `error` is `TRANSITION_REFUSED`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition_refused: Option<medulla_types::transition_refused::TransitionRefusedWire>,
 }
 
 /// The first declared code inside `text` that a caller's context wraps:
@@ -195,6 +199,7 @@ impl Response {
                 result: Some(result),
                 error: None,
                 error_detail: None,
+                transition_refused: None,
             },
             Err(error) => Response::err(id, error),
         }
@@ -235,11 +240,17 @@ impl Response {
                 }
             },
         };
+        let transition_refused = (error == medulla_types::transition_refused::TRANSITION_REFUSED)
+            .then(|| error_detail.as_deref())
+            .flatten()
+            .and_then(medulla_types::transition_refused::TransitionRefused::from_detail)
+            .map(Into::into);
         Response {
             id,
             result: None,
             error: Some(error),
             error_detail,
+            transition_refused,
         }
     }
 
@@ -293,6 +304,7 @@ impl Response {
                 result: Some(result),
                 error: Some("OPERATION_REDIRECTED".to_string()),
                 error_detail: None,
+                transition_refused: None,
             },
             Err(error) => Response::err(id, error),
         }
