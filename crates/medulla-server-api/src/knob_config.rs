@@ -313,6 +313,10 @@ knobs! {
     retrieval_forest_redundancy_weight: f64 = "retrieval.forest.redundancy_weight", F64(0.5), [0.0, 4.0], "weight", Tunable;
     /// Evidence forest: above zero, a candidate in conflict with a chosen candidate is dropped (MEDULLA-FEDERATED-QUERY-R736.3).
     retrieval_forest_conflict_weight: f64 = "retrieval.forest.conflict_weight", F64(1.0), [0.0, 4.0], "weight", Tunable;
+    /// Evidence forest: how many hops the candidate walk takes from the seeds (MEDULLA-FEDERATED-QUERY-R736.4).
+    retrieval_forest_hops: u64 = "retrieval.forest.hops", U64(2), [1, 8], "hops", Tunable;
+    /// Evidence forest: the most candidates the walk may collect before it refuses (MEDULLA-FEDERATED-QUERY-R736.4).
+    retrieval_forest_candidate_cap: u64 = "retrieval.forest.candidate_cap", U64(2000), [1, 100000], "candidates", Tunable;
     /// Retrieval round: most chunks the reranker scores for selection.
     retrieval_rerank_pool: u64 = "retrieval.rerank_pool", U64(50), [1, 256], "chunks", Tunable;
     /// Retrieval round: most nDCG at 10 an adaptive selection policy may lose to its baseline.

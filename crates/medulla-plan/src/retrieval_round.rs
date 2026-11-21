@@ -83,6 +83,10 @@ pub struct RoundKnobs {
     pub forest_redundancy_weight: f64,
     /// `knob retrieval.forest.conflict_weight`, weight (MEDULLA-FEDERATED-QUERY-R736.3).
     pub forest_conflict_weight: f64,
+    /// `knob retrieval.forest.hops`, hops (MEDULLA-FEDERATED-QUERY-R736.4).
+    pub forest_hops: u32,
+    /// `knob retrieval.forest.candidate_cap`, candidates (MEDULLA-FEDERATED-QUERY-R736.4).
+    pub forest_candidate_cap: usize,
 }
 
 impl Default for RoundKnobs {
@@ -110,6 +114,8 @@ impl Default for RoundKnobs {
             forest_similar_k: 8,
             forest_redundancy_weight: 0.5,
             forest_conflict_weight: 1.0,
+            forest_hops: 2,
+            forest_candidate_cap: 2_000,
         }
     }
 }
@@ -196,7 +202,7 @@ fn run_forest(
         .collect();
     let seed_ids: Vec<String> = seed_scores.iter().map(|(id, _)| id.clone()).collect();
     let graph = PlanForestGraph::new(ctx.view, ctx.semantic, knobs.forest_similar_k);
-    let (hops, cap) = forest_limits(None, None);
+    let (hops, cap) = forest_limits(Some(knobs.forest_hops), Some(knobs.forest_candidate_cap));
     let candidates =
         expand_candidates(&seed_scores, &graph, hops, cap).map_err(forest_refusal)?;
     let penalty = ForestPenalty {

@@ -44,6 +44,8 @@ fn round_knobs() -> RoundKnobs {
         forest_similar_k: size(knobs.retrieval_forest_similar_k),
         forest_redundancy_weight: knobs.retrieval_forest_redundancy_weight,
         forest_conflict_weight: knobs.retrieval_forest_conflict_weight,
+        forest_hops: u32::try_from(knobs.retrieval_forest_hops).unwrap_or(u32::MAX),
+        forest_candidate_cap: size(knobs.retrieval_forest_candidate_cap),
     }
 }
 
