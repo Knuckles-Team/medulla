@@ -43,14 +43,34 @@ fn server_bin() -> std::path::PathBuf {
         .join("medulla-server")
 }
 
-/// One running `medulla-server` over `dir` with its native socket and pgwire listener.
+/// The pgwire password of the pilot identity: derived from the served secret, never printed
+/// and never written to a log or an artifact.
+fn pgwire_password() -> String {
+    medulla_wire::pgwire::derive_pg_password(AUTH_SECRET, ADMIN)
+}
+
+/// The DSN of the engine's own pgwire listener as a source (P5): the pilot identity and its
+/// pgwire credentials against `graph`. It carries a secret, so callers never format it into a
+/// message.
+fn pgwire_dsn(pg_addr: &str, graph: &str) -> String {
+    format!("postgres://{ADMIN}:{}@{pg_addr}/{graph}", pgwire_password())
+}
+
+/// One running `medulla-server` with its native socket and pgwire listener. It exports the
+/// pgwire credentials (`pgwire_dsn`), the private backup root of the `Backup` and `Restore`
+/// methods and the exact `MEDULLA_FEDERATION_ALLOW` entry that lets the engine's own listener
+/// pass the outbound SSRF check as a source (loopback is a sensitive range).
 struct RunningServer {
     child: std::process::Child,
     socket: std::path::PathBuf,
+    pg_addr: String,
+    backup_root: std::path::PathBuf,
 }
 
 impl RunningServer {
-    async fn start(dir: &std::path::Path, pg_addr: &str) -> Self {
+    /// Start the server over `persist` (a data directory), keeping its socket, log and backup
+    /// root under `dir`.
+    async fn start(dir: &std::path::Path, persist: &std::path::Path, pg_addr: &str) -> Self {
         common::configure_authority();
         let socket = dir.join("native.sock");
         let _ = std::fs::remove_file(&socket);
@@ -65,6 +85,13 @@ impl RunningServer {
             json!({"key": ADMIN_SIGNER_KEY, "allowed_roles": [], "may_grant_system": true}),
         );
         let signers = Value::Object(signers);
+        let backup_root = dir.join("backups");
+        std::fs::create_dir_all(&backup_root).expect("backup root");
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&backup_root, std::fs::Permissions::from_mode(0o700))
+                .expect("private backup root");
+        }
         let mut command = std::process::Command::new(server_bin());
         command
             .arg("--socket-path")
@@ -72,9 +99,11 @@ impl RunningServer {
             .env_clear()
             .env("PATH", std::env::var("PATH").unwrap_or_default())
             .env("GRAPH_SERVICE_AUTH_SECRET", AUTH_SECRET)
-            .env("GRAPH_SERVICE_PERSIST_DIR", dir.join("persist"))
+            .env("GRAPH_SERVICE_PERSIST_DIR", persist)
             .env("MEDULLA_SIGNER_KEYS_JSON", signers.to_string())
             .env(medulla_wire::pgwire::PGWIRE_ADDR_ENV, pg_addr)
+            .env("MEDULLA_FEDERATION_ALLOW", pg_addr)
+            .env("MEDULLA_BACKUP_ROOT", &backup_root)
             .stdout(log.try_clone().expect("log handle"))
             .stderr(log);
         for name in [
@@ -89,9 +118,14 @@ impl RunningServer {
                 std::env::var(name).expect("authority env is configured"),
             );
         }
-        std::fs::create_dir_all(dir.join("persist")).expect("persist dir");
+        std::fs::create_dir_all(persist).expect("persist dir");
         let child = command.spawn().expect("spawn medulla-server");
-        let mut server = Self { child, socket };
+        let mut server = Self {
+            child,
+            socket,
+            pg_addr: pg_addr.to_string(),
+            backup_root,
+        };
         server.wait_ready(pg_addr).await;
         server
     }
@@ -379,7 +413,7 @@ fn differences(p1: &[Value], p2: &[Value]) -> Vec<Value> {
 async fn p0_p1_p2_exit_artifacts() {
     let dir = test_support::fresh_dir("native-hosting-gramps");
     let pg_addr = test_support::ephemeral_listener_addr().await;
-    let server = RunningServer::start(&dir, &pg_addr).await;
+    let server = RunningServer::start(&dir, &dir.join("persist"), &pg_addr).await;
 
     // The one System identity every session acts as, registered through the bootstrap gate.
     let mut native = Native::connect(&server.socket).await;
