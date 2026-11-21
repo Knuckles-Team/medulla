@@ -38158,6 +38158,1505 @@ class RetrievalRequest(BaseModel):
     modality: ModalityPair | None = None
 
 
+class GapState(str, Enum):
+    OPEN = "open"
+    OFFERED = "offered"
+    SETTLED = "settled"
+
+
+class ActiveSpaceRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dimensions: Annotated[int, Field(ge=0)]
+    graph: str
+    space_digest: str
+
+
+class AdapterFitted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adapter_digest: str
+    body: QueryAdapterBody
+    receipt: AdapterEvalReceipt
+    receipt_digest: str
+
+
+class BeliefPassResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claims_visited: Annotated[int, Field(ge=0)]
+    contradictions: list[ContradictionRecord]
+    evidence_edges: Annotated[int, Field(ge=0)]
+    friction: list[FrictionFinding]
+    pass_id: str
+    retractions: list[RetractionProposal]
+    revisions: list[BeliefRevision]
+
+
+class BeliefRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    oppose: list[EvidenceRef]
+    pass_id: str
+    posterior_micro: int
+    prior_micro: int
+    reason: str
+    support: list[EvidenceRef]
+    weakest_class: EvidenceClass
+
+
+class BenchmarkVerdictKind(str, Enum):
+    ADMIT = "admit"
+    DISCARD = "discard"
+
+
+class BoundComparison(str, Enum):
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+
+
+class BundleEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    budget_used_tokens: Annotated[int, Field(ge=0)]
+    certificate_bound_tokens: Annotated[int, Field(ge=0)]
+    excluded: list[ExcludedItem]
+    input_scores: list[InputScore]
+    key_inputs: KeyInputs
+    normalization: list[SourceNormalization]
+    rerank: RerankEvidence | None = None
+    resolutions: dict[str, Annotated[int, Field(ge=0, le=255)]]
+    rrf_k: Annotated[int, Field(ge=0)]
+    selected: list[str]
+    stages: list[PipelineStage] = Field(default_factory=list)
+    unchecked_dropped: list[DroppedRecord]
+
+
+BundleKey = str
+
+
+class CheckInterval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    high_micros: Annotated[int, Field(ge=0)]
+    low_micros: Annotated[int, Field(ge=0)]
+
+
+class CitationSupport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    citation_id: str
+    supporting: Annotated[int, Field(ge=0)]
+    total: Annotated[int, Field(ge=0)]
+
+
+class ClaimSupport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    citations: list[CitationSupport]
+    claim_id: str
+
+
+class CodingAgentPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    agent_revision: str
+    artifact_contract_digest: str
+    discovery_receipt_digest: str
+    skills: Annotated[list[SkillTransformation], Field(max_length=32)]
+
+
+class CompiledProgram(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    parameters: Annotated[list[ProgramParameter], Field(max_length=64)]
+    program_digest: str
+    schema_version: Annotated[int, Field(ge=0)]
+    source_run_id: str | None = None
+    steps: Annotated[list[ProgramStep], Field(max_length=40)]
+    task_signature: str
+
+
+class ContentClass(str, Enum):
+    PROSE = "prose"
+    DOCUMENT = "document"
+    COMMENT = "comment"
+    GENERATED = "generated"
+    LOCKFILE = "lockfile"
+    VENDORED = "vendored"
+    MINIFIED = "minified"
+
+
+class ContextPackageSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    certificate_digest: str
+    chosen_ids: Annotated[list[str], Field(max_length=64)]
+    effective_capacity_tokens: Annotated[int, Field(ge=0)]
+    input_digest: str
+    model_digest: str
+    objective_micro: int
+    total_cost_micro: Annotated[int, Field(ge=0)] | None = None
+    total_latency_ms: Annotated[int, Field(ge=0)] | None = None
+    total_tokens: Annotated[int, Field(ge=0)]
+    verified: bool
+
+
+class ContextSpan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    context_end: Annotated[int, Field(ge=0)]
+    context_start: Annotated[int, Field(ge=0)]
+    context_text: str
+    document_id: str
+    document_revision: Annotated[int, Field(ge=0)]
+    match_end: Annotated[int, Field(ge=0)]
+    match_start: Annotated[int, Field(ge=0)]
+    text_digest: str
+
+
+class ContradictionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    contradiction_id: str
+    detected_at_ms: Annotated[int, Field(ge=0)]
+    evidence: list[str]
+    left: str
+    right: str
+    status: ContradictionStatus
+
+
+class CostReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    applied_budget: IndexlessBudget
+    authorization_revision: Annotated[int, Field(ge=0)]
+    cost_used: Annotated[int, Field(ge=0)]
+    operation_ids: Annotated[list[str], Field(max_length=64)] = Field(default_factory=list)
+    premises: list[str] = Field(default_factory=list)
+    remaining: IndexlessBudget
+    rows_visited: Annotated[int, Field(ge=0)]
+    visits: Annotated[int, Field(ge=0)]
+
+
+class DigestRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    ref_id: str
+
+
+class DisclosureEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    instructions_hash: str
+    set_id: str
+    trigger: DisclosureTrigger
+    version: Annotated[int, Field(ge=0)]
+
+
+class DisclosureTrigger(str, Enum):
+    INITIAL = "initial"
+    RELEVANCE_UPDATE = "relevance_update"
+    CONSTRAINT_CHANGE = "constraint_change"
+    TIMEOUT = "timeout"
+
+
+class DroppedReason(str, Enum):
+    DENIED = "denied"
+    TIMEOUT = "timeout"
+    UNAVAILABLE = "unavailable"
+
+
+class DroppedRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    reason: DroppedReason
+    record_id: str
+
+
+class EntityKind(str, Enum):
+    AGENT = "agent"
+    TOOL = "tool"
+    SKILL = "skill"
+
+
+class ExcludedItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    item_id: str
+    reason: ExclusionReason
+
+
+class ExclusionReason(str, Enum):
+    BELOW_GAP = "below_gap"
+    OVER_BUDGET = "over_budget"
+    DENIED = "denied"
+    OUT_OF_SCOPE = "out_of_scope"
+    DOMINATED = "dominated"
+
+
+class ExecutionRoutingCategory(str, Enum):
+    MODEL = "model"
+    PROMPT = "prompt"
+    SKILL = "skill"
+    TOOL = "tool"
+    HARNESS_MODE = "harness_mode"
+    ACCOUNT_MODE = "account_mode"
+    SANDBOX_CONFIGURATION = "sandbox_configuration"
+
+
+class FailureIngestResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    filed: list[str]
+    patterns: list[FailurePattern]
+    skipped: list[SkippedPattern] = Field(default_factory=list)
+
+
+class FailurePattern(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    count: Annotated[int, Field(ge=0)]
+    first_seen: Annotated[int, Field(ge=0)]
+    last_seen: Annotated[int, Field(ge=0)]
+    members: Annotated[list[str], Field(max_length=1024)]
+    minimal_steps: Annotated[list[str], Field(max_length=256)]
+    signature: Signature
+
+
+class FallbackReason(str, Enum):
+    SCORER_UNAVAILABLE = "scorer_unavailable"
+    NO_CALIBRATION = "no_calibration"
+
+
+class FanoutAggregate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    aggregate_digest: str
+    delivery: FinalDelivery | None = None
+    entries: list[FanoutEntry]
+    op: AggregationOp
+    outputs: list[str]
+    reducer_id: str | None = None
+    summaries: SummaryAccount | None = None
+
+
+class FanoutEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: FanoutOutcome
+    task_id: str
+    value: str
+
+
+class FanoutOutcome(str, Enum):
+    OK = "ok"
+    FAILED = "failed"
+
+
+class FeatureKindCoverageFraction(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["coverage_fraction"]
+    param: str
+
+
+class FeatureKindDeclaredCostMicros(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["declared_cost_micros"]
+
+
+class FeatureKindDeclaredP95LatencyMs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["declared_p95_latency_ms"]
+
+
+class FeatureKindCostQuality(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["cost_quality"]
+
+
+class FeatureKindAgeSeconds(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["age_seconds"]
+
+
+class FeatureKindNumber(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["number"]
+    key: str
+
+
+class FeatureKindOutcomeRate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["outcome_rate"]
+    question_id: str
+
+
+class FeatureKindTextBm25(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["text_bm25"]
+    key: str
+    param: str
+
+
+class FeatureKindNearestNeighbourSimilarity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature: Literal["nearest_neighbour_similarity"]
+    graph_param: str
+
+
+FeatureKind = Annotated[
+    FeatureKindCoverageFraction
+    | FeatureKindDeclaredCostMicros
+    | FeatureKindDeclaredP95LatencyMs
+    | FeatureKindCostQuality
+    | FeatureKindAgeSeconds
+    | FeatureKindNumber
+    | FeatureKindOutcomeRate
+    | FeatureKindTextBm25
+    | FeatureKindNearestNeighbourSimilarity,
+    Field(discriminator="feature"),
+]
+
+
+class FeatureSchemaBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    features: Annotated[list[FeatureSpec], Field(max_length=32)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class FeatureSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: FeatureKind
+    missing: MissingValue
+    name: str
+
+
+class FinalDelivery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_digest: str
+    child_receipt_ids: list[str]
+    coordinator: str
+    delivery_digest: str
+    plan_digest: str
+    readback_id: str
+    schema_id: str
+    schema_version: Annotated[int, Field(ge=0)]
+
+
+class FrictionFinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    left: str
+    opposes: bool
+    right: str
+    similarity_ppm: Annotated[int, Field(ge=0)]
+
+
+class Gap(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence: list[str]
+    gap_id: str
+    loop_id: str
+    severity_ppm: Annotated[int, Field(ge=0)]
+    state: GapState
+
+
+class GapTopic(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    members: list[str] = Field(default_factory=list)
+    signature: Signature
+    status: GapStatus
+
+
+class GenerationBootstrapReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    items: Annotated[int, Field(ge=0)]
+    logical: str
+    model_ref: ModelRef
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    shadow_graph: str
+    space_digest: str
+    verdict: str
+
+
+class GenerationSpaceRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    active: ActiveSpaceRead | None = None
+    logical: str
+    model_space_digest: str | None = None
+
+
+class GovernedChangeSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approvals: list[WritebackApproval]
+    change_set_id: str
+    proposals: list[ProposalInput]
+
+
+class HarnessSolverCertificate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch_count: Annotated[int, Field(ge=0)]
+    model_digest: str
+    solver_certificate_digest: str
+
+
+class ImprovementLedger(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    loop_id: str
+    samples: list[ImprovementSample]
+
+
+class IndexlessResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cost: CostReport
+    rows: list[Any]
+
+
+class IngestionLane(str, Enum):
+    FAST = "fast"
+    MEDIUM = "medium"
+    SLOW = "slow"
+
+
+class IngestionLaneRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_lanes: list[str]
+
+
+class InputScore(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibrated: float
+    node_id: str
+    raw: float
+    source: str
+
+
+class Insight(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    context_signature: str
+    insight_id: str
+    schema_version: Annotated[int, Field(ge=0)]
+    selection_revision: Annotated[int, Field(ge=0)]
+    source_run_ids: Annotated[list[str], Field(max_length=64)]
+    success_count: Annotated[int, Field(ge=0)]
+    text: str
+
+
+class IsotonicBlock(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    lower: QuantisedValue
+    upper: QuantisedValue
+    value: QuantisedValue
+
+
+class IsotonicTable(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blocks: Annotated[list[IsotonicBlock], Field(max_length=1024)]
+
+
+class JoinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: Annotated[list[TrajectoryEntry], Field(max_length=256)]
+
+
+class KeyInputs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph_revision: Annotated[int, Field(ge=0)]
+    policy_digest: str
+    tenant: str
+
+
+KnobName = str
+
+
+class LedgerEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    closed_by: str | None = None
+    feature_id: str
+    match_ids: list[str]
+    plan_id: str | None = None
+    revision: Annotated[int, Field(ge=0)]
+    status: LedgerStatus
+
+
+class LedgerStatus(str, Enum):
+    OPEN = "open"
+    PLANNED = "planned"
+    CLOSED = "closed"
+
+
+class LoopInstance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_at_ms: Annotated[int, Field(ge=0)]
+    lease: LoopLease | None = None
+    loop_id: str
+    objective_digest: str
+    priority: Annotated[int, Field(ge=0)]
+    state: LoopState
+    tenant_id: str
+
+
+class LoopLease(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    epoch: Annotated[int, Field(ge=0)]
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    holder: str
+
+
+class LoopState(str, Enum):
+    SUBMITTED = "submitted"
+    RUNNING = "running"
+    PENDING = "pending"
+    VALIDATING = "validating"
+    PAUSED = "paused"
+    ORPHANED = "orphaned"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+    MAX_ITERATIONS_EXCEEDED = "max_iterations_exceeded"
+    BUDGET_EXCEEDED = "budget_exceeded"
+    WALL_CLOCK_EXCEEDED = "wall_clock_exceeded"
+    STALLED = "stalled"
+    ERROR_THRESHOLD_EXCEEDED = "error_threshold_exceeded"
+    EXTERNAL_EVENT_SATISFIED = "external_event_satisfied"
+
+
+class LoopTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    at_ms: Annotated[int, Field(ge=0)]
+    epoch: Annotated[int, Field(ge=0)]
+    event: str
+    from_: str = Field(..., alias="from")
+    to: str
+
+
+class LoopView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    beacons: list[StageBeacon]
+    gaps: list[Gap]
+    instance: LoopInstance
+    ledger: ImprovementLedger
+    offers: list[OfferEvidence]
+    patterns: list[MinedPattern]
+    ratchets: list[RatchetEvidence]
+    transitions: list[LoopTransition]
+
+
+class MemoryBenchmarkReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    baseline: RevisionRef
+    baseline_metrics: RunMetricsReceipt
+    candidate: RevisionRef
+    candidate_metrics: RunMetricsReceipt
+    change_kind: ChangeKind
+    dataset_digest: str
+    dataset_id: str
+    dataset_revision: Annotated[int, Field(ge=0)]
+    evaluator_revision: str
+    k: Annotated[int, Field(ge=0)]
+    policy_digest: str
+    premises: list[str]
+    reason_codes: list[str]
+    receipt_digest: str
+    record_id: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    tenant_id: str
+    verdict: BenchmarkVerdictKind
+
+
+class MemoryRewriteEvaluation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fidelity_q4: Annotated[int, Field(ge=0)]
+    metric_digest: str
+    metric_revision: Annotated[int, Field(ge=0)]
+    proposal: MemoryRewriteProposal
+    reason_codes: list[RewriteReason]
+    receipt_digest: str
+    signal_count: Annotated[int, Field(ge=0)]
+    signal_per_token_q4: Annotated[int, Field(ge=0)]
+    token_count: Annotated[int, Field(ge=0)]
+    verdict: RewriteVerdict
+
+
+class MinedPattern(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    sequence: list[str]
+    support: Annotated[int, Field(ge=0)]
+
+
+class MissingValueAbstain(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    missing: Literal["abstain"]
+
+
+class MissingValueImpute(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    missing: Literal["impute"]
+    value: QuantisedValue
+
+
+MissingValue = Annotated[
+    MissingValueAbstain
+    | MissingValueImpute,
+    Field(discriminator="missing"),
+]
+
+
+class NlSlot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    required: bool
+    slot_type: NlSlotType
+
+
+class NlSlotTypeIri(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    slot_type: Literal["iri"]
+    under: str
+
+
+class NlSlotTypeInt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    slot_type: Literal["int"]
+
+
+class NlSlotTypeText(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after: str
+    slot_type: Literal["text"]
+
+
+NlSlotType = Annotated[
+    NlSlotTypeIri
+    | NlSlotTypeInt
+    | NlSlotTypeText,
+    Field(discriminator="slot_type"),
+]
+
+
+class NlTemplateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    labels: Annotated[list[str], Field(max_length=16)] = Field(default_factory=list)
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    slots: Annotated[list[NlSlot], Field(max_length=16)] = Field(default_factory=list)
+    target: NlTarget
+    utterances: Annotated[list[str], Field(max_length=64)]
+
+
+class ObservedRunCost(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    measured_revision: Annotated[int, Field(ge=0)]
+    micros: Annotated[int, Field(ge=0)]
+
+
+class OfferEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capacity: Annotated[int, Field(ge=0)]
+    gap_id: str
+    open_offers: Annotated[int, Field(ge=0)]
+    rate_ppm: Annotated[int, Field(ge=0)]
+    saturation_ppm: Annotated[int, Field(ge=0)]
+    severity_ppm: Annotated[int, Field(ge=0)]
+
+
+class PairedVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    arm_outcome_digest: str
+    baseline_id: str
+    baseline_outcome_digest: str
+    decision_id: str
+    input_snapshot_digest: str
+    rung_id: str
+    winner: Winner
+
+
+class PenaltyReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_class: EvidenceClass
+    features: Annotated[list[FeatureImportance], Field(max_length=256)]
+    importance_scale: QuantisedValue
+    loss_coefficient: QuantisedValue
+    penalty_digest: str
+    schema_version: Annotated[int, Field(ge=0)] = 0
+
+
+class PipelineStage(str, Enum):
+    FUSE = "fuse"
+    RERANK = "rerank"
+    CALIBRATE = "calibrate"
+    CUT = "cut"
+    SELECT = "select"
+
+
+class PlanProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature_ids: list[str]
+    plan_id: str
+    rationale_digest: str
+
+
+class PointerState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    active: PointerEvent | None = None
+    history: Annotated[list[PointerEvent], Field(max_length=64)] = Field(default_factory=list)
+    key: str
+    stack: Annotated[list[PointerEvent], Field(max_length=64)] = Field(default_factory=list)
+
+
+class PrePlanVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifacts_exist: bool
+    evidence_refs: list[str]
+    policy_digest: str
+    tests_ran: bool
+
+
+class PreflightVerdictProceed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    verdict: Literal["proceed"]
+
+
+class PreflightVerdictQueue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    verdict: Literal["queue"]
+
+
+class PreflightVerdictRefuse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    detail: str
+    verdict: Literal["refuse"]
+
+
+PreflightVerdict = Annotated[
+    PreflightVerdictProceed
+    | PreflightVerdictQueue
+    | PreflightVerdictRefuse,
+    Field(discriminator="verdict"),
+]
+
+
+class ProbeVerdict(str, Enum):
+    RESISTED = "resisted"
+    COMPROMISED = "compromised"
+    INCONCLUSIVE = "inconclusive"
+
+
+class ProgramEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    label: str | None = None
+    to: str
+
+
+class ProgramParameter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: ProgramParameterKind
+    name: str
+
+
+class ProgramParameterKind(str, Enum):
+    TEXT = "text"
+    INT = "int"
+    BOOL = "bool"
+
+
+class ProgramStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: str
+    agent_config: ComponentDependency | None = None
+    edges: list[ProgramEdge] = Field(default_factory=list)
+    input_types: list[TypeRef] = Field(default_factory=list)
+    next: str | None = None
+    output_types: list[TypeRef] = Field(default_factory=list)
+    state: str
+
+
+class ProofEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_: str = Field(..., alias="from")
+    relationship: str
+    to: str
+
+
+class ProposalKind(str, Enum):
+    INVENTORY_CREATION = "inventory_creation"
+    FINDING_TICKET = "finding_ticket"
+
+
+class ProposalRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of_ms: int
+    external_id: str
+    id: str
+    kind: ProposalKind
+    risk_tier: RiskTier | None = None
+    system_of_record: str
+
+
+class ProposedStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action_ref: str
+    step_id: str
+    writes: bool
+
+
+class PublicationReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    package_id: Annotated[str, Field(min_length=1)]
+    publish_timestamp_ms: Annotated[int, Field(ge=0)]
+    validation_result: RenderedPackageValidation
+
+
+class RatchetEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after_mean_micro: int
+    after_samples: Annotated[int, Field(ge=0)]
+    before_mean_micro: int
+    before_samples: Annotated[int, Field(ge=0)]
+    change_at_ms: Annotated[int, Field(ge=0)]
+    metric: str
+    verdict: RatchetVerdict
+
+
+class RatchetVerdict(str, Enum):
+    KEEP = "keep"
+    REVERT = "revert"
+
+
+class ReadSpanResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    byte_end: Annotated[int, Field(ge=0)]
+    byte_start: Annotated[int, Field(ge=0)]
+    document_id: str
+    line_end: Annotated[int, Field(ge=0)]
+    line_start: Annotated[int, Field(ge=0)]
+    revision: Annotated[int, Field(ge=0)]
+    source_digest: str
+    text: str
+    toc_digest: str
+
+
+class RecoveryActionRetry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["retry"]
+    step_id: str
+
+
+class RecoveryActionRollback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["rollback"]
+    step_id: str
+
+
+class RecoveryActionAbandon(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["abandon"]
+
+
+RecoveryAction = Annotated[
+    RecoveryActionRetry
+    | RecoveryActionRollback
+    | RecoveryActionAbandon,
+    Field(discriminator="action"),
+]
+
+
+class RecursiveTraceNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    child_ids: Annotated[list[str], Field(max_length=64)]
+    evidence_refs: Annotated[list[DigestRef], Field(max_length=32)]
+    input_refs: Annotated[list[DigestRef], Field(max_length=32)]
+    kind: TraceNodeKind
+    node_id: str
+    output_refs: Annotated[list[DigestRef], Field(max_length=32)]
+    parent_node_id: str | None = None
+    run_id: str
+    run_revision: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_revision: Annotated[int, Field(ge=0)]
+    step_id: str
+    step_revision: Annotated[int, Field(ge=0)]
+    trace_snapshot_id: str
+
+
+class RenderedPackageValidation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rendered_digest: Digest256
+    run_history_digest: Digest256
+    validation_passed: bool
+
+
+class RerankEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration_digest: str | None = None
+    fallback: FallbackReason | None = None
+    input_ranks: list[Annotated[int, Field(ge=0)]]
+    output_ranks: list[Annotated[int, Field(ge=0)]]
+    scorer_name: str
+    scorer_version: str
+
+
+class ResolutionTier(str, Enum):
+    EXACT = "exact"
+    EMBEDDING = "embedding"
+    PROBABILISTIC = "probabilistic"
+
+
+class RetractionProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    evidence_class: EvidenceClass
+    posterior_micro: int
+
+
+class RetrievalContextSearchResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    authorization_revision: Annotated[int, Field(ge=0)]
+    index_digest: str
+    next_cursor: str | None = None
+    query_revision: Annotated[int, Field(ge=0)]
+    spans: list[ContextSpan]
+
+
+class RetrievalPlanKind(str, Enum):
+    LEAN_RAG = "lean_rag"
+    RECIPROCAL_RANK_FUSION = "reciprocal_rank_fusion"
+    DIRECT_SPARQL = "direct_sparql"
+
+
+class ReusablePattern(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan: PlanBinding
+    program_digest: str
+    receipt: PrePlanTestReceipt
+    source_run_id: str
+    task_signature: str
+    verdict: PrePlanVerdict
+
+
+class ReviewClass(str, Enum):
+    INJECTION = "injection"
+    AUTH_BYPASS = "auth_bypass"
+    DATA_EXPOSURE = "data_exposure"
+    CRYPTO_FLAW = "crypto_flaw"
+    BUSINESS_LOGIC = "business_logic"
+
+
+class RewriteReason(str, Enum):
+    FIDELITY_BELOW_MIN = "FIDELITY_BELOW_MIN"
+    SIGNAL_EFFICIENCY_BELOW_MIN = "SIGNAL_EFFICIENCY_BELOW_MIN"
+    DEGRADATION_RULE_TRIGGERED = "DEGRADATION_RULE_TRIGGERED"
+
+
+class RewriteVerdict(str, Enum):
+    ADMIT = "admit"
+    DISCARD = "discard"
+
+
+class RoutingPath(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector_id: str
+    method_id: str
+    parameter_digest: Digest256
+
+
+class RunCreditReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision_ids: Annotated[list[str], Field(max_length=16)]
+    negative_count: Annotated[int, Field(ge=0)]
+    outcome_digest: str
+    positive_count: Annotated[int, Field(ge=0)]
+    premises: Annotated[list[str], Field(max_length=4)]
+    receipt_digest: str
+    run_id: str
+    steps: Annotated[list[StepCredit], Field(max_length=1024)] = Field(default_factory=list)
+
+
+class RunMetricsReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    answer_accuracy_ppm: Annotated[int, Field(ge=0)]
+    correct: Annotated[int, Field(ge=0)]
+    queries: Annotated[int, Field(ge=0)]
+    recall_at_k_ppm: Annotated[int, Field(ge=0)]
+    recall_ppm_sum: Annotated[int, Field(ge=0)]
+
+
+class RunRecordStored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    key: str
+    replayed: bool
+    stored: StoredRun
+
+
+Signature = str
+
+
+class SkillCandidateRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    distinct_records: Annotated[int, Field(ge=0)]
+    option_id: str
+    premise: PremiseRef
+    question_id: str
+    successes: Annotated[int, Field(ge=0)]
+
+
+class SkillMergeCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    a: str
+    b: str
+    cosine_ppm: Annotated[int, Field(ge=0)]
+    evidence: Annotated[list[str], Field(max_length=32)]
+    overlap_ppm: Annotated[int, Field(ge=0)]
+
+
+class SkippedPattern(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    count: Annotated[int, Field(ge=0)]
+    signature: Signature
+
+
+class SourceNormalization(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    curve_digest: str | None = None
+    fallback: FallbackReason | None = None
+    source: str
+
+
+class SourceReliabilityAbsent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Literal["absent"]
+
+
+class SourceReliabilityInsufficientHistory(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    min_support: Annotated[int, Field(ge=0)]
+    state: Literal["insufficient_history"]
+    trials: Annotated[int, Field(ge=0)]
+
+
+class SourceReliabilityEstimated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    lower: float
+    mean: float
+    state: Literal["estimated"]
+    trials: Annotated[int, Field(ge=0)]
+    upper: float
+
+
+SourceReliability = Annotated[
+    SourceReliabilityAbsent
+    | SourceReliabilityInsufficientHistory
+    | SourceReliabilityEstimated,
+    Field(discriminator="state"),
+]
+
+
+class StageBeacon(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    loop_id: str
+    stage: str
+
+
+class StepVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    check_digests: Annotated[list[str], Field(max_length=1024)]
+    outcome: StepOutcome
+    step_id: str
+    trace_digest: str
+
+
+class StepVerification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    recovery: RecoveryAction | None = None
+    verdict: StepVerdict
+    withheld: list[str] = Field(default_factory=list)
+
+
+class StoredReplay(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    replay: ProgramReplay
+
+
+class StoredRetrievalOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: RetrievalOutcome
+    producer: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+
+
+class StoredRunCompiledProgram(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["compiled_program"]
+    pattern: ReusablePattern | None = None
+    program: CompiledProgram
+    program_node: str
+
+
+class StoredRunInsight(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    insight: Insight
+    kind: Literal["insight"]
+
+
+class StoredRunHorizonCheckpoint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    checkpoint: HorizonCheckpoint
+    kind: Literal["horizon_checkpoint"]
+
+
+class StoredRunBranchRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["branch_record"]
+    record: BranchRecord
+
+
+class StoredRunBranchRetrieval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["branch_retrieval"]
+    receipt: BranchRetrievalReceipt
+
+
+class StoredRunTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["trace"]
+    stored: StoredRunTrace
+
+
+class StoredRunPairedVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["paired_verdict"]
+    verdict: PairedVerdict
+
+
+class StoredRunProgramReplay(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["program_replay"]
+    replay: StoredReplay
+
+
+StoredRun = Annotated[
+    StoredRunCompiledProgram
+    | StoredRunInsight
+    | StoredRunHorizonCheckpoint
+    | StoredRunBranchRecord
+    | StoredRunBranchRetrieval
+    | StoredRunTrace
+    | StoredRunPairedVerdict
+    | StoredRunProgramReplay,
+    Field(discriminator="kind"),
+]
+
+
+class StoredRunTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal: str
+    trace: RunTraceRecord
+
+
+class SummaryAccount(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    children: list[tuple[str, str, Annotated[int, Field(ge=0)]]]
+    limit_tokens: Annotated[int, Field(ge=0)]
+    remaining_tokens: Annotated[int, Field(ge=0)]
+    total_tokens: Annotated[int, Field(ge=0)]
+
+
+class TierEvaluation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    accept_rate_ppm: Annotated[int, Field(ge=0)]
+    accepted: Annotated[int, Field(ge=0)]
+    rejected: Annotated[int, Field(ge=0)]
+    tier: ResolutionTier
+
+
+class ToolSubsetRefusal(str, Enum):
+    CAPABILITY_UNCOVERABLE = "capability_uncoverable"
+    BUDGET_EXCEEDED = "budget_exceeded"
+
+
+class TopologyCommitOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_graph_id: str
+    evidence_revision: Annotated[int, Field(ge=0)]
+    premises: list[str]
+
+
+class TraceCritiqueNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    child_ids: list[str]
+    evidence_refs: list[DigestRef] | None = None
+    input_refs: list[DigestRef] | None = None
+    kind: TraceNodeKind
+    node_id: str
+    output_refs: list[DigestRef] | None = None
+    parent_node_id: str | None = None
+    run_id: str
+    run_revision: Annotated[int, Field(ge=0)]
+    source_revision: Annotated[int, Field(ge=0)]
+    step_id: str
+    step_revision: Annotated[int, Field(ge=0)]
+
+
+class TraceCritiquePage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ancestry: list[TraceCritiqueNode]
+    next_cursor: str | None = None
+    nodes: list[TraceCritiqueNode]
+    root_node_id: str
+    snapshot_id: str
+    snapshot_revision: Annotated[int, Field(ge=0)]
+    source_refs: list[TraceSourceRef]
+
+
+class TraceNodeKind(str, Enum):
+    CODE_RUN = "code_run"
+    SUB_CALL = "sub_call"
+    INTERMEDIATE = "intermediate"
+
+
+class TraceSourceRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+    source_revision: Annotated[int, Field(ge=0)]
+
+
+class TrajectoryEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence: EvidenceClass
+    trace_digest: str
+    trajectory_id: str
+    verifier_score: QuantisedValue
+
+
+class VerifierCase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    kind: str
+    retest_artifact_digest: str | None = None
+    state: VerifierCaseState
+
+
+class VerifierCaseState(str, Enum):
+    OPEN = "open"
+    FIXED = "fixed"
+    RETESTED = "retested"
+    FAILED = "failed"
+
+
+class Winner(str, Enum):
+    ARM = "arm"
+    BASELINE = "baseline"
+    TIE = "tie"
+
+
+class WritebackApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approved_at_ms: int
+    approver: str
+    proposal_id: str
+
+
+class WritebackAudit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str | None = None
+    as_of_ms: int
+    change_set_id: str
+    outcome: WritebackAuditOutcome
+    proposal_id: str
+    risk_tier: RiskTier
+
+
+class WritebackAuditOutcomeReleased(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: Literal["released"]
+
+
+class WritebackAuditOutcomeRefused(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    outcome: Literal["refused"]
+
+
+WritebackAuditOutcome = Annotated[
+    WritebackAuditOutcomeReleased
+    | WritebackAuditOutcomeRefused,
+    Field(discriminator="outcome"),
+]
+
+
+class WritebackAuditRows(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rows: list[WritebackAudit]
+
+
+class WritebackOutcomePreflight(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    result: Literal["preflight"]
+    verdict: PreflightVerdict
+
+
+class WritebackOutcomeProposals(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposals: list[ProposalRow]
+    result: Literal["proposals"]
+
+
+class WritebackOutcomeQueued(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposal_ids: list[str]
+    queue_id: str
+    result: Literal["queued"]
+
+
+class WritebackOutcomeApproved(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approval: WritebackApproval
+    result: Literal["approved"]
+
+
+class WritebackOutcomeReleased(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    change_set: GovernedChangeSet
+    result: Literal["released"]
+
+
+WritebackOutcome = Annotated[
+    WritebackOutcomePreflight
+    | WritebackOutcomeProposals
+    | WritebackOutcomeQueued
+    | WritebackOutcomeApproved
+    | WritebackOutcomeReleased,
+    Field(discriminator="result"),
+]
+
+
 __all__ = [
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
@@ -38196,10 +39695,12 @@ __all__ = [
     "ActionSpace",
     "ActionSpec",
     "ActionStatus",
+    "ActiveSpaceRead",
     "AdamResult",
     "AdapterDirection",
     "AdapterEvalReceipt",
     "AdapterFitRequest",
+    "AdapterFitted",
     "AdapterMonitored",
     "AdapterSpec",
     "AdapterSpecLora",
@@ -38379,8 +39880,11 @@ __all__ = [
     "BayesFuseRequest",
     "BayesFusion",
     "BeliefMaterialization",
+    "BeliefPassResult",
     "BeliefPoint",
+    "BeliefRevision",
     "BeliefSliceInputs",
+    "BenchmarkVerdictKind",
     "BestTrajectoryResult",
     "BetweennessCentralityResult",
     "BetweennessCentralityResultValueItem",
@@ -38390,6 +39894,7 @@ __all__ = [
     "BlobFetchBeginResult",
     "BlobGcResult",
     "BlobReference",
+    "BoundComparison",
     "BoundedVec_CalibrationKnot_64",
     "BoundedVec_RegionRef_4096",
     "BoundProof",
@@ -38510,6 +40015,8 @@ __all__ = [
     "Branch",
     "BrokerConsumeResult",
     "BrokerConsumeResultValue",
+    "BundleEvidence",
+    "BundleKey",
     "BusParticipant",
     "BusRoster",
     "BusRosterEntry",
@@ -38540,8 +40047,18 @@ __all__ = [
     "CapabilityCoverageOutcomeCovered",
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
+    "CheckInterval",
+    "CitationSupport",
+    "ClaimSupport",
+    "CodingAgentPlan",
+    "CompiledProgram",
     "ConsolidationPlan",
     "AssemblyOutcomeState",
+    "ContentClass",
+    "ContextPackageSelection",
+    "ContextSpan",
+    "ContradictionRecord",
+    "CostReport",
     "DecisionListItem",
     "DecisionLogList",
     "DecisionLogOpList",
@@ -38549,25 +40066,63 @@ __all__ = [
     "DecisionLogOpWhyNot",
     "DecisionProvenance",
     "DecisionWhyNot",
+    "DigestRef",
+    "DisclosureEvent",
+    "DisclosureTrigger",
     "DistilledScorerManifest",
     "DriftEvaluated",
     "DriftKind",
     "DriftSignal",
+    "DroppedReason",
+    "DroppedRecord",
+    "EntityKind",
+    "ExcludedItem",
+    "ExclusionReason",
     "ExecutionAnswer",
     "ExecutionAnswerPart",
     "ExecutionAnswerPartAbstain",
     "ExecutionAnswerPartAnswer",
     "ExecutionAnswerParts",
+    "ExecutionRoutingCategory",
     "FactUseItem",
+    "FailureIngestResult",
+    "FailurePattern",
+    "FallbackReason",
+    "FanoutAggregate",
+    "FanoutEntry",
+    "FanoutOutcome",
+    "FeatureKind",
+    "FeatureSchemaBody",
+    "FeatureSpec",
+    "FinalDelivery",
     "FiringShard",
     "FreshnessReceipt",
     "FreshResult",
+    "FrictionFinding",
+    "Gap",
+    "GapState",
+    "GapTopic",
+    "GenerationBootstrapReceipt",
     "GenerationCycle",
     "GenerationCycleJob",
     "GenerationCycleReceipt",
     "GenerationCycleState",
     "GenerationEvaluated",
+    "GenerationSpaceRead",
+    "GovernedChangeSet",
+    "HarnessSolverCertificate",
+    "ImprovementLedger",
+    "IndexlessResult",
+    "IngestionLane",
+    "IngestionLaneRequest",
+    "InputScore",
     "InputsState",
+    "Insight",
+    "IsotonicBlock",
+    "IsotonicTable",
+    "JoinRequest",
+    "KeyInputs",
+    "KnobName",
     "LearningRecordedCalibration",
     "LearningRecordedCycle",
     "LearningRecordedDistilledScores",
@@ -38577,8 +40132,16 @@ __all__ = [
     "LearningRecordedPackageRun",
     "LearningRecordedRefreshed",
     "LearningWriteFitCalibration",
+    "LedgerEntry",
+    "LedgerStatus",
+    "LoopInstance",
+    "LoopLease",
+    "LoopState",
+    "LoopTransition",
+    "LoopView",
     "MediaAttachment",
     "Memento",
+    "MemoryBenchmarkReceipt",
     "MemoryExportManifest",
     "MemoryExportRequest",
     "MemoryExportResult",
@@ -38589,6 +40152,7 @@ __all__ = [
     "MemoryRecord",
     "MemoryRememberRequest",
     "MemoryRememberResult",
+    "MemoryRewriteEvaluation",
     "MemoryTier",
     "MergeGroup",
     "MethodAgentExecutionAnswer",
@@ -38599,19 +40163,86 @@ __all__ = [
     "MethodMemoryRecallParams",
     "MethodMemoryRemember",
     "MethodMemoryRememberParams",
+    "MinedPattern",
+    "MissingValue",
+    "NlSlot",
+    "NlSlotType",
+    "NlTemplateBody",
+    "ObservedRunCost",
+    "OfferEvidence",
+    "PairedVerdict",
+    "PenaltyReceipt",
     "PhaseTiming",
+    "PipelineStage",
+    "PlanProposal",
+    "PointerState",
+    "PreflightVerdict",
+    "PrePlanVerdict",
+    "ProbeVerdict",
+    "ProgramEdge",
+    "ProgramParameter",
+    "ProgramParameterKind",
+    "ProgramStep",
     "PromotionGroup",
+    "ProofEdge",
+    "ProposalKind",
+    "ProposalRow",
+    "ProposedStep",
     "ProvenanceFact",
     "ProvenancePremise",
     "ProvenanceRule",
+    "PublicationReceipt",
+    "RatchetEvidence",
+    "RatchetVerdict",
+    "ReadSpanResult",
     "RecordKind",
+    "RecoveryAction",
+    "RecursiveTraceNode",
     "RefreshPlan",
     "RefreshPriority",
     "RegionMark",
     "RegionRef",
+    "RenderedPackageValidation",
+    "RerankEvidence",
+    "ResolutionTier",
+    "RetractionProposal",
+    "RetrievalContextSearchResult",
+    "RetrievalPlanKind",
+    "ReusablePattern",
+    "ReviewClass",
+    "RewriteReason",
+    "RewriteVerdict",
+    "RoutingPath",
+    "RunCreditReceipt",
+    "RunMetricsReceipt",
+    "RunRecordStored",
     "ScheduledRefresh",
+    "Signature",
+    "SkillCandidateRow",
+    "SkillMergeCandidate",
+    "SkippedPattern",
+    "SourceNormalization",
+    "SourceReliability",
+    "StageBeacon",
+    "StepVerdict",
+    "StepVerification",
     "StoredFeedback",
     "StoredFreshRow",
+    "StoredReplay",
+    "StoredRetrievalOutcome",
+    "StoredRun",
+    "StoredRunTrace",
+    "SummaryAccount",
+    "TierEvaluation",
+    "ToolSubsetRefusal",
+    "TopologyCommitOutcome",
+    "TraceCritiqueNode",
+    "TraceCritiquePage",
+    "TraceNodeKind",
+    "TraceSourceRef",
+    "TrajectoryEntry",
+    "VerifierCase",
+    "VerifierCaseState",
     "WhyNotReason",
     "WhyNotVerdict",
     "RevisionProposalListRequest",
@@ -39578,6 +41209,7 @@ __all__ = [
     "HealthReport",
     "EngineCapabilities",
     "RuleUseItem",
+    "Winner",
     "WireFeature",
     "IndexKind",
     "ConstraintKind",
@@ -42551,8 +44183,12 @@ __all__ = [
     "WorkflowRegistryOpRead",
     "WorkflowRegistryOpRegister",
     "WorldTransformResult",
+    "WritebackApproval",
     "WriteBackAttempt",
     "WriteBackAttemptKind",
+    "WritebackAudit",
+    "WritebackAuditOutcome",
+    "WritebackAuditRows",
     "WriteBackAuthorizationDecision",
     "WriteBackAuthorizationMode",
     "WriteBackEffectStatus",
@@ -42563,6 +44199,7 @@ __all__ = [
     "WriteBackOpRecordAttempt",
     "WriteBackOpRecordReconciliation",
     "WriteBackOutcome",
+    "WritebackOutcome",
     "WriteBackReceipt",
     "WriteBackReceiptPage",
     "WriteBackReceiptRecord",
