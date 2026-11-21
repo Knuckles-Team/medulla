@@ -118,7 +118,7 @@ pub(super) fn prepare(
     let mut violations = Vec::new();
     let mut warnings = Vec::new();
     let all = pack_entries(request);
-    validate_index(request, archive, &all, &mut violations, &mut warnings);
+    let shape_digest = validate_index(request, archive, &all, &mut violations, &mut warnings);
     if !violations.is_empty() {
         return rejected(request, violations);
     }
@@ -170,7 +170,7 @@ pub(super) fn prepare(
         return rejected(request, vec![violation]);
     }
     plan.withdraw_absent(prior, &all)?;
-    plan.finish(warnings)
+    plan.finish(warnings, shape_digest)
 }
 
 /// `crosswalk` and `concept_path` entries resolve against the pinned vocabulary
@@ -551,7 +551,11 @@ impl<'a> PlanCollector<'a> {
         });
     }
 
-    fn finish(mut self, mut warnings: Vec<PackWarning>) -> Result<Prepared, String> {
+    fn finish(
+        mut self,
+        mut warnings: Vec<PackWarning>,
+        object_model_shape_digest: Option<Digest256>,
+    ) -> Result<Prepared, String> {
         self.members.sort_by(|a, b| a.uri.cmp(&b.uri));
         self.records.sort_by(|a, b| a.uri.cmp(&b.uri));
         warnings.sort_by(|a, b| (a.uri.as_deref(), a.code).cmp(&(b.uri.as_deref(), b.code)));
@@ -564,6 +568,7 @@ impl<'a> PlanCollector<'a> {
             warnings,
             self.server_pin
                 .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
+            object_model_shape_digest,
         )?;
         let record_bytes =
             medulla_storage::encode_bounded(&record, "connector pack import record")?;
@@ -698,6 +703,7 @@ fn import_record(
     entries: Vec<PackEntryRecord>,
     warnings: Vec<PackWarning>,
     server: ComponentDependency,
+    object_model_shape_digest: Option<Digest256>,
 ) -> Result<PackImportRecord, String> {
     Ok(PackImportRecord {
         schema_version: PACK_IMPORT_RECORD_SCHEMA_VERSION,
@@ -724,6 +730,7 @@ fn import_record(
         projection: projection_for(&entries),
         entries: BoundedVec::new(entries)?,
         warnings: BoundedVec::new(warnings)?,
+        object_model_shape_digest,
     })
 }
 

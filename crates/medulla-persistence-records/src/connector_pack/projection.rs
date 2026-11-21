@@ -663,6 +663,7 @@ pub mod tests {
             committed_at_ms: context.created_at_ms,
             entries: BoundedVec::new(Vec::new()).unwrap(),
             warnings: BoundedVec::new(Vec::new()).unwrap(),
+            object_model_shape_digest: None,
             projection: PackProjectionState::Pending,
         };
         match store

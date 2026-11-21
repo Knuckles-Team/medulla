@@ -10,6 +10,7 @@ each interface implementation with the required members its class lacks.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 
@@ -62,7 +63,9 @@ def _declarations(base: str, *extra: str) -> str:
     )
 
 
-async def _import_and_attach(connector: str, base: str, graph: str) -> MedullaClient:
+async def _import_and_attach(
+    connector: str, base: str, graph: str, receipts: list[dict] | None = None
+) -> MedullaClient:
     admin = await connect()
     try:
         imported = await import_entries(
@@ -75,6 +78,8 @@ async def _import_and_attach(connector: str, base: str, graph: str) -> MedullaCl
             ],
         )
         assert imported["result"] == "imported", imported
+        if receipts is not None:
+            receipts.append(imported["receipt"])
         await admin.tenants.create(graph)
     finally:
         await admin.close()
@@ -192,6 +197,41 @@ def test_value_link_and_interface_violations_refuse_with_unchanged_state() -> No
                 '<https://example.org/data/p2> rdf:type ex:Person ; ex:name "Bo" ; '
                 "ex:owns <https://example.org/data/a1> .\n",
             )
+        finally:
+            await client.tenants.delete(graph)
+            await client.close()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.5")
+def test_refusal_carries_rule_path_and_value_digest() -> None:
+    async def exercise() -> None:
+        tag = uuid.uuid4().hex[:8]
+        connector = f"object-model-{tag}"
+        base = f"https://example.org/{connector}"
+        graph = f"object-model-{tag}"
+        receipts: list[dict] = []
+        client = await _import_and_attach(connector, base, graph, receipts)
+        try:
+            # The import receipt carries the digest of the compiled shapes.
+            digest = receipts[0]["object_model_shape_digest"]
+            assert len(str(digest)) == 64, receipts[0]
+
+            secret = "bad-offending-value"
+            with pytest.raises(EngineResponseError) as refused:
+                await _add(
+                    client,
+                    base,
+                    f'<https://example.org/data/x> rdf:type ex:Asset ; ex:sku "{secret}" .\n',
+                )
+            text = str(refused.value)
+            assert "VALUE_CONSTRAINT_VIOLATED" in text, text
+            assert "/shape/" in text, text  # the rule: the compiled shape IRI
+            assert f"{base}#sku" in text, text  # the property path
+            expected = hashlib.sha256(f'"{secret}"'.encode()).hexdigest()
+            assert expected in text, text  # the digest of the offending value
+            assert secret not in text, text  # never the raw value
         finally:
             await client.tenants.delete(graph)
             await client.close()

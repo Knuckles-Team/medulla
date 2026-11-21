@@ -81,4 +81,8 @@ pub struct PackImportRecord {
     pub entries: BoundedVec<PackEntryRecord, { super::MAX_PACK_ENTRIES }>,
     pub warnings: BoundedVec<PackWarning, 256>,
     pub projection: PackProjectionState,
+    /// SHA-256 of the shapes compiled from the pack's object-model declarations;
+    /// absent when the pack declares none (MEDULLA-TYPED-PACKS-R650.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_model_shape_digest: Option<Digest256>,
 }

@@ -28,7 +28,7 @@ pub(super) fn validate_index(
     all: &[&PackEntry],
     violations: &mut Vec<PackViolation>,
     warnings: &mut Vec<PackWarning>,
-) {
+) -> Option<Digest256> {
     let mut validator = IndexValidator::new(request, archive, all, violations, warnings);
     validate_header(request, archive, validator.violations);
     check_duplicate_component_ids(request.index.connector.as_str(), all, validator.violations);
@@ -36,6 +36,7 @@ pub(super) fn validate_index(
         validator.validate_entry(entry);
     }
     finish_validation(&mut validator);
+    validator.object_model_shape_digest
 }
 
 /// MEDULLA-DECISION-ENGINE-R075.2: wire the standalone
@@ -129,6 +130,9 @@ struct IndexValidator<'a> {
     shape_owners: BTreeMap<String, String>,
     /// Every Prompt entry's URI: what a blueprint's `extends` may name.
     prompt_uris: BTreeSet<String>,
+    /// SHA-256 of the shapes compiled from the pack's object-model declarations
+    /// (MEDULLA-TYPED-PACKS-R650.5); `None` when it declares none.
+    object_model_shape_digest: Option<Digest256>,
 }
 
 impl<'a> IndexValidator<'a> {
@@ -160,6 +164,7 @@ impl<'a> IndexValidator<'a> {
                 .filter(|entry| entry.kind == PackEntryKind::Prompt)
                 .map(|entry| entry.uri.clone())
                 .collect(),
+            object_model_shape_digest: None,
         }
     }
 
@@ -798,7 +803,10 @@ fn flag_object_model(validator: &mut IndexValidator<'_>) -> Option<String> {
     }
     match compiled_shapes_document(&model) {
         Ok(document) if document.is_empty() => None,
-        Ok(document) => Some(document),
+        Ok(document) => {
+            validator.object_model_shape_digest = Some(Digest256::sha256(document.as_bytes()));
+            Some(document)
+        }
         Err(detail) => {
             validator.reject(PackViolationCode::ObjectModelInvalid, None, &detail);
             None

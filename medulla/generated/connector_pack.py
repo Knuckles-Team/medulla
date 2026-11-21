@@ -437,6 +437,7 @@ class PackImportReceipt(BaseModel):
     committed_version: Annotated[int, Field(ge=0)]
     connector: str
     counts: PackDispositionCounts
+    object_model_shape_digest: Digest256 | None = None
     pack_digest: Digest256
     previous_pack_digest: Digest256 | None = None
     projection: PackProjectionState
