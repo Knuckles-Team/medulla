@@ -398,6 +398,7 @@ closed_error_codes! {
         IdentityWeakPassword => "IDENTITY_WEAK_PASSWORD",
         ImporterMismatch => "IMPORTER_MISMATCH",
         IncidentNotFound => "INCIDENT_NOT_FOUND",
+        InstanceDefinitionUnregistered => "INSTANCE_DEFINITION_UNREGISTERED",
         Internal => "INTERNAL",
         InvalidConfiguration => "INVALID_CONFIGURATION",
         InvalidFacts => "INVALID_FACTS",
@@ -603,6 +604,7 @@ closed_error_codes! {
         StaleContentVersion => "STALE_CONTENT_VERSION",
         StaleOutboxLease => "STALE_OUTBOX_LEASE",
         StateBudgetExceeded => "STATE_BUDGET_EXCEEDED",
+        StatechartNoTransition => "STATECHART_NO_TRANSITION",
         /// MEDULLA-INCREMENTAL-VIEWS-R008.2: an incremental view disagreed with a recompute and fell back to recompute.
         ShadowMismatch => "SHADOW_MISMATCH",
         /// MEDULLA-INCREMENTAL-VIEWS-R010.3: a `view:<name>` feed names a plan view that is not defined.

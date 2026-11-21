@@ -203,7 +203,13 @@ fn op_instantiate(
             &request_batch_id,
             committed_at_ms,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|error| match error {
+            StatechartError::NotFound(_) => format!(
+                "{}: statechart definition '{def_id}' is not registered",
+                medulla_types::contract::ServerErrorCode::InstanceDefinitionUnregistered.as_str()
+            ),
+            other => other.to_string(),
+        })?;
     serde_json::to_value(&instance).map_err(|e| e.to_string())
 }
 
@@ -219,7 +225,8 @@ fn op_send_event(
 ) -> Result<serde_json::Value, String> {
     // Ownership: refuse (as "not found") an instance the caller does not own, so an
     // instance id never becomes a cross-tenant read/write handle.
-    owned_instance(store, tenant, actor, instance_id)?;
+    let instance = owned_instance(store, tenant, actor, instance_id)?;
+    let event_name = event.clone();
     let event_input = EventInput::with_payload(event, payload);
     // `crate::kernel::dispatch_support::authoritative_now_ms()` resolves to the SAME leader-selected commit time on
     // every Raft state-machine replica (see `StatechartStore::send_event`'s doc),
@@ -228,7 +235,24 @@ fn op_send_event(
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
     let outcome = store
         .send_event(instance_id, &event_input, expected_version, now_ms)
-        .map_err(|e| e.to_string())?;
+        .map_err(|error| match error {
+            StatechartError::InvalidTransition { reason, .. }
+                if reason == medulla_statechart::NO_TRANSITION_REASON =>
+            {
+                let state = instance
+                    .configuration
+                    .active
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "{}: instance '{instance_id}' in state '{state}' has no transition on event '{event_name}'",
+                    medulla_types::contract::ServerErrorCode::StatechartNoTransition.as_str()
+                )
+            }
+            other => other.to_string(),
+        })?;
     let effects: Vec<&medulla_statechart::Action> = outcome.outcome.effects().collect();
     Ok(serde_json::json!({
         "instance": serde_json::to_value(&outcome.instance).map_err(|e| e.to_string())?,
@@ -382,8 +406,8 @@ mod tests {
         );
         assert_eq!(sent["instance"]["version"], serde_json::json!(1));
 
-        // undefined edge (coin from unlocked) is a no-op, not an error
-        let noop = op_send_event(
+        // undefined edge (coin from unlocked) is the coded refusal, not a no-op
+        op_send_event(
             &store,
             tenant,
             actor,
@@ -392,8 +416,7 @@ mod tests {
             serde_json::Value::Null,
             None,
         )
-        .unwrap();
-        assert_eq!(noop["fired"], serde_json::json!(false));
+        .unwrap_err();
 
         // get + list are owner-scoped
         let got = op_get_state(&store, tenant, actor, &instance_id).unwrap();
@@ -403,6 +426,49 @@ mod tests {
         );
         let listed = op_list(&store, tenant, actor, None).unwrap();
         assert_eq!(listed["count"], serde_json::json!(1));
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R750.752
+    #[test]
+    fn undefined_transition_and_unregistered_definition_refuse() {
+        let (store, _dir) = tmp_store();
+        let def_id = op_define(&store, &turnstile_msgpack()).unwrap()["def_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let auth = authority("a1", "t1");
+        let inst = op_instantiate(&store, 1, &auth, &def_id, serde_json::Value::Null).unwrap();
+        let instance_id = inst["instance_id"].as_str().unwrap().to_string();
+
+        // `push` from `locked` has no transition: the coded refusal, state unchanged.
+        let error = op_send_event(
+            &store,
+            auth.tenant_scope(),
+            auth.actor_scope(),
+            &instance_id,
+            "push".into(),
+            serde_json::Value::Null,
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(
+            error,
+            format!(
+                "STATECHART_NO_TRANSITION: instance '{instance_id}' in state 'locked' has no transition on event 'push'"
+            )
+        );
+        let stored = op_get_state(&store, auth.tenant_scope(), auth.actor_scope(), &instance_id)
+            .unwrap();
+        assert_eq!(stored["version"], serde_json::json!(0));
+        assert_eq!(stored["configuration"]["active"], serde_json::json!(["locked"]));
+
+        // An unregistered definition is refused with its own code.
+        let error = op_instantiate(&store, 2, &auth, "eg:statechart:absent", serde_json::Value::Null)
+            .unwrap_err();
+        assert_eq!(
+            error,
+            "INSTANCE_DEFINITION_UNREGISTERED: statechart definition 'eg:statechart:absent' is not registered"
+        );
     }
 
     #[test]

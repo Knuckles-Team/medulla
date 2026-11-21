@@ -77,7 +77,9 @@ pub use guard::Guard;
 pub use instance::{Configuration, InstanceId, InstanceStatus, MachineInstance};
 pub use kg::{project, KgEdge, KgNode, KgProjection};
 pub use model::{DefId, EventName, HistoryKind, State, StateId, StatechartDef, Transition};
-pub use store::{instance_id_for_request, SendOutcome, StatechartError, StatechartStore};
+pub use store::{
+    instance_id_for_request, SendOutcome, StatechartError, StatechartStore, NO_TRANSITION_REASON,
+};
 pub use transition::{
     initial_configuration, step, transition, NoOpReason, StepOutcome, TransitionError,
     TransitionOutcome,

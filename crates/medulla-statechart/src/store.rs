@@ -104,6 +104,10 @@ const MAX_ID_BYTES: usize = 256;
 const MAX_STRING_BYTES: usize = 4 * 1024;
 const MAX_LIST_ITEMS: usize = 100_000;
 
+/// The `reason` of the [`StatechartError::InvalidTransition`] a `send_event` with no
+/// transition defined from the current state returns (MEDULLA-ORCH-VOCAB-R750.752).
+pub const NO_TRANSITION_REASON: &str = "no transition defined";
+
 /// Store error type. Small and string-carrying, mirroring `medulla-jobs`' `JobError`: the
 /// guard messages ARE the diagnostic, surfaced by callers as plain protocol errors.
 #[derive(Debug)]
@@ -641,6 +645,16 @@ impl StatechartStore {
         let outcome = step(&def, &instance.configuration, &instance.context, event)
             .map_err(|error| map_transition_error(instance_id, error))?;
 
+        // An event with no transition defined from the current state is a refusal,
+        // decided before anything is persisted (MEDULLA-ORCH-VOCAB-R750.752). A
+        // transition whose guards are all false stays a well-defined no-op.
+        if outcome.no_op_reason == Some(crate::NoOpReason::NoTransitionDefined) {
+            return Err(StatechartError::InvalidTransition {
+                instance_id: instance_id.to_string(),
+                reason: NO_TRANSITION_REASON.to_string(),
+            });
+        }
+
         if !outcome.fired {
             // Well-defined no-op: stay put, persist nothing.
             return Ok(SendOutcome { instance, outcome });
@@ -1013,18 +1027,22 @@ mod tests {
         let instance = store
             .instantiate(&def_id, Context::new(), "t", "a")
             .unwrap();
-        // 'push' from 'locked' is undefined ⇒ no-op.
-        let out = store
+        // 'push' from 'locked' is undefined ⇒ refused, and nothing is written.
+        let error = store
             .send_event(
                 &instance.instance_id,
                 &EventInput::new("push"),
                 None,
                 now_ms(),
             )
-            .unwrap();
-        assert!(!out.outcome.fired);
-        assert_eq!(out.instance.version, 0);
-        assert!(out.instance.in_state("locked"));
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            StatechartError::InvalidTransition { ref reason, .. } if reason == NO_TRANSITION_REASON
+        ));
+        let stored = store.get_instance(&instance.instance_id).unwrap();
+        assert_eq!(stored.version, 0);
+        assert!(stored.in_state("locked"));
     }
 
     #[test]
@@ -1140,17 +1158,16 @@ mod tests {
             "engine.statechart-instance.transitioned"
         );
 
-        // A well-defined NO-OP must NOT open a batch: the gateway version is unchanged.
-        // 'coin' from 'unlocked' is undefined ⇒ no-op.
-        let noop = store
+        // A refused event must NOT open a batch: the gateway version is unchanged.
+        // 'coin' from 'unlocked' is undefined ⇒ refused.
+        store
             .send_event(
                 &instance.instance_id,
                 &EventInput::new("coin"),
                 None,
                 now_ms(),
             )
-            .unwrap();
-        assert!(!noop.outcome.fired);
+            .unwrap_err();
         assert_eq!(
             store.mutation_version().unwrap(),
             v_after_fire,
