@@ -195,16 +195,25 @@ async fn try_handle_sparql(
                         // Plan IR. A row filter splices in as a FILTER; a column mask
                         // cannot be expressed inline in SPARQL 1.1, so a tagged
                         // projection is refused until the value-level boundary lands.
-                        // The caller's tenant policy set arrives via the R706.7
-                        // loader; until one is bound the rewrite is a byte-for-byte
-                        // no-op — the call itself is never skipped.
+                        // The caller's tenant policy set is loaded by the R706.7
+                        // loader from the tenant graph's unfiltered snapshot; a
+                        // malformed record refuses the read.
+                        let policies = match medulla_exec::policy_mask::load_policy_set(
+                            graph_name,
+                            &core.analysis_snapshot(),
+                        ) {
+                            Ok(set) => set,
+                            Err(error) => {
+                                return Some(Response::err(req_id, error.to_string()))
+                            }
+                        };
                         #[cfg(feature = "security")]
                         let principal = medulla_exec::policy_mask::PrincipalRef::from(caller);
                         #[cfg(not(feature = "security"))]
                         let principal = medulla_exec::policy_mask::PrincipalRef::from("");
                         let query = match medulla_exec::policy_mask::sparql_read_rewrite(
                             query,
-                            &medulla_exec::policy_mask::PolicySet::default(),
+                            &policies,
                             &principal,
                         ) {
                             Ok((rewritten, _applied)) => rewritten,

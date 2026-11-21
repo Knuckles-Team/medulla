@@ -71,8 +71,8 @@ async def test_cross_tenant_policy_not_applied() -> None:
                 "categories": [tag],
             },
         )
-        # A policy written before its marking is registered refuses (R706.4); registering
-        # the `marking:<tag>` node lets the same policy serve.
+        # A policy written before its marking is registered refuses (R706.4);
+        # registering the `marking:<tag>` node lets the same policy serve.
         await tenant_a.nodes.add(
             f"policy-{uuid.uuid4().hex}",
             {
@@ -114,7 +114,8 @@ async def test_cross_tenant_policy_not_applied() -> None:
 @pytest.mark.asyncio
 async def test_explain_lists_policies() -> None:
     """EXPLAIN lists each policy the plan is rewritten under with its tag, kind and
-    column, and the record carries no masked value; a tenant with no policy lists none."""
+    column, and the record carries no masked value; a tenant with no policy lists
+    none."""
     label = f"PolicyExplain{uuid.uuid4().hex[:8]}"
     tag = f"region.{uuid.uuid4().hex[:8]}"
     tenant_a = await _connect(TEST_TENANT)
@@ -179,3 +180,41 @@ async def test_mask_refusals() -> None:
     finally:
         await tenant_a.close()
         await tenant_b.close()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R706.4
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R706.4")
+def test_masked_column_over_sql_returns_masked_value(clean_graph) -> None:
+    """A raw-value request of a tagged column over the served SQL read is not refused:
+    it receives the masked value (`[REDACTED]` for `redact`), and an untagged column of
+    the same row stays raw."""
+    table = f"masked_{uuid.uuid4().hex[:10]}"
+    tag = f"pii.{uuid.uuid4().hex[:8]}"
+    clean_graph.query.sql(
+        f"CREATE TABLE {table} (id BIGINT PRIMARY KEY, email TEXT, city TEXT)"
+    )
+    clean_graph.query.sql(
+        f"INSERT INTO {table} VALUES (1, 'person1@example.invalid', 'oslo')"
+    )
+    clean_graph.nodes.add(f"marking:{tag}", {"type": "Marking"})
+    clean_graph.nodes.add(
+        f"policy-{uuid.uuid4().hex}",
+        {
+            "type": "QueryPolicy",
+            "kind": "mask",
+            "tag": tag,
+            "method": "redact",
+            "principals_exempt": [],
+        },
+    )
+    clean_graph.nodes.add(
+        f"claim-{uuid.uuid4().hex}",
+        {
+            "type": "ClassificationClaim",
+            "asset": f"col:{table}.email",
+            "state": "promoted",
+            "categories": [tag],
+        },
+    )
+    rows = clean_graph.query.sql(f"SELECT email, city FROM {table}")
+    assert rows == [{"email": "[REDACTED]", "city": "oslo"}]

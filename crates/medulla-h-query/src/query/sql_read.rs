@@ -129,12 +129,20 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
     // reach the SQL read through the projection adapter: the ONE rewrite
     // (apply_policies) over the shared Plan IR, spliced into the pushed query —
     // the masked projection, and the row-filter predicates AND-joined into the
-    // WHERE. The caller's tenant policy set arrives via the R706.7 loader; until
-    // one is bound the rewrite is a byte-for-byte no-op — the call itself is
-    // never skipped.
+    // WHERE. The caller's tenant policy set is loaded by the R706.7 loader from the
+    // tenant graph's unfiltered snapshot (a policy the caller cannot see must
+    // still apply to them), exactly as the UQL read does; a malformed record
+    // refuses the read.
+    let policies = match medulla_exec::policy_mask::load_policy_set(
+        graph_name,
+        &core.analysis_snapshot(),
+    ) {
+        Ok(set) => set,
+        Err(error) => return Response::err(req_id, error.to_string()),
+    };
     let (query, _applied) = match medulla_exec::policy_mask::sql_read_rewrite(
         &query,
-        &medulla_exec::policy_mask::PolicySet::default(),
+        &policies,
         &medulla_exec::policy_mask::PrincipalRef::from(caller),
     ) {
         Ok(rewritten) => rewritten,
