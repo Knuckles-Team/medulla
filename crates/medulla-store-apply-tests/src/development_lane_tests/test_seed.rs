@@ -114,7 +114,6 @@ pub(super) fn seed_lane_work_item(
         state: ResourceReservationRecordState::Reserved,
         revision: 1,
         lifecycle_revision: 1,
-        tombstone: false,
     };
     let resource = medulla_resource_store::redb_store::resource_rows::DurableResourceReservation {
         record,

@@ -632,6 +632,7 @@ pub(crate) fn seed_component_for_test(
                         source_revision: "component-seed:1".to_string(),
                         ..test_component_draft(tenant_id, component_id)
                     },
+                    prompt_blueprint: None,
                 }, None)
                 .expect("the fixture's component publishes")
                 .result

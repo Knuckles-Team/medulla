@@ -456,7 +456,7 @@ impl JobStore {
 }
 
 #[cfg(test)]
-mod tests {
+mod lane_count_tests {
     use super::*;
     use crate::dev_scope_grant::open_dev_store_in_dir;
 
@@ -471,6 +471,8 @@ mod tests {
             idempotency_key: key.to_string(),
             priority: 5,
             not_before_ms: 0,
+            job_id: None,
+            max_attempts: None,
         }
     }
 
