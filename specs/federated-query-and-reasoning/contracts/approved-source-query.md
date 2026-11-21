@@ -17,18 +17,27 @@ Repository: scion-sdk. Rows `SCION-SOURCE-INGEST-R004.7` to `SCION-SOURCE-INGEST
 
 | Method | Request | Answer |
 |---|---|---|
-| `ApproveSourceQuery` | `SourceQueryRequest`: typed parameters, dialect, source, schema and snapshot identities, authority, expiry, `SourceQueryLimits` | `ApprovedSourceQuery` |
-| `VerifySourceQueryApproval` | `SourceQueryApprovalCheck` | `SourceQueryApprovalValidity` |
+| `ApproveSourceQuery` | `request: ApproveSourceQueryRequest { tenant, query: SourceQueryRequest }` (typed parameters, dialect, source, schema and snapshot identities, expiry, `SourceQueryLimits`) and `source_approval: ConnectorPackSourceApprovalResult`. `admission` is engine-stamped; a client value is overwritten. | `SourceQueryApprovalIssued { outcome, approved: Option<ApprovedSourceQuery>, changed_work_item_ids }` |
+| `VerifySourceQueryApproval` | `request: SourceQueryApprovalCheck` and `source_approval: ConnectorPackSourceApprovalResult` | `SourceQueryApprovalValidity` |
+
+The approval carries the exact SQL and parameters. The engine lease keeps only identity and digests. Verification must come from the same principal, agent and delegation chain that obtained the approval.
 
 ## Refusal codes
 
-- `SOURCE_QUERY_APPROVAL_KIND`: the approval kind does not match the request.
-- `unsupported_dialect`: the dialect has no approved renderer.
-- A changed binding, authority, source or revision refuses. A revoked, expired or consumed approval refuses.
+`SourceQueryError::code` gives `SOURCE_QUERY_` plus the upper-case kind. The reply text is the code, a colon and the `SourceQueryFailure`.
+
+- `SOURCE_QUERY_UNSUPPORTED_DIALECT`, `SOURCE_QUERY_INVALID_QUERY`, `SOURCE_QUERY_LIMIT_EXCEEDED`: the request is refused before approval.
+- `SOURCE_QUERY_UNAUTHORIZED`: the source is not approved and registered for the caller, a binding or digest changed, or the verifier is another identity.
+- `SOURCE_QUERY_STALE_SOURCE`: the receipt or observed source, schema or snapshot identity differs from the approved one.
+- `SOURCE_QUERY_APPROVAL_REVOKED`, `SOURCE_QUERY_APPROVAL_EXPIRED`: the lease is revoked or consumed, or expired.
+- `SOURCE_QUERY_VERIFICATION_UNAVAILABLE`: the lease store or the Agent Library is unavailable.
+- `SOURCE_QUERY_QUERY_FAILED`, `SOURCE_QUERY_CANCELLED`: SDK-side execution outcomes.
+- `ACCESS_DENIED`: a generic `IssueControlLease` of `source.query.approval`, or a caller without read authority.
 
 ## Authoritative types
 
 - `SourceQueryRequest`, `ApprovedSourceQuery`, `SourceQueryApprovalCheck`, `SourceQueryApprovalValidity` and `SourceQueryLimits`: `crates/medulla-result-types/src/source_query.rs` in medulla.
+- `ApproveSourceQueryRequest`, `SourceQueryAdmission`, `SourceQueryApprovalGrant` and `SourceQueryApprovalIssued`: `crates/medulla-work-types/src/source_query_approval.rs` in medulla.
 
 ## Test vectors
 

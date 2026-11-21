@@ -271,7 +271,12 @@ Decision: the executor's allow set is the scoped view itself. The read chokepoin
 The request's `Plan` carries `constraints` (default none). `run_unified_with` compiles them over the caller's authorized snapshot once and binds the eligible set on `PlanCtx`; `vector_rank::constrained` is the one filter, called by the vector rank (fused rank-then-limit and whole-order alike), the server-side-embedded rank and the text rank leg, so no ranking path has its own. Because the filter sits in the ranking leaves, the optimizer cannot move a constraint after a rank. A plan with no ranking step reads no constraint (they bound what ranking may rank).
 
 ## Column advice receipt (R077.6.5)
-The receipt is one typed struct on each advice row, not a second relation: the relation row and the receipt cannot disagree because the row holds no count, window or revision outside it. The policy revision is the policy name with every weight and floor, so a changed knob is a changed revision without a stored counter.
+Decision: the receipt is the field `ColumnVectorAdvice.receipt: AdviceReceipt` on each advice row, not a second relation and not a second return value of `rank_columns`. Why: the row already holds the per-column count, the window and the schema revision, so the receipt adds only the share denominator, the policy revision and the three score terms, and the score is computed as the sum of those terms; row and receipt cannot disagree. The policy revision is `sql_advice/v1` followed by every weight and floor, so a changed knob is a changed revision without a stored counter.
+
+## Column NEAREST binding resolution and order (R077.5)
+Decision: a SQL column has one binding, whose id is `binding:{table}.{column}`, enforced at `AdmitBinding`. Why: a semantic owner is opened per `(tenant, binding)` and no index maps a column to its bindings; a canonical id resolves the binding with one open and no scan of owners. A second binding of the same column would be a second embedding space for one column; a model change is `RefreshBinding`.
+
+Decision: the probe narrows the projection to the hit rows, and a per-statement scalar UDF `nearest(col, text)` returns each row's hit distance, keyed by the row's current column text. Why: the SQL executor then runs the unchanged statement, so `ORDER BY NEAREST(...)` sorts nearest first and `WHERE`, `OFFSET` and `LIMIT` keep their meaning, with no rewrite of the select list. Equal texts embed to equal vectors, so a text key is exact; the smaller distance wins only if stale vectors differ.
 
 ## Column advice settings and counters (R077.6.2 to R077.6.4)
 

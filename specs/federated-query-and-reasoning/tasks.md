@@ -77,14 +77,13 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
 - [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
 - [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
-- [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation
+- [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation (canonical binding id, `search_live`, projection narrowing, per-statement `nearest` UDF)
 - [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
 - [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
 - [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
 - [ ] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
 - [ ] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [x] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
-- [x] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
 - [x] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
 - [x] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [ ] T081 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.6 Multimodal space: hot-path proof
@@ -106,7 +105,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T097 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.2 Column advice: pure workload-first `rank_columns` over `AdviceInput` and `AdvicePolicy`
 - [ ] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: text-search usage counters on the tenant TableStore and `information_schema.vector_advice`
 - [ ] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: pinned-read refusals `COLUMN_TYPE_UNSUPPORTED` and `SCHEMA_REVISION_STALE`
-- [ ] T100 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.5 Column advice: evidence
+- [ ] T100 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.5 Column advice: `ColumnVectorAdvice.receipt` (`AdviceReceipt`) served as five `information_schema.vector_advice` columns
 - [ ] T101 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.6 Column advice: hot-path proof
 - [ ] T102 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.1 Topic fusion: model
 - [ ] T103 [US1] MEDULLA-FEDERATED-QUERY-R040.2.2 Topic fusion: behavior
@@ -379,12 +378,12 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 ## User Story 4: Governed sources, masks and approvals
 
 - [ ] T359 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.1 Model of Medulla approves immutable source queries for bounded connector execution
-- [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: issue approval through the dedicated native issuer `source_query::issue`
-- [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: verify approval of Medulla approves immutable source queries for bounded connector execution
+- [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: admit in `source_query_approval::try_handle` (`source_query_authority`, `verify_registered_for`, framed digests) and issue through the dedicated native issuer `source_query::issue`
+- [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: `verify_source_query_approval` in `foreign_source_handlers.rs` re-derives digests and authority, reads the lease by `approval_id` and rechecks the source receipt
 - [x] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
-- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring: issue through the native work-item route, verify through the foreign-source handler
-- [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: bounded execution contract of Medulla approves immutable source queries for bounded connector execution
-- [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal of Medulla approves immutable source queries for bounded connector execution
+- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring: issue through `route_native_lifecycle_ops` and the native work-item route, verify through the foreign-source handler; register both methods at every `IssueHostStartGrant` site
+- [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: install `SourceQueryKnobs` at startup and clamp in `admit_source_query`; served proof `bounded_stream_preserves_approval`
+- [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal: `SourceQueryError::code` (`SOURCE_QUERY_*`) registered for both methods
 - [ ] T366 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.8 Evidence and hot-path proof
 - [ ] T367 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.1 Model of Query-time access check for dynamic-access sources
 - [ ] T368 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.2 Behavior of Query-time access check for dynamic-access sources
