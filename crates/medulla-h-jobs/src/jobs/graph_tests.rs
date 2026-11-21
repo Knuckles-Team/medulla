@@ -395,3 +395,134 @@ mod colocated_executor_tests {
         assert!(succeeded, "the colocated executor did not finish the job");
     }
 }
+
+/// The staged association result of the job plane (MEDULLA-DURABLE-KERNEL-R082.5).
+#[cfg(test)]
+mod association_result_tests {
+    use super::*;
+    use sha2::{Digest, Sha256};
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.5
+    #[test]
+    fn association_result_has_the_eleven_column_shape_and_recomputed_digest() {
+        let dataset_ref = native_opaque_ref("dataset", "association-result-input");
+        let input_digest = hex::encode(Sha256::digest(b"association-input"));
+        let job = medulla_jobs::AnalyticsJob {
+            job_id: "association-result-job".to_string(),
+            input_snapshot: medulla_jobs::model::InputSnapshotHandle::new(
+                native_opaque_ref("graph", "association-result"),
+                7,
+            )
+            .with_dataset(dataset_ref.clone(), input_digest.clone()),
+            policy: medulla_jobs::model::JobPolicy {
+                policy_fingerprint: "policy-fingerprint-1".to_string(),
+                ..medulla_jobs::model::JobPolicy::default()
+            },
+            algo: medulla_jobs::model::AlgoVersion {
+                family: "mining.association".to_string(),
+                algorithm: "fpgrowth".to_string(),
+                params_digest: "params-digest-1".to_string(),
+                code_version: "code-version-1".to_string(),
+                env_version: "env-version-1".to_string(),
+            },
+            input_payload: None,
+            retry: medulla_jobs::model::RetryPolicy::default(),
+            state: medulla_jobs::model::JobState::Submitted,
+            cancel_requested: false,
+            lease_epoch: 0,
+            lease: None,
+            last_worker_ref: String::new(),
+            not_before_ms: 0,
+            output: None,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+        let rules = vec![
+            medulla_mining::mining::association::LabeledRule {
+                antecedent: vec!["a".to_string()],
+                consequent: vec!["b".to_string()],
+                support: 0.5,
+                confidence: 0.8,
+                lift: 1.6,
+            },
+            medulla_mining::mining::association::LabeledRule {
+                antecedent: vec!["b".to_string(), "c".to_string()],
+                consequent: vec!["d".to_string()],
+                support: 0.25,
+                confidence: 0.5,
+                lift: 2.0,
+            },
+        ];
+
+        let result = typed_association_result(&job, &rules).expect("the staged result builds");
+
+        // The eleven columns, in order.
+        let columns: Vec<&str> = result
+            .schema
+            .iter()
+            .map(|column| column.name.as_str())
+            .collect();
+        assert_eq!(
+            columns,
+            [
+                "id",
+                "kind",
+                "confidence",
+                "evidence_refs",
+                "source_refs",
+                "proof_ids",
+                "contradiction_ids",
+                "antecedent",
+                "consequent",
+                "support",
+                "lift",
+            ]
+        );
+        assert_eq!(result.rows.len(), 2);
+
+        // Evidence and source refs are the input dataset ref.
+        assert_eq!(result.evidence_refs, vec![dataset_ref.clone()]);
+        for row in &result.rows {
+            assert_eq!(row["evidence_refs"], serde_json::json!([dataset_ref]));
+            assert_eq!(row["source_refs"], serde_json::json!([dataset_ref]));
+            assert_eq!(row["kind"], serde_json::json!("association_rule"));
+            assert_eq!(row["proof_ids"], serde_json::json!([]));
+            assert_eq!(row["contradiction_ids"], serde_json::json!([]));
+        }
+
+        // The result ref is `eg:knowledge_batch:` plus the SHA-256 over the schema and the rows,
+        // recomputed here independently of the producer.
+        let mut hasher = Sha256::new();
+        hasher.update(b"eg-jobs.knowledge-batch.v1\0");
+        hasher.update(rmp_serde::to_vec_named(&result.schema).unwrap());
+        hasher.update([0]);
+        hasher.update(rmp_serde::to_vec_named(&result.rows).unwrap());
+        let digest = hex::encode(hasher.finalize());
+        assert_eq!(digest.len(), 64);
+        assert!(digest
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')));
+        assert_eq!(result.content_digest, digest);
+        assert_eq!(result.dataset_ref, format!("eg:knowledge_batch:{digest}"));
+        result.validate().expect("the content identity holds");
+
+        // Uncertainty is the mean of one minus confidence; calibration is the min and max
+        // of support times confidence.
+        let uncertainty = result.uncertainty.expect("uncertainty is set");
+        assert!((uncertainty - 0.35).abs() < 1e-12, "{uncertainty}");
+        let (low, high) = result.calibration.expect("calibration is set");
+        assert!((low - 0.125).abs() < 1e-12, "{low}");
+        assert!((high - 0.4).abs() < 1e-12, "{high}");
+
+        // The reproducibility block.
+        let reproducibility = &result.reproducibility;
+        assert_eq!(reproducibility.input_dataset_ref, dataset_ref);
+        assert_eq!(reproducibility.input_content_digest, input_digest);
+        assert_eq!(reproducibility.input_snapshot_version, 7);
+        assert_eq!(reproducibility.algorithm_ref, "mining.association:fpgrowth");
+        assert_eq!(reproducibility.params_digest, "params-digest-1");
+        assert_eq!(reproducibility.implementation_version, "code-version-1");
+        assert_eq!(reproducibility.environment_version, "env-version-1");
+        assert_eq!(reproducibility.policy_fingerprint, "policy-fingerprint-1");
+    }
+}
