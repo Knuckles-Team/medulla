@@ -13,7 +13,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T007 [US1] MEDULLA-BUSINESS-OPS-R001.6 Tax terms
 - [x] T008 [US1] MEDULLA-BUSINESS-OPS-R001.7 Approval, gate decision, deploy and incident terms
 - [x] T009 [US1] MEDULLA-BUSINESS-OPS-R001.8 Every pack class rolls up to core and carries no product name
-- [ ] T010 [US1] MEDULLA-BUSINESS-OPS-R001.9 Wiring and hot-path proof: three sources join in one query
+- [ ] T010 [US1] MEDULLA-BUSINESS-OPS-R001.9 RETIRED: three-source join proof
 - [ ] T011 [US2] MEDULLA-BUSINESS-OPS-R002 Deterministic rule evaluation through the query path (rollup)
 - [x] T012 [US2] MEDULLA-BUSINESS-OPS-R002.1 Rule records
 - [x] T013 [US2] MEDULLA-BUSINESS-OPS-R002.2 Recurrence and compliance calendar
@@ -21,8 +21,8 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
 - [x] T016 [US2] MEDULLA-BUSINESS-OPS-R002.5 Reorder point and quantity
 - [x] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
-- [ ] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE` stage reaches the five kinds
-- [ ] T019 [US2] MEDULLA-BUSINESS-OPS-R002.8 Hot-path proof: ask in natural language, get the deterministic answer
+- [ ] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE RULE` stage evaluates one stored rule over the rows it is given
+- [ ] T019 [US2] MEDULLA-BUSINESS-OPS-R002.8 RETIRED: natural-language entry to the rule stage
 - [ ] T020 [US3] MEDULLA-BUSINESS-OPS-R003 Owner digest as stored queries (rollup)
 - [ ] T021 [US3] MEDULLA-BUSINESS-OPS-R003.1 Pending approvals and overdue obligations
 - [ ] T022 [US3] MEDULLA-BUSINESS-OPS-R003.2 Changed in a window

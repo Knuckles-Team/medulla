@@ -1,23 +1,23 @@
 # MEDULLA-BUSINESS-OPS — Quickstart
 
-The shortest served proof ingests an order, a payment and a payout, then joins them in one query.
+The shortest served proof stores one recurrence rule and its holiday calendar, then asks for the next due dates through one UQL statement.
 
 ## Scenario
 
 1. Start a loopback engine with one tenant and one graph.
-2. Send `SourceIngest` with one order, one payment and one payout from three source ids.
-3. Send a `Uql` query for the order and read the payment id, the payout id and the provenance source of each leg.
+2. Write a `:RuleSpec` node `rule:sales-tax` (kind `recurrence`, version 1, monthly on day 20, next business day) and a `:HolidayCalendar` node `cal:1`.
+3. Send `Uql` with `MATCH (:HolidayCalendar) WHERE id = 'cal:1' |> EVALUATE RULE 'rule:sales-tax' ASOF 1767225600000 COUNT 2` and read the due dates, the rule digest and the input revisions.
 
 ## Commands
 
-Run the proof for `MEDULLA-BUSINESS-OPS-R001.9` (planned):
+Run the stage proof for `MEDULLA-BUSINESS-OPS-R002.7` (planned):
 
 ```text
-cargo test -p medulla-server-served-tests order_payment_payout_join_with_provenance
+cargo test -p medulla-server-served-tests evaluate_rule_stage_serves_recurrence_with_inputs
 ```
 
-Run the recurrence proof for `MEDULLA-BUSINESS-OPS-R002.8` (planned):
+Run the digest proofs for `MEDULLA-BUSINESS-OPS-R003.1` to `R003.3` (planned):
 
 ```text
-cargo test -p medulla-server-served-tests nl_question_returns_recurrence_with_inputs
+cargo test -p medulla-server-served-tests digest_
 ```
