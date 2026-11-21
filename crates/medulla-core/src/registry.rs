@@ -1303,6 +1303,7 @@ impl GraphRegistry {
             }
         }
         readiness_events::evicted(name);
+        readiness_events::opening(name);
         true
     }
 
@@ -2334,6 +2335,61 @@ mod readiness_events {
     pub(super) fn evicted(name: &str) {
         if state(name) == Some(ReadinessState::Ready) {
             apply(name, ReadinessEvent::Reopen);
+        }
+    }
+
+    /// Paging into memory began or continues.
+    pub(super) fn materializing(name: &str) {
+        if matches!(
+            state(name),
+            Some(ReadinessState::Opening | ReadinessState::Migrating)
+        ) {
+            apply(name, ReadinessEvent::BeginMaterialize);
+        }
+    }
+
+    /// The manifest is complete.
+    pub(super) fn ready(name: &str) {
+        apply(name, ReadinessEvent::Materialized);
+    }
+
+    /// The manifest failed: the graph cannot serve complete reads.
+    pub(super) fn degraded(name: &str, code: &str, detail: &str) {
+        let reason = DegradeReason {
+            code: code.to_string(),
+            task: None,
+            detail: detail.to_string(),
+        };
+        if let Err(refused) = medulla_observe::readiness().degrade(name, reason) {
+            tracing::debug!(graph = name, %refused, "readiness degrade refused");
+        }
+    }
+}
+
+/// Readiness events of the graph registry (MEDULLA-OBSERVE-R007.1). The registry is the one
+/// caller that moves a graph's `ReadinessMachine`: open, eviction, paging and a failed or
+/// complete manifest each map to one event. A refused pair is logged, never hidden.
+mod readiness_events {
+    use medulla_observe::machine::readiness::{DegradeReason, ReadinessEvent, ReadinessState};
+
+    fn apply(name: &str, event: ReadinessEvent) {
+        if let Err(refused) = medulla_observe::readiness().apply(name, event, None) {
+            tracing::debug!(graph = name, %refused, "readiness event refused");
+        }
+    }
+
+    fn state(name: &str) -> Option<ReadinessState> {
+        medulla_observe::readiness().get(name).map(|row| row.state)
+    }
+
+    /// The graph is being opened: a new row starts `Opening`, a `Ready` or `Degraded` one
+    /// reopens.
+    pub(super) fn opening(name: &str) {
+        match state(name) {
+            Some(ReadinessState::Ready | ReadinessState::Degraded) => {
+                apply(name, ReadinessEvent::Reopen)
+            }
+            _ => medulla_observe::readiness().open(name),
         }
     }
 
