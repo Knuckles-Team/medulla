@@ -640,6 +640,7 @@ class PackViolationCode(str, Enum):
     PACK_SCHEMA_INCOMPATIBLE = "PACK_SCHEMA_INCOMPATIBLE"
     PACK_PLAN_STALE = "PACK_PLAN_STALE"
     OBJECT_MODEL_INVALID = "OBJECT_MODEL_INVALID"
+    INTERFACE_UNIMPLEMENTED = "INTERFACE_UNIMPLEMENTED"
     # Client-only fallback for a code this client does not know; the raw
     # code is kept in `PackViolation.raw_code`. Not an engine code.
     UNKNOWN = "UNKNOWN"

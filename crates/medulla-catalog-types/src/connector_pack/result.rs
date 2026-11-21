@@ -93,6 +93,9 @@ pub enum PackViolationCode {
     // An object-model declaration (value type, link type, interface) is malformed
     // (MEDULLA-TYPED-PACKS-R650.7).
     ObjectModelInvalid,
+    // A class declares `:implementsInterface` and lacks a required property or link
+    // (MEDULLA-TYPED-PACKS-R650.4).
+    InterfaceUnimplemented,
 }
 
 /// Something worth saying that did not stop the import.

@@ -135,6 +135,12 @@ closed_error_codes! {
         ReceiptDigestReused => "RECEIPT_DIGEST_REUSED",
         /// The component has no such revision to record a receipt on (MEDULLA-TYPED-PACKS-R094.8).
         ReceiptRevisionUnknown => "RECEIPT_REVISION_UNKNOWN",
+        /// A value breaks its declared value type (MEDULLA-TYPED-PACKS-R650.4).
+        ValueConstraintViolated => "VALUE_CONSTRAINT_VIOLATED",
+        /// A node has more links than a link type's cap (MEDULLA-TYPED-PACKS-R650.4).
+        LinkCardinalityExceeded => "LINK_CARDINALITY_EXCEEDED",
+        /// A class declares an interface and lacks a required member (MEDULLA-TYPED-PACKS-R650.4).
+        InterfaceUnimplemented => "INTERFACE_UNIMPLEMENTED",
         ComponentBodyUnavailable => "COMPONENT_BODY_UNAVAILABLE",
         ComponentWithdrawn => "COMPONENT_WITHDRAWN",
         MemsyncContentMalformed => "MEMSYNC_CONTENT_MALFORMED",

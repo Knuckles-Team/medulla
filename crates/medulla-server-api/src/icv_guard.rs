@@ -125,6 +125,87 @@ impl WriteGuard for CoreIcvGuard<'_> {
         IcvPolicyRegistry::new()
             .with(graph, policy)
             .check_graph(graph, base, additions, removals)
+            .map_err(object_model_refusal)
+    }
+}
+
+/// Name an object-model violation by its typed code (MEDULLA-TYPED-PACKS-R650.4).
+///
+/// A violation of a shape the pack's object model compiled to
+/// (`OBJECT_MODEL_NS`) refuses as `VALUE_CONSTRAINT_VIOLATED` (a value breaks its
+/// value type) or `LINK_CARDINALITY_EXCEEDED` (a node has more links than the
+/// cap). The refusal carries the rule (the shape IRI), the property path and the
+/// SHA-256 of the offending value; the raw value is never copied
+/// (MEDULLA-TYPED-PACKS-R650.5). Any other rejection passes through unchanged.
+pub fn object_model_refusal(rejection: GuardRejection) -> GuardRejection {
+    use medulla_core::ontology::object_model::OBJECT_MODEL_NS;
+
+    let Some(violations) = rejection.details.as_array() else {
+        return rejection;
+    };
+    let text = |violation: &serde_json::Value, key: &str| -> Option<String> {
+        violation
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(|term| term.trim_matches(['<', '>']).to_string())
+    };
+    let mut typed = Vec::new();
+    for violation in violations {
+        let Some(rule) = text(violation, "source_shape").filter(|r| r.starts_with(OBJECT_MODEL_NS))
+        else {
+            continue;
+        };
+        let component = text(violation, "constraint_component").unwrap_or_default();
+        let code = if component.ends_with("MaxCountConstraintComponent") {
+            "LINK_CARDINALITY_EXCEEDED"
+        } else if [
+            "DatatypeConstraintComponent",
+            "PatternConstraintComponent",
+            "MinInclusiveConstraintComponent",
+            "MaxInclusiveConstraintComponent",
+            "MaxLengthConstraintComponent",
+            "InConstraintComponent",
+        ]
+        .iter()
+        .any(|suffix| component.ends_with(suffix))
+        {
+            "VALUE_CONSTRAINT_VIOLATED"
+        } else {
+            continue;
+        };
+        let value_digest = violation
+            .get("value")
+            .and_then(serde_json::Value::as_str)
+            .map(|value| medulla_types::contract::Digest256::sha256(value.as_bytes()).to_hex());
+        typed.push(serde_json::json!({
+            "code": code,
+            "rule": rule,
+            "path": text(violation, "path"),
+            "value_digest": value_digest,
+        }));
+    }
+    let Some(first) = typed.first() else {
+        return rejection;
+    };
+    let message = format!(
+        "{}: rule {} on property {}{}{}",
+        first["code"].as_str().unwrap_or_default(),
+        first["rule"].as_str().unwrap_or_default(),
+        first["path"].as_str().unwrap_or("(none)"),
+        first["value_digest"]
+            .as_str()
+            .map(|digest| format!(" value sha256 {digest}"))
+            .unwrap_or_default(),
+        if typed.len() > 1 {
+            format!(" (+{} more)", typed.len() - 1)
+        } else {
+            String::new()
+        },
+    );
+    GuardRejection {
+        graph: rejection.graph,
+        message,
+        details: serde_json::Value::Array(typed),
     }
 }
 
@@ -225,6 +306,7 @@ fn check_native_write_gated(
     IcvPolicyRegistry::new()
         .with(Some(graph_name), icv_policy)
         .check_graph(Some(graph_name), &base, &additions, &removals)
+        .map_err(object_model_refusal)
 }
 
 fn registered_native_shape_policy(core: &GraphCore) -> Option<()> {

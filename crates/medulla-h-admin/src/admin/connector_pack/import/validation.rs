@@ -784,6 +784,18 @@ fn flag_object_model(validator: &mut IndexValidator<'_>) -> Option<String> {
             return None;
         }
     };
+    // A class that declares `:implementsInterface` carries every required member;
+    // the import commits nothing otherwise (MEDULLA-TYPED-PACKS-R650.4).
+    for gap in medulla_core::ontology::object_model::interface_gaps(&model) {
+        validator.reject(
+            PackViolationCode::InterfaceUnimplemented,
+            Some(&gap.class),
+            &class_list_detail(
+                &format!("interface {} requires a member the class lacks: ", gap.interface),
+                &[gap.member],
+            ),
+        );
+    }
     match compiled_shapes_document(&model) {
         Ok(document) if document.is_empty() => None,
         Ok(document) => Some(document),

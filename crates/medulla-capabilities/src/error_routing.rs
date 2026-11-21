@@ -1533,6 +1533,15 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     if matches!(id, "AddTriples" | "AgentComponent") {
         codes.extend(["ASSET_CLASS_ORPHAN", "FIELD_MARKED"]);
     }
+    // MEDULLA-TYPED-PACKS-R650.4: the object-model guard refuses a value or link
+    // that breaks a pack's declared value type or link cap on the RDF write route and
+    // the source-ingest batch; the import refuses an unimplemented interface.
+    if matches!(id, "AddTriples" | "SourceIngest") {
+        codes.extend(["VALUE_CONSTRAINT_VIOLATED", "LINK_CARDINALITY_EXCEEDED"]);
+    }
+    if id == "ConnectorPack" {
+        codes.insert("INTERFACE_UNIMPLEMENTED");
+    }
     // MEDULLA-FEDERATED-QUERY-R058.4.1: `max_steps` outside 1 to 4.
     if id == "NlQuery" {
         codes.insert("NL_STEPS_INVALID");
