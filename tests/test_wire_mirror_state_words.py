@@ -51,3 +51,22 @@ def test_semantic_and_audit_mirrors_type_state_as_the_rust_enum() -> None:
     assert accepted.status is models.AuditStatus.RESERVED
     with pytest.raises(ValidationError):
         models.MethodAuditAppendParams(status="closed", **fields)
+
+
+# spec: MEDULLA-ORCH-VOCAB-R816.1
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R816.1")
+def test_incident_set_status_params_type_status_as_the_rust_enum() -> None:
+    assert (
+        _annotation(models.MethodIncidentSetStatusParams, "status")
+        is models.IncidentStatus
+    )
+    assert issubclass(models.IncidentStatus, enum.Enum)
+    assert {"open", "acknowledged", "resolved"} <= {
+        m.value for m in models.IncidentStatus
+    }
+    accepted = models.MethodIncidentSetStatusParams(
+        incident_id="inc-1", status="acknowledged"
+    )
+    assert accepted.status is models.IncidentStatus.ACKNOWLEDGED
+    with pytest.raises(ValidationError):
+        models.MethodIncidentSetStatusParams(incident_id="inc-1", status="skipped")
