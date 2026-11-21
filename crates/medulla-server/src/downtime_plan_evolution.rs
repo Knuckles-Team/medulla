@@ -204,8 +204,161 @@ fn evolve_one(
     }
 }
 
+/// What one planner-evolution run did for one tenant (MEDULLA-FEDERATED-QUERY-R732.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PlannerEvolutionReceipt {
+    /// The tenant whose plan records were read.
+    pub tenant: String,
+    /// How many plan records the tenant holds.
+    pub records: usize,
+    /// `challenger_set` or `too_few_records`.
+    pub outcome: String,
+    /// The digest of the challenger cost head the run stored; `None` when it did nothing.
+    pub challenger_digest: Option<String>,
+}
+
+/// The median of `values`, which is not empty.
+fn median(mut values: Vec<f64>) -> f64 {
+    values.sort_by(f64::total_cmp);
+    let mid = values.len() / 2;
+    if values.len() % 2 == 1 {
+        values[mid]
+    } else {
+        (values[mid - 1] + values[mid]) / 2.0
+    }
+}
+
+/// Refit each op kind's correction as the median of `measured_us / estimated` over a
+/// tenant's plan records and store the result as the challenger cost head
+/// (MEDULLA-FEDERATED-QUERY-R732.4). A tenant with fewer than `min_records` records is
+/// left alone. The tenant with the most qualifying records supplies the challenger (the
+/// lexically first on a tie); the champion is never touched.
+pub fn run_planner_evolution(
+    store: &medulla_exec::learned_cost::PlanRecordStore,
+    min_records: usize,
+) -> Vec<PlannerEvolutionReceipt> {
+    use medulla_exec::learned_cost::{CostCorrectionArtifact, CostHeadRevision};
+    let mut receipts = Vec::new();
+    let mut best: Option<(usize, CostHeadRevision, usize)> = None;
+    for tenant in store.tenants() {
+        let records = store.records(&tenant);
+        if records.len() < min_records {
+            receipts.push(PlannerEvolutionReceipt {
+                tenant,
+                records: records.len(),
+                outcome: "too_few_records".into(),
+                challenger_digest: None,
+            });
+            continue;
+        }
+        let mut ratios: std::collections::BTreeMap<&'static str, Vec<f64>> = Default::default();
+        for cost in records.iter().flat_map(|record| record.op_costs.iter()) {
+            if cost.estimated > 0.0 {
+                ratios
+                    .entry(cost.op_kind)
+                    .or_default()
+                    .push(cost.measured_us as f64 / cost.estimated);
+            }
+        }
+        let corrections: Vec<CostCorrectionArtifact> = ratios
+            .into_iter()
+            .map(|(kind, observed)| {
+                let samples = observed.len() as u64;
+                CostCorrectionArtifact {
+                    op_kind: kind.to_string(),
+                    basis: medulla_graph_algos::graphlearn::edge_fn::Basis::Chebyshev,
+                    degree: 3,
+                    coeffs: vec![median(observed).max(f64::MIN_POSITIVE).ln(), 0.0, 0.0, 0.0],
+                    samples,
+                    mean_abs_log_error_static: 0.0,
+                    mean_abs_log_error_learned: 0.0,
+                }
+            })
+            .collect();
+        let revision = CostHeadRevision::new(corrections, Vec::new());
+        receipts.push(PlannerEvolutionReceipt {
+            tenant: tenant.clone(),
+            records: records.len(),
+            outcome: "challenger_set".into(),
+            challenger_digest: Some(revision.digest.clone()),
+        });
+        if best.as_ref().map_or(true, |(held, _, _)| records.len() > *held) {
+            best = Some((records.len(), revision, receipts.len() - 1));
+        }
+    }
+    if let Some((_, revision, _)) = best {
+        store.set_challenger(Some(revision));
+    }
+    receipts
+}
+
+/// The body of the `planner_evolution` intent (MEDULLA-FEDERATED-QUERY-R732.4).
+pub struct PlannerEvolutionBody;
+
+impl DowntimeBody for PlannerEvolutionBody {
+    fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
+        let min = usize::try_from(
+            medulla_server_api::knob_config::knobs().query_planner_min_records,
+        )
+        .unwrap_or(usize::MAX);
+        let receipts = run_planner_evolution(
+            medulla_exec::learned_cost::PlanRecordStore::global(),
+            min,
+        );
+        let output = serde_json::json!({ "receipts": receipts });
+        let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
+        Ok(DowntimeStep::Done {
+            result,
+            working_bytes: 0,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R732.4
+    fn planner_evolution_refits_corrections_from_records() {
+        use medulla_exec::learned_cost::{OpCost, PlanExecutionRecord, PlanRecordStore};
+        let record = |tenant: &str| PlanExecutionRecord {
+            tenant: tenant.into(),
+            shape_digest: "shape".into(),
+            plan_digest: "plan".into(),
+            op_costs: vec![OpCost {
+                op_kind: "Scan",
+                estimated: 10.0,
+                measured_us: 20,
+            }],
+            estimated_cost: 10.0,
+            measured_cost_us: 20,
+            result_rows: 1,
+            result_digest: String::new(),
+            knob_revision: String::new(),
+            cost_head_revision: String::new(),
+            recorded_at_ms: 0,
+        };
+        let store = PlanRecordStore::new(4_096);
+        for _ in 0..64 {
+            store.record(record("many"));
+        }
+        for _ in 0..63 {
+            store.record(record("few"));
+        }
+        let receipts = run_planner_evolution(&store, 64);
+        let challenger = store.challenger().expect("a tenant with 64 records sets one");
+        // A constant 2x measured/estimated ratio is a correction of 2.0.
+        assert!((challenger.correct("Scan", 10.0) / 10.0 - 2.0).abs() < 1e-9);
+        assert_eq!(receipts.iter().find(|r| r.tenant == "few").unwrap().outcome, "too_few_records");
+        assert!(store.published_champion().is_none(), "the champion is never touched");
+
+        let fewer = PlanRecordStore::new(4_096);
+        for _ in 0..63 {
+            fewer.record(record("few"));
+        }
+        run_planner_evolution(&fewer, 64);
+        assert!(fewer.challenger().is_none());
+    }
+
     use super::*;
 
     // spec: MEDULLA-FEDERATED-QUERY-R091.3
