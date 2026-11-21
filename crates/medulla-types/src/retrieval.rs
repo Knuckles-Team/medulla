@@ -194,6 +194,69 @@ pub struct RetrievalReceipt {
     /// (MEDULLA-FEDERATED-QUERY-R039.1.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modality: Option<TraceModality>,
+    /// Present exactly when the request carried `retrieval.topic`
+    /// (MEDULLA-FEDERATED-QUERY-R040.2.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topic: Option<TopicReceipt>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.5: the topic evidence of one ranked answer. It holds ids and
+/// numbers only; every real number is an integer in millionths, rounded half away from zero.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicReceipt {
+    /// The backend's stable id (`stored_centroid`).
+    pub backend_id: String,
+    /// The graph revision of the read snapshot the centroid nodes were read at.
+    pub backend_revision: u64,
+    /// The corpus revision the centroid nodes carry.
+    pub centroid_generation: u64,
+    /// `<id>|<dimensions>|<revision>` of the retriever space.
+    pub space_tuple: String,
+    /// The topics that took part, heaviest first, equal weights by topic id.
+    pub responsibilities: Vec<TopicResponsibility>,
+    /// One entry per row of the final answer, in final order.
+    pub component_scores: Vec<TopicComponentScore>,
+    /// The fusion policy the scores were computed under.
+    pub fusion_policy: TopicFusionPolicy,
+    /// The generation counter of the vector index the dense scores were read from.
+    pub source_vector_generation: u64,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.5: one topic's responsibility.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicResponsibility {
+    pub topic_id: String,
+    /// The topic weight times 1,000,000, within `[0, 1_000_000]`.
+    pub weight_micros: u32,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.5: the parts of one row's fused score, in millionths.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicComponentScore {
+    pub candidate_id: String,
+    /// The min-max normalized dense similarity.
+    pub dense_micros: i64,
+    /// The summed responsibility-weighted centroid similarity.
+    pub topic_micros: i64,
+    /// `((1_000_000 - w) * dense + w * topic) / 1_000_000`, truncating.
+    pub final_micros: i64,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.5: the fusion policy of a topic receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicFusionPolicy {
+    /// The constant `weighted_topic_dense`.
+    pub name: String,
+    /// `w` times 1,000,000.
+    pub weight_micros: u32,
 }
 
 /// MEDULLA-FEDERATED-QUERY-R039.1.5: the multimodal evidence of one ranked answer.

@@ -173,6 +173,10 @@ pub struct RowSet {
     /// MEDULLA-FEDERATED-QUERY-R039: set by a top-`k` rank that could not return `k`
     /// rows. `limit` keeps it; any step that rebuilds the rows starts without one.
     shortfall: Option<medulla_types::retrieval::Shortfall>,
+    /// MEDULLA-FEDERATED-QUERY-R040.2.5: the topic evidence of a topic-fused rank, with a
+    /// component entry for every fused candidate. `limit` keeps it; `execute_ranked` trims it
+    /// to the rows of the final answer.
+    topic_receipt: Option<medulla_types::retrieval::TopicReceipt>,
 }
 
 impl RowSet {
@@ -197,6 +201,7 @@ impl RowSet {
             cells: CellTable::new(),
             order: Vec::new(),
             shortfall: None,
+            topic_receipt: None,
         }
     }
 
@@ -204,6 +209,20 @@ impl RowSet {
     pub fn with_shortfall(mut self, shortfall: Option<medulla_types::retrieval::Shortfall>) -> Self {
         self.shortfall = shortfall;
         self
+    }
+
+    /// Attach the topic evidence of a topic-fused rank (MEDULLA-FEDERATED-QUERY-R040.2.5).
+    pub fn with_topic_receipt(
+        mut self,
+        receipt: Option<medulla_types::retrieval::TopicReceipt>,
+    ) -> Self {
+        self.topic_receipt = receipt;
+        self
+    }
+
+    /// The topic evidence of a topic-fused rank, when one ran.
+    pub fn topic_receipt(&self) -> Option<&medulla_types::retrieval::TopicReceipt> {
+        self.topic_receipt.as_ref()
     }
 
     /// The typed shortfall of a top-`k` rank, when it could not return `k` rows.
@@ -528,6 +547,7 @@ impl RowSet {
             cells: self.cells.clone(),
             order: self.order.clone(),
             shortfall: None,
+            topic_receipt: None,
         }
         .retain_cells()
     }

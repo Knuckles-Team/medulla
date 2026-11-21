@@ -1248,7 +1248,8 @@ fn fuse_rrf(ctx: &PlanCtx, input: &RowSet, branches: &[Vec<Op>], k: f32) -> Resu
                 )
                 .to_string()
             })?;
-        return Ok(RowSet::from_scored(topic::fuse_ranked(ctx, query, fused)?));
+        let (fused, receipt) = topic::fuse_ranked(ctx, query, fused)?;
+        return Ok(RowSet::from_scored(fused).with_topic_receipt(receipt));
     }
     Ok(RowSet::from_scored(fused))
 }

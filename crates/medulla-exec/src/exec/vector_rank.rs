@@ -183,9 +183,9 @@ fn rank_topic_fused(
         .semantic
         .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
     let embedded = dense.len();
-    let mut fused = super::topic::fuse_ranked(ctx, query, dense)?;
+    let (mut fused, receipt) = super::topic::fuse_ranked(ctx, query, dense)?;
     let Some(k) = limit else {
-        return Ok(RowSet::from_scored(fused));
+        return Ok(RowSet::from_scored(fused).with_topic_receipt(receipt));
     };
     let cap = ctx.budget.max_result_rows;
     fused.truncate(k.min(cap));
@@ -210,7 +210,9 @@ fn rank_topic_fused(
     } else {
         None
     };
-    Ok(RowSet::from_scored(fused).with_shortfall(shortfall))
+    Ok(RowSet::from_scored(fused)
+        .with_shortfall(shortfall)
+        .with_topic_receipt(receipt))
 }
 
 /// The identity tuple one modality binds: `(space id, dimensions, model revision)`.

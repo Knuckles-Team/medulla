@@ -81,9 +81,9 @@ pub(crate) fn fuse_ranked(
     ctx: &PlanCtx,
     query: &[f32],
     dense: Vec<(String, f32)>,
-) -> Result<Vec<(String, f32)>, String> {
+) -> Result<(Vec<(String, f32)>, Option<medulla_types::retrieval::TopicReceipt>), String> {
     let Some(policy) = ctx.topic_policy else {
-        return Ok(dense);
+        return Ok((dense, None));
     };
     let fusion = ctx.topic_fusion.as_ref().ok_or_else(|| {
         TopicRefusal::BackendUnavailable("no topic backend is bound on this query".to_string())
@@ -105,15 +105,80 @@ pub(crate) fn fuse_ranked(
     })?;
     let topics = fusion.backend.topics(query, &policy)?;
     let vector_of = |id: &str| ctx.semantic.get_embedding(id);
-    fuse_topic_dense(
-        &dense,
-        &vector_of,
+    let scored =
+        fuse_topic_dense_scored(&dense, &vector_of, &topics, weight, retriever, current)
+            .map_err(String::from)?;
+    let receipt = topic_receipt(
+        fusion.backend.id(),
+        current,
         &topics,
         weight,
         retriever,
-        current,
-    )
-    .map_err(String::from)
+        &scored,
+        ctx.semantic.generation(),
+    );
+    Ok((
+        scored.into_iter().map(|part| (part.id, part.fused)).collect(),
+        Some(receipt),
+    ))
+}
+
+/// A real number in millionths, rounded half away from zero.
+fn micros(value: f32) -> i64 {
+    (f64::from(value) * 1_000_000.0).round() as i64
+}
+
+/// The receipt of one fusion: a component entry for every fused candidate, in fused order.
+fn topic_receipt(
+    backend_id: &str,
+    backend_revision: u64,
+    topics: &TopicResult,
+    weight: f32,
+    retriever: &EmbeddingSpaceRef,
+    scored: &[FusedScore],
+    source_vector_generation: u64,
+) -> medulla_types::retrieval::TopicReceipt {
+    use medulla_types::retrieval::{
+        TopicComponentScore, TopicFusionPolicy, TopicReceipt, TopicResponsibility,
+    };
+    let weight_micros = micros(weight).clamp(0, 1_000_000);
+    TopicReceipt {
+        backend_id: backend_id.to_string(),
+        backend_revision,
+        centroid_generation: topics.corpus_revision,
+        space_tuple: format!(
+            "{}|{}|{}",
+            retriever.id, retriever.dimensions, retriever.revision
+        ),
+        responsibilities: topics
+            .topic_weights
+            .iter()
+            .map(|(topic_id, responsibility)| TopicResponsibility {
+                topic_id: topic_id.clone(),
+                weight_micros: micros(*responsibility).clamp(0, 1_000_000) as u32,
+            })
+            .collect(),
+        component_scores: scored
+            .iter()
+            .map(|part| {
+                let dense_micros = micros(part.dense);
+                let topic_micros = micros(part.topic);
+                TopicComponentScore {
+                    candidate_id: part.id.clone(),
+                    dense_micros,
+                    topic_micros,
+                    final_micros: ((1_000_000 - weight_micros) * dense_micros
+                        + weight_micros * topic_micros)
+                        / 1_000_000,
+                }
+            })
+            .collect(),
+        fusion_policy: TopicFusionPolicy {
+            name: FUSION_POLICY_NAME.to_string(),
+            weight_micros: weight_micros as u32,
+        },
+        source_vector_generation,
+    }
 }
 
 /// `TOPIC_WEIGHT_INVALID` for a non-finite or out-of-range fusion weight.
@@ -219,6 +284,43 @@ pub fn fuse_topic_dense(
     retriever: &EmbeddingSpaceRef,
     current_corpus_revision: u64,
 ) -> Result<Vec<(String, f32)>, TopicRefusal> {
+    Ok(fuse_topic_dense_scored(
+        dense,
+        vector_of,
+        topics,
+        weight,
+        retriever,
+        current_corpus_revision,
+    )?
+    .into_iter()
+    .map(|part| (part.id, part.fused))
+    .collect())
+}
+
+/// One candidate's fused score with the two parts it was computed from
+/// (MEDULLA-FEDERATED-QUERY-R040.2.5).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FusedScore {
+    /// The candidate id.
+    pub id: String,
+    /// The min-max normalized dense similarity.
+    pub dense: f32,
+    /// The summed responsibility-weighted centroid similarity.
+    pub topic: f32,
+    /// `(1 - w) * dense + w * topic`.
+    pub fused: f32,
+}
+
+/// [`fuse_topic_dense`], keeping each candidate's dense and topic parts so a receipt reports
+/// exactly the numbers the score was computed from. The one scorer both reach.
+pub fn fuse_topic_dense_scored(
+    dense: &[(String, f32)],
+    vector_of: &dyn Fn(&str) -> Option<Vec<f32>>,
+    topics: &TopicResult,
+    weight: f32,
+    retriever: &EmbeddingSpaceRef,
+    current_corpus_revision: u64,
+) -> Result<Vec<FusedScore>, TopicRefusal> {
     check_weight(weight)?;
     if !same_space(&topics.space, retriever) {
         return Err(TopicRefusal::SpaceMismatch(format!(
@@ -273,9 +375,14 @@ pub fn fuse_topic_dense(
                 responsibility * cosine
             })
             .sum();
-        fused.push((id.clone(), (1.0 - weight) * normalized + weight * topic));
+        fused.push(FusedScore {
+            id: id.clone(),
+            dense: normalized,
+            topic,
+            fused: (1.0 - weight) * normalized + weight * topic,
+        });
     }
-    fused.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    fused.sort_by(|a, b| b.fused.total_cmp(&a.fused).then_with(|| a.id.cmp(&b.id)));
     Ok(fused)
 }
 
@@ -295,6 +402,9 @@ pub struct TopicResult {
 
 /// A source of topic evidence for one query vector.
 pub trait TopicBackend: Send + Sync {
+    /// The backend's stable id, reported in the topic receipt.
+    fn id(&self) -> &'static str;
+
     /// Weigh the backend's topics against `query` and cut the answer down with
     /// `policy`. Refuses a query whose width differs from the backend's space.
     fn topics(&self, query: &[f32], policy: &TopicRankingPolicy) -> Result<TopicResult, String>;
@@ -386,6 +496,10 @@ pub struct InMemoryTopicBackend {
 
 #[cfg(test)]
 impl TopicBackend for InMemoryTopicBackend {
+    fn id(&self) -> &'static str {
+        "in_memory"
+    }
+
     fn topics(&self, query: &[f32], policy: &TopicRankingPolicy) -> Result<TopicResult, String> {
         weigh(
             &self.centroids,
@@ -396,6 +510,12 @@ impl TopicBackend for InMemoryTopicBackend {
         )
     }
 }
+
+/// The stable id of [`StoredCentroidTopicBackend`] in a topic receipt.
+pub const STORED_CENTROID_BACKEND_ID: &str = "stored_centroid";
+
+/// The fusion policy name in a topic receipt.
+pub const FUSION_POLICY_NAME: &str = "weighted_topic_dense";
 
 /// Reads `TopicCentroid` nodes from one graph snapshot.
 pub struct StoredCentroidTopicBackend<'a> {
@@ -451,6 +571,10 @@ impl<'a> StoredCentroidTopicBackend<'a> {
 }
 
 impl TopicBackend for StoredCentroidTopicBackend<'_> {
+    fn id(&self) -> &'static str {
+        STORED_CENTROID_BACKEND_ID
+    }
+
     fn topics(&self, query: &[f32], policy: &TopicRankingPolicy) -> Result<TopicResult, String> {
         let centroids = self.stored_centroids()?;
         weigh(&centroids, query, policy, self.corpus_revision, &self.space)
@@ -692,5 +816,42 @@ mod tests {
             TopicRefusal::BackendUnavailable(String::new()).code(),
             ServerErrorCode::TopicBackendUnavailable
         );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.5
+    #[test]
+    fn receipt_components_reproduce_the_final_score() {
+        let topics = TopicResult {
+            topic_weights: vec![("t1".into(), 0.75), ("t2".into(), 0.25)],
+            centroid_vectors: vec![("t1".into(), vec![1.0, 0.0]), ("t2".into(), vec![0.0, 1.0])],
+            corpus_revision: 7,
+            space: space(),
+        };
+        let dense = vec![("a".to_string(), 0.9_f32), ("b".to_string(), 0.2)];
+        let vectors = [("a", vec![1.0_f32, 0.0]), ("b", vec![0.6, 0.8])];
+        let lookup = |id: &str| {
+            vectors
+                .iter()
+                .find(|(candidate, _)| *candidate == id)
+                .map(|(_, vector)| vector.clone())
+        };
+        let weight = 0.5_f32;
+        let scored =
+            fuse_topic_dense_scored(&dense, &lookup, &topics, weight, &space(), 7).unwrap();
+        let receipt = topic_receipt("stored_centroid", 7, &topics, weight, &space(), &scored, 3);
+        assert_eq!(receipt.backend_id, "stored_centroid");
+        assert_eq!(receipt.centroid_generation, 7);
+        assert_eq!(receipt.space_tuple, format!("model|2|1"));
+        assert_eq!(receipt.fusion_policy.weight_micros, 500_000);
+        assert_eq!(receipt.source_vector_generation, 3);
+        let weights: Vec<u32> = receipt.responsibilities.iter().map(|r| r.weight_micros).collect();
+        assert_eq!(weights, [750_000, 250_000]);
+        let w = i64::from(receipt.fusion_policy.weight_micros);
+        for part in &receipt.component_scores {
+            let rebuilt = ((1_000_000 - w) * part.dense_micros + w * part.topic_micros) / 1_000_000;
+            assert!((part.final_micros - rebuilt).abs() <= 1, "{part:?}");
+        }
+        let finals: Vec<i64> = receipt.component_scores.iter().map(|p| p.final_micros).collect();
+        assert!(finals.windows(2).all(|pair| pair[0] >= pair[1]), "{finals:?}");
     }
 }

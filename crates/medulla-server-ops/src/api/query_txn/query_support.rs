@@ -205,10 +205,26 @@ pub fn execute_ranked(
             encoding_calls: calls,
         }
     });
-    let receipt = (constraint.is_some() || modality.is_some()).then_some(
+    // MEDULLA-FEDERATED-QUERY-R040.2.5: the topic receipt lists the rows of the final answer,
+    // in final order, whatever the ranking step fused before the limit cut.
+    let topic = result.topic_receipt().cloned().map(|mut receipt| {
+        let mut parts: std::collections::HashMap<String, _> = receipt
+            .component_scores
+            .drain(..)
+            .map(|part| (part.candidate_id.clone(), part))
+            .collect();
+        receipt.component_scores = result
+            .rows()
+            .iter()
+            .filter_map(|row| parts.remove(&row.id))
+            .collect();
+        receipt
+    });
+    let receipt = (constraint.is_some() || modality.is_some() || topic.is_some()).then_some(
         medulla_types::retrieval::RetrievalReceipt {
             constraint,
             modality,
+            topic,
         },
     );
     Ok(medulla_types::retrieval::RankedRows {

@@ -31955,6 +31955,50 @@ class TraceModality(BaseModel):
     space_id: str
 
 
+class TopicResponsibility(BaseModel):
+    """One topic's responsibility, in millionths."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    topic_id: str
+    weight_micros: Annotated[int, Field(ge=0)]
+
+
+class TopicComponentScore(BaseModel):
+    """The parts of one row's fused score, in millionths."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_id: str
+    dense_micros: int
+    final_micros: int
+    topic_micros: int
+
+
+class TopicFusionPolicy(BaseModel):
+    """The fusion policy of a topic receipt."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    weight_micros: Annotated[int, Field(ge=0)]
+
+
+class TopicReceipt(BaseModel):
+    """The topic evidence of one ranked answer."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    backend_id: str
+    backend_revision: Annotated[int, Field(ge=0)]
+    centroid_generation: Annotated[int, Field(ge=0)]
+    component_scores: list[TopicComponentScore]
+    fusion_policy: TopicFusionPolicy
+    responsibilities: list[TopicResponsibility]
+    source_vector_generation: Annotated[int, Field(ge=0)]
+    space_tuple: str
+
+
 class RetrievalReceipt(BaseModel):
     """The evidence a ranked ``UnifiedQuery`` answer carries."""
 
@@ -31962,6 +32006,7 @@ class RetrievalReceipt(BaseModel):
 
     constraint: TraceConstraint | None = None
     modality: TraceModality | None = None
+    topic: TopicReceipt | None = None
 
 
 class RankedRows(BaseModel):
