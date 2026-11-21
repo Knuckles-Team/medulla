@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import time
 import uuid
@@ -131,6 +132,65 @@ def test_score_evidence_reads_back(start_medulla_server) -> None:
         assert score["checker"] == "native"
         assert score["value"] == pytest.approx(2 / 3)
         assert score["passed"] is True
+    finally:
+        client.tenants.delete(graph)
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.4")
+def test_quality_refusals(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.4: refusals write nothing and a
+    proposed rule is counted, never evaluated."""
+    client = _client()
+    graph = f"quality-{uuid.uuid4().hex[:8]}"
+    table = f"orders_{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        client.query.sql(f"CREATE TABLE {table} (id int primary key, status text)")
+        client.query.sql(f"INSERT INTO {table} VALUES (1, NULL), (2, 'open')")
+        rule = {
+            "id": "status-refusals",
+            "target": table,
+            "dimension": "completeness",
+            "expression": "status IS NOT NULL",
+            "threshold": 0.9,
+            "severity": "critical",
+        }
+        for invalid, code in (
+            ({**rule, "id": " "}, "QUALITY_RULE_INVALID"),
+            ({**rule, "target": " "}, "QUALITY_RULE_INVALID"),
+            ({**rule, "expression": "1; DROP TABLE x"}, "QUALITY_RULE_INVALID"),
+            ({**rule, "threshold": 1.5}, "QUALITY_THRESHOLD_INVALID"),
+            ({**rule, "threshold": -0.1}, "QUALITY_THRESHOLD_INVALID"),
+        ):
+            with pytest.raises(Exception, match=code):
+                client._send("QualityRulePut", {"rule": invalid}, graph)
+
+        # Every refusal wrote no node: the target has no rule to score.
+        [none_stored] = _evaluate(client, graph, table)
+        assert none_stored["rule"] == ""
+        assert none_stored["skipped_proposed"] == 0
+
+        # A rule in the proposed state is skipped by evaluation and counted.
+        client._send(
+            "AddNode",
+            {
+                "node_id": f"quality_rule:proposed:{uuid.uuid4().hex[:8]}",
+                "properties_msgpack": msgpack.packb(
+                    {
+                        "type": "QualityRule",
+                        "rule": json.dumps(rule),
+                        "state": {"state": "proposed"},
+                        "tenant_id": TEST_TENANT,
+                    }
+                ),
+            },
+            graph,
+        )
+        [skipped] = _evaluate(client, graph, table)
+        assert skipped["rule"] == ""
+        assert skipped["value"] is None
+        assert skipped["skipped_proposed"] == 1
     finally:
         client.tenants.delete(graph)
         client.close()
