@@ -11,6 +11,7 @@ use std::sync::Arc;
 use medulla_exec::exec::HashEmbedder;
 use medulla_index_types::semantic_index::SemanticSourceSelector;
 use medulla_protocol_types::protocol::{Method, Response};
+use medulla_server_api::knob_config;
 use medulla_server_api::state::TextEmbedderOverride;
 use medulla_server_ops::api::query_txn::query_support::{HASH_ENCODER_ID, TEXT_ENCODER_REVISION};
 use medulla_types::bookmark_query::{
@@ -27,6 +28,8 @@ use super::semantic_live_generation::{
 const CONNECTOR: &str = "bookmark-source";
 const STREAM: &str = "bookmarks";
 const BINDING: &str = "bookmark";
+/// The lowered read window of the snapshot journey, in edges (knob `bookmark.relations_window`).
+const WINDOW: u32 = 8;
 
 /// The policy of a plain call: room for every hit, edge and byte the journeys produce.
 fn policy(max_hits: u32, max_relationships: u32) -> BookmarkQueryLimitPolicy {
@@ -434,6 +437,17 @@ async fn relations_hide_denied_edges_and_counts() {
 // spec: MEDULLA-MEDIA-VOCAB-R001.102.4
 #[tokio::test]
 async fn ingest_search_and_relations_share_one_snapshot() {
+    // The read window is a knob read once per process, so it is lowered before the first call;
+    // this test runs in its own process. Eight edges fit a window; the journey's reads are
+    // pages of at most eight.
+    let loaded = knob_config::load_knobs(
+        &[format!("bookmark.relations_window={WINDOW}")],
+        |_| None,
+    )
+    .expect("the window knob loads");
+    knob_config::install(loaded);
+    assert_eq!(knob_config::knobs().bookmark_relations_window, WINDOW as u64);
+
     let bookmarks = two_bookmarks();
     let journey = Journey::live("bookmark-proof-snapshot", &bookmarks).await;
 
@@ -444,7 +458,7 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     assert_eq!(found.hits[0].id, "bookmark:beta");
     let hit_ids: Vec<String> = found.hits.iter().map(|hit| hit.id.clone()).collect();
     let related = journey
-        .relations(relations_request(hit_ids.clone(), 100, None))
+        .relations(relations_request(hit_ids.clone(), WINDOW, None))
         .await;
     assert_eq!(edge_set(&related.edges), expected_edges());
 
@@ -471,7 +485,7 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     // Re-ingesting the same records writes the same nodes and edges: nothing is duplicated.
     journey.served.ingest(STREAM, &as_records(&bookmarks)).await;
     let again = journey
-        .relations(relations_request(hit_ids.clone(), 100, None))
+        .relations(relations_request(hit_ids.clone(), WINDOW, None))
         .await;
     assert_eq!(again.edges.len(), expected_edges().len());
     assert_eq!(edge_set(&again.edges), expected_edges());
@@ -497,7 +511,7 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     );
     assert!(refused.contains("BOOKMARK_RESPONSE_TOO_LARGE"), "{refused}");
 
-    let mut oversized = relations_request(hit_ids, 100, None);
+    let mut oversized = relations_request(hit_ids, WINDOW, None);
     oversized.limit_policy.max_hits = 1;
     let refused = refusal_of(
         "more node ids than max_hits",
@@ -548,4 +562,44 @@ async fn ingest_search_and_relations_share_one_snapshot() {
         )
         .await;
     assert!(foreign.error.is_some() && foreign.result.is_none(), "{foreign:?}");
+
+    // The read window: a page that lies beyond it refuses, and so does an answer above it,
+    // never a truncated success. Two more bookmarks bring the edges to eleven, over the eight.
+    let over_page = journey
+        .relations_as(
+            TENANT,
+            &["kg:read"],
+            relations_request(vec!["bookmark:alpha".to_string()], WINDOW + 1, None),
+        )
+        .await;
+    let refused = refusal_of("a page beyond the window", over_page);
+    assert!(refused.contains("BOOKMARK_LIMIT_EXCEEDED"), "{refused}");
+
+    journey
+        .served
+        .ingest(
+            STREAM,
+            &as_records(&[envelope(
+                "epsilon",
+                5,
+                "a note on three tags",
+                &["one", "two", "three"],
+                &[],
+                &[],
+                &[],
+                json!([]),
+            )]),
+        )
+        .await;
+    let all_ids = ["alpha", "beta", "delta", "epsilon"]
+        .map(|key| format!("bookmark:{key}"))
+        .to_vec();
+    let over_answer = relations_request(all_ids, WINDOW, None);
+    let refused = refusal_of(
+        "an answer above the window",
+        journey
+            .relations_as(TENANT, &["kg:read"], over_answer)
+            .await,
+    );
+    assert!(refused.contains("BOOKMARK_LIMIT_EXCEEDED"), "{refused}");
 }

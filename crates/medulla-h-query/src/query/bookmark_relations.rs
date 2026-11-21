@@ -33,11 +33,15 @@ const RELATIONSHIPS: [&str; 5] = [
     "relatedTo",
 ];
 
-/// The most edges one read window holds, before paging. A larger answer refuses.
-const WINDOW: usize = 5_000;
+/// The most edges one read window holds, before paging, from the knob
+/// `bookmark.relations_window` (5000 by default). A larger answer refuses.
+fn window() -> usize {
+    usize::try_from(medulla_server_api::knob_config::knobs().bookmark_relations_window)
+        .unwrap_or(usize::MAX - 1)
+}
 
 /// The UQL statement of one read: the edges that leave the requested nodes, in id order.
-fn statement() -> String {
+fn statement(window: usize) -> String {
     let relationships = RELATIONSHIPS
         .iter()
         .map(|name| format!("'{name}'"))
@@ -45,7 +49,7 @@ fn statement() -> String {
         .join(", ");
     format!(
         "EDGES WHERE source IN $ids AND rel IN ({relationships}) |> ORDER BY id |> LIMIT {}",
-        WINDOW + 1
+        window + 1
     )
 }
 
@@ -93,7 +97,8 @@ async fn relations(
         None => 0,
     };
     let cap = request.limit_policy.max_relationships as usize;
-    if offset.saturating_add(cap) > WINDOW {
+    let window = window();
+    if offset.saturating_add(cap) > window {
         return Err(refusal(
             BOOKMARK_LIMIT_EXCEEDED,
             "the page lies beyond the read window",
@@ -111,7 +116,7 @@ async fn relations(
                 .collect(),
         ),
     );
-    let response = handle_uql(ctx, statement(), params, false, Default::default())
+    let response = handle_uql(ctx, statement(window), params, false, Default::default())
         .await
         .map_err(|_| "ENGINE_UNAVAILABLE: UQL is not served in this build".to_string())?;
     let rows = match response_body::<UqlResult>(response)? {
@@ -130,7 +135,7 @@ async fn relations(
         }
         _ => return Err("the bookmark relations read did not return rows".to_string()),
     };
-    if rows.len() > WINDOW {
+    if rows.len() > window {
         return Err(refusal(
             BOOKMARK_LIMIT_EXCEEDED,
             "the relations are above the read window",
