@@ -14781,6 +14781,7 @@ class FinanceRecordKind(str, Enum):
     GEOPOLITICAL_RISK = "GeopoliticalRisk"
     STRATEGY_CARD = "StrategyCard"
     REGIME_MODEL = "RegimeModel"
+    TRADING_POLICY = "TradingPolicy"
 
 
 class FinanceRecord(BaseModel):
@@ -14917,6 +14918,27 @@ class MethodFinanceFactorRecord(BaseModel):
 
     method: Literal["FinanceFactorRecord"]
     params: MethodFinanceFactorRecordParams
+
+
+class MethodFinanceOrderStage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceOrderStage"]
+    params: MethodFinanceOrderStageParams
+
+
+class MethodFinanceOrderPromote(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceOrderPromote"]
+    params: MethodFinanceOrderPromoteParams
+
+
+class MethodFinanceOrderLimitCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceOrderLimitCheck"]
+    params: MethodFinanceOrderLimitCheckParams
 
 
 class MethodFinancePatternClassify(BaseModel):
@@ -16344,6 +16366,9 @@ Method = Annotated[
         MethodDocumentDelete,
         MethodFinanceAlertRaise,
         MethodFinanceFactorRecord,
+        MethodFinanceOrderLimitCheck,
+        MethodFinanceOrderPromote,
+        MethodFinanceOrderStage,
         MethodFinancePatternClassify,
         MethodFinanceProfitAttribution,
         MethodFinanceRecordGet,
@@ -33624,6 +33649,80 @@ class MethodFinanceFactorRecordParams(BaseModel):
     signals: list[list[float]]
 
 
+class EvidenceRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    owner_requirement_id: str
+    record_id: str
+    revision: int = Field(ge=0)
+
+
+class GateReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_digest: str
+    evidence_digest: str
+    gate_id: str
+    gate_revision: int = Field(ge=0)
+    pass_fail: bool
+
+
+class OrderProposalSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    canonical_payload_bytes: list[int]
+    decision_digest: str
+    decision_id: str
+    decision_revision: int = Field(ge=0)
+    evidence_refs: list[EvidenceRef]
+    payload_schema_id: str
+    payload_schema_revision: str
+    payload_sha256: str
+    policy_digest: str
+    policy_id: str
+    policy_revision: int = Field(ge=0)
+    predecessor_digest: str | None = None
+    proposal_id: str
+    revision: int = Field(ge=0)
+    tenant_id: str
+
+
+class OrderPromoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str
+    candidate_revision: int = Field(ge=0)
+    expected_promoted_revision: int | None = Field(default=None, ge=0)
+    gate_receipts: list[GateReceipt]
+    manifest_gate_ids: list[str]
+    proposal_id: str
+    required_gate_manifest_digest: str
+    snapshot_digest: str
+    tenant_id: str
+    veto_reason: str | None = None
+
+
+class MethodFinanceOrderStageParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    snapshot: OrderProposalSnapshot
+    expected_head_revision: int | None = Field(default=None, ge=0)
+    expected_head_digest: str | None = None
+
+
+class MethodFinanceOrderPromoteParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: OrderPromoteRequest
+
+
+class MethodFinanceOrderLimitCheckParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposal: OrderProposalSnapshot
+
+
 class MethodFinancePatternClassifyParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38708,6 +38807,10 @@ __all__ = [
     "FinanceDrawdownSeriesResult",
     "FinanceFactorRankResult",
     "FinanceFactorRecordResult",
+    "OrderPromoteRequest",
+    "OrderProposalSnapshot",
+    "GateReceipt",
+    "EvidenceRef",
     "FinanceKalmanVolatilityResult",
     "FinanceMarketOp",
     "FinanceMarketOpAnalysisSnapshot",
@@ -39802,6 +39905,12 @@ __all__ = [
     "MethodFinanceFactorRankParams",
     "MethodFinanceFactorRecord",
     "MethodFinanceFactorRecordParams",
+    "MethodFinanceOrderLimitCheck",
+    "MethodFinanceOrderLimitCheckParams",
+    "MethodFinanceOrderPromote",
+    "MethodFinanceOrderPromoteParams",
+    "MethodFinanceOrderStage",
+    "MethodFinanceOrderStageParams",
     "MethodFinanceForensicReport",
     "MethodFinanceForensicReportParams",
     "MethodFinanceGlostenMilgromSpread",

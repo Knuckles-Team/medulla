@@ -247,6 +247,12 @@ pub(super) async fn handle_record(
     if matches!(method, Method::FinanceFactorRecord { .. }) {
         return super::finance_factors::record(ctx, tenant_id, method).await;
     }
+    if matches!(
+        method,
+        Method::FinanceOrderStage { .. } | Method::FinanceOrderPromote { .. }
+    ) {
+        return super::finance_order_proposal::record(ctx, tenant_id, method).await;
+    }
     let Method::FinanceRecordPut { kind, record, .. } = method else {
         return None;
     };

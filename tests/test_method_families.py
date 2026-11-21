@@ -319,6 +319,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "FinanceRecordPut",
         "FinanceAlertRaise",
         "FinanceFactorRecord",
+        "FinanceOrderStage",
+        "FinanceOrderPromote",
         # MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits graph nodes.
         "ArgumentMapPut",
         # MEDULLA-FEDERATED-QUERY-R705.3: the feedback record commits one graph node.

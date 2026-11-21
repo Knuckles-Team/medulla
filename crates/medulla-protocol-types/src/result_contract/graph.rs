@@ -105,6 +105,15 @@ method_results! {
     // The ranked factors of a served factor record, strongest first.
     #[cfg(feature = "finance")]
     FinanceFactorRecord(FinanceFactorRecord) => Raw<Vec<medulla_result_types::compute_result::finance::FactorRecordResult>>;
+    // The staged revision of an order proposal.
+    #[cfg(feature = "finance")]
+    FinanceOrderStage(FinanceOrderStage) => Json<medulla_finance_types::finance_order::OrderStageResult>;
+    // The admission receipt of a promoted order proposal.
+    #[cfg(feature = "finance")]
+    FinanceOrderPromote(FinanceOrderPromote) => Json<medulla_finance_types::finance_order::OrderPromoteResult>;
+    // The limit verdict of an order proposal.
+    #[cfg(feature = "finance")]
+    FinanceOrderLimitCheck(FinanceOrderLimitCheck) => Json<medulla_finance_types::finance_order::OrderLimitCheckResult>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

@@ -912,6 +912,38 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: an empty provenance list or an unresolved key.
     ("FinanceFactorRecord", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1.1 and R010.2: staging refusals.
+    (
+        "FinanceOrderStage",
+        &[
+            "PROPOSAL_HEAD_STALE",
+            "PROPOSAL_REVISION_CONFLICT",
+            "PROPOSAL_HASH_MISMATCH",
+            "PROPOSAL_EVIDENCE_MISSING",
+            "ORDER_LIMIT_BREACH",
+            "TRADING_POLICY_MISSING",
+        ],
+    ),
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1.2 and R015.1.3: promotion refusals.
+    (
+        "FinanceOrderPromote",
+        &[
+            "TRADING_POLICY_MISSING",
+            "ORDER_LIMIT_BREACH",
+            "PROMOTE_GATE_UNAVAILABLE",
+            "PROMOTE_GATE_FAILED",
+            "PROMOTE_HEAD_STALE",
+            "PROMOTE_EVIDENCE_MISMATCH",
+            "PROMOTE_RECEIPT_INCOMPLETE",
+            "ORDER_PROMOTION_VETOED",
+            "PROMOTE_WRITE_FAILED",
+        ],
+    ),
+    // MEDULLA-FINANCE-PRIMITIVES-R010.2: the limit verdict is a result, not a refusal.
+    (
+        "FinanceOrderLimitCheck",
+        &["PROPOSAL_HASH_MISMATCH", "TRADING_POLICY_MISSING"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
     (
         "FinancePatternClassify",

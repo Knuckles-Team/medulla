@@ -119,6 +119,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: the served factor record ranks, then
     // commits the Factor nodes and their derivedFrom edges as one batch.
     "FinanceFactorRecord",
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1: the order proposal stage and promote
+    // commit their sealed snapshot, pointer and receipt as one batch.
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-FEDERATED-QUERY-R058.7: the certified correction commits one node.
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
@@ -774,6 +778,9 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "FinanceAlertRaise",
     // The factor batch has no replicated command either (MEDULLA-FINANCE-PRIMITIVES-R018.5).
     "FinanceFactorRecord",
+    // The order proposal stage and promote have no replicated command either (MEDULLA-FINANCE-PRIMITIVES-R015.1).
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // The certified correction has no replicated command either (MEDULLA-FEDERATED-QUERY-R058.7).
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
@@ -875,6 +882,8 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
         Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
+        Method::FinanceOrderStage { .. } => Some("FinanceOrderStage"),
+        Method::FinanceOrderPromote { .. } => Some("FinanceOrderPromote"),
         Method::NlQueryCorrect { .. } => Some("NlQueryCorrect"),
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
         Method::ProcessCompile { .. } => Some("ProcessCompile"),

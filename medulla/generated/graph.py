@@ -2831,6 +2831,12 @@ send_finance_factor_record = contract_sender(
 decode_finance_factor_record = contract_decoder(
     "FinanceFactorRecord", "FinanceFactorRecordResult"
 )
+send_finance_order_stage = contract_sender(
+    "FinanceOrderStage", "MethodFinanceOrderStageParams"
+)
+send_finance_order_promote = contract_sender(
+    "FinanceOrderPromote", "MethodFinanceOrderPromoteParams"
+)
 send_list_memory_snapshots = contract_sender(
     "ListMemorySnapshots", "MethodListMemorySnapshotsParams"
 )

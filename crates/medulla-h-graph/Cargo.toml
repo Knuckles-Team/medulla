@@ -19,6 +19,7 @@ medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-kernel = { path = "../medulla-kernel" }

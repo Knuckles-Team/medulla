@@ -5838,3 +5838,6 @@ send_regime_forecast = contract_sender("RegimeForecast", "MethodRegimeForecastPa
 send_regime_sizing_input = contract_sender(
     "RegimeSizingInput", "MethodRegimeSizingInputParams"
 )
+send_finance_order_limit_check = contract_sender(
+    "FinanceOrderLimitCheck", "MethodFinanceOrderLimitCheckParams"
+)

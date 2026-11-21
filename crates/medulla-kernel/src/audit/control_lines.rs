@@ -217,6 +217,14 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::FinanceFactorRecord { factor_ids, .. } => {
             Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
         }
+        Method::FinanceOrderStage { snapshot, .. } => Some(format!(
+            "FINANCE_ORDER_STAGE|{}|{}",
+            snapshot.proposal_id, snapshot.revision
+        )),
+        Method::FinanceOrderPromote { request } => Some(format!(
+            "FINANCE_ORDER_PROMOTE|{}|{}",
+            request.proposal_id, request.candidate_revision
+        )),
         Method::SourceSync {
             connection_iri,
             class_iri,

@@ -523,6 +523,10 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::FinanceRecordPut { .. }
                 | Method::FinanceAlertRaise { .. }
                 | Method::FinanceFactorRecord { .. }
+                // MEDULLA-FINANCE-PRIMITIVES-R015.1: order proposal snapshots,
+                // pointers and receipts commit graph nodes through the gateway.
+                | Method::FinanceOrderStage { .. }
+                | Method::FinanceOrderPromote { .. }
                 // MEDULLA-FEDERATED-QUERY-R058.7: a certified NL correction commits one node.
                 | Method::NlQueryCorrect { .. }
                 // MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.

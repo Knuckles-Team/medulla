@@ -151,6 +151,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
@@ -218,6 +220,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",
@@ -433,6 +437,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: a factor record self-translates into the
     // one `Method::BatchUpdate`, which carries the durable effect.
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",
@@ -736,6 +742,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",
@@ -826,6 +834,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",
@@ -907,6 +917,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",
@@ -947,6 +959,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    "FinanceOrderStage",
+    "FinanceOrderPromote",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
     "ProcessCompile",

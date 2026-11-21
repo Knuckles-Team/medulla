@@ -675,6 +675,39 @@ $($variants)*
         provenance_keys: Vec<Vec<String>>,
         forward_returns: Vec<f64>,
     },
+
+    // ── Served order proposals (MEDULLA-FINANCE-PRIMITIVES-R015.1, R010.2) ───
+    /// Stage one sealed, content-addressed revision of an order proposal. The
+    /// payload hash and canonical form, the cited evidence, the revision chain
+    /// (`expected_head_revision` and `expected_head_digest` name the head the
+    /// writer last read, `None` for revision 1) and the pinned policy limits are
+    /// admitted first; a refusal writes nothing. Creates no order.
+    #[cfg(feature = "finance")]
+    FinanceOrderStage {
+        snapshot: Box<medulla_finance_types::finance_order::OrderProposalSnapshot>,
+        #[serde(default)]
+        expected_head_revision: Option<u64>,
+        #[serde(default)]
+        expected_head_digest: Option<String>,
+    },
+
+    /// Promote one staged revision for host review: the staged digest, the gate
+    /// receipts against the manifest digest, the decision and the tenant
+    /// `TradingPolicy` are rechecked, then the promoted pointer, the `derivedFrom`
+    /// history edge and the `OrderAdmissionReceipt` commit in one transaction.
+    /// Admission is host review only; no order is submitted.
+    #[cfg(feature = "finance")]
+    FinanceOrderPromote {
+        request: Box<medulla_finance_types::finance_order::OrderPromoteRequest>,
+    },
+
+    /// Verify one proposal against the pinned `TradingPolicy` risk limits through
+    /// the decision limit guard: `Passed`, or `Abstained` with one `LimitBreach`
+    /// reason per breach. Reads only.
+    #[cfg(feature = "finance")]
+    FinanceOrderLimitCheck {
+        proposal: Box<medulla_finance_types::finance_order::OrderProposalSnapshot>,
+    },
         ]);
     };
 }

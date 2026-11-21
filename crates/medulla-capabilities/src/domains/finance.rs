@@ -10,4 +10,5 @@ pub(crate) const ROWS: &[PolicyRow] = &[
     ("FinanceAccountProject", spec(make_policy(false, DurabilityDomain::None, "finance:records", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
     ("RegimeForecast", spec(make_policy(false, DurabilityDomain::None, "finance:records", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
     ("RegimeSizingInput", spec(make_policy(false, DurabilityDomain::None, "finance:records", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
+    ("FinanceOrderLimitCheck", spec(make_policy(false, DurabilityDomain::None, "finance:propose-order", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
 ];

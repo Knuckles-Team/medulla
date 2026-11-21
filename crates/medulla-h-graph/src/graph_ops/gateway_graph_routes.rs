@@ -153,6 +153,8 @@ fn is_finance_record(method: &Method) -> bool {
         Method::FinanceRecordPut { .. }
             | Method::FinanceAlertRaise { .. }
             | Method::FinanceFactorRecord { .. }
+            | Method::FinanceOrderStage { .. }
+            | Method::FinanceOrderPromote { .. }
     )
 }
 

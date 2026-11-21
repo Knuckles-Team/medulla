@@ -147,6 +147,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "RegimeForecast",
     "RegimeSizingInput",
     "FinanceRecordGet",
+    "FinanceOrderLimitCheck",
     "FindCycle",
     "FiredTriggers",
     "Fork",

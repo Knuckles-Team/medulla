@@ -762,6 +762,31 @@
             sh:path :regimeTransitionMatrix ] ;
     sh:targetClass :RegimeModel .
 
+:TradingPolicyShape a sh:NodeShape ;
+    sh:description "A trading policy has one revision, the leverage limits, the risk limits and the designated approvers." ;
+    sh:name "Trading Policy Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradingPolicy must have exactly one tradingPolicyRevision." ;
+            sh:minCount 1 ;
+            sh:path :tradingPolicyRevision ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradingPolicy must have exactly one tradingPolicyLeverageLimits." ;
+            sh:minCount 1 ;
+            sh:path :tradingPolicyLeverageLimits ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradingPolicy must have exactly one tradingPolicyRiskLimits." ;
+            sh:minCount 1 ;
+            sh:path :tradingPolicyRiskLimits ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradingPolicy must have exactly one tradingPolicyApprovers." ;
+            sh:minCount 1 ;
+            sh:path :tradingPolicyApprovers ] ;
+    sh:targetClass :TradingPolicy .
+
 :FactorShape a sh:NodeShape ;
     sh:description "A factor has one id, one information coefficient, one information ratio, a positive rank and the kernel revisions." ;
     sh:name "Factor Shape" ;

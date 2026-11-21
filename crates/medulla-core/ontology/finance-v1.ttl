@@ -1118,6 +1118,40 @@
     rdfs:domain :RegimeModel ;
     rdfs:range xsd:string .
 
+# MEDULLA-FINANCE-PRIMITIVES-R015.1.2: the tenant's leverage and risk policy. The order
+# proposal stage reads its risk limits and the promotion reads its designated approvers.
+
+:TradingPolicy a owl:Class ;
+    rdfs:label "Trading Policy" ;
+    rdfs:comment "The tenant's leverage and risk policy with its designated approvers, at one revision (R015.1.2). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
+
+:tradingPolicyRevision a owl:DatatypeProperty ;
+    rdfs:label "trading policy revision" ;
+    rdfs:comment "The revision of the policy as a decimal integer; a proposal pins it." ;
+    rdfs:domain :TradingPolicy ;
+    rdfs:range xsd:string .
+
+:tradingPolicyLeverageLimits a owl:DatatypeProperty ;
+    rdfs:label "trading policy leverage limits" ;
+    rdfs:comment "JSON array of per-instrument leverage policies: instrument_id, approvers and cfd_unavailable_us_retail." ;
+    rdfs:domain :TradingPolicy ;
+    rdfs:range xsd:string .
+
+:tradingPolicyRiskLimits a owl:DatatypeProperty ;
+    rdfs:label "trading policy risk limits" ;
+    rdfs:comment "JSON array of limit rules: id, metric, bound and scope." ;
+    rdfs:domain :TradingPolicy ;
+    rdfs:range xsd:string .
+
+:tradingPolicyApprovers a owl:DatatypeProperty ;
+    rdfs:label "trading policy approvers" ;
+    rdfs:comment "JSON array of the designated approver identities." ;
+    rdfs:domain :TradingPolicy ;
+    rdfs:range xsd:string .
+
+
 # ── Personal ledger (firefly-iii; MEDULLA-CQ-CONN-R075) ──
 
 :Budget a owl:Class ;

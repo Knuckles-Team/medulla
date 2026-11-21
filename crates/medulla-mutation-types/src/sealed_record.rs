@@ -56,6 +56,8 @@ pub struct SealedClass {
 ///
 /// * `AnalysisSnapshot` — a sealed markets analysis record (finance-v1); its node id
 ///   is derived from its digest and share links verify it by re-sealing.
+/// * `OrderProposalSnapshot` and `OrderAdmissionReceipt` — a staged order proposal
+///   revision and its host-review admission (finance order proposals).
 /// * `Release` — a recorded software release (MEDULLA-SDLC-R002.5); its node id names
 ///   the repository and version, so an overwrite is a changed release.
 /// * [`SEALED_TOMBSTONE_TYPE`] — what retirement leaves behind.
@@ -64,6 +66,22 @@ pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
         name: "AnalysisSnapshot",
         digest_property: "analysisDigest",
         sealed_at_property: "sealedAtMs",
+        generic_create: true,
+        overwrite_code: None,
+    },
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1.1: one staged order proposal revision.
+    SealedClass {
+        name: "OrderProposalSnapshot",
+        digest_property: "snapshotDigest",
+        sealed_at_property: "stagedAtMs",
+        generic_create: true,
+        overwrite_code: None,
+    },
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1.3: the host-review admission of a revision.
+    SealedClass {
+        name: "OrderAdmissionReceipt",
+        digest_property: "receiptDigest",
+        sealed_at_property: "admittedAtMs",
         generic_create: true,
         overwrite_code: None,
     },

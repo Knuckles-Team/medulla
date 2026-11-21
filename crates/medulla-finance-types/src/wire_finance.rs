@@ -98,6 +98,8 @@ pub enum FinanceRecordKind {
     StrategyCard,
     // The pinned regime model a forecast reads (MEDULLA-FINANCE-PRIMITIVES-R002.11.0).
     RegimeModel,
+    // The tenant's leverage and risk policy and designated approvers (R015.1.2).
+    TradingPolicy,
 }
 
 #[cfg(feature = "finance")]
@@ -119,6 +121,7 @@ impl FinanceRecordKind {
             Self::GeopoliticalRisk => "GeopoliticalRisk",
             Self::StrategyCard => "StrategyCard",
             Self::RegimeModel => "RegimeModel",
+            Self::TradingPolicy => "TradingPolicy",
         }
     }
 
@@ -207,6 +210,10 @@ pub const FINANCE_RECORD_POLICY: &[(FinanceRecordKind, FinanceRecordPolicy)] = &
         FinanceRecordKind::RegimeModel,
         FinanceRecordPolicy::ClientWritable,
     ),
+    (
+        FinanceRecordKind::TradingPolicy,
+        FinanceRecordPolicy::ClientWritable,
+    ),
 ];
 
 /// One finance-v1 record on the wire. `fields` maps a finance ontology property
@@ -239,6 +246,21 @@ pub mod finance_record_refusal {
     pub const STRATEGY_CARD_LICENCE_MISSING: &str = "STRATEGY_CARD_LICENCE_MISSING";
     pub const RECORD_TENANT_MISMATCH: &str = "RECORD_TENANT_MISMATCH";
     pub const RECORD_IMMUTABLE: &str = "RECORD_IMMUTABLE";
+}
+
+#[cfg(all(test, feature = "finance"))]
+mod order_refusal_tests {
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R015.1.1
+    #[test]
+    fn order_refusals_are_registered_server_error_codes() {
+        use medulla_types::contract::ServerErrorCode;
+        for code in crate::finance_order::ORDER_REFUSALS {
+            assert!(
+                ServerErrorCode::ALL.iter().any(|item| item.as_str() == *code),
+                "{code} is not a ServerErrorCode"
+            );
+        }
+    }
 }
 
 #[cfg(all(test, feature = "finance"))]

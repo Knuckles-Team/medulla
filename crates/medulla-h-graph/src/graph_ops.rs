@@ -63,6 +63,9 @@ mod finance_accounting;
 mod finance_alerts;
 mod finance_factors;
 #[cfg(feature = "finance")]
+mod finance_order_limit_check;
+mod finance_order_proposal;
+#[cfg(feature = "finance")]
 pub mod finance_forecast_gate;
 mod finance_records;
 #[cfg(feature = "finance")]

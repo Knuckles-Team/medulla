@@ -10565,6 +10565,32 @@ class FinanceClient:
             self._client, {"kind": kind, "record_id": record_id}
         )
 
+    # ── Served order proposals (MEDULLA-FINANCE-PRIMITIVES-R015.1, R010.2) ──
+    async def order_limit_check(self, proposal: dict[str, Any]) -> Any:
+        """Verify one order proposal against the pinned trading policy limits.
+
+        Returns ``Passed`` or ``Abstained`` with one limit-breach reason per breach."""
+        return await _gen.compute.send_finance_order_limit_check(
+            self._client, {"proposal": proposal}
+        )
+
+    async def order_stage(
+        self,
+        snapshot: dict[str, Any],
+        expected_head_revision: int | None = None,
+        expected_head_digest: str | None = None,
+    ) -> Any:
+        """Stage one sealed order proposal revision; a limit breach refuses
+        ``ORDER_LIMIT_BREACH`` and writes nothing."""
+        return await _gen.graph.send_finance_order_stage(
+            self._client,
+            {
+                "snapshot": snapshot,
+                "expected_head_revision": expected_head_revision,
+                "expected_head_digest": expected_head_digest,
+            },
+        )
+
     # ── Position sizing
     # (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest)
     # ─────────────────────────────

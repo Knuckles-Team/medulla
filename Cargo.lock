@@ -5998,6 +5998,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-outcome-types",
  "medulla-decision-stats",
  "medulla-decision-types",
  "medulla-direct-state",
