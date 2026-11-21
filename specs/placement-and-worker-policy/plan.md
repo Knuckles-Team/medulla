@@ -33,11 +33,14 @@ crates/medulla-decision-types/src/decision/statistical/placement.rs      existin
 crates/medulla-decision-types/src/decision/statistical/placement_plan.rs new       plan types (R700.1)
 crates/medulla-decision-policy/src/solve/placement.rs                    new       plan_services (R700.2)
 crates/medulla-h-decide/src/decide/stat_placement.rs                     new       placement_outcome, load_target_facts (R001.5 to R001.10)
-crates/medulla-h-decide/src/decide/stat_placement_plan.rs                new       placement_plan_outcome (R700.3 to R700.5)
+crates/medulla-h-decide/src/decide/stat_placement_plan.rs                new       question_of, load_host_budgets, with_read, placement_plan_outcome, premises (R700.3 to R700.5)
+crates/medulla-h-decide/src/decide/family/placement_plan.rs              new       PlacementPlanFamily (R700.3)
 crates/medulla-h-decide/src/decide/capacity_premise.rs                   existing  headroom premise (R001.8)
 crates/medulla-h-decide/src/decide/assemble.rs                           existing  AgentAssemble (R001.12, R001.13)
-crates/medulla-core/ontology/placement.ttl, placement.shapes.ttl         new       placement vocabulary and shapes (R001.5)
-crates/medulla-work-types/src/worker_registry/grants.rs                  existing  granted_slots; WorkerGrant added (R002.3, R002.4)
+crates/medulla-core/ontology/placement.ttl, placement.shapes.ttl         existing  placement vocabulary and shapes; placement:Host node shape (R001.5, R004.3, R700.3)
+crates/medulla-work-types/src/worker_registry/grants.rs                  existing  granted_slots, admit_reserved_worker_task, WorkerGrant (R002.3, R002.4)
+crates/medulla-h-jobs/src/worker_registry.rs                             existing  served AdmitWorkerTask arm beside WorkerRegister (R002.4)
+crates/medulla-jobs/src/store/task_queue.rs                              existing  task_lane_counts: per-queue running and queued (R002.4)
 crates/medulla-work-types/src/scheduler_config.rs                             existing  engine-owned settings (R002.2, R002.14, R751.753)
 crates/medulla-h-jobs/src/jobs/submit.rs                                 existing  association bound (R003.1 to R003.6)
 crates/medulla-mining/src/mining/association.rs                          existing  kernel guard (R003.4)
@@ -158,13 +161,13 @@ R002.3 now provides pure `worker_registry::granted_slots` with `WorkerSizingInpu
 
 ### Capability-declared heavy compute routing (R004)
 
-Data flow: job submit wire method -> ready queue -> `claim_next` (`crates/medulla-jobs/src/store.rs:736`) -> capability anchor filter (`store.rs:773`) -> claim on the capable host.
+Data flow: job submit wire method -> ready queue -> worker claim (`worker_loop` or served `JobOp::WorkerClaim`) -> `host_capabilities::declared_for` reads the claiming host's `placement:Host` node in the commons graph -> `claim_next` with the declared heavy capability strings appended -> capability anchor filter in `select_ready_for_worker` -> claim on the capable host.
 
-Types: `HostCapability`, `RoutingFact`. Attach point: `store.rs:773`. Production caller: `crates/medulla-quantum-jobs/src/job.rs:275`, which passes no capabilities today; the Wiring row passes them. Failure behavior: `no_capable_host` leaves the job queued.
+Types: `HeavyCapability`, `HostCapability`, `RoutingFact`. Production callers: `worker_loop` (host = the engine node identity) and `handle_worker_claim` (host = `WorkerRegistration.host_iri` of the caller's live registered worker). `claim_and_run_quantum_job` has no production caller and quantum jobs require no capability. Failure behavior: a job no claiming worker is capable of stays queued.
 
-Reused: the capability anchor selection in `select_ready_for_worker`. New: capability declaration from graph topology facts.
+Reused: the capability anchor selection in `select_ready_for_worker`, `opaque_worker_capability`, the node identity of `medulla-server-auth`. New: the `placement:Host` node shape (shared with R700.3) and `declared_for`.
 
-Decision: hosts declare capabilities and the graph stores them. Rejected alternative: a fixed host list in configuration, because it drifts from the real topology.
+Decision: hosts declare capabilities and the graph stores them; a worker never self-asserts a heavy capability. Rejected alternatives: a fixed host list in configuration (drifts from the real topology) and capabilities supplied in the claim (a worker claim is not an authority).
 
 Cross-repository: `ARBORA-` rows that submit jobs only pass the job class.
 
