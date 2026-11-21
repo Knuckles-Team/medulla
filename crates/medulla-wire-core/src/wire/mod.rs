@@ -132,6 +132,7 @@ use medulla_server_api::state::ServerState;
 mod seam;
 pub use seam::WireSeam;
 mod copy_out;
+mod matview;
 pub mod projection;
 pub mod sqlstate;
 
@@ -587,6 +588,15 @@ fn authorize_table_txn_op(
         } => authorize_update_op(source, authority, table, set, selector, provisional_creates),
         TxnOp::Delete { table, selector } => {
             authorize_delete_op(source, authority, table, selector, provisional_creates)
+        }
+        // A materialized view's spec belongs to its result table, so it follows
+        // that table's ownership (the ALTER privilege) like a trigger does
+        // (MEDULLA-ENGINE-PARITY-R014.1).
+        TxnOp::PutMatView { spec } => {
+            authorize_alter_like(source, authority, &spec.name, provisional_creates)
+        }
+        TxnOp::DropMatView { name } => {
+            authorize_alter_like(source, authority, name, provisional_creates)
         }
         TxnOp::CreateView { .. }
         | TxnOp::DropView { .. }
@@ -2454,6 +2464,14 @@ impl WireSession {
             }
             StatementKind::CreateContinuousAggregate(plan) => {
                 self.run_create_continuous_aggregate(graph, sql, plan).await
+            }
+            // MEDULLA-ENGINE-PARITY-R014.1 — CREATE/REFRESH/DROP MATERIALIZED VIEW.
+            StatementKind::CreateMatView(plan) => self.run_create_matview(graph, sql, plan).await,
+            StatementKind::RefreshMatView { name } => {
+                self.run_refresh_matview(graph, sql, name).await
+            }
+            StatementKind::DropMatView { name, if_exists } => {
+                self.run_drop_matview(graph, sql, name, if_exists).await
             }
             // `COPY … FROM STDIN` (CONCEPT:MEDULLA-KG.query.register-each-user-table): switch into copy-in mode; the
             // streamed rows are ingested by the wire's copy-done hook.

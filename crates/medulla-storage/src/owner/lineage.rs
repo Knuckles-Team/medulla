@@ -342,6 +342,45 @@ pub const SQL_BEFORE_TRIGGER_REACTIONS: LayoutPredecessor = LayoutPredecessor {
     file_name: "sql.redb",
 };
 
+/// The SQL owner tables of the layout before materialized views: everything the
+/// current layout declares except `__sql_matviews__`.
+const SQL_TABLES_BEFORE_MATVIEWS: &[&str] = &[
+    "__sql_catalog__",
+    "__sql_functions__",
+    "__sql_ann_indexes__",
+    "__sql_secondary_indexes__",
+    "__sql_secondary_index_entries__",
+    "__sql_hypertables__",
+    "__sql_source_authority__",
+    "__sql_views__",
+    "__sql_extensions__",
+    "__sql_rows__",
+    "__sql_seq__",
+    "__sql_schema_catalog_versions__",
+    "__sql_schema_versions__",
+    "__sql_schema_migrations__",
+    "__sql_schema_migration_order__",
+    "__sql_schema_catalog_order__",
+    "__sql_property_graphs__",
+    "__sql_property_graph_seq__",
+    "__sql_source_checkpoints__",
+    "__sql_ann_generations__",
+    "__sql_ann_dirty__",
+    "__sql_edge_indexes__",
+    "__sql_sequences__",
+    "__sql_trigger_reactions__",
+];
+
+/// `sql.redb` before the materialized-view catalog. The offline upgrade creates
+/// the empty catalog table (MEDULLA-ENGINE-PARITY-R014.1).
+pub const SQL_BEFORE_MATVIEWS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Sql,
+    label: "SQL catalog store before the materialized-view catalog",
+    owner_tables: SQL_TABLES_BEFORE_MATVIEWS,
+    data_lost: SQL_DATA_LOST,
+    file_name: "sql.redb",
+};
+
 const SQL_DATA_LOST: &str = "its SQL catalog and rows require an explicit offline upgrade \
                              before normal open, or re-ingestion after moving the file aside";
 
@@ -613,6 +652,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             SQL_BEFORE_DURABLE_ANN,
             SQL_BEFORE_NAMED_SEQUENCES,
             SQL_BEFORE_TRIGGER_REACTIONS,
+            SQL_BEFORE_MATVIEWS,
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],

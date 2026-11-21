@@ -3234,3 +3234,100 @@ async fn after_insert_trigger_runs_once_per_row() {
     let _ = client.simple_query(&format!("DROP TABLE {source}")).await;
     let _ = client.simple_query(&format!("DROP TABLE {target}")).await;
 }
+
+/// A view reads through its stored select, a materialized view stores its rows
+/// until a refresh recomputes them, and the two refusals carry their codes.
+// spec: MEDULLA-ENGINE-PARITY-R014.1
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn view_and_matview_over_wire() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    let view = format!("{table}_v");
+    let matview = format!("{table}_mv");
+
+    client
+        .simple_query(&format!("CREATE TABLE {table} (id BIGINT PRIMARY KEY, sku TEXT)"))
+        .await
+        .expect("CREATE TABLE");
+    client
+        .simple_query(&format!("INSERT INTO {table} (id, sku) VALUES (1, 'a')"))
+        .await
+        .expect("seed row");
+    client
+        .simple_query(&format!("CREATE VIEW {view} AS SELECT id, sku FROM {table}"))
+        .await
+        .expect("CREATE VIEW");
+    client
+        .simple_query(&format!(
+            "CREATE MATERIALIZED VIEW {matview} AS SELECT id, sku FROM {table}"
+        ))
+        .await
+        .expect("CREATE MATERIALIZED VIEW");
+
+    client
+        .simple_query(&format!("INSERT INTO {table} (id, sku) VALUES (2, 'b')"))
+        .await
+        .expect("second row");
+    let live = simple_ids(
+        client
+            .simple_query(&format!("SELECT id FROM {view} ORDER BY id"))
+            .await
+            .expect("read the view"),
+    );
+    assert_eq!(live, vec!["1".to_string(), "2".to_string()]);
+    let stored = simple_ids(
+        client
+            .simple_query(&format!("SELECT id FROM {matview} ORDER BY id"))
+            .await
+            .expect("read the matview"),
+    );
+    assert_eq!(stored, vec!["1".to_string()], "the matview keeps its rows");
+
+    client
+        .simple_query(&format!("REFRESH MATERIALIZED VIEW {matview}"))
+        .await
+        .expect("REFRESH MATERIALIZED VIEW");
+    let refreshed = simple_ids(
+        client
+            .simple_query(&format!("SELECT id FROM {matview} ORDER BY id"))
+            .await
+            .expect("read the refreshed matview"),
+    );
+    assert_eq!(refreshed, vec!["1".to_string(), "2".to_string()]);
+
+    let exists = client
+        .simple_query(&format!(
+            "CREATE MATERIALIZED VIEW {matview} AS SELECT id FROM {table}"
+        ))
+        .await
+        .expect_err("a second create of one name refuses");
+    assert_eq!(
+        exists.as_db_error().expect("a database error").code().code(),
+        "42P07",
+        "{}",
+        error_chain(&exists)
+    );
+    assert!(error_chain(&exists).contains("matview_exists"));
+
+    client
+        .simple_query(&format!("DROP MATERIALIZED VIEW {matview}"))
+        .await
+        .expect("DROP MATERIALIZED VIEW");
+    let unknown = client
+        .simple_query(&format!("REFRESH MATERIALIZED VIEW {matview}"))
+        .await
+        .expect_err("a refresh of a dropped view refuses");
+    assert_eq!(
+        unknown.as_db_error().expect("a database error").code().code(),
+        "42P01",
+        "{}",
+        error_chain(&unknown)
+    );
+    assert!(error_chain(&unknown).contains("matview_unknown"));
+    client
+        .simple_query(&format!("DROP MATERIALIZED VIEW IF EXISTS {matview}"))
+        .await
+        .expect("IF EXISTS of an absent view succeeds");
+}

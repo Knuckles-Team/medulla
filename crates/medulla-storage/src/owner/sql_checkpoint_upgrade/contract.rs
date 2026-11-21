@@ -4,7 +4,7 @@ use super::super::contract::expected_table_contracts;
 use super::super::layout::{layout_digest_over, OwnerLayout};
 use super::super::lineage::{
     SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
-    SQL_BEFORE_TRIGGER_REACTIONS,
+    SQL_BEFORE_MATVIEWS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use crate::physical::incarnation::STORAGE_KERNEL_SCHEMA_VERSION;
 use crate::physical::manifest::{OwnerManifest, TableContract, TableOwnership};
@@ -33,6 +33,11 @@ pub(super) const PRE_TRIGGER_REACTIONS: [u8; 32] = [
     0xe4, 0xdf, 0x7c, 0x9e, 0x6a, 0xbf, 0xec, 0x82, 0xf2, 0xca, 0x98, 0x91, 0x7f, 0x13, 0xf7, 0xa0,
 ];
 
+/// LAYOUT-REGEN needed: the gate fixer replaces this with the printed digest of
+/// the layout before the materialized-view catalog (trigger reactions present,
+/// `__sql_matviews__` absent).
+pub(super) const PRE_MATVIEWS: [u8; 32] = [0; 32];
+
 pub(super) fn contracts_for(manifest: &OwnerManifest) -> Result<Vec<TableContract>, String> {
     let current = expected_table_contracts(OwnerLayout::Sql);
     for (predecessor, pinned) in [
@@ -40,6 +45,7 @@ pub(super) fn contracts_for(manifest: &OwnerManifest) -> Result<Vec<TableContrac
         (SQL_BEFORE_DURABLE_ANN, PRE_DURABLE_ANN),
         (SQL_BEFORE_NAMED_SEQUENCES, PRE_NAMED_SEQUENCES),
         (SQL_BEFORE_TRIGGER_REACTIONS, PRE_TRIGGER_REACTIONS),
+        (SQL_BEFORE_MATVIEWS, PRE_MATVIEWS),
     ] {
         let contracts: Vec<_> = current
             .iter()

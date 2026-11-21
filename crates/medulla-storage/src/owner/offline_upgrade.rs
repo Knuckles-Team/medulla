@@ -28,14 +28,14 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
     SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
-    SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
+    SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
     inspect_sql_ann_generation_upgrade, inspect_sql_named_sequence_upgrade,
-    inspect_sql_source_checkpoint_upgrade, inspect_sql_trigger_reaction_upgrade,
-    upgrade_sql_ann_generations, upgrade_sql_named_sequences, upgrade_sql_source_checkpoints,
-    upgrade_sql_trigger_reactions, SqlSourceCheckpointInspectionOptions,
+    inspect_sql_matview_upgrade, inspect_sql_source_checkpoint_upgrade,
+    inspect_sql_trigger_reaction_upgrade, upgrade_sql_ann_generations, upgrade_sql_matviews,
+    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints, upgrade_sql_trigger_reactions, SqlSourceCheckpointInspectionOptions,
     SqlSourceCheckpointUpgradeReport,
 };
 use crate::physical::integrity::PrivatePayloadIntegrity;
@@ -201,6 +201,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         SQL_BEFORE_TRIGGER_REACTIONS,
         inspect_sql_trigger_reaction_upgrade,
         upgrade_sql_trigger_reactions
+    ),
+    offline_upgrade!(
+        SQL_BEFORE_MATVIEWS,
+        inspect_sql_matview_upgrade,
+        upgrade_sql_matviews
     ),
     offline_upgrade!(
         AGENT_LIBRARY_BEFORE_MCP_CATALOG,

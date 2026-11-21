@@ -43,6 +43,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
+medulla-federation = { path = "../medulla-federation", features = ["federation-sql"] }
 medulla-uql = { path = "../medulla-uql" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 sha1 = { version = "0.10", optional = true }

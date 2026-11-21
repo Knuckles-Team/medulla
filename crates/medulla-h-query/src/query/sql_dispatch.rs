@@ -17,6 +17,8 @@ fn sql_needs_source_read(kind: &medulla_sql_lang::sql::classify::StatementKind) 
     matches!(
         kind,
         K::InsertSelect(_)
+            | K::CreateMatView(_)
+            | K::RefreshMatView { .. }
             | K::InsertNodesSelect(_)
             | K::UpdateNodesJoin(_)
             | K::DeleteNodesJoin(_)
@@ -162,6 +164,9 @@ async fn exec_sql_catalog_statement(
     if sql_catalog_row_kind(&kind) {
         return exec_sql_catalog_row(ctx, kind).await;
     }
+    if sql_catalog_matview_kind(&kind) {
+        return exec_sql_catalog_matview(ctx, kind).await;
+    }
     if sql_catalog_drop_kind(&kind) {
         return exec_sql_catalog_drop(ctx, kind).await;
     }
@@ -187,6 +192,37 @@ fn sql_catalog_insert_kind(kind: &medulla_sql_lang::sql::classify::StatementKind
 fn sql_catalog_row_kind(kind: &medulla_sql_lang::sql::classify::StatementKind) -> bool {
     use medulla_sql_lang::sql::classify::StatementKind as K;
     matches!(kind, K::UpdateTable(_) | K::DeleteTable(_))
+}
+
+#[cfg(feature = "query")]
+fn sql_catalog_matview_kind(kind: &medulla_sql_lang::sql::classify::StatementKind) -> bool {
+    use medulla_sql_lang::sql::classify::StatementKind as K;
+    matches!(
+        kind,
+        K::CreateMatView(_) | K::RefreshMatView { .. } | K::DropMatView { .. }
+    )
+}
+
+#[cfg(feature = "query")]
+async fn exec_sql_catalog_matview(
+    ctx: SqlDispatchCtx<'_>,
+    kind: medulla_sql_lang::sql::classify::StatementKind,
+) -> Response {
+    let SqlDispatchCtx {
+        req_id,
+        scope,
+        sql_method,
+        store,
+        read_core,
+        authorized_read_store,
+        ..
+    } = ctx;
+    let read_store = authorized_read_store.as_ref().map_or(
+        store,
+        medulla_server_auth::sql_catalog_acl::AuthorizedReadStore::store,
+    );
+    sql_matview::exec_sql_matview(req_id, scope, sql_method, read_core, store, read_store, kind)
+        .await
 }
 
 #[cfg(feature = "query")]
@@ -651,6 +687,9 @@ fn classify_sql_catalog_terminal(
         | K::DropIndex { .. }
         | K::CreateHypertable(_)
         | K::CreateContinuousAggregate(_)
+        | K::CreateMatView(_)
+        | K::RefreshMatView { .. }
+        | K::DropMatView { .. }
         | K::CreateFunction(_)
         | K::DropFunction(_) => SqlCatalogTerminalClass::Misclassified,
     }

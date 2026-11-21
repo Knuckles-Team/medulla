@@ -31,6 +31,7 @@ pub mod ann_plan;
 pub mod column_advice;
 pub mod embedding_binding;
 pub mod index_plan;
+pub mod matview;
 pub mod property_graph;
 pub mod store;
 
@@ -52,6 +53,10 @@ pub use embedding_binding::{
     MAX_EMBEDDING_DIM,
 };
 pub use index_plan::{IndexColumnPlan, IndexPlan};
+pub use matview::{
+    create_matview_txn, drop_matview_txn, refresh_matview_txn, MatViewSpec, MATVIEW_EXISTS,
+    MATVIEW_UNKNOWN,
+};
 pub use property_graph::{
     decode_property_graph, decode_property_graph_catalog_record, AlterElementAction,
     AlterPropertyGraphAction, CanonicalCatalogName, DropBehavior, EdgeEndpoint,

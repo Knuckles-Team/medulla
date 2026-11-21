@@ -34,6 +34,9 @@ const TABLE: &[(&str, &str)] = &[
     ("TRIGGER_MACHINE_INVALID", "XX000"),
     ("TRIGGER_EXISTS", "42710"),
     ("TRIGGER_UNKNOWN", "42704"),
+    // MEDULLA-ENGINE-PARITY-R014.1: a materialized view that exists, or does not.
+    ("MATVIEW_EXISTS", "42P07"),
+    ("MATVIEW_UNKNOWN", "42P01"),
 ];
 
 /// The SQLSTATE for an engine code, or `None` when the code is not in the table.

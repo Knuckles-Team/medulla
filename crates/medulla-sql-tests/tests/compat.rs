@@ -119,6 +119,9 @@ const STATEMENT_SAMPLES: &[(&str, &str)] = &[
         "create_continuous_aggregate",
         "CREATE MATERIALIZED VIEW daily WITH (timescaledb.continuous) AS SELECT time_bucket('1 day', ts) AS d, count(*) FROM t GROUP BY 1",
     ),
+    ("create_matview", "CREATE MATERIALIZED VIEW mv AS SELECT a FROM t"),
+    ("refresh_matview", "REFRESH MATERIALIZED VIEW mv"),
+    ("drop_matview", "DROP MATERIALIZED VIEW mv"),
     (
         "create_function",
         "CREATE FUNCTION add_two(a int, b int) RETURNS int AS $$ SELECT a + b $$ LANGUAGE sql",

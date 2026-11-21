@@ -226,6 +226,15 @@ pub enum StatementKind {
     /// `CREATE MATERIALIZED VIEW … WITH (timescaledb.continuous) AS SELECT …`
     /// (CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering) — a continuous aggregate lowered onto the durable view catalog.
     CreateContinuousAggregate(ContinuousAggPlan),
+    /// `CREATE MATERIALIZED VIEW name AS <select>` (MEDULLA-ENGINE-PARITY-R014.1) —
+    /// a stored result table built from the select and recorded in the matview
+    /// catalog.
+    CreateMatView(CreateMatViewPlan),
+    /// `REFRESH MATERIALIZED VIEW name` (MEDULLA-ENGINE-PARITY-R014.1) — recompute
+    /// the result table from the stored select.
+    RefreshMatView { name: String },
+    /// `DROP MATERIALIZED VIEW [IF EXISTS] name` (MEDULLA-ENGINE-PARITY-R014.1).
+    DropMatView { name: String, if_exists: bool },
 
     // ── SQL stored functions (CONCEPT:MEDULLA-KG.query.create-drop-function) ───────────────────────────────────
     /// `CREATE [OR REPLACE] FUNCTION name(arg type, …) RETURNS … AS $$ … $$ LANGUAGE sql`
@@ -277,6 +286,9 @@ impl StatementKind {
         "drop_index",
         "create_hypertable",
         "create_continuous_aggregate",
+        "create_matview",
+        "refresh_matview",
+        "drop_matview",
         "create_function",
         "drop_function",
     ];
@@ -321,6 +333,9 @@ impl StatementKind {
             Self::DropIndex { .. } => "drop_index",
             Self::CreateHypertable(_) => "create_hypertable",
             Self::CreateContinuousAggregate(_) => "create_continuous_aggregate",
+            Self::CreateMatView(_) => "create_matview",
+            Self::RefreshMatView { .. } => "refresh_matview",
+            Self::DropMatView { .. } => "drop_matview",
             Self::CreateFunction(_) => "create_function",
             Self::DropFunction(_) => "drop_function",
         }
@@ -513,6 +528,15 @@ pub struct CreateViewPlan {
     pub name: String,
     pub select_sql: String,
     pub or_replace: bool,
+}
+
+/// A decoded `CREATE MATERIALIZED VIEW name AS <select>`
+/// (MEDULLA-ENGINE-PARITY-R014.1). `select_sql` is the raw SELECT text stored in
+/// the matview catalog and re-run on every refresh.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreateMatViewPlan {
+    pub name: String,
+    pub select_sql: String,
 }
 
 /// A decoded `DROP VIEW [IF EXISTS] name` (CONCEPT:MEDULLA-KG.query.create-drop-view).
@@ -769,6 +793,7 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     if let Some(result) = classify_pgq_precheck(sql)
         .or_else(|| classify_sequence_precheck(sql))
         .or_else(|| classify_trigger_precheck(sql))
+        .or_else(|| classify_matview_precheck(sql))
         .or_else(|| {
             parse_drop_extension(sql)
                 .map(|(name, if_exists)| Ok(StatementKind::DropExtension { name, if_exists }))
@@ -828,6 +853,16 @@ fn classify_trigger_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     }
     super::trigger_ddl::parse_drop_trigger(sql)
         .map(|parsed| parsed.map(|(name, table)| StatementKind::DropTrigger { name, table }))
+}
+
+/// `REFRESH MATERIALIZED VIEW` and `DROP MATERIALIZED VIEW` (MEDULLA-ENGINE-PARITY-R014.1).
+fn classify_matview_precheck(sql: &str) -> Option<Result<StatementKind, String>> {
+    if let Some(parsed) = super::pgfamily::parse_refresh_matview(sql) {
+        return Some(parsed.map(|name| StatementKind::RefreshMatView { name }));
+    }
+    super::pgfamily::parse_drop_matview(sql).map(|parsed| {
+        parsed.map(|(name, if_exists)| StatementKind::DropMatView { name, if_exists })
+    })
 }
 
 fn classify_pgq_precheck(sql: &str) -> Option<Result<StatementKind, String>> {
@@ -2456,20 +2491,31 @@ fn classify_drop(
 
 /// Decode `CREATE [OR REPLACE] VIEW name AS <select>` (CONCEPT:MEDULLA-KG.query.create-drop-view). Read-only:
 /// the view name may not shadow a reserved graph table, the body must be a plain
-/// query, and MATERIALIZED views are rejected (a follow-up).
+/// query. A MATERIALIZED view classifies as `CreateMatView`.
 fn classify_create_view(
     name: &ObjectName,
     query: &datafusion::sql::sqlparser::ast::Query,
     or_replace: bool,
     materialized: bool,
 ) -> Result<StatementKind, String> {
-    if materialized {
-        return Err(
-            "CREATE MATERIALIZED VIEW is not supported (CONCEPT:MEDULLA-KG.query.create-drop-view)"
-                .to_string(),
-        );
-    }
     let name = last_ident(name);
+    if materialized {
+        if or_replace {
+            return Err(refuse_form(
+                "create_matview",
+                "CREATE OR REPLACE MATERIALIZED VIEW",
+            ));
+        }
+        if is_reserved_table(&name) {
+            return Err(format!(
+                "CREATE MATERIALIZED VIEW cannot use the reserved table name `{name}`"
+            ));
+        }
+        return Ok(StatementKind::CreateMatView(CreateMatViewPlan {
+            name,
+            select_sql: query.to_string(),
+        }));
+    }
     if is_reserved_table(&name) {
         return Err(format!(
             "CREATE VIEW cannot use the reserved table name `{name}`"
@@ -4706,9 +4752,33 @@ mod tests {
     }
 
     #[test]
-    fn create_view_rejects_reserved_and_materialized() {
+    fn create_view_rejects_reserved_names() {
         assert!(classify("CREATE VIEW nodes AS SELECT 1").is_err());
-        assert!(classify("CREATE MATERIALIZED VIEW v AS SELECT 1").is_err());
+        assert!(classify("CREATE MATERIALIZED VIEW nodes AS SELECT 1").is_err());
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R014.1
+    #[test]
+    fn matview_statements_classify() {
+        let StatementKind::CreateMatView(plan) =
+            classify("CREATE MATERIALIZED VIEW v AS SELECT 1").unwrap()
+        else {
+            panic!("expected CreateMatView");
+        };
+        assert_eq!(plan.name, "v");
+        assert!(matches!(
+            classify("REFRESH MATERIALIZED VIEW v").unwrap(),
+            StatementKind::RefreshMatView { name } if name == "v"
+        ));
+        assert!(matches!(
+            classify("DROP MATERIALIZED VIEW IF EXISTS v").unwrap(),
+            StatementKind::DropMatView { name, if_exists: true } if name == "v"
+        ));
+        assert!(matches!(
+            classify("CREATE MATERIALIZED VIEW c WITH (timescaledb.continuous) AS SELECT 1")
+                .unwrap(),
+            StatementKind::CreateContinuousAggregate(_)
+        ));
     }
 
     // ── CREATE / DROP EXTENSION (CONCEPT:MEDULLA-KG.query.create-drop-extension-over) ──────────────────────────────

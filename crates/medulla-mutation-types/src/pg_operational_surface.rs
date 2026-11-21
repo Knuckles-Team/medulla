@@ -118,6 +118,9 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("drop_index", SqlFormState::Supported),
     ("create_hypertable", SqlFormState::Partial),
     ("create_continuous_aggregate", SqlFormState::Partial),
+    ("create_matview", SqlFormState::Supported),
+    ("refresh_matview", SqlFormState::Supported),
+    ("drop_matview", SqlFormState::Supported),
     ("create_function", SqlFormState::Partial),
     ("drop_function", SqlFormState::Partial),
 ];

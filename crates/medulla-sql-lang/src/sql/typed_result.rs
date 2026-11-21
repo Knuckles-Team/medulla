@@ -36,3 +36,41 @@ pub struct TypedQueryResult {
     pub columns: Vec<TypedColumn>,
     pub rows: Vec<Vec<serde_json::Value>>,
 }
+
+impl PgColType {
+    /// The user-table column type that stores a result column of this type
+    /// (MEDULLA-ENGINE-PARITY-R014.1): `Text` → `Text`, `Int8` → `BigInt`,
+    /// `Float8` → `Double`, `Bool` → `Bool`, `Vector` → `Vector(None)`.
+    pub fn stored_column_type(self) -> medulla_tables::schema::ColumnType {
+        use medulla_tables::schema::ColumnType;
+        match self {
+            PgColType::Text => ColumnType::Text,
+            PgColType::Int8 => ColumnType::BigInt,
+            PgColType::Float8 => ColumnType::Double,
+            PgColType::Bool => ColumnType::Bool,
+            PgColType::Vector => ColumnType::Vector(None),
+        }
+    }
+}
+
+/// The schema of the result table of a materialized view named `name`: one
+/// nullable, non-key column per result column (MEDULLA-ENGINE-PARITY-R014.1).
+pub fn matview_result_schema(
+    name: &str,
+    columns: &[TypedColumn],
+) -> medulla_tables::schema::TableSchema {
+    medulla_tables::schema::TableSchema::new(
+        name.to_string(),
+        columns
+            .iter()
+            .map(|c| {
+                medulla_tables::schema::Column::new(
+                    c.name.clone(),
+                    c.ty.stored_column_type(),
+                    true,
+                    false,
+                )
+            })
+            .collect(),
+    )
+}

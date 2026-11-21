@@ -185,6 +185,65 @@ pub fn parse_continuous_aggregate(sql: &str) -> Option<ContinuousAggPlan> {
     })
 }
 
+/// The statement's whitespace-separated tokens, without a trailing `;`.
+fn matview_tokens(sql: &str) -> Vec<String> {
+    sql.trim()
+        .trim_end_matches(';')
+        .split_whitespace()
+        .map(str::to_string)
+        .collect()
+}
+
+/// Whether `toks[from..from + words.len()]` spells `words`, ignoring case.
+fn matview_words_at(toks: &[String], from: usize, words: &[&str]) -> bool {
+    words
+        .iter()
+        .enumerate()
+        .all(|(i, w)| toks.get(from + i).is_some_and(|t| t.eq_ignore_ascii_case(w)))
+}
+
+/// The one name token that must end a matview statement, unquoted.
+fn matview_name_at(toks: &[String], at: usize) -> Result<String, String> {
+    match toks.get(at..) {
+        Some([one]) => {
+            let name = one.trim_matches('"');
+            let leaf = name.rsplit('.').next().unwrap_or(name);
+            if leaf.is_empty() {
+                Err("FEATURE_NOT_SUPPORTED: a materialized view name is required".to_string())
+            } else {
+                Ok(leaf.to_string())
+            }
+        }
+        _ => Err(
+            "FEATURE_NOT_SUPPORTED: expected exactly one materialized view name".to_string(),
+        ),
+    }
+}
+
+/// Recognize `REFRESH MATERIALIZED VIEW name` (MEDULLA-ENGINE-PARITY-R014.1)
+/// textually. `None` when the statement is not one; the `CONCURRENTLY` and
+/// `WITH [NO] DATA` forms are refused precisely rather than mis-routed.
+pub fn parse_refresh_matview(sql: &str) -> Option<Result<String, String>> {
+    let toks = matview_tokens(sql);
+    if !matview_words_at(&toks, 0, &["refresh", "materialized", "view"]) {
+        return None;
+    }
+    Some(matview_name_at(&toks, 3))
+}
+
+/// Recognize `DROP MATERIALIZED VIEW [IF EXISTS] name` (MEDULLA-ENGINE-PARITY-R014.1)
+/// textually: the name and the `IF EXISTS` flag. `None` when the statement is
+/// not one.
+pub fn parse_drop_matview(sql: &str) -> Option<Result<(String, bool), String>> {
+    let toks = matview_tokens(sql);
+    if !matview_words_at(&toks, 0, &["drop", "materialized", "view"]) {
+        return None;
+    }
+    let if_exists = matview_words_at(&toks, 3, &["if", "exists"]);
+    let name_at = if if_exists { 5 } else { 3 };
+    Some(matview_name_at(&toks, name_at).map(|name| (name, if_exists)))
+}
+
 /// The last identifier of a function name (`paradedb.score` → `score`,
 /// `create_hypertable` → `create_hypertable`).
 fn last_fn_ident(f: &datafusion::sql::sqlparser::ast::Function) -> String {

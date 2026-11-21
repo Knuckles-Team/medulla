@@ -131,6 +131,9 @@ const SEQ: TableDefinition<&str, u64> = TableDefinition::new("__sql_seq__");
 /// View catalog (CONCEPT:MEDULLA-KG.query.create-drop-view): `view_name -> SELECT text`. A read-only named query
 /// mirrored beside the user-table catalog; expanded during SQL context build.
 const VIEWS: TableDefinition<&str, &str> = TableDefinition::new("__sql_views__");
+/// Materialized-view catalog (MEDULLA-ENGINE-PARITY-R014.1): `view_name ->
+/// MessagePack(MatViewSpec)`. The result rows live in a user table of the same name.
+const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("__sql_matviews__");
 /// Extension catalog (CONCEPT:MEDULLA-KG.query.create-drop-extension-over): `extension_name -> ""`. Records the extensions a
 /// client has `CREATE EXTENSION`-enabled (pgvector, AGE, TimescaleDB, pg_search), so a
 /// setup script's enablement is durable across a restart. The value is unused today (a
@@ -360,6 +363,14 @@ pub enum TxnOp {
     DropView {
         name: String,
         if_exists: bool,
+    },
+    /// Record a materialized view's spec (MEDULLA-ENGINE-PARITY-R014.1).
+    PutMatView {
+        spec: super::matview::MatViewSpec,
+    },
+    /// Remove a materialized view's spec (MEDULLA-ENGINE-PARITY-R014.1).
+    DropMatView {
+        name: String,
     },
     CreateExtension {
         name: String,
@@ -1844,6 +1855,20 @@ impl TableStore {
             .map(|v| v.value().to_string()))
     }
 
+    /// The materialized view `name`, or `None` when no such view exists
+    /// (MEDULLA-ENGINE-PARITY-R014.1).
+    pub fn get_matview(
+        &self,
+        name: &str,
+    ) -> Result<Option<super::matview::MatViewSpec>, String> {
+        let rtx = self.authority.read()?;
+        let matviews = rtx.open_owner_table(MATVIEWS)?;
+        match matviews.get(name).map_err(map_err)? {
+            Some(v) => decode_stored(v.value(), "matview").map(Some),
+            None => Ok(None),
+        }
+    }
+
     /// Every view as `(name, select_sql)` (sorted by name for determinism).
     pub fn list_views(&self) -> Result<Vec<(String, String)>, String> {
         let rtx = self.authority.read()?;
@@ -2771,6 +2796,8 @@ fn ddl_tables(op: &TxnOp) -> Vec<&str> {
         | TxnOp::AddConstraint { table, .. } => vec![table.as_str()],
         TxnOp::RenameTable { table, new_name } => vec![table.as_str(), new_name.as_str()],
         TxnOp::CreateView { name, .. } | TxnOp::DropView { name, .. } => vec![name.as_str()],
+        TxnOp::PutMatView { spec } => vec![spec.name.as_str()],
+        TxnOp::DropMatView { name } => vec![name.as_str()],
         TxnOp::CreateTrigger { spec } => vec![spec.table.as_str()],
         TxnOp::DropTrigger { table, .. } => vec![table.as_str()],
         _ => Vec::new(),
@@ -2832,6 +2859,8 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
             or_replace,
         } => apply_txn_op_create_view(wtx, name, select_sql, *or_replace),
         TxnOp::DropView { name, if_exists } => apply_txn_op_drop_view(wtx, name, *if_exists),
+        TxnOp::PutMatView { spec } => put_matview_in(wtx, spec).map(|()| 0),
+        TxnOp::DropMatView { name } => drop_matview_in(wtx, name).map(|()| 0),
         TxnOp::CreateExtension {
             name,
             if_not_exists,
@@ -3941,6 +3970,44 @@ fn create_view_in(
     }
     views.insert(name, select_sql).map_err(map_err)?;
     Ok(())
+}
+
+/// Record `spec` in the materialized-view catalog. A name that is already a
+/// view, a property graph or a materialized view is refused `MATVIEW_EXISTS`;
+/// the result table of the same name is created by the op before it.
+fn put_matview_in(
+    wtx: &SqlWrite<'_>,
+    spec: &super::matview::MatViewSpec,
+) -> Result<(), String> {
+    let name = spec.name.as_str();
+    let is_view = {
+        let views = wtx.open_table(VIEWS)?;
+        let found = views.get(name).map_err(map_err)?.is_some();
+        found
+    };
+    if is_view {
+        return Err(format!("{}: {name}", super::matview::MATVIEW_EXISTS));
+    }
+    let bytes = rmp_serde::to_vec_named(spec).map_err(|e| format!("encode matview: {e}"))?;
+    if bytes.len() > MAX_SQL_STORED_VALUE_BYTES {
+        return Err("encoded SQL matview exceeds storage value limit".to_string());
+    }
+    wtx.open_table(MATVIEWS)?
+        .insert(name, bytes.as_slice())
+        .map_err(map_err)?;
+    Ok(())
+}
+
+/// Remove the materialized-view catalog entry `name`, or refuse
+/// `MATVIEW_UNKNOWN` when it is absent.
+fn drop_matview_in(wtx: &SqlWrite<'_>, name: &str) -> Result<(), String> {
+    let mut matviews = wtx.open_table(MATVIEWS)?;
+    let removed = matviews.remove(name).map_err(map_err)?.is_some();
+    if removed {
+        Ok(())
+    } else {
+        Err(format!("{}: {name}", super::matview::MATVIEW_UNKNOWN))
+    }
 }
 
 fn drop_view_in(wtx: &SqlWrite<'_>, name: &str, if_exists: bool) -> Result<bool, String> {

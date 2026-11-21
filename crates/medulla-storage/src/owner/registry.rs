@@ -141,6 +141,11 @@ pub const SQL_SEQUENCES: TableDefinition<'static, &str, u64> =
 pub const SQL_TRIGGER_REACTIONS: TableDefinition<'static, &str, &[u8]> =
     TableDefinition::new("__sql_trigger_reactions__");
 
+/// The materialized-view catalog (MEDULLA-ENGINE-PARITY-R014.1): view name ->
+/// MessagePack `MatViewSpec`. The result rows live in a user table of the same name.
+pub const SQL_MATVIEWS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("__sql_matviews__");
+
 /// The key of one reaction: scope, write chain, event and trigger. A second
 /// reaction under the same key is a duplicate.
 pub fn trigger_reaction_key(
@@ -457,6 +462,7 @@ macro_rules! visit_owner_tables {
                 $visit!(SQL_EDGE_INDEXES);
                 $visit!(SQL_SEQUENCES);
                 $visit!(SQL_TRIGGER_REACTIONS);
+                $visit!(SQL_MATVIEWS);
             }
             OwnerLayout::Blob => {
                 $visit!(BLOB_CHUNKS);
@@ -908,6 +914,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "__sql_edge_indexes__",
             "__sql_sequences__",
             "__sql_trigger_reactions__",
+            "__sql_matviews__",
         ],
         OwnerLayout::Blob => &[
             "cas_chunks",

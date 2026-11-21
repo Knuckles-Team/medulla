@@ -260,6 +260,8 @@ pub(crate) use overlay::*;
 mod sql_write;
 pub(crate) use sql_write::*;
 mod sql_dispatch;
+#[cfg(feature = "query")]
+mod sql_matview;
 pub(crate) use sql_dispatch::*;
 mod sql_catalog;
 pub(crate) use sql_catalog::*;
