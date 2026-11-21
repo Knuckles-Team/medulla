@@ -1216,3 +1216,19 @@ Resolved rows now list their edge table, single writer and proof tests: R874.4, 
 Four of them reuse ontology blocks already on main; R874.10, R874.13 and R874.14 add new blocks.
 New row R874.21 deletes the orphan `:CommitMachine` and `:ProjectionMachine` blocks left by the retired rows.
 The rollup now states the shared budget and benchmark, and its root test is the landed audit machine (R874.12).
+## Amendments
+
+### 2026-11-20 — kernel build gaps (misc)
+
+Build lanes stopped on open questions in these rows. Each entry states the decision now in the row.
+
+- `MEDULLA-DURABLE-KERNEL-R028.1.2.1`: a short-term revision is one `RUN_CHECKPOINTS` row. A history list on the WorkItem prunes beyond 64 and never deletes the head. Completion deletes nothing.
+- `MEDULLA-DURABLE-KERNEL-R035.2` to `MEDULLA-DURABLE-KERNEL-R035.7`: the listener runs `message_loop::serve_connection`; `process_socket` and `serve_dump_queries` do not exist. Each surface joins one const, `SERVED_OPERATIONAL_SURFACES`.
+- `MEDULLA-DURABLE-KERNEL-R035.5`: the wire layer's `ConnectionManager` owns the cancel registry. `EngineCancelHandler` only delegates and logs a miss.
+- `MEDULLA-DURABLE-KERNEL-R035.3`: `pg_locks` is served shaped and empty. `lock_recovery.rs` is lock-poison recovery, not a lock table.
+- `MEDULLA-DURABLE-KERNEL-R039.5` withdrawn. Reason: contradicts R038.3 and keeps a second copy of durable rows.
+- `MEDULLA-DURABLE-KERNEL-R043.101`: the bypass is a static property that R043.102 already refuses. No runtime `MUTATION_ENVELOPE_BYPASS` code exists.
+- `MEDULLA-DURABLE-KERNEL-R864` withdrawn. Reason: duplicates the served loop and schedule operations.
+- `MEDULLA-DURABLE-KERNEL-R870` withdrawn. Reason: duplicates the path-grant check of MEDULLA-SCM-R007.
+- `MEDULLA-DURABLE-KERNEL-R028.5.4` and `MEDULLA-DURABLE-KERNEL-R039.4.2`: the bench seam is `test_shard::apply` with `run_fixture::seed_claim` under the `test-support` feature.
+

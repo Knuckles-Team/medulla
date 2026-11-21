@@ -57,10 +57,10 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T051 [US1] MEDULLA-DURABLE-KERNEL-R034.1 TransactionScope and CommitPath are typed, and a single-store scope structurally can never map to the cross-store commit path
 - [x] T052 MEDULLA-DURABLE-KERNEL-R035.1 PgOperationalSurface and a fail-closed PgCompatibilityMatrix are typed
 - [ ] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
-- [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 pg_stat views and pg_locks are served read-only
+- [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 Session and lock catalog views are served read-only
 - [ ] T055 MEDULLA-DURABLE-KERNEL-R035.4 EXPLAIN returns the engine plan over the wire
 - [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
-- [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 Pooler transaction mode keeps no session state across transactions
+- [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 A transaction-mode pooler sees no session state across transactions
 - [x] T058 [US6] MEDULLA-DURABLE-KERNEL-R038.1 DurabilityClass is a typed enum with a declared loss-window bound and a refusal for an unrecognized name
 - [x] T059 [US6] MEDULLA-DURABLE-KERNEL-R038.2 The write path's durability selection: write_plan/refuse_if_durable_log_write are the one entry point a write admission calls
 - [x] T060 [US6] MEDULLA-DURABLE-KERNEL-R037.1 WorkloadClass is a typed classifier with a refusal for an unrecognized operation kind
@@ -160,7 +160,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T152 MEDULLA-DURABLE-KERNEL-R095.1004 Evidence: one row per session and restart durability
 - [ ] T153 MEDULLA-DURABLE-KERNEL-R095.1005 Hot-path proof: heartbeat benchmark
 - [ ] T154 [US2] MEDULLA-DURABLE-KERNEL-R028.1.1 Native context-bound checkpoint transaction
-- [ ] T155 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.1 Short-term memory retention bound
+- [ ] T155 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.1 Checkpoint revision retention bound
 - [ ] T156 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.2 Memory document existence and revision binding
 - [ ] T157 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.3 Fenced resume read
 - [x] T158 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.1 Hosted checkpoint exports and generated facade
@@ -244,7 +244,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T236 [US2] MEDULLA-DURABLE-KERNEL-R030.1.3 Signed dispatch for dedicated host-start issuance
 - [ ] T237 [US2] MEDULLA-DURABLE-KERNEL-R030.1.4 Host-start producer is proven through signed dispatch and the installed consumer
 - [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes
-- [ ] T239 [US6] MEDULLA-DURABLE-KERNEL-R039.5 In-memory structures rebuild from the redb log
 - [x] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
 - [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic
 - [ ] T242 [US6] MEDULLA-DURABLE-KERNEL-R042.100.2 Measurement admission refusals
@@ -257,13 +256,11 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R094.7.1 Known concept ids and the lineage edge store
 - [ ] T249 MEDULLA-DURABLE-KERNEL-R094.7 Concept lineage between superseded and successor concepts
 - [ ] T250 MEDULLA-DURABLE-KERNEL-R750.750.1 The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
-- [ ] T251 MEDULLA-DURABLE-KERNEL-R864 Serve scheduled loop control: status, schedules, run and pause
 - [ ] T252 MEDULLA-DURABLE-KERNEL-R865 Child message admission record
 - [ ] T253 MEDULLA-DURABLE-KERNEL-R866 One task queue store
 - [x] T254 MEDULLA-DURABLE-KERNEL-R867 Capacity cells and leases admit shared resources with fences
 - [x] T255 MEDULLA-DURABLE-KERNEL-R868 Delete the unwired topic-log and agent-peer record code
 - [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads
-- [ ] T257 MEDULLA-DURABLE-KERNEL-R870 Read-RLS path-prefix predicate
 - [x] T258 MEDULLA-DURABLE-KERNEL-R871 Tight agent loops stay inside a round-trip budget
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
 - [ ] T260 MEDULLA-DURABLE-KERNEL-R872.1 Upgrade phase transition function
