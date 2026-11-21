@@ -19,7 +19,7 @@ use crate::MeasurementBatch;
 
 /// The out-of-line material a commit carries beside its batch, so a replay
 /// re-commits through the same path the original took.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CommitMaterial {
     /// A compact batch: the batch is the whole effect.
