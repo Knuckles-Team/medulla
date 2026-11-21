@@ -35,6 +35,7 @@ pub const MAX_SOURCE_RECORDS: usize = 1_024;
 pub const MAX_SOURCE_RELATIONSHIPS: usize = 4_096;
 pub const MAX_SOURCE_WITHDRAWALS: usize = 1_024;
 pub const MAX_AUTHORITATIVE_LIVE_IDS: usize = 16_384;
+pub const MAX_SOURCE_FEATURES: usize = 1_024;
 pub const MAX_SOURCE_MAPPING_RECEIPTS: usize = MAX_SOURCE_RECORDS + MAX_SOURCE_RELATIONSHIPS;
 pub const MAX_MAPPING_REFERENCE_BYTES: usize = 1_024;
 pub const MAX_SOURCE_TEXT_BYTES: usize = 8_192;
@@ -262,6 +263,22 @@ pub type SourceRecords = BoundedVec<SourceRecord, MAX_SOURCE_RECORDS>;
 pub type SourceRelationships = BoundedVec<SourceRelationship, MAX_SOURCE_RELATIONSHIPS>;
 pub type SourceWithdrawals = BoundedVec<SourceWithdrawal, MAX_SOURCE_WITHDRAWALS>;
 pub type AuthoritativeLiveIds = BoundedVec<SourceEntityRef, MAX_AUTHORITATIVE_LIVE_IDS>;
+pub type SourceFeatures = BoundedVec<SourceFeature, MAX_SOURCE_FEATURES>;
+
+/// One feature a batch derives from its records (MEDULLA-MEDIA-VOCAB-R001.100.2): the fields of
+/// the change envelope's `FeatureRecord` minus `operation`. `kind` is `media_tag` today.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SourceFeature {
+    pub feature_id: String,
+    pub object_id: String,
+    pub kind: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
+    #[serde(with = "serde_bytes")]
+    pub value_msgpack: Vec<u8>,
+    pub model_version: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -294,6 +311,10 @@ pub struct SourceIngestionBatch {
     /// The payload of every non-record kind; absent for `Records`.
     #[serde(default)]
     pub extension: Option<batch_kind::SourceBatchExtension>,
+    /// Features derived from the records (MEDULLA-MEDIA-VOCAB-R001.100.2). Absent or empty
+    /// serializes to the same canonical bytes as a batch without the field.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub features: SourceFeatures,
 }
 
 /// A request whose structural invariants and byte bound were checked during
@@ -582,6 +603,7 @@ fn validate_batch(batch: &SourceIngestionBatch) -> Result<(), String> {
     )?;
     validate_previous_checkpoint(batch)?;
     validate_records(batch)?;
+    validate_features(batch)?;
     validate_relationships(batch)?;
     validate_reconciliation(batch)?;
     Ok(())
@@ -622,6 +644,34 @@ fn validate_previous_checkpoint(batch: &SourceIngestionBatch) -> Result<(), Stri
         "previous cursor watermark",
         "previous cursor pending watermark",
     )?;
+    Ok(())
+}
+
+/// The one feature kind a batch carries.
+const MEDIA_TAG_FEATURE_KIND: &str = "media_tag";
+
+fn validate_features(batch: &SourceIngestionBatch) -> Result<(), String> {
+    if batch.features.is_empty() {
+        return Ok(());
+    }
+    if batch.kind != batch_kind::SourceBatchKind::Records {
+        return Err("source features are accepted only on a records batch".into());
+    }
+    let mut ids = BTreeSet::new();
+    for feature in &batch.features {
+        if feature.feature_id.is_empty()
+            || feature.object_id.is_empty()
+            || feature.model_version.is_empty()
+        {
+            return Err("source feature ids and model version must be non-empty".into());
+        }
+        if feature.kind != MEDIA_TAG_FEATURE_KIND {
+            return Err("source feature kind is not supported".into());
+        }
+        if !ids.insert(feature.feature_id.as_str()) {
+            return Err(format!("duplicate source feature {}", feature.feature_id));
+        }
+    }
     Ok(())
 }
 

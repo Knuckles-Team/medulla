@@ -41,6 +41,7 @@ pub mod ingest_materialize;
 // MEDULLA-FEDERATED-QUERY-R654.1 — served CodeContext and Diagnose wire records.
 pub mod code_context;
 pub mod participant;
+pub mod media_tag;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;
 // MEDULLA-FEDERATED-QUERY-R081.101.1 — the reusable compressed document state.

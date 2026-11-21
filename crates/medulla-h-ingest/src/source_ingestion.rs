@@ -46,6 +46,8 @@ pub mod facts;
 pub mod governance;
 pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
+mod media_tag;
+#[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
 pub mod row_version;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -443,6 +445,16 @@ pub async fn prepare(
         reconciliation.entry_revision,
         &mut admitted,
     )?;
+    media_tag::materialize_media_tags(
+        &ctx,
+        batch,
+        persistence.as_ref(),
+        &graph_fname,
+        &policy_subject,
+        reconciliation.entry_revision,
+        &mut admitted,
+    )
+    .await?;
     if let Some(marker) = reconciliation.marker.clone() {
         admitted.methods.push(marker);
     }
@@ -2854,7 +2866,18 @@ fn build_envelope(
             }),
         }),
         blobs: blobs.into_values().collect(),
-        features: Vec::new(),
+        features: batch
+            .features
+            .iter()
+            .map(|feature| medulla_protocol_types::change_envelope::FeatureRecord {
+                feature_id: feature.feature_id.clone(),
+                operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
+                object_id: feature.object_id.clone(),
+                kind: feature.kind.clone(),
+                value_msgpack: feature.value_msgpack.clone(),
+                model_version: feature.model_version.clone(),
+            })
+            .collect(),
         evidence: Vec::new(),
         policies,
         lineage,

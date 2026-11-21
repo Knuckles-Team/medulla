@@ -49,6 +49,8 @@ mod medulla_h_decide_harness_config_tests;
 #[cfg(all(test, feature = "redb"))]
 mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]
+mod medulla_h_ingest_media_tag_tests;
+#[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_ingest_repository_index_tests;
 #[cfg(test)]

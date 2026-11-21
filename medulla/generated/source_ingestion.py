@@ -7,7 +7,15 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+)
 
 from ._shared import (
     Digest256,
@@ -108,6 +116,35 @@ SourceBatchExtension = Annotated[
 ]
 
 
+def _feature_octets(value: Any) -> bytes:
+    if isinstance(value, list):
+        if any(type(item) is not int or not 0 <= item <= 255 for item in value):
+            raise ValueError("engine octets must be integers between 0 and 255")
+        return bytes(value)
+    if not isinstance(value, bytes):
+        raise ValueError("engine octets must be bytes or an integer array")
+    return value
+
+
+class SourceFeature(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    feature_id: str
+    kind: str
+    model_version: str
+    object_id: str
+    value_msgpack: Annotated[
+        bytes,
+        BeforeValidator(_feature_octets),
+        PlainSerializer(list, return_type=list[int], when_used="json"),
+    ]
+
+
+BoundedVec_SourceFeature_1024 = Annotated[
+    list[SourceFeature], Field(max_length=1024)
+]
+
+
 class SourceIngestionBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -116,6 +153,7 @@ class SourceIngestionBatch(BaseModel):
     empty_authoritative_approval: str | None = None
     expected_previous_checkpoint: SourceCheckpoint | None = None
     extension: SourceBatchExtension | None = None
+    features: BoundedVec_SourceFeature_1024 = Field(default_factory=list)
     kind: SourceBatchKind = SourceBatchKind.RECORDS
     mode: SourceIngestionMode
     provider_checkpoint: SourceCheckpoint
@@ -469,6 +507,10 @@ class SourceIngestionRequest(SourceIngestionBatch):
             "kind": value["kind"],
             "extension": value["extension"],
         }
+        if self.features:
+            projection["features"] = [
+                feature.model_dump(mode="python") for feature in self.features
+            ]
         return framed_named_msgpack_digest(
             b"eg/source-ingestion-batch/v3",
             projection,
@@ -600,6 +642,7 @@ __all__ = [
     "BoundedVec_RawAdmissionReceipt_1024",
     "BoundedVec_RawRelationshipAdmissionReceipt_4096",
     "BoundedVec_SourceEntityRef_16384",
+    "BoundedVec_SourceFeature_1024",
     "BoundedVec_SourceMappingReceipt_5120",
     "BoundedVec_SourceRecord_1024",
     "BoundedVec_SourceRelationshipTombstoneReceipt_4096",
@@ -612,6 +655,7 @@ __all__ = [
     "RawRelationshipAdmissionReceipt",
     "SourceCheckpoint",
     "SourceEntityRef",
+    "SourceFeature",
     "SourceIngestStatus",
     "SourceIngestionBatch",
     "SourceIngestionDisposition",

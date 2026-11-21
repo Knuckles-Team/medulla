@@ -270,6 +270,7 @@ mod tests {
             withdrawals: BoundedVec::new(Vec::new()).unwrap(),
             kind: Default::default(),
             extension: None,
+            features: Default::default(),
         })
         .unwrap()
     }

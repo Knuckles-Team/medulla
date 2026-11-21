@@ -54,6 +54,7 @@ pub fn request() -> SourceIngestionRequest {
         withdrawals: BoundedVec::new(Vec::new()).expect("bounded source withdrawals"),
         kind: Default::default(),
         extension: None,
+        features: Default::default(),
     })
     .expect("valid source ingestion request")
 }
