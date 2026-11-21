@@ -2382,6 +2382,13 @@ name = "media_facts"
 path = "benches/media_facts.rs"
 harness = false
 
+# Standards drift scoring per request (MEDULLA-UNIFIED-DATA-PLANE-R701.6): nightly budget.
+# Never gates a PR.
+[[bench]]
+name = "standards_drift"
+path = "benches/standards_drift.rs"
+harness = false
+
 # Source sync core at 10,000 records (MEDULLA-SRC-AUTH-R012.10): nightly budget.
 # Never gates a PR.
 [[bench]]
