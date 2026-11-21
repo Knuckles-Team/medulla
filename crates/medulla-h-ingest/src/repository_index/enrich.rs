@@ -17,6 +17,7 @@
 //! replays the same envelope instead of committing twice. Hooks of R601.3,
 //! R602.3 and R603.3 attach inside [`run_after_commit`].
 
+pub mod fingerprint;
 pub mod hooks;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -408,6 +409,19 @@ fn add_edge(source: String, target: String, relationship: &str) -> Result<Method
     })
 }
 
+/// The number of files at one change level, 0 when the run saw none.
+fn files_at(
+    files: &medulla_enrich::fingerprint::FingerprintRunReport,
+    level: medulla_enrich::fingerprint::ChangeLevel,
+) -> String {
+    files
+        .files_by_level
+        .get(&level)
+        .copied()
+        .unwrap_or(0)
+        .to_string()
+}
+
 /// Lower one run's output to the methods of the enrichment envelope.
 ///
 /// Each derived node carries the rung that produced it (`producing_rung`), and a
@@ -419,6 +433,7 @@ fn lower_output(
     facts: &CommittedFacts,
     output: &EnrichOutput,
     report: &EnrichRunReport,
+    files: &medulla_enrich::fingerprint::FingerprintRunReport,
     stored: &dyn Fn(&str) -> Option<ProvenanceRung>,
 ) -> Result<Vec<Method>, String> {
     let pattern_id_of = |pattern: medulla_enrich::code::DesignPattern| {
@@ -456,6 +471,18 @@ fn lower_output(
             ("rung_conflicts_refused", refused.to_string()),
             ("packages", facts.packages.len().to_string()),
             ("layers", facts.layers.len().to_string()),
+            (
+                "fingerprint_none",
+                files_at(files, medulla_enrich::fingerprint::ChangeLevel::None),
+            ),
+            (
+                "fingerprint_cosmetic",
+                files_at(files, medulla_enrich::fingerprint::ChangeLevel::Cosmetic),
+            ),
+            (
+                "fingerprint_structural",
+                files_at(files, medulla_enrich::fingerprint::ChangeLevel::Structural),
+            ),
         ],
     )?];
     for feature in &output.features {
@@ -517,24 +544,59 @@ fn lower_output(
 /// Run the enrichment of one claimed follow-on work item over its committed
 /// index envelope and lower the output as the `repository-enrich:<digest>`
 /// write-set. R601.3 (history) and R602.3 (service links) attach their hooks
-/// here; R603.3 attaches the same way. `stored` answers the rung of the fact
-/// already stored on a subject, `history` bounds the history pass.
+/// here; R603.3 decides which committed files the run reads. `stored` answers the
+/// rung of the fact already stored on a subject, `stored_fingerprint` answers the
+/// fingerprint stored under a fingerprint node id, `history` bounds the history pass.
 pub fn run_after_commit(
     index: &ChangeEnvelope,
     item: &FollowOn,
     stored: &dyn Fn(&str) -> Option<ProvenanceRung>,
+    stored_fingerprint: &dyn Fn(&str) -> Option<medulla_enrich::fingerprint::StructuralFingerprint>,
     history: &HistoryConfig,
 ) -> Result<IndexWriteSet, String> {
     if index.envelope_id != item.index_envelope_id() {
         return Err("CONFLICT: repository enrichment read the wrong index envelope".into());
     }
-    let facts = committed_facts(index, &item.index_digest)?;
+    let rows = committed_rows(index);
+    let mut facts = committed_facts(index, &item.index_digest)?;
+    // Only structurally changed files re-enter enrichment (MEDULLA-REPO-INGEST-R603.3).
+    let current = fingerprint::file_fingerprints(&rows);
+    let mut stored_prints = BTreeMap::new();
+    for print in &current {
+        let node_id =
+            fingerprint::fingerprint_node_id(&item.scope.repository_id, print.path.as_str())?;
+        if let Some(stored_print) = stored_fingerprint(&node_id) {
+            stored_prints.insert(print.path.clone(), stored_print);
+        }
+    }
+    let (reindex, file_report) =
+        medulla_enrich::fingerprint::plan_reindex(&stored_prints, &current, &[]);
+    let reindexed: BTreeSet<&str> = reindex.iter().map(Id::as_str).collect();
+    let mut dropped: BTreeSet<Id> = BTreeSet::new();
+    facts.input.entities.retain(|(entity, _)| {
+        let keep = reindexed.contains(entity.path.as_str());
+        if !keep {
+            dropped.insert(entity.id.clone());
+        }
+        keep
+    });
+    facts
+        .input
+        .edges
+        .retain(|edge| !dropped.contains(&edge.from) && !dropped.contains(&edge.to));
+    facts.input.communities.retain(|id, _| !dropped.contains(id));
     let (output, report) =
         medulla_enrich::code::enrich_repository(&facts.input, &TestQualityThresholds::default())
             .map_err(|error| error.to_string())?;
-    let mut methods = lower_output(item, &facts, &output, &report, stored)?;
+    let mut methods = lower_output(item, &facts, &output, &report, &file_report, stored)?;
+    for print in &current {
+        methods.push(fingerprint::fingerprint_method(
+            &item.scope.repository_id,
+            print,
+        )?);
+    }
     methods.extend(hooks::run_hooks(
-        &committed_rows(index),
+        &rows,
         &item.run_id(),
         stored,
         history,
@@ -748,7 +810,13 @@ mod worker {
                     let value = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
                     crate::ingestion_rung::stored_rung(&value)
                 };
-                run_after_commit(&index, &run_item, &stored, &history)
+                // The stored fingerprint of a file decides whether it re-enters enrichment.
+                let stored_print = |id: &str| {
+                    let bytes = core.get_node_properties(id)?;
+                    let value = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
+                    super::fingerprint::stored_fingerprint(&value)
+                };
+                run_after_commit(&index, &run_item, &stored, &stored_print, &history)
             }),
         )
         .await

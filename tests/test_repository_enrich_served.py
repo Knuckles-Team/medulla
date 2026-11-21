@@ -241,3 +241,41 @@ def test_link_pass_runs_after_features(clean_graph) -> None:
             f"MATCH (:{node_type}) |> TRAVERSE -[:ownedByService]->{{1,1}}",
         )
         assert "package:billing" in owners, (node_type, owners)
+
+
+_TWO_FILES_BEFORE = [
+    (
+        "pkg/a.py",
+        b"def ping():\n    value = 1\n    return pong(value)\n\n"
+        b"def pong(value):\n    return ping()\n",
+    ),
+    ("pkg/b.py", b"def left():\n    return right()\n\ndef right():\n    return left()\n"),
+]
+# A whitespace-only edit inside the body of `ping`: the signatures are unchanged.
+_TWO_FILES_AFTER = [
+    (
+        "pkg/a.py",
+        b"def ping():\n    value = 1\n\n    return pong(value)\n\n"
+        b"def pong(value):\n    return ping()\n",
+    ),
+    _TWO_FILES_BEFORE[1],
+]
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R603.3")
+def test_cosmetic_change_skips_enrichment(clean_graph) -> None:
+    _index(clean_graph, "repo-fingerprint", _TWO_FILES_BEFORE)
+    first = _wait_for_runs(clean_graph, 1)
+    assert len(first) == 1
+
+    _index(clean_graph, "repo-fingerprint", _TWO_FILES_AFTER)
+    runs = _wait_for_runs(clean_graph, 2)
+    assert len(runs) == 2, f"one run per index envelope, got {runs}"
+    (second,) = sorted(set(runs) - set(first))
+    properties = clean_graph.nodes.properties(second)
+    assert properties is not None
+    # File A is cosmetic and file B is unchanged: nothing re-enters enrichment.
+    assert str(properties["fingerprint_cosmetic"]) == "1"
+    assert str(properties["fingerprint_none"]) == "1"
+    assert str(properties["fingerprint_structural"]) == "0"
+    assert str(properties["entities"]) == "0"

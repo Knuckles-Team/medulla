@@ -150,7 +150,7 @@ fn enrich_served(c: &mut Criterion) {
         },
     };
     let history = HistoryConfig::default();
-    let run = || run_after_commit(black_box(&envelope), &item, &|_| None, &history);
+    let run = || run_after_commit(black_box(&envelope), &item, &|_| None, &|_| None, &history);
     let mut samples: Vec<Duration> = (0..SAMPLES)
         .map(|_| {
             let started = Instant::now();
