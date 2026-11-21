@@ -4,6 +4,8 @@
 #![cfg(feature = "query")]
 
 mod common;
+#[path = "common/span_capture.rs"]
+mod span_capture;
 #[path = "common/test_support.rs"]
 mod test_support;
 
@@ -2455,4 +2457,42 @@ fn clock_basis_and_second_pass_are_bounded() {
     let capped = plan_second_pass(&many, 0.5, 3);
     assert_eq!(capped.queries.len(), 3);
     assert!(capped.budget_exceeded, "a partial result reports the budget");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.8.6
+#[tokio::test(flavor = "multi_thread")]
+async fn terminal_feedback_continuation_executes_nothing() {
+    span_capture::install();
+    // A corpus revision no other test uses, so the span count is this test's alone.
+    const REVISION: &str = "corpus-r081-8-6-terminal";
+    let executed = || {
+        span_capture::spans_with_field("medulla.retrieval.execute", "corpus_revision", REVISION)
+            .len()
+    };
+    let state = state();
+    seed(&state, 2).await;
+
+    // One progressing round retrieves once.
+    let mut first = request(Some(part(Some(4))));
+    first.corpus_revision = REVISION.into();
+    let result = decode(round_as(&state, None, first).await);
+    assert!(result.sufficiency.is_some());
+    assert_eq!(executed(), 1, "the progressing round runs one retrieval");
+
+    // The continuation whose round limit is spent refuses with the terminal verdict: no
+    // result, and no retrieval ran for it.
+    let mut spent = stop_part(calibration(&[4]), vec![]);
+    spent.usage.tokens_used = 5;
+    spent.limits.token_limit = Some(5);
+    let mut terminal = stop_request(4, spent);
+    terminal.corpus_revision = REVISION.into();
+    let response = round_as(&state, None, terminal).await;
+    assert!(response.result.is_none(), "a terminal continuation has no result");
+    let refused = error_of(response);
+    assert!(
+        refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
+        "{refused}"
+    );
+    assert!(refused.contains("round_limit"), "{refused}");
+    assert_eq!(executed(), 1, "the terminal continuation executed nothing");
 }

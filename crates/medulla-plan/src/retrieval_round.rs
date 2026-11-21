@@ -760,7 +760,16 @@ pub fn run_round_with_state(
     if let Some(early) = exhausted_before_retrieval(request, knobs)? {
         return Ok(early);
     }
-    let rows = execute(&request.plan, ctx).map_err(RoundError::Plan)?;
+    // MEDULLA-FEDERATED-QUERY-R081.8.6: the one retrieval a round runs. A terminal continuation
+    // returned above and opens no such span.
+    let rows = {
+        let _span = tracing::info_span!(
+            "medulla.retrieval.execute",
+            corpus_revision = %request.corpus_revision
+        )
+        .entered();
+        execute(&request.plan, ctx).map_err(RoundError::Plan)?
+    };
     let mut steps = Steps::default();
     let hierarchy_selected = match &request.hierarchy {
         None => Vec::new(),
