@@ -9,7 +9,7 @@ fn record() -> serde_json::Value {
         "slice_root": "MEDULLA-SDLC-R019", "scope_rows": ["MEDULLA-SDLC-R019.2"],
         "mandate": {"schema_version": 1, "strength": "explicit", "basis": "owner",
             "policy_version": "1", "actor": "p1", "scope_rows": ["MEDULLA-SDLC-R019.2"],
-            "project_mode": false},
+            "project_mode": "development"},
         "seq": 3, "proposals": [{"id": "pr-1", "state": "merged"}], "follows": [],
         "assignments": [{"schema_version": 1, "id": "a1", "run_trace_id": "r1",
             "state": "ended", "report": {"state": "ready", "summary": "done", "proposal": "pr-1", "evidence": ["v1"], "seq": 2}, "started_at": 1, "ended_at": 2,

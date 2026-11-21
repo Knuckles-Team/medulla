@@ -347,7 +347,8 @@ pub struct DeliveryMandate {
     pub policy_version: String,
     pub actor: String,
     pub scope_rows: Vec<String>,
-    pub project_mode: bool,
+    /// The project mode the delivery was opened under (MEDULLA-SDLC-R012.8, R019.3).
+    pub project_mode: crate::lifecycle::ProjectMode,
 }
 
 /// One run assigned to a delivery.

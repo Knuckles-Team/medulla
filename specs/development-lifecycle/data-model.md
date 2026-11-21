@@ -36,7 +36,7 @@ Governing plan: [plan.md](plan.md). This file lists the records that the deliver
 ## Rust records
 
 - `Delivery{id, tenant, repo, slice_root, scope_rows, mandate, proposals: Vec<DeliveryProposal>, follows, assignments, inputs: Vec<DeliveryInput>, attention: Option<DeliveryQuestion>, ended, seq, created_at}`.
-- `DeliveryMandate{strength, basis, policy_version, actor, scope_rows, project_mode}`.
+- `DeliveryMandate{strength, basis, policy_version, actor, scope_rows, project_mode}`; `project_mode` is the `ProjectMode` enum.
 - `DeliveryAssignment{id, run_trace_id, state, report: Option<AssignmentReport>, started_at, ended_at, ended_reason}`.
 - `AssignmentReport{state, summary, proposal, evidence, seq}`, `DeliveryInput{event_id, kind, source, seq}`, `DeliveryQuestion{text, raised_by, seq}` and `DeliveryProposal{id, state}` (R019.7).
 - `seq` is the per-delivery sequence from `Delivery::next_seq`. It orders reports against inputs; wall-clock time never does.

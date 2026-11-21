@@ -17,7 +17,7 @@ fn base() -> Delivery {
         "slice_root": "MEDULLA-SDLC-R019", "scope_rows": ["MEDULLA-SDLC-R019.7"],
         "mandate": {"schema_version": 1, "strength": "explicit", "basis": "owner",
             "policy_version": "1", "actor": "p1", "scope_rows": ["MEDULLA-SDLC-R019.7"],
-            "project_mode": false},
+            "project_mode": "development"},
         "seq": 0, "proposals": [], "follows": [],
         "assignments": [{"schema_version": 1, "id": "a1", "run_trace_id": "r1",
             "state": "running", "report": null, "started_at": 1, "ended_at": null,

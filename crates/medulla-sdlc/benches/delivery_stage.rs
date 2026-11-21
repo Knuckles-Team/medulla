@@ -20,7 +20,7 @@ fn main() {
     let delivery = decode_delivery(serde_json::json!({
         "schema_version": 1, "id": "d", "tenant": "t", "repo": "medulla", "slice_root": "s",
         "scope_rows": [], "mandate": {"schema_version": 1, "strength": "explicit", "basis": "b",
-            "policy_version": "1", "actor": "p", "scope_rows": [], "project_mode": false},
+            "policy_version": "1", "actor": "p", "scope_rows": [], "project_mode": "development"},
         "seq": 0, "proposals": [], "follows": [], "assignments": assignments, "inputs": [],
         "attention": null, "ended": null, "created_at": 0
     }))
