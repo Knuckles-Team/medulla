@@ -8,6 +8,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T001 [US1] MEDULLA-SDLC-R001 Lifecycle record vocabulary and derived edges .
 - [ ] T002 [US1] MEDULLA-SDLC-R001.1 Model: lifecycle kinds, edges and shapes.
 - [ ] T003 [US1] MEDULLA-SDLC-R001.2 Behavior.
+- [ ] T139 [US1] MEDULLA-SDLC-R001.2.1 Behavior: the run that produced a changeset is a derived edge (`produced.run_trace`, `ProducedBy` in `is_derived`, `RULE_VERSION` 2).
 - [ ] T004 [US1] MEDULLA-SDLC-R001.3 Wiring: derive edges when a changeset is accepted or a commit is indexed.
 - [ ] T005 [US1] MEDULLA-SDLC-R001.4 Refusal.
 - [ ] T006 [US1] MEDULLA-SDLC-R001.5 Evidence.

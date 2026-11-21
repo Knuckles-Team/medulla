@@ -137,6 +137,7 @@ A derived edge carries the rule name, the rule version and the input digests.
 | `contains.release_range` | Release head and the previous release head | `contains` Release to Changeset |
 | `introduced.bisect` | Culprit of MEDULLA-SCM-R009 | `introducedBy` Defect to Changeset |
 | `fixed.trailer` | Structured `fixes` of the changeset | `fixedBy` Defect to Changeset |
+| `produced.run_trace` | `run_trace_id` of the changeset (MEDULLA-SCM-R012) | `producedBy` Changeset to RunTrace |
 
 Manual writes of a derived edge are refused. A rebuild replays the rules over the log and must
 reproduce the edge set byte for byte.
@@ -387,3 +388,4 @@ The row keeps its acceptance requirements. This declaration records the evidence
 
 - `MEDULLA-SDLC-R012.7` adds no edge kind. The lifecycle edge set stays closed at the 14 of `LifecycleEdgeKind::ALL`. A requirement reaches its verdicts through `citesRequirement` and `judges`, its releases through `contains`, and its deployments through `deploys`. A stored `gatedBy` link would copy a derivable fact. The row now owns the `judges` write in `gate_verdict::record` and one competency fixture. `derive_spec_status` stays a replay of the changeset chain.
 - `MEDULLA-SDLC-R019.7` fixes the record fields the stage table reads. A per-delivery `seq` orders reports against inputs. `attention` holds one `DeliveryQuestion`. Each proposal carries a `ProposalState` driven by `DELIVERY_PROPOSAL_MACHINE`. `record_report` takes the verdict IDs from the R019.14 handler, so it stays pure. R019.5 and R019.11 now depend on R019.7.
+- `MEDULLA-SDLC-R001.2.1` makes `producedBy` a derived edge, because the changeset record field `run_trace_id` is its only source. The ninth rule `produced.run_trace` derives it in the R001.3 batch. The edge set stays closed at 14.

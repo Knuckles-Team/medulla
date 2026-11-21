@@ -7,6 +7,7 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R001` | Lifecycle record vocabulary and derived edges (rollup) | See each child. |
 | `MEDULLA-SDLC-R001.1` | Model: lifecycle kinds, edges and shapes | `crates/medulla-core/tests/lifecycle_vocab.rs::edge_set_is_closed_and_shaped` (planned) |
 | `MEDULLA-SDLC-R001.2` | Behavior | `crates/medulla-core/tests/lifecycle_derive.rs::rules_emit_expected_edges` |
+| `MEDULLA-SDLC-R001.2.1` | Behavior: the run that produced a changeset is a derived edge | `crates/medulla-core/tests/lifecycle_derive.rs::produced_by_derives_from_run_trace_id_and_refuses_direct_write` (planned) |
 | `MEDULLA-SDLC-R001.3` | Wiring: derive edges when a changeset is accepted or a commit is indexed | `tests/test_sdlc_derive_served.py::test_accept_writes_derived_edges` (planned), `tests/test_sdlc_derive_served.py::test_index_repository_derives_edges_for_git_commits` (planned) |
 | `MEDULLA-SDLC-R001.4` | Refusal | `crates/medulla-core/tests/lifecycle_derive.rs::manual_edge_write_is_refused` |
 | `MEDULLA-SDLC-R001.5` | Evidence | `crates/medulla-core/tests/lifecycle_derive.rs::rebuild_equals_incremental` |
@@ -147,6 +148,7 @@ Governing spec: [spec.md](spec.md).
 Each entry below is planned. The test file or function does not exist in the tree yet; the row that binds it adds it at the stated post-split path.
 
 - `MEDULLA-SDLC-R001.1`: `crates/medulla-core/tests/lifecycle_vocab.rs::edge_set_is_closed_and_shaped` (planned, L2): proves: add `:Release`, `:Deployment` and `:Defect` to `crates/medulla-core/ontology/sdd-v1.ttl`. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SDLC-R001.2.1`: `crates/medulla-core/tests/lifecycle_derive.rs::produced_by_derives_from_run_trace_id_and_refuses_direct_write` (planned, L2): proves: a changeset with `run_trace_id` set derives exactly one `producedBy` edge, with rule `produced.run_trace` and `RULE_VERSION` 2. A changeset without it derives none. A direct `write_edge` of `ProducedBy` refuses with `LIFECYCLE_EDGE_DERIVED_ONLY`. A rebuild reproduces the edge byte for byte. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R001.3`: `tests/test_sdlc_derive_served.py::test_accept_writes_derived_edges` (planned, L4): proves: it calls `LifecycleStore::accept_changeset` (`crates/medulla-core/src/lifecycle/store.rs`). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R001.3`: `tests/test_sdlc_derive_served.py::test_index_repository_derives_edges_for_git_commits` (planned, L4): proves: it calls `LifecycleStore::accept_changeset` (`crates/medulla-core/src/lifecycle/store.rs`). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R001.6`: `tests/test_sdlc_derive_served.py::test_fifty_path_changeset_derives_expected_edge_count` (planned, L4): proves: the PR proof is the served test that submits it and reads the derived edges. The test does not exist yet; the owning change adds it at this exact path.
