@@ -11,11 +11,26 @@ use medulla_types::contract::Digest256;
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::run_adjustment::INSUFFICIENT_SAMPLES;
+use super::record::outcome::RefusalCode;
 use super::run_governance::{RunOutcome, RunTraceRecord, StepKind};
 
 const DAY_MS: u64 = 86_400_000;
 /// Domain of the necessity provenance digest.
 pub const NECESSITY_PROVENANCE_DOMAIN: &[u8] = b"eg/tool-necessity/v1";
+
+/// Request refusal (wire error `PARAMETER_INVALID`): `tool_id` is not a published Tool
+/// component of the tenant (MEDULLA-DECISION-ENGINE-R165.4).
+pub const TOOL_UNKNOWN: RefusalCode = RefusalCode::new("TOOL_UNKNOWN");
+/// Request refusal (wire error `PARAMETER_INVALID`): `model_id` is not a published
+/// ModelProfile component of the tenant (MEDULLA-DECISION-ENGINE-R165.4).
+pub const MODEL_UNKNOWN: RefusalCode = RefusalCode::new("MODEL_UNKNOWN");
+/// Abstention: the newest counted run is older than `tool_necessity.max_age`
+/// (MEDULLA-DECISION-ENGINE-R165.4).
+pub const STALE_MEASUREMENT: RefusalCode = RefusalCode::new("STALE_MEASUREMENT");
+
+/// The `tool_necessity` family table: its own codes. `INSUFFICIENT_SAMPLES` is the shared
+/// abstention registered with the run-adjustment table.
+pub const REFUSALS: &[RefusalCode] = &[TOOL_UNKNOWN, MODEL_UNKNOWN, STALE_MEASUREMENT];
 
 /// The `tool_necessity.*` knobs (MEDULLA-DECISION-ENGINE-R165.2).
 pub const KNOBS: &[KnobSpec] = &[

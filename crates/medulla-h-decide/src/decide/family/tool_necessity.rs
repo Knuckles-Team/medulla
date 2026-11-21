@@ -11,6 +11,7 @@
 //! `agreement:<bool>` and, on a mismatch, `mismatch:<reason>`. Too few runs in
 //! an arm abstain `INSUFFICIENT_SAMPLES`. `Decide` writes nothing.
 
+use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
 use medulla_decision_types::decision::run_adjustment::INSUFFICIENT_SAMPLES;
 use medulla_decision_types::decision::run_governance::RunTraceRecord;
@@ -18,8 +19,9 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, TypedValue};
 use medulla_decision_types::decision::tool_necessity::{
     compare_tool_decision, measure_tool_necessity, MismatchReason, NecessityRefusal,
-    ToolNecessityKnobs,
+    ToolNecessityKnobs, MODEL_UNKNOWN, STALE_MEASUREMENT, TOOL_UNKNOWN,
 };
+pub use medulla_decision_types::decision::tool_necessity::REFUSALS;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 
@@ -28,6 +30,18 @@ use crate::decide::SharedState;
 
 use super::support::{abstained, advisory, invalid, param, single_option, text_param};
 use super::DecisionFamily;
+
+/// Whether `component_id` is a published component of `kind` for the tenant.
+fn published(
+    ctx: &ExecutionContext,
+    component_id: &str,
+    kind: AgentComponentKind,
+) -> Result<bool, String> {
+    Ok(ctx
+        .store
+        .current_component(ctx.tenant_id, component_id)?
+        .is_some_and(|entry| entry.kind == kind))
+}
 
 /// The graph property that holds the typed run record of a `RunTrace` node.
 const RUN_TRACE_FIELD: &str = "run_trace";
@@ -103,6 +117,18 @@ fn conclude_necessity(
     let model_call_id = text_param(request, "model_call_id")?
         .ok_or_else(|| invalid("parameter model_call_id is required"))?;
     let called = model_called(request)?;
+    if !published(ctx, tool_id, AgentComponentKind::Tool)? {
+        return Err(invalid(format!(
+            "{}: `{tool_id}` is not a published Tool component",
+            TOOL_UNKNOWN.as_str()
+        )));
+    }
+    if !published(ctx, model_id, AgentComponentKind::ModelProfile)? {
+        return Err(invalid(format!(
+            "{}: `{model_id}` is not a published ModelProfile component",
+            MODEL_UNKNOWN.as_str()
+        )));
+    }
     let knobs = ToolNecessityKnobs::from_policy(policy);
     let runs = traces(graph_view, ctx.now_ms.saturating_sub(knobs.window_ms));
     let necessity = match measure_tool_necessity(&runs, tool_id, model_id, knobs.min_samples) {
@@ -115,6 +141,20 @@ fn conclude_necessity(
         }
         Err(refusal) => return Err(invalid(refusal)),
     };
+    // A measurement whose newest counted run is older than `tool_necessity.max_age` is
+    // not estimated forward: it abstains.
+    if ctx.now_ms.saturating_sub(necessity.newest_run_ms) > knobs.max_age_ms {
+        return Ok(abstained(
+            QuestionKind::ToolNecessity,
+            &Abstention(
+                STALE_MEASUREMENT,
+                format!(
+                    "the newest counted run is older than {} ms",
+                    knobs.max_age_ms
+                ),
+            ),
+        ));
+    }
     let comparison = compare_tool_decision(&necessity, called, knobs.necessary_min_q32);
     let mut options = vec![
         format!("necessity:{}", comparison.necessity_q32),
