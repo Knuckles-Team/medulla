@@ -34,11 +34,17 @@ pub enum ObjectStoreOpenRefusal {
     WrongVariant,
     /// A secret reference names a variable that is unset or empty; the
     /// message names the field and never the value.
-    SecretUnresolved { field: &'static str },
+    SecretUnresolved {
+        /// The spec field whose secret reference did not resolve.
+        field: &'static str,
+    },
     /// An `http` endpoint whose host is not loopback.
     PlainHttpNotLoopback,
     /// The object-store client could not be built from the resolved values.
-    ClientBuild { reason: String },
+    ClientBuild {
+        /// Why the client builder refused.
+        reason: String,
+    },
     /// The spec itself refuses (an outside-database endpoint scheme).
     Spec(BackendSpecRefusal),
 }
