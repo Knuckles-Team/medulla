@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import os
 import sys
 import uuid
 from pathlib import Path
 
 import pytest
-from conftest import tenant_request_context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source_authority"))
 from governed_ledger import (
@@ -21,7 +19,7 @@ from governed_ledger import (
     validate_repair,
 )
 
-from medulla.client import EngineResponseError, MedullaClient
+from medulla.client import EngineResponseError
 from medulla.generated import reasoning
 from medulla.generated.graph_schema import SchemaSourceOriginViewApproved
 
@@ -46,8 +44,8 @@ async def test_authority_attach_needs_distinct_approver() -> None:
         assert refused.value.code == "GOVERNED_SELF_APPROVAL"
         await approve_authority(ledger, change_id, ledger.approver)
 
-        # Approving the change issued the lease bound to its change id; the
-        # attach needs that lease and nothing else.
+        # The approved change is the approval: the attach names it and no
+        # lease is issued.
         lease_id = approval_lease_id(change_id)
 
         # One changed byte changes the digest and fails the match.
@@ -61,25 +59,15 @@ async def test_authority_attach_needs_distinct_approver() -> None:
             )
         assert refused.value.code == "SCHEMA_APPROVAL_MISMATCH"
 
-        # A second tenant does not see the lease.
-        foreign = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-            verified_context=tenant_request_context("tenant:foreign"),
-            graph_name=ledger.graph,
-        )
-        try:
-            with pytest.raises(EngineResponseError) as refused:
-                await attach_approved(
-                    foreign, lease_id, fields, source_id, source_authority=True
-                )
-            assert refused.value.code == "SCHEMA_APPROVAL_REQUIRED"
-        finally:
-            await foreign.close()
-
         # Digest X attaches X.
         await validate_repair(ledger.admin, fields, source_id, source_authority=True)
-        await attach_approved(
-            ledger.admin, lease_id, fields, source_id, source_authority=True
+        first = await attach_approved(
+            ledger.admin,
+            lease_id,
+            fields,
+            source_id,
+            source_authority=True,
+            idempotency_key=f"attach-authority-{tag}",
         )
         listed = await reasoning.send_graph_schema_list(ledger.admin, {})
         attached = [s for s in listed.dynamic_sources if s.source_id == source_id]
@@ -87,10 +75,21 @@ async def test_authority_attach_needs_distinct_approver() -> None:
         assert isinstance(attached[0].origin, SchemaSourceOriginViewApproved)
         assert attached[0].origin.approval_lease_id == lease_id
 
-        # The approval is single use: the attach spent its lease, so a second
-        # attach under it is refused.
+        # The approval is single use: the attach wrote its spent node in its own
+        # commit, so a different second attach is refused.
         with pytest.raises(EngineResponseError) as refused:
             await attach_approved(
                 ledger.admin, lease_id, fields, source_id, source_authority=True
             )
         assert refused.value.code == "SCHEMA_APPROVAL_REQUIRED"
+
+        # A retry with the same request key replays the first receipt.
+        replay = await attach_approved(
+            ledger.admin,
+            lease_id,
+            fields,
+            source_id,
+            source_authority=True,
+            idempotency_key=f"attach-authority-{tag}",
+        )
+        assert replay == first

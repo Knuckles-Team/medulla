@@ -38,6 +38,24 @@ pub const SCHEMA_REPAIR_KIND: &str = "governed.schema-repair";
 /// The source-authority kind (MEDULLA-SRC-AUTH-R003): operator approval only;
 /// connectors propose.
 pub const SOURCE_AUTHORITY_KIND: &str = "governed.source-authority";
+/// Prefix of the approval reference a source-authority attach names: the
+/// governed change it spends, not a control lease (MEDULLA-SRC-AUTH-R003.3).
+pub const GOVERNED_APPROVAL_REF_PREFIX: &str = "governed-change:";
+/// Prefix of the graph node that records a governed approval as spent
+/// (`approval-spent:<change_id>`).
+pub const APPROVAL_SPENT_NODE_PREFIX: &str = "approval-spent:";
+
+/// The approval reference naming governed change `change_id`.
+pub fn governed_approval_ref(change_id: &str) -> String {
+    format!("{GOVERNED_APPROVAL_REF_PREFIX}{change_id}")
+}
+
+/// The change id a governed approval reference names, if it is one.
+pub fn governed_change_of_ref(approval_ref: &str) -> Option<&str> {
+    approval_ref
+        .strip_prefix(GOVERNED_APPROVAL_REF_PREFIX)
+        .filter(|change_id| !change_id.is_empty())
+}
 /// Every governed kind: `(kind, proposer scope, approver scope)`.
 pub const GOVERNED_KINDS: [(&str, &str, &str); 2] = [
     (

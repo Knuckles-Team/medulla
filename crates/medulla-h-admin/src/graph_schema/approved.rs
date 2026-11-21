@@ -1,8 +1,12 @@
 //! EH-403: `GraphSchema.AttachApproved` -- the one way a governed schema
 //! candidate reaches a graph's schema sources.
 //!
-//! Before anything is staged, the handler reads the named approval lease from
-//! the request graph's native control-lease rows (tenant-bound: another
+//! A source-authority candidate is approved by the governed ledger and spent
+//! once by a graph node written in the attach's own commit; every other
+//! candidate is approved by a lease.
+//!
+//! Before an ordinary attach is staged, the handler reads the named approval
+//! lease from the request graph's native control-lease rows (tenant-bound: another
 //! tenant's lease is simply not visible) and checks it with
 //! [`medulla_catalog_types::graph_schema::approval::verify_schema_approval`] against the
 //! exact candidate digest. Only then does the attach enter the ordinary
@@ -19,10 +23,11 @@ use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_catalog_types::{
     graph_schema::approval::approved_candidate_digest,
     graph_schema::approval::verify_schema_approval,
-    graph_schema::approval::verify_unspent_approval,
     graph_schema::approval::SCHEMA_APPROVAL_ACTION, graph_schema::repair::RecordContract,
 };
-use medulla_mutation_types::governed_change::SOURCE_AUTHORITY_KIND;
+use medulla_mutation_types::governed_change::{
+    governed_change_of_ref, APPROVAL_SPENT_NODE_PREFIX, SOURCE_AUTHORITY_KIND,
+};
 use medulla_graph_core::graph::{GraphCore, GraphSchemaSource, GraphSchemaSources};
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +36,9 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_server_mutation::mutation::MutationPlan;
 
-/// Verify the approval, then commit the attach through the gateway.
+/// Verify the approval, then commit the attach through the gateway. A
+/// source-authority attach spends its governed approval inside that same
+/// commit (see [`spend_authority_approval`]), so there is no step before it.
 pub(super) async fn handle_gateway(
     tenant_id: &str,
     ctx: &MutationCtx<'_>,
@@ -39,16 +46,8 @@ pub(super) async fn handle_gateway(
     method: &Method,
     op: &GraphSchemaOp,
 ) -> Response {
-    let spend = match admit(tenant_id, ctx, op).await {
-        Ok(spend) => spend,
-        Err(error) => return Response::err(ctx.req_id, error),
-    };
-    // A source-authority attach spends its lease before the attach is staged:
-    // a crash in between loses the approval (fail closed), never spends it twice.
-    if let Some(spend) = spend {
-        if let Err(error) = consume_lease(tenant_id, ctx, &spend).await {
-            return Response::err(ctx.req_id, error);
-        }
+    if let Err(error) = admit(tenant_id, ctx, op).await {
+        return Response::err(ctx.req_id, error);
     }
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
@@ -58,19 +57,16 @@ pub(super) async fn handle_gateway(
     .await
 }
 
-/// The lease a source-authority attach spends: its id and the revision it read.
-struct LeaseSpend {
-    lease_id: String,
-    revision: u64,
-}
-
-/// The approval check that must pass before the attach is staged. A
-/// source-authority attach answers the lease it must spend.
+/// The approval check that must pass before the attach is staged. An ordinary
+/// candidate is proven by its consumed approval lease; a source-authority
+/// candidate is proven by the approved change in the governed ledger. Neither
+/// reads whether the approval is spent: that is decided inside the commit, after
+/// the batch idempotency replay, so a retried attach replays its receipt.
 async fn admit(
     tenant_id: &str,
     ctx: &MutationCtx<'_>,
     op: &GraphSchemaOp,
-) -> Result<Option<LeaseSpend>, String> {
+) -> Result<(), String> {
     op.validate()?;
     let GraphSchemaOp::AttachApproved {
         source_id,
@@ -83,6 +79,10 @@ async fn admit(
         return Err("attach_approved handler received another operation".to_string());
     };
     let candidate = approved_candidate_digest(source_id, contract);
+    let now_ms = medulla_server_api::txn::now_ms();
+    if contract.source_authority {
+        return verify_governed_change(ctx, approval_lease_id, source_id, &candidate, now_ms);
+    }
     let lease = read_lease(ctx, tenant_id, approval_lease_id).await?;
     if lease.is_none() && expected_digest.is_some() {
         return Err(format!(
@@ -90,87 +90,80 @@ async fn admit(
             GraphSchemaErrorCode::CandidateUnknown.as_str()
         ));
     }
-    let now_ms = medulla_server_api::txn::now_ms();
-    if !contract.source_authority {
-        verify_schema_approval(
-            lease.as_ref(),
-            approval_action(contract),
-            source_id,
-            &candidate,
-            now_ms,
-        )?;
-        return Ok(None);
-    }
-    // A governed authority approval is issued `active` and spent by this attach.
-    verify_unspent_approval(
+    verify_schema_approval(
         lease.as_ref(),
         approval_action(contract),
         source_id,
         &candidate,
         now_ms,
-    )?;
-    verify_governed_change(ctx, lease.as_ref(), source_id, &candidate, now_ms)?;
-    Ok(lease.map(|lease| LeaseSpend {
-        lease_id: approval_lease_id.clone(),
-        revision: lease.revision,
-    }))
+    )
 }
 
-/// Spend the approval lease (`active -> consumed`, at the revision the check
-/// read) through the work-item commit, so a second attach under it finds the
-/// lease used. A concurrent attach that read the same revision loses the
-/// revision check and is refused.
-async fn consume_lease(
-    tenant_id: &str,
-    ctx: &MutationCtx<'_>,
-    spend: &LeaseSpend,
-) -> Result<(), String> {
-    use medulla_work_types::control_lease::{
-        ControlLeaseTransition, ControlLeaseTransitionOutcome, TransitionControlLeaseRequest,
+/// What the spent-approval node records.
+#[derive(Serialize)]
+struct ApprovalSpent<'a> {
+    change_id: &'a str,
+    source_id: &'a str,
+    candidate_digest: &'a str,
+}
+
+/// Spend the governed approval of a source-authority attach
+/// (MEDULLA-SRC-AUTH-R003.3): write the node `approval-spent:<change_id>` only
+/// if it is absent. It runs inside the attach's own gateway commit, on the
+/// authoritative staged image, so the spend and the attach are one graph commit:
+/// a failed attach spends nothing, and a different request for the same change
+/// finds the node and is refused "already used". The same request key never
+/// reaches here a second time (the batch idempotency replays its receipt).
+pub(super) fn spend_authority_approval(core: &GraphCore, op: &GraphSchemaOp) -> Result<(), String> {
+    let GraphSchemaOp::AttachApproved {
+        source_id,
+        contract,
+        approval_lease_id,
+        ..
+    } = op
+    else {
+        return Err("attach_approved handler received another operation".to_string());
     };
-    let request = TransitionControlLeaseRequest::consume_governed_approval(
-        tenant_id,
-        &spend.lease_id,
-        spend.revision,
-    );
-    let payload = medulla_server_mutation::mutation_batch::commit_work_item(
-        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
-            ctx.persistence,
-            ctx.core,
-            medulla_server_mutation::mutation_batch::CommitOrigin {
-                request_id: ctx.req_id,
-                principal: ctx.caller,
-            },
-            Some(ctx.idempotency_key),
-            ctx.graph_name,
-            0,
-            Method::TransitionControlLease { request },
-        ),
-    )
-    .await?;
-    let transition: ControlLeaseTransition = match payload {
-        medulla_protocol_types::protocol::ResultPayload::Json(value) => {
-            serde_json::from_value(value).map_err(|error| error.to_string())?
-        }
-        _ => return Err("the approval lease transition answered an unexpected payload".into()),
-    };
-    match transition.outcome {
-        ControlLeaseTransitionOutcome::Applied => Ok(()),
-        _ => Err(format!(
+    if !contract.source_authority {
+        return Ok(());
+    }
+    let change_id = governed_change_of_ref(approval_lease_id).ok_or_else(|| {
+        format!(
+            "{}: the approval reference names no governed change",
+            GraphSchemaErrorCode::ApprovalMismatch.as_str()
+        )
+    })?;
+    let candidate = approved_candidate_digest(source_id, contract);
+    let properties = rmp_serde::to_vec_named(&ApprovalSpent {
+        change_id,
+        source_id,
+        candidate_digest: &candidate,
+    })
+    .map_err(|error| format!("approval spent record encode failed: {error}"))?;
+    if core.create_node_if_absent(
+        format!("{APPROVAL_SPENT_NODE_PREFIX}{change_id}"),
+        properties,
+    ) {
+        Ok(())
+    } else {
+        Err(format!(
             "{}: the approval was already used",
             GraphSchemaErrorCode::ApprovalRequired.as_str()
-        )),
+        ))
     }
 }
 
-/// A source-authority attach also needs the lease to be the one its governed
-/// change issued (MEDULLA-SRC-AUTH-R003.3): the grant names a `change_id`, and
-/// that change is `approved` in the governed ledger for this kind, target and
-/// candidate digest. A lease that no approved change stands behind is refused.
+/// A source-authority attach is approved by the governed ledger itself
+/// (MEDULLA-SRC-AUTH-R003.3): the approval reference names a change, and that
+/// change is `approved` and inside its window for `SOURCE_AUTHORITY_KIND`, the
+/// same `source_id` and the same candidate digest. `SCHEMA_APPROVAL_MISMATCH`
+/// when the reference names no change or the change names another kind, source
+/// or digest; `SCHEMA_APPROVAL_REQUIRED` when the change is unknown, not
+/// approved or past its window.
 #[cfg(feature = "security")]
 fn verify_governed_change(
     ctx: &MutationCtx<'_>,
-    lease: Option<&medulla_work_types::control_lease::ControlLeaseView>,
+    approval_ref: &str,
     source_id: &str,
     candidate: &str,
     now_ms: u64,
@@ -182,10 +175,8 @@ fn verify_governed_change(
             GraphSchemaErrorCode::ApprovalMismatch.as_str()
         )
     };
-    let change_id = lease
-        .and_then(|lease| lease.grant.get("change_id"))
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| mismatch("the approval grant does not name a governed change"))?;
+    let change_id = governed_change_of_ref(approval_ref)
+        .ok_or_else(|| mismatch("the approval reference names no governed change"))?;
     let change = ctx
         .isolation
         .rbac()
@@ -219,7 +210,7 @@ fn verify_governed_change(
 #[cfg(not(feature = "security"))]
 fn verify_governed_change(
     _ctx: &MutationCtx<'_>,
-    _lease: Option<&medulla_work_types::control_lease::ControlLeaseView>,
+    _approval_ref: &str,
     _source_id: &str,
     _candidate: &str,
     _now_ms: u64,

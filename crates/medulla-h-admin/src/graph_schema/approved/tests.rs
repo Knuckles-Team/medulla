@@ -27,7 +27,7 @@ use medulla_work_types::{
 
 use super::*;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_mutation_types::governed_change::SOURCE_AUTHORITY_KIND;
+use medulla_mutation_types::governed_change::{governed_approval_ref, SOURCE_AUTHORITY_KIND};
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::dispatch_test_on_heap;
 
@@ -152,8 +152,8 @@ impl Served {
     }
 
     /// Propose a source-authority change for `digest` as one principal and
-    /// approve it as another: the approval issues the lease
-    /// `governed_approval_lease_id(change_id)`.
+    /// approve it as another. The approved change is what an authority attach
+    /// names, as `governed_approval_ref(change_id)`; no lease is issued.
     async fn govern_authority(&self, change_id: &str, digest: &str) {
         use medulla_mutation_types::governed_change::{
             GovernedApproval, GovernedChangeOp, GovernedProposal,
@@ -608,7 +608,8 @@ async fn authority_candidate_needs_matching_action_and_digest() {
         .await;
     assert!(refusal(&ordinary).starts_with("SCHEMA_APPROVAL_MISMATCH"));
 
-    // A matching, unspent lease that no governed change issued is refused.
+    // A reference that names no governed change is refused, and so is a
+    // governed reference to a change the ledger does not hold.
     served
         .approval_of("action_approval:unbound", SOURCE_AUTHORITY_KIND, &digest, false)
         .await;
@@ -621,14 +622,23 @@ async fn authority_candidate_needs_matching_action_and_digest() {
         )
         .await;
     assert!(refusal(&unbound).starts_with("SCHEMA_APPROVAL_MISMATCH"));
+    let unknown = served
+        .attach_contract(
+            "attach:unknown",
+            &governed_approval_ref("change-unknown"),
+            authority.clone(),
+            None,
+        )
+        .await;
+    assert!(refusal(&unknown).starts_with("SCHEMA_APPROVAL_REQUIRED"));
 
-    // Approving the governed change issues the lease bound to its change id;
-    // the matching action, source, digest and change admit the attach.
+    // The approved change in the governed ledger admits the attach: the
+    // matching kind, source and digest are all it needs.
     served.govern_authority("change-authority", &digest).await;
-    let lease_id = medulla_work_types::control_lease::governed_approval_lease_id("change-authority");
+    let approval_ref = governed_approval_ref("change-authority");
     let committed: GraphSchemaCommitted = decode(
         served
-            .attach_contract("attach:authority", &lease_id, authority, None)
+            .attach_contract("attach:authority", &approval_ref, authority, None)
             .await,
     );
     assert!(committed.changed);
@@ -643,34 +653,67 @@ async fn an_approved_authority_attach_is_single_use() {
     authority.source_authority = true;
     let digest = approved_candidate_digest(SOURCE, &authority);
     served.govern_authority("change-single-use", &digest).await;
-    let lease_id =
-        medulla_work_types::control_lease::governed_approval_lease_id("change-single-use");
+    let approval_ref = governed_approval_ref("change-single-use");
 
-    // The approval issued the lease unspent.
-    let issued = served
-        .lease(&lease_id)
-        .await
-        .expect("the approval issued the lease");
-    assert_eq!(
-        issued.status,
-        medulla_work_types::control_lease::ControlLeaseStatus::Active
-    );
+    // The approval is the ledger's alone: it issued no lease.
+    assert!(served.lease(&approval_ref).await.is_none());
+
+    // An attach that fails spends nothing.
+    let failed = served
+        .attach_contract(
+            "attach:failed",
+            &approval_ref,
+            authority.clone(),
+            Some("0".repeat(64)),
+        )
+        .await;
+    assert!(refusal(&failed).starts_with("SCHEMA_DIGEST_MISMATCH"));
 
     let first: GraphSchemaCommitted = decode(
         served
-            .attach_contract("attach:first", &lease_id, authority.clone(), None)
+            .attach_contract("attach:first", &approval_ref, authority.clone(), None)
             .await,
     );
     assert!(first.changed);
-    let spent = served.lease(&lease_id).await.expect("the lease is kept");
-    assert_eq!(
-        spent.status,
-        medulla_work_types::control_lease::ControlLeaseStatus::Consumed
-    );
 
-    // The same approval attaches exactly once.
+    // A different request under the same approval is refused as already used.
     let second = served
-        .attach_contract("attach:second", &lease_id, authority, None)
+        .attach_contract("attach:second", &approval_ref, authority, None)
         .await;
-    assert!(refusal(&second).starts_with("SCHEMA_APPROVAL_REQUIRED"));
+    let text = refusal(&second);
+    assert!(text.starts_with("SCHEMA_APPROVAL_REQUIRED"), "{text}");
+    assert!(text.contains("already used"), "{text}");
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn a_retried_authority_attach_replays_its_receipt() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    served.govern_authority("change-retry", &digest).await;
+    let approval_ref = governed_approval_ref("change-retry");
+
+    let first: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:retry", &approval_ref, authority.clone(), None)
+            .await,
+    );
+    assert!(first.changed);
+
+    // The same request key answers the original receipt, not "already used".
+    let replay: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:retry", &approval_ref, authority.clone(), None)
+            .await,
+    );
+    assert_eq!(replay, first);
+
+    // Another key for the same approval is a different request and is refused.
+    let other = served
+        .attach_contract("attach:other", &approval_ref, authority, None)
+        .await;
+    assert!(refusal(&other).contains("already used"));
 }

@@ -196,10 +196,8 @@ async def approve_authority(
 
 
 def approval_lease_id(change_id: str) -> str:
-    """The lease that approving ``change_id`` issues (``governed_approval_lease_id`` in Rust)."""
+    """The approval reference of ``change_id`` (``governed_approval_ref`` in Rust): the change, not a lease."""
     return f"governed-change:{change_id}"
-
-
 
 async def issue_approval_lease(
     client: MedullaClient,
@@ -260,8 +258,10 @@ async def attach_approved(
     source_id: str = SOURCE_ID,
     expected_digest: str | None = None,
     source_authority: bool = False,
-) -> None:
-    await reasoning.send_graph_schema(
+    idempotency_key: str | None = None,
+) -> Any:
+    """Attach under ``lease_id``; a repeated ``idempotency_key`` is a retry of the same request."""
+    return await reasoning.send_graph_schema(
         client,
         {
             "op": {
@@ -273,7 +273,7 @@ async def attach_approved(
                 "if_composed_digest": None,
             }
         },
-        idempotency_key=f"attach:{lease_id}:{uuid.uuid4().hex}",
+        idempotency_key=idempotency_key or f"attach:{lease_id}:{uuid.uuid4().hex}",
     )
 
 

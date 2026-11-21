@@ -111,10 +111,6 @@ pub async fn dispatch_identity_and_access_methods(
                     state_machine_authorized,
                 ),
                 (op, actor),
-                medulla_server_identity::dispatch::governed::LeaseGraph {
-                    graph: &req.graph,
-                    caller: req.agent_id.as_deref(),
-                },
             )
             .await
         }

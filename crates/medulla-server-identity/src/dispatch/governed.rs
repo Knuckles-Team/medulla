@@ -7,7 +7,7 @@
 
 use medulla_mutation_types::governed_change::GovernedActor;
 #[cfg(feature = "security")]
-use medulla_mutation_types::governed_change::{GovernedChangeOp, SOURCE_AUTHORITY_KIND};
+use medulla_mutation_types::governed_change::GovernedChangeOp;
 #[cfg(feature = "security")]
 use medulla_protocol_types::{
     result_contract::security::GovernedApprove, result_contract::security::GovernedGet,
@@ -65,7 +65,6 @@ pub async fn dispatch_governed_change(
     context: &VerifiedRequestContext,
     authority: ElevationStampAuthority,
     (op, stamped): (GovernedChangeOp, Option<GovernedActor>),
-    lease_graph: LeaseGraph<'_>,
 ) -> Response {
     let actor = match (authority, stamped) {
         (ElevationStampAuthority::External, _) => governed_actor(context),
@@ -78,26 +77,6 @@ pub async fn dispatch_governed_change(
         }
     };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    // The approval lease is issued BEFORE the approval transition and the
-    // transition is refused when the issue fails, so an approved source-authority
-    // change always has its lease (MEDULLA-SRC-AUTH-R003.3).
-    #[cfg(feature = "security")]
-    if let (GovernedChangeOp::Approve { request }, ElevationStampAuthority::External) =
-        (&op, authority)
-    {
-        if let Err(error) = issue_approval_lease_for_pending(
-            state,
-            req_id,
-            context,
-            &lease_graph,
-            &request.change_id,
-            now_ms,
-        )
-        .await
-        {
-            return Response::err(req_id, error);
-        }
-    }
     let mut guard = medulla_server_api::state::timed_write(state).await;
     let isolation = &mut guard.isolation;
     let outcome = match &op {
@@ -132,64 +111,5 @@ pub async fn dispatch_governed_change(
         }
         Ok(Err(error)) => Response::err(req_id, error),
         Err(error) => Response::err(req_id, error.to_string()),
-    }
-}
-
-/// The request graph and carrier of a governed op, for the approval lease an
-/// approved source-authority change issues.
-#[cfg(feature = "security")]
-#[derive(Clone, Copy)]
-pub struct LeaseGraph<'a> {
-    /// The request graph the lease is issued in.
-    pub graph: &'a str,
-    /// The agent carrying the request.
-    pub caller: Option<&'a str>,
-}
-
-/// Approving a source-authority change first issues the approval lease bound to
-/// its change id (MEDULLA-SRC-AUTH-R003.3): `governed_approval_lease_id`, an
-/// `action.approval` lease naming the kind, target, candidate digest and change
-/// id, left `active` for the one attach that spends it. A change of another kind
-/// (or none) issues nothing. An issue that finds the lease already there (a
-/// retried approval) is not an error. The lease alone attaches nothing: the
-/// attach also needs the change `approved` in the governed ledger.
-#[cfg(feature = "security")]
-async fn issue_approval_lease_for_pending(
-    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
-    req_id: u64,
-    context: &VerifiedRequestContext,
-    target: &LeaseGraph<'_>,
-    change_id: &str,
-    now_ms: u64,
-) -> Result<(), String> {
-    use medulla_protocol_types::protocol::Method as WireMethod;
-    use medulla_work_types::control_lease::IssueControlLeaseRequest;
-    let change = state
-        .read()
-        .await
-        .isolation
-        .rbac()
-        .governed()
-        .get(change_id, now_ms);
-    let Some(change) = change.filter(|change| change.kind == SOURCE_AUTHORITY_KIND) else {
-        return Ok(());
-    };
-    let issue = IssueControlLeaseRequest::for_approved_change(
-        &context.tenant().to_string(),
-        &change,
-        now_ms,
-    );
-    let response = medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op(
-        state,
-        target.graph,
-        req_id,
-        target.caller,
-        context,
-        WireMethod::IssueControlLease { request: issue },
-    )
-    .await;
-    match response.refusal_text() {
-        Some(refusal) => Err(refusal),
-        None => Ok(()),
     }
 }
