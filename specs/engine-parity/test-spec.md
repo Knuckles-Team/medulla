@@ -54,7 +54,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R015.3` | `tests/test_change_subscribe_served.py::test_thousand_changes_arrive_in_order`; bench group `engine_parity/cdc_emit` | planned |
 | `MEDULLA-ENGINE-PARITY-R016.1` | `crates/medulla-transaction/src/tests/archive_pass.rs::archive_pass_writes_ordered_segments_and_resumes`; `tests/test_pitr_served.py::test_restore_to_time` | planned |
 | `MEDULLA-ENGINE-PARITY-R016.2` | `crates/medulla-persistence/tests/backup_replay.rs::replay_applies_segments_to_the_target_and_refuses_past_the_end`; `tests/test_pitr_served.py::test_restore_to_time`; `tests/test_pitr_served.py::test_target_past_archive_refuses` | planned |
-| `MEDULLA-ENGINE-PARITY-R016.3` | `crates/medulla-persistence/tests/backup_replay.rs::restore_drill_has_no_lost_sequences`; bench group `engine_parity/pitr_restore_drill` | planned |
+| `MEDULLA-ENGINE-PARITY-R016.3` | `crates/medulla-persistence/tests/backup_replay.rs::restore_drill_has_no_lost_sequences`; bench group `engine_parity/pitr_restore_drill` (`benches/engine_parity.rs::pitr_restore_drill`) | planned |
 | `MEDULLA-ENGINE-PARITY-R016.4` | `crates/medulla-transaction/src/tests/archive_pass.rs::retention_expires_old_segments_and_keeps_the_newest` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.1` | `crates/medulla-storage/tests/provider.rs::provider_set_is_closed`; `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.2` | `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out`; `crates/medulla-storage/src/backend_spec.rs::outside_database_endpoint_schemes_refuse_by_name` | existing |
