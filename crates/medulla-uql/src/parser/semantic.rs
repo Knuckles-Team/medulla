@@ -39,6 +39,20 @@ impl<'a> Parser<'a> {
         }
     }
 
+    gated! { "text",
+        /// `UNION ( [branch] {[branch]} | (name {, name}) )` (MEDULLA-FEDERATED-QUERY-R720.9):
+        /// combine the match results of its branches into one candidate set. It lowers to
+        /// the one `FuseRrf` op, so there is no second planner.
+        fn union_stage(&mut self) -> Result<Op, UqlError> {
+            let branches = if self.peek(&Tok::LParen) {
+                self.fuse_named_branches()?
+            } else {
+                self.fuse_inline_branches()?
+            };
+            Ok(Op::FuseRrf { branches, k: 0.0 })
+        }
+    }
+
     #[cfg(feature = "text")]
     fn fuse_inline_branches(&mut self) -> Result<Vec<Vec<Op>>, UqlError> {
         let mut branches = Vec::new();

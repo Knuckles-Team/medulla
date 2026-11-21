@@ -68,7 +68,19 @@ pub(super) fn explain(
         incremental: false,
         incremental_note: DAG_NOTE.to_string(),
         warnings,
+        plan_node_count: u32::try_from(nodes.len()).unwrap_or(u32::MAX),
+        plan_root_count: root_count(nodes),
     })
+}
+
+/// How many nodes no other node consumes: the roots of the program's DAG.
+fn root_count(nodes: &[DagNode]) -> u32 {
+    let consumed: std::collections::BTreeSet<usize> = nodes
+        .iter()
+        .flat_map(|n| n.inputs.iter().copied())
+        .collect();
+    let roots = (0..nodes.len()).filter(|id| !consumed.contains(id)).count();
+    u32::try_from(roots).unwrap_or(u32::MAX)
 }
 
 /// Execute, recording each node's actual rows and time beside its estimate.

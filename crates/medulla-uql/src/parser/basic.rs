@@ -98,6 +98,27 @@ impl<'a> Parser<'a> {
     pub(super) fn valid_as_of(&mut self) -> Result<Op, UqlError> {
         self.expect_kw("AS")?;
         self.expect_kw("OF")?;
+        // MEDULLA-FEDERATED-QUERY-R720.9: `VALID AS OF <n> <unit>` bounds the claims by a
+        // duration before now; it lowers to the same `AsOf` op at that instant.
+        if matches!(self.peek_kind(), Some(Tok::Num(_))) {
+            let n = self.number("a valid-time window")?;
+            let Some(i) = self.lookup_word(UNITS.iter().map(|(names, _, _)| *names)) else {
+                return Err(self.err_here("expected a duration unit (`s`, `m`, `h`, `d`, …)"));
+            };
+            let secs = n * UNITS[i].1 / UNITS[i].2;
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0.0, |d| d.as_secs_f64());
+            if !secs.is_finite() || secs < 0.0 {
+                return Err(
+                    self.err_at(self.prev_start(), "the valid-time window is not a duration")
+                );
+            }
+            return Ok(Op::AsOf {
+                ts: now - secs,
+                axis: TimeAxis::Valid,
+            });
+        }
         Ok(Op::AsOf {
             ts: self.timestamp()?,
             axis: TimeAxis::Valid,

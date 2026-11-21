@@ -144,6 +144,7 @@ impl<'a> Parser<'a> {
             ("DECISIONS", Self::decisions),
             ("TEXT", Self::text),
             ("FUSE", Self::fuse),
+            ("UNION", Self::union_stage),
             ("REASON", Self::reason),
             ("SPARQL", Self::sparql),
             ("UDF", Self::udf),

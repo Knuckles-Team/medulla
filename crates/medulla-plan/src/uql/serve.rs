@@ -323,6 +323,9 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         incremental,
         incremental_note,
         warnings,
+        plan_node_count: u32::try_from(optimized.ops.len()).unwrap_or(u32::MAX),
+        // A linear pipeline is a chain: its last stage is the one root.
+        plan_root_count: u32::from(!optimized.ops.is_empty()),
     })
 }
 

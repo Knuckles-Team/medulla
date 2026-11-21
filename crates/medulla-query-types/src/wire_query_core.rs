@@ -1240,6 +1240,14 @@ pub enum UqlResult {
         incremental: bool,
         incremental_note: String,
         warnings: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R720.8: how many nodes the plan DAG holds. A linear
+        /// pipeline holds one node per stage.
+        #[serde(default)]
+        plan_node_count: u32,
+        /// MEDULLA-FEDERATED-QUERY-R720.8: how many roots (nodes no other node consumes)
+        /// the plan DAG has. One program compiles to one plan with one root.
+        #[serde(default)]
+        plan_root_count: u32,
     },
     /// `PROFILE`: the rows plus per-stage actual rows and time.
     Profile {
