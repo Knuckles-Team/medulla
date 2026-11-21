@@ -40,6 +40,24 @@ ROOT_VARIABLE = "MEDULLA_TEST_OBJECT_ROOT"
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+class HeadHold:
+    """A held conditional `HEAD` update (MEDULLA-OBJECT-STORAGE-BACKEND-R003.1).
+
+    The loopback store parks the next conditional `HEAD` put without applying or
+    answering it: the engine has uploaded the segment and the next manifest and is
+    waiting on the fence. `reached` is set once the put is parked; `key` names the
+    `HEAD` object it targeted. The hold lasts until `release()`.
+    """
+
+    def __init__(self) -> None:
+        self.reached = threading.Event()
+        self.key = ""
+        self._released = threading.Event()
+
+    def release(self) -> None:
+        self._released.set()
+
+
 def _etag(body: bytes) -> str:
     return '"' + hashlib.sha256(body).hexdigest()[:32] + '"'
 
@@ -53,6 +71,8 @@ class LoopbackObjectStore:
         self._objects: dict[str, bytes] = {}
         self._etags: dict[str, str] = {}
         self._lock = threading.Lock()
+        self._head_hold: HeadHold | None = None
+        self.engines: list[subprocess.Popen] = []
         store = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -101,6 +121,15 @@ class LoopbackObjectStore:
                 body = self._read_body()
                 if_none_match = self.headers.get("If-None-Match")
                 if_match = self.headers.get("If-Match")
+                if if_match is not None and key.endswith("/HEAD"):
+                    with store._lock:
+                        hold, store._head_hold = store._head_hold, None
+                    if hold is not None:
+                        hold.key = key
+                        hold.reached.set()
+                        hold._released.wait(timeout=120)
+                        self.close_connection = True
+                        return
                 with store._lock:
                     current = store._etags.get(key)
                     if if_none_match == "*" and key in store._objects:
@@ -185,6 +214,26 @@ class LoopbackObjectStore:
     def keys(self, prefix: str) -> list[str]:
         with self._lock:
             return sorted(key for key in self._objects if key.startswith(prefix))
+
+    def get(self, key: str) -> bytes:
+        with self._lock:
+            return self._objects[key]
+
+    def hold_head_update(self) -> HeadHold:
+        """Park the next conditional `HEAD` put (the commit fence, step 4): the
+        kill hook of the commit tests. Create-only puts (a bootstrap) pass."""
+
+        hold = HeadHold()
+        with self._lock:
+            self._head_hold = hold
+        return hold
+
+    def kill_engine(self) -> None:
+        """SIGKILL the engine started last by `spawn_object_store_engine`."""
+
+        process = self.engines[-1]
+        process.kill()
+        process.wait()
 
     def corrupt(self, key: str) -> None:
         """Flip the first byte of `key` and keep its ETag."""
@@ -298,6 +347,7 @@ def spawn_object_store_engine(
         log_path=log_path,
     )
     client = None
+    store.engines.append(process)
     try:
         if expect_exit:
             from conftest import server_timeout
@@ -312,5 +362,6 @@ def spawn_object_store_engine(
         yield client
     finally:
         if client is not None:
-            client.close()
+            with contextlib.suppress(Exception):
+                client.close()
         stop_server(process, name="object-store engine", log_path=log_path)
