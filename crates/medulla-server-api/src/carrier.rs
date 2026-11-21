@@ -258,6 +258,19 @@ pub fn tenant_scope_of(tenant: &str) -> String {
     }
 }
 
+/// The one owner scope every blob holder of a memory snapshot is registered
+/// under (MEDULLA-DURABLE-KERNEL-R085.4). It is the document owner's scope: the
+/// tenant that owns the graph, never the writing caller or the consuming service
+/// actor, so the router and the `memory_snapshot_synced` consumer produce the
+/// same holder row.
+pub fn memory_snapshot_owner_scope(tenant: &str) -> String {
+    crate::batch_compile::opaque_coordinator_key(
+        "memory-snapshot-owner",
+        &tenant_scope_of(tenant),
+        "memory_snapshot",
+    )
+}
+
 fn opaque_scope(value: &str, namespace: &str) -> bool {
     value
         .strip_prefix(namespace)
@@ -707,5 +720,21 @@ impl GraphReadAuthority {
         }
 
         Arc::new(projected)
+    }
+}
+
+#[cfg(test)]
+mod memory_snapshot_owner_tests {
+    use super::memory_snapshot_owner_scope;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R085.4
+    #[test]
+    fn one_holder_identity_per_tenant_whoever_writes_it() {
+        let scope = memory_snapshot_owner_scope("tenant-a");
+        // The router (a caller) and the consumer (the service actor) of one
+        // tenant derive the same scope: the holder row is idempotent.
+        assert_eq!(scope, memory_snapshot_owner_scope("tenant-a"));
+        assert_ne!(scope, memory_snapshot_owner_scope("tenant-b"));
+        assert!(scope.starts_with("memory-snapshot-owner:"));
     }
 }

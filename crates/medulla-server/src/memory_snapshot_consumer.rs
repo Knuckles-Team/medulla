@@ -5,7 +5,7 @@
 //! those intents through the durable outbox (subscribe, claim, ack, release) as
 //! the engine service actor [`SERVICE_ACTOR`], reads the committed rows of the
 //! named document, and makes sure the blob holder of each retained revision and
-//! candidate exists. The router takes the holder right after the commit; the
+//! candidate exists under the document owner's scope. The router takes the holder right after the commit; the
 //! consumer repairs the one window that leaves open (a crash between the commit
 //! and the holder), and the claim is acknowledged only once every holder stands.
 //! The holder change is set-like, so a redelivered intent takes nothing twice.
@@ -174,6 +174,9 @@ mod worker {
             format!("memory-snapshot:{graph}:{}", intent.key),
         )?;
         let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&context)?;
+        // The holder is registered under the document owner's scope, the row the
+        // router registered, never under the service actor's own scope.
+        let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant());
         let mut held: Vec<(u64, String)> = Vec::new();
         if let Some(head) = store::load_head(&core, doc) {
             for revision in 1..=head.revision {
@@ -192,7 +195,7 @@ mod worker {
             let holder = HolderChange::acquire(
                 &digest,
                 HolderId::new(&format!("memory_snapshot:{}@{revision}", doc.as_str()))?,
-                authority.owner_scope(),
+                &owner_scope,
             )?;
             let method = medulla_protocol_types::protocol::Method::BlobRef {
                 digest: digest.clone(),

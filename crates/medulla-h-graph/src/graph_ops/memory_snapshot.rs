@@ -389,25 +389,36 @@ pub fn content_change(
     }
 }
 
-/// The revision number and bytes a committed sync stored in the graph and that
+/// The revision number and bytes a planned sync will store in the graph and that
 /// the blob holder must keep (MEDULLA-DURABLE-KERNEL-R085.7): the new head or
 /// retained revision after `Accepted` or `Resolved`, the retained candidate
-/// after `ConflictRetained`. `None` for an outcome that stored no content.
-pub fn held_content(
-    core: &GraphCore,
+/// after `ConflictRetained`. `None` for an outcome that stores no content. It
+/// reads the plan, so the content can reach the CAS before the graph commit.
+pub fn planned_content(
+    plan: &SnapshotPlan,
     doc: &DocId,
     outcome: &SyncOutcome,
 ) -> Option<(u64, String)> {
+    let written = |node_id: String| {
+        plan.writes
+            .iter()
+            .find(|write| write.node_id == node_id)
+            .map(|write| write.properties_msgpack.as_slice())
+    };
     match outcome {
         SyncOutcome::Accepted { head } | SyncOutcome::Resolved { head } => {
-            store::read(core, doc, Some(head.revision)).map(|read| (head.revision, read.content))
+            let bytes = written(revision_node_id(doc, head.revision))?;
+            store::decode_row::<RevisionRow>(bytes).map(|row| (head.revision, row.content))
         }
         SyncOutcome::ConflictRetained {
             candidate_revision, ..
-        } => store::candidates(core, doc)
-            .into_iter()
-            .find(|(number, _)| number == candidate_revision)
-            .map(|(number, row)| (number, row.content)),
+        } => {
+            let bytes = written(format!(
+                "{}{candidate_revision}",
+                store::candidate_prefix(doc)
+            ))?;
+            store::decode_row::<CandidateRow>(bytes).map(|row| (*candidate_revision, row.content))
+        }
         _ => None,
     }
 }

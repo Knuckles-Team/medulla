@@ -175,6 +175,12 @@ async fn handle_sync_memory(
                 return Response::err(req.id, refusal);
             }
         }
+        // The content is content-addressed and idempotent, so it reaches the CAS
+        // before the commit: a storage failure refuses before anything commits.
+        let staged = match holder::stage_content(state, &request, &snapshot, &outcome).await {
+            Ok(staged) => staged,
+            Err(error) => return Response::err(req.id, error),
+        };
         let response = dispatch_boxed(dispatch_graph_op(
             state,
             &req.graph,
@@ -189,13 +195,23 @@ async fn handle_sync_memory(
         .await;
         match response.error.as_deref() {
             None => {
-                if let Err(error) =
-                    holder::hold_content(state, verified_context, req.id, &core, &request, &outcome)
-                        .await
-                {
-                    return Response::err(req.id, error);
-                }
-                return outcome_response(req.id, outcome);
+                // A committed write is never reported as a failure: a holder that
+                // could not be registered is a warning, and the consumer repairs it.
+                let held = match &staged {
+                    Some(staged) => {
+                        holder::hold_staged(state, verified_context, req.id, &request, staged).await
+                    }
+                    None => Ok(()),
+                };
+                let answer = outcome_response(req.id, outcome);
+                return match held {
+                    Ok(()) => answer,
+                    Err(error) => {
+                        tracing::warn!(code = holder::HOLDER_PENDING, %error,
+                            "memory snapshot holder not registered after commit");
+                        answer.with_warning(holder::HOLDER_PENDING)
+                    }
+                };
             }
             Some(error) if error.starts_with("BUSY") => last = response,
             Some(_) => return response,

@@ -54,7 +54,8 @@ pub fn encode_row<T: Serialize>(row: &T) -> Vec<u8> {
     rmp_serde::to_vec_named(&value).unwrap_or_default()
 }
 
-fn decode<T: for<'de> Deserialize<'de>>(bytes: &[u8]) -> Option<T> {
+/// One typed row decoded from the property bytes a plan write carries.
+pub fn decode_row<T: for<'de> Deserialize<'de>>(bytes: &[u8]) -> Option<T> {
     let value: serde_json::Value = rmp_serde::from_slice(bytes).ok()?;
     serde_json::from_value(value).ok()
 }
@@ -77,7 +78,7 @@ pub fn ack_node_id(doc: &DocId) -> String {
 /// One typed row of `id`, if it exists and decodes.
 pub fn load_row<T: for<'de> Deserialize<'de>>(core: &GraphCore, id: &str) -> Option<T> {
     core.get_node_properties(id)
-        .and_then(|bytes| decode(&bytes))
+        .and_then(|bytes| decode_row(&bytes))
 }
 
 /// The accepted head of `doc`, if any.
