@@ -132,6 +132,23 @@ pub struct AccessReport {
     pub stale: u64,
 }
 
+/// Evidence of an enumeration batch (MEDULLA-INGEST-WORKER-R903.5).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReconcileReport {
+    /// The digest of the sorted identifiers of the run; empty before its last page.
+    pub ids_digest: String,
+    /// Held records the run no longer lists and the plan now holds.
+    pub missing_count: u64,
+    /// Records deleted by this batch. The sweep deletes after the grace window, so an
+    /// admission deletes none.
+    pub deleted_count: u64,
+    /// The principal whose `source:reconcile:override` lifted the mass-delete guard;
+    /// empty when no override was needed.
+    pub override_principal: String,
+}
+
 /// The access of one held record as last synced from its source.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

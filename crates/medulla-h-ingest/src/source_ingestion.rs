@@ -93,6 +93,8 @@ pub struct PreparedSourceIngestion {
     governance: medulla_types::source_governance::GovernanceReport,
     /// Counts of an `access` batch (R902.5); `None` for every other kind.
     access: Option<medulla_types::source_governance::AccessReport>,
+    /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
+    reconcile: Option<medulla_types::source_governance::ReconcileReport>,
     committed_graph_version: u64,
     /// Drift of each approved stream of the batch (R714); empty on a replay.
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
@@ -225,6 +227,13 @@ fn admit_kind(
         | SourceBatchKind::Groups
         | SourceBatchKind::Containers
         | SourceBatchKind::Proposals => Ok(()),
+        #[cfg(all(
+            feature = "redb",
+            feature = "blob",
+            feature = "query",
+            feature = "modality-serving"
+        ))]
+        SourceBatchKind::Enumeration => Ok(()),
         _ => Err(format!(
             "{}: batch kind {kind:?} has no admission path",
             medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
@@ -246,6 +255,7 @@ pub async fn prepare(
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Proposals
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Enumeration
     ) {
         return prepare_extension_batch(ctx, &request).await;
     }
@@ -398,6 +408,7 @@ pub async fn prepare(
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
         access: None,
+        reconcile: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         drift,
         embedding_set,
@@ -434,6 +445,8 @@ async fn prepare_extension_batch(
     let mut policies = Vec::new();
     let mut proposal_items = Vec::new();
     let mut access = None;
+    #[allow(unused_mut)]
+    let mut reconcile: Option<medulla_types::source_governance::ReconcileReport> = None;
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
             let snapshots = decode_permission_items::<
@@ -491,6 +504,74 @@ async fn prepare_extension_batch(
                 methods.push(update.method);
             }
         }
+        #[cfg(all(
+            feature = "redb",
+            feature = "blob",
+            feature = "query",
+            feature = "modality-serving"
+        ))]
+        Some(SourceBatchExtension::Enumeration(page)) => {
+            // An enumeration page stages its identifiers on the run node; the last page of a
+            // complete run plans the held records the source no longer lists (R903.3).
+            let connector_name = batch.connector.as_str();
+            let marker = persistence
+                .read_node(&graph_fname, &source_marker_id(ctx.tenant_scope, batch)?)
+                .await?
+                .map(|bytes| {
+                    rmp_serde::from_slice::<SourceLiveSetMarker>(&bytes)
+                        .map_err(|error| format!("SOURCE_RECONCILIATION_MARKER_INVALID: {error}"))
+                })
+                .transpose()?;
+            let held = marker.map(|marker| marker.live_ids).unwrap_or_default();
+            let run_id = sweep::run_node_id(ctx.tenant_scope, connector_name, stream)?;
+            let plan_id = sweep::plan_node_id(ctx.tenant_scope, connector_name, stream)?;
+            let staged = persistence
+                .read_node(&graph_fname, &run_id)
+                .await?
+                .map(|bytes| {
+                    rmp_serde::from_slice::<sweep::StagedRun>(&bytes)
+                        .map_err(|error| format!("SOURCE_ENUMERATION_RUN_INVALID: {error}"))
+                })
+                .transpose()?;
+            let existing_plan = persistence
+                .read_node(&graph_fname, &plan_id)
+                .await?
+                .map(|bytes| {
+                    rmp_serde::from_slice::<sweep::StoredPlan>(&bytes)
+                        .map_err(|error| format!("SOURCE_RECONCILE_PLAN_INVALID: {error}"))
+                })
+                .transpose()?;
+            let admin_override = ctx.verified.allows_action("source:reconcile:override");
+            let admission = sweep::admit_enumeration(sweep::EnumerationInput {
+                tenant: ctx.tenant_scope,
+                connector: connector_name,
+                stream,
+                page,
+                held: &held,
+                staged,
+                existing_plan,
+                now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+                grace_s: medulla_server_api::knob_config::knobs().ingest_reconcile_grace_s,
+                admin_override,
+            })?;
+            let lifted =
+                admin_override && admission.missing_count * 100 > held.len() as u64 * 20;
+            reconcile = Some(medulla_types::source_governance::ReconcileReport {
+                ids_digest: admission.ids_digest.clone(),
+                missing_count: admission.missing_count,
+                deleted_count: 0,
+                override_principal: if lifted {
+                    ctx.verified.principal().to_string()
+                } else {
+                    String::new()
+                },
+            });
+            policies.push(policy(&run_id, ctx.tenant_scope, &policy_subject, 0));
+            if admission.plan.is_some() {
+                policies.push(policy(&plan_id, ctx.tenant_scope, &policy_subject, 0));
+            }
+            methods.extend(admission.methods);
+        }
         Some(SourceBatchExtension::Proposals(items)) => {
             let knobs = medulla_server_api::knob_config::knobs();
             let admission = proposals::admit_proposals(
@@ -539,7 +620,14 @@ async fn prepare_extension_batch(
         &policy_subject,
         0,
     ));
-    methods.push(permission_receipt_method(batch, &batch_id, applied, &proposal_items, access)?);
+    methods.push(permission_receipt_method(
+        batch,
+        &batch_id,
+        applied,
+        &proposal_items,
+        access,
+        reconcile.as_ref(),
+    )?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
     let mutation = compile_mutation(&ctx, &batch_id, methods)?;
     let previous_stream_digest = stream_content_digest(
@@ -582,6 +670,7 @@ async fn prepare_extension_batch(
         relationship_tombstoned_count: 0,
         governance: Default::default(),
         access,
+        reconcile,
         drift: Vec::new(),
         committed_graph_version: ctx.graph_version.saturating_add(1),
         embedding_set: Default::default(),
@@ -688,6 +777,7 @@ fn permission_receipt_method(
     applied: u64,
     proposal_items: &[proposals::ProposalItemReceipt],
     access: Option<medulla_types::source_governance::AccessReport>,
+    reconcile: Option<&medulla_types::source_governance::ReconcileReport>,
 ) -> Result<Method, String> {
     let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -711,6 +801,10 @@ fn permission_receipt_method(
         "relationship_tombstoned_count": 0,
         "affected_count": applied,
     });
+    if let Some(reconcile) = reconcile {
+        properties["reconcile"] = serde_json::to_value(reconcile)
+            .map_err(|error| format!("reconcile receipt encoding failed: {error}"))?;
+    }
     if let Some(access) = access {
         properties["access"] = serde_json::to_value(access)
             .map_err(|error| format!("access receipt encoding failed: {error}"))?;
@@ -2493,6 +2587,7 @@ fn build_terminal_receipt(
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
         access: prepared.access,
+        reconcile: prepared.reconcile,
         report: medulla_types::ingest_materialize::IngestBatchReport {
             written: prepared
                 .affected_count
@@ -2592,6 +2687,14 @@ fn prepared_replay(
             .map(|value| {
                 serde_json::from_value(value.clone())
                     .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: access: {error}"))
+            })
+            .transpose()?,
+        reconcile: receipt
+            .get("reconcile")
+            .filter(|value| !value.is_null())
+            .map(|value| {
+                serde_json::from_value(value.clone())
+                    .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: reconcile: {error}"))
             })
             .transpose()?,
         committed_graph_version,

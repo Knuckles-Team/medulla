@@ -142,6 +142,15 @@ class AccessReport(BaseModel):
     updated: Annotated[int, Field(ge=0)]
 
 
+class ReconcileReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    deleted_count: Annotated[int, Field(ge=0)]
+    ids_digest: str
+    missing_count: Annotated[int, Field(ge=0)]
+    override_principal: str
+
+
 class GovernanceReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -264,6 +273,7 @@ class SourceIngestionReceipt(BaseModel):
     raw_admissions: BoundedVec_RawAdmissionReceipt_1024
     receipt_digest: Digest256
     receipt_id: str
+    reconcile: ReconcileReport | None = None
     relationship_count: Annotated[int, Field(ge=0)]
     report: IngestBatchReport
     relationship_live_set_digest: Digest256 | None = None

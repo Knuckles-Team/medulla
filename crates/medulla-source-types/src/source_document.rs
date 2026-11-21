@@ -229,6 +229,7 @@ mod tests {
             relationship_tombstoned_count: 0,
             governance: Default::default(),
             access: None,
+            reconcile: None,
             report: Default::default(),
             classes: BoundedVec::new(Vec::new()).unwrap(),
             committed_graph_version: 9,
