@@ -2321,6 +2321,13 @@ path = "benches/nl_steps.rs"
 harness = false
 required-features = ["server", "security", "nl-query"]
 
+# MEDULLA-FEDERATED-QUERY-R090.6: served Discover planning at one million nodes, nightly only.
+[[bench]]
+name = "discover_planning"
+path = "benches/discover_planning.rs"
+harness = false
+required-features = ["server", "security", "query"]
+
 # MEDULLA-DURABLE-KERNEL-R095.1005: served BusHeartbeat through the dispatch entry.
 [[bench]]
 name = "bus_heartbeat"

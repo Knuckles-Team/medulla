@@ -36,6 +36,8 @@
     "access_check_256": 1000000,
     "context_bundle_compile": 12000000,
     "corpus_grep_1m": 20000000,
+    "discover/deep_overhead": 40000000,
+    "discover/standard_1m": 15000000,
     "feedback_boost_256": 200000,
     "geosparql_within": 40000000,
     "knowledge_scope_50": 2000000,
