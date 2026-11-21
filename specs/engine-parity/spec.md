@@ -113,7 +113,7 @@ Independent test: the bound tests of `MEDULLA-ENGINE-PARITY-R019.2` and `MEDULLA
 - **SC-001**: 64 concurrent writers reach at least 20,000 commits per second on one store file. Rows: `MEDULLA-ENGINE-PARITY-R001.3`.
 - **SC-002**: Disjoint transactions return no `40001` under 32 sessions. Rows: `MEDULLA-ENGINE-PARITY-R004.3`.
 - **SC-003**: Wire reads equal native reads under row security for every principal in the fixture. Rows: `MEDULLA-ENGINE-PARITY-R007.2`.
-- **SC-004**: Every supported entry of the compatibility matrix passes its recorded statement. Rows: `MEDULLA-ENGINE-PARITY-R009.3`.
+- **SC-004**: Every supported and partial entry of the compatibility matrix succeeds over pgwire on its recorded statement, and each of the five refused forms (`create_policy`, `create_role`, `create_publication`, `create_rule`, `create_type`) refuses. Rows: `MEDULLA-ENGINE-PARITY-R009.3`.
 - **SC-005**: A restore loses no committed sequence up to its target. Rows: `MEDULLA-ENGINE-PARITY-R016.3`.
 - **SC-006**: No engine record reaches an outside database. Rows: `MEDULLA-ENGINE-PARITY-R019.2`.
 
