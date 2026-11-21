@@ -316,3 +316,67 @@ async fn nodes_keep_identifier_and_document_digest() {
     );
     assert_eq!(exported.model_digest, imported.model_digest);
 }
+
+// spec: MEDULLA-CQ-ORCH-R705.10
+#[tokio::test(flavor = "multi_thread")]
+async fn export_import_round_trip_keeps_digests() {
+    let mut exported = Vec::new();
+    let mut reported = Vec::new();
+    for (graph, prefix) in [
+        ("architecture-a", "architecture-exchange-served-a"),
+        ("architecture-b", "architecture-exchange-served-b"),
+    ] {
+        let (_dir, _backend, state) = test_support::durable_graph_state(
+            SECRET,
+            ENCRYPTION_KEY,
+            prefix,
+            common::current_isolation(),
+            graph,
+        )
+        .await;
+        // A imports the fixture; B imports what A exported.
+        let document = match exported.last() {
+            None => DOC.to_string(),
+            Some(previous) => {
+                let previous: &ArchitectureModelExported = previous;
+                previous.document.clone()
+            }
+        };
+        let imported: ArchitectureModelImported = payload(
+            test_support::dispatch(
+                &state,
+                test_support::request(
+                    SECRET,
+                    2,
+                    graph,
+                    Method::ArchitectureModelImport {
+                        document,
+                        expected_version: Some(1),
+                    },
+                ),
+            )
+            .await,
+        );
+        reported.push((imported.nodes, imported.edges));
+        let out: ArchitectureModelExported = payload(
+            test_support::dispatch(
+                &state,
+                test_support::request(
+                    SECRET,
+                    3,
+                    graph,
+                    Method::ArchitectureModelExport { scope: None },
+                ),
+            )
+            .await,
+        );
+        exported.push(out);
+    }
+    assert_eq!(reported[1], (5, 1), "B's import of A's export");
+    assert_eq!(exported[0].model_digest, exported[1].model_digest);
+    assert_eq!(exported[0].document_digest, exported[1].document_digest);
+    for digest in [&exported[0].model_digest, &exported[0].document_digest] {
+        assert_eq!(digest.len(), 64);
+        assert!(digest.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+    }
+}

@@ -2094,6 +2094,12 @@ name = "data_prep_declare"
 path = "benches/data_prep_declare.rs"
 harness = false
 
+# ArchiMate exchange export at 5,000 elements (MEDULLA-CQ-ORCH-R705.10): nightly budget.
+[[bench]]
+name = "architecture_exchange"
+path = "benches/architecture_exchange.rs"
+harness = false
+
 # Container subtree resolution at 10,000 containers (MEDULLA-INGEST-WORKER-R904.6): nightly budget.
 [[bench]]
 name = "source_hierarchy"
