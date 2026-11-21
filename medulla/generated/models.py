@@ -3655,9 +3655,9 @@ class DecideRequest(BaseModel):
     policy: DecisionPolicyRef
     question: StatisticalQuestion
     tenant_id: str
-    evidence_streams: (
-        Annotated[list[EvidenceStreamRef], Field(max_length=16)]
-    ) = Field(default_factory=list)
+    evidence_streams: Annotated[list[EvidenceStreamRef], Field(max_length=16)] = Field(
+        default_factory=list
+    )
 
 
 class DecimateRequest(BaseModel):
@@ -4829,9 +4829,9 @@ class RunRecordCompiledProgram(BaseModel):
     reusable: bool = Field(default=False)
     source: TraceSource
     trace: RunTraceRecord
-    phrasings: (
-        Annotated[list[ProgramPhrasing], Field(max_length=16)]
-    ) = Field(default_factory=list)
+    phrasings: Annotated[list[ProgramPhrasing], Field(max_length=16)] = Field(
+        default_factory=list
+    )
     match_threshold_micros: int | None = None
 
 
@@ -8236,9 +8236,9 @@ class HarnessConfigEvaluationEvidence(BaseModel):
     model_profile: ComponentDependency
     request: HarnessConfigRequestBody
     tool_subset_certificate: HarnessSolverCertificate | None = None
-    declared_options: (
-        Annotated[list[DeclaredOption], Field(max_length=64)]
-    ) = Field(default_factory=list)
+    declared_options: Annotated[list[DeclaredOption], Field(max_length=64)] = Field(
+        default_factory=list
+    )
     plan_scaffold_no_gain_run: ObservationRef | None = None
 
 
@@ -8250,9 +8250,9 @@ class HarnessConfigRequestBody(BaseModel):
     priority: LeasePriority
     task_class: str
     usable_context_budget_tokens: Annotated[int, Field(ge=0)]
-    required_capabilities: (
-        Annotated[list[str], Field(max_length=64)]
-    ) = Field(default_factory=list)
+    required_capabilities: Annotated[list[str], Field(max_length=64)] = Field(
+        default_factory=list
+    )
     assistant_profile_ref: str | None = None
 
 
@@ -22355,9 +22355,9 @@ class OutcomeAggregate(BaseModel):
     rows: BoundedVec_OptionAggregate_1024
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     transfer: TransferEstimate | None = None
-    skill_candidates: (
-        Annotated[list[SkillCandidateRow], Field(max_length=1024)]
-    ) = Field(default_factory=list)
+    skill_candidates: Annotated[list[SkillCandidateRow], Field(max_length=1024)] = (
+        Field(default_factory=list)
+    )
 
 
 class OutcomeAggregateRequest(BaseModel):
@@ -28177,9 +28177,9 @@ class StatisticalInputs(BaseModel):
     policy: DecisionPolicyRef
     policy_digest: str
     shortlist: ShortlistProvenance
-    evidence_streams: (
-        Annotated[list[EvidenceStreamRef], Field(max_length=16)]
-    ) = Field(default_factory=list)
+    evidence_streams: Annotated[list[EvidenceStreamRef], Field(max_length=16)] = Field(
+        default_factory=list
+    )
 
 
 class StatisticalOutcomeActed(BaseModel):
@@ -31100,9 +31100,9 @@ class WireLoginGranted(BaseModel):
 
 
 class WireLoginKind(str, Enum):
-    PASSWORD = "Password"
+    PASSWORD = "Password"  # nosec B105
     CERTIFICATE = "Certificate"
-    TOKEN = "Token"
+    TOKEN = "Token"  # nosec B105
 
 
 class WireLoginRevoke(BaseModel):
@@ -33766,7 +33766,7 @@ class ClaimOpPropose(BaseModel):
 
 
 class ProofVerdict(str, Enum):
-    PASS = "pass"
+    PASS = "pass"  # nosec B105
     FAIL = "fail"
 
 
@@ -37586,6 +37586,7 @@ class MethodRecordGateVerdictParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     changeset: str
+    branch: str
     gate_id: str
     input_digest: str
     verdict: Literal["pass", "fail"]
@@ -41259,9 +41260,7 @@ class Candidate(BaseModel):
     confidence: float
     grounding: AnswerGrounding
     claims: list[RetrievalArbitrationClaim] = Field(default_factory=list)
-    support_state: SupportState = Field(
-        default_factory=lambda: SupportState.UNKNOWN
-    )
+    support_state: SupportState = Field(default_factory=lambda: SupportState.UNKNOWN)
 
 
 class TrajectoryAnswerBudget(BaseModel):

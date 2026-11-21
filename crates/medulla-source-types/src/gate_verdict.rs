@@ -6,7 +6,7 @@
 use medulla_work_types::step_verdict::VerificationVerdict;
 use serde::{Deserialize, Serialize};
 
-use crate::lifecycle::{sha256_hex, LifecycleRefusal};
+use crate::lifecycle::{sha256_hex, LifecycleRefusal, ProjectModeApproval};
 
 /// The graph `type` of a sealed gate verdict node.
 pub const GATE_VERDICT_TYPE: &str = "GateVerdict";
@@ -151,4 +151,85 @@ pub fn landing_gate_check(
             blocked.join(",")
         )))
     }
+}
+
+/// `LandingPolicyPut` request (MEDULLA-SCM-R008): set the landing policy of one branch. A write
+/// that lowers the stored policy (drops a required gate, or leaves none) needs an operator
+/// approval.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct LandingPolicyPutRequest {
+    pub policy: LandingPolicy,
+    #[serde(default)]
+    pub approval: Option<ProjectModeApproval>,
+}
+
+/// What `LandingPolicyPut` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LandingPolicyReceipt {
+    /// The policy node id, `landing_policy:<repo>:<branch>`.
+    pub node_id: String,
+    /// True when the stored policy was lowered under an approval.
+    pub lowered: bool,
+    /// True when the same policy was already stored.
+    pub replayed: bool,
+}
+
+/// What `LandingPolicyPut` writes (not on the wire).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LandingPolicyWrite {
+    pub request: LandingPolicyPutRequest,
+    pub node_id: String,
+    pub lowered: bool,
+    pub replayed: bool,
+}
+
+fn valid_gate_id(gate: &str) -> bool {
+    !gate.is_empty()
+        && gate.len() <= MAX_GATE_ID_BYTES
+        && gate
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'/' | b'-'))
+}
+
+/// Decide one `LandingPolicyPut` against the stored policy of the same repository and branch.
+/// The required gates are kept sorted and unique so the same set always seals the same record.
+pub fn handle_landing_policy_put(
+    mut request: LandingPolicyPutRequest,
+    stored: Option<&LandingPolicy>,
+) -> Result<LandingPolicyWrite, LifecycleRefusal> {
+    let invalid = |what: &str| Err(LifecycleRefusal::InvalidArgument(what.to_owned()));
+    if request.policy.repo.trim().is_empty() || request.policy.branch.trim().is_empty() {
+        return invalid("a landing policy names its repo and branch");
+    }
+    if !request.policy.required_gates.iter().all(|gate| valid_gate_id(gate)) {
+        return invalid("a required gate id is out of bounds");
+    }
+    request.policy.required_gates.sort();
+    request.policy.required_gates.dedup();
+    let node_id = landing_policy_node_id(&request.policy.repo, &request.policy.branch);
+    let replayed = stored == Some(&request.policy);
+    let lowered = stored.is_some_and(|held| {
+        held.required_gates
+            .iter()
+            .any(|gate| !request.policy.required_gates.contains(gate))
+    });
+    if lowered {
+        let approved = request.approval.as_ref().is_some_and(|approval| {
+            !approval.approver.trim().is_empty()
+                && !approval.reason.trim().is_empty()
+                && approval.approved_at_ms > 0
+        });
+        if !approved {
+            return Err(LifecycleRefusal::LandingPolicyApprovalRequired(node_id));
+        }
+    }
+    Ok(LandingPolicyWrite {
+        request,
+        node_id,
+        lowered,
+        replayed,
+    })
 }

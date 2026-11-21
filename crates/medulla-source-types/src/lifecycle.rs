@@ -137,6 +137,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("GATE_INPUT_DIGEST_MISMATCH"),
     RefusalCode::new("GATE_VERDICT_SEALED"),
     RefusalCode::new("LANDING_GATE_BLOCKED"),
+    RefusalCode::new("LANDING_POLICY_APPROVAL_REQUIRED"),
+    RefusalCode::new("COMPETENCY_SUBJECT_UNKNOWN"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -182,6 +184,12 @@ pub enum LifecycleRefusal {
     GateVerdictSealed(String),
     #[error("LANDING_GATE_BLOCKED: {0}")]
     LandingGateBlocked(String),
+    #[error("LANDING_POLICY_APPROVAL_REQUIRED: {0}")]
+    LandingPolicyApprovalRequired(String),
+    #[error("COMPETENCY_SUBJECT_UNKNOWN: {0}")]
+    CompetencySubjectUnknown(String),
+    #[error("PARAMETER_INVALID: {0}")]
+    ParameterInvalid(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -212,6 +220,9 @@ impl LifecycleRefusal {
             Self::GateInputDigestMismatch(_) => "GATE_INPUT_DIGEST_MISMATCH",
             Self::GateVerdictSealed(_) => "GATE_VERDICT_SEALED",
             Self::LandingGateBlocked(_) => "LANDING_GATE_BLOCKED",
+            Self::LandingPolicyApprovalRequired(_) => "LANDING_POLICY_APPROVAL_REQUIRED",
+            Self::CompetencySubjectUnknown(_) => "COMPETENCY_SUBJECT_UNKNOWN",
+            Self::ParameterInvalid(_) => "PARAMETER_INVALID",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }
@@ -941,6 +952,7 @@ pub fn handle_proposal_decide(
 
 /// How a defect reached the engine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DefectIntake {
     GateFailure,
@@ -952,6 +964,7 @@ pub enum DefectIntake {
 
 /// A defect's place in its life cycle.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DefectStatus {
     New,
@@ -965,6 +978,7 @@ pub enum DefectStatus {
 
 /// How serious a defect is judged to be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
     Critical,
@@ -996,6 +1010,117 @@ pub struct Defect {
     pub status: DefectStatus,
     pub symptoms: Vec<Symptom>,
     pub created_at: u64,
+}
+
+/// The graph `type` of a stored defect node.
+pub const DEFECT_TYPE: &str = "Defect";
+/// The property holding the canonical JSON of the stored [`Defect`], symptoms included.
+pub const DEFECT_RECORD_PROPERTY: &str = "defect_record";
+/// The longest defect title and symptom text accepted.
+pub const MAX_DEFECT_TITLE_BYTES: usize = 512;
+/// The longest symptom text accepted.
+pub const MAX_SYMPTOM_TEXT_BYTES: usize = 64 * 1024;
+
+/// The node id of a defect: `defect:<repo>/<id>`, unique across the graph.
+pub fn defect_node_id(repo: &str, id: &str) -> String {
+    format!("defect:{repo}/{id}")
+}
+
+/// One filing of a symptom (MEDULLA-SDLC-R003.3): the request of `FileDefect` and the
+/// input of the in-process `file_defect`. Each call carries the intake path, the source
+/// record id and the time.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct FileDefectRequest {
+    /// The repository the defect belongs to.
+    pub repo: String,
+    /// How the symptom reached the engine.
+    pub intake: DefectIntake,
+    /// The title a new defect takes.
+    pub title: String,
+    /// The severity a new defect takes; `medium` when absent.
+    #[serde(default)]
+    pub severity: Option<Severity>,
+    /// The record the symptom came from (a verdict node id, a run trace id, an incident id).
+    pub source_record_id: String,
+    /// When the symptom was observed, in milliseconds.
+    pub observed_at: u64,
+    /// The symptom text; equal normalized texts land on one defect.
+    pub text: String,
+}
+
+/// What `FileDefect` did with a symptom.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum DefectFileOutcome {
+    /// A new defect was opened.
+    Created,
+    /// An open defect with the same signature took the symptom.
+    Absorbed,
+    /// A closed defect with the same signature reopened.
+    Reopened,
+}
+
+/// What `FileDefect` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FileDefectReceipt {
+    /// The defect node id, `defect:<repo>/<id>`.
+    pub node_id: String,
+    /// The defect id inside its repository.
+    pub defect_id: String,
+    /// What the filing did.
+    pub outcome: DefectFileOutcome,
+    /// The defect's status after the filing.
+    pub status: DefectStatus,
+    /// How many symptoms the defect now lists.
+    pub symptoms: u64,
+}
+
+/// What one filing writes (not on the wire): the defect as stored after the filing.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DefectWrite {
+    /// The defect with its full symptom list.
+    pub defect: Defect,
+    /// What the filing did.
+    pub outcome: DefectFileOutcome,
+}
+
+impl DefectWrite {
+    /// The defect node id.
+    pub fn node_id(&self) -> String {
+        defect_node_id(&self.defect.repo, &self.defect.id)
+    }
+
+    /// The receipt of this filing.
+    pub fn receipt(&self) -> FileDefectReceipt {
+        FileDefectReceipt {
+            node_id: self.node_id(),
+            defect_id: self.defect.id.clone(),
+            outcome: self.outcome,
+            status: self.defect.status,
+            symptoms: self.defect.symptoms.len() as u64,
+        }
+    }
+}
+
+/// Check one filing's bounds; the served `FileDefect` and every in-process caller go through
+/// this one check before the defect book sees the symptom.
+pub fn handle_file_defect(request: FileDefectRequest) -> Result<FileDefectRequest, LifecycleRefusal> {
+    let blank = |value: &str| value.trim().is_empty();
+    if blank(&request.repo) || blank(&request.title) || blank(&request.source_record_id) || blank(&request.text) {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a defect filing names its repo, title, source record and symptom text".to_owned(),
+        ));
+    }
+    if request.title.len() > MAX_DEFECT_TITLE_BYTES || request.text.len() > MAX_SYMPTOM_TEXT_BYTES {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a defect title or symptom text is over its bound".to_owned(),
+        ));
+    }
+    Ok(request)
 }
 
 /// The derived state of a requirement row.

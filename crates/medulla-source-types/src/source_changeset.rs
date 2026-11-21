@@ -55,6 +55,9 @@ pub enum ChangesetRefusal {
     ChangesetEmpty,
     /// A bound or pairing of the request is broken (MEDULLA-SCM-R002).
     ChangesetInvalid,
+    /// A changeset that names no requirement ID and is not a `chore`
+    /// (MEDULLA-SDLC-R012.3).
+    ChangesetRequirementMissing,
     /// The writer's base is not a changeset of the branch (MEDULLA-SCM-R002).
     ChangesetParentNotOnBranch,
     /// An overlapping path whose three-way line merge does not merge cleanly
@@ -104,6 +107,7 @@ impl ChangesetRefusal {
             Self::BlobNotFound => "BLOB_NOT_FOUND",
             Self::ChangesetEmpty => "CHANGESET_EMPTY",
             Self::ChangesetInvalid => "CHANGESET_INVALID",
+            Self::ChangesetRequirementMissing => "CHANGESET_REQUIREMENT_MISSING",
             Self::ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
             Self::SourceConflict => "SOURCE_CONFLICT",
             Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
@@ -654,6 +658,36 @@ fn valid_path(path: &str) -> bool {
             .any(|segment| segment.is_empty() || segment == "." || segment == "..")
 }
 
+/// Whether the commit subject (the first line of `message`) is a conventional `chore`: the type
+/// before an optional `(scope)`, an optional `!` and the colon is `chore`.
+pub fn is_chore(message: &str) -> bool {
+    let subject = message.lines().next().unwrap_or_default();
+    let kind = subject
+        .split(|c| matches!(c, '(' | ':' | '!'))
+        .next()
+        .unwrap_or_default();
+    kind.trim() == "chore"
+}
+
+/// Every changeset carries the requirement IDs it delivers (MEDULLA-SDLC-R012.3): a `Spec:`
+/// trailer in the message or in the structured `trailers`. A changeset with none needs the
+/// `chore` kind (a `chore` commit subject); otherwise it refuses `CHANGESET_REQUIREMENT_MISSING`.
+pub fn require_requirement_ids(
+    message: &str,
+    trailers: Option<&Trailers>,
+) -> Result<(), SubmitRefusal> {
+    let cited = !Trailers::parse(message).spec_ids.is_empty()
+        || trailers.is_some_and(|structured| !structured.spec_ids.is_empty());
+    if cited || is_chore(message) {
+        Ok(())
+    } else {
+        Err(SubmitRefusal::new(
+            ChangesetRefusal::ChangesetRequirementMissing,
+            "the changeset names no requirement ID and is not a chore",
+        ))
+    }
+}
+
 impl SubmitChangesetRequest {
     /// Check every bound and pairing of the request; the first failure names
     /// its field. No store is read.
@@ -664,7 +698,8 @@ impl SubmitChangesetRequest {
                 "the submission has no paths",
             ));
         }
-        self.validate_bounds(false)
+        self.validate_bounds(false)?;
+        require_requirement_ids(&self.message, self.trailers.as_ref())
     }
 
     /// [`Self::validate`] for one imported git commit (MEDULLA-SCM-R010): git
@@ -746,6 +781,22 @@ impl SubmitChangesetRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-SDLC-R012.3
+    #[test]
+    fn a_changeset_cites_a_requirement_or_is_a_chore() {
+        assert!(require_requirement_ids("feat: x\n\nSpec: DEMO-R001", None).is_ok());
+        assert!(require_requirement_ids("chore: bump\n\nno ids", None).is_ok());
+        assert!(require_requirement_ids("chore(deps)!: bump", None).is_ok());
+        let structured = Trailers {
+            spec_ids: vec!["DEMO-R001".into()],
+            ..Trailers::default()
+        };
+        assert!(require_requirement_ids("add", Some(&structured)).is_ok());
+        let refused = require_requirement_ids("feat: x\n\nSpec: none (ci)", None).unwrap_err();
+        assert_eq!(refused.refusal.code(), "CHANGESET_REQUIREMENT_MISSING");
+        assert!(!is_chore("choreography: x"));
+    }
 
     /// Verifies MEDULLA-SCM-R002.1: Structured trailers on a changeset
     // spec: MEDULLA-SCM-R002.1

@@ -1130,6 +1130,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CHANGESET_INVALID",
             "CHANGESET_NODE_CONFLICT",
             "CHANGESET_PARENT_NOT_ON_BRANCH",
+            "CHANGESET_REQUIREMENT_MISSING",
             "LIFECYCLE_ENDPOINT_UNKNOWN",
             "MERGE_BLOB_UNREADABLE",
             "PATH_WRITE_DENIED",
@@ -1756,6 +1757,30 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.
     ("ProposalList", &["TENANT_SCOPE_REQUIRED"]),
+    // MEDULLA-SDLC-R014.6: the competency questions' refusals.
+    (
+        "SpecQuestion",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "PARAMETER_INVALID",
+            "COMPETENCY_SUBJECT_UNKNOWN",
+        ],
+    ),
+    (
+        "LandingPolicyPut",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "LANDING_POLICY_APPROVAL_REQUIRED",
+        ],
+    ),
+    (
+        "FileDefect",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+        ],
+    ),
     (
         "ProposalDecide",
         &[

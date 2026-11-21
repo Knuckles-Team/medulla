@@ -6,7 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    FileDefect as FileDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
@@ -20,16 +20,21 @@ use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
-    LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
+    handle_file_defect, Defect, DefectWrite, FileDefectRequest, DEFECT_RECORD_PROPERTY,
+    DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
     ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
 use medulla_source_types::gate_verdict::{
-    gate_verdict_node_id, GateVerdictReceipt, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY,
-    GATE_VERDICT_SEAL_PROPERTY, GATE_VERDICT_TYPE,
+    gate_verdict_node_id, handle_landing_policy_put, GateVerdictReceipt, GateVerdictRecord,
+    LandingPolicy, LandingPolicyPutRequest, LandingPolicyReceipt, GATE_VERDICT_RECORD_PROPERTY,
+    GATE_VERDICT_SEAL_PROPERTY, GATE_VERDICT_TYPE, LANDING_POLICY_RECORD_PROPERTY,
+    LANDING_POLICY_TYPE,
 };
+use medulla_source_types::lifecycle::DefectIntake;
+use medulla_work_types::step_verdict::VerificationVerdict;
 use serde_json::{json, Map, Value};
 use tokio::sync::RwLock;
 
@@ -47,6 +52,8 @@ const PROPOSAL_TYPE: &str = "Proposal";
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
 const MAX_RELEASES_READ: usize = 100_000;
 const MAX_PROPOSALS_READ: usize = 100_000;
+const MAX_DEFECTS_READ: usize = 100_000;
+const MAX_SPEC_VIEW_READ: usize = 200_000;
 const MAX_CHAIN: usize = 200_000;
 const MAX_BATCH_OPERATIONS: usize = 50_000;
 
@@ -75,6 +82,7 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::RecordGateVerdict {
             changeset,
+            branch,
             gate_id,
             input_digest,
             verdict,
@@ -89,7 +97,7 @@ pub async fn dispatch_sdlc_methods(
                 evidence_digest,
                 duration_ms,
             };
-            dispatch_boxed(record_gate_verdict(state, target, record)).await
+            dispatch_boxed(record_gate_verdict(state, target, branch, record)).await
         }
         Method::RecordDeployment { deployment } => {
             dispatch_boxed(record_deployment(state, target, deployment)).await
@@ -106,6 +114,23 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::ProjectModeSet { request } => {
             dispatch_boxed(project_mode_set(state, target, request)).await
+        }
+        Method::SpecQuestion {
+            question,
+            subject,
+            graph,
+        } => {
+            let target = SdlcTarget {
+                graph: &graph,
+                ..target
+            };
+            dispatch_boxed(spec_question(state, target, question, subject)).await
+        }
+        Method::FileDefect { request } => {
+            dispatch_boxed(file_defect(state, target, request)).await
+        }
+        Method::LandingPolicyPut { request } => {
+            dispatch_boxed(landing_policy_put(state, target, request)).await
         }
         other => return ControlFlow::Continue(other),
     };
@@ -147,6 +172,7 @@ async fn record_release(
 async fn record_gate_verdict(
     state: &Arc<RwLock<ServerState>>,
     target: SdlcTarget<'_>,
+    branch: String,
     request: GateVerdictRecord,
 ) -> Response {
     let result = async {
@@ -172,13 +198,20 @@ async fn record_gate_verdict(
             }
             medulla_types::msgpack::decode_property_value(&blob).ok()
         };
-        let changeset_known = read(&commit_node_id(&request.changeset)).is_some_and(|node| {
+        let changeset_node = read(&commit_node_id(&request.changeset)).filter(|node| {
             node.get("type").and_then(Value::as_str) == Some(COMMIT_TYPE)
                 && node
                     .get("tenant_id")
                     .and_then(Value::as_str)
                     .is_none_or(|owner| owner == tenant)
         });
+        let changeset_known = changeset_node.is_some();
+        // The repository a failed gate files its defect under: the changeset's own.
+        let repo = changeset_node
+            .as_ref()
+            .and_then(|node| node.get("repo").and_then(Value::as_str))
+            .unwrap_or(target.graph)
+            .to_string();
         let stored: Option<GateVerdictRecord> = read(&gate_verdict_node_id(
             &request.changeset,
             &request.gate_id,
@@ -187,7 +220,7 @@ async fn record_gate_verdict(
             serde_json::from_str(node.get(GATE_VERDICT_RECORD_PROPERTY)?.as_str()?).ok()
         });
         let tree_digest = if changeset_known {
-            changeset_tree_digest(state, &target, &request.changeset).await?
+            changeset_tree_digest(state, &target, &branch, &request.changeset).await?
         } else {
             None
         };
@@ -207,16 +240,29 @@ async fn record_gate_verdict(
         properties.insert("changeset".into(), write.record.changeset.clone().into());
         properties.insert("gate_id".into(), write.record.gate_id.clone().into());
         properties.insert("verdict".into(), write.record.verdict.name().into());
-        properties.insert(
-            "recorded_at_ms".into(),
-            medulla_kernel::kernel::dispatch_support::authoritative_now_ms().into(),
-        );
+        let recorded_at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        properties.insert("recorded_at_ms".into(), recorded_at.into());
         stamp(&mut properties, &target);
         let (from, to) = write.judges();
-        let operations = vec![
+        let mut operations = vec![
             json!({"op": "upsert_node", "id": write.node_id, "properties": properties}),
             edge(&from, "judges", &to, &target),
         ];
+        // MEDULLA-SDLC-R003.3: a failed gate files a defect in the verdict's own batch. A
+        // replayed verdict files nothing, so one verdict is one symptom.
+        if write.record.verdict == VerificationVerdict::Fail && !write.replayed {
+            let filing = FileDefectRequest {
+                repo: repo.clone(),
+                intake: DefectIntake::GateFailure,
+                title: format!("gate {} failed", write.record.gate_id),
+                severity: None,
+                source_record_id: write.node_id.clone(),
+                observed_at: recorded_at,
+                text: format!("gate {} failed", write.record.gate_id),
+            };
+            let filed = file_defect_write(state, &target, filing).await?;
+            operations.extend(defect_operations(&filed, &target)?);
+        }
         commit(state, &target, operations).await?;
         Ok(GateVerdictReceipt {
             node_id: write.node_id,
@@ -228,65 +274,368 @@ async fn record_gate_verdict(
     typed_response::<RecordGateVerdictResult>(target.req_id, result)
 }
 
-/// The digest of the canonical tree listing of `changeset` on the repository's default branch;
-/// `None` when the branch or the changeset is not on it.
+/// The node types a competency question reads.
+const SPEC_VIEW_TYPES: [&str; 8] = [
+    "Requirement",
+    "SYMBOL",
+    "TaskLine",
+    "Contract",
+    "ConstitutionPrinciple",
+    "Goal",
+    COMMIT_TYPE,
+    "PlanSection",
+];
+/// The relationships a competency question reads.
+const SPEC_VIEW_RELATIONSHIPS: [&str; 9] = [
+    "implementedByCommit",
+    "verifiedBy",
+    "implementedBy",
+    "boundTest",
+    "citesRequirement",
+    "crossesSeam",
+    "dependsOnRow",
+    "covers",
+    "targetsGoal",
+];
+const SPEC_VIEW_EXTRA_RELATIONSHIPS: [&str; 2] = ["forRow", "governedBy"];
+
+/// `SpecQuestion` (MEDULLA-SDLC-R014.6): read the records and edges the caller can see once,
+/// then answer in `medulla_sdlc::spec_artifact_questions::answer`. UQL has no negation across
+/// rows, so no UQL runs here.
+async fn spec_question(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    question: medulla_source_types::spec_question::SpecQuestion,
+    subject: Option<String>,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let view = spec_graph_view(&core, &authority, tenant);
+        medulla_sdlc::spec_artifact_questions::answer(question, subject.as_deref(), &view)
+            .map_err(|e| e.to_string())
+    }
+    .await;
+    typed_response::<SpecQuestionResult>(target.req_id, result)
+}
+
+/// The visible records of the spec artifact types and the typed edges among them.
+fn spec_graph_view(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    tenant: &str,
+) -> medulla_sdlc::spec_artifact_questions::SpecGraphView {
+    use medulla_sdlc::spec_artifact_questions::{SpecGraphView, ViewNode};
+    let mut view = SpecGraphView::default();
+    for node_type in SPEC_VIEW_TYPES {
+        for (id, blob) in core.get_nodes_by_label(node_type, MAX_SPEC_VIEW_READ) {
+            if !authority.can_see_node(&blob, core.is_schema_node(&id)) {
+                continue;
+            }
+            let Ok(Value::Object(node)) = medulla_types::msgpack::decode_property_value(&blob)
+            else {
+                continue;
+            };
+            if node.get("tenant_id").and_then(Value::as_str).is_some_and(|owner| owner != tenant) {
+                continue;
+            }
+            let props = node
+                .iter()
+                .map(|(key, value)| {
+                    let text = match value {
+                        Value::String(text) => text.clone(),
+                        other => other.to_string(),
+                    };
+                    (key.clone(), text)
+                })
+                .collect();
+            view.nodes.insert(
+                id,
+                ViewNode {
+                    node_type: node_type.to_string(),
+                    props,
+                    digest: medulla_source_types::lifecycle::sha256_hex(&blob),
+                },
+            );
+        }
+    }
+    let ids: Vec<String> = view.nodes.keys().cloned().collect();
+    for source in &ids {
+        for destination in core.get_successors(source).unwrap_or_default() {
+            if !view.nodes.contains_key(&destination) {
+                continue;
+            }
+            for (relationship, _) in core.typed_edges_between(source, &destination) {
+                if SPEC_VIEW_RELATIONSHIPS.contains(&relationship.as_str())
+                    || SPEC_VIEW_EXTRA_RELATIONSHIPS.contains(&relationship.as_str())
+                {
+                    view.edges
+                        .insert((source.clone(), relationship, destination.clone()));
+                }
+            }
+        }
+    }
+    view
+}
+
+/// `FileDefect` (MEDULLA-SDLC-R003.3): file one symptom through the one defect book and write
+/// the touched `Defect` node in one gateway-routed batch.
+async fn file_defect(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: FileDefectRequest,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let request = handle_file_defect(request).map_err(|e| e.to_string())?;
+        let write = file_defect_write(state, &target, request).await?;
+        commit(state, &target, defect_operations(&write, &target)?).await?;
+        Ok(write.receipt())
+    }
+    .await;
+    typed_response::<FileDefectResult>(target.req_id, result)
+}
+
+/// File `request` against the stored defects of its repository: the decision, not the write.
+async fn file_defect_write(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    request: FileDefectRequest,
+) -> Result<DefectWrite, String> {
+    let existing = load_defects(state, target, &request.repo).await?;
+    Ok(medulla_h_ingest::defect_intake::file_defect(existing, request))
+}
+
+/// The stored defects of `repo` the caller can see, owned by the verified tenant.
+async fn load_defects(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    repo: &str,
+) -> Result<Vec<Defect>, String> {
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    let tenant = target.verified.tenant();
+    let mut defects: Vec<Defect> = core
+        .get_nodes_by_label(DEFECT_TYPE, MAX_DEFECTS_READ)
+        .into_iter()
+        .filter(|(node_id, blob)| authority.can_see_node(blob, core.is_schema_node(node_id)))
+        .filter_map(|(_, blob)| {
+            let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
+            if node.get("tenant_id").and_then(Value::as_str).is_some_and(|owner| owner != tenant) {
+                return None;
+            }
+            serde_json::from_str::<Defect>(node.get(DEFECT_RECORD_PROPERTY)?.as_str()?).ok()
+        })
+        .filter(|defect| defect.repo == repo)
+        .collect();
+    // The defect book numbers a new defect by position, so the stored order is the id order.
+    defects.sort_by(|left, right| left.id.cmp(&right.id));
+    Ok(defects)
+}
+
+/// The one `Defect` node of a filing; the status, severity and signature are flat properties
+/// beside the canonical record so a UQL read needs no JSON decode. `culprit_changeset` is not
+/// written here (a bisect writes it, MEDULLA-SCM-R009), and an upsert keeps it.
+fn defect_properties(write: &DefectWrite, target: &SdlcTarget<'_>) -> Result<Map<String, Value>, String> {
+    let defect = &write.defect;
+    let body = serde_json::to_string(defect).map_err(|_| "defect record encoding failed".to_string())?;
+    let enum_name = |value: Result<Value, serde_json::Error>| {
+        value.ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default()
+    };
+    let mut properties = Map::new();
+    properties.insert("type".into(), DEFECT_TYPE.into());
+    properties.insert(DEFECT_RECORD_PROPERTY.into(), body.into());
+    properties.insert("repo".into(), defect.repo.clone().into());
+    properties.insert("defect_id".into(), defect.id.clone().into());
+    properties.insert("title".into(), defect.title.clone().into());
+    properties.insert("signature_digest".into(), defect.signature_digest.clone().into());
+    properties.insert("status".into(), enum_name(serde_json::to_value(defect.status)).into());
+    properties.insert("severity".into(), enum_name(serde_json::to_value(defect.severity)).into());
+    properties.insert("intake".into(), enum_name(serde_json::to_value(defect.intake)).into());
+    properties.insert("symptom_count".into(), (defect.symptoms.len() as u64).into());
+    properties.insert("created_at".into(), defect.created_at.into());
+    stamp(&mut properties, target);
+    Ok(properties)
+}
+
+fn defect_operations(write: &DefectWrite, target: &SdlcTarget<'_>) -> Result<Vec<Value>, String> {
+    bounded(vec![
+        json!({"op": "upsert_node", "id": write.node_id(), "properties": defect_properties(write, target)?}),
+    ])
+}
+
+/// `LandingPolicyPut` (MEDULLA-SCM-R008): the landing policy of one branch is a governed record.
+/// Decide in `handle_landing_policy_put` against the stored policy (a lowering needs an operator
+/// approval), then write the one `LandingPolicy` node in one gateway-routed batch.
+async fn landing_policy_put(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: LandingPolicyPutRequest,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let stored: Option<LandingPolicy> = visible_node(
+            state,
+            &target,
+            &medulla_source_types::gate_verdict::landing_policy_node_id(
+                &request.policy.repo,
+                &request.policy.branch,
+            ),
+        )
+        .await?
+        .and_then(|node| {
+            serde_json::from_str(node.get(LANDING_POLICY_RECORD_PROPERTY)?.as_str()?).ok()
+        });
+        let write = handle_landing_policy_put(request, stored.as_ref()).map_err(|e| e.to_string())?;
+        let body = serde_json::to_string(&write.request.policy)
+            .map_err(|_| "landing policy encoding failed".to_string())?;
+        let mut properties = Map::new();
+        properties.insert("type".into(), LANDING_POLICY_TYPE.into());
+        properties.insert(LANDING_POLICY_RECORD_PROPERTY.into(), body.into());
+        properties.insert("repo".into(), write.request.policy.repo.clone().into());
+        properties.insert("branch".into(), write.request.policy.branch.clone().into());
+        if let Some(approval) = &write.request.approval {
+            properties.insert("approver".into(), approval.approver.clone().into());
+            properties.insert("reason".into(), approval.reason.clone().into());
+            properties.insert("approved_at_ms".into(), approval.approved_at_ms.into());
+        }
+        stamp(&mut properties, &target);
+        if !write.replayed {
+            commit(
+                state,
+                &target,
+                vec![json!({"op": "upsert_node", "id": write.node_id, "properties": properties})],
+            )
+            .await?;
+        }
+        Ok(LandingPolicyReceipt {
+            node_id: write.node_id,
+            lowered: write.lowered,
+            replayed: write.replayed,
+        })
+    }
+    .await;
+    typed_response::<LandingPolicyPutResult>(target.req_id, result)
+}
+
+/// The stored node `id` of the request graph, decoded, when the caller can see it and it
+/// belongs to the verified tenant.
+async fn visible_node(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    id: &str,
+) -> Result<Option<Value>, String> {
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    let Some(blob) = core.get_node_properties(id) else {
+        return Ok(None);
+    };
+    if !authority.can_see_node(&blob, core.is_schema_node(id)) {
+        return Ok(None);
+    }
+    Ok(medulla_types::msgpack::decode_property_value(&blob)
+        .ok()
+        .filter(|node| {
+            node.get("tenant_id")
+                .and_then(Value::as_str)
+                .is_none_or(|owner| owner == target.verified.tenant())
+        }))
+}
+
+/// The digest of the canonical tree listing of `changeset` on the chain of `branch`; `None`
+/// when the branch is empty or the changeset is not on it. The chain is read from the registry
+/// directly: the default branch has a chain but no branch row, so `resolve_target` (which
+/// refuses it) is not the read.
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn changeset_tree_digest(
     state: &Arc<RwLock<ServerState>>,
     target: &SdlcTarget<'_>,
+    branch: &str,
     changeset: &str,
 ) -> Result<Option<String>, String> {
-    use medulla_mutation_types::branch::{BranchRef, RESERVED_BRANCH_NAME};
+    use medulla_mutation_types::branch::BranchRef;
+    let registry = {
+        let guard = state.read().await;
+        medulla_persistence::branch_registry_store::shared_branch_registry(&guard)?
+    };
     let reference = BranchRef {
         tenant: target.verified.tenant().to_string(),
         graph: target.graph.to_string(),
-        name: RESERVED_BRANCH_NAME.to_string(),
-    };
-    let Ok(branch) =
-        medulla_h_graph::graph_ops::branch::resolve_target(state, target.verified, reference).await
-    else {
-        return Ok(None);
+        name: branch.to_string(),
     };
     let changeset = changeset.to_string();
-    branch
-        .read_blocking(move |registry, reference| {
-            let mut found = None;
-            for commit in registry.chain(reference)? {
-                let Some(bytes) = registry.commit_payload(reference, &commit.id)? else {
-                    continue;
-                };
-                if medulla_source_types::source_changeset::decode_changeset(&bytes)
-                    .is_ok_and(|candidate| candidate.id == changeset)
-                {
-                    found = Some(commit.id.to_string());
-                    break;
-                }
-            }
-            let Some(commit_id) = found else {
-                return Ok(None);
+    tokio::task::spawn_blocking(move || {
+        let mut found = None;
+        for commit in registry.chain(&reference)? {
+            let Some(bytes) = registry.commit_payload(&reference, &commit.id)? else {
+                continue;
             };
-            let tree = medulla_compute::source_tree::tree_at(
-                &super::read_tree::RegistryTree {
-                    registry,
-                    branch: reference,
-                },
-                &commit_id,
-                "",
-                0,
-            )
-            .map_err(|error| format!("{error:?}"))?;
-            Ok(Some(medulla_source_types::gate_verdict::tree_listing_digest(
-                tree.iter()
-                    .map(|entry| (entry.path.as_str(), entry.blob_digest.as_str(), entry.mode)),
-            )))
-        })
-        .await?
+            if medulla_source_types::source_changeset::decode_changeset(&bytes)
+                .is_ok_and(|candidate| candidate.id == changeset)
+            {
+                found = Some(commit.id.to_string());
+                break;
+            }
+        }
+        let Some(commit_id) = found else {
+            return Ok(None);
+        };
+        let tree = medulla_compute::source_tree::tree_at(
+            &super::read_tree::RegistryTree {
+                registry: &registry,
+                branch: &reference,
+            },
+            &commit_id,
+            "",
+            0,
+        )
+        .map_err(|error| format!("{error:?}"))?;
+        Ok(Some(medulla_source_types::gate_verdict::tree_listing_digest(
+            tree.iter()
+                .map(|entry| (entry.path.as_str(), entry.blob_digest.as_str(), entry.mode)),
+        )))
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[cfg(not(all(feature = "redb", feature = "blob")))]
 async fn changeset_tree_digest(
     _state: &Arc<RwLock<ServerState>>,
     _target: &SdlcTarget<'_>,
+    _branch: &str,
     _changeset: &str,
 ) -> Result<Option<String>, String> {
     Err("RecordGateVerdict requires the `redb` and `blob` features".to_string())

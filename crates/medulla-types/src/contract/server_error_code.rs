@@ -103,6 +103,8 @@ closed_error_codes! {
         BlobTooLarge => "BLOB_TOO_LARGE",
         ChangesetEmpty => "CHANGESET_EMPTY",
         ChangesetInvalid => "CHANGESET_INVALID",
+        /// MEDULLA-SDLC-R012.3: a changeset names no requirement ID and is not a chore.
+        ChangesetRequirementMissing => "CHANGESET_REQUIREMENT_MISSING",
         ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
         MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
         SourceConflict => "SOURCE_CONFLICT",
@@ -519,6 +521,10 @@ closed_error_codes! {
         GateVerdictSealed => "GATE_VERDICT_SEALED",
         /// MEDULLA-SCM-R008: a required gate has no passing verdict, so the landing is blocked.
         LandingGateBlocked => "LANDING_GATE_BLOCKED",
+        /// MEDULLA-SCM-R008: a write that lowers a landing policy carries no operator approval.
+        LandingPolicyApprovalRequired => "LANDING_POLICY_APPROVAL_REQUIRED",
+        /// MEDULLA-SDLC-R014.6: a competency question names a goal or phase the graph does not hold.
+        CompetencySubjectUnknown => "COMPETENCY_SUBJECT_UNKNOWN",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

@@ -87,6 +87,11 @@ fn is_open(status: DefectStatus) -> bool {
 }
 
 impl DefectBook {
+    /// A book over the defects already stored for one repository.
+    pub fn from_defects(defects: Vec<Defect>) -> Self {
+        Self { defects }
+    }
+
     pub fn defects(&self) -> &[Defect] {
         &self.defects
     }

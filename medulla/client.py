@@ -19020,6 +19020,7 @@ class MedullaClient:
     async def record_gate_verdict(
         self,
         changeset: str,
+        branch: str,
         gate_id: str,
         input_digest: str,
         verdict: str,
@@ -19028,8 +19029,10 @@ class MedullaClient:
     ) -> dict[str, Any]:
         """Record one gate verdict of a changeset (MEDULLA-SCM-R008).
 
-        ``verdict`` is ``"pass"`` or ``"fail"``. ``input_digest`` is the SHA-256 of the
-        canonical tree listing of the changeset (``GATE_INPUT_DIGEST_MISMATCH``); a
+        ``verdict`` is ``"pass"`` or ``"fail"``. ``branch`` names the branch whose chain
+        holds the changeset. ``input_digest`` is the SHA-256 of the canonical tree
+        listing
+        of the changeset on that chain (``GATE_INPUT_DIGEST_MISMATCH``); a
         different verdict for the same gate and changeset is refused
         (``GATE_VERDICT_SEALED``) and an identical one replays.
         """
@@ -19037,6 +19040,7 @@ class MedullaClient:
             "RecordGateVerdict",
             {
                 "changeset": changeset,
+                "branch": branch,
                 "gate_id": gate_id,
                 "input_digest": input_digest,
                 "verdict": verdict,
@@ -19131,6 +19135,62 @@ class MedullaClient:
         result = await self._send("ProjectModeSet", {"request": request}, None)
         if not isinstance(result, dict):
             raise TypeError("ProjectModeSet returned a non-object result")
+        return result
+
+    async def spec_question(
+        self, question: str, graph: str, subject: str | None = None
+    ) -> dict[str, Any]:
+        """Answer one competency question over the spec artifact graph
+        (MEDULLA-SDLC-R014.6).
+
+        ``question`` is ``unreachable_requirements``, ``uncovered_code_items``,
+        ``tasks_blocked_by_contract``, ``principles_at_risk`` (``subject`` is the
+        changeset id), ``changes_advancing_goal`` (``subject`` is the goal node id) or
+        ``next_unblocked_task`` (``subject`` is the phase). The answer holds ``rows``
+        and the ``digests`` of the records it read. A subject given where none is taken,
+        or missing where required, refuses ``PARAMETER_INVALID``; an unknown goal or
+        phase refuses ``COMPETENCY_SUBJECT_UNKNOWN``.
+        """
+        result = await self._send(
+            "SpecQuestion",
+            {"question": question, "subject": subject, "graph": graph},
+            None,
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SpecQuestion returned a non-object result")
+        return result
+
+    async def file_defect(self, request: dict[str, Any]) -> dict[str, Any]:
+        """File one symptom against the defects of a repository (MEDULLA-SDLC-R003.3).
+
+        ``request`` carries ``repo``, ``intake`` (``gate_failure``, ``run_failure``,
+        ``incident``, ``connector_issue`` or ``direct``), ``title``, an optional
+        ``severity``, ``source_record_id``, ``observed_at`` (milliseconds) and ``text``.
+        An open defect with the same normalized signature takes the symptom, a closed
+        one
+        reopens, otherwise a defect opens. The receipt names ``node_id``, ``defect_id``,
+        ``outcome`` (``created``, ``absorbed`` or ``reopened``), ``status`` and
+        ``symptoms``.
+        """
+        result = await self._send("FileDefect", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("FileDefect returned a non-object result")
+        return result
+
+    async def landing_policy_put(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Set the landing policy of one branch (MEDULLA-SCM-R008).
+
+        ``request`` carries ``policy`` (``repo``, ``branch``, ``required_gates``) and,
+        when the write drops a required gate of the stored policy, an ``approval`` with
+        ``approver``, ``approved_at_ms`` and ``reason``. The receipt names ``node_id``,
+        ``lowered`` and ``replayed``. A lowering without a full approval refuses
+        ``LANDING_POLICY_APPROVAL_REQUIRED``; a merge that does not meet the policy
+        refuses
+        ``LANDING_GATE_BLOCKED``.
+        """
+        result = await self._send("LandingPolicyPut", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("LandingPolicyPut returned a non-object result")
         return result
 
     async def describe_contract(

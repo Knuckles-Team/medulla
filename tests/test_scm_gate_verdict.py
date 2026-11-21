@@ -1,8 +1,10 @@
 """MEDULLA-SCM-R008: the served ``RecordGateVerdict`` method.
 
 A changeset lands on the default branch, a pass and a fail verdict are recorded for two
-gates and read back as sealed ``GateVerdict`` nodes with their ``judges`` edge. An identical
-replay succeeds; a different verdict for the same gate refuses ``GATE_VERDICT_SEALED``; a
+gates and read back as sealed ``GateVerdict`` nodes with their ``judges`` edge. An
+identical
+replay succeeds; a different verdict for the same gate refuses ``GATE_VERDICT_SEALED``;
+a
 digest that is not the changeset tree refuses ``GATE_INPUT_DIGEST_MISMATCH``.
 """
 
@@ -103,6 +105,7 @@ async def _scenario(graph: str) -> None:
                     "RecordGateVerdict",
                     {
                         "changeset": changeset,
+                        "branch": "main",
                         "gate_id": gate,
                         "input_digest": digest_in,
                         "verdict": verdict,

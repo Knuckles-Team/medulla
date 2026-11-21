@@ -14,6 +14,7 @@ pub mod line_merge;
 // MEDULLA-BRANCH-MERGE-R006 — branch diff and time-travel reads.
 pub mod time_travel;
 // MEDULLA-BRANCH-MERGE-R007 — atomic merge publication.
+pub mod landing_policy;
 pub mod publish;
 
 use std::sync::Arc;

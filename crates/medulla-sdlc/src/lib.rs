@@ -7,3 +7,4 @@
 #![deny(missing_docs)]
 
 pub mod lifecycle;
+pub mod spec_artifact_questions;

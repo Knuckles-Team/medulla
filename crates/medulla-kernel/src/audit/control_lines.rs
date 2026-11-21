@@ -210,6 +210,16 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "PROPOSAL_PUT|{}|{:?}",
             proposal.project, proposal.kind
         )),
+        // MEDULLA-SCM-R008: the line names the policy, never the approval.
+        Method::LandingPolicyPut { request } => Some(format!(
+            "LANDING_POLICY_PUT|{}|{}",
+            request.policy.repo, request.policy.branch
+        )),
+        // MEDULLA-SDLC-R003.3: the line names the repository and the intake path, never the symptom text.
+        Method::FileDefect { request } => Some(format!(
+            "FILE_DEFECT|{}|{:?}",
+            request.repo, request.intake
+        )),
         // MEDULLA-SDLC-R017.6: the line names the proposal and the decision, never the reason.
         Method::ProposalDecide { request } => Some(format!(
             "PROPOSAL_DECIDE|{}|{:?}",

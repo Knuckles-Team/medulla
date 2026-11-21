@@ -487,7 +487,18 @@ pub async fn publish_merge(
         return Err(PublishError::Refused(ServerErrorCode::MergeActorUnknown));
     }
     let tenant = verified.tenant().to_string();
+    let (landing_repo, landing_branch) = (target.graph.clone(), target.name.clone());
     let (source_branch, source_chain) = chain_of(state, verified, source.clone()).await?;
+    // MEDULLA-BRANCH-MERGE-R009: the landing policy gates the merge before anything is planned.
+    super::landing_policy::check(
+        state,
+        verified,
+        &landing_repo,
+        &landing_branch,
+        &source_chain,
+        &classified.source_head,
+    )
+    .await?;
     let (target_branch, target_chain) = chain_of(state, verified, target).await?;
     require_replayable(&[&fold_chain(&source_chain), &fold_chain(&target_chain)])?;
     if classified.outcome == MergeOutcome::FastForward {
@@ -761,6 +772,16 @@ pub async fn plan_trunk_merge(
             .map_err(|refusal| PublishError::Refused(refusal.code()))?
             .head
     };
+    // MEDULLA-BRANCH-MERGE-R009: the trunk's landing policy gates the merge.
+    super::landing_policy::check(
+        state,
+        verified,
+        graph,
+        medulla_mutation_types::branch::RESERVED_BRANCH_NAME,
+        &source_chain,
+        &head,
+    )
+    .await?;
     let merge_base = source_chain
         .first()
         .and_then(|(commit, _)| commit.parents.first().cloned())

@@ -401,11 +401,26 @@ $($variants)*
     /// `LIFECYCLE_ENDPOINT_UNKNOWN` (the changeset node is absent). Identical replays succeed.
     RecordGateVerdict {
         changeset: String,
+        /// The branch whose chain holds the changeset; `input_digest` is checked against the
+        /// tree of that chain.
+        branch: String,
         gate_id: String,
         input_digest: String,
         verdict: medulla_work_types::step_verdict::VerificationVerdict,
         evidence_digest: String,
         duration_ms: u64,
+    },
+    /// File one symptom against the defects of a repository (MEDULLA-SDLC-R003.3): an open
+    /// defect with the same normalized signature takes it, a closed one reopens, otherwise a
+    /// `Defect` node opens. Each call carries the intake path, the source record id and the time.
+    FileDefect {
+        request: medulla_source_types::lifecycle::FileDefectRequest,
+    },
+    /// Set the landing policy of one branch (MEDULLA-SCM-R008): the gates a landing
+    /// needs. Lowering the stored policy needs an operator approval
+    /// (`LANDING_POLICY_APPROVAL_REQUIRED`).
+    LandingPolicyPut {
+        request: medulla_source_types::gate_verdict::LandingPolicyPutRequest,
     },
     /// Record one rollout of an image: a `Deployment` node linked to the release
     /// whose artifact digests name the image, or `unattributed` with no release.
@@ -429,6 +444,17 @@ $($variants)*
     /// optionally narrowed to one state and one kind. Reads only.
     ProposalList {
         request: medulla_source_types::lifecycle::ProposalListRequest,
+    },
+    /// Answer one competency question over the spec artifact graph of `graph`
+    /// (MEDULLA-SDLC-R014.6). `subject` is the phase for `next_unblocked_task`, the goal node
+    /// id for `changes_advancing_goal` and the changeset id for `principles_at_risk`; a subject
+    /// given where none is taken, or missing where required, refuses `PARAMETER_INVALID`, and
+    /// an unknown goal or phase refuses `COMPETENCY_SUBJECT_UNKNOWN`. Reads only.
+    SpecQuestion {
+        question: medulla_source_types::spec_question::SpecQuestion,
+        #[serde(default)]
+        subject: Option<String>,
+        graph: String,
     },
     /// Record a reviewer's approval or rejection of one open proposal
     /// (MEDULLA-SDLC-R017.6). Refuses `PROPOSAL_NOT_FOUND` and `PROPOSAL_NOT_OPEN`.

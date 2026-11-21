@@ -70,6 +70,8 @@ pub mod source_changeset;
 pub mod source_tree;
 // MEDULLA-SCM-R008 — gate verdicts are sealed records.
 pub mod gate_verdict;
+/// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).
+pub mod defect_intake;
 
 /// The history index written with an accepted changeset and the path-history
 /// read (MEDULLA-SCM-R005).

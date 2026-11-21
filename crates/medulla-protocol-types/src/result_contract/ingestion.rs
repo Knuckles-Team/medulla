@@ -130,7 +130,10 @@ method_results! {
     // MEDULLA-SDLC-R017.3: the proposal record.
     ProposalPut(ProposalPut) => Raw<medulla_source_types::lifecycle::ProposalReceipt>;
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.
+    SpecQuestion(SpecQuestion) => Raw<medulla_source_types::spec_question::SpecQuestionAnswer>;
     ProposalList(ProposalList) => Raw<Vec<medulla_source_types::lifecycle::ProposalListEntry>>;
+    LandingPolicyPut(LandingPolicyPut) => Raw<medulla_source_types::gate_verdict::LandingPolicyReceipt>;
+    FileDefect(FileDefect) => Raw<medulla_source_types::lifecycle::FileDefectReceipt>;
     ProposalDecide(ProposalDecide) => Raw<medulla_source_types::lifecycle::ProposalDecideReceipt>;
     // MEDULLA-SDLC-R012.8: the project mode record.
     ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;

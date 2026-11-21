@@ -145,7 +145,9 @@ def _build_repository(root: Path, name: str) -> tuple[str, bytes]:
     return head, pack
 
 
-async def _import(client: MedullaClient, graph: str, branch: str, head: str, pack: bytes):
+async def _import(
+    client: MedullaClient, graph: str, branch: str, head: str, pack: bytes
+):
     digest = await client.blob.store(pack)
     return await client._send(
         "ImportGitHistory",
@@ -228,3 +230,67 @@ async def _repositories(workdir: Path) -> None:
 @pytest.mark.spec("MEDULLA-SDLC-R012.1")
 def test_each_repository_ingests_as_a_changeset_log(tmp_path: Path) -> None:
     asyncio.run(_repositories(tmp_path))
+
+
+async def _bound_changeset(graph: str) -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        await client._send(
+            "SetPathGrant",
+            {
+                "request": {
+                    "repo": graph,
+                    "principal": TEST_AGENT_ID,
+                    "prefix": "",
+                    "read": True,
+                    "write": True,
+                }
+            },
+        )
+        digest = await client.blob.store(b"bound")
+
+        async def submit(message: str, base_head: str | None, key: str):
+            return await client._send(
+                "SubmitChangeset",
+                {
+                    "request": {
+                        "repo": graph,
+                        "branch": "main",
+                        "base_head": base_head,
+                        "message": message,
+                        "paths": [
+                            {
+                                "path": f"{key}.txt",
+                                "op": "add",
+                                "blob": {"digest": digest, "size": 5},
+                                "mode": 0o100644,
+                                "renamed_from": None,
+                            }
+                        ],
+                        "trailers": None,
+                        "run_trace_id": None,
+                    }
+                },
+                idempotency_key=f"{graph}-{key}",
+            )
+
+        with pytest.raises(Exception, match="CHANGESET_REQUIREMENT_MISSING"):
+            await submit("add a file", None, "unbound")
+        bound = await submit("feat: a\n\nSpec: MEDULLA-SDLC-R012.3", None, "bound")
+        assert bound["changeset"]["trailers"]["spec_ids"] == ["MEDULLA-SDLC-R012.3"]
+        chore = await submit("chore: tidy", bound["branch_head"], "chore")
+        assert chore["changeset"]["trailers"]["spec_ids"] == []
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R012.3
+@pytest.mark.spec("MEDULLA-SDLC-R012.3")
+def test_changeset_binds_requirements_and_refuses_unbound() -> None:
+    asyncio.run(_bound_changeset(f"sdlc-bound-{uuid.uuid4().hex[:8]}"))
