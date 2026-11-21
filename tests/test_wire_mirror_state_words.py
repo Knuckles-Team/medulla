@@ -7,11 +7,13 @@ Python mirrors decode them and refuse a word outside the enum.
 from __future__ import annotations
 
 import enum
+import typing
 
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from medulla.generated import models
+from medulla.generated import models, policy_evolution
+from medulla.testing.synthetic import assembly
 
 pytestmark = [pytest.mark.no_engine]
 
@@ -149,3 +151,51 @@ def test_conformance_evidence_types_state_as_the_rust_enum() -> None:
     for word in ("expired", "Active", "", "closed"):
         with pytest.raises(ValidationError):
             evidence.model_validate({"state": word, **fields})
+
+
+def _tags(union: object, key: str) -> set[str]:
+    """The discriminator tags of an annotated union of tagged variants."""
+    variants = typing.get_args(typing.get_args(union)[0])
+    return {
+        typing.get_args(variant.model_fields[key].annotation)[0] for variant in variants
+    }
+
+
+# spec: MEDULLA-DECISION-ENGINE-R831.11
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R831.11")
+def test_decision_mirrors_type_state_as_the_rust_enum() -> None:
+    # A recorded training run holds an outcome, never a status lifecycle.
+    assert not any(name.startswith("TrainingRunStatus") for name in dir(policy_evolution))
+    assert _tags(policy_evolution.TrainingRunOutcome, "status") == {
+        "succeeded",
+        "failed",
+        "cancelled",
+    }
+    assert set(typing.get_args(_annotation(policy_evolution.TrainingRun, "status"))) == {
+        policy_evolution.TrainingRunOutcomeSucceeded,
+        policy_evolution.TrainingRunOutcomeFailed,
+        policy_evolution.TrainingRunOutcomeCancelled,
+    }
+    assert _tags(models.DecisionJobOutcome, "state") == {"succeeded", "failed"}
+
+    # A job that is queued or running has no record yet.
+    models.DecisionJobRecord.model_rebuild()
+    assert set(typing.get_args(_annotation(models.DecisionJobRecord, "state"))) == {
+        models.DecisionJobOutcomeSucceeded,
+        models.DecisionJobOutcomeFailed,
+    }
+    kind = next(iter(models.DecisionJobKind)).value
+    with pytest.raises(ValidationError):
+        models.DecisionJobRecord.model_validate(
+            {
+                "job_id": "job-1",
+                "kind": kind,
+                "request_digest": "sha256:" + "0" * 64,
+                "schema_version": 1,
+                "state": {"state": "running"},
+                "submitted_at_ms": 1,
+                "tenant_id": "tenant",
+            }
+        )
+
+    assert _annotation(assembly.Candidate, "lifecycle") is assembly.Lifecycle

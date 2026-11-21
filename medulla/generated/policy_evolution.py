@@ -495,32 +495,32 @@ class TrainingRun(BaseModel):
     log: HeldBlobRef | None = None
     method: TrainingMethod
     resources: ResourceObservation | None = None
-    status: TrainingRunStatus
+    status: TrainingRunOutcome
     trainer_image_digest: Digest256
     work_item_id: str
 
 
-class TrainingRunStatusSucceeded(BaseModel):
+class TrainingRunOutcomeSucceeded(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     output: TrainingOutput
     status: Literal["succeeded"]
 
 
-class TrainingRunStatusFailed(BaseModel):
+class TrainingRunOutcomeFailed(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     status: Literal["failed"]
 
 
-class TrainingRunStatusCancelled(BaseModel):
+class TrainingRunOutcomeCancelled(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     status: Literal["cancelled"]
 
 
-TrainingRunStatus = Annotated[
-    TrainingRunStatusSucceeded | TrainingRunStatusFailed | TrainingRunStatusCancelled,
+TrainingRunOutcome = Annotated[
+    TrainingRunOutcomeSucceeded | TrainingRunOutcomeFailed | TrainingRunOutcomeCancelled,
     Field(discriminator="status"),
 ]
 
@@ -617,11 +617,11 @@ TrainingOutput.model_rebuild()
 
 TrainingRun.model_rebuild()
 
-TrainingRunStatusSucceeded.model_rebuild()
+TrainingRunOutcomeSucceeded.model_rebuild()
 
-TrainingRunStatusFailed.model_rebuild()
+TrainingRunOutcomeFailed.model_rebuild()
 
-TrainingRunStatusCancelled.model_rebuild()
+TrainingRunOutcomeCancelled.model_rebuild()
 
 VersionOriginBase.model_rebuild()
 
@@ -691,10 +691,10 @@ __all__ = [
     "TrainingMethodSft",
     "TrainingOutput",
     "TrainingRun",
-    "TrainingRunStatus",
-    "TrainingRunStatusCancelled",
-    "TrainingRunStatusFailed",
-    "TrainingRunStatusSucceeded",
+    "TrainingRunOutcome",
+    "TrainingRunOutcomeCancelled",
+    "TrainingRunOutcomeFailed",
+    "TrainingRunOutcomeSucceeded",
     "VersionOrigin",
     "VersionOriginBase",
     "VersionOriginTrained",
