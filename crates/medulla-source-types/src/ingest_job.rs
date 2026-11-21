@@ -37,6 +37,14 @@ impl IngestLane {
             Self::Hydration => "ingest-hydration",
         }
     }
+
+    /// The scheduler lane this lane runs on (MEDULLA-INGEST-WORKER-R604.1).
+    pub fn lane_id(self) -> medulla_types::ingest_lanes::Lane {
+        match self {
+            Self::General => medulla_types::ingest_lanes::Lane::general(),
+            Self::Hydration => medulla_types::ingest_lanes::Lane::hydration(),
+        }
+    }
 }
 
 /// Hydration kinds run on the reserved hydration lane; everything else is general.

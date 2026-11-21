@@ -29,6 +29,8 @@ pub mod ontology_base;
 pub mod ontology_proposal;
 // MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
 pub mod knowledge_atom;
+// MEDULLA-INGEST-WORKER-R604.1 — ingest lanes, queue classes and lane metrics.
+pub mod ingest_lanes;
 // MEDULLA-INGEST-WORKER-R701.1 — extracted facts, candidate claims and evidence spans.
 pub mod extracted_fact;
 // MEDULLA-INGEST-WORKER-R900.1/R902.1/R903.1/R904.1 — source governance records.
