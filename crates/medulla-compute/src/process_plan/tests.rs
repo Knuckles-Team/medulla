@@ -267,3 +267,186 @@ fn ranked_fallback_respects_min_score() {
     assert_eq!(registered_contract(&view, "other-mcp", "read_mail"), None);
     assert_eq!(registered_contract(&view, "mail-mcp", "send_mail"), None);
 }
+
+fn flow(source: &str, target: &str, condition: Option<&str>, default: bool) -> medulla_types::process_import::CanonicalFlow {
+    medulla_types::process_import::CanonicalFlow {
+        source: source.to_string(),
+        target: target.to_string(),
+        condition: condition.map(str::to_string),
+        default,
+    }
+}
+
+fn gated(
+    id: &str,
+    kind: StepKind,
+    gate: medulla_types::process_import::GateKind,
+) -> CanonicalStep {
+    CanonicalStep {
+        gate: Some(gate),
+        ..step(id, kind, None, None)
+    }
+}
+
+fn bound(step_id: &str, target: BindingTarget) -> StepBinding {
+    StepBinding {
+        step_id: step_id.to_string(),
+        target,
+        source: BindingSource::Explicit,
+    }
+}
+
+fn no_callee(_: &str) -> Option<super::plan::Callee> {
+    None
+}
+
+/// The invoice process: a start, a human check, a decision, an XOR split with two arms (one
+/// through a human approval), an XOR join, an agent post, an AND fork of two agent steps, an
+/// AND join and an end.
+fn invoice() -> (CanonicalWorkflow, Vec<StepBinding>) {
+    use medulla_types::process_import::GateKind::{And, Xor};
+    let mut wf = workflow(vec![
+        step("s1", StepKind::Start, None, None),
+        step("s2", StepKind::Human, Some("clerk"), None),
+        step("s3", StepKind::Decision, None, Some("dmn:risk")),
+        gated("s4", StepKind::Branch, Xor),
+        step("s5", StepKind::Human, Some("manager"), None),
+        gated("s6", StepKind::Join, Xor),
+        step("s7", StepKind::Agent, None, None),
+        gated("s8", StepKind::Fork, And),
+        step("s9", StepKind::Agent, None, None),
+        step("s10", StepKind::Agent, None, None),
+        gated("s11", StepKind::Join, And),
+        step("s12", StepKind::End, None, None),
+    ]);
+    wf.flows = vec![
+        flow("s1", "s2", None, false),
+        flow("s2", "s3", None, false),
+        flow("s3", "s4", None, false),
+        flow("s4", "s5", Some("amount > 1000"), false),
+        flow("s4", "s6", None, true),
+        flow("s5", "s6", None, false),
+        flow("s6", "s7", None, false),
+        flow("s7", "s8", None, false),
+        flow("s8", "s9", None, false),
+        flow("s8", "s10", None, false),
+        flow("s9", "s11", None, false),
+        flow("s10", "s11", None, false),
+        flow("s11", "s12", None, false),
+    ];
+    let prompt = |iri: &str| BindingTarget::Prompt {
+        prompt_iri: iri.to_string(),
+        agent_kind: "writer".to_string(),
+    };
+    let bindings = vec![
+        bound("s2", BindingTarget::Approval { approver_role: "clerk".to_string() }),
+        bound("s3", BindingTarget::Decision { decision_iri: "dmn:risk".to_string() }),
+        bound("s5", BindingTarget::Approval { approver_role: "manager".to_string() }),
+        bound(
+            "s7",
+            BindingTarget::Tool {
+                server: "ledger".to_string(),
+                tool: "post".to_string(),
+                contract_iri: "urn:contract:post".to_string(),
+            },
+        ),
+        bound("s9", prompt("urn:prompt:a")),
+        bound("s10", prompt("urn:prompt:b")),
+    ];
+    (wf, bindings)
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.4
+#[test]
+fn workflow_maps_to_canonical_plan() {
+    use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind};
+    let (wf, bindings) = invoice();
+    let plan = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
+    let again = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
+    assert_eq!(plan.plan_digest, again.plan_digest, "equal digest on a second run");
+    // start and end add no task.
+    assert_eq!(plan.tasks.len(), 10);
+    assert_eq!(plan.output_task_id, "s11");
+    let task = |id: &str| plan.tasks.iter().find(|t| t.task_id == id).unwrap();
+    // A tool step, a prompt step, a decision step and two approval waits.
+    assert_eq!(task("s7").call.as_ref().unwrap().tool, "post");
+    assert!(task("s9").call.is_none() && task("s9").branch.is_none());
+    assert_eq!(task("s3").decision.as_ref().unwrap().decision_iri, "dmn:risk");
+    assert_eq!(task("s2").approval.as_ref().unwrap().approver_role, "clerk");
+    assert_eq!(task("s5").approval.as_ref().unwrap().approver_role, "manager");
+    assert_eq!(task("s2").depends_on.len(), 0);
+    // The XOR split takes one arm: the conditioned arm is a typed decision condition whose
+    // IRI carries the flow condition text, and the default flow is the default arm.
+    let branch = task("s4").branch.as_ref().unwrap();
+    assert_eq!(branch.kind, BranchKind::Exclusive);
+    assert_eq!(branch.default_arm.as_deref(), Some("s6"));
+    assert_eq!(branch.arms.len(), 1);
+    match branch.arms.as_slice()[0].condition.as_ref().unwrap() {
+        BranchCondition::Decision(d) => {
+            assert_eq!(d.decision_iri, "urn:medulla:flow-condition:amount%20%3E%201000");
+        }
+        other => panic!("{other:?}"),
+    }
+    // The joins find the nearest dominating split of their gate.
+    assert_eq!(task("s6").join.as_ref().unwrap().branch_task_id, "s4");
+    assert_eq!(task("s11").join.as_ref().unwrap().branch_task_id, "s8");
+    assert_eq!(task("s8").branch.as_ref().unwrap().kind, BranchKind::Parallel);
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.4
+#[test]
+fn plan_refuses_loops_unbound_steps_and_deep_calls() {
+    use medulla_decision_types::decision::process_plan::{
+        PROCESS_PLAN_CALL_DEPTH, PROCESS_PLAN_LOOP, PROCESS_STEP_UNBOUND, WORKFLOW_UNKNOWN,
+    };
+    let (wf, bindings) = invoice();
+    // An agent step with no binding is named.
+    let partial: Vec<StepBinding> = bindings.iter().filter(|b| b.step_id != "s9").cloned().collect();
+    let refused = super::plan::plan_from_workflow(&wf, &partial, &no_callee, 4).unwrap_err();
+    assert_eq!(refused.code, PROCESS_STEP_UNBOUND);
+    assert_eq!(refused.steps, vec!["s9".to_string()]);
+    // A flow back into the XOR split is a loop.
+    let mut looped = wf.clone();
+    looped.flows.push(flow("s7", "s4", None, false));
+    let refused = super::plan::plan_from_workflow(&looped, &bindings, &no_callee, 4).unwrap_err();
+    assert_eq!(refused.code, PROCESS_PLAN_LOOP);
+    assert!(refused.steps.contains(&"s4".to_string()), "{:?}", refused.steps);
+    // A call step: unknown callee, then inlined, then too deep.
+    let mut caller = workflow(vec![
+        step("s1", StepKind::Start, None, None),
+        step("s2", StepKind::Call, None, Some("workflow:inner")),
+        step("s3", StepKind::Agent, None, None),
+        step("s4", StepKind::End, None, None),
+    ]);
+    caller.flows = vec![flow("s1", "s2", None, false), flow("s2", "s3", None, false), flow("s3", "s4", None, false)];
+    let post = bound(
+        "s3",
+        BindingTarget::Tool {
+            server: "ledger".to_string(),
+            tool: "post".to_string(),
+            contract_iri: "urn:contract:post".to_string(),
+        },
+    );
+    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4).unwrap_err();
+    assert_eq!(refused.code, WORKFLOW_UNKNOWN);
+    assert_eq!(refused.steps, vec!["s2".to_string()]);
+    let mut inner = workflow(vec![
+        step("s1", StepKind::Start, None, None),
+        step("s2", StepKind::Human, Some("clerk"), None),
+        step("s3", StepKind::End, None, None),
+    ]);
+    inner.flows = vec![flow("s1", "s2", None, false), flow("s2", "s3", None, false)];
+    let callee = |reference: &str| {
+        (reference == "workflow:inner").then(|| super::plan::Callee {
+            workflow: inner.clone(),
+            bindings: vec![bound("s2", BindingTarget::Approval { approver_role: "clerk".to_string() })],
+        })
+    };
+    let plan = super::plan::plan_from_workflow(&caller, &[post.clone()], &callee, 4).unwrap();
+    let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
+    assert_eq!(ids, vec!["s2:s2", "s3"]);
+    assert_eq!(plan.tasks.as_slice()[1].depends_on.as_slice().to_vec(), vec!["s2:s2".to_string()]);
+    let refused = super::plan::plan_from_workflow(&caller, &[post], &callee, 0).unwrap_err();
+    assert_eq!(refused.code, PROCESS_PLAN_CALL_DEPTH);
+    assert_eq!(refused.steps, vec!["s2".to_string()]);
+}

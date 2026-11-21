@@ -3,6 +3,7 @@
 //! and the binding links of its stored step nodes only (R704.9).
 
 pub mod bind;
+pub mod plan;
 pub mod rank;
 
 #[cfg(test)]

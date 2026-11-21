@@ -6,7 +6,39 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_types::refusal_code::RefusalCode;
+
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+
+/// A step the plan needs a binding for has none (MEDULLA-CQ-ORCH-R704.6).
+pub const PROCESS_STEP_UNBOUND: &str = "PROCESS_STEP_UNBOUND";
+/// The workflow has a cycle; a task plan is acyclic (R704.4).
+pub const PROCESS_PLAN_LOOP: &str = "PROCESS_PLAN_LOOP";
+/// The plan has more tasks than a task plan holds, or a flow condition is longer than a
+/// decision IRI holds (R704.4).
+pub const PROCESS_PLAN_TOO_LARGE: &str = "PROCESS_PLAN_TOO_LARGE";
+/// A `call` step is nested deeper than `knob process_plan.max_call_depth` (R704.4).
+pub const PROCESS_PLAN_CALL_DEPTH: &str = "PROCESS_PLAN_CALL_DEPTH";
+/// The workflow, or the workflow a `call` step names, is not visible (R704.4).
+pub const WORKFLOW_UNKNOWN: &str = "WORKFLOW_UNKNOWN";
+
+/// The process plan family's refusal table (MEDULLA-CQ-ORCH-R704.6).
+pub const PROCESS_PLAN_REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(PROCESS_STEP_UNBOUND),
+    RefusalCode::new(PROCESS_PLAN_LOOP),
+    RefusalCode::new(PROCESS_PLAN_TOO_LARGE),
+    RefusalCode::new(PROCESS_PLAN_CALL_DEPTH),
+    RefusalCode::new(WORKFLOW_UNKNOWN),
+];
+
+/// Why a workflow did not become a plan: a stable code and the step ids it names (the unbound
+/// steps, the loop gates, the `call` step past the depth). A refusal the task plan engine
+/// raises keeps its own code and names no step.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessPlanRefusal {
+    pub code: String,
+    pub steps: Vec<String>,
+}
 
 /// The `process_plan.*` knobs (MEDULLA-CQ-ORCH-R704.3, R704.4): the least relevance a ranked
 /// tool needs to bind an unbound agent step, and how many `call` levels a plan inlines.

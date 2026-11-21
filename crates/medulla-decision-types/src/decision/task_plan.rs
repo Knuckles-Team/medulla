@@ -40,7 +40,8 @@ pub use control::{
     control_fact, ApprovalSpec, BranchArm, BranchComparison, BranchCondition,
     BranchDecisionCondition, BranchKind, BranchSpec, CompareOp, DecisionSpec, JoinSpec,
     APPROVAL_TIMEOUT_OUT_OF_RANGE, BRANCH_ARM_UNKNOWN, BRANCH_JOIN_UNMATCHED, BRANCH_NO_DEFAULT,
-    CONTROL_STEP_INVALID, MAX_APPROVAL_TIMEOUT_S, MIN_APPROVAL_TIMEOUT_S, STEP_KIND_CONFLICT,
+    CONTROL_STEP_INVALID, MAX_APPROVAL_TIMEOUT_S, MAX_DECISION_IRI_BYTES, MIN_APPROVAL_TIMEOUT_S,
+    STEP_KIND_CONFLICT,
 };
 pub use critical_path::{
     attach_critical_chain, critical_chain, CriticalChain, CriticalPathKnobs,
