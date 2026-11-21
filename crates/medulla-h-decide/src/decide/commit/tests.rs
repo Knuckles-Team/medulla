@@ -224,6 +224,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         record: record.clone(),
         topology: None,
         retry_of: None,
+        approval: None,
     };
     let status = CapacityStatusRequest {
         schema_version: NativeControlSchemaVersion::V1,
@@ -286,6 +287,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
             record: plain.clone(),
             topology: None,
             retry_of: None,
+            approval: None,
         },
     )
     .await;
@@ -332,6 +334,7 @@ async fn topology_denial_accepts_one_followup_request() {
         record,
         topology: None,
         retry_of: Some(denied_id.clone()),
+        approval: None,
     };
 
     // A commit that is itself a retry grants no further allowance when the ledger denies it.

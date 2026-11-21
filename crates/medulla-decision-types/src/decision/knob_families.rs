@@ -59,6 +59,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     trajectory::KNOBS,
     verifier::KNOBS,
     super::ingestion_admission::KNOBS,
+    super::approval::KNOBS,
     super::statistical::run_credit::KNOBS,
     super::statistical::feedback::KNOBS,
     super::thought_search::KNOBS,

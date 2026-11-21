@@ -66,6 +66,7 @@ fn write_outcome(
         committed_at_ms: record.created_at_ms,
         record: Box::new(record),
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     let mut rows = vec![(record_key(id), encode_artifact(&entry).unwrap())];
     for (n, success) in verdicts.iter().enumerate() {

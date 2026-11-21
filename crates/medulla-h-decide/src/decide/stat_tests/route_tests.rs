@@ -227,6 +227,7 @@ fn write_team_history(
             committed_at_ms: record.created_at_ms,
             record: Box::new(record.clone()),
             inputs: EntryInputs::Inline,
+            approval: None,
         };
         let judged = StoredEvaluation {
             evaluation: DecisionOutcomeEvaluation {

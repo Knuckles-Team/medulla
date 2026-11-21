@@ -131,6 +131,7 @@ fn log_decision(h: &Harness, tenant: &str, asked: &TrajectoryLadderRequest) -> S
         committed_at_ms: 1_000,
         visibility: RecordVisibility::Tenant,
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     h.store
         .put_decision_artifacts(

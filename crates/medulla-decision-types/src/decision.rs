@@ -24,6 +24,7 @@
 pub mod a2a_route;
 pub mod analyst_synthesis;
 pub mod answer_ranking_request;
+pub mod approval;
 pub mod autonomy;
 pub mod branch_fusion;
 pub mod capability_designation;

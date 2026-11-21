@@ -138,6 +138,7 @@ pub(super) async fn seed_as(
                     role: None,
                     expires_at_ms: now + 3_600_000,
                 }),
+                approval: None,
             },
         )
         .await,
@@ -374,6 +375,7 @@ async fn seed_aged(
         committed_at_ms: then,
         record: Box::new(record.clone()),
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     let mut rows = vec![(
         record_key(&record.record_id),

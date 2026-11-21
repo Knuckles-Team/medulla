@@ -1064,6 +1064,7 @@ async fn committed_executed_retrieval_record(state: &test_support::SharedState) 
             op: Box::new(DecisionLogOp::Commit {
                 record: Box::new(record),
                 evaluator: None,
+                approval: None,
             }),
         },
     )

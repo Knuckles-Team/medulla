@@ -39,7 +39,7 @@ use medulla_agent_types::{
     agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
 };
 use medulla_decision_types::{
-    decision::digest, decision::CandidateFacts, decision::DecisionErrorCode,
+    decision::approval::RecommendationApproval, decision::digest, decision::CandidateFacts, decision::DecisionErrorCode,
     decision::DecisionRecord, decision::LibraryCandidateScope, decision::MAX_ASSEMBLY_CANDIDATES,
 };
 
@@ -53,6 +53,9 @@ use super::agent_revision::{
 pub const DECISION_RECORD_MEDIA_TYPE: &str = "application/vnd.medulla.decision-record+json";
 /// Prefix of a decision record's engine-owned body reference.
 pub const DECISION_BODY_REF_PREFIX: &str = "eg-decision:";
+/// The component attribute a committed record keeps its approval receipt in
+/// (MEDULLA-DECISION-ENGINE-R019.100.2): the canonical JSON of the receipt.
+pub const APPROVAL_ATTRIBUTE: &str = "approval";
 /// Head rows one candidate read may examine. A tenant larger than this is
 /// refused by name rather than decided over a silently partial catalog.
 const MAX_CANDIDATE_SCAN: usize = 4_096;
@@ -126,6 +129,7 @@ pub fn candidate_facts(entries: &[AgentComponentEntry]) -> Result<Vec<CandidateF
 fn record_component(
     context: &AgentLibraryMutationContext,
     record: &DecisionRecord,
+    approval: Option<&RecommendationApproval>,
 ) -> AgentComponentDraft {
     let hex = record
         .record_digest
@@ -146,12 +150,20 @@ fn record_component(
         source_revision: "decision-inputs",
         source_revision_digest: &record.inputs_digest,
     };
+    let mut attributes = BTreeMap::from([(
+        COMPONENT_MEDIA_TYPE_ATTRIBUTE.to_string(),
+        DECISION_RECORD_MEDIA_TYPE.to_string(),
+    )]);
+    // MEDULLA-DECISION-ENGINE-R019.100.2: a committed record keeps the approval
+    // receipt it was committed under, as canonical JSON.
+    if let Some(approval) = approval {
+        if let Ok(receipt) = serde_json::to_string(approval) {
+            attributes.insert(APPROVAL_ATTRIBUTE.to_string(), receipt);
+        }
+    }
     AgentComponentDraft {
         content_ref: Some(format!("{DECISION_BODY_REF_PREFIX}{hex}")),
-        attributes: BTreeMap::from([(
-            COMPONENT_MEDIA_TYPE_ATTRIBUTE.to_string(),
-            DECISION_RECORD_MEDIA_TYPE.to_string(),
-        )]),
+        attributes,
         ..AgentComponentDraft::bare(subject, publication)
     }
 }
@@ -254,9 +266,22 @@ impl AgentLibraryStore {
     /// must already have passed the engine's re-derivation.
     pub fn commit_decision_record(
         &self,
+        context: AgentLibraryMutationContext,
+        record: &DecisionRecord,
+        expected_catalog_digest: &str,
+    ) -> Result<AgentComponentWriteResult, String> {
+        self.commit_decision_record_with_approval(context, record, expected_catalog_digest, None)
+    }
+
+    /// [`Self::commit_decision_record`] storing the approval receipt the commit
+    /// carried as the component's `approval` attribute
+    /// (MEDULLA-DECISION-ENGINE-R019.100.2).
+    pub fn commit_decision_record_with_approval(
+        &self,
         mut context: AgentLibraryMutationContext,
         record: &DecisionRecord,
         expected_catalog_digest: &str,
+        approval: Option<&RecommendationApproval>,
     ) -> Result<AgentComponentWriteResult, String> {
         validate_context(self, &context)?;
         if record.tenant_id != context.tenant_id {
@@ -273,7 +298,7 @@ impl AgentLibraryStore {
         }
         context.expected_revision = Some(0);
         let body = serde_json::to_vec(record).map_err(|error| error.to_string())?;
-        let draft = record_component(&context, record);
+        let draft = record_component(&context, record, approval);
         let (expected_revision, owner) = revision_scope(self, &context, "decision record")?;
         let txn = self.mutations.open_write(&owner)?;
         let tenant = context.tenant_id.clone();

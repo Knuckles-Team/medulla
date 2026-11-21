@@ -1114,6 +1114,7 @@ fn log_skill_outcome(
         committed_at_ms: record.created_at_ms,
         record: Box::new(record.clone()),
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     let stored = StoredEvaluation {
         evaluation: DecisionOutcomeEvaluation {

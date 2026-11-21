@@ -963,6 +963,7 @@ async fn graph_sourced_records_are_principal_scoped_not_tenant_scoped_on_log_rea
     let commit = DecisionLogOp::Commit {
         record: Box::new(record.clone()),
         evaluator: None,
+        approval: None,
     };
     let committed: DecisionLogCommitted = decode(log_op(&h, "decider", commit).await).unwrap();
 

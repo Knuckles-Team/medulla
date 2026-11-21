@@ -78,6 +78,7 @@ pub(super) async fn executed_template(h: &Harness) -> DecisionLogEntry {
     let commit = DecisionLogOp::Commit {
         record: Box::new(record),
         evaluator: None,
+        approval: None,
     };
     let logged: DecisionLogCommitted = decode(log_op(h, "decider", commit).await).unwrap();
     let key = medulla_persistence_records::decision_jobs::record_key(&logged.record_id);
@@ -541,6 +542,7 @@ async fn provider_binding_is_independent_and_never_substituted() {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

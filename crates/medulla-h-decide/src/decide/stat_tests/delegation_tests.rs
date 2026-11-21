@@ -61,6 +61,7 @@ fn write(
         committed_at_ms: seed.created_at_ms,
         visibility: RecordVisibility::Tenant,
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     let mut rows = vec![(
         record_key(&record.record_id),

@@ -84,6 +84,7 @@ pub(super) async fn decision_log_round_trip(h: &Harness, record: StatisticalDeci
     let commit = |r: StatisticalDecisionRecord| DecisionLogOp::Commit {
         record: Box::new(r),
         evaluator: None,
+        approval: None,
     };
     let refused = decode::<DecisionLogCommitted>(log_op(h, "decider", commit(tampered)).await);
     assert!(refused.unwrap_err().starts_with("DECISION_REPLAY_MISMATCH"));
@@ -356,6 +357,7 @@ pub(super) async fn mixed_origin_aggregates_exclude_synthetic(
                     DecisionLogOp::Commit {
                         record: Box::new(record.clone()),
                         evaluator: None,
+                        approval: None,
                     },
                 )
                 .await,
@@ -402,6 +404,7 @@ pub(super) async fn mixed_origin_aggregates_exclude_synthetic(
             DecisionLogOp::Commit {
                 record: Box::new(real.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

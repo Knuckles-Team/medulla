@@ -259,6 +259,10 @@ pub struct DecisionCommitRequest {
     /// commit that is itself a retry never grants a further allowance when it is denied.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retry_of: Option<String>,
+    /// The reviewer's approval receipt, checked when the record's pinned policy
+    /// sets `approval_required` (MEDULLA-DECISION-ENGINE-R019.100.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval: Option<super::approval::RecommendationApproval>,
 }
 
 /// The ledger graph a topology plan leases from, and the evidence graph that

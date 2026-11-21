@@ -32,6 +32,7 @@ async fn commit_record(h: &Harness, record: StatisticalDecisionRecord) -> Decisi
             DecisionLogOp::Commit {
                 record: Box::new(record),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

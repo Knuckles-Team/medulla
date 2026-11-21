@@ -776,6 +776,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
             op: Box::new(DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             }),
         },
     )
@@ -810,6 +811,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
                     op: Box::new(DecisionLogOp::Commit {
                         record: Box::new(relabelled.clone()),
                         evaluator: None,
+                        approval: None,
                     }),
                 },
             )
@@ -1143,6 +1145,7 @@ async fn commit_response(h: &Harness, record: &StatisticalDecisionRecord) -> Res
             op: Box::new(DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             }),
         },
     )

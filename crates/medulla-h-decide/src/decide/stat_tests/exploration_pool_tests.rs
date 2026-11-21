@@ -60,6 +60,7 @@ fn write_history_at(
         committed_at_ms: record.created_at_ms,
         record: Box::new(record.clone()),
         inputs: EntryInputs::Inline,
+        approval: None,
     };
     h.store
         .put_decision_artifacts(

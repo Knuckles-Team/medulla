@@ -66,6 +66,7 @@ async fn committed_contrast(h: &Harness, a_eval: f64, b_eval: f64) -> Statistica
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

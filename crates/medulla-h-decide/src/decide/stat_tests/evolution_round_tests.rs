@@ -714,6 +714,7 @@ async fn served_verdict_and_allocation_journey() {
     let commit = DecisionLogOp::Commit {
         record: Box::new(record.clone()),
         evaluator: None,
+        approval: None,
     };
     let logged: DecisionLogCommitted = decode(log_op(&h, "decider", commit).await)
         .expect("the verdict record is logged after verify-replay");

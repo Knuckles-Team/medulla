@@ -137,6 +137,7 @@ async fn served_ranking_round_trips_through_readback() {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

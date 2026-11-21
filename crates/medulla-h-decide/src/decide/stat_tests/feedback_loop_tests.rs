@@ -82,6 +82,7 @@ async fn commit_round(h: &Harness, record: &StatisticalDecisionRecord) {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

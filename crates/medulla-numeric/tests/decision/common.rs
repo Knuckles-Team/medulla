@@ -73,6 +73,7 @@ pub fn policy(cold_start: ColdStart) -> DecisionPolicy {
         safety_bounds: Default::default(),
         limits: Default::default(),
         entry_trust: Default::default(),
+        approval_required: false,
     }
 }
 

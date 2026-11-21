@@ -64,6 +64,7 @@ pub fn policy() -> DecisionPolicy {
         safety_bounds: Default::default(),
         limits: Default::default(),
         entry_trust: Default::default(),
+        approval_required: false,
     }
 }
 
@@ -364,6 +365,7 @@ pub fn commit_request() -> DecisionCommitRequest {
         expected_catalog_digest: digest_text(0x73),
         topology: None,
         retry_of: None,
+        approval: None,
     }
 }
 

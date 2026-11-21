@@ -154,6 +154,15 @@ pub fn decided(store: &AgentLibraryStore) -> Assembly {
 
 /// The same solved assembly, decided at `created_at_ms`: a distinct record id per time.
 pub fn decided_at(store: &AgentLibraryStore, created_at_ms: u64) -> Assembly {
+    decided_under(store, created_at_ms, DecisionPolicy::engine_default())
+}
+
+/// The same solved assembly, decided at `created_at_ms` under `policy`.
+pub fn decided_under(
+    store: &AgentLibraryStore,
+    created_at_ms: u64,
+    policy: DecisionPolicy,
+) -> Assembly {
     let entries = store
         .assembly_candidates(TENANT, &request().candidates)
         .expect("reads");
@@ -162,7 +171,7 @@ pub fn decided_at(store: &AgentLibraryStore, created_at_ms: u64) -> Assembly {
         request(),
         candidates,
         Vec::new(),
-        DecisionPolicy::engine_default(),
+        policy,
     )
     .expect("inputs");
     let identity = RecordIdentity {

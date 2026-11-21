@@ -134,6 +134,7 @@ pub(super) async fn logged_abstention(h: &Harness) -> DecisionLogCommitted {
     let commit = DecisionLogOp::Commit {
         record: Box::new(record),
         evaluator: None,
+        approval: None,
     };
     decode(log_op(h, "decider", commit).await).unwrap()
 }
@@ -208,6 +209,7 @@ async fn declared_options_decide_as_claims_under_the_declaring_principal() {
     let commit = |r: &StatisticalDecisionRecord| DecisionLogOp::Commit {
         record: Box::new(r.clone()),
         evaluator: None,
+        approval: None,
     };
     let logged: DecisionLogCommitted = decode(log_op(&h, "decider", commit(&record)).await)
         .expect("an abstention is logged after verify-replay");

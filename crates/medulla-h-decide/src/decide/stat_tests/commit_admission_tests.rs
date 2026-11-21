@@ -71,6 +71,7 @@ async fn cross_owner_admission_journey() {
         record: record.clone(),
         topology: None,
         retry_of: None,
+        approval: None,
     };
     let rbac_state = |txn_id: &str| {
         rbac.reservations()
@@ -512,6 +513,7 @@ impl TopologyWorld {
                 ),
             }),
             retry_of: None,
+            approval: None,
         }
     }
 

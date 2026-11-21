@@ -1669,6 +1669,7 @@ async fn descriptor_evidence_reads_back_through_decision_log() {
         committed_at_ms: 1_000,
         visibility: RecordVisibility::Tenant,
         inputs: Default::default(),
+        approval: None,
     };
     let key = medulla_persistence_records::decision_jobs::record_key(&sealed.record_id);
     let bytes = medulla_persistence_records::decision_jobs::encode_artifact(&entry).unwrap();

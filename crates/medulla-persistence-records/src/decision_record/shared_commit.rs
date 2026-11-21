@@ -20,6 +20,7 @@ use medulla_agent_types::agent_component::{
 };
 use medulla_agent_types::agent_graph::{AgentGraphEntry, AgentGraphPublishRequest};
 use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
+use medulla_decision_types::decision::approval::RecommendationApproval;
 use medulla_decision_types::decision::{DecisionErrorCode, DecisionRecord};
 
 use super::super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};
@@ -57,11 +58,33 @@ impl AgentLibraryStore {
     /// of a stored record is a no-op replay that returns the stored evidence head.
     pub fn commit_topology_decision(
         &self,
+        context: AgentLibraryMutationContext,
+        record: &DecisionRecord,
+        expected_catalog_digest: &str,
+        evidence: AgentGraphPublishRequest,
+        coordinator_txn: &str,
+    ) -> Result<TopologyCommitParts, String> {
+        self.commit_topology_decision_with_approval(
+            context,
+            record,
+            expected_catalog_digest,
+            evidence,
+            coordinator_txn,
+            None,
+        )
+    }
+
+    /// [`Self::commit_topology_decision`] storing the approval receipt the commit
+    /// carried as the component's `approval` attribute
+    /// (MEDULLA-DECISION-ENGINE-R019.100.2).
+    pub fn commit_topology_decision_with_approval(
+        &self,
         mut context: AgentLibraryMutationContext,
         record: &DecisionRecord,
         expected_catalog_digest: &str,
         evidence: AgentGraphPublishRequest,
         coordinator_txn: &str,
+        approval: Option<&RecommendationApproval>,
     ) -> Result<TopologyCommitParts, String> {
         validate_context(self, &context)?;
         if record.tenant_id != context.tenant_id {
@@ -112,7 +135,7 @@ impl AgentLibraryStore {
 
         context.expected_revision = Some(0);
         let body = serde_json::to_vec(record).map_err(|error| error.to_string())?;
-        let draft = record_component(&context, record);
+        let draft = record_component(&context, record, approval);
         let (expected_revision, owner) = revision_scope(self, &context, "decision record")?;
         let graph_expected = evidence.context.expected_revision.ok_or_else(|| {
             "agent graph writes require an explicit expected_revision".to_string()

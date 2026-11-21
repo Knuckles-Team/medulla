@@ -289,6 +289,7 @@ async fn graph_claim_and_evidence_control_answer_class() {
     let commit = |record: &StatisticalDecisionRecord| DecisionLogOp::Commit {
         record: Box::new(record.clone()),
         evaluator: None,
+        approval: None,
     };
     let committed: DecisionLogCommitted =
         decode(log_op(&h, "decider", commit(&evidence)).await).unwrap();

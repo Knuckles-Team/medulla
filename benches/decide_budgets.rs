@@ -2654,6 +2654,7 @@ fn bench_harness_config_replay(
                 op: Box::new(DecisionLogOp::Commit {
                     record: Box::new(fresh.clone()),
                     evaluator: None,
+                    approval: None,
                 }),
             },
         ));

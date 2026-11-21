@@ -201,6 +201,11 @@ pub struct DecisionPolicy {
     /// from the wire and keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "super::entry_types::EntryTrustPolicy::is_empty")]
     pub entry_trust: super::entry_types::EntryTrustPolicy,
+    /// Whether a commit under this policy needs a reviewer's approval receipt
+    /// (MEDULLA-DECISION-ENGINE-R019.100.2). `false` is omitted from the wire
+    /// and keeps an existing policy's digest.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub approval_required: bool,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:
@@ -261,6 +266,7 @@ impl DecisionPolicy {
             safety_bounds: BoundedVec::default(),
             limits: BoundedVec::default(),
             entry_trust: Default::default(),
+            approval_required: false,
         }
     }
 

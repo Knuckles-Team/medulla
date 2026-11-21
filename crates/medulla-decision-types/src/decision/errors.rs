@@ -107,5 +107,11 @@ closed_error_codes! {
         TransformationSchemaMismatch => "TRANSFORMATION_SCHEMA_MISMATCH",
         /// The last skill does not produce the artifact contract the plan binds.
         ArtifactDigestChanged => "ARTIFACT_DIGEST_CHANGED",
+        /// MEDULLA-DECISION-ENGINE-R019.100.2: the pinned policy requires an approval receipt and none came.
+        ApprovalMissing => "APPROVAL_MISSING",
+        /// MEDULLA-DECISION-ENGINE-R019.100.2: the approval names another record id or digest.
+        ApprovalDigestMismatch => "APPROVAL_DIGEST_MISMATCH",
+        /// MEDULLA-DECISION-ENGINE-R019.100.2: the approval is older than its age bound or dated in the future.
+        ApprovalStale => "APPROVAL_STALE",
     }
 }

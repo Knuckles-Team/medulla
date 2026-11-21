@@ -289,6 +289,7 @@ fn commit(
     reader: &LogReader,
     record: &StatisticalDecisionRecord,
     evaluator: Option<&medulla_decision_types::decision::statistical::log::NamedEvaluator>,
+    approval: Option<&medulla_decision_types::decision::approval::RecommendationApproval>,
     replay_graph: Option<&medulla_graph_core::graph::GraphView>,
     graphs: &GraphSnapshots,
 ) -> Result<DecisionLogCommitted, String> {
@@ -296,6 +297,20 @@ fn commit(
         return Err(
             "ACCESS_DENIED: a decision is logged by the principal that made it".to_string(),
         );
+    }
+    // MEDULLA-DECISION-ENGINE-R019.100.2: the receipt names the digest the reviewer saw (the
+    // submitted record's, before the seed reveal) and is checked before the idempotency read,
+    // so a refusal writes nothing and a retry carries its approval again.
+    let resolved = super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.policy)?;
+    if resolved.policy.approval_required {
+        medulla_decision_types::decision::approval::check_approval(
+            approval,
+            &record.record_id,
+            &record.record_digest,
+            ctx.now_ms,
+            medulla_decision_types::decision::approval::approval_max_age_s(&resolved.policy),
+        )
+        .map_err(|refusal| refusal.message())?;
     }
     let logged = match super::stat_replay::verify_disclosure_event(ctx, reader, record)? {
         Some(verified) => verified,
@@ -329,6 +344,7 @@ fn commit(
         committed_by: reader.principal.clone(),
         committed_at_ms: ctx.now_ms,
         inputs: EntryInputs::Inline,
+        approval: approval.cloned(),
     };
     // EH-395: a named evaluator's grant is written in the same transaction.
     let mut rows =
@@ -846,12 +862,17 @@ fn dispatch(
         result_contract::coordination::DecisionLogVerify,
     };
     match op {
-        DecisionLogOp::Commit { record, evaluator } => {
+        DecisionLogOp::Commit {
+            record,
+            evaluator,
+            approval,
+        } => {
             ResultPayload::of::<DecisionLogCommit>(commit(
                 ctx,
                 reader,
                 &record,
                 evaluator.as_ref(),
+                approval.as_ref(),
                 replay_graph,
                 graphs,
             )?)

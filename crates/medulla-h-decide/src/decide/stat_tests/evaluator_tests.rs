@@ -25,6 +25,7 @@ fn commit_with(record: &StatisticalDecisionRecord, evaluator: NamedEvaluator) ->
     DecisionLogOp::Commit {
         record: Box::new(record.clone()),
         evaluator: Some(evaluator),
+        approval: None,
     }
 }
 

@@ -376,6 +376,7 @@ async fn readback(h: &Harness) {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,
@@ -606,6 +607,7 @@ async fn summary_only_children_fit_the_parent_budget() {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,
@@ -731,6 +733,7 @@ async fn coordinator_delivers_one_complete_artifact() {
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

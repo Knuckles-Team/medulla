@@ -419,6 +419,7 @@ async fn commit_event(h: &Harness, record: &StatisticalDecisionRecord) -> Result
             DecisionLogOp::Commit {
                 record: Box::new(record.clone()),
                 evaluator: None,
+                approval: None,
             },
         )
         .await,

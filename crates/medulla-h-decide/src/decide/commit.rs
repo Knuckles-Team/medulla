@@ -86,11 +86,24 @@ async fn commit(
         expected_catalog_digest,
         topology,
         retry_of,
+        approval,
     } = request;
     if record.tenant_id != verified.tenant() {
         return Err(
             "ACCESS_DENIED: the record tenant must match the verified request tenant".into(),
         );
+    }
+    // MEDULLA-DECISION-ENGINE-R019.100.2: a pinned policy that requires approval commits only a
+    // record its reviewer's receipt names, before the replay check and before any write.
+    if record.inputs.policy.approval_required {
+        medulla_decision_types::decision::approval::check_approval(
+            approval.as_ref(),
+            &record.record_id,
+            &record.record_digest,
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            medulla_decision_types::decision::approval::approval_max_age_s(&record.inputs.policy),
+        )
+        .map_err(|refusal| refusal.message())?;
     }
     let bytes = medulla_compute::assemble::encoded_len(&record);
     if bytes > MAX_DECISION_RECORD_BYTES {
@@ -391,17 +404,23 @@ async fn commit(
             Some(topology) if capacity_backed => {
                 let txn_id = certified::Coordinator::transaction_id(&record, verified);
                 store
-                    .commit_topology_decision(
+                    .commit_topology_decision_with_approval(
                         context,
                         &record,
                         &expected_catalog_digest,
                         topology.evidence,
                         &txn_id,
+                        approval.as_ref(),
                     )
                     .map(|parts| (parts.record, Some(parts.evidence_revision)))
             }
             _ => store
-                .commit_decision_record(context, &record, &expected_catalog_digest)
+                .commit_decision_record_with_approval(
+                    context,
+                    &record,
+                    &expected_catalog_digest,
+                    approval.as_ref(),
+                )
                 .map(|written| (written, None)),
         },
     );

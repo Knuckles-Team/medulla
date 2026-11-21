@@ -140,6 +140,10 @@ pub struct DecisionLogEntry {
     pub visibility: RecordVisibility,
     #[serde(default)]
     pub inputs: EntryInputs,
+    /// The approval receipt the commit carried, when its policy required one
+    /// (MEDULLA-DECISION-ENGINE-R019.100.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval: Option<crate::decision::approval::RecommendationApproval>,
 }
 
 /// Most entries one compaction call touches.
@@ -382,6 +386,10 @@ pub enum DecisionLogOp {
         record: Box<StatisticalDecisionRecord>,
         #[serde(default)]
         evaluator: Option<NamedEvaluator>,
+        /// The reviewer's approval receipt, checked when the record's pinned
+        /// policy sets `approval_required` (MEDULLA-DECISION-ENGINE-R019.100.2).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        approval: Option<crate::decision::approval::RecommendationApproval>,
     },
     /// Join one independent evaluation to a committed record.
     Evaluate {
