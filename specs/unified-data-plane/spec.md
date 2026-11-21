@@ -64,7 +64,7 @@ The user is an analyst whose question spans a transactional store, a metastore w
 3. **Given** a search-index source and a web metasearch source, **When** a fused query runs, **Then** relevance and rank come from the remote, the web result stays a candidate and never a stored record, and a repeated query inside the time-to-live makes no second connector call.
 4. **Given** an external engine, **When** it reads the Iceberg REST catalog, **Then** every route passes the carrier gate and a cross-tenant token is refused.
 
-Independent test: the bound tests of `MEDULLA-UNIFIED-DATA-PLANE-R038.3.6` and `MEDULLA-UNIFIED-DATA-PLANE-R039.5` run this story.
+Independent test: the bound tests of `MEDULLA-UNIFIED-DATA-PLANE-R038.3.6` and `MEDULLA-UNIFIED-DATA-PLANE-R039.3` run this story.
 
 ### User Story 5 - Link entities, follow changes and correlate incidents (Priority: P2)
 
