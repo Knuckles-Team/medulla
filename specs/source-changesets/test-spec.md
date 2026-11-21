@@ -29,8 +29,8 @@
   seeded culprit. The recorded decision replays byte-identically. *(MEDULLA-SCM-R009)*
 - `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids` (planned).
   Import of a generated linear history then `export_pack` preserves every commit id and tree id for both object
-  formats; a merge commit refuses. `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors`
-  (planned) pins the object ids and the delta reads. *(MEDULLA-SCM-R010)*
+  formats, including one merge commit of two parents. `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors`
+  (planned) pins the object ids and the delta reads. `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::history_and_blame_follow_first_parent_through_a_merge` (planned) reads history and blame through a merge on the first-parent line. *(MEDULLA-SCM-R010)*
 - `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay`. Concurrent accepts with
   crash and replay hold every chain invariant. *(MEDULLA-SCM-R011)*
 - `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` (planned). A delegated agent changeset reads

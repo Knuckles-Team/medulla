@@ -112,7 +112,7 @@ Wire surface at the request boundary; each method variant goes into `crates/medu
 - `ReadPathHistory { repo, path, rev, limit }` and `ReadBlame { repo, rev, path }` return the history and line-origin answers (R005).
 - `RecordGateVerdict { changeset, gate_id, input_digest, verdict, evidence_digest, duration_ms }` returns the sealed verdict record (R008).
 - `BisectStep { repo, branch, bad, good }` returns the next midpoint or the culprit (R009).
-- `ImportGitHistory { request }` reads a git packfile (version 2) into the changeset chain (R010); `GitExportPack { repo, wants, haves }` is the one export and returns a packfile built by R010's `export_pack` (R014). The chain is linear, so import refuses a merge commit.
+- `ImportGitHistory { request }` reads a git packfile (version 2) into the changeset chain (R010); `GitExportPack { repo, wants, haves }` is the one export and returns a packfile built by R010's `export_pack` (R014). The chain is the first-parent line: a merge commit imports as one changeset with its full parent list and a stored side pack, and history and blame follow first parents.
 - `SubmitSymbolEdit { request }` projects a symbol edit to one changeset (R013).
 
 ### Decisions
