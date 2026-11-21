@@ -29,6 +29,23 @@ pub fn register_query_encoders() -> Result<(), String> {
     static REGISTERED: std::sync::Once = std::sync::Once::new();
     let mut outcome = Ok(());
     REGISTERED.call_once(|| {
+        // Each non-text modality bound in the same model-binding config registers beside
+        // the text embedder; an unbound modality is simply not registered.
+        #[cfg(feature = "modality-serving")]
+        for (identity, encoder) in
+            medulla_server_ops::api::query_txn::query_support::bound_modality_encoders()
+        {
+            if let Err(error) = medulla_plan::embed_registry::modality_encoders().register(
+                &identity.encoder_id,
+                &identity.space_id,
+                identity.dimensions,
+                &identity.revision,
+                encoder,
+            ) {
+                outcome = Err(error);
+                return;
+            }
+        }
         let (Some(embedder), Some(identity)) = (uql_text_embedder(), uql_text_encoder_identity())
         else {
             return;

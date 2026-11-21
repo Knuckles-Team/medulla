@@ -39,6 +39,39 @@ pub const HASH_ENCODER_ID: &str = "builtin:hash";
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 pub const REMOTE_ENCODER_ID: &str = "remote:openai-compatible";
 
+/// The non-text modalities whose query encoders the model-binding config can bind.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
+pub const BINDABLE_MODALITIES: [&str; 3] = ["image", "audio", "video"];
+
+/// Each non-text modality bound in the model-binding config (the `MEDULLA_EMBEDDING_<MODALITY>_*`
+/// names beside the text embedder's), with the identity it registers under and its encoder
+/// (MEDULLA-FEDERATED-QUERY-R039.1.3). An unbound modality is absent: a query that needs it
+/// refuses `QUERY_ENCODER_UNAVAILABLE`.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
+pub fn bound_modality_encoders() -> Vec<(
+    TextEncoderIdentity,
+    Box<dyn medulla_exec::exec::TextEmbedder>,
+)> {
+    BINDABLE_MODALITIES
+        .into_iter()
+        .filter_map(|modality| {
+            let config =
+                crate::api::ingest::embedder::EmbedderConfig::from_env_for_modality(modality)?;
+            let encoder_id = format!("{REMOTE_ENCODER_ID}:{modality}");
+            let identity = TextEncoderIdentity {
+                space_id: config.model.clone().unwrap_or_else(|| encoder_id.clone()),
+                encoder_id,
+                dimensions: config.dims,
+                revision: TEXT_ENCODER_REVISION.to_string(),
+            };
+            Some((
+                identity,
+                Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>,
+            ))
+        })
+        .collect()
+}
+
 /// The identity of the bound text embedder, or `None` when nothing is bound.
 #[cfg(feature = "query")]
 pub fn uql_text_encoder_identity() -> Option<TextEncoderIdentity> {

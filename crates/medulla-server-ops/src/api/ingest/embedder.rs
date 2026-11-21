@@ -10,6 +10,9 @@
 //! - `MEDULLA_EMBEDDING_API_KEY`: an optional bearer token, never
 //!   logged or echoed.
 //!
+//! A non-text modality's query encoder reads the same names with the modality in them
+//! (`MEDULLA_EMBEDDING_IMAGE_URL`, `_AUDIO_`, `_VIDEO_`; see `from_env_for_modality`).
+//!
 //! With no URL the deterministic `medulla_plan::HashEmbedder` fills in at the same
 //! width and the provenance says `embedder = hash`. The same embedder backs
 //! the UQL `RANK BY ~ "text"` seam, so stored chunk vectors and query vectors
@@ -78,6 +81,27 @@ impl EmbedderConfig {
                 .unwrap_or(DEFAULT_DIMS),
             api_key: non_empty("MEDULLA_EMBEDDING_API_KEY"),
         }
+    }
+
+    /// The config of one non-text modality's query encoder (MEDULLA-FEDERATED-QUERY-R039.1.3),
+    /// read from the same `MEDULLA_EMBEDDING_*` names with the modality's upper-case name after
+    /// `EMBEDDING_`: `MEDULLA_EMBEDDING_IMAGE_URL`, `_MODEL`, `_DIMS` and `_API_KEY`. A
+    /// modality with no URL is unbound (`None`): there is no hash fallback, because a hash of
+    /// the query text is not a vector in that modality's space.
+    pub fn from_env_for_modality(modality: &str) -> Option<Self> {
+        let name = |suffix: &str| {
+            format!("MEDULLA_EMBEDDING_{}_{suffix}", modality.to_ascii_uppercase())
+        };
+        let endpoint = non_empty(&name("URL")).map(|url| endpoint(&url))?;
+        Some(Self {
+            endpoint: Some(endpoint),
+            model: non_empty(&name("MODEL")),
+            dims: non_empty(&name("DIMS"))
+                .and_then(|dims| dims.parse::<usize>().ok())
+                .filter(|dims| (1..=16_384).contains(dims))
+                .unwrap_or(DEFAULT_DIMS),
+            api_key: non_empty(&name("API_KEY")),
+        })
     }
 
     /// The provenance name of the embedder this config selects.
@@ -243,5 +267,28 @@ mod tests {
         assert_eq!(first, config.embed(&["a", "b"]).unwrap());
         assert_eq!(first[0].len(), 16);
         assert!(!format!("{config:?}").contains("secret"));
+    }
+}
+
+#[cfg(test)]
+mod modality_config_tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.3
+    #[test]
+    fn a_non_text_modality_binds_only_when_its_url_is_configured() {
+        // A name no other test or deployment sets, so the process environment is not shared.
+        let modality = "r0391three";
+        assert!(EmbedderConfig::from_env_for_modality(modality).is_none());
+        std::env::set_var("MEDULLA_EMBEDDING_R0391THREE_URL", "http://127.0.0.1:9");
+        std::env::set_var("MEDULLA_EMBEDDING_R0391THREE_MODEL", "image-model");
+        std::env::set_var("MEDULLA_EMBEDDING_R0391THREE_DIMS", "16");
+        let config = EmbedderConfig::from_env_for_modality(modality).expect("bound");
+        assert_eq!(config.model.as_deref(), Some("image-model"));
+        assert_eq!(config.dims, 16);
+        assert_eq!(config.name(), REMOTE);
+        std::env::remove_var("MEDULLA_EMBEDDING_R0391THREE_URL");
+        std::env::remove_var("MEDULLA_EMBEDDING_R0391THREE_MODEL");
+        std::env::remove_var("MEDULLA_EMBEDDING_R0391THREE_DIMS");
     }
 }
