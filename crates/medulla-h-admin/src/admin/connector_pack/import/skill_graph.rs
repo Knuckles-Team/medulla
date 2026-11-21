@@ -56,6 +56,7 @@ pub(super) fn validate_graph_bundles(
     // The reports of every graph the pack holds, merged: each rule id once, in the order
     // first checked, and every violation (MEDULLA-TYPED-PACKS-R700.5).
     let mut merged: Option<ConformanceReport> = None;
+    let mut layers = Vec::new();
     for skill in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Skill)
@@ -111,19 +112,19 @@ pub(super) fn validate_graph_bundles(
     merged
 }
 
-/// The concept layer of the pack's skill graph (MEDULLA-TYPED-PACKS-R701.2).
+/// The concept layers of the pack's skill graphs (MEDULLA-TYPED-PACKS-R701.2).
 ///
-/// For the first graph skill the pack holds that has an ontology entry named
+/// For every graph skill the pack holds, in entry order, that has an ontology entry named
 /// `skillgraph/<graph>`: the ontology IRI that entry declares must be the layer IRI
 /// `SKILL_GRAPH_LAYER_NS` plus the graph name, and each class it declares must reach a
 /// parent class through the existing `ontology_orphan_classes` computation (R105), so the
 /// IRI and the roll-up are checked in one pass over the entry. A graph with no layer entry
-/// answers `None`. The cost is O(classes).
+/// contributes nothing; the first violation returns. The cost is O(total classes).
 #[cfg(feature = "rdf")]
-pub(super) fn bind_layer(
+pub(super) fn bind_layers(
     archive: &[u8],
     all: &[&PackEntry],
-) -> Result<Option<SkillGraphLayer>, PackViolation> {
+) -> Result<Vec<SkillGraphLayer>, PackViolation> {
     // A `skillgraph/<graph>` ontology entry with no graph skill is refused by name
     // (MEDULLA-TYPED-PACKS-R701.4).
     for layer in all
@@ -152,6 +153,7 @@ pub(super) fn bind_layer(
             ));
         }
     }
+    let mut layers = Vec::new();
     for skill in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Skill)
@@ -204,15 +206,17 @@ pub(super) fn bind_layer(
             ));
         }
         let class_count = u32::try_from(classes.len()).unwrap_or(u32::MAX);
-        return SkillGraphLayer::new(graph, expected, class_count).map(Some).map_err(|error| {
-            violation(
-                PackViolationCode::OntologyInvalid,
-                Some(&layer.uri),
-                &error.to_string(),
-            )
-        });
+        layers.push(
+            SkillGraphLayer::new(graph, expected, class_count).map_err(|error| {
+                violation(
+                    PackViolationCode::OntologyInvalid,
+                    Some(&layer.uri),
+                    &error.to_string(),
+                )
+            })?,
+        );
     }
-    Ok(None)
+    Ok(layers)
 }
 
 struct Collector {
@@ -518,7 +522,7 @@ mod tests {
     /// A pack of one graph skill and, when `layer` is given, its `skillgraph/<graph>`
     /// ontology entry.
     #[cfg(feature = "rdf")]
-    fn layer_pack(layer: Option<&str>) -> (Vec<u8>, Vec<PackEntry>) {
+    fn layer_pack(layers: &[(&str, Option<&str>)]) -> (Vec<u8>, Vec<PackEntry>) {
         let mut archive = Vec::new();
         let mut entries = Vec::new();
         let mut put = |kind: PackEntryKind, name: &str, body: &[u8]| {
@@ -532,15 +536,18 @@ mod tests {
             };
             entries.push(entry);
         };
-        let skill =
-            format!("---\nname: {GRAPH}\ndescription: demo graph\nskill_type: graph\n---\nbody\n");
-        put(PackEntryKind::Skill, GRAPH, skill.as_bytes());
-        if let Some(turtle) = layer {
-            put(
-                PackEntryKind::Ontology,
-                &format!("skillgraph/{GRAPH}"),
-                turtle.as_bytes(),
+        for (graph, layer) in layers {
+            let skill = format!(
+                "---\nname: {graph}\ndescription: demo graph\nskill_type: graph\n---\nbody\n"
             );
+            put(PackEntryKind::Skill, graph, skill.as_bytes());
+            if let Some(turtle) = layer {
+                put(
+                    PackEntryKind::Ontology,
+                    &format!("skillgraph/{graph}"),
+                    turtle.as_bytes(),
+                );
+            }
         }
         (archive, entries)
     }
@@ -563,17 +570,19 @@ mod tests {
         let layer_iri = format!("{SKILL_GRAPH_LAYER_NS}{GRAPH}");
         let core_class = medulla_types::ontology_iri!("core#CreativeWork");
         let bind = |turtle: Option<&str>| {
-            let (archive, entries) = layer_pack(turtle);
+            let (archive, entries) = layer_pack(&[(GRAPH, turtle)]);
             let refs: Vec<&PackEntry> = entries.iter().collect();
-            bind_layer(&archive, &refs)
+            bind_layers(&archive, &refs)
         };
 
         // A graph with no layer entry binds nothing.
-        assert_eq!(bind(None), Ok(None));
+        assert_eq!(bind(None), Ok(Vec::new()));
 
         // The right IRI and a roll-up to a core class bind the layer with its class count.
         let good = layer_turtle(&layer_iri, core_class);
-        let layer = bind(Some(good.as_str())).unwrap().unwrap();
+        let layers = bind(Some(good.as_str())).unwrap();
+        assert_eq!(layers.len(), 1);
+        let layer = &layers[0];
         assert_eq!(layer.graph, GRAPH);
         assert_eq!(layer.ontology_iri, layer_iri);
         assert_eq!(layer.class_count, 2);
@@ -589,5 +598,30 @@ mod tests {
         let orphan = layer_turtle(&layer_iri, "https://example.org/ontology/unrelated#Thing");
         let refused = bind(Some(orphan.as_str())).unwrap_err();
         assert_eq!(refused.code, PackViolationCode::OntologyOrphan);
+
+        // Two graphs: both layers are checked and both are returned.
+        let second_iri = format!("{SKILL_GRAPH_LAYER_NS}other");
+        let second_good = layer_turtle(&second_iri, core_class);
+        let (archive, entries) = layer_pack(&[
+            (GRAPH, Some(good.as_str())),
+            ("other", Some(second_good.as_str())),
+        ]);
+        let refs: Vec<&PackEntry> = entries.iter().collect();
+        let layers = bind_layers(&archive, &refs).unwrap();
+        assert_eq!(
+            layers.iter().map(|layer| layer.graph.as_str()).collect::<Vec<_>>(),
+            vec![GRAPH, "other"]
+        );
+
+        // A wrong IRI on the second graph's layer is refused by name.
+        let second_bad = layer_turtle("https://example.org/ontology/second", core_class);
+        let (archive, entries) = layer_pack(&[
+            (GRAPH, Some(good.as_str())),
+            ("other", Some(second_bad.as_str())),
+        ]);
+        let refs: Vec<&PackEntry> = entries.iter().collect();
+        let refused = bind_layers(&archive, &refs).unwrap_err();
+        assert_eq!(refused.code, PackViolationCode::SkillGraphLayerIriMismatch);
+        assert!(refused.detail.contains("graph other declares"));
     }
 }
