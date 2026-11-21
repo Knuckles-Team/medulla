@@ -25,7 +25,6 @@ from .client import (
     ModalityAuthority,
     RequestContextClaims,
     ResultTooLargeError,
-    TransitionRefusedError,
     ServedModalityCapabilities,
     ServedModalityClient,
     ServedModalityEvent,
@@ -34,6 +33,7 @@ from .client import (
     ServerRegistryClient,
     StaleRouteError,
     SyncMedullaClient,
+    TransitionRefusedError,
     validate_request_context,
 )
 from .client_capabilities import (

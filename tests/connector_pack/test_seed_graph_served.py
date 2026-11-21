@@ -21,13 +21,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 
-from ontology_pack_support import connect, import_entries  # noqa: E402
-from test_pack_contract_served import _engine, _head  # noqa: E402
+from ontology_pack_support import import_entries
+from test_pack_contract_served import _engine, _head
 
-from conftest import TEST_TENANT, request_context  # noqa: E402  # isort: skip
-from medulla import ConnectorPackEntryContent  # noqa: E402
-from medulla.client import MedullaClient  # noqa: E402
-from medulla.generated.connector_pack import PackAnnotations, PackEntryKind  # noqa: E402
+from conftest import TEST_TENANT, request_context  # isort: skip
+from medulla import ConnectorPackEntryContent
+from medulla.client import MedullaClient
+from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 
 GRAPH_DOMAIN = b"eg/connector-pack-projection-graph/v1"
 
