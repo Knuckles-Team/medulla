@@ -46,6 +46,22 @@ pub use report::{
     EXIT_UNDETERMINED, EXIT_UPGRADE_AVAILABLE,
 };
 
+/// One line per owner-store layout, in registry order:
+/// `<snake_case layout name> <pinned layout digest>`
+/// (MEDULLA-OBJECT-STORAGE-BACKEND-R002.3). Read-only; touches no file.
+pub fn layouts_listing() -> Vec<String> {
+    medulla_storage::ALL_LAYOUTS
+        .iter()
+        .map(|layout| {
+            format!(
+                "{} {}",
+                layout.canonical_name(),
+                medulla_storage::pinned_layout_digest(*layout)
+            )
+        })
+        .collect()
+}
+
 /// Directory, under the data directory, that holds the private scratch copy an
 /// inspection recovers and reads. It is empty between runs.
 const DEFAULT_STAGING_DIRECTORY: &str = ".store-upgrade-staging";

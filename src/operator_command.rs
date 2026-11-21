@@ -75,6 +75,11 @@ pub(super) enum StoreUpgradeVerb {
         #[arg(long)]
         confirm: bool,
     },
+    /// Print one line per owner-store layout, in registry order:
+    /// `<snake_case layout name> <pinned layout digest>`
+    /// (MEDULLA-OBJECT-STORAGE-BACKEND-R002.3). Read-only; opens no store.
+    /// Exit status: 0.
+    Layouts,
     /// Re-bind a data directory that was copied from another one. Each store
     /// binds to the device and inode of its file, so a copy refuses the ordinary
     /// open. The engine must be stopped. A store that already carries the root of
@@ -104,6 +109,12 @@ impl OperatorCommand {
     /// Run the command, print its report, and return the exit status.
     pub(super) fn run(self) -> i32 {
         let Self::StoreUpgrade { verb } = self;
+        if matches!(verb, StoreUpgradeVerb::Layouts) {
+            for line in store_upgrade::layouts_listing() {
+                println!("{line}");
+            }
+            return store_upgrade::EXIT_NOTHING_TO_DO;
+        }
         let report = match verb {
             StoreUpgradeVerb::Inspect { data_dir } => store_upgrade::inspect(&data_dir),
             StoreUpgradeVerb::Apply {
@@ -135,6 +146,7 @@ impl OperatorCommand {
                     confirm,
                 },
             ),
+            StoreUpgradeVerb::Layouts => return store_upgrade::EXIT_NOTHING_TO_DO,
             StoreUpgradeVerb::Rebind {
                 data_dir,
                 copied_from,
@@ -210,5 +222,28 @@ mod tests {
             },
         };
         assert_eq!(command.run(), store_upgrade::EXIT_FAILED);
+    }
+
+    // spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.3
+    #[test]
+    fn layouts_verb_prints_every_pinned_digest() {
+        let parsed = Cli::try_parse_from(["server", "store-upgrade", "layouts"]).unwrap();
+        assert!(matches!(
+            parsed.command,
+            Some(OperatorCommand::StoreUpgrade {
+                verb: StoreUpgradeVerb::Layouts
+            })
+        ));
+        let lines = store_upgrade::layouts_listing();
+        assert_eq!(lines.len(), medulla_storage::ALL_LAYOUTS.len());
+        for (line, layout) in lines.iter().zip(medulla_storage::ALL_LAYOUTS) {
+            let (name, digest) = line.split_once(' ').unwrap();
+            assert_eq!(name, layout.canonical_name());
+            assert_eq!(digest, medulla_storage::pinned_layout_digest(layout));
+        }
+        let command = OperatorCommand::StoreUpgrade {
+            verb: StoreUpgradeVerb::Layouts,
+        };
+        assert_eq!(command.run(), store_upgrade::EXIT_NOTHING_TO_DO);
     }
 }
