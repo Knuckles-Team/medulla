@@ -1567,3 +1567,15 @@ fn hardware_job_machine_matches_edge_table() {
 fn hardware_job_machine_classes_extend_core() {
     sm::assert_extends_core("HardwareJob");
 }
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.6
+#[test]
+fn quality_rule_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::quality_rule_machine::QUALITY_RULE_MACHINE);
+}
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.6
+#[test]
+fn quality_rule_machine_classes_extend_core() {
+    sm::assert_extends_core("QualityRule");
+}

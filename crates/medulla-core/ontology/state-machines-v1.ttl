@@ -8931,3 +8931,55 @@
     :fromState :HardwareJobMachine_Running ;
     :toState :HardwareJobMachine_Cancelled ;
     :firedBy :HardwareJobMachine_Event_CancelAccepted .
+
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.6
+# The QualityRule machine: the change-request state of a quality rule. The Rust edge table QUALITY_RULE_MACHINE is the same table.
+
+:QualityRuleState a owl:Class ;
+    rdfs:label "QualityRule State" ;
+    rdfs:comment "A state of the QualityRule machine." ;
+    rdfs:subClassOf :State .
+
+:QualityRuleTerminalState a owl:Class ;
+    rdfs:label "QualityRule Terminal State" ;
+    rdfs:comment "A terminal state of the QualityRule machine." ;
+    rdfs:subClassOf :TerminalState, :QualityRuleState .
+
+:QualityRuleTransition a owl:Class ;
+    rdfs:label "QualityRule Transition" ;
+    rdfs:comment "A transition of the QualityRule machine." ;
+    rdfs:subClassOf :Transition .
+
+:QualityRuleEvent a owl:Class ;
+    rdfs:label "QualityRule Event" ;
+    rdfs:comment "An event of the QualityRule machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:QualityRuleGuard a owl:Class ;
+    rdfs:label "QualityRule Guard" ;
+    rdfs:comment "A guard of the QualityRule machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:QualityRuleMachine a :StateMachine ;
+    rdfs:label "QualityRule machine" ;
+    :initialState :QualityRuleMachine_Proposed ;
+    :hasState :QualityRuleMachine_Proposed, :QualityRuleMachine_Approved .
+
+:QualityRuleMachine_Proposed a :QualityRuleState ;
+    rdfs:label "QualityRule Proposed" ;
+    :storedForm "proposed" .
+
+:QualityRuleMachine_Approved a :QualityRuleTerminalState ;
+    rdfs:label "QualityRule Approved" ;
+    :storedForm "approved" .
+
+:QualityRuleMachine_Event_Approve a :QualityRuleEvent ;
+    rdfs:label "QualityRule Approve" .
+
+:QualityRuleMachine_QR01 a :QualityRuleTransition ;
+    rdfs:label "QualityRule QR01" ;
+    :edgeId "QR01" ;
+    :fromState :QualityRuleMachine_Proposed ;
+    :toState :QualityRuleMachine_Approved ;
+    :firedBy :QualityRuleMachine_Event_Approve .

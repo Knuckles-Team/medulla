@@ -94,7 +94,7 @@ fn stored_rule(
         .and_then(Value::as_u64)
         .unwrap_or(0)
         .min(u64::from(u32::MAX)) as u32;
-    let approved = matches!(state, RuleState::Approved { .. });
+    let approved = state.kind() == medulla_types::quality_rule_machine::RuleStateKind::Approved;
     Some((
         StoredRule {
             node_id,

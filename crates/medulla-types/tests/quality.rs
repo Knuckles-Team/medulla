@@ -92,6 +92,17 @@ fn profile_yields_proposed_rules() {
     assert!(proposals[0].active().is_none());
     assert!(proposals[0].approve("steward"));
     assert!(proposals[0].active().is_some());
+    assert!(
+        !proposals[0].approve("other"),
+        "an approved rule is terminal: a second approval is refused"
+    );
+    assert_eq!(
+        proposals[0].state,
+        RuleState::Approved {
+            approver: "steward".to_string()
+        },
+        "the first approver stays"
+    );
 
     let sparse = ColumnProfile {
         nulls: 4_000,

@@ -145,6 +145,46 @@ pub enum RuleState {
     Approved { approver: String },
 }
 
+impl RuleState {
+    /// The machine kind of this state (MEDULLA-DATAPLAT-VOCAB-R009.6). The approver a state
+    /// carries stays on the record.
+    pub const fn kind(&self) -> medulla_types::quality_rule_machine::RuleStateKind {
+        use medulla_types::quality_rule_machine::RuleStateKind as K;
+        match self {
+            Self::Proposed => K::Proposed,
+            Self::Approved { .. } => K::Approved,
+        }
+    }
+
+    /// The state a new rule takes: the initial state of `QualityRuleMachine`.
+    pub fn initial() -> Self {
+        use medulla_types::quality_rule_machine::RuleStateKind as K;
+        match K::initial() {
+            K::Proposed => Self::Proposed,
+            K::Approved => Self::Approved {
+                approver: String::new(),
+            },
+        }
+    }
+
+    /// Approve the rule through `QualityRuleMachine`: the approved state, or
+    /// `TRANSITION_REFUSED` when the rule is not proposed.
+    pub fn approve(
+        &self,
+        approver: impl Into<String>,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        use medulla_types::quality_rule_machine::{QualityRuleEvent, RuleStateKind as K};
+        self.kind()
+            .apply(QualityRuleEvent::Approve)
+            .map(|kind| match kind {
+                K::Approved => Self::Approved {
+                    approver: approver.into(),
+                },
+                K::Proposed => Self::Proposed,
+            })
+    }
+}
+
 /// What one `QualityRulePut` wrote (MEDULLA-UNIFIED-DATA-PLANE-R762.3): the rule, the
 /// tenant-private node that holds it and the state it entered.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,9 +209,10 @@ impl ProposedQualityRule {
     /// The rule to evaluate, only once approved. A proposed rule never
     /// evaluates as active.
     pub fn active(&self) -> Option<&QualityRule> {
-        match self.state {
-            RuleState::Approved { .. } => Some(&self.rule),
-            RuleState::Proposed => None,
+        use medulla_types::quality_rule_machine::RuleStateKind as K;
+        match self.state.kind() {
+            K::Approved => Some(&self.rule),
+            K::Proposed => None,
         }
     }
 
@@ -180,10 +221,13 @@ impl ProposedQualityRule {
         if approver.trim().is_empty() {
             return false;
         }
-        self.state = RuleState::Approved {
-            approver: approver.to_string(),
-        };
-        true
+        match self.state.approve(approver) {
+            Ok(next) => {
+                self.state = next;
+                true
+            }
+            Err(_) => false,
+        }
     }
 }
 
@@ -206,7 +250,7 @@ pub fn propose_rules(profile: &crate::profile::ColumnProfile) -> Vec<ProposedQua
                 threshold,
                 severity: QualitySeverity::Warning,
             },
-            state: RuleState::Proposed,
+            state: RuleState::initial(),
             basis,
         }
     };

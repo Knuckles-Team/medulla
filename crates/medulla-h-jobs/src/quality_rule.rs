@@ -52,9 +52,9 @@ pub fn put_quality_rule(
     medulla_core::quality::compile_rule(rule)?;
     let body = serde_json::to_string(rule)
         .map_err(|_| InvalidQualityRule::RuleInvalid("the rule cannot be encoded".to_string()))?;
-    let state = RuleState::Approved {
-        approver: agent.to_string(),
-    };
+    let state = RuleState::initial().approve(agent).map_err(|_| {
+        InvalidQualityRule::RuleInvalid("rule state refused".to_string())
+    })?;
     let node_id = quality_rule_node_id(tenant, &rule.id);
     let properties = json!({
         "type": QUALITY_RULE_LABEL,
