@@ -427,29 +427,6 @@ pub fn shape_digest(ops: &[Op]) -> Result<String, String> {
         .map(|digest| digest.to_hex())
 }
 
-/// Digest of a cost head: the correction curves in op-kind order, then the planner
-/// knobs in name order (MEDULLA-FEDERATED-QUERY-R732.2).
-pub fn cost_head_digest(
-    corrections: &[CostCorrectionArtifact],
-    knobs: &[(String, String)],
-) -> String {
-    let mut curves: Vec<(&str, &[f64])> = corrections
-        .iter()
-        .map(|c| (c.op_kind.as_str(), c.coeffs.as_slice()))
-        .collect();
-    curves.sort_by(|a, b| a.0.cmp(b.0));
-    let mut knobs: Vec<(&str, &str)> = knobs.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
-    knobs.sort();
-    // A tuple of strings and floats always encodes, and the framing refuses only an
-    // empty domain or a field past 4 GiB.
-    #[allow(clippy::disallowed_methods)]
-    let bytes = rmp_serde::to_vec(&(curves, knobs)).expect("curves and knobs always encode");
-    #[allow(clippy::disallowed_methods)]
-    let digest = medulla_types::contract::Digest256::framed(b"eg/cost-head/v1", &[&bytes])
-        .expect("the cost-head domain is non-empty");
-    digest.to_hex()
-}
-
 /// One revision of the cost head: the correction curves plus the planner knob values
 /// (MEDULLA-FEDERATED-QUERY-R732.2). Its content digest is the `cost_head_revision` a
 /// [`PlanExecutionRecord`] names.
@@ -463,11 +440,22 @@ pub struct CostHeadRevision {
     pub knobs: Vec<(String, String)>,
 }
 
+/// The digest of a cost head over its curves and knobs (MEDULLA-FEDERATED-QUERY-R732.2),
+/// defined once in the decision types so the component store verifies the same bytes.
+fn revision_digest(corrections: &[CostCorrectionArtifact], knobs: &[(String, String)]) -> String {
+    let curves: Vec<(&str, &[f64])> = corrections
+        .iter()
+        .map(|c| (c.op_kind.as_str(), c.coeffs.as_slice()))
+        .collect();
+    let knobs: Vec<(&str, &str)> = knobs.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    medulla_decision_types::decision::planner_cost_head::cost_head_digest(&curves, &knobs)
+}
+
 impl CostHeadRevision {
     /// A revision over `corrections` and `knobs`; the digest is derived from them.
     pub fn new(corrections: Vec<CostCorrectionArtifact>, knobs: Vec<(String, String)>) -> Self {
         Self {
-            digest: cost_head_digest(&corrections, &knobs),
+            digest: revision_digest(&corrections, &knobs),
             corrections,
             knobs,
         }
@@ -715,7 +703,7 @@ mod tests {
         assert_ne!(doubling.digest, tripling.digest);
         assert_eq!(
             doubling.digest,
-            cost_head_digest(&doubling.corrections, &doubling.knobs)
+            revision_digest(&doubling.corrections, &doubling.knobs)
         );
         let tuned = CostHeadRevision::new(
             doubling.corrections.clone(),

@@ -168,11 +168,26 @@ fn record_component(
     }
 }
 
-/// A `DecisionPolicy` component must carry a policy body that verifies:
+/// A `DecisionPolicy` component must carry a policy body that verifies (and a
+/// `PlannerCostHead` a cost-head body that does):
 /// decodable, accepted by the policy's own validating constructor, and digested
 /// to exactly the component's `content_digest`. Checked at publish so a pin can
 /// never name a policy no assembly could read.
 pub(crate) fn verify_policy_component(draft: &AgentComponentDraft) -> Result<(), String> {
+    if draft.kind == AgentComponentKind::PlannerCostHead {
+        // MEDULLA-FEDERATED-QUERY-R732.5: a cost-head revision verifies against its digest the
+        // same way, so the policy-evolution gate can admit it as a `KnobSet` revision.
+        return medulla_decision_types::decision::planner_cost_head::verify_cost_head(
+            &draft.attributes,
+            &draft.content_digest,
+        )
+        .map_err(|code| {
+            refuse(
+                code,
+                "the cost-head body does not verify against its content digest",
+            )
+        });
+    }
     if draft.kind != AgentComponentKind::DecisionPolicy {
         return Ok(());
     }

@@ -271,6 +271,7 @@ class AgentComponentKind(str, Enum):
     RED_TEAM_TRANSFORM = "red_team_transform"
     RED_TEAM_SCORER = "red_team_scorer"
     PLAYBOOK = "playbook"
+    PLANNER_COST_HEAD = "planner_cost_head"
 
 
 class AgentGraphEdgeKind(str, Enum):

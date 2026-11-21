@@ -74,6 +74,7 @@ pub mod numeric;
 pub mod package_validation;
 pub mod paper_admission;
 pub mod path_success;
+pub mod planner_cost_head;
 pub mod planning_admission;
 pub mod playbook;
 pub mod policy;

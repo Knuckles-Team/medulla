@@ -134,7 +134,7 @@ const DIGEST_PREFIX: &str = "sha256:";
 /// `OutputValidator`, `Predicate`, `Shapes`, `A2aAgentCard`, `DecisionRecord`,
 /// `DecisionPolicy`, `DecisionHead`, `FeatureSchema`, `Rubric`, `NlTemplate`,
 /// `GuardrailRule`, `RuleInvariant`, `RedTeamAttack`, `RedTeamTransform`,
-/// `RedTeamScorer` and `Playbook`.
+/// `RedTeamScorer`, `Playbook` and `PlannerCostHead`.
 ///
 /// Closed on purpose. Every kind is either referenced from an agent slot —
 /// [`crate::agent_library::AgentLibraryEntry`],
@@ -219,6 +219,11 @@ pub enum AgentComponentKind {
     /// `trigger` (and `ticket_class` for the `ticket_class` trigger) travel as
     /// attributes and are refused at publish when missing or malformed.
     Playbook,
+    /// One revision of the planner's learned cost head: correction curves and planner knobs
+    /// (MEDULLA-FEDERATED-QUERY-R732.5). The body travels in the `planner.cost_head`
+    /// attribute and must verify against the component's `content_digest`; the policy-evolution
+    /// gate admits a published revision as a `KnobSet` revision of the `planner` policy.
+    PlannerCostHead,
 }
 
 /// The closed trigger set a `Playbook` component names in its `trigger`
@@ -274,6 +279,7 @@ impl AgentComponentKind {
             Self::RedTeamTransform => "red_team_transform",
             Self::RedTeamScorer => "red_team_scorer",
             Self::Playbook => "playbook",
+            Self::PlannerCostHead => "planner_cost_head",
         }
     }
 
@@ -286,7 +292,7 @@ impl AgentComponentKind {
     /// ledger and the access classifier read the same answer.
     pub fn publish_authz_action(self) -> &'static str {
         match self {
-            Self::DecisionPolicy => "admin:decision-policy",
+            Self::DecisionPolicy | Self::PlannerCostHead => "admin:decision-policy",
             Self::DecisionHead => "admin:decision-head",
             Self::FeatureSchema | Self::Rubric | Self::NlTemplate => "admin:decision-catalog",
             Self::ModelProfile
@@ -1908,6 +1914,7 @@ mod tests {
             ),
             (AgentComponentKind::RedTeamScorer, "agent:component-write"),
             (AgentComponentKind::Playbook, "agent:component-write"),
+            (AgentComponentKind::PlannerCostHead, "admin:decision-policy"),
             (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
             (AgentComponentKind::DecisionHead, "admin:decision-head"),
             (AgentComponentKind::FeatureSchema, "admin:decision-catalog"),

@@ -108,9 +108,9 @@ impl AgentLibraryStore {
     }
 
     /// The content digests of every retained revision of the published
-    /// `DecisionPolicy` component `component_id`, oldest first. Empty when the
-    /// component was never published or is another kind
-    /// (MEDULLA-DECISION-ENGINE-R811.7).
+    /// `DecisionPolicy` or `PlannerCostHead` component `component_id`, oldest
+    /// first. Empty when the component was never published or is another kind
+    /// (MEDULLA-DECISION-ENGINE-R811.7, MEDULLA-FEDERATED-QUERY-R732.5).
     pub fn decision_policy_digests(
         &self,
         tenant_id: &str,
@@ -120,7 +120,11 @@ impl AgentLibraryStore {
             .component_revisions(tenant_id, component_id)?
             .into_iter()
             .filter(|entry| {
-                entry.kind == medulla_agent_types::agent_component::AgentComponentKind::DecisionPolicy
+                matches!(
+                    entry.kind,
+                    medulla_agent_types::agent_component::AgentComponentKind::DecisionPolicy
+                        | medulla_agent_types::agent_component::AgentComponentKind::PlannerCostHead
+                )
             })
             .map(|entry| entry.content_digest)
             .collect())
