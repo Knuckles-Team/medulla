@@ -769,6 +769,11 @@ def memory_benchmark_op(request: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "memory_change_benchmark_submit", "request": dict(request)}
 
 
+def certify_local_skill_op(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Attest one local-model skill certification (R142.101) as a ``DecisionEval`` job."""
+    return {"op": "certify_local_skill", "request": dict(request)}
+
+
 def delegation_quality_op(request: Mapping[str, Any]) -> dict[str, Any]:
     """Judge one window of a delegate's observations (R157.3) as a
     ``DecisionEval`` job."""
@@ -1720,6 +1725,7 @@ __all__ = [
     "record_measured_fact",
     "record_outcome_op",
     "resolve_op",
+    "certify_local_skill_op",
     "promote_rule_op",
     "propose_rule_op",
     "approve_rule_op",
