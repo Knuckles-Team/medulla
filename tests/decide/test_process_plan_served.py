@@ -18,7 +18,7 @@ import uuid
 from typing import Any
 
 import pytest
-from _decision_resident_fixture import publish, schema_body
+from _decision_resident_fixture import DIGEST, publication, publish, schema_body
 from _harness_envelope import graph_name as _graph_name
 from conftest import TEST_TENANT, request_context
 
@@ -57,10 +57,13 @@ def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _workflow() -> dict[str, Any]:
-    steps = [{"id": f"s{n}", **step} for n, step in enumerate(STEPS, start=1)]
+def _workflow(
+    step_list: list[dict[str, Any]] = STEPS,
+    flow_list: list[tuple[str, str, str | None, bool]] = FLOWS,
+) -> dict[str, Any]:
+    steps = [{"id": f"s{n}", **step} for n, step in enumerate(step_list, start=1)]
     flows = []
-    for source, target, condition, default in FLOWS:
+    for source, target, condition, default in flow_list:
         flow: dict[str, Any] = {"source": source, "target": target, "default": default}
         if condition:
             flow["condition"] = condition
@@ -138,9 +141,12 @@ async def _plan(schema: dict[str, Any], graph: str, workflow_id: str, version: i
         await client.close()
 
 
-async def _store(graph: str, workflow_id: str) -> int:
+async def _store(graph: str, workflow_id: str, workflow: dict[str, Any] | None = None) -> int:
     client = await _connect(graph)
     try:
+        if workflow is not None:
+            imported = await client.process_model_import(workflow, workflow_id)
+            return imported["version"]
         imported = await client.process_model_import(_workflow(), workflow_id)
         await client.batch_update(_bindings(imported["workflow_id"]))
         return imported["version"]
@@ -184,3 +190,83 @@ def test_process_plan_binds_every_step_kind(clean_graph):
     missing = asyncio.run(_plan(schema, graph, f"workflow:none-{suffix}", 1))
     assert missing["outcome"]["outcome"] == "abstained", missing["outcome"]
     assert "WORKFLOW_UNKNOWN" in json.dumps(missing["outcome"])
+
+
+RANKED_TASK = "export the quarterly sales report to a file"
+
+
+def _publish_ranked_tool(client: Any, component_id: str, server: str, summary: str) -> None:
+    request = publication(component_id, "tool", {})
+    component = request["op"]["request"]["component"]
+    component["content_digest"] = DIGEST
+    component["summary"] = summary
+    component["facts"] = {
+        "facts": "tool",
+        "effect": "read",
+        "required_scopes": [],
+        "schema_tokens": 100,
+    }
+    component["attributes"] = {"name": component_id, "server_id": server}
+    client._send("AgentComponent", request)
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R704.8")
+def test_process_plan_ranked_binding_is_a_claim(clean_graph):
+    # spec: MEDULLA-CQ-ORCH-R704.8
+    """An agent step the graph does not bind takes the top ranked tool that has a registered
+    contract; the binding premise is a ranked claim, and its plan carries the tool call."""
+    suffix = uuid.uuid4().hex[:8]
+    graph = _graph_name(clean_graph)
+    schema = publish(clean_graph, f"r704-8-ranked-schema-{suffix}", "feature_schema", schema_body())
+    tool = f"export-report-{suffix}"
+    server = f"reports-{suffix}"
+    _publish_ranked_tool(clean_graph, tool, server, RANKED_TASK)
+    for index in range(5):
+        _publish_ranked_tool(
+            clean_graph,
+            f"filler-{suffix}-{index}",
+            f"filler-server-{index}",
+            f"handles topic{index} requests",
+        )
+    workflow = _workflow(
+        [
+            {"kind": "start", "label": "Report requested"},
+            {"kind": "agent", "label": RANKED_TASK},
+            {"kind": "end", "label": "Done"},
+        ],
+        [("s1", "s2", None, False), ("s2", "s3", None, False)],
+    )
+    workflow_id = f"workflow:ranked-{suffix}"
+    version = asyncio.run(_store(graph, workflow_id, workflow))
+
+    async def register_contract() -> None:
+        client = await _connect(graph)
+        try:
+            await client.batch_update(
+                [
+                    _node(
+                        f"tool-node:{suffix}",
+                        {
+                            "name": tool,
+                            "ofConnector": server,
+                            "contractIri": f"urn:contract:{suffix}",
+                        },
+                    )
+                ]
+            )
+        finally:
+            await client.close()
+
+    asyncio.run(register_contract())
+    record = asyncio.run(_plan(schema, graph, workflow_id, version))
+    tasks = {task["task_id"]: task for task in record["answer"]["value"]["tasks"]}
+    assert tasks["s2"]["call"]["tool"] == tool
+    ranked = [
+        premise
+        for premise in record["premises"]
+        if premise["fact"].startswith("binding:step=s2;")
+    ]
+    assert len(ranked) == 1, record["premises"]
+    assert f"target=tool:{server}/{tool}" in ranked[0]["fact"]
+    assert "source=ranked" in ranked[0]["fact"]
+    assert ranked[0]["class"] == "claim", ranked[0]
