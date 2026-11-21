@@ -61,8 +61,8 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T053 [US1] MEDULLA-SDLC-R012.1 Every ecosystem repository is ingested.
 - [ ] T054 [US1] MEDULLA-SDLC-R012.2 Spec rows are requirement records with caller and proof edges.
 - [ ] T055 [US1] MEDULLA-SDLC-R012.3 Changes are changesets bound to requirement rows.
-- [ ] T056 [US1] MEDULLA-SDLC-R012.4 Reachability and impact are graph queries.
-- [ ] T057 [US1] MEDULLA-SDLC-R012.5 Delivery slices come from the graph.
+- [ ] T056 [US1] MEDULLA-SDLC-R012.4 RETIRED: covered by R014.6 and R014.3
+- [ ] T057 [US1] MEDULLA-SDLC-R012.5 RETIRED: the next unblocked slice is a question of R014.6
 - [ ] T058 [US1] MEDULLA-SDLC-R012.6 Specs change through the graph.
 - [ ] T059 [US1] MEDULLA-SDLC-R012.7 Lifecycle evidence lives with the requirement: `judges` edge in `gate_verdict::record`, `requirement_evidence.uql` fixture, no new edge kind.
 - [ ] T060 [US4] MEDULLA-SDLC-R012.8 Project mode record.
@@ -70,11 +70,11 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T062 [US2] MEDULLA-SDLC-R014 Spec artifacts are graph records .
 - [ ] T063 [P] [US2] MEDULLA-SDLC-R014.1 Deterministic parser for spec artifacts.
 - [ ] T064 [US2] MEDULLA-SDLC-R014.2 Incremental ingest by file digest.
-- [ ] T065 [US2] MEDULLA-SDLC-R014.3 Records link to code items and commits.
+- [ ] T065 [US2] MEDULLA-SDLC-R014.3 Changesets cite the requirements they deliver.
 - [ ] T066 [US2] MEDULLA-SDLC-R014.4 Contracts form the seam graph.
 - [x] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
 - [ ] T068 [US2] MEDULLA-SDLC-R014.6 Competency questions over the artifact graph.
-- [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plans are first-class records.
+- [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plan sections are records.
 - [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
 - [ ] T071 [US2] MEDULLA-SDLC-R014.9 Hot-path proof: served artifact graph.
 - [ ] T072 [US3] MEDULLA-SDLC-R015 Task-dispatch decision .

@@ -88,7 +88,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R700.6` | `tests/ingest/test_readers_served.py::test_each_format_yields_spanned_fragments` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R701.1` | `crates/medulla-ingestion-types/src/extracted_fact.rs::tests::golden_vector_round_trips_and_invalid_shapes_are_rejected` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.2` | `crates/medulla-types/tests/ingest_rules.rs::grounding_repairs_direction_and_deduper_scales_linearly` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R701.4` | `crates/medulla-types/tests/ingest_rules.rs::a_fact_without_evidence_is_refused_and_an_unfit_fact_stays_an_ungrounded_claim` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.5` | `tests/ingest/test_fact_grounding_served.py::test_unchanged_content_is_unchanged` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R701.6` | `tests/ingest/test_fact_grounding_served.py::test_direction_repair_and_ungrounded_claims` | L4 | planned |
@@ -119,7 +119,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R902.6` | `benches/ingest_permission_sync.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R903.1` | `crates/medulla-types/tests/source_governance.rs::reconcile_plan_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R903.2` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::missing_records_delete_after_grace` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R903.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_source_reconcile_tests.rs::an_enumeration_prunes_a_deleted_record_after_the_grace_window` | L3 | `reconcile_sweep` with an injected time deletes nothing before the grace window ends and only the dropped record after it. Served wire check: `tests/ingest/test_source_reconcile_served.py::test_enumeration_prunes_deleted_record` (L4) asserts `missing_count` 1 and `deleted_count` 0 in the receipt. |
+| `MEDULLA-INGEST-WORKER-R903.3` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::sweep_methods_tombstone_only_the_due_record` | L2 | `sweep_methods` with an injected time returns no write before the grace window ends and only the dropped record's tombstone after it. Served wire check: `tests/ingest/test_source_reconcile_served.py::test_enumeration_prunes_deleted_record` (L4) asserts `missing_count` 1 and `deleted_count` 0 in the receipt. |
 | `MEDULLA-INGEST-WORKER-R903.4` | `crates/medulla-types/tests/ingest_rules.rs::incomplete_enumerations_never_delete_and_mass_deletes_are_guarded` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R903.5` | `tests/ingest/test_source_reconcile_served.py::test_reconcile_receipt_reads_back` | L4 | Asserts `ids_digest`, `missing_count` 1, `deleted_count` 0 and an empty `override_principal`; needs no clock control. |
 | `MEDULLA-INGEST-WORKER-R903.6` | `benches/ingest_source_reconcile.rs` | L5 | exists |

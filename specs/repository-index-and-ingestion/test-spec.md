@@ -149,7 +149,7 @@ Advance inventory before indexing completes. Both changed and unchanged symbol q
 
 Test same-content renames with unchanged grammar suffix and parser/identity scheme: retain symbol IDs while updating file-version and membership. Change the grammar suffix and require reparse; allow changed symbol IDs. Also reparse after parser/identity scheme changes. Independently read current spans, revisions and generation in each case.
 
-- **MEDULLA-REPO-INGEST-R002.1.6:** `crates/medulla-h-ingest/src/source_ingestion.rs::admit_kind_tests::skill_documents_is_admitted_and_facts_stays_refused` (planned, L1) and `crates/medulla-h-ingest/src/source_ingestion/skill_document.rs::tests::a_document_compiles_to_one_node_and_a_refusal_writes_nothing` (planned, L1).
+- **MEDULLA-REPO-INGEST-R002.1.6:** `crates/medulla-h-ingest/src/source_ingestion.rs::admit_kind_tests::skill_documents_and_facts_are_admitted` (L1, exists under the old name; renamed by the owning change) and `crates/medulla-h-ingest/src/source_ingestion/skill_document.rs::tests::a_document_compiles_to_one_node_and_a_refusal_writes_nothing` (planned, L1).
 
 ## Explicit state machine rows (Article XXXI)
 

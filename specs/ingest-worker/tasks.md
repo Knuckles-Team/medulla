@@ -107,7 +107,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T098 [US5] MEDULLA-INGEST-WORKER-R902.6 Hot-path proof: permission sync at batch size
 - [ ] T099 [US5] MEDULLA-INGEST-WORKER-R903.1 Model
 - [ ] T100 [US5] MEDULLA-INGEST-WORKER-R903.2 Behavior: plan, grace window and sweep
-- [ ] T101 [US5] MEDULLA-INGEST-WORKER-R903.3 Wiring: enumeration pages and the sweep job; Rust served test injects the sweep time
+- [ ] T101 [US5] MEDULLA-INGEST-WORKER-R903.3 Wiring: enumeration pages and the sweep job; the prune is proven in `sweep.rs` with an injected time
 - [ ] T102 [US5] MEDULLA-INGEST-WORKER-R903.4 Refusal
 - [ ] T103 [US5] MEDULLA-INGEST-WORKER-R903.5 Evidence: reconcile receipt
 - [ ] T104 [US5] MEDULLA-INGEST-WORKER-R903.6 Hot-path proof: reconcile at 1M identifiers

@@ -45,7 +45,7 @@ crates/medulla-h-decide/src/decide/family/task_plan.rs             new       Tas
 crates/medulla-h-decide/src/decide/family/task_context.rs          new       run-context assembly (R015.2)
 crates/medulla-decision-outcome-types/src/decision/defect_triage.rs  existing  triage types, knobs and refusals (R004.1, R004.7)
 crates/medulla-decision-stats/src/decision/defect_triage.rs        new       triage kernel (R004.8)
-crates/medulla-competency/src/spec_artifact_questions.rs           new       spec artifact competency questions (R012.4, R014.6, R018.2)
+crates/medulla-competency/src/spec_artifact_questions.rs           new       spec artifact competency questions (R014.6, R018.2)
 crates/medulla-sdlc/src/lifecycle/                                 new       scenario, proposals, research and delivery logic (R013, R017, R019)
 crates/medulla-server-router/src/dispatch/router/sdlc.rs           new       served lifecycle method arms (R002.3, R019.14)
 crates/medulla-protocol-types/src/protocol/method/method_10.rs     existing  new Method variants (R002.3, R019.14)
