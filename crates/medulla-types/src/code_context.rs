@@ -76,6 +76,10 @@ pub struct CodeContextAnswer {
     pub hubs: Vec<RankedHub>,
     /// Candidate anchors when `status` is `ambiguous`.
     pub candidates: Vec<String>,
+    /// The repositories whose index is stale or partial, listed when `status` is `degraded`
+    /// (MEDULLA-FEDERATED-QUERY-R654.4).
+    #[serde(default)]
+    pub missing_repositories: Vec<String>,
 }
 
 /// The closed set of operations causal stages.

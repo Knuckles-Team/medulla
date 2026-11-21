@@ -164,3 +164,103 @@ def test_methods_reach_kernels(start_medulla_server) -> None:
         assert by_node["svc"]["relationship"] == "depends_on"
 
     _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.4")
+def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.4: statuses, both codes and no state change."""
+
+    def body(client: Any, graph: str) -> None:
+        before = _call(
+            client, graph, "CodeContext", {"anchor": "::main", "question": "how"}
+        )
+        assert before["status"] == "ok"
+        assert before["missing_repositories"] == []
+
+        # Two symbols match the anchor: no guess, the candidates are listed.
+        _node(
+            client,
+            graph,
+            "sym-parse-2",
+            {
+                "type": "Symbol",
+                "symbol_type": "function",
+                "qualified_name": "repo/c.rs::parse",
+            },
+        )
+        ambiguous = _call(
+            client, graph, "CodeContext", {"anchor": "::parse", "question": "how"}
+        )
+        assert ambiguous["status"] == "ambiguous"
+        assert ambiguous["anchors"] == []
+        assert ambiguous["candidates"] == ["repo/b.rs::parse", "repo/c.rs::parse"]
+
+        # A repository whose branches are no longer live degrades the answer.
+        _node(
+            client,
+            graph,
+            "branch-x",
+            {"type": "Branch", "repository_id": "repo-x", "status": "stale"},
+        )
+        degraded = _call(
+            client, graph, "CodeContext", {"anchor": "::main", "question": "how"}
+        )
+        assert degraded["status"] == "degraded"
+        assert degraded["missing_repositories"] == ["repo-x"]
+        assert degraded["anchors"] == before["anchors"]
+
+        for request in (
+            {"anchor": "::main", "question": "how", "depth": 7},
+            {"anchor": "::nothing-matches", "question": "how"},
+        ):
+            with pytest.raises(Exception) as refused:
+                _call(client, graph, "CodeContext", request)
+            expected = (
+                "CODE_DEPTH_EXCEEDED"
+                if request.get("depth")
+                else "CODE_ANCHOR_UNKNOWN"
+            )
+            assert expected in str(refused.value)
+        with pytest.raises(Exception) as unknown:
+            _call(client, graph, "Diagnose", {"symptom": "no-such-symptom"})
+        assert "CODE_ANCHOR_UNKNOWN" in str(unknown.value)
+
+        # The refusals changed nothing: the same read answers the same way.
+        after = _call(
+            client, graph, "CodeContext", {"anchor": "::main", "question": "how"}
+        )
+        assert after == degraded
+
+    _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.5")
+def test_evidence_fields(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.5: hop counts, hub inputs, causal stage and evidence."""
+
+    def body(client: Any, graph: str) -> None:
+        served = _call(
+            client, graph, "CodeContext", {"anchor": "::main", "question": "how"}
+        )
+        for node in served["usages"] + served["impact"]:
+            assert set(node) == {"symbol", "hops"}
+            assert node["hops"] >= 1
+        hub = served["hubs"][0]
+        assert set(hub) == {"symbol", "in_degree", "out_degree", "score"}
+        assert hub["symbol"] == _SYMBOLS["sym-main"]
+        assert (hub["in_degree"], hub["out_degree"]) == (1, 2)
+        assert hub["score"] > 0.0
+
+        diagnosis = _call(client, graph, "Diagnose", {"symptom": "anom"})
+        assert diagnosis["chain"], "the chain names its links"
+        for link in diagnosis["chain"]:
+            assert set(link) == {"stage", "node_id", "relationship", "evidence_ids"}
+        by_node = {link["node_id"]: link for link in diagnosis["chain"]}
+        assert by_node["chg1"]["stage"] == "change"
+        assert by_node["chg1"]["evidence_ids"] == ["e-chg"]
+        assert by_node["dep1"]["stage"] == "deploy"
+        assert by_node["dep1"]["evidence_ids"] == ["e-dpl"]
+        assert by_node["svc"]["stage"] == "dependency"
+        assert by_node["svc"]["evidence_ids"] == ["e-dep"]
+
+    _with_graph(body)

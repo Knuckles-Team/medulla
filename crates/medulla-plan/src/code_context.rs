@@ -174,6 +174,7 @@ pub fn code_context(
                 impact: Vec::new(),
                 hubs: Vec::new(),
                 candidates,
+                missing_repositories: Vec::new(),
             })
         }
     };
@@ -274,6 +275,7 @@ pub fn code_context(
         impact: to_nodes(callees),
         hubs,
         candidates: Vec::new(),
+        missing_repositories: index.missing_repositories.clone(),
     })
 }
 
@@ -430,6 +432,7 @@ mod tests {
                 score: 0.25,
             }],
             candidates: vec!["x::parse".to_string(), "y::parse".to_string()],
+            missing_repositories: vec![],
         };
         let text = serde_json::to_string(&answer).unwrap();
         assert!(text.contains(r#""status":"ambiguous""#));
