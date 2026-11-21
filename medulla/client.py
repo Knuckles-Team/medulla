@@ -15935,6 +15935,48 @@ class RbacClient:
             )
         ).payload
 
+    async def ownership_plan(self, graph: str) -> dict[str, Any]:
+        """The deterministic ownership plan of ``graph`` (MEDULLA-IDENTITY-R700.3).
+
+        Read-only. The reply holds the ``signals`` and their ``signals_digest``, the
+        ``plan`` and its ``plan_digest``, and ``applied`` (the newest stored apply of the
+        graph, or ``None``)."""
+        return (
+            await _gen.security.send_graph_ownership_plan(self._client, {"graph": graph})
+        ).payload
+
+    async def ownership_apply(
+        self,
+        graph: str,
+        plan: list[dict[str, Any]],
+        plan_digest: str,
+        signals_digest: str,
+    ) -> dict[str, Any]:
+        """Apply a plan from :meth:`ownership_plan` (MEDULLA-IDENTITY-R700.3): every
+        planned principal's role set is replaced in one transaction. Returns
+        ``{"graph", "plan_digest", "principals"}``."""
+        body = {
+            "graph": graph,
+            "plan": plan,
+            "plan_digest": plan_digest,
+            "signals_digest": signals_digest,
+        }
+        return (
+            await _gen.security.send_rbac_admin(
+                self._client, {"op": {"ApplyOwnership": body}}
+            )
+        ).payload
+
+    async def ownership_rollback(self, graph: str, plan_digest: str) -> str:
+        """Restore the role sets an applied plan replaced. Returns
+        ``"ownership_rolled_back"``."""
+        body = {"graph": graph, "plan_digest": plan_digest}
+        return (
+            await _gen.security.send_rbac_admin(
+                self._client, {"op": {"RollbackOwnership": body}}
+            )
+        ).payload
+
     async def list(self) -> dict[str, Any]:
         """List the current policy.
 
