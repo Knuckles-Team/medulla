@@ -41,7 +41,6 @@ crates/medulla-h-ingest/src/lifecycle_tests.rs                     new       ten
 crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs    new       spec document and artifact projection, incremental ingest, linking (R009, R014)
 crates/medulla-h-decide/src/decide/triage.rs                       new       TriageDefect handler (R004.3)
 crates/medulla-h-decide/src/decide/family/defect_triage.rs         new       DefectTriage decide family (R004)
-crates/medulla-h-decide/src/decide/family/task_plan.rs             new       TaskPlan decide family (R015.1)
 crates/medulla-h-decide/src/decide/family/task_context.rs          new       run-context assembly (R015.2)
 crates/medulla-decision-outcome-types/src/decision/defect_triage.rs  existing  triage types, knobs and refusals (R004.1, R004.7)
 crates/medulla-decision-stats/src/decision/defect_triage.rs        new       triage kernel (R004.8)

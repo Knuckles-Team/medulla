@@ -78,7 +78,6 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
 - [ ] T071 [US2] MEDULLA-SDLC-R014.9 Hot-path proof: served artifact graph.
 - [ ] T072 [US3] MEDULLA-SDLC-R015 Task-dispatch decision .
-- [ ] T073 [US3] MEDULLA-SDLC-R015.1 Dispatch layers from dependencies and parallel markers.
 - [ ] T074 [US3] MEDULLA-SDLC-R015.2 Run-context assembly.
 - [ ] T075 [US3] MEDULLA-SDLC-R015.3 Wiring: hand each task to an agent run.
 - [ ] T076 [US3] MEDULLA-SDLC-R015.4 Results are accepted only through gates and landing.
