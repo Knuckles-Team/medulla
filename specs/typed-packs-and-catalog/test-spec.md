@@ -240,8 +240,8 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R002.11 | Current and historical revisions, graph links and verified body bytes survive restart. | A refused stale update leaves the previous durable head intact. | `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` |
 | MEDULLA-TYPED-PACKS-R094.1 | A generated Python client reads exact verified pack body bytes. | A refusal-only dispatch arm fails this acceptance. | `tests/test_connector_pack_content.py::test_stable_content_returns_body` |
 | MEDULLA-TYPED-PACKS-R094.2 | `BlueprintExport` carries the full `AgentComponentEntry` at the pinned revision and the verified body bytes unchanged. | An omitted field, a changed revision, a changed body byte, an unknown revision without `COMPONENT_REVISION_UNKNOWN` or another tenant without `ACCESS_DENIED` fails. | `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export`; `crates/medulla-h-admin/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown` |
-| MEDULLA-TYPED-PACKS-R094.3 | Changing one field creates one new revision and preserves every other field. | Concurrent writers cannot overwrite a newer head; reserved pack identities require pack admission. | `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import` |
-| MEDULLA-TYPED-PACKS-R094.4 | Replay produces no extra revision, holder or outbox event. | A conflicting retry preserves the prior committed result. | `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` |
+| MEDULLA-TYPED-PACKS-R094.3 | Changing one field creates one new revision and preserves every other field. | Concurrent writers cannot overwrite a newer head (`STALE_AGENT_LIBRARY_REVISION`); a pack-owned `mcp:` id refuses `RESERVED_COMPONENT_ID`; an envelope that changes kind or provenance refuses `BLUEPRINT_IDENTITY_CHANGED` and a digest mismatch `BLUEPRINT_MALFORMED`. | `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import` |
+| MEDULLA-TYPED-PACKS-R094.4 | Replay produces no extra revision, holder or outbox event. | A conflicting retry (same idempotency key, other content) refuses `IDEMPOTENCY_CONFLICT` and preserves the prior committed result. | `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` |
 | MEDULLA-TYPED-PACKS-R094.5 | The new revision contains the one intended change and all unchanged values. | Stale import and denied-tenant cases preserve both historical and current readback. | `tests/test_prompt_blueprints_served.py::test_blueprint_roundtrip_restart` |
 | MEDULLA-TYPED-PACKS-R094.6 | Authorized graph adoption uses the normal publication boundary and records the source revision. | A proposal alone causes no active-head change, model dispatch or external write. | `tests/test_prompt_blueprints_served.py::test_prompt_proposal_has_no_authority` |
 | MEDULLA-TYPED-PACKS-R094.7 | A real authorized producer journey writes only the approved source and returns a bound receipt. | Absent producers leave this acceptance unfulfilled; graph persistence cannot substitute. | `tests/test_prompt_blueprints_served.py::test_approved_source_effect_dependency` |
@@ -441,10 +441,10 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R803` | See each child. |
 | `MEDULLA-TYPED-PACKS-R803.1` | `crates/medulla-query-types/tests/sensitive_detect.rs::detector_rules_round_trip_and_validate`: rule kinds round-trip, unknown kinds and fields refuse, each `InvalidDetector` code, the four built-in detectors validate |
 | `MEDULLA-TYPED-PACKS-R803.2` | `crates/medulla-core/tests/sensitive_detect.rs::scan_values_counts_hits_without_values`: Luhn, IBAN mod-97 and pattern hit counts, sample cap, threshold selection by `passing`, resource and pattern refusals before any scan, no value in any output |
-| `MEDULLA-TYPED-PACKS-R803.3` | `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values` |
-| `MEDULLA-TYPED-PACKS-R803.4` | `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::detector_and_promotion_refusals` |
-| `MEDULLA-TYPED-PACKS-R803.5` | `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::claim_evidence_reads_back` |
-| `MEDULLA-TYPED-PACKS-R803.6` | `crates/medulla-core/benches/sensitive_scan.rs`, `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values` |
+| `MEDULLA-TYPED-PACKS-R803.3` | `tests/data_plane/test_sensitive_scan_served.py::test_profile_job_proposes_claim_without_values` |
+| `MEDULLA-TYPED-PACKS-R803.4` | `tests/data_plane/test_sensitive_scan_served.py::test_detector_and_promotion_refusals` |
+| `MEDULLA-TYPED-PACKS-R803.5` | `tests/data_plane/test_sensitive_scan_served.py::test_claim_evidence_reads_back` |
+| `MEDULLA-TYPED-PACKS-R803.6` | `crates/medulla-core/benches/sensitive_scan.rs`, `tests/data_plane/test_sensitive_scan_served.py::test_profile_job_proposes_claim_without_values` |
 | `MEDULLA-TYPED-PACKS-R804` | See each child. |
 | `MEDULLA-TYPED-PACKS-R804.1` | `crates/medulla-types/tests/ontology_diff.rs::diff_round_trips` |
 | `MEDULLA-TYPED-PACKS-R804.2` | `crates/medulla-h-admin/src/graph_schema/ontology_diff_tests.rs::removed_class_reports_impact` |
@@ -701,7 +701,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R093.1:** `crates/medulla-rdf/src/mapping/parsing.rs::tests::independent_parses_do_not_collide_on_repeated_blank_labels` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R093.2:** `tests/typed_packs/test_reproject_blank_nodes_served.py::test_reused_member_labels_stay_isolated_and_digest_repeats` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.2:** `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export` and `crates/medulla-h-admin/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown`. Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R094.3:** `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R094.3:** `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import` (planned); Rust L2 `component_content.rs::tests::import_envelope_and_identity_checks_name_their_codes`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.4:** `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.5:** `tests/test_prompt_blueprints_served.py::test_blueprint_roundtrip_restart` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.6:** `tests/test_prompt_blueprints_served.py::test_prompt_proposal_has_no_authority` (planned). Proves the row at its served entry point; no receipt is asserted.
@@ -776,10 +776,10 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R652:** `tests/typed_packs/test_classification_served.py::test_claim_propose_propagate_promote_and_redacted_read` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R652.1:** `crates/medulla-identity-types/tests/classification.rs::claim_round_trips_and_rejects_empty_categories`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R652.2:** `crates/medulla-isolation/tests/marking_propagation.rs::closure_is_monotone_bounded_and_deterministic`. Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R652.3:** `tests/typed_packs/test_classification_served.py::test_methods_reach_handler_and_promotion_stamps_marking` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R652.4:** `tests/typed_packs/test_classification_served.py::test_missing_evidence_illegal_state_and_unknown_marking_refuse` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R652.5:** `tests/typed_packs/test_classification_served.py::test_marking_sets_and_promoter_read_back` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R652.6:** `tests/typed_packs/test_classification_served.py::test_claim_propose_propagate_promote_and_redacted_read` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R652.3:** `tests/typed_packs/test_classification_served.py::test_methods_reach_handler_and_promotion_stamps_marking`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R652.4:** `tests/typed_packs/test_classification_served.py::test_missing_evidence_illegal_state_and_unknown_marking_refuse`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R652.5:** `tests/typed_packs/test_classification_served.py::test_marking_sets_and_promoter_read_back`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R652.6:** `tests/typed_packs/test_classification_served.py::test_claim_propose_propagate_promote_and_redacted_read`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R700:** `tests/packs/test_skill_graph_pack_served.py::test_bad_hash_refused_and_conformant_pack_imports` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R100.1:** `crates/medulla-capabilities/tests/skill_package_regeneration.rs::rendered_package_round_trip` (existing test; add the `// spec: MEDULLA-TYPED-PACKS-R100.1` tag above it, and extend it to assert the new `schema_version` field is 1).
 
@@ -811,7 +811,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
 - `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged` (with the out-of-scope mapping case) and `crates/medulla-h-admin/src/graph_schema/tests.rs::activation_stores_external_coverage_for_inspection`
 - `MEDULLA-TYPED-PACKS-R097.2.7.4`: `tests/typed_packs/test_external_schema_import_served.py::test_mapped_and_unmapped_terms_of_every_kind`
-- `MEDULLA-TYPED-PACKS-R803.7`: `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest_tests.rs::enrich_proposes_claim_for_sensitive_document`
+- `MEDULLA-TYPED-PACKS-R803.7`: `tests/data_plane/test_sensitive_scan_served.py::test_enrich_proposes_claim_for_sensitive_document`
 - `MEDULLA-TYPED-PACKS-R806`: `tests/packs/test_schema_drift_methods_served.py::test_propose_then_approve_activates_once`
 - `MEDULLA-TYPED-PACKS-R807`: `tests/packs/test_conformance_evidence_served.py::test_evidence_written_read_revoked_and_tenant_scoped`
 - `MEDULLA-TYPED-PACKS-R808`: `tests/graph_schema_digest_served.rs::mismatch_and_drift_are_refused_and_digest_reads_back` (planned)
