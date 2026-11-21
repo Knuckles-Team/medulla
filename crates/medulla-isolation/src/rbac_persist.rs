@@ -430,6 +430,15 @@ pub trait RbacPolicyStore: Send + Sync {
         Ok(None)
     }
 
+    /// Every data product and contract of `tenant` (MEDULLA-TYPED-PACKS-R805.3). The in-memory
+    /// store holds none.
+    fn data_products(
+        &self,
+        _tenant: &str,
+    ) -> Result<Vec<(DataProduct, DataContract)>, RbacPersistError> {
+        Ok(Vec::new())
+    }
+
     /// Store a data product with its contract. The in-memory store has no durable table.
     fn put_data_product(
         &self,
@@ -815,6 +824,13 @@ impl RbacPolicyStore for RbacStore {
         id: &str,
     ) -> Result<Option<(DataProduct, DataContract)>, RbacPersistError> {
         RbacStore::data_product(self, tenant, id)
+    }
+
+    fn data_products(
+        &self,
+        tenant: &str,
+    ) -> Result<Vec<(DataProduct, DataContract)>, RbacPersistError> {
+        RbacStore::data_products(self, tenant)
     }
 
     fn put_data_product(

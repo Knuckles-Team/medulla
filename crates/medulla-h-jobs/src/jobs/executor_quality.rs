@@ -38,7 +38,11 @@ use medulla_stream::telemetry::incident_nodes::{
     incident_operations, incident_record, INCIDENT_TYPE,
 };
 use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
-use medulla_catalog_types::quality::{QualityRule, RuleState};
+use medulla_catalog_types::data_product::{
+    product_schema_digest, ContractPromise, ContractViolation, DataContract, DataProduct,
+};
+use medulla_catalog_types::quality::{QualityRule, QualityScore, RuleState};
+use medulla_core::data_product::{check_contract, LiveContractState};
 use serde_json::{Map, Value};
 
 /// The node type of one quality score.
@@ -198,18 +202,28 @@ async fn freshness_lag(
     if !needed {
         return None;
     }
+    Some(read_capture_lag(state, graph, target, now_ms).await)
+}
+
+/// The capture lag of the claim's source at `now_ms`, from the tenant's durable cursor.
+async fn read_capture_lag(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    target: &QualityTarget,
+    now_ms: i64,
+) -> Result<u64, String> {
     let persistence = state.read().await.persistence.clone();
     let Some(backend) = persistence else {
-        return Some(Err(
+        return Err(
             "QUALITY_MEASURE_UNAVAILABLE: change-capture persistence is unavailable".to_string(),
-        ));
+        );
     };
     let fname = medulla_kernel::persist::sanitize(graph);
     let cursor = backend
         .read_change_cursor(&fname, &target.tenant, &target.target, FRESHNESS_PARTITION)
         .await
-        .map_err(|_| "QUALITY_MEASURE_UNAVAILABLE: the change cursor cannot be read".to_string());
-    Some(cursor.and_then(|cursor| cursor_lag(cursor.as_ref(), now_ms)))
+        .map_err(|_| "QUALITY_MEASURE_UNAVAILABLE: the change cursor cannot be read".to_string())?;
+    cursor_lag(cursor.as_ref(), now_ms)
 }
 
 /// The namespace a shape IRI lives in: everything up to and including its last `#`,
@@ -452,6 +466,175 @@ impl IncidentSink for AnomalySink {
     }
 }
 
+/// The node type of one broken data contract promise (MEDULLA-TYPED-PACKS-R805.3).
+pub(super) const CONTRACT_VIOLATION_LABEL: &str = "ContractViolation";
+/// The property catalog ingest writes the schema digest under (`cat:schemaDigest`).
+const SCHEMA_DIGEST_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#schemaDigest";
+
+/// One broken promise with the reading that anomaly detection sees.
+struct ProductViolation {
+    violation: ContractViolation,
+    dataset: String,
+    observed: f64,
+    baseline: f64,
+}
+
+/// The node property naming a promise: `schema`, `freshness` or `quality`.
+fn promise_kind(promise: &ContractPromise) -> &'static str {
+    match promise {
+        ContractPromise::Schema => "schema",
+        ContractPromise::Quality { .. } => "quality",
+        ContractPromise::Freshness => "freshness",
+    }
+}
+
+/// The `cat:schemaDigest` ingest wrote on dataset node `id`, when the node carries one.
+fn dataset_schema_digest(core: &medulla_graph_core::graph::GraphCore, id: &str) -> Option<String> {
+    let bytes = core.get_node_properties(id)?;
+    let node = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
+    node.get(SCHEMA_DIGEST_PROPERTY)?.as_str().map(str::to_string)
+}
+
+/// The newest score of `rule`: this run's evaluation, else the newest stored `QualityScore`.
+fn latest_score(
+    core: &medulla_graph_core::graph::GraphCore,
+    evaluations: &[Evaluation],
+    tenant: &str,
+    rule: &str,
+) -> Option<QualityScore> {
+    if let Some(evaluation) = evaluations.iter().find(|e| e.score.rule == rule) {
+        return Some(evaluation.score.clone());
+    }
+    let limit = medulla_server_api::knob_config::knobs().quality_max_focus_nodes as usize;
+    core.get_nodes_by_label(QUALITY_SCORE_LABEL, limit)
+        .into_iter()
+        .filter_map(|(_, properties)| {
+            let node = medulla_types::msgpack::decode_property_value(&properties).ok()?;
+            if node.get("tenant_id")?.as_str()? != tenant || node.get("rule")?.as_str()? != rule {
+                return None;
+            }
+            Some(QualityScore {
+                rule: rule.to_string(),
+                value: node.get("value")?.as_f64()?,
+                passed: node.get("passed")?.as_bool()?,
+                at: node.get("at")?.as_i64()?,
+                query_digest: node
+                    .get("query_digest")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                rows_checked: node.get("rows_checked").and_then(Value::as_u64).unwrap_or(0),
+                rows_failed: node.get("rows_failed").and_then(Value::as_u64).unwrap_or(0),
+                checker: node
+                    .get("checker")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+            })
+        })
+        .max_by_key(|score| score.at)
+}
+
+/// Check one product's contract against live state. A promise with no observation is not
+/// evaluated and never recorded: a dataset without an ingested `cat:schemaDigest` has no live
+/// schema, and a source without a time-ordered capture cursor has no watermark age.
+fn product_violations(
+    core: &medulla_graph_core::graph::GraphCore,
+    tenant: &str,
+    product: &DataProduct,
+    contract: &DataContract,
+    evaluations: &[Evaluation],
+    capture_lag_ms: Option<u64>,
+    at_ms: u64,
+) -> Vec<ProductViolation> {
+    let digests: Vec<String> = product
+        .datasets
+        .iter()
+        .filter_map(|dataset| dataset_schema_digest(core, dataset))
+        .collect();
+    let schema_observed = digests.len() == product.datasets.len();
+    let live = LiveContractState {
+        schema_digest: if schema_observed {
+            product_schema_digest(&digests)
+        } else {
+            String::new()
+        },
+        quality: contract
+            .quality_rules
+            .iter()
+            .filter_map(|rule| latest_score(core, evaluations, tenant, rule))
+            .collect(),
+        watermark_age_s: capture_lag_ms.unwrap_or(0) / 1000,
+        at_ms,
+    };
+    let dataset = product.datasets.first().cloned().unwrap_or_default();
+    check_contract(product, contract, &live)
+        .into_iter()
+        .filter(|violation| schema_observed || violation.promise != ContractPromise::Schema)
+        .map(|violation| {
+            let reading = violation.observed.parse::<f64>().unwrap_or(1.0);
+            let (observed, baseline) = match violation.promise {
+                ContractPromise::Schema => (1.0, 0.0),
+                ContractPromise::Quality { .. } => (reading, 1.0),
+                ContractPromise::Freshness => (reading, contract.freshness_s as f64),
+            };
+            ProductViolation {
+                violation,
+                dataset: dataset.clone(),
+                observed,
+                baseline,
+            }
+        })
+        .collect()
+}
+
+/// Every broken promise of the tenant's data products whose datasets include the claim's
+/// dataset, read after the scores of this run are known (MEDULLA-TYPED-PACKS-R805.3).
+async fn contract_violations(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    core: &medulla_graph_core::graph::GraphCore,
+    target: &QualityTarget,
+    dataset: &str,
+    evaluations: &[Evaluation],
+    at_ms: i64,
+) -> Result<Vec<ProductViolation>, String> {
+    #[cfg(feature = "security")]
+    {
+        let Some(store) = state.read().await.isolation.policy_store() else {
+            return Ok(Vec::new());
+        };
+        let products: Vec<(DataProduct, DataContract)> = store
+            .data_products(&target.tenant)
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .filter(|(product, _)| product.datasets.iter().any(|held| held == dataset))
+            .collect();
+        if products.is_empty() {
+            return Ok(Vec::new());
+        }
+        let lag = read_capture_lag(state, graph, target, at_ms).await.ok();
+        let mut out = Vec::new();
+        for (product, contract) in &products {
+            out.extend(product_violations(
+                core,
+                &target.tenant,
+                product,
+                contract,
+                evaluations,
+                lag,
+                at_ms.max(0) as u64,
+            ));
+        }
+        Ok(out)
+    }
+    #[cfg(not(feature = "security"))]
+    {
+        let _ = (state, graph, core, target, dataset, evaluations, at_ms);
+        Ok(Vec::new())
+    }
+}
+
 /// What one claim decided: the graph methods to commit and the result rows.
 struct QualityOutcome {
     methods: Vec<Method>,
@@ -466,6 +649,7 @@ fn quality_outcome(
     target: &QualityTarget,
     rules: &[StoredRule],
     evaluations: Vec<Evaluation>,
+    violations: &[ProductViolation],
     at_ms: u64,
 ) -> Result<QualityOutcome, String> {
     let knobs = medulla_server_api::knob_config::knobs();
@@ -528,6 +712,41 @@ fn quality_outcome(
             &Value::Object(properties),
         )?);
         scores.push((evaluation, failures));
+    }
+    for broken in violations {
+        let violation = &broken.violation;
+        let kind = promise_kind(&violation.promise);
+        let rule = match &violation.promise {
+            ContractPromise::Quality { rule } => rule.as_str(),
+            _ => "",
+        };
+        let at = violation.at_ms.to_string();
+        methods.push(node_method(
+            tenant_node_id(
+                "contract_violation",
+                &target.tenant,
+                &[&violation.product, kind, rule, &at],
+            ),
+            &serde_json::json!({
+                "type": CONTRACT_VIOLATION_LABEL,
+                "product": violation.product,
+                "dataset": broken.dataset,
+                "promise": kind,
+                "rule": rule,
+                "observed": violation.observed,
+                "at_ms": violation.at_ms,
+                "evidence_class": "observation",
+                "tenant_id": target.tenant,
+                "_owner": target.agent,
+            }),
+        )?);
+        sink.readings.push(AnomalyReading {
+            entity_ref: format!("product:{}", violation.product),
+            signal: format!("contract_violation:{kind}"),
+            observed: broken.observed,
+            baseline: broken.baseline,
+            at_ms,
+        });
     }
     let incident_ids = if sink.readings.is_empty() {
         Vec::new()
@@ -631,11 +850,22 @@ pub(super) async fn execute_quality_claim(
             return Ok(());
         }
     };
+    let violations = contract_violations(
+        state,
+        &graph,
+        &core,
+        &target,
+        &job.input_snapshot.dataset_ref,
+        &evaluations,
+        at,
+    )
+    .await?;
     let outcome = quality_outcome(
         &core,
         &target,
         &rules.approved,
         evaluations,
+        &violations,
         at.max(0) as u64,
     )?;
     commit_job_methods(state, job, "quality-evaluate", outcome.methods).await?;
@@ -895,6 +1125,7 @@ mod tests {
             &target(),
             std::slice::from_ref(&stored),
             vec![failing],
+            &[],
             7,
         )
         .unwrap();
@@ -949,5 +1180,41 @@ mod tests {
             "https://example.org/shapes/"
         );
         assert_eq!(shape_namespace("urn:shape:Customer"), "urn:shape:");
+    }
+    // spec: MEDULLA-TYPED-PACKS-R805.3
+    #[test]
+    fn a_broken_contract_writes_an_observation_node_and_an_incident_reading() {
+        use medulla_catalog_types::data_product::{DataContract, DataProduct};
+        let core = medulla_graph_core::graph::GraphCore::new();
+        let product = DataProduct {
+            id: "orders".into(),
+            owner: "alice".into(),
+            version: "1.0.0".into(),
+            datasets: vec!["ds-1".into()],
+            terms: Vec::new(),
+            ports: Vec::new(),
+        };
+        let contract = DataContract {
+            product: "orders".into(),
+            schema_digest: format!("sha256:{}", "0".repeat(64)),
+            quality_rules: Vec::new(),
+            freshness_s: 60,
+        };
+        let broken = product_violations(&core, "acme", &product, &contract, &[], Some(120_000), 9);
+        assert_eq!(broken.len(), 1, "no schema digest is ingested, so only freshness is observed");
+        assert_eq!(broken[0].violation.promise, ContractPromise::Freshness);
+        assert_eq!(broken[0].violation.observed, "120");
+        let outcome = quality_outcome(&core, &target(), &[], Vec::new(), &broken, 9).unwrap();
+        assert_eq!(outcome.incident_ids.len(), 1);
+        let violation_nodes = outcome
+            .methods
+            .iter()
+            .filter(|method| matches!(method, Method::AddNode { properties_msgpack, .. }
+                if medulla_types::msgpack::decode_property_value(properties_msgpack)
+                    .ok()
+                    .and_then(|node| node.get("type").and_then(Value::as_str).map(str::to_string))
+                    == Some(CONTRACT_VIOLATION_LABEL.to_string())))
+            .count();
+        assert_eq!(violation_nodes, 1);
     }
 }

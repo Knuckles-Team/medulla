@@ -83,6 +83,24 @@ pub fn schema_digest(columns: &[DigestColumn]) -> String {
     format!("sha256:{}", hex::encode(hash.finalize()))
 }
 
+/// The live schema digest of a product from the `cat:schemaDigest` of each of its datasets: the
+/// digest itself for one dataset, else `sha256:<hex>` over the sorted digests. A contract's
+/// `schema_digest` is promised in this form.
+pub fn product_schema_digest(dataset_digests: &[String]) -> String {
+    use sha2::{Digest, Sha256};
+    if let [one] = dataset_digests {
+        return one.clone();
+    }
+    let mut sorted: Vec<&String> = dataset_digests.iter().collect();
+    sorted.sort();
+    let mut hash = Sha256::new();
+    for digest in sorted {
+        hash.update((digest.len() as u64).to_be_bytes());
+        hash.update(digest.as_bytes());
+    }
+    format!("sha256:{}", hex::encode(hash.finalize()))
+}
+
 pub use medulla_types::access_request_machine::AccessRequestState;
 
 /// A consumer's governed request to use a product.

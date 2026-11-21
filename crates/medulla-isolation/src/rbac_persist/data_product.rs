@@ -85,6 +85,36 @@ impl RbacStore {
         )))
     }
 
+    /// Every product and contract of `tenant`, in id order. A product whose contract row is
+    /// missing is left out, as [`Self::data_product`] leaves it out.
+    pub fn data_products(
+        &self,
+        tenant: &str,
+    ) -> Result<Vec<(DataProduct, DataContract)>, RbacPersistError> {
+        key_part("tenant", tenant)?;
+        let prefix = product_key(tenant, "");
+        let read = self.scoped_read()?;
+        let table = read
+            .open_owner_table(PRODUCT_TABLE)
+            .map_err(RbacPersistError::Redb)?;
+        let mut products: Vec<DataProduct> = Vec::new();
+        for entry in table.range::<&str>(prefix.as_str()..).map_err(redb)? {
+            let (key, row) = entry.map_err(redb)?;
+            if !key.value().starts_with(prefix.as_str()) {
+                break;
+            }
+            products.push(serde_json::from_slice(row.value())?);
+        }
+        let mut out = Vec::with_capacity(products.len());
+        for product in products {
+            let key = contract_key(tenant, &product.id);
+            if let Some(row) = table.get(key.as_str()).map_err(redb)? {
+                out.push((product, serde_json::from_slice(row.value())?));
+            }
+        }
+        Ok(out)
+    }
+
     /// Store `product` and its `contract` in one commit, replacing any earlier pair of the same
     /// id. Refuses with `INVALID_FIELD` when a record fails validation, the contract names
     /// another product or an id carries `:`; with `RBAC_RESERVED` while a reservation holds the
