@@ -84,7 +84,7 @@ The user is an operator of an agent organization. The outcome is that roles, off
 
 1. **Given** an organization chart, a team store and published definitions exist, **When** `recruit`, team scoring and template rendering run through the decision ladder, **Then** the answer names its ranking, and an edit creates a new revision without changing a published one.
 
-Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R750.751`, `MEDULLA-ORCH-VOCAB-R751.751`, `MEDULLA-ORCH-VOCAB-R800.3`, `MEDULLA-ORCH-VOCAB-R616.2` run this story through a production entry point.
+Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R750.751`, `MEDULLA-ORCH-VOCAB-R800.3` run this story through a production entry point.
 
 ### User Story 8 - Keep harness components and lessons as versioned facts (Priority: P2)
 

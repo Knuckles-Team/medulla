@@ -41,7 +41,7 @@ Every row below names a test that does not exist yet. The test file and function
 | T-027 | MEDULLA-CQ-ORCH-R011.4 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_q11_usage_guidance` | Connector usage guidance question proves its row as stated in requirements.md |
 | T-028 | MEDULLA-CQ-ORCH-R011.5 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_q11_seed_changes` | Connector seed changes question proves its row as stated in requirements.md |
 | T-029 | MEDULLA-CQ-ORCH-R011.6 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_q11_all_five_questions_after_connector_import` | Job, downtime and plan hot-path proof proves its row as stated in requirements.md |
-| T-030 | MEDULLA-CQ-ORCH-R700.2 | L1 | `crates/medulla-core/tests/process_compile.rs::load_is_linear_and_deterministic` | Process compile behaviour proves its row as stated in requirements.md |
+| T-030 | MEDULLA-CQ-ORCH-R700.2 | L1 | `crates/medulla-core/tests/process_compile.rs::compile_is_linear_and_deterministic` | Process compile behaviour proves its row as stated in requirements.md |
 | T-031 | MEDULLA-CQ-ORCH-R700.3 | L3 | `tests/process_compile_served.rs::second_compile_writes_next_version_and_cas_refuses_stale` | Process compile wiring and version store proves its row as stated in requirements.md |
 | T-032 | MEDULLA-CQ-ORCH-R700.4 | L3 | `tests/process_compile_served.rs::compile_refusals_leave_state_unchanged` | Process compile refusal proves its row as stated in requirements.md |
 | T-033 | MEDULLA-CQ-ORCH-R700.5 | L3 | `tests/process_compile_served.rs::replay_reproduces_recorded_digest` | Process compile evidence proves its row as stated in requirements.md |

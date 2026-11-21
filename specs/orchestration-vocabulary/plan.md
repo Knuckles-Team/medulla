@@ -14,7 +14,7 @@ The orchestration vocabulary makes four questions one graph query each: which st
 - **Testing**: Reasoner and shape tests in `crates/medulla-rdf/tests/orchestration_vocabulary.rs`; unit tests per crate; served tests in `crates/medulla-server-served-tests` and `tests/orchestration/` (Python).
 - **Target Platform**: Linux x86_64 and aarch64 hosts.
 - **Project Type**: Ontology files plus library and handler crates.
-- **Performance Goals**: Nightly budgets named by rows: synthesis p99 250 ms (R616.6), twin capture p50 8 ms and p99 20 ms (R750.753), team score p50 6 ms and p99 15 ms (R751.753), render p50 10 microseconds and p99 50 microseconds (R800.6), component chain p99 5 ms (R801.6), lesson retrieval p99 10 ms (R802.6).
+- **Performance Goals**: Nightly budgets named by rows: twin capture p50 8 ms and p99 20 ms (R750.753), render p50 10 microseconds and p99 50 microseconds (R800.6), component chain p99 5 ms (R801.6), lesson retrieval p99 10 ms (R802.6).
 - **Constraints**: Each refusal has one stable code. Unknown stays unknown and never becomes zero. A write never leaves a partial node. No version suffix in a name.
 - **Scale/Scope**: 148 leaf rows in 8 user stories and 8 functional requirements.
 
