@@ -104,6 +104,35 @@ pub struct OntologyCrosswalkView {
     pub crosswalk_digest: String,
 }
 
+/// One class the selected core revision declares that no validated crosswalk
+/// maps (MEDULLA-TYPED-PACKS-R097.2.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyUnmappedClassView {
+    pub class_iri: String,
+    /// The reason's wire name (`no_declared_mapping`).
+    pub reason: String,
+}
+
+/// The crosswalk coverage one pack source computed at activation, bound to the
+/// core revision it was computed against (MEDULLA-TYPED-PACKS-R097.2.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyCoverageView {
+    /// The GraphSchema source the coverage belongs to.
+    pub source_id: String,
+    /// The core vocabulary revision the coverage was computed against.
+    pub source_revision: String,
+    /// Classes the selected revision declares.
+    pub declared: u32,
+    /// Classes with a validated crosswalk, sorted.
+    pub mapped: Vec<String>,
+    /// Declared classes without one, sorted.
+    pub unmapped: Vec<OntologyUnmappedClassView>,
+    /// SHA-256 over the revision and the sorted declared class set.
+    pub source_digest: String,
+}
+
 /// What `OntologyInspect` read: the vocabulary, SHACL targets and identity of a
 /// set of ontology/shapes documents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -133,6 +162,11 @@ pub struct OntologyInspection {
     /// source id. Empty for inline documents.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub crosswalks: Vec<OntologyCrosswalkView>,
+    /// The revision-bound crosswalk coverage each inspected pack source computed
+    /// at activation, sorted by source id (MEDULLA-TYPED-PACKS-R097.2.3). Empty
+    /// for inline documents and for sources without crosswalks.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage: Vec<OntologyCoverageView>,
     /// Whether the report reads committed GraphSchema sources. Inline
     /// inspection is `false` and never claims activation.
     #[serde(default)]

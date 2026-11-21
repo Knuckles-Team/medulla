@@ -311,3 +311,71 @@ fn inspection_returns_composed_crosswalks() {
     assert!(!inline_view.committed);
     assert!(inline_view.crosswalks.is_empty());
 }
+
+// spec: MEDULLA-TYPED-PACKS-R097.2.3
+#[test]
+fn inspection_reports_pack_revision_coverage() {
+    use medulla_catalog_types::domain_pack::{compute_coverage_of, CrosswalkContext};
+    use medulla_graph_core::graph::{GraphSchemaSource, SchemaSourceOrigin};
+
+    let records = vec![core_crosswalk("Agent", "Person")];
+    let revision = GraphSchemaSources::default().composed_digest().to_hex();
+    let ctx = CrosswalkContext {
+        source_revision: revision.clone(),
+        scope: "core".to_string(),
+        source_classes: [kg("Agent"), kg("Planner")]
+            .into_iter()
+            .map(|iri| (iri, "continuant".to_string()))
+            .collect(),
+        selected_sources: [kg("Agent"), kg("Planner")].into_iter().collect(),
+        hierarchy: Default::default(),
+    };
+    let coverage = compute_coverage_of(&records, &ctx).unwrap();
+    let mut sources = GraphSchemaSources::default();
+    let pack = |connector: &str, records: Vec<_>, coverage| {
+        GraphSchemaSource::new(
+            SchemaSourceOrigin::Pack {
+                connector: connector.to_string(),
+                record_id: "record-1".to_string(),
+            },
+            None,
+            None,
+            0,
+        )
+        .unwrap()
+        .with_crosswalks(records)
+        .with_crosswalk_coverage(coverage)
+    };
+    sources
+        .attach_dynamic(
+            "pack:metadata".to_string(),
+            pack("metadata", records.clone(), Some(coverage.clone())),
+        )
+        .unwrap();
+    sources
+        .attach_dynamic("pack:bare".to_string(), pack("bare", Vec::new(), None))
+        .unwrap();
+    let core = GraphCore::new();
+    core.install_schema_sources(std::sync::Arc::new(sources));
+
+    let view = inspect(&core, &[], &[]).unwrap();
+    assert_eq!(
+        view.coverage.len(),
+        1,
+        "only the source with crosswalks reports"
+    );
+    let served = &view.coverage[0];
+    assert_eq!(served.source_id, "pack:metadata");
+    assert_eq!(served.source_revision, revision);
+    assert_eq!(served.declared, 2);
+    assert_eq!(served.mapped, vec![kg("Agent")]);
+    assert_eq!(served.unmapped.len(), 1);
+    assert_eq!(served.unmapped[0].class_iri, kg("Planner"));
+    assert_eq!(served.unmapped[0].reason, "no_declared_mapping");
+    assert_eq!(served.source_digest, coverage.source_digest);
+
+    // Selecting another source reports nothing; inline inspection reports none.
+    let other = inspect(&core, &[], &["pack:bare".to_string()]).unwrap();
+    assert!(other.coverage.is_empty());
+    assert!(inline(&[VOCABULARY]).unwrap().coverage.is_empty());
+}

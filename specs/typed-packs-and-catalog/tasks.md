@@ -152,7 +152,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T143 [US3] MEDULLA-TYPED-PACKS-R097.1 HR domain vocabulary as a typed domain pack
 - [ ] T144 [US3] MEDULLA-TYPED-PACKS-R097.2.1 Crosswalk coverage model
 - [ ] T145 [US3] MEDULLA-TYPED-PACKS-R097.2.2 Crosswalk coverage behaviour
-- [ ] T146 [US3] MEDULLA-TYPED-PACKS-R097.2.3 Crosswalk coverage wiring
+- [x] T146 [US3] MEDULLA-TYPED-PACKS-R097.2.3 Crosswalk coverage wiring
 - [ ] T147 [US3] MEDULLA-TYPED-PACKS-R097.2.4 Crosswalk coverage refusals
 - [ ] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
 - [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof

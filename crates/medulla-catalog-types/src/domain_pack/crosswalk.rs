@@ -131,10 +131,19 @@ pub fn compute_coverage(
     pack: &DomainPack,
     ctx: &CrosswalkContext,
 ) -> Result<CrosswalkCoverage, VocabularyCrosswalkError> {
-    validate_crosswalks(&pack.crosswalks, ctx)?;
+    compute_coverage_of(&pack.crosswalks, ctx)
+}
+
+/// [`compute_coverage`] over a bare crosswalk set: the import boundary and the
+/// pack activation hold the committed records, not a whole `DomainPack`
+/// (MEDULLA-TYPED-PACKS-R097.2.3). One function computes coverage everywhere.
+pub fn compute_coverage_of(
+    crosswalks: &[VocabularyCrosswalk],
+    ctx: &CrosswalkContext,
+) -> Result<CrosswalkCoverage, VocabularyCrosswalkError> {
+    validate_crosswalks(crosswalks, ctx)?;
     let declared = &ctx.selected_sources;
-    let sources: BTreeSet<&String> = pack
-        .crosswalks
+    let sources: BTreeSet<&String> = crosswalks
         .iter()
         .map(|crosswalk| &crosswalk.source_class_iri)
         .collect();

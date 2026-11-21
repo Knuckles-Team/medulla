@@ -24,7 +24,7 @@ pub use manifest::{
 };
 
 pub use crosswalk::{
-    compute_coverage, validate_crosswalks, CrosswalkContext, PinnedHierarchy,
+    compute_coverage, compute_coverage_of, validate_crosswalks, CrosswalkContext, PinnedHierarchy,
     MAX_CROSSWALK_IRI_BYTES, MAX_CROSSWALK_MAPPINGS, MAX_CROSSWALK_SOURCE_CLASSES,
 };
 pub use nutrient_crosswalk::{

@@ -7,7 +7,7 @@ use medulla_catalog_types::connector_pack::{
     PackEntry, PackEntryKind, PackViolation, PackViolationCode,
 };
 use medulla_catalog_types::domain_pack::{
-    validate_crosswalks, CrosswalkContext, PinnedHierarchy, VocabularyCrosswalk,
+    compute_coverage_of, CrosswalkContext, CrosswalkCoverage, PinnedHierarchy, VocabularyCrosswalk,
     VocabularyCrosswalkError,
 };
 
@@ -79,14 +79,16 @@ impl CrosswalkRefusal {
     }
 }
 
-/// Validate a crosswalk set against the pinned vocabulary. Used by the import
-/// and again by the pack activation, so both refuse the same records.
-pub(crate) fn validate_set(
+/// Validate a crosswalk set against the pinned vocabulary and compute the
+/// coverage of the pinned revision (MEDULLA-TYPED-PACKS-R097.2.3). Used by the
+/// import before the pack head commits and again by the pack activation, so both
+/// refuse the same records and report the same coverage.
+pub(crate) fn coverage_of_set(
     set: &[VocabularyCrosswalk],
     vocabulary: &PinnedVocabulary,
-) -> Result<(), CrosswalkRefusal> {
+) -> Result<CrosswalkCoverage, CrosswalkRefusal> {
     let context = context_of(set, vocabulary);
-    validate_crosswalks(set, &context).map_err(|error| {
+    compute_coverage_of(set, &context).map_err(|error| {
         let (pack, server, iri) = classify(&error);
         CrosswalkRefusal {
             pack,
@@ -95,6 +97,15 @@ pub(crate) fn validate_set(
             message: error.to_string(),
         }
     })
+}
+
+/// Validate a crosswalk set against the pinned vocabulary; the coverage it
+/// computes on the way is [`coverage_of_set`]'s.
+pub(crate) fn validate_set(
+    set: &[VocabularyCrosswalk],
+    vocabulary: &PinnedVocabulary,
+) -> Result<(), CrosswalkRefusal> {
+    coverage_of_set(set, vocabulary).map(drop)
 }
 
 /// The pinned context: revision, class categories, selected sources and the

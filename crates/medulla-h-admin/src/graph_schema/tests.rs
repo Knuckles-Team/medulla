@@ -712,3 +712,120 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
     .unwrap_err();
     assert_eq!(error, commit_error);
 }
+
+/// A core-metadata crosswalk record for `local`, pinned to the live core revision.
+fn core_crosswalk_body(local: &str, target: &str, category: &str) -> Arc<str> {
+    use medulla_catalog_types::domain_pack::{
+        ApprovedTargetDeclaration, VocabularyCrosswalk, VocabularyCrosswalkRelation,
+        VOCABULARY_CROSSWALK_SCHEMA_VERSION,
+    };
+    let mut record = VocabularyCrosswalk {
+        schema_version: VOCABULARY_CROSSWALK_SCHEMA_VERSION,
+        source_class_iri: format!("https://knuckles-team.github.io/ontology/core#{local}"),
+        target_class_iri: format!("http://schema.org/{target}"),
+        relation: VocabularyCrosswalkRelation::SkosExactMatch,
+        source_revision: medulla_graph_core::graph::GraphSchemaSources::default()
+            .composed_digest()
+            .to_hex(),
+        target_vocabulary_revision: "ab".repeat(32),
+        origin: "core-metadata-v1".to_string(),
+        content_digest: String::new(),
+        approved_target_declarations: vec![ApprovedTargetDeclaration {
+            class_iri: format!("http://schema.org/{target}"),
+            category: category.to_string(),
+        }],
+    };
+    record.content_digest = record.compute_content_digest();
+    Arc::<str>::from(serde_json::to_string(&record).unwrap())
+}
+
+// spec: MEDULLA-TYPED-PACKS-R097.2.3
+#[test]
+fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
+    let core = GraphCore::new();
+    let connector = medulla_types::contract::ResourceId::new("coverage-pack").unwrap();
+    let documents = || PackSourceDocuments {
+        shapes: Vec::new(),
+        ontologies: Vec::new(),
+        crosswalks: vec![pack_document(
+            "crosswalk://coverage-pack/person.json",
+            core_crosswalk_body("Person", "Person", "continuant"),
+        )],
+    };
+    let first = apply_pack_source(
+        &core,
+        "pack__coverage-pack",
+        &connector,
+        "record-1",
+        documents(),
+        None,
+    )
+    .unwrap();
+    assert!(first.changed);
+
+    let sources = core.schema_sources();
+    let stored = sources.dynamic.get("pack:coverage-pack").unwrap();
+    let coverage = stored.crosswalk_coverage.as_ref().expect("coverage stored");
+    let person = "https://knuckles-team.github.io/ontology/core#Person".to_string();
+    assert_eq!(coverage.mapped, vec![person.clone()]);
+    assert!(coverage
+        .unmapped
+        .iter()
+        .all(|entry| entry.class_iri != person));
+    assert_eq!(
+        coverage.declared as usize,
+        coverage.mapped.len() + coverage.unmapped.len()
+    );
+    assert!(
+        coverage.unmapped.len() > 10,
+        "the core catalog has many classes"
+    );
+    assert_eq!(coverage.source_digest.len(), 64);
+
+    // The stored report is exactly what the import-side function computes over
+    // the same set and the same pin: one function, one answer.
+    let pinned = crate::admin::connector_pack::import::vocabulary::pin_composed(
+        &medulla_graph_core::graph::GraphSchemaSources::default(),
+        &sources,
+    )
+    .unwrap();
+    let recomputed = crate::admin::connector_pack::import::crosswalk::coverage_of_set(
+        &stored.crosswalks,
+        &pinned,
+    )
+    .unwrap();
+    assert_eq!(&recomputed, coverage);
+
+    // A repeat activation of the same head changes nothing.
+    let again = apply_pack_source(
+        &core,
+        "pack__coverage-pack",
+        &connector,
+        "record-1",
+        documents(),
+        Some(&first.composed_digest),
+    )
+    .unwrap();
+    assert!(!again.changed);
+
+    // A crosswalk naming a class outside the core revision refuses activation
+    // and leaves the stored coverage untouched.
+    let before = core.schema_sources();
+    let refused = apply_pack_source(
+        &core,
+        "pack__coverage-pack",
+        &connector,
+        "record-2",
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: Vec::new(),
+            crosswalks: vec![pack_document(
+                "crosswalk://coverage-pack/unknown.json",
+                core_crosswalk_body("NoSuchClass", "Person", "continuant"),
+            )],
+        },
+        None,
+    );
+    assert!(refused.is_err());
+    assert_eq!(core.schema_sources().dynamic, before.dynamic);
+}

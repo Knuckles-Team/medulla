@@ -146,6 +146,12 @@ pub struct GraphSchemaSource {
     /// rendered from it, so it is outside the composed digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contract: Option<medulla_catalog_types::graph_schema::repair::RecordContract>,
+    /// The crosswalk coverage of the core revision these crosswalks were
+    /// validated against, computed by the pack activation
+    /// (MEDULLA-TYPED-PACKS-R097.2.3). Derived from `crosswalks` and the pinned
+    /// revision, so it is outside both the composed digest and document identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub crosswalk_coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
     /// Deterministic provenance time. Replicated handlers must never read the
     /// local wall clock; until the commit envelope exposes a consensus time,
     /// live attachments use the documented sentinel `0`.
@@ -190,6 +196,7 @@ impl GraphSchemaSource {
             ontology_sha256,
             crosswalks: Vec::new(),
             contract: None,
+            crosswalk_coverage: None,
             attached_at_ms,
         })
     }
@@ -209,6 +216,15 @@ impl GraphSchemaSource {
         crosswalks: Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>,
     ) -> Self {
         self.crosswalks = crosswalks;
+        self
+    }
+
+    /// The same source carrying the coverage its activation computed.
+    pub fn with_crosswalk_coverage(
+        mut self,
+        coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+    ) -> Self {
+        self.crosswalk_coverage = coverage;
         self
     }
 
@@ -450,6 +466,22 @@ impl GraphSchemaSources {
             return Err(error);
         }
         Ok(true)
+    }
+
+    /// Record the coverage an activation computed for one dynamic source.
+    /// Returns whether the stored value changed; an unknown source is `false`.
+    pub fn set_dynamic_crosswalk_coverage(
+        &mut self,
+        source_id: &str,
+        coverage: Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>,
+    ) -> bool {
+        match self.dynamic.get_mut(source_id) {
+            Some(source) if source.crosswalk_coverage != coverage => {
+                source.crosswalk_coverage = coverage;
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn detach_dynamic(&mut self, source_id: &str) -> bool {

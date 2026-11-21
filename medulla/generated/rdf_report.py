@@ -35,9 +35,9 @@ class OntologyCoverageView(BaseModel):
     declared: Annotated[int, Field(ge=0)]
     graph: str = ""
     mapped: list[str]
-    pack_digest: str
-    pack_revision: str
-    schema_digest: str
+    pack_digest: str = ""
+    pack_revision: str = ""
+    schema_digest: str = ""
     source_digest: str
     source_id: str
     source_revision: str

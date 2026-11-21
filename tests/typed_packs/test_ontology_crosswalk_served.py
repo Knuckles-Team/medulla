@@ -59,6 +59,7 @@ async def _state(client) -> tuple[str, list[tuple[str, str, str]]]:
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R071.1.6")
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.3")
 def test_core_metadata_crosswalks() -> None:
     fixture = load_fixture()
     assert FIXTURE_SHA256 == (
@@ -111,6 +112,15 @@ def test_core_metadata_crosswalks() -> None:
             view = await inspect_committed(client)
             assert view.committed is True
             assert {c.source_revision for c in view.crosswalks} == {revision}
+            # The activation's coverage is reported, bound to the imported revision.
+            report = next(
+                c for c in view.coverage if c.source_id == f"pack:{connector}"
+            )
+            assert report.source_revision == revision
+            assert set(report.mapped) == {source for source, _, _ in GOLDEN}
+            assert report.declared == len(report.mapped) + len(report.unmapped)
+            assert all(u.class_iri not in report.mapped for u in report.unmapped)
+            assert all(u.reason == "no_declared_mapping" for u in report.unmapped)
             classes = await reasoning.send_graph_schema_classes(
                 client, {"kind": "class", "cursor": None, "limit": 1000}
             )

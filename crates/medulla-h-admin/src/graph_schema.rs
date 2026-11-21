@@ -450,7 +450,7 @@ pub(crate) fn apply_pack_source(
     if_composed_digest: Option<&str>,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
-    let (sources, changed, records) = pack_candidate_sources(
+    let (mut sources, changed, records) = pack_candidate_sources(
         &core.schema_sources(),
         connector,
         record_id,
@@ -458,7 +458,9 @@ pub(crate) fn apply_pack_source(
         if_composed_digest,
     )?;
     medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
-    revalidate_pack_crosswalks(&sources, &records)?;
+    let coverage = revalidate_pack_crosswalks(&sources, &records)?;
+    let source_id = format!("pack:{}", connector.as_str());
+    let changed = sources.set_dynamic_crosswalk_coverage(&source_id, coverage) || changed;
     if changed {
         core.install_schema_sources(Arc::new(sources.clone()));
     }
@@ -607,17 +609,19 @@ fn parse_pack_crosswalks(
 fn revalidate_pack_crosswalks(
     sources: &medulla_graph_core::graph::GraphSchemaSources,
     records: &[medulla_catalog_types::domain_pack::VocabularyCrosswalk],
-) -> Result<(), String> {
+) -> Result<Option<medulla_catalog_types::domain_pack::CrosswalkCoverage>, String> {
     use crate::admin::connector_pack::import::{crosswalk, vocabulary};
 
     if records.is_empty() {
-        return Ok(());
+        return Ok(None);
     }
     let pinned = vocabulary::pin_composed(
         &medulla_graph_core::graph::GraphSchemaSources::default(),
         sources,
     )?;
-    crosswalk::validate_set(records, &pinned).map_err(|refusal| refusal.activation_error())
+    crosswalk::coverage_of_set(records, &pinned)
+        .map(Some)
+        .map_err(|refusal| refusal.activation_error())
 }
 
 /// Parse each pack member independently, scope its blank nodes by immutable

@@ -7,8 +7,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::ontology_inspection::{
-    OntologyClassView, OntologyCrosswalkView, OntologyInspection, OntologyPropertyView,
-    MAX_INSPECT_DOCUMENTS,
+    OntologyClassView, OntologyCoverageView, OntologyCrosswalkView, OntologyInspection,
+    OntologyPropertyView, OntologyUnmappedClassView, MAX_INSPECT_DOCUMENTS,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::Digest256;
@@ -63,6 +63,7 @@ struct Inspected {
     schema_digests: Vec<String>,
     composed_digest: Option<String>,
     crosswalks: Vec<OntologyCrosswalkView>,
+    coverage: Vec<OntologyCoverageView>,
 }
 
 fn inspect(
@@ -171,6 +172,7 @@ fn composed_documents(
     }
     let mut inspected = parsed(&selected, Some(sources.composed_digest().to_hex()))?;
     inspected.crosswalks = crosswalk_views(sources, &wanted);
+    inspected.coverage = coverage_views(sources, &wanted);
     Ok(inspected)
 }
 
@@ -214,6 +216,42 @@ fn crosswalk_views(
     views
 }
 
+/// The coverage each selected pack source stored at activation, sorted by source
+/// id (MEDULLA-TYPED-PACKS-R097.2.3). Read as stored: the activation computed it
+/// once with `compute_coverage_of`, and the inspection never recomputes it. The
+/// revision comes from the source's own crosswalk records, which activation
+/// proved equal to the pinned revision.
+fn coverage_views(
+    sources: &GraphSchemaSources,
+    wanted: &BTreeSet<&str>,
+) -> Vec<OntologyCoverageView> {
+    let mut views: Vec<OntologyCoverageView> = sources
+        .all()
+        .filter(|(id, _)| wanted.is_empty() || wanted.contains(id))
+        .filter_map(|(id, source)| {
+            let coverage = source.crosswalk_coverage.as_ref()?;
+            let revision = source.crosswalks.first()?.source_revision.clone();
+            Some(OntologyCoverageView {
+                source_id: id.to_string(),
+                source_revision: revision,
+                declared: coverage.declared,
+                mapped: coverage.mapped.clone(),
+                unmapped: coverage
+                    .unmapped
+                    .iter()
+                    .map(|entry| OntologyUnmappedClassView {
+                        class_iri: entry.class_iri.clone(),
+                        reason: "no_declared_mapping".to_string(),
+                    })
+                    .collect(),
+                source_digest: coverage.source_digest.clone(),
+            })
+        })
+        .collect();
+    views.sort_by(|left, right| left.source_id.cmp(&right.source_id));
+    views
+}
+
 /// The relation's wire name, as `VocabularyCrosswalkRelation` serializes it.
 fn relation_name(
     relation: medulla_catalog_types::domain_pack::VocabularyCrosswalkRelation,
@@ -254,6 +292,7 @@ fn parsed(
         schema_digests: digests.into_iter().collect(),
         composed_digest,
         crosswalks: Vec::new(),
+        coverage: Vec::new(),
     })
 }
 
@@ -280,6 +319,7 @@ fn inspection_of(inspected: Inspected) -> OntologyInspection {
         shape_target_classes: facts.targets.into_iter().collect(),
         committed,
         crosswalks: inspected.crosswalks,
+        coverage: inspected.coverage,
     }
 }
 
