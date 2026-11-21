@@ -533,6 +533,58 @@ cat:inBusinessDomain a owl:ObjectProperty ;
     rdfs:domain cat:Article ;
     rdfs:range cat:BusinessDomain .
 
+cat:Annotation a owl:Class ;
+    rdfs:label "Annotation" ;
+    rdfs:comment "A comment, tag, rating or thread reply attached to any asset (MEDULLA-TYPED-PACKS-R108.12). It has an author, a time and a revision, and it outlives the asset it annotates: the thread of a deleted asset stays readable by revision." .
+
+cat:annotates a owl:ObjectProperty ;
+    rdfs:label "annotates" ;
+    rdfs:comment "The asset an annotation is attached to." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range cat:Asset .
+
+cat:annotationKind a owl:DatatypeProperty ;
+    rdfs:label "annotation kind" ;
+    rdfs:comment "comment, tag or rating." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:string .
+
+cat:annotationText a owl:DatatypeProperty ;
+    rdfs:label "annotation text" ;
+    rdfs:comment "The comment text or the tag." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:string .
+
+cat:rating a owl:DatatypeProperty ;
+    rdfs:label "rating" ;
+    rdfs:comment "An integer from 1 to 5; only a rating annotation carries it." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:integer .
+
+cat:inReplyTo a owl:ObjectProperty ;
+    rdfs:label "in reply to" ;
+    rdfs:comment "The annotation a reply continues; a thread is the replies chained from one root." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range cat:Annotation .
+
+cat:annotationAuthor a owl:DatatypeProperty ;
+    rdfs:label "annotation author" ;
+    rdfs:comment "The verified agent id that wrote the annotation." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:string .
+
+cat:annotatedAtMs a owl:DatatypeProperty ;
+    rdfs:label "annotated at" ;
+    rdfs:comment "When the annotation was written, in milliseconds since the epoch." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:nonNegativeInteger .
+
+cat:annotationRevision a owl:DatatypeProperty ;
+    rdfs:label "annotation revision" ;
+    rdfs:comment "The revision of the annotation; it starts at 1 and only increases." ;
+    rdfs:domain cat:Annotation ;
+    rdfs:range xsd:nonNegativeInteger .
+
 cat:WorkflowDefinitionAsset a owl:Class ;
     rdfs:label "Workflow Definition" ;
     rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;

@@ -164,3 +164,15 @@ cat:ArticleShape a sh:NodeShape ;
       sh:in ( "draft" "in_review" "approved" "deprecated" ) ],
     [ sh:path cat:aboutAsset ; sh:nodeKind sh:IRI ],
     [ sh:path cat:inBusinessDomain ; sh:nodeKind sh:IRI ] .
+
+# An annotation attaches to one asset and has an author, a time and a revision; a rating is an
+# integer from 1 to 5 (MEDULLA-TYPED-PACKS-R108.12).
+cat:AnnotationShape a sh:NodeShape ;
+    sh:targetClass cat:Annotation ;
+    sh:property [ sh:path cat:annotates ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:annotationKind ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "comment" "tag" "rating" ) ],
+    [ sh:path cat:annotationAuthor ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ],
+    [ sh:path cat:annotatedAtMs ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ],
+    [ sh:path cat:annotationRevision ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ],
+    [ sh:path cat:rating ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:maxInclusive 5 ],
+    [ sh:path cat:inReplyTo ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .

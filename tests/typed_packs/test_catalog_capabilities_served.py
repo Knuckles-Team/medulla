@@ -13,6 +13,7 @@ import time
 import uuid
 
 import pytest
+import stewardship_support as support
 from conftest import request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
@@ -437,3 +438,63 @@ def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
         article in asset_id for asset_id, _ in _ranked(admin, "onboarding")
     )
     assert any(article in asset_id for asset_id, _ in _ranked(admin, "invoices"))
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.12")
+def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(catalog_graph):
+    # spec: MEDULLA-TYPED-PACKS-R108.12
+    admin = catalog_graph
+    xsd = "http://www.w3.org/2001/XMLSchema#"
+    asset = "urn:medulla:asset:resource:orders"
+    note = "urn:annotation:orders:1"
+    admin.rdf.add_triples(
+        turtle=(
+            f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"orders ledger\" ;"
+            " cat:hasOwner <urn:principal:data-team> ;"
+            " <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ;"
+            " <https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Order> ;"
+            f' <https://knuckles-team.github.io/ontology/connector-pack#digest> "{"ab" * 32}" .\n'
+        )
+    )
+
+    def annotation(iri: str, kind: str, extra: str) -> str:
+        return (
+            f"{PREFIX}<{iri}> a cat:Annotation ; cat:annotates <{asset}> ;"
+            f' cat:annotationKind "{kind}" ; cat:annotationAuthor "agent-a" ;'
+            f' cat:annotatedAtMs "1700000000000"^^<{xsd}nonNegativeInteger> ;'
+            f' cat:annotationRevision "1"^^<{xsd}nonNegativeInteger> ; {extra} .\n'
+        )
+
+    # A comment, a tag, a rating and a reply attach to the asset.
+    admin.rdf.add_triples(turtle=annotation(note, "comment", 'cat:annotationText "check the totals"'))
+    admin.rdf.add_triples(turtle=annotation("urn:annotation:orders:2", "tag", 'cat:annotationText "finance"'))
+    admin.rdf.add_triples(
+        turtle=annotation("urn:annotation:orders:3", "rating", f'cat:rating "5"^^<{xsd}integer>')
+    )
+    admin.rdf.add_triples(
+        turtle=annotation(
+            "urn:annotation:orders:4", "comment", f'cat:annotationText "done" ; cat:inReplyTo <{note}>'
+        )
+    )
+    rows = admin.rdf.sparql(
+        f"PREFIX cat: <{CATALOG}> SELECT ?a WHERE {{ ?a cat:annotates <{asset}> }}"
+    )
+    assert len(rows) == 4
+
+    # A rating outside 1 to 5 is refused and writes nothing.
+    with pytest.raises(Exception, match="rating|minInclusive|maxInclusive|VALUE_CONSTRAINT"):
+        admin.rdf.add_triples(
+            turtle=annotation("urn:annotation:orders:5", "rating", f'cat:rating "6"^^<{xsd}integer>')
+        )
+
+    # A trust flag reuses the steward path: one `SetTrustFlag` writes it and ranking reads it.
+    graph = admin._graph_name
+    before = dict(_ranked(admin, "orders"))
+    key = next(k for k in before if k.strip("<>") == asset)
+    support.stewardship(
+        admin,
+        graph,
+        {"op": "set_trust_flag", "asset": asset, "flag": "deprecation", "reason": "superseded"},
+    )
+    after = dict(_ranked(admin, "orders"))
+    assert after[next(k for k in after if k.strip("<>") == asset)] < before[key]
