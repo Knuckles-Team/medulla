@@ -53,6 +53,10 @@ mod medulla_h_decide_policy_evolution_tests;
 mod medulla_h_decide_freshness_search_port_tests;
 #[cfg(all(test, feature = "redb", feature = "blob"))]
 mod medulla_h_ingest_action_record_tests;
+#[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+mod connector_pack_harness;
+#[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+mod medulla_h_ingest_paper_tests;
 #[cfg(all(test, feature = "redb"))]
 mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]
