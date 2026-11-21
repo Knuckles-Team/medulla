@@ -24,7 +24,7 @@ use medulla_protocol_types::result_contract::coordination as contract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_source_types::ingest_job::{
-    ingest_lane_of_queue, on_ingest_ack, IngestAckDecision, IngestRetryPolicy,
+    ingest_lane_of_queue, on_ingest_ack, on_ingest_claim, IngestAckDecision, IngestRetryPolicy,
 };
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 use medulla_work_types::worker_registry::{
@@ -195,14 +195,21 @@ fn admit_claim(
     }
 }
 
+/// The most tasks one claim looks at: a task of an ingest queue that is past its attempts is
+/// dead-lettered and the claim goes on to the next (MEDULLA-INGEST-WORKER-R001.12).
+const MAX_CLAIM_ROUNDS: usize = 16;
+
 /// Serve `TaskQueueClaim`: admit the worker through the one admission rule, then lease the next
 /// ready task of the verified tenant, or answer nil when none is ready. The lease length is the
-/// request's.
+/// request's. A leased task of an ingest queue whose attempts ran out (a lease that lapsed on
+/// every delivery) is dead-lettered with `LEASE_EXPIRED_EXHAUSTED` instead of delivered, and the
+/// claim leases again, at most `MAX_CLAIM_ROUNDS` times (MEDULLA-INGEST-WORKER-R001.12).
 pub fn claim(
     store: &JobStore,
     call: &TaskQueueCall<'_>,
     request: TaskClaim,
     admission: &AdmissionInputs,
+    ingest_policy: &Result<IngestRetryPolicy, String>,
 ) -> Response {
     let req_id = call.req_id;
     if let Err(refusal) = request.validate() {
@@ -214,39 +221,69 @@ pub fn claim(
     if let Err(refusal) = admit_claim(call, &request, admission) {
         return Response::err(req_id, refusal);
     }
-    let claimed = store.claim_task(
-        &worker_ref(call, &request.worker_id),
-        &tenant_capability(call.tenant),
-        call.now_ms,
-        request.lease_ms,
-    );
-    match claimed {
-        Ok(claim) => answer(
-            req_id,
-            ResultPayload::of::<contract::TaskQueueClaim>(claim.map(|claim| {
-                ClaimedTask {
-                    queue: claim
-                        .job
-                        .algo
-                        .family
-                        .strip_prefix(TASK_FAMILY_PREFIX)
-                        .unwrap_or_default()
-                        .to_string(),
-                    kind: claim.job.algo.algorithm.clone(),
-                    payload_ref: claim
-                        .job
-                        .input_payload
-                        .as_deref()
-                        .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
-                        .unwrap_or_default(),
-                    attempt: claim.job.retry.attempts_made,
-                    lease_expires_at_ms: claim.lease.expires_at_ms,
-                    task_id: claim.job.job_id,
+    let worker = worker_ref(call, &request.worker_id);
+    for _ in 0..MAX_CLAIM_ROUNDS {
+        let claimed = store.claim_task(
+            &worker,
+            &tenant_capability(call.tenant),
+            call.now_ms,
+            request.lease_ms,
+        );
+        let claim = match claimed {
+            Ok(Some(claim)) => claim,
+            Ok(None) => return answer(req_id, ResultPayload::of::<contract::TaskQueueClaim>(None)),
+            Err(error) => return store_refusal(req_id, &error),
+        };
+        let queue = claim
+            .job
+            .algo
+            .family
+            .strip_prefix(TASK_FAMILY_PREFIX)
+            .unwrap_or_default()
+            .to_string();
+        if ingest_lane_of_queue(&queue).is_some() {
+            let policy = match ingest_policy {
+                Ok(policy) => policy,
+                Err(error) => return Response::err(req_id, error.clone()),
+            };
+            if on_ingest_claim(policy, claim.job.retry.attempts_made) {
+                // The claiming worker holds the live lease, so the dead-letter write is legal.
+                let parked = store.ack_task(
+                    call.tenant,
+                    &claim.job.job_id,
+                    &worker,
+                    TaskAckOutcome::DeadLetter {
+                        code: ServerErrorCode::LeaseExpiredExhausted.as_str(),
+                    },
+                    "",
+                    call.now_ms,
+                );
+                if let Err(error) = parked {
+                    return lease_refusal(req_id, error, "claim");
                 }
+                medulla_kernel::metrics::process()
+                    .record_job(IngestJobOutcome::DeadLettered, &queue);
+                continue;
+            }
+        }
+        return answer(
+            req_id,
+            ResultPayload::of::<contract::TaskQueueClaim>(Some(ClaimedTask {
+                queue,
+                kind: claim.job.algo.algorithm.clone(),
+                payload_ref: claim
+                    .job
+                    .input_payload
+                    .as_deref()
+                    .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+                    .unwrap_or_default(),
+                attempt: claim.job.retry.attempts_made,
+                lease_expires_at_ms: claim.lease.expires_at_ms,
+                task_id: claim.job.job_id,
             })),
-        ),
-        Err(error) => store_refusal(req_id, &error),
+        );
     }
+    answer(req_id, ResultPayload::of::<contract::TaskQueueClaim>(None))
 }
 
 /// The ack the store performs for a task of an ingest queue: the pure decision of
@@ -469,6 +506,7 @@ pub async fn try_handle(
                 Ok(inputs) => inputs,
                 Err(error) => return Ok(Response::err(req_id, error)),
             };
+            let policy = ingest_retry_policy(state).await;
             claim(
                 &store,
                 &call,
@@ -478,6 +516,7 @@ pub async fn try_handle(
                     lease_ms,
                 },
                 &admission,
+                &policy,
             )
         }
         Method::TaskQueueAck {
@@ -645,7 +684,7 @@ mod tests {
             lease_ms: 30_000,
         };
         // An unregistered worker is refused and the task stays ready.
-        let refused = claim(&store, &call(2_000), request(), &admission(&[]));
+        let refused = claim(&store, &call(2_000), request(), &admission(&[]), &Ok(default_policy()));
         assert!(
             refused.error.as_deref().is_some_and(|e| e.contains("WORKER_UNKNOWN")),
             "{:?}",
@@ -654,7 +693,7 @@ mod tests {
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (1, 0));
         // A registered worker is admitted and leases the task.
-        let leased = claim(&store, &call(3_000), request(), &admission(&["worker-1"]));
+        let leased = claim(&store, &call(3_000), request(), &admission(&["worker-1"]), &Ok(default_policy()));
         assert!(leased.error.is_none(), "{:?}", leased.error);
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (0, 1));
@@ -697,6 +736,7 @@ mod tests {
                     lease_ms: 30_000,
                 },
                 &admission(&["worker-1"]),
+                &Ok(default_policy()),
             );
             assert!(claimed.error.is_none(), "attempt {attempt}: {:?}", claimed.error);
             let acked = ack(
@@ -742,6 +782,7 @@ mod tests {
                 lease_ms: 30_000,
             },
             &admission(&["worker-1"]),
+            &Ok(default_policy()),
         );
         assert!(sixth.error.is_none());
         let load = store.task_queue_load("acme", "ingest").unwrap();
@@ -795,6 +836,7 @@ mod tests {
                 lease_ms: 30_000,
             },
             &admission(&["worker-1"]),
+            &Ok(default_policy()),
         );
         assert!(claimed.error.is_none(), "claim refused: {:?}", claimed.error);
         let leased = store

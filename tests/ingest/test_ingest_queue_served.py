@@ -178,6 +178,154 @@ async def test_failed_job_retries_then_dead_letters() -> None:
         await client.close()
 
 
+async def _with_retry_limits(client: MedullaClient, max_attempts: int) -> dict[str, Any]:
+    """Set the ingest retry policy; return the config it replaced."""
+    current = await client._send("GetSchedulerConfig", {})
+    await client._send(
+        "SetSchedulerConfig",
+        {
+            "config": {
+                **current,
+                "ingest_retry": {
+                    "max_attempts": max_attempts,
+                    "base_delay_ms": 20,
+                    "max_delay_ms": 200,
+                    "jitter_milli": 200,
+                },
+            }
+        },
+    )
+    return current
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.12
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.12")
+@pytest.mark.asyncio
+async def test_lapsed_lease_redelivers_then_exhausts() -> None:
+    client = await _client()
+    current = await _with_retry_limits(client, 2)
+    try:
+        parked_before = (await _ingest_depth(client, "ingest"))["ingest"]["dead_letters"]
+        receipt = await client._send(
+            "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
+        )
+        task_id = receipt["task_id"]
+        worker = "ingest-worker-1"
+        await _ensure_worker(client, worker)
+        # Claim with the shortest lease and never renew: each lapse redelivers the task and
+        # counts as an attempt, the claim after max_attempts dead-letters it instead.
+        deliveries = 0
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline and deliveries < 2:
+            claimed = await client._send(
+                "TaskQueueClaim",
+                {"worker_id": worker, "grant_id": "grant-1", "lease_ms": 1_000},
+            )
+            if claimed is None:
+                await asyncio.sleep(0.1)
+            elif claimed["task_id"] == task_id:
+                deliveries += 1
+                assert claimed["attempt"] == deliveries
+                await asyncio.sleep(1.2)
+            else:
+                await client._send(
+                    "TaskQueueAck",
+                    {
+                        "task_id": claimed["task_id"],
+                        "worker_id": worker,
+                        "outcome": "Succeeded",
+                        "detail": "",
+                    },
+                )
+        assert deliveries == 2
+        # The third claim finds the task past its attempts: it is parked, never delivered.
+        await asyncio.sleep(0.2)
+        while (extra := await _claim(client, worker)) is not None:
+            assert extra["task_id"] != task_id
+            await client._send(
+                "TaskQueueAck",
+                {
+                    "task_id": extra["task_id"],
+                    "worker_id": worker,
+                    "outcome": "Succeeded",
+                    "detail": "",
+                },
+            )
+        parked_after = (await _ingest_depth(client, "ingest"))["ingest"]["dead_letters"]
+        assert parked_after == parked_before + 1
+    finally:
+        await client._send("SetSchedulerConfig", {"config": current})
+        await client.close()
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.12
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.12")
+@pytest.mark.asyncio
+async def test_renewed_lease_is_not_redelivered() -> None:
+    client = await _client()
+    current = await _with_retry_limits(client, 2)
+    try:
+        receipt = await client._send(
+            "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
+        )
+        task_id = receipt["task_id"]
+        worker = "ingest-worker-1"
+        await _ensure_worker(client, worker)
+        deadline = time.monotonic() + 10.0
+        claimed: dict[str, Any] | None = None
+        while time.monotonic() < deadline and claimed is None:
+            candidate = await client._send(
+                "TaskQueueClaim",
+                {"worker_id": worker, "grant_id": "grant-1", "lease_ms": 1_000},
+            )
+            if candidate is None:
+                await asyncio.sleep(0.1)
+            elif candidate["task_id"] == task_id:
+                claimed = candidate
+            else:
+                await client._send(
+                    "TaskQueueAck",
+                    {
+                        "task_id": candidate["task_id"],
+                        "worker_id": worker,
+                        "outcome": "Succeeded",
+                        "detail": "",
+                    },
+                )
+        assert claimed is not None
+        # Renewing every third of the lease keeps it: three renewals outlive two leases.
+        for _ in range(3):
+            await asyncio.sleep(0.33)
+            await client._send(
+                "TaskQueueRenew",
+                {"task_id": task_id, "worker_id": worker, "lease_ms": 1_000},
+            )
+        while (extra := await _claim(client, worker)) is not None:
+            assert extra["task_id"] != task_id
+            await client._send(
+                "TaskQueueAck",
+                {
+                    "task_id": extra["task_id"],
+                    "worker_id": worker,
+                    "outcome": "Succeeded",
+                    "detail": "",
+                },
+            )
+        acked = await client._send(
+            "TaskQueueAck",
+            {
+                "task_id": task_id,
+                "worker_id": worker,
+                "outcome": "Succeeded",
+                "detail": "",
+            },
+        )
+        assert acked["task_id"] == task_id
+    finally:
+        await client._send("SetSchedulerConfig", {"config": current})
+        await client.close()
+
+
 async def _ingest_depth(client: MedullaClient, queue: str | None = None) -> dict[str, Any]:
     report = await client._send("IngestQueueDepth", {"queue": queue})
     return {row["queue"]: row for row in report["queues"]}

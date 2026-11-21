@@ -1035,6 +1035,8 @@ closed_error_codes! {
         IngestQueueFull => "INGEST_QUEUE_FULL",
         /// MEDULLA-INGEST-WORKER-R001.9: the reason of a dead-lettered ingest task whose attempts ran out.
         IngestRetriesExhausted => "INGEST_RETRIES_EXHAUSTED",
+        /// MEDULLA-INGEST-WORKER-R001.12: the reason of a dead-lettered ingest task whose lease lapsed on every attempt.
+        LeaseExpiredExhausted => "LEASE_EXPIRED_EXHAUSTED",
         /// MEDULLA-INGEST-WORKER-R700.4: a file over `ingest.reader_max_bytes`.
         ReaderTooLarge => "READER_TOO_LARGE",
         /// MEDULLA-INGEST-WORKER-R700.4: an encrypted document, never read and never skipped.

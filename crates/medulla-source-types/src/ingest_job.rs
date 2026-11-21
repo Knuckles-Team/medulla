@@ -272,6 +272,14 @@ pub fn on_ingest_ack(
     }
 }
 
+/// Whether a claimed ingest task has run out of attempts (MEDULLA-INGEST-WORKER-R001.12).
+/// `attempt` is the job's 1-based `attempts_made`, counted at this claim: the task is exhausted
+/// when it is past `max_attempts`, so a job that kills its worker is delivered `max_attempts`
+/// times and dead-lettered on the next claim.
+pub fn on_ingest_claim(policy: &IngestRetryPolicy, attempt: u32) -> bool {
+    attempt > policy.max_attempts
+}
+
 /// The receipt for a served `IngestEnqueue`: the task id, its queue, its
 /// partition and whether the write deduplicated
 /// (MEDULLA-INGEST-WORKER-R001.4).
@@ -377,6 +385,16 @@ mod tests {
             attempt: 1,
             page: None,
         }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.12
+    #[test]
+    fn claim_exhaustion_is_after_max_attempts() {
+        let policy = policy();
+        // A job that kills its worker is delivered max_attempts times; the next claim exhausts.
+        assert!(!on_ingest_claim(&policy, 1));
+        assert!(!on_ingest_claim(&policy, policy.max_attempts));
+        assert!(on_ingest_claim(&policy, policy.max_attempts + 1));
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.9
