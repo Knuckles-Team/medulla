@@ -32,6 +32,8 @@ pub use medulla_ingestion_types::ingestion_wire::IndexResult;
 /// The deterministic cost ladder's provenance is persisted on every emitted
 /// repository edge, rather than inferred later from its relationship name.
 const EVIDENCE_RUNG: &str = "evidence_rung";
+/// The property of a `calls` edge that lists every call site that resolved to it.
+pub const CALL_SITES: &str = "sites";
 const EXTRACTED: &str = "EXTRACTED";
 const INFERRED: &str = "INFERRED";
 const DERIVED: &str = "DERIVED";
@@ -426,7 +428,9 @@ struct CallCounts {
 }
 
 struct CallResolutionState<'a> {
-    seen: HashSet<(String, String)>,
+    /// The `calls` edge of each (caller, target) pair: its index in `edges` and every
+    /// call site (`receiver`, `argc`) that resolved to it.
+    seen: HashMap<(String, String), (usize, Vec<serde_json::Value>)>,
     edges: &'a mut Vec<ExtractedEdge>,
     counts: CallCounts,
 }
@@ -594,7 +598,7 @@ fn resolve_call_edges(
     edges: &mut Vec<ExtractedEdge>,
 ) -> CallCounts {
     let mut state = CallResolutionState {
-        seen: HashSet::new(),
+        seen: HashMap::new(),
         edges,
         counts: CallCounts::default(),
     };
@@ -674,28 +678,38 @@ fn record_call_resolution(
     confidence: f64,
     state: &mut CallResolutionState<'_>,
 ) {
-    if state.seen.insert((caller_id.to_string(), target.clone())) {
+    // One `calls` edge per (caller, target): it carries every call site that resolved
+    // to it as `sites`, so feedback replays each site and not only the first.
+    let site_json = serde_json::json!({
+        "receiver": site.receiver,
+        "argc": site.argc,
+    });
+    let key = (caller_id.to_string(), target.clone());
+    if let Some((at, sites)) = state.seen.get_mut(&key) {
+        if !sites.contains(&site_json) {
+            sites.push(site_json);
+            state.edges[*at]
+                .properties
+                .insert(CALL_SITES.to_string(), serde_json::Value::Array(sites.clone()).to_string());
+        }
+    } else {
+        let sites = vec![site_json];
+        let properties = HashMap::from([
+            ("name".to_string(), site.callee.clone()),
+            ("strategy".to_string(), strategy.to_string()),
+            ("confidence".to_string(), format!("{confidence:.2}")),
+            (EVIDENCE_RUNG.to_string(), INFERRED.to_string()),
+            (
+                CALL_SITES.to_string(),
+                serde_json::Value::Array(sites.clone()).to_string(),
+            ),
+        ]);
+        state.seen.insert(key, (state.edges.len(), sites));
         state.edges.push(ExtractedEdge {
             source: caller_id.to_string(),
             target,
             edge_type: "calls".to_string(),
-            properties: {
-                let mut properties = HashMap::from([
-                    ("name".to_string(), site.callee.clone()),
-                    ("strategy".to_string(), strategy.to_string()),
-                    ("confidence".to_string(), format!("{confidence:.2}")),
-                    (EVIDENCE_RUNG.to_string(), INFERRED.to_string()),
-                ]);
-                // The site the edge came from, so a callee that goes away is fed back
-                // to the resolver as the very call site the parse saw.
-                if !site.receiver.is_empty() {
-                    properties.insert("receiver".to_string(), site.receiver.clone());
-                }
-                if let Some(argc) = site.argc {
-                    properties.insert("argc".to_string(), argc.to_string());
-                }
-                properties
-            },
+            properties,
         });
     }
     state.counts.resolved += 1;
@@ -1287,6 +1301,30 @@ mod tests {
             r.edges
         );
         assert!(r.calls_type_resolved >= 1);
+    }
+
+    #[test]
+    fn calls_edge_keeps_every_call_site() {
+        // Two call sites of one callee with different argument counts resolve to one
+        // `calls` edge that lists both (MEDULLA-SCM-R006, decided: keep every call site).
+        let r = index_repository(&files(&[
+            ("a.py", "def make(x, y=None):\n    return x\n"),
+            ("c.py", "def go():\n    make(1)\n    return make(1, 2)\n"),
+        ]));
+        let make = node_id(&r, "make", "a.py");
+        let go = node_id(&r, "go", "c.py");
+        let edges: Vec<&ExtractedEdge> = r
+            .edges
+            .iter()
+            .filter(|e| e.edge_type == "calls" && e.source == go && e.target == make)
+            .collect();
+        assert_eq!(edges.len(), 1, "one calls edge per caller and callee: {:?}", r.edges);
+        let sites: Vec<serde_json::Value> =
+            serde_json::from_str(&edges[0].properties[CALL_SITES]).expect("sites json");
+        let mut argcs: Vec<u64> = sites.iter().filter_map(|s| s["argc"].as_u64()).collect();
+        argcs.sort_unstable();
+        assert_eq!(argcs, vec![1, 2], "sites={sites:?}");
+        assert!(!edges[0].properties.contains_key("argc"));
     }
 
     #[test]

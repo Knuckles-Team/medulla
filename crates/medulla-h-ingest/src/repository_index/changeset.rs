@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use medulla_compute::parser::resolve::{
     file_node, path_names, resolution_names, resolve, similarity_bands, unresolved_bucket_id,
-    unresolved_buckets, unresolved_imports, UNRESOLVED_CALLS, UNRESOLVED_CALL_EDGE,
+    unresolved_buckets, unresolved_imports, CALL_SITES, UNRESOLVED_CALLS, UNRESOLVED_CALL_EDGE,
     UNRESOLVED_IMPORTS, UNRESOLVED_IMPORT_EDGE,
 };
 use medulla_compute::parser::tree_sitter::{is_parseable_path, parse_file};
@@ -504,11 +504,29 @@ pub fn reindex_changeset(
                 // gone is fed back as that name, so it can bind again or stay unresolved.
                 if !alive(&edge.target) {
                     if let Some(name) = edge.properties.get("name") {
-                        // The edge keeps the call site it came from, so the feedback is
-                        // the `receiver:callee:argc` text a full index writes.
-                        let receiver = edge.properties.get("receiver").map_or("", String::as_str);
-                        let argc = edge.properties.get("argc").map_or("", String::as_str);
-                        fed.1.insert(format!("{receiver}:{name}:{argc}"));
+                        // The edge keeps every call site it came from (`sites`), so the
+                        // feedback is one `receiver:callee:argc` text per site, as a full
+                        // index writes them.
+                        let sites: Vec<serde_json::Value> = edge
+                            .properties
+                            .get(CALL_SITES)
+                            .and_then(|sites| serde_json::from_str(sites).ok())
+                            .unwrap_or_default();
+                        if sites.is_empty() {
+                            fed.1.insert(format!(":{name}:"));
+                        }
+                        for site in &sites {
+                            let receiver = site
+                                .get("receiver")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or_default();
+                            let argc = site
+                                .get("argc")
+                                .and_then(serde_json::Value::as_u64)
+                                .map(|argc| argc.to_string())
+                                .unwrap_or_default();
+                            fed.1.insert(format!("{receiver}:{name}:{argc}"));
+                        }
                     }
                 }
             }
