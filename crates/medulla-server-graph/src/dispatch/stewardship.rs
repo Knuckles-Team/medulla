@@ -332,15 +332,27 @@ async fn open(
     proposed_digest: &str,
     scopes: &StewardshipTarget,
 ) -> Result<StewardshipReceipt, String> {
-    let tenant = target.verified.tenant();
     let assignments = load_assignments(state, target).await?;
     let scopes = scopes_of(scopes);
     let request = open_change_request(asset, proposed_digest, &assignments, &scopes)
         .map_err(|error| role_missing(&error.to_string()))?;
+    let (id, request) = persist_request(state, target, asset, proposed_digest, request).await?;
+    receipt(state, target, id, &scopes, Some(request), None).await
+}
+
+/// Store `request` open under its deterministic id, or return the one already stored there.
+async fn persist_request(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    asset: &str,
+    proposed_digest: &str,
+    request: ChangeRequest,
+) -> Result<(String, ChangeRequest), String> {
+    let tenant = target.verified.tenant();
     let id = request_id(tenant, asset, proposed_digest);
     if read_node(state, target, &id).await?.is_some() {
         let stored = stored_request(state, target, &id).await?;
-        return receipt(state, target, id, &scopes, Some(stored.request), None).await;
+        return Ok((id, stored.request));
     }
     let mut properties = request_properties(tenant, &id, &request, target.verified.agent_id())?;
     properties.insert("verdicts".into(), serde_json::json!([]));
@@ -357,7 +369,47 @@ async fn open(
         },
     )
     .await?;
-    receipt(state, target, id, &scopes, Some(request), None).await
+    Ok((id, request))
+}
+
+/// Open the change request a data product version change raises (MEDULLA-TYPED-PACKS-R805.3).
+/// The reviewers are the owners and stewards governing any of the product's `datasets`. A
+/// product none of whose datasets is governed raises none: `Ok(None)`.
+pub async fn open_product_change(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    product: &str,
+    proposed_digest: &str,
+    datasets: &[String],
+) -> Result<Option<String>, String> {
+    let assignments = load_assignments(state, target).await?;
+    let mut reviewers_of_datasets: Vec<String> = datasets
+        .iter()
+        .flat_map(|dataset| {
+            reviewers(
+                &assignments,
+                &TargetScopes {
+                    asset: Some(dataset.clone()),
+                    concept_scheme: None,
+                    domain: None,
+                },
+            )
+        })
+        .collect();
+    reviewers_of_datasets.sort();
+    reviewers_of_datasets.dedup();
+    if reviewers_of_datasets.is_empty() {
+        return Ok(None);
+    }
+    let request = ChangeRequest {
+        target: product.to_string(),
+        proposed_digest: proposed_digest.to_string(),
+        state: ChangeRequestState::Open,
+        reviewers: reviewers_of_datasets,
+    };
+    request.validate().map_err(invalid)?;
+    let (id, _) = persist_request(state, target, product, proposed_digest, request).await?;
+    Ok(Some(id))
 }
 
 fn request_properties(

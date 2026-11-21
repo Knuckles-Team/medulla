@@ -54,7 +54,7 @@ pub async fn dispatch_data_product_methods(
             dispatch_boxed(async {
                 typed_response::<DataProductRegister>(
                     req.id,
-                    register(state, verified_context, &tenant, product, contract).await,
+                    register(state, req, verified_context, &tenant, product, contract).await,
                 )
             })
             .await
@@ -143,6 +143,7 @@ fn store_error(error: medulla_isolation::rbac_persist::RbacPersistError) -> Stri
 
 async fn register(
     state: &Arc<RwLock<ServerState>>,
+    req: &DispatchHeader,
     verified: &VerifiedRequestContext,
     tenant: &str,
     product: medulla_catalog_types::data_product::DataProduct,
@@ -162,6 +163,7 @@ async fn register(
         ));
     }
     let store = policy_store(state).await?;
+    let mut version_changed = false;
     // A new version that changes the contract schema needs a higher major version.
     if let Some((held_product, held_contract)) = store
         .data_product(tenant, &product.id)
@@ -177,6 +179,29 @@ async fn register(
                 held_product.version
             ));
         }
+        version_changed = held_product.version != product.version;
+    }
+    // A version change opens a change request, reviewed by the owners and stewards governing
+    // the product's datasets (MEDULLA-TYPED-PACKS-R802.3). A product no steward governs opens
+    // none.
+    if version_changed {
+        use sha2::{Digest, Sha256};
+        let bytes = serde_json::to_vec(&(&product, &contract)).map_err(invalid)?;
+        let digest = format!("sha256:{:x}", Sha256::digest(&bytes));
+        let target = GraphTarget {
+            graph: &req.graph,
+            req_id: req.id,
+            caller: req.agent_id.as_deref(),
+            verified,
+        };
+        medulla_server_graph::dispatch::stewardship::open_product_change(
+            state,
+            &target,
+            &product.id,
+            &digest,
+            &product.datasets,
+        )
+        .await?;
     }
     store
         .put_data_product(tenant, &product, &contract)
@@ -282,6 +307,59 @@ async fn decider_role(
     }
 }
 
+/// The service identity the engine acts as when it carries a steward's approval onto a node the
+/// steward does not own (MEDULLA-TYPED-PACKS-R805.3).
+const STEWARD_DELEGATE_ACTOR: &str = "product-steward-delegate";
+
+/// Whether the stored assignments make the verified caller an owner or steward of `dataset`.
+async fn steward_governs(
+    state: &Arc<RwLock<ServerState>>,
+    req: &DispatchHeader,
+    verified: &VerifiedRequestContext,
+    dataset: &str,
+) -> Result<bool, String> {
+    let target = GraphTarget {
+        graph: &req.graph,
+        req_id: req.id,
+        caller: req.agent_id.as_deref(),
+        verified,
+    };
+    let assignments =
+        medulla_server_graph::dispatch::stewardship::load_assignments(state, &target).await?;
+    let scopes = TargetScopes {
+        asset: Some(dataset.to_string()),
+        concept_scheme: None,
+        domain: None,
+    };
+    Ok(reviewers(&assignments, &scopes)
+        .iter()
+        .any(|reviewer| reviewer == verified.agent_id()))
+}
+
+/// The engine's delegated authority for one dataset the stewardship store authorized the
+/// verified steward for: the read and the share write run under it, so row-level security never
+/// hides a node the steward governs. The audit entry names the steward and the delegation.
+async fn delegated_context(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    key: String,
+) -> Result<VerifiedRequestContext, String> {
+    if !verified.is_authenticated() {
+        return Ok(VerifiedRequestContext::anonymous_local(Some(key)));
+    }
+    let server = state.read().await.context.clone();
+    let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+        &server,
+        STEWARD_DELEGATE_ACTOR,
+        &[ADMIN_SCOPE],
+    )?;
+    Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
+        service.claims().clone(),
+        key,
+        Some(medulla_types::contract::Nonce::minted()),
+    ))
+}
+
 /// One dataset's decided share: the node's committed keys and the state the grant leaves.
 struct DatasetShare {
     /// The request the grant answers, `<product>:<principal>`, recorded in the audit entry.
@@ -291,6 +369,8 @@ struct DatasetShare {
     current: ShareState,
     next: ShareState,
     reason: String,
+    /// The engine's delegated authority, when the steward governs this node but does not own it.
+    engine: Option<VerifiedRequestContext>,
 }
 
 /// Decide, without writing, the share that lets `principal` read `dataset`. `None` when the
@@ -305,7 +385,22 @@ async fn plan_dataset_share(
     principal: &str,
     delegation: &ShareDelegation,
 ) -> Result<Option<DatasetShare>, String> {
-    let properties = match read_node(state, req, verified, &req.graph, dataset).await {
+    let engine = if matches!(delegation, ShareDelegation::ProductSteward { .. })
+        && steward_governs(state, req, verified, dataset).await?
+    {
+        Some(
+            delegated_context(
+                state,
+                verified,
+                format!("product-steward:{}:{dataset}:{principal}", req.id),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+    let acting = engine.as_ref().unwrap_or(verified);
+    let properties = match read_node(state, req, acting, &req.graph, dataset).await {
         Ok(Some(properties)) => properties,
         Ok(None) => return Err(node_absent(dataset)),
         Err(refusal) if refusal.starts_with("UNIT_OUT_OF_SCOPE") => {
@@ -335,9 +430,12 @@ async fn plan_dataset_share(
         .map_err(|refusal| invalid(format!("{refusal:?}")))?;
     let next = share_transition(&current, &ShareOp::Grant(grant), &actor)
         .map_err(|refusal| refusal.to_string())?;
-    let reason = share_authority(&current, &actor)
+    let mut reason = share_authority(&current, &actor)
         .map(|authority| authority.reason())
         .unwrap_or_default();
+    if engine.is_some() {
+        reason.push_str(";delegated=engine");
+    }
     Ok(Some(DatasetShare {
         request_id: format!("{product}:{principal}"),
         node_id: dataset.to_string(),
@@ -345,6 +443,7 @@ async fn plan_dataset_share(
         current,
         next,
         reason,
+        engine,
     }))
 }
 
@@ -368,7 +467,7 @@ async fn commit_dataset_share(
     match commit_share(
         state,
         req,
-        verified,
+        share.engine.as_ref().unwrap_or(verified),
         &share.node_id,
         &share.properties,
         &share.current,

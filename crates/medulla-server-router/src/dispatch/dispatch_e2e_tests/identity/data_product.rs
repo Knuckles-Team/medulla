@@ -216,6 +216,53 @@ async fn request_grants_access_after_steward_approval() {
 
 // spec: MEDULLA-TYPED-PACKS-R805.3
 #[tokio::test(flavor = "multi_thread")]
+async fn a_steward_approves_over_a_private_node_owned_by_someone_else() {
+    let state = durable_state().await;
+    // Nobody but its owner (a third principal) can read this node under row-level security.
+    add_node(
+        &state,
+        "ds-private",
+        serde_json::json!({"type": "Dataset", "_owner_id": "usr:someone-else"}),
+    )
+    .await;
+    add_node(&state, "ds-other", serde_json::json!({"type": "Dataset", "_owner_id": "usr:someone-else"})).await;
+    register(&state, "ledger", "ds-private").await;
+    let assigned = send_method(
+        &state,
+        context(OWNER, &["*"]),
+        Method::Stewardship {
+            op: Box::new(StewardshipOp::Assign {
+                assignment: StewardshipAssignment {
+                    scope: StewardshipScope::Asset("ds-private".to_string()),
+                    role: StewardRole::Steward,
+                    principal: STEWARD.to_string(),
+                },
+            }),
+        },
+    )
+    .await;
+    assert!(assigned.error.is_none(), "{:?}", assigned.error);
+    open(&state, "ledger").await;
+
+    // The product owner does not own the node and holds no stewardship of it: still hidden.
+    let owner = send_method(&state, context(OWNER, &["*"]), decide("ledger", true)).await;
+    assert!(owner.error.is_some(), "the owner of the product is no steward of the node");
+    assert_eq!(grants_of(&state, "ds-private").await, serde_json::Value::Null);
+
+    // The steward the store authorized for the node approves: the engine carries the read and
+    // the write, and the node names the consumer.
+    let approved = send_method(&state, context(STEWARD, &["*"]), decide("ledger", true)).await;
+    assert!(approved.error.is_none(), "{:?}", approved.error);
+    assert_eq!(
+        grants_of(&state, "ds-private").await,
+        serde_json::json!([CONSUMER])
+    );
+    // A node the steward does not govern is untouched.
+    assert_eq!(grants_of(&state, "ds-other").await, serde_json::Value::Null);
+}
+
+// spec: MEDULLA-TYPED-PACKS-R805.3
+#[tokio::test(flavor = "multi_thread")]
 async fn product_methods_refuse_another_tenant() {
     let state = durable_state().await;
     let (product, contract) = product("revenue", "ds-owned");
@@ -236,6 +283,59 @@ async fn product_methods_refuse_another_tenant() {
         "{:?}",
         foreign.error
     );
+}
+
+// spec: MEDULLA-TYPED-PACKS-R805.3
+#[tokio::test(flavor = "multi_thread")]
+async fn a_product_version_change_opens_a_change_request_for_the_dataset_stewards() {
+    let state = durable_state().await;
+    add_node(&state, "ds-owned", serde_json::json!({"type": "Dataset", "_owner_id": OWNER})).await;
+    register(&state, "revenue", "ds-owned").await;
+    let assigned = send_method(
+        &state,
+        context(OWNER, &["*"]),
+        Method::Stewardship {
+            op: Box::new(StewardshipOp::Assign {
+                assignment: StewardshipAssignment {
+                    scope: StewardshipScope::Asset("ds-owned".to_string()),
+                    role: StewardRole::Steward,
+                    principal: STEWARD.to_string(),
+                },
+            }),
+        },
+    )
+    .await;
+    assert!(assigned.error.is_none(), "{:?}", assigned.error);
+    let (mut next, mut contract) = product("revenue", "ds-owned");
+    next.version = "2.0.0".to_string();
+    contract.schema_digest = format!("sha256:{}", "c".repeat(64));
+    let registered = send_method(
+        &state,
+        context(OWNER, &["*"]),
+        Method::DataProductRegister {
+            tenant: TENANT.to_string(),
+            product: next,
+            contract,
+        },
+    )
+    .await;
+    assert!(registered.error.is_none(), "{:?}", registered.error);
+    let listed = send_method(
+        &state,
+        context(OWNER, &["*"]),
+        Method::GetNodesByLabel {
+            label: "cat:ChangeRequest".to_string(),
+            after: None,
+            limit: 10,
+        },
+    )
+    .await;
+    let Some(ResultPayload::NodeList(nodes)) = listed.result else {
+        panic!("no change request listed: {:?}", listed.error);
+    };
+    assert_eq!(nodes.len(), 1);
+    assert_eq!(nodes[0].1["target"], serde_json::json!("revenue"));
+    assert_eq!(nodes[0].1["reviewers"], serde_json::json!([STEWARD]));
 }
 
 fn refusal_of(response: &Response) -> String {
