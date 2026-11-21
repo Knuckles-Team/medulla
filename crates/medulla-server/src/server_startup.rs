@@ -812,7 +812,10 @@ pub fn open_isolation_layer(
             format_args!("could not open durable identity/RBAC policy: {error}"),
             1,
         )
-    });
+    })
+    .with_governed_clock(std::sync::Arc::new(
+        medulla_kernel::kernel::dispatch_support::EngineClock,
+    ));
     if anonymous {
         isolation
             .try_register_agent(medulla_identity_types::acl::AgentIdentity {

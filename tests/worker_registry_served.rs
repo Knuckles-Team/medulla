@@ -172,7 +172,8 @@ fn non_reserved_task_is_refused_when_only_reserved_capacity_remains() {
 fn unknown_expired_and_cross_owner_requests_refuse() {
     use std::sync::atomic::{AtomicU64, Ordering};
 
-    use medulla_h_jobs::worker_registry::{heartbeat, register, Clock};
+    use medulla_h_jobs::worker_registry::{heartbeat, register};
+    use medulla_types::clock::Clock;
     use medulla_work_types::worker_registry::{OwnedWorkerRegistry, WorkerRegistration};
     use parking_lot::Mutex;
 

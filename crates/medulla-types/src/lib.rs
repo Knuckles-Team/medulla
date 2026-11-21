@@ -25,6 +25,7 @@ pub mod edit_machine;
 pub mod gap_machine;
 // MEDULLA-DATAPLAT-VOCAB-R009 — the data-platform lifecycles as explicit state machines.
 pub mod access_request_machine;
+pub mod clock;
 pub mod change_request_machine;
 pub mod durable_unit_machine;
 pub mod glossary_term_machine;

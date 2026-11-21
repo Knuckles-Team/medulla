@@ -64,8 +64,11 @@ fn contract() -> RecordContract {
 
 /// The admin and the two governed-change principals, each a registered agent
 /// (`ServerState::test_isolation` registers one).
-fn test_isolation() -> medulla_isolation::isolation::IsolationLayer {
-    let mut isolation = ServerState::test_isolation(ADMIN);
+fn test_isolation(
+    clock: medulla_types::clock::ManualClock,
+) -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation =
+        ServerState::test_isolation(ADMIN).with_governed_clock(std::sync::Arc::new(clock));
     for agent in [PROPOSER, APPROVER] {
         isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
             agent_id: agent.into(),
@@ -81,6 +84,8 @@ struct Served {
     _dir: tempfile::TempDir,
     _env: medulla_kernel::crypto::TestEnvReadGuard,
     state: Arc<RwLock<ServerState>>,
+    /// The governed clock of the served layer: tests move it, never sleep.
+    clock: medulla_types::clock::ManualClock,
 }
 
 fn next_id() -> u64 {
@@ -92,9 +97,12 @@ impl Served {
     async fn new() -> Self {
         let env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let dir = tempfile::tempdir().unwrap();
+        let clock = medulla_types::clock::ManualClock::new(
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        );
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
-            test_isolation(),
+            test_isolation(clock.clone()),
         );
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let backend = medulla_persistence::redb_backend::RedbBackend::open(
@@ -107,6 +115,7 @@ impl Served {
             _dir: dir,
             _env: env,
             state: Arc::new(RwLock::new(state)),
+            clock,
         };
         let created = served
             .call(
@@ -812,7 +821,7 @@ async fn a_retry_after_the_approval_window_closed_still_replays() {
     assert!(first.changed);
 
     // The controlled clock moves past the 1 s window; no wall-clock wait.
-    served.state.read().await.isolation.advance_governed_clock_ms(1_300);
+    served.clock.advance_ms(1_300);
 
     // The window is closed: a new request is refused, the same key replays.
     let late = served

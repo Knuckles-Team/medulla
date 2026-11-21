@@ -25,7 +25,7 @@ impl IsolationLayer {
             #[cfg(feature = "security")]
             pending_audit_annotate: None,
             #[cfg(feature = "security")]
-            governed_clock_skew_ms: Default::default(),
+            governed_clock: std::sync::Arc::new(medulla_types::clock::SystemClock),
         }
     }
 
@@ -77,7 +77,7 @@ impl IsolationLayer {
             #[cfg(feature = "security")]
             pending_audit_annotate: None,
             #[cfg(feature = "security")]
-            governed_clock_skew_ms: Default::default(),
+            governed_clock: std::sync::Arc::new(medulla_types::clock::SystemClock),
         })
     }
 

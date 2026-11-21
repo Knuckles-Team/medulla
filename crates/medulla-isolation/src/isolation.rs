@@ -130,11 +130,12 @@ pub struct IsolationLayer {
     /// staged to commit in this layer's next policy store save.
     #[cfg(feature = "security")]
     pending_audit_annotate: Option<crate::isolation::identity_store_admin::PendingAuditAnnotate>,
-    /// Milliseconds added to the base clock of every governed-change decision
-    /// (MEDULLA-SRC-AUTH-R003.3). Zero in service; a test advances it to close
-    /// an approval window without a wall-clock wait. Clones share it.
+    /// The time source of every governed-change decision
+    /// (MEDULLA-SRC-AUTH-R003.3). Injected: the wall clock by default, the
+    /// engine clock in service, a manual clock in a test that closes an
+    /// approval window. Clones share it.
     #[cfg(feature = "security")]
-    governed_clock_skew_ms: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    governed_clock: std::sync::Arc<dyn medulla_types::clock::Clock>,
 }
 
 /// Extract the tenant slug from a graph name built by `agent-utilities`'

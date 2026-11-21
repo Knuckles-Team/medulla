@@ -108,7 +108,7 @@ async fn admit(
     let now_ms = medulla_server_api::txn::now_ms();
     if contract.source_authority {
         #[cfg(feature = "security")]
-        let now_ms = ctx.isolation.governed_now_ms(now_ms);
+        let now_ms = ctx.isolation.governed_now_ms();
         return verify_governed_change(
             ctx,
             tenant_id,

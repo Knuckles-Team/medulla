@@ -33,6 +33,17 @@ pub fn authoritative_now_ms() -> u64 {
         .unwrap_or(0)
 }
 
+/// The engine clock: the authoritative time of the command being served or
+/// applied, as one [`medulla_types::clock::Clock`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EngineClock;
+
+impl medulla_types::clock::Clock for EngineClock {
+    fn now_ms(&self) -> u64 {
+        authoritative_now_ms()
+    }
+}
+
 /// [`authoritative_now_ms`] in whole seconds.
 pub fn authoritative_now_secs() -> u64 {
     authoritative_now_ms() / 1_000

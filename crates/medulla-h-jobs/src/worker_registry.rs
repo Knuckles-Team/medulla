@@ -15,6 +15,8 @@ use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination as contract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_kernel::kernel::dispatch_support::EngineClock;
+use medulla_types::clock::Clock;
 use medulla_types::contract::Digest256;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 use medulla_work_types::worker_registry::{
@@ -22,22 +24,6 @@ use medulla_work_types::worker_registry::{
 };
 use parking_lot::Mutex;
 use tokio::sync::RwLock;
-
-/// The time source of the handler, in milliseconds.
-pub trait Clock: Send + Sync {
-    /// The current engine time.
-    fn now_ms(&self) -> u64;
-}
-
-/// The engine clock: the authoritative time of the request being served.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EngineClock;
-
-impl Clock for EngineClock {
-    fn now_ms(&self) -> u64 {
-        medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
-    }
-}
 
 /// The wire code of one registry refusal.
 pub fn refusal_code(error: &OwnedWorkerError) -> &'static str {
