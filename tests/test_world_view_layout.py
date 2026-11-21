@@ -15,8 +15,11 @@ from medulla.world_view import (
     CatalogEntry,
     Override,
     OverrideStore,
+    WorldBuilding,
+    WorldDistrict,
     apply_overrides,
     derive_placements,
+    read_world_envelope,
 )
 
 pytestmark = pytest.mark.no_engine
@@ -87,3 +90,63 @@ def test_derived_placement_is_never_stored() -> None:
     stale = apply_overrides(derive_placements(remaining), [override])
     assert stale.stale_overrides == ("alpha",)
     assert all(p.server_id != "alpha" for p in stale.placements)
+
+
+class _Stored(RecordingTransport):
+    """A fake graph that keeps what `AddNode` wrote and serves it back by label."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.nodes: dict[str, bytes] = {}
+
+    def reply(self, call: SentCall) -> Any:
+        assert call.params is not None
+        if call.method == "AddNode":
+            self.nodes[call.params["node_id"]] = call.params["properties_msgpack"]
+            return call.params["node_id"]
+        if call.method == "GetNodesByLabel":
+            return [[node_id, raw] for node_id, raw in self.nodes.items()]
+        return []
+
+
+# spec: MEDULLA-WORLD-VIEW-R003
+@pytest.mark.spec("MEDULLA-WORLD-VIEW-R003")
+def test_world_envelope_is_derived_overridden_and_read_only() -> None:
+    transport = _Stored()
+    store = OverrideStore(transport)  # type: ignore[arg-type]
+    catalog = [
+        CatalogEntry("zeta", "media"),
+        CatalogEntry("alpha", "media"),
+        CatalogEntry("beta", "finance"),
+    ]
+
+    envelope = asyncio.run(read_world_envelope(catalog, store))
+    assert envelope.version == 1
+    assert envelope.districts == (WorldDistrict("finance", 0), WorldDistrict("media", 1))
+    assert envelope.buildings == (
+        WorldBuilding("beta", "finance", 0, 0, 0, False, None),
+        WorldBuilding("alpha", "media", 0, DISTRICT_PITCH, 0, False, None),
+        WorldBuilding("zeta", "media", 1, DISTRICT_PITCH + PLOT_PITCH, 0, False, None),
+    )
+    assert envelope.stale_overrides == ()
+    assert [call.method for call in transport.sent] == ["GetNodesByLabel"]
+    assert transport.nodes == {}, "reading the envelope writes nothing"
+
+    asyncio.run(store.put(Override("alpha", 5, 7, "moved next to the harbor")))
+    asyncio.run(store.put(Override("ghost", 1, 1, "its connector is gone")))
+    moved = asyncio.run(read_world_envelope(catalog, store))
+    alpha = next(b for b in moved.buildings if b.server_id == "alpha")
+    assert (alpha.x, alpha.z) == (5, 7)
+    assert alpha.overridden and alpha.reason == "moved next to the harbor"
+    assert all(
+        not b.overridden and b.reason is None for b in moved.buildings if b.server_id != "alpha"
+    )
+    assert moved.stale_overrides == ("ghost",)
+    assert all(b.server_id != "ghost" for b in moved.buildings)
+
+    writes_before = [call.method for call in transport.sent].count("AddNode")
+    asyncio.run(read_world_envelope(catalog, store))
+    assert [call.method for call in transport.sent].count("AddNode") == writes_before
+
+    empty = asyncio.run(read_world_envelope([], OverrideStore(_Stored())))  # type: ignore[arg-type]
+    assert empty.districts == () and empty.buildings == ()

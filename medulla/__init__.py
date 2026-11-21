@@ -87,8 +87,13 @@ from .world_view import (
     Override,
     OverrideStore,
     Placement,
+    WorldBuilding,
+    WorldDistrict,
+    WorldEnvelope,
     apply_overrides,
+    build_world_envelope,
     derive_placements,
+    read_world_envelope,
 )
 
 
@@ -146,8 +151,13 @@ __all__ = [
     "Override",
     "OverrideStore",
     "Placement",
+    "WorldBuilding",
+    "WorldDistrict",
+    "WorldEnvelope",
     "apply_overrides",
+    "build_world_envelope",
     "derive_placements",
+    "read_world_envelope",
     "PolicyEvolutionRefused",
     "FleetDiscoveryRecordRequest",
     "FleetOverrideClearRequest",

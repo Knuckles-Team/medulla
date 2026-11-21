@@ -1,4 +1,5 @@
-"""Derived world layout with stored manual overrides (MEDULLA-WORLD-VIEW-R002).
+"""Derived world layout with stored manual overrides (MEDULLA-WORLD-VIEW-R002) and the
+world envelope read from it (MEDULLA-WORLD-VIEW-R003).
 
 The placement of each connector is a pure function of the connector catalog and is
 never stored. Only a manual override is stored, as a `:Building` node with a stated
@@ -173,3 +174,84 @@ class OverrideStore:
                 )
             )
         return tuple(sorted(found, key=lambda item: _byte_order(item.server_id)))
+
+
+WORLD_ENVELOPE_VERSION = 1
+
+
+@dataclass(frozen=True)
+class WorldDistrict:
+    """One district of the world and its position in the district order."""
+
+    name: str
+    index: int
+
+
+@dataclass(frozen=True)
+class WorldBuilding:
+    """One connector building: where it stands and, when a manual override moved it, why."""
+
+    server_id: str
+    district: str
+    plot: int
+    x: int
+    z: int
+    overridden: bool
+    reason: str | None
+
+
+@dataclass(frozen=True)
+class WorldEnvelope:
+    """The world a caller draws: districts, buildings and the stale overrides. The
+    wire shape is `dataclasses.asdict` of this value, tuples as JSON arrays."""
+
+    version: int
+    districts: tuple[WorldDistrict, ...]
+    buildings: tuple[WorldBuilding, ...]
+    stale_overrides: tuple[str, ...]
+
+
+def build_world_envelope(layout: Layout, overrides: Sequence[Override]) -> WorldEnvelope:
+    """The envelope of a layout. Districts are the distinct placement districts in byte
+    order; buildings keep the layout order with the overridden coordinates; a building
+    is `overridden` with its reason when an applied override named it. Pure."""
+    districts = tuple(
+        WorldDistrict(name=name, index=index)
+        for index, name in enumerate(
+            sorted({placement.district for placement in layout.placements}, key=_byte_order)
+        )
+    )
+    stale = set(layout.stale_overrides)
+    reasons = {
+        override.server_id: override.reason
+        for override in overrides
+        if override.server_id not in stale
+    }
+    buildings = tuple(
+        WorldBuilding(
+            server_id=placement.server_id,
+            district=placement.district,
+            plot=placement.plot,
+            x=placement.x,
+            z=placement.z,
+            overridden=placement.server_id in reasons,
+            reason=reasons.get(placement.server_id),
+        )
+        for placement in layout.placements
+    )
+    return WorldEnvelope(
+        version=WORLD_ENVELOPE_VERSION,
+        districts=districts,
+        buildings=buildings,
+        stale_overrides=layout.stale_overrides,
+    )
+
+
+async def read_world_envelope(
+    catalog: Sequence[CatalogEntry], store: OverrideStore
+) -> WorldEnvelope:
+    """Derive the placements, read the stored overrides, apply them and build the
+    envelope. It performs no write; the tenant comes from the connection."""
+    derived = derive_placements(catalog)
+    overrides = await store.list()
+    return build_world_envelope(apply_overrides(derived, overrides), overrides)
