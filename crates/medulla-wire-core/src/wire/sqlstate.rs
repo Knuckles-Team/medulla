@@ -20,6 +20,8 @@ const TABLE: &[(&str, &str)] = &[
     ("SHACL_VIOLATION", "23514"),
     ("NOT_NULL_VIOLATION", "23502"),
     ("FEATURE_NOT_SUPPORTED", "0A000"),
+    // MEDULLA-DURABLE-KERNEL-R035.4: `EXPLAIN ANALYZE` of a write is refused as not supported.
+    ("READ_ONLY_SQL", "0A000"),
     ("INVALID_LOGIN", "28000"),
     ("PLAN_SCOPE_UNVERIFIED", "28000"),
     ("INDEX_EXPR_NONDETERMINISTIC", "42P17"),

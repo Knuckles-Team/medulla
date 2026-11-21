@@ -1956,6 +1956,16 @@ impl WireSession {
     /// `analysis_snapshot()` and run the served, context-cached SQL exec on the
     /// blocking pool (DataFusion's executor must not run on a reactor worker).
     pub async fn run_read(&self, graph: &str, sql: String) -> WireResult<TypedQueryResult> {
+        // MEDULLA-DURABLE-KERNEL-R035.4: an `EXPLAIN` is judged by the statement it wraps, so
+        // `EXPLAIN ANALYZE` of a write is refused before anything runs. The refusal carries
+        // the `READ_ONLY_SQL` prefix, which the one SQLSTATE table maps to `0A000`.
+        if sql
+            .trim_start()
+            .get(..7)
+            .is_some_and(|head| head.eq_ignore_ascii_case("explain"))
+        {
+            medulla_sql::sql::require_single_read(&sql).map_err(user_err)?;
+        }
         let core = self.graph_core(graph).await?;
         let mut snap = core.analysis_snapshot();
         let in_txn = self.in_txn();

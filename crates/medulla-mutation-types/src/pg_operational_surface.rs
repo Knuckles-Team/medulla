@@ -82,6 +82,7 @@ impl SqlFormEntry {
 /// variant (`StatementKind::form_name` in `medulla-sql-lang`).
 pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("read", SqlFormState::Supported),
+    ("explain", SqlFormState::Supported),
     ("insert_nodes", SqlFormState::Supported),
     ("insert_nodes_select", SqlFormState::Supported),
     ("update_nodes", SqlFormState::Supported),
@@ -119,6 +120,10 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("create_function", SqlFormState::Partial),
     ("drop_function", SqlFormState::Partial),
 ];
+
+/// The operational surfaces the engine serves today. `PgCompatibilityMatrix::with_served_forms`
+/// declares every surface listed here; each R035 child adds its own surface.
+pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[PgOperationalSurface::Explain];
 
 /// Scalar and aggregate functions the engine registers today.
 pub const SERVED_FUNCTIONS: &[&str] = &[
@@ -190,6 +195,9 @@ impl PgCompatibilityMatrix {
                 SqlFormKind::Function,
                 SqlFormState::Supported,
             ));
+        }
+        for surface in SERVED_OPERATIONAL_SURFACES {
+            m.declare_supported(*surface);
         }
         m
     }

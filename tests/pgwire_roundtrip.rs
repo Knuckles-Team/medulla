@@ -2847,3 +2847,45 @@ async fn wire_txn_create_and_drop_trigger_follow_the_transaction() {
 
     let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R035.4
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn explain_and_explain_analyze_return_plans_and_refuse_writes() {
+    use tokio_postgres::SimpleQueryMessage;
+
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+
+    // Plain EXPLAIN and EXPLAIN ANALYZE of a read answer plan rows.
+    for statement in [
+        "EXPLAIN SELECT id FROM nodes WHERE rank >= 2",
+        "EXPLAIN ANALYZE SELECT id FROM nodes WHERE rank >= 2",
+    ] {
+        let messages = client
+            .simple_query(statement)
+            .await
+            .unwrap_or_else(|error| panic!("{statement}: {error}"));
+        let plan_rows = messages
+            .iter()
+            .filter(|message| matches!(message, SimpleQueryMessage::Row(_)))
+            .count();
+        assert!(plan_rows > 0, "{statement} returned no plan rows");
+    }
+
+    // EXPLAIN ANALYZE of a write is refused as not supported, and writes nothing.
+    let refusal = client
+        .simple_query("EXPLAIN ANALYZE INSERT INTO nodes (id) VALUES ('n-explain')")
+        .await
+        .expect_err("EXPLAIN ANALYZE of a write must be refused");
+    assert_eq!(
+        refusal.code(),
+        Some(&tokio_postgres::error::SqlState::FEATURE_NOT_SUPPORTED),
+        "{refusal}"
+    );
+    let rows = client
+        .simple_query("SELECT id FROM nodes WHERE id = 'n-explain'")
+        .await
+        .expect("read after the refused write");
+    assert!(simple_ids(rows).is_empty(), "the refused write took effect");
+}
