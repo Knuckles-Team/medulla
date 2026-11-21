@@ -5676,6 +5676,27 @@ impl WireProtocol for WireSession {
     ///     set, otherwise a command tag.
     ///   * transaction control (`BEGIN`/`COMMIT`/`ROLLBACK`) → a txn-status change.
     async fn execute(&self, sql: &str) -> WireResult<WireOutcome> {
+        self.execute_with_kind(sql, None).await
+    }
+}
+
+impl WireSession {
+    /// The body [`WireProtocol::execute`] runs for a statement already classified as a
+    /// `Read`, with the classification step skipped (MEDULLA-ENGINE-PARITY-R006.4): the
+    /// pgwire extended query reuses one cached classification of the prepared template, so
+    /// the substituted statement is not classified again. Every other check (carrier
+    /// authority, graph selection, ACL, transaction overlay) runs exactly as in `execute`.
+    pub async fn execute_read(&self, sql: &str) -> WireResult<WireOutcome> {
+        self.execute_with_kind(sql, Some(StatementKind::Read)).await
+    }
+
+    /// One statement through the shared pipeline; `known_kind` is a classification the
+    /// caller already holds, `None` classifies `sql` here.
+    async fn execute_with_kind(
+        &self,
+        sql: &str,
+        known_kind: Option<StatementKind>,
+    ) -> WireResult<WireOutcome> {
         // No SQL statement, transaction-control command, graph switch, or catalog
         // probe may touch state until a current signed request or a verified native
         // SQL proxy handshake has bound tenant+actor authority to the connection.
@@ -5708,7 +5729,10 @@ impl WireProtocol for WireSession {
             return res;
         }
 
-        let kind = medulla_sql_lang::sql::classify::classify(sql).map_err(user_err)?;
+        let kind = match known_kind {
+            Some(kind) => kind,
+            None => medulla_sql_lang::sql::classify::classify(sql).map_err(user_err)?,
+        };
 
         // ── transaction control (CONCEPT:MEDULLA-KG.query.register-each-user-table / MEDULLA-049) — no graph access needed ──
         // BEGIN/COMMIT/ROLLBACK report a txn-status change so the wire reports the

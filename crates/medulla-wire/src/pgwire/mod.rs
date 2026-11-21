@@ -85,7 +85,9 @@ use medulla_wire_core::wire::WireSession;
 mod auth;
 mod cancel;
 mod message_loop;
+mod plan_cache;
 
+pub use plan_cache::plan_cache_hits;
 pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
 
 /// Env var: when set (and the binary is built `--features pgwire`), the pgwire
@@ -798,6 +800,9 @@ struct EngineBackend {
     /// so a transaction-mode pooler never hands one client's prepared statement to
     /// the next.
     prepared_names: parking_lot::Mutex<std::collections::BTreeSet<String>>,
+    /// This connection's cache of prepared template classifications
+    /// (MEDULLA-ENGINE-PARITY-R006.4); `DISCARD ALL` clears it with `prepared_names`.
+    plan_cache: parking_lot::Mutex<plan_cache::KindCache>,
 }
 
 /// Whether `sql` is the served `DISCARD ALL` (MEDULLA-DURABLE-KERNEL-R035.6).
@@ -835,7 +840,21 @@ impl EngineBackend {
             session: Arc::new(WireSession::new(state, default_graph)),
             parser: Arc::new(EngineQueryParser),
             prepared_names: Default::default(),
+            plan_cache: Default::default(),
         }
+    }
+
+    /// The statement kind of a prepared `template`, classified once per schema version
+    /// through the connection's plan cache (MEDULLA-ENGINE-PARITY-R006.4). The schema
+    /// version is the commit sequence of the session tenant's table store, the engine's
+    /// dependency clock; a session without a table store keys under version 0.
+    async fn prepared_kind(&self, template: &str) -> Result<StatementKind, String> {
+        let schema_version = self
+            .session
+            .user_table_store()
+            .await
+            .map_or(0, |store| store.commit_seq());
+        plan_cache::prepare_kind(&mut self.plan_cache.lock(), template, schema_version)
     }
 
     /// After a served `DISCARD ALL` (MEDULLA-DURABLE-KERNEL-R035.6): drop every portal
@@ -853,6 +872,7 @@ impl EngineBackend {
         for name in std::mem::take(&mut *self.prepared_names.lock()) {
             store.rm_statement(&name);
         }
+        *self.plan_cache.lock() = Default::default();
     }
 
     /// Latch the connection's startup graph + actor from the libpq `database`/`user`
@@ -1858,10 +1878,17 @@ impl ExtendedQueryHandler for EngineBackend {
         PgWireError: From<<C as futures::Sink<pgwire::messages::PgWireBackendMessage>>::Error>,
     {
         self.bind_startup_from_client(client).await?;
-        let sql = substitute_params(&portal.statement.statement.sql, portal)?;
+        let template = &portal.statement.statement.sql;
+        let sql = substitute_params(template, portal)?;
+        // MEDULLA-ENGINE-PARITY-R006.4: a read template reuses its cached classification;
+        // every other kind (and a cached refusal) runs through `execute` unchanged.
+        let cached_kind = self.prepared_kind(template).await;
         // MEDULLA-DURABLE-KERNEL-R035.5: the statement's cancellation scope.
         let statement = cancel::StatementCancel::begin(&self.session);
-        let outcome = self.session.execute(&sql).await;
+        let outcome = match cached_kind {
+            Ok(StatementKind::Read) => self.session.execute_read(&sql).await,
+            _ => self.session.execute(&sql).await,
+        };
         statement.finish();
         let outcome = outcome.map_err(wire_err_to_pg)?;
         if is_discard_all(&sql) {
