@@ -6,7 +6,7 @@
 
 use medulla_quantum_core::qasm::{from_qasm2, to_qasm2, QasmError};
 use medulla_quantum_core::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, ParamValue, QuantumProgram, IR_VERSION,
 };
 
@@ -34,7 +34,7 @@ fn cnot(control: u32, target: u32) -> Instruction {
         qubits: vec![target],
         controls: vec![ControlQubit {
             qubit: control,
-            state: ControlState::One,
+            polarity: ControlPolarity::One,
         }],
         params: vec![],
     })
@@ -126,7 +126,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),
@@ -135,7 +135,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),
@@ -144,7 +144,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),
@@ -153,7 +153,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),
@@ -162,7 +162,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![ParamValue::Literal(0.6)],
             }),
@@ -171,7 +171,7 @@ fn kitchen_sink_supported_program() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![ParamValue::Literal(0.9)],
             }),
@@ -377,11 +377,11 @@ fn export_rejects_two_control_gate() {
             controls: vec![
                 ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 },
                 ControlQubit {
                     qubit: 1,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 },
             ],
             params: vec![],
@@ -404,7 +404,7 @@ fn export_rejects_negative_polarity_control() {
             qubits: vec![1],
             controls: vec![ControlQubit {
                 qubit: 0,
-                state: ControlState::Zero,
+                polarity: ControlPolarity::Zero,
             }],
             params: vec![],
         })],

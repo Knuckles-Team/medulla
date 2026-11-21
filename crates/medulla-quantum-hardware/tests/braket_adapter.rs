@@ -6,7 +6,7 @@
 
 use medulla_quantum_core::backend::{JobStatus, QuantumBackend, RunOptions};
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, QuantumProgram, IR_VERSION,
 };
 use medulla_quantum_hardware::braket::{
@@ -39,7 +39,7 @@ fn bell_circuit() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),

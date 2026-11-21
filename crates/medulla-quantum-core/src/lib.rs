@@ -88,7 +88,7 @@ pub use estimate::{
 };
 pub use hash::{circuit_hash, CircuitHash, HashError};
 pub use ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, IrValidationError, ParamValue, Parameter, ProgramMetadata, QuantumProgram,
     IR_VERSION,
 };

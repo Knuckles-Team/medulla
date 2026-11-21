@@ -1,7 +1,7 @@
 //! OpenQASM 2.0 parsing for the bounded quantum IR.
 
 use crate::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, ParamValue, ProgramMetadata, QuantumProgram, IR_VERSION,
 };
 
@@ -505,7 +505,7 @@ fn build_controlled_gate(
         qubits: vec![qubits[1]],
         controls: vec![ControlQubit {
             qubit: qubits[0],
-            state: ControlState::One,
+            polarity: ControlPolarity::One,
         }],
         params: literal_params(params),
     }))

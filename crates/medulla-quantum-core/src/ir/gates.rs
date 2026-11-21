@@ -6,16 +6,16 @@ use serde::{Deserialize, Serialize};
 /// convenience two-qubit names (`Cx`/`Cy`/`Cz` etc. do NOT exist as their own
 /// `GateKind` variants) so "how many controls, what polarity" is always visible to
 /// the planner without a gate-name lookup table — `Cx` == `GateKind::X` with one
-/// `ControlQubit { state: One, .. }`.
+/// `ControlQubit { polarity: One, .. }`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ControlQubit {
     pub qubit: u32,
-    pub state: ControlState,
+    pub polarity: ControlPolarity,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ControlState {
+pub enum ControlPolarity {
     /// Positive control — fires when the control qubit is `|1>`.
     One,
     /// Negative control — fires when the control qubit is `|0>`.

@@ -13,7 +13,7 @@ use medulla_numeric::complex::{apply_block2, apply_block4, Complex64};
 use medulla_quantum_core::backend::{
     BackendCapabilities, BackendError, BackendFamily, BackendId, RunOptions,
 };
-use medulla_quantum_core::ir::{ControlState, GateKind, Instruction, QuantumProgram};
+use medulla_quantum_core::ir::{ControlPolarity, GateKind, Instruction, QuantumProgram};
 use medulla_quantum_core::result::{Formalism, QuantumResult};
 use std::collections::BTreeMap;
 
@@ -282,9 +282,9 @@ fn control_predicate(g: &medulla_quantum_core::ir::GateInstruction) -> impl Fn(u
     move |idx: usize| {
         g.controls.iter().all(|ctrl| {
             let bit = (idx >> ctrl.qubit) & 1 == 1;
-            match ctrl.state {
-                ControlState::One => bit,
-                ControlState::Zero => !bit,
+            match ctrl.polarity {
+                ControlPolarity::One => bit,
+                ControlPolarity::Zero => !bit,
             }
         })
     }

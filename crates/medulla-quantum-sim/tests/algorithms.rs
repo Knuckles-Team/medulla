@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use medulla_quantum_core::backend::{BackendDescriptor, QuantumBackend, RunOptions};
 use medulla_quantum_core::estimate::{estimate, EstimateOptions};
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, QuantumProgram,
 };
 use medulla_quantum_core::planner::{select_backend, PlannerOptions, PlannerRule};
@@ -43,7 +43,7 @@ fn controlled(kind: GateKind, control: u32, target: u32) -> Instruction {
         qubits: vec![target],
         controls: vec![ControlQubit {
             qubit: control,
-            state: ControlState::One,
+            polarity: ControlPolarity::One,
         }],
         params: vec![],
     })

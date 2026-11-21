@@ -26,7 +26,7 @@ use medulla_quantum_core::backend::{
     BackendCapabilities, BackendError, BackendFamily, BackendId, RunOptions,
 };
 use medulla_quantum_core::ir::{
-    CliffordGenerator, ControlQubit, ControlState, Instruction, QuantumProgram,
+    CliffordGenerator, ControlQubit, ControlPolarity, Instruction, QuantumProgram,
 };
 use medulla_quantum_core::result::{Formalism, QuantumResult};
 use std::collections::BTreeMap;
@@ -338,7 +338,7 @@ fn apply_clifford_gate(
     }
     match g.controls.as_slice() {
         [] => apply_uncontrolled_clifford(tab, g),
-        [ControlQubit { qubit: ctrl, state }] => {
+        [ControlQubit { qubit: ctrl, polarity: state }] => {
             apply_single_controlled_clifford(tab, *ctrl, *state, g)
         }
         // is_clifford() already rejected two or more controls; unreachable in
@@ -376,7 +376,7 @@ fn apply_uncontrolled_clifford(
 fn apply_single_controlled_clifford(
     tab: &mut Tableau,
     ctrl: u32,
-    state: ControlState,
+    state: ControlPolarity,
     g: &medulla_quantum_core::ir::GateInstruction,
 ) -> Result<(), SimError> {
     let op = match g.gate.clifford_generator() {
@@ -403,17 +403,17 @@ enum ControlledOperation {
     Cz,
 }
 
-/// A negative control (ControlState::Zero) is X-conjugated on the control qubit
+/// A negative control (ControlPolarity::Zero) is X-conjugated on the control qubit
 /// before and after the positive-control primitive -- the standard trick (fire on
 /// |0> == fire an X-sandwiched version of the |1>-firing gate).
 fn apply_single_controlled(
     tab: &mut Tableau,
     ctrl: u32,
-    state: ControlState,
+    state: ControlPolarity,
     target: u32,
     op: ControlledOperation,
 ) {
-    let negate = matches!(state, ControlState::Zero);
+    let negate = matches!(state, ControlPolarity::Zero);
     let mut evolution = tab.clifford();
     if negate {
         evolution.x_gate(ctrl);
@@ -640,7 +640,7 @@ mod apply_gate_tests {
     fn instruction(
         gate: GateKind,
         qubits: &[u32],
-        controls: &[(u32, ControlState)],
+        controls: &[(u32, ControlPolarity)],
         params: Vec<ParamValue>,
     ) -> GateInstruction {
         GateInstruction {
@@ -648,7 +648,7 @@ mod apply_gate_tests {
             qubits: qubits.to_vec(),
             controls: controls
                 .iter()
-                .map(|&(qubit, state)| ControlQubit { qubit, state })
+                .map(|&(qubit, state)| ControlQubit { qubit, polarity: state })
                 .collect(),
             params,
         }
@@ -716,7 +716,7 @@ mod apply_gate_tests {
 
     #[test]
     fn single_controlled_paulis_dispatch_with_control_polarity() {
-        let positive = |gate: GateKind| instruction(gate, &[2], &[(0, ControlState::One)], vec![]);
+        let positive = |gate: GateKind| instruction(gate, &[2], &[(0, ControlPolarity::One)], vec![]);
         assert_same(
             "cx",
             &via_dispatch(&positive(GateKind::X)),
@@ -732,7 +732,7 @@ mod apply_gate_tests {
             &via_dispatch(&positive(GateKind::Z)),
             &via_primitive(|e| e.cz(0, 2)),
         );
-        let negative = instruction(GateKind::X, &[2], &[(0, ControlState::Zero)], vec![]);
+        let negative = instruction(GateKind::X, &[2], &[(0, ControlPolarity::Zero)], vec![]);
         let sandwiched = via_primitive(|e| {
             e.x_gate(0);
             e.cnot(0, 2);
@@ -749,12 +749,12 @@ mod apply_gate_tests {
             instruction(GateKind::Rx, &[0], &[], vec![ParamValue::Literal(0.5)]),
             instruction(GateKind::X, &[0], &[], vec![ParamValue::Literal(0.5)]),
             instruction(GateKind::Custom("u".to_string()), &[0], &[], vec![]),
-            instruction(GateKind::H, &[2], &[(0, ControlState::One)], vec![]),
-            instruction(GateKind::Swap, &[1, 2], &[(0, ControlState::One)], vec![]),
+            instruction(GateKind::H, &[2], &[(0, ControlPolarity::One)], vec![]),
+            instruction(GateKind::Swap, &[1, 2], &[(0, ControlPolarity::One)], vec![]),
             instruction(
                 GateKind::X,
                 &[2],
-                &[(0, ControlState::One), (1, ControlState::One)],
+                &[(0, ControlPolarity::One), (1, ControlPolarity::One)],
                 vec![],
             ),
         ];

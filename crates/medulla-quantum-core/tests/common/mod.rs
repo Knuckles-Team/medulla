@@ -11,7 +11,7 @@
 
 use medulla_quantum_core::{
     BackendCapabilities, BackendDescriptor, BackendFamily, BackendId, ClassicalBitRef,
-    ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind, Instruction,
+    ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind, Instruction,
     ParamValue, QuantumProgram, IR_VERSION,
 };
 
@@ -39,7 +39,7 @@ pub fn bell_circuit() -> QuantumProgram {
                 qubits: vec![1],
                 controls: vec![ControlQubit {
                     qubit: 0,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }),
@@ -98,7 +98,7 @@ pub fn chain_entangled_circuit(n_qubits: u32) -> QuantumProgram {
             qubits: vec![i + 1],
             controls: vec![ControlQubit {
                 qubit: i,
-                state: ControlState::One,
+                polarity: ControlPolarity::One,
             }],
             params: vec![],
         }));
@@ -131,7 +131,7 @@ pub fn dense_entangled_circuit(n_qubits: u32) -> QuantumProgram {
                 qubits: vec![j],
                 controls: vec![ControlQubit {
                     qubit: i,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 }],
                 params: vec![],
             }));

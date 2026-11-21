@@ -23,7 +23,7 @@
 //!   [`GateKind::Phase`], `rxx`, `ryy`, `rzz`), and the standard `qelib1.inc`
 //!   single-positive-control forms `cx`/`cy`/`cz`/`ch`/`crz`/`cu1` (mapping to
 //!   [`GateKind::X`]/[`Y`]/[`Z`]/[`H`]/[`Rz`]/[`Phase`] plus one
-//!   [`crate::ir::ControlQubit`] with [`crate::ir::ControlState::One`] — matching
+//!   [`crate::ir::ControlQubit`] with [`crate::ir::ControlPolarity::One`] — matching
 //!   this IR's own design, where a control is a modifier, not baked into the gate
 //!   name).
 //! - `measure q[i] -> c[j];`, `reset q[i];`, `barrier q[i],q[j],...;`.

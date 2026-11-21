@@ -1,6 +1,6 @@
 //! OpenQASM 2.0 export for the bounded quantum IR.
 
-use crate::ir::{ControlState, GateInstruction, GateKind, Instruction, ParamValue, QuantumProgram};
+use crate::ir::{ControlPolarity, GateInstruction, GateKind, Instruction, ParamValue, QuantumProgram};
 
 use super::QasmError;
 
@@ -140,7 +140,7 @@ fn write_gate(out: &mut String, g: &GateInstruction) -> Result<(), QasmError> {
         0 => write_uncontrolled(out, g),
         1 => {
             let ctrl = &g.controls[0];
-            if ctrl.state != ControlState::One {
+            if ctrl.polarity != ControlPolarity::One {
                 return Err(QasmError::UnsupportedForExport(
                     "negative-polarity control has no direct OpenQASM 2.0 qelib1.inc gate"
                         .to_string(),

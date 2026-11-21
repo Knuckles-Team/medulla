@@ -1,12 +1,12 @@
 //! Serde round-trip tests for `QuantumProgram` across every `Instruction`/`GateKind`/
-//! `ControlState`/`ParamValue` variant, plus `validate()`/`is_clifford()`/`depth()`
+//! `ControlPolarity`/`ParamValue` variant, plus `validate()`/`is_clifford()`/`depth()`
 //! sanity checks. The IR is only "stable" if it survives a JSON round trip
 //! byte-for-shape-identical — this is what proves that, not just that it compiles.
 
 mod common;
 
 use medulla_quantum_core::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlState, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
     Instruction, IrValidationError, ParamValue, Parameter, ProgramMetadata, QuantumProgram,
     IR_VERSION,
 };
@@ -144,11 +144,11 @@ fn full_program() -> QuantumProgram {
                 controls: vec![
                     ControlQubit {
                         qubit: 0,
-                        state: ControlState::One,
+                        polarity: ControlPolarity::One,
                     },
                     ControlQubit {
                         qubit: 2,
-                        state: ControlState::Zero,
+                        polarity: ControlPolarity::Zero,
                     },
                 ],
                 params: vec![],
@@ -344,5 +344,29 @@ fn circuit_hash_is_deterministic_and_content_sensitive() {
         p1.circuit_hash().unwrap(),
         p3.circuit_hash().unwrap(),
         "even a metadata-only change must change the content hash"
+    );
+}
+
+// spec: MEDULLA-CONTRACT-R062.1
+#[test]
+fn control_polarity_is_the_wire_key() {
+    let control = ControlQubit {
+        qubit: 0,
+        polarity: ControlPolarity::One,
+    };
+    assert_eq!(
+        serde_json::to_string(&control).unwrap(),
+        r#"{"qubit":0,"polarity":"one"}"#
+    );
+    assert_eq!(
+        serde_json::from_str::<ControlQubit>(r#"{"qubit":0,"polarity":"zero"}"#).unwrap(),
+        ControlQubit {
+            qubit: 0,
+            polarity: ControlPolarity::Zero,
+        }
+    );
+    assert!(
+        serde_json::from_str::<ControlQubit>(r#"{"qubit":0,"state":"one"}"#).is_err(),
+        "the retired key `state` does not decode"
     );
 }

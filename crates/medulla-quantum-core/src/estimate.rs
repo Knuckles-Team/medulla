@@ -398,7 +398,7 @@ fn forbidden_families(
 mod tests {
     use super::*;
     use crate::ir::{
-        ControlQubit, ControlState, GateInstruction, GateKind, ParamValue, IR_VERSION,
+        ControlQubit, ControlPolarity, GateInstruction, GateKind, ParamValue, IR_VERSION,
     };
 
     fn gate(kind: GateKind, qubits: &[u32], controls: &[u32]) -> Instruction {
@@ -409,7 +409,7 @@ mod tests {
                 .iter()
                 .map(|&qubit| ControlQubit {
                     qubit,
-                    state: ControlState::One,
+                    polarity: ControlPolarity::One,
                 })
                 .collect(),
             params: vec![],
