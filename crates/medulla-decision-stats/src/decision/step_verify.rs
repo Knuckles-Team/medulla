@@ -3,7 +3,10 @@
 //! [`verify_steps`] recomputes the SHA-256 of the step digests in order and
 //! binds the verdict to it. The first failed step selects the recovery: `Retry`
 //! while the attempts are below `knob verify.max_retries`, otherwise `Rollback`
-//! to the last step that passed before it, or `Abandon` when none passed.
+//! to the last step that passed before it, or `Abandon` when none passed. When
+//! no check failed, the first step whose check interval is wider than
+//! `knob verify.max_interval_width` is `Uncertain`; otherwise the last step is
+//! `Verified`. A failed or uncertain verdict withholds every later step.
 //! [`admit`] takes between 1 and `knob verify.probe_budget` probes, allows no
 //! `Compromised` verdict and at most `knob verify.max_inconclusive`
 //! inconclusive ones. Pure functions of their inputs.
@@ -12,11 +15,26 @@ use medulla_decision_types::decision::digest::step_trace_digest;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::trajectory_verdict::{
     is_sha256_hex, AdmissionVerdict, ProbeResult, ProbeVerdict, RecoveryAction, StepCheck,
-    StepVerdict, TraceStep, VerifyKnobs,
+    StepOutcome, StepVerdict, TraceStep, VerifyKnobs, MAX_STEP_EVIDENCE,
 };
 
-/// A step verdict with the recovery a failed step selects.
-pub type Verified = (StepVerdict, Option<RecoveryAction>);
+/// A step verdict, the recovery a failed step selects and the ids of the
+/// steps the verdict withholds.
+pub type Verified = (StepVerdict, Option<RecoveryAction>, Vec<String>);
+
+/// The outcome one check alone gives its step.
+pub fn check_outcome(check: &StepCheck, knobs: &VerifyKnobs) -> StepOutcome {
+    if !check.passed {
+        StepOutcome::Failed
+    } else if check
+        .interval
+        .is_some_and(|interval| interval.width_micros() > knobs.max_interval_width_micros)
+    {
+        StepOutcome::Uncertain
+    } else {
+        StepOutcome::Verified
+    }
+}
 
 /// Verify a trace against one check per step, in step order.
 pub fn verify_steps(
@@ -53,16 +71,51 @@ pub fn verify_steps(
                 step.step_id
             )));
         }
+        if step.evidence_ids.len() > MAX_STEP_EVIDENCE
+            || step.evidence_ids.iter().any(|id| id.trim().is_empty())
+        {
+            return Err(invalid(format!(
+                "step {} cites at most {MAX_STEP_EVIDENCE} non-blank evidence ids",
+                step.step_id
+            )));
+        }
+        if let Some(interval) = &check.interval {
+            interval.check().map_err(invalid)?;
+        }
     }
     let digests: Vec<&str> = steps.iter().map(|s| s.digest.as_str()).collect();
     let trace_digest = step_trace_digest(&digests);
     let check_digests = checks.iter().map(|c| c.check_digest.clone()).collect();
-    let failed = checks.iter().position(|c| !c.passed);
-    let Some(failed) = failed else {
+    let withheld_after = |index: usize| -> Vec<String> {
+        steps[index + 1..]
+            .iter()
+            .map(|step| step.step_id.clone())
+            .collect()
+    };
+    let Some(failed) = checks.iter().position(|c| !c.passed) else {
+        // No check failed: the first too-wide interval leaves its step uncertain.
+        if let Some(wide) = checks
+            .iter()
+            .position(|c| check_outcome(c, knobs) == StepOutcome::Uncertain)
+        {
+            return Ok((
+                StepVerdict::new(
+                    steps[wide].step_id.clone(),
+                    StepOutcome::Uncertain,
+                    trace_digest,
+                    check_digests,
+                )
+                .map_err(invalid)?,
+                None,
+                withheld_after(wide),
+            ));
+        }
         let last = steps[steps.len() - 1].step_id.clone();
         return Ok((
-            StepVerdict::new(last, true, trace_digest, check_digests).map_err(invalid)?,
+            StepVerdict::new(last, StepOutcome::Verified, trace_digest, check_digests)
+                .map_err(invalid)?,
             None,
+            Vec::new(),
         ));
     };
     let step_id = steps[failed].step_id.clone();
@@ -79,8 +132,10 @@ pub fn verify_steps(
         }
     };
     Ok((
-        StepVerdict::new(step_id, false, trace_digest, check_digests).map_err(invalid)?,
+        StepVerdict::new(step_id, StepOutcome::Failed, trace_digest, check_digests)
+            .map_err(invalid)?,
         Some(recovery),
+        withheld_after(failed),
     ))
 }
 
@@ -146,6 +201,7 @@ mod tests {
             .map(|i| TraceStep {
                 step_id: format!("s{i}"),
                 digest: hex(i as u8 + 1),
+                evidence_ids: Vec::new(),
             })
             .collect();
         let checks = passes
@@ -155,6 +211,7 @@ mod tests {
                 step_id: format!("s{i}"),
                 passed: *passed,
                 check_digest: hex(i as u8 + 0x80),
+                interval: None,
             })
             .collect();
         (steps, checks)
@@ -165,6 +222,7 @@ mod tests {
             max_retries: 2,
             probe_budget: 8,
             max_inconclusive: 0,
+            max_interval_width_micros: 100_000,
         }
     }
 
@@ -203,8 +261,12 @@ mod tests {
             Some(RecoveryAction::Abandon)
         );
         // The verdict names the first failed step and is bound to the trace.
-        let (verdict, _) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
-        assert_eq!((verdict.step_id.as_str(), verdict.passed), ("s0", false));
+        let (verdict, _, withheld) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert_eq!(
+            (verdict.step_id.as_str(), verdict.outcome),
+            ("s0", StepOutcome::Failed)
+        );
+        assert_eq!(withheld, ["s1"]);
         assert_eq!(
             verdict.trace_digest,
             step_trace_digest(&[hex(1).as_str(), hex(2).as_str()])
@@ -212,8 +274,9 @@ mod tests {
         assert_eq!(verdict.check_digests.as_slice(), [hex(0x80), hex(0x81)]);
         // A passing trace has no recovery and names its last step.
         let (steps, checks) = trace(&[true, true]);
-        let (verdict, recovery) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
-        assert!(verdict.passed && recovery.is_none());
+        let (verdict, recovery, withheld) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert!(verdict.outcome == StepOutcome::Verified && recovery.is_none());
+        assert!(withheld.is_empty());
         assert_eq!(verdict.step_id, "s1");
         // A retry budget of zero rolls back at once.
         let none = VerifyKnobs {
@@ -248,6 +311,57 @@ mod tests {
         let (mut steps, checks) = trace(&[true]);
         steps[0].digest = "XYZ".into();
         assert!(verify_steps(&steps, &checks, 0, &knobs()).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R121.100
+    #[test]
+    fn a_wide_interval_is_uncertain_and_withholds_the_steps_after_it() {
+        use medulla_decision_types::decision::trajectory_verdict::CheckInterval;
+        let (steps, mut checks) = trace(&[true, true, true]);
+        // A tight interval verifies the last step.
+        checks[1].interval = Some(CheckInterval {
+            low_micros: 450_000,
+            high_micros: 550_000,
+        });
+        let (verdict, recovery, withheld) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert_eq!(
+            (verdict.step_id.as_str(), verdict.outcome),
+            ("s2", StepOutcome::Verified)
+        );
+        assert!(recovery.is_none() && withheld.is_empty());
+        // One micro wider is uncertain at step s1; s2 is withheld.
+        checks[1].interval = Some(CheckInterval {
+            low_micros: 450_000,
+            high_micros: 550_001,
+        });
+        let (verdict, recovery, withheld) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert_eq!(
+            (verdict.step_id.as_str(), verdict.outcome),
+            ("s1", StepOutcome::Uncertain)
+        );
+        assert!(recovery.is_none());
+        assert_eq!(withheld, ["s2"]);
+        // A failed step outranks an earlier uncertain one.
+        checks[2].passed = false;
+        let (verdict, recovery, withheld) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert_eq!(verdict.outcome, StepOutcome::Failed);
+        assert!(recovery.is_some() && withheld.is_empty());
+        // An inverted or out-of-range interval, or a blank evidence id, is refused.
+        checks[2].passed = true;
+        checks[1].interval = Some(CheckInterval {
+            low_micros: 9,
+            high_micros: 1,
+        });
+        assert!(verify_steps(&steps, &checks, 0, &knobs()).is_err());
+        checks[1].interval = Some(CheckInterval {
+            low_micros: 0,
+            high_micros: 1_000_001,
+        });
+        assert!(verify_steps(&steps, &checks, 0, &knobs()).is_err());
+        checks[1].interval = None;
+        let mut blank = steps.clone();
+        blank[0].evidence_ids = vec!["  ".into()];
+        assert!(verify_steps(&blank, &checks, 0, &knobs()).is_err());
     }
 
     fn probe(id: &str, verdict: ProbeVerdict) -> ProbeResult {
@@ -290,7 +404,7 @@ mod tests {
     #[test]
     fn a_verdict_binds_to_the_recomputed_trace_digest() {
         let (steps, checks) = trace(&[true, true]);
-        let (verdict, _) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        let (verdict, _, _) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
         assert_eq!(bind_verdict(&verdict, &verdict.trace_digest), Ok(()));
         for unbound in ["", "not-hex", &"AB".repeat(32)] {
             let error = bind_verdict(&verdict, unbound).unwrap_err();

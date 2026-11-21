@@ -8,8 +8,8 @@ use super::kernel_family_support::{
 };
 use super::*;
 use medulla_decision_types::decision::trajectory_verdict::{
-    AdmissionRequest, AdmissionVerdict, ProbeResult, ProbeVerdict, RecoveryAction, StepCheck,
-    TraceStep, VerifyRequest,
+    AdmissionRequest, AdmissionVerdict, CheckInterval, ProbeResult, ProbeVerdict, RecoveryAction,
+    StepCheck, StepOutcome, TraceStep, VerifyRequest,
 };
 use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
 
@@ -28,23 +28,41 @@ fn verify_naming(
     attempts: u32,
     name: impl FnOnce(String) -> String,
 ) -> DecideRequest {
-    let steps: Vec<TraceStep> = (0..passes.len())
-        .map(|i| TraceStep {
+    let shaped: Vec<(bool, Option<CheckInterval>, Vec<String>)> = passes
+        .iter()
+        .map(|passed| (*passed, None, Vec::new()))
+        .collect();
+    verify_shaped(schema, &shaped, attempts, name)
+}
+
+/// A verification of one `(passed, interval, evidence ids)` triple per step.
+fn verify_shaped(
+    schema: &ComponentDependency,
+    shape: &[(bool, Option<CheckInterval>, Vec<String>)],
+    attempts: u32,
+    name: impl FnOnce(String) -> String,
+) -> DecideRequest {
+    let steps: Vec<TraceStep> = shape
+        .iter()
+        .enumerate()
+        .map(|(i, (_, _, evidence))| TraceStep {
             step_id: format!("s{i}"),
             digest: hex(i as u8 + 1),
+            evidence_ids: evidence.clone(),
         })
         .collect();
     let digests: Vec<&str> = steps.iter().map(|s| s.digest.as_str()).collect();
     let trace_digest = name(medulla_decision_types::decision::digest::step_trace_digest(
         &digests,
     ));
-    let checks = passes
+    let checks = shape
         .iter()
         .enumerate()
-        .map(|(i, passed)| StepCheck {
+        .map(|(i, (passed, interval, _))| StepCheck {
             step_id: format!("s{i}"),
             passed: *passed,
             check_digest: hex(i as u8 + 0x80),
+            interval: *interval,
         })
         .collect();
     kernel_request(
@@ -108,8 +126,8 @@ async fn served_decide_binds_the_verdict_to_the_trace() {
     assert_eq!(record.question.kind, QuestionKind::StepVerification);
     let answer = verification(record);
     assert_eq!(
-        (answer.verdict.step_id.as_str(), answer.verdict.passed),
-        ("s2", false)
+        (answer.verdict.step_id.as_str(), answer.verdict.outcome),
+        ("s2", StepOutcome::Failed)
     );
     assert_eq!(
         answer.recovery,
@@ -130,8 +148,8 @@ async fn served_decide_binds_the_verdict_to_the_trace() {
     let record_facts = facts(record);
     for expected in [
         format!("verify:trace={}", answer.verdict.trace_digest),
-        "verify:step=s2/false".to_string(),
-        "verify:step=s0/true".to_string(),
+        "verify:step=s2/failed".to_string(),
+        "verify:step=s0/verified".to_string(),
         "verify:recovery=retry:s2".to_string(),
         "knob:verify.max_retries=2".to_string(),
     ] {
@@ -162,7 +180,8 @@ async fn served_decide_binds_the_verdict_to_the_trace() {
     // A passing trace needs no recovery.
     let passed = decide(&h, verify(&schema, &[true, true], 0)).await.unwrap();
     let passed = verification(&passed.records.as_slice()[0]);
-    assert!(passed.verdict.passed && passed.recovery.is_none());
+    assert!(passed.verdict.outcome == StepOutcome::Verified && passed.recovery.is_none());
+    assert!(passed.withheld.is_empty());
     let batch = decide(&h, verify(&schema, &[true], 0)).await.unwrap();
     assert!(facts(&batch.records.as_slice()[0]).contains(&"verify:recovery=none"));
 }
@@ -263,12 +282,14 @@ async fn other_tenant_traces_are_not_read() {
             steps: BoundedVec::new(vec![TraceStep {
                 step_id: "s0".into(),
                 digest: hex(1),
+                evidence_ids: Vec::new(),
             }])
             .unwrap(),
             checks: BoundedVec::new(vec![StepCheck {
                 step_id: "other".into(),
                 passed: true,
                 check_digest: hex(2),
+                interval: None,
             }])
             .unwrap(),
             attempts: 0,
@@ -346,4 +367,110 @@ async fn verification_and_admission_refusals() {
             Some(*code)
         );
     }
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R121.100: a tight trace is `verified`; a
+/// wide interval on step 2 is `uncertain` and withholds the step after it; a
+/// failed step 2 is `failed`, selects its recovery and withholds it too. Every
+/// cited evidence id is a premise, and another tenant is refused.
+// spec: MEDULLA-DECISION-ENGINE-R121.100
+#[tokio::test]
+async fn failed_and_uncertain_steps_withhold_their_dependents() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let tight = Some(CheckInterval {
+        low_micros: 450_000,
+        high_micros: 550_000,
+    });
+    let wide = Some(CheckInterval {
+        low_micros: 300_000,
+        high_micros: 700_000,
+    });
+    let ev = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<Vec<_>>();
+    let run = |shape: Vec<(bool, Option<CheckInterval>, Vec<String>)>| {
+        verify_shaped(&schema, &shape, 0, |recomputed| recomputed)
+    };
+
+    // All passing and tight: verified, nothing withheld.
+    let batch = decide(
+        &h,
+        run(vec![
+            (true, tight, ev(&["e-a"])),
+            (true, tight, ev(&["e-b", "e-c"])),
+            (true, None, ev(&[])),
+        ]),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let answer = verification(record);
+    assert_eq!(answer.verdict.outcome, StepOutcome::Verified);
+    assert_eq!(answer.verdict.step_id, "s2");
+    assert!(answer.recovery.is_none() && answer.withheld.is_empty());
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let record_facts = facts(record);
+    for expected in [
+        "verify:evidence=s0/e-a",
+        "verify:evidence=s1/e-b",
+        "verify:evidence=s1/e-c",
+        "verify:step=s1/verified",
+    ] {
+        assert!(record_facts.contains(&expected), "missing premise {expected}");
+    }
+
+    // A wide interval on step 2 (s1): uncertain, no recovery, s2 withheld.
+    let batch = decide(
+        &h,
+        run(vec![
+            (true, tight, ev(&[])),
+            (true, wide, ev(&[])),
+            (true, tight, ev(&[])),
+        ]),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let answer = verification(record);
+    assert_eq!(answer.verdict.outcome, StepOutcome::Uncertain);
+    assert_eq!(answer.verdict.step_id, "s1");
+    assert!(answer.recovery.is_none());
+    assert_eq!(answer.withheld, ["s2"]);
+    assert!(facts(record).contains(&"verify:step=s1/uncertain"));
+
+    // A failed step 2 (s1): failed, its recovery, s2 withheld.
+    let batch = decide(
+        &h,
+        run(vec![
+            (true, tight, ev(&[])),
+            (false, wide, ev(&[])),
+            (true, tight, ev(&[])),
+        ]),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let answer = verification(record);
+    assert_eq!(answer.verdict.outcome, StepOutcome::Failed);
+    assert_eq!(answer.verdict.step_id, "s1");
+    assert_eq!(
+        answer.recovery,
+        Some(RecoveryAction::Retry {
+            step_id: "s1".into()
+        })
+    );
+    assert_eq!(answer.withheld, ["s2"]);
+    assert!(facts(record).contains(&"verify:step=s1/failed"));
+
+    // An inverted interval is refused; another tenant is refused.
+    let inverted = Some(CheckInterval {
+        low_micros: 9,
+        high_micros: 1,
+    });
+    let error = decide(&h, run(vec![(true, inverted, ev(&[]))]))
+        .await
+        .unwrap_err();
+    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+    let refused = decide_as_other_tenant(&h, run(vec![(true, tight, ev(&[]))])).await;
+    assert!(refused.starts_with("ACCESS_DENIED"), "{refused}");
 }

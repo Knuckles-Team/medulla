@@ -2380,6 +2380,7 @@ fn bench_trajectory_served(
         .map(|n| VerifyStep {
             step_id: format!("s{n:04}"),
             digest: format!("{:02x}", n % 251 + 1).repeat(32),
+            evidence_ids: Vec::new(),
         })
         .collect();
     let checks: Vec<StepCheck> = (0..SERVED_VERIFY_STEPS)
@@ -2387,6 +2388,7 @@ fn bench_trajectory_served(
             step_id: format!("s{n:04}"),
             passed: true,
             check_digest: format!("{:02x}", n % 127 + 128).repeat(32),
+            interval: None,
         })
         .collect();
     let step_digests: Vec<&str> = steps.iter().map(|step| step.digest.as_str()).collect();

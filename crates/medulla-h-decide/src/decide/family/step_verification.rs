@@ -3,10 +3,13 @@
 //!
 //! Verifies a trace step by step with the pure `verify_steps` kernel: the
 //! verdict is bound to the SHA-256 of the step digests, and the first failed
-//! step selects the recovery. Checks are caller claims, so the record is a
+//! step selects the recovery. A check interval wider than
+//! `verify.max_interval_width` leaves its step uncertain, and a failed or
+//! uncertain step withholds every step after it
+//! (MEDULLA-DECISION-ENGINE-R121.100). Checks are caller claims, so the record is a
 //! `Claim` resolved as a `Constraint`. The harness applies the recovery.
 
-use medulla_decision_stats::decision::step_verify::{bind_verdict, verify_steps};
+use medulla_decision_stats::decision::step_verify::{bind_verdict, check_outcome, verify_steps};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
@@ -62,7 +65,7 @@ impl DecisionFamily for StepVerificationFamily {
     ) -> Option<Result<Executed, String>> {
         Some(parse(request).and_then(|(verify, subject)| {
             let knobs = VerifyKnobs::from_policy(policy);
-            let (verdict, recovery) = verify_steps(
+            let (verdict, recovery, withheld) = verify_steps(
                 verify.steps.as_slice(),
                 verify.checks.as_slice(),
                 verify.attempts,
@@ -78,10 +81,23 @@ impl DecisionFamily for StepVerificationFamily {
             premises.extend(verify.checks.iter().map(|check| {
                 claim(
                     &check.step_id,
-                    format!("verify:step={}/{}", check.step_id, check.passed),
+                    format!(
+                        "verify:step={}/{}",
+                        check.step_id,
+                        check_outcome(check, &knobs).word()
+                    ),
                     field,
                 )
             }));
+            for step in verify.steps.iter() {
+                for evidence_id in &step.evidence_ids {
+                    premises.push(claim(
+                        &step.step_id,
+                        format!("verify:evidence={}/{evidence_id}", step.step_id),
+                        field,
+                    ));
+                }
+            }
             premises.push(claim(
                 subject,
                 format!("verify:recovery={}", recovery_label(&recovery)),
@@ -93,6 +109,7 @@ impl DecisionFamily for StepVerificationFamily {
                     answer: Some(FamilyAnswer::StepVerdict(Box::new(StepVerification {
                         verdict,
                         recovery,
+                        withheld,
                     }))),
                     premises,
                     resolution: None,

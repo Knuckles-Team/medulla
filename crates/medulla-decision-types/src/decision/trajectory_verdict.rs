@@ -23,6 +23,10 @@ pub const MAX_TRAJECTORIES: usize = 256;
 pub const MAX_TRACE_STEPS: usize = 1024;
 /// Most probes one admission may carry.
 pub const MAX_PROBES: usize = 64;
+/// Most evidence ids one trace step may cite (MEDULLA-DECISION-ENGINE-R121.100).
+pub const MAX_STEP_EVIDENCE: usize = 64;
+/// The widest an interval bound may be: the whole unit range, in millionths.
+pub const MAX_INTERVAL_MICROS: u32 = 1_000_000;
 
 /// Whether `digest` is 64 lowercase hex characters.
 pub fn is_sha256_hex(digest: &str) -> bool {
@@ -117,6 +121,10 @@ impl DistilledTrajectory {
 pub struct TraceStep {
     pub step_id: String,
     pub digest: String,
+    /// The evidence ids the step cites: at most [`MAX_STEP_EVIDENCE`], each
+    /// non-blank.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_ids: Vec<String>,
 }
 
 /// One check run against a step.
@@ -127,6 +135,62 @@ pub struct StepCheck {
     pub step_id: String,
     pub passed: bool,
     pub check_digest: String,
+    /// The interval the check's estimate lies in, when it has one.
+    #[serde(default)]
+    pub interval: Option<CheckInterval>,
+}
+
+/// The interval of a check's estimate, in millionths:
+/// `0 <= low_micros <= high_micros <= 1_000_000`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CheckInterval {
+    pub low_micros: u32,
+    pub high_micros: u32,
+}
+
+impl CheckInterval {
+    /// `Ok` when the bounds are ordered and inside the unit range.
+    pub fn check(&self) -> Result<(), String> {
+        if self.low_micros <= self.high_micros && self.high_micros <= MAX_INTERVAL_MICROS {
+            Ok(())
+        } else {
+            Err(format!(
+                "interval [{}, {}] must satisfy 0 <= low <= high <= {MAX_INTERVAL_MICROS}",
+                self.low_micros, self.high_micros
+            ))
+        }
+    }
+
+    /// `high_micros - low_micros`.
+    pub fn width_micros(&self) -> u32 {
+        self.high_micros.saturating_sub(self.low_micros)
+    }
+}
+
+/// What a step verification decided about the step it names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum StepOutcome {
+    /// Every check passed and every interval is tight enough.
+    Verified,
+    /// A check failed.
+    Failed,
+    /// A check's interval is wider than `verify.max_interval_width`.
+    Uncertain,
+}
+
+impl StepOutcome {
+    /// The word the evidence premises carry.
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Verified => "verified",
+            Self::Failed => "failed",
+            Self::Uncertain => "uncertain",
+        }
+    }
 }
 
 /// The verdict on one step, bound to the whole trace by `trace_digest`.
@@ -135,7 +199,7 @@ pub struct StepCheck {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StepVerdict {
     pub step_id: String,
-    pub passed: bool,
+    pub outcome: StepOutcome,
     pub trace_digest: String,
     pub check_digests: BoundedVec<String, MAX_TRACE_STEPS>,
 }
@@ -144,7 +208,7 @@ impl StepVerdict {
     /// The validating constructor: every digest is 64 lowercase hex.
     pub fn new(
         step_id: String,
-        passed: bool,
+        outcome: StepOutcome,
         trace_digest: String,
         check_digests: Vec<String>,
     ) -> Result<Self, String> {
@@ -153,7 +217,7 @@ impl StepVerdict {
         }
         Ok(Self {
             step_id,
-            passed,
+            outcome,
             trace_digest,
             check_digests: BoundedVec::new(check_digests)?,
         })
@@ -242,6 +306,14 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(0),
         safety: KnobSafety::Fixed,
     },
+    KnobSpec {
+        name: "verify.max_interval_width",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(100_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The pinned `verify.*` knob values.
@@ -253,6 +325,9 @@ pub struct VerifyKnobs {
     pub probe_budget: u32,
     /// `knob verify.max_inconclusive`, count (fixed at 0).
     pub max_inconclusive: u32,
+    /// `knob verify.max_interval_width`, fraction in millionths: a check
+    /// interval wider than this leaves its step uncertain.
+    pub max_interval_width_micros: u32,
 }
 
 impl VerifyKnobs {
@@ -266,6 +341,10 @@ impl VerifyKnobs {
             max_retries: read(0),
             probe_budget: read(1),
             max_inconclusive: read(2),
+            max_interval_width_micros: match policy.knob(&KNOBS[3]) {
+                KnobValue::DecimalMicros(value) => u32::try_from(value).unwrap_or(0),
+                _ => 0,
+            },
         }
     }
 }
@@ -313,6 +392,10 @@ pub struct StepVerification {
     pub verdict: StepVerdict,
     #[serde(default)]
     pub recovery: Option<RecoveryAction>,
+    /// The step ids after the decided step, in trace order, for a failed or
+    /// uncertain verdict; empty for a verified one.
+    #[serde(default)]
+    pub withheld: Vec<String>,
 }
 
 #[cfg(test)]
@@ -354,13 +437,19 @@ mod tests {
         round_trip(&TraceStep {
             step_id: "s1".into(),
             digest: hex(3),
+            evidence_ids: vec!["e1".into()],
         });
         round_trip(&StepCheck {
             step_id: "s1".into(),
             passed: true,
             check_digest: hex(4),
+            interval: Some(CheckInterval {
+                low_micros: 1,
+                high_micros: 2,
+            }),
         });
-        let verdict = StepVerdict::new("s1".into(), false, hex(5), vec![hex(4)]).unwrap();
+        let verdict =
+            StepVerdict::new("s1".into(), StepOutcome::Failed, hex(5), vec![hex(4)]).unwrap();
         round_trip(&verdict);
         for action in [
             RecoveryAction::Retry {
