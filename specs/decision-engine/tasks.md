@@ -890,7 +890,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T873 [US9] MEDULLA-DECISION-ENGINE-R179.8 Participant memory knobs
 - [x] T874 [US9] MEDULLA-DECISION-ENGINE-R803.7 Contrast measured from stored traces, scores and the usage ledger
 - [ ] T875 [US9] MEDULLA-DECISION-ENGINE-R803.8 DecisionLog op HarnessAdoption stores the adoption, contrast and lesson
-- [ ] T876 [US4] MEDULLA-DECISION-ENGINE-R805.10 Model: three more revision subject kinds
+- [ ] T876 [US4] MEDULLA-DECISION-ENGINE-R805.10 Model: two more revision subject kinds
 - [ ] T877 [US4] MEDULLA-DECISION-ENGINE-R805.11 Behaviour: gate rule per added subject kind
 - [ ] T878 [US4] MEDULLA-DECISION-ENGINE-R805.12 Harness component and harness adoption revision subjects
 - [ ] T879 [US4] MEDULLA-DECISION-ENGINE-R805.13 Serve the champion pointer read
