@@ -1,4 +1,5 @@
 use super::*;
+use medulla_decision_types::decision::limit_types::{LimitMetric, LimitObservation};
 
 fn rules() -> Vec<LimitRule> {
     vec![
