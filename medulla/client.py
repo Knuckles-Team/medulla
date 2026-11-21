@@ -15756,6 +15756,42 @@ class RbacClient:
             )
         ).payload
 
+    async def share_grant(
+        self,
+        node_id: str,
+        scope: str,
+        grantees: list[str] | None = None,
+        *,
+        commons: bool = False,
+    ) -> str:
+        """Share one node of the client's graph (MEDULLA-IDENTITY-R023.13.3).
+
+        ``scope`` is ``"private"`` or ``"tenant"`` (``"placement"`` is refused);
+        ``grantees`` names principals when ``scope`` is ``"tenant"`` (none means every
+        member of the owner's tenant); ``commons=True`` promotes the node to the
+        ``__commons__`` graph. Only the node's owner or a ``kg:admin`` holder may
+        share. Returns ``"share_granted"``."""
+        grant = {
+            "node_id": node_id,
+            "scope": scope,
+            "commons": commons,
+            "grantees": list(grantees or []),
+        }
+        return (
+            await _gen.security.send_rbac_admin(
+                self._client, {"op": {"ShareGrant": grant}}
+            )
+        ).payload
+
+    async def share_revoke(self, node_id: str) -> str:
+        """Withdraw every share of one node (MEDULLA-IDENTITY-R023.13.3): the node
+        becomes private and a commons copy is removed. Returns ``"share_revoked"``."""
+        return (
+            await _gen.security.send_rbac_admin(
+                self._client, {"op": {"ShareRevoke": {"node_id": node_id}}}
+            )
+        ).payload
+
     async def list(self) -> dict[str, Any]:
         """List the current policy.
 
