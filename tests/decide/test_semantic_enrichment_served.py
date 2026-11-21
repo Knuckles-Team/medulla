@@ -344,3 +344,82 @@ def test_refusals_write_nothing(clean_graph):
         with pytest.raises(EngineResponseError, match=code):
             _call(clean_graph, request)
         assert _counts(clean_graph) == before, code
+
+
+# spec: MEDULLA-DECISION-ENGINE-R614.5
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.5")
+def test_evidence_properties_read_back(clean_graph):
+    _seed(clean_graph)
+    schema = publish(clean_graph, "enrich-schema", "feature_schema", _schema_body())
+    policy = _publish_policy(clean_graph)
+
+    def scheduled(op_name: str, subject: str) -> str:
+        return asyncio.run(_schedule(schema, policy, f"semantic:{op_name}:{subject}"))
+
+    # One refusal first: it leaves no node to read back.
+    card_schedule = scheduled("card", "sym:main")
+    card = {
+        "op": "card",
+        "subject": "sym:main",
+        "summary": "main wires the parser to the store",
+        "model": "model:text-7b",
+        "prompt_digest": "ab" * 32,
+        "schedule_record_id": card_schedule,
+    }
+    before = _counts(clean_graph)
+    with pytest.raises(EngineResponseError, match="CARD_UNGROUNDED"):
+        _call(clean_graph, {**card, "source_fact_ids": []})
+    assert _counts(clean_graph) == before
+
+    # A card stores its model, prompt digest and cited facts.
+    receipt = _call(clean_graph, {**card, "source_fact_ids": ["fact:1", "fact:2"]})
+    (card_id,) = receipt["node_ids"]
+    props = clean_graph.nodes.properties(card_id)
+    assert props["model"] == "model:text-7b"
+    assert props["prompt_digest"] == "ab" * 32
+    assert list(props["source_fact_ids"]) == ["fact:1", "fact:2"]
+    assert props["schedule_record_id"] == card_schedule
+
+    # A proposal stores its ranking inputs and the schedule record id.
+    rank_schedule = scheduled("rank_proposals", "sym:main")
+    ranked = _call(
+        clean_graph,
+        {
+            "op": "rank_proposals",
+            "schedule_record_id": rank_schedule,
+            "subject": "sym:main",
+            "concepts": [
+                {
+                    "concept": "c:cache",
+                    "impact_bp": 9000,
+                    "confidence_bp": 8000,
+                    "cost_units": 2,
+                }
+            ],
+        },
+    )
+    (proposal_id,) = ranked["node_ids"]
+    props = clean_graph.nodes.properties(proposal_id)
+    assert props["impact_bp"] == 9000
+    assert props["confidence_bp"] == 8000
+    assert props["cost_units"] == 2
+    assert props["schedule_record_id"] == rank_schedule
+
+    # An assignment stores its taxonomy, topic, confidence and embedder.
+    classify_schedule = scheduled("classify", "doc:1")
+    classified = _call(
+        clean_graph,
+        {
+            "op": "classify",
+            "schedule_record_id": classify_schedule,
+            "subject": "doc:1",
+            "taxonomy": TAXONOMY,
+        },
+    )
+    (assignment_id,) = classified["node_ids"]
+    props = clean_graph.nodes.properties(assignment_id)
+    assert props["taxonomy"] == TAXONOMY
+    assert props["topic"] == classified["topic"] == "topic:a"
+    assert props["confidence_bp"] == classified["confidence_bp"]
+    assert props["embedder"]
+    assert props["schedule_record_id"] == classify_schedule
