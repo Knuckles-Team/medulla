@@ -824,6 +824,7 @@ fn membership_shrink_machine_classes_extend_core() {
 }
 
 // spec: MEDULLA-CQ-ORCH-R810.2
+// spec: MEDULLA-CQ-ORCH-R810.5
 #[test]
 fn broker_message_machine_matches_edge_table() {
     sm::assert_matches(&medulla_core::broker::message_machine::BROKER_MESSAGE_MACHINE);

@@ -287,7 +287,7 @@ impl MessageState {
 #[cfg(test)]
 mod tests {
     use super::{MessageEvent, MessageState, BROKER_MESSAGE_MACHINE};
-    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     fn edge_case(id: &str, from: MessageState, event: MessageEvent, to: MessageState) {
         let edge = BROKER_MESSAGE_MACHINE
@@ -486,7 +486,39 @@ mod tests {
         text.split("#[cfg(test)]").next().unwrap_or(text)
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.5
+
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &BROKER_MESSAGE_MACHINE;
+        for edge in machine.edges {
+            // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+            assert_eq!(
+                edge.from.apply(edge.event, |g| Some(g) == edge.guard),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
+        }
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.5
+
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let pairs = illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            assert_eq!(refused.machine, "BrokerMessageMachine");
+            assert_eq!(refused.from, state.stored());
+            assert_eq!(refused.event, event.name());
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        }
+    }
+
     // spec: MEDULLA-CQ-ORCH-R810.3
+    // spec: MEDULLA-CQ-ORCH-R810.5
 
     #[test]
     fn no_writer_sets_status_outside_apply() {
