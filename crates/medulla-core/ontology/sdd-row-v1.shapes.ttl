@@ -19,10 +19,11 @@
     sh:targetClass :Requirement ;
     sh:sparql [ a sh:SPARQLConstraint ;
             sh:message "SEAM_SIDE_MISSING: the seam is named on one side only." ;
-            sh:select """SELECT $this WHERE {
-                { $this :seamProvider ?p . FILTER NOT EXISTS { $this :seamConsumer ?c } }
+            sh:select """PREFIX : <https://knuckles-team.github.io/ontology/core#>
+                SELECT $this WHERE {
+                { $this :seamProvider ?p . OPTIONAL { $this :seamConsumer ?c } FILTER(!BOUND(?c)) }
                 UNION
-                { $this :seamConsumer ?c . FILTER NOT EXISTS { $this :seamProvider ?p } } }""" ] .
+                { $this :seamConsumer ?q . OPTIONAL { $this :seamProvider ?r } FILTER(!BOUND(?r)) } }""" ] .
 
 :RowDependsOnShape a sh:NodeShape ;
     sh:description "Every Depends on target is a row that exists." ;
@@ -38,10 +39,12 @@
     sh:targetClass :Requirement ;
     sh:sparql [ a sh:SPARQLConstraint ;
             sh:message "LANDED_WITHOUT_COMMIT: the row is LANDED or VERIFIED and no commit carries its Spec trailer." ;
-            sh:select """SELECT $this WHERE {
+            sh:select """PREFIX : <https://knuckles-team.github.io/ontology/core#>
+                SELECT $this WHERE {
                 $this :rowStatus ?s . ?s a ?k .
                 FILTER (?k IN (:LandedStatus, :VerifiedStatus))
-                FILTER NOT EXISTS { $this :implementedByCommit ?c } }""" ] .
+                OPTIONAL { $this :implementedByCommit ?c }
+                FILTER(!BOUND(?c)) }""" ] .
 
 :RowVerifiedShape a sh:NodeShape ;
     sh:description "A VERIFIED row names a bound test that exists." ;
@@ -49,15 +52,18 @@
     sh:targetClass :Requirement ;
     sh:sparql [ a sh:SPARQLConstraint ;
             sh:message "VERIFIED_WITHOUT_TEST: the row is VERIFIED and its bound test does not exist." ;
-            sh:select """SELECT $this WHERE {
+            sh:select """PREFIX : <https://knuckles-team.github.io/ontology/core#>
+                SELECT $this WHERE {
                 $this :rowStatus ?s . ?s a :VerifiedStatus .
-                FILTER NOT EXISTS { $this :verifiedBy ?t } }""" ] .
+                OPTIONAL { $this :verifiedBy ?t }
+                FILTER(!BOUND(?t)) }""" ] .
 
 :CommitHashShape a sh:NodeShape ;
     sh:description "A commit that implements a row has one 40-character hash." ;
     sh:name "Commit Hash Shape" ;
     sh:targetClass :Commit ;
     sh:property [ sh:path :commitHash ;
+            sh:minCount 1 ;
             sh:maxCount 1 ;
             sh:datatype xsd:string ;
             sh:pattern "^[0-9a-f]{40}$" ;

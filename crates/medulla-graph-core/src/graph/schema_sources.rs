@@ -1253,6 +1253,15 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/sdd-spec-v1.ttl"
             )),
         },
+        // MEDULLA-SDLC-R014.11: SHACL shapes that mirror the spec-standard row checks.
+        CoreSpec {
+            module: "sdd-row-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/sdd-row-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         CoreSpec {
             module: "sdlc_lifecycle",
             version: 1,
