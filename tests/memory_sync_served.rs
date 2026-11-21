@@ -597,3 +597,158 @@ async fn conflicts_survive_gc_and_retention_refusal() {
     let after: MemorySnapshotRead = json_of(read(&state, 9, None).await);
     assert_eq!(after.head.revision, 3);
 }
+
+async fn send_as(
+    state: &test_support::SharedState,
+    agent: &str,
+    id: u64,
+    graph: &str,
+    method: Method,
+) -> Response {
+    test_support::dispatch(
+        state,
+        common::signed_request_as(SECRET, id, graph, agent, method),
+    )
+    .await
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.8
+#[tokio::test(flavor = "multi_thread")]
+async fn complete_memory_sync_journey() {
+    install_knobs();
+    let (dir, backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-journey",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    // Two independent clients of one tenant.
+    let (alpha, beta) = ("client-alpha", "client-beta");
+
+    // Read and list an empty store.
+    let absent = send_as(&state, alpha, 2, GRAPH, Method::ReadMemorySnapshot {
+        doc_id: DOC.to_string(),
+        revision: None,
+    })
+    .await;
+    assert!(absent.error.is_some(), "nothing to read yet");
+    let empty: medulla_mutation_types::memory_sync::MemorySnapshotList =
+        json_of(send_as(&state, alpha, 3, GRAPH, list(None)).await);
+    assert!(empty.heads.is_empty());
+
+    // Two competing saves from the same base: one head, one retained candidate.
+    let first: SyncOutcome =
+        json_of(send_as(&state, alpha, 4, GRAPH, submit("j1", None, "alpha text")).await);
+    assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    let replay: SyncOutcome =
+        json_of(send_as(&state, alpha, 5, GRAPH, submit("j1", None, "alpha text")).await);
+    assert_eq!(replay, first, "a replayed request id answers the same outcome");
+    let rival: SyncOutcome =
+        json_of(send_as(&state, beta, 6, GRAPH, submit("j2", None, "beta text")).await);
+    let SyncOutcome::ConflictRetained {
+        candidate_revision, ..
+    } = rival
+    else {
+        panic!("the second competing save is retained, not lost: {rival:?}");
+    };
+
+    // The conflict reads as such, and one resolution settles it once.
+    let conflict = standing_of(json_of(
+        send_as(&state, beta, 7, GRAPH, acknowledge("j3", 1, "alpha text", 1)).await,
+    ));
+    assert_eq!(conflict, SyncStanding::Conflict);
+    let resolve = admitted(
+        &state,
+        sync(
+            "j4",
+            SyncAction::Resolve {
+                candidate_revision,
+                expected_head_revision: 1,
+                resolution: Resolution::TakeCandidate,
+            },
+        ),
+        "beta text",
+        1,
+        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+    )
+    .await;
+    let resolved: SyncOutcome = json_of(send_as(&state, alpha, 8, GRAPH, resolve.clone()).await);
+    assert!(matches!(resolved, SyncOutcome::Resolved { ref head } if head.revision == 2));
+    assert!(
+        send_as(&state, beta, 9, GRAPH, resolve).await.error.is_some(),
+        "a resolved candidate resolves once"
+    );
+
+    // Acknowledgment: in sync once revision, digest and generation match.
+    let synced = standing_of(json_of(
+        send_as(&state, beta, 10, GRAPH, acknowledge("j5", 2, "beta text", 2)).await,
+    ));
+    assert_eq!(synced, SyncStanding::InSync);
+
+    // Negatives: another tenant, another graph, a tampered cursor, a writer
+    // without the write scope. None changes the head.
+    let mut foreign = common::context_for(beta);
+    foreign.tenant = "tenant-foreign".to_string();
+    let cross = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            11,
+            GRAPH,
+            foreign,
+            submit("j6", Some(2), "foreign"),
+        ),
+    )
+    .await;
+    assert!(cross.error.is_some(), "{cross:?}");
+    let wrong_graph = send_as(&state, alpha, 12, "other-graph", submit("j7", Some(2), "x")).await;
+    assert!(wrong_graph.error.is_some(), "{wrong_graph:?}");
+    let stale = send_as(&state, alpha, 13, GRAPH, list(Some("stale-cursor".to_string()))).await;
+    assert!(error_of(&stale).contains("MEMSYNC_CURSOR_INVALID"));
+    let mut reader = common::context_for(alpha);
+    reader.scopes = vec!["memory:read".to_string()];
+    let denied = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            14,
+            GRAPH,
+            reader,
+            submit("j8", Some(2), "denied"),
+        ),
+    )
+    .await;
+    assert!(denied.error.is_some(), "{denied:?}");
+
+    // Restart, then each client reads back the same history independently.
+    let state = restart(&dir, backend, state).await;
+    for (id, agent) in [(20, alpha), (21, beta)] {
+        let head: MemorySnapshotRead = json_of(
+            send_as(&state, agent, id, GRAPH, Method::ReadMemorySnapshot {
+                doc_id: DOC.to_string(),
+                revision: None,
+            })
+            .await,
+        );
+        assert_eq!((head.head.revision, head.content.as_str()), (2, "beta text"));
+        let old: MemorySnapshotRead = json_of(
+            send_as(&state, agent, id + 10, GRAPH, Method::ReadMemorySnapshot {
+                doc_id: DOC.to_string(),
+                revision: Some(1),
+            })
+            .await,
+        );
+        assert_eq!(old.content, "alpha text");
+    }
+    let listing: medulla_mutation_types::memory_sync::MemorySnapshotList =
+        json_of(send_as(&state, beta, 40, GRAPH, Method::ListMemorySnapshots {
+            prefix: "notes/".to_string(),
+            limit: Some(10),
+            cursor: None,
+        })
+        .await);
+    assert_eq!(listing.heads.len(), 1);
+    assert_eq!(listing.heads[0].revision, 2);
+}
