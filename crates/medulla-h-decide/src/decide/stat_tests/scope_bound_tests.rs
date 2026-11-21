@@ -96,7 +96,6 @@ async fn plan_scope_is_bounded_by_policy() {
         assert!(line.contains("|op=AgentAssemble|"), "{line}");
         assert!(line.contains("|subject_iri=tool-b"), "{line}");
         assert!(line.contains(&format!("|policy_iri={policy_iri}")), "{line}");
-
     }
 
     // (2) A fresh harness with only `tool-a` published passes admission.
@@ -112,8 +111,10 @@ async fn plan_scope_is_bounded_by_policy() {
     );
 
     // (3) Another tenant with no policy node in its scope is refused by the empty bound.
+    let isolated = harness().await;
+    publish(&isolated.store, 1, ("tool-a", AgentComponentKind::Tool), None);
     let other = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, "tenant-other");
-    let refusal = assemble_with_policy(&admitted, &other, None, tools_only())
+    let refusal = assemble_with_policy(&isolated, &other, None, tools_only())
         .await
         .expect_err("an empty bound refuses every tool");
     assert!(refusal.starts_with("SCOPE_EXCEEDS_POLICY"), "{refusal}");
