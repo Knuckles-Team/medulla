@@ -19,7 +19,8 @@ use medulla_types::transition_refused::{
 };
 use serde::{Deserialize, Serialize};
 
-use medulla_raft::raft::{GroupId, NodeId};
+use medulla_direct_state::direct_state::GroupId;
+use medulla_raft::raft::NodeId;
 
 /// Bound operation ids so a malformed/replayed request cannot grow the durable
 /// drain journal without limit.

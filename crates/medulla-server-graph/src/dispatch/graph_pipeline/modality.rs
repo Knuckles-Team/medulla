@@ -6,7 +6,7 @@ use crate::dispatch::shared::timed_read;
 pub struct ModalityReplication<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     handle: &'a medulla_raft::raft::RaftHandle,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     graph_name: &'a str,
@@ -37,7 +37,7 @@ pub struct ModalityMutationInputs {
 pub struct ModalityReplicationRequest<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
     pub handle: medulla_raft::raft::RaftHandle,
-    pub group_id: medulla_raft::raft::GroupId,
+    pub group_id: medulla_direct_state::direct_state::GroupId,
     pub placement_epoch: u64,
     pub fencing_token: Option<u64>,
     pub graph_name: &'a str,

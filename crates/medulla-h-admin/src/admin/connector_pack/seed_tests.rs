@@ -18,7 +18,7 @@ fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])
 }
 
-fn shapes() -> medulla_shacl::Graph {
+fn shapes() -> medulla_rdf::oxrdf::Graph {
     medulla_shacl::graph_from_turtle(&format!(
         "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\
          @prefix seed: <{SEED_NS}> .\n\

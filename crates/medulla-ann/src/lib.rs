@@ -74,8 +74,6 @@ pub use ivfpq::{
     merge_topk, merge_topk_stable, IvfPq, IvfPqParams, SearchParams, SearchResult, TrainHooks,
     PQ_KSUB,
 };
-/// The clustering-kernel settings carried by [`IvfPqParams`].
-pub use medulla_numeric::cluster::ClusterConfig;
 pub use persist::compact;
 pub use recall::{
     average_precision, evaluate_recall, mean_average_precision, precision_at_k, recall_at_k,

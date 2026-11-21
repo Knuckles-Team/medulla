@@ -17,7 +17,7 @@
 //!   combinators;
 //! * `closed` shapes with `extra` predicates.
 //!
-//! [`validate`] takes a [`Schema`], a data [`Graph`] and a [`ShapeMap`] (focus node →
+//! [`validate`] takes a [`Schema`], a data [`Graph`](medulla_rdf::oxrdf::Graph) and a [`ShapeMap`] (focus node →
 //! shape label) and returns a serde-serializable [`ShexReport`] (`conforms` + a per-node
 //! result list). [`validate_shexj`] is the parse-and-validate convenience.
 //!
@@ -51,7 +51,3 @@ pub use schema::{
     START,
 };
 pub use validate::{graph_from_turtle, validate, validate_shexj, ShapeMap, ShapeMapEntry};
-
-/// Re-export the RDF graph model so callers name `medulla_shex::Graph` without their own oxrdf
-/// dependency (the data graph is this type).
-pub use medulla_rdf::oxrdf::Graph;

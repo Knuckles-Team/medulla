@@ -12,6 +12,7 @@ name = "medulla_raft_xshard"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 futures = { version = "0.3", optional = true }

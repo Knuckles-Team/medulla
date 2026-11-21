@@ -282,7 +282,7 @@ pub struct PlanCtx<'a> {
 #[cfg(feature = "owl")]
 pub trait ShapeSource: Send + Sync {
     /// The shapes graph, or why the graph has none to offer.
-    fn shapes(&self) -> Result<medulla_shacl::Graph, String>;
+    fn shapes(&self) -> Result<medulla_rdf::oxrdf::Graph, String>;
 }
 
 #[cfg(feature = "text")]

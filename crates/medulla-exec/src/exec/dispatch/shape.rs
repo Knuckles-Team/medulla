@@ -58,7 +58,7 @@ pub(super) fn validate_shape(
 }
 
 /// The stage's own `USING` document, else the ctx-bound graph shapes.
-fn shapes_graph(ctx: &PlanCtx, shapes: &str) -> Result<medulla_shacl::Graph, String> {
+fn shapes_graph(ctx: &PlanCtx, shapes: &str) -> Result<medulla_rdf::oxrdf::Graph, String> {
     if !shapes.trim().is_empty() {
         return medulla_shacl::graph_from_turtle(shapes)
             .map_err(|error| format!("VALIDATE SHAPE: bad shapes graph: {error}"));
@@ -79,10 +79,10 @@ fn shapes_graph(ctx: &PlanCtx, shapes: &str) -> Result<medulla_shacl::Graph, Str
 fn data_graph(
     view: &GraphView,
     projection: &medulla_rdf::sparql::Projection,
-) -> Result<medulla_shacl::Graph, String> {
+) -> Result<medulla_rdf::oxrdf::Graph, String> {
     let triples = medulla_rdf::mapping::export_view_projected(view, projection)
         .map_err(|error| format!("VALIDATE SHAPE: project the graph to RDF: {error}"))?;
-    let mut graph = medulla_shacl::Graph::new();
+    let mut graph = medulla_rdf::oxrdf::Graph::new();
     for triple in &triples {
         graph.insert(triple);
     }

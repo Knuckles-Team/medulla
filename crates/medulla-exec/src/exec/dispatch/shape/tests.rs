@@ -43,7 +43,7 @@ fn ids(rows: &RowSet) -> Vec<&str> {
 struct GraphShapes;
 
 impl ShapeSource for GraphShapes {
-    fn shapes(&self) -> Result<medulla_shacl::Graph, String> {
+    fn shapes(&self) -> Result<medulla_rdf::oxrdf::Graph, String> {
         medulla_shacl::graph_from_turtle(SHAPES)
     }
 }

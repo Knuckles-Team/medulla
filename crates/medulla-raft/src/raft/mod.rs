@@ -168,10 +168,11 @@ impl RaftStateExt for ServerState {
 ///
 /// Defined by `medulla_direct_state::direct_state`, not here: the direct-state whole-generation
 /// module inside the storage kernel is the other consumer of both, and the kernel may
-/// not depend on this binary. Re-exported so every `crate::raft::GroupId` /
+/// not depend on this binary. Imported here (not re-exported: a consumer outside this crate
+/// names `medulla_direct_state::direct_state`) so every `crate::raft::GroupId` /
 /// `crate::raft::DEFAULT_GROUP` path in this tree keeps naming the SAME type and
 /// constant rather than a second, silently-divergent pair.
-pub use medulla_direct_state::{direct_state::GroupId, direct_state::DEFAULT_GROUP};
+use medulla_direct_state::{direct_state::GroupId, direct_state::DEFAULT_GROUP};
 const RAFT_RESPONSE_SCHEMA_VERSION: u16 = 2;
 #[cfg(feature = "modality-serving")]
 mod modality;

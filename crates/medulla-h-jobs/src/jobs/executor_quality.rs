@@ -289,7 +289,7 @@ fn measure_shape(
     }
     let view = rows.view(core);
     let projection = medulla_rdf::sparql::Projection::from_wire(shape_namespace(iri), "");
-    let mut data = medulla_shacl::Graph::new();
+    let mut data = medulla_rdf::oxrdf::Graph::new();
     for triple in &medulla_rdf::mapping::export_view_projected(&view, &projection)? {
         data.insert(triple);
     }

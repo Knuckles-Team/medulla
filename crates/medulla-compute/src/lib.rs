@@ -4,17 +4,8 @@
 //! medulla-compute — the compute domains layered above the graph core: always-on graph
 //! `algorithms` + `ast`/`parser` (their tree-sitter parts gated by `ast`), plus the
 //! feature-gated `finance`, `datascience`, and `reasoning` domains. Depends on
-//! `medulla-types` and `medulla-core`, never on `medulla-server`.
-//!
-//! Re-export the lower crates under the historical `crate::` paths so the moved
-//! bodies (`crate::graph::`, `crate::types::`, `crate::wire::`) resolve unchanged.
-pub use medulla_core::registry;
-pub use medulla_graph_core::graph;
-pub use medulla_identity_types::acl;
-pub use medulla_isolation::isolation;
-pub use medulla_protocol_types::protocol;
-pub use medulla_query_types::wire;
-pub use medulla_types::types;
+//! `medulla-types` and `medulla-core`, never on `medulla-server`. It re-exports nothing from
+//! the lower crates: a caller names the owning crate.
 
 /// Find a disjoint-set root while halving each traversed path. Both entity
 /// resolution clusters and impact polytree detection use this exact rule.

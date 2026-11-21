@@ -8,9 +8,6 @@
 //! server's timeseries handlers) — and the SQL `eg_*` window functions and PromQL run
 //! the same `medulla_numeric::series` kernels one level down.
 
-/// The kernel crate, re-exported so a caller of a derived series names one path.
-pub use medulla_numeric::series as kernels;
-
 use medulla_numeric::series::{
     Arith, KalmanNoise, Map, PairStat, Rolling, Shift, Smoothing, Spec, State,
 };

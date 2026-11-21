@@ -499,10 +499,10 @@ async fn scenario_stale_fenced_participant_rejected() -> Result<bool, String> {
 #[cfg(test)]
 async fn await_default_placement_leader(multi: &MultiRaft) -> Result<(), String> {
     multi
-        .ensure_group(medulla_raft::raft::DEFAULT_GROUP)
+        .ensure_group(medulla_direct_state::direct_state::DEFAULT_GROUP)
         .await?;
     let default_group = multi
-        .group(medulla_raft::raft::DEFAULT_GROUP)
+        .group(medulla_direct_state::direct_state::DEFAULT_GROUP)
         .await
         .ok_or("default placement group missing after ensure_group")?;
     fixture::wait_until(Duration::from_secs(15), || {

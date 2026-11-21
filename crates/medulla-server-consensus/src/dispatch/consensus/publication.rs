@@ -10,7 +10,7 @@ struct JobPublicationSubmission<'a> {
     operation: &'a str,
     graph_name: &'a str,
     graph_type: medulla_protocol_types::protocol::GraphType,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     command: medulla_raft::raft::NativeMutationCommand,

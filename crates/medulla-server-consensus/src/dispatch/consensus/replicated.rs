@@ -84,7 +84,7 @@ pub async fn apply_replicated_transaction_participant(
     request_id: u64,
     committed_at_ms: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
     participant: ReplicatedParticipantRef<'_>,
 ) -> Result<bool, String> {
@@ -259,7 +259,7 @@ pub async fn apply_replicated_job_publication_commit(
     request_id: u64,
     committed_at_ms: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     coordinator_id: &str,
     plan: &[u8],
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {

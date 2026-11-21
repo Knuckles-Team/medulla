@@ -29,7 +29,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 
 /// Source points one maintenance step may consume: the per-call work budget (the one
 /// definition is the replay ceiling of the state-space limits).
-const WORK_BUDGET: usize = medulla_tsdb::derive::kernels::limits::MAX_REPLAY_POINTS;
+const WORK_BUDGET: usize = medulla_numeric::series::limits::MAX_REPLAY_POINTS;
 
 /// How long a derived-from-derived chain may be (the cycle guard's bound).
 const MAX_DERIVATION_DEPTH: usize = 16;

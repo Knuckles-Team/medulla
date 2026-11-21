@@ -39,11 +39,11 @@ pub async fn try_handle(
             node_id,
             addr,
         } => (
-            group.unwrap_or(medulla_raft::raft::DEFAULT_GROUP),
+            group.unwrap_or(medulla_direct_state::direct_state::DEFAULT_GROUP),
             RaftAdminOp::AddLearner { node_id, addr },
         ),
         Method::RaftChangeMembership { group, voters } => (
-            group.unwrap_or(medulla_raft::raft::DEFAULT_GROUP),
+            group.unwrap_or(medulla_direct_state::direct_state::DEFAULT_GROUP),
             RaftAdminOp::ChangeMembership { voters },
         ),
         other => return Err(other),

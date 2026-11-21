@@ -43,7 +43,7 @@ pub struct PreparedJobPublication {
 pub(super) struct RoutedJobPublication {
     schema_version: u16,
     prepared: PreparedJobPublication,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 }
@@ -337,7 +337,7 @@ pub fn decode_prepared_job_publication(bytes: &[u8]) -> Result<PreparedJobPublic
 #[cfg(feature = "raft")]
 pub fn build_job_publication_commands(
     prepared: PreparedJobPublication,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Result<(Vec<u8>, Vec<u8>), String> {
@@ -412,7 +412,7 @@ pub async fn apply_consensus_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     expected_coordinator_id: &str,
     plan_bytes: &[u8],
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {

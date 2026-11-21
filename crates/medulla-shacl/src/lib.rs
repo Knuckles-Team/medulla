@@ -56,7 +56,3 @@ pub use icv::{
 pub use policy::{IcvPolicy, IcvPolicyRegistry};
 pub use report::{Severity, ValidationReport, ValidationResult};
 pub use validate::{graph_from_turtle, validate, validate_nodes, validate_turtle, CompiledShapes};
-
-/// Re-export the RDF graph model so callers name `medulla_shacl::Graph` without their own
-/// oxrdf dependency (the shapes graph and data graph are both this type).
-pub use medulla_rdf::oxrdf::Graph;

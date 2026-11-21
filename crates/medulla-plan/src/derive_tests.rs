@@ -4,7 +4,7 @@
 use medulla_graph_core::graph::GraphCore;
 use medulla_query_types::wire::{UqlResult, UqlRow};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_tsdb::derive::kernels::{apply, Rolling, Shift, Smoothing, Spec, State};
+use medulla_numeric::series::{apply, Rolling, Shift, Smoothing, Spec, State};
 
 use crate::uql::serve::run_statement;
 use medulla_exec::exec::PlanCtx;

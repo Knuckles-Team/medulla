@@ -34,7 +34,7 @@ pub struct ConsensusTransactionParticipant {
     #[allow(dead_code)] // carried on the participant command for the raft apply path
     pub(crate) graph_name: String,
     pub graph_type: medulla_protocol_types::protocol::GraphType,
-    pub group_id: medulla_raft::raft::GroupId,
+    pub group_id: medulla_direct_state::direct_state::GroupId,
     pub placement_epoch: u64,
     pub fencing_token: Option<u64>,
     pub sealed_plan_source: Vec<u8>,
@@ -57,7 +57,7 @@ pub(super) struct ConsensusParticipantPlan {
     participant_id: u64,
     graph_name: String,
     graph_type: medulla_protocol_types::protocol::GraphType,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     #[serde(with = "serde_bytes")]
@@ -318,7 +318,7 @@ pub(super) fn decode_consensus_participant(
 pub(super) async fn validate_consensus_participant_placement(
     state: &Arc<RwLock<ServerState>>,
     plan: &ConsensusParticipantPlan,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
 ) -> Result<Arc<medulla_graph_core::graph::GraphCore>, String> {
@@ -432,7 +432,7 @@ pub struct ConsensusParticipantRef<'a> {
 #[cfg(feature = "raft")]
 pub async fn apply_consensus_participant_prepare(
     state: &Arc<RwLock<ServerState>>,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -565,7 +565,7 @@ pub(super) fn isolate_participant_transaction(
 pub async fn apply_consensus_participant_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
-    applying_group: medulla_raft::raft::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {

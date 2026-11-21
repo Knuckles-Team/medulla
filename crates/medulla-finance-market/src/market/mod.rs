@@ -50,7 +50,7 @@ mod pine_parity_tests;
 #[cfg(test)]
 mod record_tests;
 
-pub use medulla_result_types::compute_result::market::*;
+use medulla_result_types::compute_result::market::*;
 
 /// A typed refusal: a closed code and a detail, rendered `"CODE: detail"`.
 #[derive(Debug, Clone, PartialEq, Eq)]

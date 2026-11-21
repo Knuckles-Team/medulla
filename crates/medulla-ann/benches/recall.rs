@@ -100,7 +100,7 @@ fn main() {
         dim,
         nlist,
         m,
-        cluster: medulla_ann::ClusterConfig {
+        cluster: medulla_numeric::cluster::ClusterConfig {
             exact: mode == "exact",
             ..Default::default()
         },

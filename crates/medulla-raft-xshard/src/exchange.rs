@@ -63,7 +63,7 @@ use medulla_exec::{
 };
 
 use medulla_raft::raft::multi::GroupRouter;
-use medulla_raft::raft::GroupId;
+use medulla_direct_state::direct_state::GroupId;
 
 // ── 1. the exchange marker (kept OUTSIDE PlanDag/PlanNode) ─────────────────────────
 

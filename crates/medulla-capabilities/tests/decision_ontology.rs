@@ -3,7 +3,7 @@
 //! This test asserts the properties directly instead of diffing a stored copy.
 #![cfg(feature = "contract-schema")]
 
-use medulla_capabilities::decision_ontology::{decision_ontology_ttl, decision_shapes_ttl};
+use medulla_decision_types::ontology::{decision_ontology_ttl, decision_shapes_ttl};
 
 const CLASSES: [&str; 4] = [
     "DecideRequest",

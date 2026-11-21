@@ -34,8 +34,6 @@
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
 pub mod catalog;
-#[cfg(feature = "contract-schema")]
-pub use medulla_decision_types::ontology as decision_ontology;
 mod descriptor;
 mod domains;
 #[cfg(feature = "contract-schema")]

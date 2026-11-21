@@ -16,6 +16,7 @@ hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
+medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-h-ingest = { path = "../medulla-h-ingest" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-persistence = { path = "../medulla-persistence" }

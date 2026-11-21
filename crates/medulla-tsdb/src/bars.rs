@@ -57,7 +57,7 @@ pub fn resolve_points(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_finance_market::market::BarStatus;
+    use medulla_result_types::compute_result::market::BarStatus;
 
     const HOUR: i64 = 3_600_000_000_000;
 

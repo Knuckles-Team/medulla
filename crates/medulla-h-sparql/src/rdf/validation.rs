@@ -64,14 +64,14 @@ impl<'a> ServedShapes<'a> {
 
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]
 impl medulla_exec::exec::ShapeSource for ServedShapes<'_> {
-    fn shapes(&self) -> Result<medulla_shacl::Graph, String> {
+    fn shapes(&self) -> Result<medulla_rdf::oxrdf::Graph, String> {
         load_shacl_shapes(self.core, None).map(|loaded| loaded.graph)
     }
 }
 
 #[cfg(feature = "shacl")]
 struct LoadedShaclShapes {
-    graph: medulla_shacl::Graph,
+    graph: medulla_rdf::oxrdf::Graph,
     schema_digests: Vec<String>,
     composed_digest: Option<String>,
 }
@@ -114,7 +114,7 @@ fn load_shacl_data(
     graph_name: &str,
     core: &Arc<GraphCore>,
     data: &ShaclData<'_>,
-) -> Result<medulla_shacl::Graph, String> {
+) -> Result<medulla_rdf::oxrdf::Graph, String> {
     let has_turtle = !data.turtle.trim().is_empty();
     if has_turtle && data.triples.is_some() {
         return Err("ShaclValidate: give data_graph or data_triples, not both".to_string());
@@ -129,7 +129,7 @@ fn load_shacl_data(
     }
     let triples = medulla_rdf::mapping::export_triples(core, graph_name)
         .map_err(|error| format!("ShaclValidate: export live graph: {error}"))?;
-    let mut graph = medulla_shacl::Graph::new();
+    let mut graph = medulla_rdf::oxrdf::Graph::new();
     for triple in &triples {
         graph.insert(triple);
     }
@@ -198,7 +198,7 @@ pub(super) async fn handle_shex_validate(
         let exported = medulla_rdf::mapping::export_triples(core, graph_name);
         match exported {
             Ok(triples) => {
-                let mut g = medulla_shex::Graph::new();
+                let mut g = medulla_rdf::oxrdf::Graph::new();
                 for t in &triples {
                     g.insert(t);
                 }
@@ -329,7 +329,7 @@ mod graph_schema_shapes_tests {
         live.install_schema_sources(Arc::new(updated));
         let later_digest = live.schema_sources().composed_digest().to_hex();
 
-        let report = medulla_shacl::validate(&loaded.graph, &medulla_shacl::Graph::new()).unwrap();
+        let report = medulla_shacl::validate(&loaded.graph, &medulla_rdf::oxrdf::Graph::new()).unwrap();
         let receipt = shacl_report_wire(report, loaded.schema_digests, loaded.composed_digest);
         assert_ne!(used_digest, later_digest);
         assert_eq!(

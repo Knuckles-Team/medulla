@@ -229,7 +229,7 @@ fn bench_ann_knn(c: &mut Criterion) {
         dim: DIM,
         nlist: 128,
         m: 16,
-        cluster: medulla_ann::ClusterConfig {
+        cluster: medulla_numeric::cluster::ClusterConfig {
             max_steps: 10,
             ..Default::default()
         },

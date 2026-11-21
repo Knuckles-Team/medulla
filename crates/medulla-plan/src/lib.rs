@@ -219,10 +219,8 @@ pub mod sqlite_capture;
 // registerable owned source kinds (spec-backed / table / closure) + the shared handle.
 // These complete `Op::Foreign` / a `Named` `Op::ForeignScan` — a name → live source →
 // rows resolution the executor consults via `PlanCtx::with_foreign`.
-// Re-export the lexical surface (CONCEPT:AU-KG.query.text-spatial-time) so a caller wiring a text plan
-// names them through medulla-plan: the BM25 index, the hit row, and the RRF helper.
-#[cfg(feature = "text")]
-pub use medulla_text::{rrf_fuse, TextHit, TextIndex, RRF_K};
+// The lexical surface (CONCEPT:AU-KG.query.text-spatial-time) — the BM25 index, the hit row and
+// the RRF helper — is named through `medulla_text` by a caller wiring a text plan.
 // The `PlanCtx::with_text` search-surface trait (CONCEPT:MEDULLA-KG.query.served-text-index-binding) — a facade
 // implements this over its OWN maintained persistent index (rather than a plain
 // `medulla_text::TextIndex`) to push a served `RankText`/`FuseRrf` leg down into it.

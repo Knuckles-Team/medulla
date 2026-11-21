@@ -15,6 +15,7 @@ path = "src/lib.rs"
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-h-jobs = { path = "../medulla-h-jobs" }
 medulla-h-txn = { path = "../medulla-h-txn" }
 medulla-identity-types = { path = "../medulla-identity-types" }

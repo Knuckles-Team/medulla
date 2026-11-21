@@ -164,7 +164,7 @@ async fn handle_route(
         }
         return route_response(
             req_id,
-            medulla_raft::raft::DEFAULT_GROUP,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
             0,
             false,
             client_epoch,
@@ -174,13 +174,13 @@ async fn handle_route(
         );
     };
 
-    let control = match multi.group(medulla_raft::raft::DEFAULT_GROUP).await {
+    let control = match multi.group(medulla_direct_state::direct_state::DEFAULT_GROUP).await {
         Some(group) => group,
         None => {
             return Response::stale_route(
                 req_id,
                 "__placement_catalog__",
-                medulla_raft::raft::DEFAULT_GROUP,
+                medulla_direct_state::direct_state::DEFAULT_GROUP,
                 0,
                 None,
                 "placement control group is unavailable",
@@ -192,7 +192,7 @@ async fn handle_route(
         return Response::stale_route(
             req_id,
             "__placement_catalog__",
-            medulla_raft::raft::DEFAULT_GROUP,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
             0,
             leader,
             "placement routes require the current control-group leader",

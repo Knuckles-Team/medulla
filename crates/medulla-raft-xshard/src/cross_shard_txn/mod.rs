@@ -208,7 +208,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use medulla_raft::raft::NodeId;
-use medulla_raft::raft::{GroupId, RaftRequest};
+use medulla_direct_state::direct_state::GroupId;
+use medulla_raft::raft::RaftRequest;
 use medulla_server_api::api::persistence::PersistenceBackend;
 
 const MAX_PREPARED_TXN_BYTES: usize = 256 * 1024 * 1024;

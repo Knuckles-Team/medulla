@@ -632,7 +632,7 @@ struct BoundGraphRequest<'a> {
     mutation: medulla_server_api::api::persistence::RaftMutationContext,
     method: Method,
     server_secret: &'a str,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
 }
 
 #[cfg(feature = "raft")]

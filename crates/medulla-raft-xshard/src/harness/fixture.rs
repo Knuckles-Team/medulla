@@ -192,7 +192,7 @@ pub async fn start_single_node_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[medulla_raft::raft::GroupId],
+    group_ids: &[medulla_direct_state::direct_state::GroupId],
 ) -> (
     Arc<medulla_raft::raft::multi::MultiRaft>,
     Arc<RwLock<ServerState>>,
@@ -215,7 +215,7 @@ pub async fn start_recovered_single_node_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[medulla_raft::raft::GroupId],
+    group_ids: &[medulla_direct_state::direct_state::GroupId],
 ) -> (
     Arc<medulla_raft::raft::multi::MultiRaft>,
     Arc<RwLock<ServerState>>,
@@ -236,8 +236,8 @@ pub async fn start_routed_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[medulla_raft::raft::GroupId],
-    assignments: &[(&str, medulla_raft::raft::GroupId)],
+    group_ids: &[medulla_direct_state::direct_state::GroupId],
+    assignments: &[(&str, medulla_direct_state::direct_state::GroupId)],
 ) -> (
     Arc<medulla_raft::raft::multi::MultiRaft>,
     Arc<RwLock<ServerState>>,

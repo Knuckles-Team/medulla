@@ -26,7 +26,8 @@ use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_raft::raft::multi::MultiRaft;
-use medulla_raft::raft::{AppCtx, GroupId, NodeId};
+use medulla_direct_state::direct_state::GroupId;
+use medulla_raft::raft::{AppCtx, NodeId};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::compute_verified_envelope_token;
@@ -247,7 +248,7 @@ async fn start_groups_on_state(
         .expect("start multi");
 
     for &gid in group_ids {
-        if gid == medulla_raft::raft::DEFAULT_GROUP {
+        if gid == medulla_direct_state::direct_state::DEFAULT_GROUP {
             multi.ensure_group(gid).await.unwrap();
         } else {
             multi.create_group(gid, peers.clone(), true).await.unwrap();

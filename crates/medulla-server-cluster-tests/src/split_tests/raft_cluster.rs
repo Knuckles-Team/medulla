@@ -461,7 +461,7 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
         })
         .collect();
     let ports = free_ports(3);
-    let gid = medulla_raft::raft::DEFAULT_GROUP;
+    let gid = medulla_direct_state::direct_state::DEFAULT_GROUP;
 
     // ── Start three nodes through the REAL production path (`node::start`),
     // so ADR-1's self-report (`raft::node::start` -> `MultiRaft::commit_node_info`)
@@ -809,7 +809,7 @@ async fn graph_routes_to_its_ring_assigned_group_after_multi_group_startup() {
 
 /// The DEFAULT (unconfigured, `groups <= 1`) production boot is BYTE-FOR-BYTE the
 /// pre-existing single-group path: no extra group, an empty ring, every graph on
-/// [`medulla_raft::raft::DEFAULT_GROUP`] — the guardrail this whole feature must not regress.
+/// [`medulla_direct_state::direct_state::DEFAULT_GROUP`] — the guardrail this whole feature must not regress.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn default_startup_stays_single_group_unchanged() {
     // Opens a durable store, so the ambient encryption env must hold still for
@@ -831,7 +831,7 @@ async fn default_startup_stays_single_group_unchanged() {
     );
     assert!(started
         .multi
-        .group(medulla_raft::raft::DEFAULT_GROUP)
+        .group(medulla_direct_state::direct_state::DEFAULT_GROUP)
         .await
         .is_some());
     assert!(
@@ -841,7 +841,7 @@ async fn default_startup_stays_single_group_unchanged() {
     let route = started.multi.route_graph("any-tenant:ws1").await;
     assert_eq!(
         route.group,
-        medulla_raft::raft::DEFAULT_GROUP,
+        medulla_direct_state::direct_state::DEFAULT_GROUP,
         "every unplaced graph must be authoritatively routed to the default group"
     );
     assert_eq!(route.epoch, 0);
@@ -1009,7 +1009,7 @@ mod placement_admin_wire_rpc {
 
     async fn wait_for_group_leader(
         nodes: &BTreeMap<NodeId, StartedNode>,
-        gid: medulla_raft::raft::GroupId,
+        gid: medulla_direct_state::direct_state::GroupId,
         timeout: Duration,
     ) -> Option<NodeId> {
         let start = std::time::Instant::now();
@@ -1065,8 +1065,8 @@ mod placement_admin_wire_rpc {
     const PLACEMENT_ADMIN_SCENARIO_TIMEOUT: Duration = Duration::from_secs(300);
 
     async fn placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster_body() {
-        use medulla_raft::raft::DEFAULT_GROUP;
-        const TARGET_GROUP: medulla_raft::raft::GroupId = 1;
+        use medulla_direct_state::direct_state::DEFAULT_GROUP;
+        const TARGET_GROUP: medulla_direct_state::direct_state::GroupId = 1;
 
         let _auth_env = medulla_raft_xshard::harness::test_env::configure_auth_test_environment(
             "tenant-shared",
@@ -1426,7 +1426,7 @@ async fn durable_log_replays_from_redb_after_restart() {
     // ── Append 12 entries through the real RaftStorage::append_to_log path ──
     {
         let mut store = MedullaStore::open(
-            medulla_raft::raft::DEFAULT_GROUP,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
             backend.clone(),
             ctx.clone(),
         )
@@ -1446,7 +1446,7 @@ async fn durable_log_replays_from_redb_after_restart() {
 
     // ── Re-open the store over the SAME redb; no leader, no network ─────────
     let mut store2 = MedullaStore::open(
-        medulla_raft::raft::DEFAULT_GROUP,
+        medulla_direct_state::direct_state::DEFAULT_GROUP,
         backend.clone(),
         ctx.clone(),
     )
@@ -1493,7 +1493,7 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
 
     {
         let mut store = MedullaStore::open(
-            medulla_raft::raft::DEFAULT_GROUP,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
             backend.clone(),
             ctx.clone(),
         )
@@ -1524,7 +1524,7 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
     let backend2: Arc<dyn PersistenceBackend> =
         Arc::new(RedbBackend::open(dir.clone(), 4096).expect("reopen redb"));
     let mut store2 =
-        MedullaStore::open(medulla_raft::raft::DEFAULT_GROUP, backend2.clone(), ctx).unwrap();
+        MedullaStore::open(medulla_direct_state::direct_state::DEFAULT_GROUP, backend2.clone(), ctx).unwrap();
     let entries = store2
         .try_get_log_entries(1..=8)
         .await
@@ -1807,7 +1807,7 @@ fn group_router_distributes_tenants_across_ring() {
     let r = GroupRouter::new();
     // Default (no ring): every graph routes to DEFAULT_GROUP — scaffold behavior.
     for g in ["a", "b", "__commons__", "tenant-42"] {
-        assert_eq!(r.group_of(g), medulla_raft::raft::DEFAULT_GROUP);
+        assert_eq!(r.group_of(g), medulla_direct_state::direct_state::DEFAULT_GROUP);
     }
 
     // Configure a 4-group tenant-range ring (sorted + de-duplicated).
@@ -1843,7 +1843,7 @@ fn group_router_distributes_tenants_across_ring() {
     r.set_group_ring(&[]);
     assert_eq!(
         r.group_of("an-unpinned-graph"),
-        medulla_raft::raft::DEFAULT_GROUP
+        medulla_direct_state::direct_state::DEFAULT_GROUP
     );
 }
 
@@ -2713,7 +2713,7 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     let _ = std::fs::remove_dir_all(&root);
     let ports = free_ports(2);
     let addr = |i: usize| format!("127.0.0.1:{}", ports[i - 1]);
-    let gid = medulla_raft::raft::DEFAULT_GROUP;
+    let gid = medulla_direct_state::direct_state::DEFAULT_GROUP;
 
     let multis = start_group_cluster(&root, &ports, gid, 2).await;
     for (_, multi, state) in &multis {

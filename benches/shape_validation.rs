@@ -16,7 +16,8 @@ mod wire_receipt;
 use std::time::Instant;
 
 use latency_receipt::{write_shape_receipt, ShapeBenchCase};
-use medulla_shacl::{graph_from_turtle, validate, CompiledShapes, Graph};
+use medulla_rdf::oxrdf::Graph;
+use medulla_shacl::{graph_from_turtle, validate, CompiledShapes};
 
 const SHAPE_COUNT: usize = 50;
 const WRITES: usize = 1_000;

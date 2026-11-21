@@ -2301,7 +2301,7 @@ required-features = ["broker"]
 name = "eg096_massive_scale_bench"
 path = "benches/eg096_massive_scale_bench.rs"
 harness = false
-required-features = ["ann", "broker"]
+required-features = ["ann", "broker", "numeric"]
 
 # ── Cold-open vs warm-read of the redb durable tier (Phase-2 T-E1) ──────────────
 # Times a fresh `RedbBackend` reopen + first point-read vs a subsequent warm read, so

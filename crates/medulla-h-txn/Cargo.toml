@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-cypher = { path = "../medulla-cypher" }
+medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-table-store = { path = "../medulla-table-store" }
@@ -25,6 +26,7 @@ medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
@@ -65,13 +67,13 @@ graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "security", "medu
 matview = ["query", "medulla-server-cdc/matview", "medulla-server-ops/matview", "medulla-persistence/matview", "medulla-protocol-types/matview", "medulla-raft/matview", "medulla-server-api/matview", "medulla-store/matview", "medulla-types/matview", "result-cache", "server"]
 metrics = ["medulla-kernel/metrics", "medulla-persistence/metrics", "medulla-protocol-types/metrics", "medulla-server-api/metrics", "medulla-server-mutation/metrics", "medulla-store/metrics", "medulla-types/metrics"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-raft/owl", "medulla-server-api/owl", "medulla-server-cdc/owl", "medulla-server-ops/owl", "medulla-types/owl", "medulla-query-types/owl", "medulla-uql/owl", "rdf", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft-xshard/query", "medulla-raft/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query", "medulla-uql/query"]
+query = ["dep:medulla-numeric", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft-xshard/query", "medulla-raft/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query", "medulla-uql/query"]
 raft = ["redb", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft-xshard/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "medulla-store/raft", "server"]
 redb = ["dep:medulla-transaction", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-raft-xshard/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb", "medulla-store/redb"]
 security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-raft-xshard/security", "medulla-raft/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-cdc/security", "medulla-server-ops/security", "medulla-store/security", "medulla-types/security"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-raft/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "rdf", "server"]
 sqlite-file = ["dep:rustix", "dep:medulla-sqlite-format", "query", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-raft/sqlite-file", "medulla-types/sqlite-file", "server"]
-tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store/tsdb", "server"]
+tsdb = ["dep:medulla-numeric", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store/tsdb", "server"]
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
 epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-redaction", "medulla-server-api/epistemic-redaction", "epistemic", "query", "redb", "security"]
 epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms", "medulla-server-mutation/epistemic-tms", "epistemic", "query", "redb"]
@@ -103,8 +105,8 @@ json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld", "medulla-persistence/json-l
 sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "rdf", "server", "sparql"]
 geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql", "medulla-persistence/geosparql", "medulla-server-api/geosparql", "geo", "query", "rdf", "redb", "server", "sparql"]
 owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "rdf", "server", "sparql"]
-promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "query", "redb", "server", "text", "tsdb"]
-traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "query", "redb", "server", "text", "tsdb"]
+promql = ["dep:medulla-numeric", "dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "query", "redb", "server", "text", "tsdb"]
+traces = ["dep:medulla-numeric", "dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "query", "redb", "server", "text", "tsdb"]
 pgwire = ["dep:rustix", "medulla-raft/pgwire", "query", "redb", "server"]
 [dev-dependencies]
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }

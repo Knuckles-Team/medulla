@@ -29,7 +29,8 @@ use medulla_raft::raft::xread::{
     CompletionPolicy, CrossGraphReadErrorCode, CrossGraphReadRequest, CrossShardReader,
     ReadLegStatus, ReadPageErrorCode,
 };
-use medulla_raft::raft::{GroupId, RaftRequest};
+use medulla_direct_state::direct_state::GroupId;
+use medulla_raft::raft::RaftRequest;
 
 const GROUP_A: GroupId = 500;
 const GROUP_B: GroupId = 600;
@@ -52,7 +53,7 @@ async fn bring_up(
         backend,
         medulla_isolation::isolation::IsolationLayer::new(),
         "xread-test",
-        &[GROUP_A, GROUP_B, medulla_raft::raft::DEFAULT_GROUP],
+        &[GROUP_A, GROUP_B, medulla_direct_state::direct_state::DEFAULT_GROUP],
     )
     .await
 }

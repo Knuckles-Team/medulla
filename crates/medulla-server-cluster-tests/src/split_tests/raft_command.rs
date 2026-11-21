@@ -147,7 +147,7 @@ fn native_command_excludes_plaintext_environment_values() {
 
 fn graph_request(
     graph_name: &str,
-    group_id: medulla_raft::raft::GroupId,
+    group_id: medulla_direct_state::direct_state::GroupId,
 ) -> medulla_raft::raft::RaftRequest {
     medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(graph_name),

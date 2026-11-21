@@ -9,14 +9,14 @@ use medulla_rdf::oxrdf::{Literal, NamedNode, Term, Triple};
 /// malformed triple (named by its index) rather than validating a partial graph.
 pub(super) fn graph_from_typed_triples(
     triples: &[RdfTriple],
-) -> Result<medulla_shacl::Graph, String> {
+) -> Result<medulla_rdf::oxrdf::Graph, String> {
     if triples.len() > MAX_TYPED_TRIPLES {
         return Err(format!(
             "{} triples exceed the maximum of {MAX_TYPED_TRIPLES}",
             triples.len()
         ));
     }
-    let mut graph = medulla_shacl::Graph::new();
+    let mut graph = medulla_rdf::oxrdf::Graph::new();
     for (index, triple) in triples.iter().enumerate() {
         let triple = typed_triple(triple).map_err(|error| format!("triple {index}: {error}"))?;
         graph.insert(&triple);
