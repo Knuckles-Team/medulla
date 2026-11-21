@@ -347,6 +347,11 @@ pub enum QuestionKind {
     /// option a quorum selects, or an abstention (MEDULLA-DECISION-ENGINE-R106.1).
     /// Evaluate-only. See `decision::council`.
     CouncilCoordination,
+    /// Whether a challenger revision wins its subject's champion pointer, or
+    /// the champion regressed and rolls back (MEDULLA-DECISION-ENGINE-R805.3).
+    /// Advisory: the pointer moves only through `DecisionLog`. See
+    /// `decision::held_out`.
+    Promotion,
 }
 
 /// What is at stake. Exploration is permitted only for

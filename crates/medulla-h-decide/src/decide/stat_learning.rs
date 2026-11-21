@@ -39,7 +39,8 @@ use super::stat_generation_cycle::{
     job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
 };
 use super::stat_log::{store_once, LogReader};
-use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
+use super::stat_pointer::{activate, read_pointer, rollback, PointerMove, Qualified};
+use super::stat_promotion::{qualified_champion, record_rollouts};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
 use super::stat_support::invalid_parameter;
@@ -240,6 +241,9 @@ impl Serving<'_> {
             PointerRef::RerankCalibration { scorer_version } => {
                 qualified_calibration(store, self.tenant(), scorer_version, target, receipt)
             }
+            PointerRef::Champion { subject } => {
+                qualified_champion(store, self.tenant(), subject, target, receipt)
+            }
         }
     }
 
@@ -253,6 +257,7 @@ impl Serving<'_> {
             PointerRef::ScopedAdapter { graph, scope } => scoped_adapter_pointer(graph, scope),
             PointerRef::Generation { logical } => generation_pointer(logical),
             PointerRef::RerankCalibration { scorer_version } => calibration_pointer(scorer_version),
+            PointerRef::Champion { subject } => subject.pointer_key(),
         };
         let at = PointerMove {
             tenant: self.tenant(),
@@ -274,7 +279,20 @@ impl Serving<'_> {
                 }
                 activate(self.ctx.store, &at, &qualified)?
             }
-            PointerMovement::Rollback => rollback(self.ctx.store, &at)?,
+            PointerMovement::Rollback => {
+                // A champion with no earlier target has nothing to return to
+                // (MEDULLA-DECISION-ENGINE-R805.4).
+                if matches!(pointer, PointerRef::Champion { .. }) {
+                    let (_, state) = read_pointer(self.ctx.store, self.tenant(), &at.key)?;
+                    if state.active.is_some() && state.stack.is_empty() {
+                        return Err(format!(
+                            "{}: no earlier champion to return to",
+                            medulla_decision_types::decision::codes::ROLLBACK_NO_PARENT.as_str()
+                        ));
+                    }
+                }
+                rollback(self.ctx.store, &at)?
+            }
         };
         Ok(LearningRecorded::Pointer(Box::new(state)))
     }
@@ -302,6 +320,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::PackageRun { .. }
         | LearningWrite::RecordFeedback { .. }
+        | LearningWrite::RecordRollouts { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
     }
 }
@@ -540,6 +559,9 @@ pub(super) fn dispatch(
             super::stat_package_run::record_package_run(ctx, *run)?,
         ))),
         LearningWrite::EvaluateDrift { logical_graph, .. } => s.evaluate_drift(&logical_graph),
+        LearningWrite::RecordRollouts { set } => Ok(LearningRecorded::Rollouts(Box::new(
+            record_rollouts(ctx, *set)?,
+        ))),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

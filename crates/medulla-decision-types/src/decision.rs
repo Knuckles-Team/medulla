@@ -40,6 +40,7 @@ pub mod context_package;
 pub mod context_replacement;
 pub mod context_source;
 pub mod curriculum;
+pub mod held_out;
 pub mod delegation;
 pub mod delegation_quality;
 pub mod digest;

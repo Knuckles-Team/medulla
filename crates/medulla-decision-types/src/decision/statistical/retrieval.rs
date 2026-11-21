@@ -285,6 +285,11 @@ pub enum PointerRef {
     /// The rerank calibration curve of one scorer version
     /// (MEDULLA-DECISION-ENGINE-R822).
     RerankCalibration { scorer_version: String },
+    /// The champion of one revision subject, keyed `champion:<kind>:<ref>`
+    /// (MEDULLA-DECISION-ENGINE-R805.3).
+    Champion {
+        subject: crate::decision::held_out::RevisionSubject,
+    },
 }
 
 /// How a pointer moves.
@@ -364,6 +369,12 @@ pub enum LearningWrite {
     PackageRun {
         run: Box<crate::decision::package_validation::RunHistoryEntry>,
     },
+    /// Record the paired rollouts of a skill-revision challenger against its
+    /// champion; answers the held-out evidence they carry
+    /// (MEDULLA-DECISION-ENGINE-R654.3).
+    RecordRollouts {
+        set: Box<crate::decision::skill_evolution::RolloutSet>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -379,9 +390,8 @@ impl LearningWrite {
             Self::RecordOutcome { .. }
             | Self::RunOutcome { .. }
             | Self::RecordFeedback { .. }
-            | Self::PackageRun { .. } => {
-                LogOpClass::Write
-            }
+            | Self::PackageRun { .. }
+            | Self::RecordRollouts { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
             | Self::FitCalibration { .. }
@@ -416,6 +426,8 @@ pub enum LearningRecorded {
     Feedback(Box<super::feedback::StoredFeedback>),
     /// The package run row after a `PackageRun` write.
     PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
+    /// The held-out evidence of the rollout set a `RecordRollouts` write stored.
+    Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
 }
 
 #[cfg(test)]

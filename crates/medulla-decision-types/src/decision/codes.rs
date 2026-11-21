@@ -238,6 +238,15 @@ pub const PROMOTION_NO_BASELINE: RefusalCode = RefusalCode::new("PROMOTION_NO_BA
 /// A held-out evaluation cannot qualify a challenger: no evaluation record
 /// exists for it, or its safety outcome failed (MEDULLA-DECISION-ENGINE-R811.8).
 pub const PROMOTION_UNEVALUATED: RefusalCode = RefusalCode::new("PROMOTION_UNEVALUATED");
+/// A champion move names a champion that is no longer the active one
+/// (MEDULLA-DECISION-ENGINE-R805.4).
+pub const PROMOTION_CAS_CONFLICT: RefusalCode = RefusalCode::new("PROMOTION_CAS_CONFLICT");
+/// The record a champion move cites is not a `promote` verdict for the target
+/// (MEDULLA-DECISION-ENGINE-R805.4).
+pub const PROMOTION_RECEIPT_MISMATCH: RefusalCode = RefusalCode::new("PROMOTION_RECEIPT_MISMATCH");
+/// A champion rollback has no earlier target to return to
+/// (MEDULLA-DECISION-ENGINE-R805.4).
+pub const ROLLBACK_NO_PARENT: RefusalCode = RefusalCode::new("ROLLBACK_NO_PARENT");
 /// The only score is a model judge's; a judge never decides promotion.
 pub const PROMOTION_JUDGE_ONLY: RefusalCode = RefusalCode::new("PROMOTION_JUDGE_ONLY");
 /// A measured fact whose run is not newer than the champion's.
@@ -256,6 +265,9 @@ pub const ADOPTION_NOT_PROVEN: RefusalCode = RefusalCode::new("ADOPTION_NOT_PROV
 /// Every promotion and calibration code, in declaration order.
 pub const PROMOTION: &[RefusalCode] = &[
     PROMOTION_UNEVALUATED,
+    PROMOTION_CAS_CONFLICT,
+    PROMOTION_RECEIPT_MISMATCH,
+    ROLLBACK_NO_PARENT,
     EVAL_SET_NOT_INDEPENDENT,
     PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_NO_BASELINE,

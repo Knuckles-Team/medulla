@@ -567,6 +567,7 @@ from .policy_evolution import (
     EvaluationMetrics,
     EvaluationVerdict,
     GraderKind,
+    RevisionSubject,
     HeldBlobRef,
     KlEstimator,
     KlEstimatorBinary,
@@ -10686,11 +10687,106 @@ BoundedVec_StepCredit_1024 = Annotated[list[StepCredit], Field(max_length=1024)]
 BoundedVec_string_4 = Annotated[list[str], Field(max_length=4)]
 
 
+class ReceiptKind(str, Enum):
+    DECISION_EVAL = "decision_eval"
+    PROGRAM_EVALUATION = "program_evaluation"
+    POLICY_EVALUATION = "policy_evaluation"
+    ROLLOUT_SET = "rollout_set"
+    MEASUREMENT_RUN = "measurement_run"
+    REVIEW_APPROVAL = "review_approval"
+
+
+class MeasurementWindow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    champion_observed_at_ms: Annotated[int, Field(ge=0)] | None = None
+    observed_at_ms: Annotated[int, Field(ge=0)]
+
+
+class ReviewApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author: str
+    reviewer: str
+
+
+class HeldOutEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_count: Annotated[int, Field(ge=0)]
+    challenger_ref: str
+    challenger_score_ppm: int
+    champion_ref: str | None = None
+    champion_score_ppm: int | None = None
+    delta_ppm: int
+    evaluation_set_digest: str
+    grader_kind: GraderKind
+    independent: bool
+    measurement: MeasurementWindow | None = None
+    receipt_digest: str
+    receipt_kind: ReceiptKind
+    review: ReviewApproval | None = None
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    subject: RevisionSubject
+
+
+class Rollout(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    challenger_score_ppm: Annotated[int, Field(ge=0)] | None = None
+    champion_score_ppm: Annotated[int, Field(ge=0)] | None = None
+    seed: Annotated[int, Field(ge=0)]
+    task_id: str
+    trace_ref: str
+
+
+BoundedVec_Rollout_4096 = Annotated[list[Rollout], Field(max_length=4096)]
+
+
+class RolloutSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    champion_ref: str | None = None
+    challenger_ref: str
+    program_ref: str
+    rollouts: BoundedVec_Rollout_4096
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class LearningRecordedRollouts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_count: Annotated[int, Field(ge=0)]
+    challenger_ref: str
+    challenger_score_ppm: int
+    champion_ref: str | None = None
+    champion_score_ppm: int | None = None
+    delta_ppm: int
+    evaluation_set_digest: str
+    grader_kind: GraderKind
+    independent: bool
+    measurement: MeasurementWindow | None = None
+    receipt_digest: str
+    receipt_kind: ReceiptKind
+    recorded: Literal["rollouts"]
+    review: ReviewApproval | None = None
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    subject: RevisionSubject
+
+
+class LearningWriteRecordRollouts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    set: RolloutSet
+    write: Literal["record_rollouts"]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
     | LearningRecordedGeneration
     | LearningRecordedPointer
+    | LearningRecordedRollouts
     | LearningRecordedRun,
     Field(discriminator="recorded"),
 ]
@@ -10921,7 +11017,8 @@ LearningWrite = Annotated[
     | LearningWriteRunOutcome
     | LearningWriteUploadDistilledScores
     | LearningWritePackageRun
-    | LearningWriteRecordFeedback,
+    | LearningWriteRecordFeedback
+    | LearningWriteRecordRollouts,
     Field(discriminator="write"),
 ]
 
@@ -21950,8 +22047,18 @@ class PointerRefScopedAdapter(BaseModel):
     scope: AdapterScope
 
 
+class PointerRefChampion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    pointer: Literal["champion"]
+    subject: RevisionSubject
+
+
 PointerRef = Annotated[
-    PointerRefAdapter | PointerRefGeneration | PointerRefScopedAdapter,
+    PointerRefAdapter
+    | PointerRefChampion
+    | PointerRefGeneration
+    | PointerRefScopedAdapter,
     Field(discriminator="pointer"),
 ]
 
@@ -38862,6 +38969,13 @@ __all__ = [
     "IndexKind",
     "ConstraintKind",
     "HeldBlobRef",
+    "HeldOutEvidence",
+    "MeasurementWindow",
+    "ReceiptKind",
+    "ReviewApproval",
+    "RevisionSubject",
+    "Rollout",
+    "RolloutSet",
     "HeavyCapability",
     "HostBudget",
     "HostStartBinding",
@@ -39190,12 +39304,14 @@ __all__ = [
     "LearningRecordedGeneration",
     "LearningRecordedOutcome",
     "LearningRecordedPointer",
+    "LearningRecordedRollouts",
     "LearningRecordedRun",
     "LearningWrite",
     "LearningWriteEvaluateGeneration",
     "LearningWriteFitAdapter",
     "LearningWriteMovePointer",
     "LearningWriteRecordOutcome",
+    "LearningWriteRecordRollouts",
     "LeaseDemand",
     "LeasePlan",
     "LeasePriority",
@@ -40748,6 +40864,7 @@ __all__ = [
     "PointerMovementRollback",
     "PointerRef",
     "PointerRefAdapter",
+    "PointerRefChampion",
     "PointerRefGeneration",
     "PointerTransition",
     "PolicyCapture",

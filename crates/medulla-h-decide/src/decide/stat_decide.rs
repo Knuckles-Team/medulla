@@ -398,6 +398,13 @@ async fn serve(
                 super::family::harness_config::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
+            } else if request.question.kind == QuestionKind::Promotion {
+                // A `promotion` question about a program or policy subject reads its
+                // receipt node in the graph named by its `graph` param, under the same
+                // ACL and RLS filter (MEDULLA-DECISION-ENGINE-R805.9).
+                super::family::promotion::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else {
                 super::candidates::filtered_graph_view(
                     state,
@@ -998,6 +1005,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         }
         QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
         QuestionKind::CouncilCoordination => medulla_decision_types::decision::council::KNOBS,
+        QuestionKind::Promotion => medulla_decision_outcome_types::decision::promotion::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }

@@ -59,6 +59,7 @@ mod playbook_triage;
 mod population_drift;
 mod pre_tool_risk;
 mod probe_selection;
+pub(super) mod promotion;
 mod probe_verdict;
 mod process_remediation;
 mod program_store;
@@ -338,6 +339,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static FIELDSHIELDINGFAMILY: field_shielding::FieldShieldingFamily =
         field_shielding::FieldShieldingFamily;
     static GRAPHINTAKEFAMILY: graph_intake::GraphIntakeFamily = graph_intake::GraphIntakeFamily;
+    static PROMOTIONFAMILY: promotion::PromotionFamily = promotion::PromotionFamily;
     static TOOLNECESSITYFAMILY: tool_necessity::ToolNecessityFamily =
         tool_necessity::ToolNecessityFamily;
     static FEEDBACKLOOPFAMILY: feedback_loop::FeedbackLoopFamily =
@@ -498,6 +500,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::Recruit => &RECRUITFAMILY,
         QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
         QuestionKind::CouncilCoordination => &COUNCILFAMILY,
+        QuestionKind::Promotion => &PROMOTIONFAMILY,
     }
 }
 
@@ -598,6 +601,7 @@ mod tests {
             QuestionKind::Recruit,
             QuestionKind::ResolveConflict,
             QuestionKind::CouncilCoordination,
+            QuestionKind::Promotion,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -677,6 +681,7 @@ mod tests {
             | QuestionKind::Recruit
             | QuestionKind::ResolveConflict
             | QuestionKind::CouncilCoordination
+            | QuestionKind::Promotion
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion
             | QuestionKind::ResearchNext

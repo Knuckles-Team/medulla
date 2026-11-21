@@ -1134,6 +1134,7 @@ mod council_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
 mod tool_relevance_tests;
+mod promotion_tests;
 // MEDULLA-DECISION-ENGINE-R134.100: the served fan-out aggregation.
 mod fanout_tests;
 // MEDULLA-DECISION-ENGINE-R134.102: delegation admission over an outcome window.

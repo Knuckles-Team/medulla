@@ -1,0 +1,329 @@
+//! Promotion evidence and champion qualification (MEDULLA-DECISION-ENGINE-R805.9,
+//! R805.3, R654.3).
+//!
+//! [`held_out_evidence`] resolves a receipt into the one [`HeldOutEvidence`]
+//! the promotion gate reads, whatever kind of subject the receipt belongs to.
+//! [`qualified_champion`] is what a champion `Activate` must pass: the named
+//! receipt is a committed `Promotion` decision record whose verdict is
+//! `promote` for exactly that target and subject. [`record_rollouts`] stores a
+//! rollout set under [`rollouts_key`] and answers its evidence.
+
+use medulla_decision_outcome_types::decision::promotion::{
+    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+    PROMOTION_UNEVALUATED,
+};
+use medulla_decision_outcome_types::policy_evolution::{
+    is_policy_evolution_row, PolicyEvolutionRecord, StoredPolicyRecord,
+};
+use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
+use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
+use medulla_decision_types::decision::skill_evolution::RolloutSet;
+use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
+use medulla_decision_types::decision::DecisionPolicy;
+use medulla_graph_core::graph::GraphView;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::{decode_artifact, receipt_key, record_key};
+use medulla_types::refusal_code::RefusalCode;
+
+use super::stat_executor::ExecutionContext;
+use super::stat_log::store_once;
+use super::stat_pointer::{read_pointer, Qualified};
+
+/// The premise fact prefix every `Promotion` decision seals its reading under.
+pub(super) const PREMISE_PREFIX: &str = "promotion.";
+
+/// Most decision-eval receipts a champion's score is searched in.
+const MAX_RECEIPTS: usize = 4_096;
+
+/// The decision artifact a rollout set is stored under, keyed by the digest
+/// that names its evidence (MEDULLA-DECISION-ENGINE-R805.9).
+pub(super) fn rollouts_key(receipt_digest: &str) -> String {
+    format!("rollouts:{receipt_digest}")
+}
+
+/// Why a receipt did not resolve.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum EvidenceError {
+    /// The receipt is absent, of another tenant, or carries no usable score.
+    Refused(RefusalCode),
+    /// The store could not be read.
+    Store(String),
+}
+
+impl From<String> for EvidenceError {
+    fn from(error: String) -> Self {
+        Self::Store(error)
+    }
+}
+
+/// What a receipt resolves against: the tenant's library, the caller's
+/// visible graph (for the receipts that live in graph nodes) and the policy
+/// whose knobs the evidence is computed under.
+pub(super) struct EvidenceSources<'a> {
+    pub(super) store: &'a AgentLibraryStore,
+    pub(super) tenant: &'a str,
+    pub(super) graph: Option<&'a GraphView>,
+    pub(super) policy: &'a DecisionPolicy,
+}
+
+fn unevaluated() -> EvidenceError {
+    EvidenceError::Refused(PROMOTION_UNEVALUATED)
+}
+
+/// The held-out evidence `receipt_digest` names for `subject`. A receipt of
+/// another tenant resolves as absent. Writes nothing.
+pub(super) fn held_out_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    receipt_digest: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    match subject {
+        RevisionSubject::DecisionHead { .. } => decision_evidence(sources, subject, receipt_digest),
+        RevisionSubject::Program { program_ref } => {
+            match rollout_evidence(sources, subject, receipt_digest) {
+                Err(EvidenceError::Refused(_)) => program_evidence(sources, program_ref, receipt_digest),
+                other => other,
+            }
+        }
+        RevisionSubject::Definition { .. } => rollout_evidence(sources, subject, receipt_digest),
+        RevisionSubject::KnobSet { .. } | RevisionSubject::ModelPolicy { .. } => {
+            policy_evidence(sources, subject, receipt_digest)
+        }
+        // The other subject kinds resolve through their own receipts (R805.10).
+        _ => Err(unevaluated()),
+    }
+}
+
+fn ppm(hits: u64, total: u64) -> i64 {
+    if total == 0 {
+        return 0;
+    }
+    (u128::from(hits) * 1_000_000 / u128::from(total)) as i64
+}
+
+fn top1_ppm(receipt: &DecisionEvalReceipt) -> Option<(i64, u64)> {
+    let metrics = receipt.metrics.as_ref()?;
+    (metrics.n_items > 0).then(|| (ppm(metrics.top1_hits, metrics.n_items), metrics.n_items))
+}
+
+fn decision_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    receipt_digest: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let Some(bytes) = sources
+        .store
+        .decision_artifact(sources.tenant, &receipt_key(receipt_digest))?
+    else {
+        return Err(unevaluated());
+    };
+    let receipt: DecisionEvalReceipt = decode_artifact(&bytes, "decision evaluation receipt")?;
+    let (challenger, cases) = top1_ppm(&receipt).ok_or_else(unevaluated)?;
+    // The champion is the head the subject's pointer serves; its score is the
+    // top-1 accuracy of its own largest real evaluation.
+    let (_, state) = read_pointer(sources.store, sources.tenant, &subject.pointer_key())?;
+    let champion_ref = state.target().map(str::to_owned);
+    let champion_score = match &champion_ref {
+        Some(head) => champion_top1_ppm(sources, head)?,
+        None => None,
+    };
+    Ok(HeldOutEvidence {
+        schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+        subject: subject.clone(),
+        challenger_ref: receipt.head_digest.clone(),
+        champion_ref: champion_ref.filter(|_| champion_score.is_some()),
+        receipt_kind: ReceiptKind::DecisionEval,
+        receipt_digest: receipt.receipt_digest.clone(),
+        evaluation_set_digest: receipt.receipt_digest.clone(),
+        challenger_score_ppm: challenger,
+        champion_score_ppm: champion_score,
+        delta_ppm: champion_score.map_or(0, |champion| challenger - champion),
+        case_count: cases,
+        independent: !receipt.synthetic,
+        grader_kind: GraderKind::Annotation,
+        measurement: None,
+        review: None,
+    })
+}
+
+/// The top-1 accuracy of the real evaluation of `head` over the most items.
+fn champion_top1_ppm(sources: &EvidenceSources, head: &str) -> Result<Option<i64>, String> {
+    let mut best: Option<(u64, i64)> = None;
+    for (_, bytes) in
+        sources
+            .store
+            .decision_artifacts_with_prefix(sources.tenant, "receipt:", MAX_RECEIPTS)?
+    {
+        let receipt: DecisionEvalReceipt = decode_artifact(&bytes, "decision evaluation receipt")?;
+        if receipt.head_digest != head || receipt.synthetic {
+            continue;
+        }
+        if let Some((score, items)) = top1_ppm(&receipt) {
+            if best.is_none_or(|(most, _)| items > most) {
+                best = Some((items, score));
+            }
+        }
+    }
+    Ok(best.map(|(_, score)| score))
+}
+
+fn rollout_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    receipt_digest: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let Some(bytes) = sources
+        .store
+        .decision_artifact(sources.tenant, &rollouts_key(receipt_digest))?
+    else {
+        return Err(unevaluated());
+    };
+    let set: RolloutSet = decode_artifact(&bytes, "rollout set")?;
+    let mut evidence = paired_rollout_evidence(&set, sources.policy);
+    if let RevisionSubject::Definition { .. } = subject {
+        evidence.subject = subject.clone();
+    } else if &evidence.subject != subject {
+        return Err(unevaluated());
+    }
+    Ok(evidence)
+}
+
+fn program_evidence(
+    sources: &EvidenceSources,
+    program_ref: &str,
+    revision_ref: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let node = sources
+        .graph
+        .and_then(|graph| graph.node_row_object(revision_ref))
+        .ok_or_else(unevaluated)?;
+    if node.get("type").and_then(serde_json::Value::as_str) != Some("ProgramRevision")
+        || node.get("program_ref").and_then(serde_json::Value::as_str) != Some(program_ref)
+    {
+        return Err(unevaluated());
+    }
+    let held_out = node.get("held_out").ok_or_else(unevaluated)?;
+    serde_json::from_value(held_out.clone()).map_err(|_| unevaluated())
+}
+
+fn policy_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    record_id: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let row = sources
+        .graph
+        .and_then(|graph| graph.node_row_object(record_id))
+        .filter(|row| is_policy_evolution_row(row))
+        .ok_or_else(unevaluated)?;
+    let stored = StoredPolicyRecord::from_row(&row).ok_or_else(unevaluated)?;
+    if stored.tenant_id != sources.tenant
+        || stored.record_id != record_id
+        || stored.verify_identity().is_err()
+    {
+        return Err(unevaluated());
+    }
+    let PolicyEvolutionRecord::PolicyEvaluation { record } = &stored.record else {
+        return Err(unevaluated());
+    };
+    if &record.subject != subject {
+        return Err(unevaluated());
+    }
+    HeldOutEvidence::try_from(record).map_err(EvidenceError::Refused)
+}
+
+/// Store a rollout set under `rollouts:<digest>` and answer its evidence
+/// (MEDULLA-DECISION-ENGINE-R654.3). The set is a tenant's own record: the
+/// same set replays, and no other tenant's set is ever read back.
+pub(super) fn record_rollouts(
+    ctx: &ExecutionContext,
+    set: RolloutSet,
+) -> Result<HeldOutEvidence, String> {
+    let digest = rollout_set_digest(&set);
+    let stored = store_once(ctx, rollouts_key(&digest), "rollout set", set, |a, b| a == b)?;
+    Ok(paired_rollout_evidence(
+        &stored,
+        &DecisionPolicy::engine_default(),
+    ))
+}
+
+/// What a champion `Activate` is qualified by: `receipt_digest` names a
+/// committed `Promotion` record of this tenant whose verdict is `promote` for
+/// `target` on `subject` (MEDULLA-DECISION-ENGINE-R805.3). Any other record
+/// refuses `PROMOTION_RECEIPT_MISMATCH`.
+pub(super) fn qualified_champion(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    subject: &RevisionSubject,
+    target: &str,
+    receipt_digest: &str,
+) -> Result<Qualified, String> {
+    let mismatch = |detail: &str| {
+        format!(
+            "{}: {detail}",
+            medulla_decision_types::decision::codes::PROMOTION_RECEIPT_MISMATCH.as_str()
+        )
+    };
+    let Some(bytes) = store.decision_artifact(tenant, &record_key(receipt_digest))? else {
+        return Err(mismatch("no committed decision record has that id"));
+    };
+    let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
+    let record = &entry.record;
+    if record.tenant_id != tenant
+        || record.question.kind != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+    {
+        return Err(mismatch("the record is not a promotion decision of this tenant"));
+    }
+    let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+    let has = |fact: String| facts.contains(&fact.as_str());
+    let verdict = |name: &str| has(format!("{PREMISE_PREFIX}verdict={name}"));
+    if !verdict("promote")
+        || !has(format!("{PREMISE_PREFIX}subject={}", subject.pointer_key()))
+        || !has(format!("{PREMISE_PREFIX}challenger={target}"))
+    {
+        return Err(mismatch(
+            "the record is not a promote verdict for that subject and target",
+        ));
+    }
+    // The champion pinned at decide time must still be the active one.
+    let pinned = facts
+        .iter()
+        .find_map(|fact| fact.strip_prefix(&format!("{PREMISE_PREFIX}champion_at_decision=")))
+        .unwrap_or("none");
+    let (_, state) = read_pointer(store, tenant, &subject.pointer_key())?;
+    if state.target().unwrap_or("none") != pinned {
+        return Err(format!(
+            "{}: the champion pinned by the decision is no longer active",
+            medulla_decision_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str()
+        ));
+    }
+    Ok(Qualified {
+        target: target.to_string(),
+        receipt_digest: receipt_digest.to_string(),
+    })
+}
+
+/// The receipt a committed `Promotion` record promoted on: the value of its
+/// `promotion.receipt_digest` premise. `None` when the record is absent or is
+/// not a promotion decision of this tenant.
+pub(super) fn promoted_receipt(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    record_id: &str,
+) -> Result<Option<String>, String> {
+    let Some(bytes) = store.decision_artifact(tenant, &record_key(record_id))? else {
+        return Ok(None);
+    };
+    let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
+    let record = &entry.record;
+    if record.tenant_id != tenant
+        || record.question.kind != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+    {
+        return Ok(None);
+    }
+    let prefix = format!("{PREMISE_PREFIX}receipt_digest=");
+    Ok(record
+        .premises
+        .iter()
+        .find_map(|premise| premise.fact.strip_prefix(&prefix).map(str::to_owned)))
+}
