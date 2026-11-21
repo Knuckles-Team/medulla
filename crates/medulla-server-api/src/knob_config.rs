@@ -829,6 +829,10 @@ knobs! {
     scheduler_worker_ttl_ms: u64 = "scheduler.worker_ttl_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Scheduler: Slots the analytics pool may hold. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_analytics_slots: u32 = "scheduler.analytics_slots", U64(1), [0, 32], "slots", Tunable;
+    /// Scheduler: Lease a colocated analytics worker holds on a claimed job. (MEDULLA-DURABLE-KERNEL-R082.9).
+    scheduler_analytics_lease_ms: u64 = "scheduler.analytics_lease_ms", U64(60_000), [5_000, 300_000], "ms", Tunable;
+    /// Scheduler: Poll interval of an idle colocated analytics worker. (MEDULLA-DURABLE-KERNEL-R082.9).
+    scheduler_analytics_poll_ms: u64 = "scheduler.analytics_poll_ms", U64(250), [50, 30_000], "ms", Tunable;
     /// Scheduler: Largest baseline-hydration scope admitted. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_hydration_scope_cap: u32 = "scheduler.hydration_scope_cap", U64(10_000), [100, 1_000_000], "items", Tunable;
     /// Scheduler: Target file count of one repository split part. (MEDULLA-DURABLE-KERNEL-R076.2).
@@ -1095,6 +1099,8 @@ pub fn scheduler_config_from(
         analytics_slots: knobs.scheduler_analytics_slots,
         // One knob feeds both fields: `scheduler.analytics_slots` is the only source.
         analytics_workers: knobs.scheduler_analytics_slots,
+        analytics_lease_ms: knobs.scheduler_analytics_lease_ms,
+        analytics_poll_ms: knobs.scheduler_analytics_poll_ms,
         cores_per_mille: u16::try_from(knobs.scheduler_cores_per_mille).unwrap_or(u16::MAX),
         memory_per_worker_bytes: knobs.scheduler_memory_per_worker_bytes,
         max_queue_depth: knobs.scheduler_max_queue_depth,
@@ -1186,6 +1192,31 @@ mod scheduler_knob_tests {
         assert_eq!(config.lane_floors.get("general"), Some(&2));
         assert!(!config.lane_floors.contains_key("hydration"));
         assert_eq!(config.retry_after_ms, 250);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.9
+    #[test]
+    fn analytics_lease_and_poll_knobs_reach_the_scheduler_policy() {
+        let env = |name: &str| match name {
+            "MEDULLA_SCHEDULER_ANALYTICS_LEASE_MS" => Some("9000".to_string()),
+            "MEDULLA_SCHEDULER_ANALYTICS_POLL_MS" => Some("75".to_string()),
+            _ => None,
+        };
+        let resolved = resolve_all(&[], &env).expect("knobs resolve");
+        let config = scheduler_config_from(&resolved).expect("policy validates");
+        assert_eq!(config.analytics_lease_ms, 9_000);
+        assert_eq!(config.analytics_poll_ms, 75);
+
+        let defaults = scheduler_config_from(&KnobConfig::default()).expect("defaults validate");
+        assert_eq!(defaults.analytics_lease_ms, 60_000);
+        assert_eq!(defaults.analytics_poll_ms, 250);
+
+        let refused = resolve_all(&[], &|name: &str| {
+            (name == "MEDULLA_SCHEDULER_ANALYTICS_LEASE_MS").then(|| "300001".to_string())
+        })
+        .expect_err("out of range refuses");
+        assert_eq!(refused.code, ServerErrorCode::KnobOutOfRange);
+        assert_eq!(refused.knob, "scheduler.analytics_lease_ms");
     }
 
     #[test]

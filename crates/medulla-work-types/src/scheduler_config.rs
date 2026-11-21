@@ -30,44 +30,27 @@ pub const DEFAULT_ANALYTICS_WORKERS: u32 = 1;
 /// Inclusive bounds of `analytics_workers`; zero leaves execution to remote
 /// workers (MEDULLA-DURABLE-KERNEL-R082.9).
 pub const ANALYTICS_WORKERS_BOUNDS: (u32, u32) = (0, 32);
-/// Environment key seeding `analytics_workers` once at startup.
-pub const ENV_ANALYTICS_WORKERS: &str = "MEDULLA_ANALYTICS_WORKERS";
-
 fn default_analytics_workers() -> u32 {
     DEFAULT_ANALYTICS_WORKERS
 }
 
-/// Clamp a requested colocated pool size to [`ANALYTICS_WORKERS_BOUNDS`].
-pub fn clamp_analytics_workers(requested: u32) -> u32 {
-    requested.min(ANALYTICS_WORKERS_BOUNDS.1)
+/// Default lease a colocated analytics worker holds on a claimed job, in
+/// milliseconds (MEDULLA-DURABLE-KERNEL-R082.9).
+pub const DEFAULT_ANALYTICS_LEASE_MS: u64 = 60_000;
+/// Inclusive bounds of `analytics_lease_ms`.
+pub const ANALYTICS_LEASE_MS_BOUNDS: (u64, u64) = (5_000, 300_000);
+/// Default interval at which an idle colocated analytics worker polls for a
+/// claim, in milliseconds (MEDULLA-DURABLE-KERNEL-R082.9).
+pub const DEFAULT_ANALYTICS_POLL_MS: u64 = 250;
+/// Inclusive bounds of `analytics_poll_ms`.
+pub const ANALYTICS_POLL_MS_BOUNDS: (u64, u64) = (50, 30_000);
+
+fn default_analytics_lease_ms() -> u64 {
+    DEFAULT_ANALYTICS_LEASE_MS
 }
 
-/// The startup value of `analytics_workers`: the default, or the
-/// `MEDULLA_ANALYTICS_WORKERS` override clamped to the bound. A value that is
-/// not an unsigned integer refuses startup.
-pub fn analytics_workers_from(
-    lookup: impl Fn(&str) -> Option<String>,
-) -> Result<u32, InvalidSchedulerConfig> {
-    match lookup(ENV_ANALYTICS_WORKERS) {
-        Some(raw) => raw
-            .trim()
-            .parse::<u64>()
-            .map(|value| clamp_analytics_workers(value.min(u64::from(u32::MAX)) as u32))
-            .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(ENV_ANALYTICS_WORKERS)),
-        None => Ok(DEFAULT_ANALYTICS_WORKERS),
-    }
-}
-
-static ANALYTICS_WORKERS: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
-
-/// The process-wide colocated pool size, seeded once from the environment on
-/// first use. `executor_loop` reads only this value.
-pub fn analytics_workers() -> Result<u32, InvalidSchedulerConfig> {
-    if let Some(value) = ANALYTICS_WORKERS.get() {
-        return Ok(*value);
-    }
-    let value = analytics_workers_from(|key| std::env::var(key).ok())?;
-    Ok(*ANALYTICS_WORKERS.get_or_init(|| value))
+fn default_analytics_poll_ms() -> u64 {
+    DEFAULT_ANALYTICS_POLL_MS
 }
 
 fn default_hydration_scope_cap() -> u32 {
@@ -458,6 +441,14 @@ pub struct SchedulerConfig {
     /// [0, 32] where zero means remote-only (MEDULLA-PLACEMENT-R002.14).
     #[serde(default = "default_analytics_workers")]
     pub analytics_workers: u32,
+    /// Lease a colocated analytics worker holds on a claimed job, in milliseconds
+    /// (MEDULLA-DURABLE-KERNEL-R082.9).
+    #[serde(default = "default_analytics_lease_ms")]
+    pub analytics_lease_ms: u64,
+    /// Poll interval of an idle colocated analytics worker, in milliseconds
+    /// (MEDULLA-DURABLE-KERNEL-R082.9).
+    #[serde(default = "default_analytics_poll_ms")]
+    pub analytics_poll_ms: u64,
     /// Largest baseline-hydration scope admitted, in work items.
     #[serde(default = "default_hydration_scope_cap")]
     pub hydration_scope_cap: u32,
@@ -528,6 +519,8 @@ pub enum InvalidSchedulerConfig {
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
     AnalyticsWorkersOutOfRange,
+    AnalyticsLeaseOutOfRange,
+    AnalyticsPollOutOfRange,
     ArchitectureViewMaxContainersOutOfRange,
     ProcessImportMaxElementsOutOfRange,
     ProcessDocumentBoundOutOfRange(&'static str),
@@ -579,6 +572,16 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler analytics_workers must be within [{}, {}]",
                 ANALYTICS_WORKERS_BOUNDS.0, ANALYTICS_WORKERS_BOUNDS.1
+            ),
+            Self::AnalyticsLeaseOutOfRange => write!(
+                f,
+                "scheduler analytics_lease_ms must be within [{}, {}]",
+                ANALYTICS_LEASE_MS_BOUNDS.0, ANALYTICS_LEASE_MS_BOUNDS.1
+            ),
+            Self::AnalyticsPollOutOfRange => write!(
+                f,
+                "scheduler analytics_poll_ms must be within [{}, {}]",
+                ANALYTICS_POLL_MS_BOUNDS.0, ANALYTICS_POLL_MS_BOUNDS.1
             ),
             Self::ArchitectureViewMaxContainersOutOfRange => write!(
                 f,
@@ -680,6 +683,16 @@ impl SchedulerConfig {
             .contains(&self.analytics_workers)
         {
             return Err(InvalidSchedulerConfig::AnalyticsWorkersOutOfRange);
+        }
+        if !(ANALYTICS_LEASE_MS_BOUNDS.0..=ANALYTICS_LEASE_MS_BOUNDS.1)
+            .contains(&self.analytics_lease_ms)
+        {
+            return Err(InvalidSchedulerConfig::AnalyticsLeaseOutOfRange);
+        }
+        if !(ANALYTICS_POLL_MS_BOUNDS.0..=ANALYTICS_POLL_MS_BOUNDS.1)
+            .contains(&self.analytics_poll_ms)
+        {
+            return Err(InvalidSchedulerConfig::AnalyticsPollOutOfRange);
         }
         if !(HYDRATION_SCOPE_CAP_BOUNDS.0..=HYDRATION_SCOPE_CAP_BOUNDS.1)
             .contains(&self.hydration_scope_cap)
@@ -784,9 +797,6 @@ impl SchedulerConfig {
                     .parse()
                     .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(key))?;
             }
-        }
-        if lookup(ENV_ANALYTICS_WORKERS).is_some() {
-            self.analytics_workers = analytics_workers_from(&lookup)?;
         }
         if lookup(ENV_ENRICH_TIMEOUT_MS).is_some() {
             self.enrich_timeout_ms = enrich_timeout_ms_from(&lookup)?;
@@ -1067,30 +1077,56 @@ mod tests {
 
     // spec: MEDULLA-PLACEMENT-R002.14
     #[test]
-    fn analytics_workers_default_and_clamp() {
-        assert_eq!(analytics_workers_from(|_| None), Ok(1));
-        let env = |value: &'static str| move |_: &str| Some(value.to_string());
-        assert_eq!(analytics_workers_from(env("0")), Ok(0));
-        assert_eq!(analytics_workers_from(env("32")), Ok(32));
-        assert_eq!(analytics_workers_from(env("33")), Ok(32));
-        assert_eq!(analytics_workers_from(env("99999999999")), Ok(32));
-        assert_eq!(
-            analytics_workers_from(env("many")),
-            Err(InvalidSchedulerConfig::InvalidEnvValue(
-                ENV_ANALYTICS_WORKERS
-            ))
-        );
+    fn analytics_workers_default_and_bound() {
         let mut cfg = config();
         assert_eq!(cfg.analytics_workers, 1);
+        assert_eq!(cfg.validate(), Ok(()));
+        cfg.analytics_workers = 32;
+        assert_eq!(cfg.validate(), Ok(()));
         cfg.analytics_workers = 33;
         assert_eq!(
             cfg.validate(),
             Err(InvalidSchedulerConfig::AnalyticsWorkersOutOfRange)
         );
-        cfg.analytics_workers = 8;
-        cfg.apply_env_overrides(|key| (key == ENV_ANALYTICS_WORKERS).then(|| "40".to_string()))
-            .unwrap();
-        assert_eq!(cfg.analytics_workers, 32);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.9
+    #[test]
+    fn analytics_lease_and_poll_accept_range_ends_and_refuse_beyond_them() {
+        let mut cfg = config();
+        assert_eq!(cfg.analytics_lease_ms, 60_000);
+        assert_eq!(cfg.analytics_poll_ms, 250);
+        for lease in [5_000, 300_000] {
+            cfg.analytics_lease_ms = lease;
+            assert_eq!(cfg.validate(), Ok(()), "lease {lease}");
+        }
+        for lease in [4_999, 300_001] {
+            cfg.analytics_lease_ms = lease;
+            assert_eq!(
+                cfg.validate(),
+                Err(InvalidSchedulerConfig::AnalyticsLeaseOutOfRange),
+                "lease {lease}"
+            );
+        }
+        cfg.analytics_lease_ms = 60_000;
+        for poll in [50, 30_000] {
+            cfg.analytics_poll_ms = poll;
+            assert_eq!(cfg.validate(), Ok(()), "poll {poll}");
+        }
+        for poll in [49, 30_001] {
+            cfg.analytics_poll_ms = poll;
+            assert_eq!(
+                cfg.validate(),
+                Err(InvalidSchedulerConfig::AnalyticsPollOutOfRange),
+                "poll {poll}"
+            );
+        }
+        assert!(InvalidSchedulerConfig::AnalyticsLeaseOutOfRange
+            .to_string()
+            .contains("[5000, 300000]"));
+        assert!(InvalidSchedulerConfig::AnalyticsPollOutOfRange
+            .to_string()
+            .contains("[50, 30000]"));
     }
 
     fn config() -> SchedulerConfig {

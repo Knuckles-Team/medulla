@@ -4,73 +4,51 @@ use super::prelude_jobs::*;
 use super::prelude_std::*;
 use super::*;
 
-const DEFAULT_ANALYTICS_LEASE_MS: u64 = 60_000;
-const MIN_ANALYTICS_LEASE_MS: u64 = 5_000;
-const MAX_ANALYTICS_LEASE_MS: u64 = 300_000;
-const DEFAULT_ANALYTICS_POLL_MS: u64 = 250;
-const MIN_ANALYTICS_POLL_MS: u64 = 50;
-const MAX_ANALYTICS_POLL_MS: u64 = 30_000;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct AnalyticsWorkerTiming {
     lease_ms: u64,
     poll_ms: u64,
 }
 
-fn parse_bounded_millis(
-    name: &str,
-    raw: Option<&str>,
-    default: u64,
-    min: u64,
-    max: u64,
-) -> Result<u64, String> {
-    let Some(raw) = raw else {
-        return Ok(default);
-    };
-    let value = raw
-        .parse::<u64>()
-        .map_err(|_| format!("{name} must be an integer between {min} and {max} milliseconds"))?;
-    if !(min..=max).contains(&value) {
-        return Err(format!(
-            "{name} must be between {min} and {max} milliseconds"
-        ));
-    }
-    Ok(value)
+static POOL_STARTED: OnceLock<()> = OnceLock::new();
+
+/// Whether the colocated pool has already been started by this process.
+pub(super) fn job_workers_started() -> bool {
+    POOL_STARTED.get().is_some()
 }
 
-fn analytics_worker_timing() -> Result<AnalyticsWorkerTiming, String> {
-    Ok(AnalyticsWorkerTiming {
-        lease_ms: parse_bounded_millis(
-            "MEDULLA_ANALYTICS_LEASE_MS",
-            std::env::var("MEDULLA_ANALYTICS_LEASE_MS").ok().as_deref(),
-            DEFAULT_ANALYTICS_LEASE_MS,
-            MIN_ANALYTICS_LEASE_MS,
-            MAX_ANALYTICS_LEASE_MS,
-        )?,
-        poll_ms: parse_bounded_millis(
-            "MEDULLA_ANALYTICS_POLL_MS",
-            std::env::var("MEDULLA_ANALYTICS_POLL_MS").ok().as_deref(),
-            DEFAULT_ANALYTICS_POLL_MS,
-            MIN_ANALYTICS_POLL_MS,
-            MAX_ANALYTICS_POLL_MS,
-        )?,
-    })
+/// The scheduler policy in force, read the way `worker_ttl_ms` reads it: the stored
+/// setting, else the policy built from the startup knobs. It sizes the colocated pool
+/// and sets its lease and poll timing (MEDULLA-DURABLE-KERNEL-R082.9). An error already
+/// carries its code (`SCHEDULER_CONFIG_INVALID` or `INTERNAL`).
+pub(super) async fn analytics_pool_config(
+    state: &Arc<RwLock<ServerState>>,
+) -> Result<medulla_work_types::scheduler_config::SchedulerConfig, String> {
+    let store = {
+        let current = state.read().await;
+        medulla_persistence::scheduler_config_store::shared_scheduler_config_store(&current)
+            .map_err(|error| format!("INTERNAL: {error}"))?
+    };
+    crate::scheduler_config::effective_config(&store)
 }
 
 /// Start the optional bounded colocated executor pool. Setting the count to zero
-/// leaves execution to authenticated remote workers using the coordinator ops.
+/// leaves execution to authenticated remote workers using the coordinator ops. The pool
+/// keeps the timing it starts with; the next process start reads the policy in force.
 pub(super) fn ensure_job_workers(
     state: Arc<RwLock<ServerState>>,
     store: Arc<JobStore>,
-) -> Result<(), String> {
-    let timing = analytics_worker_timing()?;
-    let workers = medulla_work_types::scheduler_config::analytics_workers()
-        .map_err(|error| error.to_string())? as usize;
-    static STARTED: OnceLock<()> = OnceLock::new();
-    STARTED.get_or_init(|| {
+    config: &medulla_work_types::scheduler_config::SchedulerConfig,
+) {
+    let timing = AnalyticsWorkerTiming {
+        lease_ms: config.analytics_lease_ms,
+        poll_ms: config.analytics_poll_ms,
+    };
+    let workers = config.analytics_workers as usize;
+    POOL_STARTED.get_or_init(|| {
         // Gauge state must advance when leases expire even if no worker or
         // client RPC arrives. This coordinator task is deliberately independent
-        // of MEDULLA_ANALYTICS_WORKERS so remote-only deployments remain autoscalable.
+        // of the pool size so remote-only deployments remain autoscalable.
         let metric_store = store.clone();
         tokio::spawn(async move {
             loop {
@@ -83,7 +61,6 @@ pub(super) fn ensure_job_workers(
             tokio::spawn(worker_loop(state.clone(), store.clone(), slot, timing));
         }
     });
-    Ok(())
 }
 
 pub(super) fn refresh_job_metrics(store: &JobStore) {
@@ -165,143 +142,5 @@ fn program_optimization_capability() -> Option<String> {
     #[cfg(not(feature = "program-optimization"))]
     {
         None
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // spec: MEDULLA-PLACEMENT-R002.14
-    #[test]
-    fn analytics_workers_default_and_clamp() {
-        use medulla_work_types::scheduler_config::{
-            analytics_workers_from, InvalidSchedulerConfig, ENV_ANALYTICS_WORKERS,
-        };
-        let env = |value: &'static str| move |_: &str| Some(value.to_string());
-        assert_eq!(analytics_workers_from(|_| None), Ok(1));
-        assert_eq!(analytics_workers_from(env("0")), Ok(0));
-        assert_eq!(analytics_workers_from(env("32")), Ok(32));
-        assert_eq!(analytics_workers_from(env("33")), Ok(32));
-        assert_eq!(
-            analytics_workers_from(env("many")),
-            Err(InvalidSchedulerConfig::InvalidEnvValue(
-                ENV_ANALYTICS_WORKERS
-            ))
-        );
-    }
-
-    #[test]
-    fn analytics_worker_timing_uses_defaults_and_accepts_range_ends() {
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                None,
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-            Ok(DEFAULT_ANALYTICS_LEASE_MS)
-        );
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                Some("5000"),
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-            Ok(MIN_ANALYTICS_LEASE_MS)
-        );
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                Some("300000"),
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-            Ok(MAX_ANALYTICS_LEASE_MS)
-        );
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_POLL_MS",
-                None,
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            Ok(DEFAULT_ANALYTICS_POLL_MS)
-        );
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_POLL_MS",
-                Some("50"),
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            Ok(MIN_ANALYTICS_POLL_MS)
-        );
-        assert_eq!(
-            parse_bounded_millis(
-                "MEDULLA_ANALYTICS_POLL_MS",
-                Some("30000"),
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            Ok(MAX_ANALYTICS_POLL_MS)
-        );
-    }
-
-    #[test]
-    fn analytics_worker_timing_refuses_out_of_range_or_malformed_values() {
-        for (name, raw, default, min, max) in [
-            (
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                "4999",
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-            (
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                "300001",
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-            (
-                "MEDULLA_ANALYTICS_POLL_MS",
-                "49",
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            (
-                "MEDULLA_ANALYTICS_POLL_MS",
-                "30001",
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            (
-                "MEDULLA_ANALYTICS_POLL_MS",
-                "not-a-number",
-                DEFAULT_ANALYTICS_POLL_MS,
-                MIN_ANALYTICS_POLL_MS,
-                MAX_ANALYTICS_POLL_MS,
-            ),
-            (
-                "MEDULLA_ANALYTICS_LEASE_MS",
-                "-1",
-                DEFAULT_ANALYTICS_LEASE_MS,
-                MIN_ANALYTICS_LEASE_MS,
-                MAX_ANALYTICS_LEASE_MS,
-            ),
-        ] {
-            assert!(parse_bounded_millis(name, Some(raw), default, min, max).is_err());
-        }
     }
 }

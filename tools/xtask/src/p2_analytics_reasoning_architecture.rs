@@ -57,7 +57,7 @@ const REQUIRED_MARKERS: &[(&str, &[&str])] = &[
             r#"validate_remote_result_privacy("#,
             r#"association_rule_id_from_row("#,
             r#"refresh_job_metrics("#,
-            r#"scheduler_config::analytics_workers()"#,
+            r#"analytics_pool_config("#,
             r#"for slot in 0..workers"#,
             r#"analytics jobs require a configured durable persistence directory"#,
             r#""kernel_cancelled""#,

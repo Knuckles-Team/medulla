@@ -666,8 +666,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REPOSITORY_BATCH_TOO_LARGE",
         ],
     ),
-    // `ensure_job_workers` refuses an invalid analytics worker timing.
-    ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // `analytics_pool_config` refuses an invalid scheduler policy
+    // (MEDULLA-DURABLE-KERNEL-R082.9).
+    ("AnalyticsJob", &["SCHEDULER_CONFIG_INVALID"]),
     // MEDULLA-DECISION-ENGINE-R144.4: the refusals of an indexless retrieval. A denied
     // document answers as an absent one; budget exhaustion reports the counts.
     (
@@ -1910,7 +1911,10 @@ mod tests {
             "SOURCE_BINDING_MISMATCH"
         ));
         #[cfg(feature = "jobs")]
-        assert!(method_allows_error("AnalyticsJob", "INVALID_CONFIGURATION"));
+        assert!(method_allows_error(
+            "AnalyticsJob",
+            "SCHEDULER_CONFIG_INVALID"
+        ));
         assert!(method_allows_error(
             "MutationOutbox",
             "INVALID_CONFIGURATION"

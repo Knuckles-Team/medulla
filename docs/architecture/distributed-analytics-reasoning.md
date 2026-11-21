@@ -21,7 +21,7 @@ retain the native command history needed to recover it. Submission ids derive fr
 the committed batch identity rather than a process counter, so replay and follower
 apply converge. There is no pod-number or singleton-coordinator election.
 
-A bounded colocated pool (`MEDULLA_ANALYTICS_WORKERS`, default `1`) may run jobs in a
+A bounded colocated pool (the `scheduler.analytics_slots` knob or the scheduler policy, default `1`) may run jobs in a
 single-node deployment; clustered authorities disable colocated execution and use
 remote workers so a scheduler leader change never strands an in-process kernel.
 Remote workers atomically lease the highest-priority eligible job through Raft. The
@@ -179,7 +179,9 @@ control placement never silently changes the transaction target.
 
 | Setting | Default | Meaning |
 |---|---:|---|
-| `MEDULLA_ANALYTICS_WORKERS` | `1` | Colocated executor concurrency (`0` = remote-only, maximum `32`) |
+| `MEDULLA_SCHEDULER_ANALYTICS_SLOTS` | `1` | Colocated executor concurrency (`0` = remote-only, maximum `32`) |
+| `MEDULLA_SCHEDULER_ANALYTICS_LEASE_MS` | `60000` | Lease a colocated worker holds on a claimed job (`5000` to `300000`) |
+| `MEDULLA_SCHEDULER_ANALYTICS_POLL_MS` | `250` | Poll interval of an idle colocated worker (`50` to `30000`) |
 | `MEDULLA_ANALYTICS_TENANT_ACTIVE` | `2` | Maximum active leases per opaque tenant reference |
 | `MEDULLA_ANALYTICS_TENANT_CPU_MS` | unlimited | Maximum reserved CPU budget per tenant |
 

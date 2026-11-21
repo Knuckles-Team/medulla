@@ -236,13 +236,11 @@ pub(super) async fn resolve_job_store(
         })
     };
     let store = job_store(persist_dir.as_deref()).map_err(|error| Response::err(req_id, error))?;
-    if !clustered {
-        ensure_job_workers(state.clone(), store.clone()).map_err(|error| {
-            Response::err(
-                req_id,
-                format!("INVALID_CONFIGURATION: analytics worker timing: {error}"),
-            )
-        })?;
+    if !clustered && !job_workers_started() {
+        let config = analytics_pool_config(state)
+            .await
+            .map_err(|error| Response::err(req_id, error))?;
+        ensure_job_workers(state.clone(), store.clone(), &config);
     }
     Ok(store)
 }
