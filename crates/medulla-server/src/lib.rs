@@ -19,6 +19,9 @@ mod query_seam;
 /// The retention cleanup tick (MEDULLA-DURABLE-KERNEL-R700.3).
 pub mod retention_cleanup;
 
+/// The `memory_snapshot_synced` outbox consumer (MEDULLA-DURABLE-KERNEL-R085.4).
+pub mod memory_snapshot_consumer;
+
 /// The commons reconcile sweep (MEDULLA-IDENTITY-R023.13.7).
 pub mod commons_reconcile;
 

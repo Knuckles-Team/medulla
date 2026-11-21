@@ -586,6 +586,8 @@ async fn spawn_optional_service_listeners(
     // binds (MEDULLA-DECISION-ENGINE-R172.7.2); starting it here as well ran two
     // feed workers on one outbox.
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
+    // MEDULLA-DURABLE-KERNEL-R085.4: committed memory snapshot syncs reach their blob holders.
+    medulla_server::memory_snapshot_consumer::spawn(state.clone());
     medulla_h_ingest::repository_index::enrich::spawn(state.clone())?;
     #[cfg(feature = "epistemic-tms")]
     medulla_h_retrieve::reasoning_projection::spawn(state.clone());
