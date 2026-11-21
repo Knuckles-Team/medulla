@@ -29,6 +29,12 @@ pub fn register_query_encoders() -> Result<(), String> {
     static REGISTERED: std::sync::Once = std::sync::Once::new();
     let mut outcome = Ok(());
     REGISTERED.call_once(|| {
+        // The built-in chunk encoder is a registered default entry, so served
+        // `EncodeDocument` resolves every encoder through the registry.
+        if let Err(error) = medulla_h_query::query::document_encoding::register_default_chunk_encoder() {
+            outcome = Err(error);
+            return;
+        }
         // Each non-text modality bound in the same model-binding config registers beside
         // the text embedder; an unbound modality is simply not registered.
         #[cfg(feature = "modality-serving")]

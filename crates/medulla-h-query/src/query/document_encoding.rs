@@ -18,6 +18,7 @@ use std::time::Instant;
 use medulla_core::compute::chunk_windows::{
     aggregate_mean_chunks, encode_chunks, split_windows, ChunkEncoder, ChunkRefusal, PositionMode,
 };
+use medulla_exec::exec::TextEmbedder;
 use medulla_identity_types::identity::UnitPrincipal;
 use medulla_index_types::embedding::{
     DocumentAggregation, DocumentEncodingPolicy, DocumentPositionMode,
@@ -38,25 +39,28 @@ const DOCUMENT_LABEL: &str = "EncodedDocument";
 const HEAD_LABEL: &str = "EncodedIndexHead";
 /// The tokenizer identity of the default policy: the caller supplies token ids.
 const TOKEN_ID_TOKENIZER: &str = "token-ids";
-/// The model revision the server binds for chunk encoding.
+/// The registry id of the default chunk encoder: the pinned tiny encoder CI binds. A policy
+/// names it (or any other registered encoder) in `model_revision`.
 pub(crate) const BOUND_ENCODER_REVISION: &str = "builtin:test-hashed-token/1";
-/// Width of the bound encoder's vectors.
+/// The space the default entry registers for.
+const BOUND_ENCODER_SPACE: &str = "builtin-test-hashed-token";
+/// The space revision the default entry registers for.
+const BOUND_ENCODER_SPACE_REVISION: &str = "1";
+/// Width of the default encoder's vectors.
 const BOUND_ENCODER_DIM: usize = 8;
-/// A window holding this token id makes the bound encoder emit a non-finite vector.
+/// A window holding this token id makes the default encoder emit a non-finite vector.
 pub(crate) const POISON_NON_FINITE_TOKEN: u32 = u32::MAX;
-/// A window holding this token id makes the bound encoder emit a vector of another width.
+/// A window holding this token id makes the default encoder emit a vector of another width.
 pub(crate) const POISON_SHORT_TOKEN: u32 = u32::MAX - 1;
 
 /// The pinned tiny encoder CI binds: a position-aware hashed bag of token ids. It holds
 /// no state, so the same window always gives the same vector. The two poison token ids
-/// are part of its contract and let a served test make one chunk fail.
+/// are part of its contract and let a served test make one chunk fail. It is a registered
+/// entry of `ModalityEncoderRegistry` like every other encoder, so chunk encoding has one
+/// encoder authority.
 struct BoundEncoder;
 
-impl ChunkEncoder for BoundEncoder {
-    fn encode(&self, window: &[u32]) -> Vec<f32> {
-        self.encode_at(window, 0)
-    }
-
+impl BoundEncoder {
     fn encode_at(&self, window: &[u32], position_base: usize) -> Vec<f32> {
         if window.contains(&POISON_NON_FINITE_TOKEN) {
             return vec![f32::NAN; BOUND_ENCODER_DIM];
@@ -71,6 +75,200 @@ impl ChunkEncoder for BoundEncoder {
             vector[bucket] += 1.0 + (position % 5) as f32 * 0.25;
         }
         vector
+    }
+}
+
+impl TextEmbedder for BoundEncoder {
+    /// Text reaches the default encoder as space-separated decimal token ids.
+    fn embed(&self, text: &str) -> Result<Vec<f32>, String> {
+        let window = text
+            .split_ascii_whitespace()
+            .map(|word| {
+                word.parse::<u32>()
+                    .map_err(|_| format!("`{word}` is not a token id"))
+            })
+            .collect::<Result<Vec<u32>, String>>()?;
+        Ok(self.encode_at(&window, 0))
+    }
+
+    fn embed_window(&self, window: &[u32], position_base: usize) -> Result<Vec<f32>, String> {
+        Ok(self.encode_at(window, position_base))
+    }
+}
+
+/// Register the default chunk encoder in the process registry beside the bound query
+/// encoders. Idempotent: a server state may be composed more than once in one process.
+pub fn register_default_chunk_encoder() -> Result<(), String> {
+    let registry = medulla_plan::embed_registry::modality_encoders();
+    if registry.lookup_by_id(BOUND_ENCODER_REVISION).is_ok() {
+        return Ok(());
+    }
+    registry.register(
+        BOUND_ENCODER_REVISION,
+        BOUND_ENCODER_SPACE,
+        BOUND_ENCODER_DIM,
+        BOUND_ENCODER_SPACE_REVISION,
+        Box::new(BoundEncoder),
+    )
+}
+
+/// The chunk encoder of one document: every window goes to the registry encoder named by
+/// the policy. A document given as text holds the words in `words`, and a window's ids are
+/// indices into it; a document given as token ids passes the ids through. An encoder
+/// that refuses a window yields an empty vector, which the aggregate refuses.
+struct RegistryChunkEncoder<'a> {
+    encoder: &'static dyn TextEmbedder,
+    words: Option<&'a [&'a str]>,
+}
+
+impl ChunkEncoder for RegistryChunkEncoder<'_> {
+    fn encode(&self, window: &[u32]) -> Vec<f32> {
+        self.encode_at(window, 0)
+    }
+
+    fn encode_at(&self, window: &[u32], position_base: usize) -> Vec<f32> {
+        let embedded = match self.words {
+            Some(words) => {
+                let text = window
+                    .iter()
+                    .filter_map(|index| words.get(*index as usize).copied())
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+                self.encoder.embed(&text)
+            }
+            None => self.encoder.embed_window(window, position_base),
+        };
+        embedded.unwrap_or_default()
+    }
+}
+
+/// A typed refusal: the code text and its detail.
+#[derive(Debug)]
+struct Refused(String);
+
+fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> Refused {
+    Refused(format!("{}: {detail}", code.as_str()))
+}
+
+fn chunk_refusal(refusal: ChunkRefusal) -> Refused {
+    Refused(refusal.to_string())
+}
+
+fn internal(error: impl std::fmt::Display) -> Refused {
+    Refused(format!("INTERNAL: {error}"))
+}
+
+fn reader_of(ctx: &QueryHandlerCtx<'_>) -> UnitPrincipal {
+    let mut principal = ReadCaller::from_authority(ctx.read_authority, ctx.graph_name).principal;
+    principal.id = ctx.caller.to_string();
+    principal
+}
+
+fn head_node(tenant: &str, policy_digest: &str) -> String {
+    format!("encoded_index_head:{tenant}:{policy_digest}")
+}
+
+fn document_prefix(tenant: &str, policy_digest: &str) -> String {
+    format!("encoded_document:{tenant}:{policy_digest}:")
+}
+
+fn props_of(core: &GraphCore, node: &str) -> Option<serde_json::Map<String, Value>> {
+    let blob = core.get_node_properties(node)?;
+    medulla_types::msgpack::decode_property_object(&blob).ok()
+}
+
+/// The vector generation of one tenant's index under one policy digest.
+fn load_generation(core: &GraphCore, tenant: &str, policy_digest: &str) -> Option<u64> {
+    props_of(core, &head_node(tenant, policy_digest))?
+        .get("generation")?
+        .as_u64()
+}
+
+fn write_node(core: &GraphCore, node: String, props: &Value) -> Result<(), Refused> {
+    core.add_node(node, msgpack_bytes(props).map_err(internal)?);
+    Ok(())
+}
+
+fn position_label(mode: DocumentPositionMode) -> &'static str {
+    match mode {
+        DocumentPositionMode::LocalReset => "local_reset",
+        DocumentPositionMode::AbsoluteOffset => "absolute_offset",
+    }
+}
+
+fn token_bytes(tokens: &[u32]) -> Vec<u8> {
+    tokens.iter().flat_map(|t| t.to_le_bytes()).collect()
+}
+
+fn vector_bytes(vector: &[f32]) -> Vec<u8> {
+    vector.iter().flat_map(|c| c.to_le_bytes()).collect()
+}
+
+/// The policy a request without one runs under: the registered window knobs, the
+/// bound model, `local_reset` positions and `mean_chunks`.
+fn default_policy() -> Result<DocumentEncodingPolicy, Refused> {
+    let knobs = medulla_server_api::knob_config::knobs();
+    let size = |value: u64| usize::try_from(value).unwrap_or(usize::MAX);
+    DocumentEncodingPolicy::new(
+        TOKEN_ID_TOKENIZER,
+        size(knobs.retrieval_encode_window_tokens),
+        size(knobs.retrieval_encode_window_overlap),
+        DocumentPositionMode::LocalReset,
+        DocumentAggregation::MeanChunks,
+        BOUND_ENCODER_REVISION,
+    )
+    .map_err(|error| refuse(ServerErrorCode::EncodeOverlapInvalid, error))
+}
+
+/// The SHA-256 of the canonical policy record.
+fn policy_digest(policy: &DocumentEncodingPolicy) -> Result<String, Refused> {
+    Ok(sha256_hex(&serde_json::to_vec(policy).map_err(internal)?))
+}
+
+/// Refuse a policy this server cannot run before any work is done, and resolve its
+/// encoder: `model_revision` is the registry id of the encoder that embeds each chunk. An
+/// id with no registered entry is a model revision that is not bound.
+fn check_policy(policy: &DocumentEncodingPolicy) -> Result<&'static dyn TextEmbedder, Refused> {
+    if policy.policy_revision != DOCUMENT_ENCODING_POLICY_REVISION {
+        return Err(refuse(
+            ServerErrorCode::EncodePolicyStale,
+            format!(
+                "policy revision {} is not served (served: {DOCUMENT_ENCODING_POLICY_REVISION})",
+                policy.policy_revision
+            ),
+        ));
+    }
+    medulla_plan::embed_registry::modality_encoders()
+        .lookup_by_id(&policy.model_revision)
+        .map(|entry| entry.encoder)
+        .map_err(|error| {
+            refuse(
+                ServerErrorCode::EncodePolicyStale,
+                format!(
+                    "model revision `{}` is not a registered encoder ({error})",
+                    policy.model_revision
+                ),
+            )
+        })
+}
+
+fn encode(&self, window: &[u32]) -> Vec<f32> {
+        self.encode_at(window, 0)
+    }
+
+    fn encode_at(&self, window: &[u32], position_base: usize) -> Vec<f32> {
+        let embedded = match self.words {
+            Some(words) => {
+                let text = window
+                    .iter()
+                    .filter_map(|index| words.get(*index as usize).copied())
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+                self.encoder.embed(&text)
+            }
+            None => self.encoder.embed_window(window, position_base),
+        };
+        embedded.unwrap_or_default()
     }
 }
 
@@ -184,6 +382,7 @@ fn encode(
     ctx: &QueryHandlerCtx<'_>,
     document_id: String,
     token_ids: Vec<u32>,
+    text: Option<String>,
     policy: Option<DocumentEncodingPolicy>,
 ) -> Result<EncodedDocument, Refused> {
     let started = Instant::now();
@@ -197,7 +396,21 @@ fn encode(
         Some(policy) => policy,
         None => default_policy()?,
     };
-    check_policy(&policy)?;
+    let encoder = check_policy(&policy)?;
+    if text.is_some() && !token_ids.is_empty() {
+        return Err(refuse(
+            ServerErrorCode::NoEmbedding,
+            "a document is `token_ids` or `text`, not both",
+        ));
+    }
+    // A text document is its space-separated words; a window's ids index into them.
+    let words: Option<Vec<&str>> = text
+        .as_deref()
+        .map(|text| text.split_ascii_whitespace().collect());
+    let token_ids = match &words {
+        Some(words) => (0..u32::try_from(words.len()).unwrap_or(u32::MAX)).collect(),
+        None => token_ids,
+    };
     let mode = match policy.position_mode {
         DocumentPositionMode::LocalReset => PositionMode::LocalReset,
         DocumentPositionMode::AbsoluteOffset => PositionMode::Absolute,
@@ -222,12 +435,19 @@ fn encode(
     let digest = policy_digest(&policy)?;
     let tenant = reader_of(ctx).tenant;
     let prior_generation = load_generation(ctx.core, &tenant, &digest);
-    let encoding = encode_chunks(&BoundEncoder, &policy.model_revision, &token_ids, &windows);
+    let chunk_encoder = RegistryChunkEncoder {
+        encoder,
+        words: words.as_deref(),
+    };
+    let encoding = encode_chunks(&chunk_encoder, &policy.model_revision, &token_ids, &windows);
     // A failed chunk blocks the aggregate, and nothing is written before it.
     let vector = aggregate_mean_chunks(&encoding.vectors).map_err(chunk_refusal)?;
     let generation = prior_generation.unwrap_or(0) + 1;
     let receipt = EncodingReceipt {
-        document_digest: sha256_hex(&token_bytes(&token_ids)),
+        document_digest: match &text {
+            Some(text) => sha256_hex(text.as_bytes()),
+            None => sha256_hex(&token_bytes(&token_ids)),
+        },
         token_ranges: windows
             .iter()
             .map(|w| [w.start as u64, w.end as u64])
@@ -284,9 +504,13 @@ pub(crate) fn handle_encode_document(
     ctx: &QueryHandlerCtx<'_>,
     document_id: String,
     token_ids: Vec<u32>,
+    text: Option<String>,
     policy: Option<DocumentEncodingPolicy>,
 ) -> Response {
-    reply::<results::EncodeDocument>(ctx.req_id, encode(ctx, document_id, token_ids, policy))
+    reply::<results::EncodeDocument>(
+        ctx.req_id,
+        encode(ctx, document_id, token_ids, text, policy),
+    )
 }
 
 fn cosine(a: &[f32], b: &[f32]) -> Option<f32> {
@@ -379,20 +603,22 @@ mod tests {
         assert_eq!(first, BoundEncoder.encode_at(&window, 0));
         assert_ne!(first, BoundEncoder.encode_at(&window, 1));
         assert_eq!(first.len(), BOUND_ENCODER_DIM);
-        assert!(BoundEncoder.encode(&[POISON_NON_FINITE_TOKEN])[0].is_nan());
+        assert!(BoundEncoder.encode_at(&[POISON_NON_FINITE_TOKEN], 0)[0].is_nan());
         assert_eq!(
-            BoundEncoder.encode(&[POISON_SHORT_TOKEN]).len(),
+            BoundEncoder.encode_at(&[POISON_SHORT_TOKEN], 0).len(),
             BOUND_ENCODER_DIM / 2
         );
     }
 
     #[test]
     fn unsupported_policy_is_stale() {
+        register_default_chunk_encoder().unwrap();
         let mut policy = default_policy().unwrap();
         check_policy(&policy).unwrap();
         policy.model_revision = "other".into();
         assert!(check_policy(&policy)
-            .unwrap_err()
+            .err()
+            .unwrap()
             .0
             .starts_with("ENCODE_POLICY_STALE"));
     }

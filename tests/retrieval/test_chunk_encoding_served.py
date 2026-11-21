@@ -16,7 +16,7 @@ import struct
 import uuid
 
 import pytest
-from conftest import request_context
+from conftest import request_context, tenant_request_context
 
 from medulla.client import MedullaClient
 from medulla.generated import query
@@ -244,5 +244,77 @@ async def test_receipt_accounts_every_chunk() -> None:
         assert _oracle_document(TOKENS, 16, 4, False) != pytest.approx(
             _oracle_document(TOKENS, 16, 4, True), abs=1e-6
         )
+    finally:
+        await client.close()
+
+
+PINNED = "pinned-text"
+
+
+async def _encode_text(
+    client: MedullaClient, doc: str, text: str, policy: dict
+) -> dict:
+    request = {"document_id": doc, "text": text, "policy": policy}
+    return (await query.send_encode_document(client, request)).payload
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R039.2.8
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R039.2.8")
+@pytest.mark.asyncio
+async def test_chunked_document_one_vector() -> None:
+    client = await _connect()
+    try:
+        # The pinned text encoder embeds each chunk of concept tokens: `alpha beta` and
+        # `gamma delta` are two chunks, and the one document vector is the normalized
+        # mean of the two normalized chunk vectors (basis vectors of the fixture).
+        policy = _policy(size=2, overlap=0, model_revision=PINNED)
+        digest = _digest(policy)
+        half = math.sqrt(0.5)
+        chunk_a, chunk_b = [half, half, 0.0, 0.0], [0.0, 0.0, half, half]
+        mean = [(a + b) / 2 for a, b in zip(chunk_a, chunk_b)]
+        norm = math.sqrt(sum(c * c for c in mean))
+        expected = [c / norm for c in mean]
+
+        stored = await _encode_text(client, "doc-4", "alpha beta gamma delta", policy)
+        assert stored["receipt"]["token_ranges"] == [[0, 2], [2, 4]]
+        assert stored["receipt"]["chunk_model_revisions"] == [PINNED] * 2
+        assert stored["vector"] == pytest.approx(expected, abs=1e-5)
+        # A shorter document is one chunk and one vector too.
+        short = await _encode_text(client, "doc-2", "alpha beta", policy)
+        assert short["vector"] == pytest.approx(chunk_a, abs=1e-5)
+
+        # The query vector comes from the same encoder; one vector per document ranks.
+        found = await _search(client, expected, digest)
+        assert [h["document_id"] for h in found["hits"]] == ["doc-4", "doc-2"]
+        assert found["hits"][0]["score"] == pytest.approx(1.0, abs=1e-5)
+
+        # Local-reset and absolute-offset encodes differ under the position-aware default.
+        local = _oracle_document(TOKENS, 16, 4, False)
+        assert local != pytest.approx(_oracle_document(TOKENS, 16, 4, True), abs=1e-6)
+
+        # Refusals: invalid overlap, a failed chunk and an unregistered model revision.
+        with pytest.raises(RuntimeError, match="ENCODE_OVERLAP_INVALID"):
+            await _encode_text(
+                client, "doc-x", "alpha beta", _policy(size=2, overlap=2, model_revision=PINNED)
+            )
+        with pytest.raises(RuntimeError, match="NO_EMBEDDING"):
+            await _encode_text(client, "doc-x", "zeta omega", policy)
+        with pytest.raises(RuntimeError, match="ENCODE_POLICY_STALE"):
+            await _encode_text(
+                client, "doc-x", "alpha beta", _policy(model_revision="other/9")
+            )
+        # The failures left the generation as it was.
+        assert (await _search(client, expected, digest))["index_generation"] == 2
+
+        # Another tenant has no generation under this digest.
+        other = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=tenant_request_context("tenant-other-chunks"),
+        )
+        try:
+            with pytest.raises(RuntimeError, match="ENCODE_POLICY_STALE"):
+                await _search(other, expected, digest)
+        finally:
+            await other.close()
     finally:
         await client.close()

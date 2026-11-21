@@ -96,6 +96,46 @@ impl ModalityEncoderRegistry {
     }
 }
 
+/// One registry entry as a caller that knows only the encoder id sees it.
+pub struct RegisteredEncoder {
+    /// The space id the entry encodes for.
+    pub space_id: String,
+    /// The space's vector width.
+    pub dimensions: usize,
+    /// The space's revision.
+    pub revision: String,
+    /// The encoder.
+    pub encoder: &'static dyn TextEmbedder,
+}
+
+impl ModalityEncoderRegistry {
+    /// The entry registered as `encoder_id`, with the space tuple it encodes for
+    /// (MEDULLA-FEDERATED-QUERY-R039.2.5: served `EncodeDocument` resolves its encoder
+    /// here, the one encoder authority). No such entry is `QUERY_ENCODER_UNAVAILABLE`.
+    pub fn lookup_by_id(&self, encoder_id: &str) -> Result<RegisteredEncoder, String> {
+        let entries = self.entries.read().map_err(|_| {
+            format!(
+                "{}: modality encoder `{encoder_id}` is unreadable",
+                ServerErrorCode::QueryEncoderUnavailable
+            )
+        })?;
+        entries
+            .get(encoder_id)
+            .map(|entry| RegisteredEncoder {
+                space_id: entry.space_id.clone(),
+                dimensions: entry.dimensions,
+                revision: entry.revision.clone(),
+                encoder: entry.encoder,
+            })
+            .ok_or_else(|| {
+                format!(
+                    "{}: modality encoder `{encoder_id}` is not registered",
+                    ServerErrorCode::QueryEncoderUnavailable
+                )
+            })
+    }
+}
+
 impl ModalityEncoderRegistry {
     /// The text encoder of the space `(space_id, dimensions, revision)` for a caller that
     /// knows the space and not an encoder id (MEDULLA-FEDERATED-QUERY-R077.5: a column

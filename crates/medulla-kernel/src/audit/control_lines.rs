@@ -287,8 +287,13 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::EncodeDocument {
             document_id,
             token_ids,
+            text,
             ..
-        } => Some(format!("ENCODE_DOCUMENT|{document_id}|{}", token_ids.len())),
+        } => Some(format!(
+            "ENCODE_DOCUMENT|{document_id}|{}|{}",
+            token_ids.len(),
+            text.as_ref().map_or(0, String::len)
+        )),
         Method::StoredQueryPut { query } => {
             Some(format!("STORED_QUERY_PUT|{}|{}", query.name, query.version))
         }

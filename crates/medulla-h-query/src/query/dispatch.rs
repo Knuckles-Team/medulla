@@ -360,11 +360,13 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         Method::EncodeDocument {
             document_id,
             token_ids,
+            text,
             policy,
         } => Ok(super::document_encoding::handle_encode_document(
             ctx,
             document_id,
             token_ids,
+            text,
             policy,
         )),
         other => Err(other),

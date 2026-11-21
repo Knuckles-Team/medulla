@@ -36366,7 +36366,8 @@ class MethodEncodeDocumentParams(BaseModel):
 
     document_id: str
     policy: DocumentEncodingPolicy | None = None
-    token_ids: list[Annotated[int, Field(ge=0)]]
+    text: str | None = None
+    token_ids: list[Annotated[int, Field(ge=0)]] = Field(default_factory=list)
 
 
 class MethodEncodedDocumentSearchParams(BaseModel):

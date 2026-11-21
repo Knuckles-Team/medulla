@@ -814,10 +814,16 @@ $($variants)*
     /// recipe and publish its single vector, with the encoding receipt, as the next
     /// vector generation. Durable write; a refused encoding writes nothing and the
     /// prior generation keeps answering. The policy is optional: absent, the server
-    /// builds it from the registered window knobs and the bound model.
+    /// builds it from the registered window knobs and the default registered encoder.
+    /// The policy's `model_revision` names the registry encoder that embeds each chunk.
+    /// The document is either `token_ids` or `text` (space-separated tokens), never both
+    /// and never neither.
     EncodeDocument {
         document_id: String,
+        #[serde(default)]
         token_ids: Vec<u32>,
+        #[serde(default)]
+        text: Option<String>,
         policy: Option<medulla_index_types::embedding::DocumentEncodingPolicy>,
     },
 

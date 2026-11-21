@@ -201,7 +201,7 @@ mod viewport;
 #[cfg(feature = "query")]
 pub(crate) use viewport::{handle_resolve_viewport_selection, handle_viewport_query};
 #[cfg(feature = "query")]
-mod document_encoding;
+pub mod document_encoding;
 #[cfg(all(feature = "query", feature = "nl-query"))]
 pub mod expansion;
 #[cfg(feature = "query")]

@@ -419,6 +419,19 @@ pub trait TextEmbedder: Send + Sync {
     /// (e.g. an unreachable model service) surfaces as a clean typed plan error — never a
     /// panic.
     fn embed(&self, text: &str) -> Result<Vec<f32>, String>;
+
+    /// Resolve one window of a chunked document (MEDULLA-FEDERATED-QUERY-R039.2.5): the
+    /// window's token ids with the position of the first one. An encoder that reads no
+    /// positions keeps this default, which renders the ids as space-separated decimals
+    /// and embeds that text.
+    fn embed_window(&self, window: &[u32], _position_base: usize) -> Result<Vec<f32>, String> {
+        let text = window
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<String>>()
+            .join(" ");
+        self.embed(&text)
+    }
 }
 
 /// A server-side cross-encoder (MEDULLA-FEDERATED-QUERY-R081.7.3): scores each text against
