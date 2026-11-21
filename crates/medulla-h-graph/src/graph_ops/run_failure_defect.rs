@@ -1,12 +1,13 @@
-//! A run that ends in failure files a defect (MEDULLA-SDLC-R003.3). When a served `AddNode` of
+//! A run that ends in failure files a defect (MEDULLA-SDLC-R003.3). A served `AddNode` of
 //! a `RunTrace` whose `terminationReason` is present and is not `final_answer` has committed,
-//! the gateway files one symptom through the ingest seam (`IngestApi::file_defect`) and writes
-//! the touched `Defect` node. The symptom text carries the reason and the task class, so equal
+//! the gateway plans one symptom through the ingest seam (`IngestApi::file_defect`) BEFORE the
+//! commit and writes the touched `Defect` node in the same batch as the trace's `add_node`, so
+//! a committed trace is never reported as a failure and never lacks its defect. The symptom text carries the reason and the task class, so equal
 //! failures of one kind land on one defect; the source record is the run-trace id.
 
-use medulla_protocol_types::protocol::{Method, Response};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::state::ServerState;
-use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
+use medulla_server_mutation::mutation::MutationCtx;
 use medulla_source_types::lifecycle::{
     defect_from_node, handle_file_defect, Defect, DefectIntake, FileDefectRequest, DEFECT_TYPE,
 };
@@ -52,15 +53,35 @@ pub(super) fn failed_run_filing(
     })
 }
 
-/// File the symptom of a failed run after its trace committed. `Ok(None)` when the written
-/// method is not a failed run trace; `Ok(Some(response))` is the defect batch's response.
-pub(super) async fn file_failed_run(
+/// The one batch that commits a failed run trace together with its defect: the trace's own
+/// `add_node` first, then the defect's `upsert_node`. A pure fold, so the same bytes are
+/// tested and committed.
+pub(super) fn fold_trace_and_defect(
+    trace_id: &str,
+    trace_properties: &Map<String, Value>,
+    defect_id: &str,
+    defect_properties: Map<String, Value>,
+) -> Result<Method, String> {
+    let operations = vec![
+        json!({"op": "add_node", "id": trace_id, "properties": trace_properties}),
+        json!({"op": "upsert_node", "id": defect_id, "properties": defect_properties}),
+    ];
+    let operations_msgpack = rmp_serde::to_vec_named(&operations)
+        .map_err(|_| "run trace batch encoding failed".to_string())?;
+    Ok(Method::BatchUpdate { operations_msgpack })
+}
+
+/// Plan the filing of a failed run before its trace commits (plan-then-apply): `Ok(None)` when
+/// the method is not a failed run trace; `Ok(Some(batch))` is the batch to commit INSTEAD of
+/// the bare `AddNode`, carrying the trace and its defect, so they commit together or not at
+/// all. An `Err` refuses the whole write and nothing commits.
+pub(super) async fn plan_failed_run(
     state: &Arc<RwLock<ServerState>>,
     tenant_id: &str,
     ctx: &MutationCtx<'_>,
     method: &Method,
     now_ms: u64,
-) -> Result<Option<Response>, String> {
+) -> Result<Option<Method>, String> {
     let Method::AddNode { node_id, properties_msgpack } = method else {
         return Ok(None);
     };
@@ -90,20 +111,17 @@ pub(super) async fn file_failed_run(
     if let Some(owner) = ctx.owner.or(ctx.caller) {
         properties.insert("_owner".into(), owner.into());
     }
-    let operations = vec![json!({"op": "upsert_node", "id": write.node_id(), "properties": properties})];
-    let operations_msgpack = rmp_serde::to_vec_named(&operations)
-        .map_err(|_| "defect batch encoding failed".to_string())?;
-    let batch = Method::BatchUpdate { operations_msgpack };
-    let plan = MutationPlan::for_method(&batch);
-    // The defect is its own commit under a derived retry identity: the trace's nonce is spent.
-    let idempotency_key = format!("{}:run-defect:{}", ctx.idempotency_key, write.node_id());
-    let follow_on = MutationCtx {
-        attempt_nonce: None,
-        idempotency_key: &idempotency_key,
-        ..*ctx
-    };
-    let none = std::collections::BTreeSet::new();
-    Ok(super::gateway_graph::try_handle(state, tenant_id, &follow_on, &plan, &batch, &none).await)
+    fold_trace_and_defect(node_id, &props, &write.node_id(), properties).map(Some)
+}
+
+/// A committed folded batch answers as the `AddNode` the caller sent.
+pub(super) fn answer_as_add_node(mut response: Response) -> Response {
+    if response.refusal_text().is_none() {
+        response.result = Some(ResultPayload::scalar::<
+            medulla_protocol_types::result_contract::graph::AddNode,
+        >("ok".to_string()));
+    }
+    response
 }
 
 #[cfg(test)]
@@ -133,5 +151,47 @@ mod tests {
         assert_eq!(filing.source_record_id, "t1");
         assert_eq!(filing.observed_at, 5);
         assert!(filing.text.contains("step_budget") && filing.text.contains("refactor"));
+    }
+
+    fn ops(method: &Method) -> Vec<Value> {
+        let Method::BatchUpdate { operations_msgpack } = method else {
+            panic!("a failed run folds into one BatchUpdate");
+        };
+        rmp_serde::from_slice(operations_msgpack).expect("decodes")
+    }
+
+    // MEDULLA-SDLC-R003.3: the trace and its defect commit in one batch, trace first.
+    #[test]
+    fn the_trace_and_its_defect_commit_in_one_batch() {
+        let mut defect = Map::new();
+        defect.insert("type".into(), "Defect".into());
+        let batch =
+            fold_trace_and_defect("t1", &trace(Some("error")), "defect:g:1", defect).expect("folds");
+        let operations = ops(&batch);
+        assert_eq!(operations.len(), 2);
+        assert_eq!(operations[0]["op"], "add_node");
+        assert_eq!(operations[0]["id"], "t1");
+        assert_eq!(operations[0]["properties"]["terminationReason"], "error");
+        assert_eq!(operations[1]["op"], "upsert_node");
+        assert_eq!(operations[1]["id"], "defect:g:1");
+    }
+
+    // MEDULLA-SDLC-R003.3: a defect that cannot be planned refuses before any commit, so no
+    // trace is written without it (the refusal is the planning step's `Err`, never a post-commit one).
+    #[test]
+    fn a_defect_that_cannot_be_planned_refuses_the_write_before_any_commit() {
+        let mut props = trace(Some("error"));
+        props.insert("repo".into(), "  ".into());
+        let filing = failed_run_filing("t1", &props, "", 5).expect("a failed trace");
+        assert!(filing.repo.trim().is_empty());
+        assert!(handle_file_defect(filing).is_err());
+    }
+
+    #[test]
+    fn a_committed_folded_batch_answers_as_the_add_node_the_caller_sent() {
+        let answered = answer_as_add_node(Response::ok(1, ResultPayload::Bool(true)));
+        assert!(answered.refusal_text().is_none());
+        let refused = answer_as_add_node(Response::err(2, "REFUSED: no".to_string()));
+        assert!(refused.refusal_text().is_some());
     }
 }

@@ -256,22 +256,29 @@ pub async fn try_handle_gateway(
     {
         return Ok(Response::err(req_id, error));
     }
+    // MEDULLA-SDLC-R003.3: a failed run trace is planned with its defect BEFORE the commit and
+    // written in the same batch, so the trace and its defect commit together or not at all.
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let (method, plan, folded) =
+        match super::run_failure_defect::plan_failed_run(state, tenant_id, &ctx, &method, now_ms)
+            .await
+        {
+            Ok(Some(batch)) => {
+                let batch_plan = MutationPlan::for_method(&batch);
+                (batch, batch_plan, true)
+            }
+            Ok(None) => (method, plan, false),
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
     if let Some(resp) =
         super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method, &known_digests)
             .await
     {
-        // MEDULLA-SDLC-R003.3: a failed run trace, once committed, files its defect.
-        if resp.refusal_text().is_none() {
-            let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-            match super::run_failure_defect::file_failed_run(state, tenant_id, &ctx, &method, now_ms)
-                .await
-            {
-                Ok(Some(filed)) if filed.refusal_text().is_some() => return Ok(filed),
-                Ok(_) => {}
-                Err(error) => return Ok(Response::err(req_id, error)),
-            }
-        }
-        return Ok(resp);
+        return Ok(if folded {
+            super::run_failure_defect::answer_as_add_node(resp)
+        } else {
+            resp
+        });
     }
     #[cfg(feature = "broker")]
     if let Some(resp) = super::gateway_broker::try_handle(&ctx, &plan, &method).await {
