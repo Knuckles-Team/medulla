@@ -16,6 +16,16 @@ use crate::benchmark_claim::{round_half_even_div, PriceTable};
 /// Refusal reason of a cost group without a solved trace.
 pub const NO_SOLVED_TRACE: &str = "NO_SOLVED_TRACE";
 
+/// The statement that lists, per harness configuration, the cost per solved task
+/// with the trace ids it rests on (MEDULLA-ORCH-VOCAB-R010.6).
+pub const HARNESS_CONFIG_EVIDENCE: &str = "harness_config_evidence";
+/// The result columns of [`HARNESS_CONFIG_EVIDENCE`].
+pub const CONFIG_EVIDENCE_COLUMNS: [&str; 3] = ["cost_per_solved_task", "solved", "total"];
+/// Fewest traces a configuration needs before its evidence counts as sufficient.
+pub const DEFAULT_MIN_TRACES_PER_CONFIG: u32 = 20;
+/// Accepted range of the `$min_traces` parameter.
+pub const MIN_TRACES_PER_CONFIG_BOUNDS: (u32, u32) = (5, 1_000);
+
 /// The property a `RunTrace` group key reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GroupKey {
@@ -87,6 +97,13 @@ pub const HARNESS_QUERIES: &[HarnessQuery] = &[
         groups: &[],
         columns: &crate::evolution_metrics::EVOLUTION_COLUMNS,
     },
+    // MEDULLA-ORCH-VOCAB-R010.6: one row per configuration with its trace ids; its
+    // own pure function, because the rows carry ids a numeric `MetricRow` cannot.
+    HarnessQuery {
+        name: HARNESS_CONFIG_EVIDENCE,
+        groups: &[],
+        columns: &CONFIG_EVIDENCE_COLUMNS,
+    },
     // MEDULLA-ORCH-VOCAB-R010.101: grouped by the request's `grouping`, so it
     // declares no fixed group keys; see [`RunTraceUsageQuery`].
     HarnessQuery {
@@ -126,6 +143,135 @@ fn number(value: Option<&Value>) -> Option<f64> {
 
 fn text<'a>(props: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
     props.get(key).and_then(Value::as_str)
+}
+
+/// The parameters of [`HARNESS_CONFIG_EVIDENCE`] (MEDULLA-ORCH-VOCAB-R010.6).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConfigEvidenceQuery {
+    /// The model whose traces are in scope.
+    pub model_ref: String,
+    /// The task class whose traces are in scope.
+    pub task_class: String,
+    /// Fewest traces a configuration needs to be `Sufficient`.
+    pub min_traces: u32,
+}
+
+impl ConfigEvidenceQuery {
+    /// Read `$model_ref` and `$task_class` (required, non-empty after trimming)
+    /// and `$min_traces` (optional, an integer inside the bounds).
+    pub fn from_params(
+        text: impl Fn(&str) -> Option<String>,
+        number: impl Fn(&str) -> Option<f64>,
+    ) -> Result<Self, String> {
+        let required = |name: &str| -> Result<String, String> {
+            text(name)
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| format!("INVALID_ARGUMENT: ${name} is required"))
+        };
+        let (low, high) = MIN_TRACES_PER_CONFIG_BOUNDS;
+        let min_traces = match number("min_traces") {
+            None => DEFAULT_MIN_TRACES_PER_CONFIG,
+            Some(value)
+                if value.is_finite()
+                    && value.fract() == 0.0
+                    && value >= f64::from(low)
+                    && value <= f64::from(high) =>
+            {
+                value as u32
+            }
+            Some(_) => {
+                return Err(format!(
+                    "INVALID_ARGUMENT: $min_traces must be an integer in [{low}, {high}]"
+                ))
+            }
+        };
+        Ok(Self {
+            model_ref: required("model_ref")?,
+            task_class: required("task_class")?,
+            min_traces,
+        })
+    }
+}
+
+/// Whether a configuration has enough traces to rest a choice on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TraceSufficiency {
+    /// At least `min_traces` traces.
+    Sufficient,
+    /// Fewer than `min_traces` traces; the group stays in the answer.
+    Insufficient,
+}
+
+/// One configuration's evidence.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConfigEvidence {
+    /// The `appliedHarnessConfig` of the group.
+    pub config: String,
+    /// Cost per solved task; `None` when it abstains.
+    pub cost_per_solved_task: Option<f64>,
+    /// Members whose status is `completed`.
+    pub solved: u64,
+    /// Members of the group.
+    pub total: u64,
+    /// Member node ids, ascending.
+    pub trace_ids: Vec<String>,
+    /// Whether `total` reaches the threshold.
+    pub sufficiency: TraceSufficiency,
+    /// Why the cost is `None`.
+    pub abstained: Option<&'static str>,
+}
+
+/// Group the in-scope traces by configuration and report each group's cost per
+/// solved task with its trace ids. A trace is in scope when its `runModel` and
+/// `runTaskClass` equal the query's and it has an `appliedHarnessConfig` text.
+#[must_use]
+pub fn harness_config_evidence(
+    query: &ConfigEvidenceQuery,
+    traces: &[(String, &Map<String, Value>)],
+) -> Vec<ConfigEvidence> {
+    let mut groups: BTreeMap<&str, Vec<(&String, &Map<String, Value>)>> = BTreeMap::new();
+    for (id, props) in traces {
+        let in_scope = text(props, "runModel") == Some(query.model_ref.as_str())
+            && text(props, "runTaskClass") == Some(query.task_class.as_str());
+        if let (true, Some(config)) = (in_scope, text(props, "appliedHarnessConfig")) {
+            groups.entry(config).or_default().push((id, props));
+        }
+    }
+    groups
+        .into_iter()
+        .map(|(config, members)| {
+            let total = members.len() as u64;
+            let solved_count = members.iter().filter(|(_, props)| solved(props)).count() as u64;
+            let mut trace_ids: Vec<String> = members.iter().map(|(id, _)| (*id).clone()).collect();
+            trace_ids.sort();
+            let costs: Vec<Option<f64>> = members
+                .iter()
+                .map(|(_, props)| number(props.get("costUsd")))
+                .collect();
+            let (cost_per_solved_task, abstained) = if solved_count == 0 {
+                (None, Some(NO_SOLVED_TRACE))
+            } else if costs.iter().any(Option::is_none) {
+                (None, Some(PRICE_UNKNOWN))
+            } else {
+                let cost: f64 = costs.iter().flatten().sum();
+                (Some(cost / solved_count as f64), None)
+            };
+            ConfigEvidence {
+                config: config.to_string(),
+                cost_per_solved_task,
+                solved: solved_count,
+                total,
+                trace_ids,
+                sufficiency: if total < u64::from(query.min_traces) {
+                    TraceSufficiency::Insufficient
+                } else {
+                    TraceSufficiency::Sufficient
+                },
+                abstained,
+            }
+        })
+        .collect()
 }
 
 fn mean(values: &[f64]) -> Option<f64> {
@@ -807,5 +953,71 @@ mod tests {
         let stale =
             run_trace_usage(&usage_query(Some(&cursor), 2.0), &traces, None, 10).unwrap_err();
         assert!(stale.starts_with("USAGE_CURSOR_STALE"), "{stale}");
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R010.6
+    #[test]
+    fn config_evidence_marks_insufficient_and_keeps_unknown_price() {
+        let build = |id: &str, config: &str, model: &str, status: &str, cost: Option<&str>| {
+            let mut value = serde_json::json!({
+                "status": status, "runModel": model, "runTaskClass": "t",
+                "appliedHarnessConfig": config,
+            });
+            if let Some(cost) = cost {
+                value["costUsd"] = cost.into();
+            }
+            (id.to_string(), value.as_object().cloned().unwrap())
+        };
+        let rows = vec![
+            build("t3", "c1", "m", "completed", Some("0.30")),
+            build("t1", "c1", "m", "completed", Some("0.10")),
+            build("t2", "c1", "m", "failed", Some("0.20")),
+            build("t4", "c2", "m", "failed", Some("0.10")),
+            build("t5", "c3", "m", "completed", None),
+            build("t6", "c9", "other-model", "completed", Some("1.0")),
+        ];
+        let refs: Vec<(String, &Map<String, Value>)> =
+            rows.iter().map(|(id, props)| (id.clone(), props)).collect();
+        let query = ConfigEvidenceQuery {
+            model_ref: "m".into(),
+            task_class: "t".into(),
+            min_traces: 3,
+        };
+        let answer = harness_config_evidence(&query, &refs);
+        // The other model's trace is out of scope; groups are in config order.
+        let configs: Vec<&str> = answer.iter().map(|e| e.config.as_str()).collect();
+        assert_eq!(configs, ["c1", "c2", "c3"]);
+        assert_eq!(answer[0].trace_ids, ["t1", "t2", "t3"]);
+        assert_eq!((answer[0].solved, answer[0].total), (2, 3));
+        assert_eq!(answer[0].cost_per_solved_task, Some(0.3));
+        assert_eq!(answer[0].sufficiency, TraceSufficiency::Sufficient);
+        assert_eq!(answer[1].sufficiency, TraceSufficiency::Insufficient);
+        assert_eq!(answer[1].abstained, Some(NO_SOLVED_TRACE));
+        assert_eq!(answer[2].abstained, Some(PRICE_UNKNOWN));
+        assert_eq!(answer[2].cost_per_solved_task, None);
+
+        // Parameters: required text, an optional bounded integer.
+        let params = |model: &str, min: Option<f64>| {
+            ConfigEvidenceQuery::from_params(
+                |name| match name {
+                    "model_ref" => Some(model.to_string()),
+                    "task_class" => Some("t".to_string()),
+                    _ => None,
+                },
+                |name| (name == "min_traces").then_some(min).flatten(),
+            )
+        };
+        assert_eq!(params("m", None).unwrap().min_traces, DEFAULT_MIN_TRACES_PER_CONFIG);
+        assert_eq!(params("m", Some(5.0)).unwrap().min_traces, 5);
+        assert_eq!(
+            params("  ", None).unwrap_err(),
+            "INVALID_ARGUMENT: $model_ref is required"
+        );
+        for bad in [4.0, 1001.0, 7.5] {
+            assert_eq!(
+                params("m", Some(bad)).unwrap_err(),
+                "INVALID_ARGUMENT: $min_traces must be an integer in [5, 1000]"
+            );
+        }
     }
 }

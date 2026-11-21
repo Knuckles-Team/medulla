@@ -11,8 +11,9 @@ use medulla_mutation_types::evolution_metrics::{
     evolution_trace_metrics, EvolutionTraceQuery, EVOLUTION_TRACE_METRICS,
 };
 use medulla_mutation_types::harness_metrics::{
-    price_table_from_node, run_harness_query, run_trace_usage, HarnessQuery, RunTraceUsageQuery,
-    RUN_TRACE_USAGE,
+    harness_config_evidence, price_table_from_node, run_harness_query, run_trace_usage,
+    ConfigEvidenceQuery, HarnessQuery, RunTraceUsageQuery, TraceSufficiency,
+    HARNESS_CONFIG_EVIDENCE, RUN_TRACE_USAGE,
 };
 
 /// Answer one harness statement over the caller's visible `RunTrace` nodes.
@@ -27,6 +28,9 @@ pub(crate) fn handle_harness_metric(
     }
     if query.name == EVOLUTION_TRACE_METRICS {
         return handle_evolution_trace_metrics(ctx, query, params);
+    }
+    if query.name == HARNESS_CONFIG_EVIDENCE {
+        return handle_harness_config_evidence(ctx, query, params);
     }
     let (snap, version) = sql_read_snapshot(
         ctx.core,
@@ -216,6 +220,94 @@ fn handle_evolution_trace_metrics(
     let result = medulla_query_types::wire::UqlResult::Rows {
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows: answer.to_rows(),
+        warnings,
+        snapshot_revision: version,
+        knowledge_revision: 0,
+        source_coverage: Vec::new(),
+    };
+    served_response::<query_results::Uql>(
+        ctx.req_id,
+        Ok(Ok(result)),
+        "UQL",
+        #[cfg(feature = "result-cache")]
+        ctx.core,
+        #[cfg(feature = "result-cache")]
+        None,
+    )
+}
+
+/// MEDULLA-ORCH-VOCAB-R010.6: the cost per solved task of each harness configuration
+/// of one model and task class, with the trace ids behind each row and whether
+/// they reach the `$min_traces` threshold. One RLS-filtered snapshot is read;
+/// the statement writes nothing and decides nothing.
+#[cfg(feature = "query")]
+fn handle_harness_config_evidence(
+    ctx: &QueryHandlerCtx<'_>,
+    query: &HarnessQuery,
+    params: &UqlParams,
+) -> Response {
+    let evidence = match ConfigEvidenceQuery::from_params(
+        |name| text_param(params, name),
+        |name| number_param(params, name),
+    ) {
+        Ok(evidence) => evidence,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let (snap, version) = sql_read_snapshot(
+        ctx.core,
+        #[cfg(feature = "security")]
+        ctx.caller,
+        #[cfg(feature = "security")]
+        ctx.rls,
+    );
+    let nodes: Vec<(String, _)> = snap
+        .node_map
+        .keys()
+        .filter_map(|id| snap.node_row_object(id).map(|props| (id.clone(), props)))
+        .filter(|(_, props)| props.get("node_type").and_then(|v| v.as_str()) == Some("RunTrace"))
+        .collect();
+    let traces: Vec<_> = nodes.iter().map(|(id, props)| (id.clone(), props)).collect();
+    let answered = harness_config_evidence(&evidence, &traces);
+    let warnings = answered
+        .iter()
+        .filter_map(|row| {
+            row.abstained
+                .map(|reason| format!("abstained {reason}: {}", row.config))
+        })
+        .collect();
+    let rows = answered
+        .into_iter()
+        .map(|row| medulla_query_types::wire::UqlRow {
+            id: row.config,
+            score: None,
+            channels: vec![
+                row.cost_per_solved_task,
+                Some(row.solved as f64),
+                Some(row.total as f64),
+            ],
+            knowledge: None,
+            proof: None,
+            provenance: [
+                (
+                    "trace_ids".to_string(),
+                    serde_json::to_string(&row.trace_ids).unwrap_or_default(),
+                ),
+                (
+                    "sufficiency".to_string(),
+                    match row.sufficiency {
+                        TraceSufficiency::Sufficient => "sufficient",
+                        TraceSufficiency::Insufficient => "insufficient",
+                    }
+                    .to_string(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        })
+        .collect();
+    let result = medulla_query_types::wire::UqlResult::Rows {
+        columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
+        rows,
         warnings,
         snapshot_revision: version,
         knowledge_revision: 0,

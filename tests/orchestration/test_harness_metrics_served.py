@@ -120,3 +120,32 @@ def test_mechanism_counts_per_config(clean_graph):
     partial = _by_group(clean_graph.query.uql("harness_mechanism_counts"))
     assert partial["model-p|config-p"]["mean_turn_count"] == pytest.approx(4.0)
     assert partial["model-p|config-p"]["mean_elision_count"] is None
+
+
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R010.6")
+def test_config_evidence_marks_insufficient_trace_counts(clean_graph):
+    _ingest(clean_graph)
+    result = clean_graph.query.uql(
+        "harness_config_evidence",
+        {"model_ref": "model-a", "task_class": "shell-task", "min_traces": 5},
+    )
+    assert result["kind"] == "rows"
+    rows = {row["id"]: row for row in result["rows"]}
+    # Only model-a / shell-task traces are in scope: one configuration, two traces.
+    assert list(rows) == ["config-1"]
+    row = rows["config-1"]
+    assert json.loads(row["provenance"]["trace_ids"]) == [
+        "trace-context-overflow",
+        "trace-final-answer",
+    ]
+    assert row["provenance"]["sufficiency"] == "insufficient"
+    assert row["channels"]["solved"] == 1
+    assert row["channels"]["total"] == 2
+    assert row["channels"]["cost_per_solved_task"] == pytest.approx(0.352)
+
+    # A threshold below the bound is refused.
+    with pytest.raises(Exception, match=r"\$min_traces must be an integer in \[5, 1000\]"):
+        clean_graph.query.uql(
+            "harness_config_evidence",
+            {"model_ref": "model-a", "task_class": "shell-task", "min_traces": 2},
+        )
