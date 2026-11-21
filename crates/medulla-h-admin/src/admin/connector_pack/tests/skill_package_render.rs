@@ -245,3 +245,93 @@ async fn render_carries_revision_and_digest() {
         "the revision advances with the ingest"
     );
 }
+
+/// One tenant's served skill listing, signed as `tenant`. Another tenant is
+/// refused at the served boundary or lists nothing.
+async fn list_skills_as_tenant(served: &Served, tenant: &str, key: &str) -> Vec<FleetSkillRow> {
+    let id = super::next_id();
+    let request = medulla_server_auth::auth::scoped_test_request_on(
+        super::SECRET,
+        id,
+        "__commons__",
+        Method::FleetCatalog {
+            op: Box::new(FleetCatalogOp::List {
+                request: FleetCatalogListRequest {
+                    kind: FleetCatalogKind::Skills,
+                    query: None,
+                    grant_digests: BoundedVec::new(Vec::new()).unwrap(),
+                    limit: None,
+                    cursor: None,
+                },
+            }),
+        },
+        medulla_server_auth::auth::ScopedTestCaller {
+            principal: ADMIN,
+            tenant,
+            scopes: &["*"],
+            nonce: &format!("pack-served-nonce-{id}"),
+            idempotency_key: key,
+        },
+    );
+    let response =
+        medulla_server_auth::auth::dispatch_test_on_heap(&served.state, request).await;
+    if response.refusal_text().is_some() {
+        return Vec::new();
+    }
+    let page: FleetCatalogPage = ok("list skills as another tenant", response);
+    page.rows
+        .iter()
+        .filter_map(|row| match row {
+            FleetCatalogRow::Skill { row } => Some(row.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+// spec: MEDULLA-TYPED-PACKS-R100.6
+#[tokio::test]
+async fn list_after_reingest_returns_new_digest() {
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    bind(&served, CONNECTOR, ADMIN).await;
+    let ontology_ref = ontology_id();
+    let refs = [ontology_ref.as_str()];
+    let first = imported(
+        &served,
+        &build_pack(CONNECTOR, &[ontology(), skill_text("triage", &refs, "v1")]),
+        None,
+    )
+    .await;
+    observe(&served).await;
+
+    let before = list_skills(&served, "skill-render:reingest:1").await;
+    let before = the_skill(&before, "triage")
+        .package
+        .clone()
+        .expect("the first listing renders a package");
+
+    // Re-ingest the changed content through the served import.
+    imported(
+        &served,
+        &build_pack(CONNECTOR, &[ontology(), skill_text("triage", &refs, "v2")]),
+        Some(head_of(&first)),
+    )
+    .await;
+    let after = list_skills(&served, "skill-render:reingest:2").await;
+    let after = the_skill(&after, "triage")
+        .package
+        .clone()
+        .expect("the second listing renders a package");
+    assert_ne!(after.digest, before.digest, "the second listing has a new digest");
+    assert!(
+        after.graph_revision > before.graph_revision,
+        "the second listing has a newer graph revision"
+    );
+
+    // A second tenant never sees the skill.
+    let elsewhere = list_skills_as_tenant(&served, "tenant-other", "skill-render:other-tenant").await;
+    assert!(
+        elsewhere.iter().all(|row| row.component.name != "triage"),
+        "another tenant must not list the skill"
+    );
+}
