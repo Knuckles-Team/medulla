@@ -14,6 +14,7 @@
 //! (R078/R081) walk them. The records themselves are plain data: one
 //! vocabulary, one writer.
 
+pub mod definitions;
 pub mod errors;
 pub mod improvement;
 pub mod org;
