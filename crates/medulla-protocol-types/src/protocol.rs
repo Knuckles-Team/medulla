@@ -32,6 +32,10 @@ fn default_resource_stats_limit() -> usize {
     128
 }
 
+fn default_downtime_page() -> u32 {
+    20
+}
+
 /// `skip_serializing_if` predicate for a `bool` field whose default is
 /// `false` (serde requires `fn(&T) -> bool`, so `std::ops::Not::not`'s
 /// by-value signature doesn't fit). Omitting a still-`false` field from the

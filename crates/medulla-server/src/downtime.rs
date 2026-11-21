@@ -7,8 +7,9 @@
 //! `medulla_jobs::downtime::select_for_window` which types fit the open window,
 //! takes one `BackgroundIngestion` capacity lease per chosen type through
 //! `AcquireCapacity`, and only then submits the type's job through the jobs seam.
-//! A type whose lease is not granted submits nothing. The decision is recorded for
-//! the served `DowntimeSelections` method.
+//! A type whose lease is not granted submits nothing. The decision is written to the
+//! commons graph as `dw:Selection` facts (R101.5) that the served `DowntimeSelections`
+//! method pages.
 //!
 //! The capacity cells `downtime:cpu` and `downtime:memory` are the operator's to
 //! provision; a tick against an unprovisioned or full cell leases nothing and so
@@ -27,11 +28,12 @@ use medulla_jobs::ResourceBudget;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_protocol_types::protocol::Method;
 use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome};
-use medulla_server_api::downtime::{
-    record_selections, DowntimeSelected, DowntimeSelections, FOREGROUND_ACTIVITY,
-};
+use medulla_server_api::downtime::FOREGROUND_ACTIVITY;
 use medulla_server_api::state::ServerState;
 use medulla_server_ops::api::ingest::DowntimeJobRequest;
+use medulla_work_types::downtime::{
+    DowntimeSelected, DowntimeSelectionRecord, DowntimeSkipReason, DowntimeSkipped,
+};
 use medulla_work_types::native_control::{
     CapacityAcquireRequest, CapacityAcquireResult, CapacityDecision, CapacityDemand,
     NativeControlSchemaVersion,
@@ -353,24 +355,41 @@ fn idempotency_key(iri: &str, now_ms: i64) -> String {
     format!("{iri}:{}", now_ms.max(0) / LEASE_TTL_MS as i64)
 }
 
-/// Lease and submit every selected type, in run order, and answer the decision.
+/// The id of the `dw:Selection` node of the tick at `at_ms`: ascending id order is newest first.
+pub fn selection_id(at_ms: i64) -> String {
+    format!("dw:selection/{:020}", i64::MAX - at_ms.max(0))
+}
+
+/// Lease and submit every selected type, in run order, and answer the decision: the plan's
+/// precondition and budget skips, then the lease skips of this call.
 pub async fn apply_plan(
     effects: &dyn TickEffects,
     memory: &mut TickMemory,
     plan: TickPlan,
     now_ms: i64,
-) -> DowntimeSelections {
-    let mut decision = DowntimeSelections {
+) -> DowntimeSelectionRecord {
+    let skip = |iri: String, reason| DowntimeSkipped { iri, reason };
+    let mut decision = DowntimeSelectionRecord {
+        selection_id: selection_id(now_ms),
         at_ms: now_ms,
-        selected: Vec::new(),
-        skipped_precondition: plan.skipped_precondition,
-        skipped_budget: plan.skipped_budget,
-        skipped_lease: Vec::new(),
+        chosen: Vec::new(),
+        skipped: plan
+            .skipped_precondition
+            .into_iter()
+            .map(|iri| skip(iri, DowntimeSkipReason::PreconditionFalse))
+            .chain(
+                plan.skipped_budget
+                    .into_iter()
+                    .map(|iri| skip(iri, DowntimeSkipReason::BudgetDoesNotFit)),
+            )
+            .collect(),
     };
     for job_type in plan.selected {
         let granted = effects.lease(lease_request(&job_type, now_ms)).await;
         if !matches!(granted, Ok(true)) {
-            decision.skipped_lease.push(job_type.iri);
+            decision
+                .skipped
+                .push(skip(job_type.iri, DowntimeSkipReason::LeaseNotGranted));
             continue;
         }
         let request = DowntimeJobRequest {
@@ -387,7 +406,7 @@ pub async fn apply_plan(
         match effects.submit(request).await {
             Ok(job_id) => {
                 memory.last_run.insert(job_type.iri.clone(), now_ms);
-                decision.selected.push(DowntimeSelected {
+                decision.chosen.push(DowntimeSelected {
                     iri: job_type.iri,
                     intent: job_type.intent,
                     job_id,
@@ -399,6 +418,157 @@ pub async fn apply_plan(
         }
     }
     decision
+}
+
+/// How many selections the commons graph keeps.
+pub const SELECTIONS_KEPT: usize = 1_000;
+/// How many existing selections one tick reads to find the ones to prune: the kept count less
+/// the new one, plus room to catch up when more than the cap exist.
+const PRUNE_READ: usize = 1_063;
+
+fn encode(value: serde_json::Value) -> Vec<u8> {
+    rmp_serde::to_vec_named(&value).unwrap_or_default()
+}
+
+/// The two writes of one entry: its node and the edge from the selection to it.
+fn entry_methods(
+    selection_id: &str,
+    index: usize,
+    iri: &str,
+    catalog: &BTreeMap<String, DowntimeJobType>,
+    mut properties: serde_json::Map<String, serde_json::Value>,
+    edge: &str,
+) -> [Method; 2] {
+    let (priority, cpu_ms, memory_bytes) = catalog
+        .get(iri)
+        .map(|t| {
+            (
+                u64::from(t.priority),
+                t.budget.cpu_ms.unwrap_or(0),
+                t.budget.memory_bytes.unwrap_or(0),
+            )
+        })
+        .unwrap_or((0, 0, 0));
+    properties.insert("type".into(), "dw:SelectionEntry".into());
+    properties.insert("dw:jobType".into(), iri.into());
+    properties.insert("dw:priority".into(), priority.into());
+    properties.insert("dw:cpuMs".into(), cpu_ms.into());
+    properties.insert("dw:memoryBytes".into(), memory_bytes.into());
+    let node_id = format!("{selection_id}/{index}");
+    [
+        Method::AddNode {
+            node_id: node_id.clone(),
+            properties_msgpack: encode(serde_json::Value::Object(properties)),
+        },
+        Method::AddEdge {
+            source_id: selection_id.to_string(),
+            target_id: node_id,
+            properties_msgpack: encode(serde_json::json!({ "type": edge })),
+        },
+    ]
+}
+
+/// The batch that records `record` and prunes the selections beyond the newest
+/// `SELECTIONS_KEPT`. `existing` is the commons graph's `dw:Selection` page, newest first.
+pub fn selection_methods(
+    record: &DowntimeSelectionRecord,
+    catalog: &BTreeMap<String, DowntimeJobType>,
+    existing: &[(String, Vec<u8>)],
+) -> Vec<Method> {
+    let count = record.chosen.len() + record.skipped.len();
+    let mut methods = vec![Method::AddNode {
+        node_id: record.selection_id.clone(),
+        properties_msgpack: encode(serde_json::json!({
+            "type": "dw:Selection",
+            "dw:atMs": record.at_ms,
+            "dw:entryCount": count,
+        })),
+    }];
+    let mut index = 0;
+    for chosen in &record.chosen {
+        let mut properties = serde_json::Map::new();
+        properties.insert("dw:outcome".into(), "chosen".into());
+        properties.insert("dw:jobId".into(), chosen.job_id.clone().into());
+        properties.insert("dw:intent".into(), chosen.intent.clone().into());
+        methods.extend(entry_methods(
+            &record.selection_id,
+            index,
+            &chosen.iri,
+            catalog,
+            properties,
+            "dw:chosen",
+        ));
+        index += 1;
+    }
+    for skipped in &record.skipped {
+        let mut properties = serde_json::Map::new();
+        properties.insert("dw:outcome".into(), "skipped".into());
+        properties.insert("dw:skipReason".into(), skipped.reason.as_str().into());
+        methods.extend(entry_methods(
+            &record.selection_id,
+            index,
+            &skipped.iri,
+            catalog,
+            properties,
+            "dw:skipped",
+        ));
+        index += 1;
+    }
+    for (id, bytes) in existing.iter().skip(SELECTIONS_KEPT - 1) {
+        let entries = rmp_serde::from_slice::<serde_json::Value>(bytes)
+            .ok()
+            .and_then(|props| props["dw:entryCount"].as_u64())
+            .unwrap_or(0);
+        for entry in 0..entries {
+            methods.push(Method::RemoveNode {
+                node_id: format!("{id}/{entry}"),
+            });
+        }
+        methods.push(Method::RemoveNode {
+            node_id: id.clone(),
+        });
+    }
+    methods
+}
+
+/// Write one tick's record to the commons graph in one internal commit. A tick that chose
+/// and skipped nothing writes nothing; a failed commit is logged.
+async fn record_selection(
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    record: &DowntimeSelectionRecord,
+    catalog: &BTreeMap<String, DowntimeJobType>,
+) {
+    if record.chosen.is_empty() && record.skipped.is_empty() {
+        return;
+    }
+    let existing = core.get_nodes_by_label_page("dw:Selection", None, PRUNE_READ);
+    let methods = selection_methods(record, catalog, &existing);
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
+        "downtime-selection",
+        COMMONS,
+        &record.at_ms.to_string(),
+    );
+    let principal =
+        medulla_server_api::api::persistence::RaftMutationContext::internal_principal_fingerprint();
+    let committed = medulla_server_mutation::mutation_batch::commit_internal_graph_methods(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+            Some(backend),
+            core,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 0,
+                principal: Some(&principal),
+            },
+            COMMONS,
+            &batch_id,
+            methods,
+            &medulla_protocol_types::protocol::ResultPayload::Bool(true),
+        ),
+    )
+    .await;
+    if let Err(error) = committed {
+        tracing::warn!(%error, "the downtime selection was not recorded");
+    }
 }
 
 /// The effects of a served engine: the capacity ledger of the persistence
@@ -449,7 +619,7 @@ fn plan_from_graph(
     memory: &TickMemory,
     is_registered: &dyn Fn(&str) -> bool,
     now_ms: i64,
-) -> Result<TickPlan, String> {
+) -> Result<(TickPlan, BTreeMap<String, DowntimeJobType>), String> {
     let view = core.analysis_snapshot();
     let dataset = Dataset::new(&view, Vec::new());
     let projection = Projection::from_wire(DW, "");
@@ -475,14 +645,19 @@ fn plan_from_graph(
         dataset: &dataset,
         projection: &projection,
     };
-    Ok(plan_tick(
+    let plan = plan_tick(
         &types,
         &declared_windows(&type_rows),
         memory,
         &eval,
         TickKnobs::installed(),
         now_ms,
-    ))
+    );
+    let catalog = types
+        .into_iter()
+        .map(|job_type| (job_type.iri.clone(), job_type))
+        .collect();
+    Ok((plan, catalog))
 }
 
 /// Run one downtime tick; answers how many jobs it submitted.
@@ -523,8 +698,8 @@ pub async fn run_tick(state: &Arc<RwLock<ServerState>>, now_ms: i64) -> usize {
         jobs.intent_registered(&persist_dir, intent)
             .unwrap_or(false)
     };
-    let plan = match plan_from_graph(&core, &memory, &is_registered, now_ms) {
-        Ok(plan) => plan,
+    let (plan, catalog) = match plan_from_graph(&core, &memory, &is_registered, now_ms) {
+        Ok(planned) => planned,
         Err(error) => {
             tracing::warn!(%error, "downtime tick could not read the job types");
             restore(memory);
@@ -534,11 +709,11 @@ pub async fn run_tick(state: &Arc<RwLock<ServerState>>, now_ms: i64) -> usize {
     let effects = StateEffects {
         state: state.clone(),
         persist_dir: persist_dir.clone(),
-        backend,
+        backend: backend.clone(),
     };
     let decision = apply_plan(&effects, &mut memory, plan, now_ms).await;
-    let submitted = decision.selected.len();
-    record_selections(decision);
+    let submitted = decision.chosen.len();
+    record_selection(&core, &backend, &decision, &catalog).await;
     restore(memory);
     submitted
 }
@@ -671,8 +846,14 @@ mod tests {
                 "submit:dw:full"
             ]
         );
-        assert_eq!(decision.skipped_lease, ["dw:refresh"]);
-        let submitted: Vec<&str> = decision.selected.iter().map(|s| s.iri.as_str()).collect();
+        assert_eq!(
+            decision.skipped,
+            [DowntimeSkipped {
+                iri: "dw:refresh".into(),
+                reason: DowntimeSkipReason::LeaseNotGranted
+            }]
+        );
+        let submitted: Vec<&str> = decision.chosen.iter().map(|s| s.iri.as_str()).collect();
         assert_eq!(submitted, ["dw:plan", "dw:full"]);
         assert!(effects
             .leases
@@ -705,5 +886,74 @@ mod tests {
         let types = types_from_rows(&[bad_kind, no_cpu, ok], &[]);
         assert_eq!(types.len(), 1);
         assert_eq!(types[0].iri, "dw:c");
+    }
+
+    /// Holds for every precondition except the literal `false`.
+    struct NotFalse;
+    impl PreconditionEval for NotFalse {
+        fn holds(&self, precondition: &str) -> bool {
+            precondition != "false"
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R101.5
+    #[tokio::test]
+    async fn selection_recorded() {
+        let type_rows = vec![
+            type_row("dw:a", "plan_evolution", 30),
+            type_row("dw:b", "live_artifact_refresh", 20),
+            type_row("dw:c", "plan_evolution", 10),
+        ];
+        let precondition_rows = vec![row(&[("t", "dw:c"), ("query", "false")])];
+        let types = types_from_rows(&type_rows, &precondition_rows);
+        let catalog: BTreeMap<String, DowntimeJobType> =
+            types.iter().map(|t| (t.iri.clone(), t.clone())).collect();
+        let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-downtime", "selections");
+        let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = Arc::new(
+            medulla_persistence::redb_backend::RedbBackend::open(
+                dir.to_string_lossy().into_owned(),
+                64,
+            )
+            .expect("open redb backend"),
+        );
+        let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
+        let effects = Recording {
+            denied: Vec::new(),
+            log: Mutex::default(),
+            leases: Mutex::default(),
+        };
+        let tick = |at_ms: i64| {
+            let types = types.clone();
+            let effects = &effects;
+            async move {
+                let mut memory = TickMemory::default();
+                let plan = plan_tick(&types, &BTreeMap::new(), &memory, &NotFalse, knobs(), at_ms);
+                apply_plan(effects, &mut memory, plan, at_ms).await
+            }
+        };
+
+        let first = tick(1_000_000).await;
+        record_selection(&core, &backend, &first, &catalog).await;
+        let page = medulla_h_jobs::scheduler_config::selection_page(&core, None, 1);
+        assert_eq!(page.next_after, None);
+        assert_eq!(page.selections.len(), 1);
+        let selection = &page.selections[0];
+        assert_eq!(selection.chosen.len(), 2);
+        assert_eq!(
+            selection.skipped,
+            [DowntimeSkipped {
+                iri: "dw:c".into(),
+                reason: DowntimeSkipReason::PreconditionFalse
+            }]
+        );
+
+        for at_ms in 1_000_001..=1_001_000 {
+            let record = tick(at_ms).await;
+            record_selection(&core, &backend, &record, &catalog).await;
+        }
+        assert_eq!(
+            core.get_nodes_by_label_page("dw:Selection", None, 2_000).len(),
+            SELECTIONS_KEPT
+        );
     }
 }

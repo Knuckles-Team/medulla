@@ -430,12 +430,12 @@ pub(super) const REASON_SHARD_WRITER_WIDTH_CONFIG: &str =
 // MEDULLA-DURABLE-KERNEL-R076.2: the scheduler policy is process configuration.
 pub(super) const REASON_SCHEDULER_CONFIG: &str =
     "control_plane::dispatch_scheduler_config_arm routes GetSchedulerConfig to handlers::scheduler_config, which returns only the stored or knob-derived scheduler policy -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:admin in allows_method";
-// MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision is process state.
+// MEDULLA-DURABLE-KERNEL-R101.5: the recorded downtime selections are engine-owned commons facts.
 // MEDULLA-DURABLE-KERNEL-R074.2: the worker registry is in-memory process state.
 pub(super) const REASON_WORKER_REGISTRY: &str =
     "control_plane::dispatch_worker_registry_arm routes WorkerRegister/WorkerHeartbeat/AdmitWorkerTask to handlers::worker_registry, which touches only the in-memory worker registry of this process (worker id, capacity facts and lease deadline, owned by the verified principal) and the job-store lane counts of the verified tenant -- process state, never a GraphView/core.analysis_snapshot() row read; gated by worker:register in allows_method";
 pub(super) const REASON_DOWNTIME_SELECTIONS: &str =
-    "control_plane::dispatch_scheduler_config_arm routes DowntimeSelections to handlers::scheduler_config, which returns only the in-memory record of the latest downtime tick (job type IRIs, intent names and job ids) -- process state, never a GraphView/core.analysis_snapshot() row read; gated by jobs:read in allows_method";
+    "control_plane::dispatch_scheduler_config_arm routes DowntimeSelections to handlers::scheduler_config, which pages the engine-owned dw:Selection facts of the commons graph (job type IRIs, intent names, skip reasons and job ids written by the downtime tick, no tenant row) -- scheduler records, never a tenant GraphView row read; gated by jobs:read in allows_method";
 pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
     "native_routes::route_work_item_reads routes GetWorkItem/ListWorkItems/GetWorkItemOutcome/GetControlLease/ListControlLeases/GapGet/GapList (placement leader + read barrier under raft) to handlers::work_item_read, which refuses any request tenant other than the verified carrier tenant, then reads redb node rows via redb_store::work_item::{read_work_item, list_work_items, read_work_item_outcome, read_control_lease, list_control_leases, read_gap, list_gaps} and projects only rows whose `tenant` equals it -- never a GraphView/core.analysis_snapshot() row read; lease owner/epoch/fencing token are never projected";
 

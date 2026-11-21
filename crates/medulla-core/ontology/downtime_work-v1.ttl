@@ -87,9 +87,65 @@ dw:hasPrecondition a owl:ObjectProperty ;
     rdfs:domain dw:JobType ;
     rdfs:range dw:Precondition .
 
+dw:Selection a owl:Class ;
+    rdfs:label "Downtime selection" ;
+    rdfs:comment "What one deciding downtime tick chose and skipped (MEDULLA-DURABLE-KERNEL-R101.5)." .
+
+dw:SelectionEntry a owl:Class ;
+    rdfs:label "Downtime selection entry" ;
+    rdfs:comment "One job type a tick chose or skipped, with the reason when skipped." .
+
+dw:atMs a owl:DatatypeProperty ;
+    rdfs:label "tick time" ;
+    rdfs:domain dw:Selection ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Engine time of the tick, in milliseconds." .
+
+dw:entryCount a owl:DatatypeProperty ;
+    rdfs:label "entry count" ;
+    rdfs:domain dw:Selection ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "How many entries the selection holds." .
+
+dw:chosen a owl:ObjectProperty ;
+    rdfs:label "chosen" ;
+    rdfs:domain dw:Selection ;
+    rdfs:range dw:SelectionEntry .
+
+dw:skipped a owl:ObjectProperty ;
+    rdfs:label "skipped" ;
+    rdfs:domain dw:Selection ;
+    rdfs:range dw:SelectionEntry .
+
+dw:skipReason a owl:DatatypeProperty ;
+    rdfs:label "skip reason" ;
+    rdfs:domain dw:SelectionEntry ;
+    rdfs:range xsd:string ;
+    rdfs:comment "precondition_false, budget_does_not_fit, lease_not_granted or budget_required." .
+
+dw:outcome a owl:DatatypeProperty ;
+    rdfs:label "outcome" ;
+    rdfs:domain dw:SelectionEntry ;
+    rdfs:range xsd:string ;
+    rdfs:comment "chosen or skipped." .
+
+dw:jobType a owl:DatatypeProperty ;
+    rdfs:label "job type" ;
+    rdfs:domain dw:SelectionEntry ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The IRI of the dw:JobType the entry is about." .
+
+dw:jobId a owl:DatatypeProperty ;
+    rdfs:label "job id" ;
+    rdfs:domain dw:SelectionEntry ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The id of the job submitted for a chosen type." .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/downtime-work#JobType> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/downtime-work#Window> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/downtime-work#ResourceBudget> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/downtime-work#Precondition> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#Selection> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#SelectionEntry> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

@@ -532,7 +532,7 @@ pub async fn dispatch_compute_and_media_methods(
             #[cfg(feature = "jobs")]
             method @ (Method::GetSchedulerConfig
             | Method::SetSchedulerConfig { .. }
-            | Method::DowntimeSelections) => {
+            | Method::DowntimeSelections { .. }) => {
                 dispatch_scheduler_config_arm(ctx, method).await
             }
             // MEDULLA-DURABLE-KERNEL-R074.2: the served worker registry.

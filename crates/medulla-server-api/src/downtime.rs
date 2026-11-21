@@ -1,19 +1,15 @@
-//! Foreground activity and the latest downtime selections
-//! (MEDULLA-DURABLE-KERNEL-R101.3).
+//! Foreground activity and the downtime job bodies (MEDULLA-DURABLE-KERNEL-R101.3, R101.7).
 //!
 //! Every served request calls [`FOREGROUND_ACTIVITY`]`.note_request`; the downtime
-//! tick reads it to decide whether the idle window is open. The tick also records
-//! what it selected here so the served `DowntimeSelections` method can answer it
-//! without reaching into the server crate.
+//! tick reads it to decide whether the idle window is open, and the downtime worker
+//! reads it to decide whether to yield. The tick's selections are graph facts in the
+//! commons graph (R101.5), not state held here.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
 #[cfg(feature = "jobs")]
 use std::collections::BTreeMap;
 #[cfg(feature = "jobs")]
 use std::sync::{Arc, RwLock};
-
-pub use medulla_work_types::downtime::{DowntimeSelected, DowntimeSelections};
 
 /// A request-rate tracker: one atomic second counter and the last busy instant.
 #[derive(Debug)]
@@ -83,24 +79,6 @@ impl Default for ForegroundActivity {
 
 /// The process-wide foreground-activity tracker.
 pub static FOREGROUND_ACTIVITY: ForegroundActivity = ForegroundActivity::new();
-
-static LAST_SELECTIONS: Mutex<Option<DowntimeSelections>> = Mutex::new(None);
-
-/// Record the latest tick's decision.
-pub fn record_selections(selections: DowntimeSelections) {
-    if let Ok(mut slot) = LAST_SELECTIONS.lock() {
-        *slot = Some(selections);
-    }
-}
-
-/// The latest tick's decision, or an empty one before the first tick.
-pub fn latest_selections() -> DowntimeSelections {
-    LAST_SELECTIONS
-        .lock()
-        .ok()
-        .and_then(|slot| slot.clone())
-        .unwrap_or_default()
-}
 
 /// What one step of a downtime job needs: the claimed job, the state its previous step
 /// checkpointed and the wall-clock time the step may use (MEDULLA-DURABLE-KERNEL-R101.7).

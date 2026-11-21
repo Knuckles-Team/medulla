@@ -778,10 +778,16 @@ $($variants)*
         worker_id: String,
         requested_max: u32,
     },
-    /// What the latest downtime tick decided (MEDULLA-DURABLE-KERNEL-R101.3): the
-    /// job types it submitted work for and the types it skipped, with the reason.
-    /// Scope `jobs:read`.
-    DowntimeSelections,
+    /// One page of what the deciding downtime ticks chose and skipped
+    /// (MEDULLA-DURABLE-KERNEL-R101.5), newest first: the job types each submitted work
+    /// for and the types it skipped, with the reason. `after` is the `next_after` of the
+    /// previous page; `limit` is in [1, 100]. Scope `jobs:read`.
+    DowntimeSelections {
+        #[serde(default)]
+        after: Option<String>,
+        #[serde(default = "default_downtime_page")]
+        limit: u32,
+    },
     /// One bounded retention cleanup step over the request graph
     /// (MEDULLA-DURABLE-KERNEL-R700.3), under the policy `MEDULLA_RETENTION_CLEANUP`
     /// names. `dry_run` reports without removing; `cursor` resumes after the

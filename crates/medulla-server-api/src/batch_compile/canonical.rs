@@ -788,7 +788,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TaskQueueRenew { .. }
         | Method::SetSchedulerConfig { .. }
         | Method::GetSchedulerConfig
-        | Method::DowntimeSelections
+        | Method::DowntimeSelections { .. }
         | Method::WorkerRegister { .. }
         | Method::WorkerHeartbeat { .. }
         | Method::AdmitWorkerTask { .. }

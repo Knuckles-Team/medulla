@@ -81,6 +81,93 @@ fn answer(req_id: u64, payload: Result<ResultPayload, String>) -> Response {
     }
 }
 
+/// The commons graph that holds the downtime selections.
+const COMMONS: &str = "__commons__";
+
+/// Page the `dw:Selection` nodes of the commons graph, newest first (their ids sort that way),
+/// with the entry nodes of each. With no commons graph or no selection the page is empty.
+async fn downtime_selections(
+    state: &Arc<RwLock<ServerState>>,
+    after: Option<String>,
+    limit: u32,
+) -> Result<ResultPayload, String> {
+    if !(1..=100).contains(&limit) {
+        return Err(format!(
+            "INVALID_PARAMS: the downtime selection page limit {limit} is outside [1, 100]"
+        ));
+    }
+    let core = {
+        let current = state.read().await;
+        current.registry.get(COMMONS).map(|entry| entry.core.clone())
+    };
+    let page = core
+        .map(|core| selection_page(&core, after.as_deref(), limit as usize))
+        .unwrap_or_default();
+    ResultPayload::of::<contract::DowntimeSelections>(page)
+}
+
+fn node_json(bytes: &[u8]) -> serde_json::Value {
+    rmp_serde::from_slice(bytes).unwrap_or(serde_json::Value::Null)
+}
+
+pub fn selection_page(
+    core: &medulla_graph_core::graph::GraphCore,
+    after: Option<&str>,
+    limit: usize,
+) -> medulla_work_types::downtime::DowntimeSelections {
+    use medulla_work_types::downtime::{
+        DowntimeSelected, DowntimeSelectionRecord, DowntimeSkipReason, DowntimeSkipped,
+        DowntimeSelections,
+    };
+    let mut rows = core.get_nodes_by_label_page("dw:Selection", after, limit + 1);
+    let more = rows.len() > limit;
+    rows.truncate(limit);
+    let next_after = if more {
+        rows.last().map(|(id, _)| id.clone())
+    } else {
+        None
+    };
+    let selections = rows
+        .into_iter()
+        .map(|(selection_id, bytes)| {
+            let props = node_json(&bytes);
+            let count = props["dw:entryCount"].as_u64().unwrap_or(0);
+            let mut record = DowntimeSelectionRecord {
+                at_ms: props["dw:atMs"].as_i64().unwrap_or(0),
+                selection_id: selection_id.clone(),
+                chosen: Vec::new(),
+                skipped: Vec::new(),
+            };
+            for index in 0..count {
+                let Some(entry) = core.get_node_properties(&format!("{selection_id}/{index}"))
+                else {
+                    continue;
+                };
+                let entry = node_json(&entry);
+                let text = |key: &str| entry[key].as_str().unwrap_or_default().to_string();
+                if entry["dw:outcome"] == "chosen" {
+                    record.chosen.push(DowntimeSelected {
+                        iri: text("dw:jobType"),
+                        intent: text("dw:intent"),
+                        job_id: text("dw:jobId"),
+                    });
+                } else if let Some(reason) = DowntimeSkipReason::from_name(&text("dw:skipReason"))
+                {
+                    record.skipped.push(DowntimeSkipped {
+                        iri: text("dw:jobType"),
+                        reason,
+                    });
+                }
+            }
+            record
+        })
+        .collect();
+    DowntimeSelections {
+        selections,
+        next_after,
+    }
+}
+
 /// Route one scheduler-settings method, or hand the method back when it is not
 /// one of the two.
 pub async fn try_handle(
@@ -88,15 +175,13 @@ pub async fn try_handle(
     req_id: u64,
     method: Method,
 ) -> Result<Response, Method> {
-    if matches!(method, Method::DowntimeSelections) {
-        // MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision.
-        return Ok(answer(
-            req_id,
-            ResultPayload::of::<contract::DowntimeSelections>(
-                medulla_server_api::downtime::latest_selections(),
-            ),
-        ));
-    }
+    let method = match method {
+        // MEDULLA-DURABLE-KERNEL-R101.5: the recorded downtime selections, newest first.
+        Method::DowntimeSelections { after, limit } => {
+            return Ok(answer(req_id, downtime_selections(state, after, limit).await));
+        }
+        other => other,
+    };
     if !matches!(
         method,
         Method::GetSchedulerConfig | Method::SetSchedulerConfig { .. }
