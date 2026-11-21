@@ -74,3 +74,38 @@ def test_incident_set_status_params_type_status_as_the_rust_enum() -> None:
         models.MethodIncidentSetStatusParams.model_validate(
             {"incident_id": "inc-1", "status": "skipped"}
         )
+
+
+# spec: MEDULLA-DECISION-ENGINE-R831.10
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R831.10")
+def test_harness_part_tag_is_decision_not_status() -> None:
+    parts = (
+        "HarnessPart_ActionSpace",
+        "HarnessPart_BoundedVec_string_256",
+        "HarnessPart_ContextPolicy",
+        "HarnessPart_PlanScaffold",
+        "HarnessPart_UnitRationalWire",
+    )
+    for name in parts:
+        for variant in ("Decided", "Abstained"):
+            model = getattr(models, name + variant)
+            assert "decision" in model.model_fields, name + variant
+            assert "status" not in model.model_fields, name + variant
+
+    decided = models.HarnessPart_ActionSpaceDecided.model_validate(
+        {"decision": "decided", "value": "tool_set"}
+    )
+    assert decided.decision == "decided"
+    abstained = models.HarnessPart_ActionSpaceAbstained.model_validate(
+        {
+            "decision": "abstained",
+            "missing_fact": ["unverified"],
+            "conservative_default": "tool_set",
+        }
+    )
+    assert abstained.decision == "abstained"
+    # The old key is a hard cutover: no alias is accepted.
+    with pytest.raises(ValidationError):
+        models.HarnessPart_ActionSpaceDecided.model_validate(
+            {"status": "decided", "value": "tool_set"}
+        )

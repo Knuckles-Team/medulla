@@ -7730,7 +7730,7 @@ class HarnessContrastDecision(BaseModel):
 class HarnessPart_ActionSpaceDecided(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["decided"]
+    decision: Literal["decided"]
     value: ActionSpace
 
 
@@ -7739,19 +7739,19 @@ class HarnessPart_ActionSpaceAbstained(BaseModel):
 
     conservative_default: ActionSpace
     missing_fact: BoundedVec_string_64
-    status: Literal["abstained"]
+    decision: Literal["abstained"]
 
 
 HarnessPart_ActionSpace = Annotated[
     HarnessPart_ActionSpaceDecided | HarnessPart_ActionSpaceAbstained,
-    Field(discriminator="status"),
+    Field(discriminator="decision"),
 ]
 
 
 class HarnessPart_BoundedVec_string_256Decided(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["decided"]
+    decision: Literal["decided"]
     value: BoundedVec_string_256
 
 
@@ -7760,20 +7760,20 @@ class HarnessPart_BoundedVec_string_256Abstained(BaseModel):
 
     conservative_default: BoundedVec_string_256
     missing_fact: BoundedVec_string_64
-    status: Literal["abstained"]
+    decision: Literal["abstained"]
 
 
 HarnessPart_BoundedVec_string_256 = Annotated[
     HarnessPart_BoundedVec_string_256Decided
     | HarnessPart_BoundedVec_string_256Abstained,
-    Field(discriminator="status"),
+    Field(discriminator="decision"),
 ]
 
 
 class HarnessPart_ContextPolicyDecided(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["decided"]
+    decision: Literal["decided"]
     value: ContextPolicy
 
 
@@ -7782,19 +7782,19 @@ class HarnessPart_ContextPolicyAbstained(BaseModel):
 
     conservative_default: ContextPolicy
     missing_fact: BoundedVec_string_64
-    status: Literal["abstained"]
+    decision: Literal["abstained"]
 
 
 HarnessPart_ContextPolicy = Annotated[
     HarnessPart_ContextPolicyDecided | HarnessPart_ContextPolicyAbstained,
-    Field(discriminator="status"),
+    Field(discriminator="decision"),
 ]
 
 
 class HarnessPart_PlanScaffoldDecided(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["decided"]
+    decision: Literal["decided"]
     value: PlanScaffold
 
 
@@ -7803,19 +7803,19 @@ class HarnessPart_PlanScaffoldAbstained(BaseModel):
 
     conservative_default: PlanScaffold
     missing_fact: BoundedVec_string_64
-    status: Literal["abstained"]
+    decision: Literal["abstained"]
 
 
 HarnessPart_PlanScaffold = Annotated[
     HarnessPart_PlanScaffoldDecided | HarnessPart_PlanScaffoldAbstained,
-    Field(discriminator="status"),
+    Field(discriminator="decision"),
 ]
 
 
 class HarnessPart_UnitRationalWireDecided(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["decided"]
+    decision: Literal["decided"]
     value: UnitRationalWire
 
 
@@ -7824,12 +7824,12 @@ class HarnessPart_UnitRationalWireAbstained(BaseModel):
 
     conservative_default: UnitRationalWire
     missing_fact: BoundedVec_string_64
-    status: Literal["abstained"]
+    decision: Literal["abstained"]
 
 
 HarnessPart_UnitRationalWire = Annotated[
     HarnessPart_UnitRationalWireDecided | HarnessPart_UnitRationalWireAbstained,
-    Field(discriminator="status"),
+    Field(discriminator="decision"),
 ]
 
 

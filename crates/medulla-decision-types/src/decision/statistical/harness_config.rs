@@ -56,7 +56,7 @@ pub struct HarnessConfigRequestBody {
 
 /// Each part carries its own decision or conservative fallback.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(tag = "decision", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "contract-schema", schemars(rename = "HarnessPart_{T}"))]
 pub enum HarnessPart<T> {
@@ -639,9 +639,9 @@ mod tests {
                 for status in ["decided", "abstained"] {
                     let mut wire = serde_json::to_value(answer()).unwrap();
                     wire[field] = if status == "decided" {
-                        serde_json::json!({"status":status,"value":bad})
+                        serde_json::json!({"decision":status,"value":bad})
                     } else {
-                        serde_json::json!({"status":status,"missing_fact":["threshold"],"conservative_default":bad})
+                        serde_json::json!({"decision":status,"missing_fact":["threshold"],"conservative_default":bad})
                     };
                     assert!(serde_json::from_value::<HarnessConfigAnswer>(wire).is_err());
                 }
@@ -650,7 +650,7 @@ mod tests {
         let mut wire = serde_json::to_value(answer()).unwrap();
         wire["tool_subset"]["value"] = serde_json::json!(vec!["tool"; 257]);
         assert!(serde_json::from_value::<HarnessConfigAnswer>(wire).is_err());
-        assert!(serde_json::from_value::<HarnessPart<ActionSpace>>(serde_json::json!({"status":"abstained","missing_fact":vec!["fact";65],"conservative_default":"tool_set"})).is_err());
+        assert!(serde_json::from_value::<HarnessPart<ActionSpace>>(serde_json::json!({"decision":"abstained","missing_fact":vec!["fact";65],"conservative_default":"tool_set"})).is_err());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R128.3

@@ -2541,7 +2541,7 @@ fn reseal(mut record: StatisticalDecisionRecord) -> StatisticalDecisionRecord {
 /// The widest evidence the default limits admit: 4096 items.
 fn widest_evidence() -> HarnessConfigEvaluationEvidence {
     let decided =
-        |value: serde_json::Value| serde_json::json!({"status": "decided", "value": value});
+        |value: serde_json::Value| serde_json::json!({"decision": "decided", "value": value});
     let q32 = |n: u64| serde_json::json!({"numerator": n, "denominator": 4294967296u64});
     let tools: Vec<String> = (0..256).map(|i| format!("tool-{i:04}")).collect();
     let declared: Vec<serde_json::Value> = (0..64)

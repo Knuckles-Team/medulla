@@ -832,7 +832,7 @@ fn unverified_harness_evidence(
 {
     let missing = |value: serde_json::Value| {
         serde_json::json!({
-            "status": "abstained", "missing_fact": ["unverified"],
+            "decision": "abstained", "missing_fact": ["unverified"],
             "conservative_default": value
         })
     };

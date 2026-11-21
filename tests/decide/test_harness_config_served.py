@@ -160,8 +160,8 @@ def test_harness_config_end_to_end(clean_graph):
     ][0]
     assert record["question"]["kind"] == "harness_config"
     answer = _evidence(record)["answer"]
-    assert answer["action_space"] == {"status": "decided", "value": "tool_set"}
-    assert answer["tool_subset"]["status"] == "decided"
+    assert answer["action_space"] == {"decision": "decided", "value": "tool_set"}
+    assert answer["tool_subset"]["decision"] == "decided"
     assert sorted(answer["tool_subset"]["value"]) == ["tool-a", "tool-b"]
     assert _evidence(record)["tool_subset_certificate"]["model_digest"]
     facts = _premise_facts(record)
@@ -185,7 +185,7 @@ def test_harness_config_end_to_end(clean_graph):
         "records"
     ][0]
     action_space = _evidence(record)["answer"]["action_space"]
-    assert action_space["status"] == "abstained"
+    assert action_space["decision"] == "abstained"
     assert "shellProficiency" in action_space["missing_fact"]
     assert action_space["conservative_default"] == "tool_set"
 
@@ -249,7 +249,7 @@ def test_profile_constrains_a_run(clean_graph):
     )
     record = client._send("Decide", {"request": request})["records"][0]
     answer = _evidence(record)["answer"]
-    assert answer["tool_subset"]["status"] == "decided"
+    assert answer["tool_subset"]["decision"] == "decided"
     assert sorted(answer["tool_subset"]["value"]) == ["tool-b", "tool-c"]
     facts = _premise_facts(record)
     assert f"profile:profile-r656-4@{revision}" in facts, facts

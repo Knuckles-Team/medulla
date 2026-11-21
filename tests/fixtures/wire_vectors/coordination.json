@@ -1698,40 +1698,40 @@
               "harness_evaluation": {
                 "answer": {
                   "action_space": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": "tool_set"
                   },
                   "context_policy": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": "none"
                   },
                   "hard_threshold": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": {
                       "denominator": 4294967296,
                       "numerator": 1
                     }
                   },
                   "plan_scaffold": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": "on"
                   },
                   "recent_window_fraction": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": {
                       "denominator": 4294967296,
                       "numerator": 1
                     }
                   },
                   "soft_threshold": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": {
                       "denominator": 4294967296,
                       "numerator": 1
                     }
                   },
                   "tool_subset": {
-                    "status": "decided",
+                    "decision": "decided",
                     "value": []
                   }
                 },
@@ -1945,40 +1945,40 @@
             "harness_evaluation": {
               "answer": {
                 "action_space": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": "tool_set"
                 },
                 "context_policy": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": "none"
                 },
                 "hard_threshold": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": {
                     "denominator": 0,
                     "numerator": 0
                   }
                 },
                 "plan_scaffold": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": "on"
                 },
                 "recent_window_fraction": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": {
                     "denominator": 0,
                     "numerator": 0
                   }
                 },
                 "soft_threshold": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": {
                     "denominator": 0,
                     "numerator": 0
                   }
                 },
                 "tool_subset": {
-                  "status": "decided",
+                  "decision": "decided",
                   "value": []
                 }
               },

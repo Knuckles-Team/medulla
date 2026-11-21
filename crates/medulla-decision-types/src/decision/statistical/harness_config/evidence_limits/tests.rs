@@ -17,7 +17,7 @@ fn limits(items: i64, bytes: i64, string_bytes: i64) -> HarnessEvidenceLimits {
 
 fn evidence(profile: &str, tools: usize) -> HarnessConfigEvaluationEvidence {
     let decided =
-        |value: serde_json::Value| serde_json::json!({"status": "decided", "value": value});
+        |value: serde_json::Value| serde_json::json!({"decision": "decided", "value": value});
     let q32 = |n: u64| serde_json::json!({"numerator": n, "denominator": 4294967296u64});
     let tool_ids: Vec<String> = (0..tools).map(|i| format!("tool-{i:04}")).collect();
     serde_json::from_value(serde_json::json!({

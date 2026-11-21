@@ -17,7 +17,7 @@ fn limits(premises: i64, candidates: i64, bytes: i64) -> HarnessReplayLimits {
 
 fn evidence(options: usize) -> HarnessConfigEvaluationEvidence {
     let decided =
-        |value: serde_json::Value| serde_json::json!({"status": "decided", "value": value});
+        |value: serde_json::Value| serde_json::json!({"decision": "decided", "value": value});
     let q32 = |n: u64| serde_json::json!({"numerator": n, "denominator": 4294967296u64});
     let declared: Vec<serde_json::Value> = (0..options)
         .map(|i| serde_json::json!({"option_id": format!("tool-{i:04}")}))
