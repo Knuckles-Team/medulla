@@ -55,6 +55,7 @@ pub fn request() -> SourceIngestionRequest {
         kind: Default::default(),
         extension: None,
         features: Default::default(),
+        source_chunk: None,
     })
     .expect("valid source ingestion request")
 }

@@ -111,6 +111,14 @@ fn mismatch(detail: &str) -> String {
 /// and nothing else.
 pub(super) fn validate_kind(batch: &SourceIngestionBatch) -> Result<(), String> {
     let extension_kind = batch.extension.as_ref().map(SourceBatchExtension::kind);
+    if let Some(chunk) = &batch.source_chunk {
+        if batch.kind != SourceBatchKind::Facts {
+            return Err(mismatch("source_chunk is valid only on a facts batch"));
+        }
+        if chunk.trim().is_empty() {
+            return Err(mismatch("source_chunk must not be blank"));
+        }
+    }
     if batch.kind == SourceBatchKind::Records {
         return extension_kind.map_or(Ok(()), |_| {
             Err(mismatch("records batch carries an extension"))

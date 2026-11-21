@@ -315,6 +315,11 @@ pub struct SourceIngestionBatch {
     /// serializes to the same canonical bytes as a batch without the field.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub features: SourceFeatures,
+    /// The chunk node every fact of a `facts` batch was read from
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7). Valid only on a `facts` batch; absent
+    /// serializes to the same canonical bytes as a batch without the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_chunk: Option<String>,
 }
 
 /// A request whose structural invariants and byte bound were checked during

@@ -84,7 +84,7 @@ fn main() {
     let mut samples = Vec::with_capacity(BATCHES);
     for _ in 0..BATCHES {
         let started = Instant::now();
-        let admission = admit_facts("tenant:bench", &decoded, &cache, &held, 2)
+        let admission = admit_facts("tenant:bench", &decoded, &cache, &held, &BTreeMap::new(), 2, None)
             .expect("bench facts admit");
         samples.push(started.elapsed());
         assert!(admission.admitted > 0);

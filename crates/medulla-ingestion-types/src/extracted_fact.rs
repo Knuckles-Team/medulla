@@ -145,6 +145,28 @@ pub struct FactUnit {
     pub detail: String,
 }
 
+/// The outcome of one chunk of a `facts` batch (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FactChunk {
+    /// The chunk node the batch was read from.
+    pub chunk_id: String,
+    /// The hex SHA-256 of the chunk's stored text: the chunk digest.
+    pub content_hash: String,
+    #[serde(default)]
+    pub created: u64,
+    #[serde(default)]
+    pub updated: u64,
+    #[serde(default)]
+    pub unchanged: u64,
+    #[serde(default)]
+    pub rejected: u64,
+    /// Facts of an earlier extraction of this chunk that this batch no longer states.
+    #[serde(default)]
+    pub superseded: u64,
+}
+
 /// Per-outcome counts of a `facts` batch, the links it created and up to
 /// [`MAX_FACT_REPORT_ENTRIES`] per-unit entries (MEDULLA-INGEST-WORKER-R701.5,
 /// R701.7). Observation evidence: not part of the receipt digest.
@@ -166,6 +188,10 @@ pub struct FactReport {
     pub links: u64,
     #[serde(default)]
     pub entries: Vec<FactUnit>,
+    /// The outcome of the chunk a batch with `source_chunk` was read from
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7); empty without one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub chunks: Vec<FactChunk>,
 }
 
 impl FactReport {

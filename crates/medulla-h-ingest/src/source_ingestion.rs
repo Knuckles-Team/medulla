@@ -849,10 +849,19 @@ async fn prepare_extension_batch(
             // candidate claims and fact atoms (MEDULLA-INGEST-WORKER-R701.3).
             let decoded = facts::decode_facts(items.as_slice())?;
             let cache = facts::grounding_cache(&ctx.schema_sources)?;
+            // The chunk the facts were read from grounds each claim and lets a
+            // re-extraction supersede (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+            let chunk = match batch.source_chunk.as_deref() {
+                Some(chunk_id) => Some(
+                    read_held_chunk(persistence.as_ref(), &graph_fname, ctx.tenant_scope, chunk_id)
+                        .await?,
+                ),
+                None => None,
+            };
             let held = read_held_claims(
                 persistence.as_ref(),
                 &graph_fname,
-                &facts::held_claim_ids(ctx.tenant_scope, &decoded)?,
+                &facts::held_claim_ids(ctx.tenant_scope, &decoded, chunk.as_ref())?,
             )
             .await?;
             let held_pairs = read_held_pairs(
@@ -868,6 +877,7 @@ async fn prepare_extension_batch(
                 &held,
                 &held_pairs,
                 medulla_server_api::knob_config::knobs().ingest_link_min_shared_mentions,
+                chunk.as_ref(),
             )?;
             for node_id in &admission.node_ids {
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
@@ -1079,6 +1089,35 @@ async fn read_held_containers(
         held.insert(id.clone(), properties);
     }
     Ok(held)
+}
+
+/// The chunk a `facts` batch names and the claims an earlier extraction of it grounded.
+/// A chunk the graph does not hold refuses the batch (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_chunk(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    tenant: &str,
+    chunk_id: &str,
+) -> Result<facts::HeldChunk, String> {
+    let decode = |bytes: Vec<u8>| -> Result<serde_json::Value, String> {
+        rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("SOURCE_BATCH_KIND_MISMATCH: held chunk: {error}"))
+    };
+    let Some(bytes) = persistence.read_node(graph_fname, chunk_id).await? else {
+        return Err(format!(
+            "SOURCE_BATCH_KIND_MISMATCH: source_chunk names no stored chunk: {chunk_id}"
+        ));
+    };
+    let properties = decode(bytes)?;
+    let prior = match persistence
+        .read_node(graph_fname, &facts::chunk_facts_id(tenant, chunk_id)?)
+        .await?
+    {
+        Some(bytes) => facts::held_chunk_claims(&decode(bytes)?),
+        None => BTreeSet::new(),
+    };
+    facts::held_chunk(chunk_id, &properties, prior)
 }
 
 /// The candidate claims `ids` name that the graph already holds, with the unit hash and

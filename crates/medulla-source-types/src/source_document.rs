@@ -288,6 +288,7 @@ mod tests {
             kind: Default::default(),
             extension: None,
             features: Default::default(),
+            source_chunk: None,
         })
         .unwrap()
     }

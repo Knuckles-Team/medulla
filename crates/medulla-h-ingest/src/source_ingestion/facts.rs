@@ -5,14 +5,20 @@
 //! (`FactDeduper`) and stores every kept fact twice: as a `candidate_claim`
 //! node that carries the fact and its grounding, and as a `KnowledgeAtom` of
 //! kind `Fact` whose provenance key is the evidence span reference. The atom
-//! links to its claim by an `atom_of` edge.
+//! links to its claim by an `atom_of` edge. A batch that names the chunk it was read
+//! from (`source_chunk`, MEDULLA-UNIFIED-DATA-PLANE-R651.7.7) also grounds each claim:
+//! an `extractedFrom` edge to the chunk, a `derivedFrom` edge to the chunk's Document,
+//! and a `chunk_facts` record that lets a re-extraction supersede the claims it no
+//! longer states.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
+use sha2::{Digest as _, Sha256};
+
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::extracted_fact::{
-    CandidateClaim, EvidenceSpan, ExtractedFact, FactBatch, FactOutcome, FactReport, FactUnit,
+    CandidateClaim, EvidenceSpan, FactChunk, ExtractedFact, FactBatch, FactOutcome, FactReport, FactUnit,
     GroundingResult,
 };
 use medulla_ingestion_types::ingest_rules::{
@@ -28,6 +34,18 @@ use medulla_types::contract::{Digest256, ServerErrorCode};
 
 /// The `type` property of a stored candidate claim node.
 pub const CANDIDATE_CLAIM_NODE_TYPE: &str = "CandidateClaim";
+
+/// The `type` property of the record of the claims one chunk grounds.
+pub const CHUNK_FACTS_NODE_TYPE: &str = "ChunkFacts";
+
+/// The edge from a claim to the chunk it was extracted from.
+pub const EXTRACTED_FROM: &str = "extractedFrom";
+
+/// The edge from a claim to the Document it derives from.
+pub const DERIVED_FROM: &str = "derivedFrom";
+
+/// The digest domain of a chunk facts record identity.
+const CHUNK_FACTS_DOMAIN: &[u8] = b"eg/chunk-facts-identity/v1";
 
 /// The `type` property of a stored entity a link joins.
 pub const FACT_ENTITY_NODE_TYPE: &str = "FactEntity";
@@ -86,6 +104,79 @@ pub struct HeldClaim {
     pub unit_hash: String,
     /// The stored claim's confidence.
     pub confidence: f64,
+    /// The chunks the claim was extracted from.
+    pub chunks: BTreeSet<String>,
+    /// The Documents the claim derives from.
+    pub documents: BTreeSet<String>,
+    /// The stored node properties, rewritten whole when only the chunk set changes.
+    pub properties: serde_json::Value,
+}
+
+/// The chunk a `facts` batch names, read before admission
+/// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeldChunk {
+    /// The chunk node id the batch names.
+    pub chunk_id: String,
+    /// The Document node the chunk belongs to.
+    pub document_id: String,
+    /// The hex SHA-256 of the chunk's stored text.
+    pub content_hash: String,
+    /// The claim ids an earlier extraction of this chunk grounded.
+    pub prior_claims: BTreeSet<String>,
+}
+
+/// The hex SHA-256 of a chunk's stored text: the chunk digest.
+pub fn chunk_content_hash(text: &str) -> String {
+    hex::encode(Sha256::digest(text.as_bytes()))
+}
+
+/// The node id of the record of the claims one chunk grounds.
+pub fn chunk_facts_id(tenant: &str, chunk_id: &str) -> Result<String, String> {
+    let digest = Digest256::framed(
+        CHUNK_FACTS_DOMAIN,
+        &[tenant.as_bytes(), chunk_id.as_bytes()],
+    )?;
+    Ok(format!("chunk_facts:{}", digest.to_hex()))
+}
+
+/// The claim ids a stored chunk facts record holds.
+pub fn held_chunk_claims(properties: &serde_json::Value) -> BTreeSet<String> {
+    string_set(properties.get("claim_ids"))
+}
+
+/// A chunk node's properties as the chunk a batch names.
+pub fn held_chunk(
+    chunk_id: &str,
+    properties: &serde_json::Value,
+    prior_claims: BTreeSet<String>,
+) -> Result<HeldChunk, String> {
+    let document_id = properties
+        .get("document_id")
+        .and_then(|value| value.as_str())
+        .filter(|id| !id.is_empty());
+    let text = properties.get("text").and_then(|value| value.as_str());
+    match (document_id, text) {
+        (Some(document_id), Some(text)) => Ok(HeldChunk {
+            chunk_id: chunk_id.to_string(),
+            document_id: document_id.to_string(),
+            content_hash: chunk_content_hash(text),
+            prior_claims,
+        }),
+        _ => Err(invalid("source_chunk names a node that is not a stored chunk")),
+    }
+}
+
+fn string_set(value: Option<&serde_json::Value>) -> BTreeSet<String> {
+    value
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// The ordered entity pair a fact's subject and object form; none when they are equal.
@@ -142,17 +233,29 @@ pub fn held_claim(properties: &serde_json::Value) -> Option<HeldClaim> {
     Some(HeldClaim {
         unit_hash: properties.get("unit_hash")?.as_str()?.to_string(),
         confidence: properties.get("fact")?.get("confidence")?.as_f64()?,
+        chunks: string_set(properties.get("chunks")),
+        documents: string_set(properties.get("documents")),
+        properties: properties.clone(),
     })
 }
 
-/// The claim node ids a decoded batch may update, for the held-claims read.
-pub fn held_claim_ids(tenant: &str, decoded: &DecodedFacts) -> Result<BTreeSet<String>, String> {
-    decoded
+/// The claim node ids a decoded batch may update, and the claims an earlier extraction
+/// of its chunk grounded, for the held-claims read.
+pub fn held_claim_ids(
+    tenant: &str,
+    decoded: &DecodedFacts,
+    chunk: Option<&HeldChunk>,
+) -> Result<BTreeSet<String>, String> {
+    let mut ids: BTreeSet<String> = decoded
         .batch
         .facts
         .iter()
         .map(|fact| claim_node_id(tenant, fact))
-        .collect()
+        .collect::<Result<_, _>>()?;
+    if let Some(chunk) = chunk {
+        ids.extend(chunk.prior_claims.iter().cloned());
+    }
+    Ok(ids)
 }
 
 /// Decode the elements of a `facts` extension.
@@ -346,6 +449,115 @@ fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(value).map_err(|error| invalid(format!("fact encoding failed: {error}")))
 }
 
+/// Add the chunk and Document of a claim to its stored properties.
+fn ground_claim_properties(
+    properties: &mut serde_json::Value,
+    before: &HeldClaim,
+    chunk: &HeldChunk,
+) {
+    let mut chunks = before.chunks.clone();
+    chunks.insert(chunk.chunk_id.clone());
+    let mut documents = before.documents.clone();
+    documents.insert(chunk.document_id.clone());
+    properties["chunks"] = serde_json::json!(chunks);
+    properties["documents"] = serde_json::json!(documents);
+}
+
+/// The `extractedFrom` edge to the chunk and, once per Document, the `derivedFrom` edge to it.
+fn push_grounding_edges(
+    methods: &mut Vec<Method>,
+    claim_id: &str,
+    before: &HeldClaim,
+    chunk: &HeldChunk,
+) -> Result<(), String> {
+    methods.push(Method::AddEdge {
+        source_id: claim_id.to_string(),
+        target_id: chunk.chunk_id.clone(),
+        properties_msgpack: encode(&serde_json::json!({ "relationship": EXTRACTED_FROM }))?,
+    });
+    if !before.documents.contains(&chunk.document_id) {
+        methods.push(Method::AddEdge {
+            source_id: claim_id.to_string(),
+            target_id: chunk.document_id.clone(),
+            properties_msgpack: encode(&serde_json::json!({ "relationship": DERIVED_FROM }))?,
+        });
+    }
+    Ok(())
+}
+
+/// Record the claims the chunk now grounds and supersede the claims an earlier extraction
+/// of it grounded that this batch no longer states: a claim read from no other chunk is
+/// removed with its atom, one another chunk also grounds loses only this chunk. The
+/// outcome of the chunk joins the report.
+fn supersede_chunk_claims(
+    tenant: &str,
+    chunk: &HeldChunk,
+    held: &BTreeMap<String, HeldClaim>,
+    restated: &BTreeSet<String>,
+    admission: &mut FactAdmission,
+) -> Result<(), String> {
+    let mut superseded = 0;
+    for prior in chunk.prior_claims.difference(restated) {
+        let Some(stored) = held.get(prior) else {
+            continue;
+        };
+        superseded += 1;
+        let mut chunks = stored.chunks.clone();
+        chunks.remove(&chunk.chunk_id);
+        if chunks.is_empty() {
+            admission.methods.push(Method::RemoveNode {
+                node_id: prior.clone(),
+            });
+            if let Some(fact) = stored
+                .properties
+                .get("fact")
+                .and_then(|fact| serde_json::from_value::<ExtractedFact>(fact.clone()).ok())
+            {
+                admission.methods.push(Method::RemoveNode {
+                    node_id: atom_node_id(&fact_digest(tenant, &fact)?),
+                });
+            }
+        } else {
+            let mut properties = stored.properties.clone();
+            properties["chunks"] = serde_json::json!(chunks);
+            admission.methods.push(Method::RemoveEdge {
+                source_id: prior.clone(),
+                target_id: chunk.chunk_id.clone(),
+            });
+            admission.methods.push(Method::AddNode {
+                node_id: prior.clone(),
+                properties_msgpack: encode(&properties)?,
+            });
+            admission.node_ids.push(prior.clone());
+        }
+    }
+    let record_id = chunk_facts_id(tenant, &chunk.chunk_id)?;
+    admission.methods.push(Method::AddNode {
+        node_id: record_id.clone(),
+        properties_msgpack: encode(&serde_json::json!({
+            "type": CHUNK_FACTS_NODE_TYPE,
+            "tenant": tenant,
+            "chunk_id": chunk.chunk_id,
+            "document_id": chunk.document_id,
+            "content_hash": chunk.content_hash,
+            "claim_ids": restated,
+        }))?,
+    });
+    admission.node_ids.push(record_id);
+    let report = &admission.report;
+    let outcome = FactChunk {
+        chunk_id: chunk.chunk_id.clone(),
+        content_hash: chunk.content_hash.clone(),
+        created: report.created,
+        updated: report.updated,
+        unchanged: report.unchanged,
+        rejected: report.rejected,
+        superseded,
+    };
+    admission.report.chunks.push(outcome);
+    Ok(())
+}
+
 /// Ground each fact, drop repeated triples, classify the rest against the held
 /// claims and compile the claim, atom and link writes, in batch order
 /// (MEDULLA-INGEST-WORKER-R701.3, R701.5, R701.7). An unchanged claim writes
@@ -353,7 +565,10 @@ fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
 /// `1 - (1 - old) * (1 - new)`. Every pair of entities a new atom mentions is recorded
 /// on a `fact_pair` node that holds its atom ids; entities that co-occur in at least
 /// `min_shared` stored atoms, counted across batches through `held_pairs`, get a
-/// `related_to` edge.
+/// `related_to` edge. With a `chunk`, every kept claim also gets an `extractedFrom` edge to
+/// the chunk and a `derivedFrom` edge to its Document, and the claims an earlier
+/// extraction of the chunk grounded but this batch no longer states are superseded
+/// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
 pub fn admit_facts(
     tenant: &str,
     decoded: &DecodedFacts,
@@ -361,7 +576,9 @@ pub fn admit_facts(
     held: &BTreeMap<String, HeldClaim>,
     held_pairs: &BTreeMap<String, BTreeSet<String>>,
     min_shared: u64,
+    chunk: Option<&HeldChunk>,
 ) -> Result<FactAdmission, String> {
+    let mut restated: BTreeSet<String> = BTreeSet::new();
     let mut deduper = FactDeduper::default();
     let mut admission = FactAdmission::default();
     let mut created: Vec<CandidateClaim> = Vec::new();
@@ -387,7 +604,23 @@ pub fn admit_facts(
             outcome,
             detail: String::new(),
         });
+        restated.insert(claim_id.clone());
+        let stored_claim = held.get(&claim_id);
+        let new_to_chunk = chunk.is_some_and(|chunk| {
+            stored_claim.map_or(true, |stored| !stored.chunks.contains(&chunk.chunk_id))
+        });
         if outcome == FactOutcome::Unchanged {
+            if let (Some(chunk), Some(stored), true) = (chunk, stored_claim, new_to_chunk) {
+                // The same claim read from another chunk: only its grounding changes.
+                let mut properties = stored.properties.clone();
+                ground_claim_properties(&mut properties, stored, chunk);
+                admission.methods.push(Method::AddNode {
+                    node_id: claim_id.clone(),
+                    properties_msgpack: encode(&properties)?,
+                });
+                push_grounding_edges(&mut admission.methods, &claim_id, stored, chunk)?;
+                admission.node_ids.push(claim_id);
+            }
             continue;
         }
         let mut claim: CandidateClaim = ground_fact(fact.clone(), cache);
@@ -405,15 +638,27 @@ pub fn admit_facts(
         };
         check_atom_provenance(&atom).map_err(|refusal| invalid(refusal.code()))?;
         let atom_id = atom_node_id(&atom.atom_id);
+        let mut claim_properties = serde_json::json!({
+            "type": CANDIDATE_CLAIM_NODE_TYPE,
+            "tenant": tenant,
+            "fact": claim.fact,
+            "grounding": claim.grounding,
+            "unit_hash": hash,
+        });
+        let empty = HeldClaim {
+            unit_hash: String::new(),
+            confidence: 0.0,
+            chunks: BTreeSet::new(),
+            documents: BTreeSet::new(),
+            properties: serde_json::Value::Null,
+        };
+        let before = stored_claim.unwrap_or(&empty);
+        if let Some(chunk) = chunk {
+            ground_claim_properties(&mut claim_properties, before, chunk);
+        }
         admission.methods.push(Method::AddNode {
             node_id: claim_id.clone(),
-            properties_msgpack: encode(&serde_json::json!({
-                "type": CANDIDATE_CLAIM_NODE_TYPE,
-                "tenant": tenant,
-                "fact": claim.fact,
-                "grounding": claim.grounding,
-                "unit_hash": hash,
-            }))?,
+            properties_msgpack: encode(&claim_properties)?,
         });
         admission.methods.push(Method::AddNode {
             node_id: atom_id.clone(),
@@ -431,6 +676,9 @@ pub fn admit_facts(
             target_id: claim_id.clone(),
             properties_msgpack: encode(&serde_json::json!({ "relationship": ATOM_OF }))?,
         });
+        if let (Some(chunk), true) = (chunk, new_to_chunk) {
+            push_grounding_edges(&mut admission.methods, &claim_id, before, chunk)?;
+        }
         admission.node_ids.push(claim_id);
         admission.node_ids.push(atom_id);
         admission.admitted += 1;
@@ -448,6 +696,9 @@ pub fn admit_facts(
             outcome: FactOutcome::Rejected,
             detail: detail.clone(),
         });
+    }
+    if let Some(chunk) = chunk {
+        supersede_chunk_claims(tenant, chunk, held, &restated, &mut admission)?;
     }
     let mut stored: BTreeMap<(String, String), u64> = BTreeMap::new();
     for (first, second) in new_atoms.keys() {
@@ -555,7 +806,7 @@ mod tests {
             ],
             },
         };
-        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
+        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(admission.admitted, 2);
         assert_eq!(admission.duplicates, 1);
         assert_eq!(admission.grounded, 1);
@@ -596,7 +847,7 @@ mod tests {
         let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
         let first = fact("Ada Lovelace", "Note G", 10);
         let batch = decoded(vec![first.clone()]);
-        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
+        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(created.report.created, 1);
         let unit = &created.report.entries[0];
         assert_eq!(unit.outcome, FactOutcome::Created);
@@ -606,14 +857,14 @@ mod tests {
 
         let mut held = BTreeMap::new();
         held.insert(unit.claim_id.clone(), stored);
-        let again = admit_facts("t1", &batch, &cache, &held, &BTreeMap::new(), 2).unwrap();
+        let again = admit_facts("t1", &batch, &cache, &held, &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(again.report.unchanged, 1);
         assert_eq!(again.report.entries[0].unit_hash, unit.unit_hash);
         assert!(again.methods.is_empty());
 
         // The same triple at another span keeps the claim id and updates it.
         let moved = decoded(vec![fact("Ada Lovelace", "Note G", 90)]);
-        let updated = admit_facts("t1", &moved, &cache, &held, &BTreeMap::new(), 2).unwrap();
+        let updated = admit_facts("t1", &moved, &cache, &held, &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(updated.report.updated, 1);
         assert_eq!(updated.report.entries[0].claim_id, unit.claim_id);
         assert_ne!(updated.report.entries[0].unit_hash, unit.unit_hash);
@@ -631,7 +882,7 @@ mod tests {
         .unwrap();
         let decoded = decode_facts(&[item]).unwrap();
         let cache = GroundingCache::default();
-        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
+        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(admission.report.rejected, 1);
         assert_eq!(admission.report.entries[0].outcome, FactOutcome::Rejected);
         assert!(admission.methods.is_empty());
@@ -644,7 +895,7 @@ mod tests {
         let mut second = fact("Ada Lovelace", "Note G", 40);
         second.predicate = "annotated".into();
         let two = decoded(vec![fact("Ada Lovelace", "Note G", 10), second]);
-        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
+        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(linked.report.links, 1);
         let edges = linked
             .methods
@@ -654,7 +905,7 @@ mod tests {
         assert_eq!(edges, 2 + 1);
 
         let one = decoded(vec![fact("Somebody", "Something", 10)]);
-        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
+        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
         assert_eq!(none.report.links, 0);
     }
 
@@ -669,6 +920,7 @@ mod tests {
             &BTreeMap::new(),
             &BTreeMap::new(),
             2,
+            None,
         )
         .unwrap();
         // One shared atom: no link, but the pair node keeps the evidence.
@@ -693,9 +945,7 @@ mod tests {
             &decoded(vec![other]),
             &cache,
             &BTreeMap::new(),
-            &held_pairs,
-            2,
-        )
+            &held_pairs, 2, None)
         .unwrap();
         assert_eq!(second.report.links, 1);
         let edge = second
@@ -718,6 +968,128 @@ mod tests {
             } => rmp_serde::from_slice(properties_msgpack).ok(),
             _ => None,
         }
+    }
+
+    fn chunk(prior: &[&str]) -> HeldChunk {
+        HeldChunk {
+            chunk_id: "chunk:doc:ada:0".into(),
+            document_id: "doc:ada".into(),
+            content_hash: chunk_content_hash("Ada wrote Note G."),
+            prior_claims: prior.iter().map(|id| id.to_string()).collect(),
+        }
+    }
+
+    fn edge_relations(admission: &FactAdmission) -> Vec<(String, String, String)> {
+        admission
+            .methods
+            .iter()
+            .filter_map(|method| match method {
+                Method::AddEdge {
+                    source_id,
+                    target_id,
+                    properties_msgpack,
+                } => {
+                    let properties: serde_json::Value =
+                        rmp_serde::from_slice(properties_msgpack).ok()?;
+                    Some((
+                        source_id.clone(),
+                        target_id.clone(),
+                        properties["relationship"].as_str()?.to_string(),
+                    ))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.7
+    #[test]
+    fn a_chunk_batch_grounds_each_claim_in_the_same_commit() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let held_chunk = chunk(&[]);
+        let batch = decoded(vec![fact("Ada Lovelace", "Note G", 10)]);
+        let admission = admit_facts(
+            "t1",
+            &batch,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            Some(&held_chunk),
+        )
+        .unwrap();
+        let claim_id = admission.report.entries[0].claim_id.clone();
+        let relations = edge_relations(&admission);
+        assert!(relations.contains(&(
+            claim_id.clone(),
+            "chunk:doc:ada:0".into(),
+            EXTRACTED_FROM.into()
+        )));
+        assert!(relations.contains(&(claim_id.clone(), "doc:ada".into(), DERIVED_FROM.into())));
+        let claim = node_properties(&admission.methods[0]);
+        assert_eq!(claim["chunks"], serde_json::json!(["chunk:doc:ada:0"]));
+        assert_eq!(claim["documents"], serde_json::json!(["doc:ada"]));
+        let record = admission
+            .methods
+            .iter()
+            .filter_map(node_properties_opt)
+            .find(|properties| properties["type"] == CHUNK_FACTS_NODE_TYPE)
+            .expect("chunk facts record");
+        assert_eq!(record["claim_ids"], serde_json::json!([claim_id]));
+        let outcome = &admission.report.chunks[0];
+        assert_eq!(outcome.chunk_id, "chunk:doc:ada:0");
+        assert_eq!(outcome.content_hash, chunk_content_hash("Ada wrote Note G."));
+        assert_eq!((outcome.created, outcome.superseded), (1, 0));
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.7
+    #[test]
+    fn a_re_extraction_supersedes_the_claims_it_no_longer_states() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let first_chunk = chunk(&[]);
+        let first = admit_facts(
+            "t1",
+            &decoded(vec![fact("Ada Lovelace", "Note G", 10), fact("Somebody", "Something", 50)]),
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            Some(&first_chunk),
+        )
+        .unwrap();
+        let mut held = BTreeMap::new();
+        let mut prior = Vec::new();
+        for method in &first.methods {
+            if let Some(properties) = node_properties_opt(method) {
+                if properties["type"] == CANDIDATE_CLAIM_NODE_TYPE {
+                    let Method::AddNode { node_id, .. } = method else { unreachable!() };
+                    held.insert(node_id.clone(), held_claim(&properties).expect("held claim"));
+                    prior.push(node_id.as_str());
+                }
+            }
+        }
+        assert_eq!(prior.len(), 2);
+        let second_chunk = chunk(&prior);
+        let again = admit_facts(
+            "t1",
+            &decoded(vec![fact("Ada Lovelace", "Note G", 10)]),
+            &cache,
+            &held,
+            &BTreeMap::new(),
+            2,
+            Some(&second_chunk),
+        )
+        .unwrap();
+        assert_eq!(again.report.unchanged, 1);
+        let outcome = &again.report.chunks[0];
+        assert_eq!((outcome.unchanged, outcome.superseded), (1, 1));
+        let removed = again
+            .methods
+            .iter()
+            .filter(|method| matches!(method, Method::RemoveNode { .. }))
+            .count();
+        // The unstated claim and its atom.
+        assert_eq!(removed, 2);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R701.3

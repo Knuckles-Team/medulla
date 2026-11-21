@@ -161,6 +161,7 @@ class SourceIngestionBatch(BaseModel):
     provider_checkpoint: SourceCheckpoint
     records: BoundedVec_SourceRecord_1024
     relationships: BoundedVec_SourceRelationship_4096 = Field(default_factory=list)
+    source_chunk: str | None = None
     strict_schema: bool
     withdrawals: BoundedVec_SourceWithdrawal_1024 = Field(default_factory=list)
 
@@ -238,6 +239,18 @@ class FactUnit(BaseModel):
     detail: str = ""
 
 
+class FactChunk(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    chunk_id: str
+    content_hash: str
+    created: Annotated[int, Field(ge=0)] = 0
+    updated: Annotated[int, Field(ge=0)] = 0
+    unchanged: Annotated[int, Field(ge=0)] = 0
+    rejected: Annotated[int, Field(ge=0)] = 0
+    superseded: Annotated[int, Field(ge=0)] = 0
+
+
 class FactReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -249,6 +262,7 @@ class FactReport(BaseModel):
     entries: Annotated[list[FactUnit], Field(max_length=1024)] = Field(
         default_factory=list
     )
+    chunks: list[FactChunk] = Field(default_factory=list)
 
 
 class RowVersionReport(BaseModel):
@@ -765,6 +779,7 @@ __all__ = [
     "DocumentReport",
     "PaperRefusal",
     "PaperReport",
+    "FactChunk",
     "FactOutcome",
     "FactReport",
     "FactUnit",
