@@ -1,9 +1,10 @@
 //! `Method::Usage`: the served per-tenant usage ledger
 //! (MEDULLA-DECISION-ENGINE-R801.8).
 //!
-//! Both ops write under the tenant and principal of the verified request
+//! `Append` and `PutPrice` write under the tenant and principal of the verified request
 //! context and need the service-only scope `usage:write`, so a human
-//! principal is refused. `Append` writes one batch through
+//! principal is refused; `Read` (R801.7) needs `usage:read` and only ever reads
+//! the verified tenant. `Append` writes one batch through
 //! `AgentLibraryStore::append_usage`; `PutPrice` validates the catalog and
 //! stores its entries as one revision in one transaction through
 //! `AgentLibraryStore::put_prices`. Every refusal is
@@ -14,9 +15,6 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use crate::decide::SharedState;
-
-/// The scope both ops need (service-only, MEDULLA-DECISION-ENGINE-R801.3).
-pub const USAGE_WRITE_SCOPE: &str = "usage:write";
 
 /// Append usage records or store a price catalog for the verified tenant.
 pub async fn handle_usage(
@@ -41,25 +39,26 @@ pub async fn handle_usage(
 
 #[cfg(feature = "redb")]
 mod served {
-    use super::{UsageOp, VerifiedRequestContext, USAGE_WRITE_SCOPE};
+    use super::{UsageOp, VerifiedRequestContext};
     use crate::decide::SharedState;
     use medulla_decision_types::usage::{
-        PriceCatalog, UsageAppended, UsagePriceStored, UsageRecord, USAGE_SCHEMA_VERSION,
+        PriceCatalog, UsageAppended, UsagePriceStored, UsageReadResult, UsageReadView,
+        UsageRecord, USAGE_SCHEMA_VERSION,
     };
+    use medulla_persistence_records::usage_ledger::{DAY_MS, USAGE_READ_PAGE};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::usage_ledger::UsageRefusal;
     use medulla_protocol_types::protocol::ResultPayload;
-    use medulla_protocol_types::result_contract::coordination::{UsageAppend, UsagePutPrice};
+    use medulla_protocol_types::result_contract::coordination::{UsageAppend, UsagePutPrice, UsageRead};
 
     pub(super) async fn serve(
         state: &SharedState,
         verified: &VerifiedRequestContext,
         op: UsageOp,
     ) -> Result<ResultPayload, String> {
-        if !verified.allows_action(USAGE_WRITE_SCOPE) {
-            return Err(format!(
-                "ACCESS_DENIED: Usage needs the service-only scope {USAGE_WRITE_SCOPE}"
-            ));
+        let scope = op.required_scope();
+        if !verified.allows_action(scope) {
+            return Err(format!("ACCESS_DENIED: Usage needs the scope {scope}"));
         }
         let store = state.write().await.ensure_agent_library()?;
         let tenant = verified.tenant();
@@ -86,6 +85,57 @@ mod served {
                     appended: receipt.appended as u64,
                     batch_digest: receipt.batch_digest,
                 })
+            }
+            UsageOp::Read {
+                from_ms,
+                to_ms,
+                model_key,
+                view,
+                cursor,
+            } => {
+                if from_ms > to_ms {
+                    return Err(format!(
+                        "PARAMETER_INVALID: from_ms {from_ms} is after to_ms {to_ms}"
+                    ));
+                }
+                let result = match view {
+                    UsageReadView::Records => {
+                        let (records, next_cursor) = store
+                            .usage_records(
+                                tenant,
+                                from_ms,
+                                to_ms,
+                                model_key.as_deref(),
+                                cursor.as_deref(),
+                                USAGE_READ_PAGE,
+                            )
+                            .map_err(refused)?;
+                        UsageReadResult::Records {
+                            records,
+                            next_cursor,
+                        }
+                    }
+                    UsageReadView::Rollup => {
+                        let catalog = PriceCatalog {
+                            aliases: std::collections::BTreeMap::new(),
+                            entries: store.price_entries(tenant).map_err(refused)?,
+                        };
+                        let wanted = model_key.as_deref().map(|raw| {
+                            medulla_persistence_records::usage_ledger::normalize_model_key(
+                                &catalog, raw,
+                            )
+                        });
+                        let mut days = store
+                            .usage_rollup(tenant, &catalog, from_ms / DAY_MS, to_ms / DAY_MS)
+                            .map_err(refused)?
+                            .days;
+                        if let Some(wanted) = wanted {
+                            days.retain(|day| day.model_key == wanted);
+                        }
+                        UsageReadResult::Rollup { days }
+                    }
+                };
+                ResultPayload::of::<UsageRead>(result)
             }
             UsageOp::PutPrice { catalog } => {
                 let mut entries = catalog.entries;

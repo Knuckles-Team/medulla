@@ -18,12 +18,15 @@ pub const USAGE_BATCH_TOO_LARGE: RefusalCode = RefusalCode::new("USAGE_BATCH_TOO
 pub const USAGE_BAD_DIGEST: RefusalCode = RefusalCode::new("USAGE_BAD_DIGEST");
 /// A new price entry starts at or before the latest entry of its key with other prices.
 pub const PRICE_WINDOW_OVERLAP: RefusalCode = RefusalCode::new("PRICE_WINDOW_OVERLAP");
+/// A read cursor is not hex, not UTF-8, or names a key outside the verified tenant.
+pub const USAGE_BAD_CURSOR: RefusalCode = RefusalCode::new("USAGE_BAD_CURSOR");
 /// The ledger store failed; nothing was written.
 pub const USAGE_STORE_FAILED: RefusalCode = RefusalCode::new("USAGE_STORE_FAILED");
 
 /// The usage ledger's own refusal codes.
 pub const REFUSALS: &[RefusalCode] = &[
     PRICE_WINDOW_OVERLAP,
+    USAGE_BAD_CURSOR,
     USAGE_BAD_DIGEST,
     USAGE_BATCH_TOO_LARGE,
     USAGE_CACHED_EXCEEDS_INPUT,

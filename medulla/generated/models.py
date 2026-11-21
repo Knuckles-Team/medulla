@@ -33390,9 +33390,59 @@ class UsageOpPutPrice(BaseModel):
     op: Literal["put_price"]
 
 
+class UsageReadView(str, Enum):
+    RECORDS = "records"
+    ROLLUP = "rollup"
+
+
+class UsageOpRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    from_ms: Annotated[int, Field(ge=0)]
+    model_key: str | None = None
+    op: Literal["read"]
+    to_ms: Annotated[int, Field(ge=0)]
+    view: UsageReadView
+
+
 UsageOp = Annotated[
-    UsageOpAppend | UsageOpPutPrice,
+    UsageOpAppend | UsageOpPutPrice | UsageOpRead,
     Field(discriminator="op"),
+]
+
+
+class DayRollup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calls: Annotated[int, Field(ge=0)]
+    cost_micro: Annotated[int, Field(ge=0)] | None = None
+    day: Annotated[int, Field(ge=0)]
+    errors: Annotated[int, Field(ge=0)]
+    model_key: str
+    tokens_cached: Annotated[int, Field(ge=0)]
+    tokens_in: Annotated[int, Field(ge=0)]
+    tokens_out: Annotated[int, Field(ge=0)]
+
+
+class UsageReadResultRecords(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    records: list[UsageRecord]
+    view: Literal["records"]
+
+
+class UsageReadResultRollup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    days: list[DayRollup]
+    view: Literal["rollup"]
+
+
+UsageReadResult = Annotated[
+    UsageReadResultRecords | UsageReadResultRollup,
+    Field(discriminator="view"),
 ]
 
 
@@ -39266,6 +39316,12 @@ __all__ = [
     "UsageOp",
     "UsageOpAppend",
     "UsageOpPutPrice",
+    "UsageOpRead",
+    "UsageReadResult",
+    "UsageReadResultRecords",
+    "UsageReadResultRollup",
+    "UsageReadView",
+    "DayRollup",
     "UsageOutcome",
     "UsagePriceStored",
     "UsageRecord",

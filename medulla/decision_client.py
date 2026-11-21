@@ -1082,6 +1082,30 @@ def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     return {"op": "append", "records": [dict(record) for record in records]}
 
 
+def usage_read_op(
+    from_ms: int,
+    to_ms: int,
+    view: str,
+    model_key: str | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """A ``Usage`` read of the caller's tenant (scope ``usage:read``).
+
+    ``view`` is ``records`` (paged by ``cursor``) or ``rollup`` (day buckets).
+    """
+    op: dict[str, Any] = {
+        "op": "read",
+        "from_ms": from_ms,
+        "to_ms": to_ms,
+        "view": view,
+    }
+    if model_key is not None:
+        op["model_key"] = model_key
+    if cursor is not None:
+        op["cursor"] = cursor
+    return op
+
+
 def usage_put_price_op(catalog: Mapping[str, Any]) -> dict[str, Any]:
     """A ``Usage`` price put of ``catalog`` (scope ``usage:write``)."""
     return {
@@ -1182,7 +1206,7 @@ class DecisionClient:
     async def usage(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
-        """Send ``Usage`` (append usage records or put a price catalog)."""
+        """Send ``Usage`` (append usage records, put a price catalog or read the ledger)."""
         from medulla.generated.coordination import send_usage
 
         result = await send_usage(
@@ -1483,5 +1507,6 @@ __all__ = [
     "verify_task_plan_receipt",
     "usage_append_op",
     "usage_put_price_op",
+    "usage_read_op",
     "usage_record",
 ]

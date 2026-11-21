@@ -14,7 +14,9 @@ use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::usage as codes;
-use medulla_decision_types::usage::{PriceCatalog, PriceEntry, UsageOutcome, UsageRecord};
+use medulla_decision_types::usage::{
+    DayRollup, PriceCatalog, PriceEntry, UsageOutcome, UsageRecord,
+};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_server_api::knob_config::knobs;
 use medulla_storage::DECISION_ARTIFACTS;
@@ -28,6 +30,9 @@ pub const DAY_MS: u64 = 86_400_000;
 
 /// Rows read per page when a family is scanned.
 const SCAN_PAGE: usize = 5_000;
+
+/// Records returned by one served usage read page (MEDULLA-DECISION-ENGINE-R801.7).
+pub const USAGE_READ_PAGE: usize = 1000;
 
 /// Domain of the batch digest.
 const BATCH_DIGEST_DOMAIN: &str = "usage-batch";
@@ -45,6 +50,8 @@ pub enum UsageRefusal {
     BatchTooLarge,
     /// A `content_digest` is not 64 lowercase hex characters.
     BadDigest,
+    /// A read cursor is malformed or names a key outside the tenant.
+    BadCursor,
     /// A new price starts at or before the latest entry of its key with other prices.
     PriceWindowOverlap,
     /// The store failed; nothing was written.
@@ -60,6 +67,7 @@ impl UsageRefusal {
             Self::CachedExceedsInput => codes::USAGE_CACHED_EXCEEDS_INPUT,
             Self::BatchTooLarge => codes::USAGE_BATCH_TOO_LARGE,
             Self::BadDigest => codes::USAGE_BAD_DIGEST,
+            Self::BadCursor => codes::USAGE_BAD_CURSOR,
             Self::PriceWindowOverlap => codes::PRICE_WINDOW_OVERLAP,
             Self::Store(_) => codes::USAGE_STORE_FAILED,
         }
@@ -119,28 +127,6 @@ struct DayBucket {
     tokens_out: u64,
     tokens_cached: u64,
     errors: u64,
-}
-
-/// One day of one model in a rollup.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DayRollup {
-    /// The normalized model key.
-    pub model_key: String,
-    /// Days since the epoch (`recorded_at_ms / 86_400_000`).
-    pub day: u64,
-    /// Calls in the bucket.
-    pub calls: u64,
-    /// Input tokens.
-    pub tokens_in: u64,
-    /// Output tokens.
-    pub tokens_out: u64,
-    /// Cached input tokens.
-    pub tokens_cached: u64,
-    /// Calls that errored.
-    pub errors: u64,
-    /// Derived cost, priced at the last millisecond of the day; `None` when no
-    /// price applies.
-    pub cost_micro: Option<u64>,
 }
 
 /// A rollup and how many ledger rows it read to produce it.
@@ -466,6 +452,82 @@ impl AgentLibraryStore {
             }
         }
         Ok(out)
+    }
+
+    /// One page of `tenant`'s records recorded in `[from_ms, to_ms]`
+    /// (MEDULLA-DECISION-ENGINE-R801.7), in key order, starting after the
+    /// cursor key when one is given. `model_key`, when given, keeps records
+    /// whose stored key equals the normalized name over the tenant's catalog.
+    /// `next_cursor` is the lowercase hex of the last returned key, present
+    /// only when a full page was returned. A cursor that is not hex, not
+    /// UTF-8 or outside `usage:<tenant>/` refuses before any read.
+    pub fn usage_records(
+        &self,
+        tenant: &str,
+        from_ms: u64,
+        to_ms: u64,
+        model_key: Option<&str>,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<(Vec<UsageRecord>, Option<String>), UsageRefusal> {
+        let prefix = record_prefix(tenant);
+        let start = match after {
+            Some(cursor) => {
+                let bytes = hex::decode(cursor).map_err(|_| UsageRefusal::BadCursor)?;
+                let key = String::from_utf8(bytes).map_err(|_| UsageRefusal::BadCursor)?;
+                if !key.starts_with(&prefix) {
+                    return Err(UsageRefusal::BadCursor);
+                }
+                key
+            }
+            None => format!("{prefix}{from_ms:020}/"),
+        };
+        let wanted = match model_key {
+            Some(raw) => {
+                let catalog = PriceCatalog {
+                    aliases: BTreeMap::new(),
+                    entries: self.price_entries(tenant)?,
+                };
+                Some(normalize_model_key(&catalog, raw))
+            }
+            None => None,
+        };
+        let mut out: Vec<UsageRecord> = Vec::new();
+        let mut last_key: Option<String> = None;
+        let mut cursor = start;
+        'scan: loop {
+            let page =
+                self.decision_artifacts_page(tenant, &prefix, Some(&cursor), USAGE_READ_PAGE)?;
+            let Some((last, _)) = page.last() else { break };
+            cursor = last.clone();
+            let full = page.len() == USAGE_READ_PAGE;
+            for (key, bytes) in &page {
+                let record = decode::<UsageRecord>(bytes)?;
+                if record.recorded_at_ms > to_ms {
+                    break 'scan;
+                }
+                if record.recorded_at_ms < from_ms {
+                    continue;
+                }
+                if wanted.as_deref().is_some_and(|w| record.model_key != w) {
+                    continue;
+                }
+                out.push(record);
+                last_key = Some(key.clone());
+                if out.len() == limit {
+                    break 'scan;
+                }
+            }
+            if !full {
+                break;
+            }
+        }
+        let next_cursor = if out.len() == limit {
+            last_key.map(hex::encode)
+        } else {
+            None
+        };
+        Ok((out, next_cursor))
     }
 
     /// Day buckets of `tenant` between `from_day` and `to_day` inclusive,

@@ -1,4 +1,5 @@
-"""MEDULLA-DECISION-ENGINE-R801.8 served usage append and price put.
+"""MEDULLA-DECISION-ENGINE-R801.8 served usage append and price put, and
+MEDULLA-DECISION-ENGINE-R801.7 the tenant-scoped usage read.
 
 L4: every call goes through the running engine over the wire client. A service
 caller holding ``usage:write`` appends usage records and stores a price
@@ -104,5 +105,66 @@ def test_service_append_and_price_put(clean_graph):
             _usage(
                 dc.usage_put_price_op({"entries": [_price(valid_from - 1, 1)]}),
                 scopes=service,
+            )
+        )
+
+
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R801.7")
+def test_usage_read_is_tenant_scoped(clean_graph):
+    # spec: MEDULLA-DECISION-ENGINE-R801.7
+    child = f"usage-{uuid.uuid4().hex[:8]}"
+    base = 4_000_000_000_000 + (uuid.uuid4().int % 1_000_000) * 10_000
+    service = ["usage:write"]
+    human = ["usage:read", "kg:write"]
+    records = [
+        dc.usage_record(TEST_TENANT, child, OPERATION, f"{child}-run-{i}", base + i)
+        for i in range(1001)
+    ]
+    appended = asyncio.run(_usage(dc.usage_append_op(records), scopes=service))
+    assert appended["appended"] == 1001
+
+    # A human principal with `usage:read` pages the records with a cursor.
+    first = asyncio.run(
+        _usage(dc.usage_read_op(base, base + 2000, "records"), scopes=human)
+    )
+    assert first["view"] == "records"
+    assert len(first["records"]) == 1000
+    assert all(r["tenant"] == TEST_TENANT for r in first["records"])
+    assert first["next_cursor"]
+    rest = asyncio.run(
+        _usage(
+            dc.usage_read_op(
+                base, base + 2000, "records", cursor=first["next_cursor"]
+            ),
+            scopes=human,
+        )
+    )
+    assert len(rest["records"]) == 1
+    assert rest["next_cursor"] is None
+
+    rollup = asyncio.run(_usage(dc.usage_read_op(base, base + 2000, "rollup"), scopes=human))
+    assert rollup["view"] == "rollup"
+    assert sum(day["calls"] for day in rollup["days"]) >= 1001
+
+    # A service-only caller without `usage:read` cannot read.
+    with pytest.raises(Exception, match="ACCESS_DENIED"):
+        asyncio.run(_usage(dc.usage_read_op(base, base + 2000, "records"), scopes=service))
+
+    # A forged cursor of the other tenant refuses before any read.
+    forged = f"usage:{TENANT_B}/{0:020d}/{0:010d}".encode().hex()
+    with pytest.raises(Exception, match="USAGE_BAD_CURSOR"):
+        asyncio.run(
+            _usage(
+                dc.usage_read_op(base, base + 2000, "records", cursor=forged),
+                scopes=human,
+            )
+        )
+    # A caller of tenant B is never admitted to tenant A's ledger.
+    with pytest.raises(Exception, match="AUTH_TENANT_MISMATCH"):
+        asyncio.run(
+            _usage(
+                dc.usage_read_op(base, base + 2000, "records"),
+                scopes=human,
+                tenant=TENANT_B,
             )
         )

@@ -112,8 +112,9 @@ pub struct PriceCatalog {
 }
 
 /// One served usage-ledger operation (`Method::Usage`,
-/// MEDULLA-DECISION-ENGINE-R801.8). Both ops write and need the service-only
-/// scope `usage:write`; the tenant is the verified caller's.
+/// MEDULLA-DECISION-ENGINE-R801.8, R801.7). `Append` and `PutPrice` write and
+/// need the service-only scope `usage:write`; `Read` needs `usage:read`. The
+/// tenant is always the verified caller's.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -127,6 +128,90 @@ pub enum UsageOp {
     PutPrice {
         /// The catalog to store.
         catalog: PriceCatalog,
+    },
+    /// Read the verified tenant's records or daily rollup.
+    Read {
+        /// First millisecond of the window (inclusive).
+        from_ms: u64,
+        /// Last millisecond of the window (inclusive).
+        to_ms: u64,
+        /// Keep only this model (normalized against the tenant's catalog).
+        #[serde(default)]
+        model_key: Option<String>,
+        /// Which view to return.
+        view: UsageReadView,
+        /// Opaque cursor of the previous records page.
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+}
+
+impl UsageOp {
+    /// True for the ops that write the ledger.
+    pub fn is_mutation(&self) -> bool {
+        !matches!(self, Self::Read { .. })
+    }
+
+    /// The scope the op needs.
+    pub fn required_scope(&self) -> &'static str {
+        if self.is_mutation() {
+            "usage:write"
+        } else {
+            "usage:read"
+        }
+    }
+}
+
+/// The closed view a served usage read returns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UsageReadView {
+    /// The individual records, paged by cursor.
+    Records,
+    /// The per-model day buckets.
+    Rollup,
+}
+
+/// One day of one model in a rollup.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DayRollup {
+    /// The normalized model key.
+    pub model_key: String,
+    /// Days since the epoch (`recorded_at_ms / 86_400_000`).
+    pub day: u64,
+    /// Calls in the bucket.
+    pub calls: u64,
+    /// Input tokens.
+    pub tokens_in: u64,
+    /// Output tokens.
+    pub tokens_out: u64,
+    /// Cached input tokens.
+    pub tokens_cached: u64,
+    /// Calls that errored.
+    pub errors: u64,
+    /// Derived cost, priced at the last millisecond of the day; `None` when no
+    /// price applies.
+    pub cost_micro: Option<u64>,
+}
+
+/// What a served `Usage` read returns (MEDULLA-DECISION-ENGINE-R801.7).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "view", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UsageReadResult {
+    /// One page of records.
+    Records {
+        /// The records of the page, in key order.
+        records: Vec<UsageRecord>,
+        /// Present only when a full page was returned.
+        next_cursor: Option<String>,
+    },
+    /// The day buckets.
+    Rollup {
+        /// Buckets in `(model_key, day)` order.
+        days: Vec<DayRollup>,
     },
 }
 

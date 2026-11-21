@@ -249,6 +249,8 @@ method_results! {
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;
+    // MEDULLA-DECISION-ENGINE-R801.7: the tenant-scoped usage read.
+    UsageRead(Usage / "read") => Raw<medulla_decision_types::usage::UsageReadResult>;
     ClaimsPropose(Claims / "propose") => Raw<medulla_decision_types::claims::ClaimRecord>;
     ClaimsAdvance(Claims / "advance") => Raw<medulla_decision_types::claims::ClaimRecord>;
     ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_decision_types::claims::ClaimRecord>;
