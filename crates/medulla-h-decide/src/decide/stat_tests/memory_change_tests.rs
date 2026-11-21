@@ -192,8 +192,8 @@ fn receipt(
 }
 
 fn failure(job: &DecisionJobRecord) -> &str {
-    match &job.state {
-        DecisionJobState::Failed { code } => code,
+    match &job.outcome {
+        DecisionJobOutcome::Failed { code } => code,
         other => panic!("expected a refusal, got {other:?}"),
     }
 }

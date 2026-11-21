@@ -152,8 +152,8 @@ fn receipt_of(job: &DecisionJobRecord) -> GroundedEvalReceipt {
 }
 
 fn refusal_of(job: &DecisionJobRecord) -> &str {
-    match &job.state {
-        DecisionJobState::Failed { code } => code,
+    match &job.outcome {
+        DecisionJobOutcome::Failed { code } => code,
         other => panic!("expected a refusal, got {other:?}"),
     }
 }
@@ -166,7 +166,7 @@ async fn assert_refused(h: &Harness, code: &str, request: GroundedAnswerRequest)
         refusal_of(&job)
     );
     let stored = status(h, &job.job_id).await.expect("stored job");
-    assert!(matches!(stored.state, DecisionJobState::Failed { .. }));
+    assert!(matches!(stored.outcome, DecisionJobOutcome::Failed { .. }));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R100.101.3

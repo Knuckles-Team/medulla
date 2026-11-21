@@ -155,7 +155,7 @@ def test_decision_job_decode_selects_the_exact_operation(method: str) -> None:
         "tenant_id": "tenant",
         "request_digest": "digest",
         "submitted_at_ms": 0,
-        "state": {"state": "queued"},
+        "state": {"state": "failed", "code": "REFUSED"},
     }
     for operation in ["submit", "status"]:
         decoded = decode(OpaqueResult(method, payload), operation=operation)

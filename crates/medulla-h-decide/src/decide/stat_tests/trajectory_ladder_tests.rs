@@ -507,7 +507,7 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
     )
     .await;
     let error = decode::<DecisionJobRecord>(refused)
-        .map(|record| format!("{:?}", record.state))
+        .map(|record| format!("{:?}", record.outcome))
         .unwrap_or_else(|error| error);
     assert!(
         error.contains(&format!("the stored verdicts hash to {digest}")),

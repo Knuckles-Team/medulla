@@ -191,8 +191,8 @@ fn sealed(job: &DecisionJobRecord) -> EvaluationRun {
 }
 
 fn failed(job: &DecisionJobRecord) -> &str {
-    match &job.state {
-        DecisionJobState::Failed { code } => code,
+    match &job.outcome {
+        DecisionJobOutcome::Failed { code } => code,
         other => panic!("expected a refusal, got {other:?}"),
     }
 }

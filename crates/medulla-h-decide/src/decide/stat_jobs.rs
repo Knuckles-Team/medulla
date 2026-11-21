@@ -42,7 +42,7 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::DecisionEvalOp, decision::DecisionEvalReceipt, decision::DecisionEvalRequest,
     decision::DecisionFitOp, decision::DecisionFitRequest, decision::DecisionJobKind,
-    decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobState,
+    decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobOutcome,
     decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
 };
 use medulla_query_types::solve_scalar::digest_text;
@@ -95,7 +95,7 @@ struct JobIdentity {
 }
 
 impl JobIdentity {
-    fn record(&self, state: DecisionJobState) -> DecisionJobRecord {
+    fn record(&self, outcome: DecisionJobOutcome) -> DecisionJobRecord {
         DecisionJobRecord {
             schema_version: DECISION_JOB_SCHEMA_VERSION,
             job_id: self.job_id.clone(),
@@ -103,7 +103,7 @@ impl JobIdentity {
             tenant_id: self.tenant_id.clone(),
             request_digest: self.request_digest.clone(),
             submitted_at_ms: self.now_ms,
-            state,
+            outcome,
         }
     }
 }
@@ -557,15 +557,15 @@ fn run_eval_job(
     }
 }
 
-fn terminal(outcome: JobRun) -> (DecisionJobState, ArtifactRows) {
+fn terminal(outcome: JobRun) -> (DecisionJobOutcome, ArtifactRows) {
     match outcome {
         Ok((output, rows)) => (
-            DecisionJobState::Succeeded {
+            DecisionJobOutcome::Succeeded {
                 output: Box::new(output),
             },
             rows,
         ),
-        Err(error) => (DecisionJobState::Failed { code: error }, Vec::new()),
+        Err(error) => (DecisionJobOutcome::Failed { code: error }, Vec::new()),
     }
 }
 
@@ -573,7 +573,7 @@ fn pending_threshold(
     job: &DecisionJobRecord,
     rows: &ArtifactRows,
 ) -> Result<Option<DecisionThresholdAssessment>, String> {
-    let DecisionJobState::Succeeded { output } = &job.state else {
+    let DecisionJobOutcome::Succeeded { output } = &job.outcome else {
         return Ok(None);
     };
     let DecisionJobOutput::Eval { receipt } = output.as_ref() else {
@@ -599,8 +599,8 @@ fn submit_job(
     let started = Instant::now();
     let (state, mut rows) = terminal(run());
     let job = identity.record(state);
-    match &job.state {
-        DecisionJobState::Succeeded { output } => match output.as_ref() {
+    match &job.outcome {
+        DecisionJobOutcome::Succeeded { output } => match output.as_ref() {
             DecisionJobOutput::Eval { receipt } => {
                 telemetry::evaluated(receipt, started);
                 if !receipt.synthetic && receipt.metrics.is_some() {
@@ -659,8 +659,7 @@ fn submit_job(
                 );
             }
         },
-        DecisionJobState::Failed { code } => telemetry::refused("DecisionJob", code),
-        DecisionJobState::Queued | DecisionJobState::Running | DecisionJobState::Cancelled => {}
+        DecisionJobOutcome::Failed { code } => telemetry::refused("DecisionJob", code),
     }
     rows.push((job_key(&identity.job_id), encode_artifact(&job)?));
     let threshold = pending_threshold(&job, &rows)?;

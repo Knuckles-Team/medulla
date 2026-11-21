@@ -19,7 +19,7 @@ use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
 use medulla_decision_types::decision::EvidenceClass;
 use medulla_decision_types::{
     decision::jobs::DatasetSource, decision::jobs::DecisionJobOutput,
-    decision::jobs::DecisionJobState, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
+    decision::jobs::DecisionJobOutcome, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
     decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec, decision::jobs::RecordWindow,
 };
 use medulla_decision_types::{
@@ -191,8 +191,8 @@ fn window() -> RecordWindow {
 }
 
 fn succeeded(job: &DecisionJobRecord) -> &DecisionJobOutput {
-    match &job.state {
-        DecisionJobState::Succeeded { output } => output.as_ref(),
+    match &job.outcome {
+        DecisionJobOutcome::Succeeded { output } => output.as_ref(),
         other => panic!("job did not succeed: {other:?}"),
     }
 }

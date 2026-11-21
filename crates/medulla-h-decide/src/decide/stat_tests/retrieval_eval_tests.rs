@@ -120,8 +120,8 @@ fn receipt_of(job: &DecisionJobRecord) -> RetrievalRankingReceipt {
 }
 
 fn refusal_of(job: &DecisionJobRecord) -> &str {
-    match &job.state {
-        DecisionJobState::Failed { code } => code,
+    match &job.outcome {
+        DecisionJobOutcome::Failed { code } => code,
         other => panic!("expected a refusal, got {other:?}"),
     }
 }
@@ -255,6 +255,6 @@ async fn refuses_each_unscorable_input_without_a_receipt(h: &Harness) {
         );
         // The refused job carries no receipt, and reads back as refused.
         let stored = status(h, &job.job_id).await.expect("stored job");
-        assert!(matches!(stored.state, DecisionJobState::Failed { .. }));
+        assert!(matches!(stored.outcome, DecisionJobOutcome::Failed { .. }));
     }
 }

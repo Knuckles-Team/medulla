@@ -141,7 +141,7 @@ pub use importance_penalty::{FeatureImportance, ImportanceFeatures, PenaltyObjec
 pub use ingestion_admission::ContentClass;
 pub use jobs::{
     DecisionEvalOp, DecisionEvalReceipt, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobState,
+    DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobOutcome,
     DecisionJobStatusRequest, DecisionReceiptGetRequest, DecisionReceiptListRequest,
     DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
     DecisionReceiptTimelineRequest, EvalCandidate, GoldGuarantee, GoldGuaranteeEvidence, HeadKind,

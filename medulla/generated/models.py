@@ -3877,49 +3877,27 @@ class DecisionJobRecord(BaseModel):
     kind: DecisionJobKind
     request_digest: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
-    state: DecisionJobState
+    state: DecisionJobOutcome
     submitted_at_ms: Annotated[int, Field(ge=0)]
     tenant_id: str
 
 
-class DecisionJobStateQueued(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    state: Literal["queued"]
-
-
-class DecisionJobStateRunning(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    state: Literal["running"]
-
-
-class DecisionJobStateSucceeded(BaseModel):
+class DecisionJobOutcomeSucceeded(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     output: DecisionJobOutput
     state: Literal["succeeded"]
 
 
-class DecisionJobStateFailed(BaseModel):
+class DecisionJobOutcomeFailed(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     code: str
     state: Literal["failed"]
 
 
-class DecisionJobStateCancelled(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    state: Literal["cancelled"]
-
-
-DecisionJobState = Annotated[
-    DecisionJobStateQueued
-    | DecisionJobStateRunning
-    | DecisionJobStateSucceeded
-    | DecisionJobStateFailed
-    | DecisionJobStateCancelled,
+DecisionJobOutcome = Annotated[
+    DecisionJobOutcomeSucceeded | DecisionJobOutcomeFailed,
     Field(discriminator="state"),
 ]
 
@@ -35080,17 +35058,14 @@ __all__ = [
     "DecisionHeadBody",
     "DecisionInputs",
     "DecisionJobKind",
+    "DecisionJobOutcome",
+    "DecisionJobOutcomeFailed",
+    "DecisionJobOutcomeSucceeded",
     "DecisionJobOutput",
     "DecisionJobOutputEval",
     "DecisionJobOutputFit",
     "DecisionJobOutputReplay",
     "DecisionJobRecord",
-    "DecisionJobState",
-    "DecisionJobStateCancelled",
-    "DecisionJobStateFailed",
-    "DecisionJobStateQueued",
-    "DecisionJobStateRunning",
-    "DecisionJobStateSucceeded",
     "DecisionJobStatusRequest",
     "DecisionLogCommitted",
     "DecisionLogCompacted",

@@ -540,13 +540,12 @@ pub enum DecisionJobOutput {
     GroundedEval { receipt: Box<GroundedEvalReceipt> },
 }
 
-/// Where a job is.
+/// How a job ended: written once with its output or its failure code
+/// (MEDULLA-DECISION-ENGINE-R830.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum DecisionJobState {
-    Queued,
-    Running,
+pub enum DecisionJobOutcome {
     /// Boxed: the output carries a whole head or receipt.
     Succeeded {
         output: Box<DecisionJobOutput>,
@@ -554,7 +553,6 @@ pub enum DecisionJobState {
     Failed {
         code: String,
     },
-    Cancelled,
 }
 
 /// Which of the two jobs a row is.
@@ -579,7 +577,10 @@ pub struct DecisionJobRecord {
     pub tenant_id: String,
     pub request_digest: String,
     pub submitted_at_ms: u64,
-    pub state: DecisionJobState,
+    /// The job's recorded outcome, written once by the job's one writer
+    /// (MEDULLA-DECISION-ENGINE-R830.3). The wire key stays `state`.
+    #[serde(rename = "state")]
+    pub outcome: DecisionJobOutcome,
 }
 
 /// Declare one `{ submit, status }` decision-job op enum.
@@ -793,5 +794,48 @@ mod tests {
                 name: "OptionAttention".to_string()
             }
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.3
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        // A stored failed record decodes unchanged under the wire key `state`.
+        let record: DecisionJobRecord = serde_json::from_value(serde_json::json!({
+            "schema_version": 1,
+            "job_id": "job",
+            "kind": "fit",
+            "tenant_id": "tenant",
+            "request_digest": "digest",
+            "submitted_at_ms": 0,
+            "state": {"state": "failed", "code": "REFUSED"}
+        }))
+        .expect("a stored failed record decodes");
+        assert_eq!(
+            record.outcome,
+            DecisionJobOutcome::Failed {
+                code: "REFUSED".to_string()
+            }
+        );
+        let wire = serde_json::to_value(&record).unwrap();
+        assert_eq!(wire["state"]["state"], "failed");
+        // `succeeded` is still a known tag: it is refused for its missing output, not its name.
+        let error = serde_json::from_value::<DecisionJobOutcome>(
+            serde_json::json!({"state": "succeeded"}),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("output"), "{error}");
+        // The unwritten variants are gone.
+        for word in ["queued", "running", "cancelled"] {
+            let error = serde_json::from_value::<DecisionJobOutcome>(
+                serde_json::json!({ "state": word }),
+            )
+            .unwrap_err()
+            .to_string();
+            assert!(error.contains("unknown variant"), "{word}: {error}");
+        }
+        let source = include_str!("jobs.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(".outcome ="));
     }
 }
