@@ -428,6 +428,10 @@ pub enum TypedValue {
     AdversarialAdmission(Box<super::trajectory_verdict::AdmissionRequest>),
     /// The bounded frontier of a thought search (MEDULLA-DECISION-ENGINE-R750.754).
     ThoughtSearch(Box<super::thought_search::ReasoningState>),
+    /// Retrieved memory or knowledge entries offered as premises, each with its
+    /// trust tier (MEDULLA-DECISION-ENGINE-R132.3). Read from the param named
+    /// `retrieved_entries`.
+    RetrievedEntries(BoundedVec<super::entry_types::RetrievedEntry, 64>),
     /// A skill workflow draft to compile (MEDULLA-DECISION-ENGINE-R156.1).
     SkillWorkflowDraft(Box<super::skill_workflow::SkillWorkflowDraft>),
     /// A skill upgrade compatibility question (MEDULLA-DECISION-ENGINE-R167.1).

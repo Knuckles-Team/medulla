@@ -1076,6 +1076,8 @@ mod distilled_rank_tests;
 mod package_run_tests;
 // MEDULLA-DECISION-ENGINE-R100.1.1: feedback events recorded through DecisionLog learn.
 mod feedback_tests;
+// MEDULLA-DECISION-ENGINE-R132.3: retrieved entries admitted by trust tier.
+mod entry_trust_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

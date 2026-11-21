@@ -553,6 +553,8 @@ pub(super) fn decide_blocking(
     let mut trajectory_premises = trajectory_premises;
     trajectory_premises.extend(safety_premises);
     trajectory_premises.extend(limit_premises);
+    // Admitted retrieved entries enter as premises (MEDULLA-DECISION-ENGINE-R132.3).
+    trajectory_premises.extend(super::entry_stage::apply(request, &policy.policy)?);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;

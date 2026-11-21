@@ -83,6 +83,12 @@ pub enum PremiseProvenance {
     /// A row of a graph the caller's visible snapshot held, at the graph's
     /// write version (MEDULLA-DECISION-ENGINE-R121.2).
     GraphRow { graph: String, graph_version: u64 },
+    /// A retrieved entry admitted by its trust tier, from the source whose
+    /// digest the policy holds (MEDULLA-DECISION-ENGINE-R132.3).
+    RetrievedEntry {
+        entry_id: String,
+        source_digest: String,
+    },
 }
 
 /// One fact the decision used.

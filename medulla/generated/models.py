@@ -197,6 +197,7 @@ from ._shared import (
     PremiseProvenanceClaimedMapping,
     PremiseProvenanceConnectorPack,
     PremiseProvenanceGraphRow,
+    PremiseProvenanceRetrievedEntry,
     PremiseProvenanceNativeOntology,
     PremiseProvenanceObservation,
     PremiseProvenancePolicy,
@@ -27788,6 +27789,37 @@ class TypedValueSkillUpgrade(BaseModel):
     value: SkillUpgradeRequest
 
 
+class TrustTier(str, Enum):
+    UNVERIFIED = "unverified"
+    ATTESTED = "attested"
+    VERIFIED = "verified"
+
+
+class EntryTrust(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    observed_at: int
+    source_digest: str
+    tier: TrustTier
+
+
+class RetrievedEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entry_id: str
+    fact_key: str
+    subject: str
+    trust: EntryTrust
+    value: str
+
+
+class TypedValueRetrievedEntries(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["retrieved_entries"]
+    value: Annotated[list[RetrievedEntry], Field(max_length=64)]
+
+
 class TypedValueSkillWorkflowDraft(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -27922,6 +27954,7 @@ TypedValue = Annotated[
     | TypedValuePlanningAdmission
     | TypedValueSkillPlanQuery
     | TypedValueSkillUpgrade
+    | TypedValueRetrievedEntries
     | TypedValueSkillWorkflowDraft
     | TypedValueTaskDecomposition
     | TypedValueTemporalQuery
@@ -37850,6 +37883,7 @@ __all__ = [
     "PremiseProvenance",
     "PremiseProvenanceCapacityCell",
     "PremiseProvenanceGraphRow",
+    "PremiseProvenanceRetrievedEntry",
     "PremiseProvenanceClaimedMapping",
     "PremiseProvenanceConnectorPack",
     "PremiseProvenanceNativeOntology",
@@ -39316,7 +39350,11 @@ __all__ = [
     "TypedValuePlanningAdmission",
     "TypedValueSkillPlanQuery",
     "TypedValueSkillUpgrade",
+    "TypedValueRetrievedEntries",
     "TypedValueSkillWorkflowDraft",
+    "TrustTier",
+    "EntryTrust",
+    "RetrievedEntry",
     "TypedValueTaskDecomposition",
     "TypedValueTemporalQuery",
     "TypedValueThoughtSearch",

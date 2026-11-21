@@ -100,6 +100,9 @@ mod safety_stage;
 // MEDULLA-DECISION-ENGINE-R131.3: the served limit stage.
 #[cfg(feature = "decide")]
 mod limit_stage;
+// MEDULLA-DECISION-ENGINE-R132.3: the served entry admission stage.
+#[cfg(feature = "decide")]
+mod entry_stage;
 #[cfg(feature = "decide")]
 mod stat_resolve;
 #[cfg(feature = "decide")]

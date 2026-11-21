@@ -1211,6 +1211,14 @@ class PremiseProvenanceGraphRow(BaseModel):
     provenance: Literal["graph_row"]
 
 
+class PremiseProvenanceRetrievedEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entry_id: str
+    provenance: Literal["retrieved_entry"]
+    source_digest: str
+
+
 PremiseProvenance = Annotated[
     PremiseProvenanceNativeOntology
     | PremiseProvenancePolicy
@@ -1221,7 +1229,8 @@ PremiseProvenance = Annotated[
     | PremiseProvenanceRequest
     | PremiseProvenanceSchemaSource
     | PremiseProvenanceCapacityCell
-    | PremiseProvenanceGraphRow,
+    | PremiseProvenanceGraphRow
+    | PremiseProvenanceRetrievedEntry,
     Field(discriminator="provenance"),
 ]
 
@@ -2447,6 +2456,8 @@ PremiseProvenanceSchemaSource.model_rebuild()
 PremiseProvenanceCapacityCell.model_rebuild()
 PremiseProvenanceGraphRow.model_rebuild()
 
+PremiseProvenanceRetrievedEntry.model_rebuild()
+
 PremiseRef.model_rebuild()
 
 PriceSourcePublisher.model_rebuild()
@@ -2743,6 +2754,7 @@ __all__ = [
     "PremiseProvenance",
     "PremiseProvenanceCapacityCell",
     "PremiseProvenanceGraphRow",
+    "PremiseProvenanceRetrievedEntry",
     "PremiseProvenanceClaimedMapping",
     "PremiseProvenanceConnectorPack",
     "PremiseProvenanceNativeOntology",

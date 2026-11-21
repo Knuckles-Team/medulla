@@ -9,62 +9,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-/// Closed trust tiers, ordered weakest first.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum TrustTier {
-    Unverified,
-    Attested,
-    Verified,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct EntryTrust {
-    pub tier: TrustTier,
-    pub source_digest: String,
-    pub observed_at: i64,
-}
-
-/// One retrieved memory or knowledge entry offered as a premise.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RetrievedEntry {
-    pub entry_id: String,
-    pub subject: String,
-    pub fact_key: String,
-    pub value: String,
-    pub trust: EntryTrust,
-}
-
-/// The source record: the digests of sources the engine actually holds.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct EntryTrustPolicy {
-    pub known_source_digests: BTreeSet<String>,
-}
-
-/// The named rule that refused an entry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum EntryCheck {
-    TierOrder,
-    PoisonCheck,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RefusedEntry {
-    pub entry_id: String,
-    pub tier: TrustTier,
-    pub check: EntryCheck,
-}
+pub use medulla_decision_types::decision::entry_types::{
+    EntryCheck, EntryTrust, EntryTrustPolicy, RefusedEntry, RetrievedEntry, TrustTier,
+};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

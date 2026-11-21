@@ -63,6 +63,7 @@ pub fn policy() -> DecisionPolicy {
         knobs: Default::default(),
         safety_bounds: Default::default(),
         limits: Default::default(),
+        entry_trust: Default::default(),
     }
 }
 
