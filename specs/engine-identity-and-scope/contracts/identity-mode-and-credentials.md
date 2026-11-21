@@ -9,11 +9,11 @@ Arbora serves the mode transition `ConfigOp::Transition { request: ModeTransitio
 
 ## Refusal codes
 
-`IDENTITY_MODE_STALE_EPOCH`, `IDENTITY_MODE_NO_SURVIVING_ADMIN`, `IDENTITY_MODE_NO_IDP`, `IDENTITY_MODE_OFFLINE_ONLY`, `IDENTITY_MODE_NOT_CONFIRMED` and `SESSION_EPOCH_STALE`; each refusal changes no state.
+Served: `IDENTITY_EPOCH_CONFLICT`, `IDENTITY_PRECONDITION_FAILED`, `IDENTITY_ILLEGAL_TRANSITION`, `MODE_TRANSITION_FORBIDDEN` (any edge to or from `none`) and `SESSION_EPOCH_STALE`. Offline conversion out of `none` (operator command, not wire): `IDENTITY_MODE_NOT_CONFIRMED` and `IDENTITY_MODE_NOT_ANONYMOUS`. Each refusal changes no state.
 
 ## Authoritative types
 
-`IdentityOp` in `crates/medulla-identity-types/src/identity/ops.rs`; `AuthMode`, `IdentityConfig` and `ModeTransition` in `crates/medulla-identity-types/src/identity/store/modes.rs`.
+`IdentityOp` in `crates/medulla-identity-types/src/identity/ops.rs`; `AuthMode`, `IdentityConfig` and `ModeTransition` in `crates/medulla-identity-types/src/identity/config.rs`.
 
 ## Test vectors
 

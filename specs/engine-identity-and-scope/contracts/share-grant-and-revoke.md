@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-IDENTITY-R651
 
 ## Wire shape
 
-Arbora calls `Method::RbacAdmin` with `RbacAdminOp::ShareGrant { node_id, scope, grantees }` or `ShareRevoke { node_id }`. Medulla commits through the mutation gateway, appends one audit event and replies with the committed revision; the scope values are `private`, `org` and `commons`.
+Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","grantees"}}` or `{"ShareRevoke":{"node_id"}}` (`RbacAdminOp::ShareGrant(ShareGrant)` / `RbacAdminOp::ShareRevoke(ShareRevoke)`); `grantees` is at most 64 principal id strings and must be empty for `private` and `commons`. Medulla commits through the mutation gateway, appends one audit event and replies with the committed revision; the scope values are `private`, `org` and `commons`.
 
 ## Refusal codes
 
@@ -13,8 +13,8 @@ Arbora calls `Method::RbacAdmin` with `RbacAdminOp::ShareGrant { node_id, scope,
 
 ## Authoritative types
 
-`RbacAdminOp` in `crates/medulla-types/src/acl.rs`; `ShareScope` in `crates/medulla-identity-types/src/identity/segment.rs`.
+`RbacAdminOp`, `ShareGrant` and `ShareRevoke` in `crates/medulla-identity-types/src/acl.rs`; `ShareScope` in `crates/medulla-identity-types/src/identity/segment.rs`.
 
 ## Test vectors
 
-`tests/identity/test_share_restart_served.py` (planned) holds the served vectors; the Rust round-trip vector is `crates/medulla-types/src/acl.rs::tests::share_ops_round_trip` (planned).
+`tests/identity/test_share_restart_served.py` (planned) holds the served vectors; the Rust round-trip vector is `crates/medulla-identity-types/src/acl.rs::tests::share_ops_round_trip` (planned).

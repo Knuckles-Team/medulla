@@ -269,9 +269,9 @@ Replaces: `agent_utilities/knowledge_graph/core/tenant_sharing.py` (`share_with_
 
 Meristem acceptance case (in the Meristem repository): `test_org_share_revocation_persists_across_a_real_restart`.
 
-Call path: served `RbacAdmin` -> `crates/medulla-server-router/src/dispatch/router/identity_access.rs` (arm at line 305)` -> `share_transition` (`crates/medulla-isolation/src/isolation/share.rs`, new) -> mutation gateway commit -> `row_visibility` (`crates/medulla-graph-core/src/rls.rs:146`) on every read.
+Call path: served `RbacAdmin` -> `crates/medulla-server-router/src/dispatch/router/identity_access.rs` (arm at line 314) -> `apply_rbac_admin` (`lifecycle.rs:621`) -> `share_transition` (`crates/medulla-isolation/src/isolation/share.rs`, new) -> mutation gateway commit -> `row_visibility` (`crates/medulla-graph-core/src/rls.rs:146`) on every read.
 
-Crate: `medulla-isolation` for the transition, `medulla-types` for the wire operations.
+Crate: `medulla-isolation` for the transition, `medulla-identity-types` (`acl.rs`) for the wire operations.
 
 Data structures: grantee sets are sorted vectors of interned `u32` principal ids, capped at 64. The node keeps `_owner_id`, `_shared_scope` and `_grants`. Memory per operation is O(g).
 
@@ -343,6 +343,7 @@ none
 - `GovernedChangeMachine`: entry point served governed change methods → `GovernedStatus::apply` → `GovernedStatus::apply` in `crates/medulla-mutation-types/src/governed_change.rs`, the one assign site → stored state field. Attach points: `governed_change.rs:472,512,549`. Wiring row: MEDULLA-IDENTITY-R720.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R720.1.
 - `UserStatusMachine`: entry point served identity methods → `transition_status` → `UserStatus::apply` in `crates/medulla-identity-types/src/identity/model.rs`, called only by `transition_status` in `crates/medulla-identity-types/src/identity/store/users.rs:259` → stored state field. Attach points: `store/users.rs` (`transition_status`), `store/auth.rs`, `store/provision.rs`; the mode-switch write in `store/modes.rs` is deleted. Wiring row: MEDULLA-IDENTITY-R721.1. Hot-path proof row: `no_write_bypasses_transition_status` of MEDULLA-IDENTITY-R721.1.
 - `RbacElevationMachine`: entry point served elevation methods → `move_to` → `ElevationLedger::move_to` at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:133`, the one assign site (`:137`) → stored state field. Attach points: `rbac_elevation/ledger.rs:133,137`. Wiring row: MEDULLA-IDENTITY-R722.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R722.2.
+- `ApplicationAdmissionMachine`: entry point `AdmissionRunner` methods → `ApplicationAdmission::advance(event)` → `AdmissionStage::apply` in `crates/medulla-identity-types/src/application_admission_machine.rs` → the `stage` field of `crates/medulla-identity-types/src/platform_admission.rs`. Edges A01 to A05. Wiring and proof row: MEDULLA-IDENTITY-R724.1 (`no_writer_sets_stage_outside_apply`).
 
 ## Cross-repo seams
 

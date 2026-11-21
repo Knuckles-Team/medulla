@@ -12,7 +12,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T006 [US2] MEDULLA-IDENTITY-R003.4 Model: identity mode record and CAS operation
 - [ ] T007 [US2] MEDULLA-IDENTITY-R003.5 Behavior: transition preconditions
 - [ ] T008 [US2] MEDULLA-IDENTITY-R003.6 Wiring: session invalidation and issuer rotation after the commit
-- [ ] T009 [US2] MEDULLA-IDENTITY-R003.7 Wiring: served transition method and offline conversion
+- [ ] T009 [US2] MEDULLA-IDENTITY-R003.7 Wiring: served transition method and offline conversion (`identity-mode set` in `src/operator_command.rs`, `set_local` in `crates/medulla-server/src/identity_mode_offline.rs`, `stamp_initialize` in `crates/medulla-server-identity/src/dispatch/identity_store/stamp.rs`)
 - [ ] T010 [US2] MEDULLA-IDENTITY-R003.8 Hot-path proof: mode round trip over the wire
 - [ ] T011 [US4] MEDULLA-IDENTITY-R004 Generated scope registry classifies every capability scope
 - [ ] T074 [US4] MEDULLA-IDENTITY-R004.1 Register the web interface scopes and bind the compute reads
@@ -37,7 +37,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T030 [US5] MEDULLA-IDENTITY-R023.10 Refusal: invalid metadata writes
 - [ ] T031 [US5] MEDULLA-IDENTITY-R023.11 Evidence: metadata import provenance
 - [ ] T032 [US5] MEDULLA-IDENTITY-R023.12 Hot-path journey: typed metadata over the wire
-- [ ] T033 [US6] MEDULLA-IDENTITY-R023.13.1 Model: share operations
+- [ ] T033 [US6] MEDULLA-IDENTITY-R023.13.1 Model: share operation payloads `ShareGrant`/`ShareRevoke` in `crates/medulla-identity-types/src/acl.rs`
 - [ ] T034 [US6] MEDULLA-IDENTITY-R023.13.2 Behavior: share transition function
 - [ ] T035 [US6] MEDULLA-IDENTITY-R023.13.3 Wiring: RbacAdmin arm calls the transition
 - [ ] T036 [US6] MEDULLA-IDENTITY-R023.13.4 Refusal: share operations
@@ -56,9 +56,11 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T049 [US6] MEDULLA-IDENTITY-R700.5 Evidence: stored plan and rollback record
 - [ ] T050 [US6] MEDULLA-IDENTITY-R700.6 Hot-path journey: apply then rollback
 - [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
-- [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: compile, bind and enforce in the engine
+- [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: validate, bind and enforce (`IdentityOp::Policy`, lowered into `idm:policy:` roles and grants by `rbac_projection`)
 - [ ] T053 [US6] MEDULLA-IDENTITY-R703 Epistemic policy predicates
 - [ ] T054 [US6] MEDULLA-IDENTITY-R704 Resource-scoped access decision method
+- [ ] T054a [US6] MEDULLA-IDENTITY-R704.1 Resource grant record in the RBAC policy image and `RbacAdminOp::GrantResource`/`RevokeResource`
+- [ ] T054b [US6] MEDULLA-IDENTITY-R704.2 Served `Method::CheckResourceAccess` decision
 - [ ] T055 [US6] MEDULLA-IDENTITY-R705 ClientSession record vocabulary
 - [ ] T056 [US5] MEDULLA-IDENTITY-R706 Read gate expands source groups and honors source access properties
 - [ ] T057 [US7] MEDULLA-IDENTITY-R707 Identity domain operations with Argon2id and redacted views
@@ -79,16 +81,16 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T072 [US7] MEDULLA-IDENTITY-R722.2 Elevation refusals are typed
 - [x] T073 [US6] MEDULLA-IDENTITY-R723 Declare the Workstream record and the attachedTo session link
 - [ ] T075 [US6] MEDULLA-IDENTITY-R724 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T076 [US6] MEDULLA-IDENTITY-R724.1 ApplicationAdmission/AdmissionStage state machine: route 1 census findings through AdmissionStage::apply
-- [ ] T077 [US6] MEDULLA-IDENTITY-R722.3 ElevationLease status runs on the existing RbacElevationMachine; every real writer routes through ElevationStatus::apply
-- [ ] T078 [US6] MEDULLA-IDENTITY-R724.2 ReplayReceipt.status becomes the one-shot ReplayOutcome (not a lifecycle)
+- [ ] T076 [US6] MEDULLA-IDENTITY-R724.1 `ApplicationAdmissionMachine` (edges A01 to A05) in `crates/medulla-identity-types/src/application_admission_machine.rs`; `ApplicationAdmission::advance` routes through `AdmissionStage::apply`
+- [ ] T077 [US6] MEDULLA-IDENTITY-R722.3 RETIRED: duplicates `RbacElevationMachine` (R722.1, R722.2)
+- [ ] T078 [US6] MEDULLA-IDENTITY-R724.2 RETIRED: `ReplayReceipt.status` is fixed at construction
 - [x] T079 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
 - [ ] T080 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
 - [x] T081 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
 - [ ] T082 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
   Depends: none
-- [ ] T083 [US6] MEDULLA-IDENTITY-R727 One engine serves a business tenant and a personal tenant with hard separation and explicit sharing (rollup)
-- [ ] T084 [US6] MEDULLA-IDENTITY-R727.1 No cross-tenant read, count, search or inference
+- [ ] T083 [US6] MEDULLA-IDENTITY-R727 Tenants stay separated in one store, and sharing between tenants (rollup)
+- [ ] T084 [US6] MEDULLA-IDENTITY-R727.1 No cross-tenant read, count, search or inference (served test `tenant_separation_tests.rs`; the door admits one tenant)
 - [ ] T085 [US6] MEDULLA-IDENTITY-R727.2 Cross-tenant share grant
 - [ ] T086 [US6] MEDULLA-IDENTITY-R727.3 Every cross-tenant read is audited
 - [ ] T087 [US6] MEDULLA-IDENTITY-R727.4 Granted units never feed the recipient's inference

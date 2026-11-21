@@ -21,7 +21,7 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Knowledge unit and sharing
 
-- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, org, commons }`, `UnitPrincipal` (exist, `crates/medulla-identity-types/src/identity/segment.rs`); `RbacAdminOp::ShareGrant { node_id, scope, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`, `crates/medulla-types/src/acl.rs`, new variants).
+- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, org, commons }`, `UnitPrincipal` (exist, `crates/medulla-identity-types/src/identity/segment.rs`); payload structs `ShareGrant { node_id, scope, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`) carried by the variants `RbacAdminOp::ShareGrant(ShareGrant)` and `RbacAdminOp::ShareRevoke(ShareRevoke)` (`MEDULLA-IDENTITY-R023.13.3`), all in `crates/medulla-identity-types/src/acl.rs`.
 - Rule: `private` and `commons` take no grantees; `grantees` holds at most 64 ids; node keys are `_owner_id`, `_shared_scope`, `_grants`, `_commons_copy`.
 
 ### Typed principal metadata
@@ -41,7 +41,7 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Delegation, policy bundle, resource access and client session
 
-- Fields: `DelegationRecord` (`MEDULLA-IDENTITY-R701`), `PolicyRuleBundle { schema_version, bundle_id, scope, rules }` (`MEDULLA-IDENTITY-R702`), `ResourceAccessDecision` (`MEDULLA-IDENTITY-R704`), the `ClientSession` label (`MEDULLA-IDENTITY-R705`).
+- Fields: `DelegationRecord` (`MEDULLA-IDENTITY-R701`), `PolicyRuleBundle { schema_version, bundle_id, scope, rules }`, `PolicyBundleScope { tenant, graph }` and `PolicyRule { principal_group, action, resource_scope, effect }` (`MEDULLA-IDENTITY-R702`, `crates/medulla-identity-types/src/identity/policy_bundle.rs`, stored as `IdentityStore.policy_bundles`), `ResourceGrant` (`MEDULLA-IDENTITY-R704.1`, kept in `RbacPolicy.resource_grants`) and `ResourceAccessDecision` (`MEDULLA-IDENTITY-R704.2`), all in `crates/medulla-identity-types/src/acl.rs` except the policy bundle, the `ClientSession` label (`MEDULLA-IDENTITY-R705`).
 - Rule: a bundle binds one scope at most; a decision defaults to deny.
 
 ### Session records and approval keys
