@@ -144,8 +144,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T137 [US3] MEDULLA-TYPED-PACKS-R094.4 Blueprint retry identity
 - [ ] T138 [US3] MEDULLA-TYPED-PACKS-R094.5 Served lossless blueprint round trip
 - [ ] T139 [US3] MEDULLA-TYPED-PACKS-R094.6 Optimization proposals carry no authority
-- [ ] T140 [US3] MEDULLA-TYPED-PACKS-R094.7 Approved repository-source effect dependency
-- [ ] T141 [US3] MEDULLA-TYPED-PACKS-R094.8 Record the source-effect receipt on the component revision
+- [x] T140 [US3] MEDULLA-TYPED-PACKS-R094.7 Approved repository-source effect dependency
+- [x] T141 [US3] MEDULLA-TYPED-PACKS-R094.8 Record the source-effect receipt on the component revision
 - [ ] T142 [US3] MEDULLA-TYPED-PACKS-R096.1 A rejected projection never leaves a head dark without a state
 - [x] T329 [US3] MEDULLA-TYPED-PACKS-R096.2 Every import row resolves in its sweep; a failing pack retries from its own state
 - [ ] T143 [US3] MEDULLA-TYPED-PACKS-R097.1 HR domain vocabulary as a typed domain pack
@@ -157,8 +157,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
 - [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
 - [x] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
-- [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals: pinned revisions, activation coverage, `OntologyInspection.external_coverage`
-- [ ] T153 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
+- [x] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals: pinned revisions, activation coverage, `OntologyInspection.external_coverage`
+- [x] T153 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
 - [ ] T154 [US3] MEDULLA-TYPED-PACKS-R097.700 Domain pack manifest, mapping language, loader and promotion bridge
 - [ ] T155 [US3] MEDULLA-TYPED-PACKS-R097.701 Domain pack refusals, evidence and hot-path proof
 - [ ] T156 [US3] MEDULLA-TYPED-PACKS-R098 Ontology inspection and inline data triples for validation
@@ -193,8 +193,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
 - [x] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring: `PackEntryKind::SeedPart`, `validate_seed_entries`, `write_projection_triples`
 - [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
-- [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
-- [ ] T189 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
+- [x] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
+- [x] T189 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
 - [ ] T190 [US4] MEDULLA-TYPED-PACKS-R105.1 Delete the orphan warn switch; the parent-link check refuses
 - [ ] T191 [US4] MEDULLA-TYPED-PACKS-R105.3.1 Central source-record bridge
 - [ ] T192 [US4] MEDULLA-TYPED-PACKS-R105.4 The parent catalog holds a service-operations core aligned to the Open Group IT4IT data objects
@@ -245,11 +245,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T232 [US4] MEDULLA-TYPED-PACKS-R109.6 Hot-path proof
 - [ ] T233 [US5] MEDULLA-TYPED-PACKS-R650.1 Model
 - [ ] T234 [US5] MEDULLA-TYPED-PACKS-R650.2 Behavior
-- [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
-- [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
-- [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
+- [x] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
+- [x] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
+- [x] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
 - [x] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor: `extract_object_model` in `medulla_rdf::pack`, `OBJECT_MODEL_INVALID`
-- [ ] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
+- [x] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
 - [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
 - [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior
 - [ ] T241 [US5] MEDULLA-TYPED-PACKS-R651.3 Wiring

@@ -705,7 +705,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R094.4:** `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.5:** `tests/test_prompt_blueprints_served.py::test_blueprint_roundtrip_restart` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.6:** `tests/test_prompt_blueprints_served.py::test_prompt_proposal_has_no_authority` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R094.7:** `tests/test_prompt_blueprints_served.py::test_approved_source_effect_dependency` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R094.7:** `tests/test_prompt_blueprints_served.py::test_approved_source_effect_dependency`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R096:** `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::restart_replays_projection_once` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R096.1:** `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::rejected_projection_is_visible_and_retried` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R096.2:** `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal`. A healthy pack queued behind a failing one projects in the same sweep; the failing pack reaches its terminal failure after the knob's attempts and attach refuses with its code.
@@ -754,18 +754,18 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R104:** `tests/connector_pack/test_seed_graph_served.py::test_seed_idempotent_and_partial_reimport` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R104.3:** `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::served_import_projects_seed`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R104.4:** `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::seed_refusals_write_nothing` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R104.5:** `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::receipt_names_part_outcomes` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R104.6:** `tests/connector_pack/test_seed_graph_served.py::test_seed_idempotent_and_partial_reimport` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R104.5:** `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::receipt_names_part_outcomes`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R104.6:** `tests/connector_pack/test_seed_graph_served.py::test_seed_idempotent_and_partial_reimport`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R105:** `tests/typed_packs/test_connector_ontology_core_link_served.py::test_linked_pack_reads_through_core_class_and_orphan_refuses` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R105.1:** `tests/typed_packs/test_connector_ontology_core_link_served.py::test_linked_pack_reads_through_core_class_and_orphan_refuses` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R650:** `tests/typed_packs/test_object_model_served.py::test_pack_value_link_interface_declarations_are_enforced_on_write` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R650.1:** `crates/medulla-core/tests/object_model.rs::declarations_round_trip_and_reject_zero_max_card` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R650.2:** `crates/medulla-core/tests/object_model.rs::compile_is_deterministic_and_maps_each_constraint` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R650.3:** `tests/typed_packs/test_object_model_served.py::test_import_compiles_shapes_and_graph_schema_classes_reports_interfaces` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R650.4:** `tests/typed_packs/test_object_model_served.py::test_value_link_and_interface_violations_refuse_with_unchanged_state` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R650.5:** `tests/typed_packs/test_object_model_served.py::test_refusal_carries_rule_path_and_value_digest` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R650.3:** `tests/typed_packs/test_object_model_served.py::test_import_compiles_shapes_and_graph_schema_classes_reports_interfaces`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R650.4:** `tests/typed_packs/test_object_model_served.py::test_value_link_and_interface_violations_refuse_with_unchanged_state`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R650.5:** `tests/typed_packs/test_object_model_served.py::test_refusal_carries_rule_path_and_value_digest`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R650.7:** `crates/medulla-rdf/tests/object_model_extract.rs::extract_reads_declared_value_link_and_interface_terms`. Proves the row at its entry point and each `ObjectModelError` reason; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R650.6:** `tests/typed_packs/test_object_model_served.py::test_pack_value_link_interface_declarations_are_enforced_on_write` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R650.6:** `tests/typed_packs/test_object_model_served.py::test_pack_value_link_interface_declarations_are_enforced_on_write`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R651:** `tests/typed_packs/test_ontology_edits_served.py::test_import_edit_chain_revert_and_sealed_refusal` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R651.1:** `crates/medulla-types/tests/ontology_edit.rs::edit_and_finding_round_trip` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R651.2:** `crates/medulla-core/tests/ontology_edits.rs::chain_links_invert_is_exact_and_revert_replays_newest_first` (planned). Proves the row at its served entry point; no receipt is asserted.
@@ -809,7 +809,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R094.8`: `tests/test_prompt_blueprints_served.py::test_source_effect_receipt_is_recorded_once`
 - `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-catalog-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
 - `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
-- `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged` (with the out-of-scope mapping case) and `crates/medulla-h-admin/src/graph_schema/tests.rs::activation_stores_external_coverage_for_inspection` (planned)
+- `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged` (with the out-of-scope mapping case) and `crates/medulla-h-admin/src/graph_schema/tests.rs::activation_stores_external_coverage_for_inspection`
 - `MEDULLA-TYPED-PACKS-R097.2.7.4`: `tests/typed_packs/test_external_schema_import_served.py::test_mapped_and_unmapped_terms_of_every_kind`
 - `MEDULLA-TYPED-PACKS-R803.7`: `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest_tests.rs::enrich_proposes_claim_for_sensitive_document`
 - `MEDULLA-TYPED-PACKS-R806`: `tests/packs/test_schema_drift_methods_served.py::test_propose_then_approve_activates_once`
