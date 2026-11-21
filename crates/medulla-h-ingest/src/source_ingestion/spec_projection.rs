@@ -423,6 +423,107 @@ pub fn project_contracts(
     })
 }
 
+/// Refusal code of a bundle plan row that no spec holds.
+pub const BUNDLE_ROW_UNRESOLVED: &str = "BUNDLE_ROW_UNRESOLVED";
+
+/// The node id of one release bundle.
+pub fn bundle_node_id(bundle: &str) -> String {
+    format!("bundle:{bundle}")
+}
+
+/// One generated bundle plan under `releases/` (MEDULLA-SDLC-R018.1): a JSON file.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BundlePlan {
+    bundle: String,
+    /// Row ids per repository.
+    rows_by_repo: BTreeMap<String, Vec<String>>,
+    /// The dependency closure of the bundle, as row ids.
+    closure: Vec<String>,
+    /// Repository names in train order.
+    train_order: Vec<String>,
+    scenario: String,
+    /// Row ids of the open tasks.
+    open_tasks: Vec<String>,
+}
+
+/// Project the generated bundle plans of `releases/` (MEDULLA-SDLC-R018.1).
+///
+/// `plans` is `(file name, JSON text)` of each plan. Each becomes one `ReleaseBundle`
+/// record that carries the closure, the train order, the scenario and the open tasks, and
+/// each row of `rows_by_repo` gets an `inBundle` edge from its requirement node to the
+/// bundle. `known_rows` holds the requirement node ids that exist. A plan that names a row
+/// no spec holds, in `rows_by_repo`, `closure` or `open_tasks`, refuses with
+/// `BUNDLE_ROW_UNRESOLVED` and no operation is produced.
+pub fn project_bundles(
+    plans: &[(&str, &str)],
+    known_rows: &BTreeSet<String>,
+) -> Result<RequirementProjection, String> {
+    let known_ids: BTreeSet<&str> = known_rows
+        .iter()
+        .filter_map(|id| id.rsplit(':').next())
+        .collect();
+    let mut bundles: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    let mut links: BTreeSet<(String, String)> = BTreeSet::new();
+    for (name, text) in plans {
+        let plan: BundlePlan = serde_json::from_str(text).map_err(|error| {
+            format!(
+                "{}: bundle plan {name}: {error}",
+                EngineErrorCode::InvalidArgument.as_str()
+            )
+        })?;
+        let id = bundle_node_id(&plan.bundle);
+        let unresolved = |row: &str| {
+            format!(
+                "{BUNDLE_ROW_UNRESOLVED}: {row} (named by bundle {}) resolves to no row",
+                plan.bundle
+            )
+        };
+        for (repo, rows) in &plan.rows_by_repo {
+            for row in rows {
+                let requirement = requirement_node_id(repo, row);
+                if !known_rows.contains(&requirement) {
+                    return Err(unresolved(row));
+                }
+                links.insert((requirement, id.clone()));
+            }
+        }
+        for row in plan.closure.iter().chain(plan.open_tasks.iter()) {
+            if !known_ids.contains(row.as_str()) {
+                return Err(unresolved(row));
+            }
+        }
+        bundles.insert(
+            id.clone(),
+            node(
+                &id,
+                serde_json::json!({
+                    "type": "ReleaseBundle",
+                    "bundle": plan.bundle,
+                    "scenario": plan.scenario,
+                    "declaredIn": name,
+                    "train_order": plan.train_order.join(","),
+                    "closure": plan.closure.join(","),
+                    "open_tasks": plan.open_tasks.join(","),
+                }),
+            ),
+        );
+    }
+    let nodes = bundles.len() as u32;
+    let edges = links.len() as u32;
+    let mut operations: Vec<serde_json::Value> = bundles.into_values().collect();
+    operations.extend(
+        links
+            .iter()
+            .map(|(requirement, bundle)| edge(requirement, bundle, "inBundle")),
+    );
+    Ok(RequirementProjection {
+        operations,
+        nodes,
+        edges,
+    })
+}
+
 /// Write one projection as the single `BatchUpdate` through the mutation gateway.
 pub async fn commit_requirements(
     ctx: &MutationCtx<'_>,
@@ -625,5 +726,48 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let refusal =
             project_contracts("demo", &files, &BTreeSet::new()).expect_err("no row is known");
         assert!(refusal.starts_with(CONTRACT_ROW_UNRESOLVED), "{refusal}");
+    }
+
+    const PLAN: &str = r#"{
+  "bundle": "P1",
+  "rows_by_repo": {"demo": ["DEMO-R001", "DEMO-R002"], "other": ["OTHER-R009"]},
+  "closure": ["DEMO-R001", "DEMO-R002", "OTHER-R009"],
+  "train_order": ["other", "demo"],
+  "scenario": "DEMO-SCENARIO-R001",
+  "open_tasks": ["DEMO-R002"]
+}"#;
+
+    // spec: MEDULLA-SDLC-R018.1
+    #[test]
+    fn bundle_plan_becomes_records_with_in_bundle_edges() {
+        let p = project_bundles(&[("releases/P1.json", PLAN)], &known()).expect("projects");
+        let id = bundle_node_id("P1");
+        let node = &p.operations[0];
+        assert_eq!(node["id"], id.as_str());
+        assert_eq!(node["properties"]["type"], "ReleaseBundle");
+        assert_eq!(node["properties"]["train_order"], "other,demo");
+        assert_eq!(node["properties"]["open_tasks"], "DEMO-R002");
+        println!(
+            "BUNDLE\t{}\t{}\t{}",
+            node["properties"]["scenario"].as_str().unwrap(),
+            node["properties"]["train_order"].as_str().unwrap(),
+            node["properties"]["closure"].as_str().unwrap()
+        );
+        for op in p.operations.iter().filter(|op| op["op"] == "upsert_edge") {
+            assert_eq!(op["target"], id.as_str());
+            assert_eq!(op["properties"]["relationship"], "inBundle");
+            println!("IN_BUNDLE\t{}", op["source"].as_str().unwrap());
+        }
+        assert_eq!((p.nodes, p.edges), (1, 3));
+    }
+
+    // spec: MEDULLA-SDLC-R018.1
+    #[test]
+    fn bundle_plan_with_unknown_row_refuses() {
+        let plan = PLAN.replace("\"OTHER-R009\"]},", "\"OTHER-R999\"]},");
+        let refusal = project_bundles(&[("releases/P1.json", &plan)], &known())
+            .expect_err("OTHER-R999 resolves to no row");
+        assert!(refusal.starts_with(BUNDLE_ROW_UNRESOLVED), "{refusal}");
+        assert!(refusal.contains("OTHER-R999"));
     }
 }
