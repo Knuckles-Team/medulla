@@ -73,7 +73,7 @@ impl BlobReader for ServerBlobReader {
     }
 }
 
-/// Reads the committed repository index of the tenant graph.
+/// Reads the committed repository index of the tenant's graphs.
 pub struct GraphIndexReader {
     state: Arc<RwLock<ServerState>>,
 }
@@ -84,20 +84,32 @@ impl GraphIndexReader {
         Self { state }
     }
 
-    /// Run `read` over the tenant's resident graph; a tenant id that is not valid or a graph
-    /// that does not exist reads as absent.
+    /// Run `read` over each resident graph of the tenant (`tenant__<tenant>` and every
+    /// `tenant__<tenant>__<base>`), in name order, and return the first answer; a tenant id that
+    /// is not valid or a tenant with no graph reads as absent.
     fn with_tenant_graph<T>(
         &self,
         tenant: &str,
-        read: impl FnOnce(&medulla_graph_core::graph::GraphCore) -> Option<T>,
+        read: impl Fn(&medulla_graph_core::graph::GraphCore) -> Option<T>,
     ) -> Option<T> {
         let tenant = medulla_identity_types::tenancy::TenantId::new(tenant).ok()?;
-        let graph = medulla_identity_types::tenancy::tenant_graph(&tenant);
+        let whole = medulla_identity_types::tenancy::tenant_graph(&tenant);
+        let prefix = format!("{whole}__");
         with_state(&self.state, |state| {
-            state
+            let mut names: Vec<String> = state
                 .registry
-                .get(&graph)
-                .and_then(|entry| read(&entry.core))
+                .list()
+                .into_iter()
+                .map(|(name, _)| name)
+                .filter(|name| *name == whole || name.starts_with(&prefix))
+                .collect();
+            names.sort();
+            names.iter().find_map(|name| {
+                state
+                    .registry
+                    .get(name)
+                    .and_then(|entry| read(&entry.core))
+            })
         })
     }
 }
