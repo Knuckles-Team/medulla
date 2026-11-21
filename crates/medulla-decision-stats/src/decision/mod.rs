@@ -58,6 +58,7 @@ pub mod insight;
 pub mod instruction_disclosure;
 pub mod ladder;
 pub mod legal_option_filter;
+pub mod memory;
 pub mod memory_benchmark;
 pub mod memory_rewrite;
 pub mod nl;
