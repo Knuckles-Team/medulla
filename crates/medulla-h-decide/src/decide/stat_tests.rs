@@ -1081,6 +1081,8 @@ mod feedback_tests;
 mod entry_trust_tests;
 // MEDULLA-DECISION-ENGINE-R163.3, R163.4: graph intake served through Decide.
 mod graph_intake_tests;
+// MEDULLA-DECISION-ENGINE-R701.4, R701.5: failure refusals and gap evidence.
+mod failure_patterns_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

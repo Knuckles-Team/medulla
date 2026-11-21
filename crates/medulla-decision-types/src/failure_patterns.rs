@@ -11,6 +11,24 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
+
+/// A failed run record names no run-trace id (MEDULLA-DECISION-ENGINE-R701.4).
+pub const FAILURE_NO_RUN_TRACE: RefusalCode = RefusalCode::new("FAILURE_NO_RUN_TRACE");
+/// No failure gap of that topic is visible to the caller.
+pub const TOPIC_NOT_FOUND: RefusalCode = RefusalCode::new("TOPIC_NOT_FOUND");
+/// `MarkAddressed` names a source node with no `COVERS` edge to the topic.
+pub const TOPIC_SOURCE_UNLINKED: RefusalCode = RefusalCode::new("TOPIC_SOURCE_UNLINKED");
+/// A pattern below `failure.min_count` files no gap; listed in `skipped`.
+pub const PATTERN_BELOW_MIN_COUNT: RefusalCode = RefusalCode::new("PATTERN_BELOW_MIN_COUNT");
+
+/// The `failure` table of registered refusal codes (MEDULLA-DECISION-ENGINE-R010.100).
+pub const REFUSALS: &[RefusalCode] = &[
+    FAILURE_NO_RUN_TRACE,
+    TOPIC_NOT_FOUND,
+    TOPIC_SOURCE_UNLINKED,
+    PATTERN_BELOW_MIN_COUNT,
+];
 
 /// Most steps one failure record or pattern carries.
 pub const MAX_FAILURE_STEPS: usize = 256;
@@ -141,6 +159,7 @@ impl GapTopic {
             id: signature.topic_id(),
             signature,
             status: GapStatus::initial(),
+            members: Vec::new(),
         }
     }
 }
