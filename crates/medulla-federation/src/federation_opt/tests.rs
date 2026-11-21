@@ -1756,3 +1756,31 @@ mod web_metasearch {
         assert!(scanned.ids().iter().all(|id| !id.starts_with("https://")));
     }
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3
+#[test]
+fn registered_policy_reaches_the_resolved_remote() {
+    use crate::federation::ForeignSourceRegistry;
+    use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
+
+    let spec = ForeignSourceSpec::Api {
+        operation: "list_objects".into(),
+        capabilities: medulla_query_types::wire::ForeignOperationCapabilities::default(),
+    };
+    let policy = AccelerationPolicy {
+        source_supports_copy: true,
+        hot_subset_predicate: "id < 10".to_string(),
+        freshness_watermark: Some("lsn:42".to_string()),
+    };
+    let mut registry = ForeignSourceRegistry::new();
+    registry.register_spec("with-policy", spec.clone());
+    registry.set_acceleration("with-policy", policy.clone());
+    registry.register_spec("without-policy", spec);
+
+    let accelerated = super::remote::resolve_named("with-policy", &registry)
+        .expect("a registered source resolves");
+    assert_eq!(accelerated.acceleration(), Some(&policy));
+    let live = super::remote::resolve_named("without-policy", &registry)
+        .expect("a registered source resolves");
+    assert_eq!(live.acceleration(), None);
+}
