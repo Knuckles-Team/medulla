@@ -264,8 +264,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T250 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
 - [ ] T251 [US6] MEDULLA-TYPED-PACKS-R700.1 Model
 - [ ] T252 [US6] MEDULLA-TYPED-PACKS-R700.2 Behavior
-- [ ] T253 [US6] MEDULLA-TYPED-PACKS-R700.3 Wiring
-- [ ] T254 [US6] MEDULLA-TYPED-PACKS-R700.4 Refusal
+- [x] T253 [US6] MEDULLA-TYPED-PACKS-R700.3 Wiring
+- [x] T254 [US6] MEDULLA-TYPED-PACKS-R700.4 Refusal
 - [ ] T255 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
 - [ ] T256 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
 - [ ] T257 [US6] MEDULLA-TYPED-PACKS-R700.7 Declared skill type key
