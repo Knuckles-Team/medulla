@@ -125,6 +125,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T113 [US1] MEDULLA-CONTRACT-R060.1 Debug info splits from the shipped binary and the build-id stays in both. Files: `Cargo.toml`, `scripts/split_release_symbols.sh`. Test: `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes`.
 - [ ] T114 [US1] MEDULLA-CONTRACT-R060.2 Each release uploads a symbol artifact per platform, named by build-id. Files: `.github/workflows/release.yml`. Test: `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`.
 - [ ] T115 [US1] MEDULLA-CONTRACT-R060.3 One command symbolizes a stack. Files: `scripts/symbolize.sh`, `docs/interfaces/engine-observability.md`. Test: `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact`.
+- [ ] T128 [US1] MEDULLA-CONTRACT-R060.4 The linux-x86_64 server uploads its symbol artifact like every other leg. Files: `.github/workflows/medulla-release-x86.yml`, `.github/workflows/release.yml`, `tests/test_release_symbols_workflow.py`.
 - [ ] T117 [US1] MEDULLA-CONTRACT-R062 Classify every state-named quantum and health field (rollup)
 - [ ] T118 [US1] MEDULLA-CONTRACT-R062.1 Rename `ControlState` to `ControlPolarity` and `ControlQubit.state` to `polarity` (no machine)
 - [ ] T119 [US1] MEDULLA-CONTRACT-R062.2 `HardwareJobMachine` in `medulla-quantum-hardware/src/job_machine.rs`; route `refresh_with` and `cancel` through `observe` and `cancel_accepted`

@@ -166,6 +166,7 @@ Keep unexecuted cases explicit.
 | MEDULLA-CONTRACT-R060.1 | `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes` (planned) | Debug info splits from the shipped binary and the build-id stays in both. |
 | MEDULLA-CONTRACT-R060.2 | `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`, `tests/release/test_read_build_id.py::test_reads_the_id_of_an_elf_a_macho_and_a_pe_fixture` (planned) | Each release uploads a symbol artifact per platform, named by build-id. |
 | MEDULLA-CONTRACT-R060.3 | `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact` (planned) | One command symbolizes a stack. |
+| MEDULLA-CONTRACT-R060.4 | `tests/test_release_symbols_workflow.py::test_linux_x86_64_symbol_artifact_is_uploaded_and_required` (planned) | The linux-x86_64 server uploads its symbol artifact like every other leg |
 
 - **MEDULLA-CONTRACT-R061:** `crates/medulla-method-codec/tests/emit_method_body_vectors.rs::emits_one_deterministic_vector_per_typed_sample` (planned, L1): two calls of `method_body_vectors()` are equal, every `typed_samples()` name appears once across vectors and omissions, and each `body` equals `canonical_body(frame)`. `tests/test_build_method_codec_wasm.py::test_vectors_are_written_beside_both_codec_copies` (planned, L2).
 
