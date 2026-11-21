@@ -16,16 +16,23 @@ use medulla_mutation_types::memory_sync::{
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
+/// The node label of a memory snapshot head row.
 pub const HEAD_LABEL: &str = "MemorySnapshot";
+/// The node label of a memory snapshot revision row.
 pub const REVISION_LABEL: &str = "MemoryRevision";
+/// The node label of a retained candidate row.
 pub const CANDIDATE_LABEL: &str = "MemoryCandidate";
+/// The node label of an acknowledgment row.
 pub const ACK_LABEL: &str = "MemoryAck";
 
 /// A head or revision row: the head record and the bytes it stands for.
 #[derive(Serialize, Deserialize)]
 pub struct RevisionRow {
+    /// The row label, [`HEAD_LABEL`] or [`REVISION_LABEL`].
     pub label: String,
+    /// The head record this row stands for.
     pub head: MemorySnapshotHead,
+    /// The document content at this revision.
     pub content: String,
     /// The engine clock at the commit that wrote this revision. The revision
     /// before it was superseded at this time (MEDULLA-DURABLE-KERNEL-R085.7).
@@ -35,10 +42,15 @@ pub struct RevisionRow {
 /// A retained candidate row.
 #[derive(Serialize, Deserialize)]
 pub struct CandidateRow {
+    /// The row label, [`CANDIDATE_LABEL`].
     pub label: String,
+    /// The revision the candidate was written against.
     pub base_revision: u64,
+    /// The candidate content.
     pub content: String,
+    /// The digest of the candidate content.
     pub content_digest: Digest256,
+    /// Whether the conflict this candidate holds is resolved.
     pub resolved: bool,
     /// The commit time of the resolution; `None` while the conflict is open.
     #[serde(default)]
@@ -48,9 +60,13 @@ pub struct CandidateRow {
 /// An acknowledgment row.
 #[derive(Serialize, Deserialize)]
 pub struct AckRow {
+    /// The row label, [`ACK_LABEL`].
     pub label: String,
+    /// The revision the holder acknowledged.
     pub revision: u64,
+    /// The digest of the acknowledged content.
     pub content_digest: Digest256,
+    /// The observation generation the acknowledgment was made at.
     pub observation_generation: u64,
 }
 
@@ -142,7 +158,9 @@ pub struct RetentionPlan {
 /// and candidate numbers are separate sequences, so the holder id says which.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SnapshotSlot {
+    /// A numbered revision.
     Revision(u64),
+    /// A numbered retained candidate.
     Candidate(u64),
 }
 

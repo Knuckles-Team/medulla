@@ -35,7 +35,7 @@ fn literal(value: &serde_json::Value) -> Result<DmnValue, DmnError> {
 fn numeric(value: &DmnValue) -> Option<(i128, u32)> {
     match value {
         DmnValue::Integer(units) => Some((i128::from(*units), 0)),
-        DmnValue::Decimal(decimal) => Some((i128::from(decimal.units), decimal.scale)),
+        DmnValue::Decimal(decimal) => Some((i128::from(decimal.units), u32::from(decimal.scale))),
         _ => None,
     }
 }
