@@ -138,7 +138,7 @@ pub struct ClickHouseStatement {
 
 /// Render `SELECT <columns> FROM <table> [WHERE ...]` for ClickHouse. A numeric value is
 /// re-validated as a finite number before it binds; a NUL byte is refused.
-pub fn render_clickhouse_select(
+pub fn render_columnar_select(
     table: &str,
     columns: &[String],
     filters: &[ClickHouseFilter],
@@ -253,7 +253,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R017.2.2
     #[test]
     fn clickhouse_select_quotes_with_backticks_and_binds_values() {
-        let statement = render_clickhouse_select(
+        let statement = render_columnar_select(
             "events",
             &["id".to_string(), "name".to_string()],
             &[ClickHouseFilter {
@@ -269,8 +269,8 @@ mod tests {
             "SELECT `id`, `name` FROM `events` WHERE `id` >= {p0:Int64}"
         );
         assert_eq!(statement.params, vec![("param_p0".to_string(), "7".to_string())]);
-        assert!(render_clickhouse_select("t; DROP", &["id".to_string()], &[]).is_err());
-        assert!(render_clickhouse_select(
+        assert!(render_columnar_select("t; DROP", &["id".to_string()], &[]).is_err());
+        assert!(render_columnar_select(
             "t",
             &["id".to_string()],
             &[ClickHouseFilter {

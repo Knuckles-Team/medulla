@@ -391,7 +391,7 @@ impl medulla_federation::clickhouse_foreign::ClickHouseReader for EngineClickHou
         &self,
         request: &medulla_federation::clickhouse_foreign::ClickHouseRead<'_>,
     ) -> Result<medulla_federation::federation_opt::ForeignRows, String> {
-        use medulla_exec::sql_text::{render_clickhouse_select, ClickHouseFilter, ClickHouseParamKind};
+        use medulla_exec::sql_text::{render_columnar_select, ClickHouseFilter, ClickHouseParamKind};
         use medulla_federation::federation_opt::{Comparison, ForeignRow, ForeignRows};
         let config = ClickHouseDriverConfig::build(
             request.host,
@@ -449,7 +449,7 @@ impl medulla_federation::clickhouse_foreign::ClickHouseReader for EngineClickHou
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
-        let statement = render_clickhouse_select(request.table, &request.columns, &filters)
+        let statement = render_columnar_select(request.table, &request.columns, &filters)
             .map_err(|error| format!("INVALID_ARGUMENT: {error}"))?;
         let result = query(&handle, &statement)?;
         Ok(ForeignRows::from_rows(result.rows.into_iter().enumerate().map(
