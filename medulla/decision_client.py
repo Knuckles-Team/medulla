@@ -1166,6 +1166,39 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def fit(
+        self, request: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``DecisionFit`` ``submit`` for one fit request.
+
+        The result is the job row the engine answers with, unchanged. The
+        caller needs the ``admin:decision-fit`` scope.
+        """
+        from medulla.generated.coordination import send_decision_fit
+
+        result = await send_decision_fit(
+            self.client,
+            {"op": {"op": "submit", "request": dict(request)}},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
+    async def fit_status(self, request: Mapping[str, Any]) -> Any:
+        """Send ``DecisionFit`` ``status`` for one submitted job.
+
+        ``request`` is ``{"tenant_id": ..., "job_id": ...}``; the result is
+        the job row, unchanged.
+        """
+        from medulla.generated.coordination import send_decision_fit
+
+        result = await send_decision_fit(
+            self.client,
+            {"op": {"op": "status", "request": dict(request)}},
+            self.graph,
+        )
+        return _payload(result)
+
     async def revision_proposal_list(
         self, *, cursor: str | None = None, limit: int | None = None
     ) -> Any:
