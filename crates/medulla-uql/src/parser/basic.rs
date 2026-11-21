@@ -62,6 +62,22 @@ impl<'a> Parser<'a> {
         Ok(Op::DecisionScan { preds })
     }
 
+    /// `EDGES [ ":" name ] [ "WHERE" pred ]` (MEDULLA-FEDERATED-QUERY-R735) — one row per
+    /// visible edge.
+    pub(super) fn edges(&mut self) -> Result<Op, UqlError> {
+        let rel = if self.eat(&Tok::Colon) {
+            Some(self.name("an edge relationship")?)
+        } else {
+            None
+        };
+        let preds = if self.eat_kw("WHERE") {
+            self.pred_list()?
+        } else {
+            Vec::new()
+        };
+        Ok(Op::ScanEdges { rel, preds })
+    }
+
     /// `USAGE ( QUERIES | ASSETS )` (MEDULLA-TYPED-PACKS-R108.8) — the caller's usage over the
     /// trailing window, ranked by use.
     pub(super) fn usage(&mut self) -> Result<Op, UqlError> {

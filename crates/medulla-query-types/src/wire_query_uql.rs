@@ -456,6 +456,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::ClusterByEmbedding { k } => Ok(format!("CLUSTER BY EMBEDDING K {k}")),
         Op::DecisionScan { preds } => decision_scan(preds),
         Op::UsageScan { view } => Ok(usage_scan(*view).to_string()),
+        Op::ScanEdges { rel, preds } => scan_edges(rel.as_deref(), preds),
         Op::Limit { k } => Ok(format!("LIMIT {k}")),
         Op::Project { channels } => project(channels),
     }
@@ -467,6 +468,18 @@ fn decision_scan(preds: &[Pred]) -> Printed {
         return fixed("DECISIONS");
     }
     Ok(format!("DECISIONS WHERE {}", conjunction(preds)?))
+}
+
+/// `EDGES[ :rel][ WHERE <preds>]` (MEDULLA-FEDERATED-QUERY-R735).
+fn scan_edges(rel: Option<&str>, preds: &[Pred]) -> Printed {
+    let mut text = String::from("EDGES");
+    if let Some(rel) = rel {
+        text.push_str(&format!(" :{}", uql_ident(rel)));
+    }
+    if !preds.is_empty() {
+        text.push_str(&format!(" WHERE {}", conjunction(preds)?));
+    }
+    Ok(text)
 }
 
 /// `USAGE QUERIES` / `USAGE ASSETS` (MEDULLA-TYPED-PACKS-R108.8).

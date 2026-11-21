@@ -30,6 +30,7 @@ use medulla_query_types::wire::TimeAxis;
 pub(crate) mod attribution;
 // EH-066 — the `DECISIONS` source over the caller's visible decision log.
 mod decisions;
+mod edges;
 // EH-525 — `SOURCE RELIABILITY`, learned from the decision log when one is bound.
 #[cfg(feature = "epistemic")]
 pub mod reliability;

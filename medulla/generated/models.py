@@ -19993,6 +19993,19 @@ class OpScanBody(BaseModel):
     label: str
 
 
+class OpScanEdges(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScanEdges: OpScanEdgesBody
+
+
+class OpScanEdgesBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    preds: list[Pred]
+    rel: str | None = None
+
+
 class OpSensorAlign(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30239,6 +30252,7 @@ Op = (
     | OpAttribute
     | OpDecisionScan
     | OpUsageScan
+    | OpScanEdges
     | OpLimit
     | OpProject
     | OpClusterByEmbedding
@@ -37851,6 +37865,8 @@ __all__ = [
     "OpScan",
     "OpScanAll",
     "OpScanBody",
+    "OpScanEdges",
+    "OpScanEdgesBody",
     "OpSensorAlign",
     "OpSensorAlignBody",
     "OpSensorFuse",

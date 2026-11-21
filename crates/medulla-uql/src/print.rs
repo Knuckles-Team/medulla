@@ -29,6 +29,10 @@ fn canonical_op(op: &Op) -> Op {
         Op::DecisionScan { preds } => Op::DecisionScan {
             preds: preds.iter().map(canonical_pred).collect(),
         },
+        Op::ScanEdges { rel, preds } => Op::ScanEdges {
+            rel: rel.clone(),
+            preds: preds.iter().map(canonical_pred).collect(),
+        },
         Op::Expand {
             rel,
             dir,

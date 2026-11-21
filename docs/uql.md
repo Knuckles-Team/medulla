@@ -59,6 +59,7 @@ head               = source | stage | "FROM" name | "JOIN" name "," name { "," n
 match              = "MATCH" "(" [ ":" name ] ")" [ "WHERE" pred ] ;
 foreign            = "FOREIGN" id | "FOREIGN" "SCAN" string [ "JOIN" ] | "FOREIGN" "HTTP" string [ "PATH" string ] "ID" string [ "SCORE" string ] [ "JOIN" ] ;
 decisions          = "DECISIONS" [ "WHERE" pred ] ;
+edges              = "EDGES" [ ":" name ] [ "WHERE" pred ] ;
 usage              = "USAGE" ( "QUERIES" | "ASSETS" ) ;
 sparql             = "SPARQL" string "VAR" string ;   (* feature `owl` *)
 tsscan             = "TSSCAN" string_list "FROM" num "TO" num ;   (* feature `timeseries` *)
@@ -158,6 +159,7 @@ A source seeds the RowSet from nothing. Start every pipeline with one.
 | `SPATIAL SCAN 'roads' BBOX [0, 0, 10, 10]` | `SpatialScan{layer,bbox}` | `geo` |
 | `TENSOR SCAN 'frames'` | `TensorScan{layer}` | `tensor` |
 | `DECISIONS [WHERE p]` | `DecisionScan{preds}` — the caller's visible decision records | — (served: `decide`) |
+| `EDGES [:rel] [WHERE p]` | `ScanEdges{rel,preds}` — one row per visible edge (`id` is `source\|target\|ord`) | — |
 | `USAGE QUERIES` / `USAGE ASSETS` | `UsageScan{view}` — the caller's usage over the trailing window, ranked by use | — (served: `tsdb`) |
 
 These also seed when they lead a pipeline, and narrow when they follow one: `WHERE`,

@@ -983,6 +983,12 @@ pub enum Op {
     /// record-id order. The served path binds the caller's log; unbound it is a typed
     /// error, never an empty set.
     DecisionScan { preds: Vec<Pred> },
+    /// SOURCE (MEDULLA-FEDERATED-QUERY-R735, UQL `EDGES [:rel] [WHERE pred]`) — one row per
+    /// edge the caller's snapshot holds, optionally only those whose `relationship` is `rel`,
+    /// kept when every relational predicate holds over the edge's properties and the
+    /// `source`, `target` and `rel` columns. The row id is `source|target|ord`. Unscored, in
+    /// `(source, target, ord)` order.
+    ScanEdges { rel: Option<String>, preds: Vec<Pred> },
     /// SOURCE (MEDULLA-TYPED-PACKS-R108.8, UQL `USAGE QUERIES` / `USAGE ASSETS`) — the
     /// caller's usage over the trailing window `knob catalog.top_queries_window_days`, ranked
     /// by use. `Queries` ranks question digests from the server's own query provenance;

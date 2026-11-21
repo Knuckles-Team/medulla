@@ -295,6 +295,10 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::UsageScan => Op::UsageScan {
             view: UsageView::Queries,
         },
+        OpKind::ScanEdges => Op::ScanEdges {
+            rel: Some("dependsOn".into()),
+            preds: vec![],
+        },
         OpKind::Limit => Op::Limit { k: 10 },
         OpKind::Project => Op::Project {
             channels: vec!["similarity".into(), "window".into()],
