@@ -62,7 +62,7 @@
 use medulla_graph_algos::{graphlearn::edge_fn::Basis, graphlearn::edge_fn::KanEdgeFn};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
 use crate::algebra::Op;
@@ -493,6 +493,39 @@ impl CostHeadRevision {
     }
 }
 
+/// One shadow run of a challenger cost head beside the champion's served run
+/// (MEDULLA-FEDERATED-QUERY-R732.3). The challenger's rows are digested and dropped.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ShadowComparison {
+    /// The tenant whose read was shadowed.
+    pub tenant: String,
+    /// The shape digest of the plan.
+    pub shape_digest: String,
+    /// The plan the champion ran.
+    pub champion_plan_digest: String,
+    /// The plan the challenger ran.
+    pub challenger_plan_digest: String,
+    /// The champion run's estimated cost.
+    pub champion_estimated_cost: f64,
+    /// The challenger run's estimated cost.
+    pub challenger_estimated_cost: f64,
+    /// The champion run's measured cost in microseconds.
+    pub champion_cost_us: u64,
+    /// The challenger run's measured cost in microseconds.
+    pub challenger_cost_us: u64,
+    /// The challenger's `RowSet::result_digest`, hex; `None` when it failed.
+    pub challenger_result_digest: Option<String>,
+    /// Whether the challenger's rows equal the champion's.
+    pub result_match: bool,
+    /// Whether the challenger errored or panicked.
+    pub challenger_failed: bool,
+    /// Epoch milliseconds the comparison was recorded.
+    pub recorded_at_ms: i64,
+}
+
+/// The default of the `query.planner_shadow_fraction` knob.
+pub const DEFAULT_SHADOW_FRACTION: f64 = 0.05;
+
 /// The bounded in-memory store of served plan runs (MEDULLA-FEDERATED-QUERY-R732.1): a
 /// planner cache like [`LearnedCostStore`], rebuilt after a restart and never copied to
 /// another store. Each tenant keeps at most the `query.plan_records` knob's records; the
@@ -502,6 +535,8 @@ pub struct PlanRecordStore {
     records: Mutex<HashMap<String, VecDeque<PlanExecutionRecord>>>,
     champion: RwLock<Option<Arc<CostHeadRevision>>>,
     challenger: RwLock<Option<Arc<CostHeadRevision>>>,
+    shadows: Mutex<HashMap<String, VecDeque<ShadowComparison>>>,
+    shadow_fraction_bits: AtomicU64,
 }
 
 /// The default of the `query.plan_records` knob.
@@ -515,6 +550,8 @@ impl PlanRecordStore {
             records: Mutex::new(HashMap::new()),
             champion: RwLock::new(None),
             challenger: RwLock::new(None),
+            shadows: Mutex::new(HashMap::new()),
+            shadow_fraction_bits: AtomicU64::new(DEFAULT_SHADOW_FRACTION.to_bits()),
         }
     }
 
@@ -583,6 +620,43 @@ impl PlanRecordStore {
             *challenger = None;
         }
         *recover_corrections(self.champion.write()) = Some(Arc::new(revision));
+    }
+
+    /// Bind the fraction of interactive plans that also run under the challenger (the server
+    /// sets it from `query.planner_shadow_fraction` at startup).
+    pub fn set_shadow_fraction(&self, fraction: f64) {
+        self.shadow_fraction_bits
+            .store(fraction.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
+    }
+
+    /// Whether a plan with this digest is in the shadow sample: its first eight bytes, as
+    /// a fraction of the digest space, fall below the bound fraction.
+    pub fn in_shadow_sample(&self, plan_digest: &str) -> bool {
+        let fraction = f64::from_bits(self.shadow_fraction_bits.load(Ordering::Relaxed));
+        let Some(head) = plan_digest.get(..16).and_then(|h| u64::from_str_radix(h, 16).ok())
+        else {
+            return false;
+        };
+        (head as f64 / u64::MAX as f64) < fraction
+    }
+
+    /// Keep one shadow comparison under its tenant, with the same bound as the records.
+    pub fn record_shadow(&self, comparison: ShadowComparison) {
+        let cap = self.per_tenant_cap.load(Ordering::Relaxed);
+        let mut guard = recover_corrections(self.shadows.lock());
+        let queue = guard.entry(comparison.tenant.clone()).or_default();
+        queue.push_back(comparison);
+        while queue.len() > cap {
+            queue.pop_front();
+        }
+    }
+
+    /// The tenant's shadow comparisons, oldest first.
+    pub fn shadows(&self, tenant: &str) -> Vec<ShadowComparison> {
+        recover_corrections(self.shadows.lock())
+            .get(tenant)
+            .map(|queue| queue.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// Every tenant that has a record.

@@ -80,6 +80,9 @@ pub fn install_state_seams(state: &ServerState) {
         usize::try_from(medulla_server_api::knob_config::knobs().query_plan_records)
             .unwrap_or(usize::MAX),
     );
+    medulla_exec::learned_cost::PlanRecordStore::global().set_shadow_fraction(
+        medulla_server_api::knob_config::knobs().query_planner_shadow_fraction,
+    );
 
     // L2 dispatch re-entry.
     let _ = state.seams.dispatch.set(std::sync::Arc::new(

@@ -939,6 +939,14 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
             crate::budget::QUERY_BUDGET_EXCEEDED
         ));
     }
+    // MEDULLA-FEDERATED-QUERY-R732.3: an interactive run may be shadowed by the challenger
+    // cost head; the plan is kept for that second planning, after the champion's rows are final.
+    let shadow_plan = (ctx.interactive
+        && ctx.tenant.is_some()
+        && crate::learned_cost::PlanRecordStore::global()
+            .challenger()
+            .is_some())
+    .then(|| plan.clone());
     let optimized = plan_optimize(plan, ctx);
     #[cfg(feature = "federation")]
     if let Some(foreign) = ctx.federation {
@@ -957,17 +965,90 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
     let measured_us = elapsed_us(started);
     ctx.budget.check_result(rows.len())?;
-    record_plan_run(&optimized.ops, ctx, &rows, measured_us);
+    let champion_run = record_plan_run(&optimized.ops, ctx, &rows, measured_us);
+    if let (Some(plan), Some(run)) = (shadow_plan, champion_run) {
+        shadow_run(plan, ctx, &rows, &run, &challenger_run);
+    }
     Ok(rows)
+}
+
+/// The real challenger run: plan under the context's bound cost head, then execute.
+fn challenger_run(plan: Plan, ctx: &PlanCtx) -> Result<(String, RowSet), String> {
+    let optimized = plan_optimize(plan, ctx);
+    let plan_digest = crate::learned_cost::plan_digest(&optimized.ops)?;
+    let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
+    Ok((plan_digest, rows))
+}
+
+/// Plan and run `plan` under the challenger cost head on the same context and snapshot, and
+/// record how it compares with the champion's served run (MEDULLA-FEDERATED-QUERY-R732.3).
+/// The challenger never answers: its rows are digested and dropped, and an error or panic
+/// of the shadow run only sets `challenger_failed`.
+fn shadow_run(
+    plan: Plan,
+    ctx: &PlanCtx,
+    champion_rows: &RowSet,
+    run: &crate::learned_cost::PlanExecutionRecord,
+    runner: &dyn Fn(Plan, &PlanCtx) -> Result<(String, RowSet), String>,
+) {
+    use crate::learned_cost as lc;
+    let store = lc::PlanRecordStore::global();
+    let (Some(challenger), Some(tenant)) = (store.challenger(), ctx.tenant) else {
+        return;
+    };
+    if !store.in_shadow_sample(&run.plan_digest) {
+        return;
+    }
+    let recorder = std::sync::Arc::new(lc::OpCostRecorder::default());
+    let shadow_ctx = ctx
+        .clone()
+        .with_cost_head(Some(challenger))
+        .with_op_costs(recorder.clone());
+    let started = std::time::Instant::now();
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        runner(plan, &shadow_ctx).map(|(plan_digest, rows)| (plan_digest, rows.result_digest()))
+    }));
+    let cost_us = elapsed_us(started);
+    let (challenger_plan_digest, result_digest, failed) = match outcome {
+        Ok(Ok((plan_digest, digest))) => (plan_digest, Some(digest.to_hex()), false),
+        Ok(Err(error)) => {
+            tracing::warn!(error = %error, "shadow run failed; the champion's answer stands");
+            (String::new(), None, true)
+        }
+        Err(_) => {
+            tracing::warn!("shadow run panicked; the champion's answer stands");
+            (String::new(), None, true)
+        }
+    };
+    let champion_digest = champion_rows.result_digest().to_hex();
+    store.record_shadow(lc::ShadowComparison {
+        tenant: tenant.to_string(),
+        shape_digest: run.shape_digest.clone(),
+        champion_plan_digest: run.plan_digest.clone(),
+        challenger_plan_digest,
+        champion_estimated_cost: run.estimated_cost,
+        challenger_estimated_cost: recorder.costs().iter().map(|cost| cost.estimated).sum(),
+        champion_cost_us: run.measured_cost_us,
+        challenger_cost_us: cost_us,
+        result_match: result_digest.as_deref() == Some(champion_digest.as_str()),
+        challenger_result_digest: result_digest,
+        challenger_failed: failed,
+        recorded_at_ms: ctx.now_ms.unwrap_or_else(wall_clock_ms),
+    });
 }
 
 /// Keep one served run in the plan record store (MEDULLA-FEDERATED-QUERY-R732.1). A run
 /// with no tenant is not recorded; a digest that cannot be computed is logged, and the
 /// answer is returned either way, because a record never changes an answer.
-fn record_plan_run(ops: &[Op], ctx: &PlanCtx, rows: &RowSet, measured_us: u64) {
+fn record_plan_run(
+    ops: &[Op],
+    ctx: &PlanCtx,
+    rows: &RowSet,
+    measured_us: u64,
+) -> Option<crate::learned_cost::PlanExecutionRecord> {
     use crate::learned_cost as lc;
     let (Some(tenant), Some(recorder)) = (ctx.tenant, ctx.op_costs.as_ref()) else {
-        return;
+        return None;
     };
     let store = lc::PlanRecordStore::global();
     let digests = (|| -> Result<(String, String, String), String> {
@@ -981,11 +1062,11 @@ fn record_plan_run(ops: &[Op], ctx: &PlanCtx, rows: &RowSet, measured_us: u64) {
         Ok(digests) => digests,
         Err(error) => {
             tracing::warn!(error = %error, "plan record skipped: a digest could not be computed");
-            return;
+            return None;
         }
     };
     let op_costs = recorder.costs();
-    store.record(lc::PlanExecutionRecord {
+    let record = lc::PlanExecutionRecord {
         tenant: tenant.to_string(),
         shape_digest,
         plan_digest,
@@ -997,7 +1078,9 @@ fn record_plan_run(ops: &[Op], ctx: &PlanCtx, rows: &RowSet, measured_us: u64) {
         knob_revision: String::new(),
         cost_head_revision,
         recorded_at_ms: ctx.now_ms.unwrap_or_else(wall_clock_ms),
-    });
+    };
+    store.record(record.clone());
+    Some(record)
 }
 
 /// Microseconds since `started`.
@@ -3325,6 +3408,74 @@ fn rel_matches(view: &GraphView, from: &str, to: &str, rel: &str, pin: Option<As
                     && pin_admits(pin, &props)
             })
     })
+}
+
+#[cfg(test)]
+mod shadow_tests {
+    use super::*;
+    use crate::learned_cost::{CostHeadRevision, PlanRecordStore};
+    use medulla_graph_core::graph::GraphCore;
+    use serde_json::json;
+
+    fn doc_graph() -> GraphCore {
+        let core = GraphCore::new();
+        for id in ["a", "b", "c"] {
+            core.add_node(
+                id.into(),
+                rmp_serde::to_vec_named(&json!({"type": "Doc"})).unwrap(),
+            );
+        }
+        core
+    }
+
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R732.3
+    fn shadow_challenger_never_serves_its_result() {
+        let core = doc_graph();
+        let view = core.analysis_snapshot();
+        let semantic = SemanticStore::new();
+        let store = PlanRecordStore::global();
+        store.set_per_tenant_cap(4_096);
+        store.set_shadow_fraction(1.0);
+        store.set_challenger(Some(CostHeadRevision::new(Vec::new(), Vec::new())));
+        let plan = Plan::new(vec![Op::Scan { label: "Doc".into() }, Op::Limit { k: 3 }]);
+        let tenant = "shadow-test-tenant";
+        let interactive = PlanCtx::new(&view, &semantic)
+            .with_tenant(tenant)
+            .with_interactive(true);
+        let champion = plan.execute(&interactive).unwrap();
+        let run = store.records(tenant).pop().expect("the champion run is recorded");
+
+        let differing = |_: Plan, _: &PlanCtx| {
+            Ok(("other-plan".to_string(), RowSet::from_ids(["z".to_string()])))
+        };
+        let failing = |_: Plan, _: &PlanCtx| Err::<(String, RowSet), String>("boom".into());
+        let panicking = |_: Plan, _: &PlanCtx| -> Result<(String, RowSet), String> { panic!("boom") };
+        shadow_run(plan.clone(), &interactive, &champion, &run, &differing);
+        shadow_run(plan.clone(), &interactive, &champion, &run, &failing);
+        shadow_run(plan.clone(), &interactive, &champion, &run, &panicking);
+        let real = plan.execute(&interactive).unwrap();
+
+        // The answer is the champion's, whatever the challenger did.
+        assert_eq!(real.result_digest(), champion.result_digest());
+        let shadows = store.shadows(tenant);
+        assert!(shadows.iter().any(|s| !s.result_match && !s.challenger_failed));
+        assert_eq!(shadows.iter().filter(|s| s.challenger_failed).count(), 2);
+        assert!(shadows
+            .iter()
+            .filter(|s| s.challenger_failed)
+            .all(|s| s.challenger_result_digest.is_none()));
+        // The real challenger agrees with the champion on the same plan.
+        assert!(shadows.iter().any(|s| s.result_match));
+
+        // A run that is not interactive records no comparison.
+        let before = store.shadows("shadow-test-batch").len();
+        let batch = PlanCtx::new(&view, &semantic).with_tenant("shadow-test-batch");
+        plan.execute(&batch).unwrap();
+        assert_eq!(store.shadows("shadow-test-batch").len(), before);
+        store.set_challenger(None);
+        store.set_shadow_fraction(crate::learned_cost::DEFAULT_SHADOW_FRACTION);
+    }
 }
 
 #[cfg(test)]
