@@ -23,6 +23,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+use medulla_decision_types::decision::knob_families::classification as classification_knobs;
+use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_identity_types::classification::{
     claim_id as derive_claim_id, ClaimRecord, ClaimState, ClassificationClaim,
     ClassificationClaimOp, ClassificationClaimResult,
@@ -90,9 +92,21 @@ fn unknown_marking(name: &str) -> String {
     refuse(ServerErrorCode::ClaimUnknownMarking, name)
 }
 
-/// The lineage hop bound: the default of `classification.propagation_depth_max`
-/// (range [8, 1024], `medulla_decision_types::decision::knob_families::classification`).
-const PROPAGATION_DEPTH_MAX: u32 = 64;
+/// The lineage hop bound: `classification.propagation_depth_max` from the server's resolved
+/// knob snapshot, the pinned decision policy, or the knob default when none is pinned
+/// (`medulla_decision_types::decision::knob_families::classification`).
+async fn propagation_depth_max(state: &Arc<RwLock<ServerState>>) -> u32 {
+    let guard = state.read().await;
+    let spec = &classification_knobs::KNOBS[classification_knobs::PROPAGATION_DEPTH_MAX];
+    let value = match guard.pinned_policy.as_deref() {
+        Some(policy) => policy.knob(spec),
+        None => spec.default,
+    };
+    match value {
+        KnobValue::Integer(depth) => u32::try_from(depth).unwrap_or(u32::MAX),
+        _ => u32::MAX,
+    }
+}
 
 async fn serve(
     state: &Arc<RwLock<ServerState>>,
@@ -482,13 +496,14 @@ async fn propagate_downstream(
     promoted: &ClaimRecord,
 ) -> Result<Vec<ClaimRecord>, String> {
     let lineage = read_lineage(state, target).await?;
+    let depth_max = propagation_depth_max(state).await;
     let evidence = vec![format!("propagated_from:{}", promoted.claim_id)];
     let proposed = propagate(
         &lineage,
         &promoted.claim.asset,
         &promoted.claim.categories,
         &evidence,
-        PROPAGATION_DEPTH_MAX,
+        depth_max,
         &BTreeSet::new(),
     );
     let mut created = Vec::new();
@@ -497,19 +512,8 @@ async fn propagate_downstream(
         if stored_record(state, target, &id).await?.is_some() {
             continue;
         }
-        let current = match read_node(state, target, &claim.asset).await? {
-            Some(properties) => stamped(&properties),
-            None => Vec::new(),
-        };
-        let record = ClaimRecord {
-            claim_id: id,
-            claim,
-            before_markings: current.clone(),
-            after_markings: current,
-            promoted_by: None,
-        };
-        create_claim_node(state, target, &record).await?;
-        created.push(record);
+        // The propagated claim goes through the same `Propose` path as a caller's claim.
+        created.push(propose(state, target, claim).await?.record);
     }
     Ok(created)
 }

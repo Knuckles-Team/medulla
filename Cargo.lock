@@ -7799,6 +7799,7 @@ dependencies = [
  "hmac 0.12.1",
  "jsonwebtoken",
  "medulla-capabilities",
+ "medulla-decision-types",
  "medulla-identity-types",
  "medulla-isolation",
  "medulla-kernel",

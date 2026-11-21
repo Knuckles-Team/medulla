@@ -16,6 +16,7 @@ argon2 = { version = "0.5", optional = true, default-features = false, features 
 hex = "0.4"
 hmac = "0.12"
 medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
