@@ -587,7 +587,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R085.4`: Planned: `tests/memory_sync_served.rs::wire_methods_reach_durable_gateway` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.5`: Planned: `tests/memory_sync_served.rs::denied_and_malformed_requests_have_no_effects` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.6`: Planned: `tests/memory_sync_served.rs::provenance_and_materialization_ack_survive_restart` (L3).
-- `MEDULLA-DURABLE-KERNEL-R085.7`: Planned: `tests/memory_sync_served.rs::conflicts_survive_gc_and_retention_refusal` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.7`: Planned: `tests/memory_sync_served.rs::conflicts_survive_gc_and_retention_refusal` (L3). L1 `crates/medulla-server-api/src/knob_config.rs::tests::memory_sync_retention_knobs_register`.
 - `MEDULLA-DURABLE-KERNEL-R086`: Planned: `tests/safe_eviction_read_through.rs::served_safe_eviction_read_through_journey` (L3).
 - `MEDULLA-DURABLE-KERNEL-R086.1`: Planned: `crates/medulla-graph-core/src/graph/core_readthrough.rs::tests::read_through_model_outcomes` (L1).
 - `MEDULLA-DURABLE-KERNEL-R086.2`: Planned: `tests/safe_eviction_read_through.rs::selected_residents_leave_durable_rows_unchanged` (L3).
