@@ -3,9 +3,8 @@ with a benchmark, and refuses an unknown range, an unknown benchmark and an unbo
 
 from __future__ import annotations
 
-from typing import Any
-
 import os
+from typing import Any
 
 import pytest
 from conftest import TEST_TENANT, tenant_request_context
