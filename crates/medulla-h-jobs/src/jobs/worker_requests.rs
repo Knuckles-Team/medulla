@@ -89,6 +89,9 @@ pub(super) fn worker_lease(
     }
 }
 
+/// The most capabilities one worker claim names (MEDULLA-DURABLE-KERNEL-R082.10).
+const MAX_WORKER_CAPABILITIES: usize = 64;
+
 pub(super) fn handle_worker_claim(
     store: &JobStore,
     req_id: u64,
@@ -102,7 +105,7 @@ pub(super) fn handle_worker_claim(
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
-    if capabilities.len() > 128
+    if capabilities.len() > MAX_WORKER_CAPABILITIES
         || capabilities.iter().any(|value| {
             value.is_empty() || value.len() > 128 || value.chars().any(char::is_control)
         })

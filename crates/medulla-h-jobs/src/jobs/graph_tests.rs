@@ -495,6 +495,162 @@ mod colocated_executor_tests {
         }
     }
 
+    async fn call_scoped(
+        state: &Arc<RwLock<ServerState>>,
+        method: Method,
+        scopes: &[&str],
+    ) -> Response {
+        let id = next_nonce() + 5_000;
+        let request = scoped_test_request_on(
+            SECRET,
+            id,
+            GRAPH,
+            method,
+            ScopedTestCaller {
+                principal: ISSUER,
+                tenant: TENANT,
+                scopes,
+                nonce: &format!("remote-worker-nonce-{id}-{}", next_nonce()),
+                idempotency_key: &format!("remote-worker-key-{id}-{}", next_nonce()),
+            },
+        );
+        dispatch_test_on_heap(state, request).await
+    }
+
+    async fn job_op(state: &Arc<RwLock<ServerState>>, op: JobOp) -> serde_json::Value {
+        json_of(call_scoped(state, Method::AnalyticsJob { op }, &["*"]).await)
+    }
+
+    fn state_name(job: &serde_json::Value) -> String {
+        match job.get("state").expect("job state") {
+            serde_json::Value::String(name) => name.clone(),
+            other => other
+                .as_object()
+                .and_then(|object| object.keys().next().cloned())
+                .expect("a tagged job state"),
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.10
+    #[tokio::test]
+    async fn remote_worker_drives_the_full_sequence_and_scope_is_enforced() {
+        let state = prepared_state().await;
+        // A capability no colocated executor serves, so only the remote worker claims the jobs.
+        let capability = format!("remote-worker-{}", next_nonce());
+        let spec = || SubmitJobSpec {
+            required_capabilities: vec![capability.clone()],
+            ..submit_spec()
+        };
+        let claim_op = |capabilities: Vec<String>| JobOp::WorkerClaim {
+            worker_instance: "remote-slot".to_string(),
+            capabilities,
+            lease_ms: 60_000,
+        };
+
+        // The claim bound: 64 capabilities of at most 128 characters, no control characters.
+        let too_many: Vec<String> = (0..65).map(|index| format!("cap-{index}")).collect();
+        let refused = call_scoped(
+            &state,
+            Method::AnalyticsJob {
+                op: claim_op(too_many),
+            },
+            &["*"],
+        )
+        .await;
+        assert!(
+            refused.error.as_deref().is_some_and(|error| error.contains("capabilities are invalid")),
+            "{:?}",
+            refused.error
+        );
+        for invalid in ["x".repeat(129), "bad\ncapability".to_string(), String::new()] {
+            let refused = call_scoped(
+                &state,
+                Method::AnalyticsJob {
+                    op: claim_op(vec![invalid]),
+                },
+                &["*"],
+            )
+            .await;
+            assert!(refused.error.is_some(), "an invalid capability is refused");
+        }
+
+        // The service principal needs `analytics:worker`: a caller without it is denied.
+        let denied = call_scoped(
+            &state,
+            Method::AnalyticsJob {
+                op: claim_op(vec![capability.clone()]),
+            },
+            &["kg:read", "kg:write"],
+        )
+        .await;
+        assert!(
+            denied.error.as_deref().is_some_and(|error| error.contains("ACCESS_DENIED")),
+            "{:?}",
+            denied.error
+        );
+
+        // A cancelled run: claim, renew, checkpoint, cancel, then the worker confirms.
+        let submitted = job_op(&state, JobOp::Submit(spec())).await;
+        let job_id = submitted["job_id"].as_str().expect("job id").to_string();
+        let claimed = job_op(&state, claim_op(vec![capability.clone()])).await;
+        assert_eq!(claimed["job"]["job_id"], job_id);
+        assert_eq!(state_name(&claimed["job"]), "Running");
+        let epoch = claimed["lease"]["epoch"].as_u64().expect("lease epoch");
+        let renewed = job_op(
+            &state,
+            JobOp::WorkerRenew {
+                job_id: job_id.clone(),
+                worker_instance: "remote-slot".to_string(),
+                lease_epoch: epoch,
+                lease_ms: 60_000,
+            },
+        )
+        .await;
+        assert_eq!(state_name(&renewed), "Running");
+        let checkpointed = job_op(
+            &state,
+            JobOp::WorkerCheckpoint {
+                job_id: job_id.clone(),
+                worker_instance: "remote-slot".to_string(),
+                lease_epoch: epoch,
+                progress: 0.5,
+                label: "half".to_string(),
+                state_ref: None,
+            },
+        )
+        .await;
+        assert_eq!(state_name(&checkpointed), "Running");
+        let requested = job_op(&state, JobOp::Cancel { job_id: job_id.clone() }).await;
+        assert_eq!(state_name(&requested), "CancelRequested");
+        let cancelled = job_op(
+            &state,
+            JobOp::WorkerCancel {
+                job_id: job_id.clone(),
+                worker_instance: "remote-slot".to_string(),
+                lease_epoch: epoch,
+            },
+        )
+        .await;
+        assert_eq!(state_name(&cancelled), "Cancelled");
+
+        // A failed run with one attempt ends Failed through the server-owned retry policy.
+        let failing = job_op(&state, JobOp::Submit(spec())).await;
+        let failing_id = failing["job_id"].as_str().expect("job id").to_string();
+        let claim = job_op(&state, claim_op(vec![capability.clone()])).await;
+        assert_eq!(claim["job"]["job_id"], failing_id);
+        let failed = job_op(
+            &state,
+            JobOp::WorkerFail {
+                job_id: failing_id.clone(),
+                worker_instance: "remote-slot".to_string(),
+                lease_epoch: claim["lease"]["epoch"].as_u64().expect("lease epoch"),
+                reason_code: "kernel_failure".to_string(),
+            },
+        )
+        .await;
+        assert_eq!(state_name(&failed), "Failed");
+    }
+
     // spec: MEDULLA-DURABLE-KERNEL-R082.7
     #[tokio::test]
     async fn cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason() {
