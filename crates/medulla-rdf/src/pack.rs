@@ -8,8 +8,10 @@
 use medulla_catalog_types::connector_pack::PackViolationCode;
 use std::collections::BTreeSet;
 
+mod object_model;
 mod sources;
 mod union;
+pub use object_model::{extract_object_model, ObjectModelError};
 pub use sources::declared_sources;
 pub use union::{scoped_union, RdfUnion};
 

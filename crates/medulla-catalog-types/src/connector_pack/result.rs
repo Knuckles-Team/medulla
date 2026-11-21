@@ -90,6 +90,9 @@ pub enum PackViolationCode {
     // A schema names a base digest the active release no longer holds
     // (MEDULLA-TYPED-PACKS-R001.100).
     PackPlanStale,
+    // An object-model declaration (value type, link type, interface) is malformed
+    // (MEDULLA-TYPED-PACKS-R650.7).
+    ObjectModelInvalid,
 }
 
 /// Something worth saying that did not stop the import.

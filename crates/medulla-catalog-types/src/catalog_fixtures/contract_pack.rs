@@ -390,6 +390,7 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::ClassInUse,
         PackViolationCode::PackSchemaIncompatible,
         PackViolationCode::PackPlanStale,
+        PackViolationCode::ObjectModelInvalid,
     ]
 }
 
