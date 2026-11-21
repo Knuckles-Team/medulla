@@ -43,15 +43,13 @@ impl SemanticStage {
         IDS[self as usize]
     }
 
+    /// The stage the machine leaves to reach this one, derived from its edge table.
     pub fn predecessor(self) -> Option<Self> {
-        match self {
-            Self::SourceCommit => None,
-            Self::GraphProjection => Some(Self::SourceCommit),
-            Self::LexicalIndex => Some(Self::GraphProjection),
-            Self::Vector => Some(Self::LexicalIndex),
-            Self::AnnIndex => Some(Self::Vector),
-            Self::ReconcileAndActivate => Some(Self::AnnIndex),
-        }
+        super::semantic_machine::SEMANTIC_MACHINE
+            .edges
+            .iter()
+            .find(|edge| edge.to == self)
+            .map(|edge| edge.from)
     }
 
     pub fn queue_class(self) -> SemanticQueueClass {

@@ -11,6 +11,7 @@ use super::{
 };
 use medulla_index_types::{
     semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
+    semantic_index::SemanticEvent,
     semantic_index::SemanticIndexMutation, semantic_index::SemanticQueueClass,
     semantic_index::SemanticSourceProgress, semantic_index::SemanticStage,
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
@@ -652,18 +653,12 @@ fn derived_successor(
     transition: &SemanticStageTransition,
 ) -> Result<Option<SemanticStageIntent>, SemanticCodeError> {
     let receipt_digest = transition.receipt.receipt_digest();
-    let next = match transition.intent.stage {
-        SemanticStage::SourceCommit => Some((
-            SemanticStage::GraphProjection,
+    let stage = transition.intent.stage;
+    let next = match stage {
+        SemanticStage::SourceCommit | SemanticStage::GraphProjection => Some((
+            next_stage(stage)?,
             SemanticStagePredecessor::EntityReceipt {
-                stage: SemanticStage::SourceCommit,
-                receipt_digest,
-            },
-        )),
-        SemanticStage::GraphProjection => Some((
-            SemanticStage::LexicalIndex,
-            SemanticStagePredecessor::EntityReceipt {
-                stage: SemanticStage::GraphProjection,
+                stage,
                 receipt_digest,
             },
         )),
@@ -673,9 +668,9 @@ fn derived_successor(
                 .as_ref()
                 .ok_or_else(|| refused("completed S3 transition has no lexical checkpoint"))?;
             Some((
-                SemanticStage::Vector,
+                next_stage(stage)?,
                 SemanticStagePredecessor::GenerationCheckpoint {
-                    stage: SemanticStage::LexicalIndex,
+                    stage,
                     checkpoint_digest: checkpoint.successor.checkpoint_digest,
                 },
             ))
@@ -701,6 +696,15 @@ fn derived_successor(
     .map_err(|error| SemanticCodeError::Refused(format!("successor intent rejected: {error:?}")))
 }
 
+/// The stage the semantic-stage machine reaches from `stage` by its one advancing event.
+fn next_stage(stage: SemanticStage) -> Result<SemanticStage, SemanticCodeError> {
+    let event = SemanticEvent::advancing(stage)
+        .ok_or_else(|| refused("S6 is terminal and cannot publish another stage"))?;
+    stage
+        .apply(event)
+        .map_err(|refused_by_machine| refused(&refused_by_machine.to_string()))
+}
+
 /// The proof each completed stage's explicit successor must carry.
 fn ensure_successor_proof(
     stage: SemanticStage,
@@ -715,11 +719,11 @@ fn ensure_successor_proof(
             "successor intent does not carry the exact stage receipt proof",
         ),
         SemanticStage::Vector => ensure(
-            successor.stage == SemanticStage::AnnIndex && has_complete_coverage(successor),
+            successor.stage == next_stage(stage)? && has_complete_coverage(successor),
             "S4 successor must be a complete S5 generation-coverage intent",
         ),
         SemanticStage::AnnIndex => ensure(
-            is_activation_successor(successor),
+            successor.stage == next_stage(stage)? && is_activation_successor(successor),
             "S5 successor must be the generation-scoped S6 activation intent",
         ),
         SemanticStage::ReconcileAndActivate => {

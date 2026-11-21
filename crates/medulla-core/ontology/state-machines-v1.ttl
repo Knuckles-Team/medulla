@@ -5901,37 +5901,37 @@
 :SemanticMachine_Event_ReconcileAndActivate a :SemanticEvent ;
     rdfs:label "Semantic ReconcileAndActivate" .
 
-:SemanticMachine_E01 a :SemanticTransition ;
-    rdfs:label "Semantic E01" ;
-    :edgeId "E01" ;
+:SemanticMachine_S01 a :SemanticTransition ;
+    rdfs:label "Semantic S01" ;
+    :edgeId "S01" ;
     :fromState :SemanticMachine_SourceCommit ;
     :toState :SemanticMachine_GraphProjection ;
     :firedBy :SemanticMachine_Event_ProjectGraph .
 
-:SemanticMachine_E02 a :SemanticTransition ;
-    rdfs:label "Semantic E02" ;
-    :edgeId "E02" ;
+:SemanticMachine_S02 a :SemanticTransition ;
+    rdfs:label "Semantic S02" ;
+    :edgeId "S02" ;
     :fromState :SemanticMachine_GraphProjection ;
     :toState :SemanticMachine_LexicalIndex ;
     :firedBy :SemanticMachine_Event_IndexLexical .
 
-:SemanticMachine_E03 a :SemanticTransition ;
-    rdfs:label "Semantic E03" ;
-    :edgeId "E03" ;
+:SemanticMachine_S03 a :SemanticTransition ;
+    rdfs:label "Semantic S03" ;
+    :edgeId "S03" ;
     :fromState :SemanticMachine_LexicalIndex ;
     :toState :SemanticMachine_Vector ;
     :firedBy :SemanticMachine_Event_EmbedVectors .
 
-:SemanticMachine_E04 a :SemanticTransition ;
-    rdfs:label "Semantic E04" ;
-    :edgeId "E04" ;
+:SemanticMachine_S04 a :SemanticTransition ;
+    rdfs:label "Semantic S04" ;
+    :edgeId "S04" ;
     :fromState :SemanticMachine_Vector ;
     :toState :SemanticMachine_AnnIndex ;
     :firedBy :SemanticMachine_Event_BuildAnn .
 
-:SemanticMachine_E05 a :SemanticTransition ;
-    rdfs:label "Semantic E05" ;
-    :edgeId "E05" ;
+:SemanticMachine_S05 a :SemanticTransition ;
+    rdfs:label "Semantic S05" ;
+    :edgeId "S05" ;
     :fromState :SemanticMachine_AnnIndex ;
     :toState :SemanticMachine_ReconcileAndActivate ;
     :firedBy :SemanticMachine_Event_ReconcileAndActivate .

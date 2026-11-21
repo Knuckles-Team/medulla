@@ -22,6 +22,7 @@ mod provenance;
 mod request;
 mod response;
 mod selector;
+mod semantic_machine;
 mod selector_ref;
 mod source_dirty;
 mod source_manifest;
@@ -98,6 +99,7 @@ pub use selector_ref::{
     LakehouseVectorProjectionRef, MultimodalAssetRef, SqlColumnRef, TimeSeriesWindowRef,
     SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
+pub use semantic_machine::{SemanticEvent, SemanticGuard, SEMANTIC_MACHINE};
 pub use source_dirty::SemanticSourceDirtyIntent;
 pub use source_manifest::{
     SemanticGraphProjectionManifest, SemanticGraphProjectionManifestDraft,
