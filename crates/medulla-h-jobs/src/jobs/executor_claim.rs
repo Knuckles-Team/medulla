@@ -159,6 +159,25 @@ pub(super) async fn execute_claim(
                 )
                 .await;
             }
+            JobKind::AnalyticalQuery {
+                query,
+                tenant_scope,
+                agent,
+            } => {
+                return execute_analytical_claim(
+                    state,
+                    store,
+                    &claim.job,
+                    &worker_ref,
+                    epoch,
+                    AnalyticalTarget {
+                        query,
+                        tenant_scope,
+                        agent,
+                    },
+                )
+                .await;
+            }
             #[cfg(feature = "program-optimization")]
             JobKind::ProgramOptimize { request_msgpack } => {
                 return execute_program_claim(

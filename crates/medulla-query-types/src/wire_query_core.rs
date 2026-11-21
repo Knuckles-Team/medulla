@@ -28,6 +28,25 @@ use super::TensorOpKind;
 #[cfg(feature = "timeseries")]
 use super::{FuseClock, FuseStream};
 
+/// MEDULLA-FEDERATED-QUERY-R731: the latency class a `UnifiedQuery` or `Sparql` declares. An
+/// `Interactive` query reads only materialized entailments within a node budget; an
+/// `Analytical` query runs as a durable job and stores its result.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum LatencyClass {
+    #[default]
+    Interactive,
+    Analytical,
+}
+
+impl LatencyClass {
+    /// `true` for the default class, so the wire omits it and old bodies stay byte-identical.
+    pub fn is_interactive(&self) -> bool {
+        matches!(self, Self::Interactive)
+    }
+}
+
 /// A simple equality / range predicate over a node property, compiled to a SQL
 /// `WHERE` fragment and evaluated by the DataFusion FILTER leg in `medulla-plan`.
 #[cfg(feature = "query")]

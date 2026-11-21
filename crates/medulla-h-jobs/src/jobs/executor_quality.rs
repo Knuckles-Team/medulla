@@ -233,7 +233,7 @@ pub(super) struct ActorRows {
 }
 
 impl ActorRows {
-    async fn of(state: &Arc<RwLock<ServerState>>, actor: &str) -> Self {
+    pub(super) async fn of(state: &Arc<RwLock<ServerState>>, actor: &str) -> Self {
         #[cfg(feature = "security")]
         {
             Self {
@@ -249,7 +249,7 @@ impl ActorRows {
     }
 
     /// The snapshot of `core` with every row the actor may not read removed.
-    fn view(
+    pub(super) fn view(
         &self,
         core: &medulla_graph_core::graph::GraphCore,
     ) -> medulla_graph_core::graph::GraphView {

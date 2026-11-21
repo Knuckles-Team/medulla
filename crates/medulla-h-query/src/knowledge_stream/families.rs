@@ -188,6 +188,7 @@ async fn execute_rdf(
                 type_convention: type_convention.to_string(),
                 explain: false,
                 requires_packs: Vec::new(),
+                latency_class: Default::default(),
             },
             #[cfg(feature = "security")]
             rls,

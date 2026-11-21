@@ -472,6 +472,8 @@ closed_error_codes! {
         PackProjectionPreviouslyFailed => "PACK_PROJECTION_PREVIOUSLY_FAILED",
         /// A question named a connector pack the caller's tenant has not imported (MEDULLA-CQ-CONN-R084.7).
         PackNotImported => "PACK_NOT_IMPORTED",
+        /// An interactive query touched more nodes than `query.interactive_node_budget` (MEDULLA-FEDERATED-QUERY-R731).
+        QueryBudgetExceeded => "QUERY_BUDGET_EXCEEDED",
         PackRecordUndecodable => "PACK_RECORD_UNDECODABLE",
         PackProjectionStoreBusy => "PACK_PROJECTION_STORE_BUSY",
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",

@@ -155,6 +155,10 @@ $($variants)*
         /// first missing id, before any query runs. Empty ⇒ no pack is required.
         #[serde(default)]
         requires_packs: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R731: `interactive` (the default) runs within the
+        /// node budget; `analytical` submits a durable job and answers its record.
+        #[serde(default, skip_serializing_if = "medulla_query_types::wire::LatencyClass::is_interactive")]
+        latency_class: medulla_query_types::wire::LatencyClass,
     },
 
     /// OBDA / R2RML VIRTUAL GRAPH query (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /

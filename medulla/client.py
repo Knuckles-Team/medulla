@@ -12716,9 +12716,15 @@ class QueryClient:
         *,
         foreign_execution: dict[str, Any] | None = None,
         foreign_executions: list[dict[str, Any]] | None = None,
+        latency_class: str = "interactive",
     ) -> list[dict[str, Any]]:
         """Run ONE cross-modal plan (CONCEPT:AU-KG.compute.vector/209) and return ranked
         rows.
+
+        ``latency_class`` is ``"interactive"`` (the default: the plan runs within
+        the node budget and refuses ``QUERY_BUDGET_EXCEEDED`` past it) or
+        ``"analytical"`` (the plan is submitted as a durable job and the call returns
+        its job record; read the rows with ``AnalyticsJob`` ``Status``).
 
         ``plan`` is an ordered list of operator dicts — a CLOSED algebra over a
         shared ``RowSet`` (ordered ids + optional scores). Each op is the
@@ -12752,7 +12758,13 @@ class QueryClient:
             body["foreign_execution"] = foreign_execution
         if foreign_executions:
             body["foreign_executions"] = foreign_executions
+        if latency_class not in ("interactive", "analytical"):
+            raise ValueError("latency_class must be 'interactive' or 'analytical'")
+        if latency_class != "interactive":
+            body["latency_class"] = latency_class
         result = (await _gen.query.send_unified_query(self._client, body)).payload
+        if latency_class == "analytical":
+            return result
         return _unified_rows(result or [])
 
     async def code_map(
@@ -14201,6 +14213,7 @@ class RdfClient:
         *,
         explain: bool = False,
         requires_packs: list[str] | None = None,
+        latency_class: str = "interactive",
     ) -> SparqlResult:
         """Run a SPARQL ``SELECT`` and return the engine's typed ``SparqlResult``
         (EH-377): ``vars``, ``rows`` aligned to them, and one witness proof per row
@@ -14218,6 +14231,10 @@ class RdfClient:
             params["explain"] = True
         if requires_packs:
             params["requires_packs"] = list(requires_packs)
+        if latency_class not in ("interactive", "analytical"):
+            raise ValueError("latency_class must be 'interactive' or 'analytical'")
+        if latency_class != "interactive":
+            params["latency_class"] = latency_class
         sent = await _gen.reasoning.send_sparql(self._client, params)
         return _gen.reasoning.decode_sparql(sent)
 
@@ -14228,6 +14245,7 @@ class RdfClient:
         type_convention: str = "",
         *,
         requires_packs: list[str] | None = None,
+        latency_class: str = "interactive",
     ) -> list[dict[str, str | None]]:
         """Run a SPARQL 1.1 ``SELECT`` over the connection's graph and return a list
         of row dicts keyed by projected variable (``None`` for an unbound OPTIONAL
@@ -14250,10 +14268,30 @@ class RdfClient:
         ``requires_packs`` names the connector packs the question reads, by connector
         id. When the tenant has not imported one, the read abstains with
         ``PACK_NOT_IMPORTED`` naming the first missing id, before any query runs.
+
+        ``latency_class`` is ``"interactive"`` (the default: the query refuses
+        ``QUERY_BUDGET_EXCEEDED`` past the node budget) or ``"analytical"`` (the
+        query is submitted as a durable job and the call returns its job record;
+        read the rows with ``AnalyticsJob`` ``Status``).
         """
+        if latency_class == "analytical":
+            params: dict[str, Any] = {
+                "query": query,
+                "base_iri": base_iri,
+                "type_convention": type_convention,
+                "latency_class": "analytical",
+            }
+            if requires_packs:
+                params["requires_packs"] = list(requires_packs)
+            sent = await _gen.reasoning.send_sparql(self._client, params)
+            return sent.payload
         return _sparql_rows(
             await self.sparql_result(
-                query, base_iri, type_convention, requires_packs=requires_packs
+                query,
+                base_iri,
+                type_convention,
+                requires_packs=requires_packs,
+                latency_class=latency_class,
             )
         )
 

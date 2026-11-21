@@ -495,6 +495,7 @@ fn legacy_query_body(method: &Method) -> Option<Vec<u8>> {
             foreign_execution: None,
             foreign_executions,
             code_map: None,
+            latency_class: medulla_query_types::wire::LatencyClass::Interactive,
         } if foreign_executions.is_empty() => LegacyQuery::UnifiedQuery { plan },
         _ => return None,
     };
@@ -2084,6 +2085,7 @@ mod tests {
                 foreign_execution: None,
                 foreign_executions: Default::default(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         ];
         let old_client_bodies = [

@@ -37,6 +37,7 @@ pub(super) async fn handle_sparql(
     query: String,
     proj: medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
+    max_solutions: usize,
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
@@ -124,7 +125,7 @@ pub(super) async fn handle_sparql(
     evaluate_sparql(
         req_id,
         (snap, pack_views),
-        (query, proj, mode),
+        (query, proj, mode, max_solutions),
         #[cfg(feature = "result-cache")]
         core,
         #[cfg(feature = "result-cache")]
@@ -264,7 +265,12 @@ fn sparql_snapshot_uncached(
 async fn evaluate_sparql(
     req_id: u64,
     (snap, pack_views): (Arc<GraphView>, Vec<Arc<GraphView>>),
-    (query, proj, mode): (String, medulla_rdf::sparql::Projection, SparqlProofMode),
+    (query, proj, mode, max_solutions): (
+        String,
+        medulla_rdf::sparql::Projection,
+        SparqlProofMode,
+        usize,
+    ),
     #[cfg(feature = "result-cache")] core: Arc<GraphCore>,
     #[cfg(feature = "result-cache")] hash: u128,
     #[cfg(feature = "result-cache")] version: u64,
@@ -280,6 +286,7 @@ async fn evaluate_sparql(
             &query,
             &proj,
             mode,
+            max_solutions,
         )
     })
     .await
@@ -327,6 +334,7 @@ fn run_sparql(
     query: &str,
     proj: &medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
+    max_solutions: usize,
 ) -> Result<medulla_protocol_types::protocol::SparqlResult, String> {
     let (table, proofs) = match mode {
         SparqlProofMode::Rows => (
@@ -336,6 +344,13 @@ fn run_sparql(
         SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::execute_explained(ds, query, proj)?,
     };
     let (vars, rows) = table.to_rows();
+    // MEDULLA-FEDERATED-QUERY-R731: the interactive meter is the solution count before
+    // projection; past the bound the query refuses and names the remedy.
+    medulla_exec::budget::Budget {
+        max_interactive_nodes: Some(max_solutions),
+        ..medulla_exec::budget::Budget::default()
+    }
+    .check_interactive(rows.len())?;
     // EXPLAIN names each spatial function the query calls and whether a spatial index
     // served it (MEDULLA-FEDERATED-QUERY-R709.5).
     let spatial = match mode {

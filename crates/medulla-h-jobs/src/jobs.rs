@@ -94,6 +94,7 @@ mod executor_usage_cluster;
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
+mod executor_analytical;
 mod executor_quality;
 mod executor_query_log;
 #[cfg(test)]
@@ -297,6 +298,7 @@ use executor_profile::{check_profile_submit, execute_profile_claim, ProfileTarge
 use executor_program::*;
 use executor_quality::{execute_quality_claim, QualityTarget};
 use executor_query_log::*;
+use executor_analytical::*;
 use executor_usage_cluster::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
@@ -723,6 +725,9 @@ fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
         // Reads the usage series of the caller's tenant and graph and the bindings the caller
         // supplied; never graph rows.
         JobKind::UsageCluster { .. } => false,
+        // Submit reads no row. The worker reads rows only through the job actor's
+        // row-level view (`executor_quality::ActorRows`).
+        JobKind::AnalyticalQuery { .. } => false,
     }
 }
 
@@ -931,6 +936,7 @@ pub fn govern_job_kind(
         JobKind::UsageCluster { term_bindings, .. } => {
             submit_job_usage_cluster(authority, req_id, term_bindings)
         }
+        JobKind::AnalyticalQuery { query, .. } => submit_job_analytical(authority, req_id, query),
         #[cfg(feature = "program-optimization")]
         JobKind::ProgramOptimize { request_msgpack } => submit_job_program_optimize(
             authority,

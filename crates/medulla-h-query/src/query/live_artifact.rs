@@ -360,6 +360,7 @@ pub(super) async fn sparql_response(
         type_convention: String::new(),
         explain: false,
         requires_packs: Vec::new(),
+        latency_class: Default::default(),
     };
     let handler_ctx = TryHandleContext {
         req_id: ctx.req_id,

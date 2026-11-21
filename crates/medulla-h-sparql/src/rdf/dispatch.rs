@@ -147,7 +147,16 @@ async fn try_handle_sparql(
             type_convention,
             explain,
             requires_packs,
+            latency_class,
         } => {
+            // MEDULLA-FEDERATED-QUERY-R731: an analytical query is submitted as a durable job
+            // before it reaches this handler; one that arrives here is never run unbounded.
+            if !latency_class.is_interactive() {
+                return Some(Response::err(
+                    req_id,
+                    "INVALID_ARGUMENT: an analytical query is submitted as a job, not run as a read",
+                ));
+            }
             // MEDULLA-CQ-CONN-R084.7: a question that names the packs it reads abstains by
             // name when the caller's tenant has not imported one, before any query runs.
             match missing_required_pack(state, read_authority, requires_packs).await {
@@ -206,6 +215,12 @@ async fn try_handle_sparql(
                             query.clone(),
                             projection,
                             super::sparql::SparqlProofMode::of(*explain),
+                            // MEDULLA-FEDERATED-QUERY-R731: the interactive node budget.
+                            usize::try_from(
+                                medulla_server_api::knob_config::knobs()
+                                    .query_interactive_node_budget,
+                            )
+                            .unwrap_or(usize::MAX),
                             #[cfg(feature = "security")]
                             caller,
                             #[cfg(feature = "security")]

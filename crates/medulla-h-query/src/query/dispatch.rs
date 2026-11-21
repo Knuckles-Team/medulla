@@ -297,11 +297,13 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             foreign_execution,
             foreign_executions,
             code_map,
+            latency_class,
         } => {
             if let Some(query) = code_map {
                 return Ok(super::code_map::serve(ctx, &plan, &query).await);
             }
-            handle_unified_query(ctx, plan, foreign_execution, foreign_executions).await
+            handle_unified_query(ctx, plan, foreign_execution, foreign_executions, latency_class)
+                .await
         }
         Method::Uql {
             text,

@@ -216,6 +216,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "GEO_CRS_UNSUPPORTED",
             "GEO_LITERAL_INVALID",
             "PACK_NOT_IMPORTED",
+            // MEDULLA-FEDERATED-QUERY-R731: an interactive query past its node budget.
+            "QUERY_BUDGET_EXCEEDED",
         ],
     ),
     // MEDULLA-TYPED-PACKS-R807: the conformance read or revoke finds no current evidence.
@@ -1498,6 +1500,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-FEDERATED-QUERY-R733: the GROUP stage refusals.
     ("Uql", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),
     ("UnifiedQuery", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),
+    // MEDULLA-FEDERATED-QUERY-R731: an interactive query past its node budget.
+    ("UnifiedQuery", &["QUERY_BUDGET_EXCEEDED"]),
     // MEDULLA-FEDERATED-QUERY-R734: the ORDER and SKIP stage refusals.
     ("Uql", &["UQL_SKIP_LIMIT"]),
     ("UnifiedQuery", &["UQL_SKIP_LIMIT"]),

@@ -18683,6 +18683,7 @@ class MethodSparqlParams(BaseModel):
 
     base_iri: str | None = None
     explain: bool | None = None
+    latency_class: LatencyClass | None = None
     query: str
     requires_packs: list[str] = Field(default_factory=list)
     type_convention: str | None = None
@@ -19040,6 +19041,7 @@ class MethodUnifiedQueryParams(BaseModel):
     code_map: CodeMapQuery | None = None
     foreign_execution: ForeignReadExecutionRef | None = None
     foreign_executions: BoundedVec_ForeignReadExecutionRef_16 | None = None
+    latency_class: LatencyClass | None = None
     plan: Plan
 
 
@@ -30108,6 +30110,54 @@ class JobKindUsageCluster(BaseModel):
     UsageCluster: JobKindUsageClusterBody
 
 
+class LatencyClass(str, Enum):
+    INTERACTIVE = "interactive"
+    ANALYTICAL = "analytical"
+
+
+class AnalyticalQuery0(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Unified: AnalyticalQueryUnifiedBody
+
+
+class AnalyticalQueryUnifiedBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan_msgpack: _EgOctets
+
+
+class AnalyticalQuery1(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Sparql: AnalyticalQuerySparqlBody
+
+
+class AnalyticalQuerySparqlBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_iri: str = Field(default="")
+    query: str
+    type_convention: str = Field(default="")
+
+
+AnalyticalQuery = AnalyticalQuery0 | AnalyticalQuery1
+
+
+class JobKindAnalyticalQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    AnalyticalQuery: JobKindAnalyticalQueryBody
+
+
+class JobKindAnalyticalQueryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent: str = Field(default="")
+    query: AnalyticalQuery
+    tenant_scope: str = Field(default="")
+
+
 class JobKindUsageClusterBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30130,6 +30180,7 @@ JobKind = (
     | JobKindProgramOptimize
     | JobKindSourceQueryLogIngest
     | JobKindUsageCluster
+    | JobKindAnalyticalQuery
 )
 
 JobOp = (
@@ -40033,6 +40084,14 @@ __all__ = [
     "JobKindSourceQueryLogIngest",
     "JobKindSourceQueryLogIngestBody",
     "JobKindUsageCluster",
+    "JobKindAnalyticalQuery",
+    "JobKindAnalyticalQueryBody",
+    "AnalyticalQuery",
+    "AnalyticalQuery0",
+    "AnalyticalQuery1",
+    "AnalyticalQuerySparqlBody",
+    "AnalyticalQueryUnifiedBody",
+    "LatencyClass",
     "JobKindUsageClusterBody",
     "UsageTermBinding",
     "AdapterScope",

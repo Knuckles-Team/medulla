@@ -427,6 +427,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;
@@ -449,6 +450,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;
@@ -936,6 +938,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                 foreign_execution: None,
                 foreign_executions: BoundedVec::new(vec![executions[0], executions[0]]).unwrap(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;
@@ -954,6 +957,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                 foreign_execution: None,
                 foreign_executions: BoundedVec::new(wrong_query).unwrap(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;
@@ -970,6 +974,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                 foreign_execution: None,
                 foreign_executions: BoundedVec::new(executions.clone()).unwrap(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;
@@ -988,6 +993,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                 foreign_execution: None,
                 foreign_executions: BoundedVec::new(executions).unwrap(),
                 code_map: None,
+                latency_class: Default::default(),
             },
         )
         .await;

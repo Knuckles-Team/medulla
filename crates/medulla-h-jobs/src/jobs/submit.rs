@@ -489,6 +489,41 @@ pub(super) fn submit_job_quality(
     ))
 }
 
+/// The most bytes of one analytical query a job carries.
+const MAX_ANALYTICAL_QUERY_BYTES: usize = 1 << 20;
+
+/// The `JobKind::AnalyticalQuery` arm of [`handle_submit`]'s kind-governance match
+/// (MEDULLA-FEDERATED-QUERY-R731): the client supplies the query; the tenant scope and agent
+/// are the verified caller's, replacing anything the request carried. The query is the job's
+/// input and is never part of the lineage params, so it is not logged.
+pub(super) fn submit_job_analytical(
+    authority: &CarrierAuthority,
+    req_id: u64,
+    query: medulla_work_types::jobs::AnalyticalQuery,
+) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    use medulla_work_types::jobs::AnalyticalQuery;
+    let (size, shape) = match &query {
+        AnalyticalQuery::Unified { plan_msgpack } => (plan_msgpack.len(), "unified"),
+        AnalyticalQuery::Sparql { query, .. } => (query.len(), "sparql"),
+    };
+    if size == 0 || size > MAX_ANALYTICAL_QUERY_BYTES {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: an analytical query is 1 byte to 1 MiB",
+        ));
+    }
+    Ok((
+        JobKind::AnalyticalQuery {
+            query,
+            tenant_scope: authority.tenant_scope().to_string(),
+            agent: authority.agent_id().to_string(),
+        },
+        "query.analytical".to_string(),
+        "analytical_query".to_string(),
+        serde_json::json!({ "shape": shape }),
+    ))
+}
+
 /// Bounded-decode one program optimization request.
 #[cfg(feature = "program-optimization")]
 pub(super) fn decode_optimization_request(request_msgpack: &[u8]) -> Option<OptimizationRequest> {

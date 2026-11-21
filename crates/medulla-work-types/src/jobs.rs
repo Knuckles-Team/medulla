@@ -335,6 +335,16 @@ pub enum JobKind {
         #[serde(default)]
         tenant_scope: String,
     },
+    /// An analytical query run as a durable job (MEDULLA-FEDERATED-QUERY-R731). The one kind
+    /// whose payload holds a query: it is read only by the in-engine executor and never
+    /// logged. The verified tenant scope and actor are stamped by the server at submit.
+    AnalyticalQuery {
+        query: AnalyticalQuery,
+        #[serde(default)]
+        tenant_scope: String,
+        #[serde(default)]
+        agent: String,
+    },
     /// Governed graph-native program compilation. The nested MessagePack is a
     /// versioned `medulla_program::OptimizationRequest`; `medulla-types` remains the bottom
     /// of the crate DAG and the server decodes/rebinds it at the verified boundary.
@@ -343,6 +353,28 @@ pub enum JobKind {
         #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
         #[serde(with = "serde_bytes")]
         request_msgpack: Vec<u8>,
+    },
+}
+
+/// The query an `AnalyticalQuery` job runs (MEDULLA-FEDERATED-QUERY-R731). The plan travels as
+/// its MessagePack encoding, because this crate does not carry the `query` feature that
+/// defines `Plan`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AnalyticalQuery {
+    /// A `UnifiedQuery` plan.
+    Unified {
+        #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
+        #[serde(with = "serde_bytes")]
+        plan_msgpack: Vec<u8>,
+    },
+    /// A `Sparql` query with its projection vocabulary.
+    Sparql {
+        query: String,
+        #[serde(default)]
+        base_iri: String,
+        #[serde(default)]
+        type_convention: String,
     },
 }
 

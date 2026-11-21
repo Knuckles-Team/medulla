@@ -714,6 +714,16 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
         }
         _ => ctx,
     };
+    // MEDULLA-FEDERATED-QUERY-R731: an interactive plan runs no live reasoning.
+    #[cfg(feature = "owl")]
+    if ctx.budget.max_interactive_nodes.is_some()
+        && plan.ops.iter().any(|op| matches!(op, Op::Reason { .. }))
+    {
+        return Err(format!(
+            "{}: the plan holds live reasoning; resubmit with latency_class analytical",
+            crate::budget::QUERY_BUDGET_EXCEEDED
+        ));
+    }
     let optimized = plan_optimize(plan, ctx);
     #[cfg(feature = "federation")]
     if let Some(foreign) = ctx.federation {
@@ -840,6 +850,15 @@ pub(crate) fn run_with_adaptive_reopt<F>(
 where
     F: FnMut(&Op, RowSet, &PlanCtx) -> Result<RowSet, String>,
 {
+    // MEDULLA-FEDERATED-QUERY-R731: one meter over every executed stage's output rows; an
+    // interactive run refuses the moment the sum passes its bound.
+    let mut touched = 0_usize;
+    let mut step = move |op: &Op, cur: RowSet, ctx: &PlanCtx| -> Result<RowSet, String> {
+        let out = step(op, cur, ctx)?;
+        touched = touched.saturating_add(out.len());
+        ctx.budget.check_interactive(touched)?;
+        Ok(out)
+    };
     if !crate::optimizer::enabled() {
         // The global cost-optimizer kill-switch also disables the runtime feedback
         // loop below — byte-for-byte the pre-optimizer left fold.
@@ -2908,7 +2927,8 @@ fn bfs_reached_bounded(
     budget: &crate::budget::Budget,
 ) -> Result<Vec<String>, String> {
     bfs_reached_checked(view, seeds, rel, min, max, pin, |visited| {
-        budget.check_traversal(visited)
+        budget.check_traversal(visited)?;
+        budget.check_interactive(visited)
     })
 }
 

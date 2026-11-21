@@ -259,13 +259,83 @@ pub fn dispatch_request_method<'a>(
     ))
 }
 
+/// MEDULLA-FEDERATED-QUERY-R731: an `analytical` `UnifiedQuery` or `Sparql` is not run by its
+/// read handler; it is submitted as a durable `JobKind::AnalyticalQuery` through the
+/// existing analytics-job submit path, with the graph of the request and the tenant and actor
+/// of the verified context (never a client value). The served call answers the freshly
+/// durable `Submitted` job record, read later with `AnalyticsJob` `Status`. Every other
+/// method, and an `interactive` query, is returned unchanged.
+#[allow(unused_variables)]
+fn analytical_query_job(
+    method: Method,
+    graph: &str,
+    verified_context: &VerifiedRequestContext,
+) -> Method {
+    #[cfg(all(feature = "jobs", feature = "query"))]
+    {
+        use medulla_query_types::wire::LatencyClass;
+        use medulla_work_types::jobs::{AnalyticalQuery, JobKind, JobOp};
+        let query = match &method {
+            Method::UnifiedQuery {
+                plan,
+                code_map: None,
+                latency_class: LatencyClass::Analytical,
+                ..
+            } => match rmp_serde::to_vec_named(plan) {
+                Ok(plan_msgpack) => Some(AnalyticalQuery::Unified { plan_msgpack }),
+                Err(_) => None,
+            },
+            #[cfg(feature = "sparql")]
+            Method::Sparql {
+                query,
+                base_iri,
+                type_convention,
+                latency_class: LatencyClass::Analytical,
+                ..
+            } => Some(AnalyticalQuery::Sparql {
+                query: query.clone(),
+                base_iri: base_iri.clone(),
+                type_convention: type_convention.clone(),
+            }),
+            _ => None,
+        };
+        if let Some(query) = query {
+            return Method::AnalyticsJob {
+                op: JobOp::Submit(medulla_work_types::jobs::SubmitJobSpec {
+                    graph: graph.to_string(),
+                    tenant: verified_context.tenant().to_string(),
+                    actor: verified_context.agent_id().to_string(),
+                    purpose: "analytical_query".to_string(),
+                    priority: 0,
+                    deadline_unix_ms: None,
+                    quota_cpu_ms: None,
+                    memory_bytes: None,
+                    io_bytes: None,
+                    output_bytes: None,
+                    worker_pool: String::new(),
+                    worker_region: String::new(),
+                    required_capabilities: Vec::new(),
+                    max_attempts: 1,
+                    backoff_ms: 0,
+                    kind: JobKind::AnalyticalQuery {
+                        query,
+                        tenant_scope: String::new(),
+                        agent: String::new(),
+                    },
+                }),
+            };
+        }
+    }
+    method
+}
+
 async fn dispatch_request_method_inner(
     state: &Arc<RwLock<ServerState>>,
     req: Request,
     verified_context: &VerifiedRequestContext,
     authority: DispatchAuthority,
 ) -> Response {
-    let method = req.method;
+    let method = analytical_query_job(req.method, &req.graph, verified_context);
     let req = DispatchHeader {
         id: req.id,
         graph: req.graph,

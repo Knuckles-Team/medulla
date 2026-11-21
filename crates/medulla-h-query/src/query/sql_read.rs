@@ -392,10 +392,19 @@ pub(crate) async fn handle_unified_query(
         medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
         16,
     >,
+    latency_class: medulla_query_types::wire::LatencyClass,
 ) -> Result<Response, Method> {
     let state = ctx.state;
     let req_id = ctx.req_id;
     let core = ctx.core.clone();
+    // MEDULLA-FEDERATED-QUERY-R731: an analytical query is submitted as a durable job before
+    // it reaches this handler; one that arrives here is never run unbounded in the read path.
+    if !latency_class.is_interactive() {
+        return Ok(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: an analytical query is submitted as a job, not run as a read",
+        ));
+    }
     if foreign_execution.is_some() && !foreign_executions.is_empty() {
         return Ok(Response::err(
             req_id,
@@ -484,7 +493,25 @@ pub(crate) async fn handle_unified_query(
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
     let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
-    let result = run_unified_off_lock(state, req_id, &core, snap, plan, legs, &scope).await;
+    // MEDULLA-FEDERATED-QUERY-R731: an interactive query runs within the node budget of the
+    // knob `query.interactive_node_budget` and refuses `QUERY_BUDGET_EXCEEDED` past it.
+    let max_nodes = usize::try_from(medulla_server_api::knob_config::knobs().query_interactive_node_budget)
+        .unwrap_or(usize::MAX);
+    let result = run_unified_off_lock_with(
+        state,
+        req_id,
+        &core,
+        UnifiedRead { snap, plan, legs },
+        &scope,
+        move |plan, plan_ctx| {
+            let bounded = plan_ctx.clone().with_budget(medulla_exec::budget::Budget {
+                max_interactive_nodes: Some(max_nodes),
+                ..plan_ctx.budget
+            });
+            execute_rows(plan, &bounded)
+        },
+    )
+    .await;
     Ok(served_response::<query_results::UnifiedQuery>(
         req_id,
         result,

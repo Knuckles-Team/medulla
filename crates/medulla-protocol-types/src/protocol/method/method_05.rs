@@ -111,6 +111,10 @@ $($variants)*
         /// empty). The answer is a `CodeMapResult`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         code_map: Option<Box<medulla_types::code_map::CodeMapQuery>>,
+        /// MEDULLA-FEDERATED-QUERY-R731: `interactive` (the default) runs within the
+        /// node budget; `analytical` submits a durable job and answers its record.
+        #[serde(default, skip_serializing_if = "medulla_query_types::wire::LatencyClass::is_interactive")]
+        latency_class: medulla_query_types::wire::LatencyClass,
     },
 
 

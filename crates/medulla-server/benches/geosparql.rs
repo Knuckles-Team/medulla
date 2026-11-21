@@ -154,6 +154,7 @@ impl Served {
                     type_convention: String::new(),
                     explain: false,
                     requires_packs: Vec::new(),
+                    latency_class: Default::default(),
                 },
             )
             .await;

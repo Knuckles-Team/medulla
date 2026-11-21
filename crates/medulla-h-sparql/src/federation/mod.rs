@@ -384,6 +384,7 @@ fn build_local_method(
             type_convention: String::new(),
             explain: false,
             requires_packs: Vec::new(),
+            latency_class: Default::default(),
         },
         #[cfg(feature = "query")]
         "sql" => medulla_protocol_types::protocol::Method::Sql {

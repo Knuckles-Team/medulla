@@ -27,7 +27,14 @@ pub struct Budget {
     /// Most graph nodes an integrity-shape scan may cover (`validate_shape.node_budget`,
     /// MEDULLA-FEDERATED-QUERY-R005.700); a larger graph is reported as a coverage gap.
     pub max_shape_nodes: usize,
+    /// MEDULLA-FEDERATED-QUERY-R731: most nodes an interactive query may touch (the sum of
+    /// every executed stage's output rows) before it is refused with `QUERY_BUDGET_EXCEEDED`.
+    /// `None` for an analytical run, which has no node budget.
+    pub max_interactive_nodes: Option<usize>,
 }
+
+/// The error-code prefix of an interactive node-budget refusal (MEDULLA-FEDERATED-QUERY-R731).
+pub const QUERY_BUDGET_EXCEEDED: &str = "QUERY_BUDGET_EXCEEDED";
 
 impl Budget {
     /// Default result-row bound.
@@ -67,6 +74,20 @@ impl Budget {
     }
 }
 
+impl Budget {
+    /// Refuse an interactive query that has touched more nodes than its bound; a run with no
+    /// interactive bound never refuses.
+    pub fn check_interactive(&self, touched: usize) -> Result<(), String> {
+        match self.max_interactive_nodes {
+            Some(bound) if touched > bound => Err(format!(
+                "{QUERY_BUDGET_EXCEEDED}: the query touched more than {bound} nodes; \
+                 resubmit with latency_class analytical"
+            )),
+            _ => Ok(()),
+        }
+    }
+}
+
 impl Default for Budget {
     fn default() -> Self {
         Self {
@@ -75,6 +96,7 @@ impl Default for Budget {
             max_series_work: Self::DEFAULT_MAX_SERIES_WORK,
             max_groups: Self::DEFAULT_MAX_GROUPS,
             max_shape_nodes: Self::DEFAULT_MAX_SHAPE_NODES,
+            max_interactive_nodes: None,
         }
     }
 }
@@ -92,6 +114,7 @@ mod tests {
             max_series_work: 4,
             max_groups: 5,
             max_shape_nodes: 5,
+            max_interactive_nodes: None,
         };
         assert!(b.check_result(2).is_ok());
         assert!(b.check_result(3).unwrap_err().starts_with(BUDGET_EXCEEDED));
@@ -99,6 +122,26 @@ mod tests {
             .check_traversal(4)
             .unwrap_err()
             .contains("max_traversal_visits"));
+    }
+}
+
+#[cfg(test)]
+mod interactive_tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R731
+    #[test]
+    fn interactive_meter_refuses_past_bound() {
+        let interactive = Budget {
+            max_interactive_nodes: Some(1_000),
+            ..Budget::default()
+        };
+        assert!(interactive.check_interactive(1_000).is_ok());
+        let refused = interactive.check_interactive(1_001).unwrap_err();
+        assert!(refused.starts_with(QUERY_BUDGET_EXCEEDED), "{refused}");
+        assert!(refused.contains("latency_class analytical"), "{refused}");
+        // An analytical run (no bound) never refuses.
+        assert!(Budget::default().check_interactive(usize::MAX).is_ok());
     }
 }
 
