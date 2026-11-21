@@ -345,13 +345,12 @@ async fn serve(
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::GraphIntake {
-                // A `graph_intake` question resolves its sources in the graph named
-                // by its `source_graph` param, under the same ACL and RLS filter
-                // (MEDULLA-DECISION-ENGINE-R163.3).
-                let graph = super::family::graph_intake::source_graph(&request)?;
-                super::stat_support::filtered_view(state, verified.agent_id(), graph)
+                // A `graph_intake` question resolves its graph sources in the graph
+                // named by its `graph` param, under the same ACL and RLS filter;
+                // a file-only request opens no graph (MEDULLA-DECISION-ENGINE-R163.3).
+                super::family::intake_view(state, verified.agent_id(), &request)
                     .await
-                    .map(|view| Some((view, 0)))
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::FanoutAggregate {
                 super::family::fanout_view(state, verified.agent_id(), verified.tenant(), &request)
                     .await

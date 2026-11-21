@@ -99,6 +99,7 @@ mod trajectory_ladder;
 mod usage_guidance;
 
 pub(in crate::decide) use command_config::command_view;
+pub(in crate::decide) use graph_intake::intake_view;
 pub(in crate::decide) use fanout_aggregate::fanout_view;
 pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::{disclosure_view, event_premise_fact};

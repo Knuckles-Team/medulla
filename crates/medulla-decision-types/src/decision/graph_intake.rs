@@ -8,12 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::Digest256;
 
-use crate::decision::record::outcome::RefusalCode;
+use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
 
 /// The request param carrying the intake sources (a typed `intake_sources`).
 pub const PARAM_SOURCES: &str = "intake_sources";
-/// The request param naming the graph the sources are resolved in.
-pub const PARAM_SOURCE_GRAPH: &str = "source_graph";
+/// The request param naming the graph the graph sources are read from.
+pub const PARAM_GRAPH: &str = "graph";
 
 /// No registered authority has the name a source's reference carries.
 pub const GRAPH_INTAKE_UNKNOWN_AUTHORITY: RefusalCode =
@@ -32,6 +32,43 @@ pub const REFUSALS: &[RefusalCode] = &[
     GRAPH_INTAKE_RESOLUTION_FAILED,
     GRAPH_INTAKE_UNKNOWN_AUTHORITY,
 ];
+
+/// Why a graph reference did not resolve (MEDULLA-DECISION-ENGINE-R163.4). Each
+/// case is one registered refusal code; nothing here is free text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GraphResolutionError {
+    /// No registered authority has this name in the caller's visible graph.
+    UnknownAuthority { authority: String },
+    /// The node for the query carries no revision or content digest.
+    MissingRevision { query: String },
+    /// The node is absent, not visible, of another authority or tenant, or no
+    /// longer matches the revision and digest the caller pinned.
+    ResolutionFailed { query: String },
+}
+
+impl DecisionRefusal for GraphResolutionError {
+    fn code(&self) -> RefusalCode {
+        match self {
+            Self::UnknownAuthority { .. } => GRAPH_INTAKE_UNKNOWN_AUTHORITY,
+            Self::MissingRevision { .. } => GRAPH_INTAKE_MISSING_REVISION,
+            Self::ResolutionFailed { .. } => GRAPH_INTAKE_RESOLUTION_FAILED,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::UnknownAuthority { authority } => {
+                format!("authority {authority} is not registered")
+            }
+            Self::MissingRevision { query } => {
+                format!("node {query} carries no revision or content digest")
+            }
+            Self::ResolutionFailed { query } => format!(
+                "node {query} is absent, not visible, of another authority or not at the pinned revision and digest"
+            ),
+        }
+    }
+}
 
 /// A graph a source was read from, and its content type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

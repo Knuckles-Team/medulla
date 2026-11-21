@@ -55,6 +55,17 @@ async fn harness() -> (Harness, Digest256) {
             "paper:norev",
             mine(serde_json::json!({"authority": AUTHORITY})),
         );
+        // The same node stored under another tenant reads as absent.
+        put(
+            &core,
+            "paper:foreign",
+            mine(serde_json::json!({
+                "authority": AUTHORITY,
+                "revision": 12,
+                "content_digest": digest.to_hex(),
+                "tenant_id": "another-tenant",
+            })),
+        );
         // Another owner's node: hidden from the caller by row-level security.
         put(
             &core,
@@ -94,7 +105,7 @@ fn intake_request(schema: &ComponentDependency, sources: Vec<IntakeSource>) -> D
         schema,
         TENANT,
         QuestionKind::GraphIntake,
-        "resolve_sources",
+        "resolved_set",
         DecisionPolicyRef::Default,
         vec![
             TypedParam {
@@ -102,7 +113,7 @@ fn intake_request(schema: &ComponentDependency, sources: Vec<IntakeSource>) -> D
                 value: TypedValue::IntakeSources(BoundedVec::new(sources).unwrap()),
             },
             TypedParam {
-                name: "source_graph".to_string(),
+                name: "graph".to_string(),
                 value: TypedValue::Text(GRAPH.to_string()),
             },
         ],
@@ -134,7 +145,7 @@ async fn graph_intake_routes() {
     let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
         panic!("resolved sources answer advisory, got {:?}", record.outcome);
     };
-    assert_eq!(scores.as_slice()[0].option_id, "resolve_sources");
+    assert_eq!(scores.as_slice()[0].option_id, "resolved_set");
 
     // Each source is one premise with its exact revision and digest.
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
@@ -148,16 +159,35 @@ async fn graph_intake_routes() {
     assert!(!facts.iter().any(|fact| fact.contains("body")));
 
     // Another owner's node is not visible: the reference does not resolve.
-    let error = decide(
+    let batch = decide(
         &h,
         intake_request(&schema, vec![graph_source(AUTHORITY, "paper:theirs", 3, digest)]),
     )
     .await
-    .unwrap_err();
-    assert!(
-        error.starts_with("GRAPH_INTAKE_RESOLUTION_FAILED"),
-        "{error}"
+    .unwrap();
+    assert_eq!(
+        refusal_code(&batch.records.as_slice()[0]),
+        "GRAPH_INTAKE_RESOLUTION_FAILED"
     );
+    let batch = decide(
+        &h,
+        intake_request(&schema, vec![graph_source(AUTHORITY, "paper:foreign", 12, digest)]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        refusal_code(&batch.records.as_slice()[0]),
+        "GRAPH_INTAKE_RESOLUTION_FAILED"
+    );
+}
+
+/// The registered code of a sealed abstention.
+fn refusal_code(record: &StatisticalDecisionRecord) -> String {
+    assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("expected an abstention, got {:?}", record.outcome);
+    };
+    reasons.as_slice()[0].code().as_str().to_string()
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R163.4
@@ -168,10 +198,16 @@ async fn missing_graph_data_refuses() {
     let refused = |sources: Vec<IntakeSource>, code: &'static str| {
         let (h, schema) = (&h, &schema);
         async move {
-            let error = decide(h, intake_request(schema, sources))
+            let batch = decide(h, intake_request(schema, sources))
                 .await
-                .expect_err("a refusal");
-            assert!(error.starts_with(code), "{code} vs {error}");
+                .expect("a refusal is a sealed abstention, not a request error");
+            let record = &batch.records.as_slice()[0];
+            assert_eq!(refusal_code(record), code);
+            // A set with one bad source carries no resolved premise.
+            assert!(!record
+                .premises
+                .iter()
+                .any(|premise| premise.fact.starts_with("intake:")));
         }
     };
     refused(
@@ -254,4 +290,69 @@ async fn graph_intake_evidence_binds() {
         .premises
         .iter()
         .any(|premise| premise.fact.contains("body")));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R163, MEDULLA-DECISION-ENGINE-R163.1, MEDULLA-DECISION-ENGINE-R163.2, MEDULLA-DECISION-ENGINE-R163.3, MEDULLA-DECISION-ENGINE-R163.4, MEDULLA-DECISION-ENGINE-R163.6
+#[tokio::test]
+async fn mixed_source_resolution() {
+    let (h, digest) = harness().await;
+    let (schema, _) = publish_route_schema(&h);
+    let file_digest = Digest256::sha256(b"a");
+
+    // One graph source and one filesystem source resolve through the served path.
+    let batch = decide(
+        &h,
+        intake_request(
+            &schema,
+            vec![
+                graph_source(AUTHORITY, "paper:1", 12, digest),
+                file_source("docs/a.md", file_digest),
+            ],
+        ),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    assert_eq!(record.evidence_class, medulla_decision_types::decision::EvidenceClass::Claim);
+    let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+    assert!(facts.contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
+    assert!(facts.contains(&format!("intake:file=docs/a.md#{}", file_digest.to_hex()).as_str()));
+
+    // A file-only request opens no graph and needs no `graph` param.
+    let file_only = declared_request(
+        &schema,
+        TENANT,
+        QuestionKind::GraphIntake,
+        "resolved_set",
+        DecisionPolicyRef::Default,
+        vec![TypedParam {
+            name: "intake_sources".to_string(),
+            value: TypedValue::IntakeSources(
+                BoundedVec::new(vec![file_source("docs/a.md", file_digest)]).unwrap(),
+            ),
+        }],
+    );
+    let batch = decide(&h, file_only).await.unwrap();
+    assert_eq!(batch.records.as_slice()[0].resolution_kind, ResolutionKind::Constraint);
+
+    // Every refusal code is a sealed abstention.
+    for (sources, code) in [
+        (
+            vec![graph_source("graph:other", "paper:1", 12, digest)],
+            "GRAPH_INTAKE_UNKNOWN_AUTHORITY",
+        ),
+        (
+            vec![graph_source(AUTHORITY, "paper:norev", 1, digest)],
+            "GRAPH_INTAKE_MISSING_REVISION",
+        ),
+        (
+            vec![graph_source(AUTHORITY, "paper:1", 11, digest)],
+            "GRAPH_INTAKE_RESOLUTION_FAILED",
+        ),
+    ] {
+        let batch = decide(&h, intake_request(&schema, sources)).await.unwrap();
+        assert_eq!(refusal_code(&batch.records.as_slice()[0]), code);
+    }
 }
