@@ -25,12 +25,17 @@ pytestmark = [
 ]
 
 
-def _envelope(job_id: str, tenant: str = TEST_TENANT, target: str = "doc://a") -> dict[str, Any]:
+def _envelope(
+    job_id: str,
+    tenant: str = TEST_TENANT,
+    target: str = "doc://a",
+    kind: str = "document",
+) -> dict[str, Any]:
     return {
         "job_id": job_id,
         "tenant": tenant,
         "corpus_key": "corpus-a",
-        "kind": "document",
+        "kind": kind,
         "target": target,
         "attempt": 1,
     }
@@ -141,6 +146,80 @@ async def test_failed_job_retries_then_dead_letters() -> None:
             await asyncio.sleep(0.5)
             while (extra := await _claim(client, "ingest-worker-1")) is not None:
                 assert extra["task_id"] != task_id
+        finally:
+            await client._send("SetSchedulerConfig", {"config": current})
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.10
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.10")
+@pytest.mark.asyncio
+async def test_hydration_kinds_use_hydration_queue() -> None:
+    client = await _client()
+    try:
+        queues: dict[str, str] = {}
+        for kind in ("document", "codebase", "skill_workflows", "capability_hydration"):
+            receipt = await client._send(
+                "IngestEnqueue",
+                {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}", kind=kind)},
+            )
+            queues[kind] = receipt["queue"]
+        assert queues == {
+            "document": "ingest",
+            "codebase": "ingest",
+            "skill_workflows": "ingest-hydration",
+            "capability_hydration": "ingest-hydration",
+        }
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.10
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.10")
+@pytest.mark.asyncio
+async def test_one_worker_pool_still_claims_general_work() -> None:
+    client = await _client()
+    try:
+        current = await client._send("GetSchedulerConfig", {})
+        policy = {**current, "total_workers": 8, "lane_floors": {"general": 1, "hydration": 1}}
+        await client._send("SetSchedulerConfig", {"config": policy})
+        try:
+            stem = uuid.uuid4().hex[:8]
+
+            def registration(worker: str, lanes: list[str]) -> dict[str, Any]:
+                return {
+                    "worker_id": worker,
+                    "host_iri": "host:alpha",
+                    "cores": 8,
+                    "memory_bytes": 8 * 1024**3,
+                    "lanes_supported": lanes,
+                }
+
+            # One worker: the pool is granted the general lane.
+            general = f"general-{stem}"
+            await client._send(
+                "WorkerRegister", {"registration": registration(general, ["general"])}
+            )
+            first = await client._send(
+                "AdmitWorkerTask", {"worker_id": general, "requested_max": 1}
+            )
+            assert first["Granted"]["reserved_lane"] == "general"
+
+            # A second worker that runs hydration gets the hydration reserve; the first
+            # worker still claims general work.
+            hydration = f"hydration-{stem}"
+            await client._send(
+                "WorkerRegister", {"registration": registration(hydration, ["hydration"])}
+            )
+            second = await client._send(
+                "AdmitWorkerTask", {"worker_id": hydration, "requested_max": 1}
+            )
+            assert second["Granted"]["reserved_lane"] == "hydration"
+            again = await client._send(
+                "AdmitWorkerTask", {"worker_id": general, "requested_max": 1}
+            )
+            assert again["Granted"]["reserved_lane"] == "general"
         finally:
             await client._send("SetSchedulerConfig", {"config": current})
     finally:
