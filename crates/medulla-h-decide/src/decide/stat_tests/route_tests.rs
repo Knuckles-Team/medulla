@@ -653,3 +653,92 @@ async fn legal_preference_wins_and_illegal_is_recorded() {
     let refused = decide(&h, bad).await.unwrap_err();
     assert!(refused.contains("route.preferred_option"), "{refused}");
 }
+
+/// Sixty-four declared specialists (the admit cap): `spec-10`, `spec-20` and
+/// `spec-30` are classified fast-path; `spec-07` is the one the learned head
+/// scores highest through its `signal`.
+fn journey_options() -> Vec<DeclaredOption> {
+    (0..64)
+        .map(|n| {
+            let id = format!("spec-{n:02}");
+            let class: &[&str] = if matches!(n, 10 | 20 | 30) {
+                &[FAST_PATH_CLASS]
+            } else {
+                &[]
+            };
+            let mut option = route_option(&id, class);
+            option.numbers = signal_option(&id, if n == 7 { 1 << 32 } else { 0 }).numbers;
+            option
+        })
+        .collect()
+}
+
+fn journey_request(
+    schema: &ComponentDependency,
+    head: Option<ComponentDependency>,
+    turn: Option<i64>,
+) -> DecideRequest {
+    let mut asked = route_request(
+        schema,
+        DecisionPolicyRef::Default,
+        turn.map(TypedValue::Int),
+    );
+    asked.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(journey_options()).unwrap(),
+    };
+    asked.head = head;
+    asked
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R035.751
+#[tokio::test]
+async fn route_journey_covers_every_stage() {
+    let h = Harness::new().await;
+    let (route_schema, _digest) = publish_route_schema(&h);
+    let (head_schema, head) =
+        super::rank_tests::published_head(&h, HeadKind::ListwiseLogistic, "head-route-journey")
+            .await;
+
+    // Stage 1, the fast path: a short turn takes the lowest-id fast-path
+    // specialist of the 64.
+    let fast = decide(&h, journey_request(&route_schema, None, Some(100)))
+        .await
+        .unwrap();
+    let record = &fast.records.as_slice()[0];
+    assert_eq!(chosen_ids(record), ["spec-10"]);
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(route_stage_premises(record)[0].fact, "route_stage=fast_path");
+
+    // Stage 2, team reuse: this caller judged `spec-42` well in this context.
+    let asked = journey_request(&route_schema, None, None);
+    let digest = super::super::stat_log::context_digest_of(
+        &asked.question.question_id,
+        asked.params.as_slice(),
+    );
+    let base = decide(&h, asked.clone()).await.unwrap().records.as_slice()[0].clone();
+    assert!(
+        matches!(base.outcome, StatisticalOutcome::Abstained { .. }),
+        "no history and no head: nothing answers yet"
+    );
+    let me = verified().principal_persistence_id();
+    write_team_history(&h, TENANT, &me, &base, &digest, "spec-42", (5, 1, 0));
+    let reused = decide(&h, asked).await.unwrap();
+    let record = &reused.records.as_slice()[0];
+    assert_eq!(chosen_ids(record), ["spec-42"]);
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+    assert_eq!(route_stage_premises(record)[0].fact, "route_stage=team_reuse");
+
+    // Stage 3, the learned policy: a long turn in a context with no history
+    // reaches the shared ladder, which scores the 64 specialists with the
+    // pinned head and records no rule stage.
+    let learned = decide(&h, journey_request(&head_schema, Some(head), Some(300)))
+        .await
+        .unwrap();
+    let record = &learned.records.as_slice()[0];
+    assert!(
+        !matches!(record.outcome, StatisticalOutcome::Abstained { .. }),
+        "the pinned head answers: {:?}",
+        record.outcome
+    );
+    assert!(route_stage_premises(record).is_empty());
+}
