@@ -650,7 +650,7 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
 /// The bounded `ONTOLOGY_ORPHAN` detail: the count, then as many class IRIs as
 /// fit in one kibibyte.
 #[cfg(feature = "rdf")]
-fn orphan_detail(orphans: &[String]) -> String {
+pub(super) fn orphan_detail(orphans: &[String]) -> String {
     let lead = format!(
         "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
         orphans.len()
@@ -679,7 +679,7 @@ fn class_list_detail(lead: &str, classes: &[String]) -> String {
 }
 
 #[cfg(feature = "rdf")]
-fn parent_classes() -> &'static BTreeSet<String> {
+pub(super) fn parent_classes() -> &'static BTreeSet<String> {
     static CLASSES: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
     CLASSES.get_or_init(|| {
         medulla_graph_core::graph::GraphSchemaSources::default()

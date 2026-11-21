@@ -13,7 +13,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_catalog_types::connector_pack::skill_graph::{ConformanceReport, SkillGraphManifest};
+use medulla_catalog_types::connector_pack::skill_graph::{
+    ConformanceReport, SkillGraphLayer, SkillGraphManifest, SKILL_GRAPH_LAYER_NS,
+};
 use medulla_catalog_types::connector_pack::{
     PackEntry, PackEntryKind, PackViolation, PackViolationCode, MAX_PACK_VIOLATIONS,
 };
@@ -38,6 +40,8 @@ const REFERENCE_PREFIX: &str = "reference/";
 
 const SOURCES_PATH: &str = "sources.json";
 const GRAPH_SKILL_TYPE: &str = "graph";
+/// The name prefix of the pack ontology entry that holds a graph's concept layer.
+const LAYER_ENTRY_PREFIX: &str = "skillgraph/";
 
 /// Validates the bundle of every skill graph the pack declares (R700.3): a
 /// `Skill` entry whose front matter says `skill_type: graph` names a graph, and
@@ -94,6 +98,82 @@ pub(super) fn validate_graph_bundles(
             }),
         );
     }
+}
+
+/// The concept layer of the pack's skill graph (MEDULLA-TYPED-PACKS-R701.2).
+///
+/// For the first graph skill the pack holds that has an ontology entry named
+/// `skillgraph/<graph>`: the ontology IRI that entry declares must be the layer IRI
+/// `SKILL_GRAPH_LAYER_NS` plus the graph name, and each class it declares must reach a
+/// parent class through the existing `ontology_orphan_classes` computation (R105), so the
+/// IRI and the roll-up are checked in one pass over the entry. A graph with no layer entry
+/// answers `None`. The cost is O(classes).
+#[cfg(feature = "rdf")]
+pub(super) fn bind_layer(
+    archive: &[u8],
+    all: &[&PackEntry],
+) -> Result<Option<SkillGraphLayer>, PackViolation> {
+    for skill in all
+        .iter()
+        .filter(|entry| entry.kind == PackEntryKind::Skill)
+    {
+        let declares_graph = section_bytes(archive, &skill.body)
+            .ok()
+            .and_then(|body| declared_skill_type(body).ok().flatten())
+            == Some(GRAPH_SKILL_TYPE);
+        if !declares_graph {
+            continue;
+        }
+        let graph = skill.name.as_str();
+        let layer_name = format!("{LAYER_ENTRY_PREFIX}{graph}");
+        let Some(layer) = all
+            .iter()
+            .find(|entry| entry.kind == PackEntryKind::Ontology && entry.name == layer_name)
+        else {
+            continue;
+        };
+        let text = section_bytes(archive, &layer.body)
+            .ok()
+            .and_then(|body| std::str::from_utf8(body).ok())
+            .ok_or_else(|| {
+                violation(
+                    PackViolationCode::OntologyInvalid,
+                    Some(&layer.uri),
+                    "the skill graph layer ontology is not readable text",
+                )
+            })?;
+        let expected = format!("{SKILL_GRAPH_LAYER_NS}{graph}");
+        let (classes, ontologies) = medulla_rdf::pack::declared_classes_and_ontologies(text);
+        if ontologies.len() != 1 || !ontologies.contains(&expected) {
+            let found = ontologies.iter().cloned().collect::<Vec<_>>().join(", ");
+            return Err(violation(
+                PackViolationCode::MalformedBody,
+                Some(&layer.uri),
+                &format!(
+                    "SKILL_GRAPH_LAYER_IRI_MISMATCH: graph {graph} declares ontology IRI \
+                     [{found}], expected {expected}"
+                ),
+            ));
+        }
+        let orphans =
+            medulla_rdf::pack::ontology_orphan_classes(&[text], super::validation::parent_classes());
+        if !orphans.is_empty() {
+            return Err(violation(
+                PackViolationCode::OntologyOrphan,
+                Some(&layer.uri),
+                &super::validation::orphan_detail(&orphans),
+            ));
+        }
+        let class_count = u32::try_from(classes.len()).unwrap_or(u32::MAX);
+        return SkillGraphLayer::new(graph, expected, class_count).map(Some).map_err(|error| {
+            violation(
+                PackViolationCode::OntologyInvalid,
+                Some(&layer.uri),
+                &error.to_string(),
+            )
+        });
+    }
+    Ok(None)
 }
 
 struct Collector {
@@ -394,5 +474,80 @@ mod tests {
         headless.manifest.entries.pop();
         let report = run(&headless);
         assert!(report.violations[0].starts_with("SKILL_GRAPH_INDEX_MISSING"));
+    }
+
+    /// A pack of one graph skill and, when `layer` is given, its `skillgraph/<graph>`
+    /// ontology entry.
+    #[cfg(feature = "rdf")]
+    fn layer_pack(layer: Option<&str>) -> (Vec<u8>, Vec<PackEntry>) {
+        let mut archive = Vec::new();
+        let mut entries = Vec::new();
+        let mut put = |kind: PackEntryKind, name: &str, body: &[u8]| {
+            let offset = archive.len() as u64;
+            archive.extend_from_slice(body);
+            let mut entry = medulla_catalog_types::catalog_fixtures::contract_pack::entry(kind, name);
+            entry.body = PackSection {
+                offset,
+                length: body.len() as u64,
+                sha256: Digest256::from_bytes(Sha256::digest(body).into()),
+            };
+            entries.push(entry);
+        };
+        let skill =
+            format!("---\nname: {GRAPH}\ndescription: demo graph\nskill_type: graph\n---\nbody\n");
+        put(PackEntryKind::Skill, GRAPH, skill.as_bytes());
+        if let Some(turtle) = layer {
+            put(
+                PackEntryKind::Ontology,
+                &format!("skillgraph/{GRAPH}"),
+                turtle.as_bytes(),
+            );
+        }
+        (archive, entries)
+    }
+
+    #[cfg(feature = "rdf")]
+    fn layer_turtle(ontology_iri: &str, parent: &str) -> String {
+        format!(
+            "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
+             <{ontology_iri}> a owl:Ontology .\n\
+             <{ontology_iri}#Concept> a owl:Class ; rdfs:subClassOf <{parent}> .\n\
+             <{ontology_iri}#Topic> a owl:Class ; rdfs:subClassOf <{ontology_iri}#Concept> .\n"
+        )
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R701.2
+    #[cfg(feature = "rdf")]
+    #[test]
+    fn layer_iri_and_rollup_checked_in_one_pass() {
+        let layer_iri = format!("{SKILL_GRAPH_LAYER_NS}{GRAPH}");
+        let core_class = medulla_types::ontology_iri!("core#CreativeWork");
+        let bind = |turtle: Option<&str>| {
+            let (archive, entries) = layer_pack(turtle);
+            let refs: Vec<&PackEntry> = entries.iter().collect();
+            bind_layer(&archive, &refs)
+        };
+
+        // A graph with no layer entry binds nothing.
+        assert_eq!(bind(None), Ok(None));
+
+        // The right IRI and a roll-up to a core class bind the layer with its class count.
+        let good = layer_turtle(&layer_iri, core_class);
+        let layer = bind(Some(good.as_str())).unwrap().unwrap();
+        assert_eq!(layer.graph, GRAPH);
+        assert_eq!(layer.ontology_iri, layer_iri);
+        assert_eq!(layer.class_count, 2);
+
+        // A foreign ontology IRI is refused by name with the found IRI.
+        let foreign = layer_turtle("https://example.org/ontology/other", core_class);
+        let refused = bind(Some(foreign.as_str())).unwrap_err();
+        assert!(refused.detail.starts_with("SKILL_GRAPH_LAYER_IRI_MISMATCH"));
+        assert!(refused.detail.contains("https://example.org/ontology/other"));
+
+        // A class that does not roll up to the core is refused as an orphan.
+        let orphan = layer_turtle(&layer_iri, "https://example.org/ontology/unrelated#Thing");
+        let refused = bind(Some(orphan.as_str())).unwrap_err();
+        assert_eq!(refused.code, PackViolationCode::OntologyOrphan);
     }
 }
