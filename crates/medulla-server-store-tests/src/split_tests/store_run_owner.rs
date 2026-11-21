@@ -525,6 +525,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             batch,
             None,
             batch.created_at_ms,
+            None,
             DurableCrypto::none(),
             &mut medulla_store::redb_store::AuditTailCache::new(),
         )

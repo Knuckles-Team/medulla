@@ -220,6 +220,9 @@ fn finish_linger_command(
 #[derive(Default)]
 struct Pending {
     ops: Vec<(String, Method)>,
+    /// The write-day counts of the writes in `ops` (MEDULLA-IDENTITY-R700.7), committed in the
+    /// same transaction as the ops.
+    write_counts: Vec<medulla_store::redb_store::write_ledger::WriteCount>,
     /// Raft log appends `(group_id, index, blob)` folded into the SAME group-commit
     /// transaction as `ops` (CONCEPT:MEDULLA-KG.storage.one-fsync-covers-raft) — one fsync covers both the log entry
     /// and the M2 graph mutation.
@@ -335,6 +338,7 @@ fn commit_and_notify(
         shard,
         &mut pending.ops,
         &mut pending.raft_log_ops,
+        &mut pending.write_counts,
         &shard_write_attempt_id("shard_drain"),
         medulla_server_api::txn::now_ms(),
         crypto,

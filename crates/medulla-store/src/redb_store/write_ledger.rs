@@ -6,9 +6,8 @@
 //!   epoch, from which `writes_30d` is summed;
 //! * `graph_creator`, the principal that created the graph, recorded once.
 //!
-//! A bump is its own writer command enqueued after the write it counts, not part of that write,
-//! so a crash can lose the bump of the last in-flight write. Ownership is a recommendation and
-//! the plan names its signals digest, so that tolerance is accepted.
+//! A bump is part of the commit of the write it counts: the same transaction, so a crash keeps
+//! both or neither, and no second commit and no extra graph-version advance.
 
 use redb::TableDefinition;
 
@@ -29,6 +28,32 @@ pub const MAX_WRITERS: usize = 256;
 /// The ledger day of a wall-clock time in milliseconds since the epoch.
 pub fn day_of(now_ms: u64) -> u32 {
     u32::try_from(now_ms / DAY_MS).unwrap_or(u32::MAX)
+}
+
+/// One counted write: `principal` wrote `graph` on ledger `day`. It travels with the write to the
+/// commit chokepoint and is applied by [`bump_write_day`] inside that commit's transaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WriteCount {
+    pub graph: String,
+    pub principal: String,
+    pub day: u32,
+}
+
+/// Apply, inside `write`, every count of `counts` whose graph is one of `graphs`; the others
+/// stay for a later chunk of the same drain.
+pub fn bump_counts(
+    write: &ShardWrite<'_>,
+    graphs: &[String],
+    counts: &mut Vec<WriteCount>,
+) -> Result<(), String> {
+    let (mine, rest): (Vec<WriteCount>, Vec<WriteCount>) = std::mem::take(counts)
+        .into_iter()
+        .partition(|count| graphs.contains(&count.graph));
+    *counts = rest;
+    for count in &mine {
+        bump_write_day(write, &count.graph, &count.principal, count.day)?;
+    }
+    Ok(())
 }
 
 /// Add one write of `principal` on `day` to the ledger of `graph`. A bump that opens a new

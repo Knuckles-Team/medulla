@@ -227,6 +227,7 @@ pub fn commit_ops(
     shard: &Shard,
     ops: &mut Vec<(String, Method)>,
     raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,
+    write_counts: &mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
     drain_id: &str,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
@@ -251,6 +252,7 @@ pub fn commit_ops(
         shard,
         ops,
         raft_log_ops,
+        write_counts,
         drain_id,
         committed_at_ms,
         crypto,
@@ -274,6 +276,7 @@ fn commit_drained_ops(
     shard: &Shard,
     ops: &mut Vec<(String, Method)>,
     raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,
+    write_counts: &mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
     drain_id: &str,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
@@ -301,6 +304,7 @@ fn commit_drained_ops(
             &[],
             &mut by_graph,
             &mut raft_pending,
+            write_counts,
             drain_id,
             committed_at_ms,
             crypto,
@@ -315,6 +319,7 @@ fn commit_drained_ops(
             chunk,
             &mut by_graph,
             &mut raft_pending,
+            write_counts,
             &chunk_id,
             committed_at_ms,
             crypto,
@@ -332,6 +337,7 @@ pub(crate) fn commit_drained_chunk(
     graphs: &[String],
     by_graph: &mut BTreeMap<String, Vec<Method>>,
     raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,
+    write_counts: &mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
     drain_id: &str,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
@@ -387,7 +393,12 @@ pub(crate) fn commit_drained_chunk(
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
-    );
+    )
+    // The write-day counts of the writes in this chunk ride the chunk's own transaction
+    // (MEDULLA-IDENTITY-R700.7): no second commit and no extra version advance.
+    .and_then(|()| {
+        medulla_store::redb_store::write_ledger::bump_counts(&write, graphs, write_counts)
+    });
     apply_writes.finish();
     // The row gate closes whether or not the rows landed: dropping a member's
     // owner-row admission unfinished poisons the shared transaction, so the

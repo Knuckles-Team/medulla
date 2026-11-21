@@ -100,6 +100,7 @@ pub(crate) fn stage_rows_in(
                 committed_at_ms,
                 audited,
                 crashpoint,
+                write_count,
             },
         crossmodal,
     } = input;
@@ -185,6 +186,16 @@ pub(crate) fn stage_rows_in(
         plan.lifecycle,
         plan.schema_sources_update,
     )?;
+
+    // The write-day count rides this same transaction (MEDULLA-IDENTITY-R700.7).
+    if let Some(count) = write_count {
+        medulla_store::redb_store::write_ledger::bump_write_day(
+            write,
+            &count.graph,
+            &count.principal,
+            count.day,
+        )?;
+    }
 
     Ok(StagedMutationRows { generated_result })
 }

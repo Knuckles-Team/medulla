@@ -36,6 +36,9 @@ pub struct MutationBatchPayload {
     pub(crate) authoritative_state_msgpack: Option<Vec<u8>>,
     pub(crate) result_msgpack: Option<Vec<u8>>,
     pub(crate) committed_at_ms: u64,
+    /// The counted write this batch is (MEDULLA-IDENTITY-R700.7), applied in the batch's own
+    /// transaction.
+    pub(crate) write_count: Option<medulla_store::redb_store::write_ledger::WriteCount>,
     /// Whether this commit should append audit-chain entries. Only meaningful
     /// when `authoritative_state_msgpack` is `Some`; `commit_mutation_batch`
     /// (compact-row, `authoritative_state_msgpack: None`) always stamps `true`
@@ -100,6 +103,9 @@ pub enum Cmd {
     Mutation {
         graph: String,
         method: Box<Method>,
+        /// The counted write this op is (MEDULLA-IDENTITY-R700.7): applied in the same group
+        /// commit transaction as the op, so the write-day bump is part of the write's own commit.
+        write_count: Option<medulla_store::redb_store::write_ledger::WriteCount>,
         /// The writer fires this oneshot after the
         /// `WriteTransaction` carrying this op has durably committed, so the awaiting
         /// dispatch task only acks the client once the write is on disk. Many such
@@ -214,14 +220,6 @@ pub enum Cmd {
         reply: std::sync::mpsc::SyncSender<
             Result<medulla_protocol_types::protocol::AuditAppendReceipt, String>,
         >,
-    },
-    /// Add one write of `principal` on `day` to the graph's write ledger
-    /// (MEDULLA-IDENTITY-R700.7).
-    WriteDayBump {
-        graph: String,
-        principal: String,
-        day: u32,
-        reply: std::sync::mpsc::SyncSender<Result<(), String>>,
     },
     /// Record the creator of the graph when it has none (MEDULLA-IDENTITY-R700.7).
     RecordGraphCreator {

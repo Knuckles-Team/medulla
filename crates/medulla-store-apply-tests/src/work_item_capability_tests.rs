@@ -53,6 +53,7 @@ fn try_commit_method(shard: &Shard, method: Method) -> Result<(), String> {
         shard,
         &mut ops,
         &mut raft_log_ops,
+        &mut Vec::new(),
         &attempt("native-method"),
         0,
         DurableCrypto::none(),

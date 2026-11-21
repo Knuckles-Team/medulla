@@ -86,6 +86,7 @@ fn every_durable_chokepoint_refuses_the_reserved_control_scope() {
         &shard,
         &mut ops,
         &mut log,
+        &mut Vec::new(),
         "control-chokepoint",
         0,
         DurableCrypto::none(),

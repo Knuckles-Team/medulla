@@ -34,6 +34,7 @@ fn seeded(dir: &std::path::Path) -> (Shard, AuditTailCache) {
         &shard,
         &mut vec![(GRAPH.to_string(), seed)],
         &mut Vec::new(),
+        &mut Vec::new(),
         "operation-audit-seed",
         0,
         DurableCrypto::none(),

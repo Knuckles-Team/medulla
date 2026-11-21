@@ -20,8 +20,10 @@ macro_rules! writer_command_arms {
         Cmd::Mutation {
             graph,
             method,
+            write_count,
             done,
         } => {
+            pending.write_counts.extend(write_count);
             pending.ops.push((graph, *method));
             pending.waiters.push(done);
             // Bound memory: if a burst outpaces the tick, flush early. The group
@@ -174,21 +176,6 @@ macro_rules! writer_command_arms {
             let result = medulla_store::redb_store::operation_audit_append(
                 shard, &mut pending.audit_tail, &graph, &event,
             );
-            let _ = reply.send(result);
-            false
-        }
-        Cmd::WriteDayBump {
-            graph,
-            principal,
-            day,
-            reply,
-        } => {
-            flush(pending);
-            let result = in_graph_write(shard, &graph, "write_day_bump", |write| {
-                medulla_store::redb_store::write_ledger::bump_write_day(
-                    write, &graph, &principal, day,
-                )
-            });
             let _ = reply.send(result);
             false
         }
@@ -357,6 +344,7 @@ macro_rules! writer_command_arms {
                 authoritative_state_msgpack,
                 result_msgpack,
                 committed_at_ms,
+                write_count,
                 audited,
             } = *payload;
             // Preserve command ordering and make the batch its own indivisible
@@ -372,6 +360,7 @@ macro_rules! writer_command_arms {
                         authoritative_state_msgpack: state,
                         result_msgpack: result_msgpack.as_deref(),
                         committed_at_ms,
+                        write_count: write_count.as_ref(),
                         audited,
                     },
                     crypto,
@@ -385,6 +374,7 @@ macro_rules! writer_command_arms {
                     &batch,
                     result_msgpack.as_deref(),
                     committed_at_ms,
+                    write_count.as_ref(),
                     crypto,
                     #[cfg(feature = "security")]
                     &mut pending.audit_tail,

@@ -535,6 +535,7 @@ fn commit_with_result(
         batch,
         Some(result),
         101,
+        None,
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,
@@ -3377,6 +3378,7 @@ fn staged_state_commit_replaces_rows_and_replays_without_reexecution() {
             result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
             committed_at_ms: 101,
             audited: true,
+            write_count: None,
         },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
@@ -3403,6 +3405,7 @@ fn staged_state_commit_replaces_rows_and_replays_without_reexecution() {
             result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
             committed_at_ms: 101,
             audited: true,
+            write_count: None,
         },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
@@ -3445,6 +3448,7 @@ fn staged_state_commit_replaces_rows_and_replays_without_reexecution() {
             result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
             committed_at_ms: 101,
             audited: true,
+            write_count: None,
         },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
@@ -3556,6 +3560,7 @@ fn staged_row_delta_updates_only_affected_durable_rows() {
             result_msgpack: None,
             committed_at_ms: 102,
             audited: true,
+            write_count: None,
         },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
@@ -5708,6 +5713,7 @@ fn every_commit_path_publishes_at_the_chokepoint_and_a_lost_fence_rolls_back() {
                 result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
                 committed_at_ms: 101,
                 audited: true,
+                write_count: None,
             },
             DurableCrypto::none(),
             #[cfg(feature = "security")]

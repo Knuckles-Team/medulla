@@ -38,6 +38,7 @@ fn send_with_deadline_refuses_full_and_enqueues_nothing() {
                 node_id: node.to_string(),
                 properties_msgpack: Vec::new(),
             }),
+            write_count: None,
             done,
         }
     };

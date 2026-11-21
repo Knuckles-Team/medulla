@@ -7,6 +7,7 @@ macro_rules! persistence_mutations {
             let cmd = Cmd::Mutation {
                 graph: graph_fname.to_string(),
                 method: Box::new(method.clone()),
+                write_count: current_write_count(graph_fname),
                 done: done_tx,
             };
             // Blocking send = backpressure: park until the bounded channel has room
@@ -59,6 +60,7 @@ macro_rules! persistence_mutations {
                     authoritative_state_msgpack: None,
                     result_msgpack: result_msgpack.map(ToOwned::to_owned),
                     committed_at_ms,
+                    write_count: current_write_count(graph_fname),
                     // No authoritative_state -> audit is gated per-operation from the
                     // (identity-preserving) method itself downstream; this flag is inert.
                     audited: true,
@@ -88,6 +90,7 @@ macro_rules! persistence_mutations {
                     authoritative_state_msgpack: Some(authoritative_state_msgpack),
                     result_msgpack: result_msgpack.map(ToOwned::to_owned),
                     committed_at_ms,
+                    write_count: current_write_count(graph_fname),
                     audited,
                 }),
                 done,

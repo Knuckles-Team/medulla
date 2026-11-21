@@ -107,6 +107,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
                 result_msgpack: None,
                 committed_at_ms: TEST_NOW,
                 audited: true,
+                write_count: None,
             },
             DurableCrypto::none(),
             #[cfg(feature = "security")]
@@ -148,6 +149,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
                 result_msgpack: None,
                 committed_at_ms: TEST_NOW,
                 audited: true,
+                write_count: None,
             },
             DurableCrypto::none(),
             #[cfg(feature = "security")]
@@ -181,6 +183,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
                 result_msgpack: None,
                 committed_at_ms: TEST_NOW,
                 audited: true,
+                write_count: None,
             },
             DurableCrypto::none(),
             #[cfg(feature = "security")]
@@ -224,6 +227,7 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
         &fixture.shard,
         &mut ops,
         &mut raft_log,
+        &mut Vec::new(),
         "lane-row-path",
         TEST_NOW,
         DurableCrypto::none(),

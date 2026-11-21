@@ -77,6 +77,7 @@ fn eh_290_commit_ops_phase_decomposition() {
             &shard,
             &mut ops,
             &mut log,
+            &mut Vec::new(),
             &drain_id,
             index as u64,
             DurableCrypto::none(),

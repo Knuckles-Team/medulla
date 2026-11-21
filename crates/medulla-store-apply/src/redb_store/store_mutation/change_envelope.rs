@@ -46,6 +46,7 @@ pub fn commit_change_envelope_with_budget(
                 // No authoritative state, so audited is inert here.
                 audited: true,
                 crashpoint: None,
+                write_count: None,
             },
             crossmodal: None,
             result_msgpack: None,
@@ -493,6 +494,7 @@ fn finish_change_envelope_rows(
                 committed_at_ms: input.committed_at_ms,
                 audited: true,
                 crashpoint: None,
+                write_count: None,
             },
             crossmodal: None,
         },

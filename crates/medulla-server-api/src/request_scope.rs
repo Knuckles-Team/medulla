@@ -68,6 +68,22 @@ pub fn current() -> RequestCancel {
         .unwrap_or_else(|_| RequestCancel::new())
 }
 
+tokio::task_local! {
+    static WRITER: String;
+}
+
+/// Run one counted write's dispatch future with `principal` as its [`current_writer`]
+/// (MEDULLA-IDENTITY-R700.7). The durable backend reads it where the write commits, so the
+/// write-day bump rides that commit's own transaction.
+pub async fn with_writer<F: Future>(principal: String, dispatch: F) -> F::Output {
+    WRITER.scope(principal, dispatch).await
+}
+
+/// The verified principal of the counted write now committing; `None` outside one.
+pub fn current_writer() -> Option<String> {
+    WRITER.try_with(String::clone).ok()
+}
+
 /// Run blocking `work` interruptibly on behalf of `cancel`'s request. An
 /// interrupted run's result is partial by construction, so once `cancel` has
 /// tripped the result is discarded and [`CANCELLED`] is returned instead.

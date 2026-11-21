@@ -84,7 +84,7 @@ pub async fn dispatch_graph_op(
 ) -> Response {
     #[cfg(feature = "redb")]
     let counts_as_write = medulla_server_auth::access::requires_write(&method);
-    let response = dispatch_graph_op_inner(
+    let inner = dispatch_graph_op_inner(
         state,
         GraphOpContext {
             graph_name,
@@ -97,50 +97,19 @@ pub async fn dispatch_graph_op(
         None,
         #[cfg(feature = "knowledge-batch")]
         None,
-    )
-    .await;
-    #[cfg(feature = "redb")]
-    if counts_as_write && response.error.is_none() {
-        count_write(state, graph_name, verified_context.principal()).await;
-    }
-    response
-}
-
-/// Count one accepted write of `principal` in the graph's write ledger
-/// (MEDULLA-IDENTITY-R700.7), as its own writer command after the write.
-///
-/// The bump is a durable commit in the graph's mutation scope, so it is accounted in the
-/// serving version the way an audit append is: left uncounted, the next write stamped from the
-/// serving version would meet `STALE_VERSION`. No ledger exists without the durable redb
-/// backend, and a replicated apply is not a caller's write, so both count nothing. A failed
-/// bump never fails the write it counts.
-#[cfg(feature = "redb")]
-async fn count_write(state: &Arc<RwLock<ServerState>>, graph_name: &str, principal: &str) {
-    use medulla_persistence::AsRedb;
-    #[cfg(feature = "raft")]
-    if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
-        return;
-    }
-    let (core, persistence) = {
-        let s = timed_read(state).await;
-        match s.registry.get(graph_name) {
-            Some(entry) => (entry.core.clone(), s.persistence.clone()),
-            None => return,
-        }
-    };
-    let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) else {
-        return;
-    };
-    let day = medulla_store::redb_store::write_ledger::day_of(
-        medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     );
-    match redb
-        .write_day_bump(&medulla_kernel::persist::sanitize(graph_name), principal, day)
-        .await
-    {
-        Ok(()) => core.mark_dirty(),
-        Err(error) => tracing::warn!(graph = %graph_name, %error, "write ledger bump failed"),
+    // A counted write names its verified principal to the durable commit it makes
+    // (MEDULLA-IDENTITY-R700.7): the write-day bump is recorded in that commit's own
+    // transaction, never as a commit of its own.
+    #[cfg(feature = "redb")]
+    if counts_as_write {
+        return medulla_server_api::request_scope::with_writer(
+            verified_context.principal().to_string(),
+            inner,
+        )
+        .await;
     }
+    inner.await
 }
 
 /// Append one operation-audit event to a resident graph's chain through the

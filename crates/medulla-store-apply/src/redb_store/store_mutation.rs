@@ -29,12 +29,14 @@ pub fn commit_mutation_batch(
     batch: &MutationBatch,
     result_msgpack: Option<&[u8]>,
     committed_at_ms: u64,
+    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<MutationBatchCommit, String> {
     commit_mutation_batch_inner(
         shard,
-        BatchCommitInput::compact(graph_fname, batch, result_msgpack, committed_at_ms),
+        BatchCommitInput::compact(graph_fname, batch, result_msgpack, committed_at_ms)
+            .with_write_count(write_count),
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
@@ -58,6 +60,8 @@ pub struct StateCommitInput<'a> {
     pub authoritative_state_msgpack: &'a [u8],
     pub result_msgpack: Option<&'a [u8]>,
     pub committed_at_ms: u64,
+    /// The counted write this batch is, applied in the batch's own transaction.
+    pub write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
     pub audited: bool,
 }
 
@@ -79,6 +83,7 @@ pub fn commit_mutation_batch_state(
                 committed_at_ms: input.committed_at_ms,
                 audited: input.audited,
                 crashpoint: None,
+                write_count: input.write_count,
             },
             crossmodal: None,
             result_msgpack: input.result_msgpack,
@@ -163,6 +168,10 @@ pub struct BatchRowInput<'a> {
     /// it cannot be re-derived from `batch.operations`.
     pub audited: bool,
     pub crashpoint: Option<MutationBatchCrashpoint>,
+    /// The write-day count of the caller write this batch commits (MEDULLA-IDENTITY-R700.7):
+    /// applied by the row staging in this batch's transaction, so it adds no commit and no
+    /// graph-version advance. `None` for maintenance and for writes no served caller made.
+    pub write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 /// The inputs every batch-commit entry point shares, bundled so the phases
@@ -192,10 +201,19 @@ impl<'a> BatchCommitInput<'a> {
                 committed_at_ms,
                 audited: true,
                 crashpoint: None,
+                write_count: None,
             },
             crossmodal: None,
             result_msgpack,
         }
+    }
+
+    pub fn with_write_count(
+        mut self,
+        write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
+    ) -> Self {
+        self.rows.write_count = write_count;
+        self
     }
 
     pub fn with_crashpoint(mut self, crashpoint: Option<MutationBatchCrashpoint>) -> Self {
@@ -558,6 +576,7 @@ fn finish_fresh_batch(
             committed_at_ms: rows.committed_at_ms,
             audited: rows.audited,
             crashpoint: rows.crashpoint,
+            write_count: rows.write_count,
         },
         crossmodal: crossmodal.as_ref(),
     };

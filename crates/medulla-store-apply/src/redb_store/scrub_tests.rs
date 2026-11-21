@@ -46,6 +46,7 @@ fn planted_shard(tag: &str) -> (Shard, std::path::PathBuf) {
         &shard,
         &mut ops,
         &mut Vec::new(),
+        &mut Vec::new(),
         &format!("scrub-plant-{tag}"),
         1,
         DurableCrypto::none(),

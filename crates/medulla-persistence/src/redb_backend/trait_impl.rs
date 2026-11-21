@@ -1,3 +1,4 @@
+use super::backend_write_ledger::current_write_count;
 use super::trait_capabilities::persistence_capabilities;
 use super::trait_envelopes::persistence_envelopes;
 use super::trait_graph::persistence_graph;

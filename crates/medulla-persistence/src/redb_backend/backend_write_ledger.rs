@@ -1,37 +1,32 @@
 //! The per-graph write ledger and creator on the durable backend (MEDULLA-IDENTITY-R700.7).
 //!
-//! Each writer function is its own shard-writer command, enqueued after the write it counts.
-//! The reads are typed snapshot reads off the writer thread.
+//! A write is counted inside the commit of the write itself: the dispatch scopes the verified
+//! principal ([`medulla_server_api::request_scope::with_writer`]), [`current_write_count`] turns
+//! it into the [`WriteCount`] that rides the durable write command, and the shard writer
+//! applies it in that commit's transaction. There is no separate commit and no extra graph
+//! version advance. The creator record and the reads are shard-writer commands and typed
+//! snapshot reads off the writer thread.
 
 use super::*;
 use crate::writer_reply::await_writer_reply;
-use medulla_store::redb_store::write_ledger;
+use medulla_store::redb_store::write_ledger::{self, WriteCount};
+
+/// The count of the write now committing for `graph_fname`: `Some` only inside a counted write
+/// of a served request (the dispatch scoped its principal) and never for a replicated apply.
+pub(crate) fn current_write_count(graph_fname: &str) -> Option<WriteCount> {
+    #[cfg(feature = "raft")]
+    if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
+        return None;
+    }
+    let principal = medulla_server_api::request_scope::current_writer()?;
+    Some(WriteCount {
+        graph: graph_fname.to_string(),
+        principal,
+        day: write_ledger::day_of(medulla_kernel::kernel::dispatch_support::authoritative_now_ms()),
+    })
+}
 
 impl RedbBackend {
-    /// Add one write of `principal` on ledger day `day` to `graph_fname`.
-    pub async fn write_day_bump(
-        &self,
-        graph_fname: &str,
-        principal: &str,
-        day: u32,
-    ) -> Result<(), String> {
-        let (reply, rx) = std::sync::mpsc::sync_channel(1);
-        self.enqueue(
-            graph_fname,
-            Cmd::WriteDayBump {
-                graph: graph_fname.to_string(),
-                principal: principal.to_string(),
-                day,
-                reply,
-            },
-            "write_day_bump",
-        )
-        .await?;
-        tokio::task::spawn_blocking(move || await_writer_reply(&rx, "write_day_bump"))
-            .await
-            .map_err(|error| format!("write_day_bump join error: {error}"))??
-    }
-
     /// Record `principal` as the creator of `graph_fname`; a graph with a creator keeps it.
     pub async fn record_graph_creator(
         &self,
@@ -103,19 +98,41 @@ mod tests {
         };
         backend.record_durable(GRAPH, &seed).await.expect("seed");
 
-        for _ in 0..3 {
-            backend.write_day_bump(GRAPH, "a", 100).await.expect("bump");
+        // Each counted write is one commit: it advances the graph version by exactly one and
+        // its bump is part of that commit.
+        let counted = |principal: &'static str, node: &'static str| {
+            let backend = &backend;
+            medulla_server_api::request_scope::with_writer(principal.to_string(), async move {
+                let method = Method::AddNode {
+                    node_id: node.to_string(),
+                    properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({}))
+                        .expect("encode"),
+                };
+                backend.record_durable(GRAPH, &method).await.expect("write");
+            })
+        };
+        async fn version(backend: &RedbBackend) -> u64 {
+            PersistenceBackend::read_mutation_graph_version(backend, GRAPH)
+                .await
+                .expect("version")
+                .expect("graph version")
         }
-        backend.write_day_bump(GRAPH, "a", 120).await.expect("bump");
-        backend.write_day_bump(GRAPH, "b", 120).await.expect("bump");
+        let before = version(&backend).await;
+        counted("a", "n1").await;
+        assert_eq!(version(&backend).await, before + 1);
         assert_eq!(
-            backend.write_days(GRAPH, 100).await.expect("days"),
-            vec![("a".to_string(), 4), ("b".to_string(), 1)]
+            backend.write_days(GRAPH, 0).await.expect("days").iter().map(|r| r.1).sum::<u64>(),
+            1
         );
+        counted("a", "n2").await;
+        counted("b", "n3").await;
         assert_eq!(
-            backend.write_days(GRAPH, 110).await.expect("days"),
-            vec![("a".to_string(), 1), ("b".to_string(), 1)]
+            backend.write_days(GRAPH, 0).await.expect("days"),
+            vec![("a".to_string(), 2), ("b".to_string(), 1)]
         );
+        // An uncounted write (outside a served request) leaves the ledger alone.
+        backend.record_durable(GRAPH, &seed).await.expect("uncounted");
+        assert_eq!(backend.write_days(GRAPH, 0).await.expect("days").len(), 2);
 
         assert_eq!(backend.graph_creator(GRAPH).await.expect("creator"), None);
         backend.record_graph_creator(GRAPH, "first").await.expect("record");
@@ -125,11 +142,5 @@ mod tests {
             Some("first".to_string())
         );
 
-        // A bump that opens a new day deletes the rows older than 400 days.
-        backend.write_day_bump(GRAPH, "a", 600).await.expect("bump");
-        assert_eq!(
-            backend.write_days(GRAPH, 0).await.expect("days"),
-            vec![("a".to_string(), 1)]
-        );
     }
 }

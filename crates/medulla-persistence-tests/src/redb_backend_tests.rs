@@ -2014,6 +2014,7 @@ async fn micro_linger_coalesces_concurrent_writers() {
                     node_id: format!("n{i}"),
                     properties_msgpack: props(serde_json::json!({"i": i})),
                 }),
+                write_count: None,
                 done,
             })
             .expect("redb writer thread alive");
