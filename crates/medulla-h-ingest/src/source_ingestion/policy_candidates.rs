@@ -71,11 +71,7 @@ pub fn synthesize_policy_candidates(
                     }),
                 ),
             };
-            let clause_digest = candidate
-                .rule
-                .as_ref()
-                .map(|rule| rule.clause_digest.clone())
-                .unwrap_or_else(|| inactive_clause_digest(&candidate.source_ref, text));
+            let clause_digest = candidate.clause_digest.clone();
             let key = candidate
                 .rule
                 .as_ref()
@@ -115,18 +111,6 @@ pub fn synthesize_policy_candidates(
         }
     }
     operations
-}
-
-/// The digest of an inactive clause: the SHA-256 of its lines, whitespace collapsed. The
-/// parser digests the same text into `candidate_set_digest`, but only a rule carries its
-/// own `clause_digest`, so an inactive node recomputes it from its span.
-fn inactive_clause_digest(source: &PolicySourceRef, text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
-    let start = (source.start_line as usize).saturating_sub(1);
-    let end = (source.end_line as usize).min(lines.len());
-    let span = lines.get(start..end).unwrap_or_default().join(" ");
-    let collapsed = span.split_whitespace().collect::<Vec<_>>().join(" ");
-    hex::encode(Sha256::digest(collapsed.as_bytes()))
 }
 
 /// The index-result node of one candidate operation; every scalar property is carried as
@@ -184,6 +168,8 @@ mod tests {
         assert_eq!(inactive["status"], "inactive");
         assert_eq!(inactive["reason"], "CLAUSE_UNPARSED");
         assert_eq!(inactive["start_line"], 4);
+        let stripped = Sha256::digest("review changes".as_bytes());
+        assert_eq!(inactive["clause_digest"], hex::encode(stripped));
         assert_eq!(
             inactive["candidate_set_digest"],
             proposed["candidate_set_digest"]

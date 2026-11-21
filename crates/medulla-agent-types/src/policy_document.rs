@@ -98,6 +98,9 @@ pub struct PolicyCandidate {
     pub rule: Option<PolicyRule>,
     /// The clause span.
     pub source_ref: PolicySourceRef,
+    /// The digest of the keyword-stripped clause text. A proposed candidate's rule carries
+    /// the same value; an inactive candidate has no rule, so it is held here.
+    pub clause_digest: String,
     /// The digest of the whole candidate set of the document.
     pub candidate_set_digest: String,
     /// The grammar revision the document was read at.
@@ -168,7 +171,7 @@ pub fn parse_policy_document(
                             scope,
                             severity,
                             source_ref: source_ref.clone(),
-                            clause_digest: clause.clause_digest,
+                            clause_digest: clause.clause_digest.clone(),
                         }),
                         PolicyCandidateStatus::Proposed,
                     )
@@ -178,6 +181,7 @@ pub fn parse_policy_document(
             PolicyCandidate {
                 rule,
                 source_ref,
+                clause_digest: clause.clause_digest,
                 candidate_set_digest: set_digest.clone(),
                 grammar_revision: POLICY_GRAMMAR_REVISION,
                 status,
