@@ -2,7 +2,7 @@
 //! `dispatch` shell over a redb-backed `ServerState`.
 //!
 //! A compile reads the tenant-visible process, writes the next `WorkflowPattern` version and
-//! its `compiledFrom` edge as one batch under a compare-and-set on `expected_version`, and a
+//! its `compiledFromProcess` edge as one batch under a compare-and-set on `expected_version`, and a
 //! refusal writes nothing.
 
 #![cfg(feature = "redb")]

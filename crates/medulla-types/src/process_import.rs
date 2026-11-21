@@ -282,6 +282,26 @@ pub const REFUSALS: &[&str] = &[
     PROCESS_IMPORT_TOO_LARGE,
 ];
 
+/// The wire code of a strict export that would lose a construct.
+pub const PROCESS_EXPORT_LOSSY: &str = "PROCESS_EXPORT_LOSSY";
+/// The wire code of a workflow no BPMN process can be written for.
+pub const PROCESS_EXPORT_NOT_DEPLOYABLE: &str = "PROCESS_EXPORT_NOT_DEPLOYABLE";
+
+/// Every refusal code of the served `ProcessModelExport`, in the order of the checks.
+pub const EXPORT_REFUSALS: &[&str] = &[PROCESS_EXPORT_LOSSY, PROCESS_EXPORT_NOT_DEPLOYABLE];
+
+/// A strict export refused because the target cannot hold every construct.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProcessExportLossy {
+    pub losses: Vec<ProcessLoss>,
+}
+
+impl ProcessExportLossy {
+    pub fn code(&self) -> &'static str {
+        PROCESS_EXPORT_LOSSY
+    }
+}
+
 /// The wire code of a step that hands off to nothing and is not an end step
 /// (MEDULLA-CQ-ORCH-R700.4).
 pub const PROCESS_TASK_UNBOUND: &str = "PROCESS_TASK_UNBOUND";

@@ -4,12 +4,12 @@
 //! `ProcessCompile` is gateway-routed (`Route::ProcessCompile`). The handler reads the
 //! caller's tenant-visible process view (the `hasStep` and `handsOffTo` edges and the nodes
 //! they join), compiles it with `compile_process_view` and writes the next
-//! `WorkflowPattern` node `workflow:<process_iri>:v<n>` and its `compiledFrom` edge to the
+//! `WorkflowPattern` node `workflow:<process_iri>:v<n>` and its `compiledFromProcess` edge to the
 //! process node as the one `BatchUpdate` through the staged gateway. The write is a
 //! compare-and-set on `expected_version`: a version that is not the stored one refuses
 //! `WORKFLOW_VERSION_CONFLICT`, and the commit closure re-reads the stored version so two
 //! racing compiles never both write version `n + 1`. A published version is never mutated.
-//! A refusal writes nothing. The `compiledFrom` edge carries `processRevision`, `compilerId`
+//! A refusal writes nothing. The `compiledFromProcess` edge carries `processRevision`, `compilerId`
 //! and `workflowDigest`; the answer returns the digest, the version and the process revision.
 //!
 //! `ProcessModelImport` is gateway-routed beside it (`Route::ProcessModelImport`): the stated
@@ -33,13 +33,10 @@ use medulla_protocol_types::result_contract::coordination::{
 use medulla_server_api::knob_config::knobs;
 use medulla_types::process_import::{
     CanonicalWorkflow, ImportError, ProcessCompiled, ProcessModelExported, ProcessModelImported,
-    ProcessSourceSystem, WORKFLOW_VERSION_CONFLICT,
+    ProcessSourceSystem, PROCESS_EXPORT_NOT_DEPLOYABLE, WORKFLOW_VERSION_CONFLICT,
 };
 
-/// The wire code of a workflow no BPMN process can be written for.
-const PROCESS_EXPORT_NOT_DEPLOYABLE: &str = "PROCESS_EXPORT_NOT_DEPLOYABLE";
-
-/// The id of the compiler recorded on every `compiledFrom` edge.
+/// The id of the compiler recorded on every `compiledFromProcess` edge.
 pub(super) const COMPILER_ID: &str = "medulla.process-compile/v1";
 
 fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
@@ -238,7 +235,7 @@ pub(super) fn admit_compile(
             "source": workflow_id,
             "target": process_iri,
             "properties": {
-                "relationship": "compiledFrom",
+                "relationship": "compiledFromProcess",
                 "processRevision": process_revision,
                 "compilerId": COMPILER_ID,
                 "workflowDigest": workflow.digest,

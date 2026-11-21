@@ -729,6 +729,17 @@
     rdfs:domain :CompiledProgram ;
     rdfs:range :RunTrace .
 
+:WorkflowPattern a owl:Class ;
+    rdfs:label "WorkflowPattern" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "The stored, versioned canonical workflow written by the served process compile and process import (MEDULLA-CQ-ORCH-R700.3)." .
+
+:compiledFromProcess a owl:ObjectProperty ;
+    rdfs:label "compiled from process" ;
+    rdfs:comment "MEDULLA-CQ-ORCH-R700.5 — WorkflowPattern -[:compiledFromProcess]-> the process model it was compiled from. The edge carries processRevision, compilerId and workflowDigest. Distinct from :compiledFrom, which links a CompiledProgram to its RunTrace." ;
+    rdfs:domain :WorkflowPattern ;
+    rdfs:range :ProcessModel .
+
 :RecursiveTraceNode a owl:Class ;
     rdfs:label "RecursiveTraceNode" ;
     rdfs:subClassOf :RunTrace ;

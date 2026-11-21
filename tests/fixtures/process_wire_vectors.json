@@ -1,0 +1,228 @@
+{
+  "compiled": {
+    "process_revision": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "version": 2,
+    "workflow_digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+    "workflow_id": "workflow:process:invoice:v2"
+  },
+  "exported": {
+    "workflow": {
+      "digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+      "flows": [
+        {
+          "default": false,
+          "source": "s1",
+          "target": "s2"
+        },
+        {
+          "condition": "wants mail",
+          "default": false,
+          "source": "s2",
+          "target": "s3"
+        },
+        {
+          "condition": "wants text",
+          "default": false,
+          "source": "s2",
+          "target": "s4"
+        },
+        {
+          "default": false,
+          "source": "s3",
+          "target": "s5"
+        },
+        {
+          "default": false,
+          "source": "s4",
+          "target": "s5"
+        },
+        {
+          "default": false,
+          "source": "s5",
+          "target": "s6"
+        }
+      ],
+      "name": "Notify customer",
+      "schema": "medulla.process.canonical/v1",
+      "schema_version": 1,
+      "source": {
+        "elements": {
+          "s1": "s",
+          "s2": "split",
+          "s3": "mail",
+          "s4": "sms",
+          "s5": "join",
+          "s6": "e"
+        },
+        "model_id": "orsplit",
+        "schema_version": 1,
+        "system": "bpmn20"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "start",
+          "label": "Order shipped"
+        },
+        {
+          "gate": "or",
+          "id": "s2",
+          "kind": "fork",
+          "label": "Channels"
+        },
+        {
+          "id": "s3",
+          "kind": "agent",
+          "label": "Send e-mail"
+        },
+        {
+          "id": "s4",
+          "kind": "agent",
+          "label": "Send text message"
+        },
+        {
+          "gate": "or",
+          "id": "s5",
+          "kind": "join",
+          "label": "Channels done"
+        },
+        {
+          "id": "s6",
+          "kind": "end",
+          "label": "Customer notified"
+        }
+      ]
+    }
+  },
+  "imported": {
+    "version": 1,
+    "workflow_digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+    "workflow_id": "workflow:or-split-join:v1"
+  },
+  "process_compile": {
+    "method": "ProcessCompile",
+    "params": {
+      "expected_version": 1,
+      "process_iri": "process:invoice"
+    }
+  },
+  "process_compile_first": {
+    "method": "ProcessCompile",
+    "params": {
+      "expected_version": null,
+      "process_iri": "process:invoice"
+    }
+  },
+  "process_model_export": {
+    "method": "ProcessModelExport",
+    "params": {
+      "strict": true,
+      "target": "aris_epc",
+      "version": 1,
+      "workflow_id": "or-split-join"
+    }
+  },
+  "process_model_export_canonical": {
+    "method": "ProcessModelExport",
+    "params": {
+      "strict": false,
+      "target": null,
+      "version": 2,
+      "workflow_id": "or-split-join"
+    }
+  },
+  "process_model_import": {
+    "method": "ProcessModelImport",
+    "params": {
+      "expected_version": null,
+      "workflow": {
+        "digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+        "flows": [
+          {
+            "default": false,
+            "source": "s1",
+            "target": "s2"
+          },
+          {
+            "condition": "wants mail",
+            "default": false,
+            "source": "s2",
+            "target": "s3"
+          },
+          {
+            "condition": "wants text",
+            "default": false,
+            "source": "s2",
+            "target": "s4"
+          },
+          {
+            "default": false,
+            "source": "s3",
+            "target": "s5"
+          },
+          {
+            "default": false,
+            "source": "s4",
+            "target": "s5"
+          },
+          {
+            "default": false,
+            "source": "s5",
+            "target": "s6"
+          }
+        ],
+        "name": "Notify customer",
+        "schema": "medulla.process.canonical/v1",
+        "schema_version": 1,
+        "source": {
+          "elements": {
+            "s1": "s",
+            "s2": "split",
+            "s3": "mail",
+            "s4": "sms",
+            "s5": "join",
+            "s6": "e"
+          },
+          "model_id": "orsplit",
+          "schema_version": 1,
+          "system": "bpmn20"
+        },
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "start",
+            "label": "Order shipped"
+          },
+          {
+            "gate": "or",
+            "id": "s2",
+            "kind": "fork",
+            "label": "Channels"
+          },
+          {
+            "id": "s3",
+            "kind": "agent",
+            "label": "Send e-mail"
+          },
+          {
+            "id": "s4",
+            "kind": "agent",
+            "label": "Send text message"
+          },
+          {
+            "gate": "or",
+            "id": "s5",
+            "kind": "join",
+            "label": "Channels done"
+          },
+          {
+            "id": "s6",
+            "kind": "end",
+            "label": "Customer notified"
+          }
+        ]
+      },
+      "workflow_id": "or-split-join"
+    }
+  }
+}

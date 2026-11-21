@@ -15,8 +15,8 @@ use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use medulla_types::contract::Digest256;
 use medulla_types::process_import::{
     AllocatedProcess, AnnexEntry, CanonicalFlow, CanonicalStep, CanonicalWorkflow, GateKind,
-    ImportError, KindAnnotation, LoweredFlow, LoweredProcess, LoweredStep, ProcessLoss,
-    ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind, ANNEX_EPC_STATE_EVENT,
+    ImportError, KindAnnotation, LoweredFlow, LoweredProcess, LoweredStep, ProcessExportLossy,
+    ProcessLoss, ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind, ANNEX_EPC_STATE_EVENT,
     LOSS_ANNEX_NOT_HELD, PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
 };
 use serde_json::Value;
@@ -570,21 +570,6 @@ pub fn export_canonical(
         out.annex.clear();
     }
     out
-}
-
-/// The wire code of a strict export that would lose a construct.
-pub const PROCESS_EXPORT_LOSSY: &str = "PROCESS_EXPORT_LOSSY";
-
-/// A strict export refused because the target cannot hold every construct.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProcessExportLossy {
-    pub losses: Vec<ProcessLoss>,
-}
-
-impl ProcessExportLossy {
-    pub fn code(&self) -> &'static str {
-        PROCESS_EXPORT_LOSSY
-    }
 }
 
 fn treatment(target: ProcessSourceSystem, construct: &str) -> Option<&'static str> {

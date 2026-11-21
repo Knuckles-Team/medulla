@@ -51,6 +51,9 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_decision_types::decision::context_package::ContextPackageErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
+        medulla_types::process_import::REFUSALS.contains(&code),
+        medulla_types::process_import::COMPILE_REFUSALS.contains(&code),
+        medulla_types::process_import::EXPORT_REFUSALS.contains(&code),
         // The decision plane's family and module refusal tables.
         medulla_decision_types::decision::codes::resolve(code).is_some(),
     ]
