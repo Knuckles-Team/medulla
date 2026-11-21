@@ -203,3 +203,49 @@ fn money_terms_refuse_floats_and_overrefunds() {
     let equal = over.replace("1001", "1000");
     assert_eq!(conforms(&equal), (true, Vec::new()));
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.4
+#[test]
+fn procurement_terms_reuse_commercial_and_supply_chain() {
+    let triples = triples();
+    for class in ["PurchaseOrderLine", "GoodsReceipt", "StockLevel", "ReorderPolicy"] {
+        assert_class(&triples, class);
+    }
+    // Reuse: the classes of the commercial and supply-chain modules are declared there
+    // and nowhere in this pack.
+    let declared = declared_classes(&triples);
+    for reused in ["PurchaseOrder", "PurchaseInvoice", "Supplier"] {
+        assert!(
+            !declared.contains(&format!("{KG}{reused}")),
+            "{reused} is reused, not redeclared"
+        );
+    }
+    let commercial = parse_turtle(include_str!("../ontology/commercial-v1.ttl")).unwrap();
+    let supply = parse_turtle(include_str!("../ontology/supply_chain-v1.ttl")).unwrap();
+    assert_class(&commercial, "PurchaseOrder");
+    assert_class(&commercial, "PurchaseInvoice");
+    assert_class(&supply, "Supplier");
+    // The new terms point at the reused classes.
+    for (property, range) in [
+        ("purchaseLineOfOrder", "PurchaseOrder"),
+        ("receiptOfOrder", "PurchaseOrder"),
+        ("reorderSupplier", "Supplier"),
+    ] {
+        assert!(
+            has_iri(
+                &triples,
+                &format!("{KG}{property}"),
+                &format!("{RDFS}range"),
+                &format!("{KG}{range}")
+            ),
+            "{property} ranges over {range}"
+        );
+    }
+    assert!(
+        triples.iter().any(|t| {
+            subject_str(&t.subject) == Some(&format!("{KG}leadTimeDays"))
+                && t.predicate.as_str() == format!("{RDF}type")
+        }),
+        "leadTimeDays is declared"
+    );
+}

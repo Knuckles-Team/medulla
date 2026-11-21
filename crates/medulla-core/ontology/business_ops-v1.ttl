@@ -243,3 +243,112 @@
     rdfs:label "amount currency" ;
     rdfs:comment "The currency code of an amount." ;
     rdfs:range xsd:string .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.4
+# Procurement and stock. :PurchaseOrder and :PurchaseInvoice are declared by the
+# commercial module and :Supplier by the supply-chain module; none is redeclared here.
+:PurchaseOrderLine a owl:Class ;
+    rdfs:label "Purchase Order Line" ;
+    rdfs:comment "One line of a purchase order: a variant, a quantity and a unit cost." ;
+    rdfs:subClassOf :DomainEntity .
+
+:GoodsReceipt a owl:Class ;
+    rdfs:label "Goods Receipt" ;
+    rdfs:comment "The receipt of goods against a purchase order." ;
+    rdfs:subClassOf :DomainEntity .
+
+:StockLevel a owl:Class ;
+    rdfs:label "Stock Level" ;
+    rdfs:comment "The on-hand and reserved quantity of one variant at one location as of a time." ;
+    rdfs:subClassOf :DomainEntity .
+
+:ReorderPolicy a owl:Class ;
+    rdfs:label "Reorder Policy" ;
+    rdfs:comment "When and how much to reorder one variant from one supplier." ;
+    rdfs:subClassOf :GovernanceRule .
+
+:purchaseLineOfOrder a owl:ObjectProperty ;
+    rdfs:label "purchase line of order" ;
+    rdfs:comment "Links a purchase order line to its purchase order." ;
+    rdfs:domain :PurchaseOrderLine ;
+    rdfs:range :PurchaseOrder .
+
+:purchaseLineVariant a owl:ObjectProperty ;
+    rdfs:label "purchase line variant" ;
+    rdfs:comment "The product variant a purchase order line buys." ;
+    rdfs:domain :PurchaseOrderLine .
+
+:purchaseLineQuantity a owl:DatatypeProperty ;
+    rdfs:label "purchase line quantity" ;
+    rdfs:comment "The quantity ordered, an integer count of units." ;
+    rdfs:domain :PurchaseOrderLine ;
+    rdfs:range xsd:integer .
+
+:receiptOfOrder a owl:ObjectProperty ;
+    rdfs:label "receipt of order" ;
+    rdfs:comment "Links a goods receipt to the purchase order it fulfils." ;
+    rdfs:domain :GoodsReceipt ;
+    rdfs:range :PurchaseOrder .
+
+:stockVariant a owl:ObjectProperty ;
+    rdfs:label "stock variant" ;
+    rdfs:comment "The product variant a stock level counts." ;
+    rdfs:domain :StockLevel .
+
+:stockLocation a owl:DatatypeProperty ;
+    rdfs:label "stock location" ;
+    rdfs:comment "The location a stock level counts." ;
+    rdfs:domain :StockLevel ;
+    rdfs:range xsd:string .
+
+:onHand a owl:DatatypeProperty ;
+    rdfs:label "on hand" ;
+    rdfs:comment "The quantity physically held, an integer count of units." ;
+    rdfs:domain :StockLevel ;
+    rdfs:range xsd:integer .
+
+:reservedQuantity a owl:DatatypeProperty ;
+    rdfs:label "reserved quantity" ;
+    rdfs:comment "The quantity held back for open orders, an integer count of units." ;
+    rdfs:domain :StockLevel ;
+    rdfs:range xsd:integer .
+
+:stockAsOf a owl:DatatypeProperty ;
+    rdfs:label "stock as of" ;
+    rdfs:comment "The time the stock level was counted." ;
+    rdfs:domain :StockLevel ;
+    rdfs:range xsd:dateTime .
+
+:reorderVariant a owl:ObjectProperty ;
+    rdfs:label "reorder variant" ;
+    rdfs:comment "The product variant a reorder policy governs." ;
+    rdfs:domain :ReorderPolicy .
+
+:reorderSupplier a owl:ObjectProperty ;
+    rdfs:label "reorder supplier" ;
+    rdfs:comment "The supplier a reorder policy buys from." ;
+    rdfs:domain :ReorderPolicy ;
+    rdfs:range :Supplier .
+
+:leadTimeDays a owl:DatatypeProperty ;
+    rdfs:label "lead time days" ;
+    rdfs:comment "Days from order to receipt: the lead time of a supplier, and the lead time a reorder policy plans with. It has no domain so both uses hold." ;
+    rdfs:range xsd:integer .
+
+:safetyStock a owl:DatatypeProperty ;
+    rdfs:label "safety stock" ;
+    rdfs:comment "Units held in reserve against demand variance, an integer." ;
+    rdfs:domain :ReorderPolicy ;
+    rdfs:range xsd:integer .
+
+:minimumOrderQuantity a owl:DatatypeProperty ;
+    rdfs:label "minimum order quantity" ;
+    rdfs:comment "The smallest quantity the supplier sells, an integer count of units." ;
+    rdfs:domain :ReorderPolicy ;
+    rdfs:range xsd:integer .
+
+:reviewWindowDays a owl:DatatypeProperty ;
+    rdfs:label "review window days" ;
+    rdfs:comment "The trailing days of sales a reorder review measures velocity over." ;
+    rdfs:domain :ReorderPolicy ;
+    rdfs:range xsd:integer .
