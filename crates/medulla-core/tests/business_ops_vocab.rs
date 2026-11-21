@@ -149,3 +149,57 @@ fn profile_and_governance_terms_with_shapes() {
     assert!(!ok, "a rule with no currency is refused");
     assert!(paths.iter().any(|path| path.ends_with("approvalCurrency>")));
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.3
+#[test]
+fn money_terms_refuse_floats_and_overrefunds() {
+    let triples = triples();
+    for class in ["OrderLine", "Payment", "Refund", "Payout", "Fee"] {
+        assert_class(&triples, class);
+    }
+    // The core :Order is reused, never redeclared.
+    assert!(!declared_classes(&triples).contains(&format!("{KG}Order")));
+    assert!(!declared_classes(&triples).contains(&format!("{KG}Customer")));
+
+    let good = "ex:order a :Order .\n\
+                ex:line a :OrderLine ; :lineOfOrder ex:order ; :lineQuantity 2 ; \
+                  :unitPriceMinor 1999 ; :taxMinor 160 .\n\
+                ex:pay a :Payment ; :paymentOfOrder ex:order ; :amountMinor 4158 ; \
+                  :amountCurrency \"USD\" .\n\
+                ex:ref a :Refund ; :refundOf ex:pay ; :amountMinor 1000 ; \
+                  :amountCurrency \"USD\" .\n\
+                ex:out a :Payout ; :settlesPayment ex:pay ; :amountMinor 4000 ; \
+                  :amountCurrency \"USD\" .\n\
+                ex:fee a :Fee ; :feeOfPayout ex:out ; :amountMinor 158 ; \
+                  :amountCurrency \"USD\" .\n";
+    assert_eq!(conforms(good), (true, Vec::new()));
+
+    // A float literal on an amount property is refused.
+    let (ok, paths) = conforms(
+        "ex:pay a :Payment ; :amountMinor 41.58 ; :amountCurrency \"USD\" .\n",
+    );
+    assert!(!ok, "a float amount is refused");
+    assert!(paths.iter().any(|path| path.ends_with("amountMinor>")));
+    let (ok, _) = conforms("ex:line a :OrderLine ; :unitPriceMinor 19.99 .\n");
+    assert!(!ok, "a float unit price is refused");
+
+    // An amount with no currency is refused.
+    let (ok, _) = conforms("ex:pay a :Payment ; :amountMinor 100 .\n");
+    assert!(!ok, "an amount without a currency is refused");
+
+    // A refund with no payment is refused.
+    let (ok, paths) = conforms(
+        "ex:ref a :Refund ; :amountMinor 100 ; :amountCurrency \"USD\" .\n",
+    );
+    assert!(!ok, "a refund without a payment is refused");
+    assert!(paths.iter().any(|path| path.ends_with("refundOf>")));
+
+    // A refund above its payment is refused; a refund equal to it conforms.
+    let over = "ex:pay a :Payment ; :amountMinor 1000 ; :amountCurrency \"USD\" .\n\
+                ex:ref a :Refund ; :refundOf ex:pay ; :amountMinor 1001 ; \
+                  :amountCurrency \"USD\" .\n";
+    let (ok, _) = conforms(over);
+    assert!(!ok, "a refund above its payment is refused");
+    let equal = over.replace("1001", "1000");
+    assert_eq!(conforms(&equal), (true, Vec::new()));
+}

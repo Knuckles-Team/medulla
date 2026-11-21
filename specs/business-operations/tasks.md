@@ -7,7 +7,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [ ] T001 [US1] MEDULLA-BUSINESS-OPS-R001 Business operations pack (rollup)
 - [x] T002 [US1] MEDULLA-BUSINESS-OPS-R001.1 Profile, brand and governance terms
 - [ ] T003 [US1] MEDULLA-BUSINESS-OPS-R001.2 Product, variant, batch and lot traceability
-- [ ] T004 [US1] MEDULLA-BUSINESS-OPS-R001.3 Order, payment, refund and payout terms
+- [x] T004 [US1] MEDULLA-BUSINESS-OPS-R001.3 Order, payment, refund and payout terms
 - [ ] T005 [US1] MEDULLA-BUSINESS-OPS-R001.4 Procurement and stock terms
 - [ ] T006 [US1] MEDULLA-BUSINESS-OPS-R001.5 Compliance obligation terms
 - [ ] T007 [US1] MEDULLA-BUSINESS-OPS-R001.6 Tax terms

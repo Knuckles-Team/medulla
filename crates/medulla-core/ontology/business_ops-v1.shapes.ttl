@@ -36,3 +36,53 @@ kg:ApprovalRuleShape a sh:NodeShape ;
 
 kg:BusinessOpsShapesPrefixes a owl:Ontology ;
     sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.3
+# Every amount is an integer in minor units: a float literal fails `MoneyShape`.
+kg:MoneyShape a sh:NodeShape ;
+    sh:targetSubjectsOf kg:amountMinor ;
+    sh:property [
+        sh:path kg:amountMinor ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "An amount is one integer in minor units."
+    ] ;
+    sh:property [
+        sh:path kg:amountCurrency ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "An amount carries one currency code."
+    ] ;
+    sh:message "Money is an integer in minor units with a currency code." .
+
+kg:OrderLineMoneyShape a sh:NodeShape ;
+    sh:targetClass kg:OrderLine ;
+    sh:property [
+        sh:path kg:unitPriceMinor ; sh:datatype xsd:integer ;
+        sh:message "A unit price is an integer in minor units."
+    ] ;
+    sh:property [
+        sh:path kg:taxMinor ; sh:datatype xsd:integer ;
+        sh:message "A tax amount is an integer in minor units."
+    ] ;
+    sh:property [
+        sh:path kg:lineQuantity ; sh:datatype xsd:integer ;
+        sh:message "A line quantity is an integer."
+    ] ;
+    sh:message "An order line carries only integer money and quantity." .
+
+kg:RefundShape a sh:NodeShape ;
+    sh:targetClass kg:Refund ;
+    sh:property [
+        sh:path kg:refundOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kg:Payment ;
+        sh:message "A Refund names exactly one payment it refunds."
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A Refund amount is not above the payment it refunds." ;
+        sh:prefixes kg:BusinessOpsShapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this kg:refundOf ?payment ; kg:amountMinor ?amount .
+                ?payment kg:amountMinor ?paid .
+                FILTER(?amount > ?paid)
+            }
+        """ ;
+    ] ;
+    sh:message "A refund returns part or all of one payment." .

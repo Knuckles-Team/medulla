@@ -147,3 +147,99 @@
     rdfs:label "phrase match mode" ;
     rdfs:comment "How the phrase matches: exact, word (word-bounded) or stem." ;
     rdfs:range xsd:string .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.3
+# Money is an integer in minor units with a currency code; `MoneyShape` refuses any
+# other literal on an amount property.
+:OrderLine a owl:Class ;
+    rdfs:label "Order Line" ;
+    rdfs:comment "One line of an order: a variant, optionally the lot it was drawn from, a quantity, a unit price and a tax amount." ;
+    rdfs:subClassOf :DomainEntity .
+
+:Payment a owl:Class ;
+    rdfs:label "Payment" ;
+    rdfs:comment "Money received against an order, in minor units." ;
+    rdfs:subClassOf :DomainEntity .
+
+:Refund a owl:Class ;
+    rdfs:label "Refund" ;
+    rdfs:comment "Money returned against one payment; never more than that payment." ;
+    rdfs:subClassOf :DomainEntity .
+
+:Payout a owl:Class ;
+    rdfs:label "Payout" ;
+    rdfs:comment "A batch transfer that settles payments, less fees." ;
+    rdfs:subClassOf :DomainEntity .
+
+:Fee a owl:Class ;
+    rdfs:label "Fee" ;
+    rdfs:comment "A charge netted against a payout." ;
+    rdfs:subClassOf :DomainEntity .
+
+:lineOfOrder a owl:ObjectProperty ;
+    rdfs:label "line of order" ;
+    rdfs:comment "Links an order line to the order it belongs to." ;
+    rdfs:domain :OrderLine ;
+    rdfs:range :Order .
+
+:lineVariant a owl:ObjectProperty ;
+    rdfs:label "line variant" ;
+    rdfs:comment "The product variant an order line sells." ;
+    rdfs:domain :OrderLine .
+
+:lineLot a owl:ObjectProperty ;
+    rdfs:label "line lot" ;
+    rdfs:comment "The lot an order line was drawn from." ;
+    rdfs:domain :OrderLine .
+
+:lineQuantity a owl:DatatypeProperty ;
+    rdfs:label "line quantity" ;
+    rdfs:comment "The quantity an order line sells, an integer count of units." ;
+    rdfs:domain :OrderLine ;
+    rdfs:range xsd:integer .
+
+:unitPriceMinor a owl:DatatypeProperty ;
+    rdfs:label "unit price" ;
+    rdfs:comment "The price of one unit, an integer in minor units." ;
+    rdfs:domain :OrderLine ;
+    rdfs:range xsd:integer .
+
+:taxMinor a owl:DatatypeProperty ;
+    rdfs:label "tax amount" ;
+    rdfs:comment "The tax on an order line, an integer in minor units." ;
+    rdfs:domain :OrderLine ;
+    rdfs:range xsd:integer .
+
+:paymentOfOrder a owl:ObjectProperty ;
+    rdfs:label "payment of order" ;
+    rdfs:comment "Links a payment to the order it pays." ;
+    rdfs:domain :Payment ;
+    rdfs:range :Order .
+
+:refundOf a owl:ObjectProperty ;
+    rdfs:label "refund of" ;
+    rdfs:comment "Links a refund to the one payment it returns." ;
+    rdfs:domain :Refund ;
+    rdfs:range :Payment .
+
+:settlesPayment a owl:ObjectProperty ;
+    rdfs:label "settles payment" ;
+    rdfs:comment "Links a payout to each payment it settles." ;
+    rdfs:domain :Payout ;
+    rdfs:range :Payment .
+
+:feeOfPayout a owl:ObjectProperty ;
+    rdfs:label "fee of payout" ;
+    rdfs:comment "Links a fee to the payout it is netted against." ;
+    rdfs:domain :Fee ;
+    rdfs:range :Payout .
+
+:amountMinor a owl:DatatypeProperty ;
+    rdfs:label "amount" ;
+    rdfs:comment "The amount of a payment, refund, payout or fee, an integer in minor units." ;
+    rdfs:range xsd:integer .
+
+:amountCurrency a owl:DatatypeProperty ;
+    rdfs:label "amount currency" ;
+    rdfs:comment "The currency code of an amount." ;
+    rdfs:range xsd:string .
