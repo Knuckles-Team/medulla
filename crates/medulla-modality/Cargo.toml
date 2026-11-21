@@ -61,3 +61,9 @@ medulla-rdf = { path = "../medulla-rdf", features = ["contract"] }
 medulla-tsdb = { path = "../medulla-tsdb", features = ["contract"] }
 medulla-kvcache = { path = "../medulla-kvcache", features = ["contract"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["contract"] }
+
+# MEDULLA-MEDIA-VOCAB-R650.6: nightly only, never a PR gate.
+[[bench]]
+name = "media_memory_write"
+path = "benches/media_memory_write.rs"
+harness = false
