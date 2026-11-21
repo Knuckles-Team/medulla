@@ -61,6 +61,19 @@ def declared(options: Iterable[DeclaredOption]) -> dict[str, Any]:
     return {"source": "declared", "options": [o.wire() for o in ordered]}
 
 
+def rank_catalog(options: Iterable[DeclaredOption]) -> dict[str, Any]:
+    """``CandidateSource::RankCatalog``; options sorted by id, ids unique.
+
+    The whole candidate set of a catalog goes in unfiltered (up to the engine's
+    cap); the caller's own scores are not accepted, so options carry texts only.
+    """
+    ordered = sorted(options, key=lambda o: o.option_id)
+    ids = [o.option_id for o in ordered]
+    if len(set(ids)) != len(ids):
+        raise ValueError("rank catalog option ids must be unique")
+    return {"source": "rank_catalog", "options": [o.wire() for o in ordered]}
+
+
 def library(
     kinds: Sequence[str], classification_under: str | None = None
 ) -> dict[str, Any]:
