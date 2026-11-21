@@ -340,10 +340,7 @@ impl DecisionFamily for ResearchVoiFamily {
                 ));
             }
             Ok(Executed::from_family(
-                StatisticalOutcome::Advisory {
-                    scores,
-                    calibrated: false,
-                },
+                StatisticalOutcome::advisory(scores, false),
                 Some(FamilyExecuted {
                     answer: Some(FamilyAnswer::Research(Box::new(ResearchAnswer {
                         reads,

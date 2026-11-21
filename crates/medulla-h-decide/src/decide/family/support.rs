@@ -101,10 +101,7 @@ pub(in crate::decide) fn advisory_scored(options: Vec<(String, i64)>) -> Result<
     Ok(Executed {
         matrix: None,
         ladder: LadderResult {
-            outcome: StatisticalOutcome::Advisory {
-                scores,
-                calibrated: false,
-            },
+            outcome: StatisticalOutcome::advisory(scores, false),
             calibration: None,
             explained: None,
             audit: None,

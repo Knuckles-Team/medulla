@@ -207,7 +207,7 @@ async fn decide_routes_capability_designation() {
         !ids_of(answer).contains(&"agent-c"),
         "another tenant's record"
     );
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("an advisory outcome, got {:?}", record.outcome);
     };
     assert!(!calibrated);

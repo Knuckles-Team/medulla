@@ -336,10 +336,7 @@ pub(crate) fn usage_guidance_outcome(
         (ResolutionKind::Constraint, EvidenceClass::Claim)
     };
     Ok(executed(
-        StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
-            calibrated: false,
-        },
+        StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false),
         Some(FamilyExecuted {
             answer: Some(FamilyAnswer::UsageGuidance(Box::new(guidance))),
             premises,

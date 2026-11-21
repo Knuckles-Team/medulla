@@ -297,10 +297,17 @@ async fn rank_catalog_accepts_two_thousand_and_refuses_one_more() {
     )
     .await
     .unwrap();
-    assert!(matches!(
-        batch.records.as_slice()[0].outcome,
-        StatisticalOutcome::Advisory { .. }
-    ));
+    // The Advisory holds the best 64 and reports how many were ranked.
+    let StatisticalOutcome::Advisory {
+        scores,
+        ranked_total,
+        ..
+    } = &batch.records.as_slice()[0].outcome
+    else {
+        panic!("an advisory over the 2,000 candidates expected");
+    };
+    assert_eq!(scores.as_slice().len(), 64);
+    assert_eq!(*ranked_total, MAX_RANK_CATALOG_CANDIDATES as u32);
 
     let before = h.store.decision_artifacts_with_prefix(TENANT, "", 100_000).unwrap().len();
     let too_large = decide(
@@ -319,7 +326,7 @@ async fn rank_catalog_accepts_two_thousand_and_refuses_one_more() {
     let after = h.store.decision_artifacts_with_prefix(TENANT, "", 100_000).unwrap().len();
     assert_eq!(before, after, "a refusal logs no record");
 
-    // The same 65 options as a declared source are refused.
+    // A catalog question id over a declared source is refused.
     let declared = CandidateSource::Declared {
         options: BoundedVec::new(
             many(65)

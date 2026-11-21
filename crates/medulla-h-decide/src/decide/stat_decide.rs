@@ -26,6 +26,7 @@ use medulla_decision_types::{
     decision::statistical::QuestionKind, decision::statistical::ShortlistProvenance,
     decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
     decision::statistical::StatisticalInputs, decision::statistical::StatisticalOutcome,
+    decision::statistical::declared::MAX_DECLARED_OPTIONS,
 };
 use medulla_decision_types::{
     decision::EvidenceClass, decision::PremiseClass, decision::PremiseProvenance,
@@ -531,12 +532,28 @@ pub(super) fn decide_blocking(
         policy.statistical.tenant_public_features,
         &mut candidates.views,
     )?;
+    // A rank catalog larger than one record holds is ranked whole and sealed
+    // as its best 64; the Advisory reports how many were ranked
+    // (MEDULLA-DECISION-ENGINE-R829.1).
+    let ranked_total = candidates.views.len();
+    if matches!(request.candidates, CandidateSource::RankCatalog { .. })
+        && ranked_total > MAX_DECLARED_OPTIONS
+    {
+        let best = super::stat_executor::best_candidate_ids(
+            ctx,
+            request,
+            &pinned,
+            &candidates.views,
+            MAX_DECLARED_OPTIONS,
+        )?;
+        candidates.views.retain(|v| best.contains(&v.id));
+    }
     if request.question.kind == QuestionKind::Route {
         fill_observed_costs(ctx.store, ctx.tenant_id, &mut candidates.views)?;
     }
     // The kind's family concludes its specialized answer; the shared
     // matrix ladder is the fall-through (R001.101).
-    let executed = telemetry::stage(Stage::Solve, family, tenant, || {
+    let mut executed = telemetry::stage(Stage::Solve, family, tenant, || {
         // A rank question that names a distilled scorer ranks from stored
         // scores alone (R147.3): no head reading, so nothing to refine.
         if let Some(ranked) =
@@ -565,6 +582,13 @@ pub(super) fn decide_blocking(
             executed,
         )
     })?;
+    if let StatisticalOutcome::Advisory {
+        ranked_total: total,
+        ..
+    } = &mut executed.ladder.outcome
+    {
+        *total = (*total).max(ranked_total as u32);
+    }
     // The policy's safety bounds are checked after the decision concludes and
     // before it is sealed (MEDULLA-DECISION-ENGINE-R001.100.2).
     let (executed, safety_premises) =

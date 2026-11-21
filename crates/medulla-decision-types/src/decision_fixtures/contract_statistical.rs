@@ -146,6 +146,7 @@ pub fn every_statistical_outcome() -> Vec<StatisticalOutcome> {
                 probability: Some(unit_rational(1, 2)),
             }]),
             calibrated: false,
+            ranked_total: 1,
         },
         StatisticalOutcome::Abstained {
             reasons: bounded(every_abstain_reason()),

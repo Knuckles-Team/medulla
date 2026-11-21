@@ -70,10 +70,7 @@ fn conclude_topology(
     Ok(match conclusion {
         TopologyConclusion::Planned { plan, premises } => executed(
             // A proven plan is not a calibrated score or an authorization grant.
-            StatisticalOutcome::Advisory {
-                scores: BoundedVec::default(),
-                calibrated: false,
-            },
+            StatisticalOutcome::advisory(BoundedVec::default(), false),
             Some(FamilyExecuted {
                 answer: Some(
                     medulla_decision_types::decision::statistical::outcome::FamilyAnswer::Topology(

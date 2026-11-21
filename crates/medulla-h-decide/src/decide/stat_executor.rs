@@ -424,6 +424,42 @@ pub(super) fn execute(
     run_on_matrix(&inputs, pinned, policy, matrix)
 }
 
+/// The ids of the best `limit` of `views` under the pinned head, for a rank
+/// catalog larger than the 64 options one record seals
+/// (MEDULLA-DECISION-ENGINE-R829.1). Each candidate is read once; the order is
+/// the head's logit, highest first, ties by candidate order (ids are sorted).
+/// Without a head reading (no pinned head, an unknown fact or an
+/// out-of-distribution cell) the decision abstains on the leading `limit`
+/// ids. The ids come back in candidate order.
+pub(super) fn best_candidate_ids(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    pinned: &Pinned,
+    views: &[CandidateView],
+    limit: usize,
+) -> Result<Vec<String>, String> {
+    let leading = || views.iter().take(limit).map(|v| v.id.clone()).collect();
+    let features = FeatureInputs {
+        params: request.params.as_slice(),
+        now_ms: ctx.now_ms,
+    };
+    let matrix = match feature_matrix(&pinned.schema, views, &features).map_err(|r| r.render())? {
+        MatrixOutcome::Complete(matrix) => matrix,
+        MatrixOutcome::UnknownFact { .. } => return Ok(leading()),
+    };
+    let Some(Ok(evaluated)) = head_reading(pinned, &matrix)? else {
+        return Ok(leading());
+    };
+    let mut order: Vec<usize> = (0..matrix.candidate_ids.len()).collect();
+    order.sort_by(|&a, &b| evaluated.logits[b].total_cmp(&evaluated.logits[a]).then(a.cmp(&b)));
+    order.truncate(limit);
+    order.sort_unstable();
+    Ok(order
+        .into_iter()
+        .map(|i| matrix.candidate_ids[i].clone())
+        .collect())
+}
+
 /// The recorded explanation of the explained option, for a linear head
 /// (an `OptionAttention` head records none).
 pub(super) fn recorded_explanation(

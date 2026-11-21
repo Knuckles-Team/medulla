@@ -51,7 +51,12 @@ def identity(asked):
         "record_digest": "digest",
         "evidence_class": "claim",
         "resolution_kind": "constraint",
-        "outcome": {"outcome": "advisory", "scores": [], "calibrated": False},
+        "outcome": {
+            "outcome": "advisory",
+            "scores": [],
+            "calibrated": False,
+            "ranked_total": 0,
+        },
         "inputs": {
             key: asked[key] for key in ("params", "feature_schema", "head", "policy")
         },

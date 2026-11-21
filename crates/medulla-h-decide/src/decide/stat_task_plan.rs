@@ -512,10 +512,7 @@ pub(super) fn task_plan(
 
 pub(super) fn outcome(_plan: &TaskPlan) -> StatisticalOutcome {
     // A canonical plan is not a calibrated score or an authorization grant.
-    StatisticalOutcome::Advisory {
-        scores: BoundedVec::default(),
-        calibrated: false,
-    }
+    StatisticalOutcome::advisory(BoundedVec::default(), false)
 }
 
 /// A tool step's call and each binding are caller claims; neither grants

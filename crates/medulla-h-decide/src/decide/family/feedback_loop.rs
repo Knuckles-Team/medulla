@@ -247,11 +247,8 @@ pub(crate) fn round_outcome(
         effective_bound(bound, knob),
     );
     let stops = continuation.stop.is_some();
-    Ok(StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(vec![scored(CONTINUE, !stops), scored(STOP, stops)])
-            .expect("two scores fit the bound"),
-        calibrated: false,
-    })
+    Ok(StatisticalOutcome::advisory(BoundedVec::new(vec![scored(CONTINUE, !stops), scored(STOP, stops)])
+            .expect("two scores fit the bound"), false))
 }
 
 fn conclude(

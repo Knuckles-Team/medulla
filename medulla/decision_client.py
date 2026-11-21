@@ -488,7 +488,12 @@ def _verify_task_plan_identity(
         received["evidence_class"] == "claim"
         and received["resolution_kind"] == "constraint"
         and received["outcome"]
-        == {"outcome": "advisory", "scores": [], "calibrated": False},
+        == {
+            "outcome": "advisory",
+            "scores": [],
+            "calibrated": False,
+            "ranked_total": 0,
+        },
         "evaluate-only evidence",
     )
     for key in ("params", "feature_schema", "head", "policy"):

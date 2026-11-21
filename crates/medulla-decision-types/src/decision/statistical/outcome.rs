@@ -99,14 +99,31 @@ pub enum StatisticalOutcome {
         propensity: UnitRationalWire,
     },
     /// Scores only. `calibrated` says whether they mean anything numerically.
+    /// `scores` holds at most the top 64 options; `ranked_total` is how many
+    /// candidates were ranked to produce them (MEDULLA-DECISION-ENGINE-R829.1),
+    /// equal to `scores.len()` unless a rank catalog named more than 64.
     Advisory {
         scores: BoundedVec<ScoredOption, 64>,
         calibrated: bool,
+        ranked_total: u32,
     },
     /// Below the policy's floor; the same typed reasons as an assembly.
     Abstained {
         reasons: BoundedVec<AbstainReason, 64>,
     },
+}
+
+impl StatisticalOutcome {
+    /// An advisory over `scores` alone: every ranked candidate is scored, so
+    /// `ranked_total` is the number of scores.
+    pub fn advisory(scores: BoundedVec<ScoredOption, 64>, calibrated: bool) -> Self {
+        let ranked_total = scores.as_slice().len() as u32;
+        Self::Advisory {
+            scores,
+            calibrated,
+            ranked_total,
+        }
+    }
 }
 
 /// The exact per-feature logit contributions of one option under a linear

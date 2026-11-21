@@ -336,11 +336,8 @@ fn compute(request: &DecideRequest) -> Result<StatisticalOutcome, String> {
             probability: None,
         })
         .collect();
-    Ok(StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(scores)
-            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
-        calibrated: false,
-    })
+    Ok(StatisticalOutcome::advisory(BoundedVec::new(scores)
+            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?, false))
 }
 
 #[cfg(test)]

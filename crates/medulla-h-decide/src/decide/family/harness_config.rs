@@ -1193,11 +1193,8 @@ fn outcome_of(
             probability: None,
         })
         .collect();
-    Ok(StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(scores)
-            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
-        calibrated: false,
-    })
+    Ok(StatisticalOutcome::advisory(BoundedVec::new(scores)
+            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?, false))
 }
 
 fn mismatch(detail: impl std::fmt::Display) -> String {

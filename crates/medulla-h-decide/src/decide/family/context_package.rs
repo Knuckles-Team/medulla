@@ -447,10 +447,7 @@ fn solve(
         .collect();
     let scores = BoundedVec::new(scores)
         .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?;
-    let mut executed = answered(StatisticalOutcome::Advisory {
-        scores,
-        calibrated: false,
-    });
+    let mut executed = answered(StatisticalOutcome::advisory(scores, false));
     let mut premises = bound_premises;
     premises.extend(evidence_premises(package, &solved)?);
     executed.family_premises = premises;

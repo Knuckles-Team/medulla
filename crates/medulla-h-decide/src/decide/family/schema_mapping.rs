@@ -175,10 +175,7 @@ fn conclude(
                     probability: None,
                 })
                 .collect();
-            StatisticalOutcome::Advisory {
-                scores: BoundedVec::new(scores).map_err(invalid)?,
-                calibrated: false,
-            }
+            StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid)?, false)
         }
         _ => StatisticalOutcome::Abstained {
             reasons: BoundedVec::new(vec![AbstainReason::InsufficientConfidence])

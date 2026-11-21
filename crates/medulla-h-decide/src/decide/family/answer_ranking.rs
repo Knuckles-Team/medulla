@@ -105,10 +105,7 @@ impl DecisionFamily for AnswerRankingFamily {
                     })
                     .collect();
                 let scores = BoundedVec::new(scores).map_err(invalid)?;
-                executed.ladder.outcome = StatisticalOutcome::Advisory {
-                    scores,
-                    calibrated: false,
-                };
+                executed.ladder.outcome = StatisticalOutcome::advisory(scores, false);
                 Ok(executed)
             }),
         })

@@ -90,10 +90,7 @@ pub(super) fn claim(subject: &str, fact: String, field: &str) -> PremiseRef {
 /// The outcome of a kernel family: an uncalibrated advisory, because every
 /// input is a caller claim and the answer authorizes nothing.
 pub(super) fn advisory() -> StatisticalOutcome {
-    StatisticalOutcome::Advisory {
-        scores: BoundedVec::default(),
-        calibrated: false,
-    }
+    StatisticalOutcome::advisory(BoundedVec::default(), false)
 }
 
 /// An abstention of `kind` under its registered `code`: the request is well

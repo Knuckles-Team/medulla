@@ -240,10 +240,7 @@ pub(super) fn conclude(
             .expect("one reason"),
         },
         // Scores are caller claims: neither calibrated nor an authorization.
-        _ => StatisticalOutcome::Advisory {
-            scores: BoundedVec::default(),
-            calibrated: false,
-        },
+        _ => StatisticalOutcome::advisory(BoundedVec::default(), false),
     };
     let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
     let premises = premises(&parsed, strategy, &policy_digest, &answer);

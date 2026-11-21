@@ -410,10 +410,7 @@ pub(super) fn rank(
     let mut executed = advisory(Vec::new())?;
     let ranked = BoundedVec::new(kept)
         .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?;
-    executed.ladder.outcome = StatisticalOutcome::Advisory {
-        scores: ranked,
-        calibrated: false,
-    };
+    executed.ladder.outcome = StatisticalOutcome::advisory(ranked, false);
     executed.family_premises = premises;
     Ok(Some(executed))
 }

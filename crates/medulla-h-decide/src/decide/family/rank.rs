@@ -235,10 +235,7 @@ impl DecisionFamily for RankFamily {
                 .filter_map(|(candidate, _)| scores.iter().find(|s| s.option_id == candidate.id))
                 .cloned()
                 .collect();
-            StatisticalOutcome::Advisory {
-                scores: BoundedVec::new(ordered)?,
-                calibrated: true,
-            }
+            StatisticalOutcome::advisory(BoundedVec::new(ordered)?, true)
         };
         Ok(executed)
     }

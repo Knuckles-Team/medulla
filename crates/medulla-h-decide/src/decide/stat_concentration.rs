@@ -270,10 +270,7 @@ pub(super) fn conclude(
                     scored("action:revert".to_string(), revert),
                     scored(format!("count:{}", verdict.count), i64::from(verdict.count)),
                 ];
-                let mut answered = executed(StatisticalOutcome::Advisory {
-                    scores: BoundedVec::new(scores).expect("three scores fit the bound"),
-                    calibrated: false,
-                });
+                let mut answered = executed(StatisticalOutcome::advisory(BoundedVec::new(scores).expect("three scores fit the bound"), false));
                 answered.family = Some(FamilyExecuted {
                     answer: None,
                     premises: premises(request, tenant, graph_view),

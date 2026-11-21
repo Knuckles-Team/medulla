@@ -212,10 +212,7 @@ impl DecisionFamily for ComparativeAnalysisPlanFamily {
         Some(Ok(Executed {
             matrix: None,
             ladder: LadderResult {
-                outcome: StatisticalOutcome::Advisory {
-                    scores: BoundedVec::default(),
-                    calibrated: false,
-                },
+                outcome: StatisticalOutcome::advisory(BoundedVec::default(), false),
                 calibration: None,
                 explained: None,
                 audit: None,

@@ -174,7 +174,7 @@ fn rank_request(
 }
 
 fn scored_ids(record: &StatisticalDecisionRecord) -> Vec<String> {
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("advisory outcome, got {:?}", record.outcome)
     };
     assert!(calibrated, "calibrated probabilities order the list");

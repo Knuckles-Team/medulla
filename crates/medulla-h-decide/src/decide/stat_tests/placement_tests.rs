@@ -203,7 +203,7 @@ pub(super) fn placement_request(
 }
 
 fn ranked(batch: &DecisionBatch) -> Vec<String> {
-    let StatisticalOutcome::Advisory { scores, calibrated } = &batch.records.as_slice()[0].outcome
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &batch.records.as_slice()[0].outcome
     else {
         panic!(
             "expected an Advisory outcome: {:?}",

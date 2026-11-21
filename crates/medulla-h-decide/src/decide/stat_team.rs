@@ -260,11 +260,8 @@ pub(super) fn conclude(
         score: q32(i64::from(id == chosen)),
         probability: None,
     };
-    let mut concluded = executed(StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(vec![score(PRIMARY_CHANNEL), score(TEAM_COORDINATION)])
-            .expect("two scores fit the bound"),
-        calibrated: false,
-    });
+    let mut concluded = executed(StatisticalOutcome::advisory(BoundedVec::new(vec![score(PRIMARY_CHANNEL), score(TEAM_COORDINATION)])
+            .expect("two scores fit the bound"), false));
     concluded.family = Some(FamilyExecuted {
         answer: None,
         premises: premises(request, tenant, graph_view),

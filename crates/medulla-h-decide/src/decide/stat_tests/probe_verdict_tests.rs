@@ -119,7 +119,7 @@ fn probe_request(
 
 /// The label scoring 1.0, after asserting the other two score 0.
 fn chosen(record: &StatisticalDecisionRecord) -> String {
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("an advisory outcome, got {:?}", record.outcome);
     };
     assert!(!calibrated);

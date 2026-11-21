@@ -191,10 +191,7 @@ pub(super) fn placement_plan_outcome(
                 probability: None,
             }];
             Ok((
-                StatisticalOutcome::Advisory {
-                    scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
-                    calibrated: false,
-                },
+                StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false),
                 Some(plan),
             ))
         }

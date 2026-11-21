@@ -260,6 +260,7 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
             "outcome": "advisory",
             "scores": [],
             "calibrated": False,
+            "ranked_total": 0,
         }
         assert record["tenant_id"] == TEST_TENANT
         assert record["record_digest"].startswith("sha256:")

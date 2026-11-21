@@ -138,7 +138,7 @@ fn deterministic_only_abstains_and_advisory_is_labelled_uncalibrated() {
         ..inputs
     })
     .expect("decides");
-    let StatisticalOutcome::Advisory { calibrated, scores } = result.outcome else {
+    let StatisticalOutcome::Advisory { calibrated, scores, .. } = result.outcome else {
         panic!("advisory expected")
     };
     assert!(!calibrated);

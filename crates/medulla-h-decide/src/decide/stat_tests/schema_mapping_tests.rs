@@ -73,7 +73,7 @@ fn mapping_request(
 
 fn proposed(batch: &DecisionBatch) -> (String, Vec<PremiseRef>) {
     let record = &batch.records.as_slice()[0];
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("expected a proposal, got {:?}", record.outcome)
     };
     assert!(!calibrated);

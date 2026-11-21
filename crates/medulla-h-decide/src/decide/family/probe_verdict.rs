@@ -219,10 +219,7 @@ fn conclude_probe(
     ]
     .map(|candidate| scored(label(candidate), candidate == verdict));
     let mut executed = advisory(Vec::new())?;
-    executed.ladder.outcome = StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(scores.to_vec()).map_err(invalid)?,
-        calibrated: false,
-    };
+    executed.ladder.outcome = StatisticalOutcome::advisory(BoundedVec::new(scores.to_vec()).map_err(invalid)?, false);
     executed.family_premises = premises;
     Ok(executed)
 }

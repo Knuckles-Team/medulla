@@ -116,7 +116,7 @@ async fn plan_request_returns_sealed_plan() {
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.question.kind, QuestionKind::PlacementPlan);
     assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("expected an Advisory outcome: {:?}", record.outcome)
     };
     assert!(!calibrated, "a plan score is not a probability");

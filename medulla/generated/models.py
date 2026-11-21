@@ -26199,6 +26199,7 @@ class StatisticalOutcomeAdvisory(BaseModel):
 
     calibrated: bool
     outcome: Literal["advisory"]
+    ranked_total: Annotated[int, Field(ge=0, le=4294967295)]
     scores: BoundedVec_ScoredOption_64
 
 

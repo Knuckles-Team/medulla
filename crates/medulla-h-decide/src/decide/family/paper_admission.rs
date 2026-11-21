@@ -201,10 +201,7 @@ impl DecisionFamily for PaperAdmissionFamily {
             ));
             admitted.push(scored);
         }
-        executed.ladder.outcome = StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(admitted)?,
-            calibrated: true,
-        };
+        executed.ladder.outcome = StatisticalOutcome::advisory(BoundedVec::new(admitted)?, true);
         executed.family_premises = premises;
         Ok(executed)
     }

@@ -370,10 +370,7 @@ pub(crate) fn load_set_outcome(
         premises: premises.clone(),
     };
     Ok(executed(
-        StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
-            calibrated: false,
-        },
+        StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false),
         Some(FamilyExecuted {
             answer: Some(FamilyAnswer::LoadSet(Box::new(answer))),
             premises,

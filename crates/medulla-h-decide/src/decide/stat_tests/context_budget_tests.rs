@@ -176,7 +176,7 @@ fn partition_of(record: &StatisticalDecisionRecord) -> BTreeMap<String, Vec<Stri
 }
 
 fn selected_of(record: &StatisticalDecisionRecord) -> Vec<String> {
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!(
             "expected the selected sources as advisory scores: {:?}",
             record.outcome

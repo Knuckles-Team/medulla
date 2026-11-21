@@ -205,11 +205,8 @@ impl DecisionFamily for ContextBudgetFamily {
                 probability: None,
             })
             .collect::<Vec<_>>();
-        executed.ladder.outcome = StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(advisory)
-                .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
-            calibrated: false,
-        };
+        executed.ladder.outcome = StatisticalOutcome::advisory(BoundedVec::new(advisory)
+                .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?, false);
         executed.ladder.calibration = None;
         executed.ladder.audit = None;
         executed.ladder.logging = Vec::new();

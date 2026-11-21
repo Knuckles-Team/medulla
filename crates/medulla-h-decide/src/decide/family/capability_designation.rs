@@ -710,10 +710,7 @@ pub(crate) fn capability_designation_outcome(
         })
         .collect();
     Ok(executed(
-        StatisticalOutcome::Advisory {
-            scores: BoundedVec::new(scores).map_err(invalid_parameter)?,
-            calibrated: false,
-        },
+        StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false),
         Some(FamilyExecuted {
             answer: Some(FamilyAnswer::CapabilityDesignation(Box::new(answer))),
             premises,

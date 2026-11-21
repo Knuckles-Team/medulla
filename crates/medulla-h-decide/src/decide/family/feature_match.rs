@@ -325,10 +325,7 @@ impl DecisionFamily for FeatureMatchFamily {
                 ));
             }
             Ok(Executed::from_family(
-                StatisticalOutcome::Advisory {
-                    scores,
-                    calibrated: false,
-                },
+                StatisticalOutcome::advisory(scores, false),
                 Some(FamilyExecuted {
                     answer: Some(FamilyAnswer::FeatureMatch(Box::new(FeatureMatchAnswer {
                         matches: found.matches,

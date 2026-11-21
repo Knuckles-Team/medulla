@@ -116,8 +116,8 @@ fn admission(upgrade: &SkillUpgradeRequest) -> Result<Executed, String> {
             ),
         ));
     }
-    Ok(executed(StatisticalOutcome::Advisory {
-        scores: BoundedVec::new(vec![ScoredOption {
+    Ok(executed(StatisticalOutcome::advisory(
+        BoundedVec::new(vec![ScoredOption {
             option_id: ADMIT_UPGRADE.to_string(),
             score: QuantisedValue {
                 scale: QuantScaleTag::Q32,
@@ -126,8 +126,8 @@ fn admission(upgrade: &SkillUpgradeRequest) -> Result<Executed, String> {
             probability: None,
         }])
         .expect("one score fits the bound"),
-        calibrated: false,
-    }))
+        false,
+    ))
 }
 
 impl DecisionFamily for SkillUpgradeFamily {

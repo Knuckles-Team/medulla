@@ -188,7 +188,7 @@ async fn match_and_ledger_reach_their_handlers() {
     assert_eq!(answer.plans.len(), 1);
     let plan = answer.plans[0].clone();
     assert_eq!(plan.feature_ids, vec!["f-e2".to_string()]);
-    let StatisticalOutcome::Advisory { scores, calibrated } = &record.outcome else {
+    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
         panic!("feature_match answers an advisory: {:?}", record.outcome);
     };
     assert!(!calibrated);

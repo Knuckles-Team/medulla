@@ -286,8 +286,8 @@ impl DecisionFamily for PlanningAdmissionFamily {
         let plan = plan_of(request)?;
         Some(
             admit_plan(plan, ctx.tenant_id, graph_view).map(|admission| match admission {
-                Admission::Admitted => executed(StatisticalOutcome::Advisory {
-                    scores: BoundedVec::new(vec![ScoredOption {
+                Admission::Admitted => executed(StatisticalOutcome::advisory(
+                    BoundedVec::new(vec![ScoredOption {
                         option_id: ADMIT_PLAN.to_string(),
                         score: QuantisedValue {
                             scale: QuantScaleTag::Q32,
@@ -296,8 +296,8 @@ impl DecisionFamily for PlanningAdmissionFamily {
                         probability: None,
                     }])
                     .expect("one score fits the bound"),
-                    calibrated: false,
-                }),
+                    false,
+                )),
                 Admission::Held { code, detail } => executed(StatisticalOutcome::Abstained {
                     reasons: BoundedVec::new(vec![AbstainReason::Family {
                         family: QuestionKind::PlanningAdmission,
