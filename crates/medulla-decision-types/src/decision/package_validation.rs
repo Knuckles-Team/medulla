@@ -6,7 +6,73 @@
 
 use medulla_catalog_types::fleet_catalog::rendered::RenderedSkillPackage;
 use medulla_types::contract::{Digest256, OpaqueId};
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
+
+/// `PACKAGE_DIGEST_MISMATCH`: the rendered digest does not parse, or a run names another package.
+pub const PACKAGE_DIGEST_MISMATCH: RefusalCode = RefusalCode::new("PACKAGE_DIGEST_MISMATCH");
+/// `PACKAGE_RUN_SET_INVALID`: two history entries share a `run_id`.
+pub const PACKAGE_RUN_SET_INVALID: RefusalCode = RefusalCode::new("PACKAGE_RUN_SET_INVALID");
+/// `PACKAGE_RUN_HISTORY_MISSING`: fewer than `package.min_runs` runs are recorded.
+pub const PACKAGE_RUN_HISTORY_MISSING: RefusalCode =
+    RefusalCode::new("PACKAGE_RUN_HISTORY_MISSING");
+/// `PACKAGE_VALIDATION_FAILED`: the pass share is below `package.min_pass_rate`.
+pub const PACKAGE_VALIDATION_FAILED: RefusalCode = RefusalCode::new("PACKAGE_VALIDATION_FAILED");
+
+/// The four codes of package publication: the one refusal list of `PublishSkillPackage`
+/// (MEDULLA-DECISION-ENGINE-R160.4).
+pub const REFUSALS: &[RefusalCode] = &[
+    PACKAGE_DIGEST_MISMATCH,
+    PACKAGE_RUN_SET_INVALID,
+    PACKAGE_RUN_HISTORY_MISSING,
+    PACKAGE_VALIDATION_FAILED,
+];
+
+/// The one refusal type of package publication. Each variant is the trigger of one numbered
+/// step of `validate_rendered_package` (MEDULLA-DECISION-ENGINE-R160.2); a refusal writes no
+/// receipt and the catalog stays unchanged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PublicationRefusal {
+    /// The rendered digest does not parse, or a run names a different package digest.
+    DigestMismatch,
+    /// Two history entries share a `run_id`.
+    RunSetInvalid,
+    /// Fewer runs are recorded than `package.min_runs`.
+    RunHistoryMissing,
+    /// The share of passing runs is below `package.min_pass_rate`.
+    ValidationFailed { passed: u64, total: u64 },
+}
+
+impl PublicationRefusal {
+    /// The wire code of this refusal.
+    pub fn code(&self) -> RefusalCode {
+        match self {
+            Self::DigestMismatch => PACKAGE_DIGEST_MISMATCH,
+            Self::RunSetInvalid => PACKAGE_RUN_SET_INVALID,
+            Self::RunHistoryMissing => PACKAGE_RUN_HISTORY_MISSING,
+            Self::ValidationFailed { .. } => PACKAGE_VALIDATION_FAILED,
+        }
+    }
+}
+
+impl std::fmt::Display for PublicationRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = self.code().as_str();
+        match self {
+            Self::DigestMismatch => write!(
+                f,
+                "{code}: the rendered digest is not a digest, or a run names another package"
+            ),
+            Self::RunSetInvalid => write!(f, "{code}: two runs share one run id"),
+            Self::RunHistoryMissing => write!(f, "{code}: too few runs are recorded"),
+            Self::ValidationFailed { passed, total } => {
+                write!(f, "{code}: {passed} of {total} runs passed")
+            }
+        }
+    }
+}
+
+impl std::error::Error for PublicationRefusal {}
 
 /// Domain of the run-history digest.
 pub const RUN_HISTORY_DIGEST_DOMAIN: &[u8] = b"eg/package-run-history/v1";
@@ -147,5 +213,52 @@ mod tests {
         let mut wire = serde_json::to_value(&identity).unwrap();
         wire["content_digest"] = serde_json::json!("abc");
         assert!(serde_json::from_value::<PackageIdentity>(wire).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R160.4
+    #[test]
+    fn refusal_codes_are_unique_and_registered() {
+        let refusals = [
+            (PublicationRefusal::DigestMismatch, "PACKAGE_DIGEST_MISMATCH"),
+            (PublicationRefusal::RunSetInvalid, "PACKAGE_RUN_SET_INVALID"),
+            (
+                PublicationRefusal::RunHistoryMissing,
+                "PACKAGE_RUN_HISTORY_MISSING",
+            ),
+            (
+                PublicationRefusal::ValidationFailed {
+                    passed: 1,
+                    total: 3,
+                },
+                "PACKAGE_VALIDATION_FAILED",
+            ),
+        ];
+        for (refusal, code) in &refusals {
+            assert_eq!(refusal.code().as_str(), *code);
+            assert!(refusal.to_string().starts_with(&format!("{code}: ")));
+            assert!(REFUSALS.contains(&refusal.code()));
+            assert_eq!(crate::decision::codes::resolve(code), Some(refusal.code()));
+        }
+        let unique: std::collections::BTreeSet<_> = REFUSALS.iter().collect();
+        assert_eq!(unique.len(), REFUSALS.len());
+        assert_eq!(REFUSALS.len(), 4);
+        // `EXACT_METHOD_ERRORS` lists exactly these codes for `PublishSkillPackage`.
+        let routing = include_str!("../../../medulla-capabilities/src/error_routing.rs");
+        let entry = routing
+            .split("\"PublishSkillPackage\",")
+            .nth(1)
+            .expect("an EXACT_METHOD_ERRORS entry for PublishSkillPackage")
+            .split("&[")
+            .nth(1)
+            .and_then(|rest| rest.split(']').next())
+            .unwrap();
+        let listed: std::collections::BTreeSet<&str> =
+            entry.split('"').skip(1).step_by(2).collect();
+        let declared: std::collections::BTreeSet<&str> =
+            REFUSALS.iter().map(|code| code.as_str()).collect();
+        assert_eq!(listed, declared);
+        // The codes the spec says do not exist stay unregistered.
+        assert_eq!(crate::decision::codes::resolve("PACKAGE_RUN_SET_INCOMPLETE"), None);
+        assert_eq!(crate::decision::codes::resolve("PACKAGE_POLICY_MISMATCH"), None);
     }
 }

@@ -209,6 +209,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-TYPED-PACKS-R807: the conformance read or revoke finds no current evidence.
     ("ConnectorPack", &["CONFORMANCE_EVIDENCE_ABSENT"]),
+    // MEDULLA-DECISION-ENGINE-R160.4: skill package publication refusals.
+    (
+        "PublishSkillPackage",
+        &[
+            "PACKAGE_DIGEST_MISMATCH",
+            "PACKAGE_RUN_SET_INVALID",
+            "PACKAGE_RUN_HISTORY_MISSING",
+            "PACKAGE_VALIDATION_FAILED",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.3: a source that cannot give one snapshot.
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 / MEDULLA-FEDERATED-QUERY-R073.3: a remote
     // branch whose source cannot be reached.

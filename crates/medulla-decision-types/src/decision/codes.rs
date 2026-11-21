@@ -648,6 +648,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("context_facts", context_facts::REFUSALS.to_vec()),
         ("meeting_transcript", codes(meeting_transcript::REFUSALS)),
         ("participant", participant::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R160.4: skill package publication.
+        (
+            "package_publication",
+            super::package_validation::REFUSALS.to_vec(),
+        ),
         ("source_toc", source_toc::REFUSALS.to_vec()),
         ("transition_refused", transition_refused::REFUSALS.to_vec()),
         (
