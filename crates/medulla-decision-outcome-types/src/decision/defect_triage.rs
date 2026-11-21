@@ -7,7 +7,105 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_decision_types::decision::codes;
+use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use medulla_decision_types::decision::record::outcome::RefusalCode;
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_source_types::lifecycle::Severity;
+
+/// A triage that names a defect the engine does not hold.
+pub const DEFECT_UNKNOWN: RefusalCode = RefusalCode::new("DEFECT_UNKNOWN");
+/// A triage of a defect that is already closed.
+pub const DEFECT_CLOSED: RefusalCode = RefusalCode::new("DEFECT_CLOSED");
+
+/// The refusal codes of the `DefectTriage` family (MEDULLA-SDLC-R004.7), in
+/// declaration order. The three `TRIAGE_*` codes map one to one onto
+/// [`TriageAbstainReason`].
+pub const REFUSALS: &[RefusalCode] = &[
+    DEFECT_UNKNOWN,
+    DEFECT_CLOSED,
+    codes::TRIAGE_NO_SYMBOL_MATCH,
+    codes::TRIAGE_NO_OWNER,
+    codes::TRIAGE_INSUFFICIENT_EVIDENCE,
+];
+
+/// The `triage.*` knobs of the `DefectTriage` family (MEDULLA-SDLC-R004.7):
+/// `max_frames`, `max_suspects`, `blame_window_days`, `escalate_symptoms` and
+/// `duplicate_min_overlap` (a fixed-point fraction, the value times 1,000,000).
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "triage.max_frames",
+        unit: "frames",
+        default: KnobValue::Integer(50),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(500),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "triage.max_suspects",
+        unit: "symbols",
+        default: KnobValue::Integer(10),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(100),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "triage.blame_window_days",
+        unit: "days",
+        default: KnobValue::Integer(90),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(3650),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "triage.escalate_symptoms",
+        unit: "symptoms",
+        default: KnobValue::Integer(10),
+        min: KnobValue::Integer(2),
+        max: KnobValue::Integer(10_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "triage.duplicate_min_overlap",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(800_000),
+        min: KnobValue::DecimalMicros(500_000),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+];
+
+/// The triage limits the pinned policy sets, each knob or its default.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TriageKnobs {
+    pub max_frames: u32,
+    pub max_suspects: u32,
+    pub blame_window_days: u32,
+    pub escalate_symptoms: u32,
+    /// The least frame overlap that makes two defects duplicates, in millionths.
+    pub duplicate_min_overlap_micros: i64,
+}
+
+impl TriageKnobs {
+    /// Read every knob through [`DecisionPolicy::knob`].
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let count = |index: usize| match policy.knob(&KNOBS[index]) {
+            KnobValue::Integer(value) => u32::try_from(value).unwrap_or(0),
+            _ => 0,
+        };
+        let overlap = match policy.knob(&KNOBS[4]) {
+            KnobValue::DecimalMicros(value) => value,
+            _ => 0,
+        };
+        Self {
+            max_frames: count(0),
+            max_suspects: count(1),
+            blame_window_days: count(2),
+            escalate_symptoms: count(3),
+            duplicate_min_overlap_micros: overlap,
+        }
+    }
+}
 
 /// Why a triage abstained.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -237,5 +335,49 @@ mod tests {
             decision.affects_edges()[0],
             ("d1".to_string(), "culprit_sym".to_string())
         );
+    }
+
+    // spec: MEDULLA-SDLC-R004.7
+    #[test]
+    fn knob_specs_lie_within_bounds_and_codes_map_abstain_reasons() {
+        use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+
+        assert_eq!(KNOBS.len(), 5);
+        for spec in KNOBS {
+            assert!(spec.name.starts_with("triage."), "{}", spec.name);
+            assert_eq!(spec.safety, KnobSafety::Tunable, "{}", spec.name);
+            assert!(spec.admits(&spec.default), "{}", spec.name);
+            assert!(spec.admits(&spec.min) && spec.admits(&spec.max));
+        }
+        let knobs = TriageKnobs::from_policy(&DecisionPolicy::engine_default());
+        assert_eq!(
+            knobs,
+            TriageKnobs {
+                max_frames: 50,
+                max_suspects: 10,
+                blame_window_days: 90,
+                escalate_symptoms: 10,
+                duplicate_min_overlap_micros: 800_000,
+            }
+        );
+
+        let codes: Vec<&str> = REFUSALS.iter().map(|code| code.as_str()).collect();
+        assert_eq!(
+            codes,
+            [
+                "DEFECT_UNKNOWN",
+                "DEFECT_CLOSED",
+                "TRIAGE_NO_SYMBOL_MATCH",
+                "TRIAGE_NO_OWNER",
+                "TRIAGE_INSUFFICIENT_EVIDENCE"
+            ]
+        );
+        for (reason, code) in [
+            (TriageAbstainReason::NoSymbolMatch, REFUSALS[2]),
+            (TriageAbstainReason::NoOwner, REFUSALS[3]),
+            (TriageAbstainReason::InsufficientEvidence, REFUSALS[4]),
+        ] {
+            assert_eq!(reason.code(), code);
+        }
     }
 }
