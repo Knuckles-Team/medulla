@@ -463,7 +463,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T437 [US1] MEDULLA-FEDERATED-QUERY-R738.3 ClaimRecord/ClaimState state machine: route 1 census findings through ClaimState::apply
 - [x] T439 [US1] MEDULLA-FEDERATED-QUERY-R738.5 ContradictionRecord/ContradictionStatus state machine: route 1 census findings through ContradictionStatus::apply
 - [x] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
-- [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask state machine: `medulla-geo` routes every status write through `TaskStatusKind::apply`
+- [x] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask state machine: `medulla-geo` routes every status write through `TaskStatusKind::apply`
 - [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentLevel is a classification, not a lifecycle: rename DescentStage to DescentLevel
 - [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverOutcome is a classification, not a lifecycle: rename SolverStatus to SolverOutcome
 - [ ] T446 [US1] MEDULLA-FEDERATED-QUERY-R738.12 Non-lifecycle fields named `state`: the generator word of six `SplitMix64` pseudo-random generators
