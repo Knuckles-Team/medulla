@@ -502,8 +502,18 @@ fn validate_submission_properties(
     if !is_work_item(props) {
         return Ok(());
     }
-    let status = property_string(props, "status");
-    if !matches!(status, "submitted" | "ready") {
+    // MEDULLA-ORCH-VOCAB-R812.6: the stored status is read as the WorkItem state; an
+    // unknown text names no state and is refused like any lease-holding one.
+    let status = medulla_work_types::work_item_machine::WorkItemStatus::from_stored(
+        property_string(props, "status"),
+    );
+    if !matches!(
+        status,
+        Some(
+            medulla_work_types::work_item_machine::WorkItemStatus::Submitted
+                | medulla_work_types::work_item_machine::WorkItemStatus::Ready
+        )
+    ) {
         return Err("native WorkItem authority required for active lease fields".to_string());
     }
     for key in [

@@ -1,13 +1,5 @@
 use super::common::deserialize_required_option;
-use super::context_mutation::RequestContext;
 use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum WorkItemSchemaVersion {
-    #[serde(rename = "1")]
-    V1,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -36,32 +28,6 @@ pub enum DevelopmentLaneCleanupIntentSchemaVersion {
 pub enum DevelopmentLaneReserveRequestSchemaVersion {
     #[serde(rename = "1")]
     V1,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-#[serde(deny_unknown_fields)]
-pub struct WorkItem {
-    pub schema_version: WorkItemSchemaVersion,
-    pub work_item_id: String,
-    pub context: RequestContext,
-    pub kind: String,
-    pub state: String,
-    pub priority: i64,
-    pub depends_on: Vec<String>,
-    pub input_artifact_refs: Vec<String>,
-    pub output_artifact_refs: Vec<String>,
-    #[serde(deserialize_with = "deserialize_required_option")]
-    pub lease_holder_id: Option<String>,
-    #[serde(deserialize_with = "deserialize_required_option")]
-    pub lease_expires_at_ms: Option<u64>,
-    pub attempt: u64,
-    pub max_attempts: u64,
-    pub created_at_ms: u64,
-    pub updated_at_ms: u64,
-    pub idempotency_key: String,
-    #[serde(deserialize_with = "deserialize_required_option")]
-    pub lane_intent: Option<DevelopmentLaneIntent>,
 }
 
 super::common::strict_nullable_request! {
