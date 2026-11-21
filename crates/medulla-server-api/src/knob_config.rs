@@ -291,6 +291,10 @@ knobs! {
     retrieval_feedback_terms: u64 = "retrieval.feedback_terms", U64(32), [1, 256], "terms", Tunable;
     /// Retrieval round: confidence gap a supported answer must exceed to win over another supported answer.
     retrieval_arbitration_margin: f64 = "retrieval.arbitration_margin", F64(0.10), [0.0, 0.5], "confidence", Tunable;
+    /// Sufficiency (the fraction of requested slots filled with supported evidence) below which a second pass is planned (MEDULLA-FEDERATED-QUERY-R081.10).
+    retrieval_second_pass_threshold: f64 = "retrieval.second_pass_threshold", F64(0.5), [0.0, 1.0], "fraction", Tunable;
+    /// Most queries one second pass builds from the unmet slots (MEDULLA-FEDERATED-QUERY-R081.10).
+    retrieval_second_pass_queries: u64 = "retrieval.second_pass_queries", U64(3), [1, 8], "queries", Tunable;
     /// Retrieval round: most cost one retrieval loop may incur.
     retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
     /// Retrieval round: score change below which quality has saturated.

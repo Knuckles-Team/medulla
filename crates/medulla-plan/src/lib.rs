@@ -92,6 +92,9 @@ pub mod hierarchy_source;
 // MEDULLA-FEDERATED-QUERY-R736.2: candidate expansion of the evidence forest.
 #[cfg(feature = "query")]
 pub mod evidence_forest;
+// MEDULLA-FEDERATED-QUERY-R081.10: the clock basis of evidence and the bounded second pass.
+#[cfg(feature = "query")]
+pub mod retrieval_clock;
 // MEDULLA-FEDERATED-QUERY-R082.2: the retrieval stop rule.
 #[cfg(feature = "query")]
 pub mod retrieval_stop;

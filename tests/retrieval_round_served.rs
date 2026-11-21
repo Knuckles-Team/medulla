@@ -2387,3 +2387,72 @@ fn distilled_head_activates_only_above_threshold() {
     assert_eq!(refusal.code, RETRIEVAL_POLICY_UNVERIFIED);
     assert_eq!(kept, Some(champion));
 }
+
+// ---- R081.10: clock basis and the bounded second pass ----
+
+fn clock(value_ms: i64, source: &str) -> medulla_plan::retrieval_clock::ClockValue {
+    medulla_plan::retrieval_clock::ClockValue {
+        value_ms,
+        source: source.into(),
+        provenance: format!("{source}-provenance"),
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.10
+#[test]
+fn clock_basis_and_second_pass_are_bounded() {
+    use medulla_plan::retrieval_clock::{
+        choose_clock, clock_premise, plan_second_pass, Clock, EvidenceClocks, RequestedSlot,
+        CLOCK_POLICY_REVISION,
+    };
+
+    // All three clocks disagree: the event time wins, then narrative, then storage.
+    let all = EvidenceClocks {
+        storage_time: Some(clock(3_000, "store")),
+        event_time: Some(clock(1_000, "event")),
+        narrative_time: Some(clock(2_000, "transcript")),
+    };
+    let basis = choose_clock(&all).expect("a basis");
+    assert_eq!(basis.clock, Clock::EventTime);
+    assert_eq!(basis.value.source, "event");
+    assert!(basis.disagreement);
+    assert_eq!(basis.policy_revision, CLOCK_POLICY_REVISION);
+    let premise = clock_premise(&basis);
+    assert_eq!(premise.name, "retrieval.clock");
+    assert_eq!(premise.value["provenance"], "event-provenance");
+
+    // A clock is absent: the next in the precedence is the basis.
+    let no_event = EvidenceClocks {
+        event_time: None,
+        ..all.clone()
+    };
+    assert_eq!(choose_clock(&no_event).unwrap().clock, Clock::NarrativeTime);
+    let storage_only = EvidenceClocks {
+        storage_time: Some(clock(3_000, "store")),
+        ..EvidenceClocks::default()
+    };
+    let only = choose_clock(&storage_only).unwrap();
+    assert_eq!((only.clock, only.disagreement), (Clock::StorageTime, false));
+    assert!(choose_clock(&EvidenceClocks::default()).is_none());
+
+    // Second pass: none at sufficiency 0.5 or above; below it, exactly the bounded queries.
+    let slot = |name: &str, filled: bool| RequestedSlot {
+        name: name.into(),
+        filled,
+        query: format!("find {name}"),
+    };
+    let half = [slot("a", true), slot("b", false)];
+    let at = plan_second_pass(&half, 0.5, 3);
+    assert_eq!(at.sufficiency, 0.5);
+    assert!(at.queries.is_empty() && !at.budget_exceeded);
+
+    let below = [slot("a", true), slot("b", false), slot("c", false), slot("d", false)];
+    let planned = plan_second_pass(&below, 0.5, 3);
+    assert_eq!(planned.queries, ["find b", "find c", "find d"]);
+    assert!(!planned.budget_exceeded);
+
+    let many: Vec<RequestedSlot> = (0..6).map(|n| slot(&format!("s{n}"), false)).collect();
+    let capped = plan_second_pass(&many, 0.5, 3);
+    assert_eq!(capped.queries.len(), 3);
+    assert!(capped.budget_exceeded, "a partial result reports the budget");
+}
