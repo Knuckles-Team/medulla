@@ -8,6 +8,7 @@ through the served ``Decide`` path; the fixture packs of
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import hashlib
 import json
 import os
@@ -37,7 +38,7 @@ from test_usage_guidance_served import _schema_body
 from medulla import ConnectorPackEntryContent
 from medulla import decision_client as dc
 from medulla.client import EngineResponseError
-from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
+from medulla.generated.connector_pack import PackAnnotations, PackEntryKind, PackHeadRef
 
 PACKS = Path(__file__).parent / "fixtures" / "q11" / "packs"
 MAX_TOOLS = 32
@@ -442,3 +443,84 @@ def test_missing_source_abstains_one_part(clean_graph) -> None:
         assert code(parts[name]) == "ORCH_PART_ASSEMBLY_ABSTAINED", name
     for name in ("steps", "workflow", "guardrails"):
         assert parts[name]["status"] == "answer", (name, parts[name])
+
+_SEED = "https://knuckles-team.github.io/ontology/connector-seed#"
+
+
+def _lexical(value: str | None) -> str:
+    """A SPARQL cell as its bare text, without literal quotes or IRI brackets."""
+    return (value or "").strip().strip('"').strip("<>")
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R011.5")
+def test_q11_seed_changes() -> None:
+    query = (
+        "SELECT ?part ?outcome ?digest ?revision WHERE { "
+        f"?r a <{_SEED}SeedImportReceipt> ; <{_SEED}part> ?part ; <{_SEED}outcome> ?outcome ; "
+        f"<{_SEED}digest> ?digest ; <{_SEED}graphRevision> ?revision } } ORDER BY ?part"
+    )
+
+    async def receipt_rows(graph: str, want: dict[str, str]) -> dict[str, dict[str, str]]:
+        """Poll the pack graph (the projection is asynchronous) until the outcomes match."""
+        deadline = time.monotonic() + 120
+        found: dict[str, dict[str, str]] = {}
+        while time.monotonic() < deadline:
+            client = await connect(graph)
+            try:
+                rows = await client.rdf.sparql(query)
+                found = {
+                    _lexical(row["part"]): {k: _lexical(v) for k, v in row.items()}
+                    for row in rows
+                }
+            except Exception:  # the projection has not landed yet
+                found = {}
+            finally:
+                await client.close()
+            if {part: row["outcome"] for part, row in found.items()} == want:
+                return found
+            await asyncio.sleep(1)
+        return found
+
+    async def exercise() -> None:
+        connector = f"seedchg-{uuid.uuid4().hex[:8]}"
+        graph = _pack_graph(TEST_TENANT, connector)
+        admin = await connect()
+        try:
+            first = await import_entries(admin, connector, _composed_seed())
+            assert first["result"] == "imported", first
+            head = PackHeadRef(
+                binding_revision=first["receipt"]["binding_revision"],
+                pack_digest=first["receipt"]["pack_digest"],
+            )
+            changed = [
+                dataclasses.replace(
+                    entry,
+                    body=entry.body
+                    + b"\n<urn:slot:xyz-c> <http://purl.org/dc/terms/source> "
+                    b"<urn:source:topology-templates> .\n",
+                )
+                if entry.name == "catalog"
+                else entry
+                for entry in _composed_seed()
+            ]
+            second = await import_entries(admin, connector, changed, expected_head=head)
+            assert second["result"] == "imported", second
+        finally:
+            await admin.close()
+
+        rows = await receipt_rows(
+            graph, {"catalog": "replaced", "identity": "unchanged", "references": "unchanged"}
+        )
+        assert {part: row["outcome"] for part, row in rows.items()} == {
+            "catalog": "replaced",
+            "identity": "unchanged",
+            "references": "unchanged",
+        }, rows
+        revision = (
+            "urn:medulla:seed:" + connector + ":" + second["receipt"]["seed"]["content_digest"]
+        )
+        for part, row in rows.items():
+            assert row["digest"].startswith("sha256:"), (part, row)
+            assert row["revision"] == revision, (part, row)
+
+    asyncio.run(exercise())
