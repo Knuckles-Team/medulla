@@ -11,6 +11,7 @@
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::run_governance::{RunOutcome, RunTraceRecord, TraceScalar};
+use super::skill_workflow::TypeRef;
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
@@ -315,6 +316,17 @@ pub struct ProgramParameter {
     pub kind: ProgramParameterKind,
 }
 
+/// One labelled outgoing edge of a step (MEDULLA-DECISION-ENGINE-R156.2). An
+/// unlabelled edge has no `label`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProgramEdge {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    pub to: String,
+}
+
 /// One step of the state-machine program.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -328,6 +340,18 @@ pub struct ProgramStep {
     /// The agent configuration the step runs with, pinned by revision digest.
     #[serde(default)]
     pub agent_config: Option<ComponentDependency>,
+    /// Every outgoing edge in declared order, including an `error` edge. Empty
+    /// for a straight-line step, and then omitted from the wire so the digest
+    /// of a straight-line program is unchanged. `next` is the first edge's
+    /// target (MEDULLA-DECISION-ENGINE-R156.2).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edges: Vec<ProgramEdge>,
+    /// The types the step consumes; empty for a step compiled from a run.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input_types: Vec<TypeRef>,
+    /// The types the step produces; empty for a step compiled from a run.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output_types: Vec<TypeRef>,
 }
 
 /// A compiled program for one task signature.
@@ -339,8 +363,10 @@ pub struct CompiledProgram {
     pub task_signature: String,
     pub steps: BoundedVec<ProgramStep, MAX_PROGRAM_STEPS>,
     pub parameters: BoundedVec<ProgramParameter, MAX_PROGRAM_PARAMETERS>,
-    /// The successful run the program was compiled from.
-    pub source_run_id: String,
+    /// The successful run the program was compiled from; absent for a program
+    /// compiled from a skill document, which has no run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_run_id: Option<String>,
     /// SHA-256 (64 lowercase hex characters) over the canonical bytes.
     pub program_digest: String,
 }
@@ -434,8 +460,13 @@ impl CompiledProgram {
         if self.schema_version != PROGRAM_SCHEMA_VERSION {
             return invalid("unsupported schema_version");
         }
-        if self.task_signature.trim().is_empty() || self.source_run_id.trim().is_empty() {
-            return invalid("task_signature and source_run_id are required");
+        if self.task_signature.trim().is_empty()
+            || self
+                .source_run_id
+                .as_deref()
+                .is_some_and(|run| run.trim().is_empty())
+        {
+            return invalid("task_signature is required and source_run_id is not blank");
         }
         if self.steps.is_empty() {
             return invalid("a program holds at least one step");
@@ -451,7 +482,12 @@ impl CompiledProgram {
         if self
             .steps
             .iter()
-            .filter_map(|step| step.next.as_deref())
+            .flat_map(|step| {
+                step.next
+                    .as_deref()
+                    .into_iter()
+                    .chain(step.edges.iter().map(|edge| edge.to.as_str()))
+            })
             .any(|next| !states.contains(next))
         {
             return invalid("a step moves to a state the program does not declare");
@@ -527,6 +563,9 @@ pub fn compile_program(
             action,
             next: (k + 1 < trace.steps.len()).then(|| format!("s{}", k + 1)),
             agent_config: None,
+            edges: Vec::new(),
+            input_types: Vec::new(),
+            output_types: Vec::new(),
         });
     }
     let parameters = seen
@@ -548,7 +587,7 @@ pub fn compile_program(
         task_signature: trace.task_signature.clone(),
         steps: BoundedVec::new(steps).map_err(ProgramError::Invalid)?,
         parameters: BoundedVec::new(parameters).map_err(|_| too_many(count))?,
-        source_run_id: trace.run_id.clone(),
+        source_run_id: Some(trace.run_id.clone()),
         program_digest: String::new(),
     }
     .sealed();
@@ -581,6 +620,9 @@ mod tests {
                 kind: AgentComponentKind::Tool,
                 definition_digest: "sha256:00".into(),
             }),
+            edges: Vec::new(),
+            input_types: Vec::new(),
+            output_types: Vec::new(),
         }
     }
 
@@ -610,7 +652,7 @@ mod tests {
                 },
             ])
             .unwrap(),
-            source_run_id: "run-1".into(),
+            source_run_id: Some("run-1".into()),
             program_digest: String::new(),
         }
         .sealed()
@@ -785,7 +827,7 @@ mod tests {
 
         // A tampered field breaks the digest.
         let mut tampered = original.clone();
-        tampered.source_run_id = "run-2".into();
+        tampered.source_run_id = Some("run-2".into());
         assert!(matches!(tampered.validate(), Err(ProgramError::Invalid(_))));
         // An unknown field is refused.
         let mut unknown = wire.clone();

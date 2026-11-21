@@ -125,7 +125,10 @@ impl DecisionFamily for ProgramLookupFamily {
                             PARAM_TASK_SIGNATURE,
                         ),
                         claim(
-                            format!("program.source_run_id={}", program.source_run_id),
+                            format!(
+                                "program.source_run_id={}",
+                                program.source_run_id.as_deref().unwrap_or_default()
+                            ),
                             PARAM_TASK_SIGNATURE,
                         ),
                     ];

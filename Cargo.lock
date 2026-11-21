@@ -5063,6 +5063,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-decision-types",
  "medulla-types",
+ "serde_json",
 ]
 
 [[package]]

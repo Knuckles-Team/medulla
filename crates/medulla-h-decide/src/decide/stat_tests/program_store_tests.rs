@@ -362,7 +362,7 @@ async fn decide_routes_program_lookup() {
     // Another tenant's program is never returned: the same signature stored
     // under a foreign tenant is invisible here, and visible to its own tenant.
     let foreign = CompiledProgram {
-        source_run_id: "run-foreign".into(),
+        source_run_id: Some("run-foreign".into()),
         ..program_of(&stored).clone()
     }
     .sealed();

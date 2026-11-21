@@ -288,7 +288,9 @@ fn commit(
                 Some(ReusablePattern {
                     task_signature: program.task_signature.clone(),
                     program_digest: program.program_digest.clone(),
-                    source_run_id: program.source_run_id.clone(),
+                    source_run_id: program.source_run_id.clone().ok_or_else(|| {
+                        "a program compiled from a skill has no source run to promote".to_string()
+                    })?,
                     plan: binding,
                     receipt: *receipt,
                     verdict,
