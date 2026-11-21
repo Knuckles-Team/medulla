@@ -1641,6 +1641,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "GLOSSARY_CYCLE",
             "GLOSSARY_LABEL_TAKEN",
             "GLOSSARY_UNREVIEWED",
+            "STEWARD_ROLE_MISSING",
+            "PROPOSAL_INPUTS_MISSING",
         ],
     ),
     (
@@ -1865,6 +1867,17 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     // Library publish route that emits catalog nodes.
     if matches!(id, "AddTriples" | "AgentComponent") {
         codes.extend(["ASSET_CLASS_ORPHAN", "FIELD_MARKED"]);
+    }
+    // MEDULLA-TYPED-PACKS-R106.4, R108.13: the catalog shape codes, the batch bound and the
+    // article version rule on the RDF write route.
+    if id == "AddTriples" {
+        codes.extend([
+            "UNRESOLVED_REFERENCE",
+            "RESOURCE_UNOWNED",
+            "LINEAGE_EDGE_UNPAIRED",
+            "CATALOG_BATCH_TOO_LARGE",
+            "ARTICLE_VERSION_INVALID",
+        ]);
     }
     // MEDULLA-TYPED-PACKS-R650.4: the object-model guard refuses a value or link
     // that breaks a pack's declared value type or link cap on the RDF write route and

@@ -38,6 +38,12 @@ pub(super) async fn handle_add_triples(
         return Response::err(req_id, refusal.to_string());
     }
 
+    // MEDULLA-TYPED-PACKS-R108.13: an article never moves to a lower version, and a new
+    // article starts in draft.
+    if let Err(refusal) = super::catalog_guard::guard_article_versions(&triples, core) {
+        return Response::err(req_id, refusal);
+    }
+
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.
     #[cfg(feature = "shacl")]

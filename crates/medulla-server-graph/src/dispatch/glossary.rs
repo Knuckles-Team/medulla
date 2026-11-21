@@ -190,13 +190,12 @@ async fn scheme_terms(
     Ok(found)
 }
 
-/// The review a term needs before it is approved: an approved change request naming it, and a
-/// preferred label no other approved term of the scheme carries (MEDULLA-TYPED-PACKS-R801.4).
-async fn approval_gate(
+/// The review a subject needs before it is approved: an approved change request naming it
+/// (MEDULLA-TYPED-PACKS-R801.4).
+async fn review_gate(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     iri: &str,
-    term: &GlossaryTerm,
     change_request: Option<&str>,
 ) -> Result<(), String> {
     let request = match change_request {
@@ -206,9 +205,86 @@ async fn approval_gate(
             .map(|stored| stored.request),
         None => None,
     };
-    require_review(iri, request.as_ref()).map_err(glossary_refusal)?;
+    require_review(iri, request.as_ref()).map_err(glossary_refusal)
+}
+
+/// The review a term needs before it is approved, and a preferred label no other approved term
+/// of the scheme carries (MEDULLA-TYPED-PACKS-R801.4).
+async fn approval_gate(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    iri: &str,
+    term: &GlossaryTerm,
+    change_request: Option<&str>,
+) -> Result<(), String> {
+    review_gate(state, target, iri, change_request).await?;
     let stored = scheme_terms(state, target, &term.scheme).await?;
     check_label_free(&stored, iri, term).map_err(glossary_refusal)
+}
+
+/// What a status move addresses: a glossary term, or an article, which has no term record
+/// (MEDULLA-TYPED-PACKS-R108.13).
+enum Subject {
+    Term(GlossaryTerm),
+    Article {
+        status: GlossaryTermStatus,
+        status_key: String,
+        properties: Properties,
+    },
+}
+
+const ARTICLE_STATUS_LOCAL: &str = "articleStatus";
+
+/// The stored subject of `iri` in the caller's tenant.
+async fn stored_subject(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    iri: &str,
+) -> Result<Option<Subject>, String> {
+    let Some(properties) = read_node(state, target, iri).await? else {
+        return Ok(None);
+    };
+    let is_article = properties
+        .get("type")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|label| label == "Article" || label.ends_with("#Article"));
+    if !is_article {
+        return Ok(stored_term(state, target, iri)
+            .await
+            .map_err(|refusal| {
+                if refusal.contains("is not a glossary term") {
+                    invalid(format!("node '{iri}' is not a glossary term or article"))
+                } else {
+                    refusal
+                }
+            })?
+            .map(|(term, _)| Subject::Term(term)));
+    }
+    // An article written through `AddTriples` carries no tenant property of its own; one that
+    // does carry it must name the caller's tenant.
+    if properties
+        .get(TENANT_PROPERTY)
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|tenant| tenant != target.verified.tenant())
+    {
+        return Err(invalid(format!("article '{iri}' belongs to another tenant")));
+    }
+    let status_key = properties
+        .keys()
+        .find(|key| *key == ARTICLE_STATUS_LOCAL || key.ends_with("#articleStatus"))
+        .cloned()
+        .ok_or_else(|| invalid(format!("article '{iri}' has no status")))?;
+    let name = properties
+        .get(&status_key)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    let status: GlossaryTermStatus = serde_json::from_value(serde_json::Value::String(name.to_string()))
+        .map_err(|_| invalid(format!("article '{iri}' has the unknown status '{name}'")))?;
+    Ok(Some(Subject::Article {
+        status,
+        status_key,
+        properties,
+    }))
 }
 
 fn term_properties(
@@ -345,30 +421,50 @@ async fn transition(
     event: medulla_catalog_types::glossary::GlossaryTransition,
     change_request: Option<&str>,
 ) -> Result<GlossaryReceipt, String> {
-    let (mut term, _) = stored_term(state, target, iri)
+    let subject = stored_subject(state, target, iri)
         .await?
-        .ok_or_else(|| invalid(format!("term '{iri}' does not exist")))?;
-    let from = term.status;
+        .ok_or_else(|| invalid(format!("'{iri}' does not exist")))?;
+    let from = match &subject {
+        Subject::Term(term) => term.status,
+        Subject::Article { status, .. } => *status,
+    };
     let to = from
         .apply(event.event())
-        .map_err(|refused| invalid(format!("term '{iri}': {refused:?}")))?;
+        .map_err(|refused| invalid(format!("'{iri}': {refused:?}")))?;
     if event == medulla_catalog_types::glossary::GlossaryTransition::Approve {
-        approval_gate(state, target, iri, &term, change_request).await?;
+        match &subject {
+            Subject::Term(term) => approval_gate(state, target, iri, term, change_request).await?,
+            Subject::Article { .. } => review_gate(state, target, iri, change_request).await?,
+        }
     }
-    term.status = to;
     let tenant = target.verified.tenant();
     let actor = target.verified.agent_id();
-    // The term and its move record commit as one batch: the term carries the latest actor and
-    // request, and each move is one `cat:GlossaryStatusMove` node chained to the move into the
-    // state it left through `supersedes`, so the history reads by UQL (R801.5).
-    let mut properties = term_properties(tenant, iri, &term)?;
+    // The subject and its move record commit as one batch: the subject carries the latest actor
+    // and request, and each move is one `cat:GlossaryStatusMove` node chained to the move into
+    // the state it left through `supersedes`, so the history reads by UQL (R801.5). An article
+    // node changes only its status, actor and request; every other stored property is kept.
+    let (mut properties, kind) = match subject {
+        Subject::Term(mut term) => {
+            term.status = to;
+            (term_properties(tenant, iri, &term)?, "term")
+        }
+        Subject::Article {
+            status_key,
+            mut properties,
+            ..
+        } => {
+            properties.insert(status_key, status_name(to).into());
+            (properties, "article")
+        }
+    };
     properties.insert("status_actor".into(), actor.into());
     if let Some(request) = change_request {
         properties.insert("status_change_request".into(), request.into());
     }
     let mut record = Properties::new();
     record.insert("type".into(), STATUS_MOVE_LABEL.into());
-    record.insert("term".into(), iri.into());
+    record.insert("subject".into(), iri.into());
+    record.insert("subject_kind".into(), kind.into());
     record.insert("from".into(), status_name(from).into());
     record.insert("to".into(), status_name(to).into());
     record.insert("actor".into(), actor.into());

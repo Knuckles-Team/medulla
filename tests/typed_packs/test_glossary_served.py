@@ -205,7 +205,8 @@ def test_status_history_reads_back(served) -> None:
     request_id = _approve(client, graph, REVENUE)
     actor = request_context()["agent_id"]
     approved = _props(client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:approved")
-    assert approved["term"] == REVENUE
+    assert approved["subject"] == REVENUE
+    assert approved["subject_kind"] == "term"
     assert (approved["from"], approved["to"]) == ("in_review", "approved")
     assert approved["actor"] == actor
     assert approved["change_request"] == request_id

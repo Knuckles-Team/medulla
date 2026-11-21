@@ -151,6 +151,68 @@ pub(super) fn guard_catalog_write(
     Ok(())
 }
 
+/// Refuse an article write that lowers the stored `cat:articleVersion`, or that creates an
+/// article in any status but `draft` (MEDULLA-TYPED-PACKS-R108.13). The refusal leads with
+/// `ARTICLE_VERSION_INVALID`; a refused batch commits nothing.
+pub(super) fn guard_article_versions(
+    triples: &[oxrdf::Triple],
+    core: &medulla_graph_core::graph::GraphCore,
+) -> Result<(), String> {
+    let article = format!("{CAT}Article");
+    let version_key = format!("{CAT}articleVersion");
+    let status_key = format!("{CAT}articleStatus");
+    let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    let literal_of = |subject: &NamedOrBlankNode, predicate: &str| {
+        triples.iter().find_map(|t| match (&t.object, t.predicate.as_str()) {
+            (Term::Literal(value), p) if p == predicate && &t.subject == subject => {
+                Some(value.value().to_string())
+            }
+            _ => None,
+        })
+    };
+    let refuse = |detail: String| format!("ARTICLE_VERSION_INVALID: {detail}");
+    for triple in triples {
+        let NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
+            continue;
+        };
+        if triple.predicate.as_str() != rdf_type
+            || !matches!(&triple.object, Term::NamedNode(class) if class.as_str() == article)
+        {
+            continue;
+        }
+        let incoming = literal_of(&triple.subject, &version_key).and_then(|v| v.parse::<u64>().ok());
+        let stored = core
+            .get_node_properties(&format!("<{}>", subject.as_str()))
+            .and_then(|bytes| medulla_types::msgpack::decode_property_value(&bytes).ok());
+        match stored {
+            Some(node) => {
+                let held = node
+                    .get(&version_key)
+                    .or_else(|| node.get("articleVersion"))
+                    .and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|s| s.parse().ok())));
+                if let (Some(incoming), Some(held)) = (incoming, held) {
+                    if incoming < held {
+                        return Err(refuse(format!(
+                            "article {} is at version {held}; a write at version {incoming} is refused",
+                            subject.as_str()
+                        )));
+                    }
+                }
+            }
+            None => {
+                let status = literal_of(&triple.subject, &status_key);
+                if status.as_deref() != Some("draft") {
+                    return Err(refuse(format!(
+                        "a new article {} starts in draft",
+                        subject.as_str()
+                    )));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// `cat:schemaDigest` for every `cat:DataResource` of the batch that names at least one field
 /// with a `cat:columnName`. A field's type defaults to the empty string and its nullability to
 /// `true` when the batch does not state them.

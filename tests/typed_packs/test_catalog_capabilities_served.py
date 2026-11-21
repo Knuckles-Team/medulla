@@ -370,3 +370,67 @@ def test_sensitivity_propagates_downstream_as_proposal_and_asset_names_its_polic
         f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}"
     )
     assert [row["o"].strip("<>") for row in rows] == [policy]
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.13")
+def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
+    catalog_graph,
+):
+    """Verifies MEDULLA-TYPED-PACKS-R108.13: an article moves through the one status path."""
+    import msgpack
+    import stewardship_support as support
+    from stewardship_support import REVIEWER
+
+    admin = catalog_graph
+    graph = admin._client._graph_name
+    asset = "urn:medulla:asset:resource:invoices"
+    domain = "urn:medulla:asset:domain:finance"
+    article = "article:onboarding"
+
+    def article_turtle(version: int, status: str) -> str:
+        return (
+            f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"invoices\" .\n"
+            f"<{domain}> a cat:BusinessDomain ; skos:prefLabel \"finance\" .\n"
+            f"<{article}> a cat:Article ; skos:prefLabel \"Invoice onboarding\" ;\n"
+            f"  cat:author \"usr:writer\" ; cat:articleVersion {version} ;\n"
+            f"  cat:articleStatus \"{status}\" ;\n"
+            f"  cat:aboutAsset <{asset}> ; cat:inBusinessDomain <{domain}> .\n"
+        )
+
+    admin.rdf.add_triples(turtle=article_turtle(2, "draft"))
+    # A rewrite at a lower version is refused.
+    with pytest.raises(Exception, match="ARTICLE_VERSION_INVALID"):
+        admin.rdf.add_triples(turtle=article_turtle(1, "draft"))
+
+    def decode(value):
+        return msgpack.unpackb(value, raw=False) if isinstance(value, (bytes, bytearray)) else value
+
+    def move(client, event, change_request=None):
+        op = {"op": "transition", "iri": f"<{article}>", "event": event}
+        if change_request:
+            op["change_request"] = change_request
+        return decode(client._send("Glossary", {"op": op}, graph))
+
+    assert move(admin, "submit")["status"] == "in_review"
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        support.register_agents(graph, REVIEWER)
+        request_id = support.approved_request(admin, reviewer, graph, f"<{article}>")
+    finally:
+        reviewer.close()
+    assert move(admin, "approve", request_id)["status"] == "approved"
+    moves = decode(
+        admin._send(
+            "GetNodesByLabel",
+            {"label": "cat:GlossaryStatusMove", "after": None, "limit": 10},
+            graph,
+        )
+    )
+    assert {props["subject_kind"] for _, props in moves} == {"article"}
+    assert len(moves) == 2
+
+    # The approved article is found by its text and by the asset it describes; a draft is not.
+    assert any(
+        article in asset_id for asset_id, _ in _ranked(admin, "onboarding")
+    )
+    assert any(article in asset_id for asset_id, _ in _ranked(admin, "invoices"))
