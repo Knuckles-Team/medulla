@@ -611,6 +611,15 @@ $($variants)*
         source_approval: Box<medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult>,
     },
 
+    /// Verify one source-query approval against the durable control lease, the caller
+    /// authority and the observed source identities (MEDULLA-FEDERATED-QUERY-R085.3). The
+    /// receipt is a candidate reference; the durable Agent Library record is the authority.
+    /// A read: it writes nothing and mints no credential.
+    VerifySourceQueryApproval {
+        request: Box<medulla_result_types::source_query::SourceQueryApprovalCheck>,
+        source_approval: Box<medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult>,
+    },
+
     /// Open one approved, host-driven bounded foreign read. The source driver
     /// stays in the authenticated host; the server rechecks this receipt.
     #[cfg(feature = "federation")]

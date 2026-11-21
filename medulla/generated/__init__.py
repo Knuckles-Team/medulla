@@ -687,6 +687,7 @@ SEND_BY_METHOD = {
     "UpdateResourceHost": coordination.send_update_resource_host,
     "Uql": query.send_uql,
     "VerifyIngestReadback": ingestion.send_verify_ingest_readback,
+    "VerifySourceQueryApproval": query.send_verify_source_query_approval,
     "VerifyWorkItemClaimCapability": (
         coordination.send_verify_work_item_claim_capability
     ),

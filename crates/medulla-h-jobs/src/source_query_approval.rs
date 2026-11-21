@@ -122,10 +122,11 @@ pub async fn admit_source_query(
             .map_err(|_| approval_refusal(SourceQueryError::Unauthorized, &request.query))?;
     }
     // (3) to (5) The request is pinned to the approved contract, revision and snapshot.
-    let pinned = request.query.schema_digest == source_approval.contract_digest.to_hex()
-        && request.query.source_revision == source_approval.committed_version.to_string()
-        && request.query.snapshot_ref == source_approval.head.pack_digest.to_hex();
-    if !pinned {
+    if !request.query.is_pinned_to(
+        &source_approval.contract_digest.to_hex(),
+        source_approval.committed_version,
+        &source_approval.head.pack_digest.to_hex(),
+    ) {
         return Err(approval_refusal(SourceQueryError::StaleSource, &request.query));
     }
     // (6) The admission is derived from the verified context, never from the wire.

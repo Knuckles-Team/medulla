@@ -56,6 +56,8 @@ method_results! {
     ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::ExtensionResult>;
     #[cfg(feature = "federation")]
     QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_query_types::wire::ForeignColumnRow>>;
+    // MEDULLA-FEDERATED-QUERY-R085.3: the bounded validity of one source-query approval.
+    VerifySourceQueryApproval(VerifySourceQueryApproval) => Raw<medulla_result_types::source_query::SourceQueryApprovalValidity>;
     #[cfg(feature = "federation")]
     ForeignReadOpen(ForeignReadOpen) => Raw<medulla_catalog_types::foreign_read::ForeignReadOpenResult>;
     #[cfg(feature = "federation")]

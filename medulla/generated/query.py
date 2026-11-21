@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     KnowledgeStreamRequest = _models.MethodKnowledgeStreamParams
     UnifiedQueryRequest = _models.MethodUnifiedQueryParams
     QueryForeignColumnsRequest = _models.MethodQueryForeignColumnsParams
+    VerifySourceQueryApprovalRequest = _models.MethodVerifySourceQueryApprovalParams
     ForeignReadOpenRequest = _models.MethodForeignReadOpenParams
     ForeignReadChunkRequest = _models.MethodForeignReadChunkParams
     ForeignReadCompleteRequest = _models.MethodForeignReadCompleteParams
@@ -476,6 +477,51 @@ def decode_query_foreign_columns(
     """Validate this method's result against its contract model."""
     return decode_result(
         "QueryForeignColumns", models().QueryForeignColumnsResult, result
+    )
+
+
+async def send_verify_source_query_approval(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        VerifySourceQueryApproval
+    Authorization:
+        query:source-verify
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.query.json
+        #/methods/VerifySourceQueryApproval
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodVerifySourceQueryApprovalParams.model_validate(params or {})
+    payload = await client._send(
+        "VerifySourceQueryApproval",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("VerifySourceQueryApproval", payload)
+
+
+def decode_verify_source_query_approval(
+    result: OpaqueResult,
+) -> _models.SourceQueryApprovalValidity:
+    """Validate this method's result against its contract model."""
+    return decode_result(
+        "VerifySourceQueryApproval", models().SourceQueryApprovalValidity, result
     )
 
 
@@ -1808,6 +1854,7 @@ _REQUEST_METHODS = frozenset(
         "KnowledgeStream",
         "UnifiedQuery",
         "QueryForeignColumns",
+        "VerifySourceQueryApproval",
         "ForeignReadOpen",
         "ForeignReadChunk",
         "ForeignReadComplete",

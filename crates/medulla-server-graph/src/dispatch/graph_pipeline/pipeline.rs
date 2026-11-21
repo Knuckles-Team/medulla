@@ -14,6 +14,7 @@ pub struct DispatchPipelineCtx<'a> {
     pub read_authority: Option<GraphReadAuthority>,
     pub verified_actor: &'a str,
     pub tenant_id: String,
+    pub verified_context: &'a medulla_server_api::authority_context::VerifiedRequestContext,
     pub tenant_scope: String,
     pub gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub core: Arc<medulla_graph_core::graph::GraphCore>,
@@ -384,6 +385,7 @@ pub async fn route_process_global_domains(
             graph: ctx.graph_name,
             principal: caller,
             tenant_scope: &ctx.tenant_scope,
+            verified_context: ctx.verified_context,
         },
     )
     .await

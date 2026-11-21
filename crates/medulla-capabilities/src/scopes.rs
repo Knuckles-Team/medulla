@@ -231,6 +231,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("query:nl:certify", User, "engine"),
     entry("query:read", User, "engine"),
     entry("query:retrieval", User, "engine"),
+    entry("query:source-verify", User, "engine"),
     entry("query:sql", User, "engine"),
     entry("query:stream", User, "engine"),
     entry("query:unified", User, "engine"),

@@ -369,6 +369,7 @@ METHOD_IDS = frozenset(
         "KnowledgeStream",
         "UnifiedQuery",
         "QueryForeignColumns",
+        "VerifySourceQueryApproval",
         "ForeignReadOpen",
         "ForeignReadChunk",
         "ForeignReadComplete",

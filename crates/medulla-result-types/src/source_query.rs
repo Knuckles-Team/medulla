@@ -385,6 +385,15 @@ impl SourceQueryOperation {
 }
 
 impl SourceQueryRequest {
+    /// MEDULLA-FEDERATED-QUERY-R085.2 (3) to (5): whether the request names the approved
+    /// contract digest, the approved committed revision and the approved snapshot. Admission
+    /// and verification both ask this one question; `false` refuses `stale_source`.
+    pub fn is_pinned_to(&self, contract_digest: &str, committed_version: u64, snapshot_ref: &str) -> bool {
+        self.schema_digest == contract_digest
+            && self.source_revision == committed_version.to_string()
+            && self.snapshot_ref == snapshot_ref
+    }
+
     /// MEDULLA-FEDERATED-QUERY-R085.2: the framed digest of the bound parameters, three
     /// fields per parameter (position, kind name, value bytes).
     pub fn parameter_digest(&self) -> Result<String, SourceQueryError> {

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::control_lease::{ControlLeaseIssueOutcome, IssueControlLeaseRequest};
 use medulla_result_types::source_query::{
-    ApprovedSourceQuery, SourceQueryError, SourceQueryOperation, SourceQueryRequest,
-    SOURCE_QUERY_SCHEMA_VERSION,
+    ApprovedSourceQuery, SourceQueryError, SourceQueryFailure, SourceQueryOperation,
+    SourceQueryRequest, SourceQueryStep, SOURCE_QUERY_SCHEMA_VERSION,
 };
 
 /// The control lease kind of a source-query approval.
@@ -76,13 +76,41 @@ pub struct SourceQueryApprovalIssued {
 /// `approval`, naming the query by its operation digest. The text starts with the closed code
 /// `SOURCE_QUERY_<KIND>` and never carries SQL text or a parameter value.
 pub fn approval_refusal(kind: SourceQueryError, query: &SourceQueryRequest) -> String {
-    use medulla_result_types::source_query::{SourceQueryFailure, SourceQueryStep};
     let identity = query
         .operation_digest()
         .unwrap_or_else(|_| "0".repeat(64));
-    let failure = SourceQueryFailure::new(kind, &identity, SourceQueryStep::Approval, None)
-        .expect("a framed digest is 64 lowercase hex characters");
+    source_query_refusal(kind, &identity, SourceQueryStep::Approval)
+}
+
+/// A refusal in the `SourceQueryFailure` shape (MEDULLA-FEDERATED-QUERY-R085.7) for `step`,
+/// naming the query by `identity`; an identity that is not a 64-hex digest is replaced by 64
+/// zeros so no literal can ride in the reply. The text starts with `SOURCE_QUERY_<KIND>`.
+pub fn source_query_refusal(kind: SourceQueryError, identity: &str, step: SourceQueryStep) -> String {
+    let failure = SourceQueryFailure::new(kind, identity, step, None)
+        .or_else(|_| SourceQueryFailure::new(kind, &"0".repeat(64), step, None))
+        .expect("64 zeros are a 64-hex digest");
     format!("SOURCE_QUERY_{}: {failure}", kind.to_string().to_uppercase())
+}
+
+impl SourceQueryApprovalGrant {
+    /// The grant an approval implies: identity and digests only, never SQL or parameters.
+    pub fn of(approved: &ApprovedSourceQuery) -> Self {
+        Self {
+            schema_version: approved.schema_version,
+            approval_id: approved.approval_id.clone(),
+            query_id: approved.query_id.clone(),
+            source_ref: approved.request.source_ref.clone(),
+            tenant_ref: approved.tenant_ref.clone(),
+            owner_ref: approved.owner_ref.clone(),
+            actor_ref: approved.actor_ref.clone(),
+            authority_digest: approved.authority_digest.clone(),
+            policy_digest: approved.policy_digest.clone(),
+            identity_digest: approved.identity_digest.clone(),
+            operation_digest: approved.operation_digest.clone(),
+            parameter_digest: approved.parameter_digest.clone(),
+            query_digest: approved.query_digest.clone(),
+        }
+    }
 }
 
 impl ApproveSourceQueryRequest {
@@ -126,21 +154,7 @@ impl ApproveSourceQueryRequest {
         };
         approved.query_digest = approved.compute_query_digest().map_err(|_| invalid())?;
         approved.validate().map_err(|kind| approval_refusal(kind, &self.query))?;
-        let grant = SourceQueryApprovalGrant {
-            schema_version: approved.schema_version,
-            approval_id: approved.approval_id.clone(),
-            query_id: approved.query_id.clone(),
-            source_ref: self.query.source_ref.clone(),
-            tenant_ref: approved.tenant_ref.clone(),
-            owner_ref: approved.owner_ref.clone(),
-            actor_ref: approved.actor_ref.clone(),
-            authority_digest: approved.authority_digest.clone(),
-            policy_digest: approved.policy_digest.clone(),
-            identity_digest: approved.identity_digest.clone(),
-            operation_digest: approved.operation_digest.clone(),
-            parameter_digest: approved.parameter_digest.clone(),
-            query_digest: approved.query_digest.clone(),
-        };
+        let grant = SourceQueryApprovalGrant::of(&approved);
         let mut body = serde_json::Map::new();
         body.insert(
             SOURCE_QUERY_APPROVAL_GRANT_KEY.into(),

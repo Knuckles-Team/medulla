@@ -235,6 +235,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // EH-572 is a read-only, owner-scoped source query with no durable
         // effect; it belongs to the same surface-keyed default as other reads.
         Method::QueryForeignColumns { .. }
+        | Method::VerifySourceQueryApproval { .. }
         | Method::ForeignReadOpen { .. }
         | Method::ForeignReadChunk { .. }
         | Method::ForeignReadComplete { .. }

@@ -221,6 +221,7 @@ pub async fn dispatch_graph_op_inner(
             read_authority: capture.read_authority.clone(),
             verified_actor: &capture.verified_actor,
             tenant_id: capture.verified_context.tenant().to_string(),
+            verified_context: capture.verified_context,
             tenant_scope: capture.tenant_scope.clone(),
             gateway_authz_ctx: capture.gateway_authz_ctx.clone(),
             core: capture.core.clone(),

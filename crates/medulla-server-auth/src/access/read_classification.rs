@@ -478,7 +478,7 @@ pub(super) const REASON_FOREIGN_SOURCE_OWNER_SCOPED: &str =
 // against the caller's own owner-scoped approved-source catalog and foreign-read sessions; they
 // never construct a GraphView/GraphCore, and foreign rows are not local graph rows.
 pub(super) const REASON_FOREIGN_READ_SESSION_OWNER_SCOPED: &str =
-    "ForeignRead{Open,Chunk,Complete,Abort} resolve an approved source and a read session from the caller's own owner-scoped (verified tenant+principal) catalog behind kg:read and return rows fetched from that external source -- never a GraphView/core.analysis_snapshot() row read";
+    "ForeignRead{Open,Chunk,Complete,Abort} resolve an approved source and a read session from the caller's own owner-scoped (verified tenant+principal) catalog behind kg:read and return rows fetched from that external source -- never a GraphView/core.analysis_snapshot() row read; VerifySourceQueryApproval reads one control-lease row and the same catalog and returns a validity, never a graph row";
 
 // MEDULLA-TYPED-PACKS-R804.3: a read operation carried by a gateway-routed
 // (mutating) method. `GraphSchema` as a whole needs graph write authority, but
@@ -502,6 +502,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
         REASON_FOREIGN_READ_SESSION_OWNER_SCOPED,
     ),
     ("ForeignReadOpen", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
+    ("VerifySourceQueryApproval", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
     // REASON_FOREIGN_SOURCE_OWNER_SCOPED (EH-572)
     ("QueryForeignColumns", REASON_FOREIGN_SOURCE_OWNER_SCOPED),
     ("ListForeignSources", REASON_FOREIGN_SOURCE_OWNER_SCOPED),

@@ -9521,6 +9521,33 @@ class SourceQueryApprovalIssued(BaseModel):
     outcome: ControlLeaseIssueOutcome
 
 
+class SourceQueryBoundary(str, Enum):
+    START = "start"
+    CHUNK = "chunk"
+    COMPLETE = "complete"
+
+
+class SourceQueryApprovalCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approved_query: ApprovedSourceQuery
+    observed_schema_digest: str
+    observed_snapshot_ref: str
+    observed_source_revision: str
+    phase: SourceQueryBoundary
+
+
+class SourceQueryApprovalValidity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approval_id: str
+    checked_at_ms: Annotated[int, Field(ge=0)]
+    lease_revision: Annotated[int, Field(ge=0)]
+    query_digest: str
+    query_id: str
+    valid_until_ms: Annotated[int, Field(ge=0)]
+
+
 class IssueHostStartGrantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14328,6 +14355,13 @@ class MethodApproveSourceQuery(BaseModel):
     params: MethodApproveSourceQueryParams
 
 
+class MethodVerifySourceQueryApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["VerifySourceQueryApproval"]
+    params: MethodVerifySourceQueryApprovalParams
+
+
 class MethodIssueHostStartGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15972,6 +16006,7 @@ Method = Annotated[
         MethodGetWorkItemOutcome,
         MethodIssueHostStartGrant,
         MethodApproveSourceQuery,
+        MethodVerifySourceQueryApproval,
         MethodIssueControlLease,
         MethodTransitionControlLease,
         MethodGetControlLease,
@@ -18051,6 +18086,13 @@ class MethodApproveSourceQueryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: ApproveSourceQueryRequest
+    source_approval: ConnectorPackSourceApprovalResult
+
+
+class MethodVerifySourceQueryApprovalParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: SourceQueryApprovalCheck
     source_approval: ConnectorPackSourceApprovalResult
 
 
@@ -38377,7 +38419,10 @@ __all__ = [
     "ApproveSourceQueryRequest",
     "IssueHostStartGrantRequest",
     "SourceQueryAdmission",
+    "SourceQueryApprovalCheck",
     "SourceQueryApprovalIssued",
+    "SourceQueryApprovalValidity",
+    "SourceQueryBoundary",
     "SourceQueryDialect",
     "SourceQueryLimits",
     "SourceQueryOperation",
@@ -39263,6 +39308,8 @@ __all__ = [
     "MethodInvalidateEdgeParams",
     "MethodApproveSourceQuery",
     "MethodApproveSourceQueryParams",
+    "MethodVerifySourceQueryApproval",
+    "MethodVerifySourceQueryApprovalParams",
     "MethodIssueControlLease",
     "MethodIssueControlLeaseParams",
     "MethodIssueHostStartGrant",

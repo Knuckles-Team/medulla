@@ -22,6 +22,15 @@ use medulla_catalog_types::foreign_read::{
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::Method;
+use medulla_result_types::source_query::{
+    SourceQueryApprovalCheck, SourceQueryApprovalValidity, SourceQueryError, SourceQueryStep,
+};
+use medulla_server_api::source_query_authority::source_query_authority;
+use medulla_work_types::control_lease::ControlLeaseStatus;
+use medulla_work_types::source_query_approval::{
+    source_query_refusal, SourceQueryApprovalGrant, SOURCE_QUERY_APPROVAL_GRANT_KEY,
+    SOURCE_QUERY_APPROVAL_KIND,
+};
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_auth::access::OwnerScopedCall;
@@ -36,6 +45,10 @@ pub struct ContractWriteTarget<'a> {
     pub graph: &'a str,
     pub principal: Option<&'a str>,
     pub tenant_scope: &'a str,
+    /// The verified request context: its tenant keys the approval lease a source-query
+    /// verification reads, and its authority is recomputed against the stored grant
+    /// (MEDULLA-FEDERATED-QUERY-R085.3).
+    pub verified_context: &'a medulla_server_api::authority_context::VerifiedRequestContext,
 }
 
 /// The `vg:MetadataContract` class every registered source's discovery writes.
@@ -415,6 +428,10 @@ pub async fn try_handle(
             columns,
             predicates,
         } => Ok(query_columns(call, name, columns, predicates).await),
+        Method::VerifySourceQueryApproval {
+            request,
+            source_approval,
+        } => Ok(verify_source_query_approval(call, request, source_approval, target).await),
         Method::ForeignReadOpen { request } => Ok(open_foreign_read(call, request).await),
         Method::ForeignReadChunk { request } => Ok(chunk_foreign_read(call, request).await),
         Method::ForeignReadComplete { request } => Ok(complete_foreign_read(call, request).await),
@@ -482,6 +499,162 @@ fn submission_evidence(
         generation: approval.head.binding_revision,
         producer_revision: submission.producer_revision.clone(),
     })
+}
+
+/// MEDULLA-FEDERATED-QUERY-R085.3: verify one source-query approval. A read: it writes
+/// nothing, grants no SQL effect and mints no credential. The durable control lease and the
+/// durable Agent Library record are the authority; the presented approval and receipt are
+/// candidates. Every refusal replies in the `SourceQueryFailure` shape, failed step
+/// `verification`.
+async fn verify_source_query_approval(
+    call: OwnerScopedCall<'_>,
+    request: Box<SourceQueryApprovalCheck>,
+    source_approval: Box<medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult>,
+    target: &ContractWriteTarget<'_>,
+) -> Response {
+    use medulla_persistence::AsRedb;
+    let req_id = call.req_id;
+    // (1) The verified owner reads.
+    let owner = match call.owner("VerifySourceQueryApproval") {
+        Ok(owner) => owner,
+        Err(refusal) => return refusal,
+    };
+    if !owner.can_read() {
+        medulla_kernel::metrics::process().access_denied();
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: VerifySourceQueryApproval requires kg:read",
+        );
+    }
+    let check = *request;
+    let approved = &check.approved_query;
+    let refuse = |kind: SourceQueryError, identity: &str| {
+        Response::err(
+            req_id,
+            source_query_refusal(kind, identity, SourceQueryStep::Verification),
+        )
+    };
+    // (2) The approval is well formed; its identity is the recomputed operation digest.
+    let operation_digest = approved.request.operation_digest();
+    if approved.validate().is_err() {
+        return refuse(
+            SourceQueryError::InvalidQuery,
+            operation_digest.as_deref().unwrap_or_default(),
+        );
+    }
+    // (3) The digests and the query id are recomputed from the presented request.
+    let recomputed = (
+        approved.request.parameter_digest(),
+        operation_digest,
+        approved.compute_query_digest(),
+    );
+    let (Ok(parameter_digest), Ok(operation_digest), Ok(query_digest)) = recomputed else {
+        return refuse(SourceQueryError::InvalidQuery, &approved.query_digest);
+    };
+    if approved.parameter_digest != parameter_digest
+        || approved.operation_digest != operation_digest
+        || approved.query_id != operation_digest
+        || approved.query_digest != query_digest
+    {
+        return refuse(SourceQueryError::Unauthorized, &approved.query_digest);
+    }
+    let identity = approved.query_digest.as_str();
+    // (4) The lease: the stored row, keyed by the sanitized request graph, the verified
+    // tenant and the approval id.
+    let Some(backend) = target.persistence.and_then(|backend| backend.as_redb()) else {
+        return refuse(SourceQueryError::VerificationUnavailable, identity);
+    };
+    let lease = match backend
+        .read_control_lease(
+            &medulla_kernel::persist::sanitize(target.graph),
+            target.verified_context.tenant(),
+            &approved.approval_id,
+        )
+        .await
+    {
+        Ok(lease) => lease,
+        Err(_) => return refuse(SourceQueryError::VerificationUnavailable, identity),
+    };
+    let Some(lease) = lease else {
+        return refuse(SourceQueryError::Unauthorized, identity);
+    };
+    let stored: Option<SourceQueryApprovalGrant> = lease
+        .grant
+        .get(SOURCE_QUERY_APPROVAL_GRANT_KEY)
+        .and_then(|grant| serde_json::from_value(grant.clone()).ok());
+    let Some(stored) = stored.filter(|stored| {
+        lease.kind == SOURCE_QUERY_APPROVAL_KIND && *stored == SourceQueryApprovalGrant::of(approved)
+    }) else {
+        return refuse(SourceQueryError::Unauthorized, identity);
+    };
+    // (5) The lease is live.
+    let now = medulla_server_api::txn::now_ms();
+    if matches!(
+        lease.status,
+        ControlLeaseStatus::Revoked | ControlLeaseStatus::Consumed
+    ) {
+        return refuse(SourceQueryError::ApprovalRevoked, identity);
+    }
+    if lease.status == ControlLeaseStatus::Expired
+        || now >= lease.expires_at_ms
+        || now >= lease.hard_expires_at_ms
+    {
+        return refuse(SourceQueryError::ApprovalExpired, identity);
+    }
+    // (6) The caller authority, recomputed from this request, equals the stored grant.
+    let Ok(authority) = source_query_authority(target.verified_context, target.graph) else {
+        return refuse(SourceQueryError::Unauthorized, identity);
+    };
+    if authority.tenant_ref != stored.tenant_ref
+        || authority.owner_ref != stored.owner_ref
+        || authority.actor_ref != stored.actor_ref
+        || authority.authority_digest != stored.authority_digest
+        || authority.policy_digest != stored.policy_digest
+        || authority.identity_digest != stored.identity_digest
+    {
+        return refuse(SourceQueryError::Unauthorized, identity);
+    }
+    // (7) The source is registered and its durable approval still holds.
+    {
+        let state = call.state.read().await;
+        let store = state.agent_library();
+        let Some(store) = store.as_deref() else {
+            return refuse(SourceQueryError::VerificationUnavailable, identity);
+        };
+        if state
+            .foreign_sources()
+            .verify_registered_for(&owner, store, &source_approval, &approved.request.source_ref)
+            .is_err()
+        {
+            return refuse(SourceQueryError::Unauthorized, identity);
+        }
+    }
+    // (8) The request is still pinned to the approved contract, revision and snapshot, and
+    // the observed source identities equal the approved ones.
+    let pinned = approved.request.is_pinned_to(
+        &source_approval.contract_digest.to_hex(),
+        source_approval.committed_version,
+        &source_approval.head.pack_digest.to_hex(),
+    );
+    let observed = check.observed_source_revision == approved.request.source_revision
+        && check.observed_schema_digest == approved.request.schema_digest
+        && check.observed_snapshot_ref == approved.request.snapshot_ref;
+    if !(pinned && observed) {
+        return refuse(SourceQueryError::StaleSource, identity);
+    }
+    Response::ok(
+        req_id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::query::VerifySourceQueryApproval>(
+            SourceQueryApprovalValidity {
+                approval_id: approved.approval_id.clone(),
+                query_id: approved.query_id.clone(),
+                query_digest: approved.query_digest.clone(),
+                lease_revision: lease.revision,
+                checked_at_ms: now,
+                valid_until_ms: lease.expires_at_ms.min(lease.hard_expires_at_ms),
+            },
+        ),
+    )
 }
 
 async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRequest) -> Response {

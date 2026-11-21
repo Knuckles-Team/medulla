@@ -5024,6 +5024,33 @@ class ControlLeaseClient:
             raise TypeError("ApproveSourceQuery returned a non-object payload")
         return value
 
+    async def verify_source_query_approval(
+        self, request: Mapping[str, Any], source_approval: Mapping[str, Any]
+    ) -> dict:
+        """Verify one source-query approval (MEDULLA-FEDERATED-QUERY-R085.3).
+
+        ``request`` is ``{approved_query, observed_source_revision,
+        observed_schema_digest, observed_snapshot_ref, phase}``; ``source_approval`` is the
+        connector-pack source-approval receipt, a candidate the engine re-verifies against
+        the durable record. A read: nothing is written. Returns ``{approval_id, query_id,
+        query_digest, lease_revision, checked_at_ms, valid_until_ms}``. A changed request,
+        another caller, a missing, revoked or expired lease, or a changed observed identity
+        refuses with ``SOURCE_QUERY_<KIND>``.
+        """
+        if not isinstance(request, Mapping):
+            raise TypeError("VerifySourceQueryApproval.request must be a mapping")
+        if not isinstance(source_approval, Mapping):
+            raise TypeError("VerifySourceQueryApproval.source_approval must be a mapping")
+        value = (
+            await _gen.query.send_verify_source_query_approval(
+                self._client,
+                {"request": dict(request), "source_approval": dict(source_approval)},
+            )
+        ).payload
+        if not isinstance(value, dict):
+            raise TypeError("VerifySourceQueryApproval returned a non-object payload")
+        return value
+
     async def issue(
         self,
         *,
