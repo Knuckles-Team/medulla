@@ -14,6 +14,7 @@ use medulla_storage::ScopedOwnerTableMut;
 
 use super::*;
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
+use medulla_store::redb_store::shard::DrainCommit;
 
 pub(crate) const CHECKPOINT_RESOURCE_REFUSAL: &str = "checkpoint resource domain validation failed";
 
@@ -357,6 +358,72 @@ pub fn apply_checkpoint(
             Ok(count)
         }
         (Err(error), _) | (Ok(_), Err(error)) => {
+            shard.mutations().abort_group(group)?;
+            Err(error)
+        }
+    }
+}
+
+/// Restore one graph's rows from the object root, then install the graph version
+/// the root records for them (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
+///
+/// The rows are the row pages of a snapshot or a graph copy (unsealed, in key
+/// order). They replace every node, edge and ledger row the graph holds locally,
+/// since the root overrides the local store, and land in ONE admitted
+/// maintenance group whose version is then raised to `graph_version`, so the
+/// entries after the snapshot replay onto exactly the version they were
+/// published from.
+pub fn restore_graph_rows(
+    shard: &Shard,
+    graph: &str,
+    nodes: &[(String, Vec<u8>)],
+    edges: &[(String, String, Vec<u8>)],
+    graph_version: u64,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    reject_reserved_graph(graph)?;
+    let members = shard.graph_members(&[graph])?;
+    let op_id = checkpoint_attempt_id();
+    let (group, batches) = shard.admit_maintenance(&members, &op_id)?;
+    let write = ShardWrite::open(shard, &group, &members, &batches)?;
+    let applied: Result<(), String> = (|| {
+        let member = write.graph(graph)?;
+        let mut tables = GraphRowTables::open(member)?;
+        clear_graph_rows(
+            graph,
+            &mut tables.nodes,
+            &mut tables.edges,
+            &mut tables.ledger,
+        )?;
+        for (id, props) in nodes {
+            let blob = crypto.seal(props);
+            tables
+                .nodes
+                .insert((graph, id.as_str()), blob.as_ref())
+                .map_err(|e| e.to_string())?;
+        }
+        for (src, tgt, props) in edges {
+            let ordinal = next_edge_ordinal(&tables.edges, graph, src, tgt)?;
+            let blob = crypto.seal(props);
+            tables
+                .edges
+                .insert((graph, src.as_str(), tgt.as_str(), ordinal), blob.as_ref())
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })();
+    let finished = write.finish();
+    match (applied, finished) {
+        (Ok(()), Ok(())) => shard.commit_drain_with(
+            group,
+            &batches,
+            0,
+            DrainCommit {
+                materials: BTreeMap::new(),
+                install_version: Some((graph.to_string(), graph_version)),
+            },
+        ),
+        (Err(error), _) | (Ok(()), Err(error)) => {
             shard.mutations().abort_group(group)?;
             Err(error)
         }

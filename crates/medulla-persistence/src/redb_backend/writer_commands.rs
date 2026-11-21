@@ -46,6 +46,52 @@ macro_rules! writer_command_arms {
             let _ = done.send(res);
             false
         }
+        Cmd::RestoreGraphRows {
+            graph,
+            nodes,
+            edges,
+            graph_version,
+            done,
+        } => {
+            flush(pending);
+            let _ = done.send(medulla_store_apply::redb_store::checkpoint::restore_graph_rows(
+                shard,
+                &graph,
+                &nodes,
+                &edges,
+                graph_version,
+                crypto,
+            ));
+            false
+        }
+        Cmd::ReplayDrain {
+            graph,
+            methods,
+            done,
+        } => {
+            flush(pending);
+            let mut ops: Vec<(String, Method)> = methods
+                .into_iter()
+                .map(|method| (graph.clone(), method))
+                .collect();
+            let res = medulla_store_apply::redb_store::store_control::commit_ops(
+                shard,
+                &mut ops,
+                &mut Vec::new(),
+                &shard_write_attempt_id("replay_drain"),
+                medulla_server_api::txn::now_ms(),
+                crypto,
+                #[cfg(feature = "security")]
+                &mut pending.audit_tail,
+            );
+            let _ = done.send(res);
+            false
+        }
+        Cmd::ReplayVersionBump { graph, done } => {
+            flush(pending);
+            let _ = done.send(in_graph_write(shard, &graph, "replay_version_bump", |_| Ok(())));
+            false
+        }
         Cmd::PurgeGraph { graph, done } => {
             // Flush pending mutations first so we never purge a graph and then
             // re-apply a buffered op for it out of order, then drop ALL of its rows

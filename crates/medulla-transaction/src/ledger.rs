@@ -51,6 +51,29 @@ pub(crate) fn bound_scope_version<D: OwnerDomain>(
     version.ok_or_else(|| "mutation scope binding is missing its authoritative version".to_string())
 }
 
+/// Install the authoritative version of one bound scope inside an already-held
+/// write transaction, for a restore that reproduces a published graph at the
+/// version it was published at. The version only moves forward: a restore never
+/// lowers a scope's monotonic counter.
+pub fn install_scope_version<D: OwnerDomain>(
+    write: &AdmittedMutation<'_, D>,
+    identity: &MutationScopeIdentity,
+    version: u64,
+) -> Result<(), String> {
+    let binding_key = ledger_scope_key(identity);
+    let mut versions = write.scoped_table(VERSIONS)?;
+    let current = versions
+        .get(binding_key.as_str())?
+        .map(|value| value.value())
+        .ok_or_else(|| "mutation scope binding is missing its authoritative version".to_string())?;
+    if version < current {
+        return Err(format!(
+            "mutation scope version {current} cannot be lowered to {version}"
+        ));
+    }
+    versions.insert(binding_key.as_str(), version)
+}
+
 pub(crate) fn source_version<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     batch: &MutationBatch,

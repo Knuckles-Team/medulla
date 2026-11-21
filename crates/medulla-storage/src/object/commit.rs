@@ -24,8 +24,8 @@ use medulla_protocol_types::protocol::GraphType;
 use super::fetch::{ObjectHead, SegmentHeader, VersionManifest};
 
 /// What version zero of a graph is made of: the graph's identity, its
-/// authoritative version at bootstrap and the owner-table snapshot of the
-/// local store when the graph already holds data (empty otherwise).
+/// authoritative version at bootstrap and the row pages of that one graph
+/// (`super::rows`) when it already holds data (empty otherwise).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphBootstrap {
     pub graph_name: String,
@@ -229,7 +229,7 @@ impl ObjectPublisher {
     }
 
     /// Bootstrap version zero of a graph that has no `HEAD`: its snapshot (empty
-    /// for a graph with no data, the owner-table dump otherwise), the manifest of
+    /// for a graph with no data, its row pages otherwise), the manifest of
     /// version zero (create-only) and `HEAD` (create-only). The manifest records
     /// the graph's name, type and version. A concurrent bootstrap that loses a
     /// create-only put is not an error: the root already holds a version zero.

@@ -116,6 +116,31 @@ pub enum Cmd {
         graph_type: GraphType,
         done: oneshot::Sender<Result<(), String>>,
     },
+    /// Restore one graph's rows from the object root and install the graph
+    /// version the root records for them: the row pages of a version-zero
+    /// snapshot or a graph copy, replacing the graph's local rows in ONE
+    /// durable maintenance group (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
+    RestoreGraphRows {
+        graph: String,
+        nodes: Vec<(String, Vec<u8>)>,
+        edges: Vec<(String, String, Vec<u8>)>,
+        graph_version: u64,
+        done: oneshot::Sender<Result<(), String>>,
+    },
+    /// Replay one published drain: the methods one graph member applied in a
+    /// coalesced `commit_ops` group, committed as ONE group so the graph
+    /// version moves by exactly one (MEDULLA-OBJECT-STORAGE-BACKEND-R003).
+    ReplayDrain {
+        graph: String,
+        methods: Vec<Method>,
+        done: oneshot::Sender<Result<(), String>>,
+    },
+    /// Replay one published maintenance version bump: one maintenance group
+    /// over the graph that moves its version by exactly one.
+    ReplayVersionBump {
+        graph: String,
+        done: oneshot::Sender<Result<(), String>>,
+    },
     /// Drop EVERY durable row for one graph — nodes/edges/ledger/semantic AND the
     /// `graph_meta` identity row — in one durable transaction (CONCEPT:MEDULLA-KG.backend.tenant-delete-recreate-same).
     /// Issued when a tenant is DELETED so a recreate of the SAME name starts from a

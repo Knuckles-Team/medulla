@@ -1,5 +1,7 @@
 use super::*;
 use medulla_store::redb_store::store_prelude::*;
+use medulla_store::redb_store::commit_publish::CommitMaterial;
+use medulla_store::redb_store::shard::DrainCommit;
 
 /// Recover the logical graph name from a durable key produced by [`sanitize`].
 ///
@@ -348,6 +350,25 @@ pub(crate) fn commit_drained_chunk(
     // Cold graphs bind FIRST, in their own transactions: binding opens and
     // commits its own write and redb admits one writer, so it cannot happen
     // inside the group.
+    // A drain's graph methods are the material its published entries carry,
+    // read before the apply consumes them. Only a publishing shard pays the copy.
+    let materials: BTreeMap<String, CommitMaterial> = if shard.publishes_commits() {
+        graphs
+            .iter()
+            .filter_map(|graph| {
+                by_graph.get(graph).map(|methods| {
+                    (
+                        graph.clone(),
+                        CommitMaterial::Drain {
+                            methods: methods.clone(),
+                        },
+                    )
+                })
+            })
+            .collect()
+    } else {
+        BTreeMap::new()
+    };
     let acquire_txn = CommitPhaseTimer::start("acquire_txn");
     let bind_graphs = CommitPhaseTimer::start("bind_graphs");
     let members = shard.graph_members(graphs)?;
@@ -373,7 +394,15 @@ pub(crate) fn commit_drained_chunk(
     // failure must not skip it.
     let finished = write.finish();
     match (applied, finished) {
-        (Ok(()), Ok(())) => shard.commit_drain(group, &batches, committed_at_ms),
+        (Ok(()), Ok(())) => shard.commit_drain_with(
+            group,
+            &batches,
+            committed_at_ms,
+            DrainCommit {
+                materials,
+                install_version: None,
+            },
+        ),
         (Err(error), _) | (Ok(()), Err(error)) => {
             shard.mutations().abort_group(group)?;
             Err(error)

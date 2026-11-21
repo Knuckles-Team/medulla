@@ -48,6 +48,7 @@ pub use graft::{
 };
 pub use group::{AdmittedGroup, CurrentIntent, ScopedIntent};
 pub use kernel::MutationKernel;
+pub use ledger::install_scope_version;
 pub use maintenance::MaintenanceBatch;
 pub use outbox::{
     consumer_standing, max_delivery_attempts, operate_outbox, outbox_cursor, outbox_position,

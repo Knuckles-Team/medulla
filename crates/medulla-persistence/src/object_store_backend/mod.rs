@@ -27,7 +27,7 @@ pub use client::resolve_object_store_client;
 #[cfg(feature = "redb")]
 mod shard_publisher;
 #[cfg(feature = "redb")]
-pub(crate) use shard_publisher::attach_shard_publishers;
+pub(crate) use shard_publisher::{attach_shard_publishers, ShardCipher};
 
 /// The tenant the served engine files its graph versions under in the root:
 /// `<root>/engine/<graph>/`.
@@ -235,12 +235,12 @@ impl ObjectStoreBackend {
     /// the local store by the path the original took. A lost fence is
     /// `OBJECT_PUBLISH_STALE`: this node stops publishing, and every later
     /// publish refuses with the same code until the node reopens from the root.
-    /// `owner_snapshot` is the owner-table dump of the local store, read only
-    /// when the graph has no root yet and already holds data.
+    /// `graph_snapshot` is the graph's row pages, read only when the graph has no
+    /// root yet and already holds data.
     pub async fn publish_commit(
         &self,
         commit: &medulla_store::redb_store::commit_publish::PublishedCommit<'_>,
-        owner_snapshot: &dyn Fn() -> Result<Vec<u8>, String>,
+        graph_snapshot: &dyn Fn() -> Result<Vec<u8>, String>,
     ) -> Result<ObjectHead, String> {
         if self.stopped.load(Ordering::SeqCst) {
             return Err(format!(
@@ -251,10 +251,10 @@ impl ObjectStoreBackend {
         let segment = rmp_serde::to_vec_named(&vec![commit.entry])
             .map_err(|error| format!("OBJECT_HEAD_MISSING: batch segment encode: {error}"))?;
         let bootstrap = || {
-            // A graph that already holds data is bootstrapped with the owner-table
-            // snapshot as version zero; a graph with none starts empty.
+            // A graph that already holds data is bootstrapped with its row pages
+            // as version zero; a graph with none starts empty.
             let snapshot = if commit.prior_graph_version > 0 {
-                owner_snapshot().map_err(|detail| CommitRefusal::Remote { detail })?
+                graph_snapshot().map_err(|detail| CommitRefusal::Remote { detail })?
             } else {
                 Vec::new()
             };
@@ -304,23 +304,35 @@ impl ObjectStoreBackend {
 
     /// Restore the root into the local store: for each graph with a `HEAD`,
     /// read the head version (`ObjectFetcher::materialize` verifies every
-    /// segment digest), register the graph under the name and type its manifest
-    /// records, and re-commit its entries, in order, through the local store's
-    /// mutation kernel by the path each was first committed through. An entry
-    /// the local store already holds replays as a no-op. A read never writes to
-    /// the root. A graph whose local version ends past the head's refuses with
-    /// `OBJECT_LOCAL_AHEAD`; one that ends before it (a snapshot this store
-    /// cannot restore) refuses with `OBJECT_SEGMENT_MISSING`. Returns the number
-    /// of entries applied.
+    /// segment digest) and register the graph under the name and type its
+    /// manifest records.
+    ///
+    /// A segment is either row pages (the version-zero snapshot of a bootstrapped
+    /// graph, or a segment of a graph copy: [`medulla_storage::object::rows`]) or a
+    /// list of commit entries. The row pages restore the graph's rows and install
+    /// the graph version they stand for, which is the head's `graph_version` less
+    /// the number of entries after them: every published entry is one commit and
+    /// moves the version by exactly one. The entries then re-commit, in order,
+    /// through the local store by the path each was first committed through, and
+    /// an entry whose version the local graph already holds is skipped. A read
+    /// never writes to the root. A graph whose local version ends past the head's
+    /// refuses with `OBJECT_LOCAL_AHEAD`; one that ends before it refuses with
+    /// `OBJECT_SEGMENT_MISSING`. Returns the number of entries applied.
     #[cfg(feature = "redb")]
     pub async fn restore_into(
         &self,
         redb: &crate::redb_backend::RedbBackend,
     ) -> Result<usize, String> {
-        use medulla_server_api::api::persistence::{CrossModalCommitArgs, PersistenceBackend};
-        use medulla_store::redb_store::commit_publish::{BatchSegmentEntry, CommitMaterial};
+        use medulla_storage::object::rows::{decode_row_pages, is_row_page_segment};
+        use medulla_store::redb_store::commit_publish::BatchSegmentEntry;
 
         let read = |refusal: ObjectReadRefusal| format!("{}: {refusal:?}", refusal.wire_code());
+        let local_version = |graph_fname: &str| -> Result<u64, String> {
+            Ok(redb
+                .graph_identity(graph_fname)?
+                .map(|(_, _, local_version)| local_version)
+                .unwrap_or(0))
+        };
         let mut applied = 0;
         for graph_fname in self
             .fetcher
@@ -341,66 +353,77 @@ impl ObjectStoreBackend {
                 .map_err(read)?;
             redb.register_graph(&graph_fname, &version.graph_name, version.graph_type)
                 .await?;
+
+            let mut pages = decode_row_pages(&version.snapshot.bytes)
+                .map_err(|error| format!("OBJECT_SEGMENT_MISSING: snapshot {}: {error}", version.snapshot.key))?;
+            let mut entries: Vec<BatchSegmentEntry> = Vec::new();
             for segment in &version.batches {
-                let entries: Vec<BatchSegmentEntry> = rmp_serde::from_slice(&segment.bytes)
-                    .map_err(|error| {
-                        format!(
-                            "OBJECT_SEGMENT_MISSING: batch segment {} does not decode: {error}",
-                            segment.key
-                        )
-                    })?;
-                for entry in entries {
-                    let record = &entry.record;
-                    match &entry.material {
-                        CommitMaterial::Compact => {
-                            redb.commit_mutation_batch(
-                                &graph_fname,
-                                &record.batch,
-                                record.result_msgpack.as_deref(),
-                                record.committed_at_ms,
-                            )
-                            .await?;
-                        }
-                        CommitMaterial::Staged {
-                            authoritative_state_msgpack,
-                            audited,
-                        } => {
-                            redb.commit_mutation_batch_state(
-                                &graph_fname,
-                                &record.batch,
-                                authoritative_state_msgpack.clone(),
-                                record.result_msgpack.as_deref(),
-                                record.committed_at_ms,
-                                *audited,
-                            )
-                            .await?;
-                        }
-                        CommitMaterial::CrossModal {
-                            methods,
-                            vectors,
-                            blob_refs,
-                            measurements,
-                        } => {
-                            redb.commit_mutation_batch_crossmodal(CrossModalCommitArgs {
-                                graph_fname: &graph_fname,
-                                batch: &record.batch,
-                                methods,
-                                vectors,
-                                blob_refs,
-                                measurements,
-                                result_msgpack: record.result_msgpack.as_deref(),
-                                committed_at_ms: record.committed_at_ms,
-                            })
-                            .await?;
-                        }
-                    }
-                    applied += 1;
+                if segment.bytes.is_empty() {
+                    continue;
+                }
+                if is_row_page_segment(&segment.bytes) {
+                    pages.extend(decode_row_pages(&segment.bytes).map_err(|error| {
+                        format!("OBJECT_SEGMENT_MISSING: row segment {}: {error}", segment.key)
+                    })?);
+                } else {
+                    entries.extend(
+                        rmp_serde::from_slice::<Vec<BatchSegmentEntry>>(&segment.bytes).map_err(
+                            |error| {
+                                format!(
+                                    "OBJECT_SEGMENT_MISSING: batch segment {} does not decode: {error}",
+                                    segment.key
+                                )
+                            },
+                        )?,
+                    );
                 }
             }
-            let local = redb
-                .graph_identity(&graph_fname)?
-                .map(|(_, _, local_version)| local_version)
-                .unwrap_or(0);
+            let base = version
+                .graph_version
+                .checked_sub(entries.len() as u64)
+                .ok_or_else(|| {
+                    format!(
+                        "OBJECT_SEGMENT_MISSING: graph {graph_fname} is at version {} in the root, below its {} entries",
+                        version.graph_version,
+                        entries.len()
+                    )
+                })?;
+            if base == 0 && !pages.is_empty() {
+                return Err(format!(
+                    "OBJECT_SEGMENT_MISSING: graph {graph_fname} holds row pages at graph version 0"
+                ));
+            }
+            let mut local = local_version(&graph_fname)?;
+            if base > 0 && local < base {
+                let (mut nodes, mut edges) = (Vec::new(), Vec::new());
+                for page in pages {
+                    nodes.extend(page.nodes);
+                    edges.extend(page.edges);
+                }
+                redb.restore_graph_rows(&graph_fname, nodes, edges, base)
+                    .await?;
+                local = local_version(&graph_fname)?;
+                if local != base {
+                    return Err(format!(
+                        "OBJECT_SEGMENT_MISSING: graph {graph_fname} restored to version {local}, the snapshot stands for {base}"
+                    ));
+                }
+            }
+            for (index, entry) in entries.iter().enumerate() {
+                let target = base + index as u64 + 1;
+                if local >= target {
+                    continue;
+                }
+                self.replay_entry(redb, &graph_fname, entry).await?;
+                local = local_version(&graph_fname)?;
+                if local != target {
+                    return Err(format!(
+                        "OBJECT_SEGMENT_MISSING: replaying entry {} of graph {graph_fname} left it at version {local}, expected {target}",
+                        index + 1
+                    ));
+                }
+                applied += 1;
+            }
             if local > version.graph_version {
                 return Err(format!(
                     "{}: graph {graph_fname} is at version {local} locally and at {} in the root; the local copy is ahead and is not purged",
@@ -410,12 +433,119 @@ impl ObjectStoreBackend {
             }
             if local < version.graph_version {
                 return Err(format!(
-                    "OBJECT_SEGMENT_MISSING: graph {graph_fname} restored to version {local}, the root head is at {}; the root's snapshot cannot be restored into this store",
+                    "OBJECT_SEGMENT_MISSING: graph {graph_fname} restored to version {local}, the root head is at {}",
                     version.graph_version
                 ));
             }
         }
         Ok(applied)
+    }
+
+    /// Re-commit one published entry through the local store by the path its
+    /// material names.
+    #[cfg(feature = "redb")]
+    async fn replay_entry(
+        &self,
+        redb: &crate::redb_backend::RedbBackend,
+        graph_fname: &str,
+        entry: &medulla_store::redb_store::commit_publish::BatchSegmentEntry,
+    ) -> Result<(), String> {
+        use medulla_server_api::api::persistence::{CrossModalCommitArgs, PersistenceBackend};
+        use medulla_store::redb_store::commit_publish::CommitMaterial;
+
+        let record = &entry.record;
+        match &entry.material {
+            CommitMaterial::Compact => {
+                redb.commit_mutation_batch(
+                    graph_fname,
+                    &record.batch,
+                    record.result_msgpack.as_deref(),
+                    record.committed_at_ms,
+                )
+                .await?;
+            }
+            CommitMaterial::Staged {
+                authoritative_state_msgpack,
+                audited,
+            } => {
+                redb.commit_mutation_batch_state(
+                    graph_fname,
+                    &record.batch,
+                    authoritative_state_msgpack.clone(),
+                    record.result_msgpack.as_deref(),
+                    record.committed_at_ms,
+                    *audited,
+                )
+                .await?;
+            }
+            CommitMaterial::CrossModal {
+                methods,
+                vectors,
+                blob_refs,
+                measurements,
+            } => {
+                redb.commit_mutation_batch_crossmodal(CrossModalCommitArgs {
+                    graph_fname,
+                    batch: &record.batch,
+                    methods,
+                    vectors,
+                    blob_refs,
+                    measurements,
+                    result_msgpack: record.result_msgpack.as_deref(),
+                    committed_at_ms: record.committed_at_ms,
+                })
+                .await?;
+            }
+            CommitMaterial::ChangeEnvelope {
+                envelope,
+                source_budget,
+            } => {
+                match source_budget {
+                    Some(authority) => {
+                        redb.commit_repository_change_envelope(
+                            graph_fname,
+                            envelope,
+                            authority.clone(),
+                            record.committed_at_ms,
+                        )
+                        .await
+                    }
+                    None => {
+                        redb.commit_change_envelope(graph_fname, envelope, record.committed_at_ms)
+                            .await
+                    }
+                }?;
+            }
+            CommitMaterial::TopUp { transition_msgpack } => {
+                #[cfg(feature = "raft")]
+                {
+                    let transition = rmp_serde::from_slice(transition_msgpack).map_err(|error| {
+                        format!("OBJECT_SEGMENT_MISSING: top-up transition does not decode: {error}")
+                    })?;
+                    redb.commit_repository_enrichment_top_up(
+                        graph_fname,
+                        transition,
+                        record.committed_at_ms,
+                    )
+                    .await?;
+                }
+                #[cfg(not(feature = "raft"))]
+                {
+                    let _ = transition_msgpack;
+                    return Err(
+                        "OBJECT_SEGMENT_MISSING: the root holds a top-up entry and this build has no raft feature"
+                            .to_string(),
+                    );
+                }
+            }
+            CommitMaterial::Drain { methods } => {
+                redb.replay_drain(graph_fname, methods.clone()).await?;
+            }
+            CommitMaterial::VersionBump => {
+                redb.replay_version_bump(graph_fname).await?;
+            }
+        }
+        Ok(())
     }
 }
 

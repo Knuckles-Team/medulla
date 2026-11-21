@@ -472,6 +472,44 @@ struct AdmittedFreshBatch<'g, 'i, 'e> {
     outbox_effect: Option<OutboxBatchEffect<'e>>,
 }
 
+/// What a fresh commit publishes beside its batch, so a replay re-commits by the
+/// path the original took: a top-up carries its sealed transition, a governed
+/// change envelope its envelope and budget authority, a cross-modal commit its
+/// non-graph rows, a staged commit its authoritative state, and a compact batch
+/// is the whole effect.
+fn commit_material(
+    crossmodal: &Option<CrossModalBatchRows<'_>>,
+    rows: &BatchRowInput<'_>,
+    #[cfg(feature = "raft")] top_up: Option<TopUpSourceEffect<'_>>,
+) -> Result<CommitMaterial, String> {
+    #[cfg(feature = "raft")]
+    if let Some(top_up) = top_up {
+        return Ok(CommitMaterial::TopUp {
+            transition_msgpack: rmp_serde::to_vec_named(top_up.transition)
+                .map_err(|error| format!("enrichment top-up material encode: {error}"))?,
+        });
+    }
+    if let Some(envelope) = rows.change {
+        return Ok(CommitMaterial::ChangeEnvelope {
+            envelope: envelope.clone(),
+            source_budget: rows.source_budget.cloned(),
+        });
+    }
+    Ok(match (crossmodal, rows.authoritative_state_msgpack) {
+        (Some(cross), _) => CommitMaterial::CrossModal {
+            methods: cross.methods.to_vec(),
+            vectors: cross.vectors.to_vec(),
+            blob_refs: cross.blob_refs.to_vec(),
+            measurements: cross.measurements.to_vec(),
+        },
+        (None, Some(state)) => CommitMaterial::Staged {
+            authoritative_state_msgpack: state.to_vec(),
+            audited: rows.audited,
+        },
+        (None, None) => CommitMaterial::Compact,
+    })
+}
+
 fn finish_fresh_batch(
     shard: &Shard,
     admission: AdmittedFreshBatch<'_, '_, '_>,
@@ -583,22 +621,20 @@ fn finish_fresh_batch(
     let result = staged
         .generated_result
         .or_else(|| result_msgpack.map(ToOwned::to_owned));
-    let publication = shard.publishes_commits().then(|| CommitPublication {
+    let material = if shard.publishes_commits() {
+        Some(commit_material(
+            &crossmodal,
+            &rows,
+            #[cfg(feature = "raft")]
+            top_up,
+        )?)
+    } else {
+        None
+    };
+    let publication = material.map(|material| CommitPublication {
         graph_fname: rows.graph_fname,
         caller_batch: rows.batch,
-        material: match (&crossmodal, rows.authoritative_state_msgpack) {
-            (Some(cross), _) => CommitMaterial::CrossModal {
-                methods: cross.methods.to_vec(),
-                vectors: cross.vectors.to_vec(),
-                blob_refs: cross.blob_refs.to_vec(),
-                measurements: cross.measurements.to_vec(),
-            },
-            (None, Some(state)) => CommitMaterial::Staged {
-                authoritative_state_msgpack: state.to_vec(),
-                audited: rows.audited,
-            },
-            (None, None) => CommitMaterial::Compact,
-        },
+        material,
     });
     let committed =
         shard.commit_batch(group, &batches, result, rows.committed_at_ms, publication)?;

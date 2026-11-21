@@ -8,8 +8,11 @@
 
 use std::sync::{Arc, Weak};
 
+use medulla_storage::object::rows::{append_row_page, RowBatch, BATCH_ROWS};
 use medulla_store::redb_store::commit_publish::{CommitPublisher, PublishedCommit};
 use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::DurableCrypto;
+use medulla_store_apply::redb_store::dump::{read_graph_dump_page, PageCursorRef};
 
 use super::ObjectStoreBackend;
 
@@ -44,21 +47,78 @@ impl Drop for PublishRuntime {
     }
 }
 
+/// The value cipher a shard's writer seals its rows with: the snapshot reads
+/// rows unsealed, so it needs the same cipher.
+#[cfg(feature = "security")]
+pub(crate) type ShardCipher = Option<medulla_kernel::crypto::ValueCipher>;
+#[cfg(not(feature = "security"))]
+pub(crate) type ShardCipher = ();
+
 struct ShardCommitPublisher {
     backend: Arc<ObjectStoreBackend>,
     runtime: Arc<PublishRuntime>,
     shard: Weak<Shard>,
+    cipher: ShardCipher,
+}
+
+impl ShardCommitPublisher {
+    /// The version-zero snapshot of one graph: its row pages, the paged export
+    /// form of the graph copy, concatenated in key order. Read from the
+    /// committed state the open commit builds on.
+    fn graph_snapshot(&self, graph: &str) -> Result<Vec<u8>, String> {
+        let shard = self
+            .shard
+            .upgrade()
+            .ok_or_else(|| "redb writer thread is gone".to_string())?;
+        #[cfg(feature = "security")]
+        let crypto = DurableCrypto::new(self.cipher.as_ref());
+        #[cfg(not(feature = "security"))]
+        let crypto = {
+            let () = self.cipher;
+            DurableCrypto::none()
+        };
+        let mut segment = Vec::new();
+        let (mut node_after, mut edge_after): (Option<String>, Option<(String, String, u32)>) =
+            (None, None);
+        loop {
+            let Some(page) = read_graph_dump_page(
+                &shard,
+                graph,
+                crypto,
+                PageCursorRef {
+                    node_offset: 0,
+                    edge_offset: 0,
+                    node_after: node_after.as_deref(),
+                    edge_after: edge_after
+                        .as_ref()
+                        .map(|(source, target, ordinal)| (source.as_str(), target.as_str(), *ordinal)),
+                    page_size: BATCH_ROWS,
+                },
+            )?
+            else {
+                break;
+            };
+            node_after = page.node_after.clone();
+            edge_after = page.edge_after.clone();
+            let done = page.nodes_exhausted && page.edges_exhausted;
+            let batch = RowBatch {
+                nodes: page.nodes,
+                edges: page.edges,
+            };
+            if batch.rows() > 0 {
+                append_row_page(&mut segment, &batch)?;
+            }
+            if done {
+                break;
+            }
+        }
+        Ok(segment)
+    }
 }
 
 impl CommitPublisher for ShardCommitPublisher {
     fn publish(&self, commit: &PublishedCommit<'_>) -> Result<(), String> {
-        let snapshot = || {
-            self.shard
-                .upgrade()
-                .ok_or_else(|| "redb writer thread is gone".to_string())?
-                .kernel()
-                .owner_snapshot_segment()
-        };
+        let snapshot = || self.graph_snapshot(commit.graph_fname);
         self.runtime
             .block_on(self.backend.publish_commit(commit, &snapshot))
             .map(|_| ())
@@ -68,10 +128,10 @@ impl CommitPublisher for ShardCommitPublisher {
 /// Attach one publisher to each of `shards`, all publishing through `backend`.
 pub(crate) fn attach_shard_publishers(
     backend: Arc<ObjectStoreBackend>,
-    shards: impl IntoIterator<Item = Weak<Shard>>,
+    shards: impl IntoIterator<Item = (Weak<Shard>, ShardCipher)>,
 ) -> Result<(), String> {
     let runtime = Arc::new(PublishRuntime::new()?);
-    for weak in shards {
+    for (weak, cipher) in shards {
         let shard = weak
             .upgrade()
             .ok_or_else(|| "redb writer thread is gone".to_string())?;
@@ -79,6 +139,7 @@ pub(crate) fn attach_shard_publishers(
             backend: Arc::clone(&backend),
             runtime: Arc::clone(&runtime),
             shard: weak,
+            cipher,
         }))?;
     }
     Ok(())

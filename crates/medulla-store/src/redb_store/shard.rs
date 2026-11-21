@@ -69,7 +69,7 @@ pub use batch::bind_caller_batch;
 use batch::drain_batch;
 
 use super::commit_publish::{
-    BatchSegmentEntry, CommitPublication, CommitPublisher, PublishedCommit,
+    BatchSegmentEntry, CommitMaterial, CommitPublication, CommitPublisher, PublishedCommit,
 };
 use super::CommitPhaseTimer;
 
@@ -210,6 +210,10 @@ pub struct Shard {
     /// Bound graph scopes, keyed by `graph_fname`. Bound on first use; see the
     /// module doc's note on the two-fsync cost of a graph's first operation.
     graphs: RwLock<BTreeMap<String, ShardHandle>>,
+    /// The graph name of each bound graph scope, keyed by the scope's identity
+    /// digest. A drain commit knows its members by batch identity only; this is
+    /// how it names the graph a version bump belongs to when it publishes.
+    graph_by_scope: RwLock<BTreeMap<String, String>>,
     /// One in-process protocol guard per graph.  Reserved owner imports and
     /// graft cleanup each span multiple durable transactions, so their whole
     /// protocol must be serialized even though each individual redb write is
@@ -242,6 +246,7 @@ impl Shard {
             physical_path: path.to_path_buf(),
             control,
             graphs: RwLock::new(BTreeMap::new()),
+            graph_by_scope: RwLock::new(BTreeMap::new()),
             #[cfg(feature = "server")]
             graft_protocols: RwLock::new(BTreeMap::new()),
             commit_publisher: std::sync::OnceLock::new(),
@@ -328,6 +333,13 @@ impl Shard {
         }
         let handle =
             bind_scope::<GraphShardOwner>(&self.kernel, &graph_scope_identity(graph_fname)?)?;
+        self.graph_by_scope
+            .write()
+            .map_err(|_| "graph shard scope cache is poisoned".to_string())?
+            .insert(
+                handle.identity().identity_digest().to_hex(),
+                graph_fname.to_string(),
+            );
         self.graphs
             .write()
             .map_err(|_| "graph shard scope cache is poisoned".to_string())?
@@ -386,6 +398,10 @@ impl Shard {
             .is_some_and(|handle| handle.identity() == retired_identity)
         {
             graphs.remove(graph_fname);
+            self.graph_by_scope
+                .write()
+                .map_err(|_| "graph shard scope cache is poisoned".to_string())?
+                .remove(&retired_identity.identity_digest().to_hex());
         }
         Ok(())
     }
@@ -542,24 +558,73 @@ impl Shard {
         batches: &[MutationBatch],
         committed_at_ms: u64,
     ) -> Result<(), String> {
+        self.commit_drain_with(group, batches, committed_at_ms, DrainCommit::default())
+    }
+
+    /// [`Self::commit_drain`] with what a drain-class group publishes and installs.
+    ///
+    /// A drain-class group (a coalesced `commit_ops` drain or a maintenance
+    /// write) bumps the version of every graph member it applies. Each such
+    /// bump is published through the same seam as a caller batch, before the
+    /// group commits, so no version bump goes unpublished and a refused
+    /// publication aborts the group. A member with no entry in
+    /// `drain.materials` publishes [`CommitMaterial::VersionBump`].
+    pub fn commit_drain_with(
+        &self,
+        group: AdmittedGroup<'_, GraphShardOwner>,
+        batches: &[MutationBatch],
+        committed_at_ms: u64,
+        drain: DrainCommit,
+    ) -> Result<(), String> {
         // EH-290 phase split: `ledger_finish` is per-batch terminal-metadata
         // bookkeeping, still inside the one shared transaction (no fsync yet).
         // `durability_commit` is sealing every member and ending the group's
         // transaction -- the redb `commit()` call that performs the actual
         // `Durability::Immediate` fsync. See `CommitPhaseTimer`.
+        let DrainCommit {
+            mut materials,
+            install_version,
+        } = drain;
         let ledger_finish = CommitPhaseTimer::start("ledger_finish");
+        let mut receipts: Vec<(usize, MutationBatchRecord)> = Vec::new();
         for (index, batch) in batches.iter().enumerate() {
             let Begin::Apply { source_version } = group.begun(index)? else {
                 continue;
             };
             let source_version = *source_version;
-            self.mutations.finish(
+            let receipt = self.mutations.finish(
                 group.member(index)?,
                 batch,
                 None,
                 committed_at_ms,
                 source_version,
             )?;
+            if index > 0 {
+                receipts.push((index, receipt));
+            }
+        }
+        if let Some((graph, version)) = &install_version {
+            let index = self.drain_member_index(batches, graph)?;
+            medulla_transaction::install_scope_version(
+                group.member(index)?,
+                &batches[index].identity,
+                *version,
+            )?;
+        }
+        if let Some(publisher) = self.commit_publisher.get() {
+            for (index, receipt) in &receipts {
+                let batch = &batches[*index];
+                let published = self.graph_of_scope(batch).and_then(|graph| {
+                    let material = materials
+                        .remove(&graph)
+                        .unwrap_or(CommitMaterial::VersionBump);
+                    self.publish_before_commit(publisher.as_ref(), &graph, batch, material, receipt)
+                });
+                if let Err(error) = published {
+                    self.mutations.abort_group(group)?;
+                    return Err(error);
+                }
+            }
         }
         ledger_finish.finish();
         let refs: Vec<&MutationBatch> = batches.iter().collect();
@@ -567,6 +632,26 @@ impl Shard {
         let result = self.mutations.commit_group(group, &refs);
         durability_commit.finish();
         result
+    }
+
+    /// The graph a drain member's batch was admitted for.
+    fn graph_of_scope(&self, batch: &MutationBatch) -> Result<String, String> {
+        self.graph_by_scope
+            .read()
+            .map_err(|_| "graph shard scope cache is poisoned".to_string())?
+            .get(&batch.identity.identity_digest().to_hex())
+            .cloned()
+            .ok_or_else(|| "a drain member's graph scope is not bound on this shard".to_string())
+    }
+
+    /// The index in `batches` of the member admitted for `graph`.
+    fn drain_member_index(&self, batches: &[MutationBatch], graph: &str) -> Result<usize, String> {
+        for (index, batch) in batches.iter().enumerate().skip(1) {
+            if self.graph_of_scope(batch)? == graph {
+                return Ok(index);
+            }
+        }
+        Err(format!("the drain group has no member for graph {graph}"))
     }
 
     // -- the two kernel surfaces this shard reaches through ONE call site each --
@@ -917,8 +1002,13 @@ impl Shard {
         // is not committed. A refused publication (a lost fence) aborts the group,
         // so the local write rolls back and the caller is never acked.
         if let (Some(publisher), Some(publication)) = (self.commit_publisher.get(), publication) {
-            if let Err(error) = self.publish_before_commit(publisher.as_ref(), publication, &record)
-            {
+            if let Err(error) = self.publish_before_commit(
+                publisher.as_ref(),
+                publication.graph_fname,
+                publication.caller_batch,
+                publication.material,
+                &record,
+            ) {
                 self.mutations.abort_group(group)?;
                 return Err(error);
             }
@@ -937,10 +1027,11 @@ impl Shard {
     fn publish_before_commit(
         &self,
         publisher: &dyn CommitPublisher,
-        publication: CommitPublication<'_>,
+        graph: &str,
+        caller_batch: &MutationBatch,
+        material: CommitMaterial,
         receipt: &MutationBatchRecord,
     ) -> Result<(), String> {
-        let graph = publication.graph_fname;
         let (graph_name, graph_type) =
             crate::redb_store::store_read::read_graph_identity(self, graph)?.ok_or_else(|| {
                 format!("graph {graph} has no durable identity row to publish under")
@@ -949,14 +1040,14 @@ impl Shard {
             crate::redb_store::store_read::read_mutation_graph_version(self, graph)?;
         let entry = BatchSegmentEntry {
             record: MutationBatchRecord {
-                batch: publication.caller_batch.clone(),
-                identity: publication.caller_batch.identity.clone(),
+                batch: caller_batch.clone(),
+                identity: caller_batch.identity.clone(),
                 status: receipt.status,
                 committed_version: receipt.committed_version,
                 result_msgpack: receipt.result_msgpack.clone(),
                 committed_at_ms: receipt.committed_at_ms,
             },
-            material: publication.material,
+            material,
         };
         publisher.publish(&PublishedCommit {
             graph_fname: graph,
@@ -1220,6 +1311,17 @@ pub fn open_kernel_owned_store<D: OwnerDomain>(
 pub struct CommittedBatch {
     pub record: MutationBatchRecord,
     pub replayed: bool,
+}
+
+/// What a drain-class commit publishes and installs
+/// ([`Shard::commit_drain_with`]).
+#[derive(Default)]
+pub struct DrainCommit {
+    /// The material each graph member's published entry carries, by graph.
+    pub materials: BTreeMap<String, CommitMaterial>,
+    /// A restore install: after the member for this graph is finished, its
+    /// authoritative graph version is raised to this value.
+    pub install_version: Option<(String, u64)>,
 }
 
 /// The owner-row writes of one admitted scope group, addressable by graph.

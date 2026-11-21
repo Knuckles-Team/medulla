@@ -5624,6 +5624,10 @@ impl medulla_store::redb_store::commit_publish::CommitPublisher for RecordingPub
             CommitMaterial::Compact => "compact",
             CommitMaterial::Staged { .. } => "staged",
             CommitMaterial::CrossModal { .. } => "cross_modal",
+            CommitMaterial::ChangeEnvelope { .. } => "change_envelope",
+            CommitMaterial::TopUp { .. } => "top_up",
+            CommitMaterial::Drain { .. } => "drain",
+            CommitMaterial::VersionBump => "version_bump",
         };
         self.seen.lock().unwrap().push((
             kind.to_string(),
@@ -5742,5 +5746,93 @@ fn every_commit_path_publishes_at_the_chokepoint_and_a_lost_fence_rolls_back() {
     );
     drop(db);
     assert_absent_after_reopen(&path, "batch-pub-refused");
+    let _ = std::fs::remove_file(path);
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003
+#[test]
+fn no_graph_version_bump_goes_unpublished() {
+    use medulla_store::redb_store::shard::DrainCommit;
+    let path = temp_path("drain-publication");
+    let db = open(&path);
+    medulla_store::redb_store::store_read::write_graph_meta(
+        &db,
+        "graph-a",
+        "graph-a",
+        medulla_protocol_types::protocol::GraphType::Global,
+    )
+    .unwrap();
+    let publisher = std::sync::Arc::new(RecordingPublisher {
+        seen: std::sync::Mutex::new(Vec::new()),
+        refuse: std::sync::atomic::AtomicBool::new(false),
+    });
+    db.attach_commit_publisher(publisher.clone()).unwrap();
+    let version_before = read_mutation_graph_version(&db, "graph-a").unwrap();
+
+    // A coalesced `commit_ops` drain bumps the graph version once, and publishes
+    // the methods it applied.
+    let mut ops = vec![(
+        "graph-a".to_string(),
+        Method::AddNode {
+            node_id: "drained".to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"value": 1})).unwrap(),
+        },
+    )];
+    #[cfg(feature = "security")]
+    let mut audit = AuditTailCache::new();
+    medulla_store_apply::redb_store::store_control::commit_ops(
+        &db,
+        &mut ops,
+        &mut Vec::new(),
+        "drain-publication",
+        1,
+        DurableCrypto::none(),
+        #[cfg(feature = "security")]
+        &mut audit,
+    )
+    .unwrap();
+
+    // A maintenance write over the graph bumps it once too, and publishes the bump.
+    let members = db.graph_members(&["graph-a"]).unwrap();
+    let (group, batches) = db
+        .admit_maintenance(&members, "maintenance-publication")
+        .unwrap();
+    let write = medulla_store::redb_store::shard::ShardWrite::open(&db, &group, &members, &batches)
+        .unwrap();
+    write.finish().unwrap();
+    db.commit_drain_with(group, &batches, 2, DrainCommit::default())
+        .unwrap();
+
+    {
+        let seen = publisher.seen.lock().unwrap();
+        let kinds: Vec<&str> = seen.iter().map(|entry| entry.0.as_str()).collect();
+        assert_eq!(kinds, ["drain", "version_bump"]);
+        assert_eq!(seen[0].2, Some(version_before + 1));
+        assert_eq!(seen[0].3, version_before);
+        assert_eq!(seen[1].2, Some(version_before + 2));
+        assert_eq!(seen[1].3, version_before + 1);
+    }
+    assert_eq!(
+        read_mutation_graph_version(&db, "graph-a").unwrap(),
+        version_before + 2
+    );
+
+    // A lost fence aborts a drain-class group as it aborts a caller batch.
+    publisher
+        .refuse
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let (group, batches) = db.admit_maintenance(&members, "maintenance-refused").unwrap();
+    let write = medulla_store::redb_store::shard::ShardWrite::open(&db, &group, &members, &batches)
+        .unwrap();
+    write.finish().unwrap();
+    let error = db
+        .commit_drain_with(group, &batches, 3, DrainCommit::default())
+        .unwrap_err();
+    assert!(error.starts_with("OBJECT_PUBLISH_STALE"), "{error}");
+    assert_eq!(
+        read_mutation_graph_version(&db, "graph-a").unwrap(),
+        version_before + 2
+    );
+    drop(db);
     let _ = std::fs::remove_file(path);
 }

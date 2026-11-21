@@ -20,7 +20,15 @@ impl RedbBackend {
     pub fn attach_object_store(&mut self, backend: Arc<ObjectStoreBackend>) -> Result<(), String> {
         crate::object_store_backend::attach_shard_publishers(
             backend,
-            self.shards.iter().map(|writer| writer.shard.clone()),
+            self.shards.iter().map(|writer| {
+                (
+                    writer.shard.clone(),
+                    #[cfg(feature = "security")]
+                    writer.cipher.clone(),
+                    #[cfg(not(feature = "security"))]
+                    (),
+                )
+            }),
         )
     }
 
@@ -43,5 +51,56 @@ impl RedbBackend {
         let version =
             medulla_store::redb_store::store_read::read_mutation_graph_version(&shard, graph_fname)?;
         Ok(Some((name, graph_type, version)))
+    }
+
+    /// Restore one graph's rows from the root's row pages and install the graph
+    /// version they stand for; see [`Cmd::RestoreGraphRows`].
+    pub async fn restore_graph_rows(
+        &self,
+        graph_fname: &str,
+        nodes: Vec<(String, Vec<u8>)>,
+        edges: Vec<(String, String, Vec<u8>)>,
+        graph_version: u64,
+    ) -> Result<(), String> {
+        let (done, rx) = oneshot::channel();
+        let cmd = Cmd::RestoreGraphRows {
+            graph: graph_fname.to_string(),
+            nodes,
+            edges,
+            graph_version,
+            done,
+        };
+        self.enqueue(graph_fname, cmd, "restore_graph_rows").await?;
+        rx.await
+            .map_err(|_| "redb writer dropped restore_graph_rows completion".to_string())?
+    }
+
+    /// Replay one published drain of graph methods; see [`Cmd::ReplayDrain`].
+    pub async fn replay_drain(
+        &self,
+        graph_fname: &str,
+        methods: Vec<medulla_protocol_types::protocol::Method>,
+    ) -> Result<(), String> {
+        let (done, rx) = oneshot::channel();
+        let cmd = Cmd::ReplayDrain {
+            graph: graph_fname.to_string(),
+            methods,
+            done,
+        };
+        self.enqueue(graph_fname, cmd, "replay_drain").await?;
+        rx.await
+            .map_err(|_| "redb writer dropped replay_drain completion".to_string())?
+    }
+
+    /// Replay one published maintenance version bump; see [`Cmd::ReplayVersionBump`].
+    pub async fn replay_version_bump(&self, graph_fname: &str) -> Result<(), String> {
+        let (done, rx) = oneshot::channel();
+        let cmd = Cmd::ReplayVersionBump {
+            graph: graph_fname.to_string(),
+            done,
+        };
+        self.enqueue(graph_fname, cmd, "replay_version_bump").await?;
+        rx.await
+            .map_err(|_| "redb writer dropped replay_version_bump completion".to_string())?
     }
 }

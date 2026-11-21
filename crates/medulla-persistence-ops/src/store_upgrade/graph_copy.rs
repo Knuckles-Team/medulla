@@ -16,6 +16,7 @@ use std::sync::Arc;
 use futures_util::TryStreamExt;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_storage::object::fetch::{ObjectHead, SegmentHeader, VersionManifest};
+use medulla_storage::object::rows::{RowBatch, BATCH_ROWS};
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt, PutMode, PutOptions};
 use serde::{Deserialize, Serialize};
@@ -25,23 +26,8 @@ use sha2::{Digest, Sha256};
 pub const GRAPH_COPY_DIGEST_MISMATCH: &str = "GRAPH_COPY_DIGEST_MISMATCH";
 /// The wire code of a copy refused because the destination graph is not empty.
 pub const GRAPH_COPY_DESTINATION_NOT_EMPTY: &str = "GRAPH_COPY_DESTINATION_NOT_EMPTY";
-/// Rows of one batch.
-pub const BATCH_ROWS: usize = 1_000;
 /// SHA-256 of the empty snapshot segment every copied graph starts from (version 0).
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
-/// One batch segment: a page of node and edge rows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RowBatch {
-    pub nodes: Vec<(String, Vec<u8>)>,
-    pub edges: Vec<(String, String, Vec<u8>)>,
-}
-
-impl RowBatch {
-    fn rows(&self) -> u64 {
-        (self.nodes.len() + self.edges.len()) as u64
-    }
-}
 
 /// Why a copy did not happen.
 #[derive(Debug, PartialEq, Eq)]
