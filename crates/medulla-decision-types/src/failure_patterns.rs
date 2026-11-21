@@ -221,6 +221,23 @@ pub struct FailureIngestResult {
     pub patterns: Vec<FailurePattern>,
     /// Topic ids whose gap node this call created.
     pub filed: Vec<String>,
+    /// Patterns below `failure.min_count`: they file no gap
+    /// (MEDULLA-DECISION-ENGINE-R701.4). Omitted from the wire when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped: Vec<SkippedPattern>,
+}
+
+/// A pattern that did not recur enough to file a gap.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkippedPattern {
+    /// The pattern's signature.
+    pub signature: Signature,
+    /// Records seen.
+    pub count: u64,
+    /// The registered code, `PATTERN_BELOW_MIN_COUNT`.
+    pub code: String,
 }
 
 #[cfg(test)]
