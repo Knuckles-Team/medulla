@@ -1551,6 +1551,49 @@ mod web_metasearch {
         .expect("a tool with a web capability resolves to a web source")
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R174.9.3.1
+    #[test]
+    fn web_read_returns_candidates_and_none_for_other_sources() {
+        let port = WebPort::new(&THREE);
+        let registry = registry();
+        let session = session("owner-a", 2_000);
+        let spec = ForeignSourceSpec::Named { name: "web".into() };
+        let shared = || Some(port.clone() as Arc<dyn super::super::mcp::ConnectorRowSource>);
+        let set = crate::federation_opt::web::web_read_with(
+            &spec,
+            Some(&registry),
+            shared(),
+            "needle",
+            &session,
+            1_000_000,
+        )
+        .unwrap()
+        .expect("a web source answers a candidate set");
+        assert_eq!(set.query_text, "needle");
+        assert_eq!(set.query_digest, WebQuery::new("needle").digest());
+        assert_eq!(
+            set.candidates.iter().map(|c| c.url.as_str()).collect::<Vec<_>>(),
+            ["https://a.example/1", "https://b.example/2", "https://c.example/3"]
+        );
+        // A spec that is not a web source answers `None` and calls nothing.
+        let other = ForeignSourceSpec::HttpJson {
+            url: "http://x.example/".into(),
+            json_path: "data".into(),
+            field_map: medulla_query_types::wire::HttpFieldMap {
+                id: "id".into(),
+                score: None,
+                columns: Default::default(),
+            },
+        };
+        let calls = port.calls.lock().unwrap().len();
+        assert!(crate::federation_opt::web::web_read_with(
+            &other, None, shared(), "needle", &session, 1_000_000
+        )
+        .unwrap()
+        .is_none());
+        assert_eq!(port.calls.lock().unwrap().len(), calls);
+    }
+
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.2
     #[test]
     fn web_search_pushdown_and_ttl() {

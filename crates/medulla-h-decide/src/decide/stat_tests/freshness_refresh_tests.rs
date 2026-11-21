@@ -55,10 +55,11 @@ impl RecordedSource {
 }
 
 impl SearchSourcePort for RecordedSource {
-    fn binding(&self, _tenant: &str, graph: &str) -> Option<SearchSourceBinding> {
+    fn binding(&self, tenant: &str, graph: &str) -> Option<SearchSourceBinding> {
         (graph == GRAPH).then(|| SearchSourceBinding {
             connection_iri: SOURCE.to_string(),
             cost_units_per_request: self.cost,
+            tenant: tenant.to_string(),
         })
     }
 

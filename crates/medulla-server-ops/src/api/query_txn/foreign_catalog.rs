@@ -87,6 +87,9 @@ struct CatalogKey {
 #[derive(Clone)]
 struct OwnedSpec {
     owner_agent: String,
+    /// The registering owner's verified tenant scope: the tenant a lookup by tenant
+    /// checks against (MEDULLA-DECISION-ENGINE-R174.9.3.1).
+    tenant_scope: String,
     spec: ForeignSourceSpec,
     /// The per-query bounds of this source (MEDULLA-UNIFIED-DATA-PLANE-R031.2): the
     /// registration's own quota, else the `foreign.default_quota.*` values resolved when it
@@ -303,10 +306,12 @@ impl ForeignSourceCatalog {
             name,
         };
         let owner_agent = owner.agent_id().to_string();
+        let tenant_scope = owner.tenant_scope().to_string();
         self.entries.insert(
             key,
             OwnedSpec {
                 owner_agent,
+                tenant_scope,
                 spec,
                 quota,
                 acceleration,
@@ -791,6 +796,22 @@ impl ForeignSourceCatalog {
         self.spec_for_probe(owner_scope, name).is_some()
     }
 
+    /// The spec registered under `name` by a principal of `tenant`
+    /// (MEDULLA-DECISION-ENGINE-R174.9.3.1). Only entries whose owner's tenant scope
+    /// is the tenant's are considered, so another tenant's entry is never returned;
+    /// among several principals of the tenant the lowest owner scope (string order)
+    /// wins, which makes the choice deterministic.
+    pub fn spec_for_tenant(&self, tenant: &str, name: &str) -> Option<ForeignSourceSpec> {
+        let tenant_scope = medulla_server_api::carrier::tenant_scope_of(tenant);
+        self.entries
+            .iter()
+            .filter(|entry| {
+                entry.key().name == name && entry.value().tenant_scope == tenant_scope
+            })
+            .min_by(|a, b| a.key().owner_scope.cmp(&b.key().owner_scope))
+            .map(|entry| entry.value().spec.clone())
+    }
+
     /// The spec `owner` registered under `name`, if any.
     #[cfg(any(test, feature = "test-support"))]
     pub fn spec_for(&self, owner: &CarrierAuthority, name: &str) -> Option<ForeignSourceSpec> {
@@ -1237,6 +1258,50 @@ mod tests {
                 columns: Default::default(),
             },
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.9.3.1
+    #[test]
+    fn spec_for_tenant_is_tenant_checked_and_lowest_owner_wins() {
+        let catalog = ForeignSourceCatalog::default();
+        let in_tenant = |agent: &str, tenant: &str| {
+            CarrierAuthority::from_verified(
+                &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+                    agent, tenant,
+                ),
+            )
+            .expect("verified carrier")
+        };
+        let register = |owner: &CarrierAuthority, url: &str| {
+            catalog
+                .register(owner, "search".into(), http_spec(url), quota(), None)
+                .unwrap();
+        };
+        let (a, b, other) = (
+            in_tenant("agent-a", "tenant-one"),
+            in_tenant("agent-b", "tenant-one"),
+            in_tenant("agent-c", "tenant-two"),
+        );
+        // Another tenant's entry is never returned, and an unknown name is absent.
+        register(&other, "http://other.example/x");
+        assert_eq!(catalog.spec_for_tenant("tenant-one", "search"), None);
+        assert_eq!(catalog.spec_for_tenant("tenant-one", "missing"), None);
+        // The lowest owner scope wins, whichever principal registered first.
+        let (low, high) = if a.owner_scope() < b.owner_scope() {
+            (&a, &b)
+        } else {
+            (&b, &a)
+        };
+        register(high, "http://high.example/x");
+        register(low, "http://low.example/x");
+        assert_eq!(
+            catalog.spec_for_tenant("tenant-one", "search"),
+            Some(http_spec("http://low.example/x"))
+        );
+        assert_eq!(
+            catalog.spec_for_tenant("tenant-two", "search"),
+            Some(http_spec("http://other.example/x"))
+        );
     }
 
     #[test]

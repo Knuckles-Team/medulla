@@ -36,6 +36,10 @@ pub(super) const REGION_SHARDS: u32 = 64;
 /// Most held rows one refresh reads back to deduplicate against.
 const MAX_HELD_ROWS: usize = 100_000;
 
+/// The name a tenant registers its web search source under: the search source of
+/// every graph of the tenant (MEDULLA-DECISION-ENGINE-R174.9.3.1).
+pub const SEARCH_SOURCE_NAME: &str = "search";
+
 /// One search result as the source returned it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchHit {
@@ -62,6 +66,9 @@ pub struct SearchSourceBinding {
     pub connection_iri: String,
     /// Cost units one request spends.
     pub cost_units_per_request: u64,
+    /// The verified tenant the binding was resolved for; `read` resolves the
+    /// source for this tenant again (MEDULLA-DECISION-ENGINE-R174.9.3.1).
+    pub tenant: String,
 }
 
 /// The virtual-graph read seam of a refresh: the registered `searxng`

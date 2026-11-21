@@ -10,8 +10,24 @@ use medulla_server_api::state::ServerState;
 /// read lock for one read at a time.
 pub fn install_seams(state: &ServerState, shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
     install_state_seams(state);
+    install_freshness_search_port(state);
     install_walkthrough_seam(state, shared);
     install_downtime_bodies(shared);
+}
+
+/// Register the production search source port of the freshness refresh once, over the
+/// state's foreign source catalog (MEDULLA-DECISION-ENGINE-R174.9.3.1).
+#[allow(unused_variables)]
+pub fn install_freshness_search_port(state: &ServerState) {
+    #[cfg(all(feature = "decide", feature = "federation"))]
+    {
+        use medulla_server_ops::api::query_txn::ForeignStateExt;
+        medulla_h_decide::decide::stat_freshness::register_search_source_port(
+            std::sync::Arc::new(crate::freshness_search_port::FederationSearchPort::new(
+                state.foreign_sources(),
+            )),
+        );
+    }
 }
 
 /// Install the body of every shipped downtime intent that has one

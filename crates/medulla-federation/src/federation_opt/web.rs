@@ -150,6 +150,45 @@ pub fn web_entry_ttl_ms(spec: &ForeignSourceSpec, ttl_s: u64) -> Option<u64> {
     resolve_web(spec, None).map(|_| ttl_s.saturating_mul(1000))
 }
 
+/// Read one query through a registered web metasearch source
+/// (MEDULLA-DECISION-ENGINE-R174.9.3.1): `Ok(None)` when `spec` is not a web source,
+/// else the candidates the source returned with the query digest. A result without a
+/// URL refuses with its code text.
+pub fn web_read(
+    spec: &ForeignSourceSpec,
+    registry: Option<&ForeignSourceRegistry>,
+    query: &str,
+    session: &FederationSession,
+    now_ms: u64,
+) -> Result<Option<medulla_catalog_types::web_source::WebCandidateSet>, String> {
+    web_read_with(
+        spec,
+        registry,
+        super::mcp::registered_port(),
+        query,
+        session,
+        now_ms,
+    )
+}
+
+/// [`web_read`] over an explicit connector port.
+pub(crate) fn web_read_with(
+    spec: &ForeignSourceSpec,
+    registry: Option<&ForeignSourceRegistry>,
+    port: Option<super::mcp::SharedPort>,
+    query: &str,
+    session: &FederationSession,
+    now_ms: u64,
+) -> Result<Option<medulla_catalog_types::web_source::WebCandidateSet>, String> {
+    let Some(remote) = resolve_web_with(spec, registry, port) else {
+        return Ok(None);
+    };
+    let rows = web_scan_at(&WebQuery::new(query), &remote, session, now_ms)?;
+    web_candidates(&rows)
+        .map(Some)
+        .map_err(|refusal| refusal.to_string())
+}
+
 /// `Op::ForeignScan` over a web source: push the `RankText` query of the enclosing `FuseRrf`,
 /// answer from the cache inside the TTL, and return the results as rows ranked by their rank.
 pub(crate) fn web_scan(

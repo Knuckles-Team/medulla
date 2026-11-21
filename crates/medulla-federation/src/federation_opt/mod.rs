@@ -82,7 +82,7 @@ pub use trace::{
     render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
     SearchReceipt,
 };
-pub use web::{web_candidates, web_entry_ttl_ms, WebQuery};
+pub use web::{web_candidates, web_entry_ttl_ms, web_read, WebQuery};
 
 mod federated;
 pub use federated::FederatedExec;
