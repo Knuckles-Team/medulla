@@ -3724,6 +3724,87 @@ class DecisionEvalOpMemoryRewriteSubmit(BaseModel):
     request: MemoryRewriteProposal
 
 
+class SkillClassification(str, Enum):
+    ATOMIC = "atomic"
+    WORKFLOW = "workflow"
+
+
+class PinnedSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    revision: Annotated[int, Field(ge=0)]
+    digest: str
+
+
+class LocalSkillPins(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    model: ComponentDependency
+    dataset: PinnedSet
+    criteria_policy: ComponentDependency
+
+
+class CriterionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    criterion_id: str
+    passed: bool
+    evidence_digest: str
+
+
+class RunReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_id: str
+    skill: ComponentDependency
+    pins: LocalSkillPins
+    results: list[CriterionResult]
+    completion_revision: Annotated[int, Field(ge=0)]
+
+
+class LocalCertificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    schema_version: Annotated[int, Field(ge=0)]
+    tenant_id: str
+    idempotency_key: str
+    skill: ComponentDependency
+    classification: SkillClassification
+    dependencies: list[ComponentDependency]
+    pins: LocalSkillPins
+    criterion_ids: list[str]
+    receipt: RunReceipt
+
+
+class LocalCertificationBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    schema_version: Annotated[int, Field(ge=0)]
+    skill: ComponentDependency
+    classification: SkillClassification
+    dependencies: list[ComponentDependency]
+    pins: LocalSkillPins
+    run_id: str
+    results: list[CriterionResult]
+    completion_revision: Annotated[int, Field(ge=0)]
+
+
+class LocalCertificationAttestation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    body: LocalCertificationBody
+    digest: str
+    premises: list[str] = Field(default_factory=list)
+
+
+class DecisionEvalOpCertifyLocalSkill(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["certify_local_skill"]
+    request: LocalCertificationRequest
+
+
 class DelegationQualityRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -3856,7 +3937,8 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpTimeline
     | DecisionEvalOpDelegationQuality
     | DecisionEvalOpMemoryChangeBenchmarkSubmit
-    | DecisionEvalOpMemoryRewriteSubmit,
+    | DecisionEvalOpMemoryRewriteSubmit
+    | DecisionEvalOpCertifyLocalSkill,
     Field(discriminator="op"),
 ]
 
@@ -3982,8 +4064,18 @@ class DecisionJobOutputReplay(BaseModel):
     run: EvaluationRun
 
 
+class DecisionJobOutputCertification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attestation: LocalCertificationAttestation
+    output: Literal["certification"]
+
+
 DecisionJobOutput = Annotated[
-    DecisionJobOutputFit | DecisionJobOutputEval | DecisionJobOutputReplay,
+    DecisionJobOutputFit
+    | DecisionJobOutputEval
+    | DecisionJobOutputReplay
+    | DecisionJobOutputCertification,
     Field(discriminator="output"),
 ]
 
@@ -41314,6 +41406,16 @@ __all__ = [
     "TopicRequest",
     "ModalityPair",
     "RetrievalRequest",
+    "SkillClassification",
+    "PinnedSet",
+    "LocalSkillPins",
+    "CriterionResult",
+    "RunReceipt",
+    "LocalCertificationRequest",
+    "LocalCertificationBody",
+    "LocalCertificationAttestation",
+    "DecisionEvalOpCertifyLocalSkill",
+    "DecisionJobOutputCertification",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both
