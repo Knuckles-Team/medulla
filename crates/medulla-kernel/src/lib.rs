@@ -69,6 +69,10 @@ pub mod crypto;
 #[cfg(any(feature = "server", feature = "redb"))]
 pub mod sealed_guard;
 
+// MEDULLA-UNIFIED-DATA-PLANE-R030.4: only `ApproveEntityLink` writes an `owl:sameAs` edge.
+#[cfg(any(feature = "server", feature = "redb"))]
+pub mod same_as_guard;
+
 // Per-graph write coalescer (CONCEPT:MEDULLA-KG.sharding.per-graph-write-coalescer): batches concurrent single-op
 // writes to one graph into a single topology-lock acquisition. Tokio-based (tokio is an
 // unconditional dependency), so it is not feature-gated.

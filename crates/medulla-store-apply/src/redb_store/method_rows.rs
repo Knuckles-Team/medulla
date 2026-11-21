@@ -39,6 +39,7 @@ pub fn apply_method_rows_ref(
     work_item_capability::validate_generic_method(graph, method, nodes, native_work_items, crypto)?;
     work_item::refuse_generic_native_row_write(graph, method, nodes, crypto)?;
     sealed_rows::refuse_generic_sealed_row_write(graph, method, nodes, crypto)?;
+    medulla_kernel::same_as_guard::refuse_unapproved_same_as_write(method)?;
     match method {
         Method::AddNode {
             node_id,

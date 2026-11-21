@@ -286,7 +286,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an
     // inverted validity interval; invalidation and supersession keep their
     // closed-edge and missing-edge refusals.
-    ("AddEdge", &["VALIDITY_INVERTED"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R030.4: a generic edge writer refuses an `owl:sameAs` edge.
+    ("AddEdge", &["LINK_NOT_APPROVABLE", "VALIDITY_INVERTED"]),
+    ("BatchUpdate", &["LINK_NOT_APPROVABLE"]),
     (
         "InvalidateEdge",
         &["VALIDITY_INVERTED", "EDGE_ALREADY_CLOSED", "EDGE_NOT_FOUND"],

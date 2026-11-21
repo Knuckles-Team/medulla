@@ -69,6 +69,13 @@ pub(super) fn commit_prepare(
         return Err(Response::err(ctx.req_id, refused));
     }
 
+    // 1.6. owl:sameAs (MEDULLA-UNIFIED-DATA-PLANE-R030.4): only `ApproveEntityLink` writes
+    // such an edge, so a generic edge writer carrying one is refused here, and again in the
+    // durable row applier.
+    if let Err(refused) = medulla_kernel::same_as_guard::refuse_unapproved_same_as_write(method) {
+        return Err(Response::err(ctx.req_id, refused));
+    }
+
     // 2. Idempotency-replay dedup -- ONLY for methods policy marks idempotent. A
     // byte-identical replay short-circuits BEFORE touching storage: no re-apply, no
     // second durable record, no second audit-chain entry, no duplicate CDC event.
