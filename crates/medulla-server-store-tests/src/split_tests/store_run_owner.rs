@@ -286,6 +286,7 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
             schema_version: 1,
             run_id: "run".into(),
             usage: Some(RunUsage::default()),
+            timings: Vec::new(),
         },
         tenant: "tenant".into(),
         work_item_id: id.clone(),
@@ -792,6 +793,7 @@ fn completion_method(
                 schema_version: 1,
                 run_id: "run".into(),
                 usage,
+                timings: Vec::new(),
             },
         )),
     }

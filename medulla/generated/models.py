@@ -22988,11 +22988,26 @@ class RunCheckpointRead(BaseModel):
     work_item: WorkItemView
 
 
+class TimingPhase(str, Enum):
+    REQUEST = "request"
+    RUN = "run"
+    QUEUE = "queue"
+    TOOL = "tool"
+
+
+class PhaseTiming(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    duration_ms: Annotated[int, Field(ge=0)]
+    phase: TimingPhase
+
+
 class RunCompletionInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     run_id: str
     schema_version: Annotated[int, Field(ge=0)]
+    timings: list[PhaseTiming] = Field(default_factory=list)
     usage: RunUsage | None = None
 
 
@@ -35308,6 +35323,7 @@ __all__ = [
     "MethodMemoryRecallParams",
     "MethodMemoryRemember",
     "MethodMemoryRememberParams",
+    "PhaseTiming",
     "PromotionGroup",
     "RevisionProposalListRequest",
     "RevisionProposalPage",
@@ -37481,6 +37497,7 @@ __all__ = [
     "GraphView",
     "NodeLabelMapping",
     "RelationshipTypeMapping",
+    "TimingPhase",
     "ViewSource",
     "MethodRegisterIdentity",
     "MethodRegisterIdentityParams",

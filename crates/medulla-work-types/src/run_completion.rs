@@ -51,6 +51,42 @@ impl RunUsage {
     }
 }
 
+/// The phases of one turn a completion reports a duration for
+/// (MEDULLA-ORCH-VOCAB-R814). A label set at construction, not a lifecycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum TimingPhase {
+    Request,
+    Run,
+    Queue,
+    Tool,
+}
+
+impl TimingPhase {
+    /// The wire label of the phase.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Request => "request",
+            Self::Run => "run",
+            Self::Queue => "queue",
+            Self::Tool => "tool",
+        }
+    }
+}
+
+/// One phase's duration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PhaseTiming {
+    pub phase: TimingPhase,
+    pub duration_ms: u64,
+}
+
+/// The longest duration one phase may report: one day.
+pub const MAX_PHASE_DURATION_MS: u64 = 86_400_000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -59,13 +95,38 @@ pub struct RunCompletionInput {
     pub run_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<RunUsage>,
+    /// Per-phase timings of the turn; absent when none were measured, so a
+    /// completion without timings keeps its bytes and its digest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timings: Vec<PhaseTiming>,
 }
 impl RunCompletionInput {
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != 1 || self.run_id.trim().is_empty() || self.run_id.len() > 512 {
             return Err("invalid ordinary run completion version or run id".into());
         }
-        self.usage.as_ref().map_or(Ok(()), RunUsage::validate)
+        self.usage.as_ref().map_or(Ok(()), RunUsage::validate)?;
+        self.validate_timings()
+    }
+
+    /// At most one entry per phase, none above [`MAX_PHASE_DURATION_MS`].
+    fn validate_timings(&self) -> Result<(), String> {
+        let mut seen = Vec::new();
+        for timing in &self.timings {
+            let label = timing.phase.label();
+            if seen.contains(&timing.phase.label()) {
+                return Err(format!(
+                    "INVALID_ARGUMENT: invalid run completion timing: {label} reported more than once"
+                ));
+            }
+            if timing.duration_ms > MAX_PHASE_DURATION_MS {
+                return Err(format!(
+                    "INVALID_ARGUMENT: invalid run completion timing: {label} duration exceeds {MAX_PHASE_DURATION_MS} ms"
+                ));
+            }
+            seen.push(label);
+        }
+        Ok(())
     }
 }
 
@@ -125,5 +186,57 @@ mod tests {
                 .validate()
                 .is_err());
         }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R814
+    #[test]
+    fn timings_validate_and_keep_the_empty_digest() {
+        let without = RunCompletionInput {
+            schema_version: 1,
+            run_id: "run".into(),
+            usage: None,
+            timings: Vec::new(),
+        };
+        // A completion without timings encodes to the bytes it had before the field.
+        assert_eq!(
+            serde_json::to_string(&without).unwrap(),
+            r#"{"schema_version":1,"run_id":"run"}"#
+        );
+        assert_eq!(
+            rmp_serde::to_vec_named(&without).unwrap(),
+            rmp_serde::to_vec_named(&serde_json::json!({"schema_version": 1, "run_id": "run"}))
+                .unwrap()
+        );
+        assert!(without.validate().is_ok());
+
+        let timed = |timings: Vec<PhaseTiming>| RunCompletionInput {
+            timings,
+            ..without.clone()
+        };
+        let phase = |phase, duration_ms| PhaseTiming { phase, duration_ms };
+
+        // Four distinct phases pass, including the largest allowed duration.
+        let four = timed(vec![
+            phase(TimingPhase::Request, 5),
+            phase(TimingPhase::Run, MAX_PHASE_DURATION_MS),
+            phase(TimingPhase::Queue, 0),
+            phase(TimingPhase::Tool, 9),
+        ]);
+        assert!(four.validate().is_ok());
+        let round: RunCompletionInput =
+            serde_json::from_str(&serde_json::to_string(&four).unwrap()).unwrap();
+        assert_eq!(round, four);
+
+        // A duplicate phase and an over-day duration refuse.
+        let duplicate = timed(vec![phase(TimingPhase::Run, 1), phase(TimingPhase::Run, 2)]);
+        assert_eq!(
+            duplicate.validate().unwrap_err(),
+            "INVALID_ARGUMENT: invalid run completion timing: run reported more than once"
+        );
+        let over = timed(vec![phase(TimingPhase::Tool, MAX_PHASE_DURATION_MS + 1)]);
+        assert!(over
+            .validate()
+            .unwrap_err()
+            .starts_with("INVALID_ARGUMENT: invalid run completion timing: tool"));
     }
 }
