@@ -1,16 +1,43 @@
 //! The `graph_intake` question family (MEDULLA-DECISION-ENGINE-R001.101).
 //!
 //! Resolves graph references to their exact revision and content digest
-//! (MEDULLA-DECISION-ENGINE-R163.2). The kind decides through the shared
-//! matrix ladder until its wiring row adds the stage hooks.
+//! (MEDULLA-DECISION-ENGINE-R163.2, R163.3, R163.4).
+//!
+//! The caller sends its mixed sources in the typed param `intake_sources` and
+//! names the graph they resolve in with `source_graph`; the executor opens that
+//! graph under the caller's access check and row-level filter. The family
+//! resolves every source in request order and concludes
+//! `ResolutionKind::Constraint`: one `resolve_sources` option and one premise per
+//! resolved source naming its exact revision and digest, never its content. One
+//! source that does not resolve refuses the whole request with its registered
+//! code. `Decide` writes nothing.
 
 use medulla_decision_types::decision::graph_intake::{
-    GraphReference, IntakeSource, ResolvedSource,
+    GraphReference, IntakeSource, ResolvedSource, GRAPH_INTAKE_MISSING_REVISION,
+    GRAPH_INTAKE_RESOLUTION_FAILED, GRAPH_INTAKE_UNKNOWN_AUTHORITY, PARAM_SOURCES,
+    PARAM_SOURCE_GRAPH,
+};
+#[allow(unused_imports)]
+pub use medulla_decision_types::decision::graph_intake::REFUSALS;
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, StatisticalOutcome, TypedValue,
+};
+use medulla_decision_types::decision::{
+    DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::Digest256;
 
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
+
+use super::support::{advisory, invalid, param, single_option};
 use super::DecisionFamily;
+
+/// The one declared option: resolve the request's sources.
+pub const RESOLVE_OPTION: &str = "resolve_sources";
 
 /// The node type that registers an authority in the graph.
 const AUTHORITY_NODE_TYPE: &str = "SourceAuthority";
@@ -18,7 +45,6 @@ const AUTHORITY_NODE_TYPE: &str = "SourceAuthority";
 /// Why a graph reference did not resolve. The wiring and refusal rows map each
 /// case to its registered refusal code; nothing here is free text.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)] // reached by the family's candidate stage when the wiring row (R163.3) lands
 pub enum GraphResolutionError {
     /// No registered authority has this name in the caller's visible graph.
     UnknownAuthority { authority: String },
@@ -32,11 +58,147 @@ pub enum GraphResolutionError {
 /// The family of the `graph_intake` question kind.
 pub struct GraphIntakeFamily;
 
-impl DecisionFamily for GraphIntakeFamily {}
+impl GraphResolutionError {
+    /// The wire refusal: `CODE: detail`.
+    fn refusal(&self) -> String {
+        let (code, detail) = match self {
+            Self::UnknownAuthority { authority } => (
+                GRAPH_INTAKE_UNKNOWN_AUTHORITY,
+                format!("no registered authority {authority}"),
+            ),
+            Self::MissingRevision { query } => (
+                GRAPH_INTAKE_MISSING_REVISION,
+                format!("{query} carries no revision or content digest"),
+            ),
+            Self::ResolutionFailed { query } => (
+                GRAPH_INTAKE_RESOLUTION_FAILED,
+                format!("{query} does not resolve to the pinned revision"),
+            ),
+        };
+        format!("{}: {detail}", code.as_str())
+    }
+}
+
+/// The graph the sources resolve in: exactly one `source_graph` text param.
+pub(in crate::decide) fn source_graph(request: &DecideRequest) -> Result<&str, String> {
+    let mut found = request
+        .params
+        .iter()
+        .filter(|param| param.name == PARAM_SOURCE_GRAPH);
+    let (Some(param), None) = (found.next(), found.next()) else {
+        return Err(invalid(
+            "a graph_intake question names its graph in exactly one source_graph parameter",
+        ));
+    };
+    match &param.value {
+        TypedValue::Text(graph) if !graph.is_empty() => Ok(graph),
+        _ => Err(invalid("source_graph is not a graph name")),
+    }
+}
+
+/// The intake sources of the request: the typed `intake_sources` param.
+fn sources(request: &DecideRequest) -> Result<&[IntakeSource], String> {
+    match param(request, PARAM_SOURCES)? {
+        Some(TypedValue::IntakeSources(sources)) if !sources.is_empty() => Ok(sources.as_slice()),
+        Some(TypedValue::IntakeSources(_)) => Err(invalid("intake_sources is empty")),
+        Some(_) => Err(invalid("intake_sources is not a list of intake sources")),
+        None => Err(invalid("a graph_intake question requires intake_sources")),
+    }
+}
+
+fn premise(subject: &'static str, fact: String, source: FamilyPremiseSource) -> FamilyPremise {
+    FamilyPremise {
+        subject: subject.into(),
+        fact,
+        class: PremiseClass::Claim,
+        source,
+    }
+}
+
+impl DecisionFamily for GraphIntakeFamily {
+    fn validate_candidates(
+        &self,
+        options: &[DeclaredOption],
+        _principal: &str,
+    ) -> Result<(), String> {
+        single_option(options, RESOLVE_OPTION)
+    }
+
+    fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        source_graph(request)?;
+        sources(request).map(|_| ())
+    }
+
+    fn conclude(
+        &self,
+        _ctx: &ExecutionContext,
+        request: &DecideRequest,
+        _policy: &DecisionPolicy,
+        graph_view: Option<&GraphView>,
+    ) -> Option<Result<Executed, String>> {
+        Some((|| {
+            let view = graph_view.ok_or_else(|| invalid("the intake graph was not opened"))?;
+            let graph = source_graph(request)?.to_string();
+            let resolved =
+                resolve_sources(view, sources(request)?).map_err(|error| error.refusal())?;
+            let mut executed = advisory(vec![RESOLVE_OPTION.to_string()])?;
+            executed.family_premises = resolved
+                .iter()
+                .map(|source| match source {
+                    ResolvedSource::Graph {
+                        authority,
+                        query,
+                        revision,
+                        content_digest,
+                    } => premise(
+                        "intake_graph",
+                        format!(
+                            "intake:graph={authority}/{query}@{revision}#{}",
+                            content_digest.to_hex()
+                        ),
+                        FamilyPremiseSource::Bound(PremiseProvenance::GraphRow {
+                            graph: graph.clone(),
+                            graph_version: *revision,
+                        }),
+                    ),
+                    ResolvedSource::Filesystem {
+                        path,
+                        content_digest,
+                    } => premise(
+                        "intake_file",
+                        format!("intake:file={path}#{}", content_digest.to_hex()),
+                        FamilyPremiseSource::Request("params.intake_sources"),
+                    ),
+                })
+                .collect();
+            Ok(executed)
+        })())
+    }
+
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        executed
+            .family_premises
+            .iter()
+            .map(|premise| premise.seal(policy_digest))
+            .collect()
+    }
+
+    fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(ResolutionKind::Constraint)
+    }
+
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Claim)
+    }
+}
 
 /// The properties of one node the caller can see, or `None` when the node is
 /// absent from the caller's visible snapshot or its blob does not decode.
-#[allow(dead_code)] // reached by the family's candidate stage when the wiring row (R163.3) lands
 fn visible_properties(view: &GraphView, node_id: &str) -> Option<serde_json::Value> {
     let blob = view.node_properties.get(node_id)?;
     medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()
@@ -46,7 +208,6 @@ fn visible_properties(view: &GraphView, node_id: &str) -> Option<serde_json::Val
 /// the same read handle `candidates.rs` reads graph candidates through
 /// (MEDULLA-DECISION-ENGINE-R163.2). Returns the exact revision and content
 /// digest of the node for the query, never its content.
-#[allow(dead_code)] // reached by the family's candidate stage when the wiring row (R163.3) lands
 pub fn resolve_graph_reference(
     view: &GraphView,
     reference: &GraphReference,
@@ -92,7 +253,6 @@ pub fn resolve_graph_reference(
 /// Resolve every intake source in request order: a filesystem source passes
 /// through with its caller-supplied digest, a graph source resolves through
 /// [`resolve_graph_reference`]. One unresolved source fails the whole set.
-#[allow(dead_code)] // reached by the family's candidate stage when the wiring row (R163.3) lands
 pub fn resolve_sources(
     view: &GraphView,
     sources: &[IntakeSource],

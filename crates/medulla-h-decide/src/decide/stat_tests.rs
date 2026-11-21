@@ -1078,6 +1078,8 @@ mod package_run_tests;
 mod feedback_tests;
 // MEDULLA-DECISION-ENGINE-R132.3: retrieved entries admitted by trust tier.
 mod entry_trust_tests;
+// MEDULLA-DECISION-ENGINE-R163.3, R163.4: graph intake served through Decide.
+mod graph_intake_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

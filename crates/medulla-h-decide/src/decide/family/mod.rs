@@ -37,7 +37,7 @@ mod feature_match;
 pub(super) mod feedback_loop;
 mod field_shielding;
 mod generated_code_admission;
-mod graph_intake;
+pub(in crate::decide) mod graph_intake;
 pub(super) mod harness_config;
 mod harness_contrast;
 mod held_item_admission;

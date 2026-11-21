@@ -8,6 +8,31 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::Digest256;
 
+use crate::decision::record::outcome::RefusalCode;
+
+/// The request param carrying the intake sources (a typed `intake_sources`).
+pub const PARAM_SOURCES: &str = "intake_sources";
+/// The request param naming the graph the sources are resolved in.
+pub const PARAM_SOURCE_GRAPH: &str = "source_graph";
+
+/// No registered authority has the name a source's reference carries.
+pub const GRAPH_INTAKE_UNKNOWN_AUTHORITY: RefusalCode =
+    RefusalCode::new("GRAPH_INTAKE_UNKNOWN_AUTHORITY");
+/// The node a source resolves to carries no revision or content digest.
+pub const GRAPH_INTAKE_MISSING_REVISION: RefusalCode =
+    RefusalCode::new("GRAPH_INTAKE_MISSING_REVISION");
+/// The node is absent, belongs to another authority or tenant, or no longer
+/// matches the revision and digest the caller pinned.
+pub const GRAPH_INTAKE_RESOLUTION_FAILED: RefusalCode =
+    RefusalCode::new("GRAPH_INTAKE_RESOLUTION_FAILED");
+
+/// The graph intake refusals: the `GraphIntake` family table.
+pub const REFUSALS: &[RefusalCode] = &[
+    GRAPH_INTAKE_MISSING_REVISION,
+    GRAPH_INTAKE_RESOLUTION_FAILED,
+    GRAPH_INTAKE_UNKNOWN_AUTHORITY,
+];
+
 /// A graph a source was read from, and its content type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
