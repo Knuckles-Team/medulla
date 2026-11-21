@@ -393,6 +393,45 @@ pub struct ServerState {
     /// (MEDULLA-DURABLE-KERNEL-R084.3). Startup sets it from `ServerArgs`;
     /// the default `Refuse` returns a typed `WRITE_CONFLICT`.
     pub write_conflict_strategy: medulla_mutation_types::write_conflict::MergeStrategy,
+    /// The text embedder this state serves with, set by the harness that builds the state. The
+    /// resolver checks it before the process-wide embedder (`MEDULLA_UQL_TEXT_EMBEDDER`), so a
+    /// test binds its embedder per state and never sets a process environment variable
+    /// (MEDULLA-MEDIA-VOCAB-R001.102.2). `None` leaves the process-wide resolution in force.
+    #[cfg(feature = "query")]
+    pub text_embedder_override: Option<TextEmbedderOverride>,
+}
+
+/// A text embedder bound to one [`ServerState`], with the registry identity its space is
+/// pinned under. The width of the space is the length of the embedder's own vectors.
+#[cfg(feature = "query")]
+#[derive(Clone)]
+pub struct TextEmbedderOverride {
+    pub embedder: Arc<dyn medulla_exec::exec::TextEmbedder>,
+    pub encoder_id: String,
+    pub space_id: String,
+    pub revision: String,
+    pub dimensions: usize,
+}
+
+#[cfg(feature = "query")]
+impl TextEmbedderOverride {
+    /// Bind `embedder` as `encoder_id` in the space `space_id` at `revision`. The width is
+    /// measured from the embedder; an embedder that cannot embed text is refused.
+    pub fn new(
+        embedder: Arc<dyn medulla_exec::exec::TextEmbedder>,
+        encoder_id: impl Into<String>,
+        space_id: impl Into<String>,
+        revision: impl Into<String>,
+    ) -> Result<Self, String> {
+        let dimensions = embedder.embed("")?.len();
+        Ok(Self {
+            embedder,
+            encoder_id: encoder_id.into(),
+            space_id: space_id.into(),
+            revision: revision.into(),
+            dimensions,
+        })
+    }
 }
 
 #[cfg(feature = "raft")]
@@ -489,6 +528,8 @@ impl ServerState {
             local_anonymous: false,
             pinned_policy: None,
             write_conflict_strategy: Default::default(),
+            #[cfg(feature = "query")]
+            text_embedder_override: None,
             persist_dir: None,
             persistence: None,
             #[cfg(feature = "redb")]

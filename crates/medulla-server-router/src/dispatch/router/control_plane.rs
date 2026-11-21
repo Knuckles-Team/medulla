@@ -427,6 +427,7 @@ pub async fn dispatch_agent_library_methods(
         Method::SemanticIndex { op } => {
             #[cfg(all(feature = "ann-redb", feature = "query"))]
             {
+                let state_embedder = state.read().await.text_embedder_override.clone();
                 dispatch_boxed(async {
                     medulla_h_retrieve::semantic_index::handle_semantic_index(
                         state,
@@ -437,7 +438,9 @@ pub async fn dispatch_agent_library_methods(
                             verified: verified_context,
                         },
                         &|| {
-                            medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity()
+                            medulla_server_ops::api::query_txn::query_support::state_text_encoder_identity(
+                                state_embedder.as_ref(),
+                            )
                                 .and_then(|identity| {
                                     medulla_server_ops::api::query_txn::query_support::pin_embedding_space(
                                         &identity,

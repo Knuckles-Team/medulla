@@ -17,7 +17,7 @@ use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, Res
 use medulla_query_types::wire::UqlResult;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::state::ServerState;
+use medulla_server_api::state::{ServerState, TextEmbedderOverride};
 use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
 use medulla_server_blob::blob::BlobStateExt;
 use medulla_source_types::source_document::SourceIngestionOutcome;
@@ -190,22 +190,28 @@ impl Served {
         connector: &str,
         streams: &[(&str, &str)],
     ) -> Self {
-        Self::provisioned_activating(graph, connector, streams, COMMONS).await
+        Self::provisioned_activating(graph, connector, streams, COMMONS, None).await
     }
 
     /// As [`Self::provisioned`], with the pack imported on `activation_graph`: the graph a pack
     /// activation reads as its own, which a semantic index authored by the import is built from.
+    /// `text_embedder` is injected into the state before the import, so the import's authored
+    /// index is embedded in its space.
     pub(super) async fn provisioned_activating(
         graph: &str,
         connector: &str,
         streams: &[(&str, &str)],
         activation_graph: &str,
+        text_embedder: Option<TextEmbedderOverride>,
     ) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
             ServerState::test_isolation(ADMIN),
         );
+        // The text embedder is this state's own: the import authors the bookmark binding from
+        // it, and no process environment variable is set.
+        state.text_embedder_override = text_embedder;
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();

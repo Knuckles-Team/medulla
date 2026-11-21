@@ -144,6 +144,23 @@ pub fn uql_text_encoder_identity() -> Option<TextEncoderIdentity> {
     bound_text_embedder().map(|(_, identity)| identity)
 }
 
+/// The identity of the text embedder a state serves with: the state's own embedder when its
+/// harness injected one, else the process-wide embedder of [`uql_text_encoder_identity`].
+#[cfg(feature = "query")]
+pub fn state_text_encoder_identity(
+    state_embedder: Option<&medulla_server_api::state::TextEmbedderOverride>,
+) -> Option<TextEncoderIdentity> {
+    match state_embedder {
+        Some(bound) => Some(TextEncoderIdentity::new(
+            bound.encoder_id.clone(),
+            bound.space_id.clone(),
+            bound.dimensions,
+            bound.revision.clone(),
+        )),
+        None => uql_text_encoder_identity(),
+    }
+}
+
 #[cfg(feature = "query")]
 fn bound_text_embedder() -> Option<(
     &'static dyn medulla_exec::exec::TextEmbedder,

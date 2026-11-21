@@ -42,9 +42,10 @@ pub(super) async fn author_on_pack_activation(
     // With no text embedder bound there is no registered space to embed into, so no binding can
     // be authored. The import itself stays valid; the next activation of the pack authors it,
     // and a search before then refuses `BOOKMARK_INDEX_STALE` (no binding).
-    let Some(identity) =
-        medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity()
-    else {
+    let state_embedder = state.read().await.text_embedder_override.clone();
+    let Some(identity) = medulla_server_ops::api::query_txn::query_support::state_text_encoder_identity(
+        state_embedder.as_ref(),
+    ) else {
         tracing::warn!(
             "the pack declares Bookmark but no text embedder is bound; the bookmark index binding was not authored"
         );

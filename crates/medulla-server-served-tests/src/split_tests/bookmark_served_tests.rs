@@ -6,9 +6,13 @@
 // of the entity it should rank first.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
+use medulla_exec::exec::HashEmbedder;
 use medulla_index_types::semantic_index::SemanticSourceSelector;
 use medulla_protocol_types::protocol::{Method, Response};
+use medulla_server_api::state::TextEmbedderOverride;
+use medulla_server_ops::api::query_txn::query_support::{HASH_ENCODER_ID, TEXT_ENCODER_REVISION};
 use medulla_types::bookmark_query::{
     BookmarkEdge, BookmarkQueryLimitPolicy, BookmarkRelationsRequest, BookmarkRelationsResult,
     BookmarkSearchResult, BookmarkSemanticSearchRequest,
@@ -109,13 +113,20 @@ impl Journey {
     /// Ingest `bookmarks` into `graph`, complete S1 for the graph-sourced binding the pack
     /// import authored and drive the generation to live.
     async fn live(graph: &str, bookmarks: &[(String, Value)]) -> Self {
-        // The bound text embedder is process-wide and resolved from the environment once.
-        std::env::set_var("MEDULLA_UQL_TEXT_EMBEDDER", "hash");
+        // The text embedder is injected into this state alone; no process variable is set.
+        let embedder = TextEmbedderOverride::new(
+            Arc::new(HashEmbedder::default()),
+            HASH_ENCODER_ID,
+            HASH_ENCODER_ID,
+            TEXT_ENCODER_REVISION,
+        )
+        .expect("the hash embedder embeds text");
         let served = Served::provisioned_activating(
             graph,
             CONNECTOR,
             &[(STREAM, "Bookmark")],
             graph,
+            Some(embedder),
         )
         .await;
         served.subscribe_source_dirty().await;
