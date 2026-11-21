@@ -174,3 +174,42 @@ def test_request_evidence_reads_back(served) -> None:
     assert [verdict["approve"] for verdict in stored["verdicts"]] == [True]
     assert stored["verdicts"][0]["principal"] == support.principal(REVIEWER)
     assert stored["applied_by"] == request_context()["principal"]
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.6")
+def test_change_request_journey_is_tenant_scoped(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R802.6: the served journey reads back, and a second tenant sees nothing."""
+    from conftest import tenant_request_context
+
+    graph, client = served
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        request_id = support.approved_request(client, reviewer, graph, ASSET)
+    finally:
+        reviewer.close()
+    _op(client, graph, {"op": "apply", "request_id": request_id})
+    nodes = _decode(
+        client._send("GetNodesByLabel", {"label": "cat:ChangeRequest", "after": None, "limit": 10}, graph)
+    )
+    assert [node_id for node_id, _ in nodes] == [request_id]
+
+    foreign = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        graph_name=graph,
+        verified_context=tenant_request_context("tenant:foreign"),
+    )
+    try:
+        # The second tenant resolves no reviewers: it sees no assignment.
+        with pytest.raises(Exception, match="STEWARD_ROLE_MISSING|denied|DENIED|TENANT"):
+            support.stewardship(
+                foreign,
+                graph,
+                {
+                    "op": "open_change_request",
+                    "target": ASSET,
+                    "proposed_digest": DIGEST,
+                    "scopes": {"asset": ASSET},
+                },
+            )
+    finally:
+        foreign.close()

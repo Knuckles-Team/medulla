@@ -142,6 +142,16 @@ name = "sensitive_scan"
 path = "benches/sensitive_scan.rs"
 harness = false
 
+[[bench]]
+name = "stewardship_resolve"
+path = "benches/stewardship_resolve.rs"
+harness = false
+
+[[bench]]
+name = "data_contract_check"
+path = "benches/data_contract_check.rs"
+harness = false
+
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }

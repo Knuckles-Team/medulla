@@ -43,8 +43,14 @@ pub fn check_contract(
             live.schema_digest.clone(),
         ));
     }
+    // The first failing score of each rule, found once, so the check is linear in the rules and
+    // the scores rather than their product.
+    let mut failing: std::collections::HashMap<&str, &QualityScore> = std::collections::HashMap::new();
+    for score in live.quality.iter().filter(|score| !score.passed) {
+        failing.entry(score.rule.as_str()).or_insert(score);
+    }
     for rule in &contract.quality_rules {
-        if let Some(score) = live.quality.iter().find(|s| &s.rule == rule && !s.passed) {
+        if let Some(score) = failing.get(rule.as_str()) {
             out.push(violation(
                 ContractPromise::Quality { rule: rule.clone() },
                 score.value.to_string(),
@@ -141,4 +147,61 @@ pub fn propose_products(
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_catalog_types::data_product::{ProductPort, ProductPortKind};
+
+    // spec: MEDULLA-TYPED-PACKS-R805.6
+    #[test]
+    fn contract_check_is_linear_in_promises() {
+        const RULES: usize = 20_000;
+        let rules: Vec<String> = (0..RULES).map(|n| format!("rule:{n}")).collect();
+        let digest = format!("sha256:{}", "ab".repeat(32));
+        let product = DataProduct {
+            id: "product:linear".into(),
+            owner: "team:data".into(),
+            version: "1.0.0".into(),
+            datasets: vec!["table:linear".into()],
+            terms: vec![],
+            ports: vec![ProductPort {
+                name: "sql".into(),
+                kind: ProductPortKind::Query,
+            }],
+        };
+        let contract = DataContract {
+            product: product.id.clone(),
+            schema_digest: digest.clone(),
+            quality_rules: rules.clone(),
+            freshness_s: 60,
+        };
+        let live = LiveContractState {
+            schema_digest: digest,
+            quality: rules
+                .iter()
+                .map(|rule| QualityScore {
+                    rule: rule.clone(),
+                    value: 0.0,
+                    passed: false,
+                    at: 1,
+                    query_digest: "ab".repeat(32),
+                    rows_checked: 1,
+                    rows_failed: 1,
+                    checker: "native".into(),
+                })
+                .collect(),
+            watermark_age_s: 0,
+            at_ms: 1,
+        };
+        let started = std::time::Instant::now();
+        let violations = check_contract(&product, &contract, &live);
+        let elapsed = started.elapsed();
+        // One violation per broken promise, in contract order.
+        assert_eq!(violations.len(), RULES);
+        assert_eq!(violations[RULES - 1].promise, ContractPromise::Quality { rule: "rule:19999".into() });
+        // A product of the rules and the scores (4e8 steps) would not finish inside this bound.
+        assert!(elapsed < std::time::Duration::from_secs(1), "took {elapsed:?}");
+    }
 }

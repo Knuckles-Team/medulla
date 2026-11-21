@@ -437,7 +437,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R802.3` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
 | `MEDULLA-TYPED-PACKS-R802.4` | `tests/typed_packs/test_stewardship_served.py::test_stewardship_refusals` |
 | `MEDULLA-TYPED-PACKS-R802.5` | `tests/typed_packs/test_stewardship_served.py::test_request_evidence_reads_back` |
-| `MEDULLA-TYPED-PACKS-R802.6` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
+| `MEDULLA-TYPED-PACKS-R802.6` | `tests/typed_packs/test_stewardship_served.py::test_change_request_journey_is_tenant_scoped` |
 | `MEDULLA-TYPED-PACKS-R803` | See each child. |
 | `MEDULLA-TYPED-PACKS-R803.1` | `crates/medulla-query-types/tests/sensitive_detect.rs::detector_rules_round_trip_and_validate`: rule kinds round-trip, unknown kinds and fields refuse, each `InvalidDetector` code, the four built-in detectors validate |
 | `MEDULLA-TYPED-PACKS-R803.2` | `crates/medulla-core/tests/sensitive_detect.rs::scan_values_counts_hits_without_values`: Luhn, IBAN mod-97 and pattern hit counts, sample cap, threshold selection by `passing`, resource and pattern refusals before any scan, no value in any output |
