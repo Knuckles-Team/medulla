@@ -32,5 +32,7 @@ closed_error_codes! {
         EngineDeadlineExceeded => "ENGINE_DEADLINE_EXCEEDED",
         /// A spec artifact line matched no known form (MEDULLA-SDLC-R014.1).
         SpecArtifactUnparseable => "SPEC_ARTIFACT_UNPARSEABLE",
+        /// A requirement row names an ID that resolves to no row (MEDULLA-SDLC-R012.2).
+        RequirementUnresolved => "REQUIREMENT_UNRESOLVED",
     }
 }

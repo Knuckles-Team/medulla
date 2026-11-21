@@ -41,6 +41,7 @@ pub mod containers;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
+pub mod spec_projection;
 // The sweep lowers a Document delete through `crate::document_delete`, so it needs that
 // module's features as well.
 #[cfg(all(

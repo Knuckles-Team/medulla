@@ -190,7 +190,7 @@ fn is_task_id(token: &str) -> bool {
 }
 
 /// `PREFIX-...-R<digits>(.<digits>)*`, upper-case prefix segments.
-fn is_row_id(token: &str) -> bool {
+pub fn is_row_id(token: &str) -> bool {
     let Some((prefix, number)) = token.rsplit_once("-R") else {
         return false;
     };
