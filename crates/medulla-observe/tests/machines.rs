@@ -1,5 +1,6 @@
 //! The explicit state machines of the runtime registries.
 
+use medulla_observe::machine::request::{RequestEvent, RequestState, REQUEST_MACHINE};
 use medulla_observe::machine::task::{TaskEvent, TaskState, TASK_MACHINE};
 use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
 
@@ -81,4 +82,71 @@ fn every_other_pair_of_state_and_event_is_refused() {
         .filter(|state| state.is_terminal())
         .collect();
     assert_eq!(terminal, vec![S::Completed, S::Failed, S::Cancelled]);
+}
+
+const REQUEST_EDGES: [(&str, RequestState, RequestEvent, RequestState); 13] = [
+    ("Q01", RequestState::Received, RequestEvent::Admit, RequestState::Admitted),
+    ("Q02", RequestState::Received, RequestEvent::Refuse, RequestState::Refused),
+    ("Q03", RequestState::Admitted, RequestEvent::Authorize, RequestState::Authorized),
+    ("Q04", RequestState::Admitted, RequestEvent::Refuse, RequestState::Refused),
+    ("Q05", RequestState::Authorized, RequestEvent::Handle, RequestState::Handling),
+    ("Q06", RequestState::Authorized, RequestEvent::Refuse, RequestState::Refused),
+    ("Q07", RequestState::Handling, RequestEvent::WaitLock, RequestState::WaitingLock),
+    ("Q08", RequestState::WaitingLock, RequestEvent::Acquire, RequestState::Handling),
+    ("Q09", RequestState::Handling, RequestEvent::Respond, RequestState::Responding),
+    ("Q10", RequestState::Handling, RequestEvent::Refuse, RequestState::Refused),
+    ("Q11", RequestState::WaitingLock, RequestEvent::Refuse, RequestState::Refused),
+    ("Q12", RequestState::Responding, RequestEvent::Complete, RequestState::Done),
+    ("Q13", RequestState::Responding, RequestEvent::Refuse, RequestState::Refused),
+];
+
+const REQUEST_EVENTS: [RequestEvent; 8] = [
+    RequestEvent::Admit,
+    RequestEvent::Authorize,
+    RequestEvent::Handle,
+    RequestEvent::WaitLock,
+    RequestEvent::Acquire,
+    RequestEvent::Respond,
+    RequestEvent::Complete,
+    RequestEvent::Refuse,
+];
+
+// spec: MEDULLA-OBSERVE-R004.3
+#[test]
+fn request_machine_edges_q01_to_q13() {
+    assert_eq!(REQUEST_MACHINE.name, "RequestMachine");
+    assert_eq!(REQUEST_MACHINE.initial, RequestState::Received);
+    assert_eq!(REQUEST_MACHINE.edges.len(), REQUEST_EDGES.len());
+    for (id, from, event, to) in REQUEST_EDGES {
+        let edge = REQUEST_MACHINE
+            .edges
+            .iter()
+            .find(|edge| edge.id == id)
+            .unwrap_or_else(|| panic!("edge {id} is missing"));
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to), "{id}");
+        assert_eq!(from.apply(event), Ok(to), "{id}");
+    }
+    // Handling and WaitingLock alternate while a lock is held or waited for.
+    let waiting = RequestState::Handling.apply(RequestEvent::WaitLock).unwrap();
+    assert_eq!(waiting.apply(RequestEvent::Acquire), Ok(RequestState::Handling));
+    for from in RequestState::ALL {
+        for event in REQUEST_EVENTS {
+            if REQUEST_EDGES.iter().any(|edge| edge.1 == from && edge.2 == event) {
+                continue;
+            }
+            let refused = from.apply(event).expect_err("an unlisted pair is refused");
+            assert_eq!(refused.machine, "RequestMachine");
+            let reason = if from.is_terminal() {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, reason, "{from:?} {event:?}");
+        }
+    }
+    let terminal: Vec<RequestState> = RequestState::ALL
+        .into_iter()
+        .filter(|state| state.is_terminal())
+        .collect();
+    assert_eq!(terminal, vec![RequestState::Done, RequestState::Refused]);
 }
