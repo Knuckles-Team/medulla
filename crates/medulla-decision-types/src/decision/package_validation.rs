@@ -7,6 +7,8 @@
 use medulla_catalog_types::fleet_catalog::rendered::RenderedSkillPackage;
 use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_types::refusal_code::RefusalCode;
+
+use super::knob_families::package::knob_values;
 use serde::{Deserialize, Serialize};
 
 /// `PACKAGE_DIGEST_MISMATCH`: the rendered digest does not parse, or a run names another package.
@@ -104,6 +106,52 @@ pub struct RunHistoryEntry {
     pub run_id: OpaqueId,
     pub package_digest: Digest256,
     pub passed: bool,
+}
+
+/// Validate a rendered package against its recorded run history. Pure: it reads no clock,
+/// store or tenant policy, and returns the validation, not the receipt; the handler mints the
+/// [`PublicationReceipt`] from it. `history` is the tenant-visible run history in recorded
+/// order, so tenant scoping is the caller's. The first failing step refuses
+/// (MEDULLA-DECISION-ENGINE-R160.2):
+///
+/// 1. an unparseable `rendered.digest` refuses `DigestMismatch`;
+/// 2. two entries with one `run_id` refuse `RunSetInvalid`;
+/// 3. fewer than `package.min_runs` entries refuse `RunHistoryMissing`;
+/// 4. an entry whose `package_digest` differs from the rendered digest refuses `DigestMismatch`;
+/// 5. `passed * 1000000 / len` below `package.min_pass_rate` refuses `ValidationFailed`.
+pub fn validate_rendered_package(
+    rendered: &RenderedSkillPackage,
+    history: &[RunHistoryEntry],
+) -> Result<RenderedPackageValidation, PublicationRefusal> {
+    let knobs = knob_values();
+    let rendered_digest =
+        Digest256::parse(&rendered.digest).map_err(|_| PublicationRefusal::DigestMismatch)?;
+    let mut seen = std::collections::BTreeSet::new();
+    if !history.iter().all(|entry| seen.insert(entry.run_id.as_str())) {
+        return Err(PublicationRefusal::RunSetInvalid);
+    }
+    let total = history.len() as u64;
+    if total < knobs.min_runs {
+        return Err(PublicationRefusal::RunHistoryMissing);
+    }
+    if history
+        .iter()
+        .any(|entry| entry.package_digest != rendered_digest)
+    {
+        return Err(PublicationRefusal::DigestMismatch);
+    }
+    let passed = history.iter().filter(|entry| entry.passed).count() as u64;
+    if passed * 1_000_000 / total < knobs.min_pass_rate_ppm {
+        return Err(PublicationRefusal::ValidationFailed { passed, total });
+    }
+    // The only way the digest fails is a history beyond the framing limit: not a valid run set.
+    let run_history_digest =
+        run_history_digest(history).map_err(|_| PublicationRefusal::RunSetInvalid)?;
+    Ok(RenderedPackageValidation {
+        rendered_digest,
+        run_history_digest,
+        validation_passed: true,
+    })
 }
 
 /// The digest of an ordered run history: SHA-256, domain-framed, over each
@@ -260,5 +308,80 @@ mod tests {
         // The codes the spec says do not exist stay unregistered.
         assert_eq!(crate::decision::codes::resolve("PACKAGE_RUN_SET_INCOMPLETE"), None);
         assert_eq!(crate::decision::codes::resolve("PACKAGE_POLICY_MISMATCH"), None);
+    }
+
+    fn rendered(content: &[u8]) -> RenderedSkillPackage {
+        RenderedSkillPackage {
+            schema_version: RENDERED_SKILL_PACKAGE_SCHEMA_VERSION,
+            uri: "skill://example".into(),
+            digest: Digest256::sha256(content).to_hex(),
+            ontology_refs: vec!["https://knuckles-team.github.io/ontology/core#Skill".into()],
+            graph_revision: 7,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R160.2
+    #[test]
+    fn validation_gates_publication() {
+        let package = rendered(b"package");
+        // A passing history.
+        let good = vec![entry("run-1", b"package", true), entry("run-2", b"package", true)];
+        let validation = validate_rendered_package(&package, &good).unwrap();
+        assert!(validation.validation_passed);
+        assert_eq!(validation.rendered_digest, Digest256::sha256(b"package"));
+        assert_eq!(validation.run_history_digest, run_history_digest(&good).unwrap());
+
+        // A pass share below the knob: one of two is 500000 < 1000000.
+        let half = vec![entry("run-1", b"package", true), entry("run-2", b"package", false)];
+        assert_eq!(
+            validate_rendered_package(&package, &half),
+            Err(PublicationRefusal::ValidationFailed {
+                passed: 1,
+                total: 2
+            })
+        );
+        // A digest mismatch.
+        let other = vec![entry("run-1", b"other", true)];
+        assert_eq!(
+            validate_rendered_package(&package, &other),
+            Err(PublicationRefusal::DigestMismatch)
+        );
+        // A short history.
+        assert_eq!(
+            validate_rendered_package(&package, &[]),
+            Err(PublicationRefusal::RunHistoryMissing)
+        );
+        // A duplicate run.
+        let duplicate = vec![entry("run-1", b"package", true), entry("run-1", b"package", true)];
+        assert_eq!(
+            validate_rendered_package(&package, &duplicate),
+            Err(PublicationRefusal::RunSetInvalid)
+        );
+        // An unparseable rendered digest.
+        let mut bad = package.clone();
+        bad.digest = "NOT-A-DIGEST".into();
+        assert_eq!(
+            validate_rendered_package(&bad, &good),
+            Err(PublicationRefusal::DigestMismatch)
+        );
+        // The first failing step wins: a duplicate run id beats a short history, a mismatch
+        // and a low pass share; an unparseable digest beats a duplicate.
+        let everything = vec![entry("run-1", b"other", false), entry("run-1", b"other", false)];
+        assert_eq!(
+            validate_rendered_package(&package, &everything),
+            Err(PublicationRefusal::RunSetInvalid)
+        );
+        assert_eq!(
+            validate_rendered_package(&bad, &everything),
+            Err(PublicationRefusal::DigestMismatch)
+        );
+        let mismatch_and_failed = vec![entry("run-1", b"other", false)];
+        assert_eq!(
+            validate_rendered_package(&package, &mismatch_and_failed),
+            Err(PublicationRefusal::DigestMismatch)
+        );
+        // The knobs are the declared defaults.
+        let knobs = knob_values();
+        assert_eq!((knobs.min_runs, knobs.min_pass_rate_ppm), (1, 1_000_000));
     }
 }
