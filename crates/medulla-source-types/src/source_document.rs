@@ -109,6 +109,43 @@ pub enum QuarantineReason {
     MappingRevisionMismatch,
 }
 
+/// Why one document of a batch fails ingestion (MEDULLA-INGEST-WORKER-R003.10). Each
+/// variant maps to exactly one [`QuarantineReason`] and one rule id; the batch is
+/// quarantined, never errored past commit.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum DocumentIngestError {
+    /// `complete_document` failed: no text, no atom, or a record that does not normalize.
+    #[error("DOCUMENT_NORMALIZATION_FAILED: {0}")]
+    NormalizationFailed(String),
+    /// An atom without a provenance key. Not `MATERIALIZE_NO_PROVENANCE`, which is a
+    /// batch without a source system.
+    #[error("ATOM_PROVENANCE_MISSING: {0}")]
+    MissingProvenance(String),
+    /// The mapping a record names is not the revision the batch resolved.
+    #[error("MAPPING_REVISION_MISMATCH: {0}")]
+    MappingRevisionMismatch(String),
+}
+
+impl DocumentIngestError {
+    /// The quarantine reason this error maps to.
+    pub fn quarantine_reason(&self) -> QuarantineReason {
+        match self {
+            Self::NormalizationFailed(_) => QuarantineReason::NormalizationFailed,
+            Self::MissingProvenance(_) => QuarantineReason::MissingProvenance,
+            Self::MappingRevisionMismatch(_) => QuarantineReason::MappingRevisionMismatch,
+        }
+    }
+
+    /// The rule id recorded with the quarantine.
+    pub fn rule_id(&self) -> &'static str {
+        match self {
+            Self::NormalizationFailed(_) => "DOCUMENT_NORMALIZATION_FAILED",
+            Self::MissingProvenance(_) => "ATOM_PROVENANCE_MISSING",
+            Self::MappingRevisionMismatch(_) => "MAPPING_REVISION_MISMATCH",
+        }
+    }
+}
+
 /// Whether a quarantined batch may be replayed after repair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

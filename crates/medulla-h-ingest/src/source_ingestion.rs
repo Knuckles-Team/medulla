@@ -301,7 +301,8 @@ pub async fn prepare(
         &classes,
         medulla_server_api::knob_config::knobs().ingest_atom_max_tokens as usize,
         &layout,
-    )?;
+    )
+    .map_err(|error| error.to_string())?;
     // Near duplicates are decided here, before any record is admitted and before atom storage
     // (MEDULLA-INGEST-WORKER-R702.3).
     let bucket_ids = documents::candidate_bucket_ids(ctx.tenant_scope, &layout, &normalized)?;

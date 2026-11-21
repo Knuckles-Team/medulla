@@ -21,7 +21,9 @@ use medulla_ingestion_types::knowledge_atom::{
     atom_node_id, KnowledgeAtom, ATOM_NODE_TYPE, ATOM_OF,
 };
 use medulla_protocol_types::protocol::Method;
-use medulla_source_types::source_document::{NormalizedDocument, MAX_DOCUMENT_REFS};
+use medulla_source_types::source_document::{
+    DocumentIngestError, NormalizedDocument, MAX_DOCUMENT_REFS,
+};
 use medulla_source_types::source_ingestion::{SourceEntityRef, SourceIngestionBatch, SourceRecord};
 use medulla_types::contract::Digest256;
 
@@ -135,6 +137,10 @@ fn fail(detail: impl std::fmt::Display) -> String {
     format!("DOCUMENT_NORMALIZATION_FAILED: {detail}")
 }
 
+fn normalization_failed(detail: impl std::fmt::Display) -> DocumentIngestError {
+    DocumentIngestError::NormalizationFailed(detail.to_string())
+}
+
 /// Normalize every document-class record of `batch`. Records of other classes
 /// are untouched. The first record that fails `complete_document` fails the
 /// batch.
@@ -145,14 +151,16 @@ pub(super) fn normalize_documents(
     classes: &BTreeSet<String>,
     atom_max_tokens: usize,
     layout: &LshIndex,
-) -> Result<Vec<DocumentOutput>, String> {
+) -> Result<Vec<DocumentOutput>, DocumentIngestError> {
     let mut outputs = Vec::new();
     for record in &batch.records {
         let mapping = resolved
             .entities
             .get(&record.mapping_reference)
             .ok_or_else(|| {
-                "UNKNOWN_MAPPING_REFERENCE: record mapping was not resolved".to_string()
+                DocumentIngestError::MappingRevisionMismatch(
+                    "UNKNOWN_MAPPING_REFERENCE: record mapping was not resolved".to_string(),
+                )
             })?;
         if !classes.contains(&class_iri(&mapping.schema_mapping.ontology_class)) {
             continue;
@@ -182,11 +190,11 @@ pub(super) fn normalize_record(
     mapping_revision: u64,
     atom_max_tokens: usize,
     layout: &LshIndex,
-) -> Result<Option<DocumentOutput>, String> {
-    let payload = record.payload.value()?;
+) -> Result<Option<DocumentOutput>, DocumentIngestError> {
+    let payload = record.payload.value().map_err(normalization_failed)?;
     let source = payload
         .as_object()
-        .ok_or_else(|| fail("source record payload must be an object"))?;
+        .ok_or_else(|| normalization_failed("source record payload must be an object"))?;
     let value_of = |target: &str| {
         fields
             .iter()
@@ -201,35 +209,46 @@ pub(super) fn normalize_record(
     // complete_document: the text is non-empty, at least one atom is emitted
     // and every atom has a provenance key.
     if text.trim().is_empty() {
-        return Err(fail(format!(
+        return Err(normalization_failed(format!(
             "record {} has no document text",
             record.record_id
         )));
     }
     let raw = rmp_serde::to_vec_named(record)
-        .map_err(|error| fail(format!("record encoding failed: {error}")))?;
+        .map_err(|error| normalization_failed(format!("record encoding failed: {error}")))?;
     let source_digest = Digest256::sha256(&raw);
-    let document_id = content_identity(tenant, connector, record, &source_digest)?;
-    let chunks = chunk_text(text, &ChunkingConfig::default()).map_err(fail)?;
-    let atoms = decompose(tenant, &document_id, &chunks, text, atom_max_tokens).map_err(fail)?;
+    let document_id = content_identity(tenant, connector, record, &source_digest)
+        .map_err(normalization_failed)?;
+    let chunks = chunk_text(text, &ChunkingConfig::default()).map_err(normalization_failed)?;
+    let atoms = decompose(tenant, &document_id, &chunks, text, atom_max_tokens)
+        .map_err(normalization_failed)?;
     if atoms.is_empty() {
-        return Err(fail(format!("record {} yields no atom", record.record_id)));
+        return Err(normalization_failed(format!(
+            "record {} yields no atom",
+            record.record_id
+        )));
     }
     if atoms.len() > MAX_DOCUMENT_REFS {
-        return Err(fail(format!(
+        return Err(normalization_failed(format!(
             "record {} yields more than {MAX_DOCUMENT_REFS} atoms",
             record.record_id
         )));
     }
     for atom in &atoms {
-        check_atom_provenance(atom).map_err(|refusal| refusal.to_string())?;
+        check_atom_provenance(atom).map_err(|_| {
+            DocumentIngestError::MissingProvenance(format!(
+                "atom {} has no provenance key",
+                atom.atom_id
+            ))
+        })?;
     }
     let record_node_id = super::source_node_id(
         tenant,
         connector,
         record.stream.as_str(),
         &record.record_id,
-    )?;
+    )
+    .map_err(normalization_failed)?;
     let signature = document_signature(text, layout).signature().to_vec();
     Ok(Some(DocumentOutput {
         document: NormalizedDocument {
@@ -607,6 +626,7 @@ mod tests {
                 &layout(),
             )
             .unwrap_err();
+            let error = error.to_string();
             assert!(
                 error.starts_with("DOCUMENT_NORMALIZATION_FAILED:"),
                 "{error}"
@@ -618,6 +638,46 @@ mod tests {
         assert!(normalize_record("t1", "demo", &blob, &blob_fields, 4, 200, &layout())
             .unwrap()
             .is_none());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.10
+    #[test]
+    fn each_error_maps_to_one_quarantine_reason() {
+        use medulla_source_types::source_document::QuarantineReason;
+        let cases = [
+            (
+                DocumentIngestError::NormalizationFailed("no text".into()),
+                QuarantineReason::NormalizationFailed,
+                "DOCUMENT_NORMALIZATION_FAILED",
+            ),
+            (
+                DocumentIngestError::MissingProvenance("atom a1".into()),
+                QuarantineReason::MissingProvenance,
+                "ATOM_PROVENANCE_MISSING",
+            ),
+            (
+                DocumentIngestError::MappingRevisionMismatch("rev 3".into()),
+                QuarantineReason::MappingRevisionMismatch,
+                "MAPPING_REVISION_MISMATCH",
+            ),
+        ];
+        for (error, reason, rule) in cases {
+            assert_eq!(error.quarantine_reason(), reason);
+            assert_eq!(error.rule_id(), rule);
+            assert!(error.to_string().starts_with(rule), "{error}");
+        }
+        // A record that yields no text is a normalization failure.
+        let error = normalize_record(
+            "t1",
+            "demo",
+            &record(serde_json::json!({"text": "  "})),
+            &fields(),
+            4,
+            200,
+            &layout(),
+        )
+        .unwrap_err();
+        assert_eq!(error.quarantine_reason(), QuarantineReason::NormalizationFailed);
     }
 
     #[test]
