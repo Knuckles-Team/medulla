@@ -11,7 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::knob_families::rank;
+use medulla_decision_types::decision::capability_rank;
 use medulla_decision_types::decision::policy::DecisionPolicy;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 
@@ -33,8 +33,10 @@ pub struct RankWeights {
 impl RankWeights {
     /// The weights the pinned policy sets: each knob, or its default.
     pub fn of(policy: &DecisionPolicy) -> Self {
-        let (name, semantic) = rank::weights(policy);
-        Self { name, semantic }
+        Self {
+            name: capability_rank::name_weight(policy),
+            semantic: capability_rank::semantic_weight(policy),
+        }
     }
 }
 

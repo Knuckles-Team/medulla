@@ -28,6 +28,7 @@ pub mod approval;
 pub mod autonomy;
 pub mod branch_fusion;
 pub mod capability_designation;
+pub mod capability_rank;
 pub mod changeset_review;
 pub mod checker_feedback;
 pub mod codes;

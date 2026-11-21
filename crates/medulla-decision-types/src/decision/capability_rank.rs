@@ -2,8 +2,11 @@
 //! the capability-ranking features medulla computes from candidate text. Each
 //! is a non-negative weight stored as micros.
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::policy::DecisionPolicy;
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+use super::policy::DecisionPolicy;
+
+/// The largest weight a policy may set: 16.0.
+const MAX_MICROS: i64 = 16_000_000;
 
 const fn weight(name: &'static str, default_micros: i64) -> KnobSpec {
     KnobSpec {
@@ -11,7 +14,7 @@ const fn weight(name: &'static str, default_micros: i64) -> KnobSpec {
         unit: "weight",
         default: KnobValue::DecimalMicros(default_micros),
         min: KnobValue::DecimalMicros(0),
-        max: KnobValue::DecimalMicros(10_000_000),
+        max: KnobValue::DecimalMicros(MAX_MICROS),
         safety: KnobSafety::Tunable,
     }
 }
@@ -24,20 +27,25 @@ pub const SEMANTIC_WEIGHT: KnobSpec = weight("decision.rank.semantic_weight", 1_
 /// Every `decision.rank.*` knob, each `Tunable`.
 pub const KNOBS: &[KnobSpec] = &[NAME_WEIGHT, SEMANTIC_WEIGHT];
 
-/// The weights the pinned policy sets as `(name, semantic)`: each knob, or its
-/// default.
-pub fn weights(policy: &DecisionPolicy) -> (f64, f64) {
-    let read = |spec: &KnobSpec| {
-        let micros = match policy.knob(spec) {
-            KnobValue::DecimalMicros(micros) => micros.clamp(0, 10_000_000),
-            _ => match spec.default {
-                KnobValue::DecimalMicros(micros) => micros,
-                _ => 0,
-            },
-        };
-        micros as f64 / 1_000_000.0
+fn weight_of(policy: &DecisionPolicy, spec: &KnobSpec) -> f64 {
+    let micros = match policy.knob(spec) {
+        KnobValue::DecimalMicros(micros) => micros.clamp(0, MAX_MICROS),
+        _ => match spec.default {
+            KnobValue::DecimalMicros(micros) => micros,
+            _ => 0,
+        },
     };
-    (read(&NAME_WEIGHT), read(&SEMANTIC_WEIGHT))
+    micros as f64 / 1_000_000.0
+}
+
+/// The resolved `decision.rank.name_weight`: micros divided by 1,000,000.
+pub fn name_weight(policy: &DecisionPolicy) -> f64 {
+    weight_of(policy, &NAME_WEIGHT)
+}
+
+/// The resolved `decision.rank.semantic_weight`: micros divided by 1,000,000.
+pub fn semantic_weight(policy: &DecisionPolicy) -> f64 {
+    weight_of(policy, &SEMANTIC_WEIGHT)
 }
 
 #[cfg(test)]
@@ -46,12 +54,18 @@ mod tests {
 
     // spec: MEDULLA-DECISION-ENGINE-R829.2
     #[test]
-    fn the_rank_weights_are_declared_with_the_stated_starting_values() {
+    fn knob_defaults_and_bounds() {
         assert_eq!(
             KNOBS.iter().map(|k| k.name).collect::<Vec<_>>(),
             ["decision.rank.name_weight", "decision.rank.semantic_weight"]
         );
         assert_eq!(NAME_WEIGHT.default, KnobValue::DecimalMicros(2_000_000));
         assert_eq!(SEMANTIC_WEIGHT.default, KnobValue::DecimalMicros(1_000_000));
+        for spec in KNOBS {
+            assert_eq!(spec.min, KnobValue::DecimalMicros(0));
+            assert_eq!(spec.max, KnobValue::DecimalMicros(16_000_000));
+            assert_eq!(spec.unit, "weight");
+            assert_eq!(spec.safety, KnobSafety::Tunable);
+        }
     }
 }

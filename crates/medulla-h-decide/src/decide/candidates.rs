@@ -37,7 +37,7 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::features::capability_text::{capability_features, RankWeights};
+use super::features::capability_text::{capability_features, Embed, RankWeights};
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
@@ -606,11 +606,16 @@ pub(super) fn read_candidates(
                     )
                 })?;
             // Medulla computes the features from the candidate text, weighted by
-            // the pinned policy's `decision.rank.*` knobs; the embedding model is
-            // not reachable from the candidate stage, so semantic_similarity is
-            // absent.
-            let features =
-                capability_features(query, options, None, RankWeights::of(policy));
+            // the pinned policy's `decision.rank.*` knobs. The semantic feature
+            // reads the engine's one text embedder; it is absent exactly when no
+            // embedder is bound in this process (MEDULLA-DECISION-ENGINE-R829.2).
+            let embed = rank_embedder();
+            let features = capability_features(
+                query,
+                options,
+                embed.as_ref().map(|embed| embed as Embed<'_>),
+                RankWeights::of(policy),
+            );
             let featured = options
                 .iter()
                 .zip(features)
@@ -675,4 +680,38 @@ pub(super) async fn filtered_graph_view(
     _source: &CandidateSource,
 ) -> Result<Option<(medulla_graph_core::graph::GraphView, u64)>, String> {
     Ok(None)
+}
+
+/// The embedding the rank arm hands `capability_features`: a closure over the
+/// engine's one text embedder (MEDULLA-DECISION-ENGINE-R829.2). It returns one
+/// vector per input text in order, and `None` when no embedder is bound or any
+/// text fails to embed, so the semantic feature is never silently dropped while
+/// a model is bound. Without the `query` feature there is no embedder.
+fn rank_embedder() -> Option<impl Fn(&[String]) -> Option<Vec<Vec<f32>>>> {
+    #[cfg(feature = "query")]
+    {
+        let embedder = medulla_server_ops::api::query_txn::query_support::uql_text_embedder()?;
+        Some(move |texts: &[String]| -> Option<Vec<Vec<f32>>> {
+            texts
+                .iter()
+                .map(|text| embedder.embed(text).ok())
+                .collect()
+        })
+    }
+    #[cfg(not(feature = "query"))]
+    {
+        None::<fn(&[String]) -> Option<Vec<Vec<f32>>>>
+    }
+}
+
+#[cfg(test)]
+mod rank_embedder_tests {
+    // spec: MEDULLA-DECISION-ENGINE-R829.2
+    #[test]
+    fn rank_embedder_is_none_without_a_bound_model() {
+        // The shared test environment sets no embedder, so none is bound.
+        if std::env::var("MEDULLA_UQL_TEXT_EMBEDDER").is_err() {
+            assert!(super::rank_embedder().is_none());
+        }
+    }
 }

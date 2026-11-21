@@ -1020,6 +1020,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::HarnessConfig => {
             medulla_decision_types::decision::statistical::harness_config::HARNESS_KNOBS
         }
+        QuestionKind::Rank => medulla_decision_types::decision::capability_rank::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS
