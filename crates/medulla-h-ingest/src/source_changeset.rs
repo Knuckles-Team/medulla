@@ -28,6 +28,8 @@
 //! three-way merge (MEDULLA-BRANCH-MERGE-R004). No second disjointness
 //! check exists on the accept path.
 
+pub mod provenance;
+
 use std::io::Write;
 
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
@@ -291,6 +293,9 @@ pub struct AcceptContext<'a> {
     /// The three-way file merge for an overlapping path
     /// (`merge_file` of MEDULLA-BRANCH-MERGE-R010).
     pub merge: FileMerger,
+    /// The verified agent of an agent request (MEDULLA-SCM-R012); `None` for a
+    /// human request.
+    pub agent_identity: Option<&'a str>,
 }
 
 /// Three-way merge of the overlapping paths of a stale-base submission
@@ -479,7 +484,7 @@ pub fn accept(
         changed_paths,
         created_at: ctx.created_at_ms,
         trailers,
-        agent_identity: None,
+        agent_identity: ctx.agent_identity.map(str::to_string),
         run_trace_id: request.run_trace_id.clone(),
     }
     .sealed())
@@ -788,6 +793,7 @@ mod tests {
         created_at_ms: 9,
         blobs: &NoBlobs,
         merge: no_merge,
+        agent_identity: None,
     };
 
     // spec: MEDULLA-SCM-R002

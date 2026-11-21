@@ -922,6 +922,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "SubmitChangeset",
         &[
+            "AGENT_RUN_TRACE_MISSING",
             "BLOB_DIGEST_MISMATCH",
             "BLOB_NOT_FOUND",
             "BLOB_TOO_LARGE",
@@ -933,6 +934,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CHANGESET_PARENT_NOT_ON_BRANCH",
             "MERGE_BLOB_UNREADABLE",
             "PATH_WRITE_DENIED",
+            "RUN_TRACE_UNKNOWN",
             "SOURCE_CONFLICT",
         ],
     ),

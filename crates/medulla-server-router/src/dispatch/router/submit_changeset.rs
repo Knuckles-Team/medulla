@@ -27,6 +27,7 @@ mod served {
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_history::index_rows;
     use medulla_h_ingest::source_tree::checkpoint_after;
+    use medulla_h_ingest::source_changeset::provenance::{self, RunTraceLookup};
     use medulla_h_ingest::source_changeset::{
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
@@ -56,6 +57,73 @@ mod served {
 
     fn decode_changeset(bytes: &[u8]) -> Result<Changeset, String> {
         rmp_serde::from_slice(bytes).map_err(|error| error.to_string())
+    }
+
+    /// The caller's view of the repository graph (MEDULLA-SCM-R012): a node
+    /// the caller may not see answers like an absent node.
+    struct RepoGraph {
+        core: Arc<medulla_graph_core::graph::GraphCore>,
+        isolation: medulla_isolation::isolation::IsolationLayer,
+        caller: String,
+    }
+
+    impl RunTraceLookup for RepoGraph {
+        fn node_kind(&self, node_id: &str) -> Result<Option<String>, String> {
+            let Some(blob) = self.core.get_node_properties(node_id) else {
+                return Ok(None);
+            };
+            #[cfg(feature = "security")]
+            if !self.isolation.can_see_row(
+                &self.caller,
+                &medulla_graph_core::rls::row_visibility(&blob),
+            ) {
+                return Ok(None);
+            }
+            #[cfg(not(feature = "security"))]
+            let _ = (&self.isolation, &self.caller);
+            let properties: serde_json::Value =
+                rmp_serde::from_slice(&blob).map_err(|error| error.to_string())?;
+            Ok(properties
+                .get("kind")
+                .and_then(|kind| kind.as_str())
+                .map(str::to_string))
+        }
+    }
+
+    /// A lookup for a repository graph that is not registered: no node exists.
+    struct NoGraph;
+
+    impl RunTraceLookup for NoGraph {
+        fn node_kind(&self, _node_id: &str) -> Result<Option<String>, String> {
+            Ok(None)
+        }
+    }
+
+    /// Open the repository graph for the verified caller at read level, after
+    /// `check_graph_access`. `None` when no graph of that name is registered.
+    async fn open_repo_graph(
+        state: &Arc<RwLock<ServerState>>,
+        verified: &VerifiedRequestContext,
+        repo: &str,
+    ) -> Result<Option<RepoGraph>, String> {
+        medulla_server_api::api::reentry::ensure_graph_resident(state, repo).await;
+        let guard = state.read().await;
+        let Some(entry) = guard.registry.get(repo) else {
+            return Ok(None);
+        };
+        medulla_server_auth::access::check_graph_access(
+            &guard.isolation,
+            Some(verified.agent_id()),
+            repo,
+            entry.graph_type,
+            entry.owner.as_deref(),
+            medulla_isolation::isolation::AccessLevel::Read,
+        )?;
+        Ok(Some(RepoGraph {
+            core: Arc::clone(&entry.core),
+            isolation: guard.isolation.clone(),
+            caller: verified.agent_id().to_string(),
+        }))
     }
 
     fn receipt_response(req_id: u64, receipt: SubmitChangesetReceipt) -> Response {
@@ -140,7 +208,35 @@ mod served {
             );
         }
 
-        // Stage one: bounds, pairings and blobs, before any write.
+        // Stage one: bounds and pairings, then the agent provenance of
+        // MEDULLA-SCM-R012, before any blob is read and before any write.
+        if let Err(refusal) = request.validate() {
+            return Response::err(req.id, refusal.message());
+        }
+        let agent_identity: Option<String> =
+            (verified.agent_id() != verified.principal()).then(|| verified.agent_id().to_string());
+        let graph = match request.run_trace_id {
+            Some(_) => match open_repo_graph(state, verified, &request.repo).await {
+                Ok(graph) => graph,
+                Err(error) => return Response::err(req.id, error),
+            },
+            None => None,
+        };
+        let lookup: &dyn RunTraceLookup = match &graph {
+            Some(graph) => graph,
+            None => &NoGraph,
+        };
+        match provenance::check(
+            agent_identity.as_deref(),
+            request.run_trace_id.as_deref(),
+            lookup,
+        ) {
+            Ok(()) => {}
+            Err(AcceptError::Refused(refusal)) => return Response::err(req.id, refusal.message()),
+            Err(AcceptError::Store(error)) => return Response::err(req.id, error),
+        }
+
+        // Stage one: blobs, before any write.
         let store = {
             let s = state.read().await;
             match s.blob_cursors() {
@@ -197,6 +293,7 @@ mod served {
                     blobs: &blobs,
                     // MEDULLA-BRANCH-MERGE-R010: an overlapping path merges by line.
                     merge: ops::line_merge::FILE_MERGER,
+                    agent_identity: agent_identity.as_deref(),
                 };
                 let changeset = match accept(&chain, &build_request, &ctx) {
                     Ok(changeset) => changeset,

@@ -77,6 +77,11 @@ pub enum ChangesetRefusal {
     /// The blamed path is deleted or has no blame row at the revision
     /// (MEDULLA-SCM-R005.2).
     BlamePathAbsent,
+    /// An agent request that names no run (MEDULLA-SCM-R012).
+    AgentRunTraceMissing,
+    /// A `run_trace_id` that names no `run_trace` node the caller can read
+    /// (MEDULLA-SCM-R012).
+    RunTraceUnknown,
 }
 
 impl ChangesetRefusal {
@@ -96,6 +101,8 @@ impl ChangesetRefusal {
             Self::BlameBinary => "BLAME_BINARY",
             Self::BlameFileTooLarge => "BLAME_FILE_TOO_LARGE",
             Self::BlamePathAbsent => "BLAME_PATH_ABSENT",
+            Self::AgentRunTraceMissing => "AGENT_RUN_TRACE_MISSING",
+            Self::RunTraceUnknown => "RUN_TRACE_UNKNOWN",
         }
     }
 }

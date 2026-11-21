@@ -80,6 +80,10 @@ closed_error_codes! {
         BlameBinary => "BLAME_BINARY",
         /// MEDULLA-SCM-R005.2: the blamed file has more lines than the blame index holds.
         BlameFileTooLarge => "BLAME_FILE_TOO_LARGE",
+        /// MEDULLA-SCM-R012: an agent request that names no run.
+        AgentRunTraceMissing => "AGENT_RUN_TRACE_MISSING",
+        /// MEDULLA-SCM-R012: a run id that names no run-trace node the caller can read.
+        RunTraceUnknown => "RUN_TRACE_UNKNOWN",
         /// MEDULLA-SCM-R007: a read of a path no read grant covers.
         PathReadDenied => "PATH_READ_DENIED",
         /// MEDULLA-SCM-R007: a write to a path no write grant covers.
