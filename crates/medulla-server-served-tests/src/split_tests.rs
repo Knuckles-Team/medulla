@@ -46,6 +46,8 @@ mod medulla_h_decide_failure_ingest_tests;
 #[cfg(all(test, feature = "decide"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_decide_harness_config_tests;
+#[cfg(all(test, feature = "decide", feature = "redb", feature = "blob"))]
+mod medulla_h_decide_policy_evolution_tests;
 #[cfg(all(test, feature = "redb"))]
 mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]
