@@ -15043,6 +15043,13 @@ class MethodBranchDiff(BaseModel):
     params: MethodBranchDiffParams
 
 
+class MethodBranchMerge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BranchMerge"]
+    params: MethodBranchMergeParams
+
+
 class MethodBranchReadAt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15786,6 +15793,7 @@ Method = Annotated[
         MethodSemanticEnrich,
         MethodBranchWrite,
         MethodBranchDiff,
+        MethodBranchMerge,
         MethodBranchReadAt,
         MethodSubmitChangeset,
         MethodImportGitHistory,
@@ -34122,6 +34130,16 @@ class MethodBranchDiffParams(BaseModel):
     to_version: Annotated[int, Field(ge=0)] | None = Field(default=None)
 
 
+class MethodBranchMergeParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    merge_base: str | None = Field(default=None)
+    source: str
+    target: str
+    tenant: str
+
+
 class MethodBranchReadAtParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40134,6 +40152,8 @@ __all__ = [
     "UsageRecord",
     "MethodBranchDiff",
     "MethodBranchDiffParams",
+    "MethodBranchMerge",
+    "MethodBranchMergeParams",
     "MethodBranchReadAt",
     "MethodBranchReadAtParams",
     "MethodBranchWrite",

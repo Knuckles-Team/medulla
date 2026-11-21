@@ -139,6 +139,7 @@ SEND_BY_METHOD = {
     "BlobRef": storage.send_blob_ref,
     "BlobUnref": storage.send_blob_unref,
     "BranchDiff": cluster.send_branch_diff,
+    "BranchMerge": cluster.send_branch_merge,
     "BranchReadAt": cluster.send_branch_read_at,
     "BranchWrite": cluster.send_branch_write,
     "BrokerAck": messaging.send_broker_ack,

@@ -1551,6 +1551,7 @@ send_register_udf = contract_sender(
     "RegisterUdf", "MethodRegisterUdfParams", expect_string
 )
 send_branch_diff = contract_sender("BranchDiff", "MethodBranchDiffParams")
+send_branch_merge = contract_sender("BranchMerge", "MethodBranchMergeParams")
 send_branch_read_at = contract_sender("BranchReadAt", "MethodBranchReadAtParams")
 send_branch_write = contract_sender("BranchWrite", "MethodBranchWriteParams")
 send_set_path_grant = contract_sender("SetPathGrant", "MethodSetPathGrantParams")

@@ -576,6 +576,7 @@ METHOD_IDS = frozenset(
         "Batch",
         "BeliefRevise",
         "BranchDiff",
+        "BranchMerge",
         "BranchReadAt",
         "BranchWrite",
         "CatalogUsage",
