@@ -183,6 +183,8 @@ mod layer_store;
 pub mod ownership;
 // MEDULLA-IDENTITY-R023.13.2: the share transition of one node.
 pub mod share;
+// MEDULLA-TYPED-PACKS-R652.2: marking propagation along lineage.
+pub mod marking_propagation;
 mod policy_admin;
 mod scope_bound;
 pub use scope_bound::{

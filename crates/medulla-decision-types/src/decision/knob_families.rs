@@ -2,6 +2,7 @@
 //! (MEDULLA-DECISION-ENGINE-R179.8). Each module declares its own
 //! `KNOBS` table; [`REGISTRY`] lists them for the knob registry.
 
+pub mod classification;
 pub mod context;
 pub mod context_search;
 pub mod criterion_review;
@@ -34,6 +35,7 @@ use super::knobs::KnobSpec;
 
 /// The family tables this crate registers.
 pub const REGISTRY: &[&[KnobSpec]] = &[
+    classification::KNOBS,
     context::KNOBS,
     criterion_review::KNOBS,
     fanout::KNOBS,
