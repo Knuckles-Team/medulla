@@ -68,7 +68,7 @@ fn ensure_txn_recovery_key() {
     medulla_kernel::crypto::provision_test_at_rest_key_under_write_guard();
 }
 
-fn test_state() -> Arc<RwLock<ServerState>> {
+pub(crate) fn test_state() -> Arc<RwLock<ServerState>> {
     medulla_server::test_state_with_services(
         SECRET,
         ServerState::test_isolation("system"),
@@ -302,7 +302,7 @@ async fn multi_tenant_state() -> Arc<RwLock<ServerState>> {
     state
 }
 
-fn request(id: u64, graph: &str, agent_id: Option<&str>, method: Method) -> Request {
+pub(crate) fn request(id: u64, graph: &str, agent_id: Option<&str>, method: Method) -> Request {
     static NONCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let effective_agent = agent_id.unwrap_or("system");
     let claims = test_claims(effective_agent);
@@ -401,7 +401,7 @@ fn assert_denied(resp: &Response) {
     );
 }
 
-fn assert_ok(resp: &Response) {
+pub(crate) fn assert_ok(resp: &Response) {
     assert!(
         resp.error.is_none(),
         "expected success, got error: {:?}",

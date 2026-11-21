@@ -68,3 +68,5 @@ pub mod meeting_transcript;
 // MEDULLA-FEDERATED-QUERY-R708 — stored, versioned queries and their materialized results.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stored_query;
+// MEDULLA-BUSINESS-OPS-R003.1: the owner digest as stored queries.
+pub mod business_digest;
