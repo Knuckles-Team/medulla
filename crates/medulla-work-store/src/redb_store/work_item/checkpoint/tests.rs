@@ -377,3 +377,88 @@ fn conflicting_original_context_bindings_refuse_without_mutation() {
         );
     }
 }
+
+fn seed_memory_revision(shard: &Shard, graph_tag: &str, doc: &str, revision: u64, digest: &str) {
+    let id = format!("memrev:{doc}@{revision}");
+    let row = serde_json::json!({
+        "label": "MemoryRevision",
+        "head": {"doc_id": doc, "revision": revision, "content_digest": digest},
+        "content": "memory",
+    });
+    let bytes = rmp_serde::to_vec_named(&row).unwrap();
+    with_nodes(shard, graph_tag, |nodes| {
+        nodes.insert((GRAPH, id.as_str()), bytes.as_slice())?;
+        Ok(())
+    });
+}
+
+fn with_short_term(
+    refs: Vec<medulla_work_types::run_checkpoint::CheckpointMemoryRef>,
+) -> PublishRunCheckpointRequest {
+    let mut req = request(None);
+    req.snapshot.short_term = refs;
+    req
+}
+
+fn memory_ref(
+    doc: &str,
+    revision: u64,
+    digest: &str,
+) -> medulla_work_types::run_checkpoint::CheckpointMemoryRef {
+    medulla_work_types::run_checkpoint::CheckpointMemoryRef {
+        document_id: doc.into(),
+        revision,
+        digest: digest.into(),
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R028.1.2.2
+#[test]
+fn memory_refs_must_name_an_existing_revision_with_the_same_digest() {
+    let tmp = open("checkpoint-memory-refs");
+    let shard = &tmp.shard;
+    seed(shard);
+    let good = "a".repeat(64);
+    seed_memory_revision(shard, "seed-memory", "notes/a.md", 1, &good);
+    let absent = apply(
+        shard,
+        "absent",
+        &with_short_term(vec![memory_ref("notes/absent.md", 1, &good)]),
+        "owner",
+        2000,
+    )
+    .unwrap_err();
+    assert!(absent.starts_with("CHECKPOINT_MEMORY_REF_MISSING: "), "{absent}");
+    let wrong_revision = apply(
+        shard,
+        "wrong-revision",
+        &with_short_term(vec![memory_ref("notes/a.md", 2, &good)]),
+        "owner",
+        2000,
+    )
+    .unwrap_err();
+    assert!(
+        wrong_revision.starts_with("CHECKPOINT_MEMORY_REF_MISSING: "),
+        "{wrong_revision}"
+    );
+    let differing = apply(
+        shard,
+        "digest",
+        &with_short_term(vec![memory_ref("notes/a.md", 1, &"b".repeat(64))]),
+        "owner",
+        2000,
+    )
+    .unwrap_err();
+    assert!(differing.starts_with("CHECKPOINT_DIGEST_MISMATCH: "), "{differing}");
+    assert_eq!(count(shard), 0, "no row changes on refusal");
+    assert!(get(shard, "owner", false, 2000).unwrap().is_none());
+    apply(
+        shard,
+        "ok",
+        &with_short_term(vec![memory_ref("notes/a.md", 1, &good)]),
+        "owner",
+        2000,
+    )
+    .unwrap();
+    assert_eq!(count(shard), 1);
+}

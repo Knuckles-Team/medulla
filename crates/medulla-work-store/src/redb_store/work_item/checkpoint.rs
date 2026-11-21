@@ -146,6 +146,46 @@ fn verify_stored(
     .validate()
 }
 
+/// Every referenced memory revision must exist on this tenant graph with the
+/// stated digest. A revision that lives on another graph is not visible here,
+/// so it refuses with the same bytes as an absent one.
+fn require_memory_refs(
+    tables: &crate::redb_store::graph_row_tables::GraphRowTables<'_>,
+    graph: &str,
+    content: &CheckpointContent,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    use medulla_mutation_types::memory_sync::{revision_node_id, DocId};
+    use medulla_types::contract::ServerErrorCode;
+    let missing = || {
+        format!(
+            "{}: a referenced memory revision does not exist",
+            ServerErrorCode::CheckpointMemoryRefMissing
+        )
+    };
+    for reference in content.short_term.iter().chain(content.long_term.iter()) {
+        let doc = DocId::new(reference.document_id.clone()).map_err(|_| missing())?;
+        let id = revision_node_id(&doc, reference.revision);
+        let bytes = tables
+            .nodes
+            .get((graph, id.as_str()))?
+            .ok_or_else(missing)?;
+        let row: serde_json::Value =
+            decode_durable(&crypto.unseal(bytes.value())?).map_err(|_| missing())?;
+        let digest = row
+            .pointer("/head/content_digest")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(missing)?;
+        if digest != reference.digest {
+            return Err(format!(
+                "{}: a referenced memory revision has a different digest",
+                ServerErrorCode::CheckpointDigestMismatch
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub fn publish(
     graph: &str,
     request: &PublishRunCheckpointRequest,
@@ -202,6 +242,7 @@ pub fn publish(
     ) {
         return Err("ACCESS_DENIED: checkpoint context mismatch".into());
     }
+    require_memory_refs(tables, graph, &request.snapshot, crypto)?;
     let previous = head(&row)?;
     if previous.as_ref().map(|(_, revision, _)| *revision) != request.expected_revision {
         return Err("CONFLICT: checkpoint expected revision conflict".into());

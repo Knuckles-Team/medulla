@@ -9,7 +9,8 @@
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
-    decide, Decision, DocId, MemorySnapshotHead, MemorySnapshotRead, MemorySyncRefusal, Resolution,
+    decide, revision_node_id, Decision, DocId, MemorySnapshotHead, MemorySnapshotRead,
+    MemorySyncRefusal, Resolution,
     SnapshotProvenance, SyncOutcome, SyncRequest, SyncStamp, SyncStanding,
 };
 use medulla_types::contract::Digest256;
@@ -57,10 +58,6 @@ fn decode<T: for<'de> Deserialize<'de>>(bytes: &[u8]) -> Option<T> {
 /// The node id of a document's head.
 pub fn head_node_id(doc: &DocId) -> String {
     format!("memsnap:{}", doc.as_str())
-}
-
-fn revision_node_id(doc: &DocId, revision: u64) -> String {
-    format!("memrev:{}@{revision}", doc.as_str())
 }
 
 fn candidate_prefix(doc: &DocId) -> String {

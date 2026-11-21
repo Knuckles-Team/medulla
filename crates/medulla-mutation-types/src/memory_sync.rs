@@ -109,6 +109,12 @@ fn refusal(code: MemorySyncRefusal, detail: &'static str) -> MemorySyncError {
 #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
 pub struct DocId(String);
 
+/// The node id of one accepted revision of `doc`. The memory snapshot store
+/// writes it and the run checkpoint reads it, so both name the row one way.
+pub fn revision_node_id(doc: &DocId, revision: u64) -> String {
+    format!("memrev:{}@{revision}", doc.as_str())
+}
+
 impl DocId {
     pub fn new(value: impl Into<String>) -> Result<Self, MemorySyncError> {
         let value = value.into();

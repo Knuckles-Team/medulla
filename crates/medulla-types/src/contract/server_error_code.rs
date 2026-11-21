@@ -741,6 +741,8 @@ closed_error_codes! {
         DataPrepDeclarationTooLarge => "DATA_PREP_DECLARATION_TOO_LARGE",
         WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
         CheckpointFenceStale => "CHECKPOINT_FENCE_STALE",
+        CheckpointMemoryRefMissing => "CHECKPOINT_MEMORY_REF_MISSING",
+        CheckpointDigestMismatch => "CHECKPOINT_DIGEST_MISMATCH",
         WorkItemKindUnknown => "WORK_ITEM_KIND_UNKNOWN",
         MetastoreSpecInvalid => "METASTORE_SPEC_INVALID",
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",

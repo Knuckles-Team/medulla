@@ -1329,6 +1329,104 @@ async fn stale_holder_cannot_read_the_checkpoint_head() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R028.1.2.2
+#[tokio::test]
+async fn cross_tenant_memory_ref_is_indistinguishable_from_absent() {
+    use medulla_work_types::{
+        run_checkpoint::CheckpointContent, run_checkpoint::CheckpointMemoryRef,
+        run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest,
+        run_checkpoint::RunCheckpointRead,
+    };
+    use sha2::{Digest, Sha256};
+    let dir = temp_dir("medulla-checkpoint-memory-ref");
+    let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());
+    let state = run_state_with(concrete.clone(), dir.clone()).await;
+    let mut submission = run_submit_method();
+    if let Method::SubmitWorkItem { request } = &mut submission {
+        request.conversation = Some(Box::new(
+            medulla_work_types::native_control::ConversationTurnAdmission {
+                schema_version: NativeControlSchemaVersion::V1,
+                context_id: "memory-context".into(),
+                expected_revision: 0,
+                predecessor_run_id: None,
+            },
+        ));
+    }
+    let admitted: SubmitWorkItemResult = decode_raw(
+        &test_support::dispatch(&state, signed_run_request(961, submission, "admit-memory")).await,
+        "admit memory run",
+    );
+    let claimed =
+        claim_admitted_run(&state, &admitted, 962, "claim-memory", "claim memory run").await;
+    let content = r#"{"phase":"step_inflight","next_step":0,"messages":[]}"#.to_string();
+    let with_ref = |document_id: &str| PublishRunCheckpointRequest {
+        tenant: TENANT.into(),
+        work_item_id: admitted.work_item_id.clone(),
+        run_id: "run-owner-admission".into(),
+        context_id: "memory-context".into(),
+        worker_id: WORKER.into(),
+        lease_epoch: claimed.lease_epoch.unwrap(),
+        fencing_token: claimed.fencing_token.unwrap(),
+        expected_revision: None,
+        idempotency_key: "memory-body-key".into(),
+        snapshot: CheckpointContent {
+            payload_digest: hex::encode(Sha256::digest(content.as_bytes())),
+            content: content.clone(),
+            short_term: vec![CheckpointMemoryRef {
+                document_id: document_id.into(),
+                revision: 1,
+                digest: "a".repeat(64),
+            }],
+            long_term: vec![],
+        },
+    };
+    // A document that was never written here and one that exists only under
+    // another tenant's graph are the same case for this graph: no row.
+    let mut refusals = Vec::new();
+    for (index, doc) in ["notes/absent.md", "tenant-b/notes/a.md"].into_iter().enumerate() {
+        let refused = test_support::dispatch(
+            &state,
+            signed_run_request(
+                963 + index as u64,
+                Method::PublishRunCheckpoint {
+                    request: with_ref(doc),
+                },
+                &format!("memory-write-{index}"),
+            ),
+        )
+        .await;
+        assert_eq!(
+            refused.error.as_deref(),
+            Some("CHECKPOINT_MEMORY_REF_MISSING"),
+            "{refused:?}"
+        );
+        refusals.push(refused.error);
+    }
+    assert_eq!(refusals[0], refusals[1]);
+    let head: Option<RunCheckpointRead> = decode_raw(
+        &test_support::dispatch(
+            &state,
+            signed_run_request(
+                970,
+                Method::GetRunCheckpoint {
+                    request: GetRunCheckpointRequest {
+                        tenant: TENANT.into(),
+                        work_item_id: admitted.work_item_id.clone(),
+                        run_id: "run-owner-admission".into(),
+                        context_id: "memory-context".into(),
+                        current_claim: None,
+                    },
+                },
+                "memory-read",
+            ),
+        )
+        .await,
+        "read after refusal",
+    );
+    assert!(head.is_none(), "a refused publish leaves no head");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
 // spec: MEDULLA-DURABLE-KERNEL-R028.4.1
 #[tokio::test]
 async fn run_admission_owner_read_survives_native_changes_and_restart() {
