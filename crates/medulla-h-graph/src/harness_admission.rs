@@ -42,6 +42,7 @@ use std::collections::BTreeMap;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::walkthrough_readers::{WalkthroughReadRefusal, WalkthroughReaders};
 use medulla_work_types::orchestration::capability_gap::{
     decode_enhancement_write, decode_gap_write, is_capability_gap_write,
     is_desired_enhancement_write,
@@ -859,7 +860,10 @@ fn run_trace_violation(props: &Props) -> Option<(&'static str, String)> {
 /// run-trace shapes; a violation refuses with `RUN_TRACE_SHAPE_INVALID`, names
 /// the shape, and writes nothing. A valid trace is not a harness record, so it
 /// passes through (`None`).
-fn validate_run_trace_node(props: &Props) -> Result<Option<Admission>, String> {
+fn validate_run_trace_node(
+    props: &Props,
+    walkthrough: WalkthroughChecks,
+) -> Result<Option<Admission>, String> {
     if node_type(props) != Some("RunTrace") {
         return Ok(None);
     }
@@ -870,7 +874,129 @@ fn validate_run_trace_node(props: &Props) -> Result<Option<Admission>, String> {
         ));
     }
     validate_step_records(props)?;
+    validate_walkthrough(props, walkthrough)?;
     Ok(None)
+}
+
+/// The result of the repository-index and blob checks the `AddNode` handler ran
+/// through the server-api read seams before admission (MEDULLA-ORCH-VOCAB-R013.7.2).
+/// Admission itself stays graph-only: it reads this argument, never a store.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalkthroughChecks {
+    /// Every read check passed, or the write carries no walkthrough.
+    Resolved,
+    /// A read check failed.
+    Refused(WalkthroughReadRefusal),
+    /// The write path has no read seams (the change-envelope path): a walkthrough
+    /// cannot be resolved there and is refused as an unresolved revision.
+    NotRun,
+}
+
+/// Run the read checks of a walkthrough-bearing `AddNode` through the injected
+/// readers. A write without a walkthrough is `Resolved`; a walkthrough that does
+/// not decode is left to admission to refuse by shape.
+pub fn resolve_walkthrough_checks(
+    method: &Method,
+    tenant: &str,
+    readers: Option<&WalkthroughReaders>,
+) -> WalkthroughChecks {
+    let Method::AddNode {
+        properties_msgpack, ..
+    } = method
+    else {
+        return WalkthroughChecks::Resolved;
+    };
+    let props = decode_props(properties_msgpack);
+    let Some(manifest) = decode_walkthrough(&props) else {
+        return WalkthroughChecks::Resolved;
+    };
+    match readers {
+        Some(readers) => match readers.resolve(tenant, &manifest) {
+            Ok(()) => WalkthroughChecks::Resolved,
+            Err(refusal) => WalkthroughChecks::Refused(refusal),
+        },
+        None => WalkthroughChecks::Refused(WalkthroughReadRefusal::RevisionStale),
+    }
+}
+
+/// The `CodeWalkthrough` a `RunTrace` node carries under `walkthrough`, if it
+/// decodes.
+fn decode_walkthrough(
+    props: &Props,
+) -> Option<medulla_result_types::outcome_bundle::CodeWalkthrough> {
+    if node_type(props) != Some("RunTrace") {
+        return None;
+    }
+    serde_json::from_value(props.get("walkthrough")?.clone()).ok()
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.7.2 — the graph-only validation of a walkthrough
+/// manifest on a `RunTrace` write. A malformed manifest, a section with no source
+/// ref, a note index that is duplicated or gapped, and a note outside the run each
+/// refuse with their own code and store nothing; the read checks arrive as the
+/// resolved `checks` argument.
+fn validate_walkthrough(props: &Props, checks: WalkthroughChecks) -> Result<(), String> {
+    use medulla_types::contract::ServerErrorCode as Code;
+    let Some(raw) = props.get("walkthrough") else {
+        return Ok(());
+    };
+    let manifest: medulla_result_types::outcome_bundle::CodeWalkthrough =
+        serde_json::from_value(raw.clone()).map_err(|error| {
+            refuse_code(
+                Code::RunTraceShapeInvalid,
+                format!("walkthrough does not decode: {error}"),
+            )
+        })?;
+    manifest
+        .validate_shape()
+        .map_err(|detail| refuse_code(Code::RunTraceShapeInvalid, detail))?;
+    for section in &manifest.ordered_sections {
+        if section.source_refs.is_empty() {
+            return Err(refuse_code(
+                Code::WalkthroughSectionUncited,
+                format!("section {} cites no source", section.ordinal),
+            ));
+        }
+    }
+    let steps = props
+        .get("steps")
+        .and_then(|steps| steps.as_array())
+        .map(|steps| steps.len() as u64);
+    for (position, note) in manifest.execution_notes.iter().enumerate() {
+        if note.step_index != position as u64 {
+            return Err(refuse_code(
+                Code::WalkthroughNoteOrderInvalid,
+                format!(
+                    "note at position {position} carries step index {}",
+                    note.step_index
+                ),
+            ));
+        }
+    }
+    for note in &manifest.execution_notes {
+        let outside_steps = steps.is_some_and(|count| note.step_index >= count);
+        if note.run_id != manifest.run_id || outside_steps {
+            return Err(refuse_code(
+                Code::WalkthroughSpanOutsideRun,
+                format!(
+                    "span '{}' at step {} is not in run '{}'",
+                    note.span_id, note.step_index, manifest.run_id
+                ),
+            ));
+        }
+    }
+    match checks {
+        WalkthroughChecks::Resolved => Ok(()),
+        WalkthroughChecks::Refused(refusal) => Err(refuse_code(
+            refusal.code(),
+            "the walkthrough does not resolve against the repository index or blob store"
+                .to_string(),
+        )),
+        WalkthroughChecks::NotRun => Err(refuse_code(
+            Code::WalkthroughRevisionStale,
+            "a walkthrough is written through AddNode, where its revision resolves".to_string(),
+        )),
+    }
 }
 
 /// MEDULLA-ORCH-VOCAB-R013.3/R013.4 — the `steps` of a `RunTrace` are checked
@@ -1049,8 +1175,9 @@ fn harness_add_node_admission(
     node_id: &str,
     props: &Props,
     engine_fills_pointer: bool,
+    walkthrough: WalkthroughChecks,
 ) -> Result<Option<Admission>, String> {
-    validate_run_trace_node(props)?;
+    validate_run_trace_node(props, walkthrough)?;
     if let Some(admission) = validate_run_observation(view, node_id, props)? {
         return Ok(Some(admission));
     }
@@ -1144,6 +1271,18 @@ pub fn direct_add_node(
     tx_now: u64,
     principal: Option<&str>,
 ) -> Result<Method, String> {
+    direct_add_node_checked(method, core, tx_now, principal, WalkthroughChecks::Resolved)
+}
+
+/// [`direct_add_node`] with the walkthrough read checks the `AddNode` handler
+/// resolved through the server-api read seams (MEDULLA-ORCH-VOCAB-R013.7.2).
+pub fn direct_add_node_checked(
+    method: &Method,
+    core: &GraphCore,
+    tx_now: u64,
+    principal: Option<&str>,
+    walkthrough: WalkthroughChecks,
+) -> Result<Method, String> {
     let Method::AddNode {
         node_id,
         properties_msgpack,
@@ -1157,7 +1296,8 @@ pub fn direct_add_node(
         core,
         pending: &empty,
     };
-    let Some(admission) = harness_add_node_admission(&view, node_id, &props, true)? else {
+    let Some(admission) = harness_add_node_admission(&view, node_id, &props, true, walkthrough)?
+    else {
         // R013.5: a valid trace is not a harness record, but its steps are
         // stamped with the writing principal before they are stored.
         if let Some(stamped) = stamp_step_actor(&props, principal.unwrap_or("anonymous")) {
@@ -1231,7 +1371,9 @@ impl HarnessBoundaryState {
             core,
             pending: &self.pending,
         };
-        let Some(admission) = harness_add_node_admission(&view, node_id, &props, false)? else {
+        let Some(admission) =
+            harness_add_node_admission(&view, node_id, &props, false, WalkthroughChecks::NotRun)?
+        else {
             return Ok(());
         };
         if matches!(admission, Admission::New { .. }) && tx_stamp(&props).is_none() {

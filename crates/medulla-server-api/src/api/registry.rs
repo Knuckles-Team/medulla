@@ -33,6 +33,9 @@ pub struct SeamRegistry {
     pub dispatch: OnceLock<Arc<dyn DispatchApi>>,
     /// Branch-merge conflict decision seam (MEDULLA-DECISION-ENGINE-R828).
     pub conflict: OnceLock<Arc<dyn ConflictDecider>>,
+    /// Repository-index and blob readers of walkthrough validation
+    /// (MEDULLA-ORCH-VOCAB-R013.7.2, R013.7.4).
+    pub walkthrough: OnceLock<crate::walkthrough_readers::WalkthroughReaders>,
 }
 
 impl std::fmt::Debug for SeamRegistry {

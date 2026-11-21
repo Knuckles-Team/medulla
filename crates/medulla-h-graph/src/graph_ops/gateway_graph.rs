@@ -1426,4 +1426,165 @@ mod tests {
         };
         assert!(props(&conditions_msgpack)["trust_mark"].is_null());
     }
+
+    struct Index;
+
+    impl medulla_server_api::walkthrough_readers::RepositoryIndexReader for Index {
+        fn current_revision(&self, tenant: &str, repository_id: &str) -> Option<String> {
+            (tenant == "tenant-a" && repository_id == "repo-1").then(|| "rev-2".to_string())
+        }
+
+        fn snapshot_contains(
+            &self,
+            tenant: &str,
+            repository_id: &str,
+            repository_revision: &str,
+            entity_id: &str,
+            source_revision: &str,
+            source_digest: &medulla_types::contract::Digest256,
+        ) -> bool {
+            tenant == "tenant-a"
+                && repository_id == "repo-1"
+                && repository_revision == "rev-2"
+                && entity_id == "entity-1"
+                && source_revision == "rev-2"
+                && *source_digest == medulla_types::contract::Digest256::sha256(b"source")
+        }
+    }
+
+    struct Blobs;
+
+    impl medulla_server_api::walkthrough_readers::BlobReader for Blobs {
+        fn read(&self, tenant: &str, artifact_ref: &str) -> Option<Vec<u8>> {
+            (tenant == "tenant-a" && artifact_ref == "blob:1").then(|| b"artifact".to_vec())
+        }
+    }
+
+    fn walkthrough() -> serde_json::Value {
+        use medulla_types::contract::Digest256;
+        serde_json::json!({
+            "run_id": "run-1",
+            "repository_id": "repo-1",
+            "repository_revision": "rev-2",
+            "graph_snapshot_revision": 7,
+            "query_digest": Digest256::sha256(b"query"),
+            "ordered_sections": [{
+                "ordinal": 0,
+                "source_refs": [{
+                    "entity_id": "entity-1",
+                    "source_revision": "rev-2",
+                    "source_digest": Digest256::sha256(b"source"),
+                    "path": "src/lib.rs",
+                    "start_line": 1,
+                    "end_line": 3,
+                }],
+                "content": {"mode": "referenced", "digest": Digest256::sha256(b"content")},
+            }],
+            "interaction_edges": [],
+            "artifact_ref": "blob:1",
+            "artifact_digest": Digest256::sha256(b"artifact"),
+            "execution_notes": [{
+                "run_id": "run-1",
+                "step_index": 0,
+                "span_id": "span-1",
+                "kind": "tool_call",
+                "result_digest": Digest256::sha256(b"result"),
+                "source_refs": [],
+            }],
+        })
+    }
+
+    fn walkthrough_write(walkthrough: serde_json::Value) -> Method {
+        let props = serde_json::json!({
+            "node_type": "RunTrace",
+            "terminationReason": "final_answer",
+            "steps": [step(0, &hex('b'))],
+            "walkthrough": walkthrough,
+        });
+        Method::AddNode {
+            node_id: "trace-walkthrough".into(),
+            properties_msgpack: rmp_serde::to_vec_named(&props).unwrap(),
+        }
+    }
+
+    /// The handler's way: resolve through the readers, then admit with the result.
+    fn admit(write: &Method, tenant: &str) -> Result<Method, String> {
+        use medulla_server_api::walkthrough_readers::WalkthroughReaders;
+        let readers = WalkthroughReaders::new(std::sync::Arc::new(Index), std::sync::Arc::new(Blobs));
+        let checks =
+            crate::harness_admission::resolve_walkthrough_checks(write, tenant, Some(&readers));
+        if let crate::harness_admission::WalkthroughChecks::Refused(refusal) = checks {
+            return Err(refusal.code().as_str().to_string());
+        }
+        crate::harness_admission::direct_add_node_checked(
+            write,
+            &GraphCore::new(),
+            7,
+            None,
+            checks,
+        )
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.7.2
+    #[test]
+    fn add_run_trace_rejects_stale_walkthrough_source_or_artifact() {
+        // The valid manifest is admitted.
+        admit(&walkthrough_write(walkthrough()), "tenant-a").expect("a valid walkthrough");
+
+        // A stale or missing repository revision.
+        let mut stale = walkthrough();
+        stale["repository_revision"] = "rev-1".into();
+        let refusal = admit(&walkthrough_write(stale), "tenant-a").unwrap_err();
+        assert!(refusal.starts_with("WALKTHROUGH_REVISION_STALE"), "{refusal}");
+
+        // A cross-tenant manifest reads as absent.
+        let refusal = admit(&walkthrough_write(walkthrough()), "tenant-b").unwrap_err();
+        assert!(refusal.starts_with("WALKTHROUGH_REVISION_STALE"), "{refusal}");
+
+        // A ref outside the pinned snapshot.
+        let mut outside = walkthrough();
+        outside["ordered_sections"][0]["source_refs"][0]["entity_id"] = "entity-9".into();
+        let refusal = admit(&walkthrough_write(outside), "tenant-a").unwrap_err();
+        assert!(
+            refusal.starts_with("WALKTHROUGH_REF_OUTSIDE_SNAPSHOT"),
+            "{refusal}"
+        );
+
+        // An unresolved or tampered artifact.
+        let mut tampered = walkthrough();
+        tampered["artifact_digest"] = serde_json::to_value(
+            medulla_types::contract::Digest256::sha256(b"other"),
+        )
+        .unwrap();
+        let refusal = admit(&walkthrough_write(tampered), "tenant-a").unwrap_err();
+        assert!(
+            refusal.starts_with("WALKTHROUGH_ARTIFACT_UNRESOLVED"),
+            "{refusal}"
+        );
+        let mut unresolved = walkthrough();
+        unresolved["artifact_ref"] = "blob:missing".into();
+        let refusal = admit(&walkthrough_write(unresolved), "tenant-a").unwrap_err();
+        assert!(
+            refusal.starts_with("WALKTHROUGH_ARTIFACT_UNRESOLVED"),
+            "{refusal}"
+        );
+
+        // A section with no source ref.
+        let mut uncited = walkthrough();
+        uncited["ordered_sections"][0]["source_refs"] = serde_json::json!([]);
+        let refusal = admit(&walkthrough_write(uncited), "tenant-a").unwrap_err();
+        assert!(refusal.starts_with("WALKTHROUGH_SECTION_UNCITED"), "{refusal}");
+
+        // A duplicate or gapped note index.
+        let mut gapped = walkthrough();
+        gapped["execution_notes"][0]["step_index"] = 2.into();
+        let refusal = admit(&walkthrough_write(gapped), "tenant-a").unwrap_err();
+        assert!(refusal.starts_with("WALKTHROUGH_NOTE_ORDER_INVALID"), "{refusal}");
+
+        // A span outside the run.
+        let mut other_run = walkthrough();
+        other_run["execution_notes"][0]["run_id"] = "run-2".into();
+        let refusal = admit(&walkthrough_write(other_run), "tenant-a").unwrap_err();
+        assert!(refusal.starts_with("WALKTHROUGH_SPAN_OUTSIDE_RUN"), "{refusal}");
+    }
 }

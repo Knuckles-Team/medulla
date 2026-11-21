@@ -68,6 +68,14 @@ pub struct WalkthroughReaders {
     blobs: Arc<dyn BlobReader>,
 }
 
+/// Install the walkthrough readers once; a second install returns the rejected value.
+pub fn install_walkthrough_readers(
+    seams: &crate::api::registry::SeamRegistry,
+    readers: WalkthroughReaders,
+) -> Result<(), WalkthroughReaders> {
+    seams.walkthrough.set(readers)
+}
+
 impl WalkthroughReaders {
     /// Inject the readers.
     pub fn new(index: Arc<dyn RepositoryIndexReader>, blobs: Arc<dyn BlobReader>) -> Self {

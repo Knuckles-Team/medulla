@@ -135,11 +135,28 @@ pub async fn try_handle_gateway(
     // to the current version before either the durable commit or the apply
     // closure sees the method. The admitted (possibly stamped) method is the
     // one that commits.
-    let method = match crate::harness_admission::direct_add_node(
+    // MEDULLA-ORCH-VOCAB-R013.7.2: a walkthrough's repository-index and blob checks
+    // run here, through the injected read seams, before admission; admission reads
+    // only their result. A failed check refuses before any harness admission runs.
+    let walkthrough_checks = {
+        let readers = state.read().await.seams.walkthrough.get().cloned();
+        crate::harness_admission::resolve_walkthrough_checks(&method, tenant_id, readers.as_ref())
+    };
+    if let crate::harness_admission::WalkthroughChecks::Refused(refusal) = walkthrough_checks {
+        return Ok(Response::err(
+            req_id,
+            format!(
+                "{}: the walkthrough does not resolve against the repository index or blob store",
+                refusal.code().as_str()
+            ),
+        ));
+    }
+    let method = match crate::harness_admission::direct_add_node_checked(
         &method,
         core,
         medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         caller,
+        walkthrough_checks,
     ) {
         Ok(admitted) => admitted,
         Err(error) => return Ok(Response::err(req_id, error)),
