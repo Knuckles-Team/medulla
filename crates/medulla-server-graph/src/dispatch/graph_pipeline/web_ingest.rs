@@ -146,9 +146,8 @@ async fn enrich(
             let bytes = ctx.core.get_node_properties(node_id)?;
             medulla_types::msgpack::decode_property_value(&bytes).ok()
         };
-        // The chunk facts records are keyed by the opaque tenant scope the facts
-        // batch handler uses.
-        let scope = medulla_server_api::carrier::tenant_scope_of(ctx.verified_context.tenant());
+        // The same ChunkFacts scope key the facts batch handler derives.
+        let scope = medulla_h_ingest::source_ingestion::facts::chunk_facts_scope(ctx.verified_context);
         match web::prior_fact_supersession(&scope, &prior, &read) {
             Ok(methods) => methods,
             Err(error) => return Response::err(req_id, error),

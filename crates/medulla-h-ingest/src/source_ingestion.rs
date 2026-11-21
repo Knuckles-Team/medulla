@@ -848,12 +848,13 @@ async fn prepare_extension_batch(
             // Prose facts ground against the graph's compiled ontology and commit as
             // candidate claims and fact atoms (MEDULLA-INGEST-WORKER-R701.3).
             let decoded = facts::decode_facts(items.as_slice())?;
+            let facts_scope = facts::chunk_facts_scope(ctx.verified);
             let cache = facts::grounding_cache(&ctx.schema_sources)?;
             // The chunk the facts were read from grounds each claim and lets a
             // re-extraction supersede (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
             let chunk = match batch.source_chunk.as_deref() {
                 Some(chunk_id) => Some(
-                    read_held_chunk(persistence.as_ref(), &graph_fname, ctx.tenant_scope, chunk_id)
+                    read_held_chunk(persistence.as_ref(), &graph_fname, &facts_scope, chunk_id)
                         .await?,
                 ),
                 None => None,
@@ -861,17 +862,17 @@ async fn prepare_extension_batch(
             let held = read_held_claims(
                 persistence.as_ref(),
                 &graph_fname,
-                &facts::held_claim_ids(ctx.tenant_scope, &decoded, chunk.as_ref())?,
+                &facts::held_claim_ids(&facts_scope, &decoded, chunk.as_ref())?,
             )
             .await?;
             let held_pairs = read_held_pairs(
                 persistence.as_ref(),
                 &graph_fname,
-                &facts::held_pair_ids(ctx.tenant_scope, &decoded)?,
+                &facts::held_pair_ids(&facts_scope, &decoded)?,
             )
             .await?;
             let admission = facts::admit_facts(
-                ctx.tenant_scope,
+                &facts_scope,
                 &decoded,
                 &cache,
                 &held,

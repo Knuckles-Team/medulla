@@ -134,6 +134,14 @@ pub fn chunk_content_hash(text: &str) -> String {
     hex::encode(Sha256::digest(text.as_bytes()))
 }
 
+/// The scope key every `ChunkFacts` record is stored under: the opaque tenant scope of the
+/// verified request. The facts batch handler and the enrichment handler both derive it here.
+pub fn chunk_facts_scope(
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+) -> String {
+    medulla_server_api::carrier::tenant_scope_of(verified.tenant())
+}
+
 /// The node id of the record of the claims one chunk grounds.
 pub fn chunk_facts_id(tenant: &str, chunk_id: &str) -> Result<String, String> {
     let digest = Digest256::framed(
