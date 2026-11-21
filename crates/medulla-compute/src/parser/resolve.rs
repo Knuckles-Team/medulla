@@ -91,6 +91,27 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     indexed
 }
 
+/// Every bare name the symbols of `nodes` ask the resolver to bind: the callee and
+/// receiver of each call site and the base and interface names of each class. An
+/// incremental re-index looks these up in the stored graph, so a changed file
+/// resolves against the definitions of the files that did not change
+/// (MEDULLA-SCM-R006).
+pub fn resolution_names(nodes: &[ExtractedNode]) -> std::collections::BTreeSet<String> {
+    let mut names = std::collections::BTreeSet::new();
+    for node in nodes.iter().filter(|node| node.node_type == "SYMBOL") {
+        for site in decode_node_sites(node) {
+            if !site.receiver.is_empty() {
+                names.insert(site.receiver);
+            }
+            names.insert(site.callee);
+        }
+        names.extend(split_csv(node.properties.get("bases")));
+        names.extend(split_csv(node.properties.get("interfaces")));
+    }
+    names.remove("");
+    names
+}
+
 /// The node of one indexed file.
 pub fn file_node(path: &str) -> ExtractedNode {
     ExtractedNode {

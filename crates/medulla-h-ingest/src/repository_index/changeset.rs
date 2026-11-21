@@ -9,7 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use medulla_compute::parser::resolve::{file_node, resolve};
+use medulla_compute::parser::resolve::{file_node, resolution_names, resolve};
 use medulla_compute::parser::tree_sitter::{is_parseable_path, parse_file};
 use medulla_enrich::fingerprint::{classify, ChangeLevel, StructuralFingerprint};
 use medulla_enrich::Id;
@@ -35,6 +35,80 @@ pub fn generation_node_id(repo: &str) -> String {
     format!("codegen:{repo}")
 }
 
+/// The generation node of `repo`: the one record both a full index and a re-indexed
+/// changeset write, so a full-index baseline accepts the next changeset.
+pub fn generation_node(repo: &str, generation: &RepositoryGeneration) -> ExtractedNode {
+    ExtractedNode {
+        node_id: generation_node_id(repo),
+        node_type: GENERATION_TYPE.to_string(),
+        properties: [
+            (
+                "map_generation".to_string(),
+                generation.map_generation.to_string(),
+            ),
+            (
+                "base_revision".to_string(),
+                generation.base_revision.clone(),
+            ),
+            ("complete".to_string(), generation.complete.to_string()),
+        ]
+        .into_iter()
+        .collect(),
+    }
+}
+
+/// The generation a node `codegen:<repo>` stores, from its decoded properties.
+pub fn stored_generation(node: &serde_json::Value) -> RepositoryGeneration {
+    let text = |key: &str| node.get(key).and_then(serde_json::Value::as_str);
+    RepositoryGeneration {
+        map_generation: text("map_generation")
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(0),
+        base_revision: text("base_revision").unwrap_or_default().to_string(),
+        complete: text("complete") == Some("true"),
+    }
+}
+
+/// The generation a stored `codegen:<repo>` node blob holds.
+pub fn read_generation(blob: &[u8]) -> Option<RepositoryGeneration> {
+    medulla_types::msgpack::decode_property_value(blob)
+        .ok()
+        .map(|node| stored_generation(&node))
+}
+
+/// The generation after `stored`, chained from `base_revision`.
+pub fn next_generation(
+    stored: Option<&RepositoryGeneration>,
+    base_revision: &str,
+) -> RepositoryGeneration {
+    RepositoryGeneration {
+        map_generation: stored.map_or(1, |generation| generation.map_generation + 1),
+        base_revision: base_revision.to_string(),
+        complete: true,
+    }
+}
+
+/// Stamp a full index of `repo` with its generation node, chained from
+/// `base_revision`, so the next changeset of the repository finds the baseline it
+/// chains from. Indexing the same base again writes the generation it already is,
+/// so a repeated index stays a replay. Returns the generation written.
+pub fn stamp_generation(
+    result: &mut IndexResult,
+    repo: &str,
+    stored: Option<&RepositoryGeneration>,
+    base_revision: &str,
+) -> RepositoryGeneration {
+    // The same base indexed again is a replay: it writes the generation it already is.
+    let generation = match stored {
+        Some(current) if current.complete && current.base_revision == base_revision => {
+            current.clone()
+        }
+        _ => next_generation(stored, base_revision),
+    };
+    result.nodes.push(generation_node(repo, &generation));
+    generation
+}
+
 /// One file version of a changeset: a path and its new bytes.
 pub struct ChangesetFile {
     pub path: String,
@@ -57,6 +131,63 @@ pub struct StoredIndex {
     /// The community label of each symbol in the call components that contain
     /// those nodes (the label of the `feature:<label>` node it is a member of).
     pub communities: BTreeMap<String, String>,
+    /// Every edge, of any type, that touches one of those nodes, with the
+    /// properties it was stored with.
+    pub edges: Vec<StoredEdge>,
+    /// The stored node at the far end of each of those edges.
+    pub neighbours: BTreeMap<String, StoredNode>,
+}
+
+/// A stored node: its id and its text properties (the `type` key included).
+#[derive(Clone, Debug, Default)]
+pub struct StoredNode {
+    pub id: String,
+    pub properties: BTreeMap<String, String>,
+}
+
+/// A stored edge: its relationship and the properties it carries besides it.
+#[derive(Clone, Debug)]
+pub struct StoredEdge {
+    pub source: String,
+    pub target: String,
+    pub edge_type: String,
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Indexed reads of the repository graph that depend on what the changed files
+/// ask for, so they cannot be gathered before the files are parsed.
+pub trait StoredLookup {
+    /// The stored `SYMBOL` nodes whose `name` is `name`.
+    fn definitions(&self, name: &str) -> Result<Vec<StoredNode>, String>;
+    /// The path of every file node of the repository.
+    fn file_paths(&self) -> Result<Vec<String>, String>;
+}
+
+/// A repository graph that holds no other symbol and no other file.
+pub struct NoLookup;
+
+impl StoredLookup for NoLookup {
+    fn definitions(&self, _name: &str) -> Result<Vec<StoredNode>, String> {
+        Ok(Vec::new())
+    }
+
+    fn file_paths(&self) -> Result<Vec<String>, String> {
+        Ok(Vec::new())
+    }
+}
+
+fn extracted(node: &StoredNode) -> ExtractedNode {
+    let mut properties: std::collections::HashMap<String, String> = node
+        .properties
+        .iter()
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    let node_type = properties.remove("type").unwrap_or_default();
+    ExtractedNode {
+        node_id: node.id.clone(),
+        node_type,
+        properties,
+    }
 }
 
 /// The outcome of re-indexing one changeset.
@@ -114,6 +245,7 @@ pub fn reindex_changeset(
     commit_id: &str,
     files: &[ChangesetFile],
     stored: &StoredIndex,
+    lookup: &dyn StoredLookup,
 ) -> Result<ReindexOutcome, String> {
     // (1) The base check, before anything is parsed or written. No generation is the
     // empty base: the first changeset of a repository has no parent.
@@ -238,7 +370,81 @@ pub fn reindex_changeset(
             },
         })
         .collect();
-    let mut resolved = resolve(&inputs, &results);
+    // Resolution sees the changed files beside the stored symbols they bind to and
+    // the stored callers whose edges the removal broke, so a call into an unchanged
+    // file resolves and an edge from an unchanged file is re-resolved, not dropped.
+    let cross: Vec<&StoredEdge> = stored
+        .edges
+        .iter()
+        .filter(|edge| removed.contains(&edge.source) != removed.contains(&edge.target))
+        .collect();
+    let mut context: BTreeMap<String, StoredNode> = BTreeMap::new();
+    for edge in &cross {
+        let outer = if removed.contains(&edge.source) {
+            &edge.target
+        } else {
+            &edge.source
+        };
+        if let Some(node) = stored.neighbours.get(outer) {
+            context.insert(outer.clone(), node.clone());
+        }
+    }
+    let mut asked: BTreeSet<String> = BTreeSet::new();
+    let mut pending: Vec<ExtractedNode> = results
+        .iter()
+        .flat_map(|result| result.nodes.iter().map(clone_node))
+        .chain(context.values().map(extracted))
+        .collect();
+    while !pending.is_empty() {
+        let wanted: Vec<String> = resolution_names(&pending)
+            .into_iter()
+            .filter(|name| !asked.contains(name))
+            .collect();
+        pending = Vec::new();
+        for name in wanted {
+            for definition in lookup.definitions(&name)? {
+                if !removed.contains(&definition.id) && !context.contains_key(&definition.id) {
+                    pending.push(extracted(&definition));
+                    context.insert(definition.id.clone(), definition);
+                }
+            }
+            asked.insert(name);
+        }
+    }
+    let raw_imports: Vec<ExtractedEdge> = cross
+        .iter()
+        .filter(|edge| edge.edge_type == "depends_on" && !removed.contains(&edge.source))
+        .filter_map(|edge| {
+            edge.properties.get("module").map(|module| ExtractedEdge {
+                source: edge.source.clone(),
+                target: module.clone(),
+                edge_type: "depends_on_raw".to_string(),
+                properties: Default::default(),
+            })
+        })
+        .collect();
+    let mut all_inputs = inputs.clone();
+    let reparsed_paths: BTreeSet<&str> = inputs.iter().map(|(path, _)| path.as_str()).collect();
+    let deleted_paths: BTreeSet<&str> = deleted.iter().map(String::as_str).collect();
+    for path in lookup.file_paths()? {
+        if !reparsed_paths.contains(path.as_str()) && !deleted_paths.contains(path.as_str()) {
+            all_inputs.push((path, Vec::new()));
+        }
+    }
+    let mut all_results = results;
+    all_results.push(ParseResult {
+        nodes: context
+            .values()
+            .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
+            .map(extracted)
+            .collect(),
+        edges: raw_imports,
+        symbols_extracted: 0,
+    });
+    let mut resolved = resolve(&all_inputs, &all_results);
+    resolved
+        .nodes
+        .retain(|node| !context.contains_key(&node.node_id));
     resolved
         .nodes
         .extend(inputs.iter().map(|(path, _)| file_node(path)));
@@ -248,38 +454,62 @@ pub fn reindex_changeset(
         .iter()
         .map(|node| node.node_id.clone())
         .collect();
+    // Only an edge that touches a re-indexed node is written: the edges among the
+    // stored nodes stay as they are.
+    resolved
+        .edges
+        .retain(|edge| new_ids.contains(&edge.source) || new_ids.contains(&edge.target));
     let new_symbols: BTreeSet<String> = resolved
         .nodes
         .iter()
         .filter(|node| node.node_type == "SYMBOL")
         .map(|node| node.node_id.clone())
         .collect();
+    let alive = |id: &str| !removed.contains(id) || new_ids.contains(id);
+
+    // A stored edge between a removed node and a node that survives is written again.
+    // From a changed caller the resolver's edge is the answer and a stored edge it did
+    // not write is kept as it was. From a stored caller the stored edge wins: the
+    // stored symbol holds the callee names but not the receivers or argument counts,
+    // so the resolver binds it on less than the original parse saw and its strategy
+    // and confidence are the weaker reading.
+    for edge in &cross {
+        if !alive(&edge.source) || !alive(&edge.target) {
+            continue;
+        }
+        let stored_caller = !removed.contains(&edge.source);
+        let same = |written: &ExtractedEdge| {
+            written.source == edge.source
+                && written.target == edge.target
+                && written.edge_type == edge.edge_type
+        };
+        let written = resolved.edges.iter().any(same);
+        if written && !stored_caller {
+            continue;
+        }
+        resolved.edges.retain(|written| !same(written));
+        resolved.edges.push(ExtractedEdge {
+            source: edge.source.clone(),
+            target: edge.target.clone(),
+            edge_type: edge.edge_type.clone(),
+            properties: edge
+                .properties
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        });
+    }
     let new_calls: BTreeSet<(String, String)> = resolved
         .edges
         .iter()
         .filter(|edge| edge.edge_type == "calls")
         .map(|edge| (edge.source.clone(), edge.target.clone()))
         .collect();
-    let alive = |id: &str| !removed.contains(id) || new_ids.contains(id);
-
-    // A removed node takes its edges with it: a stored call between two nodes
-    // that both survive is written again.
     let mut post_calls: BTreeSet<(String, String)> = new_calls.clone();
     for (source, target) in &stored.calls {
-        if !alive(source) || !alive(target) {
-            continue;
+        if alive(source) && alive(target) {
+            post_calls.insert((source.clone(), target.clone()));
         }
-        if (removed.contains(source) || removed.contains(target))
-            && !new_calls.contains(&(source.clone(), target.clone()))
-        {
-            resolved.edges.push(ExtractedEdge {
-                source: source.clone(),
-                target: target.clone(),
-                edge_type: "calls".to_string(),
-                properties: Default::default(),
-            });
-        }
-        post_calls.insert((source.clone(), target.clone()));
     }
 
     // (4) Communities on the affected subgraph only. The pre-state components that
@@ -322,31 +552,8 @@ pub fn reindex_changeset(
     let communities_recomputed = written.len();
 
     // (5) The next generation advances for every accepted changeset.
-    let generation = RepositoryGeneration {
-        map_generation: stored
-            .generation
-            .as_ref()
-            .map_or(1, |generation| generation.map_generation + 1),
-        base_revision: commit_id.to_string(),
-        complete: true,
-    };
-    resolved.nodes.push(ExtractedNode {
-        node_id: generation_node_id(&changeset.repo),
-        node_type: GENERATION_TYPE.to_string(),
-        properties: [
-            (
-                "map_generation".to_string(),
-                generation.map_generation.to_string(),
-            ),
-            (
-                "base_revision".to_string(),
-                generation.base_revision.clone(),
-            ),
-            ("complete".to_string(), generation.complete.to_string()),
-        ]
-        .into_iter()
-        .collect(),
-    });
+    let generation = next_generation(stored.generation.as_ref(), commit_id);
+    resolved.nodes.push(generation_node(&changeset.repo, &generation));
     let lowered: IndexResult = resolved;
     methods.extend(lower(&lowered)?.methods);
     for print in &prints {
@@ -488,7 +695,7 @@ mod tests {
     fn only_structural_paths_reparse_and_communities_stay_local() {
         let a = file("a.py", "def alpha():\n    return 1\n");
         let first = changeset("c1", None, vec![changed("a.py", PathOp::Add)]);
-        let landed = reindex_changeset(&first, "k1", std::slice::from_ref(&a), &StoredIndex::default())
+        let landed = reindex_changeset(&first, "k1", std::slice::from_ref(&a), &StoredIndex::default(), &NoLookup)
             .unwrap();
         assert_eq!(landed.reparsed, vec!["a.py".to_string()]);
         assert_eq!(landed.generation.map_generation, 1);
@@ -498,7 +705,7 @@ mod tests {
         // A whitespace edit keeps the structure: nothing but the generation node is written.
         let spaced = file("a.py", "def alpha():\n\n    return 1\n");
         let cosmetic = changeset("c2", Some("k1"), vec![changed("a.py", PathOp::Modify)]);
-        let outcome = reindex_changeset(&cosmetic, "k2", &[spaced], &stored).unwrap();
+        let outcome = reindex_changeset(&cosmetic, "k2", &[spaced], &stored, &NoLookup).unwrap();
         assert!(outcome.reparsed.is_empty());
         assert_eq!(outcome.unchanged, vec!["a.py".to_string()]);
         assert!(removed_ids(&outcome).is_empty());
@@ -507,15 +714,260 @@ mod tests {
         // A new signature is structural: the file's stored nodes are removed.
         let renamed = file("a.py", "def beta():\n    return 1\n");
         let structural = changeset("c2", Some("k1"), vec![changed("a.py", PathOp::Modify)]);
-        let outcome = reindex_changeset(&structural, "k2", &[renamed], &stored).unwrap();
+        let outcome = reindex_changeset(&structural, "k2", &[renamed], &stored, &NoLookup).unwrap();
         assert_eq!(outcome.reparsed, vec!["a.py".to_string()]);
         assert!(removed_ids(&outcome).contains("file:a.py"));
 
         // A changeset that does not chain from the stored base is refused.
         let stray = changeset("c3", Some("elsewhere"), vec![changed("a.py", PathOp::Modify)]);
-        let refusal = reindex_changeset(&stray, "k3", &[file("a.py", "x = 1\n")], &stored)
+        let refusal = reindex_changeset(&stray, "k3", &[file("a.py", "x = 1\n")], &stored, &NoLookup)
             .err()
             .unwrap();
         assert!(refusal.starts_with("INDEX_BASE_MISMATCH"), "{refusal}");
+    }
+
+    /// The stored form of an index of `files`: its nodes with their `type`, its
+    /// edges with the properties they carry besides the relationship.
+    fn indexed(files: &[(&str, &str)]) -> (Vec<StoredNode>, Vec<StoredEdge>) {
+        let owned: Vec<(String, Vec<u8>)> = files
+            .iter()
+            .map(|(path, text)| (path.to_string(), text.as_bytes().to_vec()))
+            .collect();
+        let result = medulla_compute::parser::resolve::index_repository(&owned);
+        let nodes = result
+            .nodes
+            .iter()
+            .map(|node| {
+                let mut properties: BTreeMap<String, String> = node
+                    .properties
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .collect();
+                properties.insert("type".to_string(), node.node_type.clone());
+                StoredNode {
+                    id: node.node_id.clone(),
+                    properties,
+                }
+            })
+            .collect();
+        let edges = result
+            .edges
+            .iter()
+            .map(|edge| StoredEdge {
+                source: edge.source.clone(),
+                target: edge.target.clone(),
+                edge_type: edge.edge_type.clone(),
+                properties: edge
+                    .properties
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .collect(),
+            })
+            .collect();
+        (nodes, edges)
+    }
+
+    struct Memory {
+        nodes: Vec<StoredNode>,
+        files: Vec<String>,
+    }
+
+    impl StoredLookup for Memory {
+        fn definitions(&self, name: &str) -> Result<Vec<StoredNode>, String> {
+            Ok(self
+                .nodes
+                .iter()
+                .filter(|node| {
+                    node.properties.get("type").map(String::as_str) == Some("SYMBOL")
+                        && node.properties.get("name").map(String::as_str) == Some(name)
+                })
+                .cloned()
+                .collect())
+        }
+
+        fn file_paths(&self) -> Result<Vec<String>, String> {
+            Ok(self.files.clone())
+        }
+    }
+
+    fn written_edges(outcome: &ReindexOutcome) -> Vec<(String, String, BTreeMap<String, String>)> {
+        outcome
+            .write_set
+            .methods
+            .iter()
+            .filter_map(|method| match method {
+                Method::AddEdge {
+                    source_id,
+                    target_id,
+                    properties_msgpack,
+                } => Some((
+                    source_id.clone(),
+                    target_id.clone(),
+                    rmp_serde::from_slice(properties_msgpack).unwrap(),
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn symbol_id(nodes: &[StoredNode], name: &str) -> String {
+        nodes
+            .iter()
+            .find(|node| node.properties.get("name").map(String::as_str) == Some(name))
+            .map(|node| node.id.clone())
+            .unwrap()
+    }
+
+    // spec: MEDULLA-SCM-R006
+    #[test]
+    fn a_full_index_baseline_accepts_the_next_changeset() {
+        let mut result = IndexResult::default();
+        let stamped = stamp_generation(&mut result, "repo", None, "k1");
+        assert_eq!(stamped.map_generation, 1);
+        let node = result
+            .nodes
+            .iter()
+            .find(|node| node.node_id == generation_node_id("repo"))
+            .expect("the full index writes the generation node");
+        assert_eq!(node.node_type, GENERATION_TYPE);
+        assert_eq!(node.properties.get("base_revision").map(String::as_str), Some("k1"));
+
+        // A changeset whose parent is the baseline is accepted, not refused.
+        let stored = StoredIndex {
+            generation: Some(stamped),
+            ..Default::default()
+        };
+        let next = changeset("c2", Some("k1"), vec![changed("a.py", PathOp::Add)]);
+        let outcome = reindex_changeset(
+            &next,
+            "k2",
+            &[file("a.py", "def alpha():\n    return 1\n")],
+            &stored,
+            &NoLookup,
+        )
+        .unwrap();
+        assert_eq!(outcome.generation.map_generation, 2);
+
+        // A second full index advances the stored generation.
+        let again = stamp_generation(&mut result, "repo", Some(&outcome.generation), "k3");
+        assert_eq!(again.map_generation, 3);
+    }
+
+    // spec: MEDULLA-SCM-R006
+    #[test]
+    fn a_new_call_into_an_unchanged_file_resolves_with_its_properties() {
+        let (nodes, _) = indexed(&[("b.py", "def helper():\n    return 1\n")]);
+        let helper = symbol_id(&nodes, "helper");
+        let lookup = Memory {
+            nodes,
+            files: vec!["b.py".to_string()],
+        };
+        let first = changeset("c1", None, vec![changed("a.py", PathOp::Add)]);
+        let outcome = reindex_changeset(
+            &first,
+            "k1",
+            &[file("a.py", "def alpha():\n    return helper()\n")],
+            &StoredIndex::default(),
+            &lookup,
+        )
+        .unwrap();
+        let call = written_edges(&outcome)
+            .into_iter()
+            .find(|(_, target, properties)| {
+                target == &helper
+                    && properties.get("relationship").map(String::as_str) == Some("calls")
+            })
+            .expect("the call into the unchanged file resolves");
+        assert!(call.2.contains_key("strategy"), "{:?}", call.2);
+        assert!(call.2.contains_key("confidence"), "{:?}", call.2);
+        // The unchanged file's symbols are not written again.
+        assert!(!outcome
+            .write_set
+            .methods
+            .iter()
+            .any(|method| matches!(method, Method::AddNode { node_id, .. } if node_id == &helper)));
+    }
+
+    // spec: MEDULLA-SCM-R006
+    #[test]
+    fn edges_from_an_unchanged_file_survive_a_removal_with_their_properties() {
+        let before = [
+            ("a.py", "def alpha():\n    return 1\n"),
+            ("b.py", "def use():\n    return alpha()\n\nclass Child(Base):\n    pass\n"),
+        ];
+        let (nodes, edges) = indexed(&before);
+        let alpha = symbol_id(&nodes, "alpha");
+        let user = symbol_id(&nodes, "use");
+        let original = edges
+            .iter()
+            .find(|edge| edge.source == user && edge.target == alpha && edge.edge_type == "calls")
+            .expect("use calls alpha")
+            .clone();
+
+        // The stored state of a.py's nodes and every edge that touches them.
+        let in_a: Vec<String> = nodes
+            .iter()
+            .filter(|node| node.properties.get("file_path").map(String::as_str) == Some("a.py"))
+            .map(|node| node.id.clone())
+            .collect();
+        let touching: Vec<StoredEdge> = edges
+            .iter()
+            .filter(|edge| in_a.contains(&edge.source) || in_a.contains(&edge.target))
+            .cloned()
+            .collect();
+        let mut stored = StoredIndex {
+            generation: Some(RepositoryGeneration {
+                map_generation: 1,
+                base_revision: "k1".into(),
+                complete: true,
+            }),
+            edges: touching,
+            ..Default::default()
+        };
+        stored.nodes_by_path.insert("a.py".into(), in_a.clone());
+        stored.calls.push((user.clone(), alpha.clone()));
+        stored.neighbours.insert(
+            user.clone(),
+            nodes.iter().find(|node| node.id == user).unwrap().clone(),
+        );
+        let a_file = file("a.py", before[0].1);
+        stored.prints.insert(
+            Id::new("a.py".to_string()).unwrap(),
+            print_of(
+                &Parsed {
+                    path: "a.py".into(),
+                    result: parse_file("a.py", &a_file.bytes),
+                },
+                &a_file.bytes,
+            )
+            .unwrap(),
+        );
+        let lookup = Memory {
+            nodes: nodes.clone(),
+            files: vec!["a.py".into(), "b.py".into()],
+        };
+
+        // a.py gains a function: structural, so its nodes are removed and written again.
+        let modify = changeset("c2", Some("k1"), vec![changed("a.py", PathOp::Modify)]);
+        let outcome = reindex_changeset(
+            &modify,
+            "k2",
+            &[file("a.py", "def alpha():\n    return 1\n\ndef extra():\n    return 2\n")],
+            &stored,
+            &lookup,
+        )
+        .unwrap();
+        assert!(removed_ids(&outcome).contains(&alpha));
+        let kept = written_edges(&outcome)
+            .into_iter()
+            .find(|(source, target, properties)| {
+                source == &user
+                    && target == &alpha
+                    && properties.get("relationship").map(String::as_str) == Some("calls")
+            })
+            .expect("the call from the unchanged file is written again, not dropped");
+        for (key, value) in &original.properties {
+            assert_eq!(kept.2.get(key), Some(value), "property {key}");
+        }
     }
 }

@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_h_ingest::repository_index::changeset::{
-    generation_node_id, reindex_changeset, ChangesetFile, StoredIndex,
+    generation_node_id, reindex_changeset, stored_generation, ChangesetFile, StoredEdge,
+    StoredIndex, StoredLookup, StoredNode,
 };
-use medulla_h_ingest::repository_index::delta::RepositoryGeneration;
 use medulla_h_ingest::repository_index::enrich::fingerprint::{
     fingerprint_node_id, stored_fingerprint,
 };
@@ -26,8 +26,8 @@ use medulla_source_types::source_changeset::{Changeset, ChangesetIndex, PathOp};
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-/// The most nodes of one label the stored-index read scans.
-const MAX_SCAN: usize = 10_000_000;
+/// The most file nodes of one repository graph the stored-index read lists.
+const MAX_FILES: usize = 10_000_000;
 
 fn decode(blob: &[u8]) -> Option<Value> {
     medulla_types::msgpack::decode_property_value(blob).ok()
@@ -37,9 +37,85 @@ fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
 
+fn stored_node(core: &GraphCore, id: &str) -> Option<StoredNode> {
+    let node = core.get_node_properties(id).and_then(|blob| decode(&blob))?;
+    Some(StoredNode {
+        id: id.to_string(),
+        properties: node
+            .as_object()?
+            .iter()
+            .filter_map(|(key, value)| Some((key.clone(), value.as_str()?.to_string())))
+            .collect(),
+    })
+}
+
+/// Every stored edge between `source` and `target`, with its properties.
+fn stored_edges(core: &GraphCore, source: &str, target: &str) -> Vec<StoredEdge> {
+    core.get_edge_properties(source, target)
+        .iter()
+        .filter_map(|blob| decode(blob))
+        .filter_map(|edge| {
+            let properties = edge
+                .as_object()?
+                .iter()
+                .filter(|(key, _)| key.as_str() != "relationship")
+                .filter_map(|(key, value)| Some((key.clone(), value.as_str()?.to_string())))
+                .collect();
+            Some(StoredEdge {
+                source: source.to_string(),
+                target: target.to_string(),
+                edge_type: text(&edge, "relationship")?.to_string(),
+                properties,
+            })
+        })
+        .collect()
+}
+
+/// Every edge into or out of `id`.
+fn edges_at(core: &GraphCore, id: &str) -> Vec<StoredEdge> {
+    let mut edges = Vec::new();
+    for target in core.get_successors(id).unwrap_or_default() {
+        edges.extend(stored_edges(core, id, &target));
+    }
+    for source in core.get_predecessors(id).unwrap_or_default() {
+        edges.extend(stored_edges(core, &source, id));
+    }
+    edges
+}
+
+/// The reads of the repository graph that depend on what the changed files ask
+/// for: each is an index lookup (the property index and the label index), never a
+/// scan of the graph.
+struct CoreLookup<'a>(&'a GraphCore);
+
+impl StoredLookup for CoreLookup<'_> {
+    fn definitions(&self, name: &str) -> Result<Vec<StoredNode>, String> {
+        let ids = self
+            .0
+            .nodes_by_property("name", name)
+            .ok_or("INDEX_FAILED: the property index cannot cover the symbol names")?;
+        Ok(ids
+            .iter()
+            .filter_map(|id| stored_node(self.0, id))
+            .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
+            .collect())
+    }
+
+    fn file_paths(&self) -> Result<Vec<String>, String> {
+        Ok(self
+            .0
+            .get_nodes_by_label("FILE", MAX_FILES)
+            .into_iter()
+            .filter_map(|(id, _)| id.strip_prefix("file:").map(str::to_string))
+            .collect())
+    }
+}
+
 /// The stored index of `repo` as `reindex_changeset` reads it: the generation, the
-/// fingerprints of the changed paths, the nodes of those paths, and the resolved
-/// `calls` and community labels of the call components that hold them.
+/// fingerprints of the changed paths, the nodes of those paths (the property index
+/// on `file_path`), every edge that touches them, and the resolved `calls` and
+/// community labels of the call components that hold them (walked from those
+/// nodes along their own edges).
 fn stored_index(core: &GraphCore, changeset: &Changeset) -> Result<StoredIndex, String> {
     let repo = changeset.repo.as_str();
     let paths: BTreeSet<&str> = changeset
@@ -50,13 +126,7 @@ fn stored_index(core: &GraphCore, changeset: &Changeset) -> Result<StoredIndex, 
     let generation = core
         .get_node_properties(&generation_node_id(repo))
         .and_then(|blob| decode(&blob))
-        .map(|node| RepositoryGeneration {
-            map_generation: text(&node, "map_generation")
-                .and_then(|value| value.parse().ok())
-                .unwrap_or(0),
-            base_revision: text(&node, "base_revision").unwrap_or_default().to_string(),
-            complete: text(&node, "complete") == Some("true"),
-        });
+        .map(|node| stored_generation(&node));
     let mut prints = BTreeMap::new();
     for path in &paths {
         let node_id = fingerprint_node_id(repo, path)?;
@@ -69,50 +139,78 @@ fn stored_index(core: &GraphCore, changeset: &Changeset) -> Result<StoredIndex, 
         }
     }
     let mut nodes_by_path: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for label in ["FILE", "SYMBOL"] {
-        for (id, blob) in core.get_nodes_by_label(label, MAX_SCAN) {
-            let Some(node) = decode(&blob) else { continue };
-            if let Some(path) = text(&node, "file_path").filter(|path| paths.contains(path)) {
+    for path in &paths {
+        let ids = core
+            .nodes_by_property("file_path", path)
+            .ok_or("INDEX_FAILED: the property index cannot cover file_path")?;
+        for id in ids {
+            let indexed = stored_node(core, &id).is_some_and(|node| {
+                matches!(
+                    node.properties.get("type").map(String::as_str),
+                    Some("FILE" | "SYMBOL")
+                )
+            });
+            if indexed {
                 nodes_by_path.entry(path.to_string()).or_default().push(id);
             }
         }
     }
-    let mut adjacent: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    let mut calls: Vec<(String, String)> = Vec::new();
-    let mut feature_of: BTreeMap<String, String> = BTreeMap::new();
-    for (source, target, blob) in core.get_edges_arc() {
-        let Some(edge) = decode(&blob) else { continue };
-        match text(&edge, "relationship") {
-            Some("calls") => {
-                adjacent
-                    .entry(source.clone())
-                    .or_default()
-                    .push(target.clone());
-                adjacent
-                    .entry(target.clone())
-                    .or_default()
-                    .push(source.clone());
-                calls.push((source, target));
-            }
-            Some("memberOfFeature") => {
-                if let Some(label) = target.strip_prefix("feature:") {
-                    feature_of.insert(source, label.to_string());
+    let held: BTreeSet<&String> = nodes_by_path.values().flatten().collect();
+    let mut edges: Vec<StoredEdge> = Vec::new();
+    let mut seen: BTreeSet<(String, String, String)> = BTreeSet::new();
+    let mut neighbours: BTreeMap<String, StoredNode> = BTreeMap::new();
+    for id in &held {
+        for edge in edges_at(core, id) {
+            let far = if &edge.source == *id {
+                &edge.target
+            } else {
+                &edge.source
+            };
+            if !held.contains(far) && !neighbours.contains_key(far) {
+                if let Some(node) = stored_node(core, far) {
+                    neighbours.insert(far.clone(), node);
                 }
             }
-            _ => {}
+            let key = (
+                edge.source.clone(),
+                edge.target.clone(),
+                edge.edge_type.clone(),
+            );
+            if seen.insert(key) {
+                edges.push(edge);
+            }
         }
     }
+    // The call components that hold those nodes, walked edge by edge.
     let mut component: BTreeSet<String> = BTreeSet::new();
     let mut queue: VecDeque<String> = VecDeque::new();
-    for id in nodes_by_path.values().flatten() {
-        if component.insert(id.clone()) {
-            queue.push_back(id.clone());
+    for id in &held {
+        if component.insert((*id).clone()) {
+            queue.push_back((*id).clone());
         }
     }
+    let mut calls: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut communities: BTreeMap<String, String> = BTreeMap::new();
     while let Some(node) = queue.pop_front() {
-        for next in adjacent.get(&node).into_iter().flatten() {
-            if component.insert(next.clone()) {
-                queue.push_back(next.clone());
+        for edge in edges_at(core, &node) {
+            match edge.edge_type.as_str() {
+                "calls" => {
+                    calls.insert((edge.source.clone(), edge.target.clone()));
+                    let far = if edge.source == node {
+                        edge.target
+                    } else {
+                        edge.source
+                    };
+                    if component.insert(far.clone()) {
+                        queue.push_back(far);
+                    }
+                }
+                "memberOfFeature" if edge.source == node => {
+                    if let Some(label) = edge.target.strip_prefix("feature:") {
+                        communities.insert(node.clone(), label.to_string());
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -120,14 +218,10 @@ fn stored_index(core: &GraphCore, changeset: &Changeset) -> Result<StoredIndex, 
         generation,
         prints,
         nodes_by_path,
-        calls: calls
-            .into_iter()
-            .filter(|(source, _)| component.contains(source))
-            .collect(),
-        communities: component
-            .iter()
-            .filter_map(|id| feature_of.get(id).map(|label| (id.clone(), label.clone())))
-            .collect(),
+        calls: calls.into_iter().collect(),
+        communities,
+        edges,
+        neighbours,
     })
 }
 
@@ -214,7 +308,7 @@ pub async fn reindex(
             }
         }
         let stored = stored_index(&work_core, &changeset)?;
-        let outcome = reindex_changeset(&changeset, &commit_id, &files, &stored)?;
+        let outcome = reindex_changeset(&changeset, &commit_id, &files, &stored, &CoreLookup(&work_core))?;
         let operations = operations(&work_core, &outcome.write_set.methods)?;
         Ok::<_, String>((outcome, operations))
     })

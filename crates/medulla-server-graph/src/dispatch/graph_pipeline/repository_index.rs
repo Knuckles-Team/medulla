@@ -60,6 +60,9 @@ fn validate_scope_paths(
 struct ChangesetChain {
     chain: Vec<medulla_source_types::source_changeset::Changeset>,
     delta: Vec<medulla_source_types::source_changeset::Changeset>,
+    /// The id of the newest commit of the branch (empty when it has none): the base
+    /// the next changeset chains from (MEDULLA-SCM-R006).
+    head: String,
 }
 
 /// The changesets of the repository's branch chain that follow the last one cited
@@ -91,10 +94,14 @@ async fn branch_changesets(
         .map(|artifact| artifact.digest.clone());
     tokio::task::spawn_blocking(move || {
         let mut chain = Vec::new();
+        let mut head = String::new();
         // `chain` answers newest first. The delta stops at the last changeset already
         // cited; the whole chain is kept for the row status (MEDULLA-SDLC-R014.12).
         let mut delta_len = None;
-        for commit in registry.chain(&reference)? {
+        for (position, commit) in registry.chain(&reference)?.into_iter().enumerate() {
+            if position == 0 {
+                head = commit.id.to_string();
+            }
             let Some(bytes) = registry.commit_payload(&reference, &commit.id)? else {
                 continue;
             };
@@ -111,7 +118,7 @@ async fn branch_changesets(
         let mut delta: Vec<_> = chain[..delta_len].to_vec();
         delta.reverse();
         chain.reverse();
-        Ok::<_, String>(ChangesetChain { chain, delta })
+        Ok::<_, String>(ChangesetChain { chain, delta, head })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -157,9 +164,18 @@ async fn index_scoped(
     let ChangesetChain {
         chain,
         delta: changesets,
+        head,
     } = branch_changesets(&ctx, &branch_name, &stored_specs)
         .await
         .map_err(|error| Response::err(req_id, error))?;
+    // MEDULLA-SCM-R006: the generation this full index leaves; the next changeset chains
+    // from the branch head.
+    let generation = ctx
+        .core
+        .get_node_properties(&medulla_h_ingest::repository_index::changeset::generation_node_id(
+            &scope.repository_id,
+        ))
+        .and_then(|blob| medulla_h_ingest::repository_index::changeset::read_generation(&blob));
     // MEDULLA-ORCH-VOCAB-R012.7.2: the commit a policy candidate cites is the revision of
     // the indexed branch's ref (its first ref when no ref carries the branch name).
     let commit = scope
@@ -194,6 +210,13 @@ async fn index_scoped(
                 &commit,
                 &mut result,
             )?;
+            // MEDULLA-SCM-R006: a full index is the baseline of the changeset chain.
+            medulla_h_ingest::repository_index::changeset::stamp_generation(
+                &mut result,
+                &scope.repository_id,
+                generation.as_ref(),
+                &head,
+            );
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?
