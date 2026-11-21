@@ -202,7 +202,6 @@ impl EffectPhase {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "contract-schema", schemars(transparent))]
 pub struct ReceiptId(String);
 
 impl ReceiptId {
