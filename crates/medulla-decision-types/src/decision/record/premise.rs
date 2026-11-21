@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::super::entry_types::TrustTier;
 use super::super::policy::ObjectiveLevelKind;
 use medulla_types::contract::BoundedVec;
 
@@ -100,6 +101,10 @@ pub struct PremiseRef {
     pub fact: String,
     pub class: PremiseClass,
     pub provenance: PremiseProvenance,
+    /// The trust tier of an admitted retrieved entry
+    /// (MEDULLA-DECISION-ENGINE-R132.5); omitted for a premise of any other origin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trust_tier: Option<TrustTier>,
 }
 
 /// Why a candidate was removed before the solver ran.

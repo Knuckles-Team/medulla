@@ -190,6 +190,7 @@ impl DecisionFamily for SkillUpgradeFamily {
             provenance: PremiseProvenance::Request {
                 field: PARAM_SKILL_UPGRADE.to_string(),
             },
+            trust_tier: None,
         };
         let migration = upgrade
             .declared_migration_id

@@ -155,6 +155,7 @@ pub fn premises() -> Vec<PremiseRef> {
         fact: "classification".to_string(),
         class,
         provenance,
+        trust_tier: None,
     })
     .collect()
 }

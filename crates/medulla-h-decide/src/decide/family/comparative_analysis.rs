@@ -160,6 +160,7 @@ pub(in crate::decide) fn premises(plan: &ComparativeAnalysisPlan) -> Vec<Premise
         provenance: PremiseProvenance::Request {
             field: PARAM.to_string(),
         },
+        trust_tier: None,
     };
     let mut out = vec![
         claim(format!(

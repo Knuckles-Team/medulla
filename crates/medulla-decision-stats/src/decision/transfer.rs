@@ -107,6 +107,7 @@ pub fn skill_candidates(rows: &[SkillRow], knobs: &SkillKnobs) -> Vec<SkillCandi
                 provenance: PremiseProvenance::Observation {
                     evaluation_id: t.first_evaluation.unwrap_or_default(),
                 },
+                trust_tier: None,
             },
         })
         .collect()

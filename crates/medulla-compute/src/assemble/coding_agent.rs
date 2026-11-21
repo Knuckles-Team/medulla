@@ -145,7 +145,8 @@ fn claim(subject: String, fact: &str) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: "coding_agent".to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 /// The premises the question rests on, each a claim the caller made: the

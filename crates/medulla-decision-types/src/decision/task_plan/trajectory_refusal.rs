@@ -34,5 +34,6 @@ pub(super) fn request_premise(
         provenance: PremiseProvenance::Request {
             field: field.to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }

@@ -330,6 +330,7 @@ pub(super) fn premises(request: &DecideRequest) -> Vec<PremiseRef> {
             cell_id: row.cell_id.clone(),
             epoch: row.epoch,
         },
+        trust_tier: None,
     });
     let facts = read.targets.iter().map(|entry| PremiseRef {
         subject: entry.target.option_id().to_string(),
@@ -344,6 +345,7 @@ pub(super) fn premises(request: &DecideRequest) -> Vec<PremiseRef> {
         provenance: PremiseProvenance::Request {
             field: "params.placement.read".to_string(),
         },
+        trust_tier: None,
     });
     cells.chain(facts).collect()
 }

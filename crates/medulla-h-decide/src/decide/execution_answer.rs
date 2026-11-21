@@ -446,6 +446,7 @@ fn query_part(
                     graph: graph.to_string(),
                     graph_version,
                 },
+                trust_tier: None,
             });
         }
     }

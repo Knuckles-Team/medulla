@@ -334,6 +334,7 @@ impl DecisionFamily for PlanningAdmissionFamily {
             provenance: PremiseProvenance::Observation {
                 evaluation_id: plan.repository_revision.clone(),
             },
+            trust_tier: None,
         }];
         // The caller declared each attach point and each gap: claims, in request order.
         premises.extend(plan.features.iter().map(|feature| PremiseRef {
@@ -349,6 +350,7 @@ impl DecisionFamily for PlanningAdmissionFamily {
             provenance: PremiseProvenance::Request {
                 field: "params.planning_admission.features".to_string(),
             },
+            trust_tier: None,
         }));
         premises.extend(plan.gap_proposal_digests.iter().map(|gap| PremiseRef {
             subject: plan.repository_id.clone(),
@@ -357,6 +359,7 @@ impl DecisionFamily for PlanningAdmissionFamily {
             provenance: PremiseProvenance::Request {
                 field: "params.planning_admission.gap_proposal_digests".to_string(),
             },
+            trust_tier: None,
         }));
         premises
     }

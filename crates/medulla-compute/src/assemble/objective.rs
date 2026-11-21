@@ -253,6 +253,7 @@ pub(super) fn premises(inputs: &DecisionInputs, chosen: &[&CandidateFacts]) -> V
                     fact: format!("objective:{}={value}", level_label(kind)),
                     class: PremiseClass::Observation,
                     provenance: PremiseProvenance::Observation { evaluation_id },
+                    trust_tier: None,
                 });
             }
         }

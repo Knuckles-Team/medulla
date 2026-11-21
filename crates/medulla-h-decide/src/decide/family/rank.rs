@@ -277,12 +277,14 @@ impl DecisionFamily for RankFamily {
                 ),
                 class: PremiseClass::Claim,
                 provenance: evaluation.clone(),
+                trust_tier: None,
             });
             out.push(PremiseRef {
                 subject: candidate.id.clone(),
                 fact: format!("tie_break_applied={tie_break_applied}"),
                 class: PremiseClass::Claim,
                 provenance: evaluation.clone(),
+                trust_tier: None,
             });
         }
         out.push(PremiseRef {
@@ -292,6 +294,7 @@ impl DecisionFamily for RankFamily {
             provenance: PremiseProvenance::Policy {
                 policy_digest: policy_digest.to_string(),
             },
+            trust_tier: None,
         });
         out
     }

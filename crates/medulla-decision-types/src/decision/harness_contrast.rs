@@ -1162,6 +1162,7 @@ mod tests {
             belief: BoundedVec::new(Vec::new()).unwrap(),
             synthetic_evidence: false,
             retrieval_binding: None,
+            refused_entries: BoundedVec::new(Vec::new()).unwrap(),
             record_digest: String::new(),
         };
         record.record_digest = statistical_record_digest(&record);

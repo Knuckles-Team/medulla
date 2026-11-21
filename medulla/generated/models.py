@@ -273,6 +273,7 @@ from ._shared import (
     ToolFactDeclarer,
     ToolsetTransport,
     ToolSideEffects,
+    TrustTier,
     TopologyAdmission,
     TopologyCaps,
     TopologyFacts,
@@ -26602,6 +26603,7 @@ class StatisticalDecisionRecord(BaseModel):
     question: StatisticalQuestion
     record_digest: str
     record_id: str
+    refused_entries: BoundedVec_RefusedEntry_64 | None = None
     resolution_kind: ResolutionKind
     retrieval_binding: RetrievalProviderBinding | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
@@ -28541,17 +28543,24 @@ class TypedValueSkillUpgrade(BaseModel):
     value: SkillUpgradeRequest
 
 
-class TrustTier(str, Enum):
-    UNVERIFIED = "unverified"
-    ATTESTED = "attested"
-    VERIFIED = "verified"
-
-
 class EntryTrust(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     observed_at: int
     source_digest: str
+    tier: TrustTier
+
+
+class EntryCheck(str, Enum):
+    TIER_ORDER = "tier_order"
+    POISON_CHECK = "poison_check"
+
+
+class RefusedEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    check: EntryCheck
+    entry_id: str
     tier: TrustTier
 
 
@@ -29547,6 +29556,9 @@ BoundedVec_BeliefSliceInputs_8 = Annotated[list[BeliefSliceInputs], Field(max_le
 BoundedVec_GraphRowProvenance_64 = Annotated[
     list[GraphRowProvenance], Field(max_length=64)
 ]
+
+
+BoundedVec_RefusedEntry_64 = Annotated[list[RefusedEntry], Field(max_length=64)]
 
 
 BoundedVec_SqlSourceCell_256 = Annotated[list[SqlSourceCell], Field(max_length=256)]
@@ -36283,6 +36295,7 @@ __all__ = [
     "BoundedVec_BeliefPoint_8",
     "BoundedVec_BeliefSliceInputs_8",
     "BoundedVec_GraphRowProvenance_64",
+    "BoundedVec_RefusedEntry_64",
     "BoundedVec_BoundedVec_SqlSourceCell_256_1024",
     "BoundedVec_CandidateFacts_64",
     "BoundedVec_CapacityHeadroom_8",
@@ -40816,7 +40829,9 @@ __all__ = [
     "TypedValueRetrievedEntries",
     "TypedValueSkillWorkflowDraft",
     "TrustTier",
+    "EntryCheck",
     "EntryTrust",
+    "RefusedEntry",
     "RetrievedEntry",
     "TypedValueTaskDecomposition",
     "TypedValueTemporalQuery",

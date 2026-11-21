@@ -217,6 +217,7 @@ fn fact_premises(
         fact: fact.to_string(),
         class: PremiseClass::Observation,
         provenance: PremiseProvenance::Observation { evaluation_id },
+        trust_tier: None,
     };
     if let Some(size) = size {
         premises.push(observation(
@@ -256,6 +257,7 @@ fn publisher_premises(entry: &AgentComponentEntry) -> Vec<PremiseRef> {
                 component_id: entry.component_id.clone(),
                 definition_digest: entry.definition_digest.clone(),
             },
+            trust_tier: None,
         })
         .collect()
 }

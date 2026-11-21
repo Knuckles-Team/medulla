@@ -84,7 +84,8 @@ pub(super) fn claim(subject: &str, fact: String, field: &str) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: field.to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 /// The outcome of a kernel family: an uncalibrated advisory, because every

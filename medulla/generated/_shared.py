@@ -1246,6 +1246,12 @@ PremiseProvenance = Annotated[
 ]
 
 
+class TrustTier(str, Enum):
+    UNVERIFIED = "unverified"
+    ATTESTED = "attested"
+    VERIFIED = "verified"
+
+
 class PremiseRef(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -1253,6 +1259,7 @@ class PremiseRef(BaseModel):
     fact: str
     provenance: PremiseProvenance
     subject: str
+    trust_tier: TrustTier | None = None
 
 
 class PriceSourcePublisher(BaseModel):
@@ -2776,6 +2783,7 @@ __all__ = [
     "PremiseProvenanceRequest",
     "PremiseProvenanceSchemaSource",
     "PremiseRef",
+    "TrustTier",
     "PriceSource",
     "PriceSourceConnectorPack",
     "PriceSourceOperator",

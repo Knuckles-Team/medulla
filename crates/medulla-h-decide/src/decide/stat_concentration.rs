@@ -312,6 +312,7 @@ pub(super) fn premises(
         provenance: PremiseProvenance::Observation {
             evaluation_id: read.candidate.edit_id.clone(),
         },
+        trust_tier: None,
     };
     let mut out: Vec<PremiseRef> = counted_edits(&read.facts, &read.candidate, policy)
         .into_iter()

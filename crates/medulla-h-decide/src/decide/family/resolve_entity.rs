@@ -201,6 +201,7 @@ pub fn identity_premises(request: &DecideRequest) -> Vec<PremiseRef> {
                 fact: piece.premise_fact().to_string(),
                 class: PremiseClass::Claim,
                 provenance: provenance(),
+                trust_tier: None,
             });
         }
         out.push(PremiseRef {
@@ -208,6 +209,7 @@ pub fn identity_premises(request: &DecideRequest) -> Vec<PremiseRef> {
             fact: decision_fact(decision).to_string(),
             class: PremiseClass::Claim,
             provenance: provenance(),
+            trust_tier: None,
         });
         if out.len() >= MAX_IDENTITY_PREMISES {
             out.truncate(MAX_IDENTITY_PREMISES);
@@ -266,6 +268,7 @@ fn review_premises(request: &DecideRequest) -> Vec<PremiseRef> {
         provenance: PremiseProvenance::Observation {
             evaluation_id: latest.clone(),
         },
+        trust_tier: None,
     };
     let mut out = Vec::new();
     for tier in TIERS {
@@ -498,6 +501,7 @@ fn proposal_premises(request: &DecideRequest) -> Vec<PremiseRef> {
         provenance: PremiseProvenance::Request {
             field: "candidates".to_string(),
         },
+        trust_tier: None,
     };
     let mut out = Vec::new();
     for option in options.iter() {
@@ -822,6 +826,7 @@ impl DecisionFamily for ResolveEntityFamily {
                         provenance: PremiseProvenance::Request {
                             field: "candidates.options".to_string(),
                         },
+                        trust_tier: None,
                     });
                 }
             }
@@ -836,6 +841,7 @@ impl DecisionFamily for ResolveEntityFamily {
                     provenance: PremiseProvenance::Request {
                         field: "candidates".to_string(),
                     },
+                    trust_tier: None,
                 });
             }
         }
@@ -851,6 +857,7 @@ impl DecisionFamily for ResolveEntityFamily {
                     .map(|pin| pin.definition_digest.clone())
                     .unwrap_or_default(),
             },
+            trust_tier: None,
         });
         out
     }

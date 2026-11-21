@@ -111,7 +111,8 @@ fn triple_premise(
         fact: format!("guidance:triple={cite}"),
         class: PremiseClass::Claim,
         provenance,
-    }
+    },
+    trust_tier: None,
 }
 
 fn resolve<'a>(facts: &'a PackFacts) -> Vec<Resolved<'a>> {
@@ -269,6 +270,7 @@ pub(crate) fn usage_guidance_outcome(
                     provenance: PremiseProvenance::Observation {
                         evaluation_id: format!("decision-log@{}", request.tenant_id),
                     },
+                    trust_tier: None,
                 });
             }
         }
@@ -283,6 +285,7 @@ pub(crate) fn usage_guidance_outcome(
                 text_digest: digest,
                 producer: question.connector.clone(),
             },
+            trust_tier: None,
         });
     }
     let mut seen = BTreeSet::new();
@@ -293,6 +296,7 @@ pub(crate) fn usage_guidance_outcome(
         fact: format!("knob:usage.min_trials={}", knobs.min_trials),
         class: PremiseClass::Definition,
         provenance: PremiseProvenance::Policy { policy_digest },
+        trust_tier: None,
     });
     let prompts: Vec<String> = facts
         .prompts

@@ -63,7 +63,8 @@ fn observation(fact: String) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: "params.signals".to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 impl DecisionFamily for RecursionModeFamily {

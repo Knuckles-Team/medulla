@@ -212,6 +212,7 @@ fn premises_of(
             ),
             class,
             provenance,
+            trust_tier: None,
         });
     }
     let observation = || PremiseProvenance::Observation {
@@ -222,12 +223,14 @@ fn premises_of(
         fact: format!("load_set:graph_revision={graph_revision}"),
         class: PremiseClass::Observation,
         provenance: observation(),
+        trust_tier: None,
     });
     out.push(PremiseRef {
         subject: "load_set".to_string(),
         fact: format!("load_set:excluded={excluded}"),
         class: PremiseClass::Observation,
         provenance: observation(),
+        trust_tier: None,
     });
     let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
     for spec in LOAD_SET_KNOBS {
@@ -238,6 +241,7 @@ fn premises_of(
             provenance: PremiseProvenance::Policy {
                 policy_digest: policy_digest.clone(),
             },
+            trust_tier: None,
         });
     }
     out

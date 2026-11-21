@@ -197,6 +197,7 @@ impl DecisionFamily for FeedbackLoopFamily {
             provenance: PremiseProvenance::Request {
                 field: PARAM_FEEDBACK.to_string(),
             },
+            trust_tier: None,
         };
         vec![
             claim(format!(

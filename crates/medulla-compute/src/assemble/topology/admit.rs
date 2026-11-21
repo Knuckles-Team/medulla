@@ -69,6 +69,7 @@ pub fn premises(record: &EnforcementRecord, policy_digest: &str) -> Vec<PremiseR
             fact: format!("topology_cap:{name}={value}"),
             class: PremiseClass::Definition,
             provenance: policy(),
+            trust_tier: None,
         })
         .collect();
     out.push(PremiseRef {
@@ -76,6 +77,7 @@ pub fn premises(record: &EnforcementRecord, policy_digest: &str) -> Vec<PremiseR
         fact: format!("plan_digest:{}", record.plan_digest),
         class: PremiseClass::Proof,
         provenance: policy(),
+        trust_tier: None,
     });
     out
 }

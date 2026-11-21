@@ -146,6 +146,7 @@ pub fn required_capabilities(
                         provenance: PremiseProvenance::Request {
                             field: STEP_CAPABILITY_FIELD.to_string(),
                         },
+                        trust_tier: None,
                     },
                 );
             } else {
@@ -185,7 +186,8 @@ fn direct_premise(iri: &str) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: DIRECT_CAPABILITY_FIELD.to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 /// Add every capability `task` requires, under `provenance` and `class`.
@@ -206,6 +208,7 @@ fn close_task(
             fact: format!("required_by:{task}"),
             class,
             provenance: provenance.clone(),
+            trust_tier: None,
         };
         offer(required, capability, premise);
     }

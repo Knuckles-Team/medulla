@@ -712,6 +712,10 @@ pub struct StatisticalDecisionRecord {
     /// (MEDULLA-DECISION-ENGINE-R029.1); omitted when none was named.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retrieval_binding: Option<retrieval_plan::RetrievalProviderBinding>,
+    /// The retrieved entries the policy refused, with the tier and the check
+    /// (MEDULLA-DECISION-ENGINE-R132.5); omitted when none was refused.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub refused_entries: BoundedVec<super::entry_types::RefusedEntry, 64>,
     pub record_digest: String,
 }
 

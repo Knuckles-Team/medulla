@@ -640,11 +640,11 @@ pub(super) fn decide_blocking(
     let (executed, limit_premises) = super::limit_stage::apply(request, &policy.policy, executed)?;
     // Admitted retrieved entries enter as premises, and a poisoned required fact
     // abstains (MEDULLA-DECISION-ENGINE-R132.3, R132.4).
-    let (executed, entry_premises) = super::entry_stage::apply(request, &policy.policy, executed)?;
+    let (executed, entries) = super::entry_stage::apply(request, &policy.policy, executed)?;
     let mut trajectory_premises = trajectory_premises;
     trajectory_premises.extend(safety_premises);
     trajectory_premises.extend(limit_premises);
-    trajectory_premises.extend(entry_premises);
+    trajectory_premises.extend(entries.premises);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;
@@ -665,6 +665,7 @@ pub(super) fn decide_blocking(
                 context_digest,
                 pool,
                 binding: provider_binding,
+                refused_entries: entries.refused,
             },
             &executed,
             nl,
@@ -705,6 +706,8 @@ struct Sealing<'a> {
     binding: Option<
         medulla_decision_types::decision::statistical::retrieval_plan::RetrievalProviderBinding,
     >,
+    /// The retrieved entries the policy refused (R132.5).
+    refused_entries: Vec<medulla_decision_types::decision::entry_types::RefusedEntry>,
 }
 
 /// The pool a decision that may explore draws against. A refused permit
@@ -821,7 +824,8 @@ fn premise(
         fact: fact.to_string(),
         class,
         provenance,
-    }
+    },
+    trust_tier: None,
 }
 
 /// One CLAIM premise per rule-derived class (EH-200): a derivation over a
@@ -1335,6 +1339,7 @@ fn seal(
         belief: bounded(sealing.slices.points.clone())?,
         synthetic_evidence: synthetic,
         retrieval_binding: sealing.binding.clone(),
+        refused_entries: bounded(sealing.refused_entries)?,
         record_digest: String::new(),
     };
     // A load set answer carries the premises it was sealed with

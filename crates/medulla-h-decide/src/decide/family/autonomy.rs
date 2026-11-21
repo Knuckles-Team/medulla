@@ -70,7 +70,8 @@ fn observed(subject: &str, fact: String) -> PremiseRef {
         provenance: PremiseProvenance::Observation {
             evaluation_id: subject.to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 /// The family of the `autonomy_verdict` question kind.

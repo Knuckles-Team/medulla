@@ -236,6 +236,7 @@ pub(super) fn premises(request: &DecideRequest) -> Vec<PremiseRef> {
             provenance: PremiseProvenance::Request {
                 field: "params.placement_plan.read".to_string(),
             },
+            trust_tier: None,
         })
         .collect()
 }

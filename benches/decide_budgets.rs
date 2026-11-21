@@ -1859,6 +1859,62 @@ fn bench_usage_guidance(
 /// one reasoning state).
 const KERNEL_LEAVES: usize = 100_000;
 
+/// The `decide/entry_trust` group (MEDULLA-DECISION-ENGINE-R132.6, R178.1): a
+/// route question under a policy that knows one source, carrying a verified
+/// entry and an unverified entry that contradicts it. The fixture asserts the
+/// sealed record holds the verified fact as its entry premise and the
+/// unverified entry in `refused_entries`, so the group times the admitted path.
+// spec: MEDULLA-DECISION-ENGINE-R132.6
+fn bench_entry_trust(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::decision::entry_types::{EntryTrust, RetrievedEntry, TrustTier};
+    const SOURCE: &str = "sha256:bench-source";
+    let (h, mut asked) = rt.block_on(fixture(QuestionKind::Route));
+    let mut policy = DecisionPolicy::engine_default();
+    policy
+        .entry_trust
+        .known_source_digests
+        .insert(SOURCE.to_string());
+    asked.policy = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-bench-entry-trust", &policy),
+    };
+    let entry = |id: &str, tier: TrustTier, value: &str| RetrievedEntry {
+        entry_id: id.to_string(),
+        subject: "urn:agent:planner".to_string(),
+        fact_key: "max_tools".to_string(),
+        value: value.to_string(),
+        trust: EntryTrust {
+            tier,
+            source_digest: SOURCE.to_string(),
+            observed_at: 10,
+        },
+    };
+    asked.params = BoundedVec::new(vec![TypedParam {
+        name: "retrieved_entries".to_string(),
+        value: TypedValue::RetrievedEntries(
+            BoundedVec::new(vec![
+                entry("e-verified", TrustTier::Verified, "8"),
+                entry("e-unverified", TrustTier::Unverified, "99"),
+            ])
+            .unwrap(),
+        ),
+    }])
+    .unwrap();
+    let batch: DecisionBatch =
+        decode(decide(rt, &h, &asked)).expect("the entry-trust question is answered");
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.refused_entries.as_slice().len(), 1);
+    assert_eq!(record.refused_entries.as_slice()[0].entry_id, "e-unverified");
+    let group_name = "decide/entry_trust".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served"));
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+    report.insert(group_name, sampled_report(rt, &h, &asked));
+}
+
 /// A maximal frontier: `MAX_THOUGHT_LEAVES` leaves over four depths.
 fn widest_frontier() -> ReasoningState {
     let nodes = (0..MAX_THOUGHT_LEAVES as u32)
@@ -2740,6 +2796,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_retrieval_learning(c, &rt, &mut report);
     bench_load_set(c, &rt, &mut report);
     bench_usage_guidance(c, &rt, &mut report);
+    bench_entry_trust(c, &rt, &mut report);
     bench_insight_selection(c, &rt, &mut report);
     bench_distilled_rank(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);

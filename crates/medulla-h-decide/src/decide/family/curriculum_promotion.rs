@@ -90,6 +90,7 @@ impl DecisionFamily for CurriculumPromotionFamily {
                     provenance: PremiseProvenance::Observation {
                         evaluation_id: subject.to_string(),
                     },
+                    trust_tier: None,
                 },
                 claim(
                     subject,

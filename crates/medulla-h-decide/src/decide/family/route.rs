@@ -433,6 +433,7 @@ impl DecisionFamily for RouteFamily {
                     provenance: PremiseProvenance::Policy {
                         policy_digest: policy_digest.to_string(),
                     },
+                    trust_tier: None,
                 };
                 let matched = route.matched_records.iter().map(|record_id| PremiseRef {
                     subject: route.option_id.clone(),
@@ -441,6 +442,7 @@ impl DecisionFamily for RouteFamily {
                     provenance: PremiseProvenance::Observation {
                         evaluation_id: record_id.clone(),
                     },
+                    trust_tier: None,
                 });
                 std::iter::once(stage).chain(matched)
             })

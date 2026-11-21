@@ -125,6 +125,7 @@ pub fn premises(streams: &[EvidenceStreamRef]) -> Vec<PremiseRef> {
             provenance: PremiseProvenance::Request {
                 field: EVIDENCE_STREAMS_FIELD.to_string(),
             },
+            trust_tier: None,
         })
         .collect()
 }

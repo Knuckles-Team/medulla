@@ -137,7 +137,8 @@ fn claim(subject: &str, fact: String, field: &str) -> PremiseRef {
         provenance: PremiseProvenance::Request {
             field: field.to_string(),
         },
-    }
+    },
+    trust_tier: None,
 }
 
 fn premises(
@@ -156,6 +157,7 @@ fn premises(
             provenance: PremiseProvenance::Policy {
                 policy_digest: policy_digest.to_string(),
             },
+            trust_tier: None,
         },
         claim(
             "ledger",

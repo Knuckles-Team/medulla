@@ -235,6 +235,7 @@ pub(in crate::decide) fn premises(selection: &ContextSourceSelection) -> Vec<Pre
         provenance: PremiseProvenance::Request {
             field: "candidates".to_string(),
         },
+        trust_tier: None,
     };
     let mut out = Vec::new();
     for id in &selection.partition.selected {

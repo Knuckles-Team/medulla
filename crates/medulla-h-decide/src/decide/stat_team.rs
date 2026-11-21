@@ -299,6 +299,7 @@ pub(super) fn premises(
             provenance: PremiseProvenance::Request {
                 field: PARAM_SIGNAL.to_string(),
             },
+            trust_tier: None,
         },
         PremiseRef {
             subject: team.to_string(),
@@ -310,6 +311,7 @@ pub(super) fn premises(
             provenance: PremiseProvenance::Observation {
                 evaluation_id: channel.to_string(),
             },
+            trust_tier: None,
         },
     ]
 }

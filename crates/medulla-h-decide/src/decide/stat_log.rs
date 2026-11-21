@@ -716,6 +716,7 @@ fn transfer_estimate(
         provenance: PremiseProvenance::Observation {
             evaluation_id: evidence_key.clone(),
         },
+        trust_tier: None,
     };
     let knob_facts = [
         format!("knob:transfer.min_backbones={}", knobs.min_backbones),
@@ -742,6 +743,7 @@ fn transfer_estimate(
         provenance: PremiseProvenance::Policy {
             policy_digest: knob_digest.clone(),
         },
+        trust_tier: None,
     }));
     estimate.premises = BoundedVec::new(premises)
         .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;

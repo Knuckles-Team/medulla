@@ -16,7 +16,7 @@
 use medulla_decision_outcome_types::decision::entry_trust::admit_entries;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::entry_types::{
-    EntryCheck, RetrievedEntry, TrustTier, POISONED_ENTRY,
+    EntryCheck, RefusedEntry, RetrievedEntry, TrustTier, POISONED_ENTRY,
 };
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
@@ -96,16 +96,28 @@ fn entries(request: &DecideRequest) -> Result<Option<&[RetrievedEntry]>, String>
     }
 }
 
-/// The premises of the entries the policy admits, and an abstention in place of
-/// the outcome when a required fact has entries but none is admitted.
+/// What the stage hands on: the admitted entries as premises, and the refused
+/// entries for the sealed record (MEDULLA-DECISION-ENGINE-R132.5).
+pub(super) struct EntryOutcome {
+    pub(super) premises: Vec<PremiseRef>,
+    pub(super) refused: Vec<RefusedEntry>,
+}
+
+/// The premises of the entries the policy admits, the refused entries, and an
+/// abstention in place of the outcome when a required fact has entries but none
+/// is admitted.
 pub(super) fn apply(
     request: &DecideRequest,
     policy: &DecisionPolicy,
     executed: Executed,
-) -> Result<(Executed, Vec<PremiseRef>), String> {
+) -> Result<(Executed, EntryOutcome), String> {
     let required = required_facts(request)?;
     let Some(entries) = entries(request)? else {
-        return Ok((executed, Vec::new()));
+        let untouched = EntryOutcome {
+            premises: Vec::new(),
+            refused: Vec::new(),
+        };
+        return Ok((executed, untouched));
     };
     let admission = admit_entries(entries, &policy.entry_trust);
     let poisoned = required.iter().find_map(|(subject, key)| {
@@ -136,10 +148,16 @@ pub(super) fn apply(
                 entry_id: entry.entry_id.clone(),
                 source_digest: entry.trust.source_digest.clone(),
             },
+            trust_tier: Some(entry.trust.tier),
         })
         .collect();
+    let refused_entries = admission.refused.clone();
+    let outcome = |premises| EntryOutcome {
+        premises,
+        refused: refused_entries.clone(),
+    };
     let Some(refused) = poisoned else {
-        return Ok((executed, premises));
+        return Ok((executed, outcome(premises)));
     };
     let detail = format!(
         "entry {} refused by {}",
@@ -171,5 +189,5 @@ pub(super) fn apply(
         family_premises: Vec::new(),
         route: None,
     };
-    Ok((replaced, premises))
+    Ok((replaced, outcome(premises)))
 }

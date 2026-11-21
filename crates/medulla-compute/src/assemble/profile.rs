@@ -48,6 +48,7 @@ pub(super) fn premise(inputs: &DecisionInputs) -> Option<PremiseRef> {
         provenance: PremiseProvenance::Request {
             field: "assistant_profile_ref".to_string(),
         },
+        trust_tier: None,
     })
 }
 
