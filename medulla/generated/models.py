@@ -36848,6 +36848,16 @@ class EditEvent(str, Enum):
     REVERT = "revert"
 
 
+class HarnessEditOpCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dimension_iri: str
+    edit_id: str
+    op: Literal["create"]
+    policy_revision: Annotated[int, Field(ge=0)] | None = Field(default=None)
+    round: Annotated[int, Field(ge=0, le=4294967295)]
+
+
 class HarnessEditOpGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -37643,7 +37653,7 @@ ObservationStateOp = Annotated[
 
 
 HarnessEditOp = Annotated[
-    HarnessEditOpTransition | HarnessEditOpGet,
+    HarnessEditOpCreate | HarnessEditOpTransition | HarnessEditOpGet,
     Field(discriminator="op"),
 ]
 
@@ -41214,6 +41224,7 @@ __all__ = [
     "HarnessContrastAbstainReason",
     "HarnessContrastDecision",
     "HarnessEditOp",
+    "HarnessEditOpCreate",
     "HarnessEditOpGet",
     "HarnessEditOpTransition",
     "HarnessLesson",

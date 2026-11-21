@@ -83,6 +83,7 @@ impl GraphWriteScope<'_> {
         let principal = self.verified.principal_persistence_id();
         compile_methods_with_outbox(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id,
                 request_id: self.request_id,
                 attempt_nonce: self.verified.attempt_nonce(),

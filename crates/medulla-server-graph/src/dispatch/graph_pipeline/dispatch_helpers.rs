@@ -462,6 +462,7 @@ async fn commit_served_modality(
     let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
     let principal = verified_context.principal_persistence_id();
     let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: !verified_context.is_authenticated(),
         req_id,
         caller,

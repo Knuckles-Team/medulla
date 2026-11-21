@@ -276,6 +276,7 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
     let safe_receipt = command.receipt_method();
     let batch = medulla_server_api::batch_compile::compile_methods(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "opaque-batch",
             request_id: 1,
             attempt_nonce: None,

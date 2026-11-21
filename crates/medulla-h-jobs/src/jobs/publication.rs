@@ -676,6 +676,7 @@ mod publication_receipt_tests {
     ) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let batch = medulla_server_api::batch_compile::compile_methods(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: &prepared.batch_id,
                 request_id: 11,
                 attempt_nonce: None,

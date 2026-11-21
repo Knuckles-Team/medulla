@@ -291,6 +291,7 @@ pub(super) async fn compile_prepared_batch(
     let principal = txn_receipt_principal(caller).map_err(|error| Response::err(req_id, error))?;
     let batch = match medulla_server_api::batch_compile::compile_methods(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id: req_id,
             attempt_nonce,

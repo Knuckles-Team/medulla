@@ -214,6 +214,7 @@ pub fn compile_blob_batch_at_with_nonce(
         medulla_server_api::batch_compile::opaque_request_key("blob", &scope, identity_id, method);
     let batch = medulla_server_api::batch_compile::compile_opaque_method(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id: identity_id,
             attempt_nonce,

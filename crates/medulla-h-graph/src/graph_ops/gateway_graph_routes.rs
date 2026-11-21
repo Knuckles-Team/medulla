@@ -379,7 +379,7 @@ async fn try_handle_admin(
                 .await
         }
         Route::HarnessEdit => {
-            super::super::harness_edit::handle_transition(ctx, tenant_id, method).await
+            super::super::harness_edit::handle_mutation(ctx, tenant_id, method).await
         }
         Route::ObservationState => {
             super::super::observation_state::handle_put(ctx, tenant_id, method).await

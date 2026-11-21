@@ -47,6 +47,7 @@ impl DraftAuthority<'_> {
             .collect();
         let batch = medulla_server_api::batch_compile::compile_methods_with_outbox(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: &draft.mutation.batch_id,
                 request_id: self.req_id,
                 // One request carries one attempt nonce; the envelopes of a

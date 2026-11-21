@@ -337,6 +337,7 @@ fn opaque_recovery_batch(
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
     medulla_server_api::batch_compile::compile_opaque_digest(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id: 90,
             attempt_nonce: None,
@@ -367,6 +368,7 @@ fn legacy_public_batch(
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
     medulla_server_api::batch_compile::compile_opaque_method(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id: 90,
             attempt_nonce: None,

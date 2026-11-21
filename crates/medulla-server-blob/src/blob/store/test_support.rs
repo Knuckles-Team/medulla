@@ -40,6 +40,7 @@ impl Operation {
         nonce.update(attempt.to_be_bytes());
         medulla_server_api::batch_compile::compile_opaque_method(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: &self.id,
                 request_id: u64::from(attempt) + 1,
                 attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes(

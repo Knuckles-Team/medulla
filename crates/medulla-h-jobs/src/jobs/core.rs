@@ -155,6 +155,7 @@ pub(super) fn compile_job_batch(
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = medulla_server_api::batch_compile::compile_opaque_method_in_scope(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id: req_id,
             attempt_nonce,

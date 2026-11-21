@@ -59,6 +59,10 @@ pub struct MutationCtx<'a> {
     /// [`commit_mutation`] single-call path, unchanged.
     pub write_coalescer:
         Option<&'a Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>>,
+    /// Who writes this mutation: `HarnessEdit` commits under
+    /// [`StatusWriter::EditMachine`](medulla_types::edit_machine::StatusWriter), every other
+    /// route under `Caller` (MEDULLA-DECISION-ENGINE-R173.8).
+    pub status_writer: medulla_types::edit_machine::StatusWriter,
 }
 
 /// Which graph-lifecycle request this is — the `CreateGraph`/`DeleteGraph`
@@ -544,6 +548,7 @@ mod response_dedup_scope_tests {
         let core = Arc::new(GraphCore::new());
         let isolation = IsolationLayer::new();
         let ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             anonymous: false,
             req_id,
             caller: Some(caller),

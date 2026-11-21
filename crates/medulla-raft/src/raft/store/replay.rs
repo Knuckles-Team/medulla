@@ -119,6 +119,7 @@ impl MedullaStore {
         let audited = medulla_capabilities::policy(durable_method).audited;
         let probe = medulla_server_api::batch_compile::compile_methods(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Replicated,
                 batch_id,
                 request_id: authority.request_id,
                 attempt_nonce: authority.attempt_nonce,
@@ -337,6 +338,7 @@ mod tests {
         let batch_id = "replay-scope-proof";
         let batch = medulla_server_api::batch_compile::compile_methods(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Replicated,
                 batch_id,
                 request_id: 9,
                 attempt_nonce: None,

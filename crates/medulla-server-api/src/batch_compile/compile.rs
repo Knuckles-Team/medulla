@@ -126,6 +126,9 @@ pub struct CompileBatch<'a> {
     pub default_surface: MutationSurface,
     /// Optional authenticated staged material used by runtime-result mutations.
     pub authoritative_state: Option<MutationStateDescriptor>,
+    /// Who writes this batch: only a [`StatusWriter::Caller`] write is checked for
+    /// `editStatus` (MEDULLA-DECISION-ENGINE-R173.8).
+    pub status_writer: medulla_types::edit_machine::StatusWriter,
 }
 
 /// Compile an ordered engine write-set into the universal durable unit.
@@ -144,6 +147,9 @@ pub fn compile_methods_with_outbox(
     methods: Vec<Method>,
     additional_outbox: Vec<MutationOutboxIntent>,
 ) -> Result<MutationBatch, String> {
+    // MEDULLA-DECISION-ENGINE-R173.8: a caller's write of `editStatus` is refused before
+    // any operation is compiled.
+    crate::mutation_batch::edit_status::refuse_direct_edit_status_all(&methods, ctx.status_writer)?;
     // MEDULLA-IDENTITY-R023.9: typed principal metadata is admitted, owner-stamped and
     // refused here, before any operation is compiled or committed.
     let methods = crate::mutation_batch::identity_metadata::admit_all(
@@ -833,6 +839,7 @@ mod tests {
 
     fn source_context() -> CompileBatch<'static> {
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "repository-index:test-envelope",
             request_id: 41,
             attempt_nonce: None,
@@ -1016,6 +1023,7 @@ mod tests {
         };
         let batch = finish_batch(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: "terminal-batch",
                 request_id: 1,
                 attempt_nonce: None,

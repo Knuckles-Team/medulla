@@ -9,9 +9,31 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::refusal_code::RefusalCode;
 use crate::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
+
+/// Refusal of a caller write that names `editStatus` (MEDULLA-DECISION-ENGINE-R173.8). It is
+/// not `TRANSITION_REFUSED`: the refused write moves no machine.
+pub const EDIT_STATUS_ENGINE_OWNED: RefusalCode = RefusalCode::new("EDIT_STATUS_ENGINE_OWNED");
+
+/// The message of [`EDIT_STATUS_ENGINE_OWNED`].
+pub const EDIT_STATUS_ENGINE_OWNED_MESSAGE: &str =
+    "EDIT_STATUS_ENGINE_OWNED: editStatus is written only through HarnessEdit";
+
+/// Who writes a mutation batch (MEDULLA-DECISION-ENGINE-R173.8). The mutation compiler
+/// refuses a write of `editStatus` unless the writer is the edit machine itself or a replica
+/// re-compiling a batch its leader already admitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StatusWriter {
+    /// A caller's write: the guard runs.
+    Caller,
+    /// `HarnessEdit` applying `EditMachine`: the one writer of `editStatus`.
+    EditMachine,
+    /// A replica re-compiling a batch the leader already admitted.
+    Replicated,
+}
 
 /// The recorded status of a harness edit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

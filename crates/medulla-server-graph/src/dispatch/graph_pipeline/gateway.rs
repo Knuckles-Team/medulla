@@ -38,6 +38,7 @@ async fn gateway_mutation_context<'a>(
 ) -> medulla_server_mutation::mutation::MutationCtx<'a> {
     let (iso, gtype, owner) = ctx.gateway_authz_ctx.as_ref().expect(missing_authz_message);
     medulla_server_mutation::mutation::MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: ctx.state.read().await.local_anonymous,
         req_id: ctx.req_id,
         caller: ctx.caller,

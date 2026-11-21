@@ -268,6 +268,7 @@ mod tests {
         let plan = MutationPlan::for_method(&method);
 
         let ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             anonymous: false,
             req_id: 3,
             caller: Some("intruder"),

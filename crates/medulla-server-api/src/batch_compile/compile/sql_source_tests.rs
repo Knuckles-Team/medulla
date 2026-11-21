@@ -49,6 +49,7 @@ fn request(value: &str) -> SqlSourceBatchRequest {
 
 fn context(nonce: u8) -> CompileBatch<'static> {
     CompileBatch {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         batch_id: "sql-source-test",
         request_id: u64::from(nonce),
         attempt_nonce: Some(Nonce::from_bytes([nonce; 32])),

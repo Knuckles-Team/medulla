@@ -1,10 +1,15 @@
 //! Harness edit lifecycle proofs (MEDULLA-DECISION-ENGINE-R173.7): the admission and read
 //! rules on one graph holding the edits of two tenants.
 
-use super::harness_edit::{admit_transition, read_op};
+use super::harness_edit::{admit_transition, create_batch, read_op};
 use medulla_graph_core::graph::GraphCore;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::batch_compile::{compile_methods, CompileBatch};
 use medulla_server_mutation::mutation::apply_coalescable_write;
-use medulla_types::edit_machine::{EditEvent, EditStatus};
+use medulla_types::edit_machine::{
+    EditEvent, EditStatus, StatusWriter, EDIT_STATUS_ENGINE_OWNED_MESSAGE,
+};
 
 fn put_edit(core: &GraphCore, id: &str, status: &str, tenant: Option<&str>) {
     let mut properties = serde_json::json!({
@@ -102,5 +107,82 @@ fn foreign_tenant_edit_reads_as_unknown() {
     assert_eq!(
         read_op(&core, "tenant-a", "edit:graph").unwrap().status,
         EditStatus::Proposed
+    );
+}
+
+fn compile_as(writer: StatusWriter, methods: Vec<Method>) -> Result<(), String> {
+    compile_methods(
+        CompileBatch {
+            batch_id: "edit-batch",
+            request_id: 1,
+            attempt_nonce: None,
+            principal: Some("agent:a"),
+            tenant: "tenant-a",
+            graph: "graph-a",
+            placement_epoch: 0,
+            idempotency_key: "idem-edit",
+            expected_graph_version: Some(0),
+            fencing_token: None,
+            created_at_ms: 1,
+            default_surface: MutationSurface::Graph,
+            authoritative_state: None,
+            status_writer: writer,
+        },
+        methods,
+    )
+    .map(|_| ())
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R173.8
+#[test]
+fn only_harness_edit_sets_edit_status() {
+    let node = |status: &str| Method::AddNode {
+        node_id: "edit:new".to_string(),
+        properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({
+            "_harness_edit": true,
+            "editStatus": status,
+        }))
+        .unwrap(),
+    };
+    // A caller's write of the status is refused, whatever the value, and the same write
+    // compiles under the edit machine and for a replica.
+    for status in ["proposed", "shipped"] {
+        assert_eq!(
+            compile_as(StatusWriter::Caller, vec![node(status)]).unwrap_err(),
+            EDIT_STATUS_ENGINE_OWNED_MESSAGE
+        );
+        assert!(compile_as(StatusWriter::EditMachine, vec![node(status)]).is_ok());
+        assert!(compile_as(StatusWriter::Replicated, vec![node(status)]).is_ok());
+    }
+
+    // `Create` writes the edit as `proposed` with its `targetsDimension` edge, in one batch.
+    let core = GraphCore::new();
+    core.add_node("dim:tokens".to_string(), rmp_serde::to_vec_named(&serde_json::json!({})).unwrap());
+    let (write, operations) = create_batch("tenant-a", "edit:new", "dim:tokens", 4, Some(2)).unwrap();
+    assert!(compile_as(StatusWriter::EditMachine, vec![write.clone()]).is_ok());
+    assert_eq!(
+        compile_as(StatusWriter::Caller, vec![write]).unwrap_err(),
+        EDIT_STATUS_ENGINE_OWNED_MESSAGE,
+        "a caller's batch naming the status is refused too"
+    );
+    medulla_graph_algos::algorithms::batch_update(&core, &operations).unwrap();
+    let record = read_op(&core, "tenant-a", "edit:new").unwrap();
+    assert_eq!(record.status, EditStatus::Proposed);
+    let properties = medulla_types::msgpack::decode_property_object(
+        &core.get_node_properties("edit:new").unwrap(),
+    )
+    .unwrap();
+    assert_eq!(properties["editRound"], 4);
+    assert_eq!(properties["policyRevision"], 2);
+    assert_eq!(properties["tenant_id"], "tenant-a");
+    assert!(core
+        .analysis_snapshot()
+        .edge_properties
+        .contains_key(&("edit:new".to_string(), "dim:tokens".to_string())));
+
+    // The status then moves only by the machine: ship answers `shipped`.
+    assert_eq!(
+        apply(&core, "tenant-a", "edit:new", EditEvent::Ship),
+        Ok(EditStatus::Shipped)
     );
 }

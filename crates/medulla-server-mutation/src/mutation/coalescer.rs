@@ -409,6 +409,7 @@ struct OwnedMutationCtx {
     cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
+    status_writer: medulla_types::edit_machine::StatusWriter,
 }
 
 impl OwnedMutationCtx {
@@ -430,6 +431,7 @@ impl OwnedMutationCtx {
             #[cfg(feature = "streaming")]
             cdc: ctx.cdc.cloned(),
             materialization_manifest: ctx.materialization_manifest.cloned(),
+            status_writer: ctx.status_writer,
         }
     }
 
@@ -452,6 +454,7 @@ impl OwnedMutationCtx {
             cdc: self.cdc.as_ref(),
             materialization_manifest: self.materialization_manifest.as_ref(),
             write_coalescer: None,
+            status_writer: self.status_writer,
         }
     }
 }

@@ -278,6 +278,7 @@ pub(super) fn commit_sql_change(
         .unwrap();
     let batch = compile_opaque_method(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id,
             attempt_nonce: Some(Nonce::from_bytes([request_id as u8; 32])),

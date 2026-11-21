@@ -590,6 +590,7 @@ mod raft_response_receipt_tests {
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
         let batch = medulla_server_api::batch_compile::compile_methods(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Replicated,
                 batch_id: "raft-receipt-cas",
                 request_id: 7,
                 attempt_nonce: None,

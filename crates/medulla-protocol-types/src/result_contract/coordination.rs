@@ -285,6 +285,7 @@ method_results! {
     // MEDULLA-CQ-ORCH-R702.10: the document a model or workflow export wrote.
     ProcessDocumentExport(ProcessDocumentExport) => Json<medulla_types::process_exchange::ProcessDocumentExported>;
     ProcessModelExport(ProcessModelExport) => Json<medulla_types::process_import::ProcessModelExported>;
+    HarnessEditCreate(HarnessEdit / "create") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditGet(HarnessEdit / "get") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     ObservationStatePut(ObservationState / "put") => Raw<medulla_work_types::observation_state::ObservationRecord>;

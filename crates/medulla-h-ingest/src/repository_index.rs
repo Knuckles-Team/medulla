@@ -368,6 +368,7 @@ pub fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, Strin
     } = lower(result)?;
     let mutation = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &envelope_id,
             request_id: 1,
             attempt_nonce: None,

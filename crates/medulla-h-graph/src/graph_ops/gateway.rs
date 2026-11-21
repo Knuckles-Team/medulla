@@ -189,6 +189,7 @@ pub async fn try_handle_gateway(
         )
     });
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: state.read().await.local_anonymous,
         req_id,
         caller,
@@ -233,6 +234,7 @@ pub async fn try_handle_gateway(
     // never under the caller that asked for it.
     if matches!(method, Method::RetentionCleanupRun { .. }) {
         let ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             caller: Some(super::retention_cleanup::RETENTION_ACTOR),
             principal: None,
             ..ctx

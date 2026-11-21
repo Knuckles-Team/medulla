@@ -591,6 +591,7 @@ pub fn begin_named_admin_saga_with_nonce(
     let event_type = public_admin_event_type(existing.as_ref(), result_contract);
     let mut batch = medulla_server_api::batch_compile::compile_opaque_method(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id: req_id,
             attempt_nonce,
@@ -661,6 +662,7 @@ pub fn begin_named_admin_saga_with_private_payload_and_nonce(
     let expected = medulla_transaction::version(&backend.admin_mutations_read()?)?;
     let mut batch = medulla_server_api::batch_compile::compile_opaque_digest(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id: req_id,
             attempt_nonce,

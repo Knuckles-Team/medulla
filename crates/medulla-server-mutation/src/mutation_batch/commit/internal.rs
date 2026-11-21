@@ -204,6 +204,7 @@ async fn replay_internal_graph(
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let probe = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id,
             attempt_nonce,
@@ -384,6 +385,7 @@ async fn commit_prepared_internal_graph(
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
             request_id,
             attempt_nonce,

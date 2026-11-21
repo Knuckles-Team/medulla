@@ -70,6 +70,7 @@ impl SqlOwnerMutation<'_> {
             authority.idempotency_key(),
         );
         compile(medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id: self.request_id,
             attempt_nonce: self.attempt_nonce,

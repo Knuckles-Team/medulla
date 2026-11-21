@@ -1,4 +1,4 @@
-//! Served harness edit lifecycle (MEDULLA-DECISION-ENGINE-R173.7).
+//! Served harness edit lifecycle (MEDULLA-DECISION-ENGINE-R173.7, R173.8).
 //!
 //! The engine owns the `core:editStatus` of a harness edit. A `Transition` is
 //! gateway-routed (`Route::HarnessEdit`): the edit node is read, the event is applied with
@@ -13,11 +13,14 @@
 
 use super::terminal::GraphOpsContext;
 use super::*;
-use medulla_protocol_types::result_contract::coordination::{HarnessEditGet, HarnessEditTransition};
-use medulla_types::edit_machine::{EditEvent, EditStatus};
+use medulla_protocol_types::result_contract::coordination::{
+    HarnessEditCreate, HarnessEditGet, HarnessEditTransition,
+};
+use medulla_types::edit_machine::{EditEvent, EditStatus, StatusWriter, EDIT_MACHINE};
 use medulla_types::transition_refused::MachineState;
 use medulla_work_types::harness_edit::{
-    HarnessEditOp, HarnessEditRecord, HARNESS_EDIT_STATUS_INVALID, HARNESS_EDIT_UNKNOWN,
+    HarnessEditOp, HarnessEditRecord, HARNESS_EDIT_EXISTS, HARNESS_EDIT_STATUS_INVALID,
+    HARNESS_EDIT_UNKNOWN,
 };
 
 fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
@@ -126,9 +129,109 @@ pub(super) fn admit_transition(
     })
 }
 
-/// The `Route::HarnessEdit` entry: admit the event, then commit the node upsert through the
-/// coalescable gateway.
-pub(super) async fn handle_transition(
+/// The edit node and `targetsDimension` edge of one `Create`, as the one `BatchUpdate` that
+/// commits both. The initial status is the initial state of `EditMachine`, never the
+/// caller's.
+pub(super) fn create_batch(
+    tenant: &str,
+    edit_id: &str,
+    dimension_iri: &str,
+    round: u32,
+    policy_revision: Option<u64>,
+) -> Result<(Method, Vec<u8>), String> {
+    let mut properties = serde_json::json!({
+        "_harness_edit": true,
+        "editStatus": EDIT_MACHINE.initial.stored(),
+        "editRound": round,
+        "tenant_id": tenant,
+    });
+    if let Some(revision) = policy_revision {
+        properties["policyRevision"] = serde_json::json!(revision);
+    }
+    let operations = serde_json::json!([
+        {"op": "upsert_node", "id": edit_id, "properties": properties},
+        {
+            "op": "upsert_edge",
+            "source": edit_id,
+            "target": dimension_iri,
+            "properties": {"relationship": "targetsDimension"},
+        },
+    ]);
+    let operations_msgpack = rmp_serde::to_vec_named(&operations).map_err(|error| {
+        refuse(
+            "PARAMETER_INVALID",
+            format!("edit encoding failed: {error}"),
+        )
+    })?;
+    Ok((
+        Method::BatchUpdate {
+            operations_msgpack: operations_msgpack.clone(),
+        },
+        operations_msgpack,
+    ))
+}
+
+/// Serve one `Create`: the edit node and its `targetsDimension` edge commit in one batch
+/// through the staged gateway, under the edit machine as the writer.
+async fn handle_create(
+    ctx: &MutationCtx<'_>,
+    edit_id: &str,
+    dimension_iri: &str,
+    round: u32,
+    policy_revision: Option<u64>,
+) -> Response {
+    if ctx.core.get_node_properties(edit_id).is_some() {
+        return Response::err(
+            ctx.req_id,
+            refuse(
+                HARNESS_EDIT_EXISTS.as_str(),
+                format!("harness edit {edit_id} already exists"),
+            ),
+        );
+    }
+    if ctx.core.get_node_properties(dimension_iri).is_none() {
+        return Response::err(
+            ctx.req_id,
+            refuse(
+                "PARAMETER_INVALID",
+                format!("dimension {dimension_iri} is not a node of the graph"),
+            ),
+        );
+    }
+    let (write, operations) = match create_batch(
+        ctx.tenant_scope,
+        edit_id,
+        dimension_iri,
+        round,
+        policy_revision,
+    ) {
+        Ok(batch) => batch,
+        Err(error) => return Response::err(ctx.req_id, error),
+    };
+    let record = HarnessEditRecord {
+        edit_id: edit_id.to_string(),
+        status: EDIT_MACHINE.initial,
+    };
+    let plan = MutationPlan::for_method(&write);
+    let edit_id = edit_id.to_string();
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
+        if core.get_node_properties(&edit_id).is_some() {
+            return Err(refuse(
+                HARNESS_EDIT_EXISTS.as_str(),
+                format!("harness edit {edit_id} already exists"),
+            ));
+        }
+        medulla_graph_algos::algorithms::batch_update(core, &operations)?;
+        ResultPayload::of::<HarnessEditCreate>(record)
+    })
+    .await
+}
+
+/// The `Route::HarnessEdit` entry: a `Create` commits the edit node and edge, a `Transition`
+/// admits the event and commits the node upsert through the coalescable gateway. Both commit
+/// under [`StatusWriter::EditMachine`], the one writer of `editStatus` the mutation compiler
+/// admits.
+pub(super) async fn handle_mutation(
     ctx: &MutationCtx<'_>,
     _tenant_id: &str,
     method: &Method,
@@ -136,21 +239,38 @@ pub(super) async fn handle_transition(
     let Method::HarnessEdit { op } = method else {
         return None;
     };
-    let HarnessEditOp::Transition { edit_id, event } = op.as_ref() else {
-        return Some(Response::err(
-            ctx.req_id,
-            refuse(
-                "PARAMETER_INVALID",
-                "a HarnessEdit get is served by the graph read path",
-            ),
-        ));
-    };
     if let Err(detail) = op.check() {
         return Some(Response::err(
             ctx.req_id,
             refuse("PARAMETER_INVALID", detail),
         ));
     }
+    let ctx = &MutationCtx {
+        status_writer: StatusWriter::EditMachine,
+        ..*ctx
+    };
+    let (edit_id, event) = match op.as_ref() {
+        HarnessEditOp::Create {
+            edit_id,
+            dimension_iri,
+            round,
+            policy_revision,
+        } => {
+            return Some(
+                handle_create(ctx, edit_id, dimension_iri, *round, *policy_revision).await,
+            );
+        }
+        HarnessEditOp::Transition { edit_id, event } => (edit_id, event),
+        HarnessEditOp::Get { .. } => {
+            return Some(Response::err(
+                ctx.req_id,
+                refuse(
+                    "PARAMETER_INVALID",
+                    "a HarnessEdit get is served by the graph read path",
+                ),
+            ));
+        }
+    };
     let tenant = ctx.tenant_scope;
     let admitted = match admit_transition(ctx.core, tenant, edit_id, *event) {
         Ok(admitted) => admitted,

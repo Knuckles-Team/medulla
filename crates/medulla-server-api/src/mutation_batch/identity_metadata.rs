@@ -116,8 +116,26 @@ fn node_id_of(method: &Method) -> &str {
     }
 }
 
+/// The property blob a node-writing method carries, without taking the method mutably
+/// (MEDULLA-DECISION-ENGINE-R173.8 reads it; admission above edits it through
+/// [`properties_of`]).
+pub(crate) fn properties_blob(method: &Method) -> Option<&[u8]> {
+    match method {
+        Method::AddNode {
+            properties_msgpack, ..
+        }
+        | Method::CreateNodeIfAbsent {
+            properties_msgpack, ..
+        }
+        | Method::TxnAddNode {
+            properties_msgpack, ..
+        } => Some(properties_msgpack),
+        _ => None,
+    }
+}
+
 /// The text of a write route whose body is a statement or a document.
-fn statement_text(method: &Method) -> Option<Vec<&str>> {
+pub(crate) fn statement_text(method: &Method) -> Option<Vec<&str>> {
     match method {
         Method::ApplyMutation { query, .. }
         | Method::Sql { query, .. }

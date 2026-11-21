@@ -75,6 +75,7 @@ mod internal_replay_tests {
         ) -> medulla_protocol_types::mutation_batch::MutationBatch {
             compile_methods(
                 CompileBatch {
+                    status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                     batch_id: "internal-replay",
                     request_id,
                     attempt_nonce: Some(Nonce::from_bytes([nonce; 32])),

@@ -54,6 +54,7 @@ pub(super) fn compile_batch_context<'a>(
         created_at_ms,
         default_surface,
         authoritative_state,
+        status_writer: ctx.status_writer,
     }
 }
 

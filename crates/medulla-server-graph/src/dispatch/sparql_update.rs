@@ -950,6 +950,7 @@ mod coordinator_restart_tests {
     ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         medulla_server_api::batch_compile::compile_opaque_digest(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: id,
                 request_id: 41,
                 attempt_nonce: None,

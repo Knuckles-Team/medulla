@@ -1361,6 +1361,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "HarnessEdit",
         &[
+            "HARNESS_EDIT_EXISTS",
             "HARNESS_EDIT_STATUS_INVALID",
             "HARNESS_EDIT_UNKNOWN",
             "PARAMETER_INVALID",
@@ -2014,6 +2015,24 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     }
     if d.policy.is_durable() {
         codes.insert("CORRUPT_MUTATION_LEDGER");
+    }
+    // MEDULLA-DECISION-ENGINE-R173.8: the mutation compiler refuses a caller write of
+    // `editStatus` on every node-writing route.
+    if matches!(
+        d.id.as_str(),
+        "AddNode"
+            | "CreateNodeIfAbsent"
+            | "TxnAddNode"
+            | "ApplyMutation"
+            | "Sql"
+            | "CypherQuery"
+            | "AddTriples"
+            | "ApplyChangeEnvelope"
+            | "ApplyChangeEnvelopeDraft"
+            | "ApplyChangeEnvelopes"
+            | "ApplyChangeEnvelopeDrafts"
+    ) {
+        codes.insert("EDIT_STATUS_ENGINE_OWNED");
     }
     // The harness vocabulary's typed write admission (MEDULLA-ORCH-VOCAB-R801/R802)
     // runs inside every node-write method: the direct AddNode gateway path and

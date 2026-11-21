@@ -50,9 +50,43 @@ def _apply(clean_graph: Any, key: str, ops: list[dict[str, Any]]) -> None:
     assert [result["result"] for result in results] == ["applied"], results
 
 
+async def _create_edits(graph: str) -> None:
+    """One shipped edit per round: created and shipped through ``HarnessEdit``, the only
+    writer of ``editStatus`` (R173.8). Each edit points at the dimension with a
+    ``targetsDimension`` edge, which ``Create`` writes."""
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        decision = dc.DecisionClient(client=client, graph=graph)
+        for round_number in SHIPPED_ROUNDS:
+            created = await decision.harness_edit(
+                {
+                    "op": "create",
+                    "edit_id": edit_id(round_number),
+                    "dimension_iri": DIMENSION,
+                    "round": round_number,
+                },
+                idempotency_key=f"r173-6:create:{round_number}",
+            )
+            assert created["status"] == "proposed", created
+            shipped = await decision.harness_edit(
+                {
+                    "op": "transition",
+                    "edit_id": edit_id(round_number),
+                    "event": "ship",
+                },
+                idempotency_key=f"r173-6:ship:{round_number}",
+            )
+            assert shipped["status"] == "shipped", shipped
+    finally:
+        await client.close()
+
+
 def _write_edits(clean_graph: Any) -> None:
-    """The dimension, the policy and one shipped edit per round, each edit
-    pointing at the dimension with a ``targetsDimension`` edge."""
+    """The dimension and the policy through the generated client write, then the shipped
+    edits through ``HarnessEdit``."""
     nodes: list[tuple[str, dict[str, Any]]] = [
         (DIMENSION, {}),
         (
@@ -64,17 +98,6 @@ def _write_edits(clean_graph: Any) -> None:
             },
         ),
     ]
-    nodes.extend(
-        (
-            edit_id(round_number),
-            {
-                "_harness_edit": True,
-                "editStatus": "shipped",
-                "editRound": round_number,
-            },
-        )
-        for round_number in SHIPPED_ROUNDS
-    )
     ops = [
         op(
             ordinal,
@@ -83,21 +106,8 @@ def _write_edits(clean_graph: Any) -> None:
         )
         for ordinal, (node_id, props) in enumerate(nodes)
     ]
-    ops.extend(
-        op(
-            len(nodes) + offset,
-            "AddEdge",
-            {
-                "source_id": edit_id(round_number),
-                "target_id": DIMENSION,
-                "properties_msgpack": msgpack.packb(
-                    {"relationship": "targetsDimension"}
-                ),
-            },
-        )
-        for offset, round_number in enumerate(SHIPPED_ROUNDS)
-    )
     _apply(clean_graph, "r173-6:concentration:edits", ops)
+    asyncio.run(_create_edits(_graph_name(clean_graph)))
 
 
 def _options() -> list[dc.DeclaredOption]:

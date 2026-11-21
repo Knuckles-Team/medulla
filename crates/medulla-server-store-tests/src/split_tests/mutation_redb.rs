@@ -43,6 +43,7 @@ fn durable_replay_context<'a>(
     persistence: &'a Arc<dyn PersistenceBackend>,
 ) -> MutationCtx<'a> {
     MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 0,
         caller: Some("system-agent"),
@@ -100,6 +101,7 @@ async fn routed_mutation_produces_one_durable_record_one_audit_entry_and_one_cdc
     assert_eq!(plan.durability_domain, DurabilityDomain::GraphRedb);
 
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 1,
         caller: Some("system-agent"),
@@ -216,6 +218,7 @@ async fn commit_finalize_refreshes_the_graph_size_gauges() {
         };
         let plan = MutationPlan::for_method(&method);
         let ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             anonymous: false,
             req_id: 1,
             caller: Some("system-agent"),
@@ -311,6 +314,7 @@ async fn audited_mutation_writes_audit_but_cdc_stays_policy_gated() {
     assert_eq!(plan.durability_domain, DurabilityDomain::GraphRedb);
 
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 2,
         caller: Some("system-agent"),
@@ -378,6 +382,7 @@ where
     assert_eq!(plan.durability_domain, DurabilityDomain::GraphRedb);
 
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 1,
         caller: Some("system-agent"),
@@ -567,6 +572,7 @@ async fn w1c_from_msgpack_and_reconcile_reset_the_cdc_feed_and_audit() {
         let graph_name = format!("g-w1c-{tag}");
 
         let ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             anonymous: false,
             req_id: 1,
             caller: Some("system-agent"),
@@ -592,6 +598,7 @@ async fn w1c_from_msgpack_and_reconcile_reset_the_cdc_feed_and_audit() {
         };
         let seed_plan = MutationPlan::for_method(&seed);
         let seed_ctx = MutationCtx {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             idempotency_key: "w1c-seed",
             ..ctx
         };
@@ -684,6 +691,7 @@ async fn broker_family_routed_mutation_is_audited_with_no_cdc() {
     assert!(!plan.emits_cdc, "DeclareExchange policy-does-NOT-emit-CDC");
 
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 10,
         caller: Some("system-agent"),
@@ -766,6 +774,7 @@ async fn touch_nodes_commits_authoritative_state_without_audit_or_cdc() {
     assert!(!plan.emits_cdc);
 
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 11,
         caller: Some("system-agent"),
@@ -893,6 +902,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
     };
     let plan_ro = MutationPlan::for_method(&method_ro);
     let ctx_ro = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 20,
         caller: Some("system-agent"),
@@ -965,6 +975,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
     assert!(plan_rw.audited, "MineAssociate is policy-audited");
     assert!(!plan_rw.emits_cdc, "MineAssociate policy-does-NOT-emit-CDC");
     let ctx_rw = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 21,
         caller: Some("system-agent"),
@@ -1045,6 +1056,7 @@ async fn durable_facade_replay_uses_stable_key_and_kernel_nonce_authority() {
     let plan = MutationPlan::for_method(&method);
     let apply_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let first = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         req_id: 4,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([1; 32])),
         idempotency_key: "caller-stable-remove",
@@ -1066,6 +1078,7 @@ async fn durable_facade_replay_uses_stable_key_and_kernel_nonce_authority() {
         Arc::new(RedbBackend::open(dir_s, 64).expect("reopen redb backend"));
     let core = Arc::new(GraphCore::new());
     let retry = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         req_id: 5,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([2; 32])),
         idempotency_key: "caller-stable-remove",
@@ -1082,6 +1095,7 @@ async fn durable_facade_replay_uses_stable_key_and_kernel_nonce_authority() {
     assert_eq!(apply_count.load(std::sync::atomic::Ordering::SeqCst), 1);
 
     let consumed = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 6,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([1; 32])),
@@ -1101,6 +1115,7 @@ async fn durable_facade_replay_uses_stable_key_and_kernel_nonce_authority() {
     };
     let changed_plan = MutationPlan::for_method(&changed);
     let conflict = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 7,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([3; 32])),
@@ -1142,6 +1157,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     let plan = MutationPlan::for_method(&method);
     let apply_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let first = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         req_id: 40,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([11; 32])),
         idempotency_key: "caller-stable-cypher",
@@ -1164,6 +1180,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
         Arc::new(RedbBackend::open(dir_s, 64).expect("reopen redb backend"));
     let core = Arc::new(GraphCore::new());
     let retry = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         req_id: 41,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([12; 32])),
         idempotency_key: "caller-stable-cypher",
@@ -1182,6 +1199,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     assert!(core.has_node("n1"));
 
     let consumed = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 42,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([11; 32])),
@@ -1203,6 +1221,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     };
     let changed_plan = MutationPlan::for_method(&changed);
     let conflict = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: 43,
         attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([13; 32])),

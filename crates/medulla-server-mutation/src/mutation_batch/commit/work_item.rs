@@ -289,6 +289,7 @@ async fn commit_work_item_plan(plan: WorkItemCommitPlan<'_>) -> Result<ResultPay
     let expected_graph_version = authoritative_graph_version(persistence, &fname, core).await?;
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &identity.batch_id,
             request_id: identity.durable_request_id,
             attempt_nonce,

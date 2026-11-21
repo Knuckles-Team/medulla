@@ -373,6 +373,7 @@ fn identity_payload_digest(
     use crate::batch_compile::compile::CompileBatch;
     compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &identity.batch_id,
             request_id: identity.durable_request_id,
             attempt_nonce: None,

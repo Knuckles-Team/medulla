@@ -495,6 +495,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: tag,
                 request_id: now,
                 attempt_nonce: None,

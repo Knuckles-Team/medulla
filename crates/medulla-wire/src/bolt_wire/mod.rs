@@ -585,6 +585,7 @@ async fn commit_writes(
     let plan = MutationPlan::for_method(&method);
     let principal = verified.principal_persistence_id();
     let ctx = MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
         anonymous: false,
         req_id: request_id,
         caller: Some(verified.agent_id()),

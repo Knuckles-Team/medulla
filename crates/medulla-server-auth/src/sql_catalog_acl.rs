@@ -531,6 +531,7 @@ fn commit_source_acl_mutation(
     let expected_revision = acl.mutation_version(authority.tenant_scope(), SOURCE_ACL_RESOURCE)?;
     let batch = medulla_server_api::batch_compile::compile_opaque_method(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id,
             attempt_nonce: authority.attempt_nonce(),
@@ -2296,6 +2297,7 @@ mod tests {
         };
         medulla_server_api::batch_compile::compile_opaque_method(
             medulla_server_api::batch_compile::CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id,
                 request_id: 17,
                 attempt_nonce: authority.attempt_nonce(),

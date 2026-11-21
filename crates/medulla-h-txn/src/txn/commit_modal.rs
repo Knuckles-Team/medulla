@@ -316,8 +316,15 @@ async fn compile_cross_modal_batch(
     ))
     .map_err(|error| format!("cross-modal manifest encode failed: {error}"))?;
     let principal = txn_receipt_principal(args.caller)?;
+    // MEDULLA-DECISION-ENGINE-R173.8: `compile_crossmodal` sees only the manifest digest, so
+    // the caller's graph methods are checked for `editStatus` here, before it compiles.
+    medulla_server_api::mutation_batch::edit_status::refuse_direct_edit_status_all(
+        args.methods,
+        medulla_types::edit_machine::StatusWriter::Caller,
+    )?;
     let batch = medulla_server_api::batch_compile::compile_crossmodal(
         medulla_server_api::batch_compile::CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id: args.request_id,
             attempt_nonce: args.attempt_nonce,

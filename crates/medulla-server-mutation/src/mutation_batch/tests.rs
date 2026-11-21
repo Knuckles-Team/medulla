@@ -261,6 +261,7 @@ fn terminal_work_item_retry_identity_is_transport_independent_and_scope_bound() 
 fn transaction_compiler_preserves_order_and_fences() {
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "txn-1",
             request_id: 1,
             attempt_nonce: None,
@@ -313,6 +314,7 @@ fn change_envelope_projection_failure_never_partially_publishes() {
         rmp_serde::to_vec_named(serde_json::json!({"value": 1}).as_object().unwrap()).unwrap();
     let mutation = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "projection-atomic",
             request_id: 9,
             attempt_nonce: None,
@@ -387,6 +389,7 @@ fn change_envelope_projection_failure_never_partially_publishes() {
 fn rdf_adapter_marks_rdf_surface() {
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "rdf-1",
             request_id: 2,
             attempt_nonce: None,
@@ -781,6 +784,7 @@ fn graph_routed_compiler_refuses_a_store_authoritative_method() {
     // which names neither the method nor the reason.
     let error = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "store-authoritative",
             request_id: 1,
             attempt_nonce: None,
@@ -824,6 +828,7 @@ fn graph_routed_compiler_refuses_a_store_authoritative_method() {
 fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "graph-principal",
             request_id: 1,
             attempt_nonce: None,
@@ -880,6 +885,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
     let compile = |batch_id: &str, methods: Vec<Method>| {
         compile_methods(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id,
                 request_id: 1,
                 attempt_nonce: None,
@@ -927,6 +933,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
 fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() {
     let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "kv-principal",
             request_id: 1,
             attempt_nonce: None,
@@ -976,6 +983,7 @@ fn compile_sql_source_dirty_batch(
     };
     let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "sql-source-dirty-stable-batch",
             request_id,
             attempt_nonce: Some(attempt_nonce),
@@ -1051,6 +1059,7 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
 
     let non_sql = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "non-sql-opaque",
             request_id: 13,
             attempt_nonce: None,
@@ -1195,6 +1204,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
 
     let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "kv-served",
             request_id: 7,
             attempt_nonce: None,
@@ -1268,6 +1278,7 @@ fn a_caller_cannot_name_either_reserved_graph_shard_identifier() {
     let compile_with = |tenant: &str, graph: &str| {
         compile_methods(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: "reserved",
                 request_id: 1,
                 attempt_nonce: None,
@@ -1343,6 +1354,7 @@ fn editing_a_compiled_batch_after_the_mint_is_refused() {
     let compiled = || {
         compile_methods(
             CompileBatch {
+                status_writer: medulla_types::edit_machine::StatusWriter::Caller,
                 batch_id: "post-mint-edit",
                 request_id: 1,
                 attempt_nonce: None,

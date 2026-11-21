@@ -1402,9 +1402,13 @@ class DecisionClient:
     async def harness_edit(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
-        """Send ``HarnessEdit``: ``{"op": "transition", "edit_id": "...", "event":
-        "ship" | "revert"}`` applies one event of the edit machine to a stored harness
-        edit, ``{"op": "get", "edit_id": "..."}`` reads its recorded status."""
+        """Send ``HarnessEdit``: ``{"op": "create", "edit_id": "...", "dimension_iri":
+        "...", "round": 1}`` writes the edit as ``proposed`` with its
+        ``targetsDimension`` edge (the only way to create one: a generic write naming
+        ``editStatus`` is refused ``EDIT_STATUS_ENGINE_OWNED``), ``{"op": "transition",
+        "edit_id": "...", "event": "ship" | "revert"}`` applies one event of the edit
+        machine to a stored harness edit, ``{"op": "get", "edit_id": "..."}`` reads its
+        recorded status."""
         result = await self.client._send(
             "HarnessEdit",
             {"op": dict(op)},

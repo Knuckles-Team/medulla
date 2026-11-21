@@ -17,8 +17,15 @@ pub const HARNESS_EDIT_UNKNOWN: RefusalCode = RefusalCode::new("HARNESS_EDIT_UNK
 pub const HARNESS_EDIT_STATUS_INVALID: RefusalCode =
     RefusalCode::new("HARNESS_EDIT_STATUS_INVALID");
 
+/// A `Create` names an edit node that already exists (MEDULLA-DECISION-ENGINE-R173.8).
+pub const HARNESS_EDIT_EXISTS: RefusalCode = RefusalCode::new("HARNESS_EDIT_EXISTS");
+
 /// The refusal codes of `HarnessEdit`, besides `TRANSITION_REFUSED`.
-pub const REFUSALS: &[RefusalCode] = &[HARNESS_EDIT_UNKNOWN, HARNESS_EDIT_STATUS_INVALID];
+pub const REFUSALS: &[RefusalCode] = &[
+    HARNESS_EDIT_UNKNOWN,
+    HARNESS_EDIT_STATUS_INVALID,
+    HARNESS_EDIT_EXISTS,
+];
 
 /// One harness edit and its recorded status.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,7 +41,16 @@ pub struct HarnessEditRecord {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum HarnessEditOp {
-    /// Apply one event to the edit: the only mutation.
+    /// Create the edit as `proposed`, targeting one dimension: the initial state comes from
+    /// `EditMachine`, never from the caller (MEDULLA-DECISION-ENGINE-R173.8).
+    Create {
+        edit_id: String,
+        dimension_iri: String,
+        round: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        policy_revision: Option<u64>,
+    },
+    /// Apply one event to the edit.
     Transition { edit_id: String, event: EditEvent },
     /// Read the edit's recorded status.
     Get { edit_id: String },
@@ -43,23 +59,30 @@ pub enum HarnessEditOp {
 impl HarnessEditOp {
     /// Whether this operation changes durable state.
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Transition { .. })
+        matches!(self, Self::Create { .. } | Self::Transition { .. })
     }
 
     /// The edit the operation names.
     pub fn edit_id(&self) -> &str {
         match self {
-            Self::Transition { edit_id, .. } | Self::Get { edit_id } => edit_id,
+            Self::Create { edit_id, .. }
+            | Self::Transition { edit_id, .. }
+            | Self::Get { edit_id } => edit_id,
         }
     }
 
-    /// The edit id is 1 to 256 characters.
+    /// The edit id is 1 to 256 characters; a `Create` also names a dimension.
     pub fn check(&self) -> Result<(), String> {
         let length = self.edit_id().chars().count();
         if length == 0 || length > MAX_EDIT_ID_CHARS {
             return Err(format!(
                 "edit_id must be 1 to {MAX_EDIT_ID_CHARS} characters, got {length}"
             ));
+        }
+        if let Self::Create { dimension_iri, .. } = self {
+            if dimension_iri.is_empty() {
+                return Err("dimension_iri must not be empty".to_string());
+            }
         }
         Ok(())
     }
@@ -86,6 +109,21 @@ mod tests {
             transition
         );
         assert!(transition.is_mutation());
+        let create = HarnessEditOp::Create {
+            edit_id: "edit:1".into(),
+            dimension_iri: "dim:tokens".into(),
+            round: 2,
+            policy_revision: None,
+        };
+        assert!(create.is_mutation() && create.check().is_ok());
+        assert!(HarnessEditOp::Create {
+            edit_id: "edit:1".into(),
+            dimension_iri: String::new(),
+            round: 0,
+            policy_revision: None,
+        }
+        .check()
+        .is_err());
         let get = HarnessEditOp::Get {
             edit_id: "edit:1".into(),
         };

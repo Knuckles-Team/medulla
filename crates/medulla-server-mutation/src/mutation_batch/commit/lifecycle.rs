@@ -100,6 +100,7 @@ pub async fn commit_lifecycle(
         .unwrap_or(0);
     let batch = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: &batch_id,
             request_id,
             attempt_nonce,
