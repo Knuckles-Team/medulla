@@ -213,6 +213,26 @@ impl Journey {
             .await
     }
 
+    async fn relations_for(
+        &self,
+        principal: &str,
+        request: BookmarkRelationsRequest,
+    ) -> BookmarkRelationsResult {
+        ok(
+            "BookmarkRelations as a registered reader",
+            self.served
+                .verified_as(
+                    principal,
+                    TENANT,
+                    &["kg:read"],
+                    Method::BookmarkRelations {
+                        request: Box::new(request),
+                    },
+                )
+                .await,
+        )
+    }
+
     async fn relations(&self, request: BookmarkRelationsRequest) -> BookmarkRelationsResult {
         ok(
             "BookmarkRelations",
@@ -425,13 +445,55 @@ async fn relations_hide_denied_edges_and_counts() {
                 journey.served.graph(),
                 "bookmark-relations-admin",
                 Method::BookmarkRelations {
-                    request: Box::new(relations_request(node_ids, 100, None)),
+                    request: Box::new(relations_request(node_ids.clone(), 100, None)),
                 },
             )
             .await,
     );
     assert_eq!(as_admin.edges, all.edges);
     assert_eq!(as_admin.binding, all.binding);
+
+    // A row-policy-denied edge: a registered reader sees every edge while the rows are public,
+    // then none that leaves toward or from a row it may not read, and no count includes one.
+    const READER: &str = "bookmark-reader";
+    const DENIED: &str = "domain:b.example";
+    journey.served.register_reader(READER).await;
+    let before = journey
+        .relations_for(READER, relations_request(node_ids.clone(), 100, None))
+        .await;
+    assert_eq!(edge_set(&before.edges), expected_edges());
+    journey.served.deny_row(DENIED, "bookmark-owner").await;
+    let mut visible = expected_edges();
+    assert!(visible.remove(&(
+        "bookmark:beta".to_string(),
+        DENIED.to_string(),
+        "linksToDomain".to_string(),
+    )));
+    let after = journey
+        .relations_for(READER, relations_request(node_ids.clone(), 100, None))
+        .await;
+    assert_eq!(edge_set(&after.edges), visible);
+    assert_eq!(after.edges.len(), visible.len(), "a denied edge is not counted");
+    // Pages of two hold the same visible edges, with no gap where the denied edge was.
+    let mut paged = Vec::new();
+    let mut cursor = None;
+    loop {
+        let page = journey
+            .relations_for(READER, relations_request(node_ids.clone(), 2, cursor.take()))
+            .await;
+        cursor = page.edges.last().and_then(|edge| edge.cursor.clone());
+        paged.extend(page.edges);
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(paged.len(), visible.len());
+    assert_eq!(edge_set(&paged), visible);
+    // The System administrator is bound by no row rule and still reads every edge.
+    let admin_after = journey
+        .relations(relations_request(node_ids.clone(), 100, None))
+        .await;
+    assert_eq!(edge_set(&admin_after.edges), expected_edges());
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R001.102.4

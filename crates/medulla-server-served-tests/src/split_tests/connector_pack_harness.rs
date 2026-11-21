@@ -314,9 +314,22 @@ impl Served {
         dispatch_test_on_heap(&self.state, request).await
     }
 
-    /// One request as `tenant`'s verified context with `scopes`, through the chokepoint.
+    /// One request as `tenant`'s verified context with `scopes`, through the chokepoint, as the
+    /// harness administrator (a System identity: no row rule narrows its reads).
     pub(super) async fn verified(
         &self,
+        tenant: &str,
+        scopes: &[&str],
+        method: Method,
+    ) -> Response {
+        self.verified_as(ADMIN, tenant, scopes, method).await
+    }
+
+    /// As [`Self::verified`], for `principal`, whose reads the row rules narrow when it is a
+    /// registered non-System identity (see [`Self::register_reader`]).
+    pub(super) async fn verified_as(
+        &self,
+        principal: &str,
         tenant: &str,
         scopes: &[&str],
         method: Method,
@@ -325,11 +338,11 @@ impl Served {
             id: next_id(),
             graph: self.graph.clone(),
             auth_token: String::new(),
-            agent_id: Some(ADMIN.to_string()),
+            agent_id: Some(principal.to_string()),
             method,
             trace_id: None,
         };
-        let context = VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, scopes);
+        let context = VerifiedRequestContext::verified_for_test_with_scopes(principal, tenant, scopes);
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
                 &self.state,
@@ -338,6 +351,42 @@ impl Served {
             ),
         )
         .await
+    }
+
+    /// Register `agent_id` as a regular (non-System) identity with no team and no role, so the
+    /// row rules decide what its reads return.
+    pub(super) async fn register_reader(&self, agent_id: &str) {
+        self.state
+            .write()
+            .await
+            .isolation
+            .register_agent(medulla_identity_types::acl::AgentIdentity {
+                agent_id: agent_id.to_string(),
+                role: medulla_identity_types::acl::AgentRole::Agent,
+                teams: Vec::new(),
+                roles: Vec::new(),
+            });
+    }
+
+    /// Make the row `node_id` of the ingest graph private to `owner`: no other non-System
+    /// identity may read it, whatever the graph and tenant checks allow.
+    pub(super) async fn deny_row(&self, node_id: &str, owner: &str) {
+        let core = self
+            .state
+            .read()
+            .await
+            .registry
+            .get(&self.graph)
+            .expect("the ingest graph exists")
+            .core
+            .clone();
+        let properties = rmp_serde::to_vec_named(&json!({
+            "_owner_id": owner,
+            "_shared_scope": "private",
+        }))
+        .expect("encode the row policy");
+        core.add_node(node_id.to_string(), properties);
+        core.mark_dirty();
     }
 
     /// Upload `bytes` through the blob CAS, hold them under the caller's owner scope and return
