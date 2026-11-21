@@ -1,4 +1,4 @@
-//! Served proof of the owner digest (MEDULLA-BUSINESS-OPS-R003.1).
+//! Served proof of the owner digest (MEDULLA-BUSINESS-OPS-R003.1, R003.2, R003.3).
 //!
 //! The digest definitions of `business_digest::digest_queries()` are put with
 //! `Method::StoredQueryPut` and called with `Method::StoredQueryCall` through the real
@@ -6,7 +6,7 @@
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_source_types::business_digest::{
-    digest_queries, DIGEST_OVERDUE, DIGEST_PENDING_APPROVALS,
+    digest_queries, DIGEST_CHANGED_SINCE, DIGEST_OVERDUE, DIGEST_PENDING_APPROVALS,
 };
 use medulla_source_types::stored_query::StoredCall;
 
@@ -151,6 +151,167 @@ async fn digest_pending_and_overdue_with_supporting_nodes() {
         refusal.contains("STORED_QUERY_PARAM_MISSING"),
         "got: {refusal}"
     );
+}
+
+/// The `tx_from` the engine stamped on one node.
+async fn tx_from_of(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    call_id: u64,
+    node_id: &str,
+) -> i64 {
+    let response = dispatch_on_heap(
+        state,
+        request(
+            call_id,
+            GRAPH,
+            None,
+            Method::GetNodeProperties {
+                node_id: node_id.to_string(),
+            },
+        ),
+    )
+    .await;
+    assert_ok(&response);
+    let Some(ResultPayload::Raw(bytes)) = response.result else {
+        panic!("node properties answer raw msgpack");
+    };
+    let properties = medulla_types::msgpack::decode_property_value(&bytes).unwrap();
+    i64::try_from(properties["tx_from"].as_u64().expect("an engine-stamped tx_from"))
+        .expect("tx_from fits Int")
+}
+
+// spec: MEDULLA-BUSINESS-OPS-R003.2
+#[tokio::test]
+async fn digest_changed_since_uses_known_at() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state();
+    let mut next_id = 7500_u64;
+    let mut send = |method: Method| {
+        next_id += 1;
+        request(next_id, GRAPH, None, method)
+    };
+
+    for query in digest_queries() {
+        assert_ok(&dispatch_on_heap(&state, send(Method::StoredQueryPut { query })).await);
+    }
+    // A listed label, a node of a label the digest does not list, and a second listed
+    // node written after them. The engine stamps `tx_from` on each write.
+    for (id, label) in [
+        ("order:first", "Order"),
+        ("person:skipped", "Person"),
+        ("incident:second", "Incident"),
+    ] {
+        assert_ok(
+            &dispatch_on_heap(&state, send(node(id, serde_json::json!({ "type": label })))).await,
+        );
+    }
+    let first = tx_from_of(&state, 7600, "order:first").await;
+    let second = tx_from_of(&state, 7601, "incident:second").await;
+    assert!(first <= second, "the engine clock never runs backwards");
+
+    let window = |from: i64, to: i64| Method::StoredQueryCall {
+        name: DIGEST_CHANGED_SINCE.to_string(),
+        version: None,
+        args: [
+            ("from".to_string(), serde_json::json!(from)),
+            ("to".to_string(), serde_json::json!(to)),
+        ]
+        .into(),
+    };
+
+    // A window covering both writes lists the two digest labels, by label, and never the
+    // node of an unlisted label.
+    let wide = dispatch_on_heap(&state, send(window(first, second + 1))).await;
+    let mut ids = row_ids(&wide);
+    ids.sort();
+    assert_eq!(ids, vec!["incident:second", "order:first"]);
+
+    // The window is half-open on the transaction time a node was recorded at: `to` equal
+    // to the first stamp excludes it, and a window past the last stamp is empty.
+    let before = dispatch_on_heap(&state, send(window(0, first))).await;
+    assert!(row_ids(&before).is_empty());
+    let after = dispatch_on_heap(&state, send(window(second + 1, second + 1000))).await;
+    assert!(row_ids(&after).is_empty());
+}
+
+// spec: MEDULLA-BUSINESS-OPS-R003.3
+#[tokio::test]
+async fn digest_hides_out_of_scope_nodes() {
+    use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
+    use medulla_server_api::state::ServerState;
+
+    const SECRET: &str = "business-digest-scope-secret"; // sanitizer:ignore
+    const TENANT: &str = "tenant-shared";
+    const OTHER_TENANT: &str = "tenant-other";
+    const ADMIN: &str = "business-digest-scope-admin";
+
+    let dir = tempfile::tempdir().unwrap();
+    let mut server_state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(ADMIN),
+    );
+    server_state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+    let graphs = dir.path().join("graphs");
+    std::fs::create_dir_all(&graphs).unwrap();
+    server_state.persistence = Some(std::sync::Arc::new(
+        medulla_persistence::redb_backend::RedbBackend::open(
+            graphs.to_string_lossy().into_owned(),
+            64,
+        )
+        .expect("open the served graph backend"),
+    ));
+    let state = std::sync::Arc::new(tokio::sync::RwLock::new(server_state));
+    {
+        let mut guard = state.write().await;
+        if guard.registry.get(GRAPH).is_none() {
+            guard
+                .registry
+                .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Team, None)
+                .unwrap();
+        }
+    }
+    let mut call_id = 8000_u64;
+    let mut send = |method: Method| {
+        call_id += 1;
+        let id = call_id;
+        let request = scoped_test_request_on(
+            SECRET,
+            id,
+            GRAPH,
+            method,
+            ScopedTestCaller {
+                principal: ADMIN,
+                tenant: TENANT,
+                scopes: &["*"],
+                nonce: &format!("digest-scope-nonce-{id}"),
+                idempotency_key: &format!("digest-scope-{id}"),
+            },
+        );
+        let state = state.clone();
+        async move { dispatch_test_on_heap(&state, request).await }
+    };
+
+    // One overdue obligation of the caller's tenant and one of another tenant.
+    for (id, tenant) in [("ob:mine", TENANT), ("ob:theirs", OTHER_TENANT)] {
+        let properties = serde_json::json!({
+            "type": "ObligationInstance",
+            "obligationStatus": "open",
+            "instanceDueDate": "2026-01-05",
+            "_tenant": tenant,
+        });
+        assert_ok(&send(node(id, properties)).await);
+    }
+    for query in digest_queries() {
+        assert_ok(&send(Method::StoredQueryPut { query }).await);
+    }
+    let overdue = send(Method::StoredQueryCall {
+        name: DIGEST_OVERDUE.to_string(),
+        version: None,
+        args: [("as_of_date".to_string(), serde_json::json!("2026-03-01"))].into(),
+    })
+    .await;
+    // Only the caller's node contributes a row.
+    assert_eq!(row_ids(&overdue), vec!["ob:mine"]);
 }
 
 /// The canonical `:ruleParameters` of the sales-tax recurrence rule.
