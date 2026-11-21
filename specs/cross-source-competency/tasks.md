@@ -18,12 +18,11 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T012 [US4] MEDULLA-CQ-XSRC-R004.1 Add `:usesComponent` (service to component version) and `:suppliesService`
 - [ ] T013 [US4] MEDULLA-CQ-XSRC-R004.3 Resolve a vendor in erpnext, leanix and dockerhub to one `:Supplier`
 - [x] T014 [US4] MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`
-- [ ] T015 [US4] MEDULLA-CQ-XSRC-R004.5 Query-time link: a join may only cross an approved `owl:sameAs`
+- [ ] T015 [US4] MEDULLA-CQ-XSRC-R004.5 Served test: a UQL traversal crosses records of two sources only over an approved `owl:sameAs` edge (no engine change)
 - [ ] T016 [US1] MEDULLA-CQ-XSRC-R005.1 Row: `select_sources` orders candidate mappings by `vg:authorityRank`
 - [ ] T017 [US1] MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only
 - [ ] T018 [US1] MEDULLA-CQ-XSRC-R005.3 The plan is derived, not authored: planned sources equal the declared authorities
 - [ ] T019 [US1] MEDULLA-CQ-XSRC-R005.4 An unconnected authoritative source yields a typed abstention, not a silent fallback
-- [ ] T047 [US1] MEDULLA-CQ-XSRC-R005.6 Fragment trace carries authority detail
 - [ ] T020 [US1] MEDULLA-CQ-XSRC-R005.5 Row: `EXPLAIN` shows the authority premise for each planned source
 - [ ] T021 [US1] MEDULLA-CQ-XSRC-R006.1 Add the typed `SupplyChainImpactReport` model
 - [ ] T022 [US1] MEDULLA-CQ-XSRC-R006.2 Report carries freshness per source
@@ -32,8 +31,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T025 [US1] MEDULLA-CQ-XSRC-R006.5 Serve the report through Arbora
 - [ ] T026 [US1] MEDULLA-CQ-XSRC-R007.1 Acceptance on recorded connector responses
 - [ ] T027 [US1] MEDULLA-CQ-XSRC-R007.2 Acceptance against the live connected sources
-- [ ] T028 [US1] MEDULLA-CQ-XSRC-R007.3 Acceptance with the procurement source not connected
-- [ ] T029 [US2] MEDULLA-CQ-XSRC-R007.4 Decisive test: changing only the authority declaration changes the sources used
+- [ ] T028 [US1] MEDULLA-CQ-XSRC-R007.3 Served acceptance on `SupplyChainImpact`: erpnext-mcp unregistered gives `Unconnected` for `Supplier` with no fallback and unchanged software-side entries (after T044)
 - [ ] T030 [US3] MEDULLA-CQ-XSRC-R008.1.1 Query fixture and authority rows: vulnerable deployed image to exposed service
 - [ ] T031 [US3] MEDULLA-CQ-XSRC-R008.1.2 Acceptance: exposed services listed with image, vulnerability and sources
 - [ ] T032 [US3] MEDULLA-CQ-XSRC-R008.2.1 Declare the host limit-breach terms in the ontology
@@ -44,7 +42,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T037 [US3] MEDULLA-CQ-XSRC-R008.3.4 Acceptance: open incidents and changes listed with the service and contract
 - [ ] T038 [US3] MEDULLA-CQ-XSRC-R008.4 Serve the three generalization questions as Method::CrossSourceQuestion
 - [ ] T039 [US5] MEDULLA-CQ-XSRC-R009.1 Query fixture: claims that touch the report
-- [ ] T048 [US5] MEDULLA-CQ-XSRC-R009.6 Per-input-row EVIDENCE FOR
+- [ ] T048 [US5] MEDULLA-CQ-XSRC-R009.6 Add the `EVIDENCE EACH` stage (`Op::EvidenceForEach`): parser, op, kinds, printer, executor, Python mirror
 - [ ] T040 [US5] MEDULLA-CQ-XSRC-R009.2 Evidence clustering
 - [ ] T041 [US5] MEDULLA-CQ-XSRC-R009.3 Contradiction decay analysis
 - [ ] T042 [US5] MEDULLA-CQ-XSRC-R009.4 Served acceptance through arbora

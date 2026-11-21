@@ -104,8 +104,14 @@ Question, then the Arbora intent tool (Arbora repository), then the Medulla hand
 
 - Judgement: the source rankings above are proposed, not discovered; the ontology makes them changeable without code.
 - Risk: connector operation contracts for erpnext, uptime and container-manager may lag (cross-repo; `MEDULLA-CQ-XSRC-R002.7`, `R003.4`, `R003.5`).
-- Alternative rejected: naming connectors in the query. It fails the exit gate (`MEDULLA-CQ-XSRC-R007.4`).
+- Alternative rejected: naming connectors in the query. It fails the exit gate (the served swap test `MEDULLA-SRC-AUTH-R009.4`).
 - Entity resolution quality for vendor names is unproven; approval gating bounds the risk.
+
+**D7. Approved links are graph edges; the join is a traversal (`MEDULLA-CQ-XSRC-R004.5`).** `ApproveEntityLink` is the only writer of an attached-record `owl:sameAs` edge, and a UQL `TRAVERSE -[:`owl:sameAs`]-` is the one cross-source join over it. `foreign_scan` keeps its id-equality join; node ids carry the application, so that join never pairs two applications. No proposal store exists, so no answer lists unapproved candidates.
+
+**D8. The authority premise is not copied into the fragment trace (`MEDULLA-CQ-XSRC-R005.6` retired).** Source selection is served by `Method::SourceCoverage` and `Method::CrossSourceQuestion`; a foreign fragment reads the named source and records mapping digest and pushed request fields only.
+
+**D9. Per-row evidence is its own stage, `EVIDENCE EACH` (`MEDULLA-CQ-XSRC-R009.6`).** `EVIDENCE FOR <id>` keeps its seed-or-filter meaning; `EVIDENCE EACH` maps every input row to its supporting nodes (`Op::EvidenceForEach`). A keyword after `FOR` would collide with a bare claim id.
 
 **D3. Canonical change vocabulary: reuse `kg:Change`, no commercial `kg:ChangeRequest`.** `kg:Change` in `archimate-v1.ttl` is the ServiceNow change request and is a subclass of `kg:BusinessProcess`. The `service_operations-v1.ttl` module keeps its distinct `kg:ChangeRequest` for IT4IT `:touches` semantics. `MEDULLA-SUPPLY-VOCAB-R003.6` records the cross-spec decision for `MEDULLA-CQ-XSRC-R008.3.1`.
 

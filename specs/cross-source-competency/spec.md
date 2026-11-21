@@ -37,10 +37,10 @@ The user is an ontology owner. The outcome is that one edit of an authority row 
 
 **Acceptance scenarios**
 
-1. **Given** two served runs of the same query text, **When** one `vg:SourceAuthority` row is changed between them through `GraphSchema.AttachApproved`, **Then** the plan and the report name the new source.
+1. **Given** two served runs of the same query text, **When** one `vg:SourceAuthority` row is changed between them by re-sending `GraphSchema` `attach` under the same `source_id`, **Then** the plan and the report name the new source.
 2. **Given** a rank-1 source that is not connected and an authority row without `vg:allowFallback`, **When** the question runs, **Then** the answer abstains by name and never falls back.
 
-Independent test: `MEDULLA-CQ-XSRC-R007.4` and `MEDULLA-CQ-XSRC-R005.4`.
+Independent test: `MEDULLA-SRC-AUTH-R009.4` and `MEDULLA-CQ-XSRC-R005.4`.
 
 ### User Story 3 - Ask three more cross-source questions of the same shape (Priority: P2)
 
@@ -111,14 +111,14 @@ Independent test: `MEDULLA-CQ-XSRC-R012.1` and `MEDULLA-CQ-XSRC-R012.2`.
 - **FR-003**: A relation links a supply-chain entity to a service, and records in different sources resolve to one node only through an approved link. Rows: `MEDULLA-CQ-XSRC-R004.1`, `MEDULLA-CQ-XSRC-R004.3`, `MEDULLA-CQ-XSRC-R004.4`, `MEDULLA-CQ-XSRC-R004.5`.
 - **FR-004**: The query names classes only and the planner derives the sources from the authority declarations. Rows: `MEDULLA-CQ-XSRC-R005.1`, `MEDULLA-CQ-XSRC-R005.2`, `MEDULLA-CQ-XSRC-R005.3`, `MEDULLA-CQ-XSRC-R005.4`, `MEDULLA-CQ-XSRC-R005.5`.
 - **FR-005**: The report gives impact per service, the items behind it, sources used with the reason, freshness and typed abstention. Rows: `MEDULLA-CQ-XSRC-R006.1`, `MEDULLA-CQ-XSRC-R006.2`, `MEDULLA-CQ-XSRC-R006.3`, `MEDULLA-CQ-XSRC-R006.4`, `MEDULLA-CQ-XSRC-R006.5`.
-- **FR-006**: The exit-gate question is answered end to end, and changing only an authority declaration changes the sources used. Rows: `MEDULLA-CQ-XSRC-R007.1`, `MEDULLA-CQ-XSRC-R007.2`, `MEDULLA-CQ-XSRC-R007.3`, `MEDULLA-CQ-XSRC-R007.4`.
+- **FR-006**: The exit-gate question is answered end to end, and changing only an authority declaration changes the sources used. Rows: `MEDULLA-CQ-XSRC-R007.1`, `MEDULLA-CQ-XSRC-R007.2`, `MEDULLA-CQ-XSRC-R007.3` (the swap is `MEDULLA-SRC-AUTH-R009.4`).
 - **FR-007**: Three further questions reuse the same mechanism through one served method. Rows: `MEDULLA-CQ-XSRC-R008.1.1`, `MEDULLA-CQ-XSRC-R008.1.2`, `MEDULLA-CQ-XSRC-R008.2.1`, `MEDULLA-CQ-XSRC-R008.2.3`, `MEDULLA-CQ-XSRC-R008.2.4`, `MEDULLA-CQ-XSRC-R008.3.1`, `MEDULLA-CQ-XSRC-R008.3.3`, `MEDULLA-CQ-XSRC-R008.3.4`, `MEDULLA-CQ-XSRC-R008.4`.
 - **FR-008**: One UQL program answers the agent-claims question as one plan. Rows: `MEDULLA-CQ-XSRC-R009.1`, `MEDULLA-CQ-XSRC-R009.2`, `MEDULLA-CQ-XSRC-R009.3`, `MEDULLA-CQ-XSRC-R009.4`, `MEDULLA-CQ-XSRC-R009.5`.
 - **FR-009**: The impact report is served as a Medulla method and proven across connectors. Rows: `MEDULLA-CQ-XSRC-R011`, `MEDULLA-CQ-XSRC-R012.1`, `MEDULLA-CQ-XSRC-R012.2`.
 
 ## Success Criteria
 
-- **SC-001**: The test of `MEDULLA-CQ-XSRC-R007.4` shows byte-identical query text and different sources after an ontology-only change.
+- **SC-001**: The served test of `MEDULLA-SRC-AUTH-R009.4` shows byte-identical query text and different sources after an ontology-only change.
 - **SC-002**: Every report item names its source; a source-less item is refused in 100 percent of cases (`MEDULLA-CQ-XSRC-R006.1`).
 - **SC-003**: Every unconnected authoritative source appears as a typed abstention naming the source and class (`MEDULLA-CQ-XSRC-R007.3`).
 - **SC-004**: A join crosses only an approved link (`MEDULLA-CQ-XSRC-R004.5`).
