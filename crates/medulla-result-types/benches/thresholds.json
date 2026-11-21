@@ -1,0 +1,12 @@
+{
+  "_comment": "MEDULLA-FEDERATED-QUERY-R700.6: committed budgets for the medulla-result-types dung_grounded bench, in the key format of crates/medulla-plan/benches/thresholds.json and enforced by scripts/bench_gate.py. Nanoseconds for latency, bytes for memory. Benchmarks never gate a PR.",
+  "latency_p50_ns_max": {
+    "dung_grounded": 1000000
+  },
+  "latency_p99_ns_max": {
+    "dung_grounded": 6000000
+  },
+  "peak_memory_bytes_max": {
+    "dung_grounded": 16777216
+  }
+}

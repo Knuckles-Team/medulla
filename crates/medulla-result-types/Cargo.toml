@@ -38,4 +38,10 @@ ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline
 query = ["medulla-types/query", "medulla-query-types/query"]
 
 [dev-dependencies]
+criterion = { version = "0.8", default-features = false }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+
+[[bench]]
+name = "dung_grounded"
+path = "benches/dung_grounded.rs"
+harness = false

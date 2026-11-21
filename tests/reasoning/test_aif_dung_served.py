@@ -8,6 +8,7 @@ stores the golden vector, exports it byte-equal and evaluates it.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -137,3 +138,70 @@ async def test_digest_binds_map() -> None:
     again = await _evaluate(client, map_id, "grounded")
     assert again["map_digest"] == _digest(changed)
     assert again["map_digest"] != grounded["map_digest"]
+
+
+def _grounded_oracle(arguments: set[str], attacks: set[tuple[str, str]]) -> list[str]:
+    """The least fixed point of the characteristic function, by plain iteration."""
+    accepted: set[str] = set()
+    rejected: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for argument in sorted(arguments - accepted - rejected):
+            attackers = {a for a, b in attacks if b == argument}
+            if attackers <= rejected:
+                accepted.add(argument)
+                changed = True
+        for argument in sorted(arguments - accepted - rejected):
+            if any(a in accepted for a, b in attacks if b == argument):
+                rejected.add(argument)
+                changed = True
+    return sorted(accepted)
+
+
+def _fixture() -> dict:
+    # i1 -> i2 -> i3 -> i4 is a chain; i5 and i6 attack each other (undecided); i7 is
+    # attacked by i1 and defended by nobody; i8 is attacked only by the undecided i5.
+    arguments = [f"i{n}" for n in range(1, 9)]
+    attacks = [
+        ("i1", "i2"),
+        ("i2", "i3"),
+        ("i3", "i4"),
+        ("i5", "i6"),
+        ("i6", "i5"),
+        ("i1", "i7"),
+        ("i5", "i8"),
+    ]
+    nodes = [{"nodeID": a, "text": f"text {a}", "type": "I"} for a in arguments]
+    edges = []
+    for index, (src, dst) in enumerate(attacks, start=1):
+        nodes.append({"nodeID": f"ca{index}", "text": f"attack {index}", "type": "CA"})
+        edges.append({"edgeID": f"e{index}a", "fromID": src, "toID": f"ca{index}"})
+        edges.append({"edgeID": f"e{index}b", "fromID": f"ca{index}", "toID": dst})
+    return {"nodes": nodes, "edges": edges, "arguments": arguments, "attacks": attacks}
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R700.6
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R700.6")
+@pytest.mark.asyncio
+async def test_grounded_extension_matches_fixture() -> None:
+    fixture = _fixture()
+    document = {"nodes": fixture["nodes"], "edges": fixture["edges"]}
+    client = await _connect()
+    map_id = f"aif-{uuid.uuid4().hex}"
+    await _put(client, map_id, document)
+
+    result = await _evaluate(client, map_id, "grounded")
+    expected = _grounded_oracle(set(fixture["arguments"]), set(fixture["attacks"]))
+    assert expected == ["i1", "i3"]
+    assert result["complete"] is True
+    assert [sorted(extension) for extension in result["extensions"]] == [expected]
+
+    # Two maps on different graphs evaluate independently and concurrently.
+    other_id = f"aif-{uuid.uuid4().hex}"
+    await _put(client, other_id, GOLDEN)
+    first, second = await asyncio.gather(
+        _evaluate(client, map_id, "grounded"), _evaluate(client, other_id, "grounded")
+    )
+    assert first["extensions"] == result["extensions"]
+    assert second["extensions"] == [["b"]]
