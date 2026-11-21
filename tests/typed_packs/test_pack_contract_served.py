@@ -31,6 +31,7 @@ from conftest import (
     spawn_server,
     stop_server,
     strict_server_env,
+    tenant_request_context,
     wait_for_server,
 )
 from ontology_pack_support import (
@@ -47,6 +48,7 @@ from medulla.generated.connector_pack import PackHeadRef
 
 CORE = "https://knuckles-team.github.io/ontology/core"
 WORK_ITEM = f"{CORE}#WorkItem"
+FOREIGN_TENANT = "tenant:foreign"
 HEADER = (
     "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
@@ -252,6 +254,36 @@ def test_receipt_carries_digests_break_count_and_request() -> None:
     asyncio.run(exercise())
 
 
+async def _foreign_view(connector: str) -> object:
+    """What a verified principal of a second tenant, on the same served engine, sees of
+    `connector`: the refusal its tenant gets, or its own (absent) head. It is never the
+    first tenant's head."""
+    foreign = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(FOREIGN_TENANT),
+    )
+    try:
+        views: list[object] = []
+        for tenant in (TEST_TENANT, FOREIGN_TENANT):
+            try:
+                status = await ConnectorPackClient(foreign).status(
+                    tenant_id=tenant, connector=connector
+                )
+                views.append(
+                    None
+                    if status.head is None
+                    else (status.head.binding_revision, str(status.head.pack_digest))
+                )
+            except Exception as refusal:  # noqa: BLE001 - the refusal text is the view
+                views.append(f"refused:{type(refusal).__name__}")
+        assert all(
+            view is None or str(view).startswith("refused:") for view in views
+        ), views
+        return views
+    finally:
+        await foreign.close()
+
+
 def _typed_ontology(base: str, range_type: str) -> str:
     """One class and one datatype property whose declared range is `range_type`."""
     return (
@@ -275,9 +307,10 @@ def test_breaking_release_waits_for_approval_then_serves() -> None:
     ]
     target = f"pack:{connector}"
 
-    async def hold() -> tuple[dict, tuple[int, str]]:
+    async def hold() -> tuple[dict, tuple[int, str], object]:
         admin = await connect()
         try:
+            before_foreign = await _foreign_view(connector)
             first = await import_entries(admin, connector, entry("string"))
             assert first["result"] == "imported", first
             second = await import_entries(
@@ -297,11 +330,13 @@ def test_breaking_release_waits_for_approval_then_serves() -> None:
             assert violation_codes(third) == {"CONTRACT_BREAK_PENDING"}, third
             # Queries still resolve through release 2.
             assert await _status_head(admin, connector) == active
-            return third, active
+            # A second tenant on the same engine sees nothing of the held release.
+            assert await _foreign_view(connector) == before_foreign
+            return third, active, before_foreign
         finally:
             await admin.close()
 
-    held, active = asyncio.run(hold())
+    held, active, foreign_before = asyncio.run(hold())
     graph = f"pack-approval-{tag}"
     client = support.connect(None)
     try:
@@ -334,6 +369,8 @@ def test_breaking_release_waits_for_approval_then_serves() -> None:
             revision, digest = await _status_head(admin, connector)
             assert revision > active[0]
             assert digest == str(held["pack_digest"])
+            # The approval changed nothing for a second tenant.
+            assert await _foreign_view(connector) == foreign_before
         finally:
             await admin.close()
 
