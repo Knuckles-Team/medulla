@@ -1555,3 +1555,15 @@ fn approval_request_machine_matches_edge_table() {
 fn approval_request_machine_classes_extend_core() {
     sm::assert_extends_core("ApprovalRequest");
 }
+
+// spec: MEDULLA-CONTRACT-R062.2
+#[test]
+fn hardware_job_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_quantum_hardware::job_machine::HARDWARE_JOB_MACHINE);
+}
+
+// spec: MEDULLA-CONTRACT-R062.2
+#[test]
+fn hardware_job_machine_classes_extend_core() {
+    sm::assert_extends_core("HardwareJob");
+}

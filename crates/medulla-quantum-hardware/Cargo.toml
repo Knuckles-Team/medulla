@@ -11,6 +11,7 @@ name = "medulla_quantum_hardware"
 
 [dependencies]
 medulla-quantum-core = { path = "../medulla-quantum-core" }
+medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"

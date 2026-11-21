@@ -132,6 +132,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-quantum-hardware = { path = "../medulla-quantum-hardware" }
 medulla-result-types = { path = "../medulla-result-types", features = ["finance"] }
 medulla-raft = { path = "../medulla-raft", features = ["raft"] }
 medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["raft"] }

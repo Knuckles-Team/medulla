@@ -83,6 +83,7 @@
 pub mod credentials;
 #[cfg(any(feature = "ibm", feature = "braket", feature = "azure"))]
 pub mod error;
+pub mod job_machine;
 #[cfg(any(feature = "ibm", feature = "braket", feature = "azure"))]
 pub mod quota;
 #[cfg(any(feature = "ibm", feature = "braket", feature = "azure"))]

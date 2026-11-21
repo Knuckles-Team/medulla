@@ -30,6 +30,7 @@ use crate::credentials::CredentialSource;
 use crate::error::HardwareError;
 use crate::quota::{QuotaStatus, QuotaTracker, QuotaUnits};
 use crate::transport::HttpResponse;
+use crate::job_machine::{HardwareJobEvent, HardwareJobPhase, HARDWARE_JOB_MACHINE};
 use medulla_quantum_core::backend::{BackendError, BackendId, JobHandle, JobStatus, RunOptions};
 use medulla_quantum_core::hash::CircuitHash;
 use medulla_quantum_core::ir::QuantumProgram;
@@ -156,10 +157,22 @@ impl HardwareJob {
     }
 
     pub(crate) fn is_terminal(&self) -> bool {
-        matches!(
-            self.status,
-            JobStatus::Completed | JobStatus::Failed(_) | JobStatus::Cancelled
-        )
+        HARDWARE_JOB_MACHINE.is_terminal(HardwareJobPhase::of(&self.status))
+    }
+
+    /// Record the status a provider reported. The machine decides: an illegal move
+    /// refuses and the status stays as it was (MEDULLA-CONTRACT-R062.2).
+    pub(crate) fn observe(&mut self, next: JobStatus) -> Result<(), HardwareError> {
+        HardwareJobPhase::of(&self.status).apply(HardwareJobEvent::reported(&next))?;
+        self.status = next;
+        Ok(())
+    }
+
+    /// Record a cancel the provider accepted (MEDULLA-CONTRACT-R062.2).
+    pub(crate) fn cancel_accepted(&mut self) -> Result<(), HardwareError> {
+        HardwareJobPhase::of(&self.status).apply(HardwareJobEvent::CancelAccepted)?;
+        self.status = JobStatus::Cancelled;
+        Ok(())
     }
 
     pub(crate) fn cached_result(&self) -> Option<QuantumResult> {
@@ -189,8 +202,8 @@ impl HardwareJob {
         if self.is_terminal() {
             return Ok(());
         }
-        self.status = fetch(self)?;
-        Ok(())
+        let next = fetch(self)?;
+        self.observe(next)
     }
 }
 
@@ -709,7 +722,9 @@ macro_rules! impl_hardware_backend {
                     }
                     $crate::registry::ProviderClient::cancel(&self.client, record)
                         .map_err(|error| error.into_backend_error(&self.core.id))?;
-                    record.status = medulla_quantum_core::backend::JobStatus::Cancelled;
+                    record
+                        .cancel_accepted()
+                        .map_err(|error| error.into_backend_error(&self.core.id))?;
                     Ok(())
                 })
             }
@@ -749,5 +764,42 @@ mod tests {
         assert!(core
             .quota_status_at_submit(JobHandle(u64::MAX))
             .is_none());
+    }
+
+    fn queued_job() -> HardwareJob {
+        use crate::quota::{QuotaTracker, QuotaUnits};
+        let quota = QuotaTracker::new(
+            "test-provider",
+            "units",
+            std::time::Duration::from_secs(60),
+            QuotaUnits(10),
+        )
+        .status(std::time::SystemTime::now());
+        let program = medulla_quantum_core::ir::QuantumProgram {
+            ir_version: medulla_quantum_core::ir::IR_VERSION,
+            n_qubits: 1,
+            classical_registers: vec![],
+            parameters: vec![],
+            instructions: vec![],
+            metadata: Default::default(),
+        };
+        HardwareJob::queued("remote-1".to_string(), quota, program.circuit_hash().unwrap())
+    }
+
+    // spec: MEDULLA-CONTRACT-R062.2
+    #[test]
+    fn status_moves_only_through_the_machine() {
+        let mut job = queued_job();
+        job.observe(JobStatus::Running).unwrap();
+        assert_eq!(job.status, JobStatus::Running);
+        let refused = job.observe(JobStatus::Queued).unwrap_err();
+        assert!(matches!(refused, HardwareError::Transition(_)), "{refused}");
+        assert_eq!(job.status, JobStatus::Running, "a refused move changes nothing");
+
+        job.cancel_accepted().unwrap();
+        assert_eq!(job.status, JobStatus::Cancelled);
+        assert!(job.is_terminal());
+        job.refresh_with(|_| Ok(JobStatus::Running)).unwrap();
+        assert_eq!(job.status, JobStatus::Cancelled, "a terminal job is not refreshed");
     }
 }

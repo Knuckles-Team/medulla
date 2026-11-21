@@ -51,6 +51,10 @@ pub enum HardwareError {
     /// same refusal from a caller's perspective -- zero usable budget either way.
     #[error("{0}")]
     BudgetNotConfigured(String),
+
+    /// A job status move the `HardwareJobMachine` refuses (MEDULLA-CONTRACT-R062.2).
+    #[error(transparent)]
+    Transition(#[from] medulla_types::transition_refused::TransitionRefused),
 }
 
 impl HardwareError {
@@ -67,6 +71,7 @@ impl HardwareError {
             HardwareError::UnknownJob => BackendError::UnknownJob,
             HardwareError::NotTerminal(_) => BackendError::Unsupported(backend_id.clone()),
             HardwareError::RemoteFailed(_, msg) => BackendError::Execution(msg),
+            HardwareError::Transition(refusal) => BackendError::Execution(refusal.to_string()),
             other => BackendError::Execution(other.to_string()),
         }
     }

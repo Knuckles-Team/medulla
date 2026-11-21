@@ -8782,3 +8782,152 @@
     :fromState :VerifierCaseMachine_Failed ;
     :toState :VerifierCaseMachine_Open ;
     :firedBy :VerifierCaseMachine_Event_Reopen .
+
+
+# spec: MEDULLA-CONTRACT-R062.2
+# The Hardware Job machine: the status of one hardware quantum job. The Rust edge table HARDWARE_JOB_MACHINE is the same table.
+
+:HardwareJobState a owl:Class ;
+    rdfs:label "Hardware Job State" ;
+    rdfs:comment "A state of the Hardware Job machine." ;
+    rdfs:subClassOf :State .
+
+:HardwareJobTerminalState a owl:Class ;
+    rdfs:label "Hardware Job Terminal State" ;
+    rdfs:comment "A terminal state of the Hardware Job machine." ;
+    rdfs:subClassOf :TerminalState, :HardwareJobState .
+
+:HardwareJobTransition a owl:Class ;
+    rdfs:label "Hardware Job Transition" ;
+    rdfs:comment "A transition of the Hardware Job machine." ;
+    rdfs:subClassOf :Transition .
+
+:HardwareJobEvent a owl:Class ;
+    rdfs:label "Hardware Job Event" ;
+    rdfs:comment "An event of the Hardware Job machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:HardwareJobGuard a owl:Class ;
+    rdfs:label "Hardware Job Guard" ;
+    rdfs:comment "A guard of the Hardware Job machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:HardwareJobMachine a :StateMachine ;
+    rdfs:label "Hardware Job machine" ;
+    :initialState :HardwareJobMachine_Queued ;
+    :hasState :HardwareJobMachine_Queued, :HardwareJobMachine_Running, :HardwareJobMachine_Completed, :HardwareJobMachine_Failed, :HardwareJobMachine_Cancelled .
+
+:HardwareJobMachine_Queued a :HardwareJobState ;
+    rdfs:label "Hardware Job Queued" ;
+    :storedForm "queued" .
+
+:HardwareJobMachine_Running a :HardwareJobState ;
+    rdfs:label "Hardware Job Running" ;
+    :storedForm "running" .
+
+:HardwareJobMachine_Completed a :HardwareJobTerminalState ;
+    rdfs:label "Hardware Job Completed" ;
+    :storedForm "completed" .
+
+:HardwareJobMachine_Failed a :HardwareJobTerminalState ;
+    rdfs:label "Hardware Job Failed" ;
+    :storedForm "failed" .
+
+:HardwareJobMachine_Cancelled a :HardwareJobTerminalState ;
+    rdfs:label "Hardware Job Cancelled" ;
+    :storedForm "cancelled" .
+
+:HardwareJobMachine_Event_ProviderReportedQueued a :HardwareJobEvent ;
+    rdfs:label "Hardware Job ProviderReportedQueued" .
+
+:HardwareJobMachine_Event_ProviderReportedRunning a :HardwareJobEvent ;
+    rdfs:label "Hardware Job ProviderReportedRunning" .
+
+:HardwareJobMachine_Event_ProviderReportedCompleted a :HardwareJobEvent ;
+    rdfs:label "Hardware Job ProviderReportedCompleted" .
+
+:HardwareJobMachine_Event_ProviderReportedFailed a :HardwareJobEvent ;
+    rdfs:label "Hardware Job ProviderReportedFailed" .
+
+:HardwareJobMachine_Event_ProviderReportedCancelled a :HardwareJobEvent ;
+    rdfs:label "Hardware Job ProviderReportedCancelled" .
+
+:HardwareJobMachine_Event_CancelAccepted a :HardwareJobEvent ;
+    rdfs:label "Hardware Job CancelAccepted" .
+
+:HardwareJobMachine_J01 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J01" ;
+    :edgeId "J01" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Queued ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedQueued .
+
+:HardwareJobMachine_J02 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J02" ;
+    :edgeId "J02" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Running ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedRunning .
+
+:HardwareJobMachine_J03 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J03" ;
+    :edgeId "J03" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Completed ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedCompleted .
+
+:HardwareJobMachine_J04 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J04" ;
+    :edgeId "J04" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Failed ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedFailed .
+
+:HardwareJobMachine_J05 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J05" ;
+    :edgeId "J05" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Cancelled ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedCancelled .
+
+:HardwareJobMachine_J06 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J06" ;
+    :edgeId "J06" ;
+    :fromState :HardwareJobMachine_Queued ;
+    :toState :HardwareJobMachine_Cancelled ;
+    :firedBy :HardwareJobMachine_Event_CancelAccepted .
+
+:HardwareJobMachine_J07 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J07" ;
+    :edgeId "J07" ;
+    :fromState :HardwareJobMachine_Running ;
+    :toState :HardwareJobMachine_Running ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedRunning .
+
+:HardwareJobMachine_J08 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J08" ;
+    :edgeId "J08" ;
+    :fromState :HardwareJobMachine_Running ;
+    :toState :HardwareJobMachine_Completed ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedCompleted .
+
+:HardwareJobMachine_J09 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J09" ;
+    :edgeId "J09" ;
+    :fromState :HardwareJobMachine_Running ;
+    :toState :HardwareJobMachine_Failed ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedFailed .
+
+:HardwareJobMachine_J10 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J10" ;
+    :edgeId "J10" ;
+    :fromState :HardwareJobMachine_Running ;
+    :toState :HardwareJobMachine_Cancelled ;
+    :firedBy :HardwareJobMachine_Event_ProviderReportedCancelled .
+
+:HardwareJobMachine_J11 a :HardwareJobTransition ;
+    rdfs:label "Hardware Job J11" ;
+    :edgeId "J11" ;
+    :fromState :HardwareJobMachine_Running ;
+    :toState :HardwareJobMachine_Cancelled ;
+    :firedBy :HardwareJobMachine_Event_CancelAccepted .
