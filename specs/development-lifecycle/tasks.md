@@ -74,6 +74,8 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T066 [US2] MEDULLA-SDLC-R014.4 Contracts form the seam graph.
 - [x] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
 - [ ] T068 [US2] MEDULLA-SDLC-R014.6 Competency questions over the artifact graph.
+- [ ] T068a [US2] MEDULLA-SDLC-R014.6.1 Task nodes and contract provider rows.
+- [ ] T068b [US2] MEDULLA-SDLC-R014.6.2 Constitution principles and governedBy.
 - [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plan sections are records.
 - [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
 - [ ] T071 [US2] MEDULLA-SDLC-R014.9 Hot-path proof: served artifact graph.
