@@ -113,7 +113,7 @@ pub use exec::{
     exec_sql_typed_with_tables_in_graph_hive, exec_sql_typed_with_tables_in_graph_sessions,
     QueryResult, SqlContextCache,
 };
-pub use catalog::PgStatActivityRow;
+pub use catalog::{refuse_catalog_view_write, PgStatActivityRow};
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.
 pub use providers::SqlCache;

@@ -835,9 +835,16 @@ fn param_site_pg_col_type(
 }
 
 impl EngineBackend {
-    fn new(state: Arc<RwLock<ServerState>>, default_graph: String) -> Self {
+    fn new(
+        state: Arc<RwLock<ServerState>>,
+        default_graph: String,
+        activity: Arc<medulla_wire_core::wire::activity::WireActivity>,
+    ) -> Self {
+        let session = Arc::new(WireSession::new(state, default_graph));
+        // MEDULLA-DURABLE-KERNEL-R035.3.2: the session registers its row in the listener's registry.
+        session.bind_activity(activity);
         Self {
-            session: Arc::new(WireSession::new(state, default_graph)),
+            session,
             parser: Arc::new(EngineQueryParser),
             prepared_names: Default::default(),
             plan_cache: Default::default(),
@@ -920,6 +927,11 @@ impl EngineBackend {
         self.session
             .bind_authenticated_sql_actor("pgwire", &actor)
             .await
+            .map_err(wire_err_to_pg)?;
+        // MEDULLA-DURABLE-KERNEL-R035.3.2: register the session's activity row under the
+        // backend-key pid `complete_login` set (idempotent across queries).
+        self.session
+            .register_activity(client.pid_and_secret_key().0)
             .map_err(wire_err_to_pg)?;
         // The scope every read of this connection carries is the verified
         // authority's tenant. A login whose record names another tenant never
@@ -2042,9 +2054,10 @@ impl EngineBackendFactory {
         auth_secret: String,
         tls_certificate_pem: Option<Arc<Vec<u8>>>,
         connections: Arc<pgwire::api::ConnectionManager>,
+        activity: Arc<medulla_wire_core::wire::activity::WireActivity>,
     ) -> Self {
         Self {
-            backend: Arc::new(EngineBackend::new(state, default_graph)),
+            backend: Arc::new(EngineBackend::new(state, default_graph, activity)),
             auth_mode,
             auth_secret,
             tls_certificate_pem,
@@ -2172,6 +2185,8 @@ pub async fn serve_prepared(
     );
     // MEDULLA-DURABLE-KERNEL-R035.5: one registry of live connections per listener.
     let connections = Arc::new(pgwire::api::ConnectionManager::new());
+    // MEDULLA-DURABLE-KERNEL-R035.3.2: one registry of session activity rows per listener.
+    let activity = Arc::new(medulla_wire_core::wire::activity::WireActivity::default());
     loop {
         let (socket, peer) = listener.accept().await?;
         // A FRESH factory (and thus a fresh shared `EngineBackend`) per connection,
@@ -2185,6 +2200,7 @@ pub async fn serve_prepared(
                 .as_ref()
                 .map(|(_, certificate_pem)| certificate_pem.clone()),
             connections.clone(),
+            activity.clone(),
         ));
         let tls_acceptor = tls_material.as_ref().map(|(acceptor, _)| acceptor.clone());
         tokio::spawn(async move {

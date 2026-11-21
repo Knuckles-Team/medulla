@@ -731,7 +731,7 @@ const READ_ONLY_CATALOG_VIEWS: [&str; 3] = ["pg_stat_activity", "pg_stat_databas
 /// Refuse an `INSERT`, `UPDATE` or `DELETE` naming `pg_stat_activity`,
 /// `pg_stat_database` or `pg_locks`, with the `READ_ONLY_CATALOG_VIEW` prefix the
 /// wire maps to SQLSTATE `42809`. Any other statement passes. Pure.
-pub(crate) fn refuse_catalog_view_write(sql: &str) -> Result<(), String> {
+pub fn refuse_catalog_view_write(sql: &str) -> Result<(), String> {
     let lowered = sql.trim_start().to_ascii_lowercase();
     let rest = if let Some(rest) = lowered.strip_prefix("insert") {
         rest.trim_start().strip_prefix("into")

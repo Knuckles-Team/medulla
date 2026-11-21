@@ -22,6 +22,9 @@ const TABLE: &[(&str, &str)] = &[
     ("FEATURE_NOT_SUPPORTED", "0A000"),
     // MEDULLA-DURABLE-KERNEL-R035.4: `EXPLAIN ANALYZE` of a write is refused as not supported.
     ("READ_ONLY_SQL", "0A000"),
+    // MEDULLA-DURABLE-KERNEL-R035.3.2: a write naming `pg_stat_activity`, `pg_stat_database` or
+    // `pg_locks` is refused as a write to a view (`wrong_object_type`).
+    ("READ_ONLY_CATALOG_VIEW", "42809"),
     ("INVALID_LOGIN", "28000"),
     ("PLAN_SCOPE_UNVERIFIED", "28000"),
     ("INDEX_EXPR_NONDETERMINISTIC", "42P17"),

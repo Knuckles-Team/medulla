@@ -130,6 +130,7 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 mod seam;
+pub mod activity;
 pub use seam::WireSeam;
 mod copy_out;
 mod matview;
@@ -1390,6 +1391,11 @@ pub struct WireSession {
     /// wire cancel request stops the read at its next batch boundary. `None` between
     /// statements: a read outside a statement runs with a fresh token.
     statement_cancel: parking_lot::Mutex<Option<medulla_sql::sql::CancellationToken>>,
+    /// The listener's registry of live sessions, passed by the listener to every session
+    /// (MEDULLA-DURABLE-KERNEL-R035.3.2); `None` for a session no listener owns.
+    activity_registry: parking_lot::Mutex<Option<Arc<activity::WireActivity>>>,
+    /// This session's registered row; dropping the session removes it from the registry.
+    activity_guard: parking_lot::Mutex<Option<activity::ActivityGuard>>,
     /// The graph this connection was bound to at startup: the wire's default graph,
     /// or the startup `database` [`WireProtocol::resolve_startup`] adopted.
     /// [`WireSession::reset_to_startup`] restores it (MEDULLA-DURABLE-KERNEL-R035.6).
@@ -1513,7 +1519,62 @@ impl WireSession {
             txn_replay_log: Default::default(),
             recovered_intents: Default::default(),
             statement_cancel: Default::default(),
+            activity_registry: Default::default(),
+            activity_guard: Default::default(),
         }
+    }
+
+    /// Name the listener registry this session registers its activity row in. Idempotent: the
+    /// first registry stays for the connection.
+    pub fn bind_activity(&self, registry: Arc<activity::WireActivity>) {
+        self.activity_registry.lock().get_or_insert(registry);
+    }
+
+    /// Register this session's activity row under the backend-key `pid` the login set, as the
+    /// verified authority's principal in its tenant. Idempotent, and a no-op for a session no
+    /// listener registry was bound to.
+    pub fn register_activity(&self, pid: i32) -> WireResult<()> {
+        let Some(registry) = self.activity_registry.lock().clone() else {
+            return Ok(());
+        };
+        let mut guard = self.activity_guard.lock();
+        if guard.is_some() {
+            return Ok(());
+        }
+        let authority = self.carrier_authority()?;
+        let principal = self.verified_actor()?;
+        *guard = Some(registry.register(
+            pid,
+            authority.tenant_scope().to_string(),
+            principal,
+            self.current_graph(),
+        ));
+        Ok(())
+    }
+
+    /// The registered rows this session's caller may read, as the catalog's session rows: the
+    /// caller's tenant, and without `kg:admin` only the caller's own principal.
+    fn visible_sessions(&self) -> Vec<medulla_sql::sql::PgStatActivityRow> {
+        let Some(registry) = self.activity_registry.lock().clone() else {
+            return Vec::new();
+        };
+        let (Ok(authority), Ok(principal)) = (self.carrier_authority(), self.verified_actor())
+        else {
+            return Vec::new();
+        };
+        registry
+            .visible_to(authority.tenant_scope(), &principal, authority.is_admin())
+            .into_iter()
+            .map(|row| medulla_sql::sql::PgStatActivityRow {
+                pid: row.pid,
+                tenant: row.tenant,
+                principal: row.principal,
+                graph: row.graph,
+                state: row.state.as_str(),
+                query_start_ms: row.query_start_ms,
+                query: row.query,
+            })
+            .collect()
     }
 
     /// Install a fresh cancellation token for the statement about to run and return
@@ -2111,18 +2172,26 @@ impl WireSession {
         // cancel request stops this read at its next batch boundary.
         let cancel = self.statement_cancel_token();
         let read_sql = sql.clone();
+        let sessions = self.visible_sessions();
         let mut result = tokio::task::spawn_blocking(move || {
-            medulla_sql::sql::exec_sql_typed_with_tables_in_graph(
+            medulla_sql::sql::exec_sql_typed_with_tables_in_graph_sessions(
                 &snap,
                 projection.store(),
                 Some(&statement_graph),
                 &sql,
                 &cancel,
+                &sessions,
             )
         })
         .await
         .map_err(|e| user_err(format!("query task failed: {e}")))?
-        .map_err(|msg| user_err(format!("SQL error: {msg}")))?;
+        .map_err(|msg| {
+            if msg.starts_with("READ_ONLY_CATALOG_VIEW") {
+                user_err(msg)
+            } else {
+                user_err(format!("SQL error: {msg}"))
+            }
+        })?;
         // MEDULLA-ENGINE-PARITY-R014.2: a read over a stale materialized view names it.
         result.stale_matviews = self.stale_matviews_read(&read_sql).await;
         Ok(result)
@@ -5703,9 +5772,27 @@ impl WireSession {
         self.execute_with_kind(sql, Some(StatementKind::Read)).await
     }
 
+    /// One statement through the shared pipeline, recorded in this session's activity row
+    /// (MEDULLA-DURABLE-KERNEL-R035.3.2): `Active` while it runs, `Idle` or
+    /// `IdleInTransaction` when it finishes.
+    async fn execute_with_kind(
+        &self,
+        sql: &str,
+        known_kind: Option<StatementKind>,
+    ) -> WireResult<WireOutcome> {
+        if let Some(guard) = self.activity_guard.lock().as_ref() {
+            guard.begin_statement(&self.current_graph(), sql);
+        }
+        let outcome = self.execute_statement(sql, known_kind).await;
+        if let Some(guard) = self.activity_guard.lock().as_ref() {
+            guard.end_statement(self.in_txn());
+        }
+        outcome
+    }
+
     /// One statement through the shared pipeline; `known_kind` is a classification the
     /// caller already holds, `None` classifies `sql` here.
-    async fn execute_with_kind(
+    async fn execute_statement(
         &self,
         sql: &str,
         known_kind: Option<StatementKind>,
@@ -5765,6 +5852,10 @@ impl WireSession {
         {
             return Err(refusal);
         }
+
+        // ── the session catalog views are read only (MEDULLA-DURABLE-KERNEL-R035.3.2) ─────────
+        // The refusal keeps its `READ_ONLY_CATALOG_VIEW` prefix, which the SQLSTATE table maps to `42809`.
+        medulla_sql::sql::refuse_catalog_view_write(sql).map_err(user_err)?;
 
         // ── aborted-transaction gate (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) ──────────────────────────────
         // Once a statement inside an open txn has errored, every subsequent statement
