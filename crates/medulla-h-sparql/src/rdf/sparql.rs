@@ -81,6 +81,11 @@ pub(super) async fn handle_sparql(
             "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}",
             proj.base_iri, proj.camel_type
         );
+        if let Some(usage) = &proj.usage {
+            let mut entries: Vec<_> = usage.iter().collect();
+            entries.sort();
+            key.push_str(&format!("\u{0}usage@{entries:?}"));
+        }
         for (name, _, version) in &pack_views {
             key.push_str(&format!("\u{0}{name}@{version}"));
         }

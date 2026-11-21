@@ -188,11 +188,23 @@ async fn try_handle_sparql(
                             Ok((rewritten, _applied)) => rewritten,
                             Err(refusal) => return Some(Response::err(req_id, refusal)),
                         };
+                        // MEDULLA-TYPED-PACKS-R108.16: a query that ranks assets reads the
+                        // one usage store, so the prior reflects the caller's own counts.
+                        let mut projection =
+                            medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention);
+                        if super::catalog_usage::uses_catalog_ranking(&query) {
+                            projection.usage = super::catalog_usage::load_usage(
+                                state,
+                                graph_name,
+                                read_authority,
+                            )
+                            .await;
+                        }
                         super::sparql::handle_sparql(
                             req_id,
                             (core, packs),
                             query.clone(),
-                            medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
+                            projection,
                             super::sparql::SparqlProofMode::of(*explain),
                             #[cfg(feature = "security")]
                             caller,

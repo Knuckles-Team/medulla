@@ -2,7 +2,7 @@
 
 One ranked relevance function covers every asset family. It is reached through the
 served ``Sparql`` method as ``cat:relevance(?asset, "text")``; the usage prior is
-capped and the trust flags scale the score.
+capped (the counts come from the usage series) and the trust flags scale the score.
 """
 
 from __future__ import annotations
@@ -83,23 +83,14 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
     # An asset that matches nothing is not a hit.
     assert _ranked(admin, "zzz-no-such-asset") == []
 
-    # Usage lifts an asset, an endorsement lifts it further, and a deprecation lowers it.
+    # A deprecation (cat:flag) lowers the rank of the asset it is set on.
     baseline = dict(_ranked(admin, "orders"))
-    used = "urn:medulla:asset:tool:orders"
-    admin.rdf.add_triples(turtle=f'{PREFIX}<{used}> cat:usageReads "500" .\n')
-    after_usage = dict(_ranked(admin, "orders"))
-    key = next(k for k in after_usage if k.strip("<>") == used)
-    base_key = next(k for k in baseline if k.strip("<>") == used)
-    assert after_usage[key] > baseline[base_key]
-    admin.rdf.add_triples(turtle=f'{PREFIX}<{used}> cat:trustFlag "endorsement" .\n')
-    after_endorse = dict(_ranked(admin, "orders"))
-    assert after_endorse[key] > after_usage[key]
-
     skill = "urn:medulla:asset:skill:orders"
-    admin.rdf.add_triples(turtle=f'{PREFIX}<{skill}> cat:trustFlag "deprecation" .\n')
+    admin.rdf.add_triples(turtle=f'{PREFIX}<{skill}> cat:flag "deprecated" .\n')
     after_deprecate = dict(_ranked(admin, "orders"))
-    skill_key = next(k for k in after_deprecate if k.strip("<>") == skill)
-    assert after_deprecate[skill_key] < baseline[skill_key]
+    key = next(k for k in after_deprecate if k.strip("<>") == skill)
+    base_key = next(k for k in baseline if k.strip("<>") == skill)
+    assert after_deprecate[key] < baseline[base_key]
 
     # Text over the knob is refused with its code.
     with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):

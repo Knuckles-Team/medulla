@@ -322,6 +322,9 @@ fn catalog_doc(ctx: &Ctx, asset: &Binding) -> Option<medulla_catalog_types::cata
     use medulla_catalog_types::catalog_relevance::{term_labels, AssetDoc};
     let key = catalog_node_key(ctx, asset)?;
     let mut doc = AssetDoc::from_props(&node_object(ctx, &key)?);
+    if let Some(index) = &ctx.proj.usage {
+        doc.usage_reads = medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, &key);
+    }
     for ((from, to), blobs) in &ctx.active.edge_properties {
         if *to != key {
             continue;

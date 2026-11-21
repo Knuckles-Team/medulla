@@ -109,6 +109,10 @@ pub struct Projection {
     pub base_iri: Option<String>,
     /// CamelCase the `rdf:type` object local name (matches AU's `.title()` mapping).
     pub camel_type: bool,
+    /// Reads per asset name that `cat:relevance` fuses as its usage prior
+    /// (MEDULLA-TYPED-PACKS-R108.16). The serving handler loads it from the usage series;
+    /// `None` means no usage is known.
+    pub usage: Option<std::sync::Arc<medulla_catalog_types::catalog_relevance::UsageIndex>>,
 }
 
 /// The `rdf:type` predicate IRI (bare, no angle brackets — predicates compare bare).
@@ -129,6 +133,7 @@ impl Projection {
         Self {
             base_iri: Some(base_iri.to_string()),
             camel_type: type_convention.eq_ignore_ascii_case("camel"),
+            usage: None,
         }
     }
 

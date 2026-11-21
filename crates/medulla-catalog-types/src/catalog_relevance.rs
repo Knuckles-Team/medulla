@@ -136,7 +136,8 @@ pub struct AssetDoc {
     pub concepts: Vec<String>,
     /// Descriptions and definitions.
     pub descriptions: Vec<String>,
-    /// Reads counted on the asset.
+    /// Reads counted on the asset from the usage series, filled by the caller with
+    /// [`usage_of`]; the asset node stores no usage.
     pub usage_reads: u64,
     /// Trust flags set on the asset.
     pub flags: Vec<TrustFlag>,
@@ -168,14 +169,9 @@ fn term_keys() -> [String; 3] {
 fn concept_keys() -> [String; 3] {
     [format!("{CAT_NS}concept"), "concept".into(), "concepts".into()]
 }
-fn usage_keys() -> [String; 2] {
-    [format!("{CAT_NS}usageReads"), "usage_reads".into()]
-}
-fn flag_keys() -> [String; 4] {
+fn flag_keys() -> [String; 2] {
     [
-        format!("{CAT_NS}trustFlag"),
         format!("{CAT_NS}flag"),
-        "trustFlag".into(),
         "flag".into(),
     ]
 }
@@ -211,17 +207,12 @@ fn collect(obj: &Map<String, Value>, keys: &[String]) -> Vec<String> {
 impl AssetDoc {
     /// Read the asset text, counters and flags of one decoded node property object.
     pub fn from_props(obj: &Map<String, Value>) -> Self {
-        let usage_reads = collect(obj, &usage_keys())
-            .iter()
-            .filter_map(|raw| raw.trim().parse::<f64>().ok())
-            .filter(|n| n.is_finite() && *n > 0.0)
-            .fold(0u64, |sum, n| sum.saturating_add(n as u64));
         Self {
             names: collect(obj, &name_keys()),
             term_labels: collect(obj, &term_keys()),
             concepts: collect(obj, &concept_keys()),
             descriptions: collect(obj, &description_keys()),
-            usage_reads,
+            usage_reads: 0,
             flags: collect(obj, &flag_keys())
                 .iter()
                 .filter_map(|raw| TrustFlag::parse(raw))
@@ -241,6 +232,39 @@ pub fn term_labels(obj: &Map<String, Value>) -> Vec<String> {
             format!("{RDFS}label"),
         ],
     )
+}
+
+/// Reads per asset name, summed over principals, from the `asset_usage.reads` series.
+pub type UsageIndex = std::collections::HashMap<String, u64>;
+
+/// Sum the `asset_usage.reads` series (`(series name, summed count)`) per asset name.
+pub fn usage_index(series: &[(String, u64)]) -> UsageIndex {
+    let prefix = format!("{}|principal=", crate::asset_usage::ASSET_USAGE_READS_SERIES);
+    let mut out = UsageIndex::new();
+    for (name, count) in series {
+        let Some(rest) = name.strip_prefix(&prefix) else {
+            continue;
+        };
+        if let Some((_, asset)) = rest.split_once("|asset=") {
+            let slot = out.entry(asset.to_string()).or_insert(0);
+            *slot = slot.saturating_add(*count);
+        }
+    }
+    out
+}
+
+/// The reads of one asset: the usage recorded under any of its names or under the last
+/// segment of its node key.
+pub fn usage_of(index: &UsageIndex, names: &[String], node_key: &str) -> u64 {
+    let bare = node_key.trim_start_matches('<').trim_end_matches('>');
+    let local = bare.rsplit(['#', '/', ':']).next().unwrap_or(bare);
+    let mut keys: Vec<&str> = names.iter().map(String::as_str).collect();
+    keys.push(local);
+    keys.sort_unstable();
+    keys.dedup();
+    keys.iter()
+        .filter_map(|key| index.get(*key))
+        .fold(0u64, |sum, n| sum.saturating_add(*n))
 }
 
 /// Check the search text against the knobs: not blank, not over `catalog_search.max_query_chars`.
@@ -395,7 +419,6 @@ mod tests {
         let props: Map<String, Value> = serde_json::from_value(serde_json::json!({
             "http://www.w3.org/2004/02/skos/core#prefLabel": "Orders",
             "description": "sales orders",
-            "https://knuckles-team.github.io/ontology/catalog#usageReads": 12,
             "__rdf_multivalue_literals": {"termLabel": ["Order Book"]},
             "flag": "deprecated"
         }))
@@ -403,8 +426,21 @@ mod tests {
         let doc = AssetDoc::from_props(&props);
         assert_eq!(doc.names, vec!["Orders"]);
         assert_eq!(doc.term_labels, vec!["Order Book"]);
-        assert_eq!(doc.usage_reads, 12);
         assert_eq!(doc.flags, vec![TrustFlag::Deprecation]);
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.16
+    #[test]
+    fn usage_series_sum_per_asset_across_principals() {
+        let series = vec![
+            ("asset_usage.reads|principal=a|asset=orders".to_string(), 4),
+            ("asset_usage.reads|principal=b|asset=orders".to_string(), 6),
+            ("asset_usage.join|principal=a|asset=orders|with=x".to_string(), 9),
+        ];
+        let index = usage_index(&series);
+        assert_eq!(usage_of(&index, &["Orders".into(), "orders".into()], "<urn:x:y>"), 10);
+        assert_eq!(usage_of(&index, &[], "<urn:medulla:asset:tool:orders>"), 10);
+        assert_eq!(usage_of(&index, &["customers".into()], "<urn:x:y>"), 0);
     }
 
     // spec: MEDULLA-TYPED-PACKS-R108.16
