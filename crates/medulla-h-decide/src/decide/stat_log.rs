@@ -971,6 +971,33 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessLessons,
             >(super::stat_harness_adoption::lessons(ctx, &query)?)
         }
+        DecisionLogOp::List {
+            question_kind,
+            resolution_kind,
+            from_ms,
+            to_ms,
+            limit,
+            cursor,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogList,
+        >(super::stat_decision_reads::list(
+            ctx.store,
+            reader,
+            &super::stat_decision_reads::ListFilter {
+                question_kind,
+                resolution_kind,
+                from_ms,
+                to_ms,
+                limit,
+                cursor,
+            },
+        )?),
+        DecisionLogOp::Provenance { record_id, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogProvenance,
+        >(super::stat_decision_reads::provenance(
+            ctx.store, reader, &record_id,
+        )?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,

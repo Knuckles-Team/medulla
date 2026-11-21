@@ -241,6 +241,8 @@ method_results! {
     DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackAuditRows>;
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
+    DecisionLogList(DecisionLog / "list") => Raw<medulla_decision_types::decision::statistical::log::DecisionLogList>;
+    DecisionLogProvenance(DecisionLog / "provenance") => Raw<medulla_decision_types::decision::statistical::log::DecisionProvenance>;
     FeatureLedgerOpen(FeatureLedger / "open") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     FeatureLedgerPlan(FeatureLedger / "plan") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;

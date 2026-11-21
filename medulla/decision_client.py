@@ -715,6 +715,35 @@ def harness_lessons_op(
     }
 
 
+def list_op(
+    tenant_id: str,
+    *,
+    question_kind: str | None = None,
+    resolution_kind: str | None = None,
+    from_ms: int | None = None,
+    to_ms: int | None = None,
+    limit: int = 50,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """List the tenant's committed decisions, newest first, one page at a time."""
+    op: dict[str, Any] = {"op": "list", "tenant_id": tenant_id, "limit": limit}
+    for name, value in (
+        ("question_kind", question_kind),
+        ("resolution_kind", resolution_kind),
+        ("from_ms", from_ms),
+        ("to_ms", to_ms),
+        ("cursor", cursor),
+    ):
+        if value is not None:
+            op[name] = value
+    return op
+
+
+def provenance_op(tenant_id: str, record_id: str) -> dict[str, Any]:
+    """Read the premises, facts, rules and approver one committed decision rested on."""
+    return {"op": "provenance", "tenant_id": tenant_id, "record_id": record_id}
+
+
 def learn_op(tenant_id: str, write: str, **fields: Any) -> dict[str, Any]:
     """The one retrieval-learning write (EH-394..EH-397): ``record_outcome``,
     ``fit_adapter``, ``evaluate_generation`` or ``move_pointer``. What was

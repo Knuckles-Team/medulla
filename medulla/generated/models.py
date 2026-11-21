@@ -4317,6 +4317,88 @@ class DecisionLogOpHarnessLessons(BaseModel):
     tenant_id: str
 
 
+class InputsState(str, Enum):
+    inline = "inline"
+    compacted = "compacted"
+    retired = "retired"
+
+
+class DecisionListItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decided_at_ms: Annotated[int, Field(ge=0)]
+    inputs: InputsState
+    outcome: StatisticalOutcome
+    question_kind: QuestionKind
+    record_digest: str
+    record_id: str
+    resolution_kind: ResolutionKind
+
+
+class DecisionLogList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    records: list[DecisionListItem]
+
+
+class ProvenancePremise(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    class_: PremiseClass = Field(..., alias="class")
+    kind: str
+    reference: str
+
+
+class ProvenanceFact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    node_id: str
+    revision: Annotated[int, Field(ge=0)]
+
+
+class ProvenanceRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    rule_id: str
+    version: Annotated[int, Field(ge=0)]
+
+
+class DecisionProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str | None = None
+    facts: list[ProvenanceFact]
+    inputs: InputsState
+    premises: list[ProvenancePremise]
+    record_digest: str
+    record_id: str
+    rules: list[ProvenanceRule]
+
+
+class DecisionLogOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    from_ms: Annotated[int, Field(ge=0)] | None = None
+    limit: Annotated[int, Field(ge=0)] | None = 50
+    op: Literal["list"]
+    question_kind: QuestionKind | None = None
+    resolution_kind: ResolutionKind | None = None
+    tenant_id: str
+    to_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class DecisionLogOpProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["provenance"]
+    record_id: str
+    tenant_id: str
+
+
 class BranchRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4706,6 +4788,8 @@ DecisionLogOp = Annotated[
     | DecisionLogOpLearn
     | DecisionLogOpHarnessAdoption
     | DecisionLogOpHarnessLessons
+    | DecisionLogOpList
+    | DecisionLogOpProvenance
     | DecisionLogOpPromoteRule
     | DecisionLogOpCapabilityOutcome
     | DecisionLogOpGenerationSpace
@@ -37259,12 +37343,18 @@ __all__ = [
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
     "ConsolidationPlan",
+    "DecisionListItem",
+    "DecisionLogList",
+    "DecisionLogOpList",
+    "DecisionLogOpProvenance",
+    "DecisionProvenance",
     "ExecutionAnswer",
     "ExecutionAnswerPart",
     "ExecutionAnswerPartAbstain",
     "ExecutionAnswerPartAnswer",
     "ExecutionAnswerParts",
     "FactUseItem",
+    "InputsState",
     "MediaAttachment",
     "Memento",
     "MemoryExportManifest",
@@ -37289,6 +37379,9 @@ __all__ = [
     "MethodMemoryRememberParams",
     "PhaseTiming",
     "PromotionGroup",
+    "ProvenanceFact",
+    "ProvenancePremise",
+    "ProvenanceRule",
     "RevisionProposalListRequest",
     "RevisionProposalPage",
     "RevisionRow",

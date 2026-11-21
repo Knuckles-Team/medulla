@@ -495,6 +495,128 @@ pub enum DecisionLogOp {
         tenant_id: String,
         query: HarnessLessonQuery,
     },
+    /// List the tenant's committed records, newest first, one page at a time
+    /// (MEDULLA-DECISION-ENGINE-R870.1). Reads the record index `Get` reads;
+    /// writes nothing.
+    List {
+        tenant_id: String,
+        #[serde(default)]
+        question_kind: Option<super::QuestionKind>,
+        #[serde(default)]
+        resolution_kind: Option<super::super::record::ResolutionKind>,
+        #[serde(default)]
+        from_ms: Option<u64>,
+        #[serde(default)]
+        to_ms: Option<u64>,
+        /// Records per page; defaults to [`DEFAULT_LIST_LIMIT`] and is at most
+        /// the knob `decision.list_page_max`.
+        #[serde(default = "default_list_limit")]
+        limit: u32,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Read what one committed record rested on: premises, the facts and
+    /// rules it used, and its approver (MEDULLA-DECISION-ENGINE-R870.2).
+    Provenance {
+        tenant_id: String,
+        record_id: String,
+    },
+}
+
+/// Records per `List` page when the request names no limit.
+pub const DEFAULT_LIST_LIMIT: u32 = 50;
+
+fn default_list_limit() -> u32 {
+    DEFAULT_LIST_LIMIT
+}
+
+/// Where a listed record's inputs stand.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum InputsState {
+    Inline,
+    Compacted,
+    Retired,
+}
+
+impl From<&EntryInputs> for InputsState {
+    fn from(inputs: &EntryInputs) -> Self {
+        match inputs {
+            EntryInputs::Inline => Self::Inline,
+            EntryInputs::Compacted { .. } => Self::Compacted,
+            EntryInputs::Retired { .. } => Self::Retired,
+        }
+    }
+}
+
+/// One row of a `List` page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DecisionListItem {
+    pub record_id: String,
+    pub question_kind: super::QuestionKind,
+    pub resolution_kind: super::super::record::ResolutionKind,
+    pub outcome: super::StatisticalOutcome,
+    pub decided_at_ms: u64,
+    pub record_digest: String,
+    pub inputs: InputsState,
+}
+
+/// One page of committed records, ordered by `decided_at_ms` descending then
+/// `record_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DecisionLogList {
+    pub records: Vec<DecisionListItem>,
+    pub next_cursor: Option<String>,
+}
+
+/// One premise a committed record rested on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProvenancePremise {
+    /// The provenance tag of the premise (`graph_row`, `policy`, ...).
+    pub kind: String,
+    pub reference: String,
+    pub class: super::super::record::PremiseClass,
+}
+
+/// One fact a decision used, at the revision it read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProvenanceFact {
+    pub node_id: String,
+    pub revision: u64,
+    pub digest: String,
+}
+
+/// One rule a decision applied, at the version it applied.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProvenanceRule {
+    pub rule_id: String,
+    pub version: u64,
+    pub digest: String,
+}
+
+/// The provenance of one committed record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DecisionProvenance {
+    pub record_id: String,
+    pub record_digest: String,
+    pub premises: Vec<ProvenancePremise>,
+    pub facts: Vec<ProvenanceFact>,
+    pub rules: Vec<ProvenanceRule>,
+    pub approver: Option<String>,
+    pub inputs: InputsState,
 }
 
 /// The lesson retrieval of a `HarnessLessons` read.
@@ -620,7 +742,9 @@ impl DecisionLogOp {
             | Self::Verify { .. }
             | Self::GenerationSpace { .. }
             | Self::WritebackAudit { .. }
-            | Self::HarnessLessons { .. } => LogOpClass::Read,
+            | Self::HarnessLessons { .. }
+            | Self::List { .. }
+            | Self::Provenance { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
@@ -662,7 +786,9 @@ impl DecisionLogOp {
             | Self::GenerationSpace { tenant_id, .. }
             | Self::WritebackAudit { tenant_id, .. }
             | Self::HarnessAdoption { tenant_id, .. }
-            | Self::HarnessLessons { tenant_id, .. } => tenant_id,
+            | Self::HarnessLessons { tenant_id, .. }
+            | Self::List { tenant_id, .. }
+            | Self::Provenance { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

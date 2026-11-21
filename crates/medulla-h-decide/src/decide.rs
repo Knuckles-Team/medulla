@@ -79,6 +79,7 @@ mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_grounded_eval;
 #[cfg(feature = "decide")]
+mod stat_decision_reads;
 mod stat_harness_adoption;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
