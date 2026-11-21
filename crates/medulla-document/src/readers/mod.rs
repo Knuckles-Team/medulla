@@ -15,13 +15,34 @@ use crate::fragment::{Fragment, ReaderError, ReaderRegistry};
 use crate::processing::ChunkSpan;
 
 mod csv;
+#[cfg(feature = "reader-email")]
+mod email;
+#[cfg(any(
+    feature = "reader-pdf",
+    feature = "reader-ooxml",
+    feature = "reader-spreadsheet",
+    feature = "reader-email"
+))]
+mod extracted;
 mod html;
+#[cfg(feature = "reader-ooxml")]
+mod ooxml;
+#[cfg(feature = "reader-pdf")]
+mod pdf;
+#[cfg(feature = "reader-spreadsheet")]
+mod spreadsheet;
 mod subtitle;
 
 /// Stable code of a source over the byte limit.
 pub const READER_TOO_LARGE: &str = "READER_TOO_LARGE";
 /// Stable code of a source the reader cannot parse.
 pub const READER_CORRUPT: &str = "READER_CORRUPT";
+/// Stable code of a source whose content is encrypted (MEDULLA-INGEST-WORKER-R700.7).
+pub const READER_ENCRYPTED: &str = "READER_ENCRYPTED";
+/// The first eight bytes of an OLE compound file, the only container an encrypted
+/// Office Open XML package or workbook uses.
+#[cfg(any(feature = "reader-ooxml", feature = "reader-spreadsheet"))]
+const COMPOUND_FILE_SIGNATURE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// A source is cut into this many units at the byte limit, so the unit size is
 /// derived from `ingest.reader_max_bytes` and needs no second knob.
 const UNITS_PER_LIMIT: usize = 1024;
@@ -79,13 +100,32 @@ impl ReaderLimits {
     }
 }
 
-/// A registry holding the delimited-text, subtitle and HTML readers under `limits`.
+/// Whether `bytes` open with the OLE compound-file signature. A plain Office Open
+/// XML file is always a zip, so a compound file of those types is encrypted.
+#[cfg(any(feature = "reader-ooxml", feature = "reader-spreadsheet"))]
+fn is_compound_file(bytes: &[u8]) -> bool {
+    bytes.starts_with(&COMPOUND_FILE_SIGNATURE)
+}
+
+/// A registry holding the delimited-text, subtitle and HTML readers, and every
+/// format reader whose Cargo feature is on, under `limits`.
 pub fn text_registry(limits: ReaderLimits) -> Result<ReaderRegistry, ReaderError> {
     let mut registry = ReaderRegistry::new();
     registry.register(Arc::new(csv::DelimitedReader::csv(limits)))?;
     registry.register(Arc::new(csv::DelimitedReader::tsv(limits)))?;
     registry.register(Arc::new(subtitle::SubtitleReader::new(limits)))?;
     registry.register(Arc::new(html::HtmlReader::new(limits)))?;
+    #[cfg(feature = "reader-pdf")]
+    registry.register(Arc::new(pdf::PdfReader::new(limits)))?;
+    #[cfg(feature = "reader-ooxml")]
+    {
+        registry.register(Arc::new(ooxml::OoxmlReader::word(limits)))?;
+        registry.register(Arc::new(ooxml::OoxmlReader::presentation(limits)))?;
+    }
+    #[cfg(feature = "reader-spreadsheet")]
+    registry.register(Arc::new(spreadsheet::SpreadsheetReader::new(limits)))?;
+    #[cfg(feature = "reader-email")]
+    registry.register(Arc::new(email::EmailReader::new(limits)))?;
     Ok(registry)
 }
 

@@ -28,6 +28,15 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 thiserror = "2.0"
+# Reader parsers (MEDULLA-INGEST-WORKER-R700.7 to R700.10). `default-features = false`
+# keeps every date-time feature (and so `chrono`) off, which the manifest rule of
+# MEDULLA-INGEST-WORKER-R700.1 requires; each is linked only under its `reader-*` feature.
+lopdf = { version = "0.47", default-features = false, optional = true }
+zip = { version = "2.6.1", default-features = false, features = ["deflate"], optional = true }
+quick-xml = { version = "0.41", optional = true }
+calamine = { version = "0.38", default-features = false, optional = true }
+# 1.x needs rust-version 1.98; the pinned toolchain is 1.96.0.
+mail-parser = { version = "0.11.9", default-features = false, optional = true }
 
 [features]
 default = []
@@ -43,17 +52,23 @@ serving = ["contract"]
 # One feature per format reader (MEDULLA-INGEST-WORKER-R700.1). Each admits its parser
 # dependency only after tests/test_third_party_source_policy.py passes for it:
 # lopdf (pdf), zip + quick-xml (ooxml), calamine (spreadsheet), mail-parser (email), csv.
-reader-pdf = []
-reader-ooxml = []
-reader-spreadsheet = []
-reader-email = []
+reader-pdf = ["dep:lopdf"]
+reader-ooxml = ["dep:zip", "dep:quick-xml"]
+reader-spreadsheet = ["dep:calamine"]
+reader-email = ["dep:mail-parser"]
 reader-csv = []
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 serde_json = "1.0"
+zip = { version = "2.6.1", default-features = false, features = ["deflate"] }
 
 [[bench]]
 name = "document_chunk_tree"
 harness = false
+
+[[bench]]
+name = "reader_pdf"
+harness = false
+required-features = ["reader-pdf"]
