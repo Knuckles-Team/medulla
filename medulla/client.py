@@ -12939,6 +12939,28 @@ class QueryClient:
             return result
         return _unified_rows(result or [])
 
+    async def unified_ranked(
+        self,
+        plan: list[dict[str, Any]],
+        *,
+        retrieval: dict[str, Any] | None = None,
+    ) -> Any:
+        """Run ONE cross-modal plan and return the typed ``RankedRows``
+        (MEDULLA-FEDERATED-QUERY-R039).
+
+        The same plan and ``retrieval`` request as :meth:`unified`, answered as the rows
+        plus a ``shortfall`` that is present exactly when a ``Rank`` then ``Limit k`` step
+        returned fewer than ``k`` rows: ``requested``, ``found`` and a ``reason`` of
+        ``eligible_exhausted``, ``missing_embedding`` or ``budget_exhausted``. A ``k`` of
+        zero refuses ``RETRIEVAL_K_INVALID``. The answer is never cached."""
+        from .generated.models import RankedRows
+
+        body: dict[str, Any] = {"plan": {"ops": plan, "report_shortfall": True}}
+        if retrieval is not None:
+            body["retrieval"] = retrieval
+        result = (await _gen.query.send_unified_query(self._client, body)).payload
+        return RankedRows.model_validate(result)
+
     async def code_map(
         self,
         repo: str,

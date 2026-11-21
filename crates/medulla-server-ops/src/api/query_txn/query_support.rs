@@ -93,9 +93,29 @@ pub fn execute_rows(
     plan: &medulla_exec::algebra::Plan,
     ctx: &medulla_exec::exec::PlanCtx,
 ) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
+    Ok(unified_rows(&medulla_exec::exec::execute(plan, ctx)?))
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039: [`execute_rows`] for a plan that sets `report_shortfall`:
+/// the same rows plus the typed `Shortfall` of a top-`k` rank that could not return `k`.
+#[cfg(feature = "query")]
+pub fn execute_ranked(
+    plan: &medulla_exec::algebra::Plan,
+    ctx: &medulla_exec::exec::PlanCtx,
+) -> Result<medulla_types::retrieval::RankedRows, String> {
     let result = medulla_exec::exec::execute(plan, ctx)?;
+    Ok(medulla_types::retrieval::RankedRows {
+        rows: unified_rows(&result),
+        shortfall: result.shortfall().copied(),
+    })
+}
+
+#[cfg(feature = "query")]
+fn unified_rows(
+    result: &medulla_exec::rowset::RowSet,
+) -> Vec<medulla_types::unified_row::UnifiedRow> {
     let (texts, values) = (result.texts(), result.values());
-    Ok(result
+    result
         .rows()
         .iter()
         .map(|r| medulla_types::unified_row::UnifiedRow {
@@ -104,7 +124,7 @@ pub fn execute_rows(
             texts: texts.get(&r.id).cloned().unwrap_or_default(),
             values: values.get(&r.id).cloned().unwrap_or_default(),
         })
-        .collect())
+        .collect()
 }
 
 #[cfg(all(feature = "query", feature = "tsdb"))]

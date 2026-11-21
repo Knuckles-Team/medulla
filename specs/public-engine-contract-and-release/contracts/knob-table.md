@@ -55,6 +55,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `identity.ownership_writer_share` | f64 | 0.10 | [0.01, 0.5] | fraction | Tunable | `MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE` |
 | `retrieval.lineage_depth` | u64 | 8 | [1, 16] | hops | Tunable | `MEDULLA_RETRIEVAL_LINEAGE_DEPTH` |
 | `retrieval.topic_weight` | f64 | 0.3 | [0, 1] | ratio | Tunable | `MEDULLA_RETRIEVAL_TOPIC_WEIGHT` |
+| `retrieval.replenish_max_rounds` | u64 | 6 | [1, 32] | rounds | Tunable | `MEDULLA_RETRIEVAL_REPLENISH_MAX_ROUNDS` |
+| `retrieval.oversample_factor` | u64 | 4 | [1, 16] | factor | Tunable | `MEDULLA_RETRIEVAL_OVERSAMPLE_FACTOR` |
 | `drift.sample_max` | u64 | 1000 | [10, 10000] | records | Tunable | `MEDULLA_DRIFT_SAMPLE_MAX` |
 | `conformance.evidence_ttl_ms` | u64 | 2592000000 | [60000, 31536000000] | ms | Tunable | `MEDULLA_CONFORMANCE_EVIDENCE_TTL_MS` |
 | `finance.regime_forecast.max_horizon` | u64 | 10000 | [1, 1000000] | steps | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_MAX_HORIZON` |

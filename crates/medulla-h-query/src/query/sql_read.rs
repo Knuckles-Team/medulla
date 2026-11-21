@@ -482,9 +482,13 @@ pub(crate) async fn handle_unified_query(
     // survives writes disjoint from it. A plan whose legs read state outside the graph
     // version (the decision log, a foreign source without a fresh watermark — EH-400) is
     // never cached; a fresh foreign source's watermark joins the key.
+    // MEDULLA-FEDERATED-QUERY-R039: a plan that reports its shortfall answers `RankedRows`
+    // and is never cached.
+    let report_shortfall = plan.report_shortfall;
     #[cfg(feature = "result-cache")]
     let key = match (foreign_execution.is_none()
         && foreign_executions.is_empty()
+        && !report_shortfall
         && legs.cache_admissible())
     .then(|| unified_cache_payload(&plan, retrieval.as_ref()))
     .transpose()
@@ -521,6 +525,37 @@ pub(crate) async fn handle_unified_query(
     // knob `query.interactive_node_budget` and refuses `QUERY_BUDGET_EXCEEDED` past it.
     let max_nodes = usize::try_from(medulla_server_api::knob_config::knobs().query_interactive_node_budget)
         .unwrap_or(usize::MAX);
+    if report_shortfall {
+        let result = run_unified_off_lock_with(
+            state,
+            req_id,
+            &core,
+            UnifiedRead {
+                snap,
+                plan,
+                legs,
+                retrieval,
+            },
+            &scope,
+            move |plan, plan_ctx| {
+                let bounded = plan_ctx.clone().with_budget(medulla_exec::budget::Budget {
+                    max_interactive_nodes: Some(max_nodes),
+                    ..plan_ctx.budget
+                });
+                execute_ranked(plan, &bounded)
+            },
+        )
+        .await;
+        return Ok(served_response::<query_results::UnifiedQueryShortfall>(
+            req_id,
+            result,
+            "UnifiedQuery",
+            #[cfg(feature = "result-cache")]
+            &core,
+            #[cfg(feature = "result-cache")]
+            None,
+        ));
+    }
     let result = run_unified_off_lock_with(
         state,
         req_id,

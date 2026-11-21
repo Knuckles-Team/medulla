@@ -424,6 +424,18 @@ pub fn run_unified_with<T>(
         )
         .unwrap_or(usize::MAX),
         ..medulla_exec::budget::Budget::default()
+    })
+    // MEDULLA-FEDERATED-QUERY-R039: the replenishment rounds and first oversample window
+    // are the registry knobs `retrieval.replenish_max_rounds` / `retrieval.oversample_factor`.
+    .with_replenish(medulla_exec::exec::vector_rank::ReplenishPolicy {
+        max_rounds: usize::try_from(
+            medulla_server_api::knob_config::knobs().retrieval_replenish_max_rounds,
+        )
+        .unwrap_or(usize::MAX),
+        oversample: usize::try_from(
+            medulla_server_api::knob_config::knobs().retrieval_oversample_factor,
+        )
+        .unwrap_or(usize::MAX),
     });
     #[cfg(feature = "text")]
     let need_text = plan_needs_text(&ops);

@@ -9,10 +9,11 @@
 //!   [`EXACT_RANK_MAX`] when only a top `k` is wanted.
 //! * **Filtered ANN** — for a larger candidate set feeding a `Limit k`, the ANN walk
 //!   runs with the candidates as its allowlist, asking for `k · OVERSAMPLE` hits and
-//!   widening by `OVERSAMPLE` each round. A walk that still strands candidates after
-//!   [`ANN_ROUNDS`] rounds is topped up exactly, so `k` rows survive whenever `k`
-//!   candidates hold an embedding (EH-564: a traversal-then-rank query returned 7–9
-//!   of 10).
+//!   doubling the window each round ([`replenish_until_k`], MEDULLA-FEDERATED-QUERY-R039).
+//!   A walk that still strands candidates after [`ReplenishPolicy::max_rounds`] rounds is
+//!   topped up exactly, so `k` rows survive whenever `k` candidates hold an embedding
+//!   (EH-564: a traversal-then-rank query returned 7–9 of 10); otherwise the answer
+//!   carries a typed [`Shortfall`].
 //!
 //! The previous single path asked the filtered walk for `|candidates|` hits, which
 //! both cost more than scoring the candidates (the walk's beam grew to the candidate
@@ -22,6 +23,8 @@ use std::collections::HashSet;
 
 use medulla_index_types::embedding::{EmbeddingSpaceRef, Modality};
 use medulla_semantic_index::semantic::SemanticStore;
+use medulla_types::contract::ServerErrorCode;
+use medulla_types::retrieval::{Shortfall, ShortfallReason};
 
 use crate::algebra::Op;
 use crate::exec::PlanCtx;
@@ -32,11 +35,47 @@ use crate::rowset::RowSet;
 /// the EH-565 evidence in the lane WRAPUP).
 pub(crate) const EXACT_RANK_MAX: usize = 4_096;
 
-/// Oversampling factor of the filtered ANN walk, applied again on every widening round.
-const OVERSAMPLE: usize = 4;
+/// MEDULLA-FEDERATED-QUERY-R039: how a top-`k` rank replenishes candidates the filter
+/// stranded. The executor crate cannot read the registry, so the served planner resolves
+/// the knobs `retrieval.replenish_max_rounds` and `retrieval.oversample_factor` and binds
+/// them with [`PlanCtx::with_replenish`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReplenishPolicy {
+    /// Widening rounds before the exact top-up (`retrieval.replenish_max_rounds`).
+    pub max_rounds: usize,
+    /// The first window is `k` times this (`retrieval.oversample_factor`).
+    pub oversample: usize,
+}
 
-/// Widening rounds before the exact top-up.
-const ANN_ROUNDS: usize = 3;
+impl Default for ReplenishPolicy {
+    fn default() -> Self {
+        Self {
+            max_rounds: 6,
+            oversample: 4,
+        }
+    }
+}
+
+/// The best rows of a top-`k` rank and, when fewer than `k` exist, why.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Replenished {
+    /// Up to `k` `(id, score)` pairs, best first.
+    pub scored: Vec<(String, f32)>,
+    /// `Some` exactly when `scored` holds fewer than `k` rows.
+    pub shortfall: Option<Shortfall>,
+}
+
+/// The ids of `input` a ranking step may rank: all of them, narrowed to the compiled
+/// hard constraints when the request carries any (MEDULLA-FEDERATED-QUERY-R040.1.3). The
+/// one filter every ranking leg (vector, text, fused) takes, so a candidate that fails a
+/// constraint can never reach a ranked result.
+pub(crate) fn eligible_ids<'r>(ctx: &PlanCtx, input: &'r RowSet) -> HashSet<&'r str> {
+    let mut ids = input.id_set();
+    if let Some(constraints) = &ctx.constraints {
+        ids.retain(|id| constraints.contains(id));
+    }
+    ids
+}
 
 /// `RANK BY ~query` over every candidate (the whole order).
 pub fn rank_op(ctx: &PlanCtx, query: &[f32], input: RowSet) -> Result<RowSet, String> {
@@ -74,14 +113,50 @@ fn rank_top(
     if let Some(pair) = &ctx.modality_pair {
         check_pair(ctx.semantic.space(), pair.query, pair.target)?;
     }
-    let candidates = input.id_set();
+    // MEDULLA-FEDERATED-QUERY-R039: a top-0 rank is a malformed request, refused before
+    // any candidate is read.
+    if limit == Some(0) {
+        return Err(format!(
+            "{}: a ranked step asked for k = 0 rows",
+            ServerErrorCode::RetrievalKInvalid
+        ));
+    }
+    let candidates = eligible_ids(ctx, &input);
     if candidates.is_empty() {
-        return Ok(RowSet::new());
+        // Nothing is eligible: zero rows, and a top-`k` ask names why.
+        return Ok(RowSet::new().with_shortfall(limit.map(|k| Shortfall {
+            requested: k as u64,
+            found: 0,
+            reason: ShortfallReason::EligibleExhausted,
+        })));
     }
     check_width(ctx.semantic, query)?;
-    let want = limit.map_or(candidates.len(), |k| k.min(candidates.len()));
-    let scored = ranked(ctx.semantic, query, &candidates, want, EXACT_RANK_MAX);
-    Ok(RowSet::from_scored(scored))
+    let Some(k) = limit else {
+        let scored = ctx
+            .semantic
+            .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
+        return Ok(RowSet::from_scored(scored));
+    };
+    // `k` above the plan's result-row budget is capped and reported, never refused.
+    let cap = ctx.budget.max_result_rows;
+    let found = replenish_until_k(
+        ctx.semantic,
+        query,
+        &candidates,
+        k.min(cap),
+        EXACT_RANK_MAX,
+        ctx.replenish,
+    );
+    let shortfall = if k > cap {
+        Some(Shortfall {
+            requested: k as u64,
+            found: found.scored.len() as u64,
+            reason: ShortfallReason::BudgetExhausted,
+        })
+    } else {
+        found.shortfall
+    };
+    Ok(RowSet::from_scored(found.scored).with_shortfall(shortfall))
 }
 
 /// The identity tuple one modality binds: `(space id, dimensions, model revision)`.
@@ -137,29 +212,53 @@ fn check_width(semantic: &SemanticStore, query: &[f32]) -> Result<(), String> {
     ))
 }
 
-/// The best `want` candidates, by the path the candidate count selects (see the module
-/// docs). `exact_max` is the exact-path ceiling ([`EXACT_RANK_MAX`] when serving).
-pub fn ranked(
+/// MEDULLA-FEDERATED-QUERY-R039: the best `k` candidates, by the path the candidate count
+/// selects (see the module docs; `exact_max` is the exact-path ceiling,
+/// [`EXACT_RANK_MAX`] when serving). The filtered ANN walk asks for `k * oversample`
+/// hits and doubles the window until `k` candidates survive or `max_rounds` is reached;
+/// an exact top-up then follows, so fewer than `k` rows come back only when fewer than
+/// `k` candidates hold an embedding. That case, and only that case, is a [`Shortfall`]:
+/// `missing_embedding` when any candidate holds none, else `eligible_exhausted`.
+pub fn replenish_until_k(
     semantic: &SemanticStore,
     query: &[f32],
     candidates: &HashSet<&str>,
-    want: usize,
+    k: usize,
     exact_max: usize,
-) -> Vec<(String, f32)> {
-    if candidates.len() <= exact_max || want >= candidates.len() {
-        return semantic.exact_rank_candidates(query, candidates.iter().copied(), want);
-    }
-    let allow = |id: &str| candidates.contains(id);
-    let mut fetch = want.saturating_mul(OVERSAMPLE);
-    for _ in 0..ANN_ROUNDS {
-        let mut hits = semantic.semantic_search_filtered(query, fetch, allow);
-        if hits.len() >= want {
-            hits.truncate(want);
-            return hits;
+    policy: ReplenishPolicy,
+) -> Replenished {
+    let want = k.min(candidates.len());
+    let exact = || semantic.exact_rank_candidates(query, candidates.iter().copied(), want);
+    let scored = if candidates.len() <= exact_max || want >= candidates.len() {
+        exact()
+    } else {
+        let allow = |id: &str| candidates.contains(id);
+        let mut fetch = want.saturating_mul(policy.oversample.max(1));
+        let mut walked = None;
+        for _ in 0..policy.max_rounds.max(1) {
+            let mut hits = semantic.semantic_search_filtered(query, fetch, allow);
+            if hits.len() >= want {
+                hits.truncate(want);
+                walked = Some(hits);
+                break;
+            }
+            fetch = fetch.saturating_mul(2);
         }
-        fetch = fetch.saturating_mul(OVERSAMPLE);
-    }
-    semantic.exact_rank_candidates(query, candidates.iter().copied(), want)
+        walked.unwrap_or_else(exact)
+    };
+    let shortfall = (scored.len() < k).then(|| Shortfall {
+        requested: k as u64,
+        found: scored.len() as u64,
+        reason: if candidates
+            .iter()
+            .any(|id| semantic.get_embedding(id).is_none())
+        {
+            ShortfallReason::MissingEmbedding
+        } else {
+            ShortfallReason::EligibleExhausted
+        },
+    });
+    Replenished { scored, shortfall }
 }
 
 #[cfg(test)]
@@ -241,5 +340,69 @@ mod tests {
         let view = GraphCore::new().analysis_snapshot();
         let ctx = PlanCtx::new(&view, &legacy);
         assert!(rank_op(&ctx, &[1.0], RowSet::from_ids(["a".to_string()])).is_ok());
+    }
+
+    fn store(embedded: usize) -> SemanticStore {
+        let mut store = SemanticStore::new();
+        for index in 0..embedded {
+            store
+                .add_embedding(format!("e{index}"), vec![1.0, index as f32 * 0.01])
+                .unwrap();
+        }
+        store
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039
+    #[test]
+    fn replenish_returns_k_or_names_the_shortfall() {
+        let semantic = store(20);
+        let ids: Vec<String> = (0..20).map(|index| format!("e{index}")).collect();
+        let all: HashSet<&str> = ids.iter().map(String::as_str).collect();
+        let policy = ReplenishPolicy::default();
+        // The exact path and the forced filtered-ANN path both return k rows.
+        for exact_max in [EXACT_RANK_MAX, 0] {
+            let got = replenish_until_k(&semantic, &[1.0, 0.0], &all, 5, exact_max, policy);
+            assert_eq!(got.scored.len(), 5);
+            assert_eq!(got.shortfall, None);
+        }
+        // Fewer embedded candidates than k: found, requested and the reason.
+        let mut with_unembedded = all.clone();
+        with_unembedded.insert("none");
+        let got = replenish_until_k(&semantic, &[1.0, 0.0], &with_unembedded, 25, EXACT_RANK_MAX, policy);
+        assert_eq!(got.scored.len(), 20);
+        assert_eq!(
+            got.shortfall,
+            Some(Shortfall {
+                requested: 25,
+                found: 20,
+                reason: ShortfallReason::MissingEmbedding
+            })
+        );
+        let got = replenish_until_k(&semantic, &[1.0, 0.0], &all, 25, EXACT_RANK_MAX, policy);
+        assert_eq!(got.shortfall.map(|s| s.reason), Some(ShortfallReason::EligibleExhausted));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039
+    #[test]
+    fn k_zero_is_refused_and_budget_caps_k() {
+        let semantic = store(8);
+        let view = GraphCore::new().analysis_snapshot();
+        let ids: Vec<String> = (0..8).map(|index| format!("e{index}")).collect();
+        let input = || RowSet::from_ids(ids.clone());
+        let ctx = PlanCtx::new(&view, &semantic);
+        let refused = rank_limit(&ctx, &[1.0, 0.0], input(), 0).unwrap_err();
+        assert!(refused.starts_with("RETRIEVAL_K_INVALID"), "{refused}");
+        let capped = ctx.clone().with_budget(crate::budget::Budget {
+            max_result_rows: 3,
+            ..ctx.budget
+        });
+        let rows = rank_limit(&capped, &[1.0, 0.0], input(), 5).unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(
+            rows.shortfall().map(|s| (s.requested, s.found, s.reason)),
+            Some((5, 3, ShortfallReason::BudgetExhausted))
+        );
+        let rows = rank_limit(&ctx, &[1.0, 0.0], input(), 5).unwrap();
+        assert!(rows.shortfall().is_none() && rows.len() == 5);
     }
 }

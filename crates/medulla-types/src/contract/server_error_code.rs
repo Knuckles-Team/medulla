@@ -268,6 +268,8 @@ closed_error_codes! {
         ConstraintInvalid => "CONSTRAINT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a graph revision other than the one the query reads.
         GraphRevisionStale => "GRAPH_REVISION_STALE",
+        /// MEDULLA-FEDERATED-QUERY-R039: a ranked step asked for `k = 0` rows.
+        RetrievalKInvalid => "RETRIEVAL_K_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a revision the query has nothing to compare against.
         ConstraintUnevaluable => "CONSTRAINT_UNEVALUABLE",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a topic bound is out of range (`top_topics` zero, `min_weight` outside `[0, 1]`).

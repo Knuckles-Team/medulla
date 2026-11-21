@@ -259,6 +259,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CONSTRAINT_UNEVALUABLE",
             "TOPIC_WEIGHT_INVALID",
             "TOPIC_SPACE_MISMATCH",
+            "RETRIEVAL_K_INVALID",
             "TOPIC_CORPUS_STALE",
             "TOPIC_BACKEND_UNAVAILABLE",
         ],

@@ -170,6 +170,9 @@ pub struct RowSet {
     cells: CellTable,
     /// Column names in the order they were first written.
     order: Vec<String>,
+    /// MEDULLA-FEDERATED-QUERY-R039: set by a top-`k` rank that could not return `k`
+    /// rows. `limit` keeps it; any step that rebuilds the rows starts without one.
+    shortfall: Option<medulla_types::retrieval::Shortfall>,
 }
 
 impl RowSet {
@@ -193,7 +196,19 @@ impl RowSet {
             rows,
             cells: CellTable::new(),
             order: Vec::new(),
+            shortfall: None,
         }
+    }
+
+    /// Record why a top-`k` rank holds fewer than `k` rows (MEDULLA-FEDERATED-QUERY-R039).
+    pub fn with_shortfall(mut self, shortfall: Option<medulla_types::retrieval::Shortfall>) -> Self {
+        self.shortfall = shortfall;
+        self
+    }
+
+    /// The typed shortfall of a top-`k` rank, when it could not return `k` rows.
+    pub fn shortfall(&self) -> Option<&medulla_types::retrieval::Shortfall> {
+        self.shortfall.as_ref()
     }
 
     /// Replace every cell of type `ty` with `incoming`, keeping cells of other types.
@@ -512,6 +527,7 @@ impl RowSet {
             rows,
             cells: self.cells.clone(),
             order: self.order.clone(),
+            shortfall: None,
         }
         .retain_cells()
     }

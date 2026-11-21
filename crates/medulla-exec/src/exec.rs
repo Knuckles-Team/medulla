@@ -263,6 +263,10 @@ pub struct PlanCtx<'a> {
     /// request named (`None`: no modality pair is bound). The rank step compares the
     /// pair's embedding-space bindings (R039.1.2).
     pub modality_pair: Option<medulla_index_types::retrieval_request::ModalityPair>,
+    /// MEDULLA-FEDERATED-QUERY-R039 — how a top-`k` rank replenishes candidates the
+    /// filter stranded (the registry knobs `retrieval.replenish_max_rounds` and
+    /// `retrieval.oversample_factor`, resolved by the served planner).
+    pub replenish: vector_rank::ReplenishPolicy,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -487,6 +491,7 @@ impl<'a> PlanCtx<'a> {
             topic_policy: None,
             constraints: None,
             modality_pair: None,
+            replenish: vector_rank::ReplenishPolicy::default(),
         }
     }
 
@@ -532,6 +537,13 @@ impl<'a> PlanCtx<'a> {
         pair: medulla_index_types::retrieval_request::ModalityPair,
     ) -> Self {
         self.modality_pair = Some(pair);
+        self
+    }
+
+    /// Bind how a top-`k` rank replenishes stranded candidates
+    /// (MEDULLA-FEDERATED-QUERY-R039).
+    pub fn with_replenish(mut self, replenish: vector_rank::ReplenishPolicy) -> Self {
+        self.replenish = replenish;
         self
     }
 
@@ -1050,7 +1062,9 @@ fn rank_text(ctx: &PlanCtx, input: &RowSet, query: &str) -> RowSet {
     let Some(index) = ctx.text else {
         return RowSet::new();
     };
-    let candidates: Vec<&str> = input.id_set().into_iter().collect();
+    // MEDULLA-FEDERATED-QUERY-R040.1.3: the text leg ranks the same constrained set the
+    // vector leg does.
+    let candidates: Vec<&str> = vector_rank::eligible_ids(ctx, input).into_iter().collect();
     let scored: Vec<(String, f32)> = index
         .search_within(query, &candidates, candidates.len())
         .into_iter()
@@ -1079,7 +1093,11 @@ fn fuse_rrf(ctx: &PlanCtx, input: &RowSet, branches: &[Vec<Op>], k: f32) -> Resu
     }
     let k = if k > 0.0 { k } else { medulla_text::RRF_K };
     let refs: Vec<&[String]> = ranked.iter().map(|v| v.as_slice()).collect();
-    let fused = medulla_text::rrf_fuse(&refs, k);
+    // MEDULLA-FEDERATED-QUERY-R040.1.3: a branch that ranks without a vector or text leg
+    // (a distance rank) is still held to the hard constraints.
+    let fused = medulla_text::rrf_fuse(&refs, k)
+        .into_iter()
+        .filter(|(id, _)| ctx.constraints.as_ref().is_none_or(|set| set.contains(id)));
     Ok(RowSet::from_scored(fused))
 }
 

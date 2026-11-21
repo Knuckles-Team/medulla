@@ -543,6 +543,10 @@ knobs! {
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
     /// Topic fusion weight `w` of `score = (1 - w) * dense + w * topic` (MEDULLA-FEDERATED-QUERY-R040.2.2).
     retrieval_topic_weight: f64 = "retrieval.topic_weight", F64(0.3), [0.0, 1.0], "ratio", Tunable;
+    /// Mixed traversal and vector ranking: most widening rounds one `k` replenishment takes (MEDULLA-FEDERATED-QUERY-R039).
+    retrieval_replenish_max_rounds: u64 = "retrieval.replenish_max_rounds", U64(6), [1, 32], "rounds", Tunable;
+    /// Mixed traversal and vector ranking: the first candidate window is `k` times this (MEDULLA-FEDERATED-QUERY-R039).
+    retrieval_oversample_factor: u64 = "retrieval.oversample_factor", U64(4), [1, 16], "factor", Tunable;
     /// Schema drift gate: most records of one stream sampled to infer a delivery shape.
     drift_sample_max: u64 = "drift.sample_max", U64(1000), [10, 10_000], "records", Tunable;
     /// Connector conformance evidence: how long one onboarding import's evidence stands.

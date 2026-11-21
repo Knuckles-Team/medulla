@@ -21307,6 +21307,7 @@ class Plan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     ops: list[Op]
+    report_shortfall: bool | None = None
     scope: PlanScope | None = None
 
 
@@ -31256,6 +31257,31 @@ UnifiedQueryResultValueItem = (
 UnifiedQueryResult = list[UnifiedQueryResultValueItem]
 
 
+class ShortfallReason(str, Enum):
+    ELIGIBLE_EXHAUSTED = "eligible_exhausted"
+    MISSING_EMBEDDING = "missing_embedding"
+    BUDGET_EXHAUSTED = "budget_exhausted"
+
+
+class Shortfall(BaseModel):
+    """Why a ranked answer holds fewer than the ``k`` rows asked for."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    found: Annotated[int, Field(ge=0)]
+    reason: ShortfallReason
+    requested: Annotated[int, Field(ge=0)]
+
+
+class RankedRows(BaseModel):
+    """The rows of a plan that sets ``report_shortfall``, with the typed shortfall."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rows: list[UnifiedQueryResultValueItem]
+    shortfall: Shortfall | None = None
+
+
 UqlParam = UqlParamStr | UqlParamNum | UqlParamBool | UqlParamVector | UqlParamList
 
 
@@ -39208,6 +39234,9 @@ __all__ = [
     "PlanScaffold",
     "PlanScope",
     "PlanScopeLeaf",
+    "RankedRows",
+    "Shortfall",
+    "ShortfallReason",
     "PlanStatus",
     "PointerEvent",
     "PointerMovement",

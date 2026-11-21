@@ -105,6 +105,48 @@ pub struct EncodedSearchResult {
     pub index_generation: u64,
 }
 
+/// MEDULLA-FEDERATED-QUERY-R039: why a ranked answer holds fewer than the `k` rows
+/// asked for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ShortfallReason {
+    /// Every eligible candidate was ranked and fewer than `k` exist.
+    EligibleExhausted,
+    /// Some eligible candidate holds no embedding, so it could not be ranked.
+    MissingEmbedding,
+    /// `k` exceeded the plan's result-row budget and was capped to it.
+    BudgetExhausted,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039: the typed answer of a ranked step that could not
+/// return `k` rows. The planner never returns fewer than `k` rows without one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct Shortfall {
+    /// The `k` the plan asked for.
+    pub requested: u64,
+    /// The rows the answer holds.
+    pub found: u64,
+    /// Why the answer is short.
+    pub reason: ShortfallReason,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039: the answer of a `UnifiedQuery` whose plan sets
+/// `report_shortfall`: the ranked rows and, when fewer than `k` survive, the
+/// [`Shortfall`] that names why.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RankedRows {
+    /// The ranked rows, in the plan's final order.
+    pub rows: Vec<crate::unified_row::UnifiedRow>,
+    /// Present when the answer holds fewer rows than the plan asked for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shortfall: Option<Shortfall>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

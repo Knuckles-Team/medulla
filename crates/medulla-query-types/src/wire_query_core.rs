@@ -1081,6 +1081,12 @@ pub struct Plan {
     /// scope cannot bind is refused before execution.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<PlanScope>,
+    /// MEDULLA-FEDERATED-QUERY-R039: answer a served `UnifiedQuery` as `RankedRows`
+    /// (the rows plus the typed `Shortfall` of a top-`k` rank that could not return
+    /// `k`) instead of the bare row list. Read only by the served handler; its answer
+    /// is not cached.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub report_shortfall: bool,
 }
 
 /// The scan-leaf classes a plan-level scope predicate rides on
@@ -1140,7 +1146,11 @@ impl PlanScope {
 #[cfg(feature = "query")]
 impl Plan {
     pub fn new(ops: Vec<Op>) -> Self {
-        Self { ops, scope: None }
+        Self {
+            ops,
+            scope: None,
+            report_shortfall: false,
+        }
     }
 }
 

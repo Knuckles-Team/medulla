@@ -43,7 +43,7 @@ use medulla_server_api::state::ServerState;
 use medulla_server_ops::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
 use medulla_server_ops::api::query_txn::query_support::bind_sql_text_embedder;
-use medulla_server_ops::api::query_txn::query_support::execute_rows;
+use medulla_server_ops::api::query_txn::query_support::{execute_ranked, execute_rows};
 use medulla_server_ops::api::query_txn::query_support::overlay_write_set;
 #[cfg(all(feature = "query", feature = "tsdb"))]
 use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;

@@ -348,7 +348,7 @@ fn rank_then_limit_is_the_exact_top_k_under_the_ceiling() {
 /// the walk is likely to strand, where the exact top-up must still deliver `k`.
 #[test]
 fn filtered_ann_path_returns_k_candidates_with_high_recall() {
-    use medulla_exec::exec::vector_rank::ranked;
+    use medulla_exec::exec::vector_rank::{replenish_until_k, ReplenishPolicy};
 
     let (_core, semantic) = corpus();
     let broad: Vec<String> = (0..DOCS)
@@ -360,7 +360,7 @@ fn filtered_ann_path_returns_k_candidates_with_high_recall() {
         let set: HashSet<&str> = members.iter().map(String::as_str).collect();
         let owned: HashSet<String> = members.iter().cloned().collect();
         let query = vector(9_001);
-        let got = ranked(&semantic, &query, &set, 10, 0);
+        let got = replenish_until_k(&semantic, &query, &set, 10, 0, ReplenishPolicy::default()).scored;
         assert_eq!(got.len(), 10, "{label}: k rows survive");
         assert!(
             got.iter().all(|(id, _)| set.contains(id.as_str())),
