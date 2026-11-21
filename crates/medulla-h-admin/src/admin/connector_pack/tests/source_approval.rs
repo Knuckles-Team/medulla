@@ -562,6 +562,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             registration.source_id.clone(),
             spec.clone(),
             default_quota(),
+            None,
         )
         .unwrap();
     let descriptor =
@@ -610,6 +611,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
                 registration.source_id.clone(),
                 wrong_spec.clone(),
                 default_quota(),
+                None,
             )
             .unwrap();
         let mut wrong_descriptor = descriptor.clone();

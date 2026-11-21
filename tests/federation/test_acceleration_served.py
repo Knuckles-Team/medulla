@@ -168,3 +168,23 @@ def test_predicate_without_copy_capability_is_refused(clean_graph, pg_source):
     assert "COPY_CAPABILITY_MISSING" in str(refused.value)
     with pytest.raises(EngineResponseError):
         _scan(clean_graph, "accel-nocopy")
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2")
+def test_copy_policy_without_capability_is_refused(clean_graph, pg_source):
+    source = _orders_source(pg_source)
+    contracts_before = _contracts(clean_graph)
+    with pytest.raises(EngineResponseError) as refused:
+        clean_graph.query.register_foreign_source(
+            "accel-nocopy-policy",
+            source,
+            acceleration={
+                "source_supports_copy": False,
+                "hot_subset_predicate": "id < 10",
+            },
+        )
+    assert "COPY_CAPABILITY_MISSING" in str(refused.value)
+    # The refusal writes no source and no contract node.
+    with pytest.raises(EngineResponseError):
+        _scan(clean_graph, "accel-nocopy-policy")
+    assert _contracts(clean_graph) == contracts_before

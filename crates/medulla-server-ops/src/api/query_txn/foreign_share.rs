@@ -260,6 +260,7 @@ mod tests {
                     max_rows: 250_000,
                     max_wall_ms: 60_000,
                 },
+                None,
             )
             .expect("registering the shared source succeeds");
         provision_share_role(&mut isolation, "agent-a", "src").unwrap();

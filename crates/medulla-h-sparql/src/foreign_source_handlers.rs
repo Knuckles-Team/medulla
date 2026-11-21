@@ -238,14 +238,10 @@ pub async fn try_handle(
             });
             let catalog = s.foreign_sources();
             let prior = catalog.prior_registration(&owner, &name);
-            if let Err(error) = catalog.register(&owner, name.clone(), source, quota) {
+            if let Err(error) =
+                catalog.register(&owner, name.clone(), source, quota, acceleration)
+            {
                 return Ok(Response::err(req_id, error));
-            }
-            if let Some(policy) = acceleration {
-                if let Err(error) = catalog.set_acceleration(&owner, &name, policy) {
-                    catalog.restore_registration(&owner, &name, prior);
-                    return Ok(Response::err(req_id, error));
-                }
             }
             drop(s);
             // The contract is written in the same call as the catalog insert; when the durable

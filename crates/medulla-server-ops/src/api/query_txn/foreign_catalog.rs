@@ -284,7 +284,12 @@ impl ForeignSourceCatalog {
         name: String,
         spec: ForeignSourceSpec,
         quota: SourceQuota,
+        acceleration: Option<AccelerationPolicy>,
     ) -> Result<(), String> {
+        if let Some(policy) = &acceleration {
+            medulla_catalog_types::metadata_acceleration::validate_policy(policy)
+                .map_err(|refusal| refusal.0)?;
+        }
         quota.validate().map_err(|reason| {
             format!(
                 "{}: {reason}",
@@ -304,36 +309,12 @@ impl ForeignSourceCatalog {
                 owner_agent,
                 spec,
                 quota,
-                acceleration: None,
+                acceleration,
                 probe: ProbeRecord::default(),
                 catalog: None,
             },
         );
         Ok(())
-    }
-
-    /// Store `policy` on `owner`'s source `name` beside its quota
-    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2). A policy that declares a hot-subset predicate on a
-    /// source without copy refuses `COPY_CAPABILITY_MISSING`; nothing is stored then.
-    pub fn set_acceleration(
-        &self,
-        owner: &CarrierAuthority,
-        name: &str,
-        policy: AccelerationPolicy,
-    ) -> Result<(), String> {
-        medulla_catalog_types::metadata_acceleration::validate_policy(&policy)
-            .map_err(|refusal| refusal.0)?;
-        let key = CatalogKey {
-            owner_scope: owner.owner_scope().to_string(),
-            name: name.to_string(),
-        };
-        match self.entries.get_mut(&key) {
-            Some(mut entry) => {
-                entry.acceleration = Some(policy);
-                Ok(())
-            }
-            None => Err(format!("foreign source `{name}` is not registered")),
-        }
     }
 
     /// The entry `owner` holds under `name`, kept so a registration that fails after the catalog
@@ -1298,10 +1279,10 @@ mod tests {
         assert_eq!(a.tenant_scope(), b.tenant_scope(), "one engine, one tenant");
         let catalog = ForeignSourceCatalog::default();
         catalog
-            .register(&a, "src".into(), http_spec("http://a.invalid/"), quota())
+            .register(&a, "src".into(), http_spec("http://a.invalid/"), quota(), None)
             .expect("http sources are not outbound-gated here");
         catalog
-            .register(&b, "src".into(), http_spec("http://b.invalid/"), quota())
+            .register(&b, "src".into(), http_spec("http://b.invalid/"), quota(), None)
             .expect("http sources are not outbound-gated here");
         assert_eq!(
             catalog.spec_for(&a, "src"),
@@ -1329,6 +1310,7 @@ mod tests {
                 "secret_src".into(),
                 http_spec("http://a.invalid/"),
                 quota(),
+                None,
             )
             .expect("http sources are not outbound-gated here");
         let scoped = catalog
@@ -1415,6 +1397,7 @@ mod tests {
                     "bad_sql".into(),
                     sql_spec("postgres://u@127.0.0.1:5433/db"),
                     quota(),
+                    None,
                 )
                 .expect_err("a disallowed SQL destination must be refused");
             assert!(!err.is_empty());
@@ -1441,6 +1424,7 @@ mod tests {
                     "ok_sql".into(),
                     sql_spec("postgres://u@127.0.0.1:5432/db"),
                     quota(),
+                    None,
                 )
                 .expect("an allowed SQL destination must still register");
             assert!(catalog.spec_for(&a, "ok_sql").is_some());
