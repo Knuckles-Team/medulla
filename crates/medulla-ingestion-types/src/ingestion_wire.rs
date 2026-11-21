@@ -476,6 +476,15 @@ pub struct DiscoverPlan {
     /// The parsed filters and relational intent of a `deep` request's text (R651.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub analysis: Option<DiscoverAnalysis>,
+    /// Candidates dropped because their source declares `access_mode: checked_at_read`
+    /// (MEDULLA-FEDERATED-QUERY-R703.7). `Discover` makes no remote call; callers who
+    /// need those records use `ContextCompile`.
+    #[serde(default, skip_serializing_if = "is_zero_count")]
+    pub unchecked_excluded: u64,
+}
+
+fn is_zero_count(count: &u64) -> bool {
+    *count == 0
 }
 
 /// The planner fields of a `Discover` request, checked as one unit (R090.1, R090.4).

@@ -92,6 +92,18 @@ fn node_time(core: &GraphCore, node_id: &str) -> Option<i64> {
     })
 }
 
+/// Whether the node's source declares `access_mode: checked_at_read`
+/// (MEDULLA-FEDERATED-QUERY-R703.7).
+#[cfg(feature = "query")]
+fn is_checked_at_read(core: &GraphCore, node_id: &str) -> bool {
+    core.get_node_properties(node_id).is_some_and(|blob| {
+        super::gateway_graph::decode_json_object(&blob)
+            .get("access_mode")
+            .and_then(serde_json::Value::as_str)
+            == Some("checked_at_read")
+    })
+}
+
 /// The half life of a node type: the `recencyHalfLifeDays` annotation on the type's class
 /// node (the node whose id is the type name), else `knob discover.recency_half_life_days`.
 fn half_life_days(core: &GraphCore, node_type: &str, default_days: f64) -> f64 {
@@ -312,10 +324,23 @@ fn discover(
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| a.0.cmp(&b.0))
     });
+    // MEDULLA-FEDERATED-QUERY-R703.7: a record whose source is checked at read cannot
+    // be vetted without a remote call, so `Discover` drops it and counts the drop.
+    let mut unchecked_excluded = 0_u64;
+    ranked.retain(|(id, _)| {
+        let excluded = is_checked_at_read(core, id);
+        unchecked_excluded += u64::from(excluded);
+        !excluded
+    });
     ranked.truncate(k);
 
     // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
-    let planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
+    let mut planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
+    planned.retain(|hit| {
+        let excluded = is_checked_at_read(core, &hit.id);
+        unchecked_excluded += u64::from(excluded);
+        !excluded
+    });
 
     let results: Vec<medulla_ingestion_types::ingestion_wire::DiscoverHit> = planned
         .into_iter()
@@ -385,6 +410,7 @@ fn discover(
                     expansions: deep.evidence,
                     degraded: deep.degraded,
                     analysis: deep.analysis,
+                    unchecked_excluded,
                 },
             },
         ),

@@ -86,6 +86,7 @@ mod discover_plan_tests {
                     },
                     intent: None,
                 }),
+                unchecked_excluded: 3,
             },
         };
         let bytes = rmp_serde::to_vec_named(&result).expect("encode");

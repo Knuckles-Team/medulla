@@ -195,3 +195,30 @@ def test_drop_reasons_read_back(
         assert {d["reason"] for d in dropped} == {"timeout", "unavailable"}
     finally:
         web_gateway.access_delay_s = 0.0
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R703.7")
+def test_discover_excludes_checked_at_read_sources(
+    clean_graph: Any,
+    web_gateway: WebGateway,  # noqa: F811
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    allowed, denied, synced = _checked_fixture(clean_graph, suffix)
+    orphan = _orphan(clean_graph, suffix)
+    web_gateway.denied_refs = set()
+    web_gateway.access_calls.clear()
+
+    result = clean_graph._send(
+        "Discover",
+        {"keywords": ["lighthouse"], "query_embedding": [], "k": 50, "hops": 0},
+        None,
+    )
+    if isinstance(result, (bytes, bytearray)):
+        result = msgpack.unpackb(result, raw=False)
+
+    ids = {hit["id"] for hit in result["hits"]}
+    assert synced in ids
+    assert not ids & {allowed, denied, orphan}
+    # Every checked-at-read candidate is counted, none is sent to a connector.
+    assert result["plan"]["unchecked_excluded"] == 3
+    assert web_gateway.access_calls == []
