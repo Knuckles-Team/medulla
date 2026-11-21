@@ -654,6 +654,8 @@ mod preplan {
                 reusable: true,
                 plan_binding: binding,
                 preplan_receipt: receipt.map(Box::new),
+                phrasings: Default::default(),
+                match_threshold_micros: None,
             },
         };
         decode(super::super::log_tests::log_op(h, "recorder", op).await)
