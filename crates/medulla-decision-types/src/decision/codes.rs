@@ -611,6 +611,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::AnalystSynthesis,
         super::analyst_synthesis::REFUSALS,
     ),
+    (
+        QuestionKind::ResolveConflict,
+        super::resolve_conflict::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

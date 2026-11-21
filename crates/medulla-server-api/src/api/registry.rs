@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, OnceLock};
 
+use super::conflict_decider::ConflictDecider;
 use super::reentry::DispatchApi;
 use crate::state::ErasedHandle;
 
@@ -30,6 +31,8 @@ pub struct SeamRegistry {
     pub wire: OnceLock<ErasedHandle>,
     /// Method-router re-entry seam.
     pub dispatch: OnceLock<Arc<dyn DispatchApi>>,
+    /// Branch-merge conflict decision seam (MEDULLA-DECISION-ENGINE-R828).
+    pub conflict: OnceLock<Arc<dyn ConflictDecider>>,
 }
 
 impl std::fmt::Debug for SeamRegistry {

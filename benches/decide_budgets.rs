@@ -289,6 +289,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::AnalystSynthesis => "analyst_synthesis",
         // Needs a role, its candidates and a market, so it has its own fixture.
         QuestionKind::Recruit => "recruit",
+        // Needs a pinned policy and a conflict record, so it has its own fixture.
+        QuestionKind::ResolveConflict => "resolve_conflict",
     }
 }
 

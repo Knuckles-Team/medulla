@@ -83,6 +83,7 @@ pub mod replay;
 pub mod reputation;
 pub mod request;
 pub mod research_voi;
+pub mod resolve_conflict;
 pub mod reward;
 pub mod run_adjustment;
 pub mod run_governance;

@@ -106,3 +106,65 @@ mod tests {
         assert!(check_declared(&[option("", &[])]).is_err());
     }
 }
+
+/// One side of a branch-merge conflict (MEDULLA-DECISION-ENGINE-R828): the
+/// provenance and bitemporal window of one candidate value. Reliability and
+/// confidence are caller claims in `[0, 1]`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ConflictCandidate {
+    /// Reliability of the candidate's source, in `[0, 1]`.
+    pub source_reliability: f64,
+    /// Confidence in the candidate value, in `[0, 1]`.
+    pub confidence: f64,
+    /// Start of the validity window, in milliseconds.
+    pub valid_from: u64,
+    /// End of the validity window (exclusive); `None` is open-ended.
+    #[serde(default)]
+    pub valid_until: Option<u64>,
+    /// When the candidate was recorded, in milliseconds.
+    pub tx_from: u64,
+    #[serde(default)]
+    pub evidence_refs: Vec<String>,
+}
+
+/// Equality compares the two scores bitwise, so it is a total equivalence
+/// (`Eq`): a candidate rides a typed parameter whose container requires `Eq`.
+impl PartialEq for ConflictCandidate {
+    fn eq(&self, other: &Self) -> bool {
+        self.source_reliability.to_bits() == other.source_reliability.to_bits()
+            && self.confidence.to_bits() == other.confidence.to_bits()
+            && self.valid_from == other.valid_from
+            && self.valid_until == other.valid_until
+            && self.tx_from == other.tx_from
+            && self.evidence_refs == other.evidence_refs
+    }
+}
+
+impl Eq for ConflictCandidate {}
+
+impl ConflictCandidate {
+    /// `source_reliability x confidence`; the caller checks it is finite.
+    pub fn score(&self) -> f64 {
+        self.source_reliability * self.confidence
+    }
+
+    /// Whether the two validity windows share an instant.
+    pub fn overlaps(&self, other: &Self) -> bool {
+        let before = |from: u64, until: Option<u64>| until.is_none_or(|until| from < until);
+        before(self.valid_from, other.valid_until) && before(other.valid_from, self.valid_until)
+    }
+}
+
+/// The two candidates of one conflict record, the body of
+/// `TypedValue::ResolveConflict` (MEDULLA-DECISION-ENGINE-R828).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ConflictCandidates {
+    /// The conflicting entity, as the conflict record names it.
+    pub entity: String,
+    pub candidate_a: ConflictCandidate,
+    pub candidate_b: ConflictCandidate,
+}

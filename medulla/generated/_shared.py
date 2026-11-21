@@ -2188,6 +2188,7 @@ QuestionKind = (
     | Literal["branch_outcome"]
     | Literal["edit_concentration"]
     | Literal["recruit"]
+    | Literal["resolve_conflict"]
 )
 
 

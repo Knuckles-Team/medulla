@@ -4,6 +4,7 @@
 //! and the traits through which lower crates reach behaviour that stays above them. The concrete
 //! implementations are installed into [`registry::SeamRegistry`] by the server at startup.
 
+pub mod conflict_decider;
 pub mod dispatch_support;
 pub mod persistence;
 pub mod reentry;

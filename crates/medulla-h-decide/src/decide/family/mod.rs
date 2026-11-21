@@ -64,6 +64,7 @@ mod rank;
 mod recruit;
 mod recursion_mode;
 mod research_voi;
+mod resolve_conflict;
 mod resolve_entity;
 mod retrieval_plan;
 mod reward_decomposition;
@@ -387,6 +388,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static ANALYSTSYNTHESISFAMILY: analyst_synthesis::AnalystSynthesisFamily =
         analyst_synthesis::AnalystSynthesisFamily;
     static RECRUITFAMILY: recruit::RecruitFamily = recruit::RecruitFamily;
+    static RESOLVECONFLICTFAMILY: resolve_conflict::ResolveConflictFamily =
+        resolve_conflict::ResolveConflictFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -472,6 +475,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::TrajectoryLadder => &TRAJECTORYLADDERFAMILY,
         QuestionKind::AnalystSynthesis => &ANALYSTSYNTHESISFAMILY,
         QuestionKind::Recruit => &RECRUITFAMILY,
+        QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
     }
 }
 
@@ -567,6 +571,7 @@ mod tests {
             QuestionKind::TrajectoryLadder,
             QuestionKind::AnalystSynthesis,
             QuestionKind::Recruit,
+            QuestionKind::ResolveConflict,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -641,6 +646,7 @@ mod tests {
             | QuestionKind::TrajectoryLadder
             | QuestionKind::AnalystSynthesis
             | QuestionKind::Recruit
+            | QuestionKind::ResolveConflict
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion
             | QuestionKind::ResearchNext

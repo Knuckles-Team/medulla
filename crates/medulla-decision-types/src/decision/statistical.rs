@@ -327,6 +327,11 @@ pub enum QuestionKind {
     /// against its pinned revisions (MEDULLA-ORCH-VOCAB-R750.751).
     /// Evaluate-only. See `decision::recruit`.
     Recruit,
+    /// The winner of one branch-merge conflict, by `reliability x confidence`
+    /// over a knob margin, or an abstention (MEDULLA-DECISION-ENGINE-R828).
+    /// Evaluate-only: `BranchMerge` writes the resolution. See
+    /// `decision::resolve_conflict`.
+    ResolveConflict,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -472,6 +477,9 @@ pub enum TypedValue {
     /// The proposed action to check against the policy's limits, read from the
     /// param `guarded_action` (MEDULLA-DECISION-ENGINE-R131.3).
     GuardedAction(Box<super::limit_types::GuardedAction>),
+    /// The two candidates of one branch-merge conflict record
+    /// (MEDULLA-DECISION-ENGINE-R828).
+    ResolveConflict(Box<declared::ConflictCandidates>),
 }
 
 /// One named parameter of a question.

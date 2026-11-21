@@ -72,6 +72,40 @@ pub async fn handle_decide(
     }
 }
 
+/// The `ConflictDecider` seam (MEDULLA-DECISION-ENGINE-R828): the `BranchMerge`
+/// handler of the graph handler crate decides one conflict through it. It runs
+/// the same served path as [`handle_decide`] under the caller's verified
+/// context -- admission, `decide_blocking`, `execute` and `family::for_kind`
+/// -- for a `resolve_conflict` question only, and returns the sealed record.
+pub struct ConflictDeciderSeam;
+
+impl medulla_server_api::api::conflict_decider::ConflictDecider for ConflictDeciderSeam {
+    fn decide_conflict<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        verified: &'a VerifiedRequestContext,
+        request: DecideRequest,
+    ) -> medulla_server_api::api::reentry::SeamFuture<'a, Result<StatisticalDecisionRecord, String>>
+    {
+        Box::pin(async move {
+            if request.question.kind != QuestionKind::ResolveConflict {
+                return Err(refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "the conflict decider answers resolve_conflict questions only",
+                ));
+            }
+            let span = telemetry::span("Decide", verified.tenant());
+            let batch = serve(state, verified, request).instrument(span).await?;
+            batch.records.as_slice().first().cloned().ok_or_else(|| {
+                refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "a conflict decision returned no record",
+                )
+            })
+        })
+    }
+}
+
 async fn serve(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
@@ -821,6 +855,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::AnalystSynthesis => {
             medulla_decision_types::decision::analyst_synthesis::KNOBS
         }
+        QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }

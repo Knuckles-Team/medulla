@@ -40,6 +40,13 @@ pub fn install_seams(state: &ServerState) {
         std::sync::Arc::new(medulla_h_decide::decide::DecideSeam),
     );
 
+    // The branch-merge conflict decider (MEDULLA-DECISION-ENGINE-R828).
+    #[cfg(feature = "decide")]
+    let _ = medulla_server_api::api::conflict_decider::install_conflict_decider(
+        &state.seams,
+        std::sync::Arc::new(medulla_h_decide::decide::stat_decide::ConflictDeciderSeam),
+    );
+
     // Drift monitors: the Discover signal source and the write observer.
     #[cfg(feature = "decide")]
     let _ = medulla_h_decide::decide::drift_registry::install();
