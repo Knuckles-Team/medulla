@@ -27,5 +27,5 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [ ] T021 [US3] MEDULLA-BUSINESS-OPS-R003.1 Pending approvals and overdue obligations
 - [ ] T022 [US3] MEDULLA-BUSINESS-OPS-R003.2 Changed in a window
 - [ ] T023 [US3] MEDULLA-BUSINESS-OPS-R003.3 Digest respects scope
-- [ ] T024 [US2] MEDULLA-BUSINESS-OPS-R002.9 Cross-architecture byte identity
+- [x] T024 [US2] MEDULLA-BUSINESS-OPS-R002.9 Cross-architecture byte identity
 - [x] T025 [US2] MEDULLA-BUSINESS-OPS-R002.10 No wall-clock read in rule code
