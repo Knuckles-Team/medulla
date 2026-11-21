@@ -53,7 +53,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T043 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.2 Replay stream versus source snapshot
 - [ ] T044 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.4.1 Residency column
 - [ ] T045 [US3] MEDULLA-UNIFIED-DATA-PLANE-R023.1 Model: `SharedPlatformClusterGroup` is a typed cluster-group and role-set model with engine-specific refusals
-- [ ] T046 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.1 Model: `ApplicationAdmission` is a typed stage machine refusing early connector retirement
+- [ ] T046 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.1 RETIRED: the stage machine is MEDULLA-IDENTITY-R724.1
 - [ ] T047 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.2.1 Model: `AdmissionRunner` drives `ApplicationAdmission` against a pluggable `PriorIngestConnector`, with a tested rollback path
 - [ ] T048 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.3.1 One fake-connector admission test per candidate application, confirming rollback and that the retired connector no longer writes
 - [ ] T049 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.1 Model: `GrampsPilotProgress` is a typed P0-P5 phase gate refusing a wrong, unreviewed, or out-of-order exit
@@ -71,6 +71,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T061 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.1 Model: `EntityLinkProposal::assert_same_as` refuses an unapproved or non-Match candidate
 - [ ] T062 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.2 Blocking and field-similarity candidate generation across Gramps/Immich/Twenty/Firefly
 - [ ] T063 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.3 Real Fellegi-Sunter scoring and the approval workflow
+- [ ] T063a [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.4 A generic graph write refuses an unapproved `owl:sameAs` edge
 - [ ] T064 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.1 Model: `ApplicationAdmission`/`ConsolidationIsolationRegistry` are a typed admission model with identity and quota refusals
 - [x] T065 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.2 Per-source quota metering and fault isolation
 - [ ] T066 [US1] MEDULLA-UNIFIED-DATA-PLANE-R035 Share the compiled ontology cache with attached-schema graphs
