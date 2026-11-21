@@ -119,3 +119,42 @@
     sh:property [ sh:path :raises ;
             sh:class :Defect ;
             sh:message "LIFECYCLE_EDGE_RAISES: a raises edge must link an Incident to a Defect." ] .
+
+# Spec node kinds (MEDULLA-ORCH-VOCAB-R012.1): every classified spec node
+# records the one rule that decided its kind.
+
+:SpecTaskClassifiedShape a sh:NodeShape ;
+    sh:name "Spec task classified shape" ;
+    sh:targetClass :SpecTask ;
+    sh:property [ sh:path :classifiedByRule ;
+            sh:datatype xsd:string ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:message "SPEC_NODE_RULE: a spec node must record exactly one classifiedByRule." ] .
+
+:SpecGoalClassifiedShape a sh:NodeShape ;
+    sh:name "Spec goal classified shape" ;
+    sh:targetClass :SpecGoal ;
+    sh:property [ sh:path :classifiedByRule ;
+            sh:datatype xsd:string ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:message "SPEC_NODE_RULE: a spec node must record exactly one classifiedByRule." ] .
+
+:SpecMemoryClassifiedShape a sh:NodeShape ;
+    sh:name "Spec memory classified shape" ;
+    sh:targetClass :SpecMemory ;
+    sh:property [ sh:path :classifiedByRule ;
+            sh:datatype xsd:string ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:message "SPEC_NODE_RULE: a spec node must record exactly one classifiedByRule." ] .
+
+:SpecPolicyClassifiedShape a sh:NodeShape ;
+    sh:name "Spec policy classified shape" ;
+    sh:targetClass :SpecPolicy ;
+    sh:property [ sh:path :classifiedByRule ;
+            sh:datatype xsd:string ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:message "SPEC_NODE_RULE: a spec node must record exactly one classifiedByRule." ] .

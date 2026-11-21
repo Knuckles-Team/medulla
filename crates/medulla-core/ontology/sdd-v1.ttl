@@ -183,6 +183,33 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
     May be a microservice, library, module, or package.""" ;
     rdfs:subClassOf bfo:0000031 .
 
+# Spec node kinds (MEDULLA-ORCH-VOCAB-R012.1). Each extends exactly one engine
+# core class; a document reuses :Specification.
+:SpecTask a owl:Class ;
+    rdfs:label "Spec Task" ;
+    rdfs:comment "A task row of a spec folder." ;
+    rdfs:subClassOf :Action .
+
+:SpecGoal a owl:Class ;
+    rdfs:label "Spec Goal" ;
+    rdfs:comment "A goal stated in a spec folder." ;
+    rdfs:subClassOf :Goal .
+
+:SpecMemory a owl:Class ;
+    rdfs:label "Spec Memory" ;
+    rdfs:comment "A memory file of a spec folder." ;
+    rdfs:subClassOf :Memory .
+
+:SpecPolicy a owl:Class ;
+    rdfs:label "Spec Policy" ;
+    rdfs:comment "A policy file of a spec folder." ;
+    rdfs:subClassOf :Policy .
+
+:classifiedByRule a owl:DatatypeProperty ;
+    rdfs:label "classified by rule" ;
+    rdfs:comment "The named rule that decided the kind of a spec node." ;
+    rdfs:range xsd:string .
+
 :TestCase a owl:Class ;
     rdfs:label "Test Case" ;
     rdfs:comment """An executable test verifying a Requirement or AcceptanceCriteria.
