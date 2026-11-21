@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::identity::{validate_principal_id, IdentityRefusal};
+use crate::identity::{validate_principal_id, IdentityRefusal, ShareScope};
 use medulla_types::contract::Digest256;
 
 /// Identity and policy claims carried by a verified request-context envelope.
@@ -442,9 +442,152 @@ impl ResourceGrant {
     }
 }
 
+/// The most grantees one `ShareGrant` names.
+pub const MAX_SHARE_GRANTEES: usize = 64;
+
+/// The unvalidated wire form of a [`ShareGrant`]; deserializing a `ShareGrant`
+/// runs it through [`ShareGrant::checked`].
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShareGrantWire {
+    node_id: String,
+    scope: ShareScope,
+    #[serde(default)]
+    commons: bool,
+    grantees: Vec<String>,
+}
+
+/// Share one node with a scope: private, the owner's tenant, or named grantees.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, try_from = "ShareGrantWire")]
+pub struct ShareGrant {
+    pub node_id: String,
+    pub scope: ShareScope,
+    #[serde(default)]
+    pub commons: bool,
+    pub grantees: Vec<String>,
+}
+
+impl TryFrom<ShareGrantWire> for ShareGrant {
+    type Error = IdentityRefusal;
+
+    fn try_from(wire: ShareGrantWire) -> Result<Self, Self::Error> {
+        Self::checked(wire.node_id, wire.scope, wire.commons, wire.grantees)
+    }
+}
+
+impl ShareGrant {
+    /// A validated grant that is not a commons share.
+    pub fn new(
+        node_id: String,
+        scope: ShareScope,
+        grantees: Vec<String>,
+    ) -> Result<Self, IdentityRefusal> {
+        Self::checked(node_id, scope, false, grantees)
+    }
+
+    /// A validated commons share: tenant scope, no named grantees.
+    pub fn commons(node_id: String) -> Result<Self, IdentityRefusal> {
+        Self::checked(node_id, ShareScope::Tenant, true, Vec::new())
+    }
+
+    fn checked(
+        node_id: String,
+        scope: ShareScope,
+        commons: bool,
+        mut grantees: Vec<String>,
+    ) -> Result<Self, IdentityRefusal> {
+        validate_principal_id(&node_id)?;
+        if grantees.len() > MAX_SHARE_GRANTEES {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        grantees
+            .iter()
+            .try_for_each(|grantee| validate_principal_id(grantee))?;
+        let open = grantees.is_empty();
+        let allowed = match scope {
+            ShareScope::Placement => false,
+            ShareScope::Private => open && !commons,
+            ShareScope::Tenant => !commons || open,
+        };
+        if !allowed {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        grantees.sort();
+        grantees.dedup();
+        Ok(Self {
+            node_id,
+            scope,
+            commons,
+            grantees,
+        })
+    }
+}
+
+/// Withdraw every share of one node.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShareRevoke {
+    pub node_id: String,
+}
+
+impl ShareRevoke {
+    pub fn new(node_id: String) -> Result<Self, IdentityRefusal> {
+        validate_principal_id(&node_id)?;
+        Ok(Self { node_id })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn share_ops_round_trip() {
+        // spec: MEDULLA-IDENTITY-R023.13.1
+        let grant = ShareGrant::new(
+            "node-1".into(),
+            ShareScope::Tenant,
+            vec!["usr:b".into(), "usr:a".into(), "usr:b".into()],
+        )
+        .unwrap();
+        assert_eq!(grant.grantees, vec!["usr:a", "usr:b"]);
+        let revoke = ShareRevoke::new("node-1".into()).unwrap();
+        let json = serde_json::to_string(&grant).unwrap();
+        assert_eq!(serde_json::from_str::<ShareGrant>(&json).unwrap(), grant);
+        let json = serde_json::to_string(&revoke).unwrap();
+        assert_eq!(serde_json::from_str::<ShareRevoke>(&json).unwrap(), revoke);
+        let packed = rmp_serde::to_vec_named(&grant).unwrap();
+        assert_eq!(rmp_serde::from_slice::<ShareGrant>(&packed).unwrap(), grant);
+        let packed = rmp_serde::to_vec_named(&revoke).unwrap();
+        assert_eq!(
+            rmp_serde::from_slice::<ShareRevoke>(&packed).unwrap(),
+            revoke
+        );
+        assert!(ShareGrant::commons("node-1".into()).unwrap().commons);
+        let refused = |text: &str| serde_json::from_str::<ShareGrant>(text).is_err();
+        assert!(refused(r#"{"node_id":"n","scope":"world","grantees":[]}"#));
+        assert!(refused(r#"{"node_id":"n","scope":"private","grantees":["a"]}"#));
+        assert!(refused(
+            r#"{"node_id":"n","scope":"tenant","commons":true,"grantees":["a"]}"#
+        ));
+        assert!(refused(
+            r#"{"node_id":"n","scope":"private","commons":true,"grantees":[]}"#
+        ));
+        assert!(refused(r#"{"node_id":"n","scope":"placement","grantees":[]}"#));
+        assert!(refused(r#"{"node_id":"","scope":"tenant","grantees":[]}"#));
+        assert!(refused(r#"{"node_id":"n","scope":"tenant","grantees":["a b"]}"#));
+        let many = vec!["usr:x".to_string(); 65]
+            .into_iter()
+            .enumerate()
+            .map(|(i, g)| format!("{g}{i}"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            ShareGrant::new("n".into(), ShareScope::Tenant, many),
+            Err(IdentityRefusal::InvalidRequest)
+        );
+        assert!(ShareRevoke::new(String::new()).is_err());
+    }
 
     #[test]
     fn selector_specificity_ordering() {
