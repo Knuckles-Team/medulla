@@ -127,7 +127,7 @@ pub use catalog_authority::{
     McpCatalogReconcileRequest, McpJoinedConfigurationRow,
 };
 pub use ids::{
-    connector_instance_iri, escape_pack_name, seed_revision_iri, pack_component_id, validate_connector,
+    connector_instance_iri, escape_pack_name, seed_receipt_iri, seed_revision_iri, pack_component_id, validate_connector,
     PACK_COMPONENT_ID_PREFIX,
 };
 pub use index::{

@@ -99,6 +99,21 @@ pub fn seed_revision_iri(connector: &str, content_digest: &medulla_types::contra
     )
 }
 
+/// The IRI of the receipt node of one seed part (MEDULLA-TYPED-PACKS-R104.5):
+/// `urn:medulla:seed-receipt:<escaped connector>:<content digest hex>:<part token>`.
+pub fn seed_receipt_iri(
+    connector: &str,
+    content_digest: &medulla_types::contract::Digest256,
+    part: super::SeedPartKey,
+) -> String {
+    format!(
+        "urn:medulla:seed-receipt:{}:{}:{}",
+        escape_pack_name(connector),
+        content_digest.to_hex(),
+        part.token()
+    )
+}
+
 /// The component id one pack entry publishes under.
 pub fn pack_component_id(connector: &str, kind: PackEntryKind, name: &str) -> String {
     format!(

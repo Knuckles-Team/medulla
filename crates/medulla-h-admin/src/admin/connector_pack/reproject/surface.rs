@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
-use medulla_catalog_types::connector_pack::PackEntryKind;
+use medulla_catalog_types::connector_pack::{PackEntryKind, SeedImportReceipt};
 use medulla_persistence_records::connector_pack::projection::{
     ConnectorPackProjectionPlan, PackSurfaceMember,
 };
@@ -216,13 +216,14 @@ pub(crate) fn write_projection_triples(
     graph: &str,
     surface: Option<&str>,
     seed: &[PackSchemaDocument],
+    receipt: Option<&SeedImportReceipt>,
     connector: &str,
 ) -> Result<(), String> {
     let mut fresh = match surface {
         Some(document) => medulla_rdf::mapping::parse_ntriples(document)?,
         None => Vec::new(),
     };
-    fresh.extend(seed_triples(seed, connector)?);
+    fresh.extend(seed_triples(seed, connector, receipt)?);
     let stale = medulla_rdf::mapping::export_triples(core, graph)?;
     medulla_rdf::update::remove_triples(core, &stale);
     medulla_rdf::update::insert_triples(core, &fresh)?;
@@ -232,9 +233,18 @@ pub(crate) fn write_projection_triples(
 /// The seed parts' triples plus the revision node and one `seed:fromSeed` link per
 /// seed subject. The revision IRI is `urn:medulla:seed:<escaped connector>:<content
 /// digest hex>`, so a changed part is a new revision and an equal head the same one.
-fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Triple>, String> {
+///
+/// With the head's import `receipt` it also appends one `seed:SeedImportReceipt` node per
+/// seed part (MEDULLA-TYPED-PACKS-R104.5) in the same batch: the part token, its outcome,
+/// its canonical digest as `sha256:<hex>` and `seed:graphRevision` to the revision node.
+/// The receipt must name the content the documents hold.
+fn seed_triples(
+    seed: &[PackSchemaDocument],
+    connector: &str,
+    receipt: Option<&SeedImportReceipt>,
+) -> Result<Vec<Triple>, String> {
     use crate::admin::connector_pack::seed::{canonical_digest, seed_content_digest, MAX_SEED_TRIPLES};
-    use medulla_catalog_types::connector_pack::{seed_revision_iri, SeedPartKey};
+    use medulla_catalog_types::connector_pack::{seed_receipt_iri, seed_revision_iri, SeedPartKey, SeedPartOutcome};
 
     if seed.is_empty() {
         return Ok(Vec::new());
@@ -255,7 +265,8 @@ fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Trip
                 .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?,
         );
     }
-    let revision = node(&seed_revision_iri(connector, &seed_content_digest(&digests)))?;
+    let content_digest = seed_content_digest(&digests);
+    let revision = node(&seed_revision_iri(connector, &content_digest))?;
     let subjects: std::collections::BTreeSet<NamedNode> = triples
         .iter()
         .filter_map(|triple| match &triple.subject {
@@ -272,12 +283,58 @@ fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Trip
     for subject in subjects {
         triples.push(Triple::new(subject, from_seed.clone(), revision.clone()));
     }
+    if let Some(receipt) = receipt {
+        if receipt.content_digest != content_digest {
+            return Err(
+                "CORRUPT_CONNECTOR_PACK: the seed import receipt names other seed content than the head holds"
+                    .into(),
+            );
+        }
+        let receipt_class = node(&format!("{SEED_NS}SeedImportReceipt"))?;
+        let rdf_type = node(RDF_TYPE)?;
+        let part_property = node(&format!("{SEED_NS}part"))?;
+        let outcome_property = node(&format!("{SEED_NS}outcome"))?;
+        let digest_property = node(&format!("{SEED_NS}digest"))?;
+        let revision_property = node(&format!("{SEED_NS}graphRevision"))?;
+        for (key, digest) in &digests {
+            let outcome = receipt.outcomes.get(key).ok_or_else(|| {
+                format!(
+                    "CORRUPT_CONNECTOR_PACK: the seed import receipt has no outcome for part '{}'",
+                    key.token()
+                )
+            })?;
+            let outcome = match outcome {
+                SeedPartOutcome::Inserted => "inserted",
+                SeedPartOutcome::Replaced => "replaced",
+                SeedPartOutcome::Unchanged => "unchanged",
+            };
+            let part_node = node(&seed_receipt_iri(connector, &content_digest, *key))?;
+            triples.push(Triple::new(part_node.clone(), rdf_type.clone(), receipt_class.clone()));
+            triples.push(Triple::new(
+                part_node.clone(),
+                part_property.clone(),
+                Literal::new_simple_literal(key.token()),
+            ));
+            triples.push(Triple::new(
+                part_node.clone(),
+                outcome_property.clone(),
+                Literal::new_simple_literal(outcome),
+            ));
+            triples.push(Triple::new(
+                part_node.clone(),
+                digest_property.clone(),
+                Literal::new_simple_literal(format!("sha256:{}", digest.to_hex())),
+            ));
+            triples.push(Triple::new(part_node, revision_property.clone(), revision.clone()));
+        }
+    }
     Ok(triples)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_types::contract::Digest256;
 
     #[test]
     fn class_level_triples_and_individuals_are_both_projected() {
@@ -319,19 +376,105 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R104.5
+    #[test]
+    fn seed_triples_write_one_receipt_node_per_part() {
+        use crate::admin::connector_pack::seed::{canonical_digest, seed_content_digest};
+        use medulla_catalog_types::connector_pack::{
+            seed_receipt_iri, seed_revision_iri, SeedPartKey, SeedPartOutcome,
+        };
+
+        let bodies = [
+            ("seed://identity", "<urn:seed:instance> a <urn:seed:Identity> .\n"),
+            ("seed://catalog", "<urn:seed:item> a <urn:seed:CatalogEntry> .\n"),
+            (
+                "seed://references",
+                "<urn:seed:item> <urn:seed:references> <urn:source:item> .\n",
+            ),
+        ];
+        let documents: Vec<PackSchemaDocument> = bodies
+            .iter()
+            .map(|(uri, body)| PackSchemaDocument {
+                uri: (*uri).to_string(),
+                body: Arc::from(*body),
+            })
+            .collect();
+        let digests: std::collections::BTreeMap<_, _> = bodies
+            .iter()
+            .map(|(uri, body)| {
+                (SeedPartKey::from_uri(uri).unwrap(), canonical_digest(body).unwrap())
+            })
+            .collect();
+        let content_digest = seed_content_digest(&digests);
+        let receipt = SeedImportReceipt {
+            connector: medulla_types::contract::ResourceId::new("demo").unwrap(),
+            content_digest,
+            outcomes: [
+                (SeedPartKey::Identity, SeedPartOutcome::Unchanged),
+                (SeedPartKey::Catalog, SeedPartOutcome::Replaced),
+                (SeedPartKey::References, SeedPartOutcome::Inserted),
+            ]
+            .into_iter()
+            .collect(),
+            graph_revision: seed_revision_iri("demo", &content_digest),
+        };
+        let triples = seed_triples(&documents, "demo", Some(&receipt)).unwrap();
+        let seed_ns = medulla_types::ontology_iri!("connector-seed#");
+        let of = |subject: &str, property: &str| -> Vec<String> {
+            triples
+                .iter()
+                .filter(|t| {
+                    t.subject.to_string() == format!("<{subject}>")
+                        && t.predicate.as_str() == format!("{seed_ns}{property}")
+                })
+                .map(|t| t.object.to_string())
+                .collect()
+        };
+        let receipt_nodes = triples
+            .iter()
+            .filter(|t| t.object.to_string() == format!("<{seed_ns}SeedImportReceipt>"))
+            .count();
+        assert_eq!(receipt_nodes, 3);
+        for (key, outcome) in [
+            (SeedPartKey::Identity, "unchanged"),
+            (SeedPartKey::Catalog, "replaced"),
+            (SeedPartKey::References, "inserted"),
+        ] {
+            let node = seed_receipt_iri("demo", &content_digest, key);
+            assert_eq!(of(&node, "part"), vec![format!("\"{}\"", key.token())]);
+            assert_eq!(of(&node, "outcome"), vec![format!("\"{outcome}\"")]);
+            assert_eq!(
+                of(&node, "digest"),
+                vec![format!("\"sha256:{}\"", digests[&key].to_hex())]
+            );
+            assert_eq!(
+                of(&node, "graphRevision"),
+                vec![format!("<{}>", receipt.graph_revision)]
+            );
+        }
+
+        // A receipt that names other content than the documents hold is refused.
+        let mut other = receipt.clone();
+        other.content_digest = Digest256::from_bytes([9; 32]);
+        assert!(seed_triples(&documents, "demo", Some(&other)).is_err());
+        // No receipt, no receipt nodes.
+        let bare = seed_triples(&documents, "demo", None).unwrap();
+        assert!(bare.iter().all(|t| t.object.to_string() != format!("<{seed_ns}SeedImportReceipt>")));
+    }
+
     // spec: MEDULLA-MEDIA-VOCAB-R655
     #[test]
     fn a_newer_head_drops_the_triples_it_no_longer_names() {
         let core = medulla_graph_core::graph::GraphCore::new();
-        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a", "amount_b"])), &[], "demo").unwrap();
+        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a", "amount_b"])), &[], None, "demo").unwrap();
         assert_eq!(subjects_of(&core).len(), 2);
-        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a"])), &[], "demo").unwrap();
+        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a"])), &[], None, "demo").unwrap();
         assert_eq!(
             subjects_of(&core),
             vec!["<https://knuckles-team.github.io/ontology/core#amount_a>".to_string()],
             "amount_b was dropped from the newer head"
         );
-        write_projection_triples(&core, "pack", None, &[], "demo").unwrap();
+        write_projection_triples(&core, "pack", None, &[], None, "demo").unwrap();
         assert!(
             subjects_of(&core).is_empty(),
             "a head with nothing to project clears the graph"

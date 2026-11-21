@@ -670,6 +670,7 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
         ontologies,
         crosswalks: Vec::new(),
         seed: Vec::new(),
+        seed_receipt: None,
         surface: None,
     };
     let source = |ontologies: Vec<PackSchemaDocument>| PackSourceDocuments {

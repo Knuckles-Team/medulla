@@ -70,6 +70,9 @@ pub(crate) struct PackProjectionDocuments {
     /// The seed graph parts of the head (MEDULLA-TYPED-PACKS-R104.3): written into the
     /// pack graph, never composed into its schema source.
     pub(crate) seed: Vec<PackSchemaDocument>,
+    /// The head's seed import receipt (MEDULLA-TYPED-PACKS-R104.5): `seed_triples` writes it
+    /// as one receipt node per part in the same batch as the seed triples.
+    pub(crate) seed_receipt: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
     pub(crate) surface: Option<Arc<str>>,
 }
 
@@ -130,6 +133,7 @@ pub(crate) async fn commit_pack_projection(
                 &result_graph_name,
                 documents.surface.as_deref(),
                 &documents.seed,
+                documents.seed_receipt.as_ref(),
                 connector.as_str(),
             )?;
             Ok(committed)
@@ -279,10 +283,11 @@ fn write_pack_projection(
     graph: &str,
     surface: Option<&str>,
     seed: &[PackSchemaDocument],
+    receipt: Option<&medulla_catalog_types::connector_pack::SeedImportReceipt>,
     connector: &str,
 ) -> Result<(), String> {
     crate::admin::connector_pack::reproject::surface::write_projection_triples(
-        core, graph, surface, seed, connector,
+        core, graph, surface, seed, receipt, connector,
     )
 }
 
@@ -293,6 +298,7 @@ fn write_pack_projection(
     _graph: &str,
     _surface: Option<&str>,
     _seed: &[PackSchemaDocument],
+    _receipt: Option<&medulla_catalog_types::connector_pack::SeedImportReceipt>,
     _connector: &str,
 ) -> Result<(), String> {
     Ok(())

@@ -7,6 +7,7 @@
 @prefix seed: <https://knuckles-team.github.io/ontology/connector-seed#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
 <https://knuckles-team.github.io/ontology/connector-seed> a owl:Ontology ;
     rdfs:label "Connector seed graph" ;
@@ -26,7 +27,36 @@ seed:fromSeed a owl:ObjectProperty ;
     rdfs:range seed:SeedRevision ;
     rdfs:comment "The seed revision that established a seed subject." .
 
+seed:SeedImportReceipt a owl:Class ;
+    rdfs:label "Seed import receipt" ;
+    rdfs:comment "What one import did to one seed part (MEDULLA-TYPED-PACKS-R104.5): one node per part." .
+
+seed:part a owl:DatatypeProperty ;
+    rdfs:label "part" ;
+    rdfs:domain seed:SeedImportReceipt ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The seed part token: identity, catalog or references." .
+
+seed:outcome a owl:DatatypeProperty ;
+    rdfs:label "outcome" ;
+    rdfs:domain seed:SeedImportReceipt ;
+    rdfs:range xsd:string ;
+    rdfs:comment "What the import did to the part: inserted, replaced or unchanged." .
+
+seed:digest a owl:DatatypeProperty ;
+    rdfs:label "digest" ;
+    rdfs:domain seed:SeedImportReceipt ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The canonical digest of the part, as sha256:<hex>." .
+
+seed:graphRevision a owl:ObjectProperty ;
+    rdfs:label "graph revision" ;
+    rdfs:domain seed:SeedImportReceipt ;
+    rdfs:range seed:SeedRevision ;
+    rdfs:comment "The seed revision node the import established." .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/connector-seed#SeedRevision> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/connector-seed#SeedSubject> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-seed#SeedImportReceipt> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

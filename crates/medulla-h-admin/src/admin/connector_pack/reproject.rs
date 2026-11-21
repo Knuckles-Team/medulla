@@ -274,6 +274,7 @@ async fn materialize_projection_documents(
     })
     .await
     .map_err(|error| format!("connector pack projection body task failed: {error}"))??;
+    documents.seed_receipt = plan.seed.clone();
     documents.surface =
         surface::surface_triples(plan, &documents.ontologies, declaration.as_deref())?;
     Ok(documents)
@@ -333,6 +334,7 @@ fn projection_documents_from_store(
             crosswalks,
             external_schemas,
             seed,
+            seed_receipt: None,
             surface: None,
         },
         declaration,

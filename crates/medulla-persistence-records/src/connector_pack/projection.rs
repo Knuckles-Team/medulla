@@ -76,6 +76,9 @@ pub struct ConnectorPackProjectionPlan {
     pub source_registrations: Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
     /// The surface members of the head, sorted by URI.
     pub surface: Vec<PackSurfaceMember>,
+    /// The seed import receipt of the head's import record, absent when the pack carries no
+    /// seed parts (MEDULLA-TYPED-PACKS-R104.5). The projection writes it as receipt nodes.
+    pub seed: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
 }
 
 impl ConnectorPackProjectionPlan {
@@ -208,6 +211,7 @@ impl AgentLibraryStore {
             bodies,
             source_registrations,
             surface,
+            seed: record.seed.clone(),
         })
     }
 
@@ -727,6 +731,7 @@ pub mod tests {
             bodies: Vec::new(),
             source_registrations: Vec::new(),
             surface: Vec::new(),
+            seed: None,
         }
     }
 

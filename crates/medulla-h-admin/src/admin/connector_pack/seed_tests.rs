@@ -376,5 +376,41 @@ mod served {
             3,
             "one fromSeed link per seed subject: {projected}"
         );
+
+        // The receipt facts are in the graph: one node per part with the part, the outcome
+        // and the revision node of the last import.
+        for (part, outcome) in [
+            ("identity", "unchanged"),
+            ("catalog", "replaced"),
+            ("references", "unchanged"),
+        ] {
+            let node = format!(
+                "urn:medulla:seed-receipt:{CONNECTOR}:{}:{part}",
+                reimport.content_digest.to_hex()
+            );
+            let lines: Vec<&str> = projected.lines().filter(|line| line.contains(&node)).collect();
+            assert!(
+                lines.iter().any(|line| line.contains("connector-seed#outcome")
+                    && line.contains(&format!("\"{outcome}\""))),
+                "{part} is {outcome}: {projected}"
+            );
+            assert!(
+                lines.iter().any(|line| line.contains("connector-seed#graphRevision")
+                    && line.contains(&reimport.graph_revision)),
+                "{part} names the revision node: {projected}"
+            );
+            assert!(
+                lines.iter().any(|line| line.contains("connector-seed#digest")
+                    && line.contains("sha256:")),
+                "{part} has a digest: {projected}"
+            );
+        }
+        assert!(
+            !projected.contains(&format!(
+                "urn:medulla:seed-receipt:{CONNECTOR}:{}",
+                seed.content_digest.to_hex()
+            )),
+            "an older receipt never lingers: {projected}"
+        );
     }
 }
