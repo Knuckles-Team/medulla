@@ -362,3 +362,35 @@ async fn team_evidence_names_signal_and_members() {
         medulla_decision_types::decision::EvidenceClass::Claim
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R170.6
+#[tokio::test]
+async fn fallback_and_team_record() {
+    let h = Harness::new().await;
+    let pin = publish_route_schema(&h).0;
+    let bound = graph_view(None, &[("member:a", TEAM, None)]);
+
+    // An available channel chooses the primary channel; an unavailable one
+    // falls back to the team; both are constraints.
+    let available = decide_team(&h, &request(&pin, true, 5), &bound).unwrap();
+    assert_eq!(chosen(&available), "primary_channel");
+    assert_eq!(available.resolution_kind, ResolutionKind::Constraint);
+    let down = decide_team(&h, &request(&pin, false, 5), &bound).unwrap();
+    assert_eq!(chosen(&down), "team_coordination");
+    assert_eq!(down.resolution_kind, ResolutionKind::Constraint);
+
+    // The record names the channel, the members and the freshness knob.
+    let facts: Vec<&str> = down.premises.iter().map(|p| p.fact.as_str()).collect();
+    assert!(facts.contains(&"knob:team.signal_max_age=30"));
+    assert!(facts.iter().any(|f| f.starts_with("team:channel:")));
+    assert!(facts.iter().any(|f| f.starts_with("team:members:")));
+
+    // A stale signal on an available channel abstains with its code.
+    let stale = decide_team(&h, &request(&pin, true, 31), &bound).unwrap();
+    assert_eq!(abstention_code(&stale), "TEAM_SIGNAL_STALE");
+
+    // Cross-tenant negative: another tenant's team and its member are not seen.
+    let foreign = graph_view(Some("tenant-other"), &[("member:a", TEAM, Some("tenant-other"))]);
+    let record = decide_team(&h, &request(&pin, false, 5), &foreign).unwrap();
+    assert_eq!(abstention_code(&record), "TEAM_NO_FALLBACK_AVAILABLE");
+}
