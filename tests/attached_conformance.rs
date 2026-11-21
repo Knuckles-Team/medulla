@@ -127,3 +127,230 @@ fn replay_equals_snapshot() {
         "a deviation still needs a reviewer"
     );
 }
+
+// ---- MEDULLA-UNIFIED-DATA-PLANE-R022.2: the matrix manifest and the runner entry ----
+
+const MATRIX: &str = include_str!("../conformance/attached_matrix.toml");
+/// The pipelines workflow writes the image digests to this file, outside the repository.
+const IMAGE_MANIFEST_VAR: &str = "MEDULLA_CONFORMANCE_IMAGE_MANIFEST";
+
+/// One engine version of the matrix. It has no digest: the workflow pins it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MatrixEngine {
+    pub dialect: String,
+    pub version: String,
+    pub image: Option<String>,
+    pub dsn_env: Option<String>,
+}
+
+/// One image the workflow pulled, with the digest it resolved.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+pub struct ImagePin {
+    pub image: String,
+    pub digest: String,
+}
+
+/// What a live runner does for one engine.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EngineRun {
+    Run { dsn: String, digest: Option<String> },
+    Skip(String),
+}
+
+fn parse_matrix(text: &str) -> Vec<MatrixEngine> {
+    let document: toml_edit::DocumentMut = text.parse().expect("the matrix is TOML");
+    let tables = document["engine"]
+        .as_array_of_tables()
+        .expect("the matrix holds [[engine]] tables");
+    tables
+        .iter()
+        .map(|table| {
+            let text_of = |key: &str| table.get(key).map(|v| v.as_str().unwrap().to_string());
+            for key in table.iter().map(|(key, _)| key) {
+                assert!(
+                    ["dialect", "version", "image", "dsn_env"].contains(&key),
+                    "unexpected matrix key `{key}`"
+                );
+            }
+            MatrixEngine {
+                dialect: text_of("dialect").expect("an engine names its dialect"),
+                version: text_of("version").expect("an engine names its version"),
+                image: text_of("image"),
+                dsn_env: text_of("dsn_env"),
+            }
+        })
+        .collect()
+}
+
+fn well_formed_digest(digest: &str) -> bool {
+    digest.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    })
+}
+
+/// The digest the workflow pinned for an image-backed engine: `Ok(None)` for an engine with
+/// no image, `Ok(Some(digest))` for exactly one well-formed pin of the same image.
+pub fn pinned_digest<'a>(
+    engine: &MatrixEngine,
+    pins: &'a [ImagePin],
+) -> Result<Option<&'a str>, String> {
+    let Some(image) = engine.image.as_deref() else {
+        return Ok(None);
+    };
+    let mut matching = pins.iter().filter(|pin| pin.image == image);
+    match (matching.next(), matching.next()) {
+        (Some(pin), None) if well_formed_digest(&pin.digest) => Ok(Some(pin.digest.as_str())),
+        _ => Err(format!("IMAGE_UNPINNED: {image}")),
+    }
+}
+
+/// Whether a live runner starts for `engine`. `pins` is `None` when the manifest variable is
+/// unset; `env` reads the engine's DSN variable.
+pub fn plan_engine(
+    engine: &MatrixEngine,
+    pins: Option<&[ImagePin]>,
+    env: &dyn Fn(&str) -> Option<String>,
+) -> EngineRun {
+    let (Some(_), Some(dsn_env)) = (engine.image.as_deref(), engine.dsn_env.as_deref()) else {
+        return EngineRun::Run {
+            dsn: String::new(),
+            digest: None,
+        };
+    };
+    let Some(pins) = pins else {
+        return EngineRun::Skip("image manifest unset".to_string());
+    };
+    let Some(dsn) = env(dsn_env).filter(|dsn| !dsn.is_empty()) else {
+        return EngineRun::Skip(format!("{dsn_env} unset"));
+    };
+    match pinned_digest(engine, pins) {
+        Ok(digest) => EngineRun::Run {
+            dsn,
+            digest: digest.map(str::to_string),
+        },
+        Err(refusal) => EngineRun::Skip(refusal),
+    }
+}
+
+/// The `engine_version` a conformance entry carries: the version, with the pinned image
+/// digest when there is one, so a green entry names the exact image it ran.
+pub fn entry_engine_version(engine: &MatrixEngine, digest: Option<&str>) -> String {
+    match digest {
+        Some(digest) => format!("{}@{digest}", engine.version),
+        None => engine.version.clone(),
+    }
+}
+
+fn pin(image: &str, digest: &str) -> ImagePin {
+    ImagePin {
+        image: image.to_string(),
+        digest: digest.to_string(),
+    }
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R022.2
+#[test]
+fn manifest_pins_every_image_digest() {
+    let engines = parse_matrix(MATRIX);
+    assert_eq!(engines.len(), 5);
+    let dialects: Vec<&str> = engines.iter().map(|e| e.dialect.as_str()).collect();
+    assert_eq!(
+        dialects,
+        ["postgres", "mysql", "mariadb", "clickhouse", "sqlite"]
+    );
+    let unique: std::collections::BTreeSet<&str> = dialects.iter().copied().collect();
+    assert_eq!(unique.len(), dialects.len(), "dialects are unique");
+    // `parse_matrix` refuses any key but the four, so a `digest` key cannot parse.
+    for engine in &engines {
+        if engine.image.is_some() {
+            assert_eq!(
+                engine.dsn_env.as_deref(),
+                Some(format!("MEDULLA_CONFORMANCE_{}_DSN", engine.dialect.to_uppercase()).as_str())
+            );
+        } else {
+            assert_eq!(engine.dialect, "sqlite");
+            assert!(engine.dsn_env.is_none());
+        }
+    }
+
+    let good = format!("sha256:{}", "ab12".repeat(16));
+    let postgres = &engines[0];
+    let sqlite = &engines[4];
+    let pins = vec![pin("postgres:16", &good)];
+    assert_eq!(pinned_digest(postgres, &pins), Ok(Some(good.as_str())));
+    assert_eq!(
+        pinned_digest(&engines[1], &pins),
+        Err("IMAGE_UNPINNED: mysql:8.4".to_string())
+    );
+    let duplicate = vec![pin("postgres:16", &good), pin("postgres:16", &good)];
+    assert_eq!(
+        pinned_digest(postgres, &duplicate),
+        Err("IMAGE_UNPINNED: postgres:16".to_string())
+    );
+    let upper = vec![pin("postgres:16", &good.to_uppercase().replace("SHA256", "sha256"))];
+    assert_eq!(
+        pinned_digest(postgres, &upper),
+        Err("IMAGE_UNPINNED: postgres:16".to_string())
+    );
+    assert_eq!(pinned_digest(sqlite, &[]), Ok(None));
+
+    let dsn_set = |name: &str| (name == "MEDULLA_CONFORMANCE_POSTGRES_DSN").then(|| "dsn".to_string());
+    let dsn_empty = |_: &str| Some(String::new());
+    let none = |_: &str| None;
+    assert_eq!(
+        plan_engine(postgres, None, &dsn_set),
+        EngineRun::Skip("image manifest unset".to_string())
+    );
+    assert_eq!(
+        plan_engine(postgres, Some(&pins), &none),
+        EngineRun::Skip("MEDULLA_CONFORMANCE_POSTGRES_DSN unset".to_string())
+    );
+    assert_eq!(
+        plan_engine(postgres, Some(&pins), &dsn_empty),
+        EngineRun::Skip("MEDULLA_CONFORMANCE_POSTGRES_DSN unset".to_string())
+    );
+    assert_eq!(
+        plan_engine(postgres, Some(&[]), &dsn_set),
+        EngineRun::Skip("IMAGE_UNPINNED: postgres:16".to_string())
+    );
+    assert_eq!(
+        plan_engine(postgres, Some(&pins), &dsn_set),
+        EngineRun::Run {
+            dsn: "dsn".to_string(),
+            digest: Some(good.clone())
+        }
+    );
+    assert_eq!(
+        plan_engine(sqlite, None, &none),
+        EngineRun::Run {
+            dsn: String::new(),
+            digest: None
+        }
+    );
+    assert_eq!(
+        entry_engine_version(postgres, Some(&good)),
+        format!("16@{good}")
+    );
+    assert_eq!(entry_engine_version(sqlite, None), "3");
+
+    // The nightly run: every image entry is pinned in the workflow's manifest.
+    match std::env::var(IMAGE_MANIFEST_VAR) {
+        Ok(path) => {
+            let manifest: Vec<ImagePin> = serde_json::from_str(
+                &std::fs::read_to_string(&path).expect("the image manifest is readable"),
+            )
+            .expect("the image manifest is the documented JSON");
+            for engine in engines.iter().filter(|e| e.image.is_some()) {
+                assert!(
+                    matches!(pinned_digest(engine, &manifest), Ok(Some(_))),
+                    "{} is pinned in the manifest",
+                    engine.dialect
+                );
+            }
+        }
+        Err(_) => println!("skip: image manifest unset"),
+    }
+}
