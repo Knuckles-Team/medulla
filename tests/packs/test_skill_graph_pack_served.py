@@ -429,3 +429,58 @@ async def test_layer_refusals_leave_state_unchanged() -> None:
             await _evidence(client, connector)
     finally:
         await client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.5")
+@pytest.mark.asyncio
+async def test_layered_graph_imports_and_orphan_layer_refuses() -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R701.5: one layered pack commits, two refuse."""
+    client = await connect()
+    try:
+        graph = "taxonomy"
+        iri = f"{LAYER_NS}{graph}"
+
+        # A pack built from a layered graph commits.
+        good = f"graph-layer-ok-{uuid.uuid4().hex[:8]}"
+        imported = await import_entries(
+            client,
+            good,
+            _graph_entries(graph)
+            + [ontology_entry(good, f"skillgraph/{graph}", _layer_turtle(iri))],
+        )
+        assert imported["result"] == "imported", imported
+
+        # A layer whose class does not roll up to a core class is refused.
+        orphan = f"graph-layer-orphan-{uuid.uuid4().hex[:8]}"
+        orphan_turtle = (
+            "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+            f"<{iri}> a owl:Ontology .\n"
+            f"<{iri}#Stray> a owl:Class .\n"
+        )
+        refused = await import_entries(
+            client,
+            orphan,
+            _graph_entries(graph)
+            + [ontology_entry(orphan, f"skillgraph/{graph}", orphan_turtle)],
+        )
+        assert "ONTOLOGY_ORPHAN" in violation_codes(refused), refused
+
+        # A layer that imports the core ontology is refused.
+        importing = f"graph-layer-core-{uuid.uuid4().hex[:8]}"
+        core_turtle = (
+            "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+            f"<{iri}> a owl:Ontology ; owl:imports <{CORE.rstrip('#')}> .\n"
+        )
+        refused_core = await import_entries(
+            client,
+            importing,
+            _graph_entries(graph)
+            + [ontology_entry(importing, f"skillgraph/{graph}", core_turtle)],
+        )
+        assert "ONTOLOGY_PACK_IMPORTS_CORE" in violation_codes(refused_core), refused_core
+
+        for connector in (orphan, importing):
+            with pytest.raises(EngineResponseError, match=ABSENT):
+                await _evidence(client, connector)
+    finally:
+        await client.close()
