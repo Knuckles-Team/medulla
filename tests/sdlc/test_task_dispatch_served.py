@@ -33,7 +33,7 @@ from test_task_plan_served import (  # noqa: E402,F401
 )
 
 from medulla.client import EngineResponseError, SyncMedullaClient  # noqa: E402
-from medulla.decision_client import param, task_plan_request  # noqa: E402
+from medulla.decision_client import commit_op, get_op, param, task_plan_request  # noqa: E402
 
 pytestmark = pytest.mark.no_engine  # The test owns its authenticated engine.
 
@@ -228,3 +228,48 @@ def test_hidden_section_changes_neither_digest_nor_bound(plan_writer_and_reader)
     assert _digest(_decide(reader, pin, repo, row)) == before
     # The system identity sees the section, so its digest differs.
     assert _digest(_decide(writer, pin, repo, row)) != before
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R015.3")
+def test_dispatch_hands_context_to_a_run_and_logs_it(authenticated_plan_client) -> None:
+    """One sealed dispatch record per task, each pinned to its own context digest.
+
+    Each task of the slice is one `TaskPlan` question naming its row; the engine
+    assembles that task's context and seals one record whose premises carry the
+    context digest. `DecisionLog` commits the record and reads it back byte for
+    byte. The engine starts no run: the only writes are the node seeds and the
+    committed records.
+    """
+    client = authenticated_plan_client
+    try:
+        suffix = uuid.uuid4().hex[:8]
+        repo = f"repo-{suffix}"
+        rows = ("DEMO-R001", "DEMO-R002")
+        for row in rows:
+            requirement = f"requirement:{repo}:{row}"
+            plan = f"plansection:{repo}:specs/a/plan.md#{row}"
+            _node(client, requirement, {"type": "Requirement", "text": f"Serve {row}."})
+            _node(
+                client,
+                plan,
+                {"type": "PlanSection", "title": "Plan", "start_line": "3", "text": f"Plan {row}."},
+            )
+            _edge(client, plan, requirement, "covers")
+
+        pin = publish(client, "task-dispatch-schema-" + suffix, "feature_schema", schema_body())
+        digests = {}
+        for row in rows:
+            record = _decide(client, pin, repo, row)
+            digests[row] = _digest(record)
+            # spec: MEDULLA-SDLC-R015.3
+            committed = client._send("DecisionLog", {"op": commit_op(record)})
+            assert committed["record_digest"] == record["record_digest"]
+            entry = client._send(
+                "DecisionLog", {"op": get_op(TEST_TENANT, committed["record_id"])}
+            )
+            assert entry["record"] == record
+            assert _digest(entry["record"]) == digests[row]
+        # One context per task: the two rows never share a context.
+        assert digests[rows[0]] != digests[rows[1]]
+    finally:
+        client.close()
