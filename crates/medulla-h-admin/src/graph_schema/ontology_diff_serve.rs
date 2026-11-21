@@ -57,11 +57,11 @@ fn active_side(core: &GraphCore, key: &str, revision: u64) -> Result<SchemaSide,
             },
             _,
         )) => Err(refuse(
-            ServerErrorCode::OntologyRevisionConflict,
+            ServerErrorCode::OntologyRevisionUnknown,
             format!("revision {revision} is not stored; the active revision is {active}"),
         )),
         _ => Err(refuse(
-            ServerErrorCode::OntologyRevisionConflict,
+            ServerErrorCode::OntologyRevisionUnknown,
             format!("'{key}' has no active revision"),
         )),
     }
@@ -81,6 +81,19 @@ fn committed(
         edit_head: edits::head(core),
         ontology_diff: Some(report),
         revision: None,
+    }
+}
+
+/// The candidate Turtle may declare only the ontology IRI the diff names
+/// (MEDULLA-TYPED-PACKS-R804.4): a candidate that declares another is not a revision of it.
+fn candidate_iri_matches(turtle: &str, ontology_iri: &str) -> Result<(), String> {
+    let (_, declared) = medulla_rdf::pack::declared_classes_and_ontologies(turtle);
+    match declared.iter().find(|iri| iri.as_str() != ontology_iri) {
+        Some(other) => Err(refuse(
+            ServerErrorCode::OntologyDiffIriMismatch,
+            format!("the candidate declares {other}, not {ontology_iri}"),
+        )),
+        None => Ok(()),
     }
 }
 
@@ -113,11 +126,14 @@ pub(super) fn diff_ontology(
     let from = active_side(core, &key, *from_revision)?;
     let target = match to {
         DiffTarget::Revision(revision) => active_side(core, &key, *revision)?,
-        DiffTarget::Candidate { turtle } => SchemaSide {
+        DiffTarget::Candidate { turtle } => {
+            candidate_iri_matches(turtle, ontology_iri)?;
+            SchemaSide {
             revision: "candidate".to_string(),
             ontology_ttl: turtle.clone(),
             shapes_ttl: from.shapes_ttl.clone(),
-        },
+            }
+        }
     };
     let diff = diff_axioms(&from, &target)?;
     let mut snapshot = snapshot_from_core(core, &key)?;

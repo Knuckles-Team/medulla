@@ -334,3 +334,63 @@ fn impact_names_items() {
     assert_eq!(report.items.queries, sorted);
     assert_eq!(report.items.queries[0], "q050");
 }
+
+// spec: MEDULLA-TYPED-PACKS-R804.4
+#[test]
+fn diff_refusals() {
+    let core = GraphCore::new();
+    import_ontology(
+        &core,
+        "g",
+        &import_op("ex:Alpha a owl:Class .", None),
+        &authority("alice", "tenant-a"),
+    )
+    .unwrap();
+    let digest = core.schema_sources().composed_digest();
+    let version = core.version();
+
+    // A candidate that declares another ontology IRI.
+    let mismatch = diff_ontology(
+        &core,
+        "g",
+        "tenant-a",
+        &diff_op(
+            1,
+            DiffTarget::Candidate {
+                turtle: format!("{PREFIXES}<http://other.example/onto> a owl:Ontology ."),
+            },
+        ),
+    )
+    .unwrap_err();
+    assert!(mismatch.starts_with("ONTOLOGY_DIFF_IRI_MISMATCH"), "{mismatch}");
+
+    // A candidate that declares the named IRI is a revision of it.
+    diff_ontology(
+        &core,
+        "g",
+        "tenant-a",
+        &diff_op(
+            1,
+            DiffTarget::Candidate {
+                turtle: format!("{PREFIXES}<{IRI}> a owl:Ontology . ex:Alpha a owl:Class ."),
+            },
+        ),
+    )
+    .expect("the named IRI is accepted");
+
+    // A named revision that is absent, as the base or as the target.
+    let unknown_from =
+        diff_ontology(&core, "g", "tenant-a", &diff_op(9, DiffTarget::Revision(1))).unwrap_err();
+    assert!(unknown_from.starts_with("ONTOLOGY_REVISION_UNKNOWN"), "{unknown_from}");
+    let unknown_to =
+        diff_ontology(&core, "g", "tenant-a", &diff_op(1, DiffTarget::Revision(9))).unwrap_err();
+    assert!(unknown_to.starts_with("ONTOLOGY_REVISION_UNKNOWN"), "{unknown_to}");
+
+    // A tenant that cannot be named.
+    let denied = diff_ontology(&core, "g", "", &diff_op(1, DiffTarget::Revision(1))).unwrap_err();
+    assert!(denied.starts_with("TENANT_DENIED"), "{denied}");
+
+    // A refusal writes nothing.
+    assert_eq!(core.schema_sources().composed_digest(), digest);
+    assert_eq!(core.version(), version);
+}

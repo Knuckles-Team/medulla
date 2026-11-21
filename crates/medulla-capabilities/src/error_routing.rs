@@ -1567,8 +1567,10 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
             [
                 ServerErrorCode::ImporterMismatch,
                 ServerErrorCode::OntologyCoreConflict,
+                ServerErrorCode::OntologyDiffIriMismatch,
                 ServerErrorCode::OntologyDigestMismatch,
                 ServerErrorCode::OntologyRevisionConflict,
+                ServerErrorCode::OntologyRevisionUnknown,
                 ServerErrorCode::ShaclViolation,
                 ServerErrorCode::TenantDenied,
             ]
