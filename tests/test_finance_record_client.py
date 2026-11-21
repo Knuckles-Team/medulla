@@ -1,8 +1,8 @@
 """Finance record client round trips against the Rust-emitted vectors.
 
 The vectors in ``tests/fixtures/finance_record_vectors.json`` are written by
-``crates/medulla-finance-types/src/wire_finance.rs::tests::emit_record_vectors`` from the
-Rust serde types. Every vector is encoded by the client wrappers and sent
+``crates/medulla-finance-types/src/wire_finance.rs::tests::emit_record_vectors``
+from the Rust serde types. Every vector is encoded by the client wrappers and sent
 through the session-scoped served engine (conftest.py).
 """
 

@@ -32,8 +32,14 @@ PROJECTION_RS = (
     / "source_ingestion"
     / "spec_projection.rs"
 )
-PROJECT_TEST = "source_ingestion::spec_projection::tests::spec_rows_become_requirement_nodes_with_edges"
-REFUSAL_TEST = "source_ingestion::spec_projection::tests::unknown_depends_id_refuses_and_writes_nothing"
+PROJECT_TEST = (
+    "source_ingestion::spec_projection::tests::"
+    "spec_rows_become_requirement_nodes_with_edges"
+)
+REFUSAL_TEST = (
+    "source_ingestion::spec_projection::tests::"
+    "unknown_depends_id_refuses_and_writes_nothing"
+)
 
 
 def _run_engine_test(name: str) -> str:

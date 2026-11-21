@@ -90,7 +90,8 @@ async def _scenario(graph: str) -> None:
         data = f"fn main() {{}} {stem}".encode()
         blob = (await agent.blob.store(data), len(data))
 
-        # A delegated agent without a run, and with an unknown or wrong-kind run, refuses.
+        # A delegated agent without a run, and with an unknown or wrong-kind run,
+        # refuses.
         for run, code in (
             (None, "AGENT_RUN_TRACE_MISSING"),
             (f"absent-{stem}", "RUN_TRACE_UNKNOWN"),

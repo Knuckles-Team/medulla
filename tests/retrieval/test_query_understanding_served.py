@@ -147,8 +147,9 @@ def test_analysis_and_expansion_evidence(stub_engine) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R651.5.
 
     A deep request over a graph whose edges carry `owns` returns the parsed filters and
-    the relational intent in `plan.analysis`, and every expansion's digest, kind, provider
-    id and provider revision in `plan.expansions`. A standard request plans nothing.
+    the relational intent in `plan.analysis`, and every expansion's digest, kind,
+    provider id and provider revision in `plan.expansions`. A standard request plans
+    nothing.
     """
     sock, _ = stub_engine
     client = connect(sock)

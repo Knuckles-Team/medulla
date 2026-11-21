@@ -16,7 +16,8 @@ from medulla.client import EngineResponseError
 def _table(clean_graph) -> str:
     name = f"advice_{uuid.uuid4().hex[:10]}"
     clean_graph.query.sql(
-        f"CREATE TABLE {name} (id BIGINT PRIMARY KEY, title TEXT, body TEXT, qty BIGINT)"
+        f"CREATE TABLE {name} (id BIGINT PRIMARY KEY, title TEXT, body TEXT, qty "
+        f"BIGINT)"
     )
     clean_graph.query.sql(
         f"INSERT INTO {name} VALUES (1, 'alpha', 'first long body text', 1), "

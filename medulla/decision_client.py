@@ -1268,7 +1268,8 @@ class DecisionClient:
 
     async def memory_recall(self, request: Mapping[str, Any]) -> Any:
         """Send ``MemoryRecall``: rank the tenant's memory inside ``budget`` tokens;
-        ``prime_session`` adds session mementos and ``include_plan`` a consolidation plan."""
+        ``prime_session`` adds session mementos and ``include_plan`` a consolidation
+        plan."""
         result = await self.client._send(
             "MemoryRecall", {"request": dict(request)}, self.graph
         )

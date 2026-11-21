@@ -54,9 +54,11 @@ def _declarations(base: str, *extra: str) -> str:
         + f"@prefix ex: <{base}#> .\n"
         + f"ex:Asset a owl:Class ; rdfs:subClassOf <{WORK_ITEM}> .\n"
         + f"ex:Person a owl:Class ; rdfs:subClassOf <{WORK_ITEM}> .\n"
-        + 'ex:Sku a core:ValueType ; sh:datatype xsd:string ; sh:pattern "^[A-Z]{3}-[0-9]+$" .\n'
+        + "ex:Sku a core:ValueType ; sh:datatype xsd:string ; sh:pattern "
+        '"^[A-Z]{3}-[0-9]+$" .\n'
         + "ex:sku a owl:DatatypeProperty ; rdfs:domain ex:Asset ; rdfs:range ex:Sku .\n"
-        + "ex:owns a core:LinkType ; rdfs:domain ex:Person ; rdfs:range ex:Asset ; sh:maxCount 3 .\n"
+        + "ex:owns a core:LinkType ; rdfs:domain ex:Person ; rdfs:range ex:Asset ; "
+        "sh:maxCount 3 .\n"
         + "ex:Named a core:Interface ; core:hasInterfaceProperty ex:name , ex:owns .\n"
         + "ex:Person core:implementsInterface ex:Named .\n"
         + "".join(extra)
@@ -168,7 +170,8 @@ def test_value_link_and_interface_violations_refuse_with_unchanged_state() -> No
         client = await _import_and_attach(connector, base, graph)
         try:
             assets = "".join(
-                f'<https://example.org/data/a{n}> rdf:type ex:Asset ; ex:sku "ABC-{n}" .\n'
+                f"<https://example.org/data/a{n}> rdf:type ex:Asset ; ex:sku "
+                f'"ABC-{n}" .\n'
                 for n in range(1, 5)
             )
             await _add(client, base, assets)
@@ -178,14 +181,16 @@ def test_value_link_and_interface_violations_refuse_with_unchanged_state() -> No
                 await _add(
                     client,
                     base,
-                    '<https://example.org/data/bad> rdf:type ex:Asset ; ex:sku "bad" .\n',
+                    '<https://example.org/data/bad> rdf:type ex:Asset ; ex:sku "bad" '
+                    ".\n",
                 )
             owned = ", ".join(f"<https://example.org/data/a{n}>" for n in range(1, 5))
             with pytest.raises(EngineResponseError, match="LINK_CARDINALITY_EXCEEDED"):
                 await _add(
                     client,
                     base,
-                    '<https://example.org/data/p1> rdf:type ex:Person ; ex:name "Ann" ; '
+                    '<https://example.org/data/p1> rdf:type ex:Person ; ex:name "Ann" '
+                    "; "
                     f"ex:owns {owned} .\n",
                 )
             # Every refusal left the graph as it was.
@@ -223,7 +228,8 @@ def test_refusal_carries_rule_path_and_value_digest() -> None:
                 await _add(
                     client,
                     base,
-                    f'<https://example.org/data/x> rdf:type ex:Asset ; ex:sku "{secret}" .\n',
+                    f"<https://example.org/data/x> rdf:type ex:Asset ; ex:sku "
+                    f'"{secret}" .\n',
                 )
             text = str(refused.value)
             assert "VALUE_CONSTRAINT_VIOLATED" in text, text
@@ -259,7 +265,8 @@ def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
                 await _add(
                     client,
                     base,
-                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" .\n',
+                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" '
+                    ".\n",
                 )
             await _add(
                 client,
@@ -273,7 +280,8 @@ def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
                 await _add(
                     client,
                     base,
-                    '<https://example.org/data/p1> rdf:type ex:Person ; ex:name "Ann" ; '
+                    '<https://example.org/data/p1> rdf:type ex:Person ; ex:name "Ann" '
+                    "; "
                     f"ex:owns {owned} .\n",
                 )
 
@@ -293,7 +301,8 @@ def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
                 await _add(
                     other,
                     base,
-                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" .\n',
+                    '<https://example.org/data/a2> rdf:type ex:Asset ; ex:sku "nope" '
+                    ".\n",
                 )
             finally:
                 await other.tenants.delete(other_graph)

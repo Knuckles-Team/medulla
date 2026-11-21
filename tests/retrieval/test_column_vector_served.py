@@ -1,4 +1,6 @@
-"""SQL column vectorization through the semantic index, served (MEDULLA-FEDERATED-QUERY-R077.2).
+"""SQL column vectorization through the semantic index, served.
+
+Spec row: MEDULLA-FEDERATED-QUERY-R077.2.
 
 A text column binds as a ``SemanticBinding`` whose selector is a ``SqlColumnRef``.
 Bind is ``SemanticIndex`` ``admit_binding``; unbind is ``drop_binding``. Admission

@@ -31,7 +31,10 @@ PROJECTION_RS = (
     / "source_ingestion"
     / "spec_projection.rs"
 )
-PROJECT_TEST = "source_ingestion::spec_projection::tests::spec_document_projects_sections_with_spans"
+PROJECT_TEST = (
+    "source_ingestion::spec_projection::tests::"
+    "spec_document_projects_sections_with_spans"
+)
 
 
 def test_spec_document_projects_sections_with_spans() -> None:

@@ -21,7 +21,10 @@ class DatalogReasoningResult(BaseModel):
 
 
 class OriginKind(str, Enum):
-    """Where a temporal premise's authority comes from (MEDULLA-FEDERATED-QUERY-R006.1)."""
+    """Where a temporal premise's authority comes from.
+
+    Spec row: MEDULLA-FEDERATED-QUERY-R006.1.
+    """
 
     SENTENCE = "sentence"
     AXIOM = "axiom"

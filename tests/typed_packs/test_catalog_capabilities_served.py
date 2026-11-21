@@ -15,7 +15,7 @@ import uuid
 import pytest
 from conftest import request_context
 
-from medulla.client import SyncMedullaClient
+from medulla.client import EngineResponseError, SyncMedullaClient
 
 CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
 PREFIX = (
@@ -72,7 +72,8 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
     lines = [PREFIX]
     for family, cls in FAMILIES.items():
         lines.append(
-            f'<urn:medulla:asset:{family}:orders> a cat:{cls} ; skos:prefLabel "orders {family}" .\n'
+            f"<urn:medulla:asset:{family}:orders> a cat:{cls} ; skos:prefLabel "
+            f'"orders {family}" .\n'
         )
     admin.rdf.add_triples(turtle="".join(lines))
 
@@ -110,20 +111,32 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
     admin.rdf.add_triples(
         turtle=(
             f"{PREFIX}"
-            f'<urn:medulla:asset:resource:sales> a cat:DataResource ; skos:prefLabel "sales resource" ; '
-            f'cat:flag "owner_missing" ; <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ; '
-            f"<https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Sale> .\n"
-            f'<urn:medulla:asset:dashboard:sales> a cat:DashboardAsset ; skos:prefLabel "sales dashboard" ; '
-            f'cat:hasOwner {owner} ; cat:revision "1"^^<{xsd_int}> ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n'
-            f'<urn:medulla:asset:report:sales> a cat:ReportAsset ; skos:prefLabel "sales report" ; '
-            f"cat:hasOwner {owner} ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n"
-            f'<urn:medulla:asset:template:sales> a cat:ReportTemplate ; skos:prefLabel "sales template" ; '
-            f'cat:hasOwner {owner} ; cat:parameterName "region" ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n'
+            f"<urn:medulla:asset:resource:sales> a cat:DataResource ; skos:prefLabel "
+            f'"sales resource" ; '
+            f'cat:flag "owner_missing" ; '
+            f"<https://knuckles-team.github.io/ontology/connector-pack#ofConnector> "
+            f"<urn:c:a> ; "
+            f"<https://knuckles-team.github.io/ontology/connector-pack#servesClass> "
+            f"<urn:class:Sale> .\n"
+            f"<urn:medulla:asset:dashboard:sales> a cat:DashboardAsset ; "
+            f'skos:prefLabel "sales dashboard" ; '
+            f'cat:hasOwner {owner} ; cat:revision "1"^^<{xsd_int}> ; cat:readsAsset '
+            f"<urn:medulla:asset:resource:sales> .\n"
+            f"<urn:medulla:asset:report:sales> a cat:ReportAsset ; skos:prefLabel "
+            f'"sales report" ; '
+            f"cat:hasOwner {owner} ; cat:readsAsset "
+            f"<urn:medulla:asset:resource:sales> .\n"
+            f"<urn:medulla:asset:template:sales> a cat:ReportTemplate ; "
+            f'skos:prefLabel "sales template" ; '
+            f'cat:hasOwner {owner} ; cat:parameterName "region" ; cat:readsAsset '
+            f"<urn:medulla:asset:resource:sales> .\n"
         )
     )
-    # Each reporting asset lists what it reads, and the one search ranks them with the rest.
+    # Each reporting asset lists what it reads, and the one search ranks them with
+    # the rest.
     rows = admin.rdf.sparql(
-        f"SELECT ?asset WHERE {{ ?asset <{CATALOG}readsAsset> <urn:medulla:asset:resource:sales> }}"
+        f"SELECT ?asset WHERE {{ ?asset <{CATALOG}readsAsset> "
+        f"<urn:medulla:asset:resource:sales> }}"
     )
     assert len(rows) == 3
     found = {asset.strip("<>") for asset, _ in _ranked(admin, "sales")}
@@ -134,9 +147,12 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
     } <= found
 
     # A template with no parameter is refused and writes nothing.
-    with pytest.raises(Exception):
+    with pytest.raises(EngineResponseError):
         admin.rdf.add_triples(
-            turtle=f"{PREFIX}<urn:medulla:asset:template:bare> a cat:ReportTemplate ; cat:hasOwner {owner} .\n"
+            turtle=(
+                f"{PREFIX}<urn:medulla:asset:template:bare> a cat:ReportTemplate ; "
+                f"cat:hasOwner {owner} .\n"
+            )
         )
 
 

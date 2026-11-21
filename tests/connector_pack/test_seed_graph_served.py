@@ -33,7 +33,10 @@ GRAPH_DOMAIN = b"eg/connector-pack-projection-graph/v1"
 
 
 def _pack_graph(tenant: str, connector: str) -> str:
-    """The physical pack graph name (``Digest256::framed`` over tenant and connector)."""
+    """The physical pack graph name.
+
+    It is ``Digest256::framed`` over the tenant and connector.
+    """
     hasher = hashlib.sha256()
     hasher.update(b"eg/framed-sha256/v1\0")
     hasher.update(struct.pack(">I", len(GRAPH_DOMAIN)))
@@ -132,7 +135,8 @@ def test_seed_idempotent_and_partial_reimport(tmp_path: Path) -> None:
             try:
                 rows = await client.sparql(
                     "SELECT ?subject WHERE { ?subject "
-                    "<https://knuckles-team.github.io/ontology/connector-seed#fromSeed> "
+                    "<https://knuckles-team.github.io/ontology/"
+                    "connector-seed#fromSeed> "
                     f"<{revision}> }} ORDER BY ?subject"
                 )
             except Exception:  # the projection has not landed yet

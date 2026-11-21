@@ -153,8 +153,8 @@ async def test_transcripts_batch_commits_thread_and_messages() -> None:
         assert "narrative_time" not in first
         assert second["event_time"] == 2000
 
-        # Each message belongs to the thread, the first precedes the second and the first
-        # mentions the concept.
+        # Each message belongs to the thread, the first precedes the second and the
+        # first mentions the concept.
         assert await client.edges.has(first_id, thread_id)
         assert await client.edges.has(second_id, thread_id)
         assert await client.edges.has(first_id, second_id)
