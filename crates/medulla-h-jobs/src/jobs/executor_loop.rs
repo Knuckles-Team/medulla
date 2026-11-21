@@ -107,7 +107,8 @@ pub(super) async fn worker_loop(
                     if let Ok(current) = store.get(&job_id) {
                         match current.state {
                             JobState::Running { .. } => {
-                                let _ = store.fail_attempt_fenced(
+                                let _ = fail_attempt(
+                                    &store,
                                     &job_id,
                                     &lease.worker_ref,
                                     lease.epoch,

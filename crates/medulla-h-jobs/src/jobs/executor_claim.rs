@@ -10,6 +10,36 @@ pub(super) fn status_tick_ms(lease_ms: u64) -> u64 {
     (lease_ms / 3).clamp(1, 5_000)
 }
 
+/// The closed set of failure codes a colocated attempt records
+/// (MEDULLA-DURABLE-KERNEL-R082.8). A failure record carries one of these and nothing
+/// else: no payload text, endpoint or identity.
+pub(super) const FAILURE_CODES: &[&str] = &[
+    "invalid_payload",
+    "kernel_failure",
+    "deadline_exceeded",
+    "cpu_budget_exceeded",
+    "worker_execution_failed",
+];
+
+/// Release a failed fenced attempt under one code of [`FAILURE_CODES`] at `now_ms`. The
+/// store sets the durable retry time from `RetryPolicy.backoff_ms` and ends the job
+/// at `max_attempts`; a code outside the closed set is refused before any write.
+pub(super) fn fail_attempt(
+    store: &JobStore,
+    job_id: &str,
+    worker_ref: &str,
+    epoch: u64,
+    code: &str,
+    now_ms: i64,
+) -> Result<medulla_jobs::AnalyticsJob, String> {
+    if !FAILURE_CODES.contains(&code) {
+        return Err(format!("failure code {code} is outside the closed set"));
+    }
+    store
+        .fail_attempt_fenced(job_id, worker_ref, epoch, code, now_ms)
+        .map_err(|error| error.to_string())
+}
+
 pub(super) async fn execute_claim(
     state: &Arc<RwLock<ServerState>>,
     store: &Arc<JobStore>,
@@ -201,22 +231,24 @@ pub(super) async fn execute_claim(
                                         &job_id, &worker_ref, epoch, unix_ms(),
                                     );
                                 }
+                                // A lost lease is not a failure code: the attempt is no
+                                // longer ours to record, and the fence refuses the write.
                                 Some(reason) => {
-                                    let _ = store.fail_attempt_fenced(
-                                        &job_id, &worker_ref, epoch, reason, unix_ms(),
+                                    let _ = fail_attempt(
+                                        store, &job_id, &worker_ref, epoch, reason, unix_ms(),
                                     );
                                 }
                                 None => {
-                                    let _ = store.fail_attempt_fenced(
-                                        &job_id, &worker_ref, epoch, "kernel_cancelled", unix_ms(),
+                                    let _ = fail_attempt(
+                                        store, &job_id, &worker_ref, epoch, "kernel_failure", unix_ms(),
                                     );
                                 }
                             }
                             return Ok(());
                         }
                         Err(_) => {
-                            let _ = store.fail_attempt_fenced(
-                                &job_id, &worker_ref, epoch, "kernel_failure", unix_ms(),
+                            let _ = fail_attempt(
+                                store, &job_id, &worker_ref, epoch, "kernel_failure", unix_ms(),
                             );
                             return Ok(());
                         }

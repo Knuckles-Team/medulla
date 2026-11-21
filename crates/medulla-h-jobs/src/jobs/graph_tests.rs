@@ -559,6 +559,123 @@ mod colocated_executor_tests {
         assert_eq!(status["state"]["Failed"]["reason"], "cpu_budget_exceeded");
         assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
     }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.8
+    #[test]
+    fn kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload() {
+        use super::super::executor_claim::{fail_attempt, FAILURE_CODES};
+        use medulla_jobs::model::{AlgoVersion, InputSnapshotHandle, JobPolicy};
+        use medulla_jobs::store::{SubmitSpec, TenantJobQuota};
+
+        assert_eq!(
+            FAILURE_CODES,
+            [
+                "invalid_payload",
+                "kernel_failure",
+                "deadline_exceeded",
+                "cpu_budget_exceeded",
+                "worker_execution_failed",
+            ]
+        );
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = super::super::core::open_job_store(dir.path()).expect("job store opens");
+        let secret_label = "secret-payload-label";
+        let payload = rmp_serde::to_vec_named(&JobKind::MineAssociate {
+            transactions: vec![vec![secret_label.to_string(), "other".to_string()]],
+            min_support: 0.5,
+            min_confidence: 0.5,
+            algorithm: "fpgrowth".to_string(),
+        })
+        .unwrap();
+        let job = store
+            .submit(SubmitSpec {
+                input_snapshot: InputSnapshotHandle::new("eg:graph:r082-8", 1).with_dataset(
+                    "eg:job_input:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                ),
+                policy: JobPolicy {
+                    tenant: "tenant-r082-8".into(),
+                    actor: "actor".into(),
+                    purpose: "retry".into(),
+                    ..JobPolicy::default()
+                },
+                algo: AlgoVersion {
+                    family: "mining.association".into(),
+                    algorithm: "fpgrowth".into(),
+                    params_digest: "params".into(),
+                    code_version: "test".into(),
+                    env_version: "test".into(),
+                },
+                input_payload: Some(payload),
+                max_attempts: 3,
+                backoff_ms: 1_000,
+            })
+            .unwrap();
+        let claim_at = |at: i64| {
+            store
+                .claim_next("worker-ref", &[], at, 60_000, TenantJobQuota::default())
+                .unwrap()
+        };
+
+        // Attempt 1 fails at t0: the job is claimable again only after `backoff_ms`.
+        let t0 = 1_000_000_i64;
+        let first = claim_at(t0).expect("attempt 1 is claimed");
+        assert_eq!(first.job.job_id, job.job_id);
+        assert!(fail_attempt(
+            &store,
+            &job.job_id,
+            &first.lease.worker_ref,
+            first.lease.epoch,
+            "kernel_failure",
+            t0
+        )
+        .is_ok());
+        assert!(claim_at(t0 + 999).is_none(), "backoff holds the retry back");
+
+        // Attempt 2 fails at t1.
+        let t1 = t0 + 1_000;
+        let second = claim_at(t1).expect("attempt 2 is claimed after the backoff");
+        let failed_again = fail_attempt(
+            &store,
+            &job.job_id,
+            &second.lease.worker_ref,
+            second.lease.epoch,
+            "kernel_failure",
+            t1,
+        )
+        .unwrap();
+        assert!(
+            matches!(failed_again.state, medulla_jobs::model::JobState::Submitted),
+            "two failures of three attempts leave the job retryable"
+        );
+        assert_eq!(failed_again.not_before_ms, t1 + 1_000);
+        assert!(claim_at(t1 + 999).is_none());
+
+        // Attempt 3 is the last: its failure ends the job with the code only.
+        let t2 = t1 + 1_000;
+        let third = claim_at(t2).expect("attempt 3 is claimed after the backoff");
+        let ended = fail_attempt(
+            &store,
+            &job.job_id,
+            &third.lease.worker_ref,
+            third.lease.epoch,
+            "kernel_failure",
+            t2,
+        )
+        .unwrap();
+        let medulla_jobs::model::JobState::Failed { reason, .. } = &ended.state else {
+            panic!("attempts stop at max_attempts: {:?}", ended.state)
+        };
+        assert_eq!(reason, "kernel_failure");
+        assert!(FAILURE_CODES.contains(&reason.as_str()));
+        assert!(!reason.contains(secret_label));
+        assert!(claim_at(t2 + 10_000).is_none(), "a failed job is never claimed again");
+
+        // A code outside the closed set is refused before any write.
+        assert!(fail_attempt(&store, &job.job_id, "worker-ref", 1, "lease_lost", t2).is_err());
+        assert!(fail_attempt(&store, &job.job_id, "worker-ref", 1, secret_label, t2).is_err());
+    }
 }
 
 /// The staged association result of the job plane (MEDULLA-DURABLE-KERNEL-R082.5).
