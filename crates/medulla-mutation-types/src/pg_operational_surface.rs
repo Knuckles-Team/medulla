@@ -146,6 +146,8 @@ pub const SERVED_FUNCTIONS: &[&str] = &[
 /// delivers a surface adds it here, and [`PgCompatibilityMatrix::with_served_forms`]
 /// declares every surface this list names.
 pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[
+    PgOperationalSurface::PgDump,
+    PgOperationalSurface::PgRestore,
     PgOperationalSurface::Explain,
     PgOperationalSurface::QueryCancellation,
     PgOperationalSurface::PoolerTransactionMode,

@@ -3331,3 +3331,173 @@ async fn view_and_matview_over_wire() {
         .await
         .expect("IF EXISTS of an absent view succeeds");
 }
+
+// ─── pg_dump and pg_restore round trip (MEDULLA-DURABLE-KERNEL-R035.2) ──────────────────
+
+/// Rows of each of the two tables the dump and restore carry.
+const DUMP_ROWS: i64 = 10_000;
+/// The wall-clock budget of the dump and the restore together.
+const DUMP_WALL_BUDGET: std::time::Duration = std::time::Duration::from_secs(10);
+/// The most resident memory the round trip may add, in kibibytes (256 MiB).
+const DUMP_RESIDENT_BUDGET_KIB: u64 = 256 * 1024;
+
+/// A PostgreSQL client binary: the file named by `variable`, else the first `name` on
+/// `PATH`. A missing binary fails the test naming both variables; it never skips.
+fn postgres_client_binary(variable: &str, name: &str) -> std::path::PathBuf {
+    if let Some(path) = std::env::var_os(variable).filter(|value| !value.is_empty()) {
+        return std::path::PathBuf::from(path);
+    }
+    std::env::var_os("PATH")
+        .into_iter()
+        .flat_map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
+        .map(|dir| dir.join(name))
+        .find(|candidate| candidate.is_file())
+        .unwrap_or_else(|| {
+            panic!(
+                "no PostgreSQL client `{name}` found: set MEDULLA_PG_DUMP and \
+                 MEDULLA_PG_RESTORE to the pg_dump and pg_restore binaries, or put \
+                 both on PATH"
+            )
+        })
+}
+
+/// The peak resident set of this process, in kibibytes (`VmHWM`).
+fn peak_resident_kib() -> u64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status
+                .lines()
+                .find_map(|line| line.strip_prefix("VmHWM:"))
+                .and_then(|rest| rest.trim().trim_end_matches("kB").trim().parse().ok())
+        })
+        .unwrap_or(0)
+}
+
+/// Every `(id, label)` row of `table`, in id order.
+async fn table_rows(client: &tokio_postgres::Client, table: &str) -> Vec<(i64, String)> {
+    client
+        .query(&format!("SELECT id, label FROM {table} ORDER BY id"), &[])
+        .await
+        .expect("read the table back")
+        .iter()
+        .map(|row| (row.get::<_, i64>("id"), row.get::<_, String>("label")))
+        .collect()
+}
+
+/// The digest of one table's rows: equal rows hash equal, in order.
+fn rows_digest(rows: &[(i64, String)]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for (id, label) in rows {
+        hasher.update(id.to_be_bytes());
+        hasher.update((label.len() as u64).to_be_bytes());
+        hasher.update(label.as_bytes());
+    }
+    hex::encode(hasher.finalize())
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R035.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pg_dump_then_pg_restore_round_trips_two_tables() {
+    use std::process::Command;
+
+    let pg_dump = postgres_client_binary("MEDULLA_PG_DUMP", "pg_dump");
+    let pg_restore = postgres_client_binary("MEDULLA_PG_RESTORE", "pg_restore");
+
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let (host, port) = addr.rsplit_once(':').expect("listener host:port");
+    let client = connect(&addr).await;
+
+    // Two tables of 10 000 rows each, written in batches.
+    for table in ["dump_alpha", "dump_beta"] {
+        client
+            .simple_query(&format!(
+                "CREATE TABLE {table} (id BIGINT PRIMARY KEY, label TEXT)"
+            ))
+            .await
+            .expect("CREATE TABLE");
+        for start in (0..DUMP_ROWS).step_by(500) {
+            let values = (start..(start + 500).min(DUMP_ROWS))
+                .map(|id| format!("({id}, '{table}-{id}')"))
+                .collect::<Vec<_>>()
+                .join(",");
+            client
+                .simple_query(&format!("INSERT INTO {table} (id, label) VALUES {values}"))
+                .await
+                .expect("INSERT batch");
+        }
+    }
+    let before_alpha = rows_digest(&table_rows(&client, "dump_alpha").await);
+    let before_beta = rows_digest(&table_rows(&client, "dump_beta").await);
+
+    let scratch = tempfile::tempdir().expect("scratch directory");
+    let archive = scratch.path().join("dump.pgdump");
+    let password = pgwire::derive_pg_password("test", "tester");
+    let resident_before = peak_resident_kib();
+    let began = std::time::Instant::now();
+
+    // Dump both tables in the custom format through the real client.
+    let dumped = Command::new(&pg_dump)
+        .args(["--format=custom", "--no-password", "--no-owner", "--no-privileges"])
+        .args(["--host", host, "--port", port])
+        .args(["--username", "tester", "--dbname", "__commons__"])
+        .args(["--table", "dump_alpha", "--table", "dump_beta"])
+        .arg("--file")
+        .arg(&archive)
+        .env("PGPASSWORD", &password)
+        .output()
+        .expect("run pg_dump");
+    assert!(
+        dumped.status.success(),
+        "pg_dump failed: {}",
+        String::from_utf8_lossy(&dumped.stderr)
+    );
+    assert!(archive.is_file() && archive.metadata().unwrap().len() > 0);
+
+    // Drop the tables, then restore them from the archive.
+    for table in ["dump_alpha", "dump_beta"] {
+        client
+            .simple_query(&format!("DROP TABLE {table}"))
+            .await
+            .expect("DROP TABLE");
+    }
+    let restored = Command::new(&pg_restore)
+        .args(["--no-password", "--no-owner", "--no-privileges"])
+        .args(["--host", host, "--port", port])
+        .args(["--username", "tester", "--dbname", "__commons__"])
+        .arg(&archive)
+        .env("PGPASSWORD", &password)
+        .output()
+        .expect("run pg_restore");
+    assert!(
+        restored.status.success(),
+        "pg_restore failed: {}",
+        String::from_utf8_lossy(&restored.stderr)
+    );
+    let elapsed = began.elapsed();
+
+    // Every row came back, table by table.
+    let after_alpha = table_rows(&client, "dump_alpha").await;
+    let after_beta = table_rows(&client, "dump_beta").await;
+    assert_eq!(after_alpha.len() as i64, DUMP_ROWS);
+    assert_eq!(after_beta.len() as i64, DUMP_ROWS);
+    assert_eq!(rows_digest(&after_alpha), before_alpha);
+    assert_eq!(rows_digest(&after_beta), before_beta);
+
+    // The budget: the round trip finishes in time and adds little resident memory.
+    assert!(
+        elapsed < DUMP_WALL_BUDGET,
+        "dump and restore took {elapsed:?}, budget {DUMP_WALL_BUDGET:?}"
+    );
+    let added_kib = peak_resident_kib().saturating_sub(resident_before);
+    assert!(
+        added_kib < DUMP_RESIDENT_BUDGET_KIB,
+        "dump and restore added {added_kib} KiB resident, budget {DUMP_RESIDENT_BUDGET_KIB} KiB"
+    );
+
+    for table in ["dump_alpha", "dump_beta"] {
+        let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
+    }
+}
