@@ -414,6 +414,16 @@ fn default_retry_after_ms() -> u64 {
     DEFAULT_RETRY_AFTER_MS
 }
 
+/// Default `admit_retry_ms`: the `retry_after_ms` a refused ingest claim carries
+/// (MEDULLA-INGEST-WORKER-R604.4).
+pub const DEFAULT_ADMIT_RETRY_MS: u64 = 500;
+/// Inclusive bounds of `admit_retry_ms`.
+pub const ADMIT_RETRY_MS_BOUNDS: (u64, u64) = (50, 60_000);
+
+fn default_admit_retry_ms() -> u64 {
+    DEFAULT_ADMIT_RETRY_MS
+}
+
 /// Engine-owned policy. Pool size and queue bound must be configured explicitly.
 /// Zero workers, zero CPU share, or zero queue depth can disable that resource;
 /// no implicit minimum may override those limits. Lane IDs are engine-defined
@@ -518,6 +528,10 @@ pub struct SchedulerConfig {
     /// Retry limits of the ingest queue (MEDULLA-INGEST-WORKER-R001.4.1).
     #[serde(default)]
     pub ingest_retry: IngestRetryLimits,
+    /// The `retry_after_ms` of an `ADMIT_HELD_FOR_RESERVE` refusal, in milliseconds
+    /// (MEDULLA-INGEST-WORKER-R604.4).
+    #[serde(default = "default_admit_retry_ms")]
+    pub admit_retry_ms: u64,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -547,6 +561,7 @@ pub enum InvalidSchedulerConfig {
     AnnStorageCeilingBytesOutOfRange,
     ProjectionBatchOutOfRange,
     IngestRetryOutOfRange,
+    AdmitRetryOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
@@ -559,6 +574,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler task_lease_ms must be within [{}, {}]",
                 TASK_LEASE_MS_BOUNDS.0, TASK_LEASE_MS_BOUNDS.1
+            ),
+            Self::AdmitRetryOutOfRange => write!(
+                f,
+                "scheduler admit_retry_ms must be within [{}, {}]",
+                ADMIT_RETRY_MS_BOUNDS.0, ADMIT_RETRY_MS_BOUNDS.1
             ),
             Self::RetryAfterOutOfRange => write!(
                 f,
@@ -689,6 +709,9 @@ impl SchedulerConfig {
         }
         if !(RETRY_AFTER_MS_BOUNDS.0..=RETRY_AFTER_MS_BOUNDS.1).contains(&self.retry_after_ms) {
             return Err(InvalidSchedulerConfig::RetryAfterOutOfRange);
+        }
+        if !(ADMIT_RETRY_MS_BOUNDS.0..=ADMIT_RETRY_MS_BOUNDS.1).contains(&self.admit_retry_ms) {
+            return Err(InvalidSchedulerConfig::AdmitRetryOutOfRange);
         }
         if !(WORKER_TTL_MS_BOUNDS.0..=WORKER_TTL_MS_BOUNDS.1).contains(&self.worker_ttl_ms) {
             return Err(InvalidSchedulerConfig::WorkerTtlOutOfRange);
@@ -1211,8 +1234,15 @@ mod tests {
         assert_eq!(config.retry_after_ms, 250);
         assert_eq!(config.analytics_slots, 1);
         assert_eq!(config.validate(), Ok(()));
+        assert_eq!(config.admit_retry_ms, 500);
         type Set = fn(&mut SchedulerConfig, u64);
-        let cases: [(Set, [u64; 2], [u64; 2], InvalidSchedulerConfig); 4] = [
+        let cases: [(Set, [u64; 2], [u64; 2], InvalidSchedulerConfig); 5] = [
+            (
+                |c, v| c.admit_retry_ms = v,
+                [50, 60_000],
+                [49, 60_001],
+                InvalidSchedulerConfig::AdmitRetryOutOfRange,
+            ),
             (
                 |c, v| c.worker_ttl_ms = v,
                 [1_000, 600_000],

@@ -769,6 +769,10 @@ closed_error_codes! {
         WorkerRegistrationInvalid => "WORKER_REGISTRATION_INVALID",
         WorkerTtlInvalid => "WORKER_TTL_INVALID",
         WorkerUnknown => "WORKER_UNKNOWN",
+        /// MEDULLA-INGEST-WORKER-R604.4: a claim that would drop the reserved hot-spare count.
+        AdmitHeldForReserve => "ADMIT_HELD_FOR_RESERVE",
+        /// MEDULLA-INGEST-WORKER-R604.3: a claim whose worker is sized to zero slots.
+        WorkerCapacityZero => "WORKER_CAPACITY_ZERO",
         WriteConflict => "WRITE_CONFLICT",
         WriteConflictUnmergeable => "WRITE_CONFLICT_UNMERGEABLE",
         DurableUnitRunConflict => "DURABLE_UNIT_RUN_CONFLICT",

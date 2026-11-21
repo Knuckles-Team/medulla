@@ -1168,6 +1168,7 @@ pub fn scheduler_config_from(
         },
         orchestration_limits: Default::default(),
         ingest_retry: Default::default(),
+        admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
     };
     config.validate()?;
     Ok(config)

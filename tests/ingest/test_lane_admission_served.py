@@ -12,11 +12,13 @@ import uuid
 from typing import Any
 
 import pytest
-from conftest import request_context
+from conftest import request_context, tenant_request_context
 
 from medulla.client import MedullaClient
 
 pytestmark = [pytest.mark.spec("MEDULLA-INGEST-WORKER-R604.3")]
+
+_R604_4 = pytest.mark.spec("MEDULLA-INGEST-WORKER-R604.4")
 
 
 def _registration(worker: str, lane: str) -> dict[str, Any]:
@@ -64,6 +66,63 @@ async def test_claim_enforces_admission() -> None:
             for worker in (general, hydration):
                 claimed = await _claim(client, worker)
                 assert claimed is None or "task_id" in claimed
+        finally:
+            await client._send("SetSchedulerConfig", {"config": current})
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-INGEST-WORKER-R604.4
+@_R604_4
+@pytest.mark.asyncio
+async def test_reserve_refusal_has_code_and_retry_hint() -> None:
+    stem = uuid.uuid4().hex[:8]
+    tenant = f"reserve-{stem}"
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(tenant),
+    )
+    try:
+        current = await client._send("GetSchedulerConfig", {})
+        # One worker in the pool and a floor of one for the general lane: any grant starves the
+        # reserve, so only a lane with queued work and no running worker may claim.
+        policy = {
+            **current,
+            "total_workers": 1,
+            "lane_floors": {"general": 1},
+            "admit_retry_ms": 700,
+        }
+        await client._send("SetSchedulerConfig", {"config": policy})
+        try:
+            worker = f"general-{stem}"
+            await client._send(
+                "WorkerRegister", {"registration": _registration(worker, "general")}
+            )
+            before = await client._send("IngestQueueDepth", {"queue": "ingest"})
+            with pytest.raises(Exception, match="ADMIT_HELD_FOR_RESERVE") as refusal:
+                await _claim(client, worker)
+            assert "general" in str(refusal.value)
+            assert "retry_after_ms 700" in str(refusal.value)
+            # The refusal wrote nothing.
+            after = await client._send("IngestQueueDepth", {"queue": "ingest"})
+            assert after == before
+
+            # The exception: a lane with queued work and no running worker is relieved.
+            await client._send(
+                "IngestEnqueue",
+                {
+                    "envelope": {
+                        "job_id": f"job-{stem}",
+                        "tenant": tenant,
+                        "corpus_key": "corpus-a",
+                        "kind": "document",
+                        "target": "doc://a",
+                        "attempt": 1,
+                    }
+                },
+            )
+            claimed = await _claim(client, worker)
+            assert claimed is not None and "task_id" in claimed
         finally:
             await client._send("SetSchedulerConfig", {"config": current})
     finally:

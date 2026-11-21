@@ -178,7 +178,10 @@ fn admit_claim(
         WorkerAdmission::Refused(refusal) => {
             let detail = match &refusal {
                 WorkerAdmissionRefusal::AdmitHeldForReserve { lane } => {
-                    format!("lane '{lane}' would drop below its reserve")
+                    format!(
+                        "lane '{lane}' would drop below its reserve; retry_after_ms {}",
+                        admission.config.admit_retry_ms
+                    )
                 }
                 WorkerAdmissionRefusal::WorkerCapacityZero { limit } => {
                     format!("worker capacity is zero at limit '{limit}'")
@@ -587,6 +590,7 @@ mod tests {
             ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
             orchestration_limits: Default::default(),
             ingest_retry: Default::default(),
+            admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
         },
             lane_load: BTreeMap::new(),
             shard_writer_width: 4,

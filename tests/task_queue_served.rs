@@ -117,6 +117,7 @@ fn admission(workers: &[&str]) -> AdmissionInputs {
         ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
         orchestration_limits: Default::default(),
         ingest_retry: Default::default(),
+        admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
     },
         lane_load: BTreeMap::new(),
         shard_writer_width: 4,

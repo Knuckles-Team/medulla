@@ -1497,7 +1497,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "INGEST_TENANT_MISMATCH",
         ],
     ),
-    ("TaskQueueClaim", &["TASK_LEASE_ZERO"]),
+    // MEDULLA-INGEST-WORKER-R604.3, R604.4: the reserved-worker admission of a claim.
+    (
+        "TaskQueueClaim",
+        &[
+            "TASK_LEASE_ZERO",
+            "WORKER_UNKNOWN",
+            "WORKER_CAPACITY_ZERO",
+            "ADMIT_HELD_FOR_RESERVE",
+        ],
+    ),
     // MEDULLA-DURABLE-KERNEL-R072.1: a renewal refused for its lease.
     (
         "TaskQueueRenew",
