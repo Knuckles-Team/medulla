@@ -95,6 +95,9 @@ mod medulla_h_query_dispatch_pipeline_tests;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "ann-redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_retrieve_promotion_ops_tests;
+#[cfg(all(test, feature = "query", feature = "redb", feature = "ann-redb"))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod semantic_live_generation;
 #[cfg(all(
     test,
     unix,
