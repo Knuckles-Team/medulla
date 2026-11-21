@@ -3151,3 +3151,86 @@ async fn constraints_hold_under_concurrent_sessions() {
         "only the valid rows and the one race winner are stored"
     );
 }
+
+/// One after-insert trigger on a table; 1,000 pgwire inserts; each trigger effect (a row
+/// copied into a second table) ran exactly once.
+// spec: MEDULLA-ENGINE-PARITY-R012.3
+#[cfg(feature = "statechart")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn after_insert_trigger_runs_once_per_row() {
+    use medulla_statechart::{Action, State, StatechartDef, Transition};
+
+    const ROWS: usize = 1_000;
+    let source = unique_table();
+    let target = format!("{source}_copy");
+    let machine = StatechartDef {
+        name: "copy_after_insert".to_string(),
+        schema_version: 1,
+        states: vec![State::new("idle")],
+        alphabet: vec!["after_insert".to_string()],
+        transitions: vec![
+            Transition::new("idle", "after_insert", "idle").with_actions(vec![Action::Custom {
+                name: "insert_row".to_string(),
+                args: serde_json::json!({
+                    "table": target,
+                    "row": {"note": {"from": "new.note"}},
+                }),
+            }]),
+        ],
+        initial: "idle".to_string(),
+        finals: Vec::new(),
+        meta: Default::default(),
+    };
+    let persist_dir = sql_test_persist_dir();
+    let machine_id = medulla_h_jobs::statechart::statechart_store(Some(&persist_dir))
+        .expect("statechart store")
+        .define(&machine)
+        .expect("define the trigger machine");
+    let state = state_with_dir(default_persistence(), persist_dir);
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {source} (id BIGINT PRIMARY KEY, note TEXT)"
+        ))
+        .await
+        .expect("CREATE source");
+    client
+        .simple_query(&format!("CREATE TABLE {target} (note TEXT)"))
+        .await
+        .expect("CREATE target");
+    client
+        .simple_query(&format!(
+            "CREATE TRIGGER copy_note AFTER INSERT ON {source} EXECUTE MACHINE {machine_id}"
+        ))
+        .await
+        .expect("CREATE TRIGGER");
+
+    for id in 0..ROWS {
+        client
+            .simple_query(&format!(
+                "INSERT INTO {source} (id, note) VALUES ({id}, 'note-{id}')"
+            ))
+            .await
+            .expect("INSERT");
+    }
+
+    let rows = client
+        .simple_query(&format!("SELECT note FROM {target}"))
+        .await
+        .expect("read the trigger effects");
+    let mut notes: Vec<String> = rows
+        .into_iter()
+        .filter_map(|message| match message {
+            tokio_postgres::SimpleQueryMessage::Row(row) => row.get(0).map(str::to_string),
+            _ => None,
+        })
+        .collect();
+    notes.sort();
+    let mut expected: Vec<String> = (0..ROWS).map(|id| format!("note-{id}")).collect();
+    expected.sort();
+    assert_eq!(notes, expected, "each trigger effect ran exactly once");
+
+    let _ = client.simple_query(&format!("DROP TABLE {source}")).await;
+    let _ = client.simple_query(&format!("DROP TABLE {target}")).await;
+}
