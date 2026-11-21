@@ -248,6 +248,12 @@ pub enum IdentityReply<C = ()> {
     WebauthnCredentials(Vec<WebauthnCredentialView>),
     /// `issue_password_reset`.
     ResetDelivery(ResetDelivery),
+    /// `validate_policy`: the RBAC roles and grants a policy bundle lowers to
+    /// (MEDULLA-IDENTITY-R702).
+    PolicyCompiled {
+        roles: Vec<crate::acl::Role>,
+        grants: Vec<crate::acl::Grant>,
+    },
 }
 
 impl IdentityReply {
@@ -285,6 +291,9 @@ impl IdentityReply {
             Self::DirectoryGroups(value) => IdentityReply::DirectoryGroups(value),
             Self::WebauthnCredentials(value) => IdentityReply::WebauthnCredentials(value),
             Self::ResetDelivery(value) => IdentityReply::ResetDelivery(value),
+            Self::PolicyCompiled { roles, grants } => {
+                IdentityReply::PolicyCompiled { roles, grants }
+            }
             Self::Done { changed } => IdentityReply::Done { changed },
             Self::Principal { principal_id } => IdentityReply::Principal { principal_id },
             Self::Resolution(value) => IdentityReply::Resolution(compose(value)?),

@@ -80,6 +80,10 @@ pub struct IdentityStore {
     /// WorkItem id → delegation record (MEDULLA-IDENTITY-R701).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) delegations: BTreeMap<String, super::delegation::DelegationRecord>,
+    /// Scope key (`tenant` or `graph:<graph>`) → the applied policy rule bundle
+    /// (MEDULLA-IDENTITY-R702).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) policy_bundles: BTreeMap<String, super::policy_bundle::PolicyRuleBundle>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) users: BTreeMap<String, super::model::UserRecord>,
     /// Normalized username → principal id.
@@ -135,7 +139,7 @@ fn reshapes_authority(op: &IdentityOp) -> bool {
         | IdentityOp::User(_)
         | IdentityOp::Access(_)
         | IdentityOp::Idp(_) => op.is_mutation(),
-        IdentityOp::Delegation(_) => false,
+        IdentityOp::Delegation(_) | IdentityOp::Policy(_) => false,
         IdentityOp::Credential(op) => {
             matches!(op, super::ops::CredentialOp::ExternalLogin { .. })
         }
@@ -283,6 +287,7 @@ impl IdentityStore {
             IdentityOp::Access(op) => self.apply_access(op, stamp, ctx),
             IdentityOp::Idp(op) => self.apply_idp(op, stamp, ctx),
             IdentityOp::Delegation(op) => self.apply_delegation(op, stamp, ctx),
+            IdentityOp::Policy(op) => self.apply_policy(op, stamp, ctx.now_ms),
         }
     }
 

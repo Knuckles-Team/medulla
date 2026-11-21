@@ -10,6 +10,7 @@ mod approval_keys;
 mod auth;
 mod factors;
 mod modes;
+mod policy_bundle;
 mod provision;
 mod recovery;
 mod revocation;

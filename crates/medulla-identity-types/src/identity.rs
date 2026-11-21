@@ -38,6 +38,7 @@ mod model;
 mod ops;
 mod ownership;
 mod password_policy;
+mod policy_bundle;
 mod projection;
 mod relations;
 mod requests;
@@ -90,6 +91,11 @@ pub use ownership::{
     RollbackEntry, MAX_OWNERSHIP_ROLES, MAX_OWNERSHIP_WRITERS, OWNERSHIP_SCHEMA_VERSION,
 };
 pub use password_policy::check_password;
+pub use policy_bundle::{
+    compile as compile_policy_bundle, lower as lower_policy_bundle, CompiledPolicy,
+    PolicyBundleOp, PolicyBundleScope, PolicyRule, PolicyRuleBundle, MAX_POLICY_BUNDLES,
+    MAX_POLICY_RULES, POLICY_BUNDLE_SCHEMA_VERSION,
+};
 pub use projection::{
     rbac_role_name, PrincipalResolution, RbacProjection, SessionRecordProjection,
 };
@@ -254,6 +260,12 @@ medulla_types::closed_error_codes! {
         /// admission refuses it, and the existing authentication path reports
         /// `AUTHENTICATION_REQUIRED` for it on the wire.
         SessionEpochStale => "SESSION_EPOCH_STALE",
+        /// A policy bundle is bound to a scope that already holds a different bundle
+        /// (MEDULLA-IDENTITY-R702); unbind it first.
+        PolicyScopeBound => "POLICY_SCOPE_BOUND",
+        /// A policy bundle would give its binding actor an `Admin` grant through a group
+        /// that contains that actor (MEDULLA-IDENTITY-R702).
+        PolicySelfAuthorization => "POLICY_SELF_AUTHORIZATION",
     }
 }
 

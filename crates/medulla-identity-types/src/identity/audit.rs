@@ -79,6 +79,10 @@ pub enum IdentityEvent {
     /// A WorkItem delegation record was written or revoked.
     DelegationRecorded,
     DelegationRevoked,
+    /// A policy rule bundle was bound to a scope, or the scope was freed
+    /// (MEDULLA-IDENTITY-R702).
+    PolicyBound,
+    PolicyUnbound,
 }
 
 /// The change of the canonical authorization digest across one identity or

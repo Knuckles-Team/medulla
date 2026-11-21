@@ -220,19 +220,29 @@ impl IdentityStore {
                     effect: grant.effect,
                 }));
         }
+        // MEDULLA-IDENTITY-R702: every applied policy bundle lowers to `idm:policy:` roles
+        // and grants, held by the active members of each rule's group.
+        for bundle in self.policy_bundles.values() {
+            let compiled = super::policy_bundle::lower(bundle);
+            projection.roles.extend(compiled.roles);
+            projection.grants.extend(compiled.grants);
+        }
         for user in self.users.values() {
             projection.managed.insert(user.principal_id.clone());
             if !user.status.is_active() {
                 continue;
             }
-            let (roles, _) = self.effective_roles(&user.principal_id);
+            let (roles, groups) = self.effective_roles(&user.principal_id);
+            let mut role_names: BTreeSet<String> =
+                roles.iter().map(|role| rbac_role_name(role)).collect();
+            role_names.extend(self.policy_roles_for(&groups));
             projection.identities.insert(
                 user.principal_id.clone(),
                 AgentIdentity {
                     agent_id: user.principal_id.clone(),
                     role: AgentRole::Agent,
                     teams: Vec::new(),
-                    roles: roles.iter().map(|role| rbac_role_name(role)).collect(),
+                    roles: role_names.into_iter().collect(),
                 },
             );
         }

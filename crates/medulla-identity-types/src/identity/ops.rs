@@ -13,6 +13,7 @@ use super::access::IdpConfig;
 use super::approval_key::{ApprovalKeyLookup, ApprovalKeyRegistration, ApprovalKeyRevocation};
 use super::config::ModeTransition;
 use super::delegation::DelegationRecordWrite;
+use super::policy_bundle::PolicyBundleOp;
 use super::requests::{
     ApiKeyIssue, ApiKeyUse, AuthenticateRequest, CreateUserRequest, ExternalLogin,
     InitializeRequest, LinkRequest, OneTimeTokenIssue, PasswordChange, PasswordResetIssue,
@@ -384,6 +385,7 @@ macro_rules! in_family {
             IdentityOp::Access($op) => $body,
             IdentityOp::Idp($op) => $body,
             IdentityOp::Delegation($op) => $body,
+            IdentityOp::Policy($op) => $body,
         }
     };
 }
@@ -402,6 +404,8 @@ pub enum IdentityOp {
     Access(AccessOp),
     Idp(IdpOp),
     Delegation(DelegationOp),
+    /// Policy rule bundles (MEDULLA-IDENTITY-R702).
+    Policy(PolicyBundleOp),
 }
 
 impl IdentityOp {
@@ -421,6 +425,16 @@ impl IdentityOp {
 
     pub fn name(&self) -> &'static str {
         self.meta().name
+    }
+}
+
+impl PolicyBundleOp {
+    fn meta(&self) -> OpMeta {
+        match self {
+            Self::Validate { .. } => meta("validate_policy", false, OpAuthority::Admin),
+            Self::Bind { .. } => meta("bind_policy", true, OpAuthority::Admin),
+            Self::Unbind { .. } => meta("unbind_policy", true, OpAuthority::Admin),
+        }
     }
 }
 

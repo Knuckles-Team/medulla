@@ -1634,6 +1634,10 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     if id == "GetNodeProperties" {
         codes.extend(["UNIT_OUT_OF_SCOPE", "DURABLE_READ_UNAVAILABLE"]);
     }
+    // MEDULLA-IDENTITY-R702: binding a policy rule bundle refuses these two codes.
+    if id == "Identity" {
+        codes.extend(["POLICY_SCOPE_BOUND", "POLICY_SELF_AUTHORIZATION"]);
+    }
     // MEDULLA-SRC-AUTH-R011.3: the trust mark is stamped in the mutation gateway.
     if id == "AddNode" {
         codes.insert("CONTENT_ORIGIN_UNKNOWN");
