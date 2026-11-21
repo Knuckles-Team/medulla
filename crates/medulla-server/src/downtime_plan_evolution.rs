@@ -24,12 +24,17 @@ use tokio::sync::RwLock;
 /// What one candidate's evolution run decided.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct PlanEvolutionReceipt {
+    /// The tenant whose query shape was evolved.
     pub tenant: String,
+    /// The digest of the query shape the candidate plan answers.
     pub shape_digest: String,
+    /// The digest of the plan in force before the run.
     pub baseline_digest: String,
+    /// The digest of the candidate plan the run measured.
     pub candidate_digest: String,
     /// `kept`, `too_few_replays`, `results_differ`, `no_measured_gain` or `authority_expired`.
     pub outcome: String,
+    /// The downtime job that ran the evolution.
     pub job_id: String,
 }
 
