@@ -7,7 +7,9 @@
 //! overlapping range with `ARCHIVE_RANGE_OVERLAP` and `get_segment` refuses a
 //! digest mismatch with `ARCHIVE_DIGEST_MISMATCH` (an existing wire code).
 //! Provider for `MEDULLA-ENGINE-PARITY-R016.1`. Writes: one immutable object
-//! per put, plus the manifest document.
+//! per put, plus the manifest document. [`ObjectArchive::expire_segments`] is
+//! owned here and called by `MEDULLA-ENGINE-PARITY-R016.4`, which owns the
+//! retention rule.
 
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt};
@@ -22,6 +24,9 @@ pub struct ArchiveManifestEntry {
     pub last: u64,
     /// 64 lowercase hex characters.
     pub sha256: String,
+    /// The `committed_at_ms` of the segment's last record; the retention rule of
+    /// `MEDULLA-ENGINE-PARITY-R016.4` compares it with its cut-off.
+    pub last_committed_at_ms: u64,
 }
 
 /// Typed refusal. `wire_code` is the literal the wire boundary keeps stable.
@@ -166,6 +171,7 @@ impl ObjectArchive {
         graph: &str,
         first: u64,
         last: u64,
+        last_committed_at_ms: u64,
         bytes: &[u8],
     ) -> Result<String, ArchiveRefusal> {
         let entries = self.read_manifest(tenant, graph).await?;
@@ -199,9 +205,45 @@ impl ObjectArchive {
             first,
             last,
             sha256: digest,
+            last_committed_at_ms,
         });
         self.write_manifest(tenant, graph, &entries).await?;
         Ok(key)
+    }
+
+    /// Expire the segments of one scope whose `last_committed_at_ms` is below
+    /// `older_than_ms`, except the entry with the largest `last` (always kept, so
+    /// [`Self::archived_end`] never moves backwards). The manifest is rewritten
+    /// before any object is deleted, so a crash leaves at worst an unreferenced
+    /// object, never a manifest entry without its object. Returns the number of
+    /// entries expired.
+    pub async fn expire_segments(
+        &self,
+        tenant: &str,
+        graph: &str,
+        older_than_ms: u64,
+    ) -> Result<u64, ArchiveRefusal> {
+        let entries = self.read_manifest(tenant, graph).await?;
+        let newest = entries.iter().map(|e| e.last).max();
+        let (expired, kept): (Vec<_>, Vec<_>) = entries
+            .into_iter()
+            .partition(|e| e.last_committed_at_ms < older_than_ms && Some(e.last) != newest);
+        if expired.is_empty() {
+            return Ok(0);
+        }
+        self.write_manifest(tenant, graph, &kept).await?;
+        for entry in &expired {
+            let path = self.segment_path(tenant, graph, entry.first, entry.last);
+            match self.store.delete(&path).await {
+                Ok(()) | Err(object_store::Error::NotFound { .. }) => {}
+                Err(e) => {
+                    return Err(ArchiveRefusal::Remote {
+                        detail: e.to_string(),
+                    })
+                }
+            }
+        }
+        Ok(expired.len() as u64)
     }
 
     /// The manifest entries of one scope, in append order.
