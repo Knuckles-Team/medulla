@@ -4,6 +4,8 @@ The regression check is `cargo xtask decide-budgets` (tests in tools/xtask)."""
 
 from __future__ import annotations
 
+import json
+import math
 import re
 from pathlib import Path
 
@@ -57,3 +59,24 @@ def test_media_facts_bench_is_registered_and_nightly() -> None:
         encoding="utf-8"
     )
     assert "--bench media_facts" in workflow
+
+
+def test_memory_scaling_growth_above_2_2_fails() -> None:
+    # spec: MEDULLA-DECISION-ENGINE-R154.2
+    baseline = json.loads(
+        (ROOT / "benches/baselines/decide.json").read_text(encoding="utf-8")
+    )
+    limit = baseline["scaling_limits"]["decide/memory_scaling"]
+    assert limit["max_growth_per_doubling"] == 2.2
+
+    # The same growth rule the check applies: (p95_large / p95_small)^(1 / log2(size ratio)).
+    def growth(small: float, large: float, ratio: float) -> float:
+        return (large / small) ** (1.0 / math.log2(ratio))
+
+    assert growth(1.0, 4.0, 4.0) <= limit["max_growth_per_doubling"]
+    assert growth(1.0, 6.0, 4.0) > limit["max_growth_per_doubling"]
+    # The bench writes the samples the check reads, and the check keys on them.
+    bench = (ROOT / "benches/decide_budgets.rs").read_text(encoding="utf-8")
+    assert '"decide/memory_scaling"' in bench and '"scaling": scaling' in bench
+    xtask = (ROOT / "tools/xtask/src/decide_budgets.rs").read_text(encoding="utf-8")
+    assert "scaling_limits" in xtask and "max_growth_per_doubling" in xtask

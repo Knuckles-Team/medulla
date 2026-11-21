@@ -188,3 +188,44 @@ fn remember_recall_consolidate_and_export_round_trip() {
     let limited = export(&core, "tenant-a", &MemoryExportRequest { limit: Some(1) }).unwrap();
     assert_eq!(limited.records.len(), 100.min(exported.records.len()));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R154.2
+#[test]
+fn recall_stays_stable_as_the_corpus_doubles() {
+    // Five needle facts rank first by cosine; every other fact is orthogonal filler, so a
+    // larger corpus must return the same top-k for the same queries.
+    let corpus = |size: usize| {
+        let core = GraphCore::new();
+        for n in 0..size {
+            let (text, embedding) = if n < 5 {
+                (format!("needle fact {n}"), vec![1.0, 0.1 * n as f32])
+            } else {
+                (format!("filler fact {n}"), vec![0.0, 1.0])
+            };
+            store(
+                &core,
+                "tenant-a",
+                &remember(record("tenant-a", &format!("m:{n:05}"), MemoryTier::Semantic, &text), embedding),
+            );
+        }
+        core
+    };
+    let by_vector = recall_request(vec![1.0, 0.0], &[], 1_000);
+    let by_keyword = recall_request(vec![], &["needle"], 1_000);
+    let mut expected: Option<(Vec<String>, Vec<String>)> = None;
+    for size in [1_000, 2_000, 4_000] {
+        let core = corpus(size);
+        let vector = recall(&core, "tenant-a", NOW, &by_vector).unwrap();
+        let keyword = recall(&core, "tenant-a", NOW, &by_keyword).unwrap();
+        let found = (
+            ids(&vector.hits).into_iter().map(String::from).collect::<Vec<_>>(),
+            ids(&keyword.hits).into_iter().map(String::from).collect::<Vec<_>>(),
+        );
+        assert_eq!(found.0.len(), 5, "size {size}: {found:?}");
+        assert_eq!(found.1.len(), 5, "size {size}: {found:?}");
+        match &expected {
+            None => expected = Some(found),
+            Some(first) => assert_eq!(&found, first, "top-k changed at {size} facts"),
+        }
+    }
+}

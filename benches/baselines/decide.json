@@ -139,5 +139,10 @@
       "peak_mib": 64.0
     }
   },
+  "scaling_limits": {
+    "decide/memory_scaling": {
+      "max_growth_per_doubling": 2.2
+    }
+  },
   "groups": {}
 }

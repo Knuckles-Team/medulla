@@ -115,7 +115,63 @@ pub fn check(run: &Value, baseline: &Value) -> Result<Vec<String>, String> {
         let budget = &baseline["group_budgets"][group.as_str()];
         designation_findings(group, &groups[group], budget, &mut findings)?;
     }
+    for group in groups.keys().filter(|n| groups[*n].get("scaling").is_some()) {
+        scaling_findings(
+            group,
+            &groups[group]["scaling"],
+            &baseline["scaling_limits"][group.as_str()],
+            &mut findings,
+        )?;
+    }
     Ok(findings)
+}
+
+/// The p95 growth per doubling of corpus size of one scaling group
+/// (MEDULLA-DECISION-ENGINE-R154.2): `(p95_large / p95_small)^(1 / log2(size ratio))` between
+/// consecutive samples, which must stay at most `max_growth_per_doubling` of the baseline's
+/// `scaling_limits` entry for the group.
+fn scaling_findings(
+    group: &str,
+    samples: &Value,
+    limit: &Value,
+    findings: &mut Vec<String>,
+) -> Result<(), String> {
+    if limit.is_null() {
+        findings.push(format!("{group}: no scaling limit in the baseline"));
+        return Ok(());
+    }
+    let max = number(
+        &limit["max_growth_per_doubling"],
+        "scaling limit max_growth_per_doubling",
+    )?;
+    let samples = samples
+        .as_array()
+        .filter(|s| s.len() >= 2)
+        .ok_or_else(|| format!("{group}: scaling needs at least two samples"))?;
+    for pair in samples.windows(2) {
+        let (size_small, size_large) = (
+            number(&pair[0]["size"], "scaling size")?,
+            number(&pair[1]["size"], "scaling size")?,
+        );
+        let (small, large) = (
+            number(&pair[0]["p95_ms"], "scaling p95_ms")?,
+            number(&pair[1]["p95_ms"], "scaling p95_ms")?,
+        );
+        if size_large <= size_small || small <= 0.0 {
+            findings.push(format!("{group}: scaling samples are not increasing sizes"));
+            continue;
+        }
+        let growth = (large / small).powf(1.0 / (size_large / size_small).log2());
+        if growth > max {
+            findings.push(format!(
+                "{group}: p95 growth {growth:.2} per doubling between {} and {} exceeds {}",
+                g(size_small),
+                g(size_large),
+                g(max)
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// The recall floor, the filtered and upsert latencies and the resident-byte ceiling of one
@@ -259,6 +315,27 @@ mod tests {
                 "{metric}: {found:?}"
             );
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R154.2
+    #[test]
+    fn memory_scaling_growth_above_2_2_fails() {
+        let baseline = baseline();
+        let group = "decide/memory_scaling";
+        let run = |large: f64| {
+            json!({"groups": {group: {
+                "p50_ms": 1.0, "p99_ms": 2.0, "peak_mib": 8.0,
+                "scaling": [
+                    {"size": 100000, "p95_ms": 1.0},
+                    {"size": 200000, "p95_ms": 2.0},
+                    {"size": 400000, "p95_ms": large},
+                ]
+            }}})
+        };
+        assert!(check(&run(4.0), &baseline).unwrap().is_empty());
+        let planted = check(&run(6.0), &baseline).unwrap();
+        assert_eq!(planted.len(), 1, "{planted:?}");
+        assert!(planted[0].contains("exceeds 2.2"), "{planted:?}");
     }
 
     #[test]

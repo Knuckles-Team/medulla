@@ -2216,6 +2216,134 @@ fn bench_skill_evolution(
     });
 }
 
+/// Facts the `decide/memory_scaling` group loads at its smallest size (N).
+const MEMORY_SCALING_BASE: usize = 100_000;
+/// Recalls timed at each corpus size.
+const MEMORY_SCALING_RECALLS: usize = 50;
+
+// spec: MEDULLA-DECISION-ENGINE-R154.2
+/// The `decide/memory_scaling` group (MEDULLA-DECISION-ENGINE-R154.2, R178.1): N, 2N and 4N
+/// facts are stored through the served `MemoryRemember`, and the p95 of the served
+/// `MemoryRecall` is measured at each size. The `scaling` samples in the report let
+/// `cargo xtask decide-budgets` hold the p95 growth per doubling at `scaling_limits` of
+/// `benches/baselines/decide.json` (2.2).
+fn bench_memory_scaling(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_work_types::memory::{
+        MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest, MemoryTier,
+        MEMORY_RECORD_SCHEMA_VERSION,
+    };
+    let h = rt.block_on(Harness::new());
+    let remember = |n: usize| {
+        let needle = n % 1000 == 0;
+        let record = MemoryRecord {
+            memory_id: medulla_types::contract::ResourceId::new(format!("m:{n}")).unwrap(),
+            tenant: medulla_types::contract::TenantId::new(TENANT).unwrap(),
+            kind: MemoryKind::Fact,
+            tier: MemoryTier::Semantic,
+            text: if needle {
+                format!("needle fact {n}")
+            } else {
+                format!("filler fact {n}")
+            },
+            provenance_key: None,
+            session_id: None,
+            timestamp_ms: 10,
+            topics: Vec::new(),
+            pattern_key: None,
+            importance: 1.0,
+            access_count: 0,
+            last_access_ms: 0,
+            last_decay_ms: 0,
+            forgotten: false,
+            legal_hold: false,
+            expires_at_ms: None,
+            support_count: 0,
+            token_estimate: 10,
+            attachments: Vec::new(),
+            schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+        };
+        let response = rt.block_on(dispatch(
+            &h,
+            Method::MemoryRemember {
+                request: Box::new(MemoryRememberRequest {
+                    record,
+                    embedding: Vec::new(),
+                }),
+            },
+        ));
+        assert!(
+            response.error.is_none(),
+            "memory_scaling fixture: {response:?}"
+        );
+    };
+    let recall = || {
+        let response = rt.block_on(dispatch(
+            &h,
+            Method::MemoryRecall {
+                request: Box::new(MemoryRecallRequest {
+                    query_embedding: Vec::new(),
+                    keywords: vec!["needle".to_string()],
+                    tiers: Vec::new(),
+                    scope: None,
+                    as_of_ms: None,
+                    budget: 100,
+                    prime_session: None,
+                    include_plan: false,
+                }),
+            },
+        ));
+        assert!(
+            response.error.is_none(),
+            "memory_scaling fixture: {response:?}"
+        );
+        response
+    };
+    let before = high_water_mib();
+    let mut loaded = 0usize;
+    let mut scaling = Vec::new();
+    let mut last: Vec<Duration> = Vec::new();
+    for size in [
+        MEMORY_SCALING_BASE,
+        MEMORY_SCALING_BASE * 2,
+        MEMORY_SCALING_BASE * 4,
+    ] {
+        while loaded < size {
+            remember(loaded);
+            loaded += 1;
+        }
+        let mut samples: Vec<Duration> = (0..MEMORY_SCALING_RECALLS)
+            .map(|_| {
+                let start = Instant::now();
+                black_box(recall());
+                start.elapsed()
+            })
+            .collect();
+        samples.sort();
+        scaling.push(serde_json::json!({
+            "size": size,
+            "p95_ms": percentile_ms(&samples, 0.95),
+        }));
+        last = samples;
+    }
+    let mut group = c.benchmark_group("decide/memory_scaling");
+    group.sample_size(10);
+    group.bench_function("run", |b| b.iter(|| black_box(recall())));
+    group.finish();
+    report.insert(
+        "decide/memory_scaling".to_string(),
+        serde_json::json!({
+            "p50_ms": percentile_ms(&last, 0.50),
+            "p99_ms": percentile_ms(&last, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+            "scaling": scaling,
+        }),
+    );
+}
+
 /// A kernel family request: one typed body parameter and one declared candidate.
 fn kernel_ask(
     asked: &DecideRequest,
@@ -2810,6 +2938,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_served_kernels(c, &rt, &mut report);
     bench_belief_revision(c, &rt, &mut report);
     bench_skill_evolution(c, &rt, &mut report);
+    bench_memory_scaling(c, &rt, &mut report);
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);
     bench_harness_evidence_codec(c, &mut report);
