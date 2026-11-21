@@ -16,7 +16,11 @@ use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
 use medulla_decision_types::decision::ingestion_admission::{
     classify_unit, AdmissionKnobs, ContentClass,
 };
-use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
+use medulla_document::processing::{
+    build_section_tree, chunk_text, leaf_coverage_milli, section_for, verify_section_tree,
+    ChunkSpan, ChunkingConfig, LinkAnchor, SectionNode, SectionSource, SectionTreeCheck,
+    CHUNKER_VERSION,
+};
 use medulla_source_types::{
     source_ingestion::web_document::AdmissionOutcome,
     source_ingestion::web_document::EnrichDocumentReceipt,
@@ -34,6 +38,24 @@ pub const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
 pub const CHUNK_TYPE: &str = "DocumentChunk";
 pub const CHUNK_OF: &str = "chunkOf";
 pub const HAS_ENRICHMENT: &str = "hasEnrichment";
+/// The type of one section of a document's section tree (MEDULLA-REPO-INGEST-R652.3).
+pub const SECTION_TYPE: &str = "DocumentSection";
+/// The type of the processed-document record.
+pub const PROCESSED_DOCUMENT_TYPE: &str = "ProcessedDocument";
+/// The type of a node standing for the target of a link.
+pub const LINK_TARGET_TYPE: &str = "DocumentLinkTarget";
+/// The edge from a section to its document.
+pub const SECTION_OF: &str = "sectionOf";
+/// The edge from a child section to its parent section.
+pub const SUBSECTION_OF: &str = "subsectionOf";
+/// The edge from a chunk to the section it starts in.
+pub const IN_SECTION: &str = "inSection";
+/// The edge from a document to its processed-document record.
+pub const PROCESSED_AS: &str = "processedAs";
+/// The edge from a chunk to the target of a link it contains.
+pub const LINKS_TO: &str = "linksTo";
+/// The digest domain of a link target node id.
+const LINK_TARGET_DOMAIN: &[u8] = b"eg/document-link-target/v1";
 const ENVELOPE_PREFIX: &str = "document-enrichment:";
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {
     version_type: "document-enrichment-sha256",
@@ -137,6 +159,25 @@ fn chunk_id(document_id: &str, digest_hex: &str, ordinal: u32) -> String {
     format!("chunk:{document_id}:{}:{ordinal}", &digest_hex[..16])
 }
 
+/// The node id of one section of one digest of a document.
+pub fn section_node_id(document_id: &str, digest_hex: &str, section_id: u32) -> String {
+    format!("section:{document_id}:{}:{section_id}", &digest_hex[..16])
+}
+
+/// The node id of the processed-document record of one digest of a document.
+pub fn processed_document_id(document_id: &str, digest_hex: &str) -> String {
+    format!("processed-document:{document_id}:{}", &digest_hex[..32])
+}
+
+/// The node id of the target of a link: shared by every document that links to it.
+pub fn link_target_id(target: &str) -> Result<String, String> {
+    Ok(format!(
+        "link-target:{}",
+        medulla_types::contract::Digest256::framed(LINK_TARGET_DOMAIN, &[target.as_bytes()])?
+            .to_hex()
+    ))
+}
+
 /// The ladder rung the embedding producer writes under
 /// (MEDULLA-DECISION-ENGINE-R080.2).
 pub const PRODUCING_RUNG: ProvenanceRung = ProvenanceRung::Embeddings;
@@ -160,6 +201,10 @@ pub fn outranking_rung(document_id: &str, records: &[(String, Vec<u8>)]) -> Opti
 pub struct PriorEnrichment {
     pub enrichment_id: String,
     pub chunk_ids: Vec<String>,
+    /// The section nodes of that digest, removed with its chunks.
+    pub section_ids: Vec<String>,
+    /// The processed-document record of that digest, removed with its chunks.
+    pub processed_id: Option<String>,
     /// Exact span digest (hex) -> the chunk that holds that span's vector.
     pub embedded: BTreeMap<String, String>,
 }
@@ -217,6 +262,8 @@ pub fn prior_enrichments(
         prior.push(PriorEnrichment {
             enrichment_id: id,
             chunk_ids: string_list(&value["chunk_ids"]),
+            section_ids: string_list(&value["section_ids"]),
+            processed_id: value["processed_id"].as_str().map(str::to_string),
             embedded: span_digests(&value)
                 .into_iter()
                 .map(|(chunk, digest)| (digest, chunk))
@@ -277,6 +324,25 @@ pub struct EnrichmentPlan<'a> {
     /// The content classes retrieval feedback had demoted for this call
     /// (R079.5), snake_case labels.
     pub demoted_classes: Vec<String>,
+    /// The section tree of the document (MEDULLA-REPO-INGEST-R652.3).
+    pub sections: &'a [SectionNode],
+    /// What `verify_section_tree` answered for `sections`; recorded as computed.
+    pub tree_check: SectionTreeCheck,
+    /// The links of the document, in source order.
+    pub links: Vec<LinkAnchor>,
+}
+
+/// The section tree of a held Document and its verification: `Paged` when the text
+/// contains a form feed, `Markdown` otherwise (MEDULLA-REPO-INGEST-R652.3).
+pub fn sections(document: &HeldDocument) -> (Vec<SectionNode>, SectionTreeCheck) {
+    let source = if document.text.contains('\x0c') {
+        SectionSource::Paged
+    } else {
+        SectionSource::Markdown
+    };
+    let nodes = build_section_tree(&document.text, source);
+    let check = verify_section_tree(&nodes, document.text.len());
+    (nodes, check)
 }
 
 fn encode(value: &Value) -> Result<Vec<u8>, String> {
@@ -344,10 +410,26 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
             });
             superseded += 1;
         }
+        for id in &prior.section_ids {
+            methods.push(Method::RemoveNode {
+                node_id: id.clone(),
+            });
+        }
+        if let Some(id) = &prior.processed_id {
+            methods.push(Method::RemoveNode {
+                node_id: id.clone(),
+            });
+        }
         methods.push(Method::RemoveNode {
             node_id: prior.enrichment_id.clone(),
         });
     }
+    let section_ids: Vec<String> = plan
+        .sections
+        .iter()
+        .map(|section| section_node_id(plan.document_id, digest_hex, section.section_id))
+        .collect();
+    let processed_id = processed_document_id(plan.document_id, digest_hex);
     methods.push(node(
         record_id.clone(),
         json!({
@@ -374,6 +456,8 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
                 .zip(&plan.digests)
                 .map(|(span, digest)| (chunk_id(plan.document_id, digest_hex, span.ordinal), digest))
                 .collect::<BTreeMap<_, _>>(),
+            "section_ids": section_ids,
+            "processed_id": processed_id,
             "admissions": plan.admissions,
             "embedded_units": plan.embedded_units,
             "demoted_classes": plan.demoted_classes,
@@ -382,17 +466,65 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         }),
     )?);
     methods.push(edge(plan.document_id, &record_id, HAS_ENRICHMENT)?);
+    // The section tree: one node per section, linked to the document and to its parent.
+    for section in plan.sections {
+        let id = section_node_id(plan.document_id, digest_hex, section.section_id);
+        let mut properties = json!({
+            "type": SECTION_TYPE,
+            "document_id": plan.document_id,
+            "content_digest": plan.document.content_digest(),
+            "section_id": section.section_id,
+            "title": stored_value(&section.title),
+            "span_start": section.span_start,
+            "span_end": section.span_end,
+            "depth": section.depth,
+        });
+        if let Some(parent) = section.parent_id {
+            properties["parent_section_id"] = json!(parent);
+        }
+        methods.push(node(id.clone(), properties)?);
+        methods.push(edge(&id, plan.document_id, SECTION_OF)?);
+        if let Some(parent) = section.parent_id {
+            methods.push(edge(
+                &id,
+                &section_node_id(plan.document_id, digest_hex, parent),
+                SUBSECTION_OF,
+            )?);
+        }
+    }
+    methods.push(node(
+        processed_id.clone(),
+        json!({
+            "type": PROCESSED_DOCUMENT_TYPE,
+            "document_id": plan.document_id,
+            "content_digest": plan.document.content_digest(),
+            "chunk_count": plan.spans.len(),
+            "section_count": plan.sections.len(),
+            "coverage_milli": leaf_coverage_milli(plan.sections, plan.document.text.len()),
+            "tree_check": serde_json::to_value(plan.tree_check)
+                .map_err(|error| format!("enrichment encoding failed: {error}"))?,
+        }),
+    )?);
+    methods.push(edge(plan.document_id, &processed_id, PROCESSED_AS)?);
     let mut chunk_ids = Vec::with_capacity(plan.spans.len());
     for (span, vector) in plan.spans.iter().zip(&plan.vectors) {
         let id = chunk_id(plan.document_id, digest_hex, span.ordinal);
         methods.push(node(id.clone(), chunk_properties(&plan, span))?);
         methods.push(edge(&id, plan.document_id, CHUNK_OF)?);
+        if let Some(section) = section_for(plan.sections, span.start_byte) {
+            methods.push(edge(
+                &id,
+                &section_node_id(plan.document_id, digest_hex, section),
+                IN_SECTION,
+            )?);
+        }
         methods.push(Method::AddEmbedding {
             node_id: id.clone(),
             embedding: vector.clone(),
         });
         chunk_ids.push(id);
     }
+    methods.extend(link_methods(&plan, digest_hex)?);
     let write_set =
         IndexWriteSet::from_methods(ENVELOPE_PREFIX, b"eg/document-enrichment", methods)?;
     let receipt = EnrichDocumentReceipt {
@@ -415,6 +547,49 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         alignment_claims: Vec::new(),
     };
     Ok((write_set, receipt))
+}
+
+/// The link target nodes and `linksTo` edges of one document: one edge from the chunk
+/// whose span contains the anchor to its target, carrying the first anchor of that chunk
+/// and target. Target nodes are shared across documents and are never removed.
+fn link_methods(plan: &EnrichmentPlan<'_>, digest_hex: &str) -> Result<Vec<Method>, String> {
+    let mut targets: BTreeMap<String, String> = BTreeMap::new();
+    let mut edges: BTreeMap<(u32, String), &LinkAnchor> = BTreeMap::new();
+    for link in &plan.links {
+        let Some(span) = plan
+            .spans
+            .iter()
+            .find(|span| span.start_byte <= link.start_byte && link.start_byte < span.end_byte)
+        else {
+            continue;
+        };
+        let target_id = link_target_id(&link.target)?;
+        targets.entry(target_id.clone()).or_insert_with(|| link.target.clone());
+        edges.entry((span.ordinal, target_id)).or_insert(link);
+    }
+    let mut methods = Vec::new();
+    for (target_id, target) in &targets {
+        methods.push(node(
+            target_id.clone(),
+            json!({
+                "type": LINK_TARGET_TYPE,
+                "target": stored_value(target),
+            }),
+        )?);
+    }
+    for ((ordinal, target_id), link) in &edges {
+        methods.push(Method::AddEdge {
+            source_id: chunk_id(plan.document_id, digest_hex, *ordinal),
+            target_id: target_id.clone(),
+            properties_msgpack: encode(&json!({
+                "relationship": LINKS_TO,
+                "anchor": stored_value(&link.anchor),
+                "start_byte": link.start_byte,
+                "end_byte": link.end_byte,
+            }))?,
+        });
+    }
+    Ok(methods)
 }
 
 // ── Entity documents become alignment claims (MEDULLA-DECISION-ENGINE-R099.2) ────

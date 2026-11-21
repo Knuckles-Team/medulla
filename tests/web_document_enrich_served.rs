@@ -421,6 +421,182 @@ async fn enrich_replay_supersede_and_search() {
     assert_eq!(answer.selected[0].canonical_url, "https://example.org/new");
 }
 
+// spec: MEDULLA-REPO-INGEST-R652.3
+#[test]
+fn section_tree_and_links_are_written() {
+    test_support::on_engine(sections_and_links_run);
+}
+
+fn link_target_node(target: &str) -> String {
+    format!(
+        "link-target:{}",
+        medulla_types::contract::Digest256::framed(
+            b"eg/document-link-target/v1",
+            &[target.as_bytes()],
+        )
+        .unwrap()
+        .to_hex()
+    )
+}
+
+async fn sections_and_links_run() {
+    let (_dir, _backend, state) = durable_graph().await;
+    let text = "# Guide\n\nIntro with a [first link](https://example.org/one) here.\n\n\
+                ## Part A\n\nBody of part A with [second link](https://example.org/two).\n\n\
+                # Appendix\n\nClosing words.\n";
+    add_document(
+        &state,
+        2,
+        "doc:sections",
+        text,
+        "https://example.org/sections",
+        NOW,
+        "sha256:dd",
+    )
+    .await;
+    let receipt = enrich(&state, 3, "doc:sections", FetchBackend::Webarchiver).await;
+    let digest_hex = receipt.content_digest.trim_start_matches("sha256:").to_string();
+    let section = |id: u32| format!("section:doc:sections:{}:{id}", &digest_hex[..16]);
+
+    // Four sections: Guide, its intro, Part A under Guide, and Appendix.
+    let mut call_id = 10;
+    for id in 0..4 {
+        let props = chunk_props(&state, call_id, &section(id)).await;
+        call_id += 1;
+        assert_eq!(props["type"], "DocumentSection");
+        assert_eq!(props["document_id"], "doc:sections");
+        assert_eq!(props["section_id"], id);
+        let linked = bool_call(
+            &state,
+            call_id,
+            Method::HasEdge {
+                source_id: section(id),
+                target_id: "doc:sections".into(),
+            },
+        )
+        .await;
+        call_id += 1;
+        assert!(linked, "section {id} has no sectionOf edge");
+    }
+    for child in [1, 2] {
+        let nested = bool_call(
+            &state,
+            call_id,
+            Method::HasEdge {
+                source_id: section(child),
+                target_id: section(0),
+            },
+        )
+        .await;
+        call_id += 1;
+        assert!(nested, "section {child} has no subsectionOf edge to section 0");
+    }
+
+    // Each chunk is in the section its first byte falls in.
+    for chunk in &receipt.chunk_ids {
+        let mut in_section = false;
+        for id in 0..4 {
+            in_section |= bool_call(
+                &state,
+                call_id,
+                Method::HasEdge {
+                    source_id: chunk.clone(),
+                    target_id: section(id),
+                },
+            )
+            .await;
+            call_id += 1;
+        }
+        assert!(in_section, "chunk {chunk} has no inSection edge");
+    }
+
+    // The processed-document record.
+    let processed = chunk_props(
+        &state,
+        call_id,
+        &format!("processed-document:doc:sections:{}", &digest_hex[..32]),
+    )
+    .await;
+    call_id += 1;
+    assert_eq!(processed["type"], "ProcessedDocument");
+    assert_eq!(processed["tree_check"], "valid");
+    assert_eq!(processed["coverage_milli"], 1000);
+    assert_eq!(processed["chunk_count"], receipt.chunk_count);
+    assert_eq!(processed["section_count"], 4);
+    let processed_edge = bool_call(
+        &state,
+        call_id,
+        Method::HasEdge {
+            source_id: "doc:sections".into(),
+            target_id: format!("processed-document:doc:sections:{}", &digest_hex[..32]),
+        },
+    )
+    .await;
+    call_id += 1;
+    assert!(processed_edge, "the document has no processedAs edge");
+
+    // Both links: from the chunk holding the anchor to its target node.
+    for (anchor, target) in [
+        ("first link", "https://example.org/one"),
+        ("second link", "https://example.org/two"),
+    ] {
+        let at = text.find(anchor).unwrap();
+        let mut holder = None;
+        for chunk in &receipt.chunk_ids {
+            let props = chunk_props(&state, call_id, chunk).await;
+            call_id += 1;
+            let (start, end) = (
+                props["start_byte"].as_u64().unwrap() as usize,
+                props["end_byte"].as_u64().unwrap() as usize,
+            );
+            if start <= at && at < end {
+                holder = Some(chunk.clone());
+            }
+        }
+        let holder = holder.expect("a chunk holds the anchor");
+        let target_node = link_target_node(target);
+        let target_props = chunk_props(&state, call_id, &target_node).await;
+        call_id += 1;
+        assert_eq!(target_props["type"], "DocumentLinkTarget");
+        assert_eq!(target_props["target"], target);
+        let linked = bool_call(
+            &state,
+            call_id,
+            Method::HasEdge {
+                source_id: holder,
+                target_id: target_node,
+            },
+        )
+        .await;
+        call_id += 1;
+        assert!(linked, "no linksTo edge to {target}");
+    }
+
+    // A changed text leaves no section or record of the old digest.
+    add_document(
+        &state,
+        call_id,
+        "doc:sections",
+        &format!("{text}\n## Extra\n\nA later subsection.\n"),
+        "https://example.org/sections",
+        NOW,
+        "sha256:ee",
+    )
+    .await;
+    call_id += 1;
+    let changed = enrich(&state, call_id, "doc:sections", FetchBackend::Webarchiver).await;
+    call_id += 1;
+    assert!(!changed.replayed);
+    for old in [
+        section(0),
+        format!("processed-document:doc:sections:{}", &digest_hex[..32]),
+    ] {
+        let present = bool_call(&state, call_id, Method::HasNode { node_id: old.clone() }).await;
+        call_id += 1;
+        assert!(!present, "{old} survived the new digest");
+    }
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.4
 #[test]
 fn test_web_document_refusals() {

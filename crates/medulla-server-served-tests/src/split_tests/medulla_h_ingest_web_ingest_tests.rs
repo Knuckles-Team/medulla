@@ -50,6 +50,9 @@ fn plan_for<'a>(
         digests: spans.iter().map(|_| String::new()).collect(),
         embedded_units: spans.len() as u32,
         demoted_classes: Vec::new(),
+        sections: &[],
+        tree_check: medulla_document::processing::SectionTreeCheck::Valid,
+        links: Vec::new(),
     }
 }
 

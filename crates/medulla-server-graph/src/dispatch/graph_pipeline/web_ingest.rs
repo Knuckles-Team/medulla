@@ -96,6 +96,8 @@ async fn enrich(
         .collect();
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
         let spans = web::chunks(&document, &config)?;
+        let (sections, tree_check) = web::sections(&document);
+        let links = medulla_document::processing::extract_link_anchors(&document.text);
         let known: std::collections::BTreeSet<String> = reusable.keys().cloned().collect();
         let decided = web::decide_spans(&document, spans, &knobs, &known, &demoted);
         let texts: Vec<&str> = decided
@@ -113,10 +115,19 @@ async fn enrich(
             embedder.embed(&texts)?
         };
         let vectors = web::kept_vectors(&decided, fresh, &reusable)?;
-        Ok::<_, String>((document, decided, vectors, embedded_units, embedder))
+        Ok::<_, String>((
+            document,
+            decided,
+            vectors,
+            embedded_units,
+            embedder,
+            sections,
+            tree_check,
+            links,
+        ))
     })
     .await;
-    let (document, decided, vectors, embedded_units, embedder) = match embedded {
+    let (document, decided, vectors, embedded_units, embedder, sections, tree_check, links) = match embedded {
         Ok(Ok(parts)) => parts,
         Ok(Err(error)) => return Response::err(req_id, error),
         Err(response) => return response,
@@ -141,6 +152,9 @@ async fn enrich(
         digests,
         embedded_units,
         demoted_classes: demoted_labels,
+        sections: &sections,
+        tree_check,
+        links,
     };
     match web::lower(plan) {
         Ok((write_set, receipt)) => commit(ctx, write_set, &web::LABELS, receipt).await,

@@ -532,6 +532,30 @@ pub fn verify_section_tree(nodes: &[SectionNode], text_len: usize) -> SectionTre
     SectionTreeCheck::Valid
 }
 
+/// The share of a text of `text_len` bytes that the leaf sections cover, in
+/// thousandths: the summed byte length of the leaf sections times 1000 divided by
+/// `text_len`, capped at 1000, and 1000 for an empty text (MEDULLA-REPO-INGEST-R652.3).
+pub fn leaf_coverage_milli(nodes: &[SectionNode], text_len: usize) -> u32 {
+    if text_len == 0 {
+        return 1000;
+    }
+    let mut has_child = vec![false; nodes.len()];
+    for node in nodes {
+        if let Some(parent) = node.parent_id {
+            if let Some(slot) = has_child.get_mut(parent as usize) {
+                *slot = true;
+            }
+        }
+    }
+    let covered: usize = nodes
+        .iter()
+        .zip(&has_child)
+        .filter(|(_, parent)| !**parent)
+        .map(|(node, _)| node.span_end.saturating_sub(node.span_start))
+        .sum();
+    (covered.saturating_mul(1000) / text_len).min(1000) as u32
+}
+
 /// The deepest section containing byte `offset`: the leaf a chunk starting
 /// there belongs to (MEDULLA-REPO-INGEST-R652.2).
 pub fn section_for(nodes: &[SectionNode], offset: usize) -> Option<u32> {
