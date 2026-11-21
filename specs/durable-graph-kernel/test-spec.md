@@ -421,7 +421,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 - **`MEDULLA-DURABLE-KERNEL-R028.1.3`:** Record exact-source hosted native, migration, fresh layout/export and generated Python client results for the R028.1.1 fixtures. No local native build or test was run for this slice; no broad successful conversation continuation is claimed.
 
 - **`MEDULLA-DURABLE-KERNEL-R028.1.3.1`:** Validate the hosted source, recipe and artifact hashes against the import. Run `tests/test_run_checkpoint_client.py` and the neighboring read and retry facade suites from the plan.
-- **`MEDULLA-DURABLE-KERNEL-R028.1.3.2`:** After the compile lane regenerates the wire vectors with `MEDULLA_WRITE_VECTORS=1 cargo test -p medulla-capabilities --test wire_vectors`, `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` passes over the checkpoint rows, and the served test publishes and reads back both memory-reference lists.
+- **`MEDULLA-DURABLE-KERNEL-R028.1.3.2`:** With the `emit_wire_vectors` emitter of MEDULLA-CONTRACT-R001.4.1 in place, `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` passes over the checkpoint rows, and the served test publishes and reads back both memory-reference lists.
 
 ## Admission retry replay (MEDULLA-DURABLE-KERNEL-R028.4.4)
 
@@ -532,7 +532,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
 | `tests/task_queue_served.rs::renew_extends_lease_and_refuses_expired_or_foreign` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072.1` | Claim, renew, read the new expiry; the attempt count is unchanged. | A renew by another worker or tenant refuses `TASK_ACK_NOT_CLAIMED`; after expiry it refuses `TASK_ACK_LEASE_EXPIRED`; `lease_ms` 0 refuses `TASK_LEASE_ZERO`. |
 | `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (planned) (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
-| `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | The four regenerated task-queue vectors validate and re-emit byte-equal through the hand-written models. | A model field that differs from the Rust type fails; `test_unknown_field_is_rejected` refuses an unknown field. |
+| `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | The four emitted task-queue vectors validate and re-emit byte-equal through the hand-written models. | A model field that differs from the Rust type fails; `test_unknown_field_is_rejected` refuses an unknown field. |
 | `crates/medulla-work-types/src/worker_registry.rs::tests::register_heartbeat_and_expiry_at_the_exact_deadline` (L1) | `MEDULLA-DURABLE-KERNEL-R074.1` | Register, heartbeat and expire at the exact deadline. | Every refusal leaves the registry unchanged. |
 | `tests/worker_registry_served.rs::unknown_expired_and_cross_owner_requests_refuse` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R074.2` | Advance the injected clock past the ttl and the worker disappears. | An unknown worker returns WORKER_UNKNOWN and another principal returns ACCESS_DENIED. |
 | `tests/worker_registry_served.rs::non_reserved_task_is_refused_when_only_reserved_capacity_remains` (L3) | `MEDULLA-DURABLE-KERNEL-R075` | A one-worker pool receives the general lane. | A non-reserved task is refused with ADMIT_HELD_FOR_RESERVE when only reserved capacity remains. |
@@ -612,7 +612,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `crates/medulla-storage/src/owner/lineage_tests.rs::checkpoint_only_layout_digest_is_stable` (L1).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `tests/operator_command_store_upgrade_cli.rs::pre_checkpoint_store_migrates_and_reads_back_identical_heads` (L4).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_memory_refs_round_trip_against_a_served_engine` (L4).
-- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Existing: `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) over the regenerated checkpoint vectors.
+- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Existing: `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) over the emitted checkpoint vectors.
 - `MEDULLA-DURABLE-KERNEL-R038.100`: `src/embedded/tests.rs::embedded_profile_reads_and_writes_an_ephemeral_namespace` (L2).
 - `MEDULLA-DURABLE-KERNEL-R038.100`: `tests/adopt_workitem_authenticated_replay.rs::served_profile_keeps_declared_class_and_refuses_mismatch` (L3).
 - `MEDULLA-DURABLE-KERNEL-R043.100`: Planned: `tests/graph_change_feed_served.rs::two_clients_see_ordered_deduplicable_changes_and_recover` (L3).

@@ -107,7 +107,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T263 [US3] MEDULLA-DURABLE-KERNEL-R070.4 Release gate: a store of the last production release migrates and serves
 - [ ] T099 MEDULLA-DURABLE-KERNEL-R072 Served task-queue methods over the durable job store
 - [ ] T297 MEDULLA-DURABLE-KERNEL-R072.1 Served TaskQueueRenew over the shared task-lease ownership check (Depends: R072)
-- [ ] T100 MEDULLA-DURABLE-KERNEL-R073 After the compile lane regenerates the wire vectors (`MEDULLA_WRITE_VECTORS=1`), add the four task-queue method and result models, the `send_task_queue_*` helpers and `TaskQueueClient`; add the served L4 round-trip test
+- [ ] T100 MEDULLA-DURABLE-KERNEL-R073 Once MEDULLA-CONTRACT-R001.4.1's emitter serves the vectors, add the four task-queue method and result models, the `send_task_queue_*` helpers and `TaskQueueClient`; add the served L4 round-trip test
 - [ ] T101 MEDULLA-DURABLE-KERNEL-R074.1 Typed worker registry producer and pure lifecycle
 - [ ] T102 MEDULLA-DURABLE-KERNEL-R074.2 Worker registry is served with tenant ownership
 - [ ] T103 MEDULLA-DURABLE-KERNEL-R075 Reserved-worker admission returns a grant
@@ -166,7 +166,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T156 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.2 Memory document existence and revision binding
 - [ ] T157 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.3 Fenced resume read
 - [x] T158 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.1 Hosted checkpoint exports and generated facade
-- [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 After the compile lane regenerates the wire vectors (`MEDULLA_WRITE_VECTORS=1`), add the served memory-reference round-trip test
+- [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 Once MEDULLA-CONTRACT-R001.4.1's emitter serves the vectors, add the served memory-reference round-trip test
 - [x] T160 [US6] MEDULLA-DURABLE-KERNEL-R038.100 Embedded and served profiles preserve durability classes
 - [ ] T161 [US1] MEDULLA-DURABLE-KERNEL-R043.7 Attested envelope text admits @ and \ and refuses only host identity
 - [ ] T162 [US1] MEDULLA-DURABLE-KERNEL-R043.8 Envelope admission refusals carry a declared code and a safe diagnostic
