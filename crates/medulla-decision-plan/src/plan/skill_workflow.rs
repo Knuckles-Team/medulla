@@ -41,8 +41,8 @@ impl std::error::Error for SkillCompileError {}
 
 /// Compile `draft` into a program.
 ///
-/// Step `state` is the draft's `step_id` and the order of steps is kept. A
-/// step's declared `next` edges become its edges in order, and `next` is the
+/// Step `node` is the draft's `step_id` and the order of steps is kept. A
+/// step's declared `next` edges become its edges in order, and `next_node` is the
 /// first declared edge's target. `on_error` becomes one further edge labelled
 /// `error`. The program's `task_signature` is `skill:<skill_document_digest>`
 /// and it has no `source_run_id`.
@@ -70,9 +70,9 @@ pub fn compile_skill_workflow(
                 });
             }
             ProgramStep {
-                state: step.step_id.clone(),
+                node: step.step_id.clone(),
                 action: step.action.clone(),
-                next,
+                next_node: next,
                 agent_config: None,
                 edges,
                 input_types: step.input_types.iter().copied().collect(),
@@ -142,7 +142,7 @@ mod tests {
     fn golden_draft_compiles_in_order() {
         let draft = golden();
         let program = compile_skill_workflow(&draft).unwrap();
-        let states: Vec<&str> = program.steps.iter().map(|s| s.state.as_str()).collect();
+        let states: Vec<&str> = program.steps.iter().map(|s| s.node.as_str()).collect();
         assert_eq!(states, ["fetch", "check", "publish", "recover"]);
         assert_eq!(
             program.task_signature,
@@ -150,7 +150,7 @@ mod tests {
         );
         assert_eq!(program.source_run_id, None);
         let fetch = &program.steps.as_slice()[0];
-        assert_eq!(fetch.next.as_deref(), Some("check"));
+        assert_eq!(fetch.next_node.as_deref(), Some("check"));
         let edges: Vec<(Option<&str>, &str)> = fetch
             .edges
             .iter()
@@ -164,7 +164,7 @@ mod tests {
                 (Some("error"), "recover")
             ]
         );
-        assert_eq!(program.steps.as_slice()[2].next, None);
+        assert_eq!(program.steps.as_slice()[2].next_node, None);
         assert!(program.steps.as_slice()[2].edges.is_empty());
         assert_eq!(fetch.input_types, [TypeRef::Text]);
         assert_eq!(fetch.output_types, [TypeRef::Json]);

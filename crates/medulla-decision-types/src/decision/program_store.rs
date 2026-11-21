@@ -332,17 +332,21 @@ pub struct ProgramEdge {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProgramStep {
-    pub state: String,
+    /// The vertex of the compiled program graph this step names (`s0`, `s1`, ... or a
+    /// skill `step_id`). It identifies the step and never changes: a node id, not a
+    /// lifecycle (MEDULLA-DECISION-ENGINE-R831.8). The wire key stays `state`.
+    #[serde(rename = "state")]
+    pub node: String,
     pub action: String,
-    /// The state this step moves to; `None` ends the program.
-    #[serde(default)]
-    pub next: Option<String>,
+    /// The node this step moves to; `None` ends the program. The wire key stays `next`.
+    #[serde(default, rename = "next")]
+    pub next_node: Option<String>,
     /// The agent configuration the step runs with, pinned by revision digest.
     #[serde(default)]
     pub agent_config: Option<ComponentDependency>,
     /// Every outgoing edge in declared order, including an `error` edge. Empty
     /// for a straight-line step, and then omitted from the wire so the digest
-    /// of a straight-line program is unchanged. `next` is the first edge's
+    /// of a straight-line program is unchanged. `next_node` is the first edge's
     /// target (MEDULLA-DECISION-ENGINE-R156.2).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub edges: Vec<ProgramEdge>,
@@ -472,9 +476,9 @@ impl CompiledProgram {
             return invalid("a program holds at least one step");
         }
         let states: std::collections::BTreeSet<&str> =
-            self.steps.iter().map(|step| step.state.as_str()).collect();
+            self.steps.iter().map(|step| step.node.as_str()).collect();
         if states.len() != self.steps.len() || states.contains("") {
-            return invalid("step states are unique and non-empty");
+            return invalid("step nodes are unique and non-empty");
         }
         if self.steps.iter().any(|step| step.action.trim().is_empty()) {
             return invalid("every step names an action");
@@ -483,14 +487,14 @@ impl CompiledProgram {
             .steps
             .iter()
             .flat_map(|step| {
-                step.next
+                step.next_node
                     .as_deref()
                     .into_iter()
                     .chain(step.edges.iter().map(|edge| edge.to.as_str()))
             })
             .any(|next| !states.contains(next))
         {
-            return invalid("a step moves to a state the program does not declare");
+            return invalid("a step moves to a node the program does not declare");
         }
         let names: std::collections::BTreeSet<&str> = self
             .parameters
@@ -559,9 +563,9 @@ pub fn compile_program(
             format!("{}({})", step.action_ref, args.join(","))
         };
         steps.push(ProgramStep {
-            state: format!("s{k}"),
+            node: format!("s{k}"),
             action,
-            next: (k + 1 < trace.steps.len()).then(|| format!("s{}", k + 1)),
+            next_node: (k + 1 < trace.steps.len()).then(|| format!("s{}", k + 1)),
             agent_config: None,
             edges: Vec::new(),
             input_types: Vec::new(),
@@ -612,9 +616,9 @@ mod tests {
 
     fn step(state: &str, next: Option<&str>) -> ProgramStep {
         ProgramStep {
-            state: state.into(),
+            node: state.into(),
             action: format!("do {state}"),
-            next: next.map(str::to_string),
+            next_node: next.map(str::to_string),
             agent_config: Some(ComponentDependency {
                 component_id: "agent-1".into(),
                 kind: AgentComponentKind::Tool,
@@ -742,9 +746,9 @@ mod tests {
         );
         // The second step repeats the title literal and reuses p0.
         assert_eq!(first.steps.as_slice()[1].action, "tool:t1(title=p0)");
-        assert_eq!(first.steps.as_slice()[0].state, "s0");
-        assert_eq!(first.steps.as_slice()[0].next.as_deref(), Some("s1"));
-        assert_eq!(first.steps.as_slice()[1].next, None);
+        assert_eq!(first.steps.as_slice()[0].node, "s0");
+        assert_eq!(first.steps.as_slice()[0].next_node.as_deref(), Some("s1"));
+        assert_eq!(first.steps.as_slice()[1].next_node, None);
         first.validate().unwrap();
         // Different run ids give different digests.
         let other = compile_program(
@@ -801,6 +805,44 @@ mod tests {
             ProgramKnobs::from_policy(&DecisionPolicy::engine_default()).max_steps,
             MAX_PROGRAM_STEPS
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.8
+    #[test]
+    fn program_step_node_is_not_a_lifecycle_field() {
+        // The Rust names are `node` and `next_node`; the wire keys stay `state`
+        // and `next`, so the digest of a pre-rename program is unchanged. The
+        // literal below is the SHA-256 of the pre-rename compact JSON.
+        const PRE_RENAME_DIGEST: &str =
+            "de5596dcef5369cd222b845d41b3df79d69e4e39a9e2960825b4b861fff64327";
+        let step = |node: &str, next: Option<&str>| ProgramStep {
+            node: node.into(),
+            action: format!("a{}", &node[1..]),
+            next_node: next.map(str::to_string),
+            agent_config: None,
+            edges: Vec::new(),
+            input_types: Vec::new(),
+            output_types: Vec::new(),
+        };
+        let sealed = CompiledProgram {
+            schema_version: PROGRAM_SCHEMA_VERSION,
+            task_signature: "sig".into(),
+            steps: BoundedVec::new(vec![step("s0", Some("s1")), step("s1", None)]).unwrap(),
+            parameters: BoundedVec::new(Vec::new()).unwrap(),
+            source_run_id: Some("run-1".into()),
+            program_digest: String::new(),
+        }
+        .sealed();
+        sealed.validate().unwrap();
+        assert_eq!(sealed.program_digest, PRE_RENAME_DIGEST);
+
+        let wire = serde_json::to_value(&sealed).unwrap();
+        assert_eq!(wire["steps"][0]["state"], "s0");
+        assert_eq!(wire["steps"][0]["next"], "s1");
+        assert!(wire["steps"][0].get("node").is_none());
+        assert!(wire["steps"][0].get("next_node").is_none());
+        assert!(wire["steps"][1]["next"].is_null());
+        assert_eq!(CompiledProgram::from_value(wire).unwrap(), sealed);
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R135.1
