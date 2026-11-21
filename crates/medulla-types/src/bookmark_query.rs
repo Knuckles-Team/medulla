@@ -137,6 +137,8 @@ pub struct BookmarkEdge {
     pub relationship: String,
     /// The mindmap id that drew the edge, `None` when unknown.
     pub provenance: Option<String>,
+    /// Set on the last edge of a truncated page.
+    pub cursor: Option<String>,
 }
 
 /// The evidence every response carries: what it read and under which revisions.

@@ -36,64 +36,80 @@ pub struct BookmarkReadView<'a> {
     pub properties: &'a dyn Fn(&str) -> Option<BTreeMap<String, String>>,
 }
 
-fn refusal(code: medulla_types::refusal_code::RefusalCode, reason: &str) -> String {
+pub fn refusal(code: medulla_types::refusal_code::RefusalCode, reason: &str) -> String {
     format!("{}: {reason}", code.as_str())
 }
 
-fn digest_of<T: serde::Serialize>(value: &T) -> Result<Digest256, String> {
+pub fn digest_of<T: serde::Serialize>(value: &T) -> Result<Digest256, String> {
     rmp_serde::to_vec_named(value)
         .map(|bytes| Digest256::sha256(&bytes))
         .map_err(|error| format!("bookmark digest encoding failed: {error}"))
 }
 
-fn cursor_mac(
-    view: &BookmarkReadView<'_>,
-    query_digest: &Digest256,
-    index_revision: u64,
-    offset: usize,
-) -> Result<String, String> {
+/// The cursor domain of a bookmark search.
+pub const SEARCH_CURSOR_DOMAIN: &[u8] = b"eg/bookmark-cursor/v1";
+/// The cursor domain of a bookmark relations read; a search cursor never opens a relations page.
+pub const RELATIONS_CURSOR_DOMAIN: &[u8] = b"eg/bookmark-relations-cursor/v1";
+
+/// What a cursor MAC binds besides its offset: the tenant, the query, the index revision and the
+/// graph snapshot revision of the call.
+pub struct CursorBinding<'a> {
+    pub domain: &'static [u8],
+    pub tenant: &'a str,
+    pub query_digest: &'a Digest256,
+    pub index_revision: u64,
+    pub graph_snapshot_revision: u64,
+}
+
+fn cursor_mac(binding: &CursorBinding<'_>, offset: usize) -> Result<String, String> {
     let secret = semantic_cursor_secret();
     Ok(Digest256::framed(
-        b"eg/bookmark-cursor/v1",
+        binding.domain,
         &[
             &secret[..],
-            view.tenant.as_bytes(),
-            &query_digest.as_bytes()[..],
-            &index_revision.to_be_bytes()[..],
-            &view.graph_snapshot_revision.to_be_bytes()[..],
+            binding.tenant.as_bytes(),
+            &binding.query_digest.as_bytes()[..],
+            &binding.index_revision.to_be_bytes()[..],
+            &binding.graph_snapshot_revision.to_be_bytes()[..],
             &(offset as u64).to_be_bytes()[..],
         ],
     )?
     .to_hex())
 }
 
-fn encode_cursor(
-    view: &BookmarkReadView<'_>,
-    query_digest: &Digest256,
-    index_revision: u64,
-    offset: usize,
-) -> Result<String, String> {
-    Ok(format!(
-        "{offset}.{}",
-        cursor_mac(view, query_digest, index_revision, offset)?
-    ))
+/// The MAC-bound cursor of the page that starts at `offset`.
+pub fn encode_cursor(binding: &CursorBinding<'_>, offset: usize) -> Result<String, String> {
+    Ok(format!("{offset}.{}", cursor_mac(binding, offset)?))
 }
 
 /// The page offset of a cursor whose MAC binds this call's tenant, query, index revision and
 /// snapshot revision; any other cursor is `BOOKMARK_INDEX_STALE`.
-fn decode_cursor(
-    cursor: &str,
-    view: &BookmarkReadView<'_>,
-    query_digest: &Digest256,
-    index_revision: u64,
-) -> Result<usize, String> {
+pub fn decode_cursor(binding: &CursorBinding<'_>, cursor: &str) -> Result<usize, String> {
     let stale = || refusal(BOOKMARK_INDEX_STALE, "the cursor names another index or snapshot");
     let (offset, mac) = cursor.split_once('.').ok_or_else(stale)?;
     let offset: usize = offset.parse().map_err(|_| stale())?;
-    if cursor_mac(view, query_digest, index_revision, offset)? != mac {
+    if cursor_mac(binding, offset)? != mac {
         return Err(stale());
     }
     Ok(offset)
+}
+
+/// The live generation of the tenant's `bookmark` semantic index, the `index_revision` of every
+/// bookmark answer. No live generation is `BOOKMARK_INDEX_STALE`, never an empty success.
+pub fn bookmark_index_revision(
+    persist_dir: &std::path::Path,
+    tenant: &str,
+) -> Result<u64, String> {
+    let service = crate::semantic_index_runtime::open_semantic_service(
+        persist_dir,
+        tenant,
+        BOOKMARK_INDEX_BINDING_ID,
+    )
+    .map_err(|_| refusal(BOOKMARK_INDEX_STALE, "the bookmark index is unavailable"))?;
+    service
+        .live_generation()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| refusal(BOOKMARK_INDEX_STALE, "the bookmark index has no live generation"))
 }
 
 /// The five metadata keys the node does not carry: absent, `[]`, or (for `domains`) a pair whose
@@ -142,8 +158,15 @@ pub fn search(
     without_cursor.cursor = None;
     let query_digest = digest_of(&without_cursor)?;
     let limit_policy_digest = digest_of(&request.limit_policy)?;
+    let cursor_binding = CursorBinding {
+        domain: SEARCH_CURSOR_DOMAIN,
+        tenant: view.tenant,
+        query_digest: &query_digest,
+        index_revision,
+        graph_snapshot_revision: view.graph_snapshot_revision,
+    };
     let offset = match &request.cursor {
-        Some(cursor) => decode_cursor(cursor, view, &query_digest, index_revision)?,
+        Some(cursor) => decode_cursor(&cursor_binding, cursor)?,
         None => 0,
     };
     let binding = service
@@ -193,7 +216,7 @@ pub fn search(
         })
         .collect();
     if truncated {
-        let next = encode_cursor(view, &query_digest, index_revision, offset + max_hits)?;
+        let next = encode_cursor(&cursor_binding, offset + max_hits)?;
         if let Some(last) = hits.last_mut() {
             last.cursor = Some(next);
         }

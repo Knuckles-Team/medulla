@@ -180,10 +180,20 @@ async fn dispatch_query_family(
         other => other,
     };
     // MEDULLA-MEDIA-VOCAB-R001.102.3: the authorized relations among bookmark nodes.
-    #[cfg(feature = "query")]
+    #[cfg(all(feature = "query", feature = "ann-redb"))]
     let method = match method {
         Method::BookmarkRelations { request } => {
-            return Ok(super::bookmark_relations::handle_bookmark_relations(hctx, *request))
+            return Ok(super::bookmark_relations::handle_bookmark_relations(hctx, *request).await)
+        }
+        other => other,
+    };
+    #[cfg(all(feature = "query", not(feature = "ann-redb")))]
+    let method = match method {
+        Method::BookmarkRelations { .. } => {
+            return Ok(Response::err(
+                hctx.req_id,
+                "Bookmark relations are not available in this build (requires `ann-redb`)",
+            ))
         }
         other => other,
     };

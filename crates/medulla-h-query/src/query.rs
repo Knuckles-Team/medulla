@@ -170,7 +170,7 @@ mod catalog_search;
 mod column_lineage;
 #[cfg(feature = "query")]
 mod code_context;
-#[cfg(feature = "query")]
+#[cfg(all(feature = "query", feature = "ann-redb"))]
 mod bookmark_relations;
 #[cfg(feature = "query")]
 mod context_compile;
