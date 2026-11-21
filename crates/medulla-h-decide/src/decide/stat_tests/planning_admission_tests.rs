@@ -11,7 +11,9 @@ use medulla_decision_types::decision::planning_admission::{
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
+use medulla_decision_types::decision::{
+    AbstainReason, PremiseClass, PremiseProvenance, ResolutionKind,
+};
 use medulla_types::contract::Digest256;
 
 use super::super::family::planning_admission::view_digest;
@@ -248,6 +250,83 @@ async fn served_decide_admits_only_wired_features() {
     assert!(record.answer.is_none(), "a held plan carries no answer");
 
     assert_eq!(artifact_count(&h), stored, "Decide writes nothing");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R171.5
+#[tokio::test]
+async fn premises_name_view_and_each_attach_point() {
+    let h = harness_with_repositories().await;
+    let (pin, _) = publish_route_schema(&h);
+    let view = current_digest(&h, REPO, TENANT).await;
+    let wired = plan(
+        REPO,
+        view,
+        &["gap-a", "gap-b"],
+        vec![
+            feature("f1", "orders", "services/orders/src/main.rs", &["gap-a"]),
+            feature("f2", "orders", "services/orders/src/lib.rs", &["gap-b"]),
+        ],
+    );
+    let batch = decide(&h, admission_request(&pin, wired)).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    // The record class stays an observation: the view derives from ingested code.
+    assert_eq!(record.evidence_class, EvidenceClass::Observation);
+
+    let facts: Vec<(&str, &PremiseClass, &str)> = record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("admission:"))
+        .map(|p| {
+            let field = match &p.provenance {
+                PremiseProvenance::Request { field } => field.as_str(),
+                PremiseProvenance::Observation { .. } => "observation",
+                other => panic!("unexpected provenance {other:?}"),
+            };
+            (p.fact.as_str(), &p.class, field)
+        })
+        .collect();
+    assert_eq!(facts.len(), 5, "{facts:?}");
+    assert_eq!(
+        facts[0],
+        (
+            format!(
+                "admission:view repository={REPO} revision=rev-1 digest={}",
+                view.to_hex()
+            )
+            .as_str(),
+            &PremiseClass::Observation,
+            "observation"
+        )
+    );
+    let features_field = "params.planning_admission.features";
+    assert_eq!(
+        facts[1],
+        (
+            "admission:attach feature=f1 file=services/orders/src/main.rs symbol=run operation=call",
+            &PremiseClass::Claim,
+            features_field
+        )
+    );
+    assert_eq!(
+        facts[2],
+        (
+            "admission:attach feature=f2 file=services/orders/src/lib.rs symbol=run operation=call",
+            &PremiseClass::Claim,
+            features_field
+        )
+    );
+    let gaps_field = "params.planning_admission.gap_proposal_digests";
+    for (index, name) in [(3, "gap-a"), (4, "gap-b")] {
+        assert_eq!(
+            facts[index],
+            (
+                format!("admission:gap digest={}", gap(name).to_hex()).as_str(),
+                &PremiseClass::Claim,
+                gaps_field
+            )
+        );
+    }
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R171.3

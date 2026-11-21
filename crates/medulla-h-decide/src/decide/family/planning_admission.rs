@@ -310,8 +310,9 @@ impl DecisionFamily for PlanningAdmissionFamily {
         )
     }
 
-    /// The view the plan was compared against, as an `Observation`: the view
-    /// derives from ingested code.
+    /// The view the plan was compared against, as an `Observation` (the view
+    /// derives from ingested code), then one `Claim` per attach point and per
+    /// gap the caller declared (MEDULLA-DECISION-ENGINE-R171.5).
     fn premises(
         &self,
         request: &DecideRequest,
@@ -321,7 +322,7 @@ impl DecisionFamily for PlanningAdmissionFamily {
         let Some(plan) = plan_of(request) else {
             return Vec::new();
         };
-        vec![PremiseRef {
+        let mut premises = vec![PremiseRef {
             subject: plan.repository_id.clone(),
             fact: format!(
                 "admission:view repository={} revision={} digest={}",
@@ -333,7 +334,31 @@ impl DecisionFamily for PlanningAdmissionFamily {
             provenance: PremiseProvenance::Observation {
                 evaluation_id: plan.repository_revision.clone(),
             },
-        }]
+        }];
+        // The caller declared each attach point and each gap: claims, in request order.
+        premises.extend(plan.features.iter().map(|feature| PremiseRef {
+            subject: feature.feature_id.clone(),
+            fact: format!(
+                "admission:attach feature={} file={} symbol={} operation={}",
+                feature.feature_id,
+                feature.attach_point.file,
+                feature.attach_point.symbol,
+                feature.attach_point.operation
+            ),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: "params.planning_admission.features".to_string(),
+            },
+        }));
+        premises.extend(plan.gap_proposal_digests.iter().map(|gap| PremiseRef {
+            subject: plan.repository_id.clone(),
+            fact: format!("admission:gap digest={}", gap.to_hex()),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: "params.planning_admission.gap_proposal_digests".to_string(),
+            },
+        }));
+        premises
     }
 
     /// The view derives from ingested code, so an admitted plan rests on an
