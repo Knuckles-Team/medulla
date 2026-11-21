@@ -98,6 +98,7 @@ owl-dl = ["medulla-persistence/owl-dl", "medulla-rdf/owl-dl", "medulla-server-ap
 promql = ["medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "medulla-tsdb/promql", "query", "redb", "server", "tsdb", "medulla-server/promql"]
 traces = ["medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "medulla-tsdb/traces", "query", "redb", "server", "tsdb", "medulla-server/traces"]
 [dev-dependencies]
+medulla-observe = { path = "../medulla-observe" }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

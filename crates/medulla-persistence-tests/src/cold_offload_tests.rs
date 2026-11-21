@@ -638,6 +638,70 @@ mod admission_tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// MEDULLA-OBSERVE-R003.3: the background page-in of a paged lazy-open is a registered task
+    /// `lazy-page-in:<graph>`, owner `registry`, that reports the keyset cursor and the rows paged.
+    // spec: MEDULLA-OBSERVE-R003.3
+    #[tokio::test(flavor = "multi_thread")]
+    async fn lazy_paging_task_registers_with_cursor_and_units() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir =
+            std::env::temp_dir().join(format!("medulla-lazy-paged-obs-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let dir_s = dir.to_string_lossy().to_string();
+        let state = redb_state(&dir_s).await;
+
+        create(&state, 1, "paged:observed").await;
+        let total_nodes = 25u64;
+        let page_size = 5u64;
+        for i in 0..total_nodes {
+            add_node(&state, 100 + i, "paged:observed", &format!("n{i}")).await;
+        }
+        {
+            let mut s = state.write().await;
+            assert!(s.registry.evict_resident("paged:observed"));
+        }
+        assert!(
+            lazy_open(
+                &state,
+                "paged:observed",
+                DEFAULT_PRODUCTION_MAX_RESIDENT_GRAPHS,
+                page_size as usize,
+            )
+            .await
+        );
+
+        // The task finishes once every page has landed; poll with a bounded deadline.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        let row = loop {
+            let row = medulla_observe::global().get("lazy-page-in:paged:observed");
+            if let Some(row) = row.filter(|row| row.state.is_terminal()) {
+                break row;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the page-in task did not finish within the deadline"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        };
+        assert_eq!(row.state, medulla_observe::machine::task::TaskState::Completed);
+        assert_eq!(row.owner, "registry");
+        assert_eq!(
+            row.kind,
+            medulla_observe::registry::tasks::TaskKind::Materialization
+        );
+        // The first page was applied inline by `lazy_open`; the task paged the rest.
+        assert_eq!(row.units_done, total_nodes - page_size);
+        match row.cursor {
+            Some(medulla_observe::registry::tasks::ProgressCursor::Keyset { node, .. }) => {
+                assert!(node.is_some_and(|node| node.starts_with('n')))
+            }
+            other => panic!("a keyset cursor is expected, got {other:?}"),
+        }
+        assert!(row.last_progress_unix_ms > 0);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// Startup with many persisted graphs (`load_catalog`) hydrates NONE of them —
     /// only the catalog populates; every graph materializes on first access.
     #[tokio::test(flavor = "multi_thread")]

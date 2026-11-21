@@ -26,6 +26,7 @@ medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
+medulla-observe = { path = "../medulla-observe" }
 medulla-plan = { path = "../medulla-plan" }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }

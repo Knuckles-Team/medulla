@@ -523,9 +523,28 @@ pub async fn lazy_open(
     }
     if let Some(cursor) = outcome.cursor {
         drop(s);
-        tokio::spawn(page_in_remaining(state.clone(), ticket, cursor, page_size));
+        // The page-in is a registered background job: `Introspect` lists it with its
+        // keyset cursor and the nodes and edges paged so far (MEDULLA-OBSERVE-R003.3).
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: format!("lazy-page-in:{graph_name}"),
+                owner: "registry".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Materialization,
+            },
+            page_in_remaining(state.clone(), ticket, cursor, page_size),
+        );
     }
     true
+}
+
+/// The task-registry cursor of a paging position: the last node key and the last edge key.
+fn keyset_progress(
+    cursor: &medulla_core::registry::MaterializeCursor,
+) -> medulla_observe::registry::tasks::ProgressCursor {
+    medulla_observe::registry::tasks::ProgressCursor::Keyset {
+        node: cursor.node_after.clone(),
+        edge: cursor.edge_after.clone(),
+    }
 }
 
 /// Background continuation of a paged [`lazy_open`] (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38): keeps
@@ -544,6 +563,7 @@ async fn page_in_remaining(
     mut cursor: medulla_core::registry::MaterializeCursor,
     page_size: usize,
 ) {
+    let mut units_done = 0_u64;
     loop {
         let _lifecycle_guard =
             medulla_server_api::routed_write_coalescer::lock_graph(ticket.name()).await;
@@ -551,6 +571,7 @@ async fn page_in_remaining(
             return;
         }
         let fetch_ticket = ticket.clone();
+        let paged_from = cursor.clone();
         let fetch_cursor = cursor;
         let page = match tokio::task::spawn_blocking(move || {
             fetch_ticket.materialize_page(Some(fetch_cursor), page_size)
@@ -570,11 +591,16 @@ async fn page_in_remaining(
             };
             (handle, manifest)
         };
+        units_done += (page.nodes.len() + page.edges.len()) as u64;
         let next = medulla_core::registry::GraphRegistry::apply_lazy_page_to_handle(
             &ticket, &handle, &manifest, page,
         );
         match next {
-            Some(c) => cursor = c,
+            Some(c) => {
+                // One progress call per applied page: the keyset cursor and the rows paged.
+                medulla_observe::spawn::progress(keyset_progress(&c), units_done);
+                cursor = c;
+            }
             None => {
                 // `None` is either complete or a failed/mixed source snapshot.
                 // A failed partial core is evicted so the next access restarts
@@ -587,6 +613,9 @@ async fn page_in_remaining(
                     })
                 {
                     s.registry.evict_resident_if_current(&handle);
+                } else {
+                    // The last page landed: record it under the cursor it was paged from.
+                    medulla_observe::spawn::progress(keyset_progress(&paged_from), units_done);
                 }
                 return;
             }
